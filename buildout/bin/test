@@ -1,0 +1,13 @@
+#!/usr/local/bin/python
+
+import sys
+sys.path[0:0] = [
+  '/home/bnaylor/dev/OpenMDAO/openmdao.main',
+  '/home/bnaylor/dev/OpenMDAO/buildout/eggs/nose-0.10.4-py2.5.egg',
+  '/home/bnaylor/dev/OpenMDAO/buildout/eggs/setuptools-0.6c9-py2.5.egg',
+  ]
+
+import nose
+
+if __name__ == '__main__':
+    nose.main()
