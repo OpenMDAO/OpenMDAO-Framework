@@ -27,9 +27,9 @@ class PkgResFactoryTestCase(unittest.TestCase):
                             'could not find distribution satisfying bogus==1.0')
         
     def test_load(self):
-        """Verify that a plugin can be loaded successfully through a pkg_resources
-        entry point.
-        """
+        #Verify that a plugin can be loaded successfully through a pkg_resources
+        #entry point.
+        
         # make sure we're looking in the right spot for the plugins whether we're
         # in a develop egg or in the released version
         dist = working_set.find(Requirement.parse('openmdao.main'))
@@ -57,8 +57,8 @@ class PkgResFactoryTestCase(unittest.TestCase):
         self.assertEqual(foo10, None)
         
     def test_get_loaders(self):
-        """Gets a list of entry point loaders for the openmdao.dumbplugins group.
-        """
+        #Get a list of entry point loaders for the openmdao.dumbplugins group.
+        
         dist = working_set.find(Requirement.parse('openmdao.main'))
         fact = prfactory.PkgResourcesFactory([os.path.join(dist.location,'openmdao','main','plugins')],
                                              ['openmdao.dumbplugins'])

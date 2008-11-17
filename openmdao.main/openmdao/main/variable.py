@@ -1,15 +1,19 @@
 
 #public symbols
-__all__ = ["Variable"]
-
+__all__ = []
 __version__ = "0.1"
 
 
+import weakref
 from zope.interface import implements, Attribute
 
 from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.hierarchy import HierarchyMember
+
+
+INPUT = 1
+OUTPUT = 2
 
 
 class Variable(HierarchyMember):
@@ -20,31 +24,54 @@ class Variable(HierarchyMember):
 
     implements(IContainer, IVariable)
     
-    def __init__(self, name, ref_name=None, parent=None, default=None):
-        HierarchyMember.__init__(self, name, parent)        
+    def __init__(self, name, parent, iostatus, 
+                 val_type=None, ref_name=None, default=None, desc=None):
+        """Note that Variable calls _pre_assign from here, so if _pre_assign requires any
+        attributes from a derived class, those attributes must be set before the Variable
+        __init__ function is called.
+        """
+        HierarchyMember.__init__(self, name, parent, desc)        
 
         if ref_name is None:
             self.ref_name = name
         else:
             self.ref_name = ref_name
-        self.current = False
+        self.changed = True
         self.permission = None
-        self.observers = []
+        self.iostatus = iostatus
+        self.observers = None
+        self.val_type = val_type
         
-        self.__value = default
-        self.default = default
+        if parent is None:
+            val = default
+        else:
+            val = getattr(parent, self.ref_name)
+            parent.add_child(self)
+        self.__value = self._pre_assign(val)
+        if default is None: 
+            self.default = self.__value
+        else:
+            self.default = self._pre_assign(default)
 
 
     def _set_value(self, var):
-        """Assign this Variable's value to the value of another Variable or directly
-        to another value."""
+        """Assign this Variable's value to the value of another Variable or 
+        directly to another value."""
+        if self.iostatus == OUTPUT:
+            raise RuntimeError(self.get_pathname()+
+                               'is an OUTPUT Variable and cannot be set.')
         self.__value = self._pre_assign(var)
         if self._parent is not None:
             setattr(self._parent, self.ref_name, self.__value)
-        self._notify_observers()
+        if self.observers is not None:
+            self._notify_observers()
+
 
     def _get_value(self):
-        return self.__value
+        if self._parent is not None:
+            return getattr(self._parent, self.ref_name)
+        else:
+            return self.__value
     
     value = property(_get_value,_set_value)
         
@@ -54,96 +81,72 @@ class Variable(HierarchyMember):
         self.__value = self.default
 
 
-    def _pre_assign(self, var):
-        """This should be overridden to perform transformations or
+    def _pre_assign(self, var, attribname=None):
+        """This should be overridden to perform necessary transformations or
         validations at assignment time.  If validations fail, they should raise a
         ValueError. Note that var can be a Variable object or just a simple value.
+        By default, this routine performs a simple type check on the value if the
+        self.val_type attribute has been set.
         
-        Returns the transformed, validated value.
+        Returns the validated value.
         """
         if IVariable.providedBy(var):
-            return var.__value
+            val = var.value
         else:
-            return var
+            val = var
+            
+        if self.val_type is not None and not isinstance(var.value,self.val_type):
+            raise ValueError(self.get_pathname()+': incompatible with type '+
+                             str(type(var.value)))
+        return var
     
-    
-    def validate_connection(self, variable):
-        """Raise a TypeError if the connecting variable is not compatible with this one. 
-        This function should be overridden in any derived classes that require validation.
+        
+    def connect(self, variable, attribname=None):
+        """Raise a ValueError if the iostatus of the two variables is not compatible.
         """
-        pass
-
+        if self.iostatus == variable.iostatus:
+            raise ValueError(self.get_pathname()+' and '+
+                               variable.get_pathname()+' have incompatible iostatus')
+        self._pre_connect(variable, attribname)
+    
+        
+    def _pre_connect(self, variable, attribname=None):
+        """Raise a ValueError if the connecting variable is not compatible with this one.
+        This function should be overridden in any derived classes that require validation 
+        beyond the default at connect time.
+        """
+        self._pre_assign(variable, attribname)
 
     def add_observer(self, obs_funct):
         """ Add a function to be called when this variable is modified. The
         function should accept this Variable as an argument.
         """
-        self.observers.append(obs_funct)
+        if self.observers is None:
+            self.observers = [obs_funct]
+        else:
+            self.observers.append(obs_funct)
 
 
+    def set(self, name, value):
+        """Set the value of the attribute specified by the given name."""
+        if name is None: # they're setting this Variable
+            setattr(self, 'value', value)
+        else:  # they're setting an attribute (value, units, etc.)
+            setattr(self, name, value)
+            
+    def get(self, name):
+        """Return the named attribute"""
+        return getattr(self, name) 
+        
     def _notify_observers(self):
         """Call each observer on the observers list."""
         for ob in self.observers:
             ob(self)
         
-        
+#    def sync_with_parent(self):
+#        if self._parent is not None:
+#            self.__value = getattr(self._parent, self.ref_name)
 
-class Float(Variable):
-    """A float Variable"""
-    
-    def __init__(self, name, ref_name=None, parent=None, default=None,
-                 units=None, min_limit=None, max_limit=None):
-        Variable.__init__(self, name, ref_name, parent, default)
-        self.units = units
-        self.min_limit = min_limit
-        self.max_limit = max_limit
-
-
-    def incompatible_units(self, variable, units):
-        raise TypeError(variable.get_pathname()+' units ('+
-                        units+') are '+
-                        'incompatible with units ('+self.units+') of '+ 
-                        self.get_pathname())
-        
+    def add_child(self, child):
+        raise RuntimeError(self._error_msg('you cannot add children to a Variable'))            
             
-    def _pre_assign(self, var):
-        """Return the value of the specified Variable after
-        converting units if necessary and checking against min and max limits.
-        """
-        if IVariable.providedBy(var):
-            if self.units is not None:
-                # ??? eventually do unit conversion here
-                newval = var.value
-            else:
-                newval = var.value
-        else:
-            newval = var
-            
-        # check against min and max limits
-        if self.min_limit is not None and newval < self.min_limit:
-            raise ConstraintError(self.get_pathname()+' min_limit violated: '+
-                                  str(newval)+' < '+str(self.min_limit))
-        if self.max_limit is not None and newval > self.max_limit:
-            raise ConstraintError(self.get_pathname()+' max_limit violated: '+
-                                  str(newval)+' > '+str(self.max_limit))
-            
-        return newval
-        
-        
-    def validate_connection(self, variable):
-        """Raise a TypeError if the connecting Variable is incompatible."""
-        typ = type(variable.value)
-        if typ == float or typ == int:
-            # ??? until we add unit conversion stuff, force units to be the same
-            if self.units is not None:
-                if hasattr(variable,'units'):
-                    vunits = variable.units
-                else:
-                    vunits = None
-                if vunits != self.units:
-                    self.incompatible_units(variable, vunits)
-        else:
-            raise TypeError(variable.get_pathname()+' is not compatible with '+
-                            self.get_pathname())
-
-

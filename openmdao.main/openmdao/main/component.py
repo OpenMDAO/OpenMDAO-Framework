@@ -6,34 +6,50 @@ to the OpenMDAO framework and are 'runnable'.
 """
 
 #public symbols
-__all__ = ["Component"]
+#__all__ = ['Component']
 
 __version__ = "0.1"
 
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IComponent, IVariable
+from openmdao.main.interfaces import IComponent, IAssembly, IVariable
 from openmdao.main.container import Container
-from openmdao.main.variable import Variable
+from openmdao.main.variable import OUTPUT
 import openmdao.main.constants as constants
+
+# Execution states.
+STATE_UNKNOWN = -1
+STATE_IDLE    = 0
+STATE_RUNNING = 1
+STATE_WAITING = 2
+
+# Run completion status.
+RUN_UNKNOWN     = -1
+RUN_OK          = 0
+RUN_FAILED      = 1
+RUN_STOPPED     = 2
+RUN_INTERRUPTED = 3
 
 
 class Component (Container):
     """A runnable Container."""
 
-    def __init__(self, name, parent=None):
-        Container.__init__(self, name, parent)
+    implements(IComponent)
+    
+    def __init__(self, name, parent=None, desc=None):
+        Container.__init__(self, name, parent, desc)
         
-        self.state = constants.STATE_IDLE
+        self.state = STATE_IDLE
+        self._stop = False
 
 #    def add_socket (self, name, iface, desc=''):
-        """Specify a named placeholder for a component with the given
-        interface.
-        """
+#        """Specify a named placeholder for a component with the given
+#        interface.
+#        """
 
 #    def remove_socket (self, name):
-        """Remove an existing Socket"""
+#        """Remove an existing Socket"""
 
     def post_config (self):
         """Perform any final initialization after configuration has been set,
@@ -41,27 +57,34 @@ class Component (Container):
         """
         pass
     
-    def update_inputs (self):
-        """Fetch input variables."""
-        pass
+    def pre_execute (self):
+        """update input variables and anything else needed prior to execution."""
+        if self._parent is not None and IAssembly.providedBy(self._parent):
+            self._parent.update_inputs(self)
     
     def execute (self):
-        """Perform calculations or other actions. This should be overridden in
-        derived classes.
+        """Perform calculations or other actions, assuming that inputs have already been set. 
+        This should be overridden in derived classes.
         """
         pass
     
-    def update_outputs (self):
-        """Update output variables"""
+    def post_execute (self):
+        """Update output variables and anything else needed after execution"""
         pass
+#        for obj in self._framework_objs.values():
+#            if IVariable.providedBy(obj):
+#                if obj.iostatus == OUTPUT:
+#                    obj.sync_with_parent()
     
     def run (self):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
         """
-        self.update_inputs()
-        self.execute()
-        self.update_outputs()
+        self.pre_execute()
+        self.state = STATE_RUNNING
+        status = self.execute()
+        self.post_execute()
+        return status
         
     def checkpoint (self, outstream, format=constants.SAVE_PICKLE):
         """Save sufficient information for a restart. By default, this
@@ -81,10 +104,11 @@ class Component (Container):
         one Component in the Workflow and return. For simple components, it is the
         same as run().
         """
+        raise NotImplementedError('step')
 
     def require_gradients (self, varname, gradients):
         """Requests that the component be able to provide (after execution) a
-        list of gradients of a variable w.r.t. a list of variables. The format
+        list of gradients w.r.t. a list of variables. The format
         of the gradients list is [dvar_1, dvar_2, ..., dvar_n]. The component
         should return a list with entries of either a name, a tuple of the
         form (name,index) or None.  None indicates that the component cannot
@@ -95,10 +119,11 @@ class Component (Container):
         compute any gradients of the requested varname, it can just return
         None.
         """
+        raise NotImplementedError('require_gradients')
 
     def require_hessians (self, varname, deriv_vars):
         """Requests that the component be able to provide (after execution)
-        the hessian of a variable w.r.t. a list of variables. The format of
+        the hessian w.r.t. a list of variables. The format of
         deriv_vars is [dvar_1, dvar_2, ..., dvar_n]. The component should
         return one of the following:
           1) a name, which would indicate that the component contains
@@ -115,6 +140,6 @@ class Component (Container):
           3) None, which means the the component cannot compute any values
              of the hessian.
              """
-
+        raise NotImplementedError('require_hessians')
     
     

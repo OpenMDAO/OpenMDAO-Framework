@@ -2,8 +2,8 @@
 import sys
     
 sys.path[0:0] = [
-  '/home/bnaylor/dev/OpenMDAO/release/eggs/openmdao.main-0.1-py2.5.egg',
-  '/usr/local/lib/python2.5/site-packages/setuptools-0.6c8-py2.5.egg',
+  '/home/bnaylor/OpenMDAO/developers/bnaylor/T001-my_feature/openmdao.main',
+  '/home/bnaylor/OpenMDAO/developers/bnaylor/T001-my_feature/buildout/eggs/setuptools-0.6c9-py2.5.egg',
   ]
 
 _interactive = True

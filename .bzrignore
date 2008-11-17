@@ -22,3 +22,12 @@ buildout/develop-eggs
 buildout/eggs
 buildout/openmdao.log
 buildout/parts
+buildout/.coverage
+buildout/openmdao_log.txt
+openmdao.main/openmdao/main/openmdao_log.txt
+openmdao.main/openmdao.log
+buildout/distrib-cache/dist/nose-0.10.4.tar.gz
+buildout/distrib-cache/dist/openmdao.main-0.1-py2.5.egg
+buildout/distrib-cache/dist/setuptools-0.6c9-py2.5.egg
+openmdao.main/.coverage
+openmdao.test/openmdao.test.egg-info

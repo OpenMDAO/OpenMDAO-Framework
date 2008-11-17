@@ -19,11 +19,10 @@ logging.basicConfig(level=logging.DEBUG,
                     format='%(asctime)s %(name)s %(levelname)s %(message)s',
 #                    datefmt='%m-%d %H:%M',
                     datefmt='%H:%M',
-                    filename='openmdao.log',
+                    filename='openmdao_log.txt',
                     filemode='w')
                     
 
-logmod = logging
 logger = logging.getLogger('')
 
 

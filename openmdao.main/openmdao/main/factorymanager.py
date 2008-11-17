@@ -18,7 +18,7 @@ def create(typname, name=None, version=None, server=None, res_desc=None):
     for fct in _factories:
         obj = fct.create(typname, version, server, res_desc)
         if obj is not None:
-            if isinstance(name, str):
+            if isinstance(name, basestring):
                 obj.name = name
             return obj
     
@@ -26,7 +26,7 @@ def create(typname, name=None, version=None, server=None, res_desc=None):
 
 
 def find_components(search_path):
-    _factories = egglib.get_plugin_factories(search_path, 'openmdao.components')
+    _factories += egglib.get_plugin_factories(search_path, 'openmdao.components')
             
 
 

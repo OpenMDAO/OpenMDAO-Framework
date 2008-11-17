@@ -161,6 +161,14 @@ class IComponent (Interface):
 
 
 
+class IAssembly (Interface):
+    """Contains a workflow, a driver, and a collection of child 
+    Compnents/Containers and manages connections between its children."""
+    
+    def update_inputs(comp_name):
+        """update the inputs for the named child component."""
+    
+    
 class IDriver (Interface):
     """Executes a Workflow until certain criteria are met."""
 
@@ -169,7 +177,7 @@ class IDriver (Interface):
 
 
 class IFactory (Interface):
-    """An object that creates and returns objects based on a type string"""
+    """An object that creates and returns objects based on a type string."""
 
     def create (type):
         """Create an object of the specified type and return it, or a proxy
@@ -187,7 +195,8 @@ class IGeomObject (Interface):
     # the interface for IGeomObject will encapsulate the CAPRI API, which
     #is somewhat large (nearly 100 functions) to show here.
 
-        
+
+    
 class IResourceAllocator (Interface):
     """An object responsible for allocating CPU/disk resources for a particular
     host, cluster, load balancer, etc."""
@@ -222,7 +231,7 @@ class IVariable (Interface):
     current = Attribute('if False, the value is not current')
 
     def revert ():
-        """ Return this Variable to its default value"""
+        """ Return this Variable to its default value."""
 
     def validate (variable):
         """ Raise an exception if the assigned variable is not compatible"""
@@ -235,3 +244,10 @@ class IVariable (Interface):
         observers."""
 
 
+class IWorkflow(Interface):
+    """An object that executes its nodes in a specified order.
+    """
+    def add_node(node):
+        """add a new node to this workflow"""
+
+    

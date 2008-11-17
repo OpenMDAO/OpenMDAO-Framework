@@ -11,19 +11,18 @@ __all__ = ["ImportFactory"]
 __version__ = "0.1"
 
 
-import sys
-
 from openmdao.main.factory import Factory
 from openmdao.main.logger import logger
    
 class ImportFactory(Factory):
-    """Creates objects using the standard python __import__ mechanism. The object must
-    have a ctor with the same name as the module, minus the file extension.  For example, 
-    to create a MyComp object, the module must be named MyComp.py (or .pyc or .pyo).
-    This factory does not support specific version creation or creation on a 
-    remote server."""
+    """Creates objects using the standard python __import__ mechanism. The 
+    object must have a ctor with the same name as the module, minus the file 
+    extension.  For example, to create a MyComp object, the module must be 
+    named MyComp.py (or .pyc or .pyo). This factory does not support specific 
+    version creation or creation on a remote server."""
 
     def __init__(self):
+        Factory.__init__(self)
         self._ctors = {}
 
     def create(self, typ, name=None, version=None, server=None, 
@@ -36,16 +35,21 @@ class ImportFactory(Factory):
                 
         if server is not None or version is not None:
             return None
+        if res_desc is not None and len(res_desc)>0:
+            return None
         
         if typ not in self._ctors:
+            parts = typ.split('.')
+            cname = parts[-1]
+            modname = '.'.join(parts[:-1])
             try:
-                cname = typ.split('.')[-1]
-                mod = __import__(typ,globals(),locals(),[cname]);
-                self._ctors[typ] = getattr(mod, cname)
+                mod = __import__(modname, globals(), locals(), [cname])
             except ImportError, err:
                 logger.debug(str(err))
                 return None
-            except NameError, err:
+            try:
+                self._ctors[typ] = getattr(mod, cname)
+            except AttributeError, err:
                 logger.debug(str(err))
                 return None
         

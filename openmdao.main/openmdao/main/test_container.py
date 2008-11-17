@@ -11,25 +11,32 @@ class ContainerTestCase(unittest.TestCase):
         """this setup function will be called before each test in this class"""
         
         # build a simple hierarchy of Containers
-        self.root = Container('root')
-        c1 = Container('c1')
-        c2 = Container('c2')
+        self.root = Container('root', None)
+        c1 = Container('c1', None)
+        c2 = Container('c2', None)
         self.root.add_child(c1)
         self.root.add_child(c2)        
-        c21 = Container('c21')
-        c22 = Container('c22')
+        c21 = Container('c21', None)
+        c22 = Container('c22', None)
         c2.add_child(c21)
         c2.add_child(c22)
-        c221 = Container('c221')
+        c221 = Container('c221', None)
         c22.add_child(c221)
 
     def tearDown(self):
         """this teardown function will be called after each test in this class"""
         self.root = None
 
-
+    def test_add_child(self):
+        foo = Container('foo', None)
+        non_container = 'some string'
+        try:
+            foo.add_child(non_container)
+        except TypeError, err:
+            self.assertEqual(str(err),'foo: child does not provide the IContainer interface')
+            
     def test_pathname(self):
-        foo = Container('foo')
+        foo = Container('foo', None)
         self.root.add_child(foo)
         self.assertEqual(foo.get_pathname(), 'root.foo')
 
@@ -43,7 +50,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             obj = self.root.get('bogus')
         except NameError, err:
-            self.assertEqual(str(err),"'bogus' not a framework-accessible object")
+            self.assertEqual(str(err),"root: 'bogus' not a framework-accessible object")
             return
         self.fail('bogus object get did not raise exception')
 
@@ -82,7 +89,8 @@ class ContainerTestCase(unittest.TestCase):
 
     def test_create(self):
         factorymanager.register_factory(ImportFactory())
-        new_obj = self.root.create('openmdao.main.MyComp','mycomp')
+        new_obj = self.root.create('openmdao.main.component.Component','mycomp')
+        self.assertEqual(new_obj.__class__.__name__, 'Component')
         new_obj.run()
 
 if __name__ == "__main__":

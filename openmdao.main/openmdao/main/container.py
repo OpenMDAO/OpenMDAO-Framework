@@ -14,9 +14,8 @@ __version__ = "0.1"
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IContainer, IVariable
+from openmdao.main.interfaces import IContainer
 from openmdao.main.hierarchy import HierarchyMember
-from openmdao.main.variable import Variable
 import openmdao.main.factorymanager as factorymanager
 import openmdao.main.constants as constants
 
@@ -29,27 +28,24 @@ class Container(HierarchyMember):
    
     implements(IContainer)
    
-    def __init__(self, name, parent=None):
-        HierarchyMember.__init__(self, name, parent)
+    def __init__(self, name, parent, desc=None):
+        HierarchyMember.__init__(self, name, parent, desc)
         self._framework_objs = {}
             
-#    def bind_variable(self, name, var):
-#        """Bind a Variable object to an object in self."""
-#        if isinstance(var, Variable):
-#            self._framework_objs[name] = var
-#        else:
-#            raise TypeError('binding object must be a Variable')
 
-        
+    def _error_msg(self, msg):
+        return self.get_pathname()+': '+msg
+
+    
     def add_child(self, child):
-        """Adds the given child object to the dict of this Container.
-        The child must provide the IContainer interface."""
+        """Adds the given child as a framework-accessible object of 
+        this Container. The child must provide the IContainer interface."""
         if IContainer.providedBy(child):
             child._parent = self
             self._framework_objs[child.name] = child
-            setattr(self, child.name, child)
         else:
-            raise TypeError('child does not provide the IContainer interface')
+            raise TypeError(self._error_msg(
+                                'child does not provide the IContainer interface'))
 
         
     def create(self, type_name, name, version=None, server=None, res_desc=None):
@@ -69,13 +65,38 @@ class Container(HierarchyMember):
         path, which may contain '.' characters.
         
         """
-        scope = self
-        for name in path.split('.'):
-            try:
-                scope = scope._framework_objs[name]
-            except:
-                raise NameError("'"+path+"' not a framework-accessible object")
-        return scope    
+        try:
+            base, name = path.split('.',1)
+        except ValueError:
+            base = path
+            name = None
+        try:
+            scope = self._framework_objs[base]
+        except KeyError:
+            raise NameError(self._error_msg("'"+path+
+                                            "' not a framework-accessible object"))
+        if name is None:
+            return scope
+        else:
+            return scope.get(name)
+
+    def set(self, path, value):
+        """Set the value of the framework-accessible object specified by the 
+        given path, which may contain '.' characters.
+        
+        """ 
+        try:
+            base, name = path.split('.',1)
+        except ValueError:
+            base = path
+            name = None
+        try:
+            scope = self._framework_objs[base]
+        except:
+            raise NameError(self._error_msg("'"+path+
+                           "' not a framework-accessible object"))
+        
+        scope.set(name, value)
 
     
     def get_objs(self, iface, recurse=False, **kwargs):
@@ -128,9 +149,7 @@ class Container(HierarchyMember):
         observers.
         
         """
-        obj = getattr(self, name)
-        self._framework_objs.remove(obj)
-        delattr(self, name)
+        del self._framework_objs[name]
  
     def save (self, outstream, format=constants.SAVE_PICKLE):
         """Save the state of this object and its children to the given
@@ -142,8 +161,8 @@ class Container(HierarchyMember):
     
     @staticmethod
     def load (instream, format=constants.SAVE_PICKLE):
-        """Replace the current object in the hierarchy with the object
-        loaded from the input stream. Pure python classes generally
-        won't need to override this, but extensions will. The format
-        can be supplied in case something other than cPickle is needed."""
+        """Load an object of this type from the input stream. Pure python 
+        classes generally won't need to override this, but extensions will. 
+        The format can be supplied in case something other than cPickle is 
+        needed."""
         raise NotImplementedError('restore_state')
