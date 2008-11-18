@@ -11,16 +11,21 @@ __all__ = ["Container"]
 
 __version__ = "0.1"
 
+import copy
+import weakref
+# the following is a monkey-patch to correct a problem with copying/deepcopying weakrefs
+# There is an issue in the python issue tracker regarding this, but it isn't fixed yet.
+copy._copy_dispatch[weakref.ref] = copy._copy_immutable
+copy._deepcopy_dispatch[weakref.ref] = copy._deepcopy_atomic
+copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IContainer
+from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main.hierarchy import HierarchyMember
 import openmdao.main.factorymanager as factorymanager
 import openmdao.main.constants as constants
 
-
-#??? check out operator.attrgetter (in 2.6) which allows dotted names
 
 class Container(HierarchyMember):
     """ Base class for all objects having Variables that are visible 
@@ -30,7 +35,7 @@ class Container(HierarchyMember):
    
     def __init__(self, name, parent, desc=None):
         HierarchyMember.__init__(self, name, parent, desc)
-        self._framework_objs = {}
+        self._data_objs = {}
             
 
     def _error_msg(self, msg):
@@ -39,10 +44,16 @@ class Container(HierarchyMember):
     
     def add_child(self, child):
         """Adds the given child as a framework-accessible object of 
-        this Container. The child must provide the IContainer interface."""
+        this Container. The child must provide the IContainer interface.
+        
+        Returns None.
+        """
         if IContainer.providedBy(child):
             child._parent = self
-            self._framework_objs[child.name] = child
+            if IVariable.providedBy(child):
+                self._data_objs[child.name] = child
+            else:
+                setattr(self, child.name, child)
         else:
             raise TypeError(self._error_msg(
                                 'child does not provide the IContainer interface'))
@@ -70,9 +81,13 @@ class Container(HierarchyMember):
         except ValueError:
             base = path
             name = None
-        try:
-            scope = self._framework_objs[base]
-        except KeyError:
+
+        if base in self._data_objs:
+            scope = self._data_objs[base]
+        else:
+            scope = getattr(self,base)
+            
+        if not IContainer.providedBy(scope):
             raise NameError(self._error_msg("'"+path+
                                             "' not a framework-accessible object"))
         if name is None:
@@ -85,17 +100,28 @@ class Container(HierarchyMember):
         given path, which may contain '.' characters.
         
         """ 
+        if path is None:
+            if IVariable.providedBy(value):
+                value = value.get(None)
+            if IContainer.providedBy(value):
+                newcont = copy.deepcopy(value)
+                self._parent.add_child(value)  # this will replace this container
+                return
+        
         try:
             base, name = path.split('.',1)
         except ValueError:
             base = path
             name = None
-        try:
-            scope = self._framework_objs[base]
-        except:
-            raise NameError(self._error_msg("'"+path+
-                           "' not a framework-accessible object"))
         
+        if base in self._data_objs:
+            scope = self._data_objs[base]
+        else:
+            scope = getattr(self,base)
+            
+        if not IContainer.providedBy(scope):
+            raise NameError(self._error_msg("'"+path+
+                                            "' not a framework-accessible object"))        
         scope.set(name, value)
 
     
@@ -115,20 +141,25 @@ class Container(HierarchyMember):
                     return False
             return True
             
-            
-        objs = []
-        
-        if recurse:
-            for child in self._framework_objs.values():
+        def recurse_get_objs(obj, iface, visited, **kwargs):
+            objs = []
+            for child in obj.__dict__.values():
+                if id(child) in visited:
+                    continue
+                visited.add(id(child))
                 if iface.providedBy(child):
                     objs.append(child)
                 if IContainer.providedBy(child):
-                    objs.extend(child.get_objs(iface, recurse, **kwargs))
-        else:
-            for child in self._framework_objs.values():
-                if iface.providedBy(child):
-                    objs.append(child)
+                    objs.extend(recurse_get_objs(child, iface, visited, **kwargs))
             return objs
+            
+        objs = []
+        visited = set()
+        
+        if recurse:
+            objs = recurse_get_objs(self, iface, visited, **kwargs)
+        else:
+            objs = [child for child in self.__dict__.values() if iface.providedBy(child)]
             
         if len(kwargs) > 0:
             return [x for x in objs if matches(x,kwargs)]
@@ -149,7 +180,10 @@ class Container(HierarchyMember):
         observers.
         
         """
-        del self._framework_objs[name]
+        if name in self._data_objs:
+            del self._data_objs[name]
+        else:
+            delattr(self, name)
  
     def save (self, outstream, format=constants.SAVE_PICKLE):
         """Save the state of this object and its children to the given

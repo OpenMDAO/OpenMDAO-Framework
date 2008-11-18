@@ -49,8 +49,8 @@ class ContainerTestCase(unittest.TestCase):
     def test_bad_get(self):
         try:
             obj = self.root.get('bogus')
-        except NameError, err:
-            self.assertEqual(str(err),"root: 'bogus' not a framework-accessible object")
+        except AttributeError, err:
+            self.assertEqual(str(err),"'Container' object has no attribute 'bogus'")
             return
         self.fail('bogus object get did not raise exception')
 

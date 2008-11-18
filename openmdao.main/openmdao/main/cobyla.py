@@ -50,7 +50,7 @@ class COBYLA(Driver):
     
     def _set_funct(self, fstring):
         code = compile(fstring,'<string>','eval')
-        self.__funct = lambda: eval(code, __emptyglobals, self.parent._framework_objs)
+        self.__funct = lambda: eval(code, __emptyglobals, self.parent.__dict__)
         
     _funct = property(_get_funct,_set_funct)
 
@@ -85,8 +85,7 @@ class COBYLA(Driver):
 
 
     def add_constraint(self, constraint):
-        """Add a string expression that must evaluate to >= 0. Variables in the expression
-        must reside in the _framework_objs hierarchy."""
+        """Add a string expression that must evaluate to >= 0."""
         code = compile(constraint,'<string>','eval')
-        self.consfuncts.append(lambda: eval(code, __emptyglobals, self.parent._framework_objs) )
+        self.consfuncts.append(lambda: eval(code, __emptyglobals, self.parent.__dict__) )
         

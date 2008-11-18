@@ -12,7 +12,7 @@ from openmdao.main.string import String
 factorymanager.register_factory(ImportFactory())
 
 class DummyComp(Component):
-    def __init__(self, name, nest=0):
+    def __init__(self, name, nest=False):
         Component.__init__(self, name)
         self.r = 1.0
         self.r2 = -1.0
@@ -30,8 +30,8 @@ class DummyComp(Component):
         String('sout', self, OUTPUT)
         
         # hack a quick way to get nested containers for testing
-        if nest > 0:
-            self.dummy = self.add_child(DummyComp('dummy',nest-1))
+        if nest is True:
+            self.add_child(DummyComp('dummy'))
             ContainerVariable('dummy_in', self, INPUT, ref_name='dummy')
             ContainerVariable('dummy_out', self, OUTPUT, ref_name='dummy')
         
@@ -47,10 +47,10 @@ class ContainerTestCase(unittest.TestCase):
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.asm = Assembly('top',None)
-        dc = DummyComp('comp1',2)
+        dc = DummyComp('comp1',True)
         self.asm.add_child(dc)
         self.asm.workflow.add_node(dc)
-        dc2 = DummyComp('comp2',3)
+        dc2 = DummyComp('comp2',True)
         self.asm.add_child(dc2)
         self.asm.workflow.add_node(dc2)
         
@@ -86,7 +86,11 @@ class ContainerTestCase(unittest.TestCase):
         
 
     def test_connect_containers(self):
+        dum1 = self.asm.get('comp1.dummy_out')
+        dum1.set('r',75.4)
         self.asm.connect('comp1.dummy_out','comp2.dummy_in')
+        self.asm.run()
+        self.assertEqual(self.asm.get('comp2.dummy_in.r.value'),75.4)
         
     def test_invalid_connect(self):
         try:

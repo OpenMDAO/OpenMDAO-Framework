@@ -33,12 +33,12 @@ class HierarchyMember(object):
         else:
             return '.'.join([self._parent.get_pathname(), self.name])
 
-
+    
     def _get_parent(self):
         if self.__parent is None:
             return None
         else:
-            return self.__parent()
+            return self.__parent() # need parens because self.__parent is a weakref
         
     def _set_parent(self, parent):
         if parent is None:
@@ -47,3 +47,5 @@ class HierarchyMember(object):
             self.__parent = weakref.ref(parent)
            
     _parent = property(_get_parent,_set_parent)
+    
+    

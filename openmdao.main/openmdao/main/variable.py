@@ -47,9 +47,9 @@ class Variable(HierarchyMember):
         else:
             val = getattr(parent, self.ref_name)
             parent.add_child(self)
-        self.__value = self._pre_assign(val)
+        val = self._pre_assign(val)
         if default is None: 
-            self.default = self.__value
+            self.default = val
         else:
             self.default = self._pre_assign(default)
 
@@ -60,25 +60,20 @@ class Variable(HierarchyMember):
         if self.iostatus == OUTPUT:
             raise RuntimeError(self.get_pathname()+
                                'is an OUTPUT Variable and cannot be set.')
-        self.__value = self._pre_assign(var)
-        if self._parent is not None:
-            setattr(self._parent, self.ref_name, self.__value)
+        setattr(self._parent, self.ref_name, self._pre_assign(var))
         if self.observers is not None:
             self._notify_observers()
 
 
     def _get_value(self):
-        if self._parent is not None:
-            return getattr(self._parent, self.ref_name)
-        else:
-            return self.__value
+        return getattr(self._parent, self.ref_name)
     
     value = property(_get_value,_set_value)
         
         
     def revert(self):
         """ Return this Variable to its default value"""
-        self.__value = self.default
+        setattr(self._parent, self.ref_name, self.default)
 
 
     def _pre_assign(self, var, attribname=None):
@@ -143,10 +138,6 @@ class Variable(HierarchyMember):
         for ob in self.observers:
             ob(self)
         
-#    def sync_with_parent(self):
-#        if self._parent is not None:
-#            self.__value = getattr(self._parent, self.ref_name)
-
     def add_child(self, child):
         raise RuntimeError(self._error_msg('you cannot add children to a Variable'))            
             

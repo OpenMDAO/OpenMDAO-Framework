@@ -71,10 +71,6 @@ class Component (Container):
     def post_execute (self):
         """Update output variables and anything else needed after execution"""
         pass
-#        for obj in self._framework_objs.values():
-#            if IVariable.providedBy(obj):
-#                if obj.iostatus == OUTPUT:
-#                    obj.sync_with_parent()
     
     def run (self):
         """Run this object. This should include fetching input variables,
