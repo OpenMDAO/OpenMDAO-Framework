@@ -18,9 +18,11 @@ class Int(Variable):
         Variable.__init__(self, parent, name, iostatus, val_type=[int,long], ref_name=ref_name, 
                           default=default, desc=desc)
         if min_limit is not None:
-            self.add_constraint(MinConstraint(min_limit))
+            self.min_constraint = MinConstraint(min_limit)
+            self.add_constraint(self.min_constraint)
         if max_limit is not None:
-            self.add_constraint(MaxConstraint(max_limit))
+            self.max_constraint = MaxConstraint(max_limit)
+            self.add_constraint(self.max_constraint)
         
             
 
