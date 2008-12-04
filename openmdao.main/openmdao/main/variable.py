@@ -1,10 +1,11 @@
 
 #public symbols
-__all__ = []
+__all__ = ['Variable','Undefined']
 __version__ = "0.1"
 
 
 import weakref
+import inspect
 from zope.interface import implements, Attribute
 
 from openmdao.main.interfaces import IContainer, IVariable
@@ -15,6 +16,11 @@ from openmdao.main.hierarchy import HierarchyMember
 INPUT = 1
 OUTPUT = 2
 
+class _Undefined ( object ):
+    def __repr__ ( self ):
+        return '<undefined>'
+# use this to represent undefined value rather than None    
+Undefined = _Undefined()
 
 class Variable(HierarchyMember):
     """ An object representing data to be passed between Components within
@@ -22,96 +28,153 @@ class Variable(HierarchyMember):
     Variable. It can notify other objects when its value is modified.
     """
 
-    implements(IContainer, IVariable)
+    implements(IVariable, IContainer)
     
     def __init__(self, name, parent, iostatus, 
-                 val_type=None, ref_name=None, default=None, desc=None):
+                 val_type=None, ref_name=None, ref_parent=None, default=None, desc=None):
         """Note that Variable calls _pre_assign from here, so if _pre_assign requires any
         attributes from a derived class, those attributes must be set before the Variable
         __init__ function is called.
         """
         HierarchyMember.__init__(self, name, parent, desc)        
 
+        # by default, name of the variable is the same as the obj it refers to
         if ref_name is None:
             self.ref_name = name
         else:
             self.ref_name = ref_name
-        self.changed = True
-        self.permission = None
-        self.iostatus = iostatus
-        self.observers = None
-        self.val_type = val_type
-        
-        if parent is None:
-            val = default
+        # the variable can reference an obj inside of some object other than the variable's parent
+        if ref_parent is None:
+            self._ref_parent = parent
         else:
-            val = getattr(parent, self.ref_name)
-            parent.add_child(self)
-        val = self._pre_assign(val)
+            self._ref_parent = ref_parent
+            
+        self.observers = None
+        self.permission = None
+        self._constraints = []
+        self.iostatus = iostatus
+        if val_type is not None and not isinstance(val_type, tuple):
+            self.val_type = (val_type,)
+        else:
+            self.val_type = val_type
+        
+        if IContainer.providedBy(parent):
+            val = getattr(self._ref_parent, self.ref_name)
+            parent.make_public(self)
+        else:
+            raise TypeError("parent of Variable '"+name+"' is not an IContainer")
+
         if default is None: 
-            self.default = val
+            self.default = self._pre_assign(val)
         else:
             self.default = self._pre_assign(default)
 
 
     def _set_value(self, var):
         """Assign this Variable's value to the value of another Variable or 
-        directly to another value."""
+        directly to another value.  Called by setting the 'value' property."""
         if self.iostatus == OUTPUT:
             raise RuntimeError(self.get_pathname()+
                                'is an OUTPUT Variable and cannot be set.')
-        setattr(self._parent, self.ref_name, self._pre_assign(var))
+        setattr(self._ref_parent, self.ref_name, self._pre_assign(var))
         if self.observers is not None:
             self._notify_observers()
 
 
     def _get_value(self):
-        return getattr(self._parent, self.ref_name)
+        """"Called when getting the 'value' property."""
+        return getattr(self._ref_parent, self.ref_name)
     
     value = property(_get_value,_set_value)
         
         
     def revert(self):
         """ Return this Variable to its default value"""
-        setattr(self._parent, self.ref_name, self.default)
+        self.value = self.default
 
+    def add_constraint(self, con):
+        self._constraints.append(con)
 
-    def _pre_assign(self, var, attribname=None):
-        """This should be overridden to perform necessary transformations or
-        validations at assignment time.  If validations fail, they should raise a
-        ValueError. Note that var can be a Variable object or just a simple value.
-        By default, this routine performs a simple type check on the value if the
-        self.val_type attribute has been set.
+    def _pre_assign(self, val):
+        """This should be overridden to perform necessary validations
+        assignment time. If validations fail, they should raise a ValueError.
+        Note that val should just be a simple value, not a Variable. This
+        routine performs a simple type check on the value if the self.val_type
+        attribute has been set.
         
         Returns the validated value.
         """
-        if IVariable.providedBy(var):
-            val = var.value
-        else:
-            val = var
-            
-        if self.val_type is not None and not isinstance(var.value,self.val_type):
-            raise ValueError(self.get_pathname()+': incompatible with type '+
-                             str(type(var.value)))
-        return var
+        if self.val_type is not None:
+            match = [x for x in self.val_type if isinstance(val, x)]
+            if len(match) == 0:
+                raise ValueError(self.get_pathname()+': incompatible with type '+
+                                 str(type(val)))
+        
+        # test against any constraints placed on this variable
+        try:
+            for con in self._constraints:
+                con.test(val)
+        except ConstraintError, err:
+            raise ConstraintError(self.get_pathname()+": "+str(err))
+        
+        return val
     
         
-    def connect(self, variable, attribname=None):
-        """Raise a ValueError if the iostatus of the two variables is not compatible.
-        """
-        if self.iostatus == variable.iostatus:
+    def validate_var(self, variable):
+        """Raise a TypeError if the given Variable is incompatible. This is called
+        on the INPUT side of a connection.  The value attribute of the Variable is not
+        checked at this time."""
+        if not isinstance(variable, type(self)):
+            # could try to obtain adapter here...
+            raise TypeError(self.get_pathname()+": assignment to incompatible variable '"+
+                            variable.get_pathname()+"' of type '"+
+                            str(type(variable))+"'")
+        if self.iostatus != INPUT or self.iostatus == variable.iostatus:
             raise ValueError(self.get_pathname()+' and '+
-                               variable.get_pathname()+' have incompatible iostatus')
-        self._pre_connect(variable, attribname)
-    
-        
-    def _pre_connect(self, variable, attribname=None):
-        """Raise a ValueError if the connecting variable is not compatible with this one.
-        This function should be overridden in any derived classes that require validation 
-        beyond the default at connect time.
-        """
-        self._pre_assign(variable, attribname)
+                             variable.get_pathname()+' have incompatible iostatus')
 
+    def _convert(self, variable):
+        """Some Variables, e.g., Float, will need to override this in order to convert units
+        from those in connected variables."""
+        return variable.value
+    
+    def setvar(self, name, var):
+        """Assign this Variable to another Variable, which generally just means to assign
+        our value to the value of var. Some Variables will override _convert to handle things
+        like unit conversion."""
+        if name is None: # they're setting this Variable
+            self.validate_var(var)
+            self.value = self._convert(var)
+        else:
+            raise RuntimeError(self.get_pathname()+": cannot assign a Variable to attribute '"+
+                               name+"'")
+        
+    def set(self, name, value):
+        """Set the value of the attribute specified by the given name. value is assumed to
+        be a value and not a Variable object. Assignment to 'value' will force a check
+        against any constraints registered with this Variable."""
+        if name is None or name == value: # they're setting this Variable
+            self.value = value
+        else:  # they're setting an attribute (value, units, etc.)
+            setattr(self, name, value)
+            
+    def getvar(self, name):
+        if name is None:
+            return self
+        else:
+            raise NameError(self.get_pathname()+": '"+name+
+                                            "' is not a Variable object")        
+        
+    def get(self, name):
+        """Return the named attribute"""
+        if name is None:
+            return self.value
+        else:
+            getattr(self, name)
+        
+    def make_public(self, child):
+        raise NotImplemented('make_public')            
+            
     def add_observer(self, obs_funct):
         """ Add a function to be called when this variable is modified. The
         function should accept this Variable as an argument.
@@ -121,23 +184,9 @@ class Variable(HierarchyMember):
         else:
             self.observers.append(obs_funct)
 
-
-    def set(self, name, value):
-        """Set the value of the attribute specified by the given name."""
-        if name is None: # they're setting this Variable
-            setattr(self, 'value', value)
-        else:  # they're setting an attribute (value, units, etc.)
-            setattr(self, name, value)
-            
-    def get(self, name):
-        """Return the named attribute"""
-        return getattr(self, name) 
-        
     def _notify_observers(self):
         """Call each observer on the observers list."""
         for ob in self.observers:
             ob(self)
         
-    def add_child(self, child):
-        raise RuntimeError(self._error_msg('you cannot add children to a Variable'))            
-            
+    

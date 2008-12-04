@@ -72,7 +72,7 @@ class Component (Container):
         """Update output variables and anything else needed after execution"""
         pass
     
-    def run (self):
+    def run (self, force=False):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
         """

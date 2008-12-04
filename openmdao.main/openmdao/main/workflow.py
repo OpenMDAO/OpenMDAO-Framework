@@ -32,6 +32,13 @@ class Workflow(Component):
         assert IComponent.providedBy(node)
         assert not IDriver.providedBy(node)
         self.nodes.append(node)
+        
+    def remove_node(self, node):
+        nodes = [x for x in self.nodes if x is not node]
+        for n in nodes:
+            if isinstance(n, Workflow):
+                n.remove_node(node)
+        self.nodes = nodes
 
     def execute(self):
         """ Run through the nodes in the workflow list. """

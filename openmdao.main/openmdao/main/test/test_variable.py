@@ -33,7 +33,7 @@ class FloatTestCase(unittest.TestCase):
         self.assertEqual(3.1415926,self.float1.value)
         # check default value
         self.assertEqual(98.9,self.float1.default)
-        self.float1.value = self.float2
+        self.float1.value = self.float2.value
         self.assertEqual(42.,self.float1.value)
         # make sure value gets transferred to internal variable
         self.assertEqual(42.,self.hobj.internal_float1)
@@ -45,25 +45,27 @@ class FloatTestCase(unittest.TestCase):
         try:
             self.float1.value = 124
         except ConstraintError, err:
-            self.assertEqual(str(err), 'h1.float1 max_limit violated: 124 > 99.0')
+            self.assertEqual(str(err), "h1.float1: constraint '124 <= 99.0' has been violated")
         else:
             self.fail('expected exception for max_limit violation did not happen')
         try:
             self.float1.value = -3
         except ConstraintError, err:
-            self.assertEqual(str(err), 'h1.float1 min_limit violated: -3 < 0.0')
+            self.assertEqual(str(err), "h1.float1: constraint '-3 >= 0.0' has been violated")
         else:
-            self.fail('expected exception for min_limit violation did not happen')
+            self.fail('ConstraintError exception')
 
     def test_connection(self):
-        self.float1.connect(self.float2)
+        self.float1.validate_var(self.float2)
         self.float1.units = 'lb/ft^2'
         self.float2.units = 'kg'
         try:
-            self.float1.connect(self.float2)
+            self.float1.validate_var(self.float2)
         except TypeError, err:
             self.assertEqual(str(err),'h1.float2 units (kg) are incompatible'+
                              ' with units (lb/ft^2) of h1.float1')
+        else:
+            self.fail('TypeError expected')
 
 if __name__ == "__main__":
     unittest.main()

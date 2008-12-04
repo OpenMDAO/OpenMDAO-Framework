@@ -5,6 +5,8 @@ from openmdao.main.interfaces import IContainer
 import openmdao.main.factorymanager as factorymanager
 from openmdao.main.importfactory import ImportFactory
 
+import openmdao.main.containervar
+
 class ContainerTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -33,8 +35,10 @@ class ContainerTestCase(unittest.TestCase):
         try:
             foo.add_child(non_container)
         except TypeError, err:
-            self.assertEqual(str(err),'foo: child does not provide the IContainer interface')
-            
+            self.assertEqual(str(err),"foo: '<type 'str'>' object has does not provide the IContainer interface")
+            return
+        self.fail('exception expected')
+        
     def test_pathname(self):
         foo = Container('foo', None)
         self.root.add_child(foo)
@@ -50,7 +54,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             obj = self.root.get('bogus')
         except AttributeError, err:
-            self.assertEqual(str(err),"'Container' object has no attribute 'bogus'")
+            self.assertEqual(str(err),"object 'root' has no attribute 'bogus'")
             return
         self.fail('bogus object get did not raise exception')
 
@@ -58,33 +62,35 @@ class ContainerTestCase(unittest.TestCase):
     def test_get_objs(self):
         objs = self.root.get_objs(IContainer, recurse=True)
         names = [x.get_pathname() for x in objs]
-        self.assertEqual(names, ['root.c2', 'root.c2.c22', 'root.c2.c22.c221', 'root.c2.c21', 'root.c1'])
+        self.assertEqual(names, ['root.c1', 'root.c2', 'root.c2.c21', 'root.c2.c22', 
+                                 'root.c2.c22.c221'])
         
         objs = self.root.get_objs(IContainer)
         names = [x.get_pathname() for x in objs]
-        self.assertEqual(names, ['root.c2', 'root.c1'])
+        self.assertEqual(names, ['root.c1', 'root.c2'])
         
         objs = self.root.get_objs(IContainer, recurse=True, _parent=self.root)
         names = [x.get_pathname() for x in objs]
-        self.assertEqual(names, ['root.c2', 'root.c1'])        
+        self.assertEqual(names, ['root.c1', 'root.c2'])        
 
         objs = self.root.get_objs(IContainer, recurse=True, _parent=self.root.get('c2'))
         names = [x.get_pathname() for x in objs]
-        self.assertEqual(names, ['root.c2.c22', 'root.c2.c21'])        
+        self.assertEqual(names, ['root.c2.c21', 'root.c2.c22'])        
 
 
     def test_get_names(self):
         names = self.root.get_names(IContainer, recurse=True)
-        self.assertEqual(names, ['root.c2', 'root.c2.c22', 'root.c2.c22.c221', 'root.c2.c21', 'root.c1'])
+        self.assertEqual(names, ['root.c1','root.c2', 'root.c2.c21',
+                                 'root.c2.c22', 'root.c2.c22.c221'])
         
         names = self.root.get_names(IContainer)
-        self.assertEqual(names, ['root.c2', 'root.c1'])
+        self.assertEqual(names, ['root.c1', 'root.c2'])
         
         names = self.root.get_names(IContainer, recurse=True, _parent=self.root)
-        self.assertEqual(names, ['root.c2', 'root.c1'])        
+        self.assertEqual(names, ['root.c1', 'root.c2'])        
 
         names = self.root.get_names(IContainer, recurse=True, _parent=self.root.get('c2'))
-        self.assertEqual(names, ['root.c2.c22', 'root.c2.c21'])        
+        self.assertEqual(names, ['root.c2.c21', 'root.c2.c22'])        
 
 
     def test_create(self):

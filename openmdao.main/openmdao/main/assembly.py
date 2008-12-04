@@ -33,8 +33,8 @@ class Assembly(Component):
         for compname,deps in self._connections.items():
             outs = set()
             for outtuple in deps.values():
-                outobj = outtuple[0]()
-                out = outobj._parent.name
+                outobj = self.get(outtuple[0])
+                out = outobj.name
                 outs.add(out)
                 if out not in dep_graph:
                     dep_graph[out] = []
@@ -67,25 +67,15 @@ class Assembly(Component):
 
         #outcomp and variable name
         outcompname, outvarname = outpath.split('.',1)
-        outcomp = self.get(outcompname)
-        attrname = None
-        if '.' in outvarname: # it's an attribute access
-            outvarname, attrname = outvarname.split('.',1)
-        if attrname == 'value':
-            attrname = None
-        outvar = outcomp.get(outvarname)
-        weakovar = weakref.ref(outvar)
+        outcomp = getattr(self, outcompname)
+        outvar = outcomp.getvar(outvarname)
         if outvar.iostatus != OUTPUT:
             raise RuntimeError(outvar.get_pathname()+' must be an OUTPUT variable')
       
         #incomp and variable name
         incompname, invarname = inpath.split('.',1)
-        incomp = self.get(incompname)
-        if '.' in invarname:
-            raise RuntimeError('direct linking to attributes within an INPUT'+
-                               ' Variable is illegal')
-        invar = incomp.get(invarname)
-        weakivar = weakref.ref(invar)
+        incomp = getattr(self, incompname)
+        invar = incomp.getvar(invarname)
         
         if invar.iostatus != INPUT:
             raise RuntimeError(invar.get_pathname()+' must be an INPUT variable')
@@ -96,41 +86,25 @@ class Assembly(Component):
                     raise RuntimeError(inpath+' is already connected')
         
         # test compatability
-        invar.connect(outvar, attrname)
+        invar.validate_var(outvar)
         
         self._check_circular_deps(incompname, invarname, outpath)
         
         if incompname not in self._connections:
             self._connections[incompname] = {}
             
-        self._connections[incompname][weakivar] = (weakovar, attrname)
+        self._connections[incompname][inpath.split('.',1)[1]] = (outcompname, outvarname)
         
       
     def disconnect(self, inpath):
-        incomp, invar = inpath.split('.',1)
-        removes = []
-        infound = False
+        incompname, invarname = inpath.split('.',1)
         
-        for weakin,outtuple in self._connections[incomp].items():
-            inobj = weakin()
-            outobj = outtuple[0]()
-            if inobj is None or outobj is None:
-                removes.append(weakin)
-                
-            if inobj is not None and inobj.name == invar:
-                infound = True
-                if weakin not in removes:
-                    removes.append(weakin)
-
-        # clean up connection and any old dangling weakrefs
-        for rem in removes:  
-            del self._connections[incomp][rem]
-            
-        if infound is False:
+        if incompname not in self._connections or invarname not in self._connections[incompname]:
             raise RuntimeError(inpath+' is not connected')
-            
-        if len(self._connections[incomp]) == 0:
-            del self._connections[incomp]
+        del self._connections[incompname][invarname]
+                    
+        if len(self._connections[incompname]) == 0:
+            del self._connections[incompname]
                     
 
     def execute(self):
@@ -142,55 +116,35 @@ class Assembly(Component):
         observers.
         
         """
+        
+        # ??? notify observers of removal...
+        
         if name in self._connections:
-            del self._connections[name]           
+            del self._connections[name]
+            
+        discons = []
+        for incompname,indict in self._connections.items():
+            for invarname,outtuple in indict.items():
+                if outtuple[0] == name:
+                    # disconnect any inputs reading from outputs of this component
+                    discons.append('.'.join([incompname,invarname]))
+
+        for disc in discons:
+            self.disconnect(disc)
+            
+        self.workflow.remove_node(getattr(self,name))           
         Component.remove_child(self, name)
       
     def update_inputs(self, incomp):
         """Transfer input data to the specified component"""
-        removes = []
         try:
             deps = self._connections[incomp.name]
         except KeyError:
             return
-        for weakin, outtuple in deps.items():
-            invar = weakin()
-            outvar = outtuple[0]()
-            attrname = outtuple[1]
-            if invar is not None and outvar is not None:
-                if attrname is not None:
-                    invar.set(None, outvar.get(attrname))
-                else:
-                    invar.set(None, outvar)
-            else:
-                removes.append(weakin)
-        # clean up any danglers
-        for rem in removes:  
-            del deps[rem]
+        for invarname, outtuple in deps.items():
+            invar = incomp.getvar(invarname)
+            outvar = self.getvar('.'.join(outtuple[:2]))
+            invar.setvar(None, outvar)
             
       
-    def list_connections(self, fullpath=False):
-        conns = []
-        for comp,inputs in self._connections.items():
-            for inp,outinfo in inputs.items():
-                ii = inp()
-                oo = outinfo[0]()
-                attr = outinfo[1]
-                if ii is not None and oo is not None:
-                    if fullpath is True:
-                        inname = '.'.join([self.get(comp).get_pathname(), ii.name])
-                        if attr is None:
-                            outname = oo.get_pathname()
-                        else:
-                            outname = '.'.join([oo.get_pathname(), attr])
-                    else:
-                        inname = '.'.join([comp, ii.name])
-                        if attr is None:
-                            outname = '.'.join([oo._parent.name, oo.name])
-                        else:
-                            outname = '.'.join([oo._parent.name, oo.name, attr])
-                    conns.append((outname, inname))
-        return conns
-    
-    
-    
+   

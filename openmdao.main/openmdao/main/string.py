@@ -7,6 +7,7 @@ __version__ = "0.1"
 from openmdao.main.interfaces import IVariable
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.variable import Variable
+from openmdao.main.vartypemap import add_var_type_map
             
 class String(Variable):
     """A string Variable"""
@@ -52,3 +53,5 @@ class String(Variable):
         """Raise a TypeError if the connecting Variable is incompatible."""
         self._pre_assign(variable, attrname)
 
+
+add_var_type_map(String, basestring)

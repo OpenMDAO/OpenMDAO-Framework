@@ -23,6 +23,8 @@ from zope.interface import implements
 
 from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main.hierarchy import HierarchyMember
+from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.vartypemap import find_var_class
 import openmdao.main.factorymanager as factorymanager
 import openmdao.main.constants as constants
 
@@ -32,99 +34,160 @@ class Container(HierarchyMember):
     to the framework"""
    
     implements(IContainer)
+    
    
     def __init__(self, name, parent, desc=None):
-        HierarchyMember.__init__(self, name, parent, desc)
-        self._data_objs = {}
-            
-
+        HierarchyMember.__init__(self, name, parent, desc)            
+        self._pub = {}  # A container for framework accessible objects.
+        
     def _error_msg(self, msg):
         return self.get_pathname()+': '+msg
 
-    
-    def add_child(self, child):
-        """Adds the given child as a framework-accessible object of 
-        this Container. The child must provide the IContainer interface.
+    def add_child(self, obj, private=False):
+        if IContainer.providedBy(obj):
+            setattr(self, obj.name, obj)
+            obj._parent = self
+            if private is False:
+                self.make_public(obj)
+        else:
+            raise TypeError(self.get_pathname()+": '"+str(type(obj))+"' object has does not provide the IContainer interface")
+        
+    def remove_child(self, name):
+        """Remove the specified child from this container and remove any Variable objects
+        from _pub that reference that child."""
+        dels = []
+        for key,val in self._pub.items():
+            if val.ref_name == name:
+                dels.append(key)
+        for name in dels:
+            del self._pub[name]
+        delattr(self, name)
+        
+    def make_public(self, obj_info):
+        """Adds the given object(s) as framework-accessible data object(s) of this
+        Container. obj_info can be a single non-Variable object, a list of names of objects
+        in this container instance, or a list of tuples of the form (name, alias, iostatus),
+        where name is the name of an object within this container instance.  If iostatus is
+        not supplied, the default value is INPUT.  This function attempts to locate an object
+        with an IVariable interface that can wrap each object passed into the function.
         
         Returns None.
         """
-        if IContainer.providedBy(child):
-            child._parent = self
-            if IVariable.providedBy(child):
-                self._data_objs[child.name] = child
-            else:
-                setattr(self, child.name, child)
+        if isinstance(obj_info, list):
+            lst = obj_info
         else:
-            raise TypeError(self._error_msg(
-                                'child does not provide the IContainer interface'))
+            lst = [obj_info]
+            
+        for entry in lst:
+            if isinstance(entry, basestring):
+                name = entry
+                dobj = find_var_class(type(getattr(self, name)), name, self, 
+                                      iostatus=INPUT)
+            elif isinstance(entry, tuple):
+                name = entry[0]  # wrapper name
+                ref_name = entry[1]  # internal name
+                if len(entry) > 2:
+                    iostatus = entry[2]
+                else:
+                    iostatus = INPUT
+                dobj = find_var_class(type(getattr(self, ref_name)), name, self, 
+                                      iostatus=iostatus,
+                                      ref_name=ref_name)
+            else:
+                dobj = entry
+                if hasattr(dobj, 'name'):
+                    name = dobj.name
+                else:
+                    name = None
+                if not IVariable.providedBy(dobj):
+                    dobj = find_var_class(type(dobj), name, self, iostatus=INPUT)
+            
+            if IVariable.providedBy(dobj):
+                dobj._parent = self
+                self._pub[dobj.name] = dobj
+            else:
+                raise TypeError(self._error_msg(
+                                    'no IVariable interface available for the object named '+
+                                     str(name)))
+
+    def make_private(self, name):
+        """Remove the named object from the _pub container, which will make it
+        no longer accessible to the framework. 
+        
+        Returns None.
+        """
+        del self._pub[name]
 
         
-    def create(self, type_name, name, version=None, server=None, res_desc=None):
+    def create(self, type_name, name, version=None, server=None, private=False, res_desc=None):
         """Create a new object of the specified type inside of this
         Container. The object must have a 'name' attribute.
         
-        Returns the new object.
-        
+        Returns the new object.        
         """
         obj = factorymanager.create(type_name, name, version, server, res_desc)
-        self.add_child(obj)
+        self.add_child(obj, private)
         return obj
 
+    def getvar(self, path):
+        """Return the public Variable specified by the given 
+        path, which may contain '.' characters.  Only returns Variables, not attributes or
+        other Containers.
+        """
+        assert(isinstance(path,basestring))
+        try:
+            base, name = path.split('.',1)
+        except ValueError:
+            return self._pub[path]
+
+        return self._pub[base].getvar(name)
+        
         
     def get(self, path):
-        """Return the framework-accessible object specified by the given 
-        path, which may contain '.' characters.
+        """Return any public object specified by the given 
+        path, which may contain '.' characters.  If the name matches the name of a Variable,
+        the value of the Variable will be returned. Attributes of variables may also be 
+        returned.
         
         """
+        assert(isinstance(path,basestring))
+        
         try:
             base, name = path.split('.',1)
         except ValueError:
-            base = path
-            name = None
+            try:
+                return self._pub[path].value
+            except KeyError:
+                raise AttributeError("object '"+self.get_pathname()+"' has no attribute '"+
+                                     path+"'")
 
-        if base in self._data_objs:
-            scope = self._data_objs[base]
-        else:
-            scope = getattr(self,base)
-            
-        if not IContainer.providedBy(scope):
-            raise NameError(self._error_msg("'"+path+
-                                            "' not a framework-accessible object"))
-        if name is None:
-            return scope
-        else:
-            return scope.get(name)
+        return self._pub[base].get(name)
 
+        
     def set(self, path, value):
-        """Set the value of the framework-accessible object specified by the 
-        given path, which may contain '.' characters.
+        """Set the value of the data object specified by the 
+        given path, which may contain '.' characters.  If path specifies a Variable, then
+        its value attribute will be set to the given value, subject to validation and 
+        constraints.
         
         """ 
-        if path is None:
-            if IVariable.providedBy(value):
-                value = value.get(None)
-            if IContainer.providedBy(value):
-                newcont = copy.deepcopy(value)
-                self._parent.add_child(value)  # this will replace this container
-                return
-        
         try:
             base, name = path.split('.',1)
         except ValueError:
-            base = path
-            name = None
-        
-        if base in self._data_objs:
-            scope = self._data_objs[base]
-        else:
-            scope = getattr(self,base)
-            
-        if not IContainer.providedBy(scope):
-            raise NameError(self._error_msg("'"+path+
-                                            "' not a framework-accessible object"))        
-        scope.set(name, value)
+            try:
+                self._pub[path].set(None, value)        
+            except AttributeError:
+                raise NameError(self._error_msg("'"+path+
+                                                "' not a framework-accessible object")) 
+            except TypeError:
+                raise NameError(self._error_msg("'None' not a framework-accessible object"))
+        else:    
+            self._pub[base].set(name, value)
 
-    
+
+    def setvar(self, path, variable):
+        pass
+        
     def get_objs(self, iface, recurse=False, **kwargs):
         """Return a list of objects with the specified interface that
         also have attributes with values that match those passed as named
@@ -175,16 +238,6 @@ class Container(HierarchyMember):
                     for x in self.get_objs(iface, recurse, **kwargs)]
         
     
-    def remove_child(self, name):
-        """Remove the named object from this container and notify any 
-        observers.
-        
-        """
-        if name in self._data_objs:
-            del self._data_objs[name]
-        else:
-            delattr(self, name)
- 
     def save (self, outstream, format=constants.SAVE_PICKLE):
         """Save the state of this object and its children to the given
         output stream. Pure python classes generally won't need to
