@@ -104,13 +104,13 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('top.comp2.rout must be an INPUT variable',str(err))
+            self.assertEqual('top: top.comp2.rout must be an INPUT variable',str(err))
         else:
             self.fail('exception expected')
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('top.comp1.r must be an OUTPUT variable',str(err))
+            self.assertEqual('top: top.comp1.r must be an OUTPUT variable',str(err))
         else:
             self.fail('exception expected')
             
@@ -118,15 +118,17 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp1.r')
         except RuntimeError, err:
-            self.assertEqual('Cannot connect a component (comp1) to itself',str(err))
+            self.assertEqual('top: Cannot connect a component (comp1) to itself',str(err))
         else:
             self.fail('exception expected')
      
-#    def test_attribute_link(self):
-#        self.asm.connect('comp1.rout.units','comp2.s')
-#        self.asm.run()
-#        comp2 = self.asm.get('comp2')
-#        self.assertEqual(comp2.s, 'cm')
+    def test_attribute_link(self):
+        try:
+            self.asm.connect('comp1.rout.units','comp2.s')
+        except NameError, err:
+            self.assertEqual(str(err), "top.comp1.rout: 'units' is not a Variable object")
+        else:
+            self.fail('NameError expected')
         
     def test_value_link(self):
         try:
@@ -142,7 +144,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp2.rout','comp1.r')
         except RuntimeError, err:
-            self.assertEqual('Circular dependency would be created by'+
+            self.assertEqual('top: Circular dependency would be created by'+
                              ' connecting comp1.r to comp2.rout',str(err))
         else:
             self.fail('exception expected')
@@ -175,7 +177,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.disconnect('comp2.s')
         except RuntimeError, err:
-            self.assertEqual('comp2.s is not connected',str(err))
+            self.assertEqual('top: comp2.s is not connected',str(err))
         else:
             self.fail('exception expected')
 
@@ -190,7 +192,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.disconnect('comp4.r')
         except RuntimeError, err:
-            self.assertEqual(str(err), 'comp4.r is not connected')
+            self.assertEqual(str(err), 'top: comp4.r is not connected')
         else:            
             self.fail('exception expected')
         

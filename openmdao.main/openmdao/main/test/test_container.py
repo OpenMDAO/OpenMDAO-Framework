@@ -54,7 +54,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             obj = self.root.get('bogus')
         except AttributeError, err:
-            self.assertEqual(str(err),"object 'root' has no attribute 'bogus'")
+            self.assertEqual(str(err),"root: object has no attribute 'bogus'")
             return
         self.fail('bogus object get did not raise exception')
 

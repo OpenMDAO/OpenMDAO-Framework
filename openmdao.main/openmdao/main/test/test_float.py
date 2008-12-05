@@ -15,18 +15,17 @@ class FloatTestCase(unittest.TestCase):
         self.hobj.internal_float2 = 42.
         self.hobj.internal_float3 = 1.1
         self.float1 = Float('float1', self.hobj, INPUT, 
-                         ref_name='internal_float1', default=98.9,
-                         min_limit=0., max_limit=99.)
+                       ref_name='internal_float1', default=98.9,
+                       min_limit=0., max_limit=99.)
         self.float2 = Float('float2', self.hobj, OUTPUT, default=13.2, 
-                         ref_name='internal_float2')
+                       ref_name='internal_float2')
         self.float3 = Float('float3', self.hobj, INPUT, 
-                         ref_name='internal_float3',
-                         min_limit=0., max_limit=99.)
+                       ref_name='internal_float3',
+                       min_limit=0., max_limit=99.)
         
     def tearDown(self):
         """this teardown function will be called after each test in this class"""
-        self.float1 = None
-        self.float2 = None
+        self.hobj = None
 
     def test_assignment(self):
         # check starting value

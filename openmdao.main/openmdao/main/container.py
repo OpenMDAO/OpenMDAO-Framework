@@ -40,9 +40,6 @@ class Container(HierarchyMember):
         HierarchyMember.__init__(self, name, parent, desc)            
         self._pub = {}  # A container for framework accessible objects.
         
-    def _error_msg(self, msg):
-        return self.get_pathname()+': '+msg
-
     def add_child(self, obj, private=False):
         if IContainer.providedBy(obj):
             setattr(self, obj.name, obj)
@@ -50,7 +47,9 @@ class Container(HierarchyMember):
             if private is False:
                 self.make_public(obj)
         else:
-            raise TypeError(self.get_pathname()+": '"+str(type(obj))+"' object has does not provide the IContainer interface")
+            self.raise_exception("'"+str(type(obj))+
+                                 "' object has does not provide the IContainer interface",
+                                 TypeError)
         
     def remove_child(self, name):
         """Remove the specified child from this container and remove any Variable objects
@@ -106,9 +105,8 @@ class Container(HierarchyMember):
                 dobj._parent = self
                 self._pub[dobj.name] = dobj
             else:
-                raise TypeError(self._error_msg(
-                                    'no IVariable interface available for the object named '+
-                                     str(name)))
+                self.raise_exception('no IVariable interface available for the object named '+
+                                     str(name), TypeError)
 
     def make_private(self, name):
         """Remove the named object from the _pub container, which will make it
@@ -158,8 +156,7 @@ class Container(HierarchyMember):
             try:
                 return self._pub[path].value
             except KeyError:
-                raise AttributeError("object '"+self.get_pathname()+"' has no attribute '"+
-                                     path+"'")
+                self.raise_exception("object has no attribute '"+path+"'", AttributeError)
 
         return self._pub[base].get(name)
 
@@ -177,16 +174,27 @@ class Container(HierarchyMember):
             try:
                 self._pub[path].set(None, value)        
             except AttributeError:
-                raise NameError(self._error_msg("'"+path+
-                                                "' not a framework-accessible object")) 
+                self.raise_exception("'"+path+"' is not a framework-accessible object",NameError) 
             except TypeError:
-                raise NameError(self._error_msg("'None' not a framework-accessible object"))
+                self.raise_exception("'"+str(path)+"' not a framework-accessible object", 
+                                     NameError)
         else:    
             self._pub[base].set(name, value)
 
 
     def setvar(self, path, variable):
-        pass
+        try:
+            base, name = path.split('.',1)
+        except ValueError:
+            try:
+                self._pub[path].setvar(None, variable)        
+            except AttributeError:
+                self.raise_exception("'"+path+"' not a framework-accessible object", NameError) 
+            except TypeError:
+                self.raise_exception("'"+str(path)+"' not a framework-accessible object",
+                                     NameError)
+        else:    
+            self._pub[base].setvar(name, variable)
         
     def get_objs(self, iface, recurse=False, **kwargs):
         """Return a list of objects with the specified interface that
@@ -244,7 +252,7 @@ class Container(HierarchyMember):
         override this because the base class version will suffice, but
         python extension classes will have to override. The format
         can be supplied in case something other than cPickle is needed."""
-        raise NotImplementedError('save_state')
+        self.raise_exception('save', NotImplementedError)
     
     @staticmethod
     def load (instream, format=constants.SAVE_PICKLE):
@@ -252,4 +260,4 @@ class Container(HierarchyMember):
         classes generally won't need to override this, but extensions will. 
         The format can be supplied in case something other than cPickle is 
         needed."""
-        raise NotImplementedError('restore_state')
+        raise NotImplementedError('load')

@@ -44,8 +44,8 @@ class Assembly(Component):
         out = outname.split('.')[0]
         
         if incomp == out:
-            raise RuntimeError('Cannot connect a component ('+incomp+
-                               ') to itself')
+            self.raise_exception('Cannot connect a component ('+incomp+') to itself',
+                                 RuntimeError)
         
         if incomp not in dep_graph:
             dep_graph[incomp] = [out]
@@ -58,9 +58,9 @@ class Assembly(Component):
         sccomps = strongly_connected_components(dep_graph)
         for comp in sccomps:
             if len(comp) > 1:
-                raise RuntimeError('Circular dependency would be '+
-                                   'created by connecting '+
-                                   incomp+'.'+invar+' to '+outname)
+                self.raise_exception('Circular dependency would be '+
+                                     'created by connecting '+
+                                     incomp+'.'+invar+' to '+outname, RuntimeError)
 
     def connect(self, outpath, inpath):
         """Connect one output variable to one input variable"""
@@ -70,7 +70,8 @@ class Assembly(Component):
         outcomp = getattr(self, outcompname)
         outvar = outcomp.getvar(outvarname)
         if outvar.iostatus != OUTPUT:
-            raise RuntimeError(outvar.get_pathname()+' must be an OUTPUT variable')
+            self.raise_exception(outvar.get_pathname()+' must be an OUTPUT variable',
+                                 RuntimeError)
       
         #incomp and variable name
         incompname, invarname = inpath.split('.',1)
@@ -78,12 +79,14 @@ class Assembly(Component):
         invar = incomp.getvar(invarname)
         
         if invar.iostatus != INPUT:
-            raise RuntimeError(invar.get_pathname()+' must be an INPUT variable')
+            self.raise_exception(invar.get_pathname()+' must be an INPUT variable',
+                                 RuntimeError)
         
         if incompname in self._connections:
             for iname in self._connections[incompname].keys():
                 if iname == invarname:
-                    raise RuntimeError(inpath+' is already connected')
+                    self.raise_exception(inpath+' is already connected',
+                                         RuntimeError)
         
         # test compatability
         invar.validate_var(outvar)
@@ -100,7 +103,7 @@ class Assembly(Component):
         incompname, invarname = inpath.split('.',1)
         
         if incompname not in self._connections or invarname not in self._connections[incompname]:
-            raise RuntimeError(inpath+' is not connected')
+            self.raise_exception(inpath+' is not connected', RuntimeError)
         del self._connections[incompname][invarname]
                     
         if len(self._connections[incompname]) == 0:

@@ -20,7 +20,7 @@ class _Undefined ( object ):
     def __repr__ ( self ):
         return '<undefined>'
 # use this to represent undefined value rather than None    
-Undefined = _Undefined()
+undefined = _Undefined()
 
 class Variable(HierarchyMember):
     """ An object representing data to be passed between Components within
@@ -31,7 +31,7 @@ class Variable(HierarchyMember):
     implements(IVariable, IContainer)
     
     def __init__(self, name, parent, iostatus, 
-                 val_type=None, ref_name=None, ref_parent=None, default=None, desc=None):
+                 val_type=None, ref_name=None, ref_parent=None, default=undefined, desc=None):
         """Note that Variable calls _pre_assign from here, so if _pre_assign requires any
         attributes from a derived class, those attributes must be set before the Variable
         __init__ function is called.
@@ -64,15 +64,19 @@ class Variable(HierarchyMember):
         else:
             raise TypeError("parent of Variable '"+name+"' is not an IContainer")
 
-        if default is None: 
+        if default is undefined: 
             self.default = self._pre_assign(val)
+        elif default is None:
+            self.default = None
         else:
             self.default = self._pre_assign(default)
 
 
     def _set_value(self, var):
         """Assign this Variable's value to the value of another Variable or 
-        directly to another value.  Called by setting the 'value' property."""
+        directly to another value.  Checks validity of the new value before assignment.
+        Called by setting the 'value' property.
+        """
         if self.iostatus == OUTPUT:
             raise RuntimeError(self.get_pathname()+
                                'is an OUTPUT Variable and cannot be set.')
@@ -97,7 +101,8 @@ class Variable(HierarchyMember):
 
     def _pre_assign(self, val):
         """This should be overridden to perform necessary validations
-        assignment time. If validations fail, they should raise a ValueError.
+        assignment time but this base version should still be called from within the
+        overridden version. If validations fail, they should raise a ValueError.
         Note that val should just be a simple value, not a Variable. This
         routine performs a simple type check on the value if the self.val_type
         attribute has been set.
@@ -107,15 +112,15 @@ class Variable(HierarchyMember):
         if self.val_type is not None:
             match = [x for x in self.val_type if isinstance(val, x)]
             if len(match) == 0:
-                raise ValueError(self.get_pathname()+': incompatible with type '+
-                                 str(type(val)))
+                self.raise_exception('incompatible with type '+
+                                     str(type(val), ValueError))
         
         # test against any constraints placed on this variable
         try:
             for con in self._constraints:
                 con.test(val)
         except ConstraintError, err:
-            raise ConstraintError(self.get_pathname()+": "+str(err))
+            self.raise_exception(str(err), ConstraintError)
         
         return val
     
@@ -126,12 +131,12 @@ class Variable(HierarchyMember):
         checked at this time."""
         if not isinstance(variable, type(self)):
             # could try to obtain adapter here...
-            raise TypeError(self.get_pathname()+": assignment to incompatible variable '"+
-                            variable.get_pathname()+"' of type '"+
-                            str(type(variable))+"'")
+            self.raise_exception("assignment to incompatible variable '"+
+                                 variable.get_pathname()+"' of type '"+
+                                 str(type(variable))+"'", TypeError)
         if self.iostatus != INPUT or self.iostatus == variable.iostatus:
-            raise ValueError(self.get_pathname()+' and '+
-                             variable.get_pathname()+' have incompatible iostatus')
+            self.raise_exception('incompatible iostatus with '+
+                                 variable.get_pathname(),ValueError)
 
     def _convert(self, variable):
         """Some Variables, e.g., Float, will need to override this in order to convert units
@@ -146,8 +151,8 @@ class Variable(HierarchyMember):
             self.validate_var(var)
             self.value = self._convert(var)
         else:
-            raise RuntimeError(self.get_pathname()+": cannot assign a Variable to attribute '"+
-                               name+"'")
+            self.raise_exception("cannot assign a Variable to attribute '"+
+                                 name+"'", RuntimeError)
         
     def set(self, name, value):
         """Set the value of the attribute specified by the given name. value is assumed to
@@ -158,14 +163,13 @@ class Variable(HierarchyMember):
         else:  # they're setting an attribute (value, units, etc.)
             setattr(self, name, value)
             
-    def getvar(self, name):
+    def getvar(self, name=None):
         if name is None:
             return self
         else:
-            raise NameError(self.get_pathname()+": '"+name+
-                                            "' is not a Variable object")        
+            self.raise_exception("'"+name+"' is not a Variable object", NameError)        
         
-    def get(self, name):
+    def get(self, name=None):
         """Return the named attribute"""
         if name is None:
             return self.value
@@ -173,7 +177,7 @@ class Variable(HierarchyMember):
             getattr(self, name)
         
     def make_public(self, child):
-        raise NotImplemented('make_public')            
+        self.raise_exception('make_public', NotImplemented)            
             
     def add_observer(self, obs_funct):
         """ Add a function to be called when this variable is modified. The
