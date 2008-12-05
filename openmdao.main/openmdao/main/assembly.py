@@ -134,13 +134,31 @@ class Assembly(Component):
             
         self.workflow.remove_node(getattr(self,name))           
         Component.remove_child(self, name)
-      
+
+    def list_connections(self, fullpath=False):
+        conns = []
+        for comp,inputs in self._connections.items():
+            for inp,outinfo in inputs.items():
+                outcomp = self.getvar(outinfo[0])
+                outvar = outcomp.getvar(outinfo[1])
+                if fullpath is True:
+                    inname = '.'.join([self.getvar(comp).get_pathname(), inp])
+                    outname = outvar.get_pathname()
+                else:
+                    inname = '.'.join([comp, inp])
+                    outname = '.'.join([outcomp.name, outvar.name])
+                conns.append((outname, inname))
+        return conns
+    
+    
+        
+        
     def update_inputs(self, incomp):
         """Transfer input data to the specified component"""
         try:
             deps = self._connections[incomp.name]
         except KeyError:
-            return
+            return  # no connections
         for invarname, outtuple in deps.items():
             invar = incomp.getvar(invarname)
             outvar = self.getvar('.'.join(outtuple[:2]))

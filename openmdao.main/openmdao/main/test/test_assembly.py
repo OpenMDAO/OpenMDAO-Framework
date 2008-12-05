@@ -199,15 +199,15 @@ class ContainerTestCase(unittest.TestCase):
         self.asm.add_child(DummyComp('comp3'))
         self.asm.connect('comp1.rout','comp2.r')
         self.asm.connect('comp3.sout','comp2.s')
-#        conns = self.asm.list_connections(fullpath=True)
-#        self.assertEqual(conns, [('top.comp1.rout','top.comp2.r'),
-#                                 ('top.comp3.sout','top.comp2.s')])
-#        conns = self.asm.list_connections(fullpath=False)
-#        self.assertEqual(conns, [('comp1.rout','comp2.r'),
-#                                 ('comp3.sout','comp2.s')])
+        conns = self.asm.list_connections(fullpath=True)
+        self.assertEqual(conns, [('top.comp3.sout','top.comp2.s'),
+                                 ('top.comp1.rout','top.comp2.r')])
+        conns = self.asm.list_connections(fullpath=False)
+        self.assertEqual(conns, [('comp3.sout','comp2.s'),
+                                 ('comp1.rout','comp2.r')])
         self.asm.remove_child('comp3')
-#        conns = self.asm.list_connections(fullpath=False)
-#        self.assertEqual(conns, [('comp1.rout','comp2.r')])
+        conns = self.asm.list_connections(fullpath=False)
+        self.assertEqual(conns, [('comp1.rout','comp2.r')])
         self.asm.run()
         
         
