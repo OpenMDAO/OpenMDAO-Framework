@@ -6,6 +6,7 @@ from openmdao.main.exceptions import ConstraintError
 from openmdao.main.container import Container
 from openmdao.main.variable import Variable, INPUT, OUTPUT
 from openmdao.main.arrayvar import ArrayVariable
+from openmdao.main.float import Float
 from openmdao.main.interfaces import IVariable
 
 class ArrayVarTestCase(unittest.TestCase):
@@ -34,27 +35,36 @@ class ArrayVarTestCase(unittest.TestCase):
         self.hobj.set('array1', numpy.array([1.,2.,3.,4.,5.]))
         assert(numpy.all(numpy.array([1.,2.,3.,4.,5.])==self.array1.value))
         
+    def test_bad_assignment(self):
+        self.hobj.float1 = 2.1
+        var = Float('var', self.hobj, OUTPUT, ref_name='float1')
+        try:
+            self.hobj.setvar('array1', var)
+        except TypeError,err:
+            self.assertEqual(str(err), "h1.array1: assignment to incompatible variable "+
+                             "'h1.var' of type '<class 'openmdao.main.float.Float'>'")
+        else:
+            self.fail('TypeError expected')
+        try:    
+            self.hobj.set('array1', 'foobar')
+        except ValueError,err:
+            self.assertEqual(str(err), 
+                             "h1.array1: new type 'str'is not compatible with type 'ndarray")
+        else:
+            self.fail('ValueError expected')
+               
     def test_assign_size_violation(self):
         try:
             self.hobj.setvar('array2', self.hobj.getvar('array1out'))
         except ValueError, err:
-            self.assertEqual(str(err), 'h1.array2: expected array of size (2, 3) but got (3,)')
+            self.assertEqual(str(err), 'h1.array2: expected array of size (2, 3) but got (1, 3)')
         else:
             self.fail('ValueError expected')
-            
-        
+                    
     def test_connection(self):
-        return
-        self.float1.validate_var(self.float2)
-        self.float1.units = 'lb/ft^2'
-        self.float2.units = 'kg'
-        try:
-            self.float1.validate_var(self.float2)
-        except TypeError, err:
-            self.assertEqual(str(err),'h1.float2 units (kg) are incompatible'+
-                             ' with units (lb/ft^2) of h1.float1')
-        else:
-            self.fail('TypeError expected')
+        self.hobj.newarray = numpy.array([[12.,34.,56.],[78.,910.,1112.]])
+        newarray = ArrayVariable('newarray',self.hobj, OUTPUT, float)
+        self.hobj.setvar('array2',newarray)
 
 if __name__ == "__main__":
     unittest.main()

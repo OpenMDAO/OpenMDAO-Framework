@@ -31,7 +31,7 @@ class Variable(HierarchyMember):
     implements(IVariable, IContainer)
     
     def __init__(self, name, parent, iostatus, 
-                 val_type=None, ref_name=None, ref_parent=None, default=undefined, desc=None):
+                 val_type=None, ref_name=None, refparent=None, default=undefined, desc=None):
         """Note that Variable calls _pre_assign from here, so if _pre_assign requires any
         attributes from a derived class, those attributes must be set before the Variable
         __init__ function is called.
@@ -44,10 +44,10 @@ class Variable(HierarchyMember):
         else:
             self.ref_name = ref_name
         # the variable can reference an obj inside of some object other than the variable's parent
-        if ref_parent is None:
-            self._ref_parent = parent
+        if refparent is None:
+            self._refparent = parent
         else:
-            self._ref_parent = ref_parent
+            self._refparent = refparent
             
         self.observers = None
         self.permission = None
@@ -59,7 +59,7 @@ class Variable(HierarchyMember):
             self.val_type = val_type
         
         if IContainer.providedBy(parent):
-            val = getattr(self._ref_parent, self.ref_name)
+            val = getattr(self._refparent, self.ref_name)
             parent.make_public(self)
         else:
             raise TypeError("parent of Variable '"+name+"' is not an IContainer")
@@ -71,7 +71,13 @@ class Variable(HierarchyMember):
         else:
             self.default = self._pre_assign(default)
 
-
+    def contains(self, path):
+        try:
+            base, name = path.split('.',1)
+        except ValueError:
+            return hasattr(self, path)
+        return False
+    
     def _set_value(self, var):
         """Assign this Variable's value to the value of another Variable or 
         directly to another value.  Checks validity of the new value before assignment.
@@ -80,14 +86,14 @@ class Variable(HierarchyMember):
         if self.iostatus == OUTPUT:
             raise RuntimeError(self.get_pathname()+
                                'is an OUTPUT Variable and cannot be set.')
-        setattr(self._ref_parent, self.ref_name, self._pre_assign(var))
+        setattr(self._refparent, self.ref_name, self._pre_assign(var))
         if self.observers is not None:
             self._notify_observers()
 
 
     def _get_value(self):
         """"Called when getting the 'value' property."""
-        return getattr(self._ref_parent, self.ref_name)
+        return getattr(self._refparent, self.ref_name)
     
     value = property(_get_value,_set_value)
         
@@ -154,13 +160,16 @@ class Variable(HierarchyMember):
             self.raise_exception("cannot assign a Variable to attribute '"+
                                  name+"'", RuntimeError)
         
-    def set(self, name, value):
+    def set(self, name, value, index=None):
         """Set the value of the attribute specified by the given name. value is assumed to
         be a value and not a Variable object. Assignment to 'value' will force a check
         against any constraints registered with this Variable."""
         if name is None or name == value: # they're setting this Variable
-            self.value = value
-        else:  # they're setting an attribute (value, units, etc.)
+            if index is None:
+                self.value = value
+            else:
+                self.set_entry(value, index)                    
+        else:  # they're setting an attribute (units, etc.)
             setattr(self, name, value)
             
     def getvar(self, name=None):
@@ -169,13 +178,34 @@ class Variable(HierarchyMember):
         else:
             self.raise_exception("'"+name+"' is not a Variable object", NameError)        
         
-    def get(self, name=None):
+    def get(self, name=None, index=None):
         """Return the named attribute"""
         if name is None:
-            return self.value
+            if index is None:
+                return self.value
+            else:
+                return self.get_entry(index)
         else:
-            getattr(self, name)
-        
+            if index is None:
+                return getattr(self, name)
+            else:
+                val = getattr(self, name)
+                for i in index:
+                    val = val[i]
+                return val
+
+    def get_entry(self, index):
+        return self.value[index]
+    
+    def set_entry(self, val, index):
+        tmp = self._pre_assign_entry(val, index)
+        try:
+            self.value[index] = tmp
+        except:
+            self.raise_exception("assigning index "+str(index)+
+                                 " to a value of type "+
+                                 str(type(val))+" failed", ValueError)        
+    
     def make_public(self, child):
         self.raise_exception('make_public', NotImplemented)            
             

@@ -43,7 +43,7 @@ class Container(HierarchyMember):
     def add_child(self, obj, private=False):
         if IContainer.providedBy(obj):
             setattr(self, obj.name, obj)
-            obj._parent = self
+            obj.parent = self
             if private is False:
                 self.make_public(obj)
         else:
@@ -102,7 +102,7 @@ class Container(HierarchyMember):
                     dobj = find_var_class(type(dobj), name, self, iostatus=INPUT)
             
             if IVariable.providedBy(dobj):
-                dobj._parent = self
+                dobj.parent = self
                 self._pub[dobj.name] = dobj
             else:
                 self.raise_exception('no IVariable interface available for the object named '+
@@ -116,7 +116,15 @@ class Container(HierarchyMember):
         """
         del self._pub[name]
 
-        
+    def contains(self, path):
+        try:
+            base, name = path.split('.',1)
+        except ValueError:
+            return path in self._pub
+        if base in self._pub:
+            return self._pub[base].contains(name)
+        return False
+            
     def create(self, type_name, name, version=None, server=None, private=False, res_desc=None):
         """Create a new object of the specified type inside of this
         Container. The object must have a 'name' attribute.
@@ -136,12 +144,15 @@ class Container(HierarchyMember):
         try:
             base, name = path.split('.',1)
         except ValueError:
-            return self._pub[path]
+            try:
+                return self._pub[path]
+            except KeyError:
+                self.raise_exception("object has no attribute '"+path+"'", AttributeError)
 
         return self._pub[base].getvar(name)
         
         
-    def get(self, path):
+    def get(self, path, index=None):
         """Return any public object specified by the given 
         path, which may contain '.' characters.  If the name matches the name of a Variable,
         the value of the Variable will be returned. Attributes of variables may also be 
@@ -154,47 +165,55 @@ class Container(HierarchyMember):
             base, name = path.split('.',1)
         except ValueError:
             try:
-                return self._pub[path].value
+                if index is not None:
+                    return self._pub[path].get_entry(index)
+                else:
+                    return self._pub[path].value
             except KeyError:
                 self.raise_exception("object has no attribute '"+path+"'", AttributeError)
 
-        return self._pub[base].get(name)
+        return self._pub[base].get(name, index)
 
         
-    def set(self, path, value):
+    def set(self, path, value, index=None):
         """Set the value of the data object specified by the 
         given path, which may contain '.' characters.  If path specifies a Variable, then
         its value attribute will be set to the given value, subject to validation and 
         constraints.
         
         """ 
+        assert(isinstance(path,basestring))
         try:
             base, name = path.split('.',1)
         except ValueError:
-            try:
-                self._pub[path].set(None, value)        
-            except AttributeError:
-                self.raise_exception("'"+path+"' is not a framework-accessible object",NameError) 
-            except TypeError:
-                self.raise_exception("'"+str(path)+"' not a framework-accessible object", 
-                                     NameError)
-        else:    
-            self._pub[base].set(name, value)
+            base = path
+            name = None
+           
+        try:
+            obj = self._pub[base]
+        except KeyError:
+            self.raise_exception("object has no attribute '"+base+"'", AttributeError)
+        except TypeError:
+            self.raise_exception("object has no attribute '"+str(base)+"'", AttributeError)
+            
+        obj.set(name, value, index)        
 
 
     def setvar(self, path, variable):
         try:
             base, name = path.split('.',1)
         except ValueError:
-            try:
-                self._pub[path].setvar(None, variable)        
-            except AttributeError:
-                self.raise_exception("'"+path+"' not a framework-accessible object", NameError) 
-            except TypeError:
-                self.raise_exception("'"+str(path)+"' not a framework-accessible object",
-                                     NameError)
-        else:    
-            self._pub[base].setvar(name, variable)
+            base = path
+            name = None
+        try:
+            obj = self._pub[base]
+        except KeyError:
+            self.raise_exception("object has no attribute '"+
+                                 base+"'", AttributeError)
+        except TypeError:
+            self.raise_exception("object has no attribute '"+
+                                 str(base)+"'", AttributeError)
+        obj.setvar(name, variable)        
         
     def get_objs(self, iface, recurse=False, **kwargs):
         """Return a list of objects with the specified interface that

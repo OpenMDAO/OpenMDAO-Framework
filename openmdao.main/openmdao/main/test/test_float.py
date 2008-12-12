@@ -54,7 +54,7 @@ class FloatTestCase(unittest.TestCase):
         else:
             self.fail('ConstraintError exception')
 
-    def test_connection(self):
+    def test_bad_connection(self):
         self.float1.validate_var(self.float2)
         self.float1.units = 'lb/ft^2'
         self.float2.units = 'kg'

@@ -59,8 +59,8 @@ class Component (Container):
     
     def pre_execute (self):
         """update input variables and anything else needed prior to execution."""
-        if self._parent is not None and IAssembly.providedBy(self._parent):
-            self._parent.update_inputs(self)
+        if self.parent is not None and IAssembly.providedBy(self.parent):
+            self.parent.update_inputs(self)
     
     def execute (self):
         """Perform calculations or other actions, assuming that inputs have already been set. 

@@ -15,7 +15,7 @@ class StringList(Variable):
     
     def __init__(self, name, parent, iostatus, ref_name=None, 
                  default=None, desc=None, min_length=None, max_length=None):
-        Variable.__init__(self, parent, name, iostatus, val_type=list, 
+        Variable.__init__(self, name, parent, iostatus, val_type=list, 
                           ref_name=ref_name, 
                           default=default, desc=desc)
         if min_length is not None:

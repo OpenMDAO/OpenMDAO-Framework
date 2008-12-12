@@ -15,7 +15,7 @@ class Int(Variable):
     
     def __init__(self, name, parent, iostatus, ref_name=None, 
                  default=None, desc=None, min_limit=None, max_limit=None):
-        Variable.__init__(self, parent, name, iostatus, val_type=[int,long], ref_name=ref_name, 
+        Variable.__init__(self, name, parent, iostatus, val_type=[int,long], ref_name=ref_name, 
                           default=default, desc=desc)
         if min_limit is not None:
             self.min_constraint = MinConstraint(min_limit)

@@ -36,8 +36,8 @@ class ContainerTestCase(unittest.TestCase):
             foo.add_child(non_container)
         except TypeError, err:
             self.assertEqual(str(err),"foo: '<type 'str'>' object has does not provide the IContainer interface")
-            return
-        self.fail('exception expected')
+        else:
+            self.fail('TypeError expected')
         
     def test_pathname(self):
         foo = Container('foo', None)
@@ -55,8 +55,32 @@ class ContainerTestCase(unittest.TestCase):
             obj = self.root.get('bogus')
         except AttributeError, err:
             self.assertEqual(str(err),"root: object has no attribute 'bogus'")
-            return
-        self.fail('bogus object get did not raise exception')
+        else:
+            self.fail('AttributeError expected')
+
+    def test_bad_set(self):
+        try:
+            obj = self.root.set('bogus', 99)
+        except AttributeError, err:
+            self.assertEqual(str(err),"root: object has no attribute 'bogus'")
+        else:
+            self.fail('AttributeError expected')
+
+    def test_bad_getvar(self):
+        try:
+            obj = self.root.getvar('bogus')
+        except AttributeError, err:
+            self.assertEqual(str(err),"root: object has no attribute 'bogus'")
+        else:
+            self.fail('AttributeError expected')
+
+    def test_bad_setvar(self):
+        try:
+            obj = self.root.setvar('bogus', 99)
+        except AttributeError, err:
+            self.assertEqual(str(err),"root: object has no attribute 'bogus'")
+        else:
+            self.fail('AttributeError expected')
 
 
     def test_get_objs(self):
@@ -69,11 +93,11 @@ class ContainerTestCase(unittest.TestCase):
         names = [x.get_pathname() for x in objs]
         self.assertEqual(names, ['root.c1', 'root.c2'])
         
-        objs = self.root.get_objs(IContainer, recurse=True, _parent=self.root)
+        objs = self.root.get_objs(IContainer, recurse=True, parent=self.root)
         names = [x.get_pathname() for x in objs]
         self.assertEqual(names, ['root.c1', 'root.c2'])        
 
-        objs = self.root.get_objs(IContainer, recurse=True, _parent=self.root.get('c2'))
+        objs = self.root.get_objs(IContainer, recurse=True, parent=self.root.get('c2'))
         names = [x.get_pathname() for x in objs]
         self.assertEqual(names, ['root.c2.c21', 'root.c2.c22'])        
 
@@ -86,10 +110,10 @@ class ContainerTestCase(unittest.TestCase):
         names = self.root.get_names(IContainer)
         self.assertEqual(names, ['root.c1', 'root.c2'])
         
-        names = self.root.get_names(IContainer, recurse=True, _parent=self.root)
+        names = self.root.get_names(IContainer, recurse=True, parent=self.root)
         self.assertEqual(names, ['root.c1', 'root.c2'])        
 
-        names = self.root.get_names(IContainer, recurse=True, _parent=self.root.get('c2'))
+        names = self.root.get_names(IContainer, recurse=True, parent=self.root.get('c2'))
         self.assertEqual(names, ['root.c2.c21', 'root.c2.c22'])        
 
 

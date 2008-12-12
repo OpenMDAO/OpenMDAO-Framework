@@ -18,35 +18,52 @@ class ContainerVariable(Variable):
         Variable.__init__(self, name, parent, iostatus, ref_name=ref_name, 
                           default=default, desc=desc)
 
-
     def getvar(self, path):
         if path is None:
             return self
-        container = getattr(self._parent, self.ref_name)
+        container = getattr(self.parent, self.ref_name)
         return container.getvar(path)
 
-
-    def get(self, path):
+    def get(self, path, index=None):
         if path is None:
-            return self.value
+            val = self.value
+            if index is None:
+                return val
+            for i in index:
+                val = val[i]
+            return val
         try:
-            return getattr(self, path)
+            if index is None:
+                return getattr(self, path)
+            else:
+                val = getattr(self, path)
+                for i in index:
+                    val = val[i]
+                return val
         except:
-            container = getattr(self._parent, self.ref_name)
-            return container.get(path)
+            container = getattr(self.parent, self.ref_name)
+            return container.get(path, index)
 
 
-    def set(self, path, value):
-        if path is None:
+    def set(self, path, value, index=None):
+        if path is None and index is None:
             val = self._pre_assign(value)
             newcont = copy.deepcopy(val)
             newcont.name = self.name
-            newcont._parent = self._parent
-            setattr(self._parent, self.ref_name, newcont)  # this will replace the container
+            newcont.parent = self.parent
+            setattr(self.parent, self.ref_name, newcont)  # this will replace the container
             return
         
-        container = getattr(self._parent, self.ref_name)
-        container.set(path, value)
+        container = getattr(self.parent, self.ref_name)
+        container.set(path, value, index)
 
+    def contains(self, path):
+        try:
+            base, name = path.split('.',1)
+        except ValueError:
+            if hasattr(self, path):
+                return True
+        container = getattr(self.parent, self.ref_name)
+        return container.contains(path)
 
 add_var_type_map(ContainerVariable, Container)

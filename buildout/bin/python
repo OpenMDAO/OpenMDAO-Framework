@@ -3,6 +3,8 @@ import sys
     
 sys.path[0:0] = [
   '/home/bnaylor/OpenMDAO/developers/bnaylor/T001-my_feature/openmdao.main',
+  '/home/bnaylor/OpenMDAO/developers/bnaylor/T001-my_feature/buildout/eggs/numpy-1.2.1-py2.5-linux-x86_64.egg',
+  '/home/bnaylor/OpenMDAO/developers/bnaylor/T001-my_feature/buildout/eggs/pyparsing-1.5.1-py2.5.egg',
   '/home/bnaylor/OpenMDAO/developers/bnaylor/T001-my_feature/buildout/eggs/setuptools-0.6c9-py2.5.egg',
   ]
 

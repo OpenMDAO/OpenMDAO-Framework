@@ -1,14 +1,13 @@
 """
-A driver is used to run a workflow in an assembly.
+A CONMIN based driver.
 """
 
 #public symbols
-__all__ = ["COBYLA"]
+__all__ = []
 
 __version__ = "0.1"
 
 
-from scipy.optimize.cobyla import fmin_cobyla
 from pyparsing import ParseException
 
 from openmdao.main.driver import Driver
