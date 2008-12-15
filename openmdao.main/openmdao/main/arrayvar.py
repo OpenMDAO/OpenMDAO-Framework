@@ -6,6 +6,7 @@ __version__ = "0.1"
 import numpy
 
 from openmdao.main.variable import Variable, undefined
+from openmdao.main.vartypemap import add_var_type_map
 
 class ArrayVariable(Variable):
     """A Variable object that wraps a numpy array."""
@@ -79,4 +80,5 @@ class ArrayVariable(Variable):
             self.raise_exception("assigning index "+str(index)+
                                  " to a value of type "+
                                  str(type(val))+" failed", ValueError)        
-            
+
+add_var_type_map(ArrayVariable, numpy.ndarray)

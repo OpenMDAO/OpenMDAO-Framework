@@ -18,7 +18,7 @@ from openmdao.main.string import String
 from openmdao.main.stringlist import StringList
 from openmdao.main.int import Int
 from openmdao.main.variable import INPUT
-from openmdao.main.transext import translate_expr
+from openmdao.main.transexpr import translate_expr
 
 # if our globals dict doesn't contain __builtins__, python will 
 # copy current global dict into it

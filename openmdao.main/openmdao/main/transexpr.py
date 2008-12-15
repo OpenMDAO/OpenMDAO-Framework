@@ -21,7 +21,7 @@ def _trans_unary(s, loc, tok):
     return tok
 
     
-def _trans_rhs(s, loc, tok, scope):
+def _trans_lhs(s, loc, tok, scope):
     if scope.contains(tok[0]):
         scname = 'self'
     else:
@@ -31,7 +31,7 @@ def _trans_rhs(s, loc, tok, scope):
                           " so a public value in the parent is"+
                           " being used instead (if found)")
     
-    full = scname + ".set('" + tok[0] + "',_@LHS@_"
+    full = scname + ".set('" + tok[0] + "',_@RHS@_"
     if len(tok) > 1:
         full += ","+tok[1]
             
@@ -39,7 +39,7 @@ def _trans_rhs(s, loc, tok, scope):
     
 def _trans_assign(s, loc, tok, scope):
     if tok[0] == '=':
-        return [tok[1].replace('_@LHS@_',tok[2],1)]
+        return [tok[1].replace('_@RHS@_',tok[2],1)]
     else:
         return tok
     
@@ -149,10 +149,10 @@ def translate_expr(text, scope):
     term = factor + ZeroOrMore( ( multop + factor ) )
     expr << term + ZeroOrMore( ( addop + term ) )
     
-    rhs_fancyname = pathname + ZeroOrMore(arrayindex)
-    rhs = rhs_fancyname + assignop
-    rhs.setParseAction(lambda s,loc,tok: _trans_rhs(s,loc,tok,scope))
-    equation = Optional(rhs) + expr + StringEnd()
+    lhs_fancyname = pathname + ZeroOrMore(arrayindex)
+    lhs = lhs_fancyname + assignop
+    lhs.setParseAction(lambda s,loc,tok: _trans_lhs(s,loc,tok,scope))
+    equation = Optional(lhs) + Combine(expr) + StringEnd()
     equation.setParseAction(lambda s,loc,tok: _trans_assign(s,loc,tok,scope))
     
     try:

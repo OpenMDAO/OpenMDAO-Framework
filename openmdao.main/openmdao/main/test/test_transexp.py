@@ -1,7 +1,7 @@
 
 import numpy
 
-from openmdao.main.transext import translate_expr
+from openmdao.main.transexpr import translate_expr
 from openmdao.main.container import Container
 from openmdao.main.component import Component
 from openmdao.main.variable import INPUT
@@ -41,6 +41,7 @@ tests = [
 ('b[0]',"b[0]"),
 ('b[-3]',"b[-3]"),
 ('comp.x[0]',"self.parent.get('comp.x',[0])"),
+('comp.x[0] = 10.-(3.2*b[3]+1.1*b[2])', "self.parent.set('comp.x',3.2*b[3],[0])"),
 ('c.b[2] = -comp.x',"self.parent.set('c.b',-self.parent.get('comp.x'),[2])"),
 ]
 

@@ -135,23 +135,6 @@ class Container(HierarchyMember):
         self.add_child(obj, private)
         return obj
 
-    def getvar(self, path):
-        """Return the public Variable specified by the given 
-        path, which may contain '.' characters.  Only returns Variables, not attributes or
-        other Containers.
-        """
-        assert(isinstance(path,basestring))
-        try:
-            base, name = path.split('.',1)
-        except ValueError:
-            try:
-                return self._pub[path]
-            except KeyError:
-                self.raise_exception("object has no attribute '"+path+"'", AttributeError)
-
-        return self._pub[base].getvar(name)
-        
-        
     def get(self, path, index=None):
         """Return any public object specified by the given 
         path, which may contain '.' characters.  If the name matches the name of a Variable,
@@ -170,11 +153,28 @@ class Container(HierarchyMember):
                 else:
                     return self._pub[path].value
             except KeyError:
-                self.raise_exception("object has no attribute '"+path+"'", AttributeError)
+                self.raise_exception("object has no public attribute '"+path+"'", AttributeError)
 
         return self._pub[base].get(name, index)
 
+    
+    def getvar(self, path):
+        """Return the public Variable specified by the given 
+        path, which may contain '.' characters.  Only returns Variables, not attributes or
+        other Containers.
+        """
+        assert(isinstance(path,basestring))
+        try:
+            base, name = path.split('.',1)
+        except ValueError:
+            try:
+                return self._pub[path]
+            except KeyError:
+                self.raise_exception("object has no attribute '"+path+"'", AttributeError)
+
+        return self._pub[base].getvar(name)
         
+                
     def set(self, path, value, index=None):
         """Set the value of the data object specified by the 
         given path, which may contain '.' characters.  If path specifies a Variable, then
@@ -192,9 +192,9 @@ class Container(HierarchyMember):
         try:
             obj = self._pub[base]
         except KeyError:
-            self.raise_exception("object has no attribute '"+base+"'", AttributeError)
+            self.raise_exception("object has no public attribute '"+base+"'", AttributeError)
         except TypeError:
-            self.raise_exception("object has no attribute '"+str(base)+"'", AttributeError)
+            self.raise_exception("object has no public attribute '"+str(base)+"'", AttributeError)
             
         obj.set(name, value, index)        
 

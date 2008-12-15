@@ -1,0 +1,12 @@
+setup.cfg
+setup.py
+conmindriver/__init__.py
+conmindriver/cmtest.py
+conmindriver/conmin.py
+conmindriver/conmindriver.py
+conmindriver.egg-info/PKG-INFO
+conmindriver.egg-info/SOURCES.txt
+conmindriver.egg-info/dependency_links.txt
+conmindriver.egg-info/entry_points.txt
+conmindriver.egg-info/not-zip-safe
+conmindriver.egg-info/top_level.txt
