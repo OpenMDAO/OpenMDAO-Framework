@@ -6,12 +6,14 @@ the result would be self.parent.get('a.b',[2+x]).
 """
 
 #public symbols
-__all__ = ["translate_expr"]
+__all__ = ["ExprEvaluator"]
 
 __version__ = "0.1"
 
 
 #from __future__ import division
+
+import weakref
 
 from pyparsing import Word,Group,ZeroOrMore,OneOrMore,Literal,CaselessLiteral,Each
 from pyparsing import oneOf,alphas,nums,alphanums,quotedString,Optional,Combine,Forward,StringEnd
@@ -23,9 +25,9 @@ def _trans_unary(s, loc, tok):
     
 def _trans_lhs(s, loc, tok, scope):
     if scope.contains(tok[0]):
-        scname = 'self'
+        scname = 'scope'
     else:
-        scname = 'self.parent'
+        scname = 'scope.parent'
         if hasattr(scope,tok[0]):
             scope.warning("attribute '"+tok[0]+"' is private"+
                           " so a public value in the parent is"+
@@ -66,11 +68,11 @@ def _trans_fancyname(s, loc, tok, scope):
     # if we find the named object in the current scope, then we don't need to 
     # do any translation.  The scope object is assumed to have a contains() function.
     if scope.contains(tok[0]):
-        scname = 'self'
+        scname = 'scope'
         if hasattr(scope,tok[0]):
             return tok  # use name unmodified for faster local access
     else:
-        scname = 'self.parent'
+        scname = 'scope.parent'
         if hasattr(scope,tok[0]):
             scope.warning("attribute '"+tok[0]+"' is private"+
                           " so a public value in the parent is"+
@@ -160,3 +162,24 @@ def translate_expr(text, scope):
     except ParseException, err:
         raise RuntimeError(str(err)+' - '+err.markInputline())
 
+    
+class ExprEvaluator(object):
+    def __init__(self, text, scope):
+        self.scope = weakref.ref(scope)
+        self.set_text(text)
+    
+    def set_text(self, text):
+        self.text = text
+        self.scoped_text = translate_expr(text, self.scope())
+        self._code = compile(text,'<string>','eval')
+        
+    def evaluate(self, scope=None):
+        if scope is None:
+            scope = self.scope()
+        if scope is None:
+            raise RuntimeError('ExprEvaluator cannot evaluate expression without scope.')
+        
+        return eval(self._code, self.scope().__dict__, locals())
+
+    
+    

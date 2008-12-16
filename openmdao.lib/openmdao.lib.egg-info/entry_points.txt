@@ -1,3 +1,4 @@
 
-      # -*- Entry points: -*-
+      [openmdao.drivers]
+      conmindrv = openmdao.lib.conmindriver.CONMINdriver
       

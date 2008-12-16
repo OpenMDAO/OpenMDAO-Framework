@@ -31,3 +31,7 @@ buildout/distrib-cache/dist/openmdao.main-0.1-py2.5.egg
 buildout/distrib-cache/dist/setuptools-0.6c9-py2.5.egg
 openmdao.main/.coverage
 openmdao.test/openmdao.test.egg-info
+../eggsrc/conmin/build
+../eggsrc/conmin/dist
+../eggsrc/conmin/build
+eggsrc/conmin/build

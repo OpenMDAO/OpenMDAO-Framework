@@ -153,7 +153,7 @@ class Container(HierarchyMember):
                 else:
                     return self._pub[path].value
             except KeyError:
-                self.raise_exception("object has no public attribute '"+path+"'", AttributeError)
+                self.raise_exception("object has no attribute '"+path+"'", AttributeError)
 
         return self._pub[base].get(name, index)
 
@@ -192,9 +192,9 @@ class Container(HierarchyMember):
         try:
             obj = self._pub[base]
         except KeyError:
-            self.raise_exception("object has no public attribute '"+base+"'", AttributeError)
+            self.raise_exception("object has no attribute '"+base+"'", AttributeError)
         except TypeError:
-            self.raise_exception("object has no public attribute '"+str(base)+"'", AttributeError)
+            self.raise_exception("object has no attribute '"+str(base)+"'", AttributeError)
             
         obj.set(name, value, index)        
 

@@ -1,5 +1,4 @@
 README.txt
-setup.cfg
 setup.py
 openmdao/__init__.py
 openmdao.lib.egg-info/PKG-INFO
@@ -11,3 +10,4 @@ openmdao.lib.egg-info/not-zip-safe
 openmdao.lib.egg-info/requires.txt
 openmdao.lib.egg-info/top_level.txt
 openmdao/lib/__init__.py
+openmdao/lib/conmindriver.py

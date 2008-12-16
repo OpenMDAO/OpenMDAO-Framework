@@ -22,11 +22,14 @@ setup(name='openmdao.lib',
       namespace_packages=['openmdao'],
       include_package_data=True,
       zip_safe=False,
+      test_suite='nose.collector',
       install_requires=[
           'setuptools',
-          # -*- Extra requirements: -*-
+          'openmdao.main',
+          'numpy',
       ],
       entry_points="""
-      # -*- Entry points: -*-
+      [openmdao.drivers]
+      conmindrv = openmdao.lib.conmindriver.CONMINdriver
       """,
       )

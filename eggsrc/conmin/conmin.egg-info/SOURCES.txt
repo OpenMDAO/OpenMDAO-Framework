@@ -1,0 +1,10 @@
+conmin.f
+setup.py
+conmin/__init__.py
+conmin.egg-info/PKG-INFO
+conmin.egg-info/SOURCES.txt
+conmin.egg-info/dependency_links.txt
+conmin.egg-info/native_libs.txt
+conmin.egg-info/not-zip-safe
+conmin.egg-info/requires.txt
+conmin.egg-info/top_level.txt

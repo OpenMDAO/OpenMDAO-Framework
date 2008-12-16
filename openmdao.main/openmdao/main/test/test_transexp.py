@@ -41,7 +41,7 @@ tests = [
 ('b[0]',"b[0]"),
 ('b[-3]',"b[-3]"),
 ('comp.x[0]',"self.parent.get('comp.x',[0])"),
-('comp.x[0] = 10.-(3.2*b[3]+1.1*b[2])', "self.parent.set('comp.x',3.2*b[3],[0])"),
+('comp.x[0] = 10.-(3.2*b[3]+1.1*b[2])', "self.parent.set('comp.x',10.-(3.2*b[3]+1.1*b[2]),[0])"),
 ('c.b[2] = -comp.x',"self.parent.set('c.b',-self.parent.get('comp.x'),[2])"),
 ]
 

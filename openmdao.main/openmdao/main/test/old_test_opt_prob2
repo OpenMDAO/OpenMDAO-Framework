@@ -1,0 +1,95 @@
+import unittest
+import numpy
+
+from openmdao.main.component import Component
+from openmdao.main.assembly import Assembly
+from openmdao.lib.conmindriver import CONMINdriver
+from openmdao.main.arrayvar import ArrayVariable
+from openmdao.main.variable import INPUT,OUTPUT
+from openmdao.main.float import Float
+
+# we need to add the ImportFactory to the factorymanager to be able to find plugin modules
+import openmdao.main.factorymanager as factorymanager
+from openmdao.main.importfactory import ImportFactory
+factorymanager.register_factory(ImportFactory())
+
+# we need to find a better way to bootstrap the var to type map
+import openmdao.main.containervar
+
+class OptTest1Component(Component):
+    """
+    Test problem 1 from chapter 2 of "A Collection of Test Problems
+    for Constrained Global Optimization Algorithms" by C.A. Floudas
+    and P.M. Pardalos.
+    
+    Minimize f(x) = c*x - 0.5*transpose(x)*Q*x
+
+    subject to:
+      20*x[0] + 12*x[1] +11*x[2] + 7*x[3] + 4*x[4] <= 40
+                                         0 <= x[i] <=  1
+                                
+    where
+       c = [42, 44, 45, 47, 47.5]
+       Q = 100*I
+       
+    Global solution:
+          x_opt = [1,1,0,1,0]
+       f(x_opt) = -17
+    """
+    Q = 100*numpy.eye(5)
+    c = numpy.mat([42.,44.,45.,47.,47.5])
+    
+    def __init__(self, name, parent=None, desc=None):
+        Component.__init__(self, name, parent, desc)
+        self.x = numpy.mat([1.,1.,0.,1.,0.],dtype=float).T
+        self.result = 0.
+        
+        # declare public Variables
+        ArrayVariable('x',self,iostatus=INPUT,entry_type=float)
+        Float('result',self,iostatus=OUTPUT)
+
+    def execute(self):
+        self.result = (self.c*self.x - 0.5*self.x.T*self.Q*self.x)[0,0]
+        
+    def opt_objective(self):
+        """the optimal objective value"""
+        return -17.
+    
+    def opt_design_vars(self):
+        """design variable values at the optimum"""
+        return [1., 1., 0., 1., 0.]
+    
+        
+class CONMINdriverTestCase(unittest.TestCase):
+
+    def setUp(self):
+        pass
+    
+    def teardown(self):
+        pass
+    
+    def test_opt1(self):
+        top = Assembly('top',None)
+        comp = OptTest1Component('comp', top)
+        top.add_child(comp)
+        top.workflow.add_node(comp)
+        top.add_child(CONMINdriver('driver'))
+        top.driver.iprint = 0
+        top.driver.objective = 'comp.result'
+        top.driver.maxiters = 300
+        top.driver.design_vars = ['comp.x[0,0]','comp.x[1,0]','comp.x[2,0]',
+                                  'comp.x[3,0]','comp.x[4,0]']
+        top.driver.constraints = [
+            '40.-(20.*design_vals[0]+12.*design_vals[1]+11.*design_vals[2]+'+
+            '7.*design_vals[3]+4.*design_vals[4])']
+        top.driver.upper_bounds = [1.,1.,1.,1.,1.]
+        top.driver.lower_bounds = [0.,0.,0.,0.,0.]
+        top.run()
+        self.assertAlmostEqual(-17, top.driver.objective_val)
+
+    
+
+
+
+    
+    
