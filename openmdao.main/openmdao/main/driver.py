@@ -27,9 +27,13 @@ class Driver(Component):
         """ Run the assembly by invoking run() on the workflow. """
         self.state = STATE_WAITING
         status = self.parent.workflow.run()
-        self.state = STATE_RUNNING
+        #self.state = STATE_RUNNING
         return status
 
+    def step(self):
+        """Execute a single step"""
+        return self.parent.workflow.step()
+        
         
     def stop(self):
         """ Stop the assembly by stopping the workflow. """

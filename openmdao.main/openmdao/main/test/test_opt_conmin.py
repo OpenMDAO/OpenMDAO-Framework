@@ -43,7 +43,7 @@ class OptRosenSuzukiComponent(Component):
     """
     
     def __init__(self, name, parent=None, desc=None):
-        Component.__init__(self, name, parent, desc)
+        super(OptRosenSuzukiComponent, self).__init__(name, parent, desc)
         self.x = numpy.array([1.,1.,1.,1.],dtype=float)
         self.result = 0.
         ArrayVariable('x',self,iostatus=INPUT,entry_type=float)
@@ -74,11 +74,12 @@ class CONMINdriverTestCase(unittest.TestCase):
         
         top.driver.iprint = 0
         top.driver.objective = 'comp.result'
-        top.driver.maxiters = 300
+        top.driver.maxiters = 30
         top.driver.design_vars = ['comp.x[0]','comp.x[1]','comp.x[2]','comp.x[3]']
-        top.driver.constraints = ['comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
-                                  'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
-                                  '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
+        top.driver.constraints = [
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
         top.run()
         self.assertAlmostEqual(top.comp.opt_objective, top.driver.objective_val, places=2)
         self.assertAlmostEqual(top.comp.opt_design_vars[0], top.comp.x[0], places=1)
@@ -87,6 +88,11 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(top.comp.opt_design_vars[3], top.comp.x[3], places=1)
 
     
+if __name__ == "__main__":
+    unittest.main()
+    #suite = unittest.TestLoader().loadTestsFromTestCase(ContainerTestCase)
+    #unittest.TextTestRunner(verbosity=2).run(suite)    
+
 
 
 

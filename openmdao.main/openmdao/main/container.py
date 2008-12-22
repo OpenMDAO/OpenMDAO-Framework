@@ -12,6 +12,9 @@ __all__ = ["Container"]
 __version__ = "0.1"
 
 import copy
+import pickle
+import cPickle
+import yaml
 import weakref
 # the following is a monkey-patch to correct a problem with copying/deepcopying weakrefs
 # There is an issue in the python issue tracker regarding this, but it isn't fixed yet.
@@ -279,4 +282,12 @@ class Container(HierarchyMember):
         classes generally won't need to override this, but extensions will. 
         The format can be supplied in case something other than cPickle is 
         needed."""
-        raise NotImplementedError('load')
+        if format is constants.SAVE_CPICKLE:
+            return cPickle.load(instream)
+        elif format is constants.SAVE_PICKLE:
+            return pickle.load(instream)
+        elif format is constants.SAVE_YAML:
+            return yaml.load(instream)
+        else:
+            raise RuntimeError('cannot load object using format '+str(format))
+        

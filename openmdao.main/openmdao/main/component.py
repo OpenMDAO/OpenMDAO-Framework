@@ -13,9 +13,8 @@ __version__ = "0.1"
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IComponent, IAssembly, IVariable
+from openmdao.main.interfaces import IComponent, IAssembly
 from openmdao.main.container import Container
-from openmdao.main.variable import OUTPUT
 import openmdao.main.constants as constants
 
 # Execution states.
@@ -42,6 +41,7 @@ class Component (Container):
         
         self.state = STATE_IDLE
         self._stop = False
+        self._input_changed = True
 
 #    def add_socket (self, name, iface, desc=''):
 #        """Specify a named placeholder for a component with the given
@@ -59,8 +59,7 @@ class Component (Container):
     
     def pre_execute (self):
         """update input variables and anything else needed prior to execution."""
-        if self.parent is not None and IAssembly.providedBy(self.parent):
-            self.parent.update_inputs(self)
+        pass
     
     def execute (self):
         """Perform calculations or other actions, assuming that inputs have already been set. 
@@ -76,6 +75,8 @@ class Component (Container):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
         """
+        if self.parent is not None and IAssembly.providedBy(self.parent):
+            self.parent.update_inputs(self)
         self.pre_execute()
         self.state = STATE_RUNNING
         status = self.execute()
@@ -115,7 +116,7 @@ class Component (Container):
         compute any gradients of the requested varname, it can just return
         None.
         """
-        raise NotImplementedError('require_gradients')
+        return None
 
     def require_hessians (self, varname, deriv_vars):
         """Requests that the component be able to provide (after execution)
@@ -136,6 +137,6 @@ class Component (Container):
           3) None, which means the the component cannot compute any values
              of the hessian.
              """
-        raise NotImplementedError('require_hessians')
+        return None
     
     

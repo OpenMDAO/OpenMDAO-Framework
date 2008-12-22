@@ -37,21 +37,17 @@ class CONMINdriver(Driver):
         Driver.__init__(self, name, parent, desc)
         self._first = True
         self._design_vars = []
-        self._design_vars_code = []
-        self._design_vars_set_code = []
         self.design_vals = numarray.zeros(0,'d')
         self._lower_bounds = numarray.zeros(0,'d')
         self._upper_bounds = numarray.zeros(0,'d')
         self._constraints = []
-        self._constraints_code = []
         self.constraint_vals = numarray.zeros(0,'d')
         self._objective = None
-        self.objective_code = None
         self.objective_val = 0.
         self.iprint = 0
         self.maxiters = 40
         self.gradients = None
-        # ???this really needs to be a copy
+        # ??? this really needs to be a copy (see conmin user's guide for how to save state)
         self.cnmn1 = conmin.cnmn1
         
         StringList('design_vars', self, INPUT)
@@ -65,29 +61,24 @@ class CONMINdriver(Driver):
         
     def _set_desvars(self, dv):
         self._first = True
-        self._design_vars_code = []
         self._design_vars = []
+        self._design_var_setters = []
         for i,desvar in enumerate(dv):
             try:
-                text = translate_expr(desvar, self)
+                self._design_vars.append(ExprEvaluator(desvar, self))
             except RuntimeError, err:
                 self.raise_exception("design variable '"+str(desvar)+
                                      "' is invalid", RuntimeError)
-            code = compile(text,'<string>','eval')
-            self._design_vars_code.append(code)
             
             # now create an expression to set each design variable to
             # the corresponding value in self.design_vals
             setter = desvar+'=design_vals['+str(i)+']'
             try:
-                text = translate_expr(setter, self)
+                self._design_var_setters.append(ExprEvaluator(setter, self))
             except RuntimeError, err:
                 self.raise_exception("expression '"+str(setter)+
                                      "' is invalid", RuntimeError)
-            code = compile(text,'<string>','eval')
-            self._design_vars_set_code.append(code)
             
-        self._design_vars = dv
         self.design_vals = numarray.zeros(len(dv)+2,'d')
         if self.upper_bounds.size != self.design_vals.size:
             self._upper_bounds = numarray.array([1.e99 for x in self.design_vals])
@@ -102,22 +93,19 @@ class CONMINdriver(Driver):
         self.s = numarray.zeros(len(dv)+2,'d')      
         
     def _get_desvars(self):
-        return self._design_vars
+        return [x.text for x in self._design_vars]
         
     design_vars = property(_get_desvars, _set_desvars)
         
     def _set_constraints(self, cons):
         self._first = True
-        self._constraints_code = []
         self._constraints = []
         for constraint in cons:
             try:
-                text = translate_expr(constraint, self)
+                self._constraints.append(ExprEvaluator(constraint, self))
             except RuntimeError, err:
                 raise RuntimeError("constraint '"+str(constraint)+"' is invalid")
-            code = compile(text,'<string>','eval')
-            self._constraints_code.append(code)
-        self._constraints = cons
+            
         length = len(cons)+2*len(self.design_vals)
         self.constraint_vals = numarray.zeros(length,'d')
         self.g1 = numarray.zeros(length,'d') # temp storage of constraint and des vals
@@ -128,24 +116,24 @@ class CONMINdriver(Driver):
         self.cons_is_linear = numarray.zeros(length,'i') 
         
     def _get_constraints(self):
-        return self._constraints
+        return [x.text for x in self._constraints]
         
     constraints = property(_get_constraints, _set_constraints)
     
     
     def _set_objective(self, obj):
         self._first = True
-        self._objective_code = None
         self._objective = None
         try:
-            text = translate_expr(obj, self)
+            self._objective = ExprEvaluator(obj, self)
         except RuntimeError, err:
             raise RuntimeError("objective '"+str(obj)+"' is invalid")
-        self._objective_code = compile(text,'<string>','eval')
-        self._objective = obj
         
     def _get_objective(self):
-        return self._objective
+        if self._objective is None:
+            return None
+        else:
+            return self._objective.text
         
     objective = property(_get_objective, _set_objective)
 
@@ -190,9 +178,9 @@ class CONMINdriver(Driver):
         self.parent.workflow.run()
         
         # get the initial values of the design variables
-        for i,code in enumerate(self._design_vars_code):
-            self.design_vals[i] = eval(code)
-        self.objective_val = eval(self._objective_code)
+        for i,dv in enumerate(self._design_vars):
+            self.design_vals[i] = dv.evaluate()
+        self.objective_val = self._objective.evaluate()
             
         # loop until optimized
         while conmin.cnmn1.igoto or self._first is True:
@@ -221,18 +209,18 @@ class CONMINdriver(Driver):
                                      NotImplementedError)
         
     def update_objective_val(self):
-        if self._objective_code is None:
+        if self._objective is None:
             self.raise_exception('No objective has been set',RuntimeError)
         else:
-            self.objective_val = eval(self._objective_code, self.__dict__, locals())
+            self.objective_val = self._objective.evaluate()
                
     def update_constraint_vals(self):
-        for i,code in enumerate(self._constraints_code):
-            self.constraint_vals[i] = eval(code, self.__dict__, locals())
+        for i,con in enumerate(self._constraints):
+            self.constraint_vals[i] = con.evaluate()
             
     def update_design_variables(self):
-        for code in self._design_vars_set_code:
-            eval(code, self.__dict__, locals())
+        for dv in self._design_var_setters:
+            dv.evaluate()
 
     def _config_conmin(self):
         self.cnmn1.ndv = len(self._design_vars)

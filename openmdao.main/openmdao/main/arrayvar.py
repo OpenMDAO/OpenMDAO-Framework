@@ -5,7 +5,7 @@ __version__ = "0.1"
 
 import numpy
 
-from openmdao.main.variable import Variable, undefined
+from openmdao.main.variable import Variable, UNDEFINED
 from openmdao.main.vartypemap import add_var_type_map
 
 class ArrayVariable(Variable):
@@ -13,7 +13,7 @@ class ArrayVariable(Variable):
 
     def __init__(self, name, parent, iostatus, entry_type=float, 
                  fixed_size=None, num_dims=None, ref_name=None, 
-                 default=undefined, desc=None):
+                 default=UNDEFINED, desc=None):
         self.dtype = numpy.dtype(entry_type)
         self.fixed_size = fixed_size
         self.numdims = num_dims
@@ -42,7 +42,7 @@ class ArrayVariable(Variable):
         try:
             check_val = numpy.array(val, dtype=self.dtype, subok=True, 
                                     ndmin=mindims)
-        except:
+        except ValueError:
             self.raise_exception("new type '"+type(val).__name__+
                                  "'is not compatible with type '"+
                                  type(self.value).__name__, ValueError)
@@ -56,13 +56,16 @@ class ArrayVariable(Variable):
                 
             
     def _pre_assign_entry(self, val, index):
+        """Called prior to assigning to an entry of the array value in order to 
+        perform validation."""
         try:
             myval = self.value[tuple(index)]
         except IndexError:
-            self.raise_exception('invalid index: '+str(tuple(index)),IndexError)
+            self.raise_exception('invalid index: '+str(tuple(index)), IndexError)
         valtype = numpy.obj2sctype(type(val))
-        if valtype is not None and numpy.can_cast(valtype, self.value.dtype.type):
-                return val
+        if valtype is not None and numpy.can_cast(valtype, 
+                                                  self.value.dtype.type):
+            return val
         else:
             self.raise_exception('value type '+type(myval).__name__+
                                  ' at array index '+str(index)+
@@ -70,15 +73,17 @@ class ArrayVariable(Variable):
                                  type(val).__name__, ValueError)
         
     def get_entry(self, index):
+        """Return the value of the entry at index in our array value."""
         return self.value[tuple(index)]
     
     def set_entry(self, val, index):
+        """Set the entry at index of our array value."""
         tmp = self._pre_assign_entry(val, index)
         try:
             self.value[tuple(index)] = tmp
-        except:
+        except IndexError:
             self.raise_exception("assigning index "+str(index)+
                                  " to a value of type "+
-                                 str(type(val))+" failed", ValueError)        
+                                 str(type(val))+" failed", IndexError)        
 
 add_var_type_map(ArrayVariable, numpy.ndarray)

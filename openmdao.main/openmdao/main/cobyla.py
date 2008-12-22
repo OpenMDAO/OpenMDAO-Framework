@@ -9,7 +9,6 @@ __version__ = "0.1"
 
 
 from scipy.optimize.cobyla import fmin_cobyla
-from pyparsing import ParseException
 
 from openmdao.main.driver import Driver
 from openmdao.main.component import STATE_WAITING, RUN_UNKNOWN
@@ -22,7 +21,7 @@ from openmdao.main.transexpr import translate_expr
 
 # if our globals dict doesn't contain __builtins__, python will 
 # copy current global dict into it
-_emptyglobals = { '__builtins__':None }
+#_emptyglobals = { '__builtins__':None }
 
 
 class COBYLA(Driver):
@@ -32,6 +31,7 @@ class COBYLA(Driver):
         Driver.__init__(self, name, parent, desc)
         self.design_vars = [] #names of design variables
         self.__funct = None
+        self._code = None
         self.min_expr = None
         #self.func_args = (self,)
         self._consfuncts = [] # constraint functs. All must be >=0
@@ -45,18 +45,18 @@ class COBYLA(Driver):
         self.xmin = []
         self.iprint = 0
         
-        Float('rhobeg',self,INPUT,
+        Float('rhobeg', self, INPUT,
               desc='reasonable initial changes to the variables')
-        Float('rhoend',self,INPUT,
+        Float('rhoend', self, INPUT,
               desc='final accuracy (not precisely guaranteed)')
-        Int('maxiters',self,INPUT,
+        Int('maxiters', self, INPUT,
             desc='maximum number of function iterations')
-        Int('iprint',self,INPUT,
+        Int('iprint', self, INPUT,
             desc='print frequency: 0 (no output),1,2,3')
-        String('min_expr',self,INPUT,desc='expression to minimize')
-        StringList('constraint_exprs',self,INPUT,
+        String('min_expr', self, INPUT, desc='expression to minimize')
+        StringList('constraint_exprs', self, INPUT,
                    desc='constraint expressions (must be >=0)')
-        StringList('design_vars',self,INPUT,
+        StringList('design_vars', self, INPUT,
                    desc='list of design variable names')
         
     def _get_funct(self):
@@ -64,15 +64,15 @@ class COBYLA(Driver):
     
     def _set_funct(self, fstring):
         text = translate_expr(fstring, self)
-        self._code = compile(text,'<string>','eval')
+        self._code = compile(text, '<string>','eval')
 #        self.__funct = lambda: eval(code, _emptyglobals, self.parent.__dict__)
         
-    _funct = property(_get_funct,_set_funct)
+    _funct = property(_get_funct, _set_funct)
     
-    def _driven_func(self, x):
+    def _driven_func(self, dvars):
         # first, set the design variables in the model
-        for name,val in zip(self.design_vars,x):
-            eval(translate_expr(name+'='+str(val),self))
+        for name, val in zip(self.design_vars, dvars):
+            eval(translate_expr(name+'='+str(val), self))
         self.state = STATE_WAITING
         self.status = self.parent.workflow.run()
         
@@ -86,9 +86,10 @@ class COBYLA(Driver):
         """ Run the assembly by invoking run() on the workflow. """
         self.iter_count = 0
         # get initial values of design vars
-        x0 = [eval(translate_expr(a,self)) for a in self.design_vars]
+        dvinit = [eval(translate_expr(a, self)) for a in self.design_vars]
         
-        self.xmin = fmin_cobyla(self._driven_func, x0, self._consfuncts,consargs=(),
+        self.xmin = fmin_cobyla(self._driven_func, dvinit, self._consfuncts,
+                                consargs=(),
                                 rhobeg=self.rhobeg, rhoend=self.rhoend,
                                 iprint=self.iprint, maxfun=self.maxiters)
         
@@ -96,6 +97,8 @@ class COBYLA(Driver):
 
 
     def add_constraint(self, constraint):
-        """Add a function that evaluates to >= 0 if the constraint is not violated."""
+        """Add a function that evaluates to >= 0 if the 
+        constraint is not violated.
+        """
         self._consfuncts.append(constraint)
         

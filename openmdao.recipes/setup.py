@@ -27,6 +27,8 @@ setup(name='openmdao.recipes',
           # -*- Extra requirements: -*-
       ],
       entry_points="""
-      # -*- Entry points: -*-
+      [zc.buildout]
+      default = openmdao.recipes.dummy:Dummy
+      dummy = openmdao.recipes.dummy:Dummy
       """,
       )

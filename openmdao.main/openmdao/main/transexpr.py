@@ -171,7 +171,7 @@ class ExprEvaluator(object):
     def set_text(self, text):
         self.text = text
         self.scoped_text = translate_expr(text, self.scope())
-        self._code = compile(text,'<string>','eval')
+        self._code = compile(self.scoped_text,'<string>','eval')
         
     def evaluate(self, scope=None):
         if scope is None:

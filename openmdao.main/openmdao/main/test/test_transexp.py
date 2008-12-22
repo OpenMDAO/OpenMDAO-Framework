@@ -1,7 +1,7 @@
 
 import numpy
 
-from openmdao.main.transexpr import translate_expr
+from openmdao.main.transexpr import translate_expr,ExprEvaluator
 from openmdao.main.container import Container
 from openmdao.main.component import Component
 from openmdao.main.variable import INPUT
@@ -40,9 +40,9 @@ tests = [
 ('-b',"-b"),
 ('b[0]',"b[0]"),
 ('b[-3]',"b[-3]"),
-('comp.x[0]',"self.parent.get('comp.x',[0])"),
-('comp.x[0] = 10.-(3.2*b[3]+1.1*b[2])', "self.parent.set('comp.x',10.-(3.2*b[3]+1.1*b[2]),[0])"),
-('c.b[2] = -comp.x',"self.parent.set('c.b',-self.parent.get('comp.x'),[2])"),
+('comp.x[0]',"scope.parent.get('comp.x',[0])"),
+('comp.x[0] = 10.-(3.2*b[3]+1.1*b[2])', "scope.parent.set('comp.x',10.-(3.2*b[3]+1.1*b[2]),[0])"),
+('c.b[2] = -comp.x',"scope.parent.set('c.b',-scope.parent.get('comp.x'),[2])"),
 ]
 
 
@@ -52,21 +52,21 @@ for tst in tests:
         raise AssertionError(trans+" == "+tst[1])  
 
 tests = [
-('a.b[1+3**4*1]',"self.get('a.b',[1+3**4*1])"),
-('a.b[1][2]',"self.get('a.b',[1,2])"),
-('a.b[1,2]',"self.get('a.b',[1,2])"),
-('a.b[1][x.y]',"self.get('a.b',[1,self.parent.get('x.y')])"),
-('a.b()',"self.invoke('a.b')"),
-('a.b(5)',"self.invoke('a.b',5)"),
-('a.b(5,9)',"self.invoke('a.b',5,9)"),
-('a.b(5,z.y)',"self.invoke('a.b',5,self.parent.get('z.y'))"),
-('a.b(5,-z.y)',"self.invoke('a.b',5,-self.parent.get('z.y'))"),
-('a.b(5, z.y(2,3))',"self.invoke('a.b',5,self.parent.invoke('z.y',2,3))"),
-('a.b(5, z.y[3])',"self.invoke('a.b',5,self.parent.get('z.y',[3]))"),
+('a.b[1+3**4*1]',"scope.get('a.b',[1+3**4*1])"),
+('a.b[1][2]',"scope.get('a.b',[1,2])"),
+('a.b[1,2]',"scope.get('a.b',[1,2])"),
+('a.b[1][x.y]',"scope.get('a.b',[1,scope.parent.get('x.y')])"),
+('a.b()',"scope.invoke('a.b')"),
+('a.b(5)',"scope.invoke('a.b',5)"),
+('a.b(5,9)',"scope.invoke('a.b',5,9)"),
+('a.b(5,z.y)',"scope.invoke('a.b',5,scope.parent.get('z.y'))"),
+('a.b(5,-z.y)',"scope.invoke('a.b',5,-scope.parent.get('z.y'))"),
+('a.b(5, z.y(2,3))',"scope.invoke('a.b',5,scope.parent.invoke('z.y',2,3))"),
+('a.b(5, z.y[3])',"scope.invoke('a.b',5,scope.parent.get('z.y',[3]))"),
 ('0+a.b(5, -z.y[3])**2-z.z[4]',
- "0+self.invoke('a.b',5,-self.parent.get('z.y',[3]))**2-self.parent.get('z.z',[4])"),
+ "0+scope.invoke('a.b',5,-scope.parent.get('z.y',[3]))**2-scope.parent.get('z.z',[4])"),
 # compound stuff (arglist followed by array index or vice versa) doesn't work
-#('a.b(1,23)[1]',"self.parent.invoke('a.b',1,23)"),
+#('a.b(1,23)[1]',"scope.parent.get(scope.parent.invoke('a.b',1,23),[1])"),
 ]
 
 
@@ -74,3 +74,12 @@ for tst in tests:
     trans = translate_expr(tst[0],scope=foo)
     if trans != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+trans+" == "+tst[1])  
+    
+    
+
+for tst in tests:
+    ex = ExprEvaluator(tst[0],foo)
+    if ex.scoped_text != tst[1]:
+        raise AssertionError('for input of '+tst[0]+', '+trans+" == "+tst[1])  
+    
+

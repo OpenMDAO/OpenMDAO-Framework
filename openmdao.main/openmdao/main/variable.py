@@ -1,12 +1,9 @@
 
 #public symbols
-__all__ = ['Variable','Undefined']
+__all__ = ['Variable', 'UNDEFINED']
 __version__ = "0.1"
 
-
-import weakref
-import inspect
-from zope.interface import implements, Attribute
+from zope.interface import implements
 
 from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main.exceptions import ConstraintError
@@ -17,10 +14,12 @@ INPUT = 1
 OUTPUT = 2
 
 class _Undefined ( object ):
+    """A class used to define a special undefined object."""
     def __repr__ ( self ):
         return '<undefined>'
+    
 # use this to represent undefined value rather than None    
-undefined = _Undefined()
+UNDEFINED = _Undefined()
 
 class Variable(HierarchyMember):
     """ An object representing data to be passed between Components within
@@ -31,10 +30,11 @@ class Variable(HierarchyMember):
     implements(IVariable, IContainer)
     
     def __init__(self, name, parent, iostatus, 
-                 val_type=None, ref_name=None, refparent=None, default=undefined, desc=None):
-        """Note that Variable calls _pre_assign from here, so if _pre_assign requires any
-        attributes from a derived class, those attributes must be set before the Variable
-        __init__ function is called.
+                 val_type=None, ref_name=None, refparent=None, 
+                 default=UNDEFINED, desc=None):
+        """Note that Variable calls _pre_assign from here, so if _pre_assign
+        requires any attributes from a derived class, those attributes must be
+        set before the Variable __init__ function is called.
         """
         HierarchyMember.__init__(self, name, parent, desc)        
 
@@ -43,7 +43,8 @@ class Variable(HierarchyMember):
             self.ref_name = name
         else:
             self.ref_name = ref_name
-        # the variable can reference an obj inside of some object other than the variable's parent
+        # the variable can reference an obj inside of some object other 
+        # than the variable's parent
         if refparent is None:
             self._refparent = parent
         else:
@@ -53,6 +54,7 @@ class Variable(HierarchyMember):
         self.permission = None
         self._constraints = []
         self.iostatus = iostatus
+        self._set_count = 0
         if val_type is not None and not isinstance(val_type, tuple):
             self.val_type = (val_type,)
         else:
@@ -62,9 +64,10 @@ class Variable(HierarchyMember):
             val = getattr(self._refparent, self.ref_name)
             parent.make_public(self)
         else:
-            raise TypeError("parent of Variable '"+name+"' is not an IContainer")
+            raise TypeError("parent of Variable '"+name+
+                            "' is not an IContainer")
 
-        if default is undefined: 
+        if default is UNDEFINED: 
             self.default = self._pre_assign(val)
         elif default is None:
             self.default = None
@@ -72,11 +75,13 @@ class Variable(HierarchyMember):
             self.default = self._pre_assign(default)
 
     def contains(self, path):
-        try:
-            base, name = path.split('.',1)
-        except ValueError:
+        """Return True if the object identified by path is found
+        within this object.
+        """
+        if '.' in path:
+            return False
+        else:
             return hasattr(self, path)
-        return False
     
     def _set_value(self, var):
         """Assign this Variable's value to the value of another Variable or 
@@ -87,6 +92,7 @@ class Variable(HierarchyMember):
             raise RuntimeError(self.get_pathname()+
                                'is an OUTPUT Variable and cannot be set.')
         setattr(self._refparent, self.ref_name, self._pre_assign(var))
+        self._set_count += 1
         if self.observers is not None:
             self._notify_observers()
 
@@ -95,18 +101,21 @@ class Variable(HierarchyMember):
         """"Called when getting the 'value' property."""
         return getattr(self._refparent, self.ref_name)
     
-    value = property(_get_value,_set_value)
+    value = property(_get_value, _set_value)
         
         
-    def revert(self):
+    def revert_to_default(self):
         """ Return this Variable to its default value"""
         self.value = self.default
 
     def add_constraint(self, con):
+        """Add a Constraint object to the list of Constraint objects for
+        this Variable.
+        """
         self._constraints.append(con)
 
     def _pre_assign(self, val):
-        """This should be overridden to perform necessary validations
+        """This should be overridden to perform necessary validations at
         assignment time but this base version should still be called from within the
         overridden version. If validations fail, they should raise a ValueError.
         Note that val should just be a simple value, not a Variable. This
@@ -129,12 +138,19 @@ class Variable(HierarchyMember):
             self.raise_exception(str(err), ConstraintError)
         
         return val
+
     
+    def _pre_assign_entry(self, val):
+        """Perform validation before assignment of a value to an entry.
+        This is only applicable for array Variables.
+        """
+        self.raise_exception('_pre_assign_entry', NotImplemented)            
+
         
     def validate_var(self, variable):
-        """Raise a TypeError if the given Variable is incompatible. This is called
-        on the INPUT side of a connection.  The value attribute of the Variable is not
-        checked at this time."""
+        """Raise a TypeError if the given Variable is incompatible. This is
+        called on the INPUT side of a connection. The value attribute of the
+        Variable is not checked at this time."""
         if not isinstance(variable, type(self)):
             # could try to obtain adapter here...
             self.raise_exception("assignment to incompatible variable '"+
@@ -145,14 +161,16 @@ class Variable(HierarchyMember):
                                  variable.get_pathname(),ValueError)
 
     def _convert(self, variable):
-        """Some Variables, e.g., Float, will need to override this in order to convert units
-        from those in connected variables."""
+        """Some Variables, e.g., Float, will need to override this in order to
+        convert units from those in connected variables. By default, no 
+        conversion is performed.
+        """
         return variable.value
     
     def setvar(self, name, var):
-        """Assign this Variable to another Variable, which generally just means to assign
-        our value to the value of var. Some Variables will override _convert to handle things
-        like unit conversion."""
+        """Assign this Variable to another Variable, which generally just
+        means to assign our value to the value of var. Some Variables will
+        override _convert to handle things like unit conversion."""
         if name is None: # they're setting this Variable
             self.validate_var(var)
             self.value = self._convert(var)
@@ -161,9 +179,10 @@ class Variable(HierarchyMember):
                                  name+"'", RuntimeError)
         
     def set(self, name, value, index=None):
-        """Set the value of the attribute specified by the given name. value is assumed to
-        be a value and not a Variable object. Assignment to 'value' will force a check
-        against any constraints registered with this Variable."""
+        """Set the value of the attribute specified by the given name. value
+        is assumed to be a value and not a Variable object. Assignment to
+        'value' will force a check against any constraints registered with
+        this Variable."""
         if name is None or name == value: # they're setting this Variable
             if index is None:
                 self.value = value
@@ -173,10 +192,14 @@ class Variable(HierarchyMember):
             setattr(self, name, value)
             
     def getvar(self, name=None):
+        """Retrieved a named Variable from this object, or return 
+        self if the name is None.
+        """
         if name is None:
             return self
         else:
-            self.raise_exception("'"+name+"' is not a Variable object", NameError)        
+            self.raise_exception("'"+name+"' is not a Variable object", 
+                                 NameError)        
         
     def get(self, name=None, index=None):
         """Return the named attribute"""
@@ -195,18 +218,23 @@ class Variable(HierarchyMember):
                 return val
 
     def get_entry(self, index):
+        """Retrieve the entry indicated by index."""
         return self.value[index]
     
     def set_entry(self, val, index):
+        """Set the value of the entry indicated by index.
+        Validation will be performed prior to assignment.
+        """
         tmp = self._pre_assign_entry(val, index)
         try:
             self.value[index] = tmp
-        except:
+        except Exception:
             self.raise_exception("assigning index "+str(index)+
                                  " to a value of type "+
                                  str(type(val))+" failed", ValueError)        
     
     def make_public(self, child):
+        """Make a given object a member of this object's pubic interface."""
         self.raise_exception('make_public', NotImplemented)            
             
     def add_observer(self, obs_funct):
@@ -220,7 +248,7 @@ class Variable(HierarchyMember):
 
     def _notify_observers(self):
         """Call each observer on the observers list."""
-        for ob in self.observers:
-            ob(self)
+        for observer in self.observers:
+            observer(self)
         
     
