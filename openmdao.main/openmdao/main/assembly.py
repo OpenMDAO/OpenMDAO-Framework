@@ -1,3 +1,8 @@
+"""
+Contains the Assembly class, which is a Component that contains
+a Driver and a Workflow, and manages connections between its 
+child Components.
+"""
 
 #public symbols
 __all__ = ["Assembly"]
@@ -19,7 +24,7 @@ class Assembly(Component):
     implements(IAssembly)
     
     def __init__(self, name, parent=None, desc=None):
-        Component.__init__(self, name, parent, desc)
+        super(Assembly, self).__init__(name, parent, desc)
         self._connections = {} # dependencies between Components
         self.driver = self.create('openmdao.main.driver.Driver','driver')
         self.workflow = self.create('openmdao.main.workflow.Workflow',
@@ -129,7 +134,7 @@ class Assembly(Component):
         
         """
         
-        # ??? notify observers of removal...
+        # TODO: notify observers of removal...
         
         if name in self._connections:
             del self._connections[name]

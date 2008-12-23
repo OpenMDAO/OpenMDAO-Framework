@@ -37,7 +37,7 @@ class Component (Container):
     implements(IComponent)
     
     def __init__(self, name, parent=None, desc=None):
-        Container.__init__(self, name, parent, desc)
+        super(Component,self).__init__(name, parent, desc)
         
         self.state = STATE_IDLE
         self._stop = False
@@ -58,11 +58,13 @@ class Component (Container):
         pass
     
     def pre_execute (self):
-        """update input variables and anything else needed prior to execution."""
+        """update input variables and anything else needed prior 
+        to execution."""
         pass
     
     def execute (self):
-        """Perform calculations or other actions, assuming that inputs have already been set. 
+        """Perform calculations or other actions, assuming that inputs 
+        have already been set. 
         This should be overridden in derived classes.
         """
         pass
@@ -101,7 +103,7 @@ class Component (Container):
         one Component in the Workflow and return. For simple components, it is the
         same as run().
         """
-        raise NotImplementedError('step')
+        self.run()
 
     def require_gradients (self, varname, gradients):
         """Requests that the component be able to provide (after execution) a

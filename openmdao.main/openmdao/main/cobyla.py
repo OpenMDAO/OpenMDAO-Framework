@@ -28,7 +28,7 @@ class COBYLA(Driver):
     """ Constrained Optimization BY Linear Approximation. """
     
     def __init__(self, name, parent=None, desc=None):
-        Driver.__init__(self, name, parent, desc)
+        super(COBYLA, self).__init__(name, parent, desc)
         self.design_vars = [] #names of design variables
         self.__funct = None
         self._code = None

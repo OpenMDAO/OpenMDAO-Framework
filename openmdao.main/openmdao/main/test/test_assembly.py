@@ -1,3 +1,5 @@
+# pylint: disable-msg=C0111,C0103
+
 import unittest
 
 import openmdao.main.factorymanager as factorymanager
@@ -5,7 +7,6 @@ from openmdao.main.component import Component, RUN_OK
 from openmdao.main.assembly import Assembly
 from openmdao.main.importfactory import ImportFactory
 from openmdao.main.variable import INPUT,OUTPUT
-from openmdao.main.containervar import ContainerVariable
 from openmdao.main.float import Float
 from openmdao.main.string import String
 
@@ -13,7 +14,7 @@ factorymanager.register_factory(ImportFactory())
 
 class DummyComp(Component):
     def __init__(self, name, nest=False):
-        Component.__init__(self, name)
+        super(DummyComp, self).__init__(name)
         self.r = 1.0
         self.r2 = -1.0
         self.rout = 0.0
@@ -32,12 +33,14 @@ class DummyComp(Component):
         # hack a quick way to get nested containers for testing
         if nest is True:
             self.add_child(DummyComp('dummy'), private=True)
-            self.make_public([('dummy_in','dummy'), ('dummy_out','dummy',OUTPUT)])
+            self.make_public([('dummy_in','dummy'), 
+                              ('dummy_out','dummy',OUTPUT)])
         
     def execute(self):
         self.rout = self.r * 1.5
         self.r2out = self.r2 + 10.0
         self.sout = self.s[::-1]
+        # pylint: disable-msg=E1101
         if hasattr(self, 'dummy'):
             self.dummy.run()
         return RUN_OK
@@ -57,7 +60,7 @@ class ContainerTestCase(unittest.TestCase):
         
     
     def tearDown(self):
-        """this teardown function will be called after each test in this class"""
+        """this teardown function will be called after each test"""
         pass
 
     def test_data_passing(self):
@@ -104,13 +107,15 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('top: top.comp2.rout must be an INPUT variable',str(err))
+            self.assertEqual('top: top.comp2.rout must be an INPUT variable',
+                             str(err))
         else:
             self.fail('exception expected')
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('top: top.comp1.r must be an OUTPUT variable',str(err))
+            self.assertEqual('top: top.comp1.r must be an OUTPUT variable',
+                             str(err))
         else:
             self.fail('exception expected')
             
@@ -118,7 +123,9 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp1.r')
         except RuntimeError, err:
-            self.assertEqual('top: Cannot connect a component (comp1) to itself',str(err))
+            self.assertEqual(
+                'top: Cannot connect a component (comp1) to itself',
+                str(err))
         else:
             self.fail('exception expected')
      
@@ -126,7 +133,8 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout.units','comp2.s')
         except NameError, err:
-            self.assertEqual(str(err), "top.comp1.rout: 'units' is not a Variable object")
+            self.assertEqual(str(err), 
+                    "top.comp1.rout: 'units' is not a Variable object")
         else:
             self.fail('NameError expected')
         
@@ -134,7 +142,8 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout.value','comp2.r2')
         except NameError, err:
-            self.assertEqual(str(err), "top.comp1.rout: 'value' is not a Variable object")
+            self.assertEqual(str(err), 
+                        "top.comp1.rout: 'value' is not a Variable object")
         else:
             self.fail('exception expected')
         
@@ -172,7 +181,6 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(comp2.r, 9.0)
  
     def test_discon_not_connected(self):
-        comp2 = self.asm.get('comp2')
         self.asm.connect('comp1.rout','comp2.r')
         try:
             self.asm.disconnect('comp2.s')
@@ -188,7 +196,8 @@ class ContainerTestCase(unittest.TestCase):
         self.asm.connect('comp2.rout','comp3.r')
         self.asm.connect('comp3.rout','comp4.r')
         
-        self.asm.remove_child('comp3') # this also removes the connection to comp4.r
+        # this also removes the connection to comp4.r
+        self.asm.remove_child('comp3') 
         try:
             self.asm.disconnect('comp4.r')
         except RuntimeError, err:

@@ -1,3 +1,6 @@
+"""
+Variable: the base class for public wrappers of internal Container attributes.
+"""
 
 #public symbols
 __all__ = ['Variable', 'UNDEFINED']
@@ -36,7 +39,7 @@ class Variable(HierarchyMember):
         requires any attributes from a derived class, those attributes must be
         set before the Variable __init__ function is called.
         """
-        HierarchyMember.__init__(self, name, parent, desc)        
+        super(Variable, self).__init__(name, parent, desc)        
 
         # by default, name of the variable is the same as the obj it refers to
         if ref_name is None:
@@ -140,7 +143,7 @@ class Variable(HierarchyMember):
         return val
 
     
-    def _pre_assign_entry(self, val):
+    def _pre_assign_entry(self, val, index):
         """Perform validation before assignment of a value to an entry.
         This is only applicable for array Variables.
         """
@@ -228,7 +231,11 @@ class Variable(HierarchyMember):
         tmp = self._pre_assign_entry(val, index)
         try:
             self.value[index] = tmp
-        except Exception:
+        except TypeError:
+            self.raise_exception("assigning index "+str(index)+
+                                 " to a value of type "+
+                                 str(type(val))+" failed", ValueError)        
+        except IndexError:
             self.raise_exception("assigning index "+str(index)+
                                  " to a value of type "+
                                  str(type(val))+" failed", ValueError)        

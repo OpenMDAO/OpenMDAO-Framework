@@ -1,4 +1,6 @@
-from zope.schema import List, Text, TextLine, Int, Float
+# pylint: disable-msg=C0111,C0103,E0611,W0232,W0105
+
+from zope.schema import TextLine, Float
 """
 from zope.interface import implements, Interface
 from zope.component import getGlobalSiteManager, adapts
@@ -52,9 +54,9 @@ class MyFunctionality(object):
     implements(IFunctionality)
     adapts(IAdapteeOne, IAdapteeOne)
 
-    def __init__(self, one, two):
-        self.one = one
-        self.two = two
+    def __init__(self, xone, xtwo):
+        self.one = xone
+        self.two = xtwo
         
     def xfer(self):
         self.two.f = self.one.f

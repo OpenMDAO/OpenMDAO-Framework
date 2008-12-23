@@ -1,3 +1,6 @@
+"""
+Contains ArrayVariable, a Variable class that wraps a numpy array.
+"""
 
 #public symbols
 __all__ = []
@@ -17,7 +20,7 @@ class ArrayVariable(Variable):
         self.dtype = numpy.dtype(entry_type)
         self.fixed_size = fixed_size
         self.numdims = num_dims
-        Variable.__init__(self, name, parent, iostatus, 
+        super(ArrayVariable, self).__init__(name, parent, iostatus, 
                           ref_name=ref_name, default=default, desc=desc)
 
         
@@ -30,6 +33,13 @@ class ArrayVariable(Variable):
                                  'is not compatible with type '+
                                  str(var.dtype), ValueError)
         
+    def _convert(self, variable):
+        """Perform unit conversion here. Validation is not necessary because 
+        it's already been done in validate_var.
+        """
+        # TODO: add unit conversion code here if type is float, or create an
+        # entirely separate FloatArray class...
+        return variable.value
         
     def _pre_assign(self, val):
         """Returns the transformed, validated value, 
@@ -61,7 +71,8 @@ class ArrayVariable(Variable):
         try:
             myval = self.value[tuple(index)]
         except IndexError:
-            self.raise_exception('invalid index: '+str(tuple(index)), IndexError)
+            self.raise_exception('invalid index: '+str(tuple(index)), 
+                                 IndexError)
         valtype = numpy.obj2sctype(type(val))
         if valtype is not None and numpy.can_cast(valtype, 
                                                   self.value.dtype.type):

@@ -4,10 +4,9 @@ if needed.
 """
 
 #public symbols
-#__all__ = ['logger']
+__all__ = ['logger']
 
 __version__ = '0.1'
-#__author__ = ""
 
 
 import logging
@@ -15,7 +14,7 @@ import logging
 
 # set up logging to file 
 logging.basicConfig(level=logging.DEBUG,
-#                    format='%(asctime)s %(name)-8s %(levelname)-5s %(message)s',
+#                   format='%(asctime)s %(name)-8s %(levelname)-5s %(message)s',
                     format='%(asctime)s %(name)s %(levelname)s %(message)s',
 #                    datefmt='%m-%d %H:%M',
                     datefmt='%H:%M',

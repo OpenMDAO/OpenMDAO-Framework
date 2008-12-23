@@ -22,7 +22,7 @@ class ImportFactory(Factory):
     version creation or creation on a remote server."""
 
     def __init__(self):
-        Factory.__init__(self)
+        super(ImportFactory, self).__init__()
         self._ctors = {}
 
     def create(self, typ, name=None, version=None, server=None, 

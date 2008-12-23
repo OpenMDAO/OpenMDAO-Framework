@@ -1,24 +1,20 @@
 """
 A CONMIN based driver.
 """
+# pylint: disable-msg=C0103
 
 #public symbols
 __all__ = []
 
 __version__ = "0.1"
 
-import copy
-
 import conmin.conmin as conmin
 import numpy.numarray as numarray
 
 from openmdao.main.driver import Driver
-from openmdao.main.component import STATE_WAITING, RUN_UNKNOWN
-from openmdao.main.float import Float
 from openmdao.main.arrayvar import ArrayVariable
 from openmdao.main.string import String
 from openmdao.main.stringlist import StringList
-from openmdao.main.int import Int
 from openmdao.main.variable import INPUT
 from openmdao.main.transexpr import ExprEvaluator
 
@@ -30,11 +26,17 @@ class CONMINdriver(Driver):
     and restored per instance at this time.
     
     TODO: add copy/restore of common block info per instance
-    TODO: make CONMIN's handling of user calculated gradients accessible through CONMINdriver
+    TODO: make CONMIN's handling of user calculated gradients 
+          accessible through CONMINdriver
     """
     
     def __init__(self, name, parent=None, desc=None):
-        Driver.__init__(self, name, parent, desc)
+        super(CONMINdriver, self).__init__(name, parent, desc)
+        
+        # TODO: this really needs to be a copy 
+        # (see conmin user's guide for how to save state)
+        self.cnmn1 = conmin.cnmn1
+
         self._first = True
         self._design_vars = []
         self.design_vals = numarray.zeros(0,'d')
@@ -42,14 +44,26 @@ class CONMINdriver(Driver):
         self._upper_bounds = numarray.zeros(0,'d')
         self._constraints = []
         self.constraint_vals = numarray.zeros(0,'d')
+        self.cons_active_or_violated  = numarray.zeros(0, 'i')
         self._objective = None
         self.objective_val = 0.
         self.iprint = 0
         self.maxiters = 40
         self.gradients = None
-        # ??? this really needs to be a copy (see conmin user's guide for how to save state)
-        self.cnmn1 = conmin.cnmn1
-        
+        # vector of scaling parameters
+        self.scal = numarray.ones(2,'d')
+        # gradient of objective w.r.t x[i]
+        self.df = numarray.zeros(2,'d')
+        # move direction in the optimization space
+        self.s = numarray.zeros(2,'d')
+        self.gradients = numarray.zeros((2,1),'d')
+        # temp storage
+        self._b = numarray.zeros((1,1),'d')
+        # temp storage
+        self._c = numarray.zeros(1,'d')
+        # temp storage
+        self._ms1 = numarray.zeros(2,'i')
+                
         StringList('design_vars', self, INPUT)
         StringList('constraints', self, INPUT)
         String('objective', self, INPUT)
@@ -66,7 +80,7 @@ class CONMINdriver(Driver):
         for i,desvar in enumerate(dv):
             try:
                 self._design_vars.append(ExprEvaluator(desvar, self))
-            except RuntimeError, err:
+            except RuntimeError:
                 self.raise_exception("design variable '"+str(desvar)+
                                      "' is invalid", RuntimeError)
             
@@ -75,21 +89,18 @@ class CONMINdriver(Driver):
             setter = desvar+'=design_vals['+str(i)+']'
             try:
                 self._design_var_setters.append(ExprEvaluator(setter, self))
-            except RuntimeError, err:
+            except RuntimeError:
                 self.raise_exception("expression '"+str(setter)+
                                      "' is invalid", RuntimeError)
             
         self.design_vals = numarray.zeros(len(dv)+2,'d')
         if self.upper_bounds.size != self.design_vals.size:
-            self._upper_bounds = numarray.array([1.e99 for x in self.design_vals])
+            self._upper_bounds = numarray.array([1.e99]*len(self.design_vals))
         if self.lower_bounds.size != self.design_vals.size:
-            self._lower_bounds = numarray.array([-1.e99 for x in self.design_vals])
+            self._lower_bounds = numarray.array([-1.e99]*len(self.design_vals))
             
-        # vector of scaling parameters
         self.scal = numarray.ones(len(dv)+2,'d')
-        # gradient of objective w.r.t x[i]
         self.df = numarray.zeros(len(dv)+2,'d')
-        # move direction in the optimization space
         self.s = numarray.zeros(len(dv)+2,'d')      
         
     def _get_desvars(self):
@@ -103,13 +114,16 @@ class CONMINdriver(Driver):
         for constraint in cons:
             try:
                 self._constraints.append(ExprEvaluator(constraint, self))
-            except RuntimeError, err:
-                raise RuntimeError("constraint '"+str(constraint)+"' is invalid")
+            except RuntimeError:
+                raise RuntimeError("constraint '"+str(constraint)+
+                                   "' is invalid")
             
         length = len(cons)+2*len(self.design_vals)
         self.constraint_vals = numarray.zeros(length,'d')
-        self.g1 = numarray.zeros(length,'d') # temp storage of constraint and des vals
-        self.g2 = numarray.zeros(length,'d') # temp storage of constraint vals
+        # temp storage of constraint and des vals
+        self.g1 = numarray.zeros(length,'d') 
+        # temp storage of constraint vals
+        self.g2 = numarray.zeros(length,'d') 
         # if constraint i is known to be a linear function of des vals, 
         # set cons_is_linear[i] to 1, otherwise set it to 0. This is 
         # not essential is is for efficiency only.
@@ -126,7 +140,7 @@ class CONMINdriver(Driver):
         self._objective = None
         try:
             self._objective = ExprEvaluator(obj, self)
-        except RuntimeError, err:
+        except RuntimeError:
             raise RuntimeError("objective '"+str(obj)+"' is invalid")
         
     def _get_objective(self):
@@ -140,7 +154,8 @@ class CONMINdriver(Driver):
     def _set_lower_bounds(self, val):
         vv = numarray.zeros(len(val)+2)
         if len(val) != len(self._design_vars):
-            self.raise_exception('size of new lower bound array ('+str(len(val))+
+            self.raise_exception('size of new lower bound array ('+
+                                 str(len(val))+
                                  ') does not match number of design vars ('+
                                  str(len(self._design_vars)), ValueError)
         for i,lb in enumerate(val):
@@ -155,7 +170,8 @@ class CONMINdriver(Driver):
     def _set_upper_bounds(self, val):
         vv = numarray.zeros(len(val)+2)
         if len(val) != len(self._design_vars):
-            self.raise_exception('size of new upper bound array ('+str(len(val))+
+            self.raise_exception('size of new upper bound array ('+
+                                 str(len(val))+
                                  ') does not match number of design vars ('+
                                  str(len(self._design_vars))+')', ValueError)
         
@@ -169,6 +185,8 @@ class CONMINdriver(Driver):
     upper_bounds = property(_get_upper_bounds, _set_upper_bounds)
     
     def execute(self):
+        """perform the optimization"""
+        
         # set conmin array sizes and such
         if self._first is True:
             self._config_conmin()
@@ -187,12 +205,19 @@ class CONMINdriver(Driver):
             self._first = False            
             
             conmin.cnmn1.obj = numarray.array(self.objective_val)
-            zz=conmin.conmin(self.design_vals,self.lower_bounds,self.upper_bounds,
-                               self.constraint_vals,self.scal,self.df,
-                               self.gradients,self.s,self.g1,self.g2,self._b,self._c,
-                               self.cons_is_linear,self.cons_active_or_violated,self._ms1)
-            (self.design_vals,self.scal,self.gradients,self.s,self.g1,self.g2,self._b,self._c,
-             self.cons_is_linear,self.cons_active_or_violated,self._ms1) = zz
+            zz = conmin.conmin(self.design_vals,
+                               self.lower_bounds, self.upper_bounds,
+                               self.constraint_vals,
+                               self.scal,self.df,
+                               self.gradients,
+                               self.s,self.g1,self.g2,self._b,self._c,
+                               self.cons_is_linear,
+                               self.cons_active_or_violated,self._ms1)
+            (self.design_vals,
+             self.scal,self.gradients,self.s,
+             self.g1,self.g2,self._b,self._c,
+             self.cons_is_linear,
+             self.cons_active_or_violated,self._ms1) = zz
             
             self.update_design_variables()
 
@@ -200,25 +225,28 @@ class CONMINdriver(Driver):
             self.parent.workflow.run()
             
             # calculate objective and constraints
-            if conmin.cnmn1.info==1:
+            if conmin.cnmn1.info == 1:
                 self.update_objective_val()
                 self.update_constraint_vals()
             # calculate gradients
-            elif conmin.cnmn1.info==2:
+            elif conmin.cnmn1.info == 2:
                 self.raise_exception('user defined gradients not yet supported',
                                      NotImplementedError)
         
     def update_objective_val(self):
+        """evaluate the new objective"""
         if self._objective is None:
             self.raise_exception('No objective has been set',RuntimeError)
         else:
             self.objective_val = self._objective.evaluate()
                
     def update_constraint_vals(self):
+        """calculate new constraint values"""
         for i,con in enumerate(self._constraints):
             self.constraint_vals[i] = con.evaluate()
             
     def update_design_variables(self):
+        """set the new values of the design variables into the model"""
         for dv in self._design_var_setters:
             dv.evaluate()
 
@@ -226,7 +254,7 @@ class CONMINdriver(Driver):
         self.cnmn1.ndv = len(self._design_vars)
         self.cnmn1.ncon = len(self._constraints)
         
-        if not self._lower_bounds.size==0 or not self._upper_bounds.size==0:
+        if not self._lower_bounds.size == 0 or not self._upper_bounds.size == 0:
             self.cnmn1.nside = 2*len(self._design_vars)
         else:
             self.cnmn1.nside = 0
@@ -234,7 +262,7 @@ class CONMINdriver(Driver):
         self.cnmn1.nacmx1 = max(len(self._design_vars),
                                     len(self._constraints)+conmin.cnmn1.nside)+1
         n1 = len(self._design_vars)+2
-        n2 = len(self._constraints)+2*len(self._design_vars)
+        #n2 = len(self._constraints)+2*len(self._design_vars)
         n3 = self.cnmn1.nacmx1
         n4 = max(n3,len(self._design_vars))
         n5 = 2*n4

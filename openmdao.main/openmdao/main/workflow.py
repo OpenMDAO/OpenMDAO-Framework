@@ -5,10 +5,11 @@ The typical node is a ComponentNode, which simply executes a Component.
 
 from zope.interface import implements
 
-from openmdao.main.component import Component, STATE_RUNNING, STATE_WAITING, RUN_OK
+from openmdao.main.component import Component, STATE_RUNNING, STATE_WAITING
+from openmdao.main.component import RUN_OK, RUN_STOPPED
 from openmdao.main.interfaces import IWorkflow, IComponent, IDriver
 
-__all__ = ('Workflow')
+__all__ = ['Workflow']
 
 
 class Workflow(Component):
@@ -20,8 +21,9 @@ class Workflow(Component):
     
     def __init__(self, name, parent=None):
         """ Create an empty flow. """
-        Component.__init__(self, name, parent)
+        super(Workflow, self).__init__(name, parent)
         self.nodes = []
+        self._iterator = None
 
     def __len__(self):
         """ Not very meaningful, but it helps boolean tests when using RPyC. """
@@ -34,10 +36,11 @@ class Workflow(Component):
         self.nodes.append(node)
         
     def remove_node(self, node):
+        """Remove a component from this Workflow and any of its children."""
         nodes = [x for x in self.nodes if x is not node]
-        for n in nodes:
-            if isinstance(n, Workflow):
-                n.remove_node(node)
+        for comp in nodes:
+            if isinstance(comp, Workflow):
+                comp.remove_node(node)
         self.nodes = nodes
 
     def execute(self):
@@ -47,11 +50,29 @@ class Workflow(Component):
             self.state = STATE_WAITING
             status = node.run()
             self.state = STATE_RUNNING
-            if status != RUN_OK:
+            if status is not RUN_OK:
                 return status
             if self._stop:
                 return RUN_STOPPED
         return RUN_OK
+    
+    def step(self):
+        """Run a single component in the Workflow"""
+        if self._iterator is None:
+            self._iterator = self.nodes.__iter__()
+            
+        self.state = STATE_WAITING
+        node = self._iterator.next()
+        try:
+            status = node.run()
+        except StopIteration, err:
+            self._iterator = None
+            raise err
+        self.state = STATE_RUNNING
+        if status is RUN_OK:
+            return RUN_STOPPED
+        else:
+            return status
 
     def steppable(self):
         """ Return True if it makes sense to 'step' this component. """

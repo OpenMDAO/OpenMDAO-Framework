@@ -1,3 +1,6 @@
+"""
+Classes used for constraint checking in Variables.
+"""
 
 #public symbols
 __all__ = []
@@ -28,6 +31,7 @@ class MinConstraint(Constraint):
         self.min = min_allowed
         
     def test(self, value):
+        """Raise a ConstraintError if value is less than min allowed."""
         if value < self.min:
             raise ConstraintError("constraint '"+str(value)+" >= "+
                                   str(self.min)+"' has been violated")
@@ -39,6 +43,7 @@ class MaxConstraint(Constraint):
         self.max = max_allowed        
         
     def test(self, value):
+        """Raise a ConstraintError if value is greater than max allowed."""
         if value > self.max:
             raise ConstraintError("constraint '"+str(value)+" <= "+
                                   str(self.max)+"' has been violated")
@@ -51,6 +56,9 @@ class MinLengthConstraint(Constraint):
         self.minlen = minlen
         
     def test(self, value):
+        """Raise a ConstraintError if length of value is less 
+        than min allowed.
+        """
         length = len(value)
         if length < self.minlen:
             raise ConstraintError("length constraint '"+str(length)+" >= "+
@@ -63,6 +71,9 @@ class MaxLengthConstraint(Constraint):
         self.maxlen = maxlen
         
     def test(self, value):
+        """Raise a ConstraintError if length of value is greater 
+        than max allowed.
+        """
         length = len(value)
         if length > self.maxlen:
             raise ConstraintError("length constraint '"+str(length)+" <= "+

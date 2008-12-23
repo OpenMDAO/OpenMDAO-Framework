@@ -1,3 +1,5 @@
+# pylint: disable-msg=C0111,C0103
+
 import unittest
 
 from openmdao.main.container import Container
@@ -5,7 +7,6 @@ from openmdao.main.interfaces import IContainer
 import openmdao.main.factorymanager as factorymanager
 from openmdao.main.importfactory import ImportFactory
 
-import openmdao.main.containervar
 
 class ContainerTestCase(unittest.TestCase):
 
@@ -26,7 +27,7 @@ class ContainerTestCase(unittest.TestCase):
         c22.add_child(c221)
 
     def tearDown(self):
-        """this teardown function will be called after each test in this class"""
+        """this teardown function will be called after each test"""
         self.root = None
 
     def test_add_child(self):
@@ -35,7 +36,8 @@ class ContainerTestCase(unittest.TestCase):
         try:
             foo.add_child(non_container)
         except TypeError, err:
-            self.assertEqual(str(err),"foo: '<type 'str'>' object has does not provide the IContainer interface")
+            self.assertEqual(str(err), "foo: '<type 'str'>' "+
+                "object has does not provide the IContainer interface")
         else:
             self.fail('TypeError expected')
         
@@ -52,7 +54,7 @@ class ContainerTestCase(unittest.TestCase):
 
     def test_bad_get(self):
         try:
-            obj = self.root.get('bogus')
+            self.root.get('bogus')
         except AttributeError, err:
             self.assertEqual(str(err),"root: object has no attribute 'bogus'")
         else:
@@ -60,7 +62,7 @@ class ContainerTestCase(unittest.TestCase):
 
     def test_bad_set(self):
         try:
-            obj = self.root.set('bogus', 99)
+            self.root.set('bogus', 99)
         except AttributeError, err:
             self.assertEqual(str(err),"root: object has no attribute 'bogus'")
         else:
@@ -68,7 +70,7 @@ class ContainerTestCase(unittest.TestCase):
 
     def test_bad_getvar(self):
         try:
-            obj = self.root.getvar('bogus')
+            self.root.getvar('bogus')
         except AttributeError, err:
             self.assertEqual(str(err),"root: object has no attribute 'bogus'")
         else:
@@ -76,7 +78,7 @@ class ContainerTestCase(unittest.TestCase):
 
     def test_bad_setvar(self):
         try:
-            obj = self.root.setvar('bogus', 99)
+            self.root.setvar('bogus', 99)
         except AttributeError, err:
             self.assertEqual(str(err),"root: object has no attribute 'bogus'")
         else:
@@ -86,7 +88,8 @@ class ContainerTestCase(unittest.TestCase):
     def test_get_objs(self):
         objs = self.root.get_objs(IContainer, recurse=True)
         names = [x.get_pathname() for x in objs]
-        self.assertEqual(names, ['root.c1', 'root.c2', 'root.c2.c21', 'root.c2.c22', 
+        self.assertEqual(names, ['root.c1', 'root.c2', 'root.c2.c21', 
+                                 'root.c2.c22', 
                                  'root.c2.c22.c221'])
         
         objs = self.root.get_objs(IContainer)
@@ -97,7 +100,8 @@ class ContainerTestCase(unittest.TestCase):
         names = [x.get_pathname() for x in objs]
         self.assertEqual(names, ['root.c1', 'root.c2'])        
 
-        objs = self.root.get_objs(IContainer, recurse=True, parent=self.root.get('c2'))
+        objs = self.root.get_objs(IContainer, recurse=True, 
+                                  parent=self.root.get('c2'))
         names = [x.get_pathname() for x in objs]
         self.assertEqual(names, ['root.c2.c21', 'root.c2.c22'])        
 
@@ -110,10 +114,12 @@ class ContainerTestCase(unittest.TestCase):
         names = self.root.get_names(IContainer)
         self.assertEqual(names, ['root.c1', 'root.c2'])
         
-        names = self.root.get_names(IContainer, recurse=True, parent=self.root)
+        names = self.root.get_names(IContainer, recurse=True, 
+                                    parent=self.root)
         self.assertEqual(names, ['root.c1', 'root.c2'])        
 
-        names = self.root.get_names(IContainer, recurse=True, parent=self.root.get('c2'))
+        names = self.root.get_names(IContainer, recurse=True, 
+                                    parent=self.root.get('c2'))
         self.assertEqual(names, ['root.c2.c21', 'root.c2.c22'])        
 
 

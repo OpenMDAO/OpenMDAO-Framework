@@ -1,10 +1,11 @@
+# pylint: disable-msg=C0111,C0103
+
 import unittest
 
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.container import Container
-from openmdao.main.variable import Variable, INPUT, OUTPUT
+from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.float import Float
-from openmdao.main.interfaces import IVariable
 
 class FloatTestCase(unittest.TestCase):
 
@@ -24,7 +25,7 @@ class FloatTestCase(unittest.TestCase):
                        min_limit=0., max_limit=99.)
         
     def tearDown(self):
-        """this teardown function will be called after each test in this class"""
+        """this teardown function will be called after each test"""
         self.hobj = None
 
     def test_assignment(self):
@@ -44,13 +45,16 @@ class FloatTestCase(unittest.TestCase):
         try:
             self.float1.value = 124
         except ConstraintError, err:
-            self.assertEqual(str(err), "h1.float1: constraint '124 <= 99.0' has been violated")
+            self.assertEqual(str(err), 
+                        "h1.float1: constraint '124 <= 99.0' has been violated")
         else:
-            self.fail('expected exception for max_limit violation did not happen')
+            self.fail(
+                'expected exception for max_limit violation did not happen')
         try:
             self.float1.value = -3
         except ConstraintError, err:
-            self.assertEqual(str(err), "h1.float1: constraint '-3 >= 0.0' has been violated")
+            self.assertEqual(str(err), 
+                        "h1.float1: constraint '-3 >= 0.0' has been violated")
         else:
             self.fail('ConstraintError exception')
 

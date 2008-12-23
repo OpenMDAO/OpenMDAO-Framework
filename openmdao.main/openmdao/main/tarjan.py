@@ -21,7 +21,9 @@ def strongly_connected_components(graph):
     low = { }
 
     def visit(node):
-        if node in low: return
+        """Visit a node in the graph"""
+        if node in low: 
+            return
 
         num = len(low)
         low[node] = num
@@ -46,6 +48,7 @@ def strongly_connected_components(graph):
 
 
 def topological_sort(graph):
+    """sort the graph into DFS order"""
     count = { }
     for node in graph:
         count[node] = 0

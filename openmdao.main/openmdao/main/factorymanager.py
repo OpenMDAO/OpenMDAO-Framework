@@ -14,6 +14,9 @@ _factories = []
 search_path = []
 
 def create(typname, name=None, version=None, server=None, res_desc=None):
+    """Create and return an object specified by the given type, name,
+    version, etc.
+    """
     obj = None
     for fct in _factories:
         obj = fct.create(typname, version, server, res_desc)
@@ -25,12 +28,8 @@ def create(typname, name=None, version=None, server=None, res_desc=None):
     raise NameError("unable to create object of type '"+typname+"'")
 
 
-def find_components(search_path):
-    _factories += egglib.get_plugin_factories(search_path, 'openmdao.components')
-            
-
-
 def get_factory_names():
+    """Return a list of names of Factory objects managed by this manager."""
     names = []
     for fct in _factories:
         names.append(type(fct).__name__)
@@ -39,6 +38,7 @@ def get_factory_names():
 
 
 def register_factory(fct):
+    """Add a Factory to the factory list"""
     if fct not in _factories:
-       _factories.append(fct)      
+        _factories.append(fct)      
           

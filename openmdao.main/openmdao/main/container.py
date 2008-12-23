@@ -16,21 +16,38 @@ import pickle
 import cPickle
 import yaml
 import weakref
-# the following is a monkey-patch to correct a problem with copying/deepcopying weakrefs
-# There is an issue in the python issue tracker regarding this, but it isn't fixed yet.
-copy._copy_dispatch[weakref.ref] = copy._copy_immutable
+# the following is a monkey-patch to correct a problem with
+# copying/deepcopying weakrefs There is an issue in the python issue tracker
+# regarding this, but it isn't fixed yet.
+
+# pylint: disable-msg=W0212
+copy._copy_dispatch[weakref.ref] = copy._copy_immutable  
 copy._deepcopy_dispatch[weakref.ref] = copy._deepcopy_atomic
 copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
+# pylint: enable-msg=W0212
 
 from zope.interface import implements
 
 from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main.hierarchy import HierarchyMember
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.variable import INPUT
 from openmdao.main.vartypemap import find_var_class
 import openmdao.main.factorymanager as factorymanager
 import openmdao.main.constants as constants
 
+
+def _bootstrap_type_var_mappers():
+    """Call this when we fail to locate a mapper from a particular type
+    to a Variable type.
+    TODO: this should load all available Variable entry points using pkg_resources
+    """
+# pylint: disable-msg=W0612
+    import openmdao.main.float
+    import openmdao.main.int
+    import openmdao.main.string
+    import openmdao.main.stringlist
+    import openmdao.main.arrayvar
+    import openmdao.main.containervar
 
 class Container(HierarchyMember):
     """ Base class for all objects having Variables that are visible 
@@ -40,10 +57,14 @@ class Container(HierarchyMember):
     
    
     def __init__(self, name, parent, desc=None):
-        HierarchyMember.__init__(self, name, parent, desc)            
+        super(Container, self).__init__(name, parent, desc)            
         self._pub = {}  # A container for framework accessible objects.
         
     def add_child(self, obj, private=False):
+        """Add an object (must provide IContainer interface) to this
+        Container, and make it a member of this Container's public
+        interface if private is False.
+        """
         if IContainer.providedBy(obj):
             setattr(self, obj.name, obj)
             obj.parent = self
@@ -51,65 +72,81 @@ class Container(HierarchyMember):
                 self.make_public(obj)
         else:
             self.raise_exception("'"+str(type(obj))+
-                                 "' object has does not provide the IContainer interface",
-                                 TypeError)
+                    "' object has does not provide the IContainer interface",
+                    TypeError)
         
     def remove_child(self, name):
-        """Remove the specified child from this container and remove any Variable objects
-        from _pub that reference that child."""
+        """Remove the specified child from this container and remove any
+        Variable objects from _pub that reference that child."""
         dels = []
         for key,val in self._pub.items():
             if val.ref_name == name:
                 dels.append(key)
-        for name in dels:
-            del self._pub[name]
+        for dname in dels:
+            del self._pub[dname]
         delattr(self, name)
         
     def make_public(self, obj_info):
-        """Adds the given object(s) as framework-accessible data object(s) of this
-        Container. obj_info can be a single non-Variable object, a list of names of objects
-        in this container instance, or a list of tuples of the form (name, alias, iostatus),
-        where name is the name of an object within this container instance.  If iostatus is
-        not supplied, the default value is INPUT.  This function attempts to locate an object
-        with an IVariable interface that can wrap each object passed into the function.
+        """Adds the given object(s) as framework-accessible data object(s) of
+        this Container. obj_info can be a single non-Variable object, a list
+        of names of objects in this container instance, or a list of tuples of
+        the form (name, alias, iostatus), where name is the name of an object
+        within this container instance. If iostatus is not supplied, the
+        default value is INPUT. This function attempts to locate an object
+        with an IVariable interface that can wrap each object passed into the
+        function.
         
         Returns None.
-        """
+        """            
+# pylint: disable-msg=R0912
         if isinstance(obj_info, list):
             lst = obj_info
         else:
             lst = [obj_info]
-            
+        
+        ref_name = None
+        iostat = INPUT
+        
         for entry in lst:
+            dobj = None
             if isinstance(entry, basestring):
                 name = entry
-                dobj = find_var_class(type(getattr(self, name)), name, self, 
-                                      iostatus=INPUT)
+                typ = type(getattr(self, name))
+                    
             elif isinstance(entry, tuple):
                 name = entry[0]  # wrapper name
                 ref_name = entry[1]  # internal name
                 if len(entry) > 2:
-                    iostatus = entry[2]
-                else:
-                    iostatus = INPUT
-                dobj = find_var_class(type(getattr(self, ref_name)), name, self, 
-                                      iostatus=iostatus,
-                                      ref_name=ref_name)
+                    iostat = entry[2] # optional iostatus
+                typ = type(getattr(self, ref_name))
+                
             else:
                 dobj = entry
                 if hasattr(dobj, 'name'):
                     name = dobj.name
+                    typ = type(dobj)
                 else:
-                    name = None
-                if not IVariable.providedBy(dobj):
-                    dobj = find_var_class(type(dobj), name, self, iostatus=INPUT)
+                    self.raise_exception(
+                      'no IVariable interface available for the object named '+
+                      str(name), TypeError)
+                    
+            if not IVariable.providedBy(dobj):
+                dobj = find_var_class(typ, name, self, iostatus=iostat, 
+                                      ref_name=ref_name)
+                # if we didn't find a mapper, make sure we've imported all 
+                # of the available Variable types.
+                if dobj is None:
+                    _bootstrap_type_var_mappers()
+                    dobj = find_var_class(typ, name, self, iostatus=iostat, 
+                                          ref_name=ref_name)
             
             if IVariable.providedBy(dobj):
                 dobj.parent = self
                 self._pub[dobj.name] = dobj
             else:
-                self.raise_exception('no IVariable interface available for the object named '+
-                                     str(name), TypeError)
+                self.raise_exception(
+                    'no IVariable interface available for the object named '+
+                    str(name), TypeError)
 
     def make_private(self, name):
         """Remove the named object from the _pub container, which will make it
@@ -120,15 +157,20 @@ class Container(HierarchyMember):
         del self._pub[name]
 
     def contains(self, path):
+        """Return True if the child specified by the given dotted path
+        name is publicly accessibly and is contained in this Container. 
+        """
         try:
             base, name = path.split('.',1)
         except ValueError:
             return path in self._pub
-        if base in self._pub:
-            return self._pub[base].contains(name)
+        obj = self._pub.get(base)
+        if obj is not None:
+            return obj.contains(name)
         return False
             
-    def create(self, type_name, name, version=None, server=None, private=False, res_desc=None):
+    def create(self, type_name, name, version=None, server=None, 
+               private=False, res_desc=None):
         """Create a new object of the specified type inside of this
         Container. The object must have a 'name' attribute.
         
@@ -156,7 +198,8 @@ class Container(HierarchyMember):
                 else:
                     return self._pub[path].value
             except KeyError:
-                self.raise_exception("object has no attribute '"+path+"'", AttributeError)
+                self.raise_exception("object has no attribute '"+path+"'",
+                                     AttributeError)
 
         return self._pub[base].get(name, index)
 
@@ -173,7 +216,8 @@ class Container(HierarchyMember):
             try:
                 return self._pub[path]
             except KeyError:
-                self.raise_exception("object has no attribute '"+path+"'", AttributeError)
+                self.raise_exception("object has no attribute '"+path+"'", 
+                                     AttributeError)
 
         return self._pub[base].getvar(name)
         
@@ -195,14 +239,21 @@ class Container(HierarchyMember):
         try:
             obj = self._pub[base]
         except KeyError:
-            self.raise_exception("object has no attribute '"+base+"'", AttributeError)
+            self.raise_exception("object has no attribute '"+base+"'", 
+                                 AttributeError)
         except TypeError:
-            self.raise_exception("object has no attribute '"+str(base)+"'", AttributeError)
+            self.raise_exception("object has no attribute '"+str(base)+
+                                 "'", AttributeError)
             
         obj.set(name, value, index)        
 
 
     def setvar(self, path, variable):
+        """Set the value of a Variable in this Container with another Variable.
+        This differs from setting to a simple value, because the destination
+        Variable can use info from the source Variable to perform conversions
+        if necessary, as in the case of Float Variables with differing units.
+        """
         try:
             base, name = path.split('.',1)
         except ValueError:
@@ -223,18 +274,8 @@ class Container(HierarchyMember):
         also have attributes with values that match those passed as named
         args.
         
-        """
-        
-        def matches(obj, dct):
-            for key,val in dct.items():
-                try:
-                    if getattr(obj, key) != val:
-                        return False
-                except:
-                    return False
-            return True
-            
-        def recurse_get_objs(obj, iface, visited, **kwargs):
+        """            
+        def _recurse_get_objs(obj, iface, visited, **kwargs):
             objs = []
             for child in obj.__dict__.values():
                 if id(child) in visited:
@@ -243,19 +284,21 @@ class Container(HierarchyMember):
                 if iface.providedBy(child):
                     objs.append(child)
                 if IContainer.providedBy(child):
-                    objs.extend(recurse_get_objs(child, iface, visited, **kwargs))
+                    objs.extend(_recurse_get_objs(child, iface, 
+                                                  visited, **kwargs))
             return objs
             
         objs = []
         visited = set()
         
         if recurse:
-            objs = recurse_get_objs(self, iface, visited, **kwargs)
+            objs = _recurse_get_objs(self, iface, visited, **kwargs)
         else:
-            objs = [child for child in self.__dict__.values() if iface.providedBy(child)]
+            objs = [child for child in self.__dict__.values() 
+                                               if iface.providedBy(child)]
             
         if len(kwargs) > 0:
-            return [x for x in objs if matches(x,kwargs)]
+            return [x for x in objs if _matches(x,kwargs)]
         else:
             return objs
 
@@ -290,4 +333,13 @@ class Container(HierarchyMember):
             return yaml.load(instream)
         else:
             raise RuntimeError('cannot load object using format '+str(format))
+
         
+def _matches(obj, dct):
+    for key,val in dct.items():
+        try:
+            if getattr(obj, key) != val:
+                return False
+        except AttributeError:
+            return False
+    return True

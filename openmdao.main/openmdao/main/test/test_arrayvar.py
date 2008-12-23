@@ -1,13 +1,13 @@
+# pylint: disable-msg=C0111,C0103
+
 import unittest
 
 import numpy
 
-from openmdao.main.exceptions import ConstraintError
 from openmdao.main.container import Container
-from openmdao.main.variable import Variable, INPUT, OUTPUT
+from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.arrayvar import ArrayVariable
 from openmdao.main.float import Float
-from openmdao.main.interfaces import IVariable
 
 class ArrayVarTestCase(unittest.TestCase):
 
@@ -15,16 +15,18 @@ class ArrayVarTestCase(unittest.TestCase):
         """this setup function will be called before each test in this class"""
         self.hobj = Container('h1', None)
         self.hobj.internal_arr1 = numpy.array([1.2, 3.4, 5.6])
-        self.hobj.internal_arr2 = numpy.array([[1.2, 3.4, 5.6],[7.8,9.10,11.12]])
+        self.hobj.internal_arr2 = numpy.array([[1.2, 3.4, 5.6],
+                                               [7.8,9.10,11.12]])
         self.array1 = ArrayVariable('array1', self.hobj, INPUT, float,
                                ref_name='internal_arr1')
         self.array1out = ArrayVariable('array1out', self.hobj, OUTPUT, float,
                                ref_name='internal_arr1')
-        self.array2 = ArrayVariable('array2', self.hobj, INPUT, float, fixed_size=(2,3),
-                               ref_name='internal_arr2')
+        self.array2 = ArrayVariable('array2', self.hobj, INPUT, float, 
+                                    fixed_size=(2,3),
+                                    ref_name='internal_arr2')
         
     def tearDown(self):
-        """this teardown function will be called after each test in this class"""
+        """this teardown function will be called after each test"""
         self.hobj = None
         self.array1 = None
         self.array1out = None
@@ -41,15 +43,16 @@ class ArrayVarTestCase(unittest.TestCase):
         try:
             self.hobj.setvar('array1', var)
         except TypeError,err:
-            self.assertEqual(str(err), "h1.array1: assignment to incompatible variable "+
-                             "'h1.var' of type '<class 'openmdao.main.float.Float'>'")
+            self.assertEqual(str(err), 
+                    "h1.array1: assignment to incompatible variable "+
+                    "'h1.var' of type '<class 'openmdao.main.float.Float'>'")
         else:
             self.fail('TypeError expected')
         try:    
             self.hobj.set('array1', 'foobar')
         except ValueError,err:
             self.assertEqual(str(err), 
-                             "h1.array1: new type 'str'is not compatible with type 'ndarray")
+                "h1.array1: new type 'str'is not compatible with type 'ndarray")
         else:
             self.fail('ValueError expected')
                
@@ -57,7 +60,8 @@ class ArrayVarTestCase(unittest.TestCase):
         try:
             self.hobj.setvar('array2', self.hobj.getvar('array1out'))
         except ValueError, err:
-            self.assertEqual(str(err), 'h1.array2: expected array of size (2, 3) but got (1, 3)')
+            self.assertEqual(str(err), 
+                    'h1.array2: expected array of size (2, 3) but got (1, 3)')
         else:
             self.fail('ValueError expected')
                     

@@ -1,11 +1,9 @@
 
-
-#
-# programmer comments here, copyright, etc.
-#
-
 """
+Interfaces for the OpenMDAO project.
 """
+
+# pylint: disable-msg=E0213,E0211,W0232
 
 #public symbols
 #__all__ = []
@@ -86,9 +84,11 @@ class IComponent (Interface):
     """A runnable Container. This interface is provided by the Component
     class"""
 
-    state =  Attribute('the current state of this object (UNKNOWN,IDLE,RUNNING,WAITING)')
+    state =  Attribute('the current state of this object '+
+                       '(UNKNOWN,IDLE,RUNNING,WAITING)')
 
-    resource_desc = Attribute('a dict containing key-value pairs that are used to select a ResourceAllocator')
+    resource_desc = Attribute('a dict containing key-value pairs that are used'+
+                              'to select a ResourceAllocator')
 
     def add_socket (name, iface, desc=''):
         """Specify a named placeholder for a component with the given
@@ -172,14 +172,15 @@ class IAssembly (Interface):
 class IDriver (Interface):
     """Executes a Workflow until certain criteria are met."""
 
-    workflow = Attribute('the object that orders execution of components that are driven by this driver')
+    workflow = Attribute('the object that orders execution of'+
+                         'components that are driven by this driver')
 
 
 
 class IFactory (Interface):
     """An object that creates and returns objects based on a type string."""
 
-    def create (type):
+    def create (typ):
         """Create an object of the specified type and return it, or a proxy
         to it if it resides in another process."""
 
@@ -190,7 +191,8 @@ class IGeomObject (Interface):
     shape, with parameters that can be manipulated by other Components or
     Drivers to modify its properties."""
 
-    modelID = Attribute("Identifies the model. This can either be a part or an assembly of parts")
+    modelID = Attribute("Identifies the model. "+
+                        "This can either be a part or an assembly of parts")
 
     # the interface for IGeomObject will encapsulate the CAPRI API, which
     #is somewhat large (nearly 100 functions) to show here.

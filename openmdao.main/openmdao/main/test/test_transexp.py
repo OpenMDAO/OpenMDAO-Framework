@@ -11,7 +11,7 @@ from openmdao.main.containervar import ContainerVariable
 
 """
 Test scenario:
-    Container hierarchy    foo
+    Container hierarchy    top
                           /   \
                          a   comp
                         /       \
@@ -25,14 +25,14 @@ comp is a Component
 x is an float variable
 """
 
-foo = Container('foo', None)
-foo.a = Container('a',foo)
-foo.a.b = numpy.array([1.,2,3,4,5,6])
-b = ArrayVariable('b', foo.a, INPUT)
-foo.comp = Component('comp',foo)
-foo.comp.x = 3.14
-x = Float('x', foo.comp, INPUT)
-foo.make_public(['a','comp'])
+top = Container('top', None)
+top.a = Container('a',top)
+top.a.b = numpy.array([1.,2,3,4,5,6])
+b = ArrayVariable('b', top.a, INPUT)
+top.comp = Component('comp',top)
+top.comp.x = 3.14
+x = Float('x', top.comp, INPUT)
+top.make_public(['a','comp'])
 
 # each test is a tuple of the form (input, expected output)
 tests = [
@@ -41,13 +41,14 @@ tests = [
 ('b[0]',"b[0]"),
 ('b[-3]',"b[-3]"),
 ('comp.x[0]',"scope.parent.get('comp.x',[0])"),
-('comp.x[0] = 10.-(3.2*b[3]+1.1*b[2])', "scope.parent.set('comp.x',10.-(3.2*b[3]+1.1*b[2]),[0])"),
+('comp.x[0] = 10.-(3.2*b[3]+1.1*b[2])', 
+     "scope.parent.set('comp.x',10.-(3.2*b[3]+1.1*b[2]),[0])"),
 ('c.b[2] = -comp.x',"scope.parent.set('c.b',-scope.parent.get('comp.x'),[2])"),
 ]
 
 
 for tst in tests:
-    trans = translate_expr(tst[0],scope=foo.a)
+    trans = translate_expr(tst[0],scope=top.a)
     if trans != tst[1]:
         raise AssertionError(trans+" == "+tst[1])  
 
@@ -71,14 +72,14 @@ tests = [
 
 
 for tst in tests:
-    trans = translate_expr(tst[0],scope=foo)
+    trans = translate_expr(tst[0],scope=top)
     if trans != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+trans+" == "+tst[1])  
     
     
 
 for tst in tests:
-    ex = ExprEvaluator(tst[0],foo)
+    ex = ExprEvaluator(tst[0],top)
     if ex.scoped_text != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+trans+" == "+tst[1])  
     

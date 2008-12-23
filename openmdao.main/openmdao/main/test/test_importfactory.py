@@ -1,4 +1,5 @@
 
+# pylint: disable-msg=C0111
 
 from openmdao.main.importfactory import ImportFactory
 
@@ -19,12 +20,14 @@ def test_version_import():
 
 def test_server_import():
     ifactory = ImportFactory()
-    obj = ifactory.create('openmdao.main.component.Component', server='open_mdao_srv')
+    obj = ifactory.create('openmdao.main.component.Component', 
+                          server='open_mdao_srv')
     assert obj == None
 
 def test_res_desc_import():
     ifactory = ImportFactory()
-    obj = ifactory.create('openmdao.main.component.Component', res_desc={'my_attribute':4})
+    obj = ifactory.create('openmdao.main.component.Component', 
+                          res_desc={'my_attribute':4})
     assert obj == None
 
 

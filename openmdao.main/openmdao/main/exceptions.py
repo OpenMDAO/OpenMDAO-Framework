@@ -13,5 +13,5 @@ __version__ = "0.1"
 class ConstraintError(ValueError):
     """Raised when a constraint is violated."""
     def __init__(self, msg):
-        ValueError.__init__(self, msg)
+        super(ConstraintError, self).__init__(msg)
         

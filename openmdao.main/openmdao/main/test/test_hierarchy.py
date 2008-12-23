@@ -1,4 +1,5 @@
 
+# pylint: disable-msg=C0111
 
 from openmdao.main.hierarchy import HierarchyMember
 

@@ -10,8 +10,8 @@ __version__ = "0.1"
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IDriver, IVariable
-from openmdao.main.component import Component, STATE_WAITING, STATE_RUNNING
+from openmdao.main.interfaces import IDriver
+from openmdao.main.component import Component, STATE_WAITING
 
 
 class Driver(Component):
@@ -20,7 +20,7 @@ class Driver(Component):
     implements(IDriver)
 
     def __init__(self, name, parent=None, desc=None):
-        Component.__init__(self, name, parent, desc)
+        super(Driver, self).__init__(name, parent, desc)
 
         
     def execute(self):
