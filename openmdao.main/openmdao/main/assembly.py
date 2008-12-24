@@ -178,7 +178,8 @@ class Assembly(Component):
         try:
             deps = self._connections[incomp.name]
         except KeyError:
-            return  # no connections
+            return  # no connected inputs for this component
+
         for invarname, outtuple in deps.items():
             invar = incomp.getvar(invarname)
             outvar = self.getvar('.'.join(outtuple[:2]))

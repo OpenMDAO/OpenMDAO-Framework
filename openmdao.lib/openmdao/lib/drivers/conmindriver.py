@@ -16,7 +16,7 @@ from openmdao.main.arrayvar import ArrayVariable
 from openmdao.main.string import String
 from openmdao.main.stringlist import StringList
 from openmdao.main.variable import INPUT
-from openmdao.main.transexpr import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator
 
 
 class CONMINdriver(Driver):
@@ -86,14 +86,14 @@ class CONMINdriver(Driver):
             
             # now create an expression to set each design variable to
             # the corresponding value in self.design_vals
-            setter = desvar+'=design_vals['+str(i)+']'
-            try:
-                self._design_var_setters.append(ExprEvaluator(setter, self))
-            except RuntimeError:
-                self.raise_exception("expression '"+str(setter)+
-                                     "' is invalid", RuntimeError)
+            self._design_var_setters.append(
+                ExprEvaluator(desvar+'=design_vals['+str(i)+']', self))
             
         self.design_vals = numarray.zeros(len(dv)+2,'d')
+        
+        # FIXME: we're probably causing CONMIN to do some unnecessary 
+        #        bounds checking by making these the same size as design_vars
+        #        even if the user doesn't set them.
         if self.upper_bounds.size != self.design_vals.size:
             self._upper_bounds = numarray.array([1.e99]*len(self.design_vals))
         if self.lower_bounds.size != self.design_vals.size:
@@ -115,8 +115,8 @@ class CONMINdriver(Driver):
             try:
                 self._constraints.append(ExprEvaluator(constraint, self))
             except RuntimeError:
-                raise RuntimeError("constraint '"+str(constraint)+
-                                   "' is invalid")
+                self.raise_exception("constraint '"+str(constraint)+
+                                     "' is invalid", RuntimeError)
             
         length = len(cons)+2*len(self.design_vals)
         self.constraint_vals = numarray.zeros(length,'d')
@@ -141,7 +141,8 @@ class CONMINdriver(Driver):
         try:
             self._objective = ExprEvaluator(obj, self)
         except RuntimeError:
-            raise RuntimeError("objective '"+str(obj)+"' is invalid")
+            self.raise_exception("objective '"+str(obj)+"' is invalid",
+                                 RuntimeError)
         
     def _get_objective(self):
         if self._objective is None:
@@ -157,7 +158,7 @@ class CONMINdriver(Driver):
             self.raise_exception('size of new lower bound array ('+
                                  str(len(val))+
                                  ') does not match number of design vars ('+
-                                 str(len(self._design_vars)), ValueError)
+                                 str(len(self._design_vars))+')', ValueError)
         for i,lb in enumerate(val):
             vv[i] = lb
         self._lower_bounds = vv
@@ -236,7 +237,7 @@ class CONMINdriver(Driver):
     def update_objective_val(self):
         """evaluate the new objective"""
         if self._objective is None:
-            self.raise_exception('No objective has been set',RuntimeError)
+            self.raise_exception('No objective has been set', RuntimeError)
         else:
             self.objective_val = self._objective.evaluate()
                
@@ -251,7 +252,17 @@ class CONMINdriver(Driver):
             dv.evaluate()
 
     def _config_conmin(self):
+        """Set up arrays for the FORTRAN conmin routine, and perform some
+        basic validation.
+        """
         self.cnmn1.ndv = len(self._design_vars)
+        
+        if self.cnmn1.ndv < 1:
+            self.raise_exception('no design variables specified', RuntimeError)
+            
+        if self._objective is None:
+            self.raise_exception('no objective specified', RuntimeError)
+        
         self.cnmn1.ncon = len(self._constraints)
         
         if not self._lower_bounds.size == 0 or not self._upper_bounds.size == 0:

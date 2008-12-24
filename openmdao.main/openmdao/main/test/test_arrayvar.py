@@ -69,6 +69,42 @@ class ArrayVarTestCase(unittest.TestCase):
         self.hobj.newarray = numpy.array([[12.,34.,56.],[78.,910.,1112.]])
         newarray = ArrayVariable('newarray',self.hobj, OUTPUT, float)
         self.hobj.setvar('array2',newarray)
+        
+    def test_bad_set_index(self):
+        try:
+            self.array1.set(None, 99., (1,2,3))
+        except IndexError, err:
+            self.assertEqual(str(err), "h1.array1: invalid index: (1, 2, 3)")
+        else:
+            self.fail('IndexError expected')
+        try:
+            self.array1.set(None, 99., [])
+        except IndexError, err:
+            self.assertEqual(str(err), "h1.array1: empty index not allowed")
+        else:
+            self.fail('IndexError expected')
+        try:
+            self.array1.set(None, 99., 'shoe')
+        except IndexError, err:
+            self.assertEqual(str(err), "h1.array1: index must be a list or a tuple")
+        else:
+            self.fail('IndexError expected')
+        try:
+            self.array1.set(None, 99., {'a':5})
+        except IndexError, err:
+            self.assertEqual(str(err), "h1.array1: index must be a list or a tuple")
+        else:
+            self.fail('IndexError expected')
+
+    def test_bad_set_index_value(self):
+        try:
+            self.array1.set(None, 'unexpected', [1])
+        except ValueError, err:
+            self.assertEqual(str(err), "h1.array1: value type float64 at array"+
+                             " index [1] is not compatible with new value type str")
+        else:
+            self.fail('ValueError expected')
+
 
 if __name__ == "__main__":
     unittest.main()

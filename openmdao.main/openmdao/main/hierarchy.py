@@ -21,9 +21,9 @@ class HierarchyMember(object):
     def __init__(self, name, parent=None, desc=None):
         self.name = name
         if parent is None:
-            self.__parent = None
+            self._parent = None
         else:
-            self.__parent = weakref.ref(parent)
+            self._parent = weakref.ref(parent)
         if desc is not None:
             self.__doc__ = desc
 
@@ -49,18 +49,32 @@ class HierarchyMember(object):
 
     
     def _get_parent(self):
-        if self.__parent is None:
+        if self._parent is None:
             return None
         else:
-            return self.__parent() # need parens since self.parent is a weakref
+            return self._parent() # need parens since self.parent is a weakref
         
     def _set_parent(self, parent):
         if parent is None:
-            self.__parent = None
+            self._parent = None
         else:
-            self.__parent = weakref.ref(parent)
+            self._parent = weakref.ref(parent)
            
     parent = property(_get_parent,_set_parent)
+    
+    def __getstate__(self):
+        """ Return dict representing this container's state. """
+        state = self.__dict__.copy()
+        if state['_parent'] is not None:
+            # remove weakref to parent because it won't pickle
+            state['_parent'] = self._parent() 
+        return state
+    
+    def __setstate__(self, state):
+        """ Restore this component's state. """
+        if state['_parent'] is not None:
+            state['_parent'] = weakref.ref(state['_parent'])
+        self.__dict__ = state
     
     # error reporting stuff
     def raise_exception(self, msg, exception_class=Exception):

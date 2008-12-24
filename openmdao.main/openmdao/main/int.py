@@ -26,6 +26,8 @@ class Int(Variable):
             self.max_constraint = MaxConstraint(max_limit)
             self.add_constraint(self.max_constraint)
         
+        # test default value against constraints
+        self.set_default(default)
             
 
 add_var_type_map(Int, int)

@@ -33,7 +33,7 @@ class Variable(HierarchyMember):
     implements(IVariable, IContainer)
     
     def __init__(self, name, parent, iostatus, 
-                 val_type=None, ref_name=None, refparent=None, 
+                 val_type=object, ref_name=None, refparent=None, 
                  default=UNDEFINED, desc=None):
         """Note that Variable calls _pre_assign from here, so if _pre_assign
         requires any attributes from a derived class, those attributes must be
@@ -58,25 +58,42 @@ class Variable(HierarchyMember):
         self._constraints = []
         self.iostatus = iostatus
         self._set_count = 0
-        if val_type is not None and not isinstance(val_type, tuple):
-            self.val_type = (val_type,)
-        else:
-            self.val_type = val_type
         
         if IContainer.providedBy(parent):
-            val = getattr(self._refparent, self.ref_name)
             parent.make_public(self)
         else:
             raise TypeError("parent of Variable '"+name+
                             "' is not an IContainer")
 
-        if default is UNDEFINED: 
-            self.default = self._pre_assign(val)
-        elif default is None:
-            self.default = None
+        if isinstance(val_type, (tuple, type)):
+            self.val_type = val_type
+        elif isinstance(val_type, list):
+            self.val_type = tuple(val_type)
         else:
-            self.default = self._pre_assign(default)
+            self.raise_exception('val_type must be a type, a class, or a tuple',
+                                 TypeError) 
+            
+        # we'll check the validity of the default value here, but
+        # we don't know the constraints yet, so the derived class
+        # will have to do it again if it has constraints
+        self.set_default(default)
 
+    def _get_ref_value(self):
+        return getattr(self._refparent, self.ref_name)        
+        
+    def set_default(self, default):
+        try:
+            if default is UNDEFINED: 
+                self.default = self._pre_assign(self._get_ref_value())
+            elif default is None:
+                self.default = None
+            else:
+                self.default = self._pre_assign(default)
+        except (ValueError, TypeError), err:
+            self.raise_exception('invalid default value: '+ 
+                        str(err).replace(self.get_pathname()+':','',1),
+                        type(err))
+        
     def contains(self, path):
         """Return True if the object identified by path is found
         within this object.
@@ -127,11 +144,9 @@ class Variable(HierarchyMember):
         
         Returns the validated value.
         """
-        if self.val_type is not None:
-            match = [x for x in self.val_type if isinstance(val, x)]
-            if len(match) == 0:
-                self.raise_exception('incompatible with type '+
-                                     str(type(val), ValueError))
+        if not isinstance(val, self.val_type):        
+            self.raise_exception('incompatible with type '+
+                                 str(type(val)), ValueError)
         
         # test against any constraints placed on this variable
         try:

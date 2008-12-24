@@ -1,7 +1,7 @@
 
 import numpy
 
-from openmdao.main.transexpr import translate_expr,ExprEvaluator
+from openmdao.main.expreval import translate_expr,ExprEvaluator
 from openmdao.main.container import Container
 from openmdao.main.component import Component
 from openmdao.main.variable import INPUT
@@ -48,7 +48,7 @@ tests = [
 
 
 for tst in tests:
-    trans = translate_expr(tst[0],scope=top.a)
+    trans = translate_expr(tst[0],scope=top.a, validate=False)
     if trans != tst[1]:
         raise AssertionError(trans+" == "+tst[1])  
 
@@ -72,15 +72,25 @@ tests = [
 
 
 for tst in tests:
-    trans = translate_expr(tst[0],scope=top)
+    trans = translate_expr(tst[0], scope=top, validate=False)
     if trans != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+trans+" == "+tst[1])  
     
     
 
 for tst in tests:
-    ex = ExprEvaluator(tst[0],top)
+    ex = ExprEvaluator(tst[0], top, validate=False)
     if ex.scoped_text != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+trans+" == "+tst[1])  
     
+
+# now try some bogus expressions
+try:
+    ex = ExprEvaluator('abcd.efg', top)
+except RuntimeError, err:
+    expected = "cannot find variable 'abcd.efg'"
+    if str(err) != expected:
+        raise AssertionError(str(err)+'=='+expected)
+else:
+    raise AssertionError('RuntimeError expected')
 

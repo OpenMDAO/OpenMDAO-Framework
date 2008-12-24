@@ -1,17 +1,20 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest
+import StringIO
+
 
 from openmdao.main.container import Container
 from openmdao.main.interfaces import IContainer
 import openmdao.main.factorymanager as factorymanager
 from openmdao.main.importfactory import ImportFactory
+import openmdao.main.constants as constants
 
 
 class ContainerTestCase(unittest.TestCase):
 
     def setUp(self):
-        """this setup function will be called before each test in this class"""
+        """this setup function will be called before each test"""
         
         # build a simple hierarchy of Containers
         self.root = Container('root', None)
@@ -122,12 +125,55 @@ class ContainerTestCase(unittest.TestCase):
                                     parent=self.root.get('c2'))
         self.assertEqual(names, ['root.c2.c21', 'root.c2.c22'])        
 
-
     def test_create(self):
         factorymanager.register_factory(ImportFactory())
         new_obj = self.root.create('openmdao.main.component.Component','mycomp')
         self.assertEqual(new_obj.__class__.__name__, 'Component')
         new_obj.run()
+        
+    def test_save_load_yaml(self):
+        output = StringIO.StringIO()
+        c1 = Container('c1', None)
+        c2 = Container('c2', None)
+        c1.add_child(c2)
+        c1.save(output, constants.SAVE_YAML)
+        
+        inp = StringIO.StringIO(output.getvalue())
+        newc1 = Container.load(inp, constants.SAVE_YAML)
+                
+    def test_save_load_libyaml(self):
+        output = StringIO.StringIO()
+        c1 = Container('c1', None)
+        c2 = Container('c2', None)
+        c1.add_child(c2)
+        c1.save(output, constants.SAVE_LIBYAML)
+        
+        inp = StringIO.StringIO(output.getvalue())
+        newc1 = Container.load(inp, constants.SAVE_LIBYAML)
+                
+    def test_save_load_cpickle(self):
+        output = StringIO.StringIO()
+        c1 = Container('c1', None)
+        c2 = Container('c2', None)
+        c1.add_child(c2)
+        c1.save(output)
+        
+        inp = StringIO.StringIO(output.getvalue())
+        newc1 = Container.load(inp)
+        
+    def test_save_load_pickle(self):
+        output = StringIO.StringIO()
+        c1 = Container('c1', None)
+        c2 = Container('c2', None)
+        c1.add_child(c2)
+        c1.save(output, constants.SAVE_PICKLE)
+        
+        inp = StringIO.StringIO(output.getvalue())
+        newc1 = Container.load(inp, constants.SAVE_PICKLE)
+                
+        
+        
+    
 
 if __name__ == "__main__":
     unittest.main()

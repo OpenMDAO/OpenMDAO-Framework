@@ -26,6 +26,8 @@ class String(Variable):
             self.maxlen_constraint = MaxLengthConstraint(max_length)
             self.add_constraint(self.maxlen_constraint)
             
+        # test default value against constraints
+        self.set_default(default)
             
         
         

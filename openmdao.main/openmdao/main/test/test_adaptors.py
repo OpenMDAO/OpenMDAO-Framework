@@ -88,13 +88,11 @@ from zope.component import getMultiAdapter
 
 
 ma = getMultiAdapter((one,otherone), IFunctionality)
-print ma
+assert(isinstance(ma, MyFunctionality))
 
-one.dump()
 one.f = 99.7
-one.dump()
-otherone.dump()
+assert(otherone.f == 1.2)
 ma.xfer()
-otherone.dump()
+assert(otherone.f == 99.7)
 
 

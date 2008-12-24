@@ -27,7 +27,7 @@ def _trans_unary(strng, loc, tok):
     return tok
 
     
-def _trans_lhs(strng, loc, tok, scope):
+def _trans_lhs(strng, loc, tok, scope, validate):
     if scope.contains(tok[0]):
         scname = 'scope'
     else:
@@ -36,6 +36,8 @@ def _trans_lhs(strng, loc, tok, scope):
             scope.warning("attribute '"+tok[0]+"' is private"+
                           " so a public value in the parent is"+
                           " being used instead (if found)")
+        if validate is True and not scope.parent.contains(tok[0]):
+            raise RuntimeError("cannot find variable '"+tok[0]+"'")
     
     full = scname + ".set('" + tok[0] + "',_@RHS@_"
     if len(tok) > 1:
@@ -43,7 +45,7 @@ def _trans_lhs(strng, loc, tok, scope):
             
     return ['=',full + ")"]
     
-def _trans_assign(strng, loc, tok, scope):
+def _trans_assign(strng, loc, tok):
     if tok[0] == '=':
         return [tok[1].replace('_@RHS@_',tok[2],1)]
     else:
@@ -69,7 +71,7 @@ def _trans_arglist(strng, loc, tok):
         full += ','+tok[index]
     return [full+")"]
 
-def _trans_fancyname(strng, loc, tok, scope):
+def _trans_fancyname(strng, loc, tok, scope, validate):
     # if we find the named object in the current scope, then we don't need to 
     # do any translation.  The scope object is assumed to have a contains() 
     # function.
@@ -83,6 +85,9 @@ def _trans_fancyname(strng, loc, tok, scope):
             scope.warning("attribute '"+tok[0]+"' is private"+
                           " so a public value in the parent is"+
                           " being used instead (if found)")
+        if validate is True and (scope.parent is None or 
+                                 not scope.parent.contains(tok[0])):
+            raise RuntimeError("cannot find variable '"+tok[0]+"'")
     
     if len(tok) == 1 or (len(tok) > 1 and tok[1].startswith('[')):
         full = scname + ".get('" + tok[0] + "'"
@@ -96,7 +101,7 @@ def _trans_fancyname(strng, loc, tok, scope):
     return [full + ")"]
     
 
-def translate_expr(text, scope):
+def translate_expr(text, scope, validate=True):
     """A function to translate an expression using dotted names into a new
     expression string containing the appropriate calls to resolve those dotted
     names in the framework, e.g., get('a.b.c') or invoke('a.b.c',1,2,3).
@@ -148,7 +153,7 @@ def translate_expr(text, scope):
     # pyparsing only take 3 args, so we wrap our function in a lambda function
     # with an extra argument to specify the scope used for the translation.
     fancyname.setParseAction(
-        lambda s,loc,tok: _trans_fancyname(s,loc,tok,scope))
+        lambda s,loc,tok: _trans_fancyname(s,loc,tok,scope, validate))
 
     addop  = plus | minus
     multop = mult | div
@@ -162,9 +167,9 @@ def translate_expr(text, scope):
     
     lhs_fancyname = pathname + ZeroOrMore(arrayindex)
     lhs = lhs_fancyname + assignop
-    lhs.setParseAction(lambda s,loc,tok: _trans_lhs(s,loc,tok,scope))
+    lhs.setParseAction(lambda s,loc,tok: _trans_lhs(s,loc,tok,scope,validate))
     equation = Optional(lhs) + Combine(expr) + StringEnd()
-    equation.setParseAction(lambda s,loc,tok: _trans_assign(s,loc,tok,scope))
+    equation.setParseAction(lambda s,loc,tok: _trans_assign(s,loc,tok))
     
     try:
         return ''.join(equation.parseString(text))
@@ -184,16 +189,21 @@ class ExprEvaluator(object):
     and function invocation are also translated in a similar way.  For example,
     the expression "a+b[2]-comp.y(x)" for a scoping object that contains attributes
     a, and b, but not comp,x or y, would translate to 
-    "a+b[2]-self.parent.invoke('comp.y',self.parent.get('x'))"
+    "a+b[2]-self.parent.invoke('comp.y',self.parent.get('x'))".
+    
+    If validate is True, any objects referenced in the expression must exist
+    at creation time (or any time later that text is set to a different value)
+    or a RuntimeError will be raised.
     """
     
-    def __init__(self, text, scope):
-        self.scope = weakref.ref(scope)
+    def __init__(self, text, scope, validate=True):
+        self._scope = weakref.ref(scope)
+        self.validate = validate
         self.text = text
     
     def _set_text(self, text):
         self._text = text
-        self.scoped_text = translate_expr(text, self.scope())
+        self.scoped_text = translate_expr(text, self._scope(), self.validate)
         self._code = compile(self.scoped_text, '<string>','eval')
         
     def _get_text(self):
@@ -206,12 +216,13 @@ class ExprEvaluator(object):
         using the eval() function.
         """
         if scope is None:
-            scope = self.scope()
+            scope = self._scope()
+        # object referred to by weakref may no longer exist
         if scope is None:
             raise RuntimeError(
                 'ExprEvaluator cannot evaluate expression without scope.')
         
-        return eval(self._code, self.scope().__dict__, locals())
+        return eval(self._code, scope.__dict__, locals())
 
     
     

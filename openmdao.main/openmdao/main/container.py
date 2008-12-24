@@ -15,6 +15,14 @@ import copy
 import pickle
 import cPickle
 import yaml
+try:
+    from yaml import CLoader as Loader
+    from yaml import CDumper as Dumper
+    _libyaml = True
+except ImportError:
+    from yaml import Loader, Dumper
+    _libyaml = False
+
 import weakref
 # the following is a monkey-patch to correct a problem with
 # copying/deepcopying weakrefs There is an issue in the python issue tracker
@@ -32,6 +40,7 @@ from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main.hierarchy import HierarchyMember
 from openmdao.main.variable import INPUT
 from openmdao.main.vartypemap import find_var_class
+from openmdao.main.logger import logger
 import openmdao.main.factorymanager as factorymanager
 import openmdao.main.constants as constants
 
@@ -311,16 +320,27 @@ class Container(HierarchyMember):
                     for x in self.get_objs(iface, recurse, **kwargs)]
         
     
-    def save (self, outstream, format=constants.SAVE_PICKLE):
+    def save (self, outstream, format=constants.SAVE_CPICKLE):
         """Save the state of this object and its children to the given
         output stream. Pure python classes generally won't need to
         override this because the base class version will suffice, but
         python extension classes will have to override. The format
         can be supplied in case something other than cPickle is needed."""
-        self.raise_exception('save', NotImplementedError)
+        if format is constants.SAVE_CPICKLE:
+            cPickle.dump(self, outstream, -1) # -1 means use highest protocol
+        elif format is constants.SAVE_PICKLE:
+            pickle.dump(self, outstream, -1)
+        elif format is constants.SAVE_YAML:
+            yaml.dump(self, outstream)
+        elif format is constants.SAVE_LIBYAML:
+            if _libyaml is False:
+                self.warning('libyaml not available, using yaml instead')
+            yaml.dump(self, outstream, Dumper=Dumper)
+        else:
+            raise RuntimeError('cannot save object using format '+str(format))
     
     @staticmethod
-    def load (instream, format=constants.SAVE_PICKLE):
+    def load (instream, format=constants.SAVE_CPICKLE):
         """Load an object of this type from the input stream. Pure python 
         classes generally won't need to override this, but extensions will. 
         The format can be supplied in case something other than cPickle is 
@@ -331,6 +351,10 @@ class Container(HierarchyMember):
             return pickle.load(instream)
         elif format is constants.SAVE_YAML:
             return yaml.load(instream)
+        elif format is constants.SAVE_LIBYAML:
+            if _libyaml is False:
+                logger.warn('libyaml not available, using yaml instead')
+            return yaml.load(instream, Loader=Loader)
         else:
             raise RuntimeError('cannot load object using format '+str(format))
 

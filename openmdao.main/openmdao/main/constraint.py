@@ -59,9 +59,13 @@ class MinLengthConstraint(Constraint):
         """Raise a ConstraintError if length of value is less 
         than min allowed.
         """
-        length = len(value)
+        try:
+            length = len(value)
+        except TypeError:
+            raise ConstraintError('length constraint violated. value ('+
+                                  str(value)+') has no length')
         if length < self.minlen:
-            raise ConstraintError("length constraint '"+str(length)+" >= "+
+            raise ConstraintError("min length constraint '"+str(length)+" >= "+
                                   str(self.minlen)+"' has been violated")
         
 class MaxLengthConstraint(Constraint):
@@ -74,9 +78,13 @@ class MaxLengthConstraint(Constraint):
         """Raise a ConstraintError if length of value is greater 
         than max allowed.
         """
-        length = len(value)
+        try:
+            length = len(value)
+        except TypeError:
+            raise ConstraintError('length constraint violated. value ('+
+                                  str(value)+') has no length')
         if length > self.maxlen:
-            raise ConstraintError("length constraint '"+str(length)+" <= "+
+            raise ConstraintError("max length constraint '"+str(length)+" <= "+
                                   str(self.maxlen)+"' has been violated")
         
         

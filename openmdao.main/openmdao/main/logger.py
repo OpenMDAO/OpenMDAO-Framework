@@ -16,8 +16,8 @@ import logging
 logging.basicConfig(level=logging.DEBUG,
 #                   format='%(asctime)s %(name)-8s %(levelname)-5s %(message)s',
                     format='%(asctime)s %(name)s %(levelname)s %(message)s',
-#                    datefmt='%m-%d %H:%M',
-                    datefmt='%H:%M',
+                    datefmt='%m-%d %H:%M',
+#                    datefmt='%H:%M',
                     filename='openmdao_log.txt',
                     filemode='w')
                     

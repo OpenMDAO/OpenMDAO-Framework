@@ -31,6 +31,9 @@ class Float(Variable):
         if max_limit is not None:
             self.max_constraint = MaxConstraint(max_limit)
             self.add_constraint(self.max_constraint)
+            
+        # test default value against constraints
+        self.set_default(default)
 
 
     def _incompatible_units(self, variable, units):
@@ -42,7 +45,7 @@ class Float(Variable):
     def validate_var(self, var):
         """Raise a TypeError if the connecting Variable is incompatible. This
         is called on the INPUT side of a connection."""
-        Variable.validate_var(self, var)
+        super(Float,self).validate_var(var)
         
         if self.units is not _unassigned:
             # if units are defined, force exact unit match for now
@@ -52,12 +55,12 @@ class Float(Variable):
             # allow value without units to be assigned to val with units
 
      
-    def _convert(self, variable):
+    def _convert(self, var):
         """Perform unit conversion here. Validation is not necessary because 
         it's already been done in validate_var.
         """
         #TODO: add unit conversion code here...
-        return variable.value
+        return var.value
     
     
 add_var_type_map(Float, float)

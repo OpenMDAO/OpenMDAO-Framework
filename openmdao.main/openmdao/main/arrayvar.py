@@ -68,11 +68,7 @@ class ArrayVariable(Variable):
     def _pre_assign_entry(self, val, index):
         """Called prior to assigning to an entry of the array value in order to 
         perform validation."""
-        try:
-            myval = self.value[tuple(index)]
-        except IndexError:
-            self.raise_exception('invalid index: '+str(tuple(index)), 
-                                 IndexError)
+        myval = self.get_entry(index)
         valtype = numpy.obj2sctype(type(val))
         if valtype is not None and numpy.can_cast(valtype, 
                                                   self.value.dtype.type):
@@ -85,16 +81,22 @@ class ArrayVariable(Variable):
         
     def get_entry(self, index):
         """Return the value of the entry at index in our array value."""
-        return self.value[tuple(index)]
+        if len(index) == 0:
+            self.raise_exception('empty index not allowed',
+                                 IndexError)
+        elif not isinstance(index, (list,tuple)):
+            self.raise_exception('index must be a list or a tuple',
+                                 IndexError)           
+        try:
+            myval = self.value[tuple(index)]
+        except IndexError:
+            self.raise_exception('invalid index: '+str(tuple(index)), 
+                                 IndexError)
+        return myval
     
     def set_entry(self, val, index):
         """Set the entry at index of our array value."""
         tmp = self._pre_assign_entry(val, index)
-        try:
-            self.value[tuple(index)] = tmp
-        except IndexError:
-            self.raise_exception("assigning index "+str(index)+
-                                 " to a value of type "+
-                                 str(type(val))+" failed", IndexError)        
+        self.value[tuple(index)] = tmp
 
 add_var_type_map(ArrayVariable, numpy.ndarray)
