@@ -162,7 +162,7 @@ class Variable(HierarchyMember):
         """Perform validation before assignment of a value to an entry.
         This is only applicable for array Variables.
         """
-        self.raise_exception('_pre_assign_entry', NotImplemented)            
+        self.raise_exception('_pre_assign_entry', NotImplementedError)            
 
         
     def validate_var(self, variable):
@@ -170,7 +170,7 @@ class Variable(HierarchyMember):
         called on the INPUT side of a connection. The value attribute of the
         Variable is not checked at this time."""
         if not isinstance(variable, type(self)):
-            # could try to obtain adapter here...
+            # TODO: could try to obtain adapter here...
             self.raise_exception("assignment to incompatible variable '"+
                                  variable.get_pathname()+"' of type '"+
                                  str(type(variable))+"'", TypeError)
@@ -201,13 +201,17 @@ class Variable(HierarchyMember):
         is assumed to be a value and not a Variable object. Assignment to
         'value' will force a check against any constraints registered with
         this Variable."""
-        if name is None or name == value: # they're setting this Variable
+        if name is None or name == 'value': # they're setting this Variable
             if index is None:
                 self.value = value
             else:
                 self.set_entry(value, index)                    
         else:  # they're setting an attribute (units, etc.)
-            setattr(self, name, value)
+            if index is None:
+                setattr(self, name, value)
+            else:
+                self.raise_exception("array indexing of Variable attributes not supported", 
+                                     ValueError)
             
     def getvar(self, name=None):
         """Retrieved a named Variable from this object, or return 
@@ -226,7 +230,7 @@ class Variable(HierarchyMember):
                 return self.value
             else:
                 return self.get_entry(index)
-        else:
+        else:  # getting an attribute of this Variable
             if index is None:
                 return getattr(self, name)
             else:
@@ -237,7 +241,10 @@ class Variable(HierarchyMember):
 
     def get_entry(self, index):
         """Retrieve the entry indicated by index."""
-        return self.value[index]
+        val = self.value
+        for i in index:
+            val = val[i]
+        return val
     
     def set_entry(self, val, index):
         """Set the value of the entry indicated by index.
@@ -245,7 +252,10 @@ class Variable(HierarchyMember):
         """
         tmp = self._pre_assign_entry(val, index)
         try:
-            self.value[index] = tmp
+            val = self.value
+            for i in index[:-1]:
+                val = val[i]
+            val[index[len(index)-1]] = tmp
         except TypeError:
             self.raise_exception("assigning index "+str(index)+
                                  " to a value of type "+

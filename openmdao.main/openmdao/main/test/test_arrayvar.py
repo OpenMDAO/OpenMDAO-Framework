@@ -33,10 +33,25 @@ class ArrayVarTestCase(unittest.TestCase):
         self.array2 = None
 
     def test_assignment(self):
-        assert(numpy.all(numpy.array([1.2,3.4,5.6])==self.array1.value))
+        self.assert_(numpy.all(numpy.array([1.2,3.4,5.6])==self.array1.value))
         self.hobj.set('array1', numpy.array([1.,2.,3.,4.,5.]))
-        assert(numpy.all(numpy.array([1.,2.,3.,4.,5.])==self.array1.value))
+        self.assert_(numpy.all(numpy.array([1.,2.,3.,4.,5.])==self.array1.value))
         
+    def test_set_entry(self):
+        self.hobj.set('array1',-99.9, [2])
+        self.assertEqual(-99.9, self.hobj.get('array1',[2]))
+    
+    def test_get(self):
+        val = self.hobj.get('array1',[2])
+        self.assertEqual(val, 5.6)
+        val = self.hobj.get('array1.default',[2])
+        self.assertEqual(val, 5.6)
+        var = self.hobj.getvar('array1')
+        val = var.get(None,[2])
+        self.assertEqual(val, 5.6)
+        arr = self.hobj.get('array1')
+        self.assert_(numpy.all(arr == numpy.array([1.2, 3.4, 5.6])))
+    
     def test_bad_assignment(self):
         self.hobj.float1 = 2.1
         var = Float('var', self.hobj, OUTPUT, ref_name='float1')

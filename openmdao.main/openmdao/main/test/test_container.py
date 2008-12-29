@@ -9,6 +9,8 @@ from openmdao.main.interfaces import IContainer
 import openmdao.main.factorymanager as factorymanager
 from openmdao.main.importfactory import ImportFactory
 import openmdao.main.constants as constants
+from openmdao.main.float import Float
+from openmdao.main.variable import INPUT
 
 
 class ContainerTestCase(unittest.TestCase):
@@ -27,7 +29,10 @@ class ContainerTestCase(unittest.TestCase):
         c2.add_child(c21)
         c2.add_child(c22)
         c221 = Container('c221', None)
+        c221.number = 3.14
         c22.add_child(c221)
+        ff = Float('number',c221,INPUT)
+        ff.units = "ft/sec"
 
     def tearDown(self):
         """this teardown function will be called after each test"""
@@ -53,8 +58,15 @@ class ContainerTestCase(unittest.TestCase):
     def test_get(self):
         obj = self.root.get('c2.c21')
         self.assertEqual(obj.get_pathname(), 'root.c2.c21')
+        num = self.root.get('c2.c22.c221.number')
+        self.assertEqual(num, 3.14)
+        num = self.root.get('c2.c22.c221.number.value')
+        self.assertEqual(num, 3.14)
 
-
+    def test_get_attribute(self):
+        units = self.root.get('c2.c22.c221.number.units')
+        self.assertEqual(units, "ft/sec")
+        
     def test_bad_get(self):
         try:
             self.root.get('bogus')
@@ -130,7 +142,10 @@ class ContainerTestCase(unittest.TestCase):
         new_obj = self.root.create('openmdao.main.component.Component','mycomp')
         self.assertEqual(new_obj.__class__.__name__, 'Component')
         new_obj.run()
-        
+ 
+    # TODO: all of these save/load test functions need to do more checking
+    #       to verify that the loaded thing is equivalent to the saved thing
+    
     def test_save_load_yaml(self):
         output = StringIO.StringIO()
         c1 = Container('c1', None)
@@ -172,9 +187,6 @@ class ContainerTestCase(unittest.TestCase):
         newc1 = Container.load(inp, constants.SAVE_PICKLE)
                 
         
-        
-    
-
 if __name__ == "__main__":
     unittest.main()
 

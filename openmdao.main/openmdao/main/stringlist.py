@@ -43,3 +43,21 @@ class StringList(Variable):
             
         return newval
         
+    def _pre_assign_entry(self, val, index):
+        """Called prior to assigning to an entry of the array value in order to 
+        perform validation."""
+        if not isinstance(val, basestring):
+            self.raise_exception('cannot assign a value of type '+
+                                 str(type(val))+' to a StringList entry',
+                                 ValueError)
+        if not isinstance(index, list) or not isinstance(index[0], int):
+            self.raise_exception('invalid list index: '+str(index),
+                                 IndexError)            
+        if len(index) > 1:
+            self.raise_exception('StringList does not support nested lists',
+                                 IndexError)
+        if index[0] >= len(self.value) or index[0] < 0:
+            self.raise_exception('index '+str(index[0])+' out of range',
+                                 IndexError)
+        return val
+            

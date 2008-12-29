@@ -40,6 +40,47 @@ class StringListTestCase(unittest.TestCase):
         self.sl1.value = ["qq"]
         self.assertEqual(["qq"],self.sl1.value)
         self.assertEqual(["qq"],self.hobj.internal_sl1)
+    
+    def test_get(self):
+        val = self.sl1.get(None, [1])
+        self.assertEqual("def", val)
+        val = self.sl1.get('value', [1])
+        self.assertEqual("def", val)
+        
+    def test_set(self):
+        self.sl1.set(None, '___', [1])
+        self.assertEqual(["abcd","___"], self.sl1.value)
+        self.sl1.set('value', '000', [0])
+        self.assertEqual(["000","___"], self.sl1.value)
+        
+    def test_bad_set(self):
+        try:
+            self.sl1.set(None, '___', [99])
+        except IndexError, err:
+            self.assertEqual(str(err), "h1.sl1: index 99 out of range")
+        else:
+            self.fail('IndexError expected')
+        try:
+            self.sl1.set('value', '000', [-3])
+        except IndexError, err:
+            self.assertEqual(str(err), "h1.sl1: index -3 out of range")
+        else:
+            self.fail('IndexError expected')
+        try:
+            self.sl1.set(None, ["foo"], [0])
+        except ValueError, err:
+            self.assertEqual(str(err), 
+                "h1.sl1: cannot assign a value of type <type 'list'> to a StringList entry")
+        else:
+            self.fail('ValueError expected')
+        try:
+            self.sl1.set('value', ["foo"], [0])
+        except ValueError, err:
+            self.assertEqual(str(err), 
+                "h1.sl1: cannot assign a value of type <type 'list'> to a StringList entry")
+        else:
+            self.fail('ValueError expected')
+            
         
     def test_bad_assignment(self):
         try:

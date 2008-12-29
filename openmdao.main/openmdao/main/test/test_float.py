@@ -41,6 +41,31 @@ class FloatTestCase(unittest.TestCase):
         self.assertEqual(32.1,self.float1.value)
         self.assertEqual(32.1,self.hobj.internal_float1)
         
+    def test_get(self):
+        val = self.float1.get(None)
+        self.assertEqual(val, 3.1415926)
+        val = self.float1.get('value')
+        self.assertEqual(val, 3.1415926)
+        
+    def test_set_attribute(self):
+        self.float1.set("units", "ft^2")
+        self.assertEqual(self.float1.units, "ft^2")
+        try:
+            self.float1.set("units", "in^2", [2])
+        except ValueError, err:
+            self.assertEqual(str(err), 
+                "h1.float1: array indexing of Variable attributes not supported")
+        else:
+            self.fail("ValueError expected")
+        
+    def test_array_assign(self):
+        try:
+            self.float1.set(None, 1.3, [3])
+        except NotImplementedError, err:
+            self.assertEqual(str(err), "h1.float1: _pre_assign_entry")
+        else:
+            self.fail("NotImplementedError expected")
+        
     def test_constraint_violations(self):
         try:
             self.float1.value = 124
