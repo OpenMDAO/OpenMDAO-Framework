@@ -27,7 +27,7 @@ class DummyComp(Component):
         String('s', self, INPUT)
         
         Float('rout', self, OUTPUT, units='cm')
-        Float('r2out', self, OUTPUT, units='cm/sec')
+        Float('r2out', self, OUTPUT, units='cm/s')
         String('sout', self, OUTPUT)
         
         # hack a quick way to get nested containers for testing

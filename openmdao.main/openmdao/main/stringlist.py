@@ -19,15 +19,53 @@ class StringList(Variable):
         super(StringList, self).__init__(name, parent, iostatus, val_type=list, 
                                          ref_name=ref_name, 
                                          default=default, desc=desc)            
-        if min_length is not None:
-            self.minlen_constraint = MinLengthConstraint(min_length)
-            self.add_constraint(self.minlen_constraint)
-        if max_length is not None:
-            self.maxlen_constraint = MaxLengthConstraint(max_length)
-            self.add_constraint(self.maxlen_constraint)
-        
+        self._min_length = None
+        self._max_length = None
+        self.min_length = min_length
+        self.max_length = max_length
+            
         # test default value against constraints
         self.set_default(default)
+    
+    def _get_min_length(self):
+        if self._min_length is None:
+            return None
+        else:
+            return self._min_length.minlen
+        
+    def _set_min_length(self, value):
+        if self._min_length is None:
+            if value is not None:
+                self._min_length = MinLengthConstraint(value)
+                self.add_constraint(self._min_length)
+        else:
+            if value is None:
+                self.remove_constraint(self._min_length)
+                self._min_length = None
+            else:
+                self._min_length.minlen = value
+    
+    min_length = property(_get_min_length, _set_min_length)
+    
+    def _get_max_length(self):
+        if self._max_length is None:
+            return None
+        else:
+            return self._max_length.minlen
+        
+    def _set_max_length(self, value):
+        if self._max_length is None:
+            if value is not None:
+                self._max_length = MaxLengthConstraint(value)
+                self.add_constraint(self._max_length)
+        else:
+            if value is None:
+                self.remove_constraint(self._max_length)
+                self._max_length = None
+            else:
+                self._max_length.maxlen = value
+    
+    max_length = property(_get_max_length, _set_max_length)
         
             
     def _pre_assign(self, val):

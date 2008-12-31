@@ -14,7 +14,7 @@ class StringTestCase(unittest.TestCase):
         self.hobj = Container('h1', None)
         self.hobj.internal_s1 = "abcd"
         self.hobj.internal_s2 = "xyz"
-        self.hobj.internal_s3 = ""
+        self.hobj.internal_s3 = "z"
         self.s1 = String('s1', self.hobj, INPUT, 
                        ref_name='internal_s1', default="foo")
         self.s2 = String('s2', self.hobj, OUTPUT, 

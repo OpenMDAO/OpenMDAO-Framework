@@ -4,7 +4,7 @@ import unittest
 
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.container import Container
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
 from openmdao.main.float import Float
 
 class FloatTestCase(unittest.TestCase):
@@ -17,12 +17,12 @@ class FloatTestCase(unittest.TestCase):
         self.hobj.internal_float3 = 1.1
         self.float1 = Float('float1', self.hobj, INPUT, 
                        ref_name='internal_float1', default=98.9,
-                       min_limit=0., max_limit=99.)
+                       min_limit=0., max_limit=99., units='ft')
         self.float2 = Float('float2', self.hobj, OUTPUT, default=13.2, 
-                       ref_name='internal_float2')
+                       ref_name='internal_float2', units='inch')
         self.float3 = Float('float3', self.hobj, INPUT, 
                        ref_name='internal_float3',
-                       min_limit=0., max_limit=99.)
+                       min_limit=0., max_limit=99., units='kg')
         
     def tearDown(self):
         """this teardown function will be called after each test"""
@@ -40,6 +40,30 @@ class FloatTestCase(unittest.TestCase):
         self.float1.value = 32.1
         self.assertEqual(32.1,self.float1.value)
         self.assertEqual(32.1,self.hobj.internal_float1)
+
+    def test_unit_conversion(self):
+        self.hobj.internal_float2 = 12.  # inches
+        self.float1.setvar(None, self.float2)
+        self.assertEqual(self.hobj.internal_float1, 1.) # 12 inches = 1 ft
+        
+        # now set to a value that will violate constraint after conversion
+        self.hobj.internal_float2 = 1200.  # inches
+        try:
+            self.float1.setvar(None, self.float2)
+        except ConstraintError, err:
+            self.assertEqual(str(err), 
+                             "h1.float1: constraint '100.0 <= 99.0' has been violated")
+        else:
+            self.fail('ConstraintError expected')
+        
+    def test_bogus_units(self):
+        try:
+            self.float1.units = 'bogus'
+        except ValueError, err:
+            self.assertEqual(str(err), 
+                             "h1.float1: units of 'bogus' are invalid")
+        else:
+            self.fail('ValueError expected')
         
     def test_get(self):
         val = self.float1.get(None)
@@ -48,10 +72,10 @@ class FloatTestCase(unittest.TestCase):
         self.assertEqual(val, 3.1415926)
         
     def test_set_attribute(self):
-        self.float1.set("units", "ft^2")
-        self.assertEqual(self.float1.units, "ft^2")
+        self.float1.set("units", "ft**2")
+        self.assertEqual(self.float1.units, "ft**2")
         try:
-            self.float1.set("units", "in^2", [2])
+            self.float1.set("units", "inch**2", [2])
         except ValueError, err:
             self.assertEqual(str(err), 
                 "h1.float1: array indexing of Variable attributes not supported")
@@ -85,13 +109,13 @@ class FloatTestCase(unittest.TestCase):
 
     def test_bad_connection(self):
         self.float1.validate_var(self.float2)
-        self.float1.units = 'lb/ft^2'
+        self.float1.units = 'lb/ft**2'
         self.float2.units = 'kg'
         try:
             self.float1.validate_var(self.float2)
         except TypeError, err:
             self.assertEqual(str(err),'h1.float2 units (kg) are incompatible'+
-                             ' with units (lb/ft^2) of h1.float1')
+                             ' with units (lb/ft**2) of h1.float1')
         else:
             self.fail('TypeError expected')
 

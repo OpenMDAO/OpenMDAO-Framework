@@ -83,7 +83,7 @@ class Variable(HierarchyMember):
         
     def set_default(self, default):
         try:
-            if default is UNDEFINED: 
+            if default is UNDEFINED:
                 self.default = self._pre_assign(self._get_ref_value())
             elif default is None:
                 self.default = None
@@ -133,6 +133,12 @@ class Variable(HierarchyMember):
         this Variable.
         """
         self._constraints.append(con)
+        
+    def remove_constraint(self, con):
+        """Remove a Constraint object from the list of Constraint objects for
+        this Variable.
+        """
+        self._constraints.remove(con)
 
     def _pre_assign(self, val):
         """This should be overridden to perform necessary validations at

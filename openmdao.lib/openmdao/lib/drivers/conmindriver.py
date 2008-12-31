@@ -66,7 +66,7 @@ class CONMINdriver(Driver):
                 
         StringList('design_vars', self, INPUT)
         StringList('constraints', self, INPUT)
-        String('objective', self, INPUT)
+        String('objective', self, INPUT, default=None)
         ArrayVariable('upper_bounds', self, INPUT)
         ArrayVariable('lower_bounds', self, INPUT)
         self.make_public(['design_vals',
@@ -146,7 +146,7 @@ class CONMINdriver(Driver):
         
     def _get_objective(self):
         if self._objective is None:
-            return None
+            return ''
         else:
             return self._objective.text
         

@@ -32,7 +32,7 @@ class ContainerTestCase(unittest.TestCase):
         c221.number = 3.14
         c22.add_child(c221)
         ff = Float('number',c221,INPUT)
-        ff.units = "ft/sec"
+        ff.units = "ft/s"
 
     def tearDown(self):
         """this teardown function will be called after each test"""
@@ -65,7 +65,7 @@ class ContainerTestCase(unittest.TestCase):
 
     def test_get_attribute(self):
         units = self.root.get('c2.c22.c221.number.units')
-        self.assertEqual(units, "ft/sec")
+        self.assertEqual(units, "ft/s")
         
     def test_bad_get(self):
         try:
