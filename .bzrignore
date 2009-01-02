@@ -29,3 +29,4 @@ openmdao.test/openmdao.test.egg-info
 
 eggsrc/conmin/build
 virtual
+docs/readme.html
