@@ -7,12 +7,12 @@ from os.path import join, normpath
 from optparse import OptionParser
 from subprocess import Popen,PIPE,STDOUT
 
-MDAO_HOME = join(normpath('/OpenMDAO'),'dev')
+#MDAO_HOME = join(normpath('/OpenMDAO'),'dev')
+MDAO_HOME = join(normpath('/home/bnaylor/OpenMDAO'),'dev')
 
-# TODO: fix this path (and the real directory structure) such that
+# TODO: fix the real directory structure such that
 # developer branches live under /OpenMDAO/dev/developers
-#BRANCHES_HOME = join(MDAO_HOME,'developers')
-BRANCHES_HOME = join(normpath('/OpenMDAO'),'developers')
+BRANCHES_HOME = join(MDAO_HOME,'developers')
 
 options = None
 
@@ -42,20 +42,18 @@ def make_virtual_dir():
     if retcode != 0:
         raise RuntimeError(output+"\nerror creating virtual environment")
     os.chdir(virt_dir) 
-    
-    # activate the virtual python environment
-#    activate_file = join(os.getcwd(), 'bin', 'activate_this.py')
-#    execfile(activate_file, dict(__file__=activate_file))
-    
+        
     make_buildout_dir()
 
 
 def make_buildout_dir():    
+    # activate the virtual python environment
+    activate_file = join(os.getcwd(), 'bin', 'activate_this.py')
+    execfile(activate_file, dict(__file__=activate_file))
+    
     os.makedirs('buildout')
     os.chdir('buildout')
     
-    print 'NOW IN: ',os.getcwd()
-    sys.exit(0)
     # grab the buildout bootstrap file
     shutil.copy('../../util/branch_config/bootstrap.py', 'bootstrap.py')
     # grab the buildout configuration file
@@ -63,6 +61,17 @@ def make_buildout_dir():
     
     # bootstrap our buildout
     output, retcode = run_command(join('..','bin','python')+' bootstrap.py')   
+    if retcode != 0:
+        raise RuntimeError(output+"\nerror bootstrapping buildout")
+    else:
+        print output
+    output, retcode = run_command(join('bin','buildout'))  
+    if retcode != 0:
+        raise RuntimeError(output+"\nerror running buildout")
+    else:
+        print output
+    
+
 
     
 def create_branch(src_branch, new_branch):
@@ -79,6 +88,8 @@ def create_branch(src_branch, new_branch):
     if retcode != 0:
         raise RuntimeError(output+"\nerror creating bazaar branch '"+
                            new_branch+"'")
+    else:
+        print output
     
 
 def main():
