@@ -1,7 +1,7 @@
 
--------------------------------------
-Working With the OpenMDAO Source Code
--------------------------------------
+--------------------------------
+The OpenMDAO Development Process
+--------------------------------
 
 .. contents:: Contents
 
@@ -9,8 +9,8 @@ Working With the OpenMDAO Source Code
 
 
 
-Overview
---------
+Introduction
+------------
 
 This is the beginning of the documentation for OpenMDAO developers that
 attempts to explain the process of how OpenMDAO development works, and
@@ -30,177 +30,204 @@ Getting Started
 ---------------
 
 Before you can start working on source code or running tests, you need to get
-your own copy to work with.  You do this by asking the configuration
-management system, in our case we are using `bazaar <http://bazaar-vcs.org>`_,
-to create a branch for you.  You can change anything in your branch without
-affecting anyone else's code.  Once your changes are complete and have been
-through the verification and validation  process, they can be merged with the
-'official' version.
+your own copy of the source code and create an environment that contains all  of
+the python modules you need.  To accomplish these things, we'll be using two
+tools: `bazaar <http://bazaar-vcs.org>`_ to configuration manage our source
+code, and  `zc.buildout <http://pypi.python.org/pypi/zc.buildout>`_ to keep track 
+of all  of the python
+packages that our code depends on.  A python script called ``setup_branch.py`` 
+has been written to help cut down on the number of manual steps required before
+you can start working on your branch.  For a gentle video introduction to
+zc.buildout, check out http://rhodesmill.org/brandon/buildout. Note that on
+*torpedo* the sound doesn't work, so it's better to view the buildout video
+intro from another machine. 
 
 
-Where Is The Code?
+Where's The Code?
 ==================
 
-The OpenMDAO project source files are located under ``/OpenMDAO/dev``.  This
-directory is what is called a shared repository, meaning that any branches
-created under it share the same version tree.  Under ``OpenMDAO/dev`` is a
-dirctory called ``trunk``.  This is the *official* version of the OpenMDAO
-source. Developers cannot write directly to this version.  Writing to the
-trunk can only be done by the configuration manager.  To make changes to
-the code, a developer must first create a branch.
+The OpenMDAO project source files are located under ``/OpenMDAO/dev`` on
+*torpedo*.  This directory is what is called a shared repository, meaning that
+any branches created under it share the same version tree.  Under
+``/OpenMDAO/dev`` is a dirctory called ``trunk``.  This is the *official*
+version of the OpenMDAO source. Developers cannot write directly to this
+version.  Writing to the trunk can only be done by the configuration manager. 
+To make changes to the code, a developer must first create a branch, then make 
+and test changes, then make the branch available to the configuration manager 
+who will then merge the branch back into the trunk.
+
 
 
 Creating Your Branch
 ====================
 
-Before you create your branch, you should ``cd`` to
-``/OpenMDAO/dev/developers/<username>`` where ``<username>`` is your user name
-on *torpedo*.  bazaar_ will let you create your
-branch anywhere you choose, but for purposes of organization for the OpenMDAO
-project, you should create all of your branches under your user subdirectory
-within the OpenMDAO shared repository.  This will allow the configuration
-manager to easily find your branch when it needs to be merged.  Since my
-user name is *bnaylor*, I would do the following:
+A python script, called ``setup_branch.py`` located in the ``util`` directory of
+the trunk will help create and configure your development branch for you.  It will
+create your branch and create a buildout for you on the branch. Internally, the
+script is simply talking to bazaar_ and zc.buildout_. You could perform these
+tasks manually, but you should use the script in order to keep your branch
+consistent with others in OpenMDAO.  This will make it easier for the
+configuration manager to locate and merge your branch, and it will also make it
+easier for other developers on the team to help you if you run into a problem.
+
+The following command will create a branch and create and bootstrap the
+buildout:
 
 ::
 
-  cd /OpenMDAO/dev/developers/bnaylor
+  python /OpenMDAO/dev/trunk/util/setup_branch.py -t <ticket number> [-d <description>][-s <source repository>][-b <config file>]
+  
+You must supply a ticket number to the script, and you can optionally provide a
+short description.  The ``-b`` flag is also optional, and if you supply it, the
+script will use the config file you supply to create the buildout. It will also
+copy this file into your branch buildout directory and name it
+``buildout.cfg``.   You may be wondering where you would get a buildout.cfg file
+to customize before calling ``setup_branch.py``.  You'll probably want to 
+copy the version from the trunk, located in
+``/OpenMDAO/dev/trunk/buildout/buildout.cfg``.  If you don't supply
+a ``-b`` to ``setup_branch.py``, then it will use the version of the buildout
+config file on the trunk to initialize your buildout.  This may or may not be
+what you want, but in any event, it's easy to modify the ``buildout.cfg`` file 
+after running ``setup_branch.py`` and rerun the buildout again.  
 
-Normally, you'll want to create your branch using the *trunk* as a basleline.
-In some cases it will be necessary to branch off of another branch instead of
-the trunk, but for now, let's just assume we're branching off of the trunk.
-To create your branch, enter the following command:
+Normally, you'll want to create your branch using the *trunk* as a basleline. This
+is the default for ``setup_branch.py``. If you want to branch off of another
+branch, then you should supply a ``-s <source repository>`` argument, where
+``<source repository>`` is the top directory in the repository you want to branch
+from.  For example, if I wanted to create a branch off of my ``T321`` branch to 
+fix a bug on that branch, I would enter the following:
 
 ::
 
-  bzr branch /OpenMDAO/dev/trunk <my_branch_name>
+  python /OpenMDAO/util/setup_branch.py -t 321 -d bugfix -s /OpenMDAO/dev/developers/bnaylor/T321
 
 
-where ``<my_branch_name>`` should follow the naming convention:
+After the script runs, you will be sitting in the 
+``/OpenMDAO/dev/developers/<username>`` directory, where ``<username>`` is your
+user name on *torpedo*.  For example, since my user name is *bnaylor*, my branch
+would be created in ``/OpenMDAO/dev/developers/bnaylor/T321-bugfix``. Branches
+are named using the following form:
 
 ::
 
   T<ticket number>-<desc>
 
 
-where *desc* is a short description of what the branch is for. For example:
+where *desc* is a short description supplied using the ``-d`` argument. 
 
-::
+At this point, your buildout should be configured, and your top level ``buildout``
+directory should contain the following subdirectories:
 
-  T1043-objserver_fix
-
-
-would be a branch to fix something in the objserver and the ticket number is
-1043.
-
-            
-Bootstrapping the Branch
-========================
-
-When you first create your branch, there are a couple of things that you'll
-need to do to set things up before you can start working. The first step is to
-create an isolated, empty python environment.  This is necessary in order to
-ensure that changes made to the system level python environment don't affect
-the branch you're working on, and changes you make to your python environment
-don't affect the system environment or any other developer's environment. The
-second step is to create what is called a *buildout*.
+- bin
+    Contains a buildout script, a buildout specific
+    python interpreter, and other scripts that depend upon which parts you've
+    included as part of your buildout.
+- develop-eggs
+    Contains links to any directories that you've
+    specified in the *develop* list in your ``buildout.cfg`` file.
+- eggs
+    Contains all of the installed eggs you've listed as dependencies in your
+    ``buildout.cfg`` file.
+- parts
+    Contains any files specific to any parts you've installed as part of your
+    buildout. These could be anything. They don't have to be python related
+    at all.
 
 
-Creating an Isolated Python Environment
-+++++++++++++++++++++++++++++++++++++++
+Working on Your Branch
+======================
 
-We'll use something called `virtualenv
-<http://pypi.python.org/pypi/virtualenv>`_ to create our virtual python
-environment, and we'll use the ``--no-site-packages`` option to prevent our
-environment from seeing any of the system level python packages.  But before
-we issue the virtualenv command, we should cd into the top level directory of
-our new branch.
+As you make changes to the source code, you may want to modify your buildout
+in some way, possibly adding new eggs, updating to new versions, etc. Whenever
+this happens, you must re-run the ``buildout`` script that lives in the top
+level ``bin`` directory of your buildout.
 
-::
 
-  cd /OpenMDAO/dev/developers/bnaylor/T1043-objserver_fix
-  
-  
-Once we're there, we can then create our virtual environment using virtualenv.
+Editing/Debugging Source Code
+=============================
 
-::
-    
-  virtualenv --no-site-packages <my-virtual-dir>
-  
-where ``<my-virtual-dir>`` can be named anything you like, but for the sake of
-consistency across the OpenMDAO project, let's name it
-``virtual-T<ticket number>``.  So in our example case, our virtualenv command
-would be:
+Wing is a very nice integrated editor and debugger for python that is available to
+local OpenMDAO developers.  To run it, type ``wing3.1``.
 
-::
+- TODO: create a buildout recipe to customize a wing project file specific to a buildout
 
-  virtualenv --no-site-packages virtual-T1043
 
-One of the things that virtualenv_ does for us is modify the prompt of our
-shell to let us know we're in a virtual environment. It does this by placing
-the name of the top virtual environment directory in parens at the beginning
-of the prompt.  For example:
-
-::
-
-  (virtual-T1043)[bnaylor@torpedo buildout]
-  
-Putting the ticket number in the name of the top level virtual directory will
-help avoid confusion for those people that may need to interact with multiple
-branches at the same time.
-
-        - cd <my-virtual-dir>
-        - Create buildout directory and copy bootstrap.py file there
-            - (Windows)   
-                - md buildout
-                - copy <branch-dir>\branch_config\bootstrap.py buildout
-                - copy <branch-dir>\branch_config\buildout.cfg buildout
-            - (linux/mac) mkdir buildout
-                - cp <branch-dir>/buildout_config/bootstrap.py buildout
-                - cp <branch-dir>/buildout_config/buildout.cfg buildout
-        - Activate the virtual environment
-            - (Windows)  bin\activate
-            - (linux/mac)
-               - bash (if not already running bash)
-               - source bin/activate
-        - Bootstrap the buildout environment (only needed the first time)
-            - cd buildout
-            - python bootstrap.py  # bootstraps zc.buildout
-        - Edit buildout.cfg (if necessary)
-            - add any eggs/parts needed for your development
-        - Run buildout (this should build the full environment needed)
-            - bin/buildout
-        - Test the buildout
-            - bin/test openmdao -v
-
-    - setting up Wing to work with your buildout
-        - edit Project Properties
-        - add eggs and develop-egg dirs to PYTHONPATH
-        - save project
-        
-
-The Download Cache
-==================
-
-    - cd distrib-cache/dist
-    - wget <url to distrib>  # pull distrib from the web
-
-    
 Adding New Source Files
 =======================
 
-    - bzr commands
-    - paster create templates
-        - basic package
-        - nested namespace package
+If you create new files or directories that you want to be part of OpenMDAO, you
+must add them to your repository by running the command
+
+::
+
+   bzr add <filename>
         
-        
+If ``<filename>`` is a directory, all files within the directory will also be
+added to the repository, unless they match any of the patterns in the
+``.bzrignore``
+file located in the top level directory of the branch.  To add a new pattern
+for bazaar to ignore, type
+
+::
+
+   bzr ignore <pattern>
+   
+where ``<pattern>`` can be a filename or a wildcard expression, e.g., ``*.exe``.
+
+
+If you add a file or directory to the repository by mistake, type
+
+::
+
+   bzr remove <filename> --keep
+   
+which will remove the file from the repository but will **not** delete it.
+
+
+            
 Testing
 =======
 
-    - unittest
-    - nose
+By default, your ``buildout/bin`` directory will contain a script called ``test``
+that will run all of the unit tests for any package that you specify. For example,
+to run all of the openmdao unit tests, do the following:
 
+::
+
+   bin/test openmdao
+   
+which should generate output something like this:
+
+::
+
+   ..
+   ----------------------------------------------------------------------
+   Ran 82 tests in 0.888s
+
+   OK
+
+- TODO: explain how to develop a unit test
+- TODO: talk about coverage
+
+
+The Distribution Cache
+======================
+
+Sometimes you will be creating new python packages or new versions of existing
+ones. When this happens you need to build a python egg of your package, making
+sure to update the version number.  Once you've built the egg, you can upload it
+to the distribution cache by running the ???? script on it.  Also, if you
+introduce a dependency on some third party python package, you will need to 
+grab a distribution of it and add it to the distribution cache in the same way.
+
+If you package does not contain any python extensions, i.e., compiled code, you
+only need to create a source distribution, but if it does contain compiled code,
+you will have to create a binary distribution for Windows, linux, and OSX.
+
+For instructions on how to build eggs, see the setuptools `documentation
+<http://peak.telecommunity.com/DevCenter/setuptools>`_.
+
+    
 
 Creating New zc.buildout Recipes
 ================================

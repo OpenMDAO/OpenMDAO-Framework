@@ -28,7 +28,7 @@ setup(name='openmdao.recipes',
       ],
       entry_points="""
       [zc.buildout]
-      default = openmdao.recipes.dummy:Dummy
-      dummy = openmdao.recipes.dummy:Dummy
+      default = openmdao.recipes.isolatedegg:IsolatedEgg
+      isolatedegg = openmdao.recipes.isolatedegg:IsolatedEgg
       """,
       )

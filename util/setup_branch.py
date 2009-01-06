@@ -17,12 +17,17 @@ BRANCHES_HOME = join(MDAO_HOME,'developers')
 options = None
 
 
+def error_out(msg):
+    print >> sys.stderr, msg
+    sys.exit(-1)
+
 def run_command(cmd, sh=True):
    """Run a command using Popen and return its output (stdout and stderr)
    and its return code as a tuple. If the command is a python file, prepend
    python to the command string
    """
-   p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=sh)
+#   p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=sh)
+   p = Popen(cmd, env=os.environ, shell=sh)
    output = p.communicate()[0]
    return (output, p.returncode)
 
@@ -40,13 +45,15 @@ def make_virtual_dir():
     # directory
     output, retcode = run_command('virtualenv --no-site-packages '+virt_dir)   
     if retcode != 0:
-        raise RuntimeError(output+"\nerror creating virtual environment")
+        error_out("error creating virtual environment")
     os.chdir(virt_dir) 
         
     make_buildout_dir()
 
 
-def make_buildout_dir():    
+def make_buildout_dir():  
+    global options
+      
     # activate the virtual python environment
     activate_file = join(os.getcwd(), 'bin', 'activate_this.py')
     execfile(activate_file, dict(__file__=activate_file))
@@ -56,40 +63,36 @@ def make_buildout_dir():
     
     # grab the buildout bootstrap file
     shutil.copy('../../util/branch_config/bootstrap.py', 'bootstrap.py')
+    
     # grab the buildout configuration file
-    shutil.copy('../../util/branch_config/buildout.cfg', 'buildout.cfg')
+    if options.buildout:
+        shutil.copy(options.buildout, 'buildout.cfg')
+    else:
+        shutil.copy('../../util/branch_config/buildout.cfg', 'buildout.cfg')
     
     # bootstrap our buildout
     output, retcode = run_command(join('..','bin','python')+' bootstrap.py')   
     if retcode != 0:
-        raise RuntimeError(output+"\nerror bootstrapping buildout")
-    else:
-        print output
+        error_out("error bootstrapping buildout")
     output, retcode = run_command(join('bin','buildout'))  
     if retcode != 0:
-        raise RuntimeError(output+"\nerror running buildout")
-    else:
-        print output
+        error_out("error running buildout")
     
-
 
     
 def create_branch(src_branch, new_branch):
     if not os.path.isdir(src_branch):
-        raise RuntimeError("can't find source branch '"+src_branch+"'")
+        error_out("can't find source branch '"+src_branch+"'")
         
     if os.path.isdir(join(os.getcwd(), new_branch)):
-        raise RuntimeError("branch '"+join(os.getcwd(), new_branch)+
+        error_out("branch '"+join(os.getcwd(), new_branch)+
                            "' already exists")
         
     cmd = 'bzr branch '+src_branch+' '+new_branch
     output, retcode = run_command(cmd)
     
     if retcode != 0:
-        raise RuntimeError(output+"\nerror creating bazaar branch '"+
-                           new_branch+"'")
-    else:
-        print output
+        error_out("error creating bazaar branch '"+new_branch+"'")
     
 
 def main():
@@ -98,18 +101,20 @@ def main():
     global options
    
     parser = OptionParser()
-    parser.add_option("-u","--user", action="store", type="string", dest="user",
+    parser.add_option("-u","", action="store", type="string", dest="user",
                       help="username (defaults to value of LOGNAME "+
-                      "environment variable")
-    parser.add_option("-s","--source", action="store", 
+                      "environment variable)")
+    parser.add_option("-s","", action="store", 
                       type="string", dest="source",
                       help="full path of source branch (defaults to trunk path)")
-    parser.add_option("-t","--ticket", action="store", 
+    parser.add_option("-t","", action="store", 
                       type="int", dest="ticket",
                       help="ticket number for new branch")
-    parser.add_option("-d","--desc", action="store", 
+    parser.add_option("-d","", action="store", 
                       type="string", dest="desc",help="short "+
                       "(<15 character) description of the new branch")
+    parser.add_option("-b","", action="store", type="string", dest="buildout",
+                      help="specify a buildout.cfg file")
                         
     (options, args) = parser.parse_args(sys.argv[1:])
    
@@ -121,12 +126,10 @@ def main():
     if options.ticket:
         ticket = options.ticket
         if ticket < 0:
-            print >> sys.stderr, '\nInvalid ticket number ('+str(options.ticket)+')'
-            sys.exit(-1)
+            error_out('Invalid ticket number ('+str(options.ticket)+')')
     else:
         parser.print_help()
-        print >> sys.stderr, '\nTicket number for new branch is mandatory'
-        sys.exit(-1)
+        error_out('Ticket number for new branch is mandatory')
         
     if options.desc:
         desc = options.desc
@@ -153,5 +156,5 @@ def main():
     
 
 if __name__ == '__main__':
-
     main()
+
