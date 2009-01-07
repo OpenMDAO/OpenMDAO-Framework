@@ -35,7 +35,7 @@ the python modules you need.  To accomplish these things, we'll be using two
 tools: `bazaar <http://bazaar-vcs.org>`_ to configuration manage our source
 code, and  `zc.buildout <http://pypi.python.org/pypi/zc.buildout>`_ to keep track 
 of all  of the python
-packages that our code depends on.  A python script called ``setup_branch.py`` 
+packages that our code depends on.  A python script called ``mkbranch.py`` 
 has been written to help cut down on the number of manual steps required before
 you can start working on your branch.  For a gentle video introduction to
 zc.buildout, check out http://rhodesmill.org/brandon/buildout. Note that on
@@ -49,19 +49,19 @@ Where's The Code?
 The OpenMDAO project source files are located under ``/OpenMDAO/dev`` on
 *torpedo*.  This directory is what is called a shared repository, meaning that
 any branches created under it share the same version tree.  Under
-``/OpenMDAO/dev`` is a dirctory called ``trunk``.  This is the *official*
+``/OpenMDAO/dev`` is a directory called ``trunk``.  This is the *official*
 version of the OpenMDAO source. Developers cannot write directly to this
 version.  Writing to the trunk can only be done by the configuration manager. 
 To make changes to the code, a developer must first create a branch, then make 
 and test changes, then make the branch available to the configuration manager 
-who will then merge the branch back into the trunk.
+who will then merge the changes back into the trunk.
 
 
 
 Creating Your Branch
 ====================
 
-A python script, called ``setup_branch.py`` located in the ``util`` directory of
+A python script, called ``mkbranch.py`` located in the ``util`` directory of
 the trunk will help create and configure your development branch for you.  It will
 create your branch and create a buildout for you on the branch. Internally, the
 script is simply talking to bazaar_ and zc.buildout_. You could perform these
@@ -70,68 +70,87 @@ consistent with others in OpenMDAO.  This will make it easier for the
 configuration manager to locate and merge your branch, and it will also make it
 easier for other developers on the team to help you if you run into a problem.
 
-The following command will create a branch and create and bootstrap the
+The following command will create a branch as well as create and bootstrap the
 buildout:
 
 ::
 
-  python /OpenMDAO/dev/trunk/util/setup_branch.py -t <ticket number> [-d <description>][-s <source repository>][-b <config file>]
-  
-You must supply a ticket number to the script, and you can optionally provide a
-short description.  The ``-b`` flag is also optional, and if you supply it, the
-script will use the config file you supply to create the buildout. It will also
-copy this file into your branch buildout directory and name it
-``buildout.cfg``.   You may be wondering where you would get a buildout.cfg file
-to customize before calling ``setup_branch.py``.  You'll probably want to 
-copy the version from the trunk, located in
-``/OpenMDAO/dev/trunk/buildout/buildout.cfg``.  If you don't supply
-a ``-b`` to ``setup_branch.py``, then it will use the version of the buildout
-config file on the trunk to initialize your buildout.  This may or may not be
-what you want, but in any event, it's easy to modify the ``buildout.cfg`` file 
-after running ``setup_branch.py`` and rerun the buildout again.  
+  <python> /OpenMDAO/dev/trunk/util/mkbranch.py -t <ticket number> [-d <description>][-s <source repository>][-b <config file>][-u <user name>]
 
-Normally, you'll want to create your branch using the *trunk* as a basleline. This
-is the default for ``setup_branch.py``. If you want to branch off of another
-branch, then you should supply a ``-s <source repository>`` argument, where
-``<source repository>`` is the top directory in the repository you want to branch
-from.  For example, if I wanted to create a branch off of my ``T321`` branch to 
-fix a bug on that branch, I would enter the following:
+where the following parameters are user specified:
+
+``<python>`` 
+   The specific version of python you want to use for the
+   branch, for example, ``python2.6``.  Whatever version of python you use for
+   this command will be *hard-wired* into all of the buildout-generated scripts.
+
+``<ticket number>``
+   The ticket number used by the bug tracking system
+   
+``<description>``
+   *(optional)* A short description  of the purpose of the branch. The description
+   should be less than 15 characters in length. 
+   
+``<source repository>``
+   *(optional)* The top directory of the repository you want to branch from. If
+   not supplied, this defaults to the top directory of the trunk.
+   
+``<config file>``
+   *(optional)* The pathname of a buildout configuration file that will be used
+   to run the buildout for the new branch.  This file will be copied into
+   ``buildout/buildout.cfg`` in the top level of the new branch.  If not 
+   supplied, the buildout.cfg file from the trunk will be used. If that isn't
+   what you want, you can easily modify the buildout.cfg file after creating
+   the branch and run the buildout again.
+   
+``<user name>``
+   *(optional)* This should be your username on *torpedo*.  This is set 
+   automatically for you based on the LOGNAME environment variable, so 
+   generally you should not have to set this one.
+   
+
+As an example, if I wanted to create a branch off of the trunk to fix a bug in the
+unit conversion code based on ticket 321 in the bug tracker and wanted to use
+version 2.6 of python, I could issue the following command:
 
 ::
 
-  python /OpenMDAO/util/setup_branch.py -t 321 -d bugfix -s /OpenMDAO/dev/developers/bnaylor/T321
+   python2.6 /OpenMDAO/dev/trunk/util/mkbranch.py -t 321 -d units_fix 
 
 
-After the script runs, you will be sitting in the 
+After the script runs, it places you in the 
 ``/OpenMDAO/dev/developers/<username>`` directory, where ``<username>`` is your
 user name on *torpedo*.  For example, since my user name is *bnaylor*, my branch
-would be created in ``/OpenMDAO/dev/developers/bnaylor/T321-bugfix``. Branches
-are named using the following form:
+from the command above would be created in 
+``/OpenMDAO/dev/developers/bnaylor/T321-units_fix``. Branches are named using the
+following form:
 
 ::
 
   T<ticket number>-<desc>
 
 
-where *desc* is a short description supplied using the ``-d`` argument. 
+where ``<desc>`` is the short description supplied using the ``-d`` argument. 
 
 At this point, your buildout should be configured, and your top level ``buildout``
 directory should contain the following subdirectories:
 
-- bin
+``bin``
     Contains a buildout script, a buildout specific
     python interpreter, and other scripts that depend upon which parts you've
     included as part of your buildout.
-- develop-eggs
+    
+``develop-eggs``
     Contains links to any directories that you've
     specified in the *develop* list in your ``buildout.cfg`` file.
-- eggs
+    
+``eggs``
     Contains all of the installed eggs you've listed as dependencies in your
     ``buildout.cfg`` file.
-- parts
+    
+``parts``
     Contains any files specific to any parts you've installed as part of your
-    buildout. These could be anything. They don't have to be python related
-    at all.
+    buildout. These could be anything. They don't have to be python related.
 
 
 Working on Your Branch
@@ -188,9 +207,10 @@ which will remove the file from the repository but will **not** delete it.
 Testing
 =======
 
-By default, your ``buildout/bin`` directory will contain a script called ``test``
-that will run all of the unit tests for any package that you specify. For example,
-to run all of the openmdao unit tests, do the following:
+By default, your top level ``buildout/bin`` directory will contain a script called
+``test`` that script uses a python package called ``nose`` to run all of the unit
+tests for any package that you specify. For example, to run all of the openmdao
+unit tests, do the following:
 
 ::
 
@@ -206,8 +226,23 @@ which should generate output something like this:
 
    OK
 
-- TODO: explain how to develop a unit test
+To get a list of options available with ``bin/test``, type ``bin/test --help``
+from the ``buildout`` directory.
+   
+Test Coverage
++++++++++++++
+
+There is a python package called ``coverage`` that is accessible through ``nose``
+that makes it easy to determine if your tests cover every line of code in your
+source files.
+
 - TODO: talk about coverage
+
+
+Adding New Tests
+++++++++++++++++
+
+- TODO: explain how to develop a unit test
 
 
 The Distribution Cache

@@ -38,40 +38,16 @@ def make_branch_name(ticket, desc):
         name += '-'+desc
     return name
 
-def make_virtual_dir():
-    virt_dir = 'virtual'
-    
-    # tell virtualenv to create a virtual environment in the 'virtual'
-    # directory
-    output, retcode = run_command('virtualenv --no-site-packages '+virt_dir)   
-    if retcode != 0:
-        error_out("error creating virtual environment")
-    os.chdir(virt_dir) 
-        
-    make_buildout_dir()
-
 
 def make_buildout_dir():  
     global options
       
-    # activate the virtual python environment
-    activate_file = join(os.getcwd(), 'bin', 'activate_this.py')
-    execfile(activate_file, dict(__file__=activate_file))
-    
-    os.makedirs('buildout')
-    os.chdir('buildout')
-    
-    # grab the buildout bootstrap file
-    shutil.copy('../../util/branch_config/bootstrap.py', 'bootstrap.py')
-    
-    # grab the buildout configuration file
+    # replace the buildout configuration file if supplied by the user
     if options.buildout:
         shutil.copy(options.buildout, 'buildout.cfg')
-    else:
-        shutil.copy('../../util/branch_config/buildout.cfg', 'buildout.cfg')
     
     # bootstrap our buildout
-    output, retcode = run_command(join('..','bin','python')+' bootstrap.py')   
+    output, retcode = run_command(sys.executable+' bootstrap.py')   
     if retcode != 0:
         error_out("error bootstrapping buildout")
     output, retcode = run_command(join('bin','buildout'))  
@@ -114,7 +90,7 @@ def main():
                       type="string", dest="desc",help="short "+
                       "(<15 character) description of the new branch")
     parser.add_option("-b","", action="store", type="string", dest="buildout",
-                      help="specify a buildout.cfg file")
+                      help="specify a buildout configuration file to run")
                         
     (options, args) = parser.parse_args(sys.argv[1:])
    
@@ -152,7 +128,7 @@ def main():
     # cd to the top of the new branch
     os.chdir(new_branch)
     
-    make_virtual_dir()
+    make_buildout_dir()
     
 
 if __name__ == '__main__':
