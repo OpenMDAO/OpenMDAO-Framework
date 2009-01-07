@@ -126,7 +126,7 @@ def main():
     create_branch(src_branch, new_branch)
     
     # cd to the top of the new branch
-    os.chdir(new_branch)
+    os.chdir(os.path.join(new_branch,'buildout'))
     
     make_buildout_dir()
     
