@@ -28,7 +28,8 @@ setup(name='openmdao.recipes',
       ],
       entry_points="""
       [zc.buildout]
-      default = openmdao.recipes.isolatedegg:IsolatedEgg
+      default = openmdao.recipes.wingproj:WingProj
       isolatedegg = openmdao.recipes.isolatedegg:IsolatedEgg
+      wingproj = openmdao.recipes.wingproj:WingProj
       """,
       )

@@ -154,7 +154,7 @@ directory should contain the following subdirectories:
 
 
 Working on Your Branch
-======================
+----------------------
 
 As you make changes to the source code, you may want to modify your buildout
 in some way, possibly adding new eggs, updating to new versions, etc. Whenever
@@ -205,7 +205,7 @@ which will remove the file from the repository but will **not** delete it.
 
             
 Testing
-=======
+-------
 
 By default, your top level ``buildout/bin`` directory will contain a script called
 ``test`` that script uses a python package called ``nose`` to run all of the unit
@@ -230,39 +230,123 @@ To get a list of options available with ``bin/test``, type ``bin/test --help``
 from the ``buildout`` directory.
    
 Test Coverage
-+++++++++++++
+=============
 
-There is a python package called ``coverage`` that is accessible through ``nose``
-that makes it easy to determine if your tests cover every line of code in your
-source files.
+There is a python package called ``coverage`` that is accessible through
+``bin/test`` that makes it easy to determine if your tests cover every line of
+code in your source files.  To get a coverage report for the openmdao package,
+do the following from the ``buildout`` directory:
 
-- TODO: talk about coverage
+::
 
+   bin/test openmdao --with-coverage --cover-package=openmdao
+   
+The report should look something like this:
+
+::
+
+   ................................................................................
+   ..
+   Name                                Stmts   Exec  Cover   Missing
+   -----------------------------------------------------------------
+   openmdao                                5      0     0%   2-6
+   openmdao.lib                            0      0   100%   
+   openmdao.lib.components                 0      0   100%   
+   openmdao.lib.drivers                    0      0   100%   
+   openmdao.lib.drivers.conmindriver     183    179    97%   149, 233-234, 271
+   openmdao.lib.factories                  0      0   100%   
+   openmdao.lib.variables                  0      0   100%   
+   openmdao.main                           6      3    50%   5-7
+   openmdao.main.arrayvar                 48     47    97%   32
+   openmdao.main.assembly                103    101    98%   95, 129
+   openmdao.main.component                47     41    87%   58, 92, 99, 106, 121, 142
+   openmdao.main.constants                 4      4   100%   
+   openmdao.main.constraint               44     43    97%   24
+   openmdao.main.container               201    185    92%   22-24, 138, 156, 166, 253-254, 276-277, 337, 340, 356, 359, 367-368
+   openmdao.main.containervar             50     29    58%   29, 38-43, 49-55, 66-72, 82
+   openmdao.main.driver                   18     15    83%   35, 40-41
+   openmdao.main.exceptions                5      5   100%   
+   openmdao.main.expreval                122    115    94%   27, 32, 36, 40, 85, 177, 222
+   openmdao.main.factory                   6      5    83%   25
+   openmdao.main.factorymanager           21     16    76%   28, 33-37
+   openmdao.main.float                    70     54    77%   38-41, 49-53, 58-61, 69-73, 105, 120
+   openmdao.main.hierarchy                49     46    93%   34, 40, 59
+   openmdao.main.importfactory            28     25    89%   47-49
+   openmdao.main.int                      42     24    57%   31-34, 39-46, 51-54, 59-66
+   openmdao.main.interfaces               54     54   100%   
+   openmdao.main.logger                    9      9   100%   
+   openmdao.main.pkg_res_factory          61     59    96%   88, 114
+   openmdao.main.string                   42     28    66%   31-34, 42-46, 51-54, 62-66
+   openmdao.main.stringlist               56     40    71%   31-34, 42-46, 51-54, 62-66, 92, 95
+   openmdao.main.tarjan                   58     26    44%   52-71, 78-96, 100
+   openmdao.main.variable                138    113    81%   22, 54, 65, 73, 101-104, 112, 117, 129, 141, 184, 202, 227, 263, 265-270, 276, 282-285, 289-290
+   openmdao.main.vartypemap               19     17    89%   42-45
+   openmdao.main.workflow                 56     35    62%   30, 43, 56, 61-75, 79, 86-88, 92
+   -----------------------------------------------------------------
+   TOTAL                                1545   1318    85%   
+   ----------------------------------------------------------------------
+   Ran 82 tests in 5.678s
+
+   OK
+
+The numbers in the *Missing* column indicate lines or ranges of lines that are
+not covered by the current set of tests.
 
 Adding New Tests
-++++++++++++++++
+================
 
 - TODO: explain how to develop a unit test
 
 
-The Distribution Cache
-======================
+Creating and Updating Package Distributions
+-------------------------------------------
 
-Sometimes you will be creating new python packages or new versions of existing
-ones. When this happens you need to build a python egg of your package, making
-sure to update the version number.  Once you've built the egg, you can upload it
-to the distribution cache by running the ???? script on it.  Also, if you
-introduce a dependency on some third party python package, you will need to 
-grab a distribution of it and add it to the distribution cache in the same way.
+Sometimes the changes you make on your branch will result in the 
+modification of an existing package or the creation of a new one. In
+either case, you must create a distributable version for each new or
+modified package.
 
-If you package does not contain any python extensions, i.e., compiled code, you
-only need to create a source distribution, but if it does contain compiled code,
-you will have to create a binary distribution for Windows, linux, and OSX.
+In order for a python package to be distributable, you have to provide
+a ``setup.py`` file that knows how to build, package, and install it. The
+``setup.py`` file should be located in the top level directory of the
+package. For instructions on how to create distributions, see the setuptools
+`documentation <http://peak.telecommunity.com/DevCenter/setuptools>`_.
 
-For instructions on how to build eggs, see the setuptools `documentation
-<http://peak.telecommunity.com/DevCenter/setuptools>`_.
+If a package contains code that must be compiled, you should create
+a binary egg distribution for it for each of our release platforms, which are
+currently *Windows*, *Linux*, and *OS X*.  To create a binary egg in the current
+directory for the current platform, type the following:
 
-    
+::
+
+   python setup.py bdist_egg -d .
+   
+This will generate an egg file with a name that contains information about
+version of the package, platform, and the python version, e.g., 
+``conmin-1.0-py2.5-linux-x86_64.egg``. 
+
+Regardless of the contents of the package, you should also produce a source 
+distribution of it. If you package has compiled code as mentioned above, you will
+have to use the sdist command to generate a source tarball. Assuming your setup.py
+file is written correctly, you can generate a source distribution in the current
+directory by typing
+
+::
+
+   python setup.py sdist -d .
+   
+A gzipped tar file will be generated with the version number of the package
+embedded in the filename, e.g., ``openmdao.recipes-0.1dev.tar.gz``
+
+However, if your package does **not** contain any compiled code, you can 
+simply use the ``python setup.py bdist_egg -d .`` command mentioned earlier 
+to generate a source egg, which will have a name containing the package version 
+information and the python version, e.g., ``openmdao.recipes-0.1dev-py2.5.egg``.
+
+
+- TODO: describe needed metadata in setup.py file
+- TODO: describe entry points used by the framework    
+
 
 Creating New zc.buildout Recipes
 ================================
