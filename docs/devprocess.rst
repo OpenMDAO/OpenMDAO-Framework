@@ -30,17 +30,29 @@ Getting Started
 ---------------
 
 Before you can start working on source code or running tests, you need to get
-your own copy of the source code and create an environment that contains all  of
-the python modules you need.  To accomplish these things, you'll be using two
-tools: `bazaar <http://bazaar-vcs.org>`_ to configuration manage your source
-code, and  `zc.buildout <http://pypi.python.org/pypi/zc.buildout>`_ to keep track 
-of all  of the python
-packages that your code depends on.  A python script called ``mkbranch.py`` 
-has been written to help cut down on the number of manual steps required before
-you can start working on your branch.  For a gentle video introduction to
-zc.buildout, check out http://rhodesmill.org/brandon/buildout. Note that on
-*torpedo* the sound doesn't work, so it's better to view the buildout video
-intro from another machine. 
+your own copy of the source code and create an environment that contains all 
+of the python modules you need.  To accomplish these things, you'll be using
+two tools: `bazaar <http://bazaar-vcs.org>`_ to configuration manage your
+source code, and  `zc.buildout <http://pypi.python.org/pypi/zc.buildout>`_ to
+keep track  of all  of the python packages that your code depends on.  A python
+script called ``mkbranch.py``  has been written to help cut down on the number
+of manual steps required before you can start working on your branch.  For a
+gentle video introduction to zc.buildout, check out
+http://rhodesmill.org/brandon/buildout. Note that on *torpedo* the sound
+doesn't work, so it's better to view the buildout video intro from another
+machine. 
+
+If you haven't used bazaar before on a particular machine where you intend
+to work with bazaar repositories, you should run the ``whoami``
+command so that bazaar will know your email address. You need to supply your
+first and last name and your email address in the following format:
+
+::
+
+    bzr whoami "Joe Cool <joe@example.com>"
+
+In this way, your contact information will be included whenever you commit
+to a repository on that machine.
 
 
 Where's The Code?
@@ -334,8 +346,9 @@ which will remove the file from the repository but will **not** delete it.
 Testing
 -------
 
-By default, your top level ``buildout/bin`` directory will contain a script called
-``test`` that script uses a python package called ``nose`` to run all of the unit
+By default, your top level ``buildout/bin`` directory will contain a script
+called ``test`` that script uses a python package called `nose
+<http://somethingaboutorange.com/mrl/projects/nose>`_ to run all of the unit
 tests for any package that you specify. For example, to run all of the openmdao
 unit tests, do the following:
 
@@ -356,13 +369,15 @@ which should generate output something like this:
 To get a list of options available with ``bin/test``, type ``bin/test --help``
 from the ``buildout`` directory.
    
+   
 Test Coverage
 =============
 
-There is a python package called ``coverage`` that is accessible through
-``bin/test`` that makes it easy to determine if your tests cover every line of
-code in your source files.  To get a coverage report for the openmdao package,
-do the following from the ``buildout`` directory:
+There is a python package called  `coverage
+<http://nedbatchelder.com/code/modules/rees-coverage.html>`_ that is accessible
+through ``bin/test`` that makes it easy to determine if your tests cover every
+line of code in your source files.  To get a coverage report for the openmdao
+package, do the following from the ``buildout`` directory:
 
 ::
 
@@ -419,11 +434,101 @@ The report should look something like this:
 The numbers in the *Missing* column indicate lines or ranges of lines that are
 not covered by the current set of tests.
 
+If you edit source code, the coverage data may become inaccurate, so you should
+clear the coverage database by issuing the following command:
+
+::
+
+   bin/test openmdao --cover-erase
+
+
 Adding New Tests
 ================
 
-- TODO: explain how to develop a unit test
+Generally, you should write your tests using python's `unittest
+<http://docs.python.org/library/unittest.html>`_ framework if possible,
+although the nose_ package is able to discover and run tests that do not use
+unittest_.
 
+The following is a simple example of a unit test written using the unittest_
+framework.
+
+
+.. parsed-literal::
+
+    import unittest
+
+    class TestSomeFunctions(unittest.TestCase):
+
+        def setUp(self):
+            # put setup code here. It will run at the beginning of each
+            # test function (function with name that starts with 'test')
+
+        def tearDown(self):
+            # put code here that you want to be run after each test function
+            # is completed
+
+        def testfunct1(self):
+            # a test function
+
+        def test_some_stuff(self):
+            # another test function
+
+    if __name__ == '__main__':
+        unittest.main()
+
+
+The ``unittest.TestCase`` class provides a number of functions to
+test output during a test function.  For example:
+
+``self.assertTrue(expr[,msg])``
+    Test will fail if expr does not evaluate to True
+    
+``self.assertEqual(val1,val2)``
+    Test will fail if val1 != val2
+        
+``self.assertNotEqual(val1,val2)``
+    Test will fail if val1 == val2
+        
+``self.assertAlmostEqual(val1,val2[,places=7])``
+    Test will fail if val1 differs from val2 by more than a small
+    amount of decimal places.
+    
+``self.fail([msg])``
+    Test will fail and display the given message
+    
+Often in a test you'll want to make sure that a specific exception is raised
+when a certain thing happens, and usually you want to verify that the error
+message contains certain information.  The unittest_ framework provides an
+``assertRaises`` function that does part of this job, but it doesn't allow
+you to check the error message, so the preferred way to test exceptions is
+shown in the code below. In this example, we'll assume that the exception
+we're interested in is a ``ValueError``, and note that we would place our
+test function inside of our ``unittest.TestCase`` derived class.
+
+.. parsed-literal::
+
+    def test_myexception(self):
+        try:
+            # perform action here that should raise exception
+        except ValueError, err:
+            self.assertEqual(str(err), "this should be my expected error message")
+        else:
+            self.fail('expected a ValueError')
+
+Note that the ``else`` block after the ``except`` is important because we
+want the test to fail if no exception is raised at all.  Without the else
+block, the test would pass if no exception was raised.
+
+
+Test File Locations
++++++++++++++++++++
+
+Unit tests are typically placed in a ``test`` subdirectory within the
+directory where the source code being tested is located.  For example,
+the test files for ``openmdao.main`` are located in
+``openmdao.main/openmdao/main/test``.
+        
 
 Creating and Updating Package Distributions
 -------------------------------------------
