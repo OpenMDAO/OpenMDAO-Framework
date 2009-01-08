@@ -7,11 +7,9 @@ from os.path import join, normpath
 from optparse import OptionParser
 from subprocess import Popen,PIPE,STDOUT
 
-#MDAO_HOME = join(normpath('/OpenMDAO'),'dev')
-MDAO_HOME = join(normpath('/home/bnaylor/OpenMDAO'),'dev')
+MDAO_HOME = join(normpath('/OpenMDAO'),'dev')
+#MDAO_HOME = join(normpath('/home/bnaylor/OpenMDAO'),'dev')
 
-# TODO: fix the real directory structure such that
-# developer branches live under /OpenMDAO/dev/developers
 BRANCHES_HOME = join(MDAO_HOME,'developers')
 
 options = None
@@ -37,23 +35,6 @@ def make_branch_name(ticket, desc):
     if desc is not None and desc != '':
         name += '-'+desc
     return name
-
-
-def make_buildout_dir():  
-    global options
-      
-    # replace the buildout configuration file if supplied by the user
-    if options.buildout:
-        shutil.copy(options.buildout, 'buildout.cfg')
-    
-    # bootstrap our buildout
-    output, retcode = run_command(sys.executable+' bootstrap.py')   
-    if retcode != 0:
-        error_out("error bootstrapping buildout")
-    output, retcode = run_command(join('bin','buildout'))  
-    if retcode != 0:
-        error_out("error running buildout")
-    
 
     
 def create_branch(src_branch, new_branch):
@@ -128,7 +109,9 @@ def main():
     # cd to the top of the new branch
     os.chdir(os.path.join(new_branch,'buildout'))
     
-    make_buildout_dir()
+    # replace the buildout configuration file if supplied by the user
+    if options.buildout:
+        shutil.copy(options.buildout, 'buildout.cfg')
     
 
 if __name__ == '__main__':
