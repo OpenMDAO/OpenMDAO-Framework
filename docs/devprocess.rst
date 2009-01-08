@@ -269,10 +269,20 @@ Editing/Debugging Source Code
 
 Wing is a very nice integrated editor and debugger for python that is available to
 local OpenMDAO developers.  OpenMDAO comes with a buildout recipe called 
-``openmdao.recipes:wingproj`` that will create a Wing project file that with
-python path and executable settings that
+``openmdao.recipes:wingproj`` that will create a Wing project file with
+python path and executable settings that will make it work with the buildout.
 
-- TODO: create a buildout recipe to customize a wing project file specific to a buildout
+To run wing for your buildout, type
+
+::
+
+    bin/wing
+    
+from your buildout directory.  You will be promted by wing that your 
+project settings have changed whenever you re-run your buildout. Select
+``Discard Changes and Reload`` if your wing path needs to be updated. Otherwise,
+select ``Don't Reload`` to keep your existing project file.
+
 
 
 Adding New Source Files
