@@ -24,11 +24,12 @@ setup(name='openmdao.recipes',
       zip_safe=True,
       install_requires=[
           'setuptools',
-          # -*- Extra requirements: -*-
+          'zc.recipe.egg==1.1.0'
       ],
       entry_points="""
       [zc.buildout]
-      default = openmdao.recipes.isolatedegg:IsolatedEgg
+      default = openmdao.recipes.wingproj:WingProj
       isolatedegg = openmdao.recipes.isolatedegg:IsolatedEgg
+      wingproj = openmdao.recipes.wingproj:WingProj
       """,
       )
