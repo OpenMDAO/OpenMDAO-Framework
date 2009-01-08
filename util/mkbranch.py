@@ -24,7 +24,6 @@ def run_command(cmd, sh=True):
    and its return code as a tuple. If the command is a python file, prepend
    python to the command string
    """
-#   p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=sh)
    p = Popen(cmd, env=os.environ, shell=sh)
    output = p.communicate()[0]
    return (output, p.returncode)

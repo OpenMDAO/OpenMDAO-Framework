@@ -4,6 +4,12 @@
 # Wing IDE project file                                          #
 ##################################################################
 [project attributes]
+proj.directory-list = [{'dirloc': loc('.'),
+                        'excludes': (),
+                        'filter': 'All Source Files',
+                        'include_hidden': False,
+                        'recursive': True,
+                        'watch_for_changes': True}]
 proj.file-type = 'normal'
 [user attributes]
 guimgr.overall-gui-state = {'windowing-policy': 'combined-window',

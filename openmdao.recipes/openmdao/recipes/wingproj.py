@@ -2,15 +2,19 @@
 import os
 import os.path
 import sys
+import stat
 import zc.buildout.easy_install
 
+script_template = """#!%(python)s
+
+from subprocess import Popen
+Popen(["wing3.1", "%(proj)s"])
+
+"""
 
 class WingProj(object):
     """Create a Wing IDE project file with python path set properly to be able
     to find files within a buildout.
-    
-    TODO: possibly add automatic inclusion of all OpenMDAO source files
-          to the project. This may not always be what a developer wants though...
     """
 
     def __init__(self, buildout, name, options):
@@ -34,23 +38,54 @@ class WingProj(object):
         numsubs = len(npath)/57+1
         newpaths = [("'"+npath[i*57:i*57+57]+"'\\").rjust(81)
                                           for i in range(0,numsubs)]
-        newpaths[0] = newpaths[0].strip()
-        newpaths[len(newpaths)-1] = (22*' '+newpaths[len(newpaths)-1].strip()).rstrip('\\')
-        
-        wingfile = open(self.wingproj)
-        contents = wingfile.read()
-        wingfile.close()
-        
-        newcontents = contents.replace('XXX_PYTHON_EXE_XXX',
-                                       self.executable)
-        newcontents = newcontents.replace("'XXX_PYTHON_PATH_XXX'",
-                                          '\n'.join(newpaths))
+        newpaths[0] = "                     "+newpaths[0].strip()
+        newpaths[len(newpaths)-1] = (22*' '+newpaths[len(newpaths)-1].strip()).rstrip('\\')+")}"
+        newpaths[0:0] = ["proj.pypath = {None: ('custom',"]
+
         newfname = os.path.join(self.branchdir,'wingproj.wpr')
-        newfile = open(newfname,'w')
-        newfile.write(newcontents)
+        
+        if os.path.isfile(newfname):
+            oldfile = open(newfname,'r')
+        else:
+            oldfile = open(self.wingproj,'r')
+            
+        lines = oldfile.readlines()
+        oldfile.close()
+
+        inpath = False
+        for i,line in enumerate(lines):
+            if inpath is True:
+                if '}' in line:
+                    path_end = i+1
+                    inpath = False
+            elif line.startswith('proj.pyexec'):
+                exec_start = i
+                exec_end = i+2
+            elif line.startswith('proj.pypath'):
+                path_start = i
+                inpath = True
+                
+        lines[exec_start:exec_end] = ["proj.pyexec = {None: ('custom',",
+                                      "                      '"+
+                                      self.executable+"')}"]
+        lines[path_start:path_end] = newpaths
+        
+        newfile = open(newfname, 'w')
+        newfile.write('\n'.join(lines))
         newfile.close()
         
-        return [newfname]
+        # create a bin/wing script
+        scriptname = os.path.join(self.buildout['buildout']['directory'],
+                                  'bin','wing')
+        script = open(scriptname, 'w')
+        script.write(script_template % dict(python=self.executable,
+                                            proj=newfname))
+        script.close()
+        os.chmod(scriptname, 
+                 stat.S_IREAD|stat.S_IWRITE|stat.S_IEXEC|
+                 os.stat(scriptname).st_mode)
+        
+        return []
         
     update = install
 

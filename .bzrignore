@@ -16,3 +16,4 @@ buildout/.installed.cfg
 buildout/bin/
 docs/readme.html
 eggsrc/conmin/build
+wingproj.wpr
