@@ -30,7 +30,7 @@ def run_command(cmd, sh=True):
 
    
 def make_branch_name(ticket, desc):
-    name = 'T'+str(ticket)
+    name = 'T'+str(int(ticket,10)).rjust(4,'0')
     if desc is not None and desc != '':
         name += '-'+desc
     return name
@@ -64,7 +64,7 @@ def main():
                       type="string", dest="source",
                       help="full path of source branch (defaults to trunk path)")
     parser.add_option("-t","", action="store", 
-                      type="int", dest="ticket",
+                      type="string", dest="ticket",
                       help="ticket number for new branch")
     parser.add_option("-d","", action="store", 
                       type="string", dest="desc",help="short "+
@@ -107,6 +107,8 @@ def main():
     
     # cd to the top of the new branch
     os.chdir(os.path.join(new_branch,'buildout'))
+    
+    run_command(sys.executable+' bootstrap.py')
     
     # replace the buildout configuration file if supplied by the user
     if options.buildout:
