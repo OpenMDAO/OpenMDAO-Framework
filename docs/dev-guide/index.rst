@@ -9,4 +9,7 @@ Developer's Guide
 .. toctree::
    :maxdepth: 3
    
-   devprocess.rst   
+   intro
+   working
+   testing
+   distributions
