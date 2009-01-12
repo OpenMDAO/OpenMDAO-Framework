@@ -1,5 +1,5 @@
 """
-An object that knows how to create a particular component
+An object that knows how to create a particular component --NEW COMMENT
 """
 
 #public symbols
