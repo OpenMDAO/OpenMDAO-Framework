@@ -7,10 +7,8 @@ from os.path import join, normpath
 from optparse import OptionParser
 from subprocess import Popen,PIPE,STDOUT
 
-MDAO_HOME = join(normpath('/OpenMDAO'),'dev')
-#MDAO_HOME = join(normpath('/home/bnaylor/OpenMDAO'),'dev')
-
-BRANCHES_HOME = join(MDAO_HOME,'developers')
+MDAO_HOME = normpath('/OpenMDAO')
+BRANCHES_HOME = join(MDAO_HOME,'dev')
 
 options = None
 
