@@ -17,3 +17,7 @@ buildout/bin/
 docs/readme.html
 eggsrc/conmin/build
 wingproj.wpr
+_build
+doctrees
+html
+generated_images
