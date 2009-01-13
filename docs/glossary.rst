@@ -19,7 +19,14 @@ Glossary
 	Driver, and acts as a container for Components. An Assembly is also a
 	Component, so hierarchical structures of Assemblies can be created.
 
+      
+      .. _`branch`:
+      
+      **branch**
+	An ordered series of revisions that describes the history of a set of
+	files. 	
 
+      
       **Case**
 	A collection of input names and values, and names of outputs to be stored
 	along with the inputs after the process model runs.
@@ -33,13 +40,19 @@ Glossary
 	A component that runs a separate executable program via a system call.
 
 
+      **commit**
+        To record a change
+	
+      .. _`Component`: 
+      
       **Component**
-	A Container that is *runnable*, in addition to supporting several other
-	framework functions, such as checkpoint/restart, stop, and invoke.
+	A Container that is *runnable*; it also supports several other framework
+	functions, such as checkpoint/restart, stop, and invoke.
 
 
       **Components**
-      	See "Component" above.
+      	See `Component`_ above.
+	
 	
       **CAD**
 	Computer Aided Design. An automated system for the design, drafting, and
@@ -51,14 +64,17 @@ Glossary
 	programming interface that aids in acquiring geometry data directly from CAD
 	files.
 
+
       **CFD**
 	Computational Fluid Dynamics. A branch of fluid mechanics that uses numerical
 	methods and algorithms to solve and analyze problems that involve fluid flows. 
+
 
       **Container**
 	A container of Variables and other Containers.
 	The base class of all objects within the framework that 
 	support user access to input and output Variables. 
+
 
       **Driver**
 	A Driver's function is to iterate over a Workflow until some
@@ -66,6 +82,9 @@ Glossary
 	Other Drivers, such as Optimizers or ParameterStudies, would execute
 	the Workflow a variable number of times based on their inputs.  
 
+
+      .. _`egg`:
+      
       **egg**
 	A zip file with a specified internal directory structure that
 	contains a python package or module. It is similar to a jar file in java. For
@@ -73,8 +92,9 @@ Glossary
 
       .. _PythonEggs: http://peak.telecommunity.com/DevCenter/PythonEggs
 
+
       **eggs**
-	See "egg" above. 
+	See `egg`_ above. 
 
 
       **Factory**
@@ -101,7 +121,6 @@ Glossary
 	A Component representing an object having physical dimensions and
 	shape, with parameters that can be manipulated by other Components or 
 	Drivers to modify its properties.
-
 
 
       **IPC**
@@ -163,10 +182,13 @@ Glossary
 	Python objects that can be used to extend the functionality of the framework.
 
            
-
       **PID**
 	Process id
 
+
+      **repository**
+	A store of revisions. See `revision`_.
+	
 
       **ResourceAllocator**
 	An object responsible for allocating CPU/disk resources for a particular
@@ -182,16 +204,36 @@ Glossary
 
 
       **ResourceDescription**
-	An object containing information defining system attributes required to select a 
-	viable place to run a code.
+	An object containing information defining system attributes required to
+	select a  viable place to run a code.
 
+      .. _`revision`:
 
+      **revision**
+	A snapshot of the state of files and directories, including their
+	content. A revision also has some metadata associated with it, including
+	who committed it, when it was committed, a commit message, and the
+	parent revisions from which it was derived.
+
+      
       **Socket**
 	A placeholder for a plug-in within a :term:`Component`.
 
 
       **SocketList**
 	A list that holds only objects that provide a particular interface.
+
+
+      **ticket**
+	A ticket is a file contained within an issue (or bug) tracking system
+	that contains information about a request, often by an end user, to
+	fix a bug or make some other change to a computer software package. A
+	ticket has a unique reference number (ticket number) that allows the
+	submitter, software developer, or other technical staff to quickly
+	locate, add to, or communicate the status of the submitter's issue or
+	request. Once OpenMDAO's bug-tracking tool is in place, all changes to
+	the software will require a ticket, and the ticket number will identify
+	the software `branch`_ where the change is being made.
 
 
       **Variable**
@@ -202,6 +244,7 @@ Glossary
 	Components, a developer would create a new python class that inherits from
 	Variable. This Variable would have its own validation routine and could also
 	have a custom viewer/editor.
+
 
       **VSP**
 	Vehicle Sketch Pad. VSP is a rapid geometry creation tool used to create a

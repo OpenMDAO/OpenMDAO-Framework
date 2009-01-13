@@ -15,6 +15,7 @@ the top level directory of your OpenMDAO source :term:`branch`. If you don not k
 what a branch is, that will be explained in a following section.
 
 .. index:: zc.buildout
+.. index:: Bazaar
 
 Getting Started
 ===============
@@ -79,7 +80,7 @@ The overall directory structure for OpenMDAO looks like this:
     located
 
 ``/OpenMDAO/dev/<username>/T<ticket number>-<desc>``
-    Top level directory of an active branch for ticket ``<ticket number>``
+    Top level directory of an active branch for :term:`ticket` ``<ticket number>``
     with description ``<desc>`` and owned by user ``<username>``
     
 ``/OpenMDAO/distrib-cache/dist``
@@ -195,7 +196,7 @@ where the following parameters are user specified:
    this command will be *hard-wired* into all of the buildout-generated scripts.
 
 ``<ticket number>``
-   The :term:`ticket` number used by the bug tracking system
+   The ticket number used by the bug tracking system
    
 ``<description>``
    *(optional)* A short description  of the purpose of the branch. The description
