@@ -23,7 +23,7 @@ Glossary
       .. _`branch`:
       
       **branch**
-	An ordered series of revisions that describes the history of a set of
+	An ordered series of revisions (see `revision`_ below) that describes the history of a set of
 	files. 	
 
       
@@ -41,8 +41,10 @@ Glossary
 
 
       **commit**
-        To record a change
+	To record a change. A change is committed to a developer's local
+	repository.
 	
+
       .. _`Component`: 
       
       **Component**

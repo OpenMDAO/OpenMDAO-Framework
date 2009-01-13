@@ -1,3 +1,3 @@
 
-Installation FAQ
+Installation FAQs
 -----------------

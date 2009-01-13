@@ -1,5 +1,6 @@
 """
 An object that knows how to create a particular component
+ 
 """
 
 #public symbols
