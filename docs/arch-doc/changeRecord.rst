@@ -15,3 +15,8 @@ Changes in the Architecture Document
 	- Re-created the document using Sphinx documentation generator; made the
 	  Definitions Section into the Glossary; added glossary entries and an
 	  index, and removed the Use Cases Section.
+
+**Release 1.01 (01-13-09)**
+	- Added Architecture Document to new OpenMDAO Sphinx project
+	  documentation (one of several documents).
+	- Added links between sections and updated the Glossary.
