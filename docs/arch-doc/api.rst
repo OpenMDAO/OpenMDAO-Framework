@@ -145,7 +145,7 @@ they should give a good indication of our intent.
 
 	 def require_gradients (varname, gradients):
              """Requests that the component be able to provide (after execution) a
-             list of gradients of a variable w.r.t. a list of variables. The format
+             list of gradients w.r.t. a list of variables. The format
              of the gradients list is [dvar_1, dvar_2, ..., dvar_n]. The component
              should return a list with entries of either a name, a tuple of the
              form (name,index) or None.  None indicates that the component cannot
@@ -158,7 +158,7 @@ they should give a good indication of our intent.
 
 	 def require_hessians (varname, deriv_vars):
              """Requests that the component be able to provide (after execution)
-             the hessian of a variable w.r.t. a list of variables. The format of
+             the hessian w.r.t. a list of variables. The format of
              deriv_vars is [dvar_1, dvar_2, ..., dvar_n]. The component should
              return one of the following:
                1) a name, which would indicate that the component contains

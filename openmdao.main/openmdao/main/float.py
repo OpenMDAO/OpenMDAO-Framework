@@ -83,8 +83,10 @@ class Float(Variable):
             try:
                 mypq = PhysicalQuantity(1.,units)
             except NameError:
-                self.raise_exception("units of '"+str(units)+"' are invalid",
-                                     ValueError)
+                msg = "Units of '"+str(units)+"' are invalid"
+                if '^' in units:
+                    msg += ". Exponentiation is indicated by '**', not '^'."
+                self.raise_exception(msg, ValueError)
         self._units = units      
         
     units = property(_get_units, _set_units)

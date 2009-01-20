@@ -21,19 +21,31 @@ _wing_header = """#!wing
 ##################################################################
 """
 
-def wingify(obj):
+_LINE_WIDTH = 68
+
+def wingify(obj, left_margin=0):
     """Take an object, convert to a string, split it on commas. If any piece 
     is longer than 80 chars, split it up into smaller chunks. Finally, recombine 
     it all back into a string with each entry on a new line
     """
     flat = []
-    parts = str(obj).split(',')
-    for part in parts:
-        if len(part) < 80:
-            flat.append(part)
+    parts = str(obj).strip().split(',')
+    for idx, part in enumerate(parts):
+        if len(part) < _LINE_WIDTH and idx < len(parts)-1:
+            flat.append(part+',')
         else:
-            pass
-            
+            part = part.strip()
+            just = _LINE_WIDTH-left_margin
+            numsubs = len(part)/just+1
+            for i in range(0, numsubs):
+                p = part[i*just:i*just+just]
+                if not p.startswith("'"):
+                    p = "'"+p
+                p = left_margin*" "+p+"'\\"
+                flat.append(p)
+            flat[len(flat)-1] = flat[len(flat)-1][:-2]
+    return '\n'.join(flat)
+
     
 
 class WingProj(object):
@@ -72,7 +84,7 @@ class WingProj(object):
         # buildout. We just look for the keyword 'eggs' and look into the eggs
         # directory for matching distributions
         self.eggs = []
-        env = Environment([buildout['buildout']['eggs-directory']].extend(self.dev_eggs))
+        env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory']])
         ws = WorkingSet()
         for entry,val in buildout.items():
             if 'eggs' in val:
@@ -91,26 +103,12 @@ class WingProj(object):
             for r in reqs:
                 self._add_deps(deps, env, ws, r)
                         
-    def _format(self, names):
-        """Take a list of paths to distribs and format them the way Wing wants them.
-        """
-        npath = ':'.join(names)
-        numsubs = len(npath)/53+1
-        newpaths = [("'"+npath[i*53:i*53+53]+"'\\").rjust(70)
-                                          for i in range(0,numsubs)]
-        newpaths[0] = 14*' '+newpaths[0].strip()
-        newpaths[len(newpaths)-1] = (14*' '+newpaths[len(newpaths)-1].strip()).rstrip('\\')+")}"
-        newpaths[0:0] = ["{None: ('custom',"]
-        return '\n'.join(newpaths)
-
-
     def _unformat(self, namestr):
         """Take a path string from the Wing project file and chop it up into 
         individual paths.
         """
         path = namestr.split('\n')
-        path = [p.strip("\\") for p in path]
-        path = [p.strip("'") for p in path]
+        path = [p.strip("\\").strip("'") for p in path]
         path = ''.join(path)
         path = path.lstrip("{None: ('custom',")
         path = path.rstrip("\\n')}")
@@ -140,17 +138,19 @@ class WingProj(object):
         diff = oldset ^ newset
         
         if len(diff) > 0:       
-            newpaths = self._format(newnames)
-            config.set('user attributes', 'proj.pypath', newpaths)
+            config.set('user attributes', 'proj.pypath', 
+                       wingify(dict({None: ('custom',':'.join(newnames))}), left_margin=18))
             config.set('user attributes', 'proj.pyexec', 
-                       "{None: ('custom',\n"+18*" "+"'"+self.executable+"')}")
-            config.set('project attributes', 'proj.directory-list',
-                       "[{'dirloc': loc('.'),\n"+
-                       "  'excludes': (),\n"+
-                       "  'filter': '*.py',\n"+
-                       "  'include_hidden': False,\n"+
-                       "  'recursive': True,\n"+
-                       "  'watch_for_changes': True}]")
+                       wingify(dict({None: ('custom', self.executable)}), left_margin=18))
+
+            if not config.has_option('project attributes', 'proj.directory-list'):
+                config.set('project attributes', 'proj.directory-list',
+                            "[{'dirloc': loc('.'),\n"+
+                            "  'excludes': (),\n"+
+                            "  'filter': '*.py',\n"+
+                            "  'include_hidden': False,\n"+
+                            "  'recursive': True,\n"+
+                            "  'watch_for_changes': True}]")
             try:
                 newfile = open(newfname, 'wb')
                 newfile.write(_wing_header)

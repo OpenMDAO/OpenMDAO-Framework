@@ -254,7 +254,7 @@ assembly.connect(), which is called implicitly while constructing a model. The
 assembly maintains a list of all variables linked between its components.
 Transfer of regular variables is handled by simply getting the value from the
 source and setting the corresponding variable on the destination, after applying
-any required unit conversion.
+any required unit conversion or other translation.
 
 .. _`Variable Transfers Between Components`:
 
