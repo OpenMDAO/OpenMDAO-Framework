@@ -27,6 +27,7 @@ setup(name='openmdao.lib',
           'setuptools',
           'openmdao.main',
           'numpy',
+          'pyparsing',
       ],
       entry_points="""
       [openmdao.drivers]

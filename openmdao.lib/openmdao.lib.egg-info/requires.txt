@@ -1,3 +1,4 @@
 setuptools
 openmdao.main
 numpy
+pyparsing

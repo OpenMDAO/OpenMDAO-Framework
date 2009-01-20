@@ -21,9 +21,28 @@ _wing_header = """#!wing
 ##################################################################
 """
 
+def wingify(obj):
+    """Take an object, convert to a string, split it on commas. If any piece 
+    is longer than 80 chars, split it up into smaller chunks. Finally, recombine 
+    it all back into a string with each entry on a new line
+    """
+    flat = []
+    parts = str(obj).split(',')
+    for part in parts:
+        if len(part) < 80:
+            flat.append(part)
+        else:
+            pass
+            
+    
+
 class WingProj(object):
     """Create a Wing IDE project file with python path set properly to be able
-    to find files within a buildout.
+    to find files within a buildout. The user's default.wpr file will be used if
+    present as the basis of the new project file.  After the buildout is run, 
+    a file named wingproj.wpr will be created in the parent directory of the 
+    buildout.  This file will be updated during future buildouts only if the
+    list of dependent eggs changes.
     """
 
     def __init__(self, buildout, name, options):
@@ -34,6 +53,8 @@ class WingProj(object):
         dev_eggs = buildout['buildout']['develop'].strip().splitlines()
         self.dev_eggs = [os.path.abspath(f) for f in dev_eggs]
         self.executable = buildout['buildout']['executable']
+        
+        # try to find the default.wpr file in the user's home directory
         try:
             if sys.platform == 'win32':
                 home = os.env['HOMEDRIVE']+os.env['HOMEPATH']
@@ -47,8 +68,11 @@ class WingProj(object):
             self.wingproj = os.path.join(self.branchdir,
                                          'util','new_wing_proj.wpr')
         
+        # build up a list of all egg dependencies we find in other recipes in this
+        # buildout. We just look for the keyword 'eggs' and look into the eggs
+        # directory for matching distributions
         self.eggs = []
-        env = Environment([buildout['buildout']['eggs-directory']])
+        env = Environment([buildout['buildout']['eggs-directory']].extend(self.dev_eggs))
         ws = WorkingSet()
         for entry,val in buildout.items():
             if 'eggs' in val:
@@ -57,6 +81,9 @@ class WingProj(object):
                     self._add_deps(self.eggs, env, ws, Requirement.parse(egg))
 
     def _add_deps(self, deps, env, ws, req):
+        """Add a dependency for the given requirement and anything the resulting
+        distrib depends on.
+        """
         dist = env.best_match(req, ws)
         if dist is not None:
             deps.append(dist.location)
@@ -64,7 +91,9 @@ class WingProj(object):
             for r in reqs:
                 self._add_deps(deps, env, ws, r)
                         
-    def format(self, names):
+    def _format(self, names):
+        """Take a list of paths to distribs and format them the way Wing wants them.
+        """
         npath = ':'.join(names)
         numsubs = len(npath)/53+1
         newpaths = [("'"+npath[i*53:i*53+53]+"'\\").rjust(70)
@@ -75,7 +104,10 @@ class WingProj(object):
         return '\n'.join(newpaths)
 
 
-    def unformat(self, namestr):
+    def _unformat(self, namestr):
+        """Take a path string from the Wing project file and chop it up into 
+        individual paths.
+        """
         path = namestr.split('\n')
         path = [p.strip("\\") for p in path]
         path = [p.strip("'") for p in path]
@@ -97,7 +129,7 @@ class WingProj(object):
         config.read(oldfile)
         if config.has_option('user attributes', 'proj.pypath'):
             pypath = config.get('user attributes', 'proj.pypath')
-            oldnames = self.unformat(pypath)
+            oldnames = self._unformat(pypath)
         else:
             oldnames = []
         
@@ -108,7 +140,7 @@ class WingProj(object):
         diff = oldset ^ newset
         
         if len(diff) > 0:       
-            newpaths = self.format(newnames)
+            newpaths = self._format(newnames)
             config.set('user attributes', 'proj.pypath', newpaths)
             config.set('user attributes', 'proj.pyexec', 
                        "{None: ('custom',\n"+18*" "+"'"+self.executable+"')}")
