@@ -18,6 +18,17 @@ sys.path[:] = [  prefx+'.zip',
                  os.path.join(prefx,'plat-'+sys.platform),
               ]
 """
+new_sp_win = """
+import sys
+import os.path
+prefx = os.path.join(sys.prefix,'Lib')
+sys.path[:] = [  prefx,
+                 os.path.join(sys.prefix,'DLLs'),
+              ]
+"""
+
+if sys.platform == 'win32':
+    new_sp = new_sp_win
 
 _script_template = zc.buildout.easy_install.script_template.replace(old_sp,new_sp)
 _py_script_template = zc.buildout.easy_install.py_script_template.replace(old_sp,new_sp)
