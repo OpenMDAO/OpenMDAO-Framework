@@ -15,6 +15,7 @@ the top level directory of your OpenMDAO source :term:`branch`. If you don not k
 what a branch is, that will be explained in a following section.
 
 .. index:: zc.buildout
+.. index:: Bazaar
 
 Getting Started
 ===============
@@ -79,7 +80,7 @@ The overall directory structure for OpenMDAO looks like this:
     located
 
 ``/OpenMDAO/dev/<username>/T<ticket number>-<desc>``
-    Top level directory of an active branch for ticket ``<ticket number>``
+    Top level directory of an active branch for :term:`ticket` ``<ticket number>``
     with description ``<desc>`` and owned by user ``<username>``
     
 ``/OpenMDAO/distrib-cache/dist``
@@ -171,7 +172,7 @@ ____________________
 A Python script, called ``mkbranch.py`` located in the ``util`` directory of
 the trunk will help create and configure your development branch for you.  It will
 create your branch and create a buildout for you on the branch. Internally, the
-script is simply talking to Bazaar_ and zc.buildout_. You could perform these
+script is simply talking to Bazaar and zc.buildout. You could perform these
 tasks manually, but you should use the script in order to keep your branch
 consistent with others in OpenMDAO.  This will make it easier for the
 configuration manager to locate and merge your branch, and it will also make it
@@ -185,7 +186,7 @@ buildout:
 
 ::
 
-  <python> /OpenMDAO/trunk/util/mkbranch.py -t <ticket number> [-d <description>][-s <source repository>][-b <config file>][-u <user name>]
+  <python> /OpenMDAO/trunk/util/mkbranch.py -t <ticket number> [-d <description>][-s <source repository>][-u <user name>]
 
 where the following parameters are user specified:
 
@@ -195,7 +196,7 @@ where the following parameters are user specified:
    this command will be *hard-wired* into all of the buildout-generated scripts.
 
 ``<ticket number>``
-   The :term:`ticket` number used by the bug tracking system
+   The ticket number used by the bug tracking system
    
 ``<description>``
    *(optional)* A short description  of the purpose of the branch. The description
@@ -204,14 +205,6 @@ where the following parameters are user specified:
 ``<source repository>``
    *(optional)* The top directory of the repository you want to branch from. If
    not supplied, this defaults to the top directory of the trunk.
-   
-``<config file>``
-   *(optional)* The pathname of a buildout configuration file that will be used
-   to run the buildout for the new branch.  This file will be copied into
-   ``buildout/buildout.cfg`` in the top level of the new branch.  If you do not 
-   supply it, the buildout.cfg file from the trunk will be used. If that is not
-   what you want, you can easily modify the buildout.cfg file after creating
-   the branch and run the buildout again.
    
 ``<user name>``
    *(optional)* This should be your username on *torpedo*.  This is set 
