@@ -1,6 +1,28 @@
 """
-A simple egg server based on Ian Bicking's tutorial at
-http://pythonpaste.org/webob/file-example.html
+A simple egg server that borrows heavily from Ian Bicking's tutorial at
+http://pythonpaste.org/webob/file-example.html.
+
+Usage: python eggsrv.py --eggdir=<top level egg dir> --log=<my log file>
+
+eggdir is expected to have the following structure:
+
+top
+    package1_dir
+        package1-1.0-py2.5-win32.egg
+        package1-1.0-py2.5-linux-x86_64.egg
+        package1-1.0.tar.gz
+        
+    package2_dir
+        package2-0.4-py2.4.egg
+        
+      ...
+    
+The egg server will automatically handle the addition of new distributions to the 
+egg directory structure, provided that they are structured as shown above.
+    
+MD5 checksums are calculated and added to each file URL, but testing has shown that
+easy_install ignores them.
+
 """
 
 import mimetypes
@@ -12,6 +34,7 @@ from optparse import OptionParser
 import platform
 from StringIO import StringIO
 import wsgiref.util
+import hashlib
 
 
 port = 31001
@@ -79,6 +102,21 @@ def make_response(filename):
     return res
 
 
+def file_md5(fpath):
+    """Return the MD5 digest for the given file"""
+    try:
+        f = open(fpath,'rb')
+        m = hashlib.md5()
+        while True:
+            s = f.read(4096)
+            if not s:
+                break
+            m.update(s)
+        return m.hexdigest()
+    finally:
+        f.close()
+
+
 class EggServer(object):
     def __init__(self, topdir):
         self.topdir = os.path.abspath(topdir)
@@ -102,19 +140,23 @@ class EggServer(object):
         for f in os.listdir(abspath):
             fpath = os.path.join(abspath,f)
             if os.path.isfile(fpath) and (fpath.endswith('.tar.gz') or fpath.endswith('.egg')):
+                checksum = file_md5(fpath)
                 lpath = os.path.join(wsgiref.util.request_uri(environ), f)
-                out.write('<li><a href="%s">%s</a>\n'%(lpath, f))
+                out.write('<li><a href="%s#md5=%s">%s</a>\n'%(lpath, checksum, f))
         out.write('</ul>\n</body>\n</html>')
         return [out.getvalue()]
         
     def file_response(self, environ, start_response, abspath):
-        print 'requesting file',wsgiref.util.request_uri(environ)
         app = FileApp(abspath)
         return app(environ, start_response)
         
     def __call__(self, environ, start_response):
+        global logger
+        if logger:
+            logger.info('from '+environ['REMOTE_ADDR']+' request for  '+
+                         wsgiref.util.request_uri(environ))
+                     
         pth = environ['PATH_INFO']
-        logger.info('from '+environ['REMOTE_ADDR']+' request for file '+pth)
         abspath = os.path.join(self.topdir, pth.strip('/'))
         
         if pth == '/':
