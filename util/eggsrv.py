@@ -2,7 +2,7 @@
 A simple egg server that borrows heavily from Ian Bicking's tutorial at
 http://pythonpaste.org/webob/file-example.html.
 
-Usage: python eggsrv.py --eggdir=<top level egg dir> --log=<my log file>
+Usage: python eggsrv.py --eggdir=<top level egg dir> --log=<my log file> --port=<port>
 
 eggdir is expected to have the following structure:
 
@@ -20,7 +20,7 @@ top
 The egg server will automatically handle the addition of new distributions to the 
 egg directory structure, provided that they are structured as shown above.
     
-MD5 checksums are calculated and added to each file URL, but testing has shown that
+MD5 checksums are calculated and added to each file URL, but testing indicates that
 easy_install ignores them.
 
 """
@@ -36,8 +36,6 @@ from StringIO import StringIO
 import wsgiref.util
 import hashlib
 
-
-port = 31001
 
 logger = None
 
@@ -122,6 +120,9 @@ class EggServer(object):
         self.topdir = os.path.abspath(topdir)
         
     def top_dir_response(self, environ, start_response):
+        """When the server gets a '/' request, return a page listing all of
+        the dirs in the egg directory.
+        """
         start_response('200 OK', [('Content-Type', 'text/html')])
         out = StringIO()
         out.write('<html>\n<body>\n<h1>Package Index</h1>\n<ul>\n')
@@ -133,6 +134,9 @@ class EggServer(object):
         return [out.getvalue()]
         
     def dist_dir_response(self, environ, start_response, abspath):
+        """When the server gets a request for a directory, return a page
+        listing each distribution file in the directory, along with its md5 digest.
+        """
         dpath = environ['PATH_INFO'].strip('/')
         start_response('200 OK', [('Content-Type', 'text/html')])
         out = StringIO()
@@ -147,13 +151,14 @@ class EggServer(object):
         return [out.getvalue()]
         
     def file_response(self, environ, start_response, abspath):
+        """Download the requested file."""
         app = FileApp(abspath)
         return app(environ, start_response)
         
     def __call__(self, environ, start_response):
         global logger
         if logger:
-            logger.info('from '+environ['REMOTE_ADDR']+' request for  '+
+            logger.info(environ['REMOTE_ADDR']+': <-- '+
                          wsgiref.util.request_uri(environ))
                      
         pth = environ['PATH_INFO']
@@ -186,9 +191,10 @@ if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("","--log", action="store", type="string", dest="log",
                       help="specify a file to log results to")
-    parser.add_option("-e","--eggdir", action="store", type="string", dest="eggdir",
+    parser.add_option("","--eggdir", action="store", type="string", dest="eggdir",
                       help="specify the directory where distributions are kept", default=".")
-
+    parser.add_option("", "--port", action="store", type="int", dest="port", default=31001,
+                      help="specify the port the the egg server will listen at")
     (options, args) = parser.parse_args()
     
     eggdir = os.path.abspath(options.eggdir)
@@ -197,12 +203,12 @@ if __name__ == '__main__':
         print >> sys.stderr, eggdir,'is not an accessible directory'
         parser.print_help()
         sys.exit(-1)
-        
+    
     if options.log:
         logger = setup_logger(options.log)
         
     app = EggServer(eggdir)
     
-    httpserver.serve(app, host=platform.uname()[1], port=port)
+    httpserver.serve(app, host=platform.uname()[1], port=options.port)
 
 
