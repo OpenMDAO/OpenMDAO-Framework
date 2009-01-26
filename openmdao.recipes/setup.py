@@ -31,5 +31,6 @@ setup(name='openmdao.recipes',
       default = openmdao.recipes.wingproj:WingProj
       isolatedegg = openmdao.recipes.isolatedegg:IsolatedEgg
       wingproj = openmdao.recipes.wingproj:WingProj
+      sphinxbuild = openmdao.recipes.sphinxbuild:SphinxBuild
       """,
       )
