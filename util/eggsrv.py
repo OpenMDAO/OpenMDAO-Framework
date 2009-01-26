@@ -126,7 +126,9 @@ class EggServer(object):
         start_response('200 OK', [('Content-Type', 'text/html')])
         out = StringIO()
         out.write('<html>\n<body>\n<h1>Package Index</h1>\n<ul>\n')
-        for d in os.listdir(self.topdir):
+        dirs = os.listdir(self.topdir)
+        dirs.sort(key=str.lower)
+        for d in dirs:
             full = os.path.join(self.topdir,d)
             if os.path.isdir(full):
                 out.write('<li><a href="%s">%s</a>\n'%(d,d))
@@ -143,7 +145,9 @@ class EggServer(object):
         out.write('<html>\n<body>\n<h1>%s Distributions</h1>\n<ul>\n'%(dpath,))
         for f in os.listdir(abspath):
             fpath = os.path.join(abspath,f)
-            if os.path.isfile(fpath) and (fpath.endswith('.tar.gz') or fpath.endswith('.egg')):
+            # TODO: add pkg_resources code here to actually find all of the distributions
+            #       so that files that aren't distributions won't show up
+            if os.path.isfile(fpath):
                 checksum = file_md5(fpath)
                 lpath = os.path.join(wsgiref.util.request_uri(environ), f)
                 out.write('<li><a href="%s#md5=%s">%s</a>\n'%(lpath, checksum, f))
@@ -187,17 +191,35 @@ def setup_logger(fname):
     return logging.getLogger('')
 
 
+def check_eggdir(name):
+    if name is None or os.path.isdir(name) is False:
+        raise RuntimeError(str(name)+' is not a directory')
+     
+    dirs = [d for d in os.listdir(name) if os.path.isdir(os.path.join(name, d))]
+    for d in dirs:
+        for f in os.listdir(os.path.join(name, d)):
+            if d != f[0:len(d)]:
+                raise RuntimeError('directory '+name+' does not have the correct format '+
+                                   d+' != '+f[0:len(d)])
+                                       
+
 if __name__ == '__main__':
     parser = OptionParser()
     parser.add_option("","--log", action="store", type="string", dest="log",
-                      help="specify a file to log results to")
+                      help="a file to log results to")
     parser.add_option("","--eggdir", action="store", type="string", dest="eggdir",
-                      help="specify the directory where distributions are kept", default=".")
+                      help="the directory where distributions are kept. The"+
+                        " format of the directory must be a top level directory "+
+                        "containing one directory for each package, with each package "+
+                        "directory containing all distributions for that package",
+                        default=".")
     parser.add_option("", "--port", action="store", type="int", dest="port", default=31001,
-                      help="specify the port the the egg server will listen at")
+                      help="the port that the egg server will listen to")
     (options, args) = parser.parse_args()
     
     eggdir = os.path.abspath(options.eggdir)
+    
+    check_eggdir(eggdir)
     
     if not os.path.isdir(eggdir):
         print >> sys.stderr, eggdir,'is not an accessible directory'

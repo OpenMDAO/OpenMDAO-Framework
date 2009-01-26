@@ -3,13 +3,12 @@
 from setuptools import setup, find_packages
 import os
 
-version = '0.1'
+version = '0.0.1'
 
 setup(name='openmdao.main',
       version=version,
       description="MDAO framework kernel",
-      long_description=open("README.txt").read() + "\n" +
-                       open(os.path.join("docs", "HISTORY.txt")).read(),
+      long_description="",
       # Get more strings from 
       # http://www.python.org/pypi?%3Aaction=list_classifiers
       classifiers=[
@@ -20,9 +19,9 @@ setup(name='openmdao.main',
       author='OpenMDAO Team',
       author_email='',
       url='',
-      license='NASA Open Source License',
+      license='NASA Open Source Agreement',
       packages=find_packages(exclude=['ez_setup']),
-      package_data={'openmdao.main': ['plugins/*.egg']},
+      package_data={'openmdao.main': ['plugins/*.egg','test/*.py']},
       namespace_packages=['openmdao'],
       include_package_data=True,
       zip_safe=False,
@@ -34,8 +33,6 @@ setup(name='openmdao.main',
           # -*- Extra requirements: -*-
       ],
       entry_points="""
-      [openmdao.drivers]
-      onepass = openmdao.main.drivers.OnePassDriver
       """,
       )
 
