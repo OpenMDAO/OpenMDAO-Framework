@@ -30,6 +30,9 @@ class SphinxBuild(object):
         self.docdir = options.get('doc_dir') or 'docs'
         self.builddir = options.get('build_dir') or '_build' 
         self.browser = options.get('browser') or 'firefox'
+        
+        #TODO: add format option so that buildout user could specify building
+        #      of html, latex, or both
               
 
                
