@@ -16,8 +16,9 @@ Popen(["%(browser)s", "%(index)s"])
     
 
 class SphinxBuild(object):
-    """Build Sphinx documentation and create a script to bring up the documentation
-    in a browser.
+    """Build Sphinx documentation and create a script to bring up the
+    documentation in a browser. This is specific to the OpenMDAO Sphinx docs and
+    is not a  general purpose Sphinx building recipe.
     """
 
     def __init__(self, buildout, name, options):
