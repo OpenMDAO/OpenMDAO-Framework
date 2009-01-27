@@ -30,7 +30,7 @@ def run_command(cmd, sh=True):
 def make_branch_name(ticket, desc):
     name = 'T'+str(int(ticket,10)).rjust(4,'0')
     if desc is not None and desc != '':
-        name += '-'+desc
+        name += '-'+desc.replace(' ','_')
     return name
 
     

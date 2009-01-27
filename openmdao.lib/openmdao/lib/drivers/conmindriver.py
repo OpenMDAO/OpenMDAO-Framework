@@ -206,7 +206,12 @@ class CONMINdriver(Driver):
             self._first = False            
             
             conmin.cnmn1.obj = numarray.array(self.objective_val)
-            zz = conmin.conmin(self.design_vals,
+            (self.design_vals,
+             self.scal,self.gradients,self.s,
+             self.g1,self.g2,self._b,self._c,
+             self.cons_is_linear,
+             self.cons_active_or_violated,self._ms1) = \
+                 conmin.conmin(self.design_vals,
                                self.lower_bounds, self.upper_bounds,
                                self.constraint_vals,
                                self.scal,self.df,
@@ -214,11 +219,6 @@ class CONMINdriver(Driver):
                                self.s,self.g1,self.g2,self._b,self._c,
                                self.cons_is_linear,
                                self.cons_active_or_violated,self._ms1)
-            (self.design_vals,
-             self.scal,self.gradients,self.s,
-             self.g1,self.g2,self._b,self._c,
-             self.cons_is_linear,
-             self.cons_active_or_violated,self._ms1) = zz
             
             self.update_design_variables()
 

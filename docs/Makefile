@@ -3,7 +3,7 @@
 
 # You can set these variables from the command line.
 SPHINXOPTS    =
-SPHINXBUILD   = sphinx-build
+SPHINXBUILD   = python-scripts/sphinx-build
 PAPER         =
 
 # Internal variables.
@@ -32,6 +32,9 @@ html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) _build/html
 	@echo
 	@echo "Build finished. The HTML pages are in _build/html."
+
+
+showhtml: html
 	firefox _build/html/index.html &
 
 pickle:

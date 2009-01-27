@@ -4,4 +4,5 @@ Using OpenMDAO
 --------------
 
 
-Placeholder for text
+Getting Started
+===============
