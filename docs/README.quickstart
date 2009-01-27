@@ -1,0 +1,37 @@
+
+-------------------------------
+OpenMDAO Local Quickstart Guide
+-------------------------------
+
+The following is a very brief explanation of what you need to do to get up and running with an
+OpenMDAO build locally here at GRC. A more thorough explanation of all steps will be available to 
+you once you create a repository and build the OpenMDAO documentation.
+
+
+1. Log into torpedo.grc.nasa.gov
+
+   If you don't have an account on torpedo, contact James.Below@nasa.gov
+
+2. Type python2.5 /OpenMDAO/trunk/util/mkbranch.py -t <ticket number> -d <description>
+
+   If you don't have a ticket number, use 0.
+   
+   description is optional.
+   
+3. cd to /OpenMDAO/dev/<username>/T<ticket number>-<description>/buildout
+
+   where <username> is your user name on torpedo
+   
+   For example: cd /OpenMDAO/dev/bnaylor/T0000-bugfix/buildout
+   
+4. Type bin/buildout
+
+   This will take some time as all of the required python eggs will be installed in your
+   buildout area.
+   
+5. Type bin/docs. 
+
+   A firefox web browser should pop up and display
+   the front page of the OpenMDAO docs.  Click on the Developer's Guide for more instructions.
+   
+   
