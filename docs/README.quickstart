@@ -16,7 +16,10 @@ you once you create a repository and build the OpenMDAO documentation.
 
    If you don't have a ticket number, use 0.
    
-   description is optional.
+   description is optional. If it contains spaces it must be enclosed in 
+   quotes.  Any spaces will be replaced by underscores (_)
+
+   For example: python2.5 /OpenMDAO/trunk/util/mkbranch.py -t 0 -d "my bugfix"
    
 3. cd to /OpenMDAO/dev/<username>/T<ticket number>-<description>/buildout
 
