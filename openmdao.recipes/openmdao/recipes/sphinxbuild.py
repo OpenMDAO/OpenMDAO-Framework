@@ -10,7 +10,7 @@ script_template = """#!%(python)s
 from subprocess import Popen
 
 # run this without blocking
-Popen(["%(browser)s", "%(index)s"])
+Popen(["%(browser)s", r"%(index)s"])
 
 """
     
