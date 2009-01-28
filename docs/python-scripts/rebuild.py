@@ -20,7 +20,7 @@ def resize_image(fname):
         new_w = int(width * wrat)
         new_h = int(height * wrat)
         newim = im.transform((new_w,new_h), Image.EXTENT, 
-                             im.getbbox(),Image.BICUBIC)
+                             im.getbbox(), Image.BICUBIC)
         newim.save(fname)
 
 #Convert dia files to png, and resize
