@@ -4,6 +4,7 @@ import os.path
 import sys
 import stat
 from subprocess import check_call
+from PIL import Image
 
 script_template = """#!%(python)s
 
@@ -57,9 +58,9 @@ class SphinxBuild(object):
             
         # build the docs using Sphinx (just run the Makefile)
         try:
-            os.chdir('python-scripts')
-            sys.path.append(os.path.abspath('.'))
-            execfile('rebuild.py')
+            #os.chdir('python-scripts')
+            sys.path.append(os.path.abspath('python-scripts'))
+            execfile(os.path.join('python-scripts','rebuild.py'))
             #check_call([self.interpreter,'rebuild.py'])
             check_call([self.interpreter, self.builder, '-b', 'html', 
                         '-d', os.path.join(self.builddir,'doctrees'), 
