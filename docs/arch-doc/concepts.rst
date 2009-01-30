@@ -52,24 +52,26 @@ inherits from :ref:`IContainer<IContainer>`.
 :ref:`IDriver<IDriver>` - interface to optimizers, solvers, parameter studies, and other
 objects that iterate over a model. It inherits from :ref:`IComponent<IComponent>`.
 
-:ref:`IVariable<IVariable>` - interface to data objects that are to be passed between linked
-components. These data objects have a validate() function to ensure that only 
-valid links are allowed. They can also translate values from other IVariables,
-e.g., perform unit conversion.
+:ref:`IVariable<IVariable>` - interface to data objects that are to be passed
+between linked components. These data objects have a validate() function to
+ensure that only  valid links are allowed. They can also translate values from
+other IVariables, e.g., perform unit conversion.
 
-:ref:`IGeomObject<IGeomObject>` - interface to objects with geometry. Typically these will have
-parameters that can be modified by components and will have the ability to
-return various grid representations of their geometry.
+:ref:`IGeomObject<IGeomObject>` - interface to objects with geometry.
+Typically these will have parameters that can be modified by components and
+will have the ability to return various grid representations of their
+geometry.
 
-:ref:`IResourceAllocator<IResourceAllocator>` - interface to objects that allocate memory and disk
-resources, sometimes on specific servers, based on a resource description.
+:ref:`IResourceAllocator<IResourceAllocator>` - interface to objects that
+allocate memory and disk resources, sometimes on specific servers, based on a
+resource description.
 
-:ref:`IFactory<IFactory>` - interface to an object that creates other objects used by the
-framework. This creation may involve the creation of a remote instance of an
-object and a  proxy to represent it in the local process.
+:ref:`IFactory<IFactory>` - interface to an object that creates other objects
+used by the framework. This creation may involve the creation of a remote
+instance of an object and a  proxy to represent it in the local process.
 
-(See the section  :ref:`Application-Programming-Interface-(API)` for details on
-these interfaces.)
+(See the section  :ref:`Application-Programming-Interface-(API)` for details
+on these interfaces.)
 
 
 .. index:: geometry
@@ -79,16 +81,16 @@ Geometry
 ========
 
 Many analysis components will require some representation of geometry, and that
-representation could vary in detail from simple parameters, e.g., length, up to a
-full 3d mesh. It's also important that the components dealing with the same
+representation could vary in detail from simple parameters, e.g., length, up to
+a full 3d mesh. It is also important that the components dealing with the same
 physical object are using geometric representations generated from the same
 underlying geometry. Also, real world geometries tend to be complex hierarchical
-assemblies of parts, and some components will be interested in only a single part
-while others will need, for example, the :term:`OML` of an entire assembly of
-parts. The source of the underlying geometry could be one of any number of tools,
-from external full featured  :term:`CAD` programs like Pro/Engineer and Catia, to
-more aircraft specific codes like :term:`VSP`, to open source geometry kernels
-like OpenCASCADE_.
+assemblies of parts, and some components will be interested in only a single
+part while others will need, for example, the :term:`OML` of an entire assembly
+of parts. The source of the underlying geometry could be one of any number of
+tools, from external full featured  :term:`CAD` programs like Pro/Engineer and
+Catia, to more aircraft specific codes like :term:`VSP`, to open source geometry
+kernels like OpenCASCADE_.
 
 .. _OpenCASCADE: http://www.opencascade.org
 
@@ -98,13 +100,44 @@ like OpenCASCADE_.
 .. index:: CAPRI
 .. index:: Vehicle Sketch Pad (VSP)
 
-Our goal is to allow other tools in the framework to interact with geometry in a
-consistent fashion regardless of the tool used to provide the geometry. To this
-end, we intend to use the :term:`CAPRI` API to interact with geometry producers. There
-are existing CAPRI interfaces to OpenCASCADE and to a number of popular 
-commercial CAD packages, but not to :term:`VSP`. Creating a new CAPRI interface to 
-VSP will require significant effort, but that effort is necessary if components
-are to interact with VSP as a generic geometry producer in the framework.
+
+Because OpenMDAO is an open source framework, we hope to provide an open source
+solution to the problem of interacting with geometry. At the same time, we want
+our users who have access to powerful CAD systems to be able to interact with
+them from within OpenMDAO. 
+
+Using the :term:`CAPRI`  :term:`CAE` Gateway will allow us to satisfy our commercial CAD
+users.  CAPRI allows interaction with many popular CAD packages through the same
+API.  This API supports parametric geometry manipulation, if supported by the
+underlying CAD package, as well as querying the geometry in a variety of ways. 
+It currently does not support creation of new geometry.  CAPRI is commercial
+software, so we cannot release it as part of OpenMDAO, but we can provide
+OpenMDAO wrapper objects that can interact with CAD packages through the CAPRI
+API.
+
+For our users who want a fully open source solution to the problem of
+interacting with geometry, we hope to provide an interface to OpenCASCADE along
+with the framework.  OpenCASCADE currently does not support parametric geometry
+manipulation.
+
+There seem to be three distinct areas of functionality involved in the geometry
+interaction problem: querying the geometry, parametric manipulation, and
+geometry creation.  In order to make these interactions consistent within the
+framework, an interface will be defined for each of the three modes of
+interaction.  
+
+The querying interface will be based on the part of the CAPRI API
+that performs query operations.  We have been given permission to include the
+CAPRI API in our open source release, so basing our open source API on it is not
+a problem.
+
+The parametric manipulation interface will be based on the parametric geometry
+manipulation part of the CAPRI API.
+
+Because geometry creation is not part of the CAPRI API, we will have to develop
+our own, and we will likely implement it only for OpenCASCADE.  There has been
+some talk of CADNexus adding geometry creation functions to the CAPRI API. If
+that happens, we will wrap it in our geometry creation interface.
 
 
 .. index:: pair: Component; publishing
@@ -477,7 +510,7 @@ _________
 
 For debugging purposes, a *manhole* is optionally provided, which has a separate
 authentication mechanism (ssh) from normal framework access. Access to the
-manhole is configured at server startup and cannot be enabled afterwards. The
+manhole is configured at server startup and cannot be enabled afterward. The
 manhole provides access to the server's Python interpreter. Initially this will
 simply be the interpreter command line prompt. Later versions may provide
 higher-level commands pertinent to simulation server debugging and/or GUI

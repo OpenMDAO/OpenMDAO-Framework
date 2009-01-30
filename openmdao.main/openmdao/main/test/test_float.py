@@ -61,7 +61,7 @@ class FloatTestCase(unittest.TestCase):
             self.float1.units = 'bogus'
         except ValueError, err:
             self.assertEqual(str(err), 
-                             "h1.float1: units of 'bogus' are invalid")
+                             "h1.float1: Units of 'bogus' are invalid")
         else:
             self.fail('ValueError expected')
         

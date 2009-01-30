@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
-version = '0.1'
+version = '0.0.1'
 
 setup(name='openmdao.recipes',
       version=version,
@@ -24,12 +24,15 @@ setup(name='openmdao.recipes',
       zip_safe=True,
       install_requires=[
           'setuptools',
-          'zc.recipe.egg==1.1.0'
+          'zc.recipe.egg==1.1.0',
+          'Sphinx',
+          'PIL'
       ],
       entry_points="""
       [zc.buildout]
       default = openmdao.recipes.wingproj:WingProj
       isolatedegg = openmdao.recipes.isolatedegg:IsolatedEgg
       wingproj = openmdao.recipes.wingproj:WingProj
+      sphinxbuild = openmdao.recipes.sphinxbuild:SphinxBuild
       """,
       )

@@ -57,8 +57,13 @@ Glossary
 	
 	
       **CAD**
-	Computer Aided Design. An automated system for the design, drafting, and
+	Computer-Aided Design. An automated system for the design, drafting, and
 	display of graphically oriented information. 
+
+      
+      **CAE**
+	Computer-Aided Engineering. Using computers to design, analyze, and
+        manufacture products and processes.
 
 
       **CAPRI**
@@ -169,7 +174,7 @@ Glossary
 	
 
       **OSI** 
-	`Open Source Initiative Initiative <http://www.opensource.org>`_.
+	`Open Source Initiative <http://www.opensource.org>`_.
 
 
       **PBS**

@@ -82,8 +82,8 @@ Implementation Language
 
 OpenMDAO will be implemented using the Python_ programming language. Plug-ins to
 the framework will be Python modules. A Python module can be either a text file
-written in pure Python code or an extension module, which is a shared library that
-conforms to the Python C-API. Because Python is an interpreted language,
+written in pure Python code or an extension module, which is a shared library
+that conforms to the Python C-API. Because Python is an interpreted language,
 numerically intensive components will typically be implemented using a compiled
 language, such as C, C++, or FORTRAN, and will be wrapped as a Python extension
 module or wrapped using file I/O.
@@ -99,14 +99,26 @@ Distribution
 ============
 
 The framework will be distributed as a namespace package like other large Python
-projects, e.g., zope_. Parts of the framework that are decoupled and deemed useful
-on their own will be installable as individual :term:`eggs` like, for example,
-*zope.interface*. The framework namespace will also contain a standard library of
-open source plug-in components. A number of other components that are not open
-source, primarily wrappers for NASA analysis codes that cannot be released open
-source for various reasons, will be available as individual eggs.
+projects, e.g., zope_. Parts of the framework that are decoupled and deemed
+useful on their own will be installable as individual :term:`eggs` like, for
+example, *zope.interface*. The framework namespace will also contain a standard
+library of open source plug-in components. A number of other components that are
+not open source, primarily wrappers for NASA analysis codes that cannot be
+released open source for various reasons, will be available as individual eggs.
+
+The current package layout of the project is as follows:
+
+**openmdao.main**
+    the OpenMDAO framework infrastructure
+    
+**openmdao.lib**
+    standard library of OpenMDAO plug-ins
+    
+**openmdao.recipes**
+    OpenMDAO specific recipes for zc.buildout_
+
 
 
 .. _zope: http://wiki.zope.org/zope3/Zope3Wiki
 
-
+.. _zc.buildout: http://pypi.python.org/pypi/zc.buildout

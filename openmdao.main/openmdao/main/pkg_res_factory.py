@@ -16,7 +16,7 @@ from openmdao.main.factory import Factory
 
 
 def import_version(req, env=None):
-    """Import the project version specified in the Requirement req, if it can
+    """Import the project version, specified in the Requirement req, if it can
     be found in the current WorkingSet or in the specified Environment. If a
     conflicting version already exists in the WorkingSet, a VersionConflict
     will be raised. If a distrib cannot be found matching the requirement,
