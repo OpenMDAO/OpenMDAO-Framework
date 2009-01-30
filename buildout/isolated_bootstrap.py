@@ -19,7 +19,8 @@ use the -c option to specify an alternate configuration file.
 
 This is a modified version of the bootstrap.py file from Zope Corp.
 It creates a bin/buildout script that is isolated from the system level
-installed packages.
+installed packages. -BAN
+
 
 $Id$
 """
