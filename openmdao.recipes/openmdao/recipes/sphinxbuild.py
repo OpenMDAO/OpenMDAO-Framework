@@ -58,7 +58,7 @@ class SphinxBuild(object):
             
         # build the docs using Sphinx
         try:
-            sys.path[0:0] = [os.path.abspath('python-scripts'))]
+            sys.path[0:0] = [os.path.abspath('python-scripts')]
             execfile(os.path.join('python-scripts','rebuild.py'))
             check_call([self.interpreter, self.builder, '-b', 'html', 
                         '-d', os.path.join(self.builddir,'doctrees'), 
@@ -71,8 +71,8 @@ class SphinxBuild(object):
             scriptname = os.path.join(self.buildout['buildout']['directory'],
                                      'bin','docs.py')
             bat = open(os.path.join(self.buildout['buildout']['directory'],
-                                    'bin','docs.bat'))
-            bat.write("python %(script)s"%(scriptname,))
+                                    'bin','docs.bat'), 'w')
+            bat.write("@echo off\npython %s"%(scriptname,))
             bat.close()
         else:
             scriptname = os.path.join(self.buildout['buildout']['directory'],

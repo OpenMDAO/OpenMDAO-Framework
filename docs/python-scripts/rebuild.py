@@ -29,7 +29,7 @@ for diafile in includingWalk("..", ["*.dia"]):
    if  retcode == -1 or retcode == 0:
        print 'generated_images/'+dest+'.png is up-to-date'
    else:
-       cmd = 'dia --export=generated_images/'+dest+'.png --filter=png '+diafile
+       cmd = 'dia --export=generated_images/'+dest+'.png --filter=png-libart '+diafile
        system(cmd)
        resize_image(os.path.abspath(os.path.join('generated_images',dest+'.png')))
 
