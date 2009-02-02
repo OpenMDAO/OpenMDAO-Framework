@@ -52,24 +52,26 @@ inherits from :ref:`IContainer<IContainer>`.
 :ref:`IDriver<IDriver>` - interface to optimizers, solvers, parameter studies, and other
 objects that iterate over a model. It inherits from :ref:`IComponent<IComponent>`.
 
-:ref:`IVariable<IVariable>` - interface to data objects that are to be passed between linked
-components. These data objects have a validate() function to ensure that only 
-valid links are allowed. They can also translate values from other IVariables,
-e.g., perform unit conversion.
+:ref:`IVariable<IVariable>` - interface to data objects that are to be passed
+between linked components. These data objects have a validate() function to
+ensure that only  valid links are allowed. They can also translate values from
+other IVariables, e.g., perform unit conversion.
 
-:ref:`IGeomObject<IGeomObject>` - interface to objects with geometry. Typically these will have
-parameters that can be modified by components and will have the ability to
-return various grid representations of their geometry.
+:ref:`IGeomObject<IGeomObject>` - interface to objects with geometry.
+Typically these will have parameters that can be modified by components and
+will have the ability to return various grid representations of their
+geometry.
 
-:ref:`IResourceAllocator<IResourceAllocator>` - interface to objects that allocate memory and disk
-resources, sometimes on specific servers, based on a resource description.
+:ref:`IResourceAllocator<IResourceAllocator>` - interface to objects that
+allocate memory and disk resources, sometimes on specific servers, based on a
+resource description.
 
-:ref:`IFactory<IFactory>` - interface to an object that creates other objects used by the
-framework. This creation may involve the creation of a remote instance of an
-object and a  proxy to represent it in the local process.
+:ref:`IFactory<IFactory>` - interface to an object that creates other objects
+used by the framework. This creation may involve the creation of a remote
+instance of an object and a  proxy to represent it in the local process.
 
-(See the section  :ref:`Application-Programming-Interface-(API)` for details on
-these interfaces.)
+(See the section  :ref:`Application-Programming-Interface-(API)` for details
+on these interfaces.)
 
 
 .. index:: geometry
@@ -80,7 +82,7 @@ Geometry
 
 Many analysis components will require some representation of geometry, and that
 representation could vary in detail from simple parameters, e.g., length, up to
-a full 3d mesh. It's also important that the components dealing with the same
+a full 3d mesh. It is also important that the components dealing with the same
 physical object are using geometric representations generated from the same
 underlying geometry. Also, real world geometries tend to be complex hierarchical
 assemblies of parts, and some components will be interested in only a single
@@ -104,7 +106,7 @@ solution to the problem of interacting with geometry. At the same time, we want
 our users who have access to powerful CAD systems to be able to interact with
 them from within OpenMDAO. 
 
-Using the :term:`CAPRI` CAE Gateway will allow us to satisfy our commercial CAD
+Using the :term:`CAPRI`  :term:`CAE` Gateway will allow us to satisfy our commercial CAD
 users.  CAPRI allows interaction with many popular CAD packages through the same
 API.  This API supports parametric geometry manipulation, if supported by the
 underlying CAD package, as well as querying the geometry in a variety of ways. 
@@ -132,8 +134,8 @@ a problem.
 The parametric manipulation interface will be based on the parametric geometry
 manipulation part of the CAPRI API.
 
-Because geometry creation is not part of the CAPRI API we will have to develop
-our own, and we will likely only implement it for OpenCASCADE.  There has been
+Because geometry creation is not part of the CAPRI API, we will have to develop
+our own, and we will likely implement it only for OpenCASCADE.  There has been
 some talk of CADNexus adding geometry creation functions to the CAPRI API. If
 that happens, we will wrap it in our geometry creation interface.
 
@@ -508,7 +510,7 @@ _________
 
 For debugging purposes, a *manhole* is optionally provided, which has a separate
 authentication mechanism (ssh) from normal framework access. Access to the
-manhole is configured at server startup and cannot be enabled afterwards. The
+manhole is configured at server startup and cannot be enabled afterward. The
 manhole provides access to the server's Python interpreter. Initially this will
 simply be the interpreter command line prompt. Later versions may provide
 higher-level commands pertinent to simulation server debugging and/or GUI
