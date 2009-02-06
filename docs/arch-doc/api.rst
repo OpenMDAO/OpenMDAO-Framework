@@ -217,6 +217,7 @@ they should give a good indication of our intent.
 
 .. index:: IGeomObject
 
+
 .. _IGeomObject:
 
 ::
@@ -228,8 +229,7 @@ they should give a good indication of our intent.
 
         modelID = Attribute('Identifies the model. This can either be a part or an assembly of parts')
 
-        # the interface for IGeomObject will encapsulate the CAPRI API, which 
-        # is somewhat large (nearly 100 functions) to show here.
+        # API to be determined
 
 -------
 

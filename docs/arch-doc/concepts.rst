@@ -90,54 +90,62 @@ part while others will need, for example, the :term:`OML` of an entire assembly
 of parts. The source of the underlying geometry could be one of any number of
 tools, from external full featured  :term:`CAD` programs like Pro/Engineer and
 Catia, to more aircraft specific codes like :term:`VSP`, to open source geometry
-kernels like OpenCASCADE_.
+kernels like OpenCASCADE_ or open source CAD packages like BRL-CAD_.
 
 .. _OpenCASCADE: http://www.opencascade.org
+
+.. _BRL-CAD: http://brlcad.org
 
 
 .. index:: OpenCascade
 .. index:: CAD
 .. index:: CAPRI
 .. index:: Vehicle Sketch Pad (VSP)
+.. index:: BRL-CAD
 
+Before OpenMDAO can do anything with a geometry, it must first exist. There are
+two primary ways of creating geometry. The first is for a skilled CAD operator to
+create the geometry using a particular CAD package and then provide it to the
+OpenMDAO user.  In this scenario, using the :term:`CAPRI`  :term:`CAE` Gateway
+would allow the user to interact with that existing geometry. The second way is to
+create the geometry programatically from within OpenMDAO using some sort of
+geometry creation API. CAPRI does not provide for creation of new geometry. CAPRI
+is also commercial software, so we cannot release it as part of OpenMDAO, but we
+can provide OpenMDAO wrapper objects that can interact with CAD packages through
+the CAPRI API.
 
-Because OpenMDAO is an open source framework, we hope to provide an open source
-solution to the problem of interacting with geometry. At the same time, we want
-our users who have access to powerful CAD systems to be able to interact with
-them from within OpenMDAO. 
+After the geometry exists, we can query it.  The querying portion of the CAPRI
+API or something similar could be used to facilitate this. This would allow
+mesh generators, for example, to create meshes based on the geometry.
 
-Using the :term:`CAPRI`  :term:`CAE` Gateway will allow us to satisfy our commercial CAD
-users.  CAPRI allows interaction with many popular CAD packages through the same
-API.  This API supports parametric geometry manipulation, if supported by the
-underlying CAD package, as well as querying the geometry in a variety of ways. 
-It currently does not support creation of new geometry.  CAPRI is commercial
-software, so we cannot release it as part of OpenMDAO, but we can provide
-OpenMDAO wrapper objects that can interact with CAD packages through the CAPRI
-API.
+Finally, we wish to be able to parametrically manipulate the geometry. Many
+commercial CAD packages support this, although in incompatible ways, meaning
+that you cannot save a parametric geometry from one CAD package and use it
+in another. CAPRI provides a common interface to allow parametric 
+manipulation in the commercial CAD programs that provide it.
 
-For our users who want a fully open source solution to the problem of
-interacting with geometry, we hope to provide an interface to OpenCASCADE along
-with the framework.  OpenCASCADE currently does not support parametric geometry
-manipulation.
+If we don't have a commercial CAD package that can handle parametric geometry
+manipulation, the only available option seems to be to generate a sequence of
+commands to a geometry creation API at runtime based on parameter values.  This 
+would recreate the geometry whenever the sequence of commands were
+executed.
 
-There seem to be three distinct areas of functionality involved in the geometry
-interaction problem: querying the geometry, parametric manipulation, and
-geometry creation.  In order to make these interactions consistent within the
-framework, an interface will be defined for each of the three modes of
-interaction.  
+So we have two possible ways to have fully functional geometry within OpenMDAO.
+The CAPRI option works well for users with commercial CAD packages and skilled
+CAD operators available to create parametric CAD parts for them. One unfortunate
+side effect of this approach is that it limits collaboration with other potential
+users of a parametric geometry, because whatever parametric geometry is built in
+this fashion will only work in the same CAD package in which it was built. If
+the geometry is exported into some format that is readable by other packages,
+the parametric information will be lost.
 
-The querying interface will be based on the part of the CAPRI API
-that performs query operations.  We have been given permission to include the
-CAPRI API in our open source release, so basing our open source API on it is not
-a problem.
-
-The parametric manipulation interface will be based on the parametric geometry
-manipulation part of the CAPRI API.
-
-Because geometry creation is not part of the CAPRI API, we will have to develop
-our own, and we will likely implement it only for OpenCASCADE.  There has been
-some talk of CADNexus adding geometry creation functions to the CAPRI API. If
-that happens, we will wrap it in our geometry creation interface.
+The approach of using a program to build geometry at runtime based on
+parameter values and using an open source geometry kernel built into OpenMDAO is 
+not as polished as the commercial CAD approach. However, it has the advantage that
+any geometry created in this way will be available to any OpenMDAO user without
+requiring the purchase of a commercial package. This increases the probability of
+reuse by others, and over time could result in the creation by the OpenMDAO
+community of a library of high quality parametric parts available to anyone.
 
 
 .. index:: pair: Component; publishing
