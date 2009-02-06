@@ -26,69 +26,77 @@ they should give a good indication of our intent.
 
 ::
 
-     class IContainer (Interface):
-	 """The interface to an object that allows set/get of its public attributes through the framework. 
-	 This interface is provided by the Container class."""
-	 
-	 name = Attribute('the name of the Container')
-	 
-	 parent = Attribute('the IContainer object containing this object, or None')
+    class IContainer (Interface):
+	"""The interface to an object that allows set/get of its public attributes through the framework. 
+	This interface is provided by the Container class."""
 
-	 def create (type_name, name, version=None, factory=None):
-             """Create an object with the given type and the given name within
-             this Container."""
+	name = Attribute('the name of the Container')
 
-	 def delete (name):
-             """Remove the named object from this container and notify any
-             observers"""
+	parent = Attribute('the IContainer object containing this object, or None')
 
-	 def get_objs_by_type (typ, recurse=False, attrdict):
-             """Return a list of objects of the specified type that also have
-             attributes with values that match those passed in the attrdict
-             dictionary. If type is an Interface, then a list of objects providing
-             that interface will be returned."""
+    def add_child(obj, private=False):
+            """Add an object (must provide IContainer interface) to this
+            Container, and make it a member of this Container's public
+            interface if private is False."""
+            
+    def remove_child(name):
+            """Remove the specified child from this container and remove any
+            Variable objects from _pub that reference that child."""
 
-	 def get_pathname ():
-             """Return the name (dot delimited) that uniquely
-             identifies this object's location within a hierarchy of IContainers"""
+    def create (typ_name, name, version=None, factory=None):
+            """Create an object with the given type and the given name 
+            within this Container."""
+        
+    def delete (name):
+            """Remove the named object from this container and notify any
+            observers"""
 
-	 def get (name):
-             """return the value of a public variable"""
+    def contains (path):
+            """Return True if the child specified by the given dotted path
+            name is publicly accessibly and is contained in this Container. 
+            """
+        
+    def get_objs_by_type (typ, recurse=False, attrdict):
+            """Return a list of objects of the specified type that also have
+            attributes with values that match those passed in the attrdict
+            dictionary. If type is an Interface, then a list of objects providing
+            that interface will be returned."""
 
-	 def multiget (names):
-             """Return a tuple of values corresponding to the supplied attribute
-             names."""
+    def get_pathname ():
+            """Return the name (dot delimited) that uniquely
+            identifies this object's location within a hierarchy of IContainers"""
 
-	 def set (name, value):
-             """Set the value of a public variable"""
+    def get (name):
+            """Return the value of a public Variable."""
 
-	 def multiset (pairs):
-             """Based on the tuple of input (name,value) pairs, set the values
-             of the specified named variables."""
+    def getvar (name):
+            """Return a public Variable."""
 
-	 def save_state (out, format='cPickle'):
-             """Save the state of this object and its children to the given 
-             output stream. Pure Python classes generally won't need to 
-             override this because the base class version will suffice, but
-             Python extension classes will have to override. The format
-             can be supplied in case something other than cPickle is needed."""
-	     	
-	 def restore_state (input, format='cPickle'):
-             """Replace the current object in the hierarchy with the object
-             loaded from the input stream. Pure Python classes generally 
-             won't need to override this, but extensions will. The format
-             can be supplied in case something other than cPickle is needed."""
+    def set (name, value):
+            """Set the value of a public variable"""
 
-	 def config_from_obj (obj):
-             """This is intended to allow a newer version of a component to
-             configure itself based on an older version. By default, values
-             of dictionary entries from the old object will be copied to the
-             new one."""
+    def setvar (name, varobj):
+            """Set the value of a public Variable to the value of the Variable var."""
 
-	 def move (old_name, new_name):
-             """move the named child object from the location indicated by the
-             relative pathname old_name to the location indicated by
-             new_name."""
+    def save (out, format=constants.SAVE_CPICKLE):
+            """Save the state of this object and its children to the given 
+            output stream. Pure Python classes generally won't need to 
+            override this because the base class version will suffice, but
+            Python extension classes will have to override. The format
+            can be supplied in case something other than cPickle is needed."""
+
+    def load (input, format=constants.SAVE_CPICKLE):
+            """Replace the current object in the hierarchy with the object
+            loaded from the input stream. Pure Python classes generally 
+            won't need to override this, but extensions will. The format
+            can be supplied in case something other than cPickle is needed."""
+
+    def config_from_obj (obj):
+            """This is intended to allow a newer version of a component to
+            configure itself based on an older version. By default, values
+            of dictionary entries from the old object will be copied to the
+            new one."""
+
 
 -------
 
@@ -98,82 +106,83 @@ they should give a good indication of our intent.
 
 ::
 
-     class IComponent (Interface):
-	 """A runnable Container. This interface is provided by the Component 
-	 class"""
+    class IComponent (Interface):
+        """A runnable Container. This interface is provided by the Component 
+        class"""
 
-	 state =  Attribute('the current state of this object(UNKNOWN,IDLE,RUNNING,WAITING)')
+    state =  Attribute('the current state of this object(UNKNOWN,IDLE,RUNNING,WAITING)')
 
-	 resource_desc = Attribute('a dict containing key-value pairs that are used to select a ResourceAllocator')
+    resource_desc = Attribute('a dict containing key-value pairs that are used to select a ResourceAllocator')
 
-	 def add_socket (name, iface, desc=''):
-             """Specify a named placeholder for a component with the given
-             interface."""
 
-	 def remove_socket (name):
-             """Remove an existing Socket"""
+    def add_socket (name, iface, desc=''):
+            """Specify a named placeholder for a component with the given
+            interface."""
 
-	 def post_config ():
-             """Perform any final initialization after configuration has been set,
-             and verify that the configuration is correct."""
+    def remove_socket (name):
+            """Remove an existing Socket"""
 
-	 def update_inputs ():
-             """Fetch input variables."""
+    def post_config ():
+            """Perform any final initialization after configuration has been set,
+            and verify that the configuration is correct."""
 
-	 def execute ():
-             """Perform calculations or other actions."""
+    def update_inputs ():
+            """Fetch input variables."""
 
-	 def update_outputs ():
-             """Update output variables"""
+    def execute ():
+            """Perform calculations or other actions."""
 
-	 def run ():
-             """Run this object. This should include fetching input variables,
-             executing, and updating output variables."""
+    def update_outputs ():
+            """Update output variables"""
 
-	 def checkpoint (out):
-             """Save sufficient information for a restart. By default, this
-             just calls save_state()"""
-	 
-	 def restart (input):
-             """Restore state using a checkpoint file. The checkpoint file is typically a delta 
-	     from a full saved state file."""
-		
-	 def step ():
-             """For Components that contain Workflows (e.g., Assembly), this will run
-             one Component in the Workflow and return. For simple components, it is the
-             same as run()."""
+    def run ():
+            """Run this object. This should include fetching input variables,
+            executing, and updating output variables."""
 
-	 def require_gradients (varname, gradients):
-             """Requests that the component be able to provide (after execution) a
-             list of gradients w.r.t. a list of variables. The format
-             of the gradients list is [dvar_1, dvar_2, ..., dvar_n]. The component
-             should return a list with entries of either a name, a tuple of the
-             form (name,index) or None.  None indicates that the component cannot
-             compute the specified derivative. name indicates the name of a
-             scalar variable in the component that contains the gradient value, and
-             (name,index) indicates the name of an array variable and the index of
-             the entry containing the gradient value. If the component cannot
-             compute any gradients of the requested varname, it can just return
-             None."""
+    def checkpoint (out):
+            """Save sufficient information for a restart. By default, this
+            just calls save_state()"""
 
-	 def require_hessians (varname, deriv_vars):
-             """Requests that the component be able to provide (after execution)
-             the hessian w.r.t. a list of variables. The format of
-             deriv_vars is [dvar_1, dvar_2, ..., dvar_n]. The component should
-             return one of the following:
-               1) a name, which would indicate that the component contains
-                           a 2D array variable or matrix containing the hessian
-               2) an array of the form [[dx1dx1, dx1dx2, ... dx1dxn],
-                                        	 ...
-                                	[dxndx1, dxndx2, ... dxndxn]]
-        	  with entries of either name, (name,index), or None. name
-        	  indicates that a scalar variable in the component contains the
-        	  desired hessian matrix entry. (name,index) indicates that
-        	  an array variable contains the value at the specified index.
-        	  If index is a list with two entries, that indicates that
-        	  the variable containing the entry is a 2d array or matrix.
-               3) None, which means the the component cannot compute any values
-        	  of the hessian."""
+    def restart (input):
+            """Restore state using a checkpoint file. The checkpoint file is typically a delta 
+	    from a full saved state file."""
+
+    def step ():
+            """For Components that contain Workflows (e.g., Assembly), this will run
+            one Component in the Workflow and return. For simple components, it is the
+            same as run()."""
+
+    def require_gradients (varname, gradients):
+            """Requests that the component be able to provide (after execution) a
+            list of gradients w.r.t. a list of variables. The format
+            of the gradients list is [dvar_1, dvar_2, ..., dvar_n]. The component
+            should return a list with entries of either a name, a tuple of the
+            form (name,index) or None.  None indicates that the component cannot
+            compute the specified derivative. name indicates the name of a
+            scalar variable in the component that contains the gradient value, and
+            (name,index) indicates the name of an array variable and the index of
+            the entry containing the gradient value. If the component cannot
+            compute any gradients of the requested varname, it can just return
+            None."""
+
+    def require_hessians (varname, deriv_vars):
+            """Requests that the component be able to provide (after execution)
+            the hessian w.r.t. a list of variables. The format of
+            deriv_vars is [dvar_1, dvar_2, ..., dvar_n]. The component should
+            return one of the following:
+              1) a name, which would indicate that the component contains
+                          a 2D array variable or matrix containing the hessian
+              2) an array of the form [[dx1dx1, dx1dx2, ... dx1dxn],
+                                            ...
+                                   [dxndx1, dxndx2, ... dxndxn]]
+             with entries of either name, (name,index), or None. name
+             indicates that a scalar variable in the component contains the
+             desired hessian matrix entry. (name,index) indicates that
+             an array variable contains the value at the specified index.
+             If index is a list with two entries, that indicates that
+             the variable containing the entry is a 2d array or matrix.
+              3) None, which means the the component cannot compute any values
+             of the hessian."""
 
 
 -------
@@ -184,10 +193,10 @@ they should give a good indication of our intent.
 
 ::
 
-     class IDriver (Interface):
-	 """Executes a Workflow until certain criteria are met."""
+    class IDriver (Interface):
+        """Executes a Workflow until certain criteria are met."""
 
-         workflow = Attribute('the object that orders execution of components that are driven by this driver')
+        workflow = Attribute('the object that orders execution of components that are driven by this driver')
 	 	 
 -------
 
@@ -197,12 +206,12 @@ they should give a good indication of our intent.
 
 ::
 
-     class IFactory (Interface):
-	 """An object that creates and returns objects based on a type string"""
+    class IFactory (Interface):
+        """An object that creates and returns objects based on a type string"""
 
-	 def create (type):
-             """Create an object of the specified type and return it, or a proxy
-             to it if it resides in another process."""
+    def create (type):
+            """Create an object of the specified type and return it, or a proxy
+            to it if it resides in another process."""
 
 -------
 
@@ -212,15 +221,15 @@ they should give a good indication of our intent.
 
 ::
 
-     class IGeomObject (Interface):
-	 """A Component representing an object having physical dimensions and
-	 shape, with parameters that can be manipulated by other Components or 
-	 Drivers to modify its properties."""
+    class IGeomObject (Interface):
+        """A Component representing an object having physical dimensions and
+        shape, with parameters that can be manipulated by other Components or 
+        Drivers to modify its properties."""
 
-	 modelID = Attribute('Identifies the model. This can either be a part or an assembly of parts')
+        modelID = Attribute('Identifies the model. This can either be a part or an assembly of parts')
 
-	 # the interface for IGeomObject will encapsulate the CAPRI API, which 
-	 # is somewhat large (nearly 100 functions) to show here.
+        # the interface for IGeomObject will encapsulate the CAPRI API, which 
+        # is somewhat large (nearly 100 functions) to show here.
 
 -------
 
@@ -230,23 +239,23 @@ they should give a good indication of our intent.
 
 ::
 
-     class IResourceAllocator (Interface):
-	 """An object responsible for allocating CPU/disk resources for a particular
-	 host, cluster, load balancer, etc."""
+    class IResourceAllocator (Interface):
+        """An object responsible for allocating CPU/disk resources for a particular
+        host, cluster, load balancer, etc."""
 
-	 def time_estimate (resource_desc):
-             """Return the estimated time (wall clock) to perform the specified
-             computation. A return of -1 indicates that the computation cannot
-             be performed using this resource. A return of 0 indicates that 
-             the computation can be performed, but there is no time estimate."""
+    def time_estimate (resource_desc):
+        """Return the estimated time (wall clock) to perform the specified
+        computation. A return of -1 indicates that the computation cannot
+        be performed using this resource. A return of 0 indicates that 
+        the computation can be performed, but there is no time estimate."""
 
-	 def deploy (resource_desc):
-             """Execute the process described in the resource description on the 
-             computing resource associated with this object."""
+    def deploy (resource_desc):
+        """Execute the process described in the resource description on the 
+        computing resource associated with this object."""
 
-	 def list_allocated_components ():
-             """Return a list of tuples (hostname, pid, component_name) for each
-             Component currently allocated by this allocator."""
+    def list_allocated_components ():
+        """Return a list of tuples (hostname, pid, component_name) for each
+        Component currently allocated by this allocator."""
         
 --------
 
@@ -256,28 +265,28 @@ they should give a good indication of our intent.
 
 ::
 
-     class IVariable (Interface):
-	 """ An object representing data to be passed between Components within
-	 the framework. It will perform validation when assigned to another
-	 IVariable. It can notify other objects when its value is modified."""
+    class IVariable (Interface):
+        """ An object representing data to be passed between Components within
+        the framework. It will perform validation when assigned to another
+        IVariable. It can notify other objects when its value is modified."""
 
-	 value = Attribute('the value')
+    value = Attribute('the value')
 
-	 default = Attribute('the default value')
+    default = Attribute('the default value')
 
-	 current = Attribute('if False, the value is not current')
+    current = Attribute('if False, the value is not current')
 
-	 def revert ():
-             """ Return this Variable to its default value"""
+    def revert ():
+        """ Return this Variable to its default value"""
 
-	 def validate (variable):
-             """ Raise an exception if the assigned variable is not compatible"""
+    def validate (variable):
+        """ Raise an exception if the assigned variable is not compatible"""
 
-	 def add_observer (obs_funct, *args, **metadata):
-             """ Add a function to be called when this variable is modified"""
+    def add_observer (obs_funct, *args, **metadata):
+        """ Add a function to be called when this variable is modified"""
 
-	 def notify_observers ():
-             """Call data_changed(self,args,metadata) on all of this object's 
-             observers."""
+    def notify_observers ():
+        """Call data_changed(self,args,metadata) on all of this object's 
+        observers."""
 
 
