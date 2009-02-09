@@ -103,16 +103,16 @@ kernels like OpenCASCADE_ or open source CAD packages like BRL-CAD_.
 .. index:: Vehicle Sketch Pad (VSP)
 .. index:: BRL-CAD
 
-Before OpenMDAO can do anything with a geometry, it must first exist. There are
-two primary ways of creating geometry. The first is for a skilled CAD operator to
-create the geometry using a particular CAD package and then provide it to the
-OpenMDAO user.  In this scenario, using the :term:`CAPRI`  :term:`CAE` Gateway
-would allow the user to interact with that existing geometry. The second way is to
-create the geometry programatically from within OpenMDAO using some sort of
-geometry creation API. CAPRI does not provide for creation of new geometry. CAPRI
-is also commercial software, so we cannot release it as part of OpenMDAO, but we
-can provide OpenMDAO wrapper objects that can interact with CAD packages through
-the CAPRI API.
+Before OpenMDAO can do anything with a geometry, that geometry must first exist.
+There are two primary ways of creating geometry. The first is for a skilled CAD
+operator to create the geometry using a particular CAD package and then provide it
+to the OpenMDAO user.  In this scenario, using the :term:`CAPRI`  :term:`CAE`
+Gateway would allow the user to interact with that existing geometry. The second
+way is to create the geometry programatically from within OpenMDAO using some sort
+of geometry creation API. CAPRI does not provide for creation of new geometry.
+CAPRI is also commercial software, so we cannot release it as part of OpenMDAO,
+but we can provide OpenMDAO wrapper objects that can interact with CAD packages
+through the CAPRI API.
 
 After the geometry exists, we can query it.  The querying portion of the CAPRI
 API or something similar could be used to facilitate this. This would allow
@@ -125,10 +125,15 @@ in another. CAPRI provides a common interface to allow parametric
 manipulation in the commercial CAD programs that provide it.
 
 If we don't have a commercial CAD package that can handle parametric geometry
-manipulation, the only available option seems to be to generate a sequence of
+manipulation, the only available option seems to be to issue a sequence of
 commands to a geometry creation API at runtime based on parameter values.  This 
-would recreate the geometry whenever the sequence of commands were
+would recreate the geometry whenever the sequence of commands are
 executed.
+
+Regardless of how the parametric manipulation of geometry happens within an
+object, the parameters to be manipulated must be handled in the same way as any
+other parameter accessible to the framework, whether geometric or not, because an
+optimizer must be able to manipulate all parameters in a uniform way.
 
 So we have two possible ways to have fully functional geometry within OpenMDAO.
 The CAPRI option works well for users with commercial CAD packages and skilled
