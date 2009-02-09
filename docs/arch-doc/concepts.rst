@@ -130,7 +130,7 @@ commands to a geometry creation API at runtime based on parameter values.  This
 would recreate the geometry whenever the sequence of commands are
 executed.
 
-Regardless of how the parametric manipulation of geometry happens within an
+Regardless of how the parametric manipulation of geometry happens *within* an
 object, the parameters to be manipulated must be handled in the same way as any
 other parameter accessible to the framework, whether geometric or not, because an
 optimizer must be able to manipulate all parameters in a uniform way.
@@ -144,14 +144,29 @@ this fashion will only work in the same CAD package in which it was built. If
 the geometry is exported into some format that is readable by other packages,
 the parametric information will be lost.
 
-The approach of using a program to build geometry at runtime based on
-parameter values and using an open source geometry kernel built into OpenMDAO is 
-not as polished as the commercial CAD approach. However, it has the advantage that
-any geometry created in this way will be available to any OpenMDAO user without
-requiring the purchase of a commercial package. This increases the probability of
-reuse by others, and over time could result in the creation by the OpenMDAO
-community of a library of high quality parametric parts available to anyone.
+The open source option, i.e., the approach of using a program to build geometry at
+runtime based on parameter values and using an open source geometry kernel built
+into OpenMDAO is  not as polished as the commercial CAD approach. However, it has
+the advantage that any geometry created in this way will be available to any
+OpenMDAO user without requiring the purchase of a commercial package. This
+increases the probability of reuse by others, and over time could result in the
+creation by the OpenMDAO community of a library of high quality parametric parts
+available to anyone.
 
+There is unfortunately no common interface to cover creation, querying, and
+parametric manipulation that will work with both the CAPRI option and the open
+source approach, but it should be possible to come up with a consistent query
+interface that works with both.  This query interface will be patterned after the
+query part of the CAPRI API, and should only include query functions that can be
+supported by both CAPRI and whatever open source geometry kernel that is included
+in OpenMDAO.  This will allow mesh generators and plotting components to interact
+with geometry in the same way whether CAPRI is used or not.  The interface for
+parametric manipulation will also be consistent because it must simply expose
+parameters to the framework in the same manner that non-geometric parameters are
+exposed.  Geometry creation is the only functionality that will be handled
+differently between the two approaches. A creation API will be created that is
+tied to OpenMDAO's internal geometry kernel, but that API will not work through
+CAPRI because CAPRI does not support geometry creation.
 
 .. index:: pair: Component; publishing
 .. index:: setuptools
