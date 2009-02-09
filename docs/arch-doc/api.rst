@@ -215,23 +215,43 @@ they should give a good indication of our intent.
 
 -------
 
-.. index:: IGeomObject
+.. index:: IGeomQueryObject
 
 
-.. _IGeomObject:
+.. _IGeomQueryObject:
 
 ::
 
-    class IGeomObject (Interface):
+    class IGeomQueryObject (Interface):
         """A Component representing an object having physical dimensions and
-        shape, with parameters that can be manipulated by other Components or 
-        Drivers to modify its properties."""
+        shape that can be queried for geometric information like surfaces, curves
+        etc."""
 
         modelID = Attribute('Identifies the model. This can either be a part or an assembly of parts')
 
+        # API to be determined, probably based largely on the querying portion
+        # of the CAPRI API
+ 
+        
+-------
+     
+        
+.. index:: IGeomCreator
+
+
+.. _IGeomCreator:
+
+::
+
+    class IGeomCreator (Interface):
+        """An interface to a geometry kernel that allows new geometry to be
+        created."""
+
         # API to be determined
+                
 
 -------
+
 
 .. index:: IResourceAllocator
 

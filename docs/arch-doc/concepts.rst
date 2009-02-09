@@ -38,7 +38,8 @@ listed below:
 .. index:: pair: IDriver; plug-in interface
 .. index:: pair: IVariable; plug-in interface
 .. index:: pair: IVariable; plug-in interface
-.. index:: pair: IGeomObject; plug-in interface
+.. index:: pair: IGeomQueryObject; plug-in interface
+.. index:: pair: IGeomCreator; plug-in interface
 .. index:: pair: IResourceAllocator; plug-in interface
 .. index:: pair: IFactory; plug-in interface
 
@@ -57,10 +58,11 @@ between linked components. These data objects have a validate() function to
 ensure that only  valid links are allowed. They can also translate values from
 other IVariables, e.g., perform unit conversion.
 
-:ref:`IGeomObject<IGeomObject>` - interface to objects with geometry.
-Typically these will have parameters that can be modified by components and
-will have the ability to return various grid representations of their
-geometry.
+:ref:`IGeomQueryObject<IGeomQueryObject>` - interface to objects with geometry.
+Geometric properties of the object can be queried.
+
+:ref:`IGeomCreator<IGeomCreator>` - interface to a geometry kernel that allows
+creation of new geometry.
 
 :ref:`IResourceAllocator<IResourceAllocator>` - interface to objects that
 allocate memory and disk resources, sometimes on specific servers, based on a
