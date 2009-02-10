@@ -56,12 +56,10 @@ class SphinxBuild(object):
         if not os.path.isdir('generated_images'):
             os.makedirs('generated_images')
             
-        # build the docs using Sphinx (just run the Makefile)
+        # build the docs using Sphinx
         try:
-            #os.chdir('python-scripts')
-            sys.path.append(os.path.abspath('python-scripts'))
+            sys.path[0:0] = [os.path.abspath('python-scripts')]
             execfile(os.path.join('python-scripts','rebuild.py'))
-            #check_call([self.interpreter,'rebuild.py'])
             check_call([self.interpreter, self.builder, '-b', 'html', 
                         '-d', os.path.join(self.builddir,'doctrees'), 
                         '.', os.path.join(self.builddir,'html')])
@@ -69,8 +67,16 @@ class SphinxBuild(object):
             os.chdir(startdir)
         
         # create a bin/docs script
-        scriptname = os.path.join(self.buildout['buildout']['directory'],
-                                  'bin','docs')
+        if sys.platform == 'win32':
+            scriptname = os.path.join(self.buildout['buildout']['directory'],
+                                     'bin','docs.py')
+            bat = open(os.path.join(self.buildout['buildout']['directory'],
+                                    'bin','docs.bat'), 'w')
+            bat.write("@echo off\npython %s"%(scriptname,))
+            bat.close()
+        else:
+            scriptname = os.path.join(self.buildout['buildout']['directory'],
+                                     'bin','docs')
         script = open(scriptname, 'w')
         
         idxpath = os.path.join(self.branchdir, self.docdir, self.builddir,

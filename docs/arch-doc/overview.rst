@@ -117,7 +117,9 @@ The current package layout of the project is as follows:
 **openmdao.recipes**
     OpenMDAO specific recipes for zc.buildout_
 
-
+**openmdao.test**
+    Classes and utilities that are specific to testing various aspects
+    of OpenMDAO
 
 .. _zope: http://wiki.zope.org/zope3/Zope3Wiki
 
