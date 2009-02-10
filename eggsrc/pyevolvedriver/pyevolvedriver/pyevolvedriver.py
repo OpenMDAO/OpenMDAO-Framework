@@ -9,7 +9,7 @@ from pyevolve import GsimpleGA,Selectors,Initializators,Mutators,Consts,DBadapte
 
 import NASAevolve.G1DListCrossOverRealHypersphere
 
-# TESTING BZR
+
 
 class pyevolvedriver(Driver):
     """OpenMDAO wrapper for the pyevolve genetic algorithm framework. The 
