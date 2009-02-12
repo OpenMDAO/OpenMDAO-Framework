@@ -95,6 +95,7 @@ module or wrapped using file I/O.
 .. index:: framework; distributing
 .. index:: zope
 
+
 Distribution
 ============
 
@@ -124,3 +125,20 @@ The current package layout of the project is as follows:
 .. _zope: http://wiki.zope.org/zope3/Zope3Wiki
 
 .. _zc.buildout: http://pypi.python.org/pypi/zc.buildout
+
+
+Deployment
+==========
+
+The basic OpenMDAO framework, contained in the openmdao.main egg, will be
+installable using easy_install. Included in that install will be scripts to 
+create sandboxes, start factory servers, and start object servers.
+
+OpenMDAO is an egg based framework, and any OpenMDAO model of any complexity will
+depend upon a large number of eggs.  Copying all of those eggs from an egg server
+every time a new sandbox is created could cause unwanted delays, so configuring
+the system to avoid unnecessary copying of distributions is important. The system
+will have a configurable list of search paths which can be URLs or file
+system paths, indicating the locations of egg servers or installed distributions
+respectively.
+
