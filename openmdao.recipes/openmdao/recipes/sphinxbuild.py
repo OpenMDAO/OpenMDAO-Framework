@@ -59,7 +59,7 @@ class SphinxBuild(object):
         # build the docs using Sphinx
         try:
             sys.path[0:0] = [os.path.abspath('python-scripts')]
-            execfile(os.path.join('python-scripts','rebuild.py'))
+#            execfile(os.path.join('python-scripts','rebuild.py'))
             check_call([self.interpreter, self.builder, '-b', 'html', 
                         '-d', os.path.join(self.builddir,'doctrees'), 
                         '.', os.path.join(self.builddir,'html')])

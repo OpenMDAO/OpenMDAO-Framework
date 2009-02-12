@@ -128,7 +128,7 @@ The current package layout of the project is as follows:
 
 
 Deployment
-===========
+==========
 
 The basic OpenMDAO framework, contained in the openmdao.main egg, will be
 installable using easy_install. Included in that install will be scripts to 
