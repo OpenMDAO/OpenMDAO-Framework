@@ -83,10 +83,10 @@ Implementation Language
 OpenMDAO will be implemented using the Python_ programming language. Plug-ins to
 the framework will be Python modules. A Python module can be either a text file
 written in pure Python code or an extension module, which is a shared library
-that conforms to the Python C-API. Because Python is an interpreted language,
-numerically intensive components will typically be implemented using a compiled
-language, such as C, C++, or FORTRAN, and will be wrapped as a Python extension
-module or wrapped using file I/O.
+that conforms to the Python C-API. Because Python is an interpreted language and
+is not as fast as compiled languages, numerically intensive components will
+typically be implemented using a compiled language, such as C, C++, or FORTRAN,
+and will be wrapped as a Python extension module or wrapped using file I/O.
 
 .. _python: http://www.python.org
 
@@ -134,11 +134,16 @@ The basic OpenMDAO framework, contained in the openmdao.main egg, will be
 installable using easy_install. Included in that install will be scripts to 
 create sandboxes, start factory servers, and start object servers.
 
-OpenMDAO is an egg based framework, and any OpenMDAO model of any complexity will
-depend upon a large number of eggs.  Copying all of those eggs from an egg server
-every time a new sandbox is created could cause unwanted delays, so configuring
-the system to avoid unnecessary copying of distributions is important. The system
-will have a configurable list of search paths which can be URLs or file
-system paths, indicating the locations of egg servers or installed distributions
-respectively.
+OpenMDAO is an egg based framework, and any OpenMDAO model of any complexity
+will depend upon a large number of eggs.  Copying all of those eggs from an egg
+server every time a new sandbox is created could cause unwanted delays, so
+configuring the system to avoid unnecessary copying of distributions is
+important. The system will have a configurable list of search paths which can be
+URLs or file system paths, indicating the locations of egg servers or installed
+distributions respectively. These locations will be searched in the order that
+they appear in the search path.  If a location is a URL, that URL is assumed
+to be a distribution server, and the desired distribution, if found there, will
+be downloaded and installed in the sandbbox.  If a location is a directory, that
+directory will be searched for the distribution and if found will be linked to
+from the sandbox.
 
