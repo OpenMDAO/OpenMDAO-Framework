@@ -52,46 +52,49 @@ class pyevolvedriverTestCase(unittest.TestCase):
         self.top.workflow.add_node(self.top.comp)
         self.top.add_child(pyevolvedriver.pyevolvedriver('driver'))
 
-        #objective expression assumes you are in the scope of self.top
-        self.top.driver.objective = "comp.total" 
-        self.top.driver.decoder = self.decoder
-        #TODO: genome should be plugged into a socket
-        self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
-
-        #TODO GAengine shoudl be plugged into a socket
-        #self.top.driver.GA = pyevolvedriver.GSimpleGA.GSimpleGA
-
-    
     def tearDown(self):
         self.top = None
-    
- 
-    
+        
+    #basic test to make sure optmizer is working 
     def test_optimizeSphere(self):
-        #TODO: seed the GAengine so the outcome is predictable
-
+        self.top.driver.objective = "comp.total" 
         #configure the genome
+        #TODO: genome should be plugged into a socket
+        self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
         self.top.driver.genome.setParams(rangemin=-5.12, rangemax=5.13)
         self.top.driver.genome.initializator.set(pyevolvedriver.Initializators.G1DListInitializatorReal)
         self.top.driver.genome.mutator.set(pyevolvedriver.Mutators.G1DListMutatorRealGaussian)
-        self.top.driver.decoder = self.decoder
         
-        #set the frequency of the collection of population statistics and go
-        self.top.driver.freq_stat = 20
-        self.top.driver.rand_seed = 123 #used to ensure the same random sequence 
-        self.top.run()        
+        #configure the GAengine 
+          #None will configure the defualt
+        self.top.driver.decoder = self.decoder  
+        self.top.driver.freq_stats = 0
+        self.top.driver.seed = 123
         
-        #configure the GAengine
-        self.top.driver.GA.minimax = Consts.minimaxType["minimize"]
-        self.top.driver.GA.setGenerations(200)
-        self.top.driver.GA.setMutationRate(0.02)    
+        self.top.driver.terminationCriteria = None
+        self.top.driver.DBAdapter = None
+        self.top.driver.PopulationSize = None
+        self.top.driver.SortType = None
+        self.top.driver.MutationRate = .02
+        self.top.driver.CrossoverRate = None
+        self.top.driver.Generations = 200
+        self.top.driver.Minimax = pyevolvedriver.Consts.minimaxType["minimize"]
+        self.top.driver.Elitism = None
+        
+        self.top.driver.selector = None
+        self.top.driver.stepCallback = None
+        self.top.driver.terminationCriteria = None
+        
+        self.top.run()
         
         self.assertAlmostEqual(self.top.driver.best.score,0.000038,places = 4)
         x0,x1 = [x for x in self.top.driver.best] 
-        self.assertAlmostEqual(x0,0,places = 2)
-        self.assertAlmostEqual(x1,0,places = 2)
+        self.assertAlmostEqual(x0,0,places = 1)
+        self.assertAlmostEqual(x1,0,places = 1)
     
-    #should throw an error because no decode function is provides
+    #TODO: need to add tests for functions slots
+    
+    #should throw an error because no decode function is provided
     def test_noDecoder(self):
         self.top.driver.decoder = None
         try:
@@ -100,7 +103,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
             self.assertEqual(str(err), "top.driver: decoder specified as 'None'. A valid decoder must be present")
         else: 
             self.fail("TypeError expected")
-        pass
+
     
     def test_wrongDecoderSignature(self):
         def decodeBad(genome,secondArgument):
@@ -112,7 +115,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
             self.assertEqual(str(err), "top.driver: decoder specified as does not have the right signature. Must take only 1 argument")
         else: 
             self.fail("TypeError expected")
-        pass
+
     
     #should throw and error about the lack of a genome
     def test_noGenomeTest(self): 
@@ -120,33 +123,23 @@ class pyevolvedriverTestCase(unittest.TestCase):
         try:
             self.top.driver.run()
         except TypeError, err:
-            self.assertEqual(str(err), "top.driver: genome specified as 'None'. A valid genome instance must be provided")
+            self.assertEqual(str(err), "top.driver: genome provided is not valid. Does not inherit from pyevolve.GenomeBase.GenomeBase")
         else: 
             self.fail("TypeError expected")
-        pass
+  
     
-    #should throw and error about the lack of a GAengine
-    def test_noGAengineTest(self): 
-        self.top.driver.GA = None
+    #should throw an error becuase genome does not inherit from GenomeBase
+    def test_GenomeNotGenomeTest(self):
+        self.top.driver.genome = [1,2]
         try:
             self.top.driver.run()
         except TypeError, err:
-            self.assertEqual(str(err), "top.driver: GA specified as 'None'. A valid GAengine instance must be provided")
+            self.assertEqual(str(err), "top.driver: genome provided is not valid. Does not inherit from pyevolve.GenomeBase.GenomeBase")
         else: 
             self.fail("TypeError expected")
-        pass
+        
     
-    #should throw and error beacuse the user tried to put that is not a
-    #  genome into the genome slot
-    def test_genomeNotGenomeTest(self): 
-        testGenome = [1,1]
-        self.top.driver.genome = testGenome
-        try: 
-            self.top.driver.run()
-        except TypeError, err: 
-            self.assertEqual(str(err),"top.driver: genome specified is not an instance of pyevolve.GenomeBase")
-        else: 
-            self.fail("TypeError expected")
+
         
     
 if __name__ == '__main__':

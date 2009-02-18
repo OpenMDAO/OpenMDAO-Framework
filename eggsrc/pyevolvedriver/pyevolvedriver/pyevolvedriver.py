@@ -6,11 +6,9 @@ from openmdao.main.driver import Driver
 
 from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
 from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
-from pyevolve import GPopulation,FunctionSlot
+from pyevolve import GenomeBase
 from openmdao.main.expreval import ExprEvaluator
-
-#Testing BZR
-
+  
 class pyevolvedriver(Driver):
     """OpenMDAO wrapper for the pyevolve genetic algorithm framework. The 
     wrapper uses two attributes to configure the GA: The wrapper conforms to the
@@ -54,58 +52,97 @@ class pyevolvedriver(Driver):
                                  RuntimeError)            
     objective = property(_get_objective,_set_objective)
     
-    
+    def get_objective_val(self):
+        """evaluate the new objective"""
+        if self.objective is None:
+            self.raise_exception('No objective has been set', RuntimeError)
+        else:
+            return self._objective.evaluate()     
+            
     def __init__(self,name,parent=None,desc=None): 
         super(pyevolvedriver,self).__init__(name,parent,desc)
        
         self.genome = GenomeBase.GenomeBase()
         self.GA = GSimpleGA.GSimpleGA(self.genome)
         
-        self.freq_stats = 10
-        #self.make_public(['freq_stats','minmax'])
+        #inputs - value of None means use default
+        self.decoder = None
+        self.freq_stats = None
+        self.selector = None
+        self.stepCallback = None
+        self.terminationCriteria = None
+        self.seed = None
+        self.DBAdapter = None
+        self.PopulationSize = None
+        self.SortType = None
+        self.MutationRate = None
+        self.CrossoverRate = None
+        self.Generations = None
+        self.Minimax = None
+        self.Elitism = None
         
+        #outputs
         self.best_individual= None
-        
         self.decoder = None
         
-        #self.GAconfigurator = FunctionSlot.FunctionSlot("GAconfigurator")
-        self.GAconfigurator = None
-        
-        self.best = None
-        
+        #internal stuff
         self._objective = None
-        self.objective_val = 0
         
+        #TODO Need to make a Genome socket
+
         
+    
         
-    def update_objective_val(self):
-        """evaluate the new objective"""
-        if self.objective is None:
-            self.raise_exception('No objective has been set', RuntimeError)
-        else:
-            return self._objective.evaluate()   
+    def set_GA_property(self,setFunc,val): 
+        if val != None: 
+            return setFunc(val)
+            
+    def set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
+        slot.clear()
+        for func in funcList: 
+            if slot.isEmpty(): 
+                slot.set(func)
+            else: slot.add(func)
+        slot.setRandomApply(RandomApply)
+            
             
     def evaluate(self,genome):
         self.decoder(genome)
         
         self.parent.workflow.run()
-        return self.update_objective_val()
+        return self.get_objective_val()
     
     def verify(self):
-        pass
+        #genome verify
+        if not isinstance(self.genome,GenomeBase.GenomeBase):
+            self.raise_exception("genome provided is not valid. Does not inherit from pyevolve.GenomeBase.GenomeBase",TypeError)
     
+	    #decoder verify
+        if self.decoder == None: # check if None first
+            self.raise_exception("decoder specified as 'None'. A valid decoder must be present",TypeError)
+        try: # won't work if decoder is None
+            self.decoder(self.genome)
+        except TypeError:
+            self.raise_exception("decoder specified as does not have the right signature. Must take only 1 argument",TypeError)
+        
     
     def execute(self):
         """ Perform the optimization"""
         self.verify()
+        #configure the evaluator function of the genome
         self.genome.evaluator.set(self.evaluate)
         
-
-        self.GA = GSimpleGA.GSimpleGA(self.genome)
+        self.GA = GSimpleGA.GSimpleGA(self.genome, self.seed)
+        self.set_GA_property(self.GA.setDBAdapter,self.DBAdapter)
+        self.set_GA_property(self.GA.setPopulationSize,self.PopulationSize)
+        self.set_GA_property(self.GA.setSortType,self.SortType)
+        self.set_GA_property(self.GA.setMutationRate,self.MutationRate)
+        self.set_GA_property(self.GA.setCrossoverRate,self.CrossoverRate)
+        self.set_GA_property(self.GA.setGenerations,self.Generations)
+        self.set_GA_property(self.GA.setMinimax,self.Minimax)
+        self.set_GA_property(self.GA.setElitism,self.Elitism)
         
-        
-        self.GAconfigurator()
-        
+		
         self.GA.evolve(freq_stats = self.freq_stats)
         self.best = self.GA.bestIndividual()
         
