@@ -18,9 +18,9 @@ __version__ = "0.1"
 
 import weakref
 
-from pyparsing import Word,ZeroOrMore,OneOrMore,Literal,CaselessLiteral
-from pyparsing import oneOf,alphas,nums,alphanums,Optional,Combine
-from pyparsing import Forward,StringEnd
+from pyparsing import Word, ZeroOrMore, OneOrMore, Literal, CaselessLiteral
+from pyparsing import oneOf, alphas, nums, alphanums, Optional, Combine
+from pyparsing import Forward, StringEnd
 from pyparsing import ParseException
 
 def _trans_unary(strng, loc, tok):
@@ -32,7 +32,7 @@ def _trans_lhs(strng, loc, tok, scope, validate):
         scname = 'scope'
     else:
         scname = 'scope.parent'
-        if hasattr(scope,tok[0]):
+        if hasattr(scope, tok[0]):
             scope.warning("attribute '"+tok[0]+"' is private"+
                           " so a public value in the parent is"+
                           " being used instead (if found)")
@@ -43,22 +43,22 @@ def _trans_lhs(strng, loc, tok, scope, validate):
     if len(tok) > 1:
         full += ","+tok[1]
             
-    return ['=',full + ")"]
+    return ['=', full + ")"]
     
 def _trans_assign(strng, loc, tok):
     if tok[0] == '=':
-        return [tok[1].replace('_@RHS@_',tok[2],1)]
+        return [tok[1].replace('_@RHS@_', tok[2], 1)]
     else:
         return tok
     
 def _trans_arrayindex(strng, loc, tok):
     full = "[" + tok[1]
     if tok[2] == ',':
-        for index in range(3,len(tok),2):
+        for index in range(3, len(tok), 2):
             full += ','
             full += tok[index]
     else:
-        for index in range(4,len(tok),3):
+        for index in range(4, len(tok), 3):
             full += ','
             full += tok[index]
     return [full+"]"]
@@ -67,7 +67,7 @@ def _trans_arglist(strng, loc, tok):
     full = "("
     if len(tok) > 2: 
         full += tok[1]
-    for index in range(3,len(tok),2):
+    for index in range(3, len(tok), 2):
         full += ','+tok[index]
     return [full+")"]
 
@@ -77,11 +77,11 @@ def _trans_fancyname(strng, loc, tok, scope, validate):
     # function.
     if scope.contains(tok[0]):
         scname = 'scope'
-        if hasattr(scope,tok[0]):
+        if hasattr(scope, tok[0]):
             return tok  # use name unmodified for faster local access
     else:
         scname = 'scope.parent'
-        if hasattr(scope,tok[0]):
+        if hasattr(scope, tok[0]):
             scope.warning("attribute '"+tok[0]+"' is private"+
                           " so a public value in the parent is"+
                           " being used instead (if found)")

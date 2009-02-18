@@ -51,7 +51,7 @@ class String(Variable):
         if self._max_length is None:
             return None
         else:
-            return self._max_length.minlen
+            return self._max_length.maxlen
         
     def _set_max_length(self, value):
         if self._max_length is None:

@@ -38,16 +38,16 @@ class ArrayVarTestCase(unittest.TestCase):
         self.assert_(numpy.all(numpy.array([1.,2.,3.,4.,5.])==self.array1.value))
         
     def test_set_entry(self):
-        self.hobj.set('array1',-99.9, [2])
-        self.assertEqual(-99.9, self.hobj.get('array1',[2]))
+        self.hobj.set('array1', -99.9, [2])
+        self.assertEqual(-99.9, self.hobj.get('array1', [2]))
     
     def test_get(self):
-        val = self.hobj.get('array1',[2])
+        val = self.hobj.get('array1', [2])
         self.assertEqual(val, 5.6)
-        val = self.hobj.get('array1.default',[2])
+        val = self.hobj.get('array1.default', [2])
         self.assertEqual(val, 5.6)
         var = self.hobj.getvar('array1')
-        val = var.get(None,[2])
+        val = var.get(None, [2])
         self.assertEqual(val, 5.6)
         arr = self.hobj.get('array1')
         self.assert_(numpy.all(arr == numpy.array([1.2, 3.4, 5.6])))
@@ -57,7 +57,7 @@ class ArrayVarTestCase(unittest.TestCase):
         var = Float('var', self.hobj, OUTPUT, ref_name='float1')
         try:
             self.hobj.setvar('array1', var)
-        except TypeError,err:
+        except TypeError, err:
             self.assertEqual(str(err), 
                     "h1.array1: assignment to incompatible variable "+
                     "'h1.var' of type '<class 'openmdao.main.float.Float'>'")
@@ -65,7 +65,7 @@ class ArrayVarTestCase(unittest.TestCase):
             self.fail('TypeError expected')
         try:    
             self.hobj.set('array1', 'foobar')
-        except ValueError,err:
+        except ValueError, err:
             self.assertEqual(str(err), 
                 "h1.array1: new type 'str'is not compatible with type 'ndarray")
         else:
@@ -81,13 +81,13 @@ class ArrayVarTestCase(unittest.TestCase):
             self.fail('ValueError expected')
                     
     def test_connection(self):
-        self.hobj.newarray = numpy.array([[12.,34.,56.],[78.,910.,1112.]])
+        self.hobj.newarray = numpy.array([[12., 34., 56.], [78., 910., 1112.]])
         newarray = ArrayVariable('newarray',self.hobj, OUTPUT, float)
         self.hobj.setvar('array2',newarray)
         
     def test_bad_set_index(self):
         try:
-            self.array1.set(None, 99., (1,2,3))
+            self.array1.set(None, 99., (1, 2, 3))
         except IndexError, err:
             self.assertEqual(str(err), "h1.array1: invalid index: (1, 2, 3)")
         else:

@@ -51,8 +51,8 @@ class StringList(Variable):
         if self._max_length is None:
             return None
         else:
-            return self._max_length.minlen
-        
+            return self._max_length.maxlen
+
     def _set_max_length(self, value):
         if self._max_length is None:
             if value is not None:
@@ -72,7 +72,7 @@ class StringList(Variable):
         """Return the value of the specified Variable after
         checking against min and max length limits.
         """
-        newval = super(StringList,self)._pre_assign(val)
+        newval = super(StringList, self)._pre_assign(val)
         
         for strng in newval:
             if not isinstance(strng, basestring):

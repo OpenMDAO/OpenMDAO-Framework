@@ -88,7 +88,7 @@ class Container(HierarchyMember):
         """Remove the specified child from this container and remove any
         Variable objects from _pub that reference that child."""
         dels = []
-        for key,val in self._pub.items():
+        for key, val in self._pub.items():
             if val.ref_name == name:
                 dels.append(key)
         for dname in dels:
@@ -170,7 +170,7 @@ class Container(HierarchyMember):
         name is publicly accessibly and is contained in this Container. 
         """
         try:
-            base, name = path.split('.',1)
+            base, name = path.split('.', 1)
         except ValueError:
             return path in self._pub
         obj = self._pub.get(base)
@@ -196,10 +196,10 @@ class Container(HierarchyMember):
         returned.
         
         """
-        assert(isinstance(path,basestring))
+        assert(isinstance(path, basestring))
         
         try:
-            base, name = path.split('.',1)
+            base, name = path.split('.', 1)
         except ValueError:
             try:
                 if index is not None:
@@ -218,9 +218,9 @@ class Container(HierarchyMember):
         path, which may contain '.' characters.  Only returns Variables, not attributes or
         other Containers.
         """
-        assert(isinstance(path,basestring))
+        assert(isinstance(path, basestring))
         try:
-            base, name = path.split('.',1)
+            base, name = path.split('.', 1)
         except ValueError:
             try:
                 return self._pub[path]
@@ -238,9 +238,9 @@ class Container(HierarchyMember):
         constraints.
         
         """ 
-        assert(isinstance(path,basestring))
+        assert(isinstance(path, basestring))
         try:
-            base, name = path.split('.',1)
+            base, name = path.split('.', 1)
         except ValueError:
             base = path
             name = None
@@ -264,7 +264,7 @@ class Container(HierarchyMember):
         if necessary, as in the case of Float Variables with differing units.
         """
         try:
-            base, name = path.split('.',1)
+            base, name = path.split('.', 1)
         except ValueError:
             base = path
             name = None
@@ -307,7 +307,7 @@ class Container(HierarchyMember):
                                                if iface.providedBy(child)]
             
         if len(kwargs) > 0:
-            return [x for x in objs if _matches(x,kwargs)]
+            return [x for x in objs if _matches(x, kwargs)]
         else:
             return objs
 
@@ -358,9 +358,18 @@ class Container(HierarchyMember):
         else:
             raise RuntimeError('cannot load object using format '+str(format))
 
-        
+    def post_load(self):
+        """ Perform any required operations after model has been loaded. """
+        pass
+
+    def pre_delete(self):
+        """ Perform any required operations before the model is deleted. """
+        pass
+
+
 def _matches(obj, dct):
-    for key,val in dct.items():
+    """ Return True if obj matches all items in dct. """
+    for key, val in dct.items():
         try:
             if getattr(obj, key) != val:
                 return False

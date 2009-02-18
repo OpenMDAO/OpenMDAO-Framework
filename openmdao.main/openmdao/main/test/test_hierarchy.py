@@ -10,11 +10,11 @@ def setup():
     h12 = HierarchyMember('h12', h1)
     h121 = HierarchyMember('h121', h12)
     h122 = HierarchyMember('h122', h12)
-    return (h1,h11,h12,h121,h122)
+    return (h1, h11, h12, h121, h122)
 
 
 def test_pathnames():
-    h1,h11,h12,h121,h122 = setup()
+    h1, h11, h12, h121, h122 = setup()
 
     assert h1.get_pathname() == 'h1'
     assert h11.get_pathname() == 'h1.h11'
@@ -23,12 +23,12 @@ def test_pathnames():
     assert h122.get_pathname() == 'h1.h12.h122' 
 
 def test_doc():
-    h1,h11,h12,h121,h122 = setup()
+    h1, h11, h12, h121, h122 = setup()
     
     assert h1.__doc__ == "a hierarchy member"
     
 def test_error_handling():
-    h1,h11,h12,h121,h122 = setup()
+    h1, h11, h12, h121, h122 = setup()
     
     try:
         h121.raise_exception("bad value", ValueError)

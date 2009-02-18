@@ -31,7 +31,7 @@ class ContainerTestCase(unittest.TestCase):
         c221 = Container('c221', None)
         c221.number = 3.14
         c22.add_child(c221)
-        ff = Float('number',c221,INPUT)
+        ff = Float('number', c221, INPUT)
         ff.units = "ft/s"
 
     def tearDown(self):
@@ -123,7 +123,7 @@ class ContainerTestCase(unittest.TestCase):
 
     def test_get_names(self):
         names = self.root.get_names(IContainer, recurse=True)
-        self.assertEqual(names, ['root.c1','root.c2', 'root.c2.c21',
+        self.assertEqual(names, ['root.c1', 'root.c2', 'root.c2.c21',
                                  'root.c2.c22', 'root.c2.c22.c221'])
         
         names = self.root.get_names(IContainer)

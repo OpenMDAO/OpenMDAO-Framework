@@ -34,7 +34,7 @@ def import_version(req, env=None):
     for dist in needed:
         # add required distribs to the real working set
         if dist not in working_set:
-            working_set.add(dist,entry=None,insert=False)  
+            working_set.add(dist, entry=None, insert=False)  
             dist.activate()
                 
     for dist in needed:

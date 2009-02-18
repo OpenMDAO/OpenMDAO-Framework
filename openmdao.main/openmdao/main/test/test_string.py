@@ -30,16 +30,16 @@ class StringTestCase(unittest.TestCase):
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual("abcd",self.s1.value)
+        self.assertEqual("abcd", self.s1.value)
         # check default value
-        self.assertEqual("foo",self.s1.default)
+        self.assertEqual("foo", self.s1.default)
         self.s1.value = self.s2.value
-        self.assertEqual("xyz",self.s1.value)
+        self.assertEqual("xyz", self.s1.value)
         # make sure value gets transferred to internal variable
-        self.assertEqual("xyz",self.hobj.internal_s1)
+        self.assertEqual("xyz", self.hobj.internal_s1)
         self.s1.value = "qq"
-        self.assertEqual("qq",self.s1.value)
-        self.assertEqual("qq",self.hobj.internal_s1)
+        self.assertEqual("qq", self.s1.value)
+        self.assertEqual("qq", self.hobj.internal_s1)
         
     def test_constraint_violations(self):
         try:

@@ -30,16 +30,16 @@ class FloatTestCase(unittest.TestCase):
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual(3.1415926,self.float1.value)
+        self.assertEqual(3.1415926, self.float1.value)
         # check default value
-        self.assertEqual(98.9,self.float1.default)
+        self.assertEqual(98.9, self.float1.default)
         self.float1.value = self.float2.value
-        self.assertEqual(42.,self.float1.value)
+        self.assertEqual(42., self.float1.value)
         # make sure value gets transferred to internal variable
-        self.assertEqual(42.,self.hobj.internal_float1)
+        self.assertEqual(42., self.hobj.internal_float1)
         self.float1.value = 32.1
-        self.assertEqual(32.1,self.float1.value)
-        self.assertEqual(32.1,self.hobj.internal_float1)
+        self.assertEqual(32.1, self.float1.value)
+        self.assertEqual(32.1, self.hobj.internal_float1)
 
     def test_unit_conversion(self):
         self.hobj.internal_float2 = 12.  # inches
