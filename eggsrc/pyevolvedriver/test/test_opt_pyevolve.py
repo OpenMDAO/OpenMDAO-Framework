@@ -93,6 +93,15 @@ class pyevolvedriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(x1,0,places = 1)
     
     #TODO: need to add tests for functions slots
+    def test_invalidObjective(self):
+        self.top.driver.objective = "comp.badojbjective"
+        
+        try:
+            self.top.run()
+        except TypeError, err:
+            self.assertEqual(str(err), "top.driver: objective specified, '"+ str(self.top.driver.objective) + "', is not valid ")
+        else: 
+            self.fail("TypeError expected")
     
     #should throw an error because no decode function is provided
     def test_noDecoder(self):

@@ -48,7 +48,7 @@ class pyevolvedriver(Driver):
         try:
             self._objective = ExprEvaluator(obj,self)
         except RuntimeError,err:
-            self.raise_exception(str(err) + "objective '"+str(obj)+"' is invalid",
+            self.raise_exception(str(err) + "objective specified, '"+str(obj)+"', is not valid a valid OpenMDAO object. If it does exist in the model, a framework variable may need to be created",
                                  RuntimeError)            
     objective = property(_get_objective,_set_objective)
     
