@@ -113,7 +113,7 @@ Gateway would allow the user to interact with that existing geometry. The second
 way is to create the geometry programatically from within OpenMDAO using some sort
 of geometry creation API. CAPRI does not provide for creation of new geometry.
 CAPRI is also commercial software, so we cannot release it as part of OpenMDAO,
-but we can provide OpenMDAO wrapper objects that can interact with CAD packages
+but we can provide an OpenMDAO wrapper object that can interact with CAD packages
 through the CAPRI API.
 
 After the geometry exists, we can query it.  The querying portion of the CAPRI
@@ -129,46 +129,45 @@ manipulation in the commercial CAD programs that provide it.
 If we don't have a commercial CAD package that can handle parametric geometry
 manipulation, the only available option seems to be to issue a sequence of
 commands to a geometry creation API at runtime based on parameter values.  This 
-would recreate the geometry whenever the sequence of commands are
-executed.
+would recreate the geometry whenever the sequence of commands is executed.
 
 Regardless of how the parametric manipulation of geometry happens *within* an
 object, the parameters to be manipulated must be handled in the same way as any
-other parameter accessible to the framework, whether geometric or not, because an
-optimizer must be able to manipulate all parameters in a uniform way.
+other parameter accessible to the framework, whether geometric or not, because
+an optimizer must be able to manipulate all parameters in a uniform way.
 
 So we have two possible ways to have fully functional geometry within OpenMDAO.
 The CAPRI option works well for users with commercial CAD packages and skilled
 CAD operators available to create parametric CAD parts for them. One unfortunate
-side effect of this approach is that it limits collaboration with other potential
-users of a parametric geometry, because whatever parametric geometry is built in
-this fashion will only work in the same CAD package in which it was built. If
-the geometry is exported into some format that is readable by other packages,
-the parametric information will be lost.
+side effect of this approach is that it limits collaboration with other
+potential users of a parametric geometry, because whatever parametric geometry
+is built in this fashion will only work in the same CAD package in which it was
+built. If the geometry is exported into some format that is readable by other
+packages, the parametric information will be lost.
 
-The open source option, i.e., the approach of using a program to build geometry at
-runtime based on parameter values and using an open source geometry kernel built
-into OpenMDAO is  not as polished as the commercial CAD approach. However, it has
-the advantage that any geometry created in this way will be available to any
-OpenMDAO user without requiring the purchase of a commercial package. This
-increases the probability of reuse by others, and over time could result in the
-creation by the OpenMDAO community of a library of high quality parametric parts
-available to anyone.
+The open source option, i.e., the approach of using a program to build geometry
+at runtime based on parameter values and using an open source geometry kernel
+built into OpenMDAO, is  not as polished as the commercial CAD approach.
+However, it has the advantage that any geometry created in this way will be
+available to any OpenMDAO user without requiring the purchase of a commercial
+package. This increases the probability of reuse by others, and over time could
+result in the creation by the OpenMDAO community of a library of high quality
+parametric parts available to anyone.
 
 There is unfortunately no common interface to cover creation, querying, and
 parametric manipulation that will work with both the CAPRI option and the open
 source approach, but it should be possible to come up with a consistent query
-interface that works with both.  This query interface will be patterned after the
-query part of the CAPRI API, and should only include query functions that can be
-supported by both CAPRI and whatever open source geometry kernel that is included
-in OpenMDAO.  This will allow mesh generators and plotting components to interact
-with geometry in the same way whether CAPRI is used or not.  The interface for
-parametric manipulation will also be consistent because it must simply expose
-parameters to the framework in the same manner that non-geometric parameters are
-exposed.  Geometry creation is the only functionality that will be handled
-differently between the two approaches. A creation API will be created that is
-tied to OpenMDAO's internal geometry kernel, but that API will not work through
-CAPRI because CAPRI does not support geometry creation.
+interface that works with both.  This query interface will be patterned after
+the query part of the CAPRI API, and should only include query functions that
+can be supported by both CAPRI and whatever open source geometry kernel that is
+included in OpenMDAO.  This will allow mesh generators and plotting components
+to interact with geometry in the same way whether CAPRI is used or not.  The
+interface for parametric manipulation will also be consistent because it must
+simply expose parameters to the framework in the same manner that non-geometric
+parameters are exposed.  Geometry creation is the only functionality that will
+be handled differently between the two approaches. A creation API will be
+created that is tied to OpenMDAO's internal geometry kernel, but that API will
+not work through CAPRI because CAPRI does not support geometry creation.
 
 .. index:: pair: Component; publishing
 .. index:: setuptools
@@ -186,15 +185,15 @@ framework more useful, one of our goals is to make the process of publishing a
 component for use by others as easy as possible. 
 
 Python has a popular distribution tool called *setuptools* which packages
-modules and any associated dependent files into a single file called an :term:`egg`. An
-egg in Python is similar to a jar file in java. Using setuptools, a user can
-install multiple versions of the same module in a given Python environment. 
-Eggs can be downloaded from an egg server using a simple HTML-based protocol. A
-developer can control the distribution of a component by choosing to  publish it
-in a particular egg server. For world-wide distribution, it can be placed on a 
-public server like the `Python Package Index`_. For more restricted
-distribution, it can be placed on  a secure egg server that requires a login id
-and password.
+modules and any associated dependent files into a single file called an
+:term:`egg`. An egg in Python is similar to a jar file in java. Using
+setuptools, a user can install multiple versions of the same module in a given
+Python environment.  Eggs can be downloaded from an egg server using a simple
+HTML-based protocol. A developer can control the distribution of a component by
+choosing to  publish it in a particular egg server. For world-wide distribution,
+it can be placed on a  public server like the `Python Package Index`_. For more
+restricted distribution, it can be placed on  a secure egg server that requires
+a login id and password.
 
 .. _`Python Package Index`: http://pypi.python.org/pypi
 
@@ -227,10 +226,10 @@ the :term:`IPC` protocol used to communicate between them is the same on both
 sides of the connection, these *incompatible* components can coexist within a
 model.
 
-In OpenMDAO, this will be done by setting up an :term:`ObjServerFactory` in a virtual
-Python environment and having each :term:`ObjServer` spawned from that factory use
-that factory's environment. Each virtual Python environment can run a different
-Python version and can also have its own set of modules installed.
+In OpenMDAO, this will be done by setting up an :term:`ObjServerFactory` in a
+virtual Python environment and having each :term:`ObjServer` spawned from that
+factory use that factory's environment. Each virtual Python environment can run
+a different Python version and can also have its own set of modules installed.
 
 Users often want to update a model as its constituent components evolve. To
 facilitate this process, we have added a config_from_obj() function to the
@@ -252,12 +251,37 @@ out of the process, as described above.
 User Interfaces
 ===============
 
-There will be a wxPython-based GUI and a command line interface, and both will
-allow a user to fully exercise the framework. In addition, a web interface will
-provide functionality similar to the wxPython GUI, probably with some initial
-limitations. Over time, as javascript libraries become more robust, it should
-be possible for the web interface to provide most of the functionality of the
-local wxPython GUI.
+There are a number of ways in which a user can interact with the framework.
+There will be a command line interface allowing the user to load a model
+configuration and execute a set of input cases. There will also be a graphical
+interface, although it is not clear at this time whether it will be a
+traditional GUI running on the desktop implemented in wxPython or PyQt, or a web
+based interface. Initial plans were to implement both kinds of graphical
+interface, but given the size of the development team and the amount of time
+allowed for development, this is simply not possible. In addition to the command
+line and graphical interface, there will also be a programatic interface that
+allows a user to write a python script that can interact with objects in the
+framework.
+
+Neither approach to graphical interface development is ideal. Early prototyping
+using the wxPython approach has revealed some platform differences between the
+Windows and linux versions that were not anticipated. Also, packaging and
+distribution is difficult due to dependence on underlying libraries like, for
+example, *GTK* on linux.  The current version of the Qt library has a license
+that is not compatible with OpenMDAO, although the next version will have an
+LGPL license, which is compatible. It is assumed that PyQt, the python wrapper
+for Qt will have a similar license to Qt, but this is not certain. 
+
+If a web based interface is used, there are questions about the richness of the
+interface relative to a traditional GUI. There are a number of javascript
+libraries like dojo_ for example that are still relatively immature, but they
+offer the promise of a browser based application with interactivity that
+approaches that of a desktop application. Projects like dojo are being actively
+developed, so they may reach the necessary level of maturity in the near
+future.  
+
+
+.. _dojo: http://www.dojotoolkit.org
 
 
 .. index:: view	

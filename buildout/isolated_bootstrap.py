@@ -91,16 +91,19 @@ sys.path[:] = [  prefx,
 
 if sys.platform == 'win32':
     new_sp = new_sp_win
+    bo_name = 'bin/buildout-script.py'
+    # on windows, a buildout.exe file is generated that runs python
+    # on the buildout-script.py file.  buildout.exe is really just
+    # a copy of cli.exe from setuptools, which just looks for a file
+    # named argv[0]+"-script.py" and runs python on it.
+else:
+    bo_name = 'bin/buildout'
 
-try:
-    f = open('bin/buildout','r')
-    old = f.read()
-finally:
-    f.close()
+f = open(bo_name,'r')
+old = f.read()
+f.close()
 
-try:    
-    newf = open('bin/buildout','w')
-    newf.write(old.replace(old_sp, new_sp))
-finally:
-    newf.close()
+newf = open(bo_name,'w')
+newf.write(old.replace(old_sp, new_sp))
+newf.close()
     
