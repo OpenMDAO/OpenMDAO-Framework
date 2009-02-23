@@ -119,10 +119,9 @@ class Assembly(Component):
         if len(self._connections[incompname]) == 0:
             del self._connections[incompname]
                     
-
     def execute(self):
         """run this Assembly by handing control to the driver"""
-        self.driver.run()
+        return self.driver.run()
 
     def step(self):
         """Execute a single step."""

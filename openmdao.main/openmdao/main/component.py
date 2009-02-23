@@ -89,7 +89,7 @@ class Component (Container):
         have already been set. 
         This should be overridden in derived classes.
         """
-        pass
+        return RUN_OK
     
     def post_execute (self):
         """Update output variables and anything else needed after execution"""

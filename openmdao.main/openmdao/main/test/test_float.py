@@ -4,7 +4,7 @@ import unittest
 
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.container import Container
-from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
+from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.float import Float
 
 class FloatTestCase(unittest.TestCase):
@@ -114,7 +114,7 @@ class FloatTestCase(unittest.TestCase):
         try:
             self.float1.validate_var(self.float2)
         except TypeError, err:
-            self.assertEqual(str(err),'h1.float2 units (kg) are incompatible'+
+            self.assertEqual(str(err), 'h1.float2 units (kg) are incompatible'+
                              ' with units (lb/ft**2) of h1.float1')
         else:
             self.fail('TypeError expected')

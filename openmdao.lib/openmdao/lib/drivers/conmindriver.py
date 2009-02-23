@@ -12,6 +12,7 @@ import conmin.conmin as conmin
 import numpy.numarray as numarray
 
 from openmdao.main.driver import Driver
+from openmdao.main.component import RUN_OK
 from openmdao.main.arrayvar import ArrayVariable
 from openmdao.main.string import String
 from openmdao.main.stringlist import StringList
@@ -21,9 +22,9 @@ from openmdao.main.expreval import ExprEvaluator
 
 class CONMINdriver(Driver):
     """ Driver wrapper of CONMIN. 
-    NOTE: This implementation does not support multiple instances of CONMINdriver within
-    the same process because the common block information used by conmin is not copied
-    and restored per instance at this time.
+    NOTE: This implementation does not support multiple instances of
+    CONMINdriver within the same process because the common block information
+    used by conmin is not copied and restored per instance at this time.
     
     TODO: add copy/restore of common block info per instance
     TODO: make CONMIN's handling of user calculated gradients 
@@ -194,7 +195,9 @@ class CONMINdriver(Driver):
         self.cnmn1.igoto = 0
         
         # perform an initial run for self-consistency
-        self.parent.workflow.run()
+        status = self.parent.workflow.run()
+        if status != RUN_OK:
+            return status
         
         # get the initial values of the design variables
         for i,dv in enumerate(self._design_vars):
@@ -223,8 +226,11 @@ class CONMINdriver(Driver):
             self.update_design_variables()
 
             # update the model
-            self.parent.workflow.run()
-            
+            status = self.parent.workflow.run()
+# TODO: 'step around' ill-behaved cases.
+            if status != RUN_OK:
+                return status
+
             # calculate objective and constraints
             if conmin.cnmn1.info == 1:
                 self.update_objective_val()
@@ -233,7 +239,8 @@ class CONMINdriver(Driver):
             elif conmin.cnmn1.info == 2:
                 self.raise_exception('user defined gradients not yet supported',
                                      NotImplementedError)
-        
+        return RUN_OK
+
     def update_objective_val(self):
         """evaluate the new objective"""
         if self._objective is None:

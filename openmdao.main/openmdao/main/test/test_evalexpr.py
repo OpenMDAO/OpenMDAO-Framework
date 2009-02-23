@@ -32,7 +32,7 @@ b = ArrayVariable('b', top.a, INPUT)
 top.comp = Component('comp', top)
 top.comp.x = 3.14
 x = Float('x', top.comp, INPUT)
-top.make_public(['a','comp'])
+top.make_public(['a', 'comp'])
 
 # each test is a tuple of the form (input, expected output)
 tests = [

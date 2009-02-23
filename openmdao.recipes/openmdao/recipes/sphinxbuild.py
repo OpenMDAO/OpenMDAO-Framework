@@ -4,13 +4,14 @@ import os.path
 import sys
 import stat
 from subprocess import check_call
+from PIL import Image
 
 script_template = """#!%(python)s
 
 from subprocess import Popen
 
 # run this without blocking
-Popen(["%(browser)s", "%(index)s"])
+Popen(["%(browser)s", r"%(index)s"])
 
 """
     
@@ -26,16 +27,17 @@ class SphinxBuild(object):
         self.name = name
         self.options = options
         self.branchdir = os.path.split(buildout['buildout']['directory'])[0]
+        self.interpreter = os.path.join(buildout['buildout']['bin-directory'], 'python')
         self.executable = buildout['buildout']['executable']
         
         self.docdir = options.get('doc_dir') or 'docs'
         self.builddir = options.get('build_dir') or '_build' 
         self.browser = options.get('browser') or 'firefox'
+        self.builder = options.get('build_script') or os.path.join(self.branchdir,
+                                                                   'docs',
+                                                                   'python-scripts',
+                                                                   'sphinx-build')
         
-        #TODO: add format option so that buildout user could specify building
-        #      of html, latex, or both
-              
-
                
     def install(self):
         
@@ -46,15 +48,35 @@ class SphinxBuild(object):
             raise RuntimeError('doc directory '+self.docdir+' not found')
         os.chdir(self.docdir)
         
-        # build the docs using Sphinx (just run the Makefile)
+        # make necessary directories if they aren't already there
+        if not os.path.isdir(os.path.join(self.builddir,'html')):
+            os.makedirs(os.path.join(self.builddir,'html'))
+        if not os.path.isdir(os.path.join(self.builddir,'doctrees')):
+            os.makedirs(os.path.join(self.builddir,'doctrees'))
+        if not os.path.isdir('generated_images'):
+            os.makedirs('generated_images')
+            
+        # build the docs using Sphinx
         try:
-            check_call(['make','html'])
+            sys.path[0:0] = [os.path.abspath('python-scripts')]
+#            execfile(os.path.join('python-scripts','rebuild.py'))
+            check_call([self.interpreter, self.builder, '-b', 'html', 
+                        '-d', os.path.join(self.builddir,'doctrees'), 
+                        '.', os.path.join(self.builddir,'html')])
         finally:
             os.chdir(startdir)
         
         # create a bin/docs script
-        scriptname = os.path.join(self.buildout['buildout']['directory'],
-                                  'bin','docs')
+        if sys.platform == 'win32':
+            scriptname = os.path.join(self.buildout['buildout']['directory'],
+                                     'bin','docs.py')
+            bat = open(os.path.join(self.buildout['buildout']['directory'],
+                                    'bin','docs.bat'), 'w')
+            bat.write("@echo off\npython %s"%(scriptname,))
+            bat.close()
+        else:
+            scriptname = os.path.join(self.buildout['buildout']['directory'],
+                                     'bin','docs')
         script = open(scriptname, 'w')
         
         idxpath = os.path.join(self.branchdir, self.docdir, self.builddir,

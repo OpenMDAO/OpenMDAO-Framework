@@ -6,7 +6,7 @@ import unittest
 import numpy
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.component import Component
+from openmdao.main.component import Component, RUN_OK
 from openmdao.main.assembly import Assembly
 from openmdao.main.arrayvar import ArrayVariable
 from openmdao.main.variable import INPUT,OUTPUT
@@ -62,8 +62,9 @@ class OptRosenSuzukiComponent(Component):
                        self.x[1]**2 - 5.*self.x[1] +
                        2.*self.x[2]**2 - 21.*self.x[2] + 
                        self.x[3]**2 + 7.*self.x[3] + 50)
-        
-        
+        return RUN_OK
+
+
 class CONMINdriverTestCase(unittest.TestCase):
     """test CONMIN optimizer component"""
 

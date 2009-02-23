@@ -82,8 +82,8 @@ class ArrayVarTestCase(unittest.TestCase):
                     
     def test_connection(self):
         self.hobj.newarray = numpy.array([[12., 34., 56.], [78., 910., 1112.]])
-        newarray = ArrayVariable('newarray',self.hobj, OUTPUT, float)
-        self.hobj.setvar('array2',newarray)
+        newarray = ArrayVariable('newarray', self.hobj, OUTPUT, float)
+        self.hobj.setvar('array2', newarray)
         
     def test_bad_set_index(self):
         try:

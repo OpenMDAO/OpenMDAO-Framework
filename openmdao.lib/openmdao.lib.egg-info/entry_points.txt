@@ -1,4 +1,0 @@
-
-      [openmdao.drivers]
-      conmindrv = openmdao.lib.conmindriver.CONMINdriver
-      
