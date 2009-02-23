@@ -4,7 +4,6 @@ import os.path
 import sys
 import stat
 from subprocess import check_call
-from PIL import Image
 
 script_template = """#!%(python)s
 
