@@ -40,9 +40,7 @@ def has_diffs(fname1, fname2):
     lines2 = file2.readlines()
     file2.close()
     diff = difflib.unified_diff(lines1, lines2, 'file1','file2',n=0) 
-    lst = list(diff)
-    print 'diffs = ',lst
-    return len(lst) > 0
+    return len(list(diff)) > 0
 
 
 def gmerge(cmd_args):    
