@@ -7,10 +7,10 @@ from subprocess import check_call
 
 script_template = """#!%(python)s
 
-from subprocess import Popen
+import webbrowser
 
-# run this without blocking
-Popen(["%(browser)s", r"%(index)s"])
+wb = webbrowser.get("%(browser)s")
+wb.open(r"%(index)s")
 
 """
     
@@ -31,7 +31,6 @@ class SphinxBuild(object):
         
         self.docdir = options.get('doc_dir') or 'docs'
         self.builddir = options.get('build_dir') or '_build' 
-        self.browser = options.get('browser') or 'firefox'
         self.builder = options.get('build_script') or os.path.join(self.branchdir,
                                                                    'docs',
                                                                    'python-scripts',
@@ -73,15 +72,17 @@ class SphinxBuild(object):
                                     'bin','docs.bat'), 'w')
             bat.write("@echo off\npython %s"%(scriptname,))
             bat.close()
+            browser = self.options.get('browser') or 'windows-default'
         else:
             scriptname = os.path.join(self.buildout['buildout']['directory'],
                                      'bin','docs')
+            browser = self.options.get('browser') or 'firefox'
         script = open(scriptname, 'w')
         
         idxpath = os.path.join(self.branchdir, self.docdir, self.builddir,
                                'html','index.html')
         script.write(script_template % dict(python=self.executable,
-                                            browser=self.browser,
+                                            browser=browser,
                                             index=idxpath))
         script.close()
         os.chmod(scriptname, 
