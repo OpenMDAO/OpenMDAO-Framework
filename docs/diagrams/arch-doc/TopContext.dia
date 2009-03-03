@@ -861,13 +861,13 @@ Communication#</dia:string>
         <dia:point val="14.3463,25.4457"/>
       </dia:attribute>
       <dia:attribute name="obj_bb">
-        <dia:rectangle val="14.2963,25.3957;20.4913,27.2957"/>
+        <dia:rectangle val="14.2963,25.3957;19.7213,27.2957"/>
       </dia:attribute>
       <dia:attribute name="elem_corner">
         <dia:point val="14.3463,25.4457"/>
       </dia:attribute>
       <dia:attribute name="elem_width">
-        <dia:real val="6.0950000000000006"/>
+        <dia:real val="5.3250000000000002"/>
       </dia:attribute>
       <dia:attribute name="elem_height">
         <dia:real val="1.8000000000000007"/>
@@ -884,7 +884,7 @@ Communication#</dia:string>
       <dia:attribute name="text">
         <dia:composite type="text">
           <dia:attribute name="string">
-            <dia:string>#Geometry Engine#</dia:string>
+            <dia:string>#Geometry APIs#</dia:string>
           </dia:attribute>
           <dia:attribute name="font">
             <dia:font family="sans" style="0" name="Helvetica"/>
@@ -893,7 +893,7 @@ Communication#</dia:string>
             <dia:real val="0.80000000000000004"/>
           </dia:attribute>
           <dia:attribute name="pos">
-            <dia:point val="17.3938,26.4882"/>
+            <dia:point val="17.0088,26.4882"/>
           </dia:attribute>
           <dia:attribute name="color">
             <dia:color val="#000000"/>

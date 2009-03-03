@@ -25,7 +25,8 @@ setup(name='openmdao.recipes',
       install_requires=[
           'setuptools',
           'zc.recipe.egg==1.1.0',
-          'sphinx'
+          'Sphinx',
+          'PIL'
       ],
       entry_points="""
       [zc.buildout]

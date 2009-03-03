@@ -9,18 +9,16 @@ from compmodtimes import compmodtimes
 
 from PIL import Image
 
-MAX_WIDTH = 620.
-
-def resize_image(fname):
+def resize_image(fname, max_width=620):
     im = Image.open(fname)
     width, height = tuple(im.getbbox()[2:])
     print 'height =',height,' width =',width
-    if width > MAX_WIDTH:
-        wrat = MAX_WIDTH/float(width)
+    if width > max_width:
+        wrat = max_width/float(width)
         new_w = int(width * wrat)
         new_h = int(height * wrat)
         newim = im.transform((new_w,new_h), Image.EXTENT, 
-                             im.getbbox(),Image.BICUBIC)
+                             im.getbbox(), Image.BICUBIC)
         newim.save(fname)
 
 #Convert dia files to png, and resize
@@ -31,9 +29,9 @@ for diafile in includingWalk("..", ["*.dia"]):
    if  retcode == -1 or retcode == 0:
        print 'generated_images/'+dest+'.png is up-to-date'
    else:
-       cmd = 'dia --export=generated_images/'+dest+'.png --filter=png '+diafile
+       cmd = 'dia --export=generated_images/'+dest+'.png --filter=png-libart '+diafile
        system(cmd)
-       resize_image('generated_images/'+dest+'.png')
+       resize_image(os.path.abspath(os.path.join('generated_images',dest+'.png')))
 
 #Copy over any static images to the build area also 
 #for staticpic in includingWalk("images", ["*.png"]):

@@ -21,9 +21,9 @@ from openmdao.main.expreval import ExprEvaluator
 
 class CONMINdriver(Driver):
     """ Driver wrapper of CONMIN. 
-    NOTE: This implementation does not support multiple instances of CONMINdriver within
-    the same process because the common block information used by conmin is not copied
-    and restored per instance at this time.
+    NOTE: This implementation does not support multiple instances of
+    CONMINdriver within the same process because the common block information
+    used by conmin is not copied and restored per instance at this time.
     
     TODO: add copy/restore of common block info per instance
     TODO: make CONMIN's handling of user calculated gradients 

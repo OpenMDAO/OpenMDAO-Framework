@@ -319,6 +319,12 @@ class Container(HierarchyMember):
         return [x.get_pathname() 
                     for x in self.get_objs(iface, recurse, **kwargs)]
         
+    def config_from_obj(self, obj):
+        """This is intended to allow a newer version of a component to
+        configure itself based on an older version. By default, values
+        of dictionary entries from the old object will be copied to the
+        new one."""
+        raise NotImplementedError("config_from_obj")
     
     def save (self, outstream, format=constants.SAVE_CPICKLE):
         """Save the state of this object and its children to the given

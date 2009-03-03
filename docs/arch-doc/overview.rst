@@ -82,11 +82,11 @@ Implementation Language
 
 OpenMDAO will be implemented using the Python_ programming language. Plug-ins to
 the framework will be Python modules. A Python module can be either a text file
-written in pure Python code or an extension module, which is a shared library that
-conforms to the Python C-API. Because Python is an interpreted language,
-numerically intensive components will typically be implemented using a compiled
-language, such as C, C++, or FORTRAN, and will be wrapped as a Python extension
-module or wrapped using file I/O.
+written in pure Python code or an extension module, which is a shared library
+that conforms to the Python C-API. Because Python is an interpreted language and
+is not as fast as compiled languages, numerically intensive components will
+typically be implemented using a compiled language, such as C, C++, or FORTRAN,
+and will be wrapped as a Python extension module or wrapped using file I/O.
 
 .. _python: http://www.python.org
 
@@ -95,18 +95,55 @@ module or wrapped using file I/O.
 .. index:: framework; distributing
 .. index:: zope
 
+
 Distribution
 ============
 
 The framework will be distributed as a namespace package like other large Python
-projects, e.g., zope_. Parts of the framework that are decoupled and deemed useful
-on their own will be installable as individual :term:`eggs` like, for example,
-*zope.interface*. The framework namespace will also contain a standard library of
-open source plug-in components. A number of other components that are not open
-source, primarily wrappers for NASA analysis codes that cannot be released open
-source for various reasons, will be available as individual eggs.
+projects, e.g., zope_. Parts of the framework that are decoupled and deemed
+useful on their own will be installable as individual :term:`eggs` like, for
+example, *zope.interface*. The framework namespace will also contain a standard
+library of open source plug-in components. A number of other components that are
+not open source, primarily wrappers for NASA analysis codes that cannot be
+released open source for various reasons, will be available as individual eggs.
 
+The current package layout of the project is as follows:
+
+**openmdao.main**
+    the OpenMDAO framework infrastructure
+    
+**openmdao.lib**
+    standard library of OpenMDAO plug-ins
+    
+**openmdao.recipes**
+    OpenMDAO specific recipes for zc.buildout_
+
+**openmdao.test**
+    Classes and utilities that are specific to testing various aspects
+    of OpenMDAO
 
 .. _zope: http://wiki.zope.org/zope3/Zope3Wiki
 
+.. _zc.buildout: http://pypi.python.org/pypi/zc.buildout
+
+
+Deployment
+==========
+
+The basic OpenMDAO framework, contained in the openmdao.main egg, will be
+installable using easy_install. Included in that install will be scripts to 
+create sandboxes, start factory servers, and start object servers.
+
+OpenMDAO is an egg based framework, and any OpenMDAO model of any complexity
+will depend upon a large number of eggs.  Copying all of those eggs from an egg
+server every time a new sandbox is created could cause unwanted delays, so
+configuring the system to avoid unnecessary copying of distributions is
+important. The system will have a configurable list of search paths which can be
+URLs or file system paths, indicating the locations of egg servers or installed
+distributions respectively. These locations will be searched in the order that
+they appear in the search path.  If a location is a URL, that URL is assumed
+to be a distribution server, and the desired distribution, if found there, will
+be downloaded and installed in the sandbbox.  If a location is a directory, that
+directory will be searched for the distribution and if found will be linked to
+from the sandbox.
 
