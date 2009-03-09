@@ -1,6 +1,17 @@
 
 
 from openmdao.main.hierarchy import HierarchyMember
+
+# Variable stuff
+from openmdao.main.variable import Variable
+from openmdao.main.bool import Bool
+from openmdao.main.dict import Dict
+from openmdao.main.float import Float
+from openmdao.main.int import Int
+from openmdao.main.string import String
+from openmdao.main.stringlist import StringList
+from openmdao.main.arrayvar import ArrayVariable
+
 from openmdao.main.container import Container
 from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
@@ -13,15 +24,6 @@ from openmdao.main.factory import Factory
 from openmdao.main.importfactory import ImportFactory
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
-# Variable stuff
-from openmdao.main.variable import Variable
-from openmdao.main.bool import Bool
-from openmdao.main.dict import Dict
-from openmdao.main.float import Float
-from openmdao.main.int import Int
-from openmdao.main.string import String
-from openmdao.main.stringlist import StringList
-from openmdao.main.arrayvar import ArrayVariable
 from openmdao.main.containervar import ContainerVariable
 
 
@@ -36,7 +38,6 @@ __all__ = ['HierarchyMember',
            'Driver',
            'Workflow',
            'ConstraintError',
-           'logger',
            'Factory',
            'ImportFactory',
            'PkgResourcesFactory',
