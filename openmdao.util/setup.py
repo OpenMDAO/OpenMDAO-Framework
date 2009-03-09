@@ -12,34 +12,28 @@ except ImportError, e:
 
 version = '0.0.1'
 
-setup(name='openmdao.recipes',
+setup(name='openmdao.util',
       version=version,
-      description="OpenMDAO framework infrastructure",
+      description="various utility routines",
       long_description="""\
 """,
       classifiers=[],
-      keywords='recipe buildout mdao',
+      keywords='optimization multidisciplinary multi-disciplinary analysis',
       author='',
       author_email='',
       url='',
       license='NASA Open Source Agreement',
       namespace_packages=["openmdao"],
-      packages=['openmdao', 'openmdao.recipes'],
+      packages=['openmdao', 'openmdao.util'],
       package_dir={'': 'src'},
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
           'setuptools',
-          'zc.recipe.egg==1.1.0',
-          'Sphinx',
-          'openmdao.util',
+          # -*- Extra requirements: -*-
       ],
       entry_points="""
-      [zc.buildout]
-      default = openmdao.recipes.wingproj:WingProj
-      isolatedegg = openmdao.recipes.isolatedegg:IsolatedEgg
-      wingproj = openmdao.recipes.wingproj:WingProj
-      sphinxbuild = openmdao.recipes.sphinxbuild:SphinxBuild
+      # -*- Entry points: -*-
       """,
       )

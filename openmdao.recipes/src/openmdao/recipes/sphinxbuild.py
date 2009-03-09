@@ -6,7 +6,7 @@ import stat
 from subprocess import check_call, Popen
 from fnmatch import fnmatchcase
 
-import grcutils.pkg_sphinx_info as pkg_sphinx_info
+import openmdao.util.pkg_sphinx_info as pkg_sphinx_info
 
 script_template = """\
 #!%(python)s

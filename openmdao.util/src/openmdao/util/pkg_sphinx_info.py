@@ -1,12 +1,10 @@
 
 import os
 import sys
-#from inspect import getmembers, isclass, isfunction
 from os.path import join, splitext, dirname, basename, abspath
 from fnmatch import fnmatchcase
 
-from grcutils.fileutil import glob_walk, dirtreegen
-
+from openmdao.util.fileutil import glob_walk, dirtreegen
             
 def mod_sphinx_info(mod, outfile, package=None, show_undoc=False):
     name = os.path.splitext(mod.replace(os.sep, '.'))[0]
