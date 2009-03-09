@@ -182,25 +182,25 @@ class NPSSTestCase(unittest.TestCase):
 
     def test_set_then_get(self):
         self.sample.i = 91919
-        self.assertEqual(self.sample._get('i'), 91919)
+        self.assertEqual(self.npss.get('sample.i'), 91919)
  
     def test_get_then_set(self):
         self.assertEqual(self.sample.i, 42)
         self.sample.i = 91919
-        self.assertEqual(self.sample._get('i'), 91919)
+        self.assertEqual(self.npss.get('sample.i'), 91919)
 
     def test_nested_npss_object_access(self):
         self.sample.create('Sample', 'Sample', 'child')
         self.sample.r = 1.2222
         self.sample.child.r = 987.654
-        self.assertEqual(self.sample._get('r'), 1.2222)
-        self.assertEqual(self.sample.child._get('r'), 987.654)
+        self.assertEqual(self.npss.get('sample.r'), 1.2222)
+        self.assertEqual(self.npss.get('sample.child.r'), 987.654)
 
     def test_getref(self):
         self.sample.create('Sample', 'Sample', 'child')
         child2 = self.sample.getref('child')
         child2.r = 222.2222
-        self.assertEqual(self.sample.child._get('r'), child2.r)
+        self.assertEqual(self.npss.get('sample.child.r'), child2.r)
         try:
             self.sample.getref('blah')
         except AttributeError, err:
@@ -383,22 +383,22 @@ class NPSSTestCase(unittest.TestCase):
         else:
             self.fail('Exception expected')
 
-#    def test_numpy(self):
-#        try:
-#            import numpy
-#        except:
-#            print 'skipping numpy test because numpy not installed'
-#            return
-#
-#        eye = numpy.eye(3)
-#        self.sample.r2d = eye
-#
-#        self.assertEqual(self.sample.r2d, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
-#
-#        zips = numpy.ones(4)
-#        self.sample.r1d = zips
-#
-#        self.assertEqual(self.sample.r1d, [1, 1, 1, 1])
+    def test_numpy(self):
+        try:
+            import numpy
+        except ImportError:
+            print 'skipping numpy test because numpy not installed'
+            return
+
+        eye = numpy.eye(3)
+        self.sample.r2d = eye
+
+        self.assertEqual(self.sample.r2d, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+
+        zips = numpy.ones(4)
+        self.sample.r1d = zips
+
+        self.assertEqual(self.sample.r1d, [1, 1, 1, 1])
 
     def test_table(self):
         """ Test accessing a table. Currently this is expected to fail. """

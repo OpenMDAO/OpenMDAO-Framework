@@ -39,15 +39,18 @@ class HierarchyMember(object):
         """
         raise NotImplementedError('set') 
     
-    
     def get_pathname(self):
         """ Return full path name to this container. """
         if self.parent is None:
             return self.name
         else:
-            return '.'.join([self.parent.get_pathname(), self.name])
+            try:
+                path = self.parent.get_pathname()
+            except AttributeError:
+                return self.name
+            else:
+                return '.'.join([path, self.name])
 
-    
     def _get_parent(self):
         if self._parent is None:
             return None

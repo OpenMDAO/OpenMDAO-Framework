@@ -51,6 +51,8 @@ def _bootstrap_type_var_mappers():
     TODO: this should load all available Variable entry points using pkg_resources
     """
 # pylint: disable-msg=W0612
+    import openmdao.main.bool
+    import openmdao.main.dict
     import openmdao.main.float
     import openmdao.main.int
     import openmdao.main.string
@@ -58,16 +60,20 @@ def _bootstrap_type_var_mappers():
     import openmdao.main.arrayvar
     import openmdao.main.containervar
 
+
 class Container(HierarchyMember):
     """ Base class for all objects having Variables that are visible 
     to the framework"""
    
     implements(IContainer)
     
-   
-    def __init__(self, name, parent, desc=None):
+    def __init__(self, name, parent=None, desc=None, add_to_parent=True):
         super(Container, self).__init__(name, parent, desc)            
         self._pub = {}  # A container for framework accessible objects.
+        if parent is not None and \
+           IContainer.providedBy(parent) and \
+           add_to_parent:
+            parent.add_child(self)
         
     def add_child(self, obj, private=False):
         """Add an object (must provide IContainer interface) to this

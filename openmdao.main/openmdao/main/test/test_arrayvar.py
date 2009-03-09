@@ -67,7 +67,7 @@ class ArrayVarTestCase(unittest.TestCase):
             self.hobj.set('array1', 'foobar')
         except ValueError, err:
             self.assertEqual(str(err), 
-                "h1.array1: new type 'str'is not compatible with type 'ndarray")
+                "h1.array1: new type 'str' is not compatible with type 'ndarray'")
         else:
             self.fail('ValueError expected')
                

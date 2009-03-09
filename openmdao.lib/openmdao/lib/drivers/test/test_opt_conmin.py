@@ -71,9 +71,8 @@ class CONMINdriverTestCase(unittest.TestCase):
     def setUp(self):
         self.top = Assembly('top',None)
         comp = OptRosenSuzukiComponent('comp', self.top)
-        self.top.add_child(comp)
         self.top.workflow.add_node(comp)
-        self.top.add_child(CONMINdriver('driver'))
+        CONMINdriver('driver', self.top)
         self.top.driver.iprint = 0
         self.top.driver.maxiters = 30
         

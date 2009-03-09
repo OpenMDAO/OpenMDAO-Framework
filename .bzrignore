@@ -21,3 +21,6 @@ _build
 doctrees
 html
 generated_images
+eggsrc/npsscomponent/test/NPSS_A
+eggsrc/npsscomponent/test/NPSS_B
+eggsrc/npsscomponent/test/reload.out

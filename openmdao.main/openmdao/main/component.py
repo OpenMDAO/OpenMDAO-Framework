@@ -19,6 +19,7 @@ from openmdao.main.interfaces import IComponent, IAssembly
 from openmdao.main.container import Container
 import openmdao.main.constants as constants
 from openmdao.main.string import String
+from openmdao.main.stringlist import StringList
 from openmdao.main.variable import INPUT
 
 # Execution states.
@@ -48,10 +49,14 @@ class Component (Container):
         self._input_changed = True
         self._dir_stack = []
 
-        self.directory = directory
+        self.directory = directory  # For PyLint.
         String('directory', self,
                desc='If non-null, the directory to execute in.',
                default=directory, iostatus=INPUT)
+
+        StringList('external_files', self,
+                   desc='External files generated or used by this component',
+                   default=[], iostatus=INPUT)
 
         if self.directory:
             if not os.path.exists(self.directory):

@@ -9,7 +9,7 @@ import os
 
 from openmdao.main.bool import Bool
 from openmdao.main.component import Component, RUN_OK, RUN_FAILED
-from openmdao.main.dictionary import Dict
+from openmdao.main.dict import Dict
 from openmdao.main.string import String
 from openmdao.main.stringlist import StringList
 from openmdao.main.variable import INPUT
@@ -34,123 +34,100 @@ class NPSScomponent(Component):
         self._topstr = top
 
         # Model options.
-        self.model_filename = ''
         String('model_filename', self,
                desc='Filename for NPSS model.',
                default='', iostatus=INPUT)
 
-        self.include_dirs = []
         StringList('include_dirs', self,
                    desc='Model include directories.',
                    default=[], iostatus=INPUT)
 
-        self.use_default_paths = True
         Bool('use_default_paths', self,
              desc='Use default NPSS directories.',
              default=True, iostatus=INPUT)
 
-        self.preprocessor_vars = {}
         Dict('preprocessor_vars', self,
              desc='Preprocessor variable definitions',
              default={}, iostatus=INPUT)
 
         # Execution options.
-        self.run_command = ''
         String('run_command', self,
                desc='String to parse to run model.',
                default='', iostatus=INPUT)
 
-        self.reload_flag = ''
         String('reload_flag', self,
-               desc='Flag to trigger a model reload.',
+               desc='Path to flag to internally request a model reload.',
                default='', iostatus=INPUT)
 
-        self.preloaded_dlms = []
         StringList('preloaded_dlms', self,
                    desc='Preloaded DLMs.',
                    default=[], iostatus=INPUT)
 
-        self.iclod_first = False
         Bool('iclod_first', self,
              desc='Search ICLOD before DCLOD.',
              default=False, iostatus=INPUT)
 
-        self.no_dclod = False
         Bool('no_dclod', self,
              desc='Do not search DCLOD.',
              default=False, iostatus=INPUT)
 
-        self.no_iclod = False
         Bool('no_iclod', self,
              desc='Do not search ICLOD.',
              default=False, iostatus=INPUT)
 
-        self.use_corba = False
         Bool('use_corba', self,
              desc='Enable distributed simulation via CORBA.',
              default=False, iostatus=INPUT)
 
         # Output options.
-        self.output_filename = output_filename
         String('output_filename', self,
-               desc='Filename for standard streams to in all new sessions.',
+               desc='Filename for standard streams in all new sessions.',
                default=output_filename, iostatus=INPUT)
 
-        self.trace_execution = False
         Bool('trace_execution', self,
              desc='Trace interpreted statement execution.',
              default=False, iostatus=INPUT)
 
         # Advanced options.
-        self.assembly_type = ''
         String('assembly_type', self,
                desc='Type for top object.',
                default='', iostatus=INPUT)
 
-        self.executive_type = ''
         String('executive_type', self,
                desc='Top-level executive.',
                default='', iostatus=INPUT)
 
-        self.preloaded_objs = []
         StringList('preloaded_objs', self,
                    desc='Preloaded Objects.',
                    default=[], iostatus=INPUT)
 
-        self.use_solver = True
         Bool('use_solver', self,
              desc='Use default solver.',
              default=True, iostatus=INPUT)
 
-        self.use_constants = True
         Bool('use_constants', self,
              desc='Use default constants.',
              default=True, iostatus=INPUT)
 
-        self.access = ''
         String('access', self,
                desc='Default access type.',
                default='', iostatus=INPUT)
 
-        self.autodoc = False
         Bool('autodoc', self,
              desc='Allow abstract creation.',
              default=False, iostatus=INPUT)
 
-        self.ns_ior = ''
         String('ns_ior', self,
                desc='IOR of NamingService.',
                default='', iostatus=INPUT)
 
-        self.other_opts = ''
         String('other_opts', self,
                desc='Other options.',
                default='', iostatus=INPUT)
 
         # Wrapper stuff.
-        self.reload_model = False
         Bool('reload_model', self,
-             desc='Flag to allow externally requested model reload.',
+             desc='Flag to externally request a model reload.',
              default=False, iostatus=INPUT)
 
         if arglist is not None:
@@ -344,10 +321,12 @@ class NPSScomponent(Component):
         if self._top is not None:
             is_reload = True
             # Save current input values.
-            if self._parent is not None:
-                connections = self._parent.list_connections(dst_comp=self)
-                for src_path, src_attr, dst_path, dst_attr, mode in connections:
-                    saved_inputs.append((dst_attr, self.get(dst_attr)))
+            if self.parent is not None:
+                connections = self.parent.list_connections()
+                for src, dst in connections:
+                    dst_comp, dst_attr = dst.split('.', 1)
+                    if dst_comp == self.name:
+                        saved_inputs.append((dst_attr, self.get(dst_attr)))
             self._top.closeSession()
             self._top = None
 
@@ -388,8 +367,8 @@ class NPSScomponent(Component):
             for path in paths:
                 if path.startswith(cwd):
                     path = path[len(cwd):]
-                    if path not in self.input_files:
-                        self.input_files.append(path)
+                    if path not in self.external_files:
+                        self.external_files.append(path)
 
         if is_reload:
             # Need to restore input values.
@@ -414,6 +393,9 @@ class NPSScomponent(Component):
         Note that this is not __getattribute__.
         This gets called only when the normal methods fail.
         """
+        if name == '_top':
+            return object.__getattribute__(self, name)
+
         try:
             top = object.__getattribute__(self, '_top')
         except AttributeError:
@@ -422,9 +404,8 @@ class NPSScomponent(Component):
             return super(NPSScomponent, self).__getattribute__(name)
 
         try:
-            value = getattr(top, name)
-            return value
-        except (AttributeError, RuntimeError), err:
+            return getattr(top, name)
+        except AttributeError, err:
             # Possibly a wrapper attribute.
             try:
                 return super(NPSScomponent, self).__getattribute__(name)
@@ -439,6 +420,9 @@ class NPSScomponent(Component):
 
     def __setattr__(self, name, value):
         """ Set attribute value. """
+        if name == '_top':
+            return object.__setattr__(self, name, value)
+
         try:
             top = object.__getattribute__(self, '_top')
         except AttributeError:
@@ -448,7 +432,7 @@ class NPSScomponent(Component):
 
         try:
             setattr(top, name, value)
-        except (AttributeError, RuntimeError):
+        except AttributeError:
             return super(NPSScomponent, self).__setattr__(name, value)
         finally:
             NPSScomponent.grab_context()

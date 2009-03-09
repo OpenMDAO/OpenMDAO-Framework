@@ -30,7 +30,6 @@ class Assembly(Component):
         self.workflow = self.create('openmdao.main.workflow.Workflow',
                                     'workflow')
     
-        
     def _check_circular_deps(self, incomp, invar, outname):
         """Raises an exception if a circular dependency is detected"""
         dep_graph = {}
@@ -106,7 +105,6 @@ class Assembly(Component):
         self._connections[incompname][inpath.split('.', 1)[1]] = (outcompname, 
                                                                  outvarname)
         
-      
     def disconnect(self, inpath):
         """Remove a connection between two Components."""
         incompname, invarname = inpath.split('.', 1)
@@ -130,7 +128,6 @@ class Assembly(Component):
     def remove_child(self, name):
         """Remove the named object from this container and notify any 
         observers.
-        
         """
         
         # TODO: notify observers of removal...
@@ -169,9 +166,6 @@ class Assembly(Component):
                 conns.append((outname, inname))
         return conns
     
-    
-        
-        
     def update_inputs(self, incomp):
         """Transfer input data to the specified component"""
         try:
@@ -184,5 +178,3 @@ class Assembly(Component):
             outvar = self.getvar('.'.join(outtuple[:2]))
             invar.setvar(None, outvar)
             
-      
-   

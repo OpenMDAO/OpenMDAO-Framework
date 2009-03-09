@@ -73,6 +73,15 @@ class Variable(HierarchyMember):
             self.raise_exception('val_type must be a type, a class, or a tuple',
                                  TypeError) 
             
+        # Create the real object if it doesn't already exist.
+        if not hasattr(self._refparent, self.ref_name):
+            if default is UNDEFINED or default is None:
+                self.raise_exception('default must be supplied'
+                                     ' with implicit creation.', ValueError)
+            else:
+                setattr(self._refparent, self.ref_name,
+                        self._pre_assign(default))
+
         # we'll check the validity of the default value here, but
         # we don't know the constraints yet, so the derived class
         # will have to do it again if it has constraints
