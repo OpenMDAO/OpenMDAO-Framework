@@ -5,59 +5,63 @@ import sys
 from os.path import join, splitext, dirname, basename, abspath
 from fnmatch import fnmatchcase
 
-from grcutils.fileutil import glob_walk
+from grcutils.fileutil import glob_walk, dirtreegen
 
             
 def mod_sphinx_info(mod, outfile, package=None, show_undoc=False):
-    mod = mod.replace(os.sep, '.')
-    name = os.path.splitext(mod)[0]
+    name = os.path.splitext(mod.replace(os.sep, '.'))[0]
     if package is not None:
         name = '.'.join([package, name])
     short = os.path.basename(name)
     
-    try:
-        __import__(name)
-    except Exception, err:
-        print >> sys.stderr, 'Import of %s failed: %s' % (name, str(err))
-        return
-
-    m = sys.modules[name]
-    print >> outfile, 'Module %s.py' % short.split('.').pop()
-    print >> outfile, '_'*(len(short.split('.').pop())+len('Module    '))+'\n'
+    print >> outfile, '%s.py' % short.split('.').pop()
+    print >> outfile, '_'*(3+len(short.split('.').pop()))+'\n'
     print >> outfile, '.. automodule:: %s' % short
     print >> outfile, '   :members:'
-    if options.show_undoc:
+    if show_undoc:
         print >> outfile, '   :undoc-members:'
     print >> outfile, '   :show-inheritance:\n\n'
 
 
-def pkg_sphinx_info(pkg, outfile, show_undoc=False, underline='-'):
-    """Generate Sphinx autodoc directives for all of the modules in the given package.
+def pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False, underline='-'):
+    """Generate Sphinx autodoc directives for all of the modules in 
+    the given package.
     
     """
-    print 'importing ',pkg
-    for x in sys.path:
-        print x
-    __import__(pkg)
-    p = sys.modules[pkg]
-    pack = p.__name__
-    
-    # p.__file__ should give us the path of the __init__.py file 
-    # for the package, so start at its containing directory
-    dname = dirname(p.__file__)
-    dparts = dname.split(os.sep)
+    # locate the package directory
+    topdir = pkg
+    pkgdir = pkg
+    # directory form of the package, e.g., openmdao.main --> openmdao/main
+    dirform = os.sep.join(pkg.split('.'))
+    found = 0
+    for dd in dirtreegen(startdir):
+        if pkg == basename(dd):
+            found = 1
+            topdir = join(os.getcwd(), dd)
+        elif dd.endswith(dirform) and found == 1:
+            pkgdir = dd
+            break
+            
 
     print >> outfile, 'Package %s' % pkg
-    print >> outfile, underline*(len(pkg)+len('Package '))
+    print >> outfile, underline*(len('Package ')+len(pkg))
     print >> outfile, '\n\n'
     
     names = []
-    for fname in glob_walk(dname,['*.py']):
-        pathparts = fname.split(os.sep)
-        path = '.'.join(pathparts[len(dparts):])
+    used = set()
+    exclude = ['setup.py', '__init__.py']
+    abspkg = abspath(pkgdir)
+    
+    # directory form of the package, e.g., openmdao.main --> openmdao/main
+    dirform = os.sep.join(pkg.split('.'))
+    
+    for fname in glob_walk(abspkg, [join(pkgdir,'*.py')]):
         base = basename(fname)
-        if not base.startswith('_') and not base.startswith('test_') and not base == 'setup.py':
-            names.append(path)
+        if base.startswith('_') or base.startswith('test_') or base in exclude:
+            continue        
+                
+        lpath = fname[len(abspkg)+1:]
+        names.append(lpath)
             
     names.sort()
     for name in names:

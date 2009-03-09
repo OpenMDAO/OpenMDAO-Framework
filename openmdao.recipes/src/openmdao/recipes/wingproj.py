@@ -23,7 +23,7 @@ _wing_header = """#!wing
 
 _LINE_WIDTH = 68
 
-def wingify(obj, left_margin=0):
+def _wingify(obj, left_margin=0):
     """Take an object, convert to a string, split it on commas. If any piece 
     is longer than 80 chars, split it up into smaller chunks. Finally, recombine 
     it all back into a string with each entry on a new line
@@ -139,9 +139,9 @@ class WingProj(object):
         
         if len(diff) > 0:       
             config.set('user attributes', 'proj.pypath', 
-                       wingify(dict({None: ('custom',':'.join(newnames))}), left_margin=18))
+                       _wingify(dict({None: ('custom',':'.join(newnames))}), left_margin=18))
             config.set('user attributes', 'proj.pyexec', 
-                       wingify(dict({None: ('custom', self.executable)}), left_margin=18))
+                       _wingify(dict({None: ('custom', self.executable)}), left_margin=18))
 
             if not config.has_option('project attributes', 'proj.directory-list'):
                 config.set('project attributes', 'proj.directory-list',
