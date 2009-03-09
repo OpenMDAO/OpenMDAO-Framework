@@ -6,11 +6,7 @@ import os.path
 import pkg_resources
 import unittest
 
-from openmdao.main.assembly import Assembly
-from openmdao.main.component import Component
-from openmdao.main.bool import Bool
-from openmdao.main.float import Float
-from openmdao.main.string import String
+from openmdao.main import Assembly, Component, Bool, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent

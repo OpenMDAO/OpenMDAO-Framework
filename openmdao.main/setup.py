@@ -1,39 +1,43 @@
+import os, sys
 
 # pylint: disable-msg=F0401
-from setuptools import setup, find_packages
-import os
+
+from distutils.errors import DistutilsExecError,DistutilsPlatformError
+
+try:
+    from setuptools import setup
+except ImportError, e:
+    from distutils.core import setup
+
 
 version = '0.0.1'
 
 setup(name='openmdao.main',
       version=version,
-      description="MDAO framework kernel",
-      long_description="",
-      # Get more strings from 
-      # http://www.python.org/pypi?%3Aaction=list_classifiers
-      classifiers=[
-        "Programming Language :: Python",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        ],
-      keywords='optimization multidisciplinary multi-discipliniary analysis',
-      author='OpenMDAO Team',
+      description="OpenMDAO framework infrastructure",
+      long_description="""\
+""",
+      classifiers=[],
+      keywords='optimization multidisciplinary multi-disciplinary analysis',
+      author='',
       author_email='',
       url='',
       license='NASA Open Source Agreement',
-      packages=find_packages(exclude=['ez_setup']),
+      namespace_packages=["openmdao"],
+      packages=['openmdao', 'openmdao.main'],
+      package_dir={'': 'src'},
       package_data={'openmdao.main': ['plugins/*.egg','test/*.py']},
-      namespace_packages=['openmdao'],
       include_package_data=True,
-      zip_safe=False,
       test_suite='nose.collector',
+      zip_safe=False,
       install_requires=[
           'setuptools',
           'pyparsing',
           'numpy',
+          'PyYAML',
           # -*- Extra requirements: -*-
       ],
       entry_points="""
+      # -*- Entry points: -*-
       """,
       )
-
-

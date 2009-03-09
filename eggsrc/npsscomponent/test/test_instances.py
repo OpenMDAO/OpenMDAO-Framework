@@ -6,14 +6,8 @@ import os.path
 import pkg_resources
 import unittest
 
-from openmdao.main.assembly import Assembly
-from openmdao.main.component import Component
-from openmdao.main.arrayvar import ArrayVariable
-from openmdao.main.bool import Bool
-from openmdao.main.float import Float
-from openmdao.main.int import Int
-from openmdao.main.string import String
-from openmdao.main.stringlist import StringList
+from openmdao.main import Assembly, Component, \
+                          ArrayVariable, Bool, Float, Int, String, StringList
 from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent

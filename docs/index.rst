@@ -10,6 +10,7 @@ Welcome to OpenMDAO's Documentation.
    arch-doc/index
    user-guide/index
    dev-guide/index
+   srcdocs/index
    FAQ/index
    feedback/index
    license/index

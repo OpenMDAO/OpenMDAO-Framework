@@ -13,3 +13,5 @@ Developer's Guide
    working
    testing
    distributions
+   grc-users
+
