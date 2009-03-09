@@ -1,4 +1,7 @@
 
+# this is from the rearranged branch ...
+
+
 #public symbols
 __all__ = ['StringList']
 __version__ = "0.1"
