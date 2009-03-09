@@ -52,6 +52,7 @@ class IsolatedEgg(zc.recipe.egg.Scripts):
 
     def __init__(self, buildout, name, options):
         super(IsolatedEgg, self).__init__(buildout, name, options)
+        self.buildout = buildout
 
     def install(self):
         old, old_py = swap_templates(_script_template, _py_script_template)

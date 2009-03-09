@@ -139,7 +139,7 @@ class CONMINdriverTestCase(unittest.TestCase):
     
     def test_update_objective(self):
         try:
-            self.top.driver.update_objective_val()
+            self.top.driver._update_objective_val()
         except RuntimeError, err:
             self.assertEqual(str(err), "top.driver: No objective has been set")
         else:
@@ -147,7 +147,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertEqual(self.top.driver.objective_val, 0)
         self.top.comp.result = 99.
         self.top.driver.objective = 'comp.result'
-        self.top.driver.update_objective_val()
+        self.top.driver._update_objective_val()
         self.assertEqual(self.top.driver.objective_val, 99.)
     
     def test_bad_design_vars(self):

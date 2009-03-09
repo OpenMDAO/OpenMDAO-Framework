@@ -1,33 +1,30 @@
-"""
-A CONMIN based driver.
-"""
 # pylint: disable-msg=C0103
 
 #public symbols
-__all__ = []
+__all__ = ['CONMINdriver']
 
 __version__ = "0.1"
 
 import conmin.conmin as conmin
 import numpy.numarray as numarray
 
-from openmdao.main.driver import Driver
-from openmdao.main.arrayvar import ArrayVariable
-from openmdao.main.string import String
-from openmdao.main.stringlist import StringList
+from openmdao.main import Driver,ArrayVariable,String,StringList,ExprEvaluator
 from openmdao.main.variable import INPUT
-from openmdao.main.expreval import ExprEvaluator
 
 
 class CONMINdriver(Driver):
-    """ Driver wrapper of CONMIN. 
+    """ Driver wrapper of Fortran version of CONMIN. 
+    
     NOTE: This implementation does not support multiple instances of
     CONMINdriver within the same process because the common block information
     used by conmin is not copied and restored per instance at this time.
     
-    TODO: add copy/restore of common block info per instance
-    TODO: make CONMIN's handling of user calculated gradients 
-          accessible through CONMINdriver
+    .. parsed-literal::
+    
+       TODO: add copy/restore of common block info per instance    
+       TODO: make CONMIN's handling of user calculated gradients 
+             accessible through CONMINdriver
+            
     """
     
     def __init__(self, name, parent=None, desc=None):
@@ -106,7 +103,9 @@ class CONMINdriver(Driver):
     def _get_desvars(self):
         return [x.text for x in self._design_vars]
         
-    design_vars = property(_get_desvars, _set_desvars)
+    design_vars = property(_get_desvars, _set_desvars, None,
+        'An array of design variable names. These names can include '+
+        'array indexing.')
         
     def _set_constraints(self, cons):
         self._first = True
@@ -132,7 +131,10 @@ class CONMINdriver(Driver):
     def _get_constraints(self):
         return [x.text for x in self._constraints]
         
-    constraints = property(_get_constraints, _set_constraints)
+    constraints = property(_get_constraints, _set_constraints, None,
+        'An array of expression strings indicating constraints.'+
+        ' A value of < 0 for the expression indicates that the constraint '+
+        'is violated.')
     
     
     def _set_objective(self, obj):
@@ -150,7 +152,8 @@ class CONMINdriver(Driver):
         else:
             return self._objective.text
         
-    objective = property(_get_objective, _set_objective)
+    objective = property(_get_objective, _set_objective, None, 
+       'An string containing the objective function expression.')
 
     def _set_lower_bounds(self, val):
         vv = numarray.zeros(len(val)+2)
@@ -166,7 +169,8 @@ class CONMINdriver(Driver):
     def _get_lower_bounds(self):
         return self._lower_bounds
     
-    lower_bounds = property(_get_lower_bounds, _set_lower_bounds)
+    lower_bounds = property(_get_lower_bounds, _set_lower_bounds, None,
+          'Array of constraints on the minimum value of each design variable.')
 
     def _set_upper_bounds(self, val):
         vv = numarray.zeros(len(val)+2)
@@ -183,10 +187,11 @@ class CONMINdriver(Driver):
     def _get_upper_bounds(self):
         return self._upper_bounds
     
-    upper_bounds = property(_get_upper_bounds, _set_upper_bounds)
+    upper_bounds = property(_get_upper_bounds, _set_upper_bounds, None,
+          'Array of constraints on the maximum value of each design variable.')
     
     def execute(self):
-        """perform the optimization"""
+        """Perform the optimization."""
         
         # set conmin array sizes and such
         if self._first is True:
@@ -220,34 +225,34 @@ class CONMINdriver(Driver):
                                self.cons_is_linear,
                                self.cons_active_or_violated,self._ms1)
             
-            self.update_design_variables()
+            self._update_design_variables()
 
             # update the model
             self.parent.workflow.run()
             
             # calculate objective and constraints
             if conmin.cnmn1.info == 1:
-                self.update_objective_val()
-                self.update_constraint_vals()
+                self._update_objective_val()
+                self._update_constraint_vals()
             # calculate gradients
             elif conmin.cnmn1.info == 2:
                 self.raise_exception('user defined gradients not yet supported',
                                      NotImplementedError)
         
-    def update_objective_val(self):
-        """evaluate the new objective"""
+    def _update_objective_val(self):
+        """Evaluate the new objective."""
         if self._objective is None:
             self.raise_exception('No objective has been set', RuntimeError)
         else:
             self.objective_val = self._objective.evaluate()
                
-    def update_constraint_vals(self):
-        """calculate new constraint values"""
+    def _update_constraint_vals(self):
+        """Calculate new constraint values."""
         for i,con in enumerate(self._constraints):
             self.constraint_vals[i] = con.evaluate()
             
-    def update_design_variables(self):
-        """set the new values of the design variables into the model"""
+    def _update_design_variables(self):
+        """Set the new values of the design variables into the model."""
         for dv in self._design_var_setters:
             dv.evaluate()
 
@@ -313,3 +318,6 @@ class CONMINdriver(Driver):
 
         self.cnmn1.iprint = self.iprint
         self.cnmn1.itmax = self.maxiters
+
+
+

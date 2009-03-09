@@ -1,32 +1,39 @@
-from setuptools import setup, find_packages
-import os
+import os, sys
+
+# pylint: disable-msg=F0401
+
+from distutils.errors import DistutilsExecError,DistutilsPlatformError
+
+try:
+    from setuptools import setup
+except ImportError, e:
+    from distutils.core import setup
+
 
 version = '0.0.1'
 
 setup(name='openmdao.recipes',
       version=version,
-      description="various zc.buildout recipes for openmdao",
-      long_description=open("README.txt").read() + "\n" +
-                       open(os.path.join("docs", "HISTORY.txt")).read(),
-      # Get more strings from http://www.python.org/pypi?%3Aaction=list_classifiers
-      classifiers=[
-        "Programming Language :: Python",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        ],
-      keywords='recipe buildout',
+      description="OpenMDAO framework infrastructure",
+      long_description="""\
+""",
+      classifiers=[],
+      keywords='recipe buildout mdao',
       author='',
       author_email='',
       url='',
       license='NASA Open Source Agreement',
-      packages=find_packages(exclude=['ez_setup']),
-      namespace_packages=['openmdao'],
+      namespace_packages=["openmdao"],
+      packages=['openmdao', 'openmdao.recipes'],
+      package_dir={'': 'src'},
       include_package_data=True,
-      zip_safe=True,
+      test_suite='nose.collector',
+      zip_safe=False,
       install_requires=[
           'setuptools',
           'zc.recipe.egg==1.1.0',
           'Sphinx',
-          'PIL'
+          'grcutils',
       ],
       entry_points="""
       [zc.buildout]

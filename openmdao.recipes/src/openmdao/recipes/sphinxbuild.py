@@ -3,9 +3,15 @@ import os
 import os.path
 import sys
 import stat
-from subprocess import check_call
+from subprocess import check_call, Popen
+from fnmatch import fnmatchcase
+from pkg_resources import Distribution, working_set, find_distributions
 
-script_template = """#!%(python)s
+from grcutils.fileutil import glob_walk
+import grcutils.pkg_sphinx_info as pkg_sphinx_info
+
+script_template = """\
+#!%(python)s
 
 import webbrowser
 
@@ -14,6 +20,15 @@ wb.open(r"%(index)s")
 
 """
     
+def run_command(cmd, sh=True):
+   """Run a command using Popen and return its output (stdout and stderr)
+   and its return code as a tuple. If the command is a python file, prepend
+   python to the command string
+   """
+   p = Popen(cmd, env=os.environ, shell=sh)
+   output = p.communicate()[0]
+   return (output, p.returncode)
+
 
 class SphinxBuild(object):
     """Build Sphinx documentation and create a script to bring up the
@@ -29,6 +44,7 @@ class SphinxBuild(object):
         self.interpreter = os.path.join(buildout['buildout']['bin-directory'], 'python')
         self.executable = buildout['buildout']['executable']
         
+        self.packages = options.get('packages') or ''  
         self.docdir = options.get('doc_dir') or 'docs'
         self.builddir = options.get('build_dir') or '_build' 
         self.builder = options.get('build_script') or os.path.join(self.branchdir,
@@ -46,19 +62,21 @@ class SphinxBuild(object):
             raise RuntimeError('doc directory '+self.docdir+' not found')
         os.chdir(self.docdir)
         
+        self.write_src_docs()
+        
         # make necessary directories if they aren't already there
         if not os.path.isdir(os.path.join(self.builddir,'html')):
             os.makedirs(os.path.join(self.builddir,'html'))
         if not os.path.isdir(os.path.join(self.builddir,'doctrees')):
             os.makedirs(os.path.join(self.builddir,'doctrees'))
-        if not os.path.isdir('generated_images'):
-            os.makedirs('generated_images')
+        #if not os.path.isdir('generated_images'):
+        #    os.makedirs('generated_images')
             
         # build the docs using Sphinx
         try:
             sys.path[0:0] = [os.path.abspath('python-scripts')]
 #            execfile(os.path.join('python-scripts','rebuild.py'))
-            check_call([self.interpreter, self.builder, '-b', 'html', 
+            check_call([self.interpreter, self.builder, '-P','-b', 'html', 
                         '-d', os.path.join(self.builddir,'doctrees'), 
                         '.', os.path.join(self.builddir,'html')])
         finally:
@@ -93,3 +111,14 @@ class SphinxBuild(object):
         
     update = install
 
+    def write_src_docs(self):
+        sys.path[0:0] = [x.location for x in find_distributions(os.path.join(self.branchdir,'buildout','eggs'))]
+        for pack in self.packages.split():
+            sys.path[0:0] = [os.path.join(self.branchdir,pack,'src')]
+            f = open(os.path.join(self.docdir,'srcdocs','packages',pack+'.rst'),'w')
+            pkg_sphinx_info(pack, f, show_undoc=True, underline='-')
+#            out,ret = run_command(' '.join([self.interpreter, 
+#                                            os.path.join(self.branchdir,'eggsrc',
+#                                            'grcutils','grcutils','pkg_sphinx_info.py'),
+#                                            pack]))
+            f.close()
