@@ -39,7 +39,6 @@ from openmdao.main.factorymanager import create as fmcreate
 from openmdao.main.constants import SAVE_YAML,SAVE_LIBYAML
 from openmdao.main.constants import SAVE_PICKLE,SAVE_CPICKLE
 
-
 class Container(HierarchyMember):
     """ Base class for all objects having Variables that are visible 
     to the framework"""
