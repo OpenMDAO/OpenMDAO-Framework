@@ -7,11 +7,8 @@ __version__ = '0.1'
 
 import os
 
-from openmdao.main.bool import Bool
-from openmdao.main.component import Component, RUN_OK, RUN_FAILED
-from openmdao.main.dict import Dict
-from openmdao.main.string import String
-from openmdao.main.stringlist import StringList
+from openmdao.main import Component, Bool, Dict, String, StringList
+from openmdao.main.component import RUN_OK, RUN_FAILED
 from openmdao.main.variable import INPUT
 
 import npss
@@ -155,7 +152,7 @@ class NPSScomponent(Component):
                 self._reload_model()
                 return True
             except Exception, exc:
-                self.log_error('Reload caught exception: %s', str(exc))
+                self.error('Reload caught exception: %s', str(exc))
         return False
 
     def pre_delete(self):
@@ -360,15 +357,20 @@ class NPSScomponent(Component):
             self.info('output routed to %s', self.output_filename)
 
         if self.model_filename:
+            # Parse NPSS model.
             self._top.parseFile(self.model_filename)
+            # Add any local model input files to external_files list.
             cwd = os.getcwd()+'/'
             paths = self._top.inputFileList
             paths.sort()
             for path in paths:
                 if path.startswith(cwd):
                     path = path[len(cwd):]
-                    if path not in self.external_files:
-                        self.external_files.append(path)
+                    for meta in self.external_files:
+                        if meta['path'] == path:
+                            break;
+                    else:
+                        self.external_files.append({'path':path, 'input':True})
 
         if is_reload:
             # Need to restore input values.
@@ -446,7 +448,7 @@ class NPSScomponent(Component):
             try:
                 self._reload_model()
             except Exception, exc:
-                self.error('Exception during reload: %s', exc)
+                self.error('Exception during reload: %s', str(exc))
                 status = RUN_FAILED
         else:
             if self.reload_flag:
@@ -454,7 +456,7 @@ class NPSScomponent(Component):
                     reload_req = getattr(self._top, self.reload_flag)
                 except Exception, exc:
                     self.error('Exception getting %s: %s',
-                               self.reload_flag, exc)
+                               self.reload_flag, str(exc))
                     status = RUN_FAILED
                 else:
                     if reload_req:
@@ -462,7 +464,7 @@ class NPSScomponent(Component):
                         try:
                             self._reload_model()
                         except Exception, exc:
-                            self.error('Exception during reload: %s', exc)
+                            self.error('Exception during reload: %s', str(exc))
                             status = RUN_FAILED
 
         if status == RUN_OK:
@@ -472,7 +474,7 @@ class NPSScomponent(Component):
                 else:
                     self._top.run()
             except Exception, exc:
-                self.error('Exception during run: %s', exc)
+                self.error('Exception during run: %s', str(exc))
                 status = RUN_FAILED
 
         NPSScomponent.grab_context()

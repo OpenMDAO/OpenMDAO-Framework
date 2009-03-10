@@ -3,8 +3,8 @@
 import unittest
 
 from openmdao.main.exceptions import ConstraintError
-from openmdao.main import Container,Float
-from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
+from openmdao.main import Container, Float
+from openmdao.main.variable import INPUT, OUTPUT
 
 class FloatTestCase(unittest.TestCase):
 

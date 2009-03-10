@@ -1,6 +1,6 @@
 
 #public symbols
-__all__ = ['import_version','EntryPtLoader','PkgResourcesFactory']
+__all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory']
 
 __version__ = "0.1"
 

@@ -4,10 +4,8 @@ Test for Bool variables.
 
 import unittest
 
-from openmdao.main.container import Container
+from openmdao.main import Container, Bool, Int
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.bool import Bool
-from openmdao.main.int import Int
 
 class BoolTestCase(unittest.TestCase):
 
@@ -83,6 +81,7 @@ class BoolTestCase(unittest.TestCase):
                              " '<class 'openmdao.main.int.Int'>'")
         else:
             self.fail('TypeError expected')
+
 
 if __name__ == '__main__':
     unittest.main()

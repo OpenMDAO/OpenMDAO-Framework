@@ -1,4 +1,7 @@
 
+# NOTE: Order here is important!
+#       Odd import errors could be the result of importing from a module
+#       before importing from those modules it imports from.
 
 from openmdao.main.hierarchy import HierarchyMember
 

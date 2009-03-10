@@ -6,7 +6,7 @@ import StringIO
 
 import openmdao.main.factorymanager as factorymanager
 import openmdao.main.constants as constants
-from openmdao.main import Container,ImportFactory,Float
+from openmdao.main import Container, ImportFactory, Float
 from openmdao.main.interfaces import IContainer
 from openmdao.main.variable import INPUT
 

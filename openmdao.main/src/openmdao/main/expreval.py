@@ -40,9 +40,9 @@ def _trans_lhs(strng, loc, tok, scope, validate):
     
 def _trans_assign(strng, loc, tok, exprobj):
     if tok[0] == '=':
-        exprobj.lhs = tok[1].replace('_@RHS@_','',1)
+        exprobj.lhs = tok[1].replace('_@RHS@_', '', 1)
         exprobj.rhs = tok[2]
-        return [tok[1].replace('_@RHS@_',tok[2],1)]
+        return [tok[1].replace('_@RHS@_', tok[2], 1)]
     else:
         exprobj.lhs = ''.join(tok)
         return tok

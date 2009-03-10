@@ -362,7 +362,7 @@ class NPSSTestCase(unittest.TestCase):
         self.sample.closeSession()
         try:
             self.sample.i = 8
-        except Exception, err:
+        except RuntimeError, err:
             self.assertEqual('no active session', str(err))
         else:
             self.fail('Exception expected')
@@ -378,7 +378,7 @@ class NPSSTestCase(unittest.TestCase):
         child.closeSession()
         try:
             self.sample.i = 8
-        except Exception, err:
+        except RuntimeError, err:
             self.assertEqual('no active session', str(err))
         else:
             self.fail('Exception expected')

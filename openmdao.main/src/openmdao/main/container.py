@@ -36,8 +36,8 @@ from openmdao.main.variable import INPUT
 from openmdao.main.vartypemap import find_var_class
 from openmdao.main.log import logger
 from openmdao.main.factorymanager import create as fmcreate
-from openmdao.main.constants import SAVE_YAML,SAVE_LIBYAML
-from openmdao.main.constants import SAVE_PICKLE,SAVE_CPICKLE
+from openmdao.main.constants import SAVE_YAML, SAVE_LIBYAML
+from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
 
 class Container(HierarchyMember):
     """ Base class for all objects having Variables that are visible 

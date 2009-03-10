@@ -4,7 +4,7 @@ import unittest
 
 import numpy
 
-from openmdao.main import Container,ArrayVariable,Float
+from openmdao.main import Container, ArrayVariable, Float
 from openmdao.main.variable import INPUT, OUTPUT
 
 class ArrayVarTestCase(unittest.TestCase):

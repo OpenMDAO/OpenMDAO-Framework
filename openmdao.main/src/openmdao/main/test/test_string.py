@@ -3,7 +3,7 @@
 import unittest
 
 from openmdao.main.exceptions import ConstraintError
-from openmdao.main import Container,String
+from openmdao.main import Container, String
 from openmdao.main.variable import Variable, INPUT, OUTPUT
 
 class StringTestCase(unittest.TestCase):

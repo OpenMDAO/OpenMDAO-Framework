@@ -10,9 +10,7 @@ import os.path
 from zope.interface import implements
 
 from openmdao.main.interfaces import IComponent, IAssembly
-from openmdao.main import Container
-from openmdao.main.string import String
-from openmdao.main.stringlist import StringList
+from openmdao.main import Container, String
 from openmdao.main.variable import INPUT
 from openmdao.main.constants import SAVE_PICKLE
 
@@ -33,7 +31,6 @@ RUN_INTERRUPTED = 3
 class Component (Container):
     """This is the base class for all objects containing Variables that are 
        accessible to the OpenMDAO framework and are 'runnable'.
-
     """
 
     implements(IComponent)
@@ -46,14 +43,13 @@ class Component (Container):
         self._input_changed = True
         self._dir_stack = []
 
+        # List of meta-data dictionaries.
+        self.external_files = []
+
         self.directory = directory  # For PyLint.
         String('directory', self,
                desc='If non-null, the directory to execute in.',
                default=directory, iostatus=INPUT)
-
-        StringList('external_files', self,
-                   desc='External files generated or used by this component',
-                   default=[], iostatus=INPUT)
 
         if self.directory:
             if not os.path.exists(self.directory):

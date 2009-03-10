@@ -1,9 +1,9 @@
 
 import numpy
 
-from openmdao.main.expreval import translate_expr,ExprEvaluator
-from openmdao.main import Container,Component
-from openmdao.main import ArrayVariable,Float,ContainerVariable
+from openmdao.main.expreval import translate_expr, ExprEvaluator
+from openmdao.main import Container, Component
+from openmdao.main import ArrayVariable, Float
 from openmdao.main.variable import INPUT
 
 """
@@ -21,17 +21,6 @@ funct is a callable
 comp is a Component
 x is an float variable
 """
-
-import numpy
-
-from openmdao.main.expreval import translate_expr, ExprEvaluator
-from openmdao.main.container import Container
-from openmdao.main.component import Component
-from openmdao.main.variable import INPUT
-from openmdao.main.arrayvar import ArrayVariable
-from openmdao.main.float import Float
-from openmdao.main.containervar import ContainerVariable
-
 
 top = Container('top', None)
 top.a = Container('a', top)
