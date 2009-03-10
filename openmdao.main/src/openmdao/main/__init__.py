@@ -1,9 +1,14 @@
 
+# NOTE: Order here is important!
+#       Odd import errors could be the result of importing from a module
+#       before importing from those modules it imports from.
 
 from openmdao.main.hierarchy import HierarchyMember
 
 # Variable stuff
 from openmdao.main.variable import Variable
+from openmdao.main.bool import Bool
+from openmdao.main.dict import Dict
 from openmdao.main.float import Float
 from openmdao.main.int import Int
 from openmdao.main.string import String
@@ -40,6 +45,8 @@ __all__ = ['HierarchyMember',
            'ImportFactory',
            'PkgResourcesFactory',
            'Variable',
+           'Bool',
+           'Dict',
            'Float',
            'Int',
            'String',

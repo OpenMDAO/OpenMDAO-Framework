@@ -6,10 +6,10 @@ import unittest
 import numpy
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.component import Component
+from openmdao.main.component import Component, RUN_OK
 from openmdao.main.assembly import Assembly
 from openmdao.main.arrayvar import ArrayVariable
-from openmdao.main.variable import INPUT,OUTPUT
+from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.float import Float
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
@@ -48,10 +48,10 @@ class OptRosenSuzukiComponent(Component):
     # pylint: disable-msg=C0103
     def __init__(self, name, parent=None, desc=None):
         super(OptRosenSuzukiComponent, self).__init__(name, parent, desc)
-        self.x = numpy.array([1.,1.,1.,1.],dtype=float)
+        self.x = numpy.array([1., 1., 1., 1.], dtype=float)
         self.result = 0.
-        ArrayVariable('x',self,iostatus=INPUT,entry_type=float)
-        Float('result',self,iostatus=OUTPUT)
+        ArrayVariable('x', self,iostatus=INPUT, entry_type=float)
+        Float('result', self, iostatus=OUTPUT)
         
         self.opt_objective = 6.
         self.opt_design_vars = [0., 1., 2., -1.]
@@ -62,17 +62,17 @@ class OptRosenSuzukiComponent(Component):
                        self.x[1]**2 - 5.*self.x[1] +
                        2.*self.x[2]**2 - 21.*self.x[2] + 
                        self.x[3]**2 + 7.*self.x[3] + 50)
-        
-        
+        return RUN_OK
+
+
 class CONMINdriverTestCase(unittest.TestCase):
     """test CONMIN optimizer component"""
 
     def setUp(self):
-        self.top = Assembly('top',None)
+        self.top = Assembly('top', None)
         comp = OptRosenSuzukiComponent('comp', self.top)
-        self.top.add_child(comp)
         self.top.workflow.add_node(comp)
-        self.top.add_child(CONMINdriver('driver'))
+        CONMINdriver('driver', self.top)
         self.top.driver.iprint = 0
         self.top.driver.maxiters = 30
         
@@ -82,10 +82,10 @@ class CONMINdriverTestCase(unittest.TestCase):
     def test_opt1(self):
         """Rosen-Suzuki optimization using CONMIN"""
         self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]','comp.x[1]',
-                                       'comp.x[2]','comp.x[3]']
+        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
+                                       'comp.x[2]', 'comp.x[3]']
         self.top.driver.lower_bounds = [-10, -10, -10, -10]
-        self.top.driver.upper_bounds = [99,99,99,99]
+        self.top.driver.upper_bounds = [99, 99, 99, 99]
         
         # pylint: disable-msg=C0301
         self.top.driver.constraints = [
@@ -124,8 +124,8 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.fail('RuntimeError expected')
     
     def test_no_objective(self):
-        self.top.driver.design_vars = ['comp.x[0]','comp.x[1]',
-                                       'comp.x[2]','comp.x[3]']
+        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
+                                       'comp.x[2]', 'comp.x[3]']
         try:
             self.top.run()
         except RuntimeError, err:
@@ -152,7 +152,7 @@ class CONMINdriverTestCase(unittest.TestCase):
     
     def test_bad_design_vars(self):
         try:
-            self.top.driver.design_vars = ['comp_bogus.x[0]','comp.x[1]']
+            self.top.driver.design_vars = ['comp_bogus.x[0]', 'comp.x[1]']
         except RuntimeError, err:
             self.assertEqual(str(err), 
                     "top.driver: design variable 'comp_bogus.x[0]' is invalid")
@@ -169,9 +169,9 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.fail('RuntimeError expected')
             
     def test_lower_bounds_mismatch(self):
-        self.top.driver.design_vars = ['comp.x[0]','comp.x[1]']
+        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]']
         try:
-            self.top.driver.lower_bounds = [0,0,0,0]
+            self.top.driver.lower_bounds = [0, 0, 0, 0]
         except ValueError, err:
             self.assertEqual(str(err),
                              "top.driver: size of new lower bound array"+
@@ -180,7 +180,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.fail('ValueError expected')
             
     def test_upper_bounds_mismatch(self):
-        self.top.driver.design_vars = ['comp.x[0]','comp.x[1]']
+        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]']
         try:
             self.top.driver.upper_bounds = [99]
         except ValueError, err:
@@ -189,13 +189,10 @@ class CONMINdriverTestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')
     
+
 if __name__ == "__main__":
     unittest.main()
     #suite = unittest.TestLoader().loadTestsFromTestCase(ContainerTestCase)
     #unittest.TextTestRunner(verbosity=2).run(suite)    
 
 
-
-
-    
-    

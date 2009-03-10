@@ -10,14 +10,14 @@ __version__ = "0.1"
 
 from scipy.optimize.cobyla import fmin_cobyla
 
-from openmdao.mainr import Driver
+from openmdao.main import Driver
 from openmdao.main.component import STATE_WAITING, RUN_UNKNOWN
 from openmdao.main import Float
 from openmdao.main import String
 from openmdao.main import StringList
 from openmdao.main import Int
 from openmdao.main.variable import INPUT
-from openmdao.main.transexpr import translate_expr
+from openmdao.main.expreval import translate_expr
 
 # if our globals dict doesn't contain __builtins__, python will 
 # copy current global dict into it

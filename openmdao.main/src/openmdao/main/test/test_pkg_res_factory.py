@@ -59,16 +59,16 @@ class PkgResFactoryTestCase(unittest.TestCase):
                                                            'openmdao','main',
                                                            'plugins')],
                                              ['openmdao.dumbplugins'])
-        foo = fact.create('foo.Comp1Plugin',name='foo',version='1.0')
+        foo = fact.create('foo.Comp1Plugin', name='foo', version='1.0')
         self.assertEqual(foo.version, '1.0')
         
         # now try to create an object that requires a conflicting version of foo
         self.assertRaises(VersionConflict,
-                          fact.create,'foo.Comp1Plugin',name='foo2',
+                          fact.create, 'foo.Comp1Plugin', name='foo2',
                           version='1.4')
         
         # now request a non-existent version of foo
-        foo10 = fact.create('foo.Comp1Plugin',name='foo2',version='10.5')
+        foo10 = fact.create('foo.Comp1Plugin', name='foo2', version='10.5')
         self.assertEqual(foo10, None)
         
     def test_get_loaders(self):
@@ -78,7 +78,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         dist = working_set.find(Requirement.parse('openmdao.main'))
         fact = prfactory.PkgResourcesFactory([os.path.join(dist.location,
                                                            'openmdao',
-                                                           'main','plugins')],
+                                                           'main', 'plugins')],
                                              ['openmdao.dumbplugins'])
         # first, look for active loaders. list should be empty
         dumb_loaders = fact.get_loaders('openmdao.dumbplugins')
@@ -94,7 +94,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
 
         # now, create a plugin object, which will make its loader active
         comp = fact.create('bar.Comp1Plugin')
-        self.assertEqual(comp.version,'1.0')
+        self.assertEqual(comp.version, '1.0')
         
         # now there should be one active loader (its ctor should not be None)
         dumb_loaders = fact.get_loaders('openmdao.dumbplugins')
@@ -109,4 +109,3 @@ class PkgResFactoryTestCase(unittest.TestCase):
 if __name__ == "__main__":
     unittest.main()
 
-    

@@ -2,7 +2,7 @@
 
 import unittest
 
-from openmdao.main.constraint import Constraint,MinConstraint,MaxConstraint
+from openmdao.main.constraint import MinConstraint, MaxConstraint
 from openmdao.main.constraint import MinLengthConstraint, MaxLengthConstraint
 from openmdao.main.exceptions import ConstraintError
 
@@ -36,8 +36,8 @@ class ConstraintTestCase(unittest.TestCase):
             
     def test_min_length(self):
         mincon = MinLengthConstraint(1)
-        mincon.test([1,2])
-        mincon.test((3,4,5))
+        mincon.test([1, 2])
+        mincon.test((3, 4, 5))
         try:
             mincon.test([])
         except ConstraintError, err:
@@ -53,10 +53,10 @@ class ConstraintTestCase(unittest.TestCase):
             
     def test_max_length(self):
         maxcon = MaxLengthConstraint(3)
-        maxcon.test([1,2,3])
-        maxcon.test((3,4))
+        maxcon.test([1, 2, 3])
+        maxcon.test((3, 4))
         try:
-            maxcon.test([1,2,3,4])
+            maxcon.test([1, 2, 3, 4])
         except ConstraintError, err:
             self.assertEqual(str(err), "max length constraint '4 <= 3' has been violated")
         else:

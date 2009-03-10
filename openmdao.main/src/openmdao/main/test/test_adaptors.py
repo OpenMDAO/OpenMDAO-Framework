@@ -74,8 +74,8 @@ class One(object):
     s = 'foobar'
     
     def dump(self):
-        print 'f = ',self.f
-        print 's = ',self.s
+        print 'f = ', self.f
+        print 's = ', self.s
 
 class Two(object):
     implements(IAdapteeTwo)
@@ -87,7 +87,7 @@ two = Two()
 from zope.component import getMultiAdapter
 
 
-ma = getMultiAdapter((one,otherone), IFunctionality)
+ma = getMultiAdapter((one, otherone), IFunctionality)
 assert(isinstance(ma, MyFunctionality))
 
 one.f = 99.7

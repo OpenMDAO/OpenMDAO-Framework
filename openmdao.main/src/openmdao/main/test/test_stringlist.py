@@ -3,7 +3,7 @@
 import unittest
 
 from openmdao.main.exceptions import ConstraintError
-from openmdao.main import Container,StringList
+from openmdao.main import Container, StringList
 from openmdao.main.variable import Variable, INPUT, OUTPUT
 
 class StringListTestCase(unittest.TestCase):
@@ -11,7 +11,7 @@ class StringListTestCase(unittest.TestCase):
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.hobj = Container('h1', None)
-        self.hobj.internal_sl1 = ["abcd","def"]
+        self.hobj.internal_sl1 = ["abcd", "def"]
         self.hobj.internal_sl2 = []
         self.hobj.internal_sl3 = ["zz"]
         self.sl1 = StringList('sl1', self.hobj, INPUT, 
@@ -29,16 +29,16 @@ class StringListTestCase(unittest.TestCase):
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual(["abcd","def"],self.sl1.value)
+        self.assertEqual(["abcd", "def"], self.sl1.value)
         # check default value
-        self.assertEqual(["foo"],self.sl1.default)
+        self.assertEqual(["foo"], self.sl1.default)
         self.sl1.value = self.sl2.value
-        self.assertEqual([],self.sl1.value)
+        self.assertEqual([], self.sl1.value)
         # make sure value gets transferred to internal variable
-        self.assertEqual([],self.hobj.internal_sl1)
+        self.assertEqual([], self.hobj.internal_sl1)
         self.sl1.value = ["qq"]
-        self.assertEqual(["qq"],self.sl1.value)
-        self.assertEqual(["qq"],self.hobj.internal_sl1)
+        self.assertEqual(["qq"], self.sl1.value)
+        self.assertEqual(["qq"], self.hobj.internal_sl1)
     
     def test_get(self):
         val = self.sl1.get(None, [1])
@@ -48,9 +48,9 @@ class StringListTestCase(unittest.TestCase):
         
     def test_set(self):
         self.sl1.set(None, '___', [1])
-        self.assertEqual(["abcd","___"], self.sl1.value)
+        self.assertEqual(["abcd", "___"], self.sl1.value)
         self.sl1.set('value', '000', [0])
-        self.assertEqual(["000","___"], self.sl1.value)
+        self.assertEqual(["000", "___"], self.sl1.value)
         
     def test_bad_set(self):
         try:
@@ -83,7 +83,7 @@ class StringListTestCase(unittest.TestCase):
         
     def test_bad_assignment(self):
         try:
-            self.sl1.value = ["foo",1,2]
+            self.sl1.value = ["foo", 1, 2]
         except ValueError, err:
             self.assertEqual(str(err), 
                 "h1.sl1: list contains non-string entries")
@@ -99,7 +99,7 @@ class StringListTestCase(unittest.TestCase):
         else:
             self.fail('ConstraintError expected')
         try:
-            self.sl3.value = ["a","b","c","d","e","f","g"]
+            self.sl3.value = ["a", "b", "c", "d", "e", "f", "g"]
         except ConstraintError, err:
             self.assertEqual(str(err), 
                 "h1.sl3: max length constraint '7 <= 5' has been violated")
@@ -122,7 +122,7 @@ class StringListTestCase(unittest.TestCase):
     
     def test_constraint_violation_setvar(self):
         """violate a constraint using setvar"""
-        self.hobj.internal_sl2 = ["a","b","c","d","e","f","g"]
+        self.hobj.internal_sl2 = ["a", "b", "c", "d", "e", "f", "g"]
         self.sl3.validate_var(self.sl2) # should be OK since no value xfer
         try:
             self.sl3.setvar(None, self.sl2)
@@ -133,7 +133,7 @@ class StringListTestCase(unittest.TestCase):
             self.fail("ValueError expected")
 
     def test_bad_default(self):
-        self.hobj.internal_sl4 = ['a','b','c','d','e','f']
+        self.hobj.internal_sl4 = ['a', 'b', 'c', 'd', 'e', 'f']
         try:
             sl4 = StringList('sl4', self.hobj, INPUT, 
                              ref_name='internal_sl4',
