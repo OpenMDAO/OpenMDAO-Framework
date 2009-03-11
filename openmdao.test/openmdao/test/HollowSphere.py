@@ -1,5 +1,6 @@
 from openmdao.main.component import Component, RUN_OK
-from openmdao.main.variable import Float, INPUT, OUTPUT
+from openmdao.main.float import Float
+from openmdao.main.variable import INPUT, OUTPUT
 from math import pi
 
 class HollowSphere(Component):
@@ -13,15 +14,14 @@ class HollowSphere(Component):
         self.surface_area = None
         
         # set up interface to the framework
-        Float('radius',INPUT,parent=self,units='cm')
-        Float('thickness',INPUT,parent=self,units='cm')
+        Float('radius', self, INPUT, units='cm')
+        Float('thickness', self, INPUT, units='cm')
         
-        Float('inner_volume',OUTPUT,parent=self,units='cm^3')
-        Float('volume',OUTPUT,parent=self,units='cm^3')
-        Float('solid_volume',OUTPUT,parent=self,units='cm^3')
-        Float('surface_area',OUTPUT,parent=self,units='cm^2')
+        Float('inner_volume', self, OUTPUT, units='cm^3')
+        Float('volume', self, OUTPUT, units='cm^3')
+        Float('solid_volume', self, OUTPUT, units='cm^3')
+        Float('surface_area', self, OUTPUT, units='cm^2')
 
-        
     def execute(self):
         self.surface_area = 4.0*pi*self.radius*self.radius
         self.inner_volume = 4.0/3.0*pi*self.radius^3

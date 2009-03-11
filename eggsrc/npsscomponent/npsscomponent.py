@@ -368,7 +368,7 @@ class NPSScomponent(Component):
                     path = path[len(cwd):]
                     for meta in self.external_files:
                         if meta['path'] == path:
-                            break;
+                            break
                     else:
                         self.external_files.append({'path':path, 'input':True})
 

@@ -31,7 +31,7 @@ from openmdao.main.containervar import ContainerVariable
 
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.case import Case, FileCaseIterator
+from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 
 
 __all__ = ['HierarchyMember',
@@ -54,5 +54,7 @@ __all__ = ['HierarchyMember',
            'ArrayVariable',
            'ContainerVariable',
            'ExprEvaluator',
-           'FileCaseIterator',]
+           'Case',
+           'FileCaseIterator',
+           'ListCaseIterator',]
 

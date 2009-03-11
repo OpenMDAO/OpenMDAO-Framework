@@ -115,7 +115,7 @@ class Variable(HierarchyMember):
         """
         if self.iostatus == OUTPUT:
             raise RuntimeError(self.get_pathname()+
-                               'is an OUTPUT Variable and cannot be set.')
+                               ' is an OUTPUT Variable and cannot be set.')
         setattr(self._refparent, self.ref_name, self._pre_assign(var))
         self._set_count += 1
         if self.observers is not None:

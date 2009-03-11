@@ -17,7 +17,7 @@ class Case(object):
     executing the case.
 
     """
-    def __init__(self, inputs=None, outputs=None):
+    def __init__(self, inputs=None, outputs=None, status=None, msg=None):
         """If inputs or outputs are supplied to the constructor, each must be an
         iterator that returns (name,index,value) tuples. 
         
@@ -26,10 +26,13 @@ class Case(object):
         self.outputs = outputs or [] # a list of name,index,value tuples 
                                      # Values for each output will be filled 
                                      # in after the case completes
-        self.status = None
-        self.msg = None
+        self.status = status
+        self.msg = msg
 
-
+    def __str__(self):
+        return 'Case:\n    inputs'+str(self.inputs) + \
+               '\n    outputs'+str(self.outputs) + \
+               '\n    status='+str(self.status)+', msg:'+str(self.msg)
 
 
 class FileCaseIterator(object):
@@ -37,6 +40,8 @@ class FileCaseIterator(object):
     format below, where a blank line indicates a separation between two cases.
     Whitespace outside of quotes is ignored.  Outputs are indicated
     by the lack of an assignment.
+    
+    TODO: convert value strings to appropriate type
     
     TODO: allow multi-line values (strings, arrays, etc.) on right hand side
     
@@ -60,17 +65,21 @@ class FileCaseIterator(object):
     implements(ICaseIterator)
     
     def __init__(self, scope, fname):
-        self.f = open(fname, 'r')
+        if isinstance(fname, basestring):
+            self.inp = open(fname, 'r')
+        else:
+            self.inp = fname
         self.scope = scope
         self.line_number = 0
     
     def __iter__(self):
-        return self._next_case
+        return self._next_case()
         
     def _next_case(self):
+        """ Generator which returns cases as they are seen in the stream. """
         inputs = []
         outputs = []
-        for line in self.f:
+        for line in self.inp:
             self.line_number += 1
             line = line.strip()
             if line.startswith('#'):  # comment line
@@ -86,9 +95,33 @@ class FileCaseIterator(object):
             else:
                 parts = line.split('=')
                 if len(parts) > 1:        # it's an input assignment
-                    inputs.append((parts[0], None, parts[1]))
+                    inputs.append((parts[0].strip(), None, parts[1].strip()))
                 else:
-                    outputs.append(parts[0], None, None)
+                    outputs.append((parts[0].strip(), None, None))
+        if len(inputs) > 0:
+            newcase = Case(inputs, outputs)
+            inputs = []
+            outputs = []
+            yield newcase
                     
 
-                
+class ListCaseIterator(object):                
+    """ An iterator that returns Case objects from a passed-in list of cases.
+    This can be useful for runtime-generated cases from an optimizer, etc.
+
+    """
+
+    implements(ICaseIterator)
+
+    def __init__(self, cases):
+        self._cases = []
+        self._cases.extend(cases)
+
+    def __iter__(self):
+        return self._next_case()
+
+    def _next_case(self):
+        """ Generator which just returns list items in-order. """
+        while self._cases:
+            yield self._cases.pop(0)
+
