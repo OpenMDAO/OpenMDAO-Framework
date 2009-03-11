@@ -6,14 +6,16 @@ __version__ = "0.1"
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
-from pkg_resources import working_set, get_entry_map
+from pkg_resources import working_set, get_entry_map, get_distribution
 from pkg_resources import Environment, Requirement, DistributionNotFound
     
 from openmdao.main import Factory
+from openmdao.main.log import logger
 
 
-def import_version(req, env=None):
-    """Import the project version, specified in the Requirement req, if it can
+def import_version(modname, req, env=None):
+    """Import the specified module from the package specified in the Requirement 
+    req, if it can
     be found in the current WorkingSet or in the specified Environment. If a
     conflicting version already exists in the WorkingSet, a VersionConflict
     will be raised. If a distrib cannot be found matching the requirement,
@@ -34,8 +36,9 @@ def import_version(req, env=None):
             working_set.add(dist, entry=None, insert=False)  
             dist.activate()
                 
-    for dist in needed:
-        __import__(dist.project_name)           
+#    dist = get_distribution(req)
+#    __import__(dist.project_name)
+    __import__(modname)
 
 
 class EntryPtLoader(object):
@@ -55,7 +58,8 @@ class EntryPtLoader(object):
         point, and check for conflicting version dependencies before loading.
         """
         if self.ctor is None:
-            import_version(self.dist.as_requirement(), env)
+            import_version(self.entry_pt.module_name,
+                           self.dist.as_requirement(), env)
             self.ctor = self.entry_pt.load(require=False, env=env)
             
         return self.ctor(name)
@@ -72,8 +76,9 @@ class PkgResourcesFactory(Factory):
         super(PkgResourcesFactory, self).__init__()
         self.env = Environment(search_path)
         self._loaders = {}
-        for group in groups:
-            self._get_plugin_info(self.env, group)
+        if isinstance(groups,list):
+            for group in groups:
+                self._get_plugin_info(self.env, group)
         
         
     def create(self, typ, name=None, version=None, server=None, 
@@ -84,14 +89,18 @@ class PkgResourcesFactory(Factory):
         if server is not None or res_desc is not None:
             return None
         
-        if version is None:
-            return self._loaders[typ][0].create(self.env, name)
-        
-        for entry in self._loaders[typ]:
-            if entry.dist in Requirement.parse(entry.dist.project_name+
-                                               '=='+version):
-                return entry.create(self.env, name)
+        try:
+            if version is None:
+                return self._loaders[typ][0].create(self.env, name)
 
+            for entry in self._loaders[typ]:
+                if entry.dist in Requirement.parse(entry.dist.project_name+
+                                                   '=='+version):
+                    return entry.create(self.env, name)
+        except KeyError:
+            pass
+        return None
+            
     
     def _get_plugin_info(self, pkg_env, groupname):
         """Given a search path and an entry point group name, fill the
@@ -103,7 +112,7 @@ class PkgResourcesFactory(Factory):
             # pkg_env[name] gives us a list of distribs for that package name
             for dist in pkg_env[name]:
                 entry_dict = get_entry_map(dist, group=groupname)
-                for entry_pt in entry_dict.values():
+                for nm,entry_pt in entry_dict.items():
                     if len(entry_pt.attrs) > 0:
                         ename = '.'.join([entry_pt.module_name]+
                                          list(entry_pt.attrs))

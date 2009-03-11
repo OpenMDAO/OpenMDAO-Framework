@@ -3,6 +3,7 @@ import os
 import os.path
 import sys
 import stat
+import fnmatch
 import ConfigParser
 from pkg_resources import working_set, get_entry_map
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
@@ -44,6 +45,8 @@ def _wingify(obj, left_margin=0):
                 p = left_margin*" "+p+"'\\"
                 flat.append(p)
             flat[len(flat)-1] = flat[len(flat)-1][:-2]
+    if " ')}" in flat[-1]:
+        flat[-1] = flat[-1].replace(" ')}"," )}")
     return '\n'.join(flat)
 
     
@@ -62,8 +65,11 @@ class WingProj(object):
         self.name = name
         self.options = options
         self.branchdir = os.path.split(buildout['buildout']['directory'])[0]
-        dev_eggs = buildout['buildout']['develop'].strip().splitlines()
-        self.dev_eggs = [os.path.abspath(f) for f in dev_eggs]
+        dev_egg_dir = buildout['buildout']['develop-eggs-directory']
+#        dev_eggs = buildout['buildout']['develop'].strip().splitlines()
+        dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
+        # grab the first line of each dev egg link file
+        self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() for f in dev_eggs]
         self.executable = buildout['buildout']['executable']
         
         # try to find the default.wpr file in the user's home directory
@@ -78,7 +84,7 @@ class WingProj(object):
         self.wingproj = os.path.join(home, '.wingide3', 'default.wpr')    
         if not os.path.isfile(self.wingproj):
             self.wingproj = os.path.join(self.branchdir,
-                                         'util','new_wing_proj.wpr')
+                                         'misc','new_wing_proj.wpr')
         
         # build up a list of all egg dependencies we find in other recipes in this
         # buildout. We just look for the keyword 'eggs' and look into the eggs
@@ -88,7 +94,7 @@ class WingProj(object):
         ws = WorkingSet()
         for entry,val in buildout.items():
             if 'eggs' in val:
-                eggs = val['eggs'].split()
+                eggs = [x.strip() for x in val['eggs'].split()]
                 for egg in eggs:
                     self._add_deps(self.eggs, env, ws, Requirement.parse(egg))
 

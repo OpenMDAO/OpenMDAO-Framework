@@ -2,12 +2,10 @@
 
 import unittest
 
-import openmdao.main.factorymanager as factorymanager
 from openmdao.main.component import Component, RUN_OK
-from openmdao.main import Assembly, ImportFactory, Float, String
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main import Assembly,Float,String
+from openmdao.main.variable import INPUT,OUTPUT
 
-factorymanager.register_factory(ImportFactory())
 
 class DummyComp(Component):
     def __init__(self, name, nest=False):

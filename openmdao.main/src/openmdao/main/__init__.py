@@ -3,6 +3,8 @@
 #       Odd import errors could be the result of importing from a module
 #       before importing from those modules it imports from.
 
+
+from openmdao.main.log import logger
 from openmdao.main.hierarchy import HierarchyMember
 
 # Variable stuff
@@ -15,6 +17,10 @@ from openmdao.main.string import String
 from openmdao.main.stringlist import StringList
 from openmdao.main.arrayvar import ArrayVariable
 
+from openmdao.main.factory import Factory
+from openmdao.main.importfactory import ImportFactory
+from openmdao.main.pkg_res_factory import PkgResourcesFactory
+
 from openmdao.main.container import Container
 from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
@@ -23,9 +29,6 @@ from openmdao.main.workflow import Workflow
 
 from openmdao.main.exceptions import ConstraintError
 
-from openmdao.main.factory import Factory
-from openmdao.main.importfactory import ImportFactory
-from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.containervar import ContainerVariable
 

@@ -7,17 +7,9 @@ import numpy
 
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.component import Component, RUN_OK
-from openmdao.main.assembly import Assembly
-from openmdao.main.arrayvar import ArrayVariable
-from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.float import Float
+from openmdao.main import Assembly,ArrayVariable,Float
+from openmdao.main.variable import INPUT,OUTPUT
 from openmdao.lib.drivers.conmindriver import CONMINdriver
-
-# we need to add the ImportFactory to the factorymanager to be 
-# able to find plugin modules
-import openmdao.main.factorymanager as factorymanager
-from openmdao.main.importfactory import ImportFactory
-factorymanager.register_factory(ImportFactory())
 
 class OptRosenSuzukiComponent(Component):
     """ From the CONMIN User's Manual:
@@ -188,8 +180,8 @@ class CONMINdriverTestCase(unittest.TestCase):
                              " (1) does not match number of design vars (2)")
         else:
             self.fail('ValueError expected')
-    
 
+    
 if __name__ == "__main__":
     unittest.main()
     #suite = unittest.TestLoader().loadTestsFromTestCase(ContainerTestCase)

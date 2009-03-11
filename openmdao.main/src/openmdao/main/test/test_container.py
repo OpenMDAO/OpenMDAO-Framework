@@ -4,9 +4,8 @@ import unittest
 import StringIO
 
 
-import openmdao.main.factorymanager as factorymanager
 import openmdao.main.constants as constants
-from openmdao.main import Container, ImportFactory, Float
+from openmdao.main import Container,Float
 from openmdao.main.interfaces import IContainer
 from openmdao.main.variable import INPUT
 
@@ -136,7 +135,6 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(names, ['root.c2.c21', 'root.c2.c22'])        
 
     def test_create(self):
-        factorymanager.register_factory(ImportFactory())
         new_obj = self.root.create('openmdao.main.component.Component','mycomp')
         self.assertEqual(new_obj.__class__.__name__, 'Component')
         new_obj.run()
