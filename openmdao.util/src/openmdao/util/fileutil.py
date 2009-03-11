@@ -3,7 +3,7 @@ Misc. file utility routines
 """
 import os,sys
 import linecache
-from fnmatch import fnmatchcase
+import fnmatch
 from os.path import islink, isdir
 
 
@@ -17,7 +17,7 @@ def glob_walk(directory, include_list):
     def included(name, include_list):
        #True if the given name is matched by the include list
        for m in include_list:
-          if fnmatchcase(name, m): 
+          if fnmatch.fnmatchcase(name, m): 
               return True
        return False
        
@@ -40,7 +40,7 @@ def excluding_walk(ddir,excludeList):
     def included(name,excludeList):
        #False if the given name is part of the exlude list
        for m in excludeList:
-          if fnmatchcase(name, m): return False
+          if fnmatch.fnmatchcase(name, m): return False
        return True
        
     if included(os.path.basename(ddir),excludeList):
@@ -68,6 +68,14 @@ def dirtreegen(ddir):
        else:
            yield fullpath
 
+
+def find_files(pat, startdir):
+    """Return a list of files (using a generator) that match
+    the given glob pattern.
+    """
+    for path, dirlist, filelist in os.walk(startdir):
+        for name in fnmatch.filter(filelist, pat):
+            yield os.path.join(path.name)
 
 
 def traceit(frame, event, arg):
