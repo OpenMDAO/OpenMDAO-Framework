@@ -30,3 +30,8 @@ docs/srcdocs/packages/openmdao.main.rst
 docs/srcdocs/packages/openmdao.recipes.rst
 eggsrc/grcutils/build
 eggsrc/m4/examples/meta_doe*
+openmdao.lib/openmdao.lib.egg-info.moved
+docs/srcdocs/packages/openmdao.lib.rst
+docs/srcdocs/packages/openmdao.main.rst
+docs/srcdocs/packages/openmdao.recipes.rst
+docs/srcdocs/packages/pyNPSS.rst

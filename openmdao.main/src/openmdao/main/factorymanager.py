@@ -10,6 +10,9 @@ __all__ = ["create", "get_factory_names", "register_factory"]
 __version__ = "0.1"
 
 
+from openmdao.main import ImportFactory
+from openmdao.main import PkgResourcesFactory
+
 _factories = []
 search_path = []
 
@@ -42,3 +45,8 @@ def register_factory(fct):
     if fct not in _factories:
         _factories.append(fct)      
           
+
+# by default, register factories that create things via pkg_resources 
+# and simple imports
+register_factory(PkgResourcesFactory())
+register_factory(ImportFactory())

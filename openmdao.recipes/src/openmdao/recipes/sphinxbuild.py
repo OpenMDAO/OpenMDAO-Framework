@@ -4,7 +4,8 @@ import os.path
 import sys
 import stat
 from subprocess import check_call, Popen
-from fnmatch import fnmatchcase
+import fnmatch
+from pkg_resources import working_set, Environment
 
 import openmdao.util.pkg_sphinx_info as pkg_sphinx_info
 
@@ -39,7 +40,13 @@ class SphinxBuild(object):
                                                                    'docs',
                                                                    'python-scripts',
                                                                    'sphinx-build')
-        
+        egg_dir = buildout['buildout']['eggs-directory']
+        dev_egg_dir = buildout['buildout']['develop-eggs-directory']
+        dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
+        # grab the first line of each dev egg link file
+        self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() for f in dev_eggs]
+        self.env = Environment(self.dev_eggs+[os.path.join(egg_dir,x) 
+                          for x in fnmatch.filter(os.listdir(egg_dir),'*.egg')])
                
     def install(self):
         
@@ -49,7 +56,7 @@ class SphinxBuild(object):
         if not os.path.isdir(self.docdir):
             raise RuntimeError('doc directory '+self.docdir+' not found')
             
-        self.write_src_docs()
+        self._write_src_docs()
             
         os.chdir(self.docdir)        
         
@@ -100,10 +107,10 @@ class SphinxBuild(object):
         
     update = install
 
-    def write_src_docs(self):
+    def _write_src_docs(self):
         for pack in self.packages.split():
             f = open(os.path.join(self.docdir,'srcdocs','packages',
                                   pack+'.rst'),'w')
-            pkg_sphinx_info(self.branchdir, pack, f, 
+            pkg_sphinx_info(self.env,self.branchdir, pack, f, 
                             show_undoc=True, underline='-')
             f.close()

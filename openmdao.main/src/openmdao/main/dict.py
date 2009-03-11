@@ -3,7 +3,7 @@ Dict: a Variable wrapper for a dictionary.
 """
 
 #public symbols
-__all__ = []
+__all__ = ['Dict']
 __version__ = "0.1"
 
 from openmdao.main.variable import Variable, UNDEFINED

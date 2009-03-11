@@ -1,6 +1,6 @@
 
 from openmdao.main.component import Component, RUN_OK
-from openmdao.main.float import Float
+from openmdao.main import Float
 from openmdao.main.variable import INPUT, OUTPUT
 
 class Box(Component):
@@ -11,20 +11,20 @@ class Box(Component):
         self.depth = 1
         self.thickness = 0.05
         self.density = .01
-        self.mass = None
-        self.volume = None
-        self.surface_area = None
+        self.mass = 0.
+        self.volume = 0.
+        self.surface_area = 0.
         
         # set up interface to the framework
         Float('width', self, INPUT, units='cm')
         Float('height', self, INPUT, units='cm')
         Float('depth', self, INPUT, units='cm')
         Float('thickness', self, INPUT, units='cm')
-        Float('density', self, INPUT, units='g/cm^3')
+        Float('density', self, INPUT, units='g/cm**3')
         
         Float('mass', self, OUTPUT, units='g')
-        Float('volume', self, OUTPUT, units='cm^3')
-        Float('surface_area', self, OUTPUT, units='cm^2')
+        Float('volume', self, OUTPUT, units='cm**3')
+        Float('surface_area', self, OUTPUT, units='cm**2')
         
     def execute(self):
         self.surface_area = (self.width*(self.height+self.depth)+

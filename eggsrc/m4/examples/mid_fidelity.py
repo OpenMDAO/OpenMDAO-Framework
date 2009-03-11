@@ -7,11 +7,7 @@ from openmdao.main.variable import INPUT, OUTPUT
 
 from m4.doe import DOE
 from m4.mid_fidelity import MidFidelity 
-from m4.test_components import Model_A2d, Model_B2d
-
-import openmdao.main.factorymanager as factorymanager
-from openmdao.main.importfactory import ImportFactory
-factorymanager.register_factory(ImportFactory())
+from m4.dummy_components import Model_A2d, Model_B2d
 
 class Model(Assembly):
     """ Simple M4 variable fidelity example.  """

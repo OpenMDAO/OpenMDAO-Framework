@@ -6,11 +6,7 @@ from openmdao.main import Assembly
 from openmdao.main.component import RUN_OK
 
 import m4.doe
-import m4.test_components
-
-import openmdao.main.factorymanager as factorymanager
-from openmdao.main.importfactory import ImportFactory
-factorymanager.register_factory(ImportFactory())
+import m4.dummy_components
 
 class Model(Assembly):
     """ Simple M4 DOE example.  """
@@ -19,7 +15,7 @@ class Model(Assembly):
         super(Model, self).__init__(name, parent)
 
         # The model is just an M4 test component.
-        self.workflow.add_node(m4.test_components.Model_A2d(parent=self))
+        self.workflow.add_node(m4.dummy_components.Model_A2d(parent=self))
 
         # Specify DOE.
         doe = m4.doe.DOE(parent=self)

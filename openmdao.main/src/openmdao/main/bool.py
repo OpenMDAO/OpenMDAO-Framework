@@ -3,7 +3,7 @@ Bool: a Variable wrapper for booleans
 """
 
 #public symbols
-__all__ = []
+__all__ = ['Bool']
 __version__ = "0.1"
 
 from openmdao.main.variable import Variable, UNDEFINED
