@@ -6,7 +6,7 @@ Interfaces for the OpenMDAO project.
 # pylint: disable-msg=E0213,E0211,W0232
 
 #public symbols
-__all__ = ['IContainer','IComponent','IAssembly','IDriver','IFactory',
+__all__ = ['IContainer', 'IComponent', 'IAssembly', 'IDriver', 'IFactory',
            'IGeomQueryObject', 'IGeomModifier', 'IResourceAllocator',
            'IVariable', 'IWorkflow', 'ICaseIterator']
 
@@ -92,6 +92,8 @@ class IComponent (Interface):
     resource_desc = Attribute('a dict containing key-value pairs that are used'+
                               'to select a ResourceAllocator')
 
+    directory = Attribute('If non-null, the directory to execute in.')
+
     def add_socket (name, iface, desc=''):
         """Specify a named placeholder for a component with the given
         interface."""
@@ -115,6 +117,15 @@ class IComponent (Interface):
     def run ():
         """Run this object. This should include fetching input variables,
         executing, and updating output variables."""
+
+    def get_directory ():
+        """Return absolute path of execution directory."""
+
+    def push_dir (directory):
+        """Change directory to dir, remembering current for later pop_dir()."""
+
+    def pop_dir ():
+        """Return to previous directory saved by push_dir()."""
 
     def checkpoint (outstream):
         """Save sufficient information for a restart. By default, this

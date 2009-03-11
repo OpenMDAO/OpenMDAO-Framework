@@ -1,8 +1,7 @@
-import os, sys
 
 # pylint: disable-msg=F0401
 
-from setuptools import setup, find_packages
+from setuptools import setup
 
 version = '0.0.1'
 

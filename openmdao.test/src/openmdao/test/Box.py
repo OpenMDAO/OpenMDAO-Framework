@@ -1,5 +1,6 @@
 
-from openmdao.main import Component, Float
+from openmdao.main.component import Component, RUN_OK
+from openmdao.main import Float
 from openmdao.main.variable import INPUT, OUTPUT
 
 class Box(Component):
@@ -30,5 +31,6 @@ class Box(Component):
                      self.depth*self.height)*2
         self.mass = self.surface_area*self.thickness*self.density        
         self.volume = self.width*self.height*self.depth
+        return RUN_OK
 
         

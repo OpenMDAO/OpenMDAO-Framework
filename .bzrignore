@@ -21,8 +21,12 @@ _build
 doctrees
 html
 generated_images
+eggsrc/npsscomponent/test/NPSS_A
+eggsrc/npsscomponent/test/NPSS_B
+eggsrc/npsscomponent/test/reload.out
 grcutils/build
 docs/srcdocs/packages/openmdao.lib.rst
 docs/srcdocs/packages/openmdao.main.rst
 docs/srcdocs/packages/openmdao.recipes.rst
 eggsrc/grcutils/build
+openmdao.lib/openmdao.lib.egg-info.moved

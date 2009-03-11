@@ -33,15 +33,18 @@ class HierarchyMember(object):
         """
         raise NotImplementedError('set') 
     
-    
     def get_pathname(self):
         """ Return full path name to this container. """
         if self.parent is None:
             return self.name
         else:
-            return '.'.join([self.parent.get_pathname(), self.name])
+            try:
+                path = self.parent.get_pathname()
+            except AttributeError:
+                return self.name
+            else:
+                return '.'.join([path, self.name])
 
-    
     def _get_parent(self):
         if self._parent is None:
             return None
@@ -54,7 +57,7 @@ class HierarchyMember(object):
         else:
             self._parent = weakref.ref(parent)
            
-    parent = property(_get_parent,_set_parent)
+    parent = property(_get_parent, _set_parent)
     
     def __getstate__(self):
         """ Return dict representing this container's state. """
@@ -77,19 +80,19 @@ class HierarchyMember(object):
 #        logger.error(full_msg)
         raise exception_class(full_msg)
     
-    def error(self, msg):
+    def error(self, msg, *args, **kwargs):
         """Record an error message"""
-        logger.error(self.get_pathname()+': '+msg)
+        logger.error(self.get_pathname()+': '+msg, *args, **kwargs)
         
-    def warning(self, msg):
+    def warning(self, msg, *args, **kwargs):
         """Record a warning message"""
-        logger.warn(self.get_pathname()+': '+msg)
+        logger.warn(self.get_pathname()+': '+msg, *args, **kwargs)
         
-    def info(self, msg):
+    def info(self, msg, *args, **kwargs):
         """Record an informational message"""
-        logger.info(self.get_pathname()+': '+msg)
+        logger.info(self.get_pathname()+': '+msg, *args, **kwargs)
         
-    def debug(self, msg):
+    def debug(self, msg, *args, **kwargs):
         """Record a debug message"""
-        logger.debug(self.get_pathname()+': '+msg)
-        
+        logger.debug(self.get_pathname()+': '+msg, *args, **kwargs)
+

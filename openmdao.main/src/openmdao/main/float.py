@@ -5,7 +5,7 @@ __all__ = ["Float"]
 __version__ = "0.1"
 
 
-from openmdao.main.variable import Variable,UNDEFINED
+from openmdao.main.variable import Variable, UNDEFINED
 from openmdao.main.vartypemap import add_var_type_map
 from openmdao.main.constraint import MinConstraint, MaxConstraint
 from Scientific.Physics.PhysicalQuantities import PhysicalQuantity
@@ -78,7 +78,7 @@ class Float(Variable):
         if units is not UNDEFINED:
             # this will raise an exception if units are bad
             try:
-                mypq = PhysicalQuantity(1.,units)
+                mypq = PhysicalQuantity(1., units)
             except NameError:
                 msg = "Units of '"+str(units)+"' are invalid"
                 if '^' in units:
@@ -98,14 +98,14 @@ class Float(Variable):
     def validate_var(self, var):
         """Raise a TypeError if the connecting Variable is incompatible. This
         is called on the INPUT side of a connection."""
-        super(Float,self).validate_var(var)
+        super(Float, self).validate_var(var)
         
         # allow assignment if either Variable has unassigned units
         if self.units is UNDEFINED or var.units is UNDEFINED:
             pass
         else:
             # if units are defined, force compatibility
-            mypq = PhysicalQuantity(1.,self.units)
+            mypq = PhysicalQuantity(1., self.units)
             if not mypq.isCompatible(var.units):
                 self._incompatible_units(var, var.units)
                 

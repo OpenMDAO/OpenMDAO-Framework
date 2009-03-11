@@ -104,7 +104,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
 
         # now, create a plugin object, which will make its loader active
         comp = fact.create('bar.Comp1Plugin')
-        self.assertEqual(comp.version,'1.0')
+        self.assertEqual(comp.version, '1.0')
         
         # now there should be one active loader (its ctor should not be None)
         dumb_loaders = fact.get_loaders('openmdao.dumbplugins')

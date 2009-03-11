@@ -3,8 +3,8 @@
 import unittest
 
 from openmdao.main.exceptions import ConstraintError
-from openmdao.main import Container,Float
-from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
+from openmdao.main import Container, Float
+from openmdao.main.variable import INPUT, OUTPUT
 
 class FloatTestCase(unittest.TestCase):
 
@@ -29,16 +29,16 @@ class FloatTestCase(unittest.TestCase):
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual(3.1415926,self.float1.value)
+        self.assertEqual(3.1415926, self.float1.value)
         # check default value
-        self.assertEqual(98.9,self.float1.default)
+        self.assertEqual(98.9, self.float1.default)
         self.float1.value = self.float2.value
-        self.assertEqual(42.,self.float1.value)
+        self.assertEqual(42., self.float1.value)
         # make sure value gets transferred to internal variable
-        self.assertEqual(42.,self.hobj.internal_float1)
+        self.assertEqual(42., self.hobj.internal_float1)
         self.float1.value = 32.1
-        self.assertEqual(32.1,self.float1.value)
-        self.assertEqual(32.1,self.hobj.internal_float1)
+        self.assertEqual(32.1, self.float1.value)
+        self.assertEqual(32.1, self.hobj.internal_float1)
 
     def test_unit_conversion(self):
         self.hobj.internal_float2 = 12.  # inches
@@ -113,7 +113,7 @@ class FloatTestCase(unittest.TestCase):
         try:
             self.float1.validate_var(self.float2)
         except TypeError, err:
-            self.assertEqual(str(err),'h1.float2 units (kg) are incompatible'+
+            self.assertEqual(str(err), 'h1.float2 units (kg) are incompatible'+
                              ' with units (lb/ft**2) of h1.float1')
         else:
             self.fail('TypeError expected')

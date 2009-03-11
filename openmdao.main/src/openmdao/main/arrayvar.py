@@ -18,7 +18,6 @@ class ArrayVariable(Variable):
         self.numdims = num_dims
         super(ArrayVariable, self).__init__(name, parent, iostatus, 
                           ref_name=ref_name, default=default, desc=desc)
-
         
     def validate_var(self, var):
         """Raise a TypeError if the connecting Variable is incompatible. 
@@ -26,7 +25,7 @@ class ArrayVariable(Variable):
         Variable.validate_var(self, var)
         if var.dtype is not self.dtype:
             self.raise_exception('numpy data type '+str(self.dtype)+
-                                 'is not compatible with type '+
+                                 ' is not compatible with type '+
                                  str(var.dtype), ValueError)
         
     def _convert(self, variable):
@@ -50,16 +49,14 @@ class ArrayVariable(Variable):
                                     ndmin=mindims)
         except ValueError:
             self.raise_exception("new type '"+type(val).__name__+
-                                 "'is not compatible with type '"+
-                                 type(self.value).__name__, ValueError)
-            
+                                 "' is not compatible with type '"+
+                                 type(self.value).__name__+"'", ValueError)
             
         if self.fixed_size is not None and self.fixed_size != check_val.shape:
             self.raise_exception('expected array of size '+
                                  str(self.fixed_size)+' but got '+
                                  str(check_val.shape), ValueError)
         return check_val
-                
             
     def _pre_assign_entry(self, val, index):
         """Called prior to assigning to an entry of the array value in order to 

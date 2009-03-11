@@ -4,7 +4,7 @@ from pkg_resources import Environment, Requirement, Distribution
 from pkg_resources import VersionConflict, DistributionNotFound
 
 #public symbols
-__all__ = ['get_plugin_factories','import_version']
+__all__ = ['get_plugin_factories', 'import_version']
 
 __version__ = "0.1"
 
@@ -29,7 +29,7 @@ def get_plugin_factories(search_path, groupname):
 
     
 def import_version(req, env=None):
-    """Import the project version specified in the Requirement req, if it can be 
+    """Import the project version specified in the Requirement req, if it can be
     found in the current WorkingSet or in the specified Environment.
     If a conflicting version already exists in the WorkingSet, raise a 
     VersionConflict.  If a distrib cannot be found matching the requirement,
@@ -43,7 +43,7 @@ def import_version(req, env=None):
     for dist in needed:
         # add required distribs to the real working set 
         if dist is not None:
-            working_set.add(dist,entry=None,insert=False)  
+            working_set.add(dist, entry=None, insert=False)  
             dist.activate() 
             __import__(dist.project_name)
         

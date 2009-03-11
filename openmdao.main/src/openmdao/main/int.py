@@ -13,7 +13,7 @@ class Int(Variable):
     
     def __init__(self, name, parent, iostatus, ref_name=None, 
                  default=UNDEFINED, desc=None, min_limit=None, max_limit=None):
-        super(Int, self).__init__(name, parent, iostatus, val_type=[int,long], 
+        super(Int, self).__init__(name, parent, iostatus, val_type=[int, long], 
                                   ref_name=ref_name, 
                                   default=default, desc=desc)
         self._min_limit = None

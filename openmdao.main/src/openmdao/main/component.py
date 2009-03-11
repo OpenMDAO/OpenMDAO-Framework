@@ -4,11 +4,14 @@
 
 __version__ = "0.1"
 
+import os
+import os.path
 
 from zope.interface import implements
 
 from openmdao.main.interfaces import IComponent, IAssembly
-from openmdao.main import Container
+from openmdao.main import Container, String
+from openmdao.main.variable import INPUT
 from openmdao.main.constants import SAVE_PICKLE
 
 # Execution states.
@@ -28,17 +31,37 @@ RUN_INTERRUPTED = 3
 class Component (Container):
     """This is the base class for all objects containing Variables that are 
        accessible to the OpenMDAO framework and are 'runnable'.
-
     """
 
     implements(IComponent)
     
-    def __init__(self, name, parent=None, desc=None):
-        super(Component,self).__init__(name, parent, desc)
+    def __init__(self, name, parent=None, desc=None, directory=''):
+        super(Component, self).__init__(name, parent, desc)
         
         self.state = STATE_IDLE
         self._stop = False
         self._input_changed = True
+        self._dir_stack = []
+
+        # List of meta-data dictionaries.
+        self.external_files = []
+
+        self.directory = directory  # For PyLint.
+        String('directory', self,
+               desc='If non-null, the directory to execute in.',
+               default=directory, iostatus=INPUT)
+
+        if self.directory:
+            if not os.path.exists(self.directory):
+# TODO: Security!
+                try:
+                    os.makedirs(self.directory)
+                except OSError, exc:
+                    self.error("Could not create directory '%s': %s",
+                               self.directory, exc.strerror)
+            else:
+                if not os.path.isdir(self.directory):
+                    self.error("Path '%s' is not a directory.", self.directory)
 
 #    def add_socket (self, name, iface, desc=''):
 #        """Specify a named placeholder for a component with the given
@@ -64,7 +87,7 @@ class Component (Container):
         have already been set. 
         This should be overridden in derived classes.
         """
-        pass
+        return RUN_OK
     
     def post_execute (self):
         """Update output variables and anything else needed after execution"""
@@ -74,14 +97,53 @@ class Component (Container):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
         """
-        if self.parent is not None and IAssembly.providedBy(self.parent):
-            self.parent.update_inputs(self)
-        self.pre_execute()
+        directory = self.get_directory()
+        try:
+            self.push_dir(directory)
+        except OSError, exc:
+            self.error("Could not move to execution directory '%s': %s",
+                       directory, exc.strerror)
+            return RUN_FAILED
+
         self.state = STATE_RUNNING
-        status = self.execute()
-        self.post_execute()
-        return status
-        
+        try:
+            if self.parent is not None and IAssembly.providedBy(self.parent):
+                self.parent.update_inputs(self)
+            self.pre_execute()
+            status = self.execute()
+            if status is None:
+                self.error('execute() did not return a run status!')
+                status = RUN_FAILED
+            self.post_execute()
+            return status
+        finally:
+            self.state = STATE_IDLE
+            self.pop_dir()
+
+    def get_directory(self):
+        """ Return absolute path of execution directory. """
+        path = self.directory
+        if not os.path.isabs(path):
+            if self.parent is not None and IComponent.providedBy(self.parent):
+                parent_dir = self.parent.get_directory()
+            else:
+                parent_dir = os.getcwd()
+            path = os.path.join(parent_dir, path)
+        return path
+
+    def push_dir(self, directory):
+        """Change directory to dir, remembering current for later pop_dir()."""
+        if not directory:
+            directory = '.'
+        cwd = os.getcwd()
+# TODO: Security!
+        os.chdir(directory)
+        self._dir_stack.append(cwd)
+
+    def pop_dir(self):
+        """ Return to previous directory saved by push_dir(). """
+        os.chdir(self._dir_stack.pop())
+
     def checkpoint (self, outstream, format=SAVE_PICKLE):
         """Save sufficient information for a restart. By default, this
         just calls save()

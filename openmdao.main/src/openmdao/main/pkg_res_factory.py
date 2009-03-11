@@ -1,6 +1,6 @@
 
 #public symbols
-__all__ = ['import_version','EntryPtLoader','PkgResourcesFactory']
+__all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory']
 
 __version__ = "0.1"
 
@@ -33,7 +33,7 @@ def import_version(modname, req, env=None):
     for dist in needed:
         # add required distribs to the real working set
         if dist not in working_set:
-            working_set.add(dist,entry=None,insert=False)  
+            working_set.add(dist, entry=None, insert=False)  
             dist.activate()
                 
 #    dist = get_distribution(req)
