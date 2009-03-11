@@ -1,6 +1,5 @@
 """
-This is just a wrapper for the logging module so we can switch it out later
-if needed.
+This is just a wrapper for the logging module.
 """
 
 #public symbols

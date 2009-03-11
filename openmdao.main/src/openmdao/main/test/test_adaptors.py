@@ -5,7 +5,7 @@ from zope.schema import TextLine, Float
 from zope.interface import implements, Interface
 from zope.component import getGlobalSiteManager, adapts
 
-from openmdao.main.float import Float
+from openmdao.main import Float
 
 class Int_Float_Adapter(object):
 

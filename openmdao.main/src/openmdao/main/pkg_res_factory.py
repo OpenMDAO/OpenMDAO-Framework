@@ -10,6 +10,7 @@ from pkg_resources import working_set, get_entry_map
 from pkg_resources import Environment, Requirement, DistributionNotFound
     
 from openmdao.main import Factory
+from openmdao.main.log import logger
 
 
 def import_version(req, env=None):
@@ -72,8 +73,9 @@ class PkgResourcesFactory(Factory):
         super(PkgResourcesFactory, self).__init__()
         self.env = Environment(search_path)
         self._loaders = {}
-        for group in groups:
-            self._get_plugin_info(self.env, group)
+        if isinstance(groups,list):
+            for group in groups:
+                self._get_plugin_info(self.env, group)
         
         
     def create(self, typ, name=None, version=None, server=None, 
@@ -84,14 +86,18 @@ class PkgResourcesFactory(Factory):
         if server is not None or res_desc is not None:
             return None
         
-        if version is None:
-            return self._loaders[typ][0].create(self.env, name)
-        
-        for entry in self._loaders[typ]:
-            if entry.dist in Requirement.parse(entry.dist.project_name+
-                                               '=='+version):
-                return entry.create(self.env, name)
+        try:
+            if version is None:
+                return self._loaders[typ][0].create(self.env, name)
 
+            for entry in self._loaders[typ]:
+                if entry.dist in Requirement.parse(entry.dist.project_name+
+                                                   '=='+version):
+                    return entry.create(self.env, name)
+        except KeyError:
+            pass
+        return None
+            
     
     def _get_plugin_info(self, pkg_env, groupname):
         """Given a search path and an entry point group name, fill the
@@ -103,7 +109,7 @@ class PkgResourcesFactory(Factory):
             # pkg_env[name] gives us a list of distribs for that package name
             for dist in pkg_env[name]:
                 entry_dict = get_entry_map(dist, group=groupname)
-                for entry_pt in entry_dict.values():
+                for nm,entry_pt in entry_dict.items():
                     if len(entry_pt.attrs) > 0:
                         ename = '.'.join([entry_pt.module_name]+
                                          list(entry_pt.attrs))
