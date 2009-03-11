@@ -27,7 +27,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
     def test_import_not_found(self):
         """try importing a distrib that doesn't exist"""
         try:
-            import_version(Requirement.parse('bogus==1.0'),
+            import_version('bogus',Requirement.parse('bogus==1.0'),
                                      Environment(['plugins']))
         except DistributionNotFound, err:
             self.assertEqual(str(err),
@@ -58,8 +58,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         fact = PkgResourcesFactory(None,
                                              ['openmdao.components'])
         
-        comp = fact.create('openmdao.test.box.Box','foo')
-        print 'comp = ',comp
+        comp = fact.create('openmdao.test.Box.Box','foo')
         comp.run()
         
     def test_load_version(self):
