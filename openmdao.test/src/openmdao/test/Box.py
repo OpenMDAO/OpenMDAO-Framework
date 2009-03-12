@@ -16,15 +16,15 @@ class Box(Component):
         self.surface_area = 0.
         
         # set up interface to the framework
-        Float('width',self,INPUT,units='cm')
-        Float('height',self,INPUT,units='cm')
-        Float('depth',self,INPUT,units='cm')
-        Float('thickness',self,INPUT,units='cm')
-        Float('density',self,INPUT,units='g/cm**3')
+        Float('width', self, INPUT, units='cm')
+        Float('height', self, INPUT, units='cm')
+        Float('depth', self, INPUT, units='cm')
+        Float('thickness', self, INPUT, units='cm')
+        Float('density', self, INPUT, units='g/cm**3')
         
-        Float('mass',self,OUTPUT,units='g')
-        Float('volume',self,OUTPUT,units='cm**3')
-        Float('surface_area',self,OUTPUT,units='cm**2')
+        Float('mass', self, OUTPUT, units='g')
+        Float('volume', self, OUTPUT, units='cm**3')
+        Float('surface_area', self, OUTPUT, units='cm**2')
         
     def execute(self):
         self.surface_area = (self.width*(self.height+self.depth)+
@@ -33,4 +33,3 @@ class Box(Component):
         self.volume = self.width*self.height*self.depth
         return RUN_OK
 
-        

@@ -5,7 +5,7 @@ import StringIO
 
 
 import openmdao.main.constants as constants
-from openmdao.main import Container,Float
+from openmdao.main import Container, Float
 from openmdao.main.interfaces import IContainer
 from openmdao.main.variable import INPUT
 

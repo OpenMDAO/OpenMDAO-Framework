@@ -6,9 +6,9 @@ import unittest
 import numpy
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.component import Component, RUN_OK
-from openmdao.main import Assembly,ArrayVariable,Float
-from openmdao.main.variable import INPUT,OUTPUT
+from openmdao.main import Assembly, Component, ArrayVariable, Float
+from openmdao.main.component import RUN_OK
+from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 class OptRosenSuzukiComponent(Component):
@@ -38,11 +38,11 @@ class OptRosenSuzukiComponent(Component):
     """
     
     # pylint: disable-msg=C0103
-    def __init__(self, name, parent=None, desc=None):
-        super(OptRosenSuzukiComponent, self).__init__(name, parent, desc)
+    def __init__(self, name, parent=None, doc=None):
+        super(OptRosenSuzukiComponent, self).__init__(name, parent, doc)
         self.x = numpy.array([1., 1., 1., 1.], dtype=float)
         self.result = 0.
-        ArrayVariable('x', self,iostatus=INPUT, entry_type=float)
+        ArrayVariable('x', self, iostatus=INPUT, entry_type=float)
         Float('result', self, iostatus=OUTPUT)
         
         self.opt_objective = 6.
@@ -176,7 +176,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         try:
             self.top.driver.upper_bounds = [99]
         except ValueError, err:
-            self.assertEqual(str(err),"top.driver: size of new upper bound array"+
+            self.assertEqual(str(err),
+                             "top.driver: size of new upper bound array"+
                              " (1) does not match number of design vars (2)")
         else:
             self.fail('ValueError expected')

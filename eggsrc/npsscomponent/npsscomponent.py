@@ -25,107 +25,84 @@ class NPSScomponent(Component):
         """ Cause a session switch to save correct directory context. """
         NPSScomponent._dummy.exists('COPYRIGHT')
 
-    def __init__(self, name='NPSS', parent=None, desc=None, directory='',
+    def __init__(self, name='NPSS', parent=None, doc=None, directory='',
                  arglist=None, output_filename='', top=''):
-        super(NPSScomponent, self).__init__(name, parent, desc, directory)
+        super(NPSScomponent, self).__init__(name, parent, doc, directory)
         self._topstr = top
 
         # Model options.
-        String('model_filename', self,
-               desc='Filename for NPSS model.',
-               default='', iostatus=INPUT)
+        String('model_filename', self, INPUT, default='',
+               doc='Filename for NPSS model.')
 
-        StringList('include_dirs', self,
-                   desc='Model include directories.',
-                   default=[], iostatus=INPUT)
+        StringList('include_dirs', self, INPUT, default=[],
+                   doc='Model include directories.')
 
-        Bool('use_default_paths', self,
-             desc='Use default NPSS directories.',
-             default=True, iostatus=INPUT)
+        Bool('use_default_paths', self, INPUT, default=True,
+             doc='Use default NPSS directories.')
 
-        Dict('preprocessor_vars', self,
-             desc='Preprocessor variable definitions',
-             default={}, iostatus=INPUT)
+        Dict('preprocessor_vars', self, INPUT, default={},
+             doc='Preprocessor variable definitions')
 
         # Execution options.
-        String('run_command', self,
-               desc='String to parse to run model.',
-               default='', iostatus=INPUT)
+        String('run_command', self, INPUT, default='',
+               doc='String to parse to run model.')
 
-        String('reload_flag', self,
-               desc='Path to flag to internally request a model reload.',
-               default='', iostatus=INPUT)
+        String('reload_flag', self, INPUT, default='',
+               doc='Path to flag to internally request a model reload.')
 
-        StringList('preloaded_dlms', self,
-                   desc='Preloaded DLMs.',
-                   default=[], iostatus=INPUT)
+        StringList('preloaded_dlms', self, INPUT, default=[],
+                   doc='Preloaded DLMs.')
 
-        Bool('iclod_first', self,
-             desc='Search ICLOD before DCLOD.',
-             default=False, iostatus=INPUT)
+        Bool('iclod_first', self, INPUT, default=False,
+             doc='Search ICLOD before DCLOD.')
 
-        Bool('no_dclod', self,
-             desc='Do not search DCLOD.',
-             default=False, iostatus=INPUT)
+        Bool('no_dclod', self, INPUT, default=False,
+             doc='Do not search DCLOD.')
 
-        Bool('no_iclod', self,
-             desc='Do not search ICLOD.',
-             default=False, iostatus=INPUT)
+        Bool('no_iclod', self, INPUT, default=False,
+             doc='Do not search ICLOD.')
 
-        Bool('use_corba', self,
-             desc='Enable distributed simulation via CORBA.',
-             default=False, iostatus=INPUT)
+        Bool('use_corba', self, INPUT, default=False,
+             doc='Enable distributed simulation via CORBA.')
 
         # Output options.
-        String('output_filename', self,
-               desc='Filename for standard streams in all new sessions.',
-               default=output_filename, iostatus=INPUT)
+        String('output_filename', self, INPUT, default=output_filename,
+               doc='Filename for standard streams in all new sessions.')
 
-        Bool('trace_execution', self,
-             desc='Trace interpreted statement execution.',
-             default=False, iostatus=INPUT)
+        Bool('trace_execution', self, INPUT, default=False,
+             doc='Trace interpreted statement execution.')
 
         # Advanced options.
-        String('assembly_type', self,
-               desc='Type for top object.',
-               default='', iostatus=INPUT)
+        String('assembly_type', self, INPUT, default='',
+               doc='Type for top object.')
 
-        String('executive_type', self,
-               desc='Top-level executive.',
-               default='', iostatus=INPUT)
+        String('executive_type', self, INPUT, default='',
+               doc='Top-level executive.')
 
-        StringList('preloaded_objs', self,
-                   desc='Preloaded Objects.',
-                   default=[], iostatus=INPUT)
+        StringList('preloaded_objs', self, INPUT, default=[],
+                   doc='Preloaded Objects.')
 
-        Bool('use_solver', self,
-             desc='Use default solver.',
-             default=True, iostatus=INPUT)
+        Bool('use_solver', self, INPUT, default=True,
+             doc='Use default solver.')
 
-        Bool('use_constants', self,
-             desc='Use default constants.',
-             default=True, iostatus=INPUT)
+        Bool('use_constants', self, INPUT, default=True,
+             doc='Use default constants.')
 
-        String('access', self,
-               desc='Default access type.',
-               default='', iostatus=INPUT)
+        String('access', self, INPUT, default='',
+               doc='Default access type.')
 
-        Bool('autodoc', self,
-             desc='Allow abstract creation.',
-             default=False, iostatus=INPUT)
+        Bool('autodoc', self, INPUT, default=False,
+             doc='Allow abstract creation.')
 
-        String('ns_ior', self,
-               desc='IOR of NamingService.',
-               default='', iostatus=INPUT)
+        String('ns_ior', self, INPUT, default='',
+               doc='IOR of NamingService.')
 
-        String('other_opts', self,
-               desc='Other options.',
-               default='', iostatus=INPUT)
+        String('other_opts', self, INPUT, default='',
+               doc='Other options.')
 
         # Wrapper stuff.
-        Bool('reload_model', self,
-             desc='Flag to externally request a model reload.',
-             default=False, iostatus=INPUT)
+        Bool('reload_model', self, INPUT, default=False,
+             doc='Flag to externally request a model reload.')
 
         if arglist is not None:
             self._parse_arglist(arglist)
@@ -368,7 +345,7 @@ class NPSScomponent(Component):
                     path = path[len(cwd):]
                     for meta in self.external_files:
                         if meta['path'] == path:
-                            break;
+                            break
                     else:
                         self.external_files.append({'path':path, 'input':True})
 

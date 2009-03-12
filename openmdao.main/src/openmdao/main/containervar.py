@@ -13,10 +13,10 @@ class ContainerVariable(Variable):
     """A Variable class that wraps a Container."""
     
     def __init__(self, name, parent, iostatus, ref_name=None, 
-                 default=None, desc=None):
+                 default=None, doc=None):
         super(ContainerVariable, self).__init__(name, parent, iostatus, 
                                                 ref_name=ref_name, 
-                                                default=default, desc=desc)
+                                                default=default, doc=doc)
 
     def getvar(self, name=None):
         """Return this Variable or a Variable child of our value, which is

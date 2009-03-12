@@ -11,13 +11,14 @@ class ArrayVariable(Variable):
     """A Variable object that wraps a numpy array."""
 
     def __init__(self, name, parent, iostatus, entry_type=float, 
-                 fixed_size=None, num_dims=None, ref_name=None, 
-                 default=UNDEFINED, desc=None):
+                 fixed_size=None, num_dims=None, ref_name=None, ref_parent=None,
+                 default=UNDEFINED, doc=None):
         self.dtype = numpy.dtype(entry_type)
         self.fixed_size = fixed_size
         self.numdims = num_dims
         super(ArrayVariable, self).__init__(name, parent, iostatus, 
-                          ref_name=ref_name, default=default, desc=desc)
+                                        ref_name=ref_name, ref_parent=ref_parent,
+                                        default=default, doc=doc)
         
     def validate_var(self, var):
         """Raise a TypeError if the connecting Variable is incompatible. 

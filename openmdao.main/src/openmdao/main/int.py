@@ -11,11 +11,11 @@ from openmdao.main.constraint import MinConstraint, MaxConstraint
 class Int(Variable):
     """A Variable wrapper for ints"""
     
-    def __init__(self, name, parent, iostatus, ref_name=None, 
-                 default=UNDEFINED, desc=None, min_limit=None, max_limit=None):
+    def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
+                 default=UNDEFINED, doc=None, min_limit=None, max_limit=None):
         super(Int, self).__init__(name, parent, iostatus, val_type=[int, long], 
-                                  ref_name=ref_name, 
-                                  default=default, desc=desc)
+                                  ref_name=ref_name, ref_parent=ref_parent,
+                                  default=default, doc=doc)
         self._min_limit = None
         self._max_limit = None
         self.min_limit = min_limit

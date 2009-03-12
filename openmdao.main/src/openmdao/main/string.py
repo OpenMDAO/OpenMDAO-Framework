@@ -13,12 +13,12 @@ from openmdao.main.constraint import MinLengthConstraint, MaxLengthConstraint
 class String(Variable):
     """A Variable wrapper for a python string attribute."""
     
-    def __init__(self, name, parent, iostatus, ref_name=None, 
-                 default=UNDEFINED, desc=None, min_length=None, max_length=None):
+    def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
+                 default=UNDEFINED, doc=None, min_length=None, max_length=None):
         super(String, self).__init__(name, parent, iostatus, 
                                      val_type=basestring, 
-                                     ref_name=ref_name, 
-                                     default=default, desc=desc)
+                                     ref_name=ref_name, ref_parent=ref_parent,
+                                     default=default, doc=doc)
         self._min_length = None
         self._max_length = None
         self.min_length = min_length

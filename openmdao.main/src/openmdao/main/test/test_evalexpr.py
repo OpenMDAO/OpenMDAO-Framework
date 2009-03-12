@@ -1,11 +1,3 @@
-
-import numpy
-
-from openmdao.main.expreval import translate_expr, ExprEvaluator
-from openmdao.main import Container, Component
-from openmdao.main import ArrayVariable, Float
-from openmdao.main.variable import INPUT
-
 """
 Test scenario:
     Container hierarchy    top
@@ -21,6 +13,14 @@ funct is a callable
 comp is a Component
 x is an float variable
 """
+
+import numpy
+
+from openmdao.main.expreval import translate_expr, ExprEvaluator
+from openmdao.main import Container, Component
+from openmdao.main import ArrayVariable, Float
+from openmdao.main.variable import INPUT
+
 
 top = Container('top', None)
 top.a = Container('a', top)
@@ -84,7 +84,7 @@ tests = [
 for tst in tests:
     ex = ExprEvaluator(tst[0], top, validate=False)
     if ex.scoped_text != tst[1]:
-        raise AssertionError('for input of '+tst[0]+', '+trans+" == "+tst[1])  
+        raise AssertionError('for input of '+tst[0]+', '+ex.scoped_text+" == "+tst[1])  
     
 
 # now try some bogus expressions

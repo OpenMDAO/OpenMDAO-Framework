@@ -35,8 +35,8 @@ class Component (Container):
 
     implements(IComponent)
     
-    def __init__(self, name, parent=None, desc=None, directory=''):
-        super(Component, self).__init__(name, parent, desc)
+    def __init__(self, name, parent=None, doc=None, directory=''):
+        super(Component, self).__init__(name, parent, doc)
         
         self.state = STATE_IDLE
         self._stop = False
@@ -47,9 +47,8 @@ class Component (Container):
         self.external_files = []
 
         self.directory = directory  # For PyLint.
-        String('directory', self,
-               desc='If non-null, the directory to execute in.',
-               default=directory, iostatus=INPUT)
+        String('directory', self, INPUT, default=directory,
+               doc='If non-null, the directory to execute in.')
 
         if self.directory:
             if not os.path.exists(self.directory):
@@ -63,7 +62,7 @@ class Component (Container):
                 if not os.path.isdir(self.directory):
                     self.error("Path '%s' is not a directory.", self.directory)
 
-#    def add_socket (self, name, iface, desc=''):
+#    def add_socket (self, name, iface, doc=''):
 #        """Specify a named placeholder for a component with the given
 #        interface.
 #        """
