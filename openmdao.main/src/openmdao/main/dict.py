@@ -12,10 +12,10 @@ from openmdao.main.vartypemap import add_var_type_map
 class Dict(Variable):
     """A dictionary Variable"""
 
-    def __init__(self, name, parent, iostatus, ref_name=None, refparent=None,
+    def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
                  default=UNDEFINED, desc=None):
         super(Dict, self).__init__(name, parent, iostatus, val_type=dict,
-                                   ref_name=ref_name, refparent=refparent,
+                                   ref_name=ref_name, ref_parent=ref_parent,
                                    default=default, desc=desc)
         self.set_default(default)
 

@@ -33,12 +33,15 @@ class Model(Assembly):
         doe.n_samples = 200
 
 
+# pylint: disable-msg=E1101
+# "Instance of <class> has no <attr> member"
+
 def main():
     """ Run model and print results. """
     model = Model()
     status = model.run()
     if status == RUN_OK:
-        for i, case in enumerate(model.driver.outerator):
+        for i, case in enumerate(model.driver.outerator.plugin):
             print 'CASE %d:' % (i+1)
             for name, index, value in case.inputs:
                 print '    input:', name, index, value

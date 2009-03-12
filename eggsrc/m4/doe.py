@@ -10,57 +10,11 @@ __version__ = '0.1'
 
 import mool.Optimization.DOE
 
-from openmdao.main import Driver, Int, String, Case, ListCaseIterator
-from openmdao.main.component import RUN_OK, RUN_FAILED
+from openmdao.main import Int, String, Case, ListCaseIterator
+from openmdao.main.component import RUN_FAILED
 from openmdao.main.variable import INPUT
 
-class FakeROSE(Driver):
-    """
-    Just a stand-in until we have a concurrent-capable driver.
-    The intent is that a set of cases to be run is provided by
-    an ICaseIterator, and the system does its best to run those cases.
-    Other than that, don't assume this API is valid for the real code.
-    """
-
-    def __init__(self, name='FakeROSE', parent=None):
-        super(FakeROSE, self).__init__(name, parent)
-        self.iterator = None
-        self.outerator = None
-
-    def execute(self):
-        """ Run each case in iterator. """
-        self.outerator = []
-        for case in self.iterator:
-            for name, index, value in case.inputs:
-                try:
-                    self.parent.set(name, value, index)
-                except Exception, exc:
-                    msg = "Exception setting '%s': %s" % (name, str(exc))
-                    self.error(msg)
-                    self.outerator.append(Case(case.inputs, None,
-                                               RUN_FAILED, msg))
-                    break
-            else:
-                status = self.parent.workflow.run()
-                if status == RUN_OK:
-                    results = []
-                    for name, index, value in case.outputs:
-                        try:
-                            value = self.parent.get(name, index)
-                            results.append((name, index, value))
-                        except Exception, exc:
-                            msg = "Exception getting '%s': %s" % (name, str(exc))
-                            self.error(msg)
-                            self.outerator.append(Case(case.inputs, None,
-                                                       RUN_FAILED, msg))
-                            break
-                    else:
-                        self.outerator.append(Case(case.inputs, results,
-                                                   RUN_OK, ''))
-                else:
-                    self.outerator.append(Case(case.inputs, None, status, ''))
-        return RUN_OK
-
+from fakes import FakeROSE
 
 class DOE(FakeROSE):
     """ M4 Design Of Experiments driver. """
@@ -86,7 +40,7 @@ class DOE(FakeROSE):
         if cases is None:
             return RUN_FAILED
         else:
-            self.iterator = ListCaseIterator(cases)
+            self.iterator.plugin = ListCaseIterator(cases)
         return super(DOE, self).execute()
 
 

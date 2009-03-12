@@ -29,7 +29,7 @@ class Variable(HierarchyMember):
     implements(IVariable, IContainer)
     
     def __init__(self, name, parent, iostatus, 
-                 val_type=object, ref_name=None, refparent=None, 
+                 val_type=object, ref_name=None, ref_parent=None, 
                  default=UNDEFINED, desc=None):
         """Note that Variable calls _pre_assign from here, so if _pre_assign
         requires any attributes from a derived class, those attributes must be
@@ -44,10 +44,10 @@ class Variable(HierarchyMember):
             self.ref_name = ref_name
         # the variable can reference an obj inside of some object other 
         # than the variable's parent
-        if refparent is None:
+        if ref_parent is None:
             self._refparent = parent
         else:
-            self._refparent = refparent
+            self._refparent = ref_parent
             
         self.observers = None
         self.permission = None

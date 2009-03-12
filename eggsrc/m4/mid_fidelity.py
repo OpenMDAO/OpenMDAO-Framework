@@ -10,27 +10,12 @@ __version__ = '0.1'
 
 import mool.Optimization.MidFiModel
 
-from openmdao.main import Component, Container, ArrayVariable, Float, Int, String
+from openmdao.main import Component, ArrayVariable, Float, Int, String
 from openmdao.main.component import RUN_OK, RUN_FAILED
 from openmdao.main.variable import INPUT, OUTPUT
 
 import wrapper
-
-class FakeSocket(Container):
-    """
-    Just a stand-in until we have a real socket definition.
-    Don't assume this API is valid for the real code.
-    """
-
-    def __init__(self, name='Socket', parent=None,
-                 plugin=None, interface='', required=True):
-        super(FakeSocket, self).__init__(name, parent)
-        self.plugin = plugin
-        self.interface = interface
-        self.required = required
-        if plugin is not None:
-            plugin.parent = self
-
+import fakes
 
 class MidFidelity(Component):
     """ Wrapper for M4 variable fidelity capability. """
@@ -70,8 +55,8 @@ class MidFidelity(Component):
             desc='For Kriging method, nthets=1(SA),2(Cobyla),3(BFGS)')
 
         # Sockets.
-        FakeSocket('lofi_model', self, None, 'IComponent', True)
-        FakeSocket('hifi_model', self, None, 'IComponent', True)
+        fakes.FakeSocket('lofi_model', self, None, 'IComponent', True)
+        fakes.FakeSocket('hifi_model', self, None, 'IComponent', True)
 
         self.input_mappings = []
         self.output_mappings = []
@@ -83,15 +68,15 @@ class MidFidelity(Component):
 
         ArrayVariable('sample_points', self, OUTPUT, default=[],
                       desc='Points used to make response',
-                      ref_name='sample_points', refparent=self._midfi_model)
+                      ref_name='sample_points', ref_parent=self._midfi_model)
 
         ArrayVariable('lofi_results', self, OUTPUT, default=[],
                       desc='Points used to make response',
-                      ref_name='lofi_results', refparent=self._midfi_model)
+                      ref_name='lofi_results', ref_parent=self._midfi_model)
 
         ArrayVariable('hifi_results', self, OUTPUT, default=[],
                       desc='Points used to make response',
-                      ref_name='hifi_results', refparent=self._midfi_model)
+                      ref_name='hifi_results', ref_parent=self._midfi_model)
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"

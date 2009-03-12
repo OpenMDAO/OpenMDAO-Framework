@@ -14,10 +14,10 @@ from openmdao.main.constraint import MinLengthConstraint, MaxLengthConstraint
 class StringList(Variable):
     """A Variable wrapper for a list of python strings."""
     
-    def __init__(self, name, parent, iostatus, ref_name=None, refparent=None,
+    def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
                  default=UNDEFINED, desc=None, min_length=None, max_length=None):
         super(StringList, self).__init__(name, parent, iostatus, val_type=list, 
-                                         ref_name=ref_name, refparent=refparent,
+                                         ref_name=ref_name, ref_parent=ref_parent,
                                          default=default, desc=desc)            
         self._min_length = None
         self._max_length = None
