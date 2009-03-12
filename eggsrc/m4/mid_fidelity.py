@@ -28,31 +28,31 @@ class MidFidelity(Component):
         # No 'Option' variables yet.
 
         String('doe_type', self, INPUT, default='lhs',
-               desc='Type of DOE used to generate response surface.')
+               doc='Type of DOE used to generate response surface.')
 
         String('rs_type', self, INPUT, default='quadratic',
-               desc='Type of response surface.')
+               doc='Type of response surface.')
 
         Int('n_samples', self, INPUT, default=1, min_limit=1,
-            desc='Number of samples.')
+            doc='Number of samples.')
 
         Float('tolerance', self, INPUT, default=1.0e10,
-              desc='?')
+              doc='?')
 
         Int('correction_function', self, INPUT, default=1,
-            desc='Type of correction function.')
+            doc='Type of correction function.')
 
         Float('w_h', self, INPUT, default=0.5,
-              desc='?')
+              doc='?')
 
         Int('accuracy_test_type', self, INPUT, default=2,
-            desc='Method for testing accuracy of response.')
+            doc='Method for testing accuracy of response.')
 
         Int('n_samples_test', self, INPUT, default=10, min_limit=1,
-            desc='Number of additional samples for additional-points test.')
+            doc='Number of additional samples for additional-points test.')
 
         Int('ntheta', self, INPUT, default=3,
-            desc='For Kriging method, nthets=1(SA),2(Cobyla),3(BFGS)')
+            doc='For Kriging method, nthets=1(SA),2(Cobyla),3(BFGS)')
 
         # Sockets.
         fakes.FakeSocket('lofi_model', self, None, 'IComponent', True)
@@ -67,15 +67,15 @@ class MidFidelity(Component):
         self._midfi_model = mool.Optimization.MidFiModel.Mid_Fi_Model()
 
         ArrayVariable('sample_points', self, OUTPUT, default=[],
-                      desc='Points used to make response',
+                      doc='Points used to make response',
                       ref_name='sample_points', ref_parent=self._midfi_model)
 
         ArrayVariable('lofi_results', self, OUTPUT, default=[],
-                      desc='Points used to make response',
+                      doc='Points used to make response',
                       ref_name='lofi_results', ref_parent=self._midfi_model)
 
         ArrayVariable('hifi_results', self, OUTPUT, default=[],
-                      desc='Points used to make response',
+                      doc='Points used to make response',
                       ref_name='hifi_results', ref_parent=self._midfi_model)
 
 # pylint: disable-msg=E1101

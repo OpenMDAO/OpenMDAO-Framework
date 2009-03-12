@@ -52,10 +52,10 @@ class DictTestCase(unittest.TestCase):
         self.assertEqual(val, {'item1':1, 'item2':2})
 
     def test_set_attribute(self):
-        self.dict1.set('desc', 'xyzzy')
-        self.assertEqual(self.dict1.desc, 'xyzzy')
+        self.dict1.set('doc', 'xyzzy')
+        self.assertEqual(self.dict1.doc, 'xyzzy')
         try:
-            self.dict1.set('desc', 'froboz', [2])
+            self.dict1.set('doc', 'froboz', [2])
         except ValueError, err:
             self.assertEqual(str(err), 
                 'h1.dict1: array indexing of Variable attributes not supported')

@@ -38,8 +38,8 @@ class OptRosenSuzukiComponent(Component):
     """
     
     # pylint: disable-msg=C0103
-    def __init__(self, name, parent=None, desc=None):
-        super(OptRosenSuzukiComponent, self).__init__(name, parent, desc)
+    def __init__(self, name, parent=None, doc=None):
+        super(OptRosenSuzukiComponent, self).__init__(name, parent, doc)
         self.x = numpy.array([1., 1., 1., 1.], dtype=float)
         self.result = 0.
         ArrayVariable('x', self, iostatus=INPUT, entry_type=float)

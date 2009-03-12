@@ -11,7 +11,6 @@ from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.tarjan import strongly_connected_components
 
 
-
 class Assembly(Component):
     """A container for Components, a Driver, and a Workflow. It manages
     connections between Components."""
@@ -19,8 +18,9 @@ class Assembly(Component):
    
     implements(IAssembly)
     
-    def __init__(self, name, parent=None, desc=None):
-        super(Assembly, self).__init__(name, parent, desc)
+    def __init__(self, name, parent=None, doc=None, directory=''):
+        super(Assembly, self).__init__(name, parent, doc=doc,
+                                       directory=directory)
         self._connections = {} # dependencies between Components
         self.driver = self.create('openmdao.main.driver.Driver','driver')
         self.workflow = self.create('openmdao.main.workflow.Workflow',

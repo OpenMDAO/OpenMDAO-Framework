@@ -15,9 +15,8 @@ class Driver(Component):
     
     implements(IDriver)
 
-    def __init__(self, name, parent=None, desc=None):
-        super(Driver, self).__init__(name, parent, desc)
-
+    def __init__(self, name, parent=None, doc=None):
+        super(Driver, self).__init__(name, parent, doc=doc)
         
     def execute(self):
         """ Run the assembly by invoking run() on the workflow. """
@@ -29,7 +28,6 @@ class Driver(Component):
     def step(self):
         """Execute a single step"""
         return self.parent.workflow.step()
-        
         
     def stop(self):
         """ Stop the assembly by stopping the workflow. """

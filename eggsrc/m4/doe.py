@@ -26,13 +26,13 @@ class DOE(FakeROSE):
 
         # No 'Option' variable (yet?).
         String('type', self, INPUT, default='ccd',
-               desc='Type of experiment design.')
+               doc='Type of experiment design.')
 
         Int('n_samples', self, INPUT, default=1, min_limit=1,
-            desc='Number of samples.')
+            doc='Number of samples.')
 
         Int('lhs', self, INPUT, default=2, min_limit=1,
-            desc='???, used by LHS and Rand_LHS.')
+            doc='???, used by LHS and Rand_LHS.')
 
     def execute(self):
         """ Generate cases and run them. """

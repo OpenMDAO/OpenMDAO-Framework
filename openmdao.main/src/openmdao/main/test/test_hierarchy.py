@@ -5,7 +5,7 @@ from openmdao.main import HierarchyMember
 
 
 def setup():
-    h1 = HierarchyMember('h1', None, desc="a hierarchy member")
+    h1 = HierarchyMember('h1', None, doc="a hierarchy member")
     h11 = HierarchyMember('h11', h1)    
     h12 = HierarchyMember('h12', h1)
     h121 = HierarchyMember('h121', h12)

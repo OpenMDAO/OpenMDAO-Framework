@@ -12,14 +12,14 @@ class HierarchyMember(object):
     hierarchy of named objects.
 
     """
-    def __init__(self, name, parent=None, desc=None):
+    def __init__(self, name, parent=None, doc=None):
         self.name = name
         if parent is None:
             self._parent = None
         else:
             self._parent = weakref.ref(parent)
-        if desc is not None:
-            self.__doc__ = desc
+        if doc is not None:
+            self.__doc__ = doc
 
     def get(self, path, index=None):
         """Get a child object using a dotted path name. 

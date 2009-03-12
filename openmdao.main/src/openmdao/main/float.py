@@ -14,13 +14,13 @@ class Float(Variable):
     """A Variable wrapper for floats"""
     
     def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
-                 default=UNDEFINED, desc=None, units=UNDEFINED, 
+                 default=UNDEFINED, doc=None, units=UNDEFINED, 
                  min_limit=None, max_limit=None):
         self.units = units
         super(Float, self).__init__(name, parent, iostatus, 
                                     val_type=(float,int,long), 
                                     ref_name=ref_name, ref_parent=ref_parent,
-                                    default=default, desc=desc)
+                                    default=default, doc=doc)
         self._min_limit = None
         self._max_limit = None
         self.min_limit = min_limit

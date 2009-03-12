@@ -30,12 +30,12 @@ class Variable(HierarchyMember):
     
     def __init__(self, name, parent, iostatus, 
                  val_type=object, ref_name=None, ref_parent=None, 
-                 default=UNDEFINED, desc=None):
+                 default=UNDEFINED, doc=None):
         """Note that Variable calls _pre_assign from here, so if _pre_assign
         requires any attributes from a derived class, those attributes must be
         set before the Variable __init__ function is called.
         """
-        super(Variable, self).__init__(name, parent, desc)        
+        super(Variable, self).__init__(name, parent, doc)        
 
         # by default, name of the variable is the same as the obj it refers to
         if ref_name is None:

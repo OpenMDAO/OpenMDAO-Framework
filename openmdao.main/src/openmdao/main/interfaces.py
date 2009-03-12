@@ -94,7 +94,7 @@ class IComponent (Interface):
 
     directory = Attribute('If non-null, the directory to execute in.')
 
-    def add_socket (name, iface, desc=''):
+    def add_socket (name, iface, doc=''):
         """Specify a named placeholder for a component with the given
         interface."""
 

@@ -45,8 +45,8 @@ class Container(HierarchyMember):
    
     implements(IContainer)
     
-    def __init__(self, name, parent=None, desc=None, add_to_parent=True):
-        super(Container, self).__init__(name, parent, desc)            
+    def __init__(self, name, parent=None, doc=None, add_to_parent=True):
+        super(Container, self).__init__(name, parent, doc)            
         self._pub = {}  # A container for framework accessible objects.
         if parent is not None and \
            IContainer.providedBy(parent) and \

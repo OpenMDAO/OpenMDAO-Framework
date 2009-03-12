@@ -52,10 +52,10 @@ class BoolTestCase(unittest.TestCase):
         self.assertEqual(val, True)
 
     def test_set_attribute(self):
-        self.bool1.set('desc', 'xyzzy')
-        self.assertEqual(self.bool1.desc, 'xyzzy')
+        self.bool1.set('doc', 'xyzzy')
+        self.assertEqual(self.bool1.doc, 'xyzzy')
         try:
-            self.bool1.set('desc', 'froboz', [2])
+            self.bool1.set('doc', 'froboz', [2])
         except ValueError, err:
             self.assertEqual(str(err), 
                 'h1.bool1: array indexing of Variable attributes not supported')
