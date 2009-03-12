@@ -106,7 +106,7 @@ def main():
     # cd to the top of the new branch
     os.chdir(os.path.join(new_branch,'buildout'))
     
-    run_command(sys.executable+' bootstrap.py')
+    run_command(sys.executable+' isolated_bootstrap.py')
     
     # replace the buildout configuration file if supplied by the user
     if options.buildout:
