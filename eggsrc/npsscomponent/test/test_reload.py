@@ -17,9 +17,9 @@ class Source(Component):
 
     def __init__(self, name='Source', parent=None):
         super(Source, self).__init__(name, parent)
-        Bool('npss_reload', self, desc='Test input to NPSS',
+        Bool('npss_reload', self, doc='Test input to NPSS',
               default=False, iostatus=OUTPUT)
-        Float('npss_in', self, desc='Test input to NPSS',
+        Float('npss_in', self, doc='Test input to NPSS',
               default=0., iostatus=OUTPUT)
 
 
@@ -28,7 +28,7 @@ class Sink(Component):
 
     def __init__(self, name='Sink', parent=None):
         super(Sink, self).__init__(name, parent)
-        Float('npss_out', self, desc='Test output from NPSS',
+        Float('npss_out', self, doc='Test output from NPSS',
               default=0., iostatus=INPUT)
 
 
@@ -50,9 +50,9 @@ class NPSSTestCase(unittest.TestCase):
         self.npss = NPSScomponent(parent=self.tla, directory=directory,
                                   arglist=arglist, output_filename='reload.out')
         self.npss.reload_flag = 'reload_requested'
-        Float('xyzzy_in',  self.npss, desc='Test input',  iostatus=INPUT)
-        Float('xyzzy_out', self.npss, desc='Test output', iostatus=OUTPUT)
-        String('s', self.npss, desc='Unconnected input', iostatus=INPUT)
+        Float('xyzzy_in',  self.npss, doc='Test input',  iostatus=INPUT)
+        Float('xyzzy_out', self.npss, doc='Test output', iostatus=OUTPUT)
+        String('s', self.npss, doc='Unconnected input', iostatus=INPUT)
 
         self.tla.workflow.add_node(self.npss)
 

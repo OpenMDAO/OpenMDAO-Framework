@@ -29,8 +29,8 @@ class CONMINdriver(Driver):
             
     """
     
-    def __init__(self, name, parent=None, desc=None):
-        super(CONMINdriver, self).__init__(name, parent, desc)
+    def __init__(self, name, parent=None, doc=None):
+        super(CONMINdriver, self).__init__(name, parent, doc)
         
         # TODO: this really needs to be a copy 
         # (see conmin user's guide for how to save state)

@@ -18,11 +18,11 @@ class Model_A2d(Component):
         super(Model_A2d, self).__init__(name, parent)
         self._m4_comp = mool.Optimization.Models_test.Model_A2d()
 
-        Float('x', self, INPUT, desc='X input value.', default=0.)
-        Float('y', self, INPUT, desc='Y input value.', default=0.)
+        Float('x', self, INPUT, doc='X input value.', default=0.)
+        Float('y', self, INPUT, doc='Y input value.', default=0.)
 
-        Float('z1', self, OUTPUT, desc='exp(x) + exp(y)', default=0.)
-        Float('z2', self, OUTPUT, desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0',
+        Float('z1', self, OUTPUT, doc='exp(x) + exp(y)', default=0.)
+        Float('z2', self, OUTPUT, doc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0',
               default = 0.)
 
     def execute(self):
@@ -42,10 +42,10 @@ class Model_B2d(Component):
         super(Model_B2d, self).__init__(name, parent)
         self._m4_comp = mool.Optimization.Models_test.Model_B2d()
 
-        Float('x', self, INPUT, desc='X input value.', default=0.)
-        Float('y', self, INPUT, desc='Y input value.', default=0.)
+        Float('x', self, INPUT, doc='X input value.', default=0.)
+        Float('y', self, INPUT, doc='Y input value.', default=0.)
 
-        Float('z', self, OUTPUT, desc='24.*x+24.*y', default=0.)
+        Float('z', self, OUTPUT, doc='24.*x+24.*y', default=0.)
 
     def execute(self):
         """ Run M4 component. """
