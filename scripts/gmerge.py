@@ -1,14 +1,15 @@
 #!/usr/bin/env python
 
 """
-This is a helper script to make merging with bazaar and meld be more similar to the
-graphical clearcase merge tool.  For a given file that is merged, e.g., file_x, the
-bazaar merge will create file_x.BASE, file_x.OTHER, and file_x.THIS in the event of a
-conflict. These three files are used by this script to perform the graphical merge.
+This is a helper script to make merging with bazaar and meld be more similar to
+the graphical clearcase merge tool.  For a given file that is merged, e.g.,
+file_x, the bazaar merge will create file_x.BASE, file_x.OTHER, and file_x.THIS
+in the event of a conflict. These three files are used by this script to perform
+the graphical merge.
 
-The user will have the option to update the file_x.OTHER or the file_x.THIS version 
-of file_x, and will be prompted after the graphical merge to determine which one
-should be used to overwrite file_x.
+The user will have the option to update the file_x.OTHER or the file_x.THIS
+version  of file_x, and will be prompted after the graphical merge to determine
+which one should be used to overwrite file_x.
 
 
 usage: gmerge.py filename
@@ -169,7 +170,6 @@ def merge_all():
     while rest != '':
         os.chdir(path)
         if os.path.exists('.bzr'):
-            print 'found .bzr'
             break
         else:
             path,rest = os.path.split(path)
@@ -190,8 +190,8 @@ def merge_all():
 
 if __name__ == '__main__':
     parser = OptionParser()
-    parser.add_option("-a","--all", action="store_true", dest="all",
-         help="if set, graphically merge all conflict files in the repository")
+#    parser.add_option("-a","--all", action="store_true", dest="all",
+#         help="if set, graphically merge all conflict files in the repository")
     parser.add_option("-f", "", action="store", type="string", dest="fname",
                       help="specify name of file to merge manually")
     parser.add_option("","--log", action="store", type="string", dest="log",
@@ -221,12 +221,8 @@ if __name__ == '__main__':
     
     app = GmergeApp(redirect = False)
     
-    if options.all:
-        merge_all()
-    elif options.fname:
+    if options.fname:
         gmerge(options.fname)
     else:
-        parser.print_help()
-        sys.exit(-1)
-        
+        merge_all()
 
