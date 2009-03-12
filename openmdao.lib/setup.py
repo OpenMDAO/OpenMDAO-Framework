@@ -1,32 +1,34 @@
-from setuptools import setup, find_packages
-import os
+
+# pylint: disable-msg=F0401
+
+from setuptools import setup
 
 version = '0.0.1'
 
 setup(name='openmdao.lib',
       version=version,
       description="OpenMDAO Standard Library",
-      long_description="",
-      # Get more strings from http://www.python.org/pypi?%3Aaction=list_classifiers
-      classifiers=[
-        "Programming Language :: Python",
-        "Topic :: Software Development :: Libraries :: Python Modules",
-        ],
-      keywords='',
-      author='OpenMDAO Team',
+      long_description="""\
+""",
+      classifiers=[],
+      keywords='optimization multidisciplinary multi-disciplinary analysis',
+      author='',
       author_email='',
       url='',
       license='NASA Open Source Agreement',
-      packages=find_packages(exclude=['ez_setup']),
+      namespace_packages=["openmdao"],
+      packages=['openmdao','openmdao.lib','openmdao.lib.drivers',
+                'openmdao.lib.components','openmdao.lib.variables',
+                'openmdao.lib.factories'],
+      package_dir={'': 'src'},
       package_data={'openmdao.lib.drivers': ['test/*.py'],
                     'openmdao.lib.variables': ['test/*.py'],
                     'openmdao.lib.factories': ['test/*.py'],
                     'openmdao.lib.components': ['test/*.py']
       },
-      namespace_packages=['openmdao'],
       include_package_data=True,
-      zip_safe=False,
       test_suite='nose.collector',
+      zip_safe=False,
       install_requires=[
           'setuptools',
           'openmdao.main',

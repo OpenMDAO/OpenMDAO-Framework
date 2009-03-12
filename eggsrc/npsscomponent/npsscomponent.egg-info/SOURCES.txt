@@ -7,3 +7,6 @@ npsscomponent.egg-info/entry_points.txt
 npsscomponent.egg-info/requires.txt
 npsscomponent.egg-info/top_level.txt
 npsscomponent.egg-info/zip-safe
+test/test_basic.py
+test/test_instances.py
+test/test_reload.py

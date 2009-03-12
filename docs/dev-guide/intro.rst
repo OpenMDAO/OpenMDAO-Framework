@@ -2,20 +2,29 @@
 Introduction to OpenMDAO Development Process
 --------------------------------------------
 
-This is the beginning of the documentation for OpenMDAO developers that attempts
-to explain the OpenMDAO development process and how to interact with the various
-tools the project uses for configuration management, testing, deployment, etc. 
-Right now, this is a very basic outline that needs to be greatly improved before
-it is ready for production use.  So if you are reading this, consider yourself
-an alpha tester of the process.  When you come across something that does not
-work or is confusing, or if you have thought of a way to improve some aspect of
-the process, please write it down and email it to Bret.A.Naylor@nasa.gov or edit
-the file yourself. The source file for this tutorial can be found in ``???`` in
-the top level directory of your OpenMDAO source :term:`branch`. If you don not know
-what a branch is, that will be explained in a following section.
+This is the beginning of the documentation for OpenMDAO developers that
+attempts to explain the OpenMDAO development process and how to interact
+with the various tools the project uses for configuration management,
+testing, deployment, etc.  The source files for this tutorial can be found
+in the ``docs/dev-guide`` directory in the top level directory of your
+OpenMDAO source :term:`branch`. 
 
 .. index:: zc.buildout
 .. index:: Bazaar
+
+
+System Configuration
+====================
+
+Some steps of the development process, e.g., downloading a branch of the
+source repository, require network access.  If you're behind an http
+proxy, you'll have to set the http_proxy environment variable on your
+system in order for bazaar and zc.buildout to function properly.
+
+In these early stages of the project, we are developing mostly on linux,
+with occasional testing on Windows, but in the near term we plan to start
+full testing on linux, Windows, and OS X.
+
 
 Getting Started
 ===============
@@ -25,18 +34,16 @@ your own copy of the source code and create an environment that contains all  of
 the Python modules you will need.  To accomplish these things, you will be using
 two tools: `Bazaar, <http://bazaar-vcs.org>`_ to configuration manage your
 source code, and  `zc.buildout, <http://pypi.python.org/pypi/zc.buildout>`_ to
-keep track  of all  of the Python packages that your code depends on.  A Python
-script called ``mkbranch.py``  has been written to help cut down on the number
-of manual steps required before you can start working on your :term:`branch`.  For a
+keep track  of all  of the Python packages that your code depends on. For a
 gentle video introduction to zc.buildout, check out
-http://rhodesmill.org/brandon/buildout. Note that on *torpedo* the sound does
-not work, so it is better to view the buildout video intro from another
-machine. 
+http://rhodesmill.org/brandon/buildout. Note that the sound does not work on the
+local GRC machine called *torpedo*, so GRC users should view the buildout video
+intro from another machine. 
 
 If you have not previously used Bazaar on a particular machine where you intend
 to work with Bazaar repositories, you should run the ``whoami``
 command so that Bazaar will know your email address. You need to supply your
-first and last name and your email address in the following format:
+first and last name and your email address in the following way:
 
 ::
 
@@ -51,45 +58,26 @@ to a :term:`repository` on that machine.
 .. index:: pair: source code; location
 .. index:: branch
 
-Where's the Code?
-_________________
 
-
-The OpenMDAO project source files are located under ``/OpenMDAO/`` on
-*torpedo*.  Under ``/OpenMDAO/``
-is a directory called ``trunk``.  This is the *official* version of the
-OpenMDAO source. Developers cannot write directly to this version.  Writing
-to the trunk can be done only by the configuration manager.  To make changes
-to the code, a developer must first create a :term:`branch`, make  and test
-changes, and then make the branch available to the configuration manager 
-who will then merge the changes back into the trunk.
-
-.. index:: pair: OpenMDAO; directory structure
-
-The overall directory structure for OpenMDAO looks like this:
-
-``/OpenMDAO``
-    The top level directory
+Code Location
+_____________
     
-``/OpenMDAO/trunk``
-    Release version of the code
 
-``/OpenMDAO/dev/<username>``
-    Shared repository where all active branches for user ``<username>`` are
-    located
+The bazaar repository for the OpenMDAO source code is currently only available
+to users with sftp access to the GRC host named *torpedo* because the OpenMDAO
+public website is not yet active.  If you have sftp access, either directly or
+through a VPN, you can get a copy of the repository as follows:
 
-``/OpenMDAO/dev/<username>/T<ticket number>-<desc>``
-    Top level directory of an active branch for :term:`ticket` ``<ticket number>``
-    with description ``<desc>`` and owned by user ``<username>``
-    
-``/OpenMDAO/eggs``
-    Directory containing Python distributions for all packages used in
-    OpenMDAO
-    
-``/OpenMDAO/eggs/<package name>``
-    Directory containing all distributions of a particular package
+::
 
-    
+    bzr branch sftp://yourusername@torpedo.grc.nasa.gov/OpenMDAO/trunk <your_branch_name>
+
+
+When the web site is eventually activated, read-only access
+will be available to anyone and
+patches will be submittable in the form of bazaar merge directives sent via email
+to ``patches@openmdao.org``.
+
 
 .. index:: source repository
 .. index:: buildout
@@ -97,16 +85,15 @@ The overall directory structure for OpenMDAO looks like this:
 Layout of a Source Repository
 +++++++++++++++++++++++++++++
 
-Within a branch repository itself, located in 
-``/OpenMDAO/dev/<username>/T<ticket number>-<desc>``, 
-the directory structure will look like this:
+Within an OpenMDAO branch repository,  the directory structure will look like
+this:
 
 ``buildout``
     The directory containing the buildout configuration file(s) and all of 
     the content generated by the buildout
     
 ``docs``
-    All Sphinx documentation for OpenMDAO.  The documentation
+    All Sphinx user documentation for OpenMDAO.  The documentation
     is broken up into several major documents, each found in a separate 
     subdirectory, e.g., ``arch-doc`` contains the Architecture
     Document, ``dev-guide`` contains the Developer's Guide, and ``user-guide``
@@ -117,7 +104,8 @@ the directory structure will look like this:
     Python package containing all infrastructure source for OpenMDAO
     
 ``openmdao.lib``
-    Python package containing source for the OpenMDAO standard library of plugins
+    Python package containing source for the OpenMDAO standard library of 
+    modules
     
 ``openmdao.recipes``
     Python package containing source for any buildout recipes developed for
@@ -127,19 +115,24 @@ the directory structure will look like this:
     Python package containing source for various OpenMDAO plugins used for
     testing
     
-``util``
+``openmdao.util``
+    Python package containing source for various python utility routines
+    used by OpenMDAO developers.
+    
+``misc``
     Miscellaneous scripts and configuration files used by OpenMDAO developers
  
 .. index:: egg
     
 ``eggsrc``
-    Contains source to be packaged into Python :term:`eggs` that are releasable separately
-    from OpenMDAO.  These eggs may or may not depend upon OpenMDAO.  Eggs that have
-    not yet been approved to be part of openmdao.lib can live here, as can any eggs
-    containing source that is not license compatible with NOSA, for example, GPL.
+    Contains source to be packaged into Python :term:`eggs` that are releasable
+    separately from OpenMDAO.  These eggs may or may not depend upon OpenMDAO. 
+    Eggs that have not yet been approved to be part of openmdao.lib can live
+    here, as can any eggs containing source that is not license compatible with
+    NOSA, for example, eggs containing GPL code.
 
 
-.. index:: namesake package
+.. index:: namespace package
 
 Layout of a Namespace Package
 +++++++++++++++++++++++++++++++++++++
@@ -148,7 +141,7 @@ OpenMDAO is large enough that it makes sense to split it up into multiple Python
 packages, but we want all of those packages to be under the umbrella of
 ``openmdao``. To do this in Python, we use what is called a *namespace*
 package.  Namespace  packages all have a similar directory layout.  Currently in
-OpenMDAO,  ``openmdao.main``, ``openmdao.lib``, ``openmdao.recipes``, and
+OpenMDAO,  ``openmdao.main``, ``openmdao.lib``, ``openmdao.recipes``, ``openmdao.util``,and
 ``openmdao.test`` are all namespace packages that are in the ``openmdao``
 namespace.  They all  have a layout like this:
 
@@ -157,99 +150,75 @@ namespace.  They all  have a layout like this:
     contains the ``setup.py`` script which is used to build and 
     create an egg for the package.
     
-``openmdao.<package>/docs``
-    Documentation specific to the package.
+``openmdao.<package>/src``
+    Contains all of the package source code.
     
-``openmdao.<package>/openmdao``
-    Contains nothing but a special ``__init__.py`` file and a ``<package>``
+``openmdao.<package>/src/openmdao``
+    Contains a special ``__init__.py`` file and a ``<package>``
     subdirectory.
     
-``openmdao.<package>/openmdao/<package>``
+``openmdao.<package>/src/openmdao/<package>``
     This is where the actual source code, usually a bunch of Python files,
-    is located.  There could also be a standard Python package directory structure
+    is located.  There could be a standard Python package directory structure
     under this directory as well.
     
 
 .. index:: pair: branch; creating 
 .. index:: buildout
 
+
 Creating Your Branch
 ____________________
 
 
-A Python script, called ``mkbranch.py`` located in the ``util`` directory of
-the trunk will help create and configure your development branch for you.  It will
-create your branch and create a buildout for you on the branch. Internally, the
-script is simply talking to Bazaar and zc.buildout. You could perform these
-tasks manually, but you should use the script in order to keep your branch
-consistent with others in OpenMDAO.  This will make it easier for the
-configuration manager to locate and merge your branch, and it will also make it
-easier for other developers on the team to help you if you run into a problem.
-
-
-.. index:: ticket
-
-The following command will create a branch as well as create and bootstrap the
-buildout:
+To create a branch of the OpenMDAO source repository, run the following
+command:
 
 ::
 
-  <python> /OpenMDAO/trunk/util/mkbranch.py -t <ticket number> [-d <description>][-s <source repository>][-u <user name>]
-
-where the following parameters are user specified:
-
-``<python>`` 
-   The specific version of Python you want to use for the
-   branch, for example, ``python2.6``.  Whatever version of Python you use for
-   this command will be *hard-wired* into all of the buildout-generated scripts.
-
-``<ticket number>``
-   The ticket number used by the bug tracking system
+   bzr branch bzr://openmdao.org/source/trunk <branch_name>
    
-``<description>``
-   *(optional)* A short description  of the purpose of the branch. The description
-   should be less than 15 characters in length. 
+where ``<branch_name>`` is the name your are giving to the top level directory
+of your branch repository.  The name should reflect the purpose of the branch in
+order to avoid confusion in the case where you have multiple branches active at
+the same time. If you do not supply ``<branch_name>``, the name by default will
+be the last part of the source repository URI, which in this case is ``trunk``.
+At GRC, we name branches based on ticket numbers in the bug tracker, and we use
+the form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug tracker
+ticket number and ``<desc>`` is a short description of the branch. For example,
+``T0029-workflow_fix``.
    
-``<source repository>``
-   *(optional)* The top directory of the repository you want to branch from. If
-   not supplied, this defaults to the top directory of the trunk.
-   
-``<user name>``
-   *(optional)* This should be your username on *torpedo*.  This is set 
-   automatically for you based on the LOGNAME environment variable, so 
-   generally you should not have to set this one.
-   
-
-As an example, if I wanted to create a branch off of the trunk to fix a bug in the
-unit conversion code based on ticket 321 in the bug tracker and wanted to use
-version 2.6 of Python, I could issue the following command:
+Note that as of this writing, the ``openmdao.org`` web site is not active, so
+the URI bzr://openmdao.org/source/trunk is not available yet.  Until the web
+site becomes active, if you have access to torpedo.grc.nasa.gov, you can
+creata a branch using the command:
 
 ::
 
-   python2.6 /OpenMDAO/trunk/util/mkbranch.py -t 321 -d units_fix 
+   bzr branch sftp://yourusername@torpedo.grc.nasa.gov/OpenMDAO/trunk <branch_name>
+   
+You will be prompted for your password after entering the command.
 
-
-After the script runs, it places you in the 
-``/OpenMDAO/dev/<username>`` directory, where ``<username>`` is your
-user name on *torpedo*.  For example, since my user name is *bnaylor*, my branch
-from the command above would be created in 
-``/OpenMDAO/dev/bnaylor/T321-units_fix``. Branches are named using the
-following form:
+After you've created your branch, change your directory to the ``buildout``
+directory within the top level directory of the repository and run:
 
 ::
 
-  T<ticket number>-<desc>
+   <python> isolated_bootstrap.py
+   
+where ``<python>`` is the specific version of Python you want to use for
+the branch, for example, ``python2.5``.  Whatever version of Python you use
+for this command will be *hard-wired* into all of the buildout-generated
+scripts. 
 
 
-where ``<desc>`` is the short description supplied using the ``-d`` argument. 
-
-At this point, your buildout should be configured, and your top level ``buildout``
-directory should contain the following subdirectories:
+At this point, your buildout area should be configured, and your 
+``buildout`` directory should contain the following subdirectories:
 
 ``bin``
-    Contains a buildout script, a buildout specific Python interpreter, and
-    other scripts that depend upon which parts you have included as part of
-    your buildout.
+    Contains a buildout script, a buildout specific Python interpreter, a
+    test script, and other scripts that depend upon which parts you have
+    included as part of your buildout.
 
 ``develop-eggs``
     Contains links to any directories that you have
