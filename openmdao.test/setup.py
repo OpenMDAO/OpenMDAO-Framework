@@ -1,8 +1,7 @@
-import os, sys
 
 # pylint: disable-msg=F0401
 
-from distutils.errors import DistutilsExecError,DistutilsPlatformError
+from distutils.errors import DistutilsExecError, DistutilsPlatformError
 
 try:
     from setuptools import setup

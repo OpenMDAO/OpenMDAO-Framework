@@ -27,7 +27,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
     def test_import_not_found(self):
         """try importing a distrib that doesn't exist"""
         try:
-            import_version('bogus',Requirement.parse('bogus==1.0'),
+            import_version('bogus', Requirement.parse('bogus==1.0'),
                                      Environment(['plugins']))
         except DistributionNotFound, err:
             self.assertEqual(str(err),
@@ -69,7 +69,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
                                                            'openmdao','test',
                                                            'plugins')],
                                              ['openmdao.dumbplugins'])
-        foo = fact.create('foo.Comp1Plugin',name='foo',version='1.0')
+        foo = fact.create('foo.Comp1Plugin', name='foo', version='1.0')
         self.assertEqual(foo.version, '1.0')
         
         # now try to create an object that requires a conflicting version of foo
@@ -78,7 +78,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
                           version='1.4')
         
         # now request a non-existent version of foo
-        foo10 = fact.create('foo.Comp1Plugin',name='foo2',version='10.5')
+        foo10 = fact.create('foo.Comp1Plugin', name='foo2', version='10.5')
         self.assertEqual(foo10, None)
         
     def test_get_loaders(self):

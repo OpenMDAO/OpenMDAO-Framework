@@ -76,7 +76,7 @@ class PkgResourcesFactory(Factory):
         super(PkgResourcesFactory, self).__init__()
         self.env = Environment(search_path)
         self._loaders = {}
-        if isinstance(groups,list):
+        if isinstance(groups, list):
             for group in groups:
                 self._get_plugin_info(self.env, group)
         
@@ -112,7 +112,7 @@ class PkgResourcesFactory(Factory):
             # pkg_env[name] gives us a list of distribs for that package name
             for dist in pkg_env[name]:
                 entry_dict = get_entry_map(dist, group=groupname)
-                for nm,entry_pt in entry_dict.items():
+                for nm, entry_pt in entry_dict.items():
                     if len(entry_pt.attrs) > 0:
                         ename = '.'.join([entry_pt.module_name]+
                                          list(entry_pt.attrs))

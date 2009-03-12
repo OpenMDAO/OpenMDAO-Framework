@@ -3,8 +3,8 @@
 import unittest
 
 from openmdao.main.component import Component, RUN_OK
-from openmdao.main import Assembly,Float,String
-from openmdao.main.variable import INPUT,OUTPUT
+from openmdao.main import Assembly, Float, String
+from openmdao.main.variable import INPUT, OUTPUT
 
 
 class DummyComp(Component):

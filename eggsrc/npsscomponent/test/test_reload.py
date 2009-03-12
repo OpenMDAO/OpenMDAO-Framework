@@ -11,10 +11,6 @@ from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent
 
-import openmdao.main.factorymanager as factorymanager
-from openmdao.main.importfactory import ImportFactory
-factorymanager.register_factory(ImportFactory())
-
 
 class Source(Component):
     """ Just something to connect NPSS inputs to. """
