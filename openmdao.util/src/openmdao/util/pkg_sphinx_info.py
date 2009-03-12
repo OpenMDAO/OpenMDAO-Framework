@@ -96,8 +96,7 @@ def pkg_sphinx_info(env,startdir, pkg, outfile, show_undoc=False, underline='-')
     print >> outfile, '\n\n'
     
     names = list(get_resource_files(dist,['*__init__.py','*setup.py','*test_*.py'],
-                                    ['*.py']))
-            
+                                    ['*.py']))            
     names.sort()
     for name in names:
         mod_sphinx_info(name, outfile, show_undoc=show_undoc)

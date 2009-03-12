@@ -13,7 +13,7 @@ setup(name='npsscomponent',
       license='',
       py_modules=['npsscomponent'],
       include_package_data=True,
-      zip_safe=True,
+      zip_safe=False,
       install_requires=[
           'pyNPSS'
       ],
