@@ -2,14 +2,29 @@
 Introduction to OpenMDAO Development Process
 --------------------------------------------
 
-This is the beginning of the documentation for OpenMDAO developers that attempts
-to explain the OpenMDAO development process and how to interact with the various
-tools the project uses for configuration management, testing, deployment, etc. 
-The source files for this tutorial can be found in the ``docs/dev-guide``
-directory in the top level directory of your OpenMDAO source :term:`branch`. 
+This is the beginning of the documentation for OpenMDAO developers that
+attempts to explain the OpenMDAO development process and how to interact
+with the various tools the project uses for configuration management,
+testing, deployment, etc.  The source files for this tutorial can be found
+in the ``docs/dev-guide`` directory in the top level directory of your
+OpenMDAO source :term:`branch`. 
 
 .. index:: zc.buildout
 .. index:: Bazaar
+
+
+System Configuration
+====================
+
+Some steps of the development process, e.g., downloading a branch of the
+source repository, require network access.  If you're behind an http
+proxy, you'll have to set the http_proxy environment variable on your
+system in order for bazaar and zc.buildout to function properly.
+
+In these early stages of the project, we are developing mostly on linux,
+with occasional testing on Windows, but in the near term we plan to start
+full testing on linux, Windows, and OS X.
+
 
 Getting Started
 ===============
@@ -126,7 +141,7 @@ OpenMDAO is large enough that it makes sense to split it up into multiple Python
 packages, but we want all of those packages to be under the umbrella of
 ``openmdao``. To do this in Python, we use what is called a *namespace*
 package.  Namespace  packages all have a similar directory layout.  Currently in
-OpenMDAO,  ``openmdao.main``, ``openmdao.lib``, ``openmdao.recipes``, and
+OpenMDAO,  ``openmdao.main``, ``openmdao.lib``, ``openmdao.recipes``, ``openmdao.util``,and
 ``openmdao.test`` are all namespace packages that are in the ``openmdao``
 namespace.  They all  have a layout like this:
 
@@ -174,7 +189,15 @@ ticket number and ``<desc>`` is a short description of the branch. For example,
 ``T0029-workflow_fix``.
    
 Note that as of this writing, the ``openmdao.org`` web site is not active, so
-the URI bzr://openmdao.org/source/trunk is not available yet.
+the URI bzr://openmdao.org/source/trunk is not available yet.  Until the web
+site becomes active, if you have access to torpedo.grc.nasa.gov, you can
+creata a branch using the command:
+
+::
+
+   bzr branch sftp://yourusername@torpedo.grc.nasa.gov/OpenMDAO/trunk <branch_name>
+   
+You will be prompted for your password after entering the command.
 
 After you've created your branch, change your directory to the ``buildout``
 directory within the top level directory of the repository and run:
@@ -183,18 +206,19 @@ directory within the top level directory of the repository and run:
 
    <python> isolated_bootstrap.py
    
-where ``<python>`` is the specific version of Python you want to use for the
-branch, for example, ``python2.6``.  Whatever version of Python you use for
-this command will be *hard-wired* into all of the buildout-generated scripts.
+where ``<python>`` is the specific version of Python you want to use for
+the branch, for example, ``python2.5``.  Whatever version of Python you use
+for this command will be *hard-wired* into all of the buildout-generated
+scripts. 
 
 
 At this point, your buildout area should be configured, and your 
 ``buildout`` directory should contain the following subdirectories:
 
 ``bin``
-    Contains a buildout script, a buildout specific Python interpreter, and
-    other scripts that depend upon which parts you have included as part of
-    your buildout.
+    Contains a buildout script, a buildout specific Python interpreter, a
+    test script, and other scripts that depend upon which parts you have
+    included as part of your buildout.
 
 ``develop-eggs``
     Contains links to any directories that you have
