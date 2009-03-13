@@ -1,9 +1,0 @@
-npsscomponent.py
-setup.py
-npsscomponent.egg-info/PKG-INFO
-npsscomponent.egg-info/SOURCES.txt
-npsscomponent.egg-info/dependency_links.txt
-npsscomponent.egg-info/entry_points.txt
-npsscomponent.egg-info/requires.txt
-npsscomponent.egg-info/top_level.txt
-npsscomponent.egg-info/zip-safe

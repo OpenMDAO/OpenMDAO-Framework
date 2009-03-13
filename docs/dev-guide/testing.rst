@@ -180,7 +180,7 @@ test function inside of our ``unittest.TestCase`` derived class.
 
 Note that the ``else`` block after the ``except`` is important because we
 want the test to fail if no exception is raised at all.  Without the else
-block, the test would pass if no exception was raised.
+block, the test would pass if no exception were raised.
 
 
 Test File Locations
