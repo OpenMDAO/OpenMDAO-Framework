@@ -254,10 +254,10 @@ class NPSSTestCase(unittest.TestCase):
 
         try:
             NPSScomponent(arglist=['-foobar'])
-        except RuntimeError, err:
+        except ValueError, err:
             self.assertEqual("NPSS: illegal option '-foobar'", str(err))
         else:
-            self.fail('RuntimeError expected')
+            self.fail('ValueError expected')
 
         try:
             NPSScomponent(top=99)
@@ -268,45 +268,45 @@ class NPSSTestCase(unittest.TestCase):
 
         try:
             NPSScomponent(arglist=['-I .', 99])
-        except RuntimeError, err:
+        except ValueError, err:
             self.assertEqual("NPSS: illegal option '-I .'", str(err))
         else:
-            self.fail('RuntimeError expected')
+            self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=99)
         except TypeError, err:
             self.assertEqual("'int' object is not iterable", str(err))
         else:
-            self.fail('AttributeError expected')
+            self.fail('TypeError expected')
 
         try:
             NPSScomponent(arglist=['-I'])
-        except RuntimeError, err:
+        except ValueError, err:
             self.assertEqual('NPSS: expected include path', str(err))
         else:
-            self.fail('RuntimeError expected')
+            self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-D'])
-        except RuntimeError, err:
+        except ValueError, err:
             self.assertEqual('NPSS: expected preprocessor value', str(err))
         else:
-            self.fail('RuntimeError expected')
+            self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-a'])
-        except RuntimeError, err:
+        except ValueError, err:
             self.assertEqual('NPSS: expected default access type', str(err))
         else:
-            self.fail('RuntimeError expected')
+            self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-l'])
-        except RuntimeError, err:
+        except ValueError, err:
             self.assertEqual('NPSS: expected DLM path', str(err))
         else:
-            self.fail('RuntimeError expected')
+            self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['somefilethatdoesnotexist.npss'])
@@ -365,7 +365,7 @@ class NPSSTestCase(unittest.TestCase):
         except RuntimeError, err:
             self.assertEqual('no active session', str(err))
         else:
-            self.fail('Exception expected')
+            self.fail('RuntimeError expected')
         try:
             child.exists('foobar')
         except RuntimeError, err:
@@ -381,7 +381,7 @@ class NPSSTestCase(unittest.TestCase):
         except RuntimeError, err:
             self.assertEqual('no active session', str(err))
         else:
-            self.fail('Exception expected')
+            self.fail('RuntimeError expected')
 
     def test_numpy(self):
         try:

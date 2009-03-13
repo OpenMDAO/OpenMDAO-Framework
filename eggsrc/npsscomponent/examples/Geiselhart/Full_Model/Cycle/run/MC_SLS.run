@@ -1,0 +1,61 @@
+real tmpKnoz = engine.Knoz;
+engine.Knoz = 1;
+// Run Aero Design Point
+  failCheck << "altitude = " << engine.alt << endl;
+  failCheck << "Mach = " << engine.MN << endl;
+engine.setOption("switchDes","DESIGN");
+engine.PC = 50;
+engine.setup();
+engine.run();  
+engine.page.display();   
+
+// Report Any Errors
+if(!engine.solver.converged) {
+  failCheck << "failed = 1" << endl;
+  failCheck << "design case failed" << endl;
+}
+else {
+  failCheck << "";
+}
+
+engine.Knoz = tmpKnoz;
+
+// Run run SLS max thrust case
+engine.setOption("switchDes","OFFDESIGN");
+ESOregSetActive( 1013999, FALSE );
+ESOregSetActive( 1013299, FALSE );
+
+engine.PC = 50;
+engine.setup();
+engine.run();           
+engine.page.display();   
+
+// see if this helps get to SLS:
+   engine.alt = 40000.;
+   engine.MN = 1.2;
+   engine.PC = 50;
+   engine.setup();
+   engine.run();           
+   engine.page.display();   
+   
+   engine.alt = 30000.;
+   engine.MN = 0.8;
+   engine.PC = 50;
+   engine.setup();
+   engine.run();           
+   engine.page.display();   
+   
+   engine.alt = 15000.;
+   engine.MN = 0.50;
+   engine.PC = 50;
+   engine.setup();
+   engine.run();           
+   engine.page.display();   
+
+engine.alt = 0.00;
+engine.MN = 0.001;
+
+engine.PC = 50;
+engine.setup();
+engine.run();           
+engine.page.display();   

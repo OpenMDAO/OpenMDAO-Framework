@@ -1,0 +1,30 @@
+real tmpKnoz = engine.Knoz;
+engine.Knoz = 1;
+// Run Aero Design Point
+engine.setOption("switchDes","DESIGN");
+engine.PC = 50;
+engine.setup();
+engine.run();  
+engine.page.display();   
+
+// Report Any Errors
+if(!engine.solver.converged) {
+  failCheck << "failed = 1" << endl;
+  failCheck << "design case failed" << endl;
+}
+else {
+  failCheck << "";
+}
+
+engine.Knoz = tmpKnoz;
+
+// Run ADP Off Design to generate data for plume
+engine.setOption("switchDes","OFFDESIGN");
+ESOregSetActive( 1013999, FALSE );
+ESOregSetActive( 1013299, FALSE );
+
+
+engine.PC = 50;
+engine.setup();
+engine.run();           
+engine.page.display();   
