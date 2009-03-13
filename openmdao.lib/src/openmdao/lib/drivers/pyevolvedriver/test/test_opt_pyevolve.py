@@ -12,7 +12,7 @@ from openmdao.main.assembly import Assembly
 from openmdao.main.arrayvar import ArrayVariable
 from openmdao.main.variable import INPUT,OUTPUT
 from openmdao.main.float import Float
-from pyevolvedriver import pyevolvedriver
+from openmdao.lib.drivers.pyevolvedriver import pyevolvedriver
 
 
 import openmdao.main.factorymanager as factorymanager
