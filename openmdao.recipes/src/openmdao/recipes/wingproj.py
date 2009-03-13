@@ -171,10 +171,7 @@ class WingProj(object):
         script.write(script_template % dict(python=self.executable,
                                             proj=newfname))
         script.close()
-        os.chmod(scriptname, 
-                 stat.S_IREAD|stat.S_IWRITE|stat.S_IEXEC|
-                 os.stat(scriptname).st_mode)
-        
+        os.chmod(scriptname, 0755)
         return []
         
     update = install
