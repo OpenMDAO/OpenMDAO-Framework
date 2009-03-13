@@ -4,8 +4,8 @@ from openmdao.main import Float
 from openmdao.main.variable import INPUT, OUTPUT
 
 class Box(Component):
-    def __init__(self, name):
-        Component.__init__(self, name)
+    def __init__(self, name, parent=None, doc=None, directory=''):
+        super(Box, self).__init__(name, parent, doc, directory)
         self.width = 1
         self.height = 1
         self.depth = 1
