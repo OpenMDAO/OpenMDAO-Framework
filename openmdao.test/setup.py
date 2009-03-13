@@ -39,6 +39,9 @@ setup(name='openmdao.test',
       [openmdao.components]
       hollowsphere = openmdao.test.HollowSphere:HollowSphere
       box = openmdao.test.Box:Box
-      # -*- Entry points: -*-
+      
+      [console_scripts]
+      openmdaotest=openmdao.test.testing:run_openmdao_suite
+      
       """,
       )

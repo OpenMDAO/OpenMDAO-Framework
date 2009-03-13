@@ -25,7 +25,7 @@ help:
 
 clean:
 	-rm -rf _build/*
-	-rm -rf generated_images
+
 html:
 	mkdir -p _build/html _build/doctrees generated_images
 	python python-scripts/rebuild.py

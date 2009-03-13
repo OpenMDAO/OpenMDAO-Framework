@@ -40,15 +40,15 @@ class SphinxBuild(object):
                                                                    'docs',
                                                                    'python-scripts',
                                                                    'sphinx-build')
-        egg_dir = buildout['buildout']['eggs-directory']
-        dev_egg_dir = buildout['buildout']['develop-eggs-directory']
-        dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
-        # grab the first line of each dev egg link file
-        self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() for f in dev_eggs]
-        self.env = Environment(self.dev_eggs+[os.path.join(egg_dir,x) 
-                          for x in fnmatch.filter(os.listdir(egg_dir),'*.egg')])
+        self.egg_dir = buildout['buildout']['eggs-directory']
+        self.dev_egg_dir = buildout['buildout']['develop-eggs-directory']
                
     def install(self):
+        dev_eggs = fnmatch.filter(os.listdir(self.dev_egg_dir),'*.egg-link')
+        # grab the first line of each dev egg link file
+        self.dev_eggs = [open(os.path.join(self.dev_egg_dir,f),'r').readlines()[0].strip() for f in dev_eggs]
+        self.env = Environment(self.dev_eggs+[os.path.join(self.egg_dir,x) 
+                          for x in fnmatch.filter(os.listdir(self.egg_dir),'*.egg')])
         
         startdir = os.getcwd()
         if not os.path.isdir(self.docdir):
@@ -99,9 +99,7 @@ class SphinxBuild(object):
                                             browser=browser,
                                             index=idxpath))
         script.close()
-        os.chmod(scriptname, 
-                 stat.S_IREAD|stat.S_IWRITE|stat.S_IEXEC|
-                 os.stat(scriptname).st_mode)
+        os.chmod(scriptname, 0775)
         
         return [scriptname]
         
