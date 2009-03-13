@@ -66,7 +66,6 @@ class WingProj(object):
         self.options = options
         self.branchdir = os.path.split(buildout['buildout']['directory'])[0]
         dev_egg_dir = buildout['buildout']['develop-eggs-directory']
-#        dev_eggs = buildout['buildout']['develop'].strip().splitlines()
         dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
         # grab the first line of each dev egg link file
         self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() for f in dev_eggs]
@@ -172,7 +171,7 @@ class WingProj(object):
                                             proj=newfname))
         script.close()
         os.chmod(scriptname, 0755)
-        return []
+        return [scriptname]
         
     update = install
 

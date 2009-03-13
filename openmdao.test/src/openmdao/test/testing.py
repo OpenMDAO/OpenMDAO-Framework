@@ -9,7 +9,11 @@ def run_openmdao_suite():
     
     tlist = ['openmdao', '../eggsrc/npsscomponent']
     
-    nose.run_exit(argv=sys.argv+tlist)
+    if 'all' in sys.argv:
+        sys.argv.remove('all')
+        nose.run_exit(argv=sys.argv+tlist)
+    else:
+        nose.run_exit()
 
 
 if __name__ == '__main__':
