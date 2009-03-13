@@ -109,6 +109,8 @@ class Container(HierarchyMember):
             elif isinstance(entry, tuple):
                 name = entry[0]  # wrapper name
                 ref_name = entry[1]  # internal name
+                if not ref_name:
+                    ref_name = name
                 if len(entry) > 2:
                     iostat = entry[2] # optional iostatus
                 typ = type(getattr(self, ref_name))
@@ -193,8 +195,8 @@ class Container(HierarchyMember):
     
     def getvar(self, path):
         """Return the public Variable specified by the given 
-        path, which may contain '.' characters.  Only returns Variables, not attributes or
-        other Containers.
+        path, which may contain '.' characters.  Only returns Variables,
+        not attributes or other Containers.
         """
         assert(isinstance(path, basestring))
         try:
@@ -205,9 +207,14 @@ class Container(HierarchyMember):
             except KeyError:
                 self.raise_exception("object has no attribute '"+path+"'", 
                                      AttributeError)
-
-        return self._pub[base].getvar(name)
-        
+        try:
+            return self._pub[base].getvar(name)
+        except KeyError:
+            try:
+                return self._pub[path]
+            except KeyError:
+                self.raise_exception("object has no attribute '"+path+"'", 
+                                     AttributeError)
                 
     def set(self, path, value, index=None):
         """Set the value of the data object specified by the 

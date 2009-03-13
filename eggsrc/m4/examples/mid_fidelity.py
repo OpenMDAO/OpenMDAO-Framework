@@ -3,6 +3,7 @@ Simple M4 variable fidelity example.
 """
 
 from openmdao.main import Assembly, Float
+from openmdao.main.component import RUN_OK
 from openmdao.main.variable import INPUT, OUTPUT
 
 from m4.doe import DOE
@@ -72,6 +73,28 @@ class VarFi(MidFidelity):
         self.add_output_mapping('z2', 'z', 'z2')
 
 
+# pylint: disable-msg=E1101
+# "Instance of <class> has no <attr> member"
+
+def main():
+    """ Run model and print results. """
+    model = Model()
+    status = model.run()
+    if status == RUN_OK:
+        for i, case in enumerate(model.driver.outerator.plugin):
+            print 'CASE %d:' % (i+1)
+            for name, index, value in case.inputs:
+                print '    input:', name, index, value
+            if case.status == RUN_OK:
+                for name, index, value in case.outputs:
+                    print '    output:', name, index, value
+            else:
+                print '    FAILED, status = %d, msg: %s' % \
+                      (case.status, case.msg)
+    else:
+        print 'Run failed, status', status
+
+
 if __name__ == '__main__':
-    Model().run()
+    main()
 
