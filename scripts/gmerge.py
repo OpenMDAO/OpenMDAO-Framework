@@ -80,12 +80,15 @@ def gmerge(conflict_file, merge_tool='meld2.4'):
     logger.info('merging file '+conflict_file+' manually')
     
     base_file = conflict_file+'.BASE'
+    if not os.path.isfile(base_file):
+        base_file = None
     other_file = conflict_file+'.OTHER'
     this_file = conflict_file+'.THIS'
 
     # write protect base file to avoid confusion
-    base_perm = os.stat(base_file)[stat.ST_MODE]
-    os.chmod(base_file, stat.S_IREAD) 
+    if base_file:
+        base_perm = os.stat(base_file)[stat.ST_MODE]
+        os.chmod(base_file, stat.S_IREAD) 
 
     try:
         # save a temp copy of the OTHER file
@@ -94,11 +97,15 @@ def gmerge(conflict_file, merge_tool='meld2.4'):
         # save a temp copy of the THIS file
         tmp_this_file = temp_copy(this_file)
 
-        cmd = merge_tool+' '+base_file+' '+other_file+' '+this_file
+        if base_file:
+            cmd = merge_tool+' '+base_file+' '+other_file+' '+this_file
+        else:
+            cmd = merge_tool+' '+other_file+' '+this_file
         merge_output,merge_return = run_command(cmd)
     finally:
         # put back original permissions
-        os.chmod(base_file, base_perm)
+        if base_file:
+            os.chmod(base_file, base_perm)
 
     updated = []
     if has_diffs(other_file, tmp_other_file) is True:
@@ -109,8 +116,9 @@ def gmerge(conflict_file, merge_tool='meld2.4'):
     undo = False
     if len(updated) != 1:  
         try:  
-            choices=[other_file, this_file]
-            short_choices = [os.path.split(x)[1] for x in choices]
+            choices=[(other_file,' (from merged branch)'), 
+                     (this_file,'     (from this branch)')]
+            short_choices = [os.path.split(x[0])[1]+x[1] for x in choices]
             dialog = wx.SingleChoiceDialog(None, "Choose File to Update From",
                                            ' ', 
                                            choices=short_choices)
