@@ -212,12 +212,14 @@ and run:
 
    <python> isolated_bootstrap.py
    
-where ``<python>`` is the specific version of Python you want to use for
-the branch, for example, ``python2.5``.  Whatever version of Python you use
-for this command will be *hard-wired* into all of the buildout-generated
-scripts. Note that isolated_bootstrap.py is a modified version of bootstrap.py,
-which can be found in the <branch_name>/misc/branch_config directory. Using
-isolated_bootstrap.py will isolate your buildout from the
+where ``<python>`` is the specific version of Python you want to use for the
+branch, for example, ``python2.5``.  Whatever version of Python you use for this
+command will be *hard-wired* into all of the buildout-generated scripts. Note
+that isolated_bootstrap.py is a modified version of bootstrap.py, which can be
+found in the <branch_name>/misc/branch_config directory. Using
+isolated_bootstrap.py will isolate your buildout from the system level python
+install, while the regular bootstrap.py will use distributions from the system
+level if available.
 
 
 At this point, your buildout area should be configured, and your 
