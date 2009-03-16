@@ -18,21 +18,21 @@ class Source(Component):
 
     def __init__(self, name='Source', parent=None):
         super(Source, self).__init__(name, parent)
-        Bool('b', self, default=False, iostatus=OUTPUT)
-        Float('f', self, default=0., iostatus=OUTPUT)
-        ArrayVariable('f1d', self, entry_type=float, num_dims=1,
-                      default=[], iostatus=OUTPUT)
-        ArrayVariable('f2d', self, entry_type=float, num_dims=2,
-                      default=[[]], iostatus=OUTPUT)
-        ArrayVariable('f3d', self, entry_type=float, num_dims=3,
-                      default=[[[]]], iostatus=OUTPUT)
-        Int('i', self, default=0, iostatus=OUTPUT)
-        ArrayVariable('i1d', self, entry_type=int, num_dims=1,
-                      default=[], iostatus=OUTPUT)
-        ArrayVariable('i2d', self, entry_type=int, num_dims=2,
-                      default=[[]], iostatus=OUTPUT)
-        String('s', self, default='', iostatus=OUTPUT)
-        StringList('s1d', self, default=[], iostatus=OUTPUT)
+        Bool('b', self, OUTPUT, default=False)
+        Float('f', self, OUTPUT, default=0.)
+        ArrayVariable('f1d', self, OUTPUT, entry_type=float, num_dims=1,
+                      default=[])
+        ArrayVariable('f2d', self, OUTPUT, entry_type=float, num_dims=2,
+                      default=[[]])
+        ArrayVariable('f3d', self, OUTPUT, entry_type=float, num_dims=3,
+                      default=[[[]]])
+        Int('i', self, OUTPUT, default=0)
+        ArrayVariable('i1d', self, OUTPUT, entry_type=int, num_dims=1,
+                      default=[])
+        ArrayVariable('i2d', self, OUTPUT, entry_type=int, num_dims=2,
+                      default=[[]])
+        String('s', self, OUTPUT, default='')
+        StringList('s1d', self, OUTPUT, default=[])
 
 
 class Passthrough(NPSScomponent):
@@ -44,37 +44,27 @@ class Passthrough(NPSScomponent):
         super(Passthrough, self).__init__(name, parent, '', directory,
                                           arglist, 'passthrough.out')
 
-        Bool('b_in', self, iostatus=INPUT)
-        Float('f_in', self, iostatus=INPUT)
-        ArrayVariable('f1d_in', self, entry_type=float, num_dims=1,
-                      iostatus=INPUT)
-        ArrayVariable('f2d_in', self, entry_type=float, num_dims=2,
-                      iostatus=INPUT)
-        ArrayVariable('f3d_in', self, entry_type=float, num_dims=3,
-                      iostatus=INPUT)
-        Int('i_in', self, default=0, iostatus=INPUT)
-        ArrayVariable('i1d_in', self, entry_type=int, num_dims=1,
-                      iostatus=INPUT)
-        ArrayVariable('i2d_in', self, entry_type=int, num_dims=2,
-                      iostatus=INPUT)
-        String('s_in', self, iostatus=INPUT)
-        StringList('s1d_in', self, iostatus=INPUT)
+        Bool('b_in', self, INPUT)
+        Float('f_in', self, INPUT)
+        ArrayVariable('f1d_in', self, INPUT, entry_type=float, num_dims=1)
+        ArrayVariable('f2d_in', self, INPUT, entry_type=float, num_dims=2)
+        ArrayVariable('f3d_in', self, INPUT, entry_type=float, num_dims=3)
+        Int('i_in', self, INPUT, default=0)
+        ArrayVariable('i1d_in', self, INPUT, entry_type=int, num_dims=1)
+        ArrayVariable('i2d_in', self, INPUT, entry_type=int, num_dims=2)
+        String('s_in', self, INPUT)
+        StringList('s1d_in', self, INPUT)
 
-        Bool('b_out', self, iostatus=OUTPUT)
-        Float('f_out', self, iostatus=OUTPUT)
-        ArrayVariable('f1d_out', self, entry_type=float, num_dims=1,
-                      iostatus=OUTPUT)
-        ArrayVariable('f2d_out', self, entry_type=float, num_dims=2,
-                      iostatus=OUTPUT)
-        ArrayVariable('f3d_out', self, entry_type=float, num_dims=3,
-                      iostatus=OUTPUT)
-        Int('i_out', self, iostatus=OUTPUT)
-        ArrayVariable('i1d_out', self, entry_type=int, num_dims=1,
-                      iostatus=OUTPUT)
-        ArrayVariable('i2d_out', self, entry_type=int, num_dims=2,
-                      iostatus=OUTPUT)
-        String('s_out', self, iostatus=OUTPUT)
-        StringList('s1d_out', self, iostatus=OUTPUT)
+        Bool('b_out', self, OUTPUT)
+        Float('f_out', self, OUTPUT)
+        ArrayVariable('f1d_out', self, OUTPUT, entry_type=float, num_dims=1)
+        ArrayVariable('f2d_out', self, OUTPUT, entry_type=float, num_dims=2)
+        ArrayVariable('f3d_out', self, OUTPUT, entry_type=float, num_dims=3)
+        Int('i_out', self, OUTPUT)
+        ArrayVariable('i1d_out', self, OUTPUT, entry_type=int, num_dims=1)
+        ArrayVariable('i2d_out', self, OUTPUT, entry_type=int, num_dims=2)
+        String('s_out', self, OUTPUT)
+        StringList('s1d_out', self, OUTPUT)
 
 
 class Sink(Component):
@@ -82,21 +72,21 @@ class Sink(Component):
 
     def __init__(self, name='Sink', parent=None):
         super(Sink, self).__init__(name, parent)
-        Bool('b', self, default=False, iostatus=INPUT)
-        Float('f', self, default=0., iostatus=INPUT)
-        ArrayVariable('f1d', self, entry_type=float, num_dims=1,
-                      default=[], iostatus=INPUT)
-        ArrayVariable('f2d', self, entry_type=float, num_dims=2,
-                      default=[[]], iostatus=INPUT)
-        ArrayVariable('f3d', self, entry_type=float, num_dims=3,
-                      default=[[[]]], iostatus=INPUT)
-        Int('i', self, default=0, iostatus=INPUT)
-        ArrayVariable('i1d', self, entry_type=int, num_dims=1,
-                      default=[], iostatus=INPUT)
-        ArrayVariable('i2d', self, entry_type=int, num_dims=2,
-                      default=[[]], iostatus=INPUT)
-        String('s', self, default='', iostatus=INPUT)
-        StringList('s1d', self, default=[], iostatus=INPUT)
+        Bool('b', self, INPUT, default=False)
+        Float('f', self, INPUT, default=0.)
+        ArrayVariable('f1d', self, INPUT, entry_type=float, num_dims=1,
+                      default=[])
+        ArrayVariable('f2d', self, INPUT, entry_type=float, num_dims=2,
+                      default=[[]])
+        ArrayVariable('f3d', self, INPUT, entry_type=float, num_dims=3,
+                      default=[[[]]])
+        Int('i', self, INPUT, default=0)
+        ArrayVariable('i1d', self, INPUT, entry_type=int, num_dims=1,
+                      default=[])
+        ArrayVariable('i2d', self, INPUT, entry_type=int, num_dims=2,
+                      default=[[]])
+        String('s', self, INPUT, default='')
+        StringList('s1d', self, INPUT, default=[])
 
 
 # pylint: disable-msg=E1101
@@ -192,7 +182,7 @@ class NPSSTestCase(unittest.TestCase):
 
         self.assertEqual(self.tla.Sink.b, self.tla.Source.b)
 
-        self.assertEqual(self.tla.Sink.f,   self.tla.Source.f)
+        self.assertEqual(self.tla.Sink.f, self.tla.Source.f)
         for i in xrange(len(self.tla.Source.f1d)):
             self.assertEqual(self.tla.Sink.f1d[i], self.tla.Source.f1d[i])
         for i in xrange(len(self.tla.Source.f2d)):
@@ -213,7 +203,7 @@ class NPSSTestCase(unittest.TestCase):
                 self.assertEqual(self.tla.Sink.i2d[i][j],
                                  self.tla.Source.i2d[i][j])
 
-        self.assertEqual(self.tla.Sink.s,   self.tla.Source.s)
+        self.assertEqual(self.tla.Sink.s, self.tla.Source.s)
         for i in xrange(len(self.tla.Source.s1d)):
             self.assertEqual(self.tla.Sink.s1d[i], self.tla.Source.s1d[i])
 

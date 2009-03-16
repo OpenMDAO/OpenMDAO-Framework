@@ -17,10 +17,10 @@ class Source(Component):
 
     def __init__(self, name='Source', parent=None):
         super(Source, self).__init__(name, parent)
-        Bool('npss_reload', self, doc='Test input to NPSS',
-              default=False, iostatus=OUTPUT)
-        Float('npss_in', self, doc='Test input to NPSS',
-              default=0., iostatus=OUTPUT)
+        Bool('npss_reload', self, OUTPUT, default=False,
+             doc='Test input to NPSS')
+        Float('npss_in', self, OUTPUT, default=0.,
+              doc='Test input to NPSS')
 
 
 class Sink(Component):
@@ -28,8 +28,8 @@ class Sink(Component):
 
     def __init__(self, name='Sink', parent=None):
         super(Sink, self).__init__(name, parent)
-        Float('npss_out', self, doc='Test output from NPSS',
-              default=0., iostatus=INPUT)
+        Float('npss_out', self, INPUT, default=0.,
+              doc='Test output from NPSS')
 
 
 # pylint: disable-msg=E1101
@@ -38,7 +38,7 @@ class Sink(Component):
 class NPSSTestCase(unittest.TestCase):
 
     def setUp(self):
-        """called before each test in this class"""
+        """ Called before each test in this class. """
         self.tla = Assembly('TLA')
         self.tla.workflow.add_node(Source(parent=self.tla))
         self.tla.Source.npss_in = 9
@@ -50,9 +50,9 @@ class NPSSTestCase(unittest.TestCase):
         self.npss = NPSScomponent(parent=self.tla, directory=directory,
                                   arglist=arglist, output_filename='reload.out')
         self.npss.reload_flag = 'reload_requested'
-        Float('xyzzy_in',  self.npss, doc='Test input',  iostatus=INPUT)
-        Float('xyzzy_out', self.npss, doc='Test output', iostatus=OUTPUT)
-        String('s', self.npss, doc='Unconnected input', iostatus=INPUT)
+        Float('xyzzy_in',  self.npss, INPUT, doc='Test input')
+        Float('xyzzy_out', self.npss, OUTPUT, doc='Test output')
+        String('s', self.npss, INPUT, doc='Unconnected input')
 
         self.tla.workflow.add_node(self.npss)
 
@@ -63,7 +63,7 @@ class NPSSTestCase(unittest.TestCase):
         self.tla.connect('NPSS.xyzzy_out', 'Sink.npss_out')
 
     def tearDown(self):
-        """called after each test in this class"""
+        """ Called after each test in this class. """
         self.npss.pre_delete()
         self.npss = None
         self.tla = None
