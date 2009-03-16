@@ -639,7 +639,7 @@ def importLibrary(libfilepointer):
   for unitType,name in _unitLib.items('base_units'):
     _newUnit(name,1,_unitLib.base_types[unitType])
     _unitLib.base_names.append(name)
-  _unitLib.base_names=['m','kg','s','A','K', 'mol','cd','rad','sr']
+  #_unitLib.base_names=['m','kg','s','A','K', 'mol','cd','rad','sr']
   retry1 = set()
   retry2 = set()
   retryCount = 0
@@ -647,14 +647,22 @@ def importLibrary(libfilepointer):
 
 
   for name,unit in _unitLib.items('units'):
-    
-    try:
-      comment = unit.split(',')[1]
-      unit = unit.split(',')[0]
-      addUnit(name,unit,comment)
+    data = unit.split(',')
+    if len(data) == 2:
+        try:
+            comment = data[1]
+            unit = data[0]
+            addUnit(name,unit,comment)
 
-    except NameError:
-      retry1.add((name,unit,comment))
+        except NameError:
+            retry1.add((name,unit,comment))
+    elif len(data) == 4: 
+        try:
+            factor,baseunit,offset,comment = tuple(data)
+            addOffsetUnit(name,baseunit,factor,offset,comment)
+
+        except NameError:
+            retry1.add((name,unit,comment))
 
   for cruft in ['__builtins__', '__args__']:
     try: del _unitLib.unit_table[cruft]
