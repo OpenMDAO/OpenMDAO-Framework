@@ -18,6 +18,7 @@ class HierarchyMember(object):
             self._parent = None
         else:
             self._parent = weakref.ref(parent)
+        
         if doc is not None:
             self.__doc__ = doc
 
@@ -76,7 +77,7 @@ class HierarchyMember(object):
     # error reporting stuff
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception"""
-        full_msg = self.get_pathname()+': '+msg
+        full_msg = '%s: %s' % (self.get_pathname(), msg)
 #        logger.error(full_msg)
         raise exception_class(full_msg)
     

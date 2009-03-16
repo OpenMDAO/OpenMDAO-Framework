@@ -1,11 +1,4 @@
 
-
-#
-# programmer comments here, copyright, etc.
-#
-
-
-#public symbols
 __all__ = ["ObjServerFactory"]
 
 __version__ = "0.1"

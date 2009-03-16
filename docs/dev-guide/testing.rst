@@ -7,8 +7,8 @@ Testing
 By default, your top level ``buildout/bin`` directory will contain a script
 called ``test`` that uses a Python package called `nose
 <http://somethingaboutorange.com/mrl/projects/nose>`_ to run all of the unit
-tests for any package that you specify. For example, to run all of the openmdao
-unit tests, do the following:
+tests for any package that you specify. For example, to run all of the unit
+tests in the openmdao package, do the following:
 
 ::
 
@@ -20,7 +20,7 @@ which should generate output something like this:
 
    ..
    ----------------------------------------------------------------------
-   Ran 82 tests in 0.888s
+   Ran 95 tests in 0.888s
 
    OK
 

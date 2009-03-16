@@ -16,10 +16,10 @@ OpenMDAO source :term:`branch`.
 System Configuration
 ====================
 
-Some steps of the development process, e.g., downloading a branch of the
-source repository, require network access.  If you're behind an http
-proxy, you'll have to set the http_proxy environment variable on your
-system in order for bazaar and zc.buildout to function properly.
+Some steps of the development process, e.g., downloading a branch of the source
+repository and downloading python eggs, require network access.  If you're
+behind an http proxy, you'll have to set the **http_proxy** environment variable
+on your system in order for bazaar and zc.buildout to function properly.
 
 In these early stages of the project, we are developing mostly on linux,
 with occasional testing on Windows, but in the near term we plan to start
@@ -36,9 +36,10 @@ two tools: `Bazaar, <http://bazaar-vcs.org>`_ to configuration manage your
 source code, and  `zc.buildout, <http://pypi.python.org/pypi/zc.buildout>`_ to
 keep track  of all  of the Python packages that your code depends on. For a
 gentle video introduction to zc.buildout, check out
-http://rhodesmill.org/brandon/buildout. Note that the sound does not work on the
+http://rhodesmill.org/brandon/buildout Note that the sound does not work on the
 local GRC machine called *torpedo*, so GRC users should view the buildout video
 intro from another machine. 
+
 
 If you have not previously used Bazaar on a particular machine where you intend
 to work with Bazaar repositories, you should run the ``whoami``
@@ -73,14 +74,14 @@ through a VPN, you can get a copy of the repository as follows:
     bzr branch sftp://yourusername@torpedo.grc.nasa.gov/OpenMDAO/trunk <your_branch_name>
 
 
-When the web site is eventually activated, read-only access
-will be available to anyone and
-patches will be submittable in the form of bazaar merge directives sent via email
-to ``patches@openmdao.org``.
+When the web site is eventually activated, read-only access will be available to
+anyone from ``openmdao.org/source/trunk`` and patches will be submittable in
+the form of bazaar merge directives sent via email to ``patches@openmdao.org``.
 
 
 .. index:: source repository
 .. index:: buildout
+
 
 Layout of a Source Repository
 +++++++++++++++++++++++++++++
@@ -171,8 +172,20 @@ Creating Your Branch
 ____________________
 
 
-To create a branch of the OpenMDAO source repository, run the following
-command:
+As of this writing, the ``openmdao.org`` web site is not active, so
+the URI bzr://openmdao.org/source/trunk is not available yet.  Until the web
+site becomes active, if you have sftp access to torpedo.grc.nasa.gov, you can
+create a branch using the command:
+
+::
+
+   bzr branch sftp://yourusername@torpedo.grc.nasa.gov/OpenMDAO/trunk <branch_name>
+   
+You will be prompted for your password after entering the command.
+
+
+Once the ``openmdao.org`` website is active, you should be able to create
+a branch using the following command:
 
 ::
 
@@ -183,33 +196,30 @@ of your branch repository.  The name should reflect the purpose of the branch in
 order to avoid confusion in the case where you have multiple branches active at
 the same time. If you do not supply ``<branch_name>``, the name by default will
 be the last part of the source repository URI, which in this case is ``trunk``.
+
+
 At GRC, we name branches based on ticket numbers in the bug tracker, and we use
 the form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug tracker
 ticket number and ``<desc>`` is a short description of the branch. For example,
 ``T0029-workflow_fix``.
    
-Note that as of this writing, the ``openmdao.org`` web site is not active, so
-the URI bzr://openmdao.org/source/trunk is not available yet.  Until the web
-site becomes active, if you have access to torpedo.grc.nasa.gov, you can
-creata a branch using the command:
-
-::
-
-   bzr branch sftp://yourusername@torpedo.grc.nasa.gov/OpenMDAO/trunk <branch_name>
-   
-You will be prompted for your password after entering the command.
 
 After you've created your branch, change your directory to the ``buildout``
-directory within the top level directory of the repository and run:
+directory within the top level directory of the repository ``<branch_name>``
+and run:
 
 ::
 
    <python> isolated_bootstrap.py
    
-where ``<python>`` is the specific version of Python you want to use for
-the branch, for example, ``python2.5``.  Whatever version of Python you use
-for this command will be *hard-wired* into all of the buildout-generated
-scripts. 
+where ``<python>`` is the specific version of Python you want to use for the
+branch, for example, ``python2.5``.  Whatever version of Python you use for this
+command will be *hard-wired* into all of the buildout-generated scripts. Note
+that isolated_bootstrap.py is a modified version of bootstrap.py, which can be
+found in the <branch_name>/misc/branch_config directory. Using
+isolated_bootstrap.py will isolate your buildout from the system level python
+install, while the regular bootstrap.py will use distributions from the system
+level if available.
 
 
 At this point, your buildout area should be configured, and your 
