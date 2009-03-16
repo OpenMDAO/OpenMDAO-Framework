@@ -578,11 +578,26 @@ def _addPrefixed(unit):
     prefixed_names.append(name)
   _unitLib.help.append(', '.join(prefixed_names))
 
-
+def addOffsetUnit(name,baseunit,factor,offset,comment):
+    if type(baseunit) == str:
+        baseunit = _findUnit(baseunit)
+    #else, baseunit should be a instance of PhysicalUnit
+    #names,factor,powers,offset=0
+    unit = PhysicalUnit(baseunit.names,factor,baseunit.powers,offset)
+    unit.setName(name)
+    if _unitLib.unit_table.has_key(name):
+        if (_unitLib.unit_table[name].factor!=unit.factor or _unitLib.unit_table[name].powers!=unit.powers):
+          raise KeyError, 'Unit ' + name + ' already defined with different factor or powers'
+    _unitLib.unit_table[name] = unit
+    _unitLib.set('units',name,unit)   
+    if comment: 
+        _unitLib.help.append((name,comment,unit))
+        
+        
 def addUnit(name, unit, comment=''):
     if comment:
       _unitLib.help.append((name, comment, unit))
-    if type(unit) == type(''):
+    if type(unit) == str:
       unit = eval(unit, _unitLib.unit_table)
       for cruft in ['__builtins__', '__args__']:
         try: del _unitLib.unit_table[cruft]
@@ -632,6 +647,7 @@ def importLibrary(libfilepointer):
 
 
   for name,unit in _unitLib.items('units'):
+    
     try:
       comment = unit.split(',')[1]
       unit = unit.split(',')[0]
