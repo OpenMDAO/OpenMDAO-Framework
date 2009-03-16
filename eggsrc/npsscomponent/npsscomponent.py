@@ -189,7 +189,7 @@ class NPSScomponent(Component):
                     self.access = arg
                 else:
                     self.raise_exception("invalid access '%s'" % arg,
-                                         RuntimeError)
+                                         ValueError)
                 access_next = False
             elif arg == '-autodoc':
                 self.autodoc = True
@@ -220,26 +220,26 @@ class NPSScomponent(Component):
             elif arg == '-trace':
                 self.trace_execution = True
             elif arg.startswith('-'):
-                self.raise_exception("illegal option '%s'" % arg, RuntimeError)
+                self.raise_exception("illegal option '%s'" % arg, ValueError)
             else:
                 self.model_filename = arg
 
         if access_next:
-            self.raise_exception("expected default access type", RuntimeError)
+            self.raise_exception("expected default access type", ValueError)
         elif assembly_next:
-            self.raise_exception("expected assembly type", RuntimeError)
+            self.raise_exception("expected assembly type", ValueError)
         elif dlm_next:
-            self.raise_exception("expected DLM path", RuntimeError)
+            self.raise_exception("expected DLM path", ValueError)
         elif executive_next:
-            self.raise_exception("expected executive type", RuntimeError)
+            self.raise_exception("expected executive type", ValueError)
         elif include_next:
-            self.raise_exception("expected include path", RuntimeError)
+            self.raise_exception("expected include path", ValueError)
         elif ns_next:
-            self.raise_exception("expected NameServer IOR path", RuntimeError)
+            self.raise_exception("expected NameServer IOR path", ValueError)
         elif obj_next:
-            self.raise_exception("expected object path", RuntimeError)
+            self.raise_exception("expected object path", ValueError)
         elif preproc_next:
-            self.raise_exception("expected preprocessor value", RuntimeError)
+            self.raise_exception("expected preprocessor value", ValueError)
 
     def _generate_arglist(self):
         """ Generate argument list. """

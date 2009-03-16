@@ -10,7 +10,7 @@ import numpy.numarray as numarray
 
 from openmdao.main import Driver, ArrayVariable, String, StringList, \
                           ExprEvaluator
-from openmdao.main.component import RUN_OK
+from openmdao.main.component import RUN_OK, RUN_STOPPED
 from openmdao.main.variable import INPUT
 
 
@@ -212,6 +212,9 @@ class CONMINdriver(Driver):
             
         # loop until optimized
         while conmin.cnmn1.igoto or self._first is True:
+            if self._stop:
+                return RUN_STOPPED
+
             self._first = False            
             
             conmin.cnmn1.obj = numarray.array(self.objective_val)

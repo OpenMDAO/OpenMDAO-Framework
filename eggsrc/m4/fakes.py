@@ -6,7 +6,8 @@ __all__ = ('FakeSocket', 'FakeROSE')
 __version__ = '0.0'
 
 from openmdao.main import Driver, Container, Case
-from openmdao.main.component import RUN_OK, RUN_FAILED
+from openmdao.main.component import RUN_OK, RUN_FAILED, RUN_STOPPED
+from openmdao.main.interfaces import IContainer, ICaseIterator
 
 class FakeSocket(Container):
     """
@@ -15,13 +16,25 @@ class FakeSocket(Container):
     """
 
     def __init__(self, name='Socket', parent=None,
-                 plugin=None, interface='', required=True):
+                 plugin=None, interface=None, required=True):
         super(FakeSocket, self).__init__(name, parent)
-        self.plugin = plugin
         self.interface = interface
         self.required = required
-        if plugin is not None:
+        self.plugin = plugin
+
+    def _get_plugin(self):
+        return self._plugin
+
+    def _set_plugin(self, plugin):
+        if self.interface is not None and plugin is not None:
+            if not self.interface.providedBy(plugin):
+                self.raise_exception('plugin does not support required interface',
+                                     TypeError)
+        self._plugin = plugin
+        if plugin is not None and IContainer.providedBy(plugin):
             plugin.parent = self
+
+    plugin = property(_get_plugin, _set_plugin)
 
 
 class FakeROSE(Driver):
@@ -34,16 +47,26 @@ class FakeROSE(Driver):
 
     def __init__(self, name='FakeROSE', parent=None):
         super(FakeROSE, self).__init__(name, parent)
-        FakeSocket('iterator', self, None, 'ICaseIterator', True)
-        FakeSocket('outerator', self, None, '', True)
+        FakeSocket('iterator', self, None, ICaseIterator, True)
+        FakeSocket('outerator', self, None, None, True)
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
 
     def execute(self):
         """ Run each case in iterator record results in outerator. """
-        self.outerator.plugin = []
+        if self.iterator.plugin is None:
+            self.error('No iterator plugin')
+            return RUN_FAILED
+
+        if self.outerator.plugin is None:
+            self.error('No outerator plugin')
+            return RUN_FAILED
+
         for case in self.iterator.plugin:
+            if self._stop:
+                return RUN_STOPPED
+
             for name, index, value in case.inputs:
                 try:
                     self.parent.set(name, value, index)

@@ -1,0 +1,223 @@
+// ****************************************************************************
+// * NASA Glenn Research Center
+// * 21000 Brookpark Rd
+// * Cleveland, OH 44135
+// *
+// ****************************************************************************
+
+#include <InterpIncludes.ncp>
+
+class Splitter2 extends Element {
+
+//------------------------------------------------------------
+//     ******* DOCUMENTATION *******
+//------------------------------------------------------------
+
+  title = "";
+
+
+  description = isA() + " will split one flow stream into two flow streams.";
+
+
+  usageNotes = isA() +
+"
+
+- The splitter element takes one entering stream and splits it into
+two streams and applies a pressure loss to each flow separately.
+This splitter applies to streams that flow only in one direction
+at all times and do not recirculate.";
+
+  background = "";
+
+//------------------------------------------------------------
+//     ******* SETUP VARIABLES ********
+//------------------------------------------------------------
+
+  real BPR {
+    value = 0.0;  IOstatus = INPUT;  units = NONE;
+    description = "Bypass Ratio, W2out/W1out, input by the user at design point";
+  }
+
+  real BPRdes {
+    value = 0.0;  IOstatus = OUTPUT;  units = NONE;
+    description = "Design bypass ratio, stored from the input value of BPR at design point";
+  }
+
+  real dPqPavg {
+    value = 0.0;  IOstatus = OUTPUT;  units = NONE;
+    description = "Mass avg DeltaP/P";
+  }
+
+  real dPqP1 {
+    value = 0.0;  IOstatus = INPUT;  units = NONE;
+    description = "DeltaP/P of primary leg ";
+  }
+
+  real dPqP2 {
+    value = 0.0;  IOstatus = INPUT;  units = NONE;
+    description = "DeltaP/P of secondary leg";
+  }
+
+//   real W1out {
+//     value = 1.0;  IOstatus = OUTPUT;  units = LBM_PER_SEC;
+//     description = "Flow in the primary leg";
+//   }
+
+//   real W2out {
+//     value = 1.0;  IOstatus = OUTPUT;  units = LBM_PER_SEC;
+//     description = "Flow in the secondary leg";
+//   }
+
+//------------------------------------------------------------
+//   ******* OPTION VARIABLE SETUP *******
+//------------------------------------------------------------
+// Default value is the first value in the allowedValues list
+
+  Option switchDes {
+    allowedValues = { DESIGN, OFFDESIGN }
+    description = "Design/Off-design switch";
+    rewritableValues = FALSE;  // Enables converter optimization.
+  }
+
+//------------------------------------------------------------
+// ****** SETUP PORTS, FLOW STATIONS, SOCKETS, TABLES ********
+//------------------------------------------------------------
+
+// FLUID PORTS
+
+  FluidInputPort Fl_I {
+    description = "Inlet fluid port";
+  }
+
+  FluidOutputPort Fl_01 {
+    description = "Fluid outlet port 1";
+  }
+
+  FluidOutputPort Fl_02 {
+    description = "Fluid outlet port 2";
+  }
+
+// FUEL PORTS
+
+// BLEED PORTS
+
+// THERMAL PORTS
+
+// MECHANICAL PORTS
+
+// FLOW STATIONS
+
+// SOCKETS
+
+  Socket S_dP {
+    allowedValues = { "dPqP1","dPqP2" }
+    description = "Primary and secondary pressure loss socket ";
+    socketType = SPLITTER_DP;
+  }
+
+
+
+// TABLES
+
+
+//------------------------------------------------------------
+// ******* INTERNAL SOLVER SETUP *******
+//------------------------------------------------------------
+
+
+//------------------------------------------------------------
+//  ******  ADD SOLVER INDEPENDENTS & DEPENDENTS  ******
+//------------------------------------------------------------
+
+  Independent ind_BPR {
+    varName = "BPR";
+    description = "Bypass ratio independent";
+  }
+
+
+//------------------------------------------------------------
+// ******* VARIABLE CHANGED METHODOLOGY *******
+//------------------------------------------------------------
+  void variableChanged( string name, any oldVal ) {
+    if (name == "switchDes") {
+      if (switchDes == DESIGN ) {
+	ind_BPR.autoSetup = FALSE;
+      }
+      else if ( switchDes == OFFDESIGN ) {
+	ind_BPR.autoSetup = FALSE;
+      }
+    }
+  }
+
+//------------------------------------------------------------
+//   ******* PERFORM ENGINEERING CALCULATIONS *******
+//------------------------------------------------------------
+  void calculate() {
+
+    //------------------------------------------------------------
+    // if in design mode then pick of the BPR for use in the guesses
+    //------------------------------------------------------------
+    if ( switchDes == DESIGN) {
+      BPRdes = BPR;
+    }
+
+    //------------------------------------------------------------
+    //  Splitter Computations
+    //  Set Primary and Secondary Fluid Ports conditions equal the
+    //  Fluid In Port.  Copy the flow from the inlet to the two
+    //  outlet ports. This will make sure that any constituent
+    //  elements and anything else in the flow station that this
+    //  element doesn't deal with gets passed along.
+    //------------------------------------------------------------
+    Fl_01.copyFlow( "Fl_I" );
+    Fl_02.copyFlow( "Fl_I" );
+
+    //------------------------------------------------------------
+    // Split the Flow
+    // Calculate the Primary and Secondary flow rates when in Design
+    // mode or the bypass ratio and the secondary flow rate from the
+    // given primary flow rate when in off-design mode.
+    //------------------------------------------------------------
+    real Win = Fl_I.W;
+
+    real W1out = Win/(1 + BPR);
+    real W2out = Win - W1out;
+
+    Fl_01.W = W1out;
+    Fl_02.W = W2out;
+
+    //------------------------------------------------------------
+    // Apply Pressure Losses
+    // Check to see if there is a subelement in the sockets. If
+    // there is, then execute the socket. The socket will write
+    // into the dPqP1 and dPqP2 attributes. If there is
+    // not a subelement, then any user supplied value in these
+    // attributes is used.
+    //------------------------------------------------------------
+    if (!S_dP.isEmpty() ) {
+      S_dP.execute();
+    }
+
+    //------------------------------------------------------------
+    // Calculate the Primary and Secondary Exit Total Pressures
+    //------------------------------------------------------------
+    real PtPri = Fl_I.Pt *( 1 - dPqP1 );
+    real PtSec = Fl_I.Pt *( 1 - dPqP2 );
+
+    //----------------------------------------------------------------
+    // Use the Entrance total enthalpy and the outlet total pressures
+    // to determine the thermodynamic state of the primary and
+    // secondary flow stations.
+    //----------------------------------------------------------------
+    real htIn = Fl_I.ht;
+    Fl_01.setTotal_hP( htIn, PtPri );
+    Fl_02.setTotal_hP( htIn, PtSec );
+
+    //------------------------------------------------------------
+    //  Calculate the mass averaged pressure loss
+    //------------------------------------------------------------
+    dPqPavg = (( W1out * dPqP1 ) + ( W2out * dPqP2 ))/ Win;
+  }
+
+}
+

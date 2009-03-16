@@ -1,0 +1,193 @@
+real tmpKnoz = engine.Knoz;
+engine.Knoz = 1;
+// Run Aero Design Point
+engine.setOption("switchDes","DESIGN");
+engine.PC = 50;
+engine.setup();
+engine.run();  
+engine.page.display();   
+
+// Report Any Errors
+if(!engine.solver.converged) {
+  failCheck << "failed = 1" << endl;
+  failCheck << "design case failed" << endl;
+}
+else {
+  failCheck << "";
+}
+
+engine.Knoz = tmpKnoz;
+
+// Run Off Design, generate Flops Deck
+engine.setOption("switchDes","OFFDESIGN");
+ESOregSetActive( 1013999, FALSE );
+ESOregSetActive( 1013299, FALSE );
+
+
+engine.PC = 50;
+engine.setup();
+engine.run();           
+
+// Running Flops Deck Cases
+real hookCount = 0;
+runThrottleHook(60000,1.80); hookCount++;
+runThrottleHook(60000,1.70); hookCount++;
+runThrottleHook(60000,1.60); hookCount++;
+runThrottleHook(60000,1.50); hookCount++;
+runThrottleHook(60000,1.40); hookCount++;
+runThrottleHook(60000,1.30); hookCount++;
+runThrottleHook(60000,1.20); hookCount++;
+runThrottleHook(60000,1.10); hookCount++;
+runThrottleHook(60000,1.00); hookCount++;
+
+runThrottleHook(55000,1.80); hookCount++;
+runThrottleHook(55000,1.70); hookCount++;
+runThrottleHook(55000,1.60); hookCount++;
+runThrottleHook(55000,1.50); hookCount++;
+runThrottleHook(55000,1.40); hookCount++;
+runThrottleHook(55000,1.30); hookCount++;
+runThrottleHook(55000,1.20); hookCount++;
+runThrottleHook(55000,1.10); hookCount++;
+runThrottleHook(55000,1.00); hookCount++;
+
+runThrottleHook(50000,1.80); hookCount++;
+runThrottleHook(50000,1.70); hookCount++;
+runThrottleHook(50000,1.60); hookCount++;
+runThrottleHook(50000,1.50); hookCount++;
+runThrottleHook(50000,1.40); hookCount++;
+runThrottleHook(50000,1.30); hookCount++;
+runThrottleHook(50000,1.20); hookCount++;
+runThrottleHook(50000,1.10); hookCount++;
+runThrottleHook(50000,1.00); hookCount++;
+
+runThrottleHook(45000,1.80); hookCount++;
+runThrottleHook(45000,1.70); hookCount++;
+runThrottleHook(45000,1.60); hookCount++;
+runThrottleHook(45000,1.50); hookCount++;
+runThrottleHook(45000,1.40); hookCount++;
+runThrottleHook(45000,1.30); hookCount++;
+runThrottleHook(45000,1.20); hookCount++;
+runThrottleHook(45000,1.10); hookCount++;
+runThrottleHook(45000,1.00); hookCount++;
+
+runThrottleHook(40000,1.80); hookCount++;
+runThrottleHook(40000,1.70); hookCount++;
+runThrottleHook(40000,1.60); hookCount++;
+runThrottleHook(40000,1.50); hookCount++;
+runThrottleHook(40000,1.40); hookCount++;
+runThrottleHook(40000,1.30); hookCount++;
+runThrottleHook(40000,1.20); hookCount++;
+runThrottleHook(40000,1.10); hookCount++;
+runThrottleHook(40000,1.00); hookCount++;
+runThrottleHook(40000,0.90); hookCount++;
+runThrottleHook(40000,0.80); hookCount++;
+runThrottleHook(40000,0.70); hookCount++;
+runThrottleHook(40000,0.60); hookCount++;
+runThrottleHook(40000,0.50); hookCount++;
+runThrottleHook(40000,0.40); hookCount++;
+runThrottleHook(40000,0.30); hookCount++;
+runThrottleHook(40000,0.20); hookCount++;
+
+runThrottleHook(35000,1.80); hookCount++;
+runThrottleHook(35000,1.70); hookCount++;
+runThrottleHook(35000,1.60); hookCount++;
+runThrottleHook(35000,1.50); hookCount++;
+runThrottleHook(35000,1.40); hookCount++;
+runThrottleHook(35000,1.30); hookCount++;
+runThrottleHook(35000,1.20); hookCount++;
+runThrottleHook(35000,1.10); hookCount++;
+runThrottleHook(35000,1.00); hookCount++;
+runThrottleHook(35000,0.95); hookCount++;
+runThrottleHook(35000,0.90); hookCount++;
+runThrottleHook(35000,0.80); hookCount++;
+runThrottleHook(35000,0.70); hookCount++;
+runThrottleHook(35000,0.60); hookCount++;
+runThrottleHook(35000,0.50); hookCount++;
+runThrottleHook(35000,0.40); hookCount++;
+runThrottleHook(35000,0.30); hookCount++;
+runThrottleHook(35000,0.20); hookCount++;
+
+runThrottleHook(30000,1.80); hookCount++;
+runThrottleHook(30000,1.70); hookCount++;
+runThrottleHook(30000,1.60); hookCount++;
+runThrottleHook(30000,1.50); hookCount++;
+runThrottleHook(30000,1.40); hookCount++;
+runThrottleHook(30000,1.30); hookCount++;
+runThrottleHook(30000,1.20); hookCount++;
+runThrottleHook(30000,1.10); hookCount++;
+runThrottleHook(30000,1.00); hookCount++;
+runThrottleHook(30000,0.90); hookCount++;
+runThrottleHook(30000,0.80); hookCount++;
+runThrottleHook(30000,0.70); hookCount++;
+runThrottleHook(30000,0.60); hookCount++;
+runThrottleHook(30000,0.50); hookCount++;
+runThrottleHook(30000,0.40); hookCount++;
+runThrottleHook(30000,0.30); hookCount++;
+runThrottleHook(30000,0.20); hookCount++;
+
+
+runThrottleHook(20000,1.80); hookCount++;
+runThrottleHook(20000,1.70); hookCount++;
+runThrottleHook(20000,1.60); hookCount++;
+runThrottleHook(20000,1.50); hookCount++;
+runThrottleHook(20000,1.40); hookCount++;
+runThrottleHook(20000,1.30); hookCount++;
+runThrottleHook(20000,1.20); hookCount++;
+runThrottleHook(20000,1.10); hookCount++;
+runThrottleHook(20000,1.00); hookCount++;
+runThrottleHook(20000,0.90); hookCount++;
+runThrottleHook(20000,0.80); hookCount++;
+runThrottleHook(20000,0.70); hookCount++;
+runThrottleHook(20000,0.60); hookCount++;
+runThrottleHook(20000,0.50); hookCount++;
+runThrottleHook(20000,0.40); hookCount++;
+runThrottleHook(20000,0.30); hookCount++;
+runThrottleHook(20000,0.20); hookCount++;
+
+runThrottleHook(10000,1.00); hookCount++;
+runThrottleHook(10000,0.90); hookCount++;
+runThrottleHook(10000,0.80); hookCount++;
+runThrottleHook(10000,0.70); hookCount++;
+runThrottleHook(10000,0.60); hookCount++;
+runThrottleHook(10000,0.50); hookCount++;
+runThrottleHook(10000,0.40); hookCount++;
+runThrottleHook(10000,0.30); hookCount++;
+runThrottleHook(10000,0.20); hookCount++;
+runThrottleHook(10000,0.10); hookCount++;
+runThrottleHook(10000,0.001); hookCount++;
+
+runThrottleHook(5000,1.00); hookCount++;
+runThrottleHook(5000,0.90); hookCount++;
+runThrottleHook(5000,0.80); hookCount++;
+runThrottleHook(5000,0.70); hookCount++;
+runThrottleHook(5000,0.60); hookCount++;
+runThrottleHook(5000,0.50); hookCount++;
+runThrottleHook(5000,0.40); hookCount++;
+runThrottleHook(5000,0.30); hookCount++;
+runThrottleHook(5000,0.20); hookCount++;
+runThrottleHook(5000,0.10); hookCount++;
+runThrottleHook(5000,0.001); hookCount++;
+
+runThrottleHook(0,1.00); hookCount++;
+runThrottleHook(0,0.90); hookCount++;
+runThrottleHook(0,0.80); hookCount++;
+runThrottleHook(0,0.70); hookCount++;
+runThrottleHook(0,0.60); hookCount++;
+runThrottleHook(0,0.50); hookCount++;
+runThrottleHook(0,0.40); hookCount++;
+runThrottleHook(0,0.30); hookCount++;
+runThrottleHook(0,0.20); hookCount++;
+runThrottleHook(0,0.10); hookCount++;
+runThrottleHook(0,0.001); hookCount++;
+
+if(failCount/hookCount >= .3) {
+  failCheck << "failed = 1" << endl;
+  failCheck << "design case converged" << endl;
+  failCheck << "greater than 30% of the cycle deck generation cases failed" << endl;
+  failCheck << "   to many cases failed, deck invalid. " << endl;
+}
+else {
+  failCheck << "failed = 0" << endl;
+  failCheck << "Design Case succesful" << endl;
+  failCheck << "Engine Deck Creation Succesful" << endl;
+}

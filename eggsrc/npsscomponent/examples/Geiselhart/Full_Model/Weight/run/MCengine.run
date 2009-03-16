@@ -1,0 +1,101 @@
+
+// Run Aero Design Point
+
+engine.designFlag = 1;
+engine.PC = 50;
+// engine.ambient.ZMN = 1.8;
+// engine.ambient.alt = 53700;
+engine.setup();
+engine.run();
+engine.page.display();
+
+if(!engine.solver.converged) {
+  failCheck << "failure = 1" << endl;
+  failCheck << "Design Case Failed" << endl;
+  quit();
+}
+else{
+  failCheck << "";
+}
+
+ESOregSetActive( 1013999, FALSE );
+ESOregSetActive( 1013299, FALSE );
+
+engine.designFlag = 0;;
+engine.PC = 50;
+engine.setup();
+engine.run();    
+
+engine.ambient.ZMN = 1.8;
+engine.ambient.Zalt = 40000;
+runODPoint();
+if(!engine.solver.converged){ODFailCount++;}
+
+engine.ambient.ZMN = 1.7;
+engine.ambient.Zalt = 40000;
+runODPoint();
+if(!engine.solver.converged){ODFailCount++;}
+
+engine.ambient.ZMN = 1.4;
+engine.ambient.Zalt = 40000;
+runODPoint();
+if(!engine.solver.converged){ODFailCount++;}
+
+
+engine.ambient.ZMN = 1.2;
+engine.ambient.Zalt = 30000;
+runODPoint();
+if(!engine.solver.converged){ODFailCount++;}
+
+
+engine.ambient.ZMN = 1.0;
+engine.ambient.Zalt = 25000;
+runODPoint();
+if(!engine.solver.converged){ODFailCount++;}
+
+
+engine.ambient.ZMN = 1.0;
+engine.ambient.Zalt = 20000;
+runODPoint();
+if(!engine.solver.converged){ODFailCount++;}
+
+
+engine.ambient.ZMN = 1.0;
+engine.ambient.Zalt = 10000;
+runODPoint();
+if(!engine.solver.converged){ODFailCount++;}
+
+
+engine.ambient.ZMN = .001;
+engine.ambient.Zalt = 0;
+runODPoint();
+if(!engine.solver.converged){
+  ODFailCount++;
+  // Sea Level Case needed to size for mass flow! 
+  failCheck << "failure = 1" << endl;
+  failCheck << "Sea Level Off Design Sizing Case Failed" << endl;
+  quit();
+}
+// Turn of meaningless errors from WATE
+ESOregSetActive( 1001001, FALSE );
+engine.WATE.setOption("executionState", "CALCULATE");
+engine.WATE.autoSolverSetup();
+engine.WATE.solver.maxIterations = 150;
+engine.WATE.run();
+if(engine.WATE.solver.converged == FALSE) {
+  failCheck << "failure = 1" << endl;
+  failCheck << "WATE calculation failure" << endl;
+  quit();
+}
+else {
+  failCheck << "failure = 0" << endl;
+  failCheck << "engineWeight = " << engine.weight << endl;
+  failCheck << "Design Case Passed" << endl;
+  failCheck << "Sea Level Static Sizing Case Passed" << endl;
+  failCheck << "WATE case passed" << endl;
+}
+
+engine.WATE.wateppPV.display();
+engine.WATE.svg.display();
+
+run();
