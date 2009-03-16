@@ -35,7 +35,7 @@ _py_script_template = zc.buildout.easy_install.py_script_template.replace(old_sp
 
 import zc.recipe.egg
 
-def swap_templates(script, py_script):
+def _swap_templates(script, py_script):
     old_script = zc.buildout.easy_install.script_template
     old_py_script = zc.buildout.easy_install.py_script_template
 
@@ -55,13 +55,13 @@ class IsolatedEgg(zc.recipe.egg.Scripts):
         self.buildout = buildout
 
     def install(self):
-        old, old_py = swap_templates(_script_template, _py_script_template)
+        old, old_py = _swap_templates(_script_template, _py_script_template)
         
         ret = []
         try:
             ret = super(IsolatedEgg, self).install()
         finally:
-            swap_templates(old, old_py)
+            _swap_templates(old, old_py)
                 
         return ret
 

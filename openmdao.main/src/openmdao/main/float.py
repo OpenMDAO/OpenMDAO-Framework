@@ -75,7 +75,7 @@ class Float(Variable):
         return self._units
     
     def _set_units(self, units):
-        if units is not UNDEFINED:
+        if units is not UNDEFINED and units is not None :
             # this will raise an exception if units are bad
             try:
                 mypq = PhysicalQuantity(1., units)
@@ -91,8 +91,8 @@ class Float(Variable):
     
     def _incompatible_units(self, variable, units):
         raise TypeError(variable.get_pathname()+' units ('+
-                        units+') are '+
-                        'incompatible with units ('+self.units+') of '+ 
+                        str(units) +') are '+
+                        'incompatible with units ('+ str(self.units) +') of '+ 
                         self.get_pathname())
         
     def validate_var(self, var):
@@ -103,6 +103,10 @@ class Float(Variable):
         # allow assignment if either Variable has unassigned units
         if self.units is UNDEFINED or var.units is UNDEFINED:
             pass
+        elif self.units is None and var.units is None:
+            pass
+        elif self.units is None or var.units is None:
+            self._incompatible_units(var, var.units)
         else:
             # if units are defined, force compatibility
             mypq = PhysicalQuantity(1., self.units)

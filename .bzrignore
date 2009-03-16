@@ -36,3 +36,4 @@ docs/srcdocs/packages/openmdao.main.rst
 docs/srcdocs/packages/openmdao.recipes.rst
 docs/srcdocs/packages/pyNPSS.rst
 eggsrc/npsscomponent/examples/Geiselhart/NPSS_*
+repo_lock

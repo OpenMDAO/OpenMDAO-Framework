@@ -9,7 +9,7 @@ from pkg_resources import get_distribution, resource_listdir
 from pkg_resources import WorkingSet, Requirement
 
 def mod_sphinx_info(mod, outfile, show_undoc=False):
-    name = os.path.splitext(mod.replace(os.sep, '.'))[0]
+    name = os.path.splitext(mod.replace('/', '.'))[0]
     short = os.path.basename(name)
     
     print >> outfile, '%s.py' % short.split('.').pop()
