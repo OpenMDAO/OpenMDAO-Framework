@@ -74,9 +74,9 @@ class WingProj(object):
         # try to find the default.wpr file in the user's home directory
         try:
             if sys.platform == 'win32':
-                home = os.env['HOMEDRIVE']+os.env['HOMEPATH']
+                home = os.environ['HOMEDRIVE']+os.environ['HOMEPATH']
             else:
-                home = os.env['HOME']
+                home = os.environ['HOME']
         except:
             home = ''
         
