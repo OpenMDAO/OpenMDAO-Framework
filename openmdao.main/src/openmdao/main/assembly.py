@@ -121,6 +121,11 @@ class Assembly(Component):
         """Execute a single step."""
         self.driver.step()
 
+    def stop(self):
+        """ Stop by telling the driver to stop. """
+        self._stop = True
+        self.driver.stop()
+
     def remove_child(self, name):
         """Remove the named object from this container and notify any 
         observers.

@@ -1,0 +1,53 @@
+//
+//------------------------------------------------------------------------
+//                                                                       |
+//   File Name:     WATE_Interface.int                                   |
+//   Date(s):       March 14, 2008                                       |
+//   Author:        Karl A. Geiselhart                                   |
+//                                                                       |
+//   Description:   File to Create an interface to WATE data for ANOPP   |
+//                  in ModelCenter                                       |
+//                                                                       |
+//------------------------------------------------------------------------
+
+class WATE_Interface_Compressor {
+   real maxSpdRatio { units = "none"; IOstatus = "input"; };
+   real stg1TipRadius { units = "ft"; IOstatus = "input"; };
+   real areaIn { units = "ft2"; IOstatus = "input"; };
+   real spoolRPM { units = "ft2"; IOstatus = "input"; };
+   real AR_stg[]; AR_stg { units = "none"; IOstatus = "input"; }
+   real tipRadius_stg[]; tipRadius_stg { units = "ft"; IOstatus = "input"; }
+   real hubRadius_stg[]; hubRadius_stg { units = "ft"; IOstatus = "input"; }
+   int  numBlades_stg[]; numBlades_stg { units = "none"; IOstatus = "input"; }
+   int  numStatorBlades_stg[]; numStatorBlades_stg { units = "none"; IOstatus = "input"; }
+   real bypassLen_stg[]; bypassLen_stg { units = "ft"; IOstatus = "input"; }
+}
+
+class WATE_Interface_Inlet {
+   real fanLength { units = "ft"; IOstatus = "input"; };
+   real mostFwdToEngFFLength { units = "ft"; IOstatus = "input"; };
+   real fanExhaustLength { units = "ft"; IOstatus = "input"; };
+   real avgCowlDiam { units = "ft"; IOstatus = "input"; };
+}
+
+class WATE_Interface_Burner {
+   real innerDiam { units = "ft"; IOstatus = "input"; };
+   real outerDiam { units = "ft"; IOstatus = "input"; };
+}
+
+class WATE_Interface_Turbine {
+   int  numStages { units = "none"; IOstatus = "input"; };
+   real area_stg[]; area_stg { units = "ft2"; IOstatus = "input"; };
+   real tipRadius_stg[]; tipRadius_stg { units = "ft"; IOstatus = "input"; }
+   real hubRadius_stg[]; hubRadius_stg { units = "ft"; IOstatus = "input"; }
+   int  numBlades_stg[]; numBlades_stg { units = "none"; IOstatus = "input"; }
+}
+
+class WATE_Interface_Nozzle {
+   VariableContainer outPort {
+      real innerRadius { units = "in"; IOstatus = "input"; };
+      real outerRadius { units = "in"; IOstatus = "input"; };
+      real axialPosition { units = "in"; IOstatus = "input"; };
+   }
+}
+

@@ -1,0 +1,117 @@
+
+OutFileStream wateppStream {
+  filename = "WATE++.output"; 
+}
+
+PageViewer wateppPV {
+
+  UserTextBlock Header {
+    void update() {
+      filledBlock = { };
+
+      filledBlock.append("***************************************");
+      filledBlock.append("Model:   "+MODELNAME);
+      filledBlock.append("***************************************");
+     }
+  }
+ 
+  DObjGroupBlock wateBlock { 
+     useSolvSeqOrder = 1;
+     
+     mappings = { 
+        "WATEductBase",        "WATElegacyDuctBlock", 
+        "WATEburnerBase",      "WATElegacyBurnerBlock", 
+        "WATEaxialCompressor", "WATElegacyAxialCompressorBlock",
+        "WATEaxialTurbine",    "WATElegacyAxialTurbineBlock",
+        "WATEinletBase",       "WATElegacyInletBaseBlock",  
+        "WATEnozzleBase",      "WATElegacyNozzleBaseBlock",  
+        "WATEshaftBase",       "WATElegacyShaftBlock",  
+        "WATEmixerBase",       "WATElegacyMixerBaseBlock"  
+     };                
+  }
+  
+  DColTBlock colSummaryBlock {
+       compType = "WATEelement";
+       excludeCompTypes = { "WATEshaftBase", "WATEaccessories", "WATEengineMount", "drawtest" }
+       compTypeFormat = "???????????????????????";
+       compAttr = { 
+                    "weight:?????=WT", "length:???.???=COMP LEN",
+                    "(hasInterface(\"WATEsplitter\"))?outPortPrimary.axialPosition:outPort.axialPosition:???.???=ACCU LEN",
+                    "(hasInterface(\"WATEmixerBase\"))?innerInPort.innerRadius:(hasInterface(\"WATEinletBase\"))?0.:inPort.innerRadius:???.???=UPSTR RI1", 
+                    "(hasInterface(\"WATEmixerBase\"))?innerInPort.outerRadius:(hasInterface(\"WATEinletBase\"))?0.:inPort.outerRadius:???.???=UPSTR RO1", 
+                    "(hasInterface(\"WATEmixerBase\"))?outerInPort.innerRadius:(hasInterface(\"WATEinletBase\"))?0.:inPort.innerRadiusUp:???.???=UPSTR RI2", 
+                    "(hasInterface(\"WATEmixerBase\"))?outerInPort.outerRadius:(hasInterface(\"WATEinletBase\"))?0.:inPort.outerRadiusUp:???.???=UPSTR RO2", 
+                    "(hasInterface(\"WATEsplitter\"))?outPortPrimary.innerRadius:outPort.innerRadius:???.???=DWNSTR RI1", 
+                    "(hasInterface(\"WATEsplitter\"))?outPortPrimary.outerRadius:outPort.outerRadius:???.???=DWNSTR RO1", 
+                    "(hasInterface(\"WATEsplitter\"))?outPortSecondary.innerRadius:outPort.innerRadiusDwn:???.???=DWNSTR RI2", 
+                    "(hasInterface(\"WATEsplitter\"))?outPortSecondary.outerRadius:outPort.outerRadiusDwn:???.???=DWNSTR RO2"
+                  }
+       showColHeader = TRUE;
+  }
+
+  DColTBlock colSummaryBlock2 {
+       compType = "WATEshaftBase";
+       compTypeFormat = "???????????????????????";
+       compAttr = { 
+                    "weight:?????=WT", 
+                    "length:???.???=COMP LEN",
+                    "0.:???.???=ACCU LEN",
+                    "0.:???.???=UPSTR RI1", 
+                    "0.:???.???=UPSTR RO1", 
+                    "0.:???.???=UPSTR RI2", 
+                    "0.:???.???=UPSTR RO2", 
+                    "0.:???.???=DWNSTR RI1", 
+                    "0.:???.???=DWNSTR RO1", 
+                    "0.:???.???=DWNSTR RI2", 
+                    "0.:???.???=DWNSTR RO2"
+                  }
+       showColHeader = FALSE;
+  }
+  
+  WATElegacyEngineSummaryBlock engSummaryBlock { 
+     inletName = "WATE_inlet";   //"WATE_Inlet";   // **changed by DT**
+  }
+    
+  DColTBlock compressorBlock {
+       compType = "WATEaxialCompressor";
+       compTypeFormat = "???????????????????????";
+       compAttr = { 
+                    "weight:?????.??=TOT WT", 
+                    "totDiskWt+totBladeWt+totRotorDrumWt+totNutsBoltsWt:?????.???=ROTOR",
+                    "totStatorWt+totStatorSupportFlangeWt+totCaseWt+totFanContRingWt:?????.???=STATOR",
+                    "((S_FrontFrame.isEmpty()) ? 0.:S_FrontFrame.weight)+((S_RearFrame.isEmpty())? 0.:S_RearFrame.weight):????.???=FRAME", 
+                    "bypassLength:???.???=LT",
+                    "bypassLength-((S_RearFrame.isEmpty())? 0.:S_RearFrame.length)-((S_FrontFrame.isEmpty())? 0.:S_FrontFrame.length):???.???=LTM"
+                  }
+       showColHeader = TRUE;
+  }
+
+  DColTBlock turbineBlock {
+       compType = "WATEaxialTurbine";
+       compTypeFormat = "???????????????????????";
+       compAttr = { 
+                    "weight:?????.??=TOT WT", 
+                    "totDiskWt+totInterStgSealDiskWt+totInducerDiskWt+totDiskSpacerWt+totBladeWt+totRotorShroudWt+totRotorDrumWt+totNutsBoltsWt:?????.???=ROTOR",
+                    "totRubStripWt+totStatorWt+totStatorShroudWt+totStatorFlangeWt+totCaseWt+totActiveCaseCoolingWt:?????.???=STATOR",
+                    "((S_RearFrame.isEmpty()) ? 0.:S_RearFrame.weight):????.???=FRAME", 
+                    "length:???.???=LT",
+                    "length-(((S_RearFrame.isEmpty())? 0.:S_RearFrame.length)+((!S_RearFrame.isEmpty()&&S_RearFrame.child.hasInterface(\"WATEframeCustom\"))?S_RearFrame.gap:0.)):???.???=LTM"
+                  }
+       showColHeader = FALSE;
+  }
+
+  anchor = "Header";
+  Header.bottom = "wateBlock";
+  wateBlock.bottom = "colSummaryBlock";
+  colSummaryBlock.bottom = "colSummaryBlock2";
+  colSummaryBlock2.bottom = "engSummaryBlock";
+  engSummaryBlock.bottom = "compressorBlock";
+  compressorBlock.bottom = "turbineBlock";
+  
+  outStreamHandle = "wateppStream";
+  
+  pageWidth = 0;
+  pageHeight = 0;
+}
+
+ 

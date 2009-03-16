@@ -1,0 +1,697 @@
+// ****************************************************************************
+// * NASA Glenn Research Center
+// * 21000 Brookpark Rd
+// * Cleveland, OH 44135
+// *
+// ****************************************************************************
+
+#include <InterpIncludes.ncp>
+
+class OverUnderNozzle extends Element {
+  
+  //------------------------------------------------------------
+  //     ******* DOCUMENTATION *******
+  //------------------------------------------------------------
+  
+  title = "";
+  
+  
+  description = "The " + isA() + " element calculates performance for convergent and 
+  convergent-divergent nozzles having variable or fixed exit areas.";
+  
+  usageNotes = isA() +
+  " 
+  No Provisional Errors or Warnings.
+  
+  - Nozzle calculations require the user to specify the exhaust static 
+  pressure.  This is best done by providing the complete path name of a 
+  variable holding the nozzle exhaust static pressure in string variable 
+  PsExhName (for example, PsExhName = 'Amb.Pamb' for a model with a 
+  FlightConditions1 element named Amb).  If this string is not set, then 
+  variable PsExh must be set by the user, most likely with a preexecute() 
+  function.
+  
+  - The nozzle mixing coefficient, CmixCorr, is often calculated in another 
+  element (for example, partialMix calculated in the Mixer1 element by 
+  subelement partialMixingThrustCorrection).  The user can specify the 
+  complete path name of a variable holding the thrust correction coefficient 
+  in string variable CmixName (for example, CmixName = 'Mix.partialMix' for 
+  a model with a Mixer1 element named Mix).  Alternatively, the user can 
+  supply the desired value directly using variable CmixCorr.  If there is 
+  no partial mixing correction, leave both CmixName and CmixCorr unchanged.  
+  The default value CmixCorr = 1 will then be used.  CmixCorr is used only 
+  when switchCoef = CV.
+  
+  - Nozzle has three modes for exit area, controlled by switchType.  When 
+  switchType = CONIC, a convergent nozzle calculation is performed in which 
+  the throat is the nozzle exit.  A fixed area (specified by AthCold, and 
+  modified by Cqua and CdTh) is used if switchDes = OFFDESIGN.  If switchDes 
+  = DESIGN, the exit area is calculated to match the specified exhaust 
+  static pressure, or give an exit Mach number of 1 if the nozzle pressure 
+  ratio is sufficient to choke the nozzle.  When switchType = CON_DIV, a 
+  convergent-divergent nozzle calculation is performed in which an exit area 
+  is calculated that perfectly expands the flow to the specified exhaust 
+  pressure.  When switchType = FIXED, a convergent-divergent nozzle 
+  calculation is performed in which the exit area is fixed by AthCold, Cqua, 
+  and CdTh.  
+  
+  -  The nozzle has two modes for calculating losses controlled by switchCoef, 
+  CV and CFG.  When switchCoef = CV, Fg = FgIdeal * Cang * Cv * CmixCorr, with 
+  Cfg being ignored.  When switchCoef = CFG, Fg = FgIdeal * Cfg with Cang, 
+  Cv, and CmixCorr being ignored.
+  
+  - NPSS flowstations can calculate flow properties based on either 
+  equilibrium or frozen chemistry (see the Thermodynamic Reference Sheets).  
+  Ordinarily, the default setting is for equilibrium flow.  The Nozzle 
+  element, however, sets the nozzle exit and ideal exit to frozen chemistry.  
+  This effectively freezes the flow at the nozzle throat.  If this is not 
+  desired, the user should override this setting in the Fl_O and Fl_Oideal 
+  flow stations as described in the Thermodynamic Reference Sheets.  Of 
+  course, the user can also freeze the flow earlier, if desired, by 
+  overriding the equilibrium chemistry default for flow stations at and 
+  upstream of the nozzle throat.
+  
+  - The amount of flow the nozzle can pass is determined by the throat area.
+  In DESIGN mode this area is calculated.  If the overall pressure ratio is
+  greater than 1.0, then the nozzle is choked in design mode.  In this case
+  the area is determined by setting the Mach number equal to 1.0 and 
+  calculating the area.  If the nozzle is not choked, then the area is 
+  determined by setting the static pressure equal to the exit static
+  pressure and determining the area.  In OFF-DESIGN mode the nozzle 
+  throat area is determined from the design area and a thermal expansion
+  coefficient that calculates the effect of temperature on the throat area.
+  In addition, the flow station will determine the area actually required
+  to pass the flow.  A default dependent is created and can be accessed
+  through the auto-solver setup that will balance the actual area with
+  the demand area.";
+  
+  background = "";
+  
+  //------------------------------------------------------------
+  //     ******* SETUP VARIABLES ********
+  //------------------------------------------------------------
+  real AeTh { 
+    value = 0;  IOstatus = OUTPUT;  units = INCH2;
+    description = "Throat effective area determined from the cold throat area, and the thermal expansion and flow coefficients";
+  }
+  real Ath {
+    value = 0;  IOstatus = OUTPUT;  units = INCH2;
+    description = "Throat area determined from the cold throat area and the thermal expansion coefficient";
+  }
+  real AthCold {
+    value = 0;  IOstatus = OUTPUT;  units = INCH2;
+    description = "Throat area without thermal expansion factor applied";
+  }
+  real ARideal {
+    value = 0;  IOstatus = OUTPUT;  units = NONE;
+    description = "Ratio of perfectly expanded exit area to throat area";
+  }
+  real AR {
+    value = 0;  IOstatus = OUTPUT;  units = NONE;
+    description = "Ratio of exit area to throat area";
+  }  
+  real Cang {
+    value = 1;  IOstatus = INPUT;  units = NONE;
+    description = "Nozzle exit flow angle coefficient (used when switchCoef = CV)";
+  }
+  real CdTh {
+    value = 1;  IOstatus = INPUT;  units = NONE;
+    description = "Nozzle throat discharge coefficient";
+  }
+  real Cfg {
+    value = 1;  IOstatus = OUTPUT;  units = NONE;
+    description = "Nozzle exit gross thrust coefficient (used when switchCoef = CFG).";
+  }
+  real CmixCorr {
+    value = 1;  IOstatus = INPUT;  units = NONE;
+    description = "Thrust correction due to partial mixing upstream of or in the nozzle (used only 
+    when switchCoef - CV)";
+  }
+  string CmixName {
+    IOstatus = INPUT;
+    description = "Location of the mixing coefficient (string variable)";
+  }
+  real Cqua {
+    value = 1;  IOstatus = INPUT;  units = NONE;
+    description = "Nozzle throat thermal expansion coefficient";
+  }
+  real Cv {
+    value = 1;  IOstatus = INPUT;  units = NONE;
+    description = "Nozzle exit velocity coefficient (used when switchCoef = CV)";
+  }
+  real dPqP {
+    value = 0;  IOstatus = INPUT;  units = NONE;
+    description = "Normalized total pressure loss (dP/P) from nozzle inlet to throat";
+  }
+  real errA { 
+    value = 0.0;   IOstatus = OUTPUT; units = NONE;
+    description = "Nozzle throat area error";
+  }
+  real Fg {
+    value = 0;  IOstatus = OUTPUT;  units = LBF;
+    description = "Nozzle gross thrust";
+  }
+  real FgIdeal {
+    value = 0;  IOstatus = OUTPUT;  units = LBF;
+    description = "Nozzle ideal gross thrust";
+  }
+  real underExp = 1;
+  real PR {
+    value = 1;  IOstatus = OUTPUT;  units = NONE;
+    description = "Nozzle pressure ratio";
+  }
+  real PsActual {
+    value = 0;  IOstatus = OUTPUT;  units = PSIA;
+    description = "Nozzle exhaust static pressure";
+  }
+  real PsExh {
+    value = 0;  IOstatus = INPUT;  units = PSIA;
+    description = "Nozzle exhaust static pressure (specify only if PsExhName is left unset)";
+  }
+  string PsExhName {
+    units = NONE;
+    description = "Location of the exhaust static pressure in the model (string variable)";
+  }
+  real WqAE {
+    value = 0;  IOstatus = OUTPUT;  units = LBM_PER_SEC_IN2;
+    description = "Flow per effective area";
+  }
+  real WqAEdem {
+    value = 0;  IOstatus = OUTPUT;  units = LBM_PER_SEC_IN2;
+    description = "Demand flow per effective area";
+  }
+  real WqAEchoke {
+    value = 0;  IOstatus = OUTPUT;  units = LBM_PER_SEC_IN2;
+    description = "Choking flow per effective area";
+  }
+  real Vactual {
+    value = 0;  IOstatus = OUTPUT;  units = FT_PER_SEC;
+    description = "Nozzle exit velocity";
+  }
+  
+  
+  
+  //------------------------------------------------------------
+  //   ******* OPTION VARIABLE SETUP *******
+  //------------------------------------------------------------
+  // default value is first value in allowedValues list
+  
+  Option switchCoef {
+    allowedValues = { "CV", "CFG" } ;
+    description = "Switch to determine how corrections to ideal gross thrust are applied.";
+    rewritableValues = FALSE;  // Enables converter optimization.
+  }
+  
+  Option switchDes {
+    allowedValues = { DESIGN, OFFDESIGN };
+    description = "Design/Off-Design switch";
+    rewritableValues = FALSE;
+  }
+  
+  Option switchFrozen {
+    allowedValues = { "FROZEN", "EQUIL" }
+    description = "Determines if the ideal and actual exit conditions are calculated based on equilibrium or frozen (throat) conditions";
+    rewritableValues = FALSE;
+  }
+  
+  Option switchType {
+    allowedValues = { "CON_DIV", "CONIC", "FIXED" };
+    description = "Switch to specify type of nozzle geometry.";
+    rewritableValues = FALSE;
+  }
+  
+  
+  //-------------------------------------------------------------
+  // ****** SETUP PORTS, FLOW STATIONS, SOCKETS, TABLES ********
+  //-------------------------------------------------------------
+  
+  // FLUID PORTS
+  
+  FluidInputPort Fl_I {
+    description = "Incoming flow";
+  }
+  FluidOutputPort Fl_O {
+    description = "Outgoing flow";
+  }	 
+  
+  // FUEL PORTS
+  
+  // BLEED PORTS
+  
+  // THERMAL PORTS
+  
+  // MECHANICAL PORTS
+  
+  // FLOW STATIONS
+  
+  FlowStation Fl_Oideal {
+    description = "Ideal exit flow conditions";
+  }
+  
+  FlowStation Fl_Th {
+    description = "Throat flow conditions";
+  }
+  
+  // SOCKETS
+  
+  Socket S_Cang {
+    allowedValues = { "Cang" };
+    description = "Returns the nozzle thrust correction due to flow angle variation at the exit.";
+    socketType = CANGULAR;
+  }
+  
+  Socket S_CdTh {
+    allowedValues = { "CdTh" };
+    description = "Returns the discharge coefficient at the throat";
+    socketType = CDTH;
+  }
+  
+  Socket S_Cfg {
+    allowedValues = { "Cfg" };
+    description = "Returns the gross thrust coefficient";
+    socketType = CFGR;
+  }
+  
+  Socket S_Cqua {
+    allowedValues = { "Cqua" };
+    description = "Returns the throat area change due to thermal expansion";
+    socketType = CQUA;
+  }
+  
+  Socket S_Cv {
+    allowedValues = { "Cv" };
+    description = "Returns the nozzle thrust correction due to velocity variations at the exit";
+    socketType = CVELOCITY;
+  }
+  
+  Socket S_dP {
+    allowedValues = { "dPqP" };
+    description = "Returns the normalized pressure drop from nozzle inlet to throat.";
+    socketType = ADIAB_DPNORM;
+  }
+  
+  // TABLES
+  Independent ind_Ps{
+    varName = "PsActual";
+  }
+  Dependent AoverA_ideal{
+    eq_lhs = "ARideal/AR";
+    eq_rhs = "underExp";
+  }
+  
+  //------------------------------------------------------------
+  // ******* INTERNAL SOLVER SETUP *******
+  //------------------------------------------------------------
+  Dependent dep_Area{
+    eq_lhs = "WqAE";
+    eq_rhs = "WqAEdem";
+    eq_Ref = "WqAEchoke";
+    description = "Error to balance out the flow mismatch";
+  }
+  
+  //------------------------------------------------------------
+  //  ******  ADD SOLVER INDEPENDENTS & DEPENDENTS  ******
+  //------------------------------------------------------------
+  // Define the secant solver required for the Mach iterations
+  
+  
+  SecantSolver iterMN {
+    description = "solver for MN";
+    maxDx = 0.5;
+    tolerance = 1.E-5;  
+    perturbSize = 0.01;
+    maxIters = 50;
+  }
+  
+  
+  //------------------------------------------------------------
+  // ******* VARIABLE CHANGED METHODOLOGY *******
+  //------------------------------------------------------------
+  void variableChanged( string name, any oldVal ) {
+    
+    if ( name == "switchCoef" ) {
+      if ( switchCoef == "CV" ) {
+        Cfg.IOstatus = OUTPUT;
+        Cv.IOstatus = INACTIVE;
+        Cang.IOstatus = INACTIVE;
+      }
+      else {
+        Cfg.IOstatus = INPUT;
+        Cv.IOstatus = OUTPUT;
+        Cang.IOstatus = OUTPUT;
+      }
+    }
+    
+    if ( name == "switchDes" ) {
+      if ( switchDes == "DESIGN" ) {
+        AthCold.IOstatus = OUTPUT;
+        dep_Area.autoSetup = FALSE;
+        ind_Ps.autoSetup = TRUE;
+        AoverA_ideal.autoSetup = TRUE;
+      }
+      else {
+        AthCold.IOstatus = INPUT;
+        dep_Area.autoSetup = FALSE;
+        ind_Ps.autoSetup = TRUE;
+        AoverA_ideal.autoSetup = TRUE;;  
+      }
+    }
+    
+    if ( name == "switchFrozen" ){
+      if ( switchFrozen == "FROZEN" ){
+        Fl_O.setOption( "reconstitute", "FROZEN" );
+        Fl_Oideal.setOption( "reconstitute", "FROZEN" );
+      }
+      else if ( switchFrozen == "EQUIL" ){
+        Fl_O.setOption( "reconstitute", "EQUIL" );
+        Fl_Oideal.setOption( "reconstitute", "EQUIL" );
+      }
+    }
+    /*   Trigger vars dont work right in interpreted code yet - handled in verify function
+    if ( name == "PsExhName" ){ 
+    PsExh.IOstatus = OUTPUT;
+    }
+    */
+  }
+  
+  //------------------------------------------------------------
+  //    Check to see if user input PsExhName
+  //------------------------------------------------------------
+  int verify(){
+    
+    //------------------------------------------------------------------
+    // If the user has input a reference for static exhaust pressure
+    // then resolve that reference for use in the calculate function.
+    //------------------------------------------------------------------
+    if ( !PsExhName.isNull() ){
+      PsExhName.IOstatus = OUTPUT;
+      PsActual = PsExhName->value;
+    }
+    
+    //------------------------------------------------------------------
+    // If the user has not input PsExhName then he/she better input
+    // PsExh or the nozzle will not work
+    //------------------------------------------------------------------
+    else if ( PsExh == 0 ){
+      ESOreport( 1052201, "Nozzle trying to expand to zero ambient pressue.  Input PsExh or PsExhName" );
+      return 0;
+    }
+    //------------------------------------------------------------------
+    //   If the user has input a reference for mixing coefficient
+    //   then resolve that reference for use in the calculate function.
+    //------------------------------------------------------------------
+    if ( !CmixName.isNull() ){
+      CmixCorr.IOstatus = OUTPUT;
+      // 	  string temp2;
+      // 	  temp2 = "." + CmixName;
+      // 	  ptrCmixName = temp2;
+    }
+    
+    //------------------------------------------------------------------
+    //  Be sure the exit port static conditions are set to supersonic
+    //  for fixed area CD Nozzles 
+    //------------------------------------------------------------------
+    
+    Fl_O.setOption( "superOrSub", "SUPERSONIC" );
+    
+    //------------------------------------------------------------------
+    //  Detemine how to set the equilibrium flags at the nozzle idael and
+    //  actual exit locations
+    //------------------------------------------------------------------
+    if ( switchFrozen == "FROZEN" ){
+      Fl_O.setOption( "reconstitute", "FROZEN" );
+      Fl_Oideal.setOption( "reconstitute", "FROZEN" );
+    }
+    else if ( switchFrozen == "EQUIL" ){
+      Fl_O.setOption( "reconstitute", "EQUIL" );
+      Fl_Oideal.setOption( "reconstitute", "EQUIL" );
+    }
+    
+    
+    return Element::verify();
+    
+  }
+  
+  
+  //------------------------------------------------------------
+  //   ******* PERFORM ENGINEERING CALCULATIONS *******
+  //------------------------------------------------------------
+  void calculate() {
+    
+    //-----------------------------------------------------------------------
+    // If the user has input a reference to static exhaust pressure then go 
+    // grab that value.  Note this will override any previous values of the
+    // the static exhaust pressure.
+    //-----------------------------------------------------------------------
+    
+    if ( !PsExhName.isNull() ) {
+      PsExh = PsExhName->value;
+    }
+    
+    if(abs(PsExh - PsActual)/PsExh > 1) {
+      PsActual = PsExh;
+    }
+    
+    //-----------------------------------------------------------------------
+    // If the user has input a reference to the mixing coefficient then 
+    // go grab that value.  Note this will override any previous values of the
+    // the mixing coefficient.
+    //-----------------------------------------------------------------------
+    
+    if (!CmixName.isNull() ) {
+      CmixCorr = CmixName->value;
+    }
+    
+    real htIn = Fl_I.ht;
+    real PtIn = Fl_I.Pt;
+    real Win = Fl_I.W;
+    
+    //------------------------------------------------------------
+    // Set pressure loss 
+    //------------------------------------------------------------
+    if ( !S_dP.isEmpty() ) {
+      S_dP.execute();
+    }
+    
+    //------------------------------------------------------------
+    // Calculate the throat total pressure 
+    //------------------------------------------------------------
+    real PtTh = PtIn * ( 1. - dPqP );
+    
+    //------------------------------------------------------------
+    // Calculate the nozzle pressure ratio.
+    //------------------------------------------------------------
+    PR = PtTh / PsExh;
+    
+    //------------------------------------------------------------
+    // Calculate the pressure ratio corresponding to choking
+    // and the choking area for this flow
+    //------------------------------------------------------------
+    Fl_Th.copyFlow( "Fl_I" );
+    Fl_Th.MN = 1.0;
+    Fl_Th.setTotal_hP( htIn, PtTh );
+    real PRcr = PtTh / Fl_Th.Ps;
+    real Achoke = Fl_Th.Aphy * Fl_Th.Cd;
+    
+    //------------------------------------------------------------
+    // Create and set a flag to indicate nozzle choking
+    //------------------------------------------------------------
+    int choked;
+    if ( PR > PRcr ) {
+      choked = TRUE;
+    }
+    else {
+      choked = FALSE;
+    }
+    
+    //------------------------------------------------------------
+    // Calculate ideal exit flow  (Assume no loss or blockage)
+    //------------------------------------------------------------
+    Fl_Oideal.copyFlow( "Fl_I" );
+    Fl_Oideal.Cd = 1.0;
+    
+    real MN, errPs;
+    
+    //------------------------------------------------------------
+    // Iterate on MN for ideal exit conditions (Ps = PsExh)
+    //------------------------------------------------------------
+    MN = 1.2;
+    iterMN.initialize( MN );
+    Fl_Oideal.setTotal_hP( htIn, PtIn);
+    Fl_Oideal.setStaticPs( PsActual );
+
+    
+    
+    //------------------------------------------------------------
+    // Calculate ideal gross thrust
+    //------------------------------------------------------------
+    FgIdeal = ( Fl_Oideal.W / C_GRAVITY ) * Fl_Oideal.V
+    +  ( Fl_Oideal.Ps - PsExh ) * Fl_Oideal.Aphy;
+    
+    
+    //------------------------------------------------------------
+    // Obtain CdTh from subelement 
+    // (use the input value if it does not exist)
+    //------------------------------------------------------------
+    if ( !S_CdTh.isEmpty() ) {
+      S_CdTh.execute();
+    }
+    
+    //------------------------------------------------------------------------
+    // Determine the throat area required for a converged nozzle calculation
+    //------------------------------------------------------------------------
+    Fl_Th.Cd = 1;
+    
+    //------------------------------------------------------------
+    // Obtain Cqua from subelement
+    // (use the input value if it does not exist)
+    //------------------------------------------------------------
+    if ( !S_Cqua.isEmpty() ) {
+      S_Cqua.execute();
+    }
+    
+    //------------------------------------------------------------------------
+    // Determine the static conditions at the throat
+    //------------------------------------------------------------------------
+    
+    //------------------------------------------------------------------------
+    // If the nozzle is choked the static conditions are determine by
+    // sonic conditions
+    //------------------------------------------------------------------------
+    if ( choked ) {
+      Fl_Th.MN = 1.0;
+      Fl_Th.setTotal_hP( htIn, PtTh );
+    }
+    
+    //------------------------------------------------------------------------
+    // If it is not choked then the static conditions are determine by
+    // the exit static pressure
+    //------------------------------------------------------------------------
+    else {
+      
+      //------------------------------------------------------------
+      // Set the throat static pressure to be the exit pressure
+      //------------------------------------------------------------
+      Fl_Th.setStaticPs( PsExh );
+    }
+    
+    //-----------------------------------------------------------------------
+    // If we are in design mode the determine the cold area
+    //-----------------------------------------------------------------------
+    //if ( switchDes == "DESIGN" ){
+    AthCold = Fl_Th.Aphy / Cqua / CdTh;
+    
+    //------------------------------------------------------------------------
+    // Determine the throat area required for a converged nozzle calculation
+    //------------------------------------------------------------------------
+    Ath = AthCold * Cqua;
+    AeTh = AthCold * Cqua * CdTh; 
+    errA = ( Fl_Th.Aphy - AeTh )/ AeTh; 
+    
+    //------------------------------------------------------------------------
+    // Determine the choking flow that goes with this area and calculate 
+    // error terms
+    //------------------------------------------------------------------------
+    WqAEchoke = Win / Achoke;
+    WqAE = Win /( Fl_Th.Aphy * Fl_Th.Cd );	
+    WqAEdem = Win / AeTh;	
+    
+    //------------------------------------------------------------
+    // Determine type of nozzle (conic or CD)
+    //------------------------------------------------------------
+    if ( switchType == "CONIC" ) {
+      
+      //--------------------------------------------------------------
+      // Conic nozzle - Pretend the nozzle is converged, and set the 
+      // exit flow accordingly.
+      //---------------------------------------------------------------
+      Fl_O.copyFlowStatic( "Fl_Th" );
+      
+    }
+    
+    else if ( switchType == "CON_DIV" ){
+      
+      //------------------------------------------------------------
+      // CD nozzle 
+      //------------------------------------------------------------
+      Fl_O.copyFlow( "Fl_Th" );
+      
+      Fl_O.Cd = 1.;
+      
+      //------------------------------------------------------------
+      // Set the exit static pressure
+      //------------------------------------------------------------
+      
+      Fl_O.setStaticPs( PsExh );
+      ARideal = Fl_O.Aphy / Ath;  
+      Fl_O.setStaticPs( PsActual) ;
+      
+      //
+      
+    }
+    
+    else if ( switchType == "FIXED" ){
+      
+      //---------------------------------------------------------------
+      // Since the exit area is fixed and input directly
+      // into the FlowStation, the only thing neccessary to do
+      // is to pass the flow from the throat
+      //---------------------------------------------------------------
+      Fl_O.copyFlow( "Fl_Th" );
+      
+      //---------------------------------------------------------------
+      // this element will not produce the right results for an
+      // unchoked CD nozzle
+      //---------------------------------------------------------------
+      if ( choked == FALSE ){
+        ESOreport( 1062301,"CD nozzle is unchoked, output no good" );	
+      }
+      
+      
+    }
+    
+    //------------------------------------------------------------
+    // Run all the Coefficient sockets which affect thrust 
+    // calculations (if they exist)
+    //------------------------------------------------------------
+    if ( !S_Cang.isEmpty() ) {
+      S_Cang.execute();
+    }
+    
+    if ( !S_Cfg.isEmpty() ) {
+      S_Cfg.execute();
+    }
+    
+    if ( !S_Cv.isEmpty() ) {
+      S_Cv.execute();
+    }
+    
+    //----------------------------------------------------------------------
+    // Calculate the actual gross thrust and other parameters of interest
+    //----------------------------------------------------------------------
+    if ( switchCoef == "CV" ) {
+      Fg   = ( Fl_O.W / C_GRAVITY ) * Fl_O.V * CmixCorr * Cv * Cang
+      +  ( Fl_O.Ps - PsExh ) * Fl_O.Aphy;
+      Cfg  = Fg / FgIdeal;
+      Vactual = Fl_O.V * CmixCorr * Cv * Cang;
+    }
+    else {
+      Fg   = FgIdeal * Cfg;
+      Vactual = Fl_O.V;
+    }
+    AR = Fl_O.Aphy / Ath;    
+  }
+  
+  //------------------------------------------------------------
+  // register the appropriate errors at build time
+  //------------------------------------------------------------
+  void VCinit()
+  {
+    ESOregCreate( 1052201, 9, "", FALSE, FALSE, TRUE );
+    ESOregCreate( 1062301, 8, "", TRUE, FALSE, TRUE );
+  }
+  
+  
+  
+}
+

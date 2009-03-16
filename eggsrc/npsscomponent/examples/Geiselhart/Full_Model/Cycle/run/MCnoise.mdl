@@ -1,0 +1,237 @@
+MixedTurboFan engine;
+MODELNAME = "SBJ_models_1-17-08";
+engine.init(); // initialization routine for the engine is necessary, do not delete!
+
+// Check the output in this file to test for failed case
+//     if failed = 0; Then your ok!
+//     if failed = 1; Then your design did not converge
+//     an explaination will be included in the file
+//     ** ignore failure messages printed to the screen, they are intermediate cases
+OutFileStream failCheck { filename = "failureCheck.out"; }
+#include<WATE_Interface.int>
+
+// Set Design Variables Here
+engine.FanPRdes = 2.51;
+engine.HpcPRdes = 8.00;
+engine.TOCThrust = 5230;
+engine.Knoz = 1.04; 
+  //This setting regulates the underexpansion of the nozzle
+  //Knoz equals %nozzle exit static pressure below ambient
+  //Knoz automatically gets reset to 1 below ambient Mach 1 for all cases
+
+// Don't Touch Below Here!!: 
+
+////////////////////////////////////////////////////////////////////////////////
+//
+// From pax300.case_Noise and/or MCpax300.mdl
+//
+real ESF = 1.0;                      // engine scale factor
+real A_ref { units = "in2"; }        // fan reference area
+real M_ref { units = "lbm/sec"; }    // reference massflow rate
+real LP_RPM_scalar;                  // WATE-calculated RPM / NPSS-assumed RPM 
+int last_LPT_stg;                    // identifier used for LPT array data
+
+int m=0,n=0;                         // counters used for saving data
+int number_of_vars = 51;             // # of noise variables
+int number_of_throttles = 7;         // # of engine throttle settings (IND1)
+int number_of_machs = 7;             // # of flight mach # & alt. points (IND2)
+
+real noise_var[number_of_throttles][number_of_machs][number_of_vars];
+
+// These variables will be linked from a ModelCenter assembly allowing
+// a generic viewer to be utilized for a variety of engine types.
+WATE_Interface_Inlet WATE_Inlet;
+WATE_Interface_Compressor WATE_Fan;
+WATE_Interface_Turbine WATE_LPT;
+WATE_Interface_Nozzle WATE_Core_Nozz;
+WATE_Interface_Nozzle WATE_Byp_Nozz;
+WATE_Interface_Burner WATE_Burner;
+
+// maxThrust for engine state tables
+real MaxThrust;
+
+// These variables are needed by npss.view_noise
+VariableContainer view {
+   string Ambient = "engine.ambient";
+   string Inlet = "engine.inlet";
+   string Fan = "engine.fan";
+   string LPT = "engine.LPT";
+   string LP_Shaft = "engine.LPShaft";
+   string Burner = "engine.burner";
+   string Core_Nozz = "engine.nozzle";
+   string Byp_Nozz = "engine.nozzle";
+   string PERF = "engine.PERF";
+   string Splitter = "engine.split";
+   string PC = "engine.PC";
+}
+
+
+// These variables are needed by ANOPP
+// VariableContainer anopp {
+// }
+
+//-----------------------------------------------------------------------------
+//  (D) create functions to save noise-related variable data and run engine
+//-----------------------------------------------------------------------------
+
+#include<npss.view_noise>
+#include<eng_state_tbl.fnc>
+////////////////////////////////////////////////////////////////////////////////
+
+// Define Throttle Hook Run Function
+real failCount  = 0;
+void runThrottleHook(real altitude, real Mach) {
+  // Note: Only successfull Throttle Hooks are recorded in the deck
+  int maxPowerSuccess = TRUE;
+  int throttleHookFailure = 0;
+  engine.alt = altitude;
+  engine.MN = Mach;
+  maxPowerSuccess = TRUE;
+ 
+  
+  engine.PC = 50;
+  engine.setup();
+  engine.run();
+  engine.page.display();
+  if(engine.solver.converged == TRUE) {
+     save_noise_data("engine.ambient", "engine.inlet", "engine.fan", "engine.LPT", "engine.LPShaft", "engine.burner", "engine.nozzle", "engine.nozzle", "engine.PERF");
+     engine.FLOPsheet.update();}
+  else{ 
+    maxPowerSuccess = FALSE; 
+    return;
+  }
+  
+  engine.PC = 45;
+  engine.setup();
+  engine.run();
+  engine.page.display();
+  if(engine.solver.converged == TRUE && maxPowerSuccess) {
+     save_noise_data("engine.ambient", "engine.inlet", "engine.fan", "engine.LPT", "engine.LPShaft", "engine.burner", "engine.nozzle", "engine.nozzle", "engine.PERF");
+     engine.FLOPsheet.update();}
+  else {throttleHookFailure += 1;}
+  
+  
+  engine.PC = 40;
+  engine.setup();
+  engine.run();
+  engine.page.display();
+  if(engine.solver.converged == TRUE && maxPowerSuccess) {
+     save_noise_data("engine.ambient", "engine.inlet", "engine.fan", "engine.LPT", "engine.LPShaft", "engine.burner", "engine.nozzle", "engine.nozzle", "engine.PERF");
+     engine.FLOPsheet.update();}
+  else {throttleHookFailure += 1;}
+  
+  engine.PC = 30;
+  engine.setup();
+  engine.run();
+  engine.page.display();
+  if(engine.solver.converged == TRUE && maxPowerSuccess) {
+     save_noise_data("engine.ambient", "engine.inlet", "engine.fan", "engine.LPT", "engine.LPShaft", "engine.burner", "engine.nozzle", "engine.nozzle", "engine.PERF");
+     engine.FLOPsheet.update();}
+  else {throttleHookFailure += 1;}
+  
+  engine.PC = 40;
+  engine.setup();
+  engine.run();
+  
+  engine.PC = 50;
+  engine.setup();
+  engine.run();  
+  
+  if(throttleHookFailure >=3) {
+    // If too many power codes fail, fail the whole throttle hook
+    failCount += 1;
+  }
+}
+
+//
+// The original ModelCenter model had these expressions defined on the links.
+//
+real link_bladeTipRadius,
+     link_spoolRPM,
+     link_speed;
+
+int  link_numStages;
+
+void eval_links() {
+//   NPSS_ANOPP.A_ref =
+//      pi*144*NPSS_WATE.engine.WATE.WATE_fan.bladeTipRadius**2
+  A_ref = PI * 144. * link_bladeTipRadius**2;
+
+//   NPSS_ANOPP.last_LPT_stg =
+//      NPSS_WATE.engine.WATE.WATE_LPT.numStages-1
+  last_LPT_stg = link_numStages - 1;
+
+//   NPSS_ANOPP.LP_RPM_scalar =
+//      NPSS_WATE.engine.WATE.WATE_fan.spoolRPM
+//          / NPSS_WATE.engine.WATE.WATE_LP_Shaft.speed
+  LP_RPM_scalar = link_spoolRPM / link_speed;
+}
+
+int mcReload = FALSE;
+
+string mcInputs[] = {
+   "engine.alt",
+   "engine.extractionRatio",
+   "engine.FanPRdes",
+   "engine.HpcPRdes",
+   "engine.Knoz",
+   "engine.MN",
+   "engine.nozzle.Cfg",
+   "engine.TOCThrust",
+   "MaxThrust",
+   "A_ref",
+   "last_LPT_stg",
+   "LP_RPM_scalar"
+};
+
+void mcRun() {
+   int i;
+   cout << "\nMCnoise mcRun() executing in " << getcwd() << endl;
+
+   // Evaluate ModelCenter link expressions.
+   eval_links();
+
+   LocalOutFileStream out;
+   out.open("NPSS_ANOPP.textRep");
+   out << .getTextRep(TRUE);
+   out.close();
+
+   for (i = 0 ; i < mcInputs.entries() ; ++i) {
+     cout << "    " << mcInputs[i] << " = " << mcInputs[i]->value << endl;
+   }
+
+   // This model needs a reload after the initial run.
+   mcReload = TRUE;
+
+   // Do the stuff associated with running the model.
+   parseFile("MCnoise.run");
+   // engine.FLOPSsheet.display();
+   // engine.NviewSumm.display();
+
+   // Display data viewers and set-up for a new run's display.
+   string dataViewers[] = list("DataViewer", TRUE);
+   for (i = 0 ; i < dataViewers.entries() ; ++i) {
+     string dataViewer = dataViewers[i];
+     dataViewer->display();
+     dataViewer->reset();
+
+     // Reset the filename to start a new output file.
+     // Without this, rerunning a model will append to the file.
+     // This is not necessary if the model is reloaded.
+     string prefix = "";
+     if (dataViewer->outStreamHandle[0] != ".") {
+       // Not absolute, so get context.
+       string path = dataViewer;
+       int dot;
+       while ((dot = path.index(".")) > 0) {
+         prefix += path.substr(0, dot+1);
+         path = path.substr(dot+1, -1);
+       }
+     }
+     string handle = prefix+dataViewer->outStreamHandle;
+     handle->filename = handle->filename;
+   }
+
+   cout.flush();
+   cerr.flush();
+}
