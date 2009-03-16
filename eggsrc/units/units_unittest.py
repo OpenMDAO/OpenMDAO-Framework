@@ -137,7 +137,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         else: 
             self.fail("expecting TypeError")
             
-        #test for error if using offset units
+        #test offset units
             
 
     def test__sub__known__Values(self):

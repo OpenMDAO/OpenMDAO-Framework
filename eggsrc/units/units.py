@@ -131,8 +131,7 @@ class PhysicalQuantity(object):
   def _sum(self, other, sign1, sign2):
     if not isPhysicalQuantity(other):
       raise TypeError('Incompatible types')
-    new_value = sign1*self.value + \
-                sign2*other.value*other.unit.conversionFactorTo(self.unit)
+    new_value = sign1*self.value + sign2*other.value*other.unit.conversionFactorTo(self.unit)
     return self.__class__(new_value, self.unit)
   def __add__(self, other):
     return self._sum(other, 1, 1)
@@ -653,16 +652,14 @@ def importLibrary(libfilepointer):
             comment = data[1]
             unit = data[0]
             addUnit(name,unit,comment)
-
         except NameError:
             retry1.add((name,unit,comment))
     elif len(data) == 4: 
         try:
             factor,baseunit,offset,comment = tuple(data)
             addOffsetUnit(name,baseunit,float(factor),float(offset),comment)
-
         except NameError:
-            retry1.add((name,unit,comment))
+            retry1.add((name,baseunit,float(factor),float(offset),comment))
 
   for cruft in ['__builtins__', '__args__']:
     try: del _unitLib.unit_table[cruft]
@@ -672,14 +669,21 @@ def importLibrary(libfilepointer):
     lastRetryCount = retryCount
     retryCount = 0
     retry2 = retry1.copy()
-    for name,unit,comment in retry2:
-      try:
-        addUnit(name,unit,comment)
-        retry1.remove((name,unit,comment))
-      except NameError:
-
-        retryCount+=1
-
+    for data in retry2:
+        if len(data) == 3:
+            name,unit,comment = data
+            try:
+                addUnit(name,unit,comment)
+                retry1.remove(data)
+            except NameError:
+                retryCount+=1
+        if len(data) == 5:
+            try:
+                name,factor,baseunit,offset,comment = data
+                addOffsetUnit(name,factor,baseunit,offset,comment)
+                retry1.remove(data)
+            except NameError:
+                retryCount+=1        
   if(len(retry1) >0):
     print "The following units were not defined"
     print "because they could not be resolved as a "
