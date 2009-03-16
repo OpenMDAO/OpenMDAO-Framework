@@ -659,7 +659,7 @@ def importLibrary(libfilepointer):
     elif len(data) == 4: 
         try:
             factor,baseunit,offset,comment = tuple(data)
-            addOffsetUnit(name,baseunit,factor,offset,comment)
+            addOffsetUnit(name,baseunit,float(factor),float(offset),comment)
 
         except NameError:
             retry1.add((name,unit,comment))
