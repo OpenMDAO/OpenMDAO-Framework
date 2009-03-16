@@ -99,7 +99,7 @@ class SphinxBuild(object):
                                             browser=browser,
                                             index=idxpath))
         script.close()
-        os.chmod(scriptname, 0755)
+        os.chmod(scriptname, 0775)
         
         return [scriptname]
         

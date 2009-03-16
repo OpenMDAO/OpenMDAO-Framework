@@ -105,6 +105,7 @@ class Component (Container):
             return RUN_FAILED
 
         self.state = STATE_RUNNING
+        self._stop = False
         try:
             if self.parent is not None and IAssembly.providedBy(self.parent):
                 self.parent.update_inputs(self)
@@ -119,7 +120,7 @@ class Component (Container):
             self.state = STATE_IDLE
             self.pop_dir()
 
-    def get_directory(self):
+    def get_directory (self):
         """ Return absolute path of execution directory. """
         path = self.directory
         if not os.path.isabs(path):
@@ -130,7 +131,7 @@ class Component (Container):
             path = os.path.join(parent_dir, path)
         return path
 
-    def push_dir(self, directory):
+    def push_dir (self, directory):
         """Change directory to dir, remembering current for later pop_dir()."""
         if not directory:
             directory = '.'
@@ -139,7 +140,7 @@ class Component (Container):
         os.chdir(directory)
         self._dir_stack.append(cwd)
 
-    def pop_dir(self):
+    def pop_dir (self):
         """ Return to previous directory saved by push_dir(). """
         os.chdir(self._dir_stack.pop())
 
@@ -158,10 +159,14 @@ class Component (Container):
 
     def step (self):
         """For Components that contain Workflows (e.g., Assembly), this will run
-        one Component in the Workflow and return. For simple components, it is the
-        same as run().
+        one Component in the Workflow and return. For simple components, it is
+        the same as run().
         """
         self.run()
+
+    def stop (self):
+        """ Stop this component. """
+        self._stop = True
 
     def require_gradients (self, varname, gradients):
         """Requests that the component be able to provide (after execution) a

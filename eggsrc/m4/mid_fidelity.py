@@ -12,6 +12,7 @@ import mool.Optimization.MidFiModel
 
 from openmdao.main import Component, ArrayVariable, Float, Int, String
 from openmdao.main.component import RUN_OK, RUN_FAILED
+from openmdao.main.interfaces import IComponent
 from openmdao.main.variable import INPUT, OUTPUT
 
 import wrapper
@@ -55,8 +56,8 @@ class MidFidelity(Component):
             doc='For Kriging method, nthets=1(SA),2(Cobyla),3(BFGS)')
 
         # Sockets.
-        fakes.FakeSocket('lofi_model', self, None, 'IComponent', True)
-        fakes.FakeSocket('hifi_model', self, None, 'IComponent', True)
+        fakes.FakeSocket('lofi_model', self, None, IComponent, True)
+        fakes.FakeSocket('hifi_model', self, None, IComponent, True)
 
         self.input_mappings = []
         self.output_mappings = []
@@ -105,6 +106,13 @@ class MidFidelity(Component):
 
     def execute(self):
         """ Compute results based on mid-fidelity approximation. """
+        if self.lofi_model.plugin is None:
+            self.error('No lofi model')
+            return RUN_FAILED
+
+        if self.hifi_model.plugin is None:
+            self.error('No hifi model')
+            return RUN_FAILED
 
         # Wrap low fidelity model.
         if self._lofi_m4model is None:
