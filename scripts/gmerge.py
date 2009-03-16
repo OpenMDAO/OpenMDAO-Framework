@@ -125,7 +125,7 @@ def gmerge(conflict_file, merge_tool='meld2.4'):
             result = dialog.ShowModal()
             if result == wx.ID_OK:
                 idx = dialog.GetSelection()
-                fname = choices[idx]
+                fname = choices[idx][0]
             else:
                 fname = ''
                 undo = True

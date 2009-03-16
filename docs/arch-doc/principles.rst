@@ -4,13 +4,14 @@ Design Principles
 -----------------
 
 This section provides a brief outline of some of our requirements and the
-general approaches we intend to use in order to meet them.
+general approaches we intend to use in order to meet them. Some of the  specific
+libraries and tools mentioned may change as the design of the framework evolves.
 
 
 **Flexibility**
     - Component Architecture (Zope's or similar)
         - Adaptor design pattern
-    - Virtual Python Environments
+    - Isolated Python Environments using zc.buildout
     - Support multiple IPC protocols by using Twisted_
     
 .. _Twisted : http://twistedmatrix.com/trac
@@ -26,7 +27,6 @@ general approaches we intend to use in order to meet them.
 
 **Location transparency**
     - Abstract Factory design pattern
-    - RPyC or similar
     - proxy objects
 
 

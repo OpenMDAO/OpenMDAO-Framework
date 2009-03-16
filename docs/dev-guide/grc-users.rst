@@ -3,7 +3,7 @@ Notes for Developers at GRC
 ---------------------------
 
 This section outlines policies that are specific to OpenMDAO development that
-happens locally on computers located at the NASA Glenn Research Center. If you
+happens locally on computers at the NASA Glenn Research Center. If you
 are not a developer at GRC, you can skip this section.
 
 
@@ -131,9 +131,10 @@ To run Wing for your buildout, type:
 
     bin/wing
     
-from your buildout directory.  Whenever you re-run your buildout, you will be
-prompted by Wing that your project settings have changed. Select ``Discard
-Changes and Reload`` if your Wing path needs to be updated. Otherwise, select
-``Don't Reload`` to keep your existing project file.
+from your buildout directory.  If the eggs used in your buildout change and you
+re-run your buildout, you will be prompted by Wing that your project settings
+have changed. Select ``Discard Changes and Reload`` if your Wing path needs to
+be updated. Otherwise, select ``Don't Reload`` to keep your existing project
+file. 
 
 

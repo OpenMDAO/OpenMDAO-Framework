@@ -3,7 +3,7 @@ This is just a wrapper for the logging module.
 """
 
 #public symbols
-__all__ = ['logger']
+__all__ = ['logger', 'getLogger']
 
 __version__ = '0.1'
 
@@ -34,3 +34,9 @@ formatter = logging.Formatter('%(levelname)-6s %(message)s')
 console.setFormatter(formatter)
 # add the handler to the root logger
 #logger.addHandler(console)
+
+
+def getLogger(name):
+    return logging.getLogger(name)
+    
+    

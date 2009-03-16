@@ -5,8 +5,8 @@ from openmdao.main.variable import INPUT, OUTPUT
 from math import pi
 
 class HollowSphere(Component):
-    def __init__(self, name):
-        Component.__init__(self, name)
+    def __init__(self, name, parent=None, doc=None, directory=''):
+        super(HollowSphere, self).__init__(name, parent, doc, directory) 
         self.radius = 1.0
         self.thickness = 0.05
         self.volume = 0.
