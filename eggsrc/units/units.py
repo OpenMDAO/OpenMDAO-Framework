@@ -567,22 +567,12 @@ def _newUnit(name,factor,powers):
   _unitLib.unit_table[name] = PhysicalUnit(name,factor,powers)
 
 
-
-def _addPrefixed(unit):
-  _unitLib.help.append('Prefixed units for %s:' % unit)
-  prefixed_names = []
-  for prefix in _unitLib.prefixes:
-    name = prefix + unit
-    addUnit(name, _unitLib.prefixes[prefix]*_unitLib.unit_table[unit])
-    prefixed_names.append(name)
-  _unitLib.help.append(', '.join(prefixed_names))
-
 def addOffsetUnit(name,baseunit,factor,offset,comment):
     if type(baseunit) == str:
         baseunit = _findUnit(baseunit)
     #else, baseunit should be a instance of PhysicalUnit
     #names,factor,powers,offset=0
-    unit = PhysicalUnit(baseunit.names,factor,baseunit.powers,offset)
+    unit = PhysicalUnit(baseunit.names,baseunit.factor*factor,baseunit.powers,offset)
     unit.setName(name)
     if _unitLib.unit_table.has_key(name):
         if (_unitLib.unit_table[name].factor!=unit.factor or _unitLib.unit_table[name].powers!=unit.powers):
