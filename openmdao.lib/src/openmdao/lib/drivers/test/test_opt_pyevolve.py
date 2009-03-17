@@ -12,7 +12,8 @@ from openmdao.main.assembly import Assembly
 from openmdao.main.arrayvar import ArrayVariable
 from openmdao.main.variable import INPUT,OUTPUT
 from openmdao.main.float import Float
-from openmdao.lib.drivers.pyevolvedriver import pyevolvedriver
+from openmdao.lib.drivers import pyevolvedriver
+
 
 
 import openmdao.main.factorymanager as factorymanager
@@ -54,7 +55,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
 
     def tearDown(self):
         self.top = None
-
+    
     #basic test to make sure optmizer is working 
     def test_optimizeSphere(self):
         self.top.driver.objective = "comp.total" 
