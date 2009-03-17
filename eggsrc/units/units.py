@@ -272,6 +272,7 @@ class PhysicalQuantity(object):
     denom = ''
     for i in [0,1,2,3,4,5,6,7,8]:
       unit = _unitLib.base_names[i]
+      print unit
       power = self.unit.powers[i]
       if power < 0:
         denom = denom + '/' + unit
@@ -414,6 +415,7 @@ class PhysicalUnit(object):
       inv_exp = 1./other
       rounded = int(math.floor(inv_exp+0.5))
       if abs(inv_exp-rounded) < 1.e-10:
+        
         if all([x%rounded==0 for x in self.powers]):
           f = self.factor**other
           p = [x/rounded for x in self.powers]
@@ -607,15 +609,15 @@ _unitLib.optionxform = doNothing
 
 def importLibrary(libfilepointer):
   _unitLib.readfp(libfilepointer)
-  _unitLib.base_types = {'length':[1,0,0,0,0,0,0,0,0],
-                         'mass':[0,1,0,0,0,0,0,0,0],
-                         'time':[0,0,1,0,0,0,0,0,0],
-                         'current':[0,0,0,1,0,0,0,0,0],
-                         'temperature':[0,0,0,0,1,0,0,0,0],
-                         'amount':[0,0,0,0,0,1,0,0,0],
+  _unitLib.base_types = {'length':           [1,0,0,0,0,0,0,0,0],
+                         'mass':             [0,1,0,0,0,0,0,0,0],
+                         'time':             [0,0,1,0,0,0,0,0,0],
+                         'current':          [0,0,0,1,0,0,0,0,0],
+                         'temperature':      [0,0,0,0,1,0,0,0,0],
+                         'amount':           [0,0,0,0,0,1,0,0,0],
                          'luminous_intesity':[0,0,0,0,0,0,1,0,0],
-                         'angle':[0,0,0,0,0,0,0,1,0],
-                         'solid_angle':[0,0,0,0,0,0,0,0,1]
+                         'angle':            [0,0,0,0,0,0,0,1,0],
+                         'solid_angle':      [0,0,0,0,0,0,0,0,1]
                          }
   _unitLib.base_names = list()
   _unitLib.unit_table = dict()
@@ -628,7 +630,7 @@ def importLibrary(libfilepointer):
   for unitType,name in _unitLib.items('base_units'):
     _newUnit(name,1,_unitLib.base_types[unitType])
     _unitLib.base_names.append(name)
-  #_unitLib.base_names=['m','kg','s','A','K', 'mol','cd','rad','sr']
+  _unitLib.base_names=['m','kg','s','A','K', 'mol','cd','rad','sr']
   retry1 = set()
   retry2 = set()
   retryCount = 0
