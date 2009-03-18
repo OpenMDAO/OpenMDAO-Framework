@@ -357,9 +357,10 @@ class PhysicalUnit(object):
     self.powers = powers
 
   def __repr__(self):
-    return '<PhysicalUnit ' + self.name() + '>'
+    return 'PhysicalUnit(%s,%s,%s,%s)'%(self.names,self.factor,self.powers,self.offset)
 
-  __str__ = __repr__
+  def __str__(self):
+    return '<PhysicalUnit ' + self.name() + '>'
 
   def __cmp__(self, other):
     if self.powers != other.powers:
