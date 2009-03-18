@@ -1,8 +1,51 @@
 import units
 #from units import _addUnit
 #import Scientific.Physics.PhysicalQuantities as units
+import StringIO
 
+bad_ini_file = StringIO.StringIO()
+bad_ini_file.write("""
+[prefixes]
+Y: 1.e24
+Z: 1.e21
+E: 1.e18
+P: 1.e15
+T: 1.e12
+G: 1.e9
+M: 1.e6
+k: 1.e3
+h: 1.e2
+da: 1.e1
+d: 1.e-1
+c: 1.e-2
+m: 1.e-3
+u: 1.e-6
+n: 1.e-9
+p: 1.e-12
+f: 1.e-15
+a: 1.e-18
+z: 1.e-21
+y: 1.e-24
 
+[base_units]
+length: m
+current: A
+temperature: degK
+amount: mol
+luminous_intesity: cd
+angle: rad
+solid_angle: sr
+money: $
+
+[units]
+degC: 1,degK,273.15,centigrade
+degR: 0.555555556*degK,Rankine
+degF: 1,degR,459.67,Fahrenheit
+g: .001*kg,gram
+Hz: 1/s,hertz
+""")
+
+units.importLibrary(bad_ini_file)
 
 exit()
 

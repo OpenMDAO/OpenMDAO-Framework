@@ -272,7 +272,6 @@ class PhysicalQuantity(object):
     denom = ''
     for i in [0,1,2,3,4,5,6,7,8]:
       unit = _unitLib.base_names[i]
-      print unit
       power = self.unit.powers[i]
       if power < 0:
         denom = denom + '/' + unit
@@ -492,7 +491,7 @@ class PhysicalUnit(object):
     return not any(self.powers)
 
   def isAngle(self):
-    return (self.powers[7] == 1 and sum(self.powers) == 1)
+    return (self.powers[_unitLib.base_types['angle']] == 1 and sum(self.powers) == 1)
 
   def setName(self, name):
     self.names = NumberDict()
@@ -602,14 +601,19 @@ def addUnit(name, unit, comment=''):
 
 
 _unitLib = ConfigParser.ConfigParser()
-def doNothing(string):
+def doNothing(string): #makes the ConfigParser case sensetive
   return string
 _unitLib.optionxform = doNothing
 
 
 def importLibrary(libfilepointer):
+  global _unitLib 
+  _unitLib = ConfigParser.ConfigParser()
+  _unitLib.optionxform = doNothing
   _unitLib.readfp(libfilepointer)
+  required_base_types = ['length','mass','time','temperature','angle']
   _unitLib.base_names = list()
+  _unitLib.base_types = dict() #used to isAngle() and other base type checking
   _unitLib.unit_table = dict()
   _unitLib.prefixes = dict()
   _unitLib.help = list()
@@ -618,14 +622,20 @@ def importLibrary(libfilepointer):
     _unitLib.prefixes[prefix] = float(factor)
 
   base_list = [0 for x in _unitLib.items('base_units')]
+  
+
   for i,(unitType,name) in enumerate(_unitLib.items('base_units')):
-      #_newUnit(name,1,_unitLib.base_types[unitType])
+      _unitLib.base_types[unitType] = i 
       powers = list(base_list)
       powers[i] = 1
-      #print '%5s'%name, powers
-      _newUnit(name,1,powers)
+      #print '%20s'%unitType, powers
+      _newUnit(name,1,powers) #cant use addUnit because no base units exist yet
       _unitLib.base_names.append(name)
-  #_unitLib.base_names=['m','kg','s','A','K', 'mol','cd','rad','sr']
+
+  #test for required base types
+  missing = [type for type in required_base_types if not type in _unitLib.base_types]
+  if any(missing):
+      raise ValueError,"Not all required base type were present in the config file. missing: %s, at least %s required"%(missing,required_base_types)
  
   retry1 = set()
   retry2 = set()
@@ -673,10 +683,7 @@ def importLibrary(libfilepointer):
             except NameError:
                 retryCount+=1        
   if(len(retry1) >0):
-    print "The following units were not defined"
-    print "because they could not be resolved as a "
-    print "function of any other defined units: "
-    print retry1
+    raise ValueError, "The following units were not defined because they could not be resolved as a function of any other defined units:%s"%[x[0] for x in retry1]
 
 defaultLib = resource_stream(__name__, 'unitLibdefualt.ini')
 importLibrary(defaultLib)
