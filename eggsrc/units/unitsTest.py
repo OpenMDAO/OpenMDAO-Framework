@@ -4,6 +4,7 @@ import units
 
 
 
+exit()
 
 length1 = units.PhysicalQuantity(6,'mm')
 length2 = units.PhysicalQuantity(7,'inch')

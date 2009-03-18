@@ -609,16 +609,6 @@ _unitLib.optionxform = doNothing
 
 def importLibrary(libfilepointer):
   _unitLib.readfp(libfilepointer)
-  _unitLib.base_types = {'length':           [1,0,0,0,0,0,0,0,0],
-                         'mass':             [0,1,0,0,0,0,0,0,0],
-                         'time':             [0,0,1,0,0,0,0,0,0],
-                         'current':          [0,0,0,1,0,0,0,0,0],
-                         'temperature':      [0,0,0,0,1,0,0,0,0],
-                         'amount':           [0,0,0,0,0,1,0,0,0],
-                         'luminous_intesity':[0,0,0,0,0,0,1,0,0],
-                         'angle':            [0,0,0,0,0,0,0,1,0],
-                         'solid_angle':      [0,0,0,0,0,0,0,0,1]
-                         }
   _unitLib.base_names = list()
   _unitLib.unit_table = dict()
   _unitLib.prefixes = dict()
@@ -627,10 +617,16 @@ def importLibrary(libfilepointer):
   for prefix,factor in _unitLib.items('prefixes'):
     _unitLib.prefixes[prefix] = float(factor)
 
-  for unitType,name in _unitLib.items('base_units'):
-    _newUnit(name,1,_unitLib.base_types[unitType])
-    _unitLib.base_names.append(name)
-  _unitLib.base_names=['m','kg','s','A','K', 'mol','cd','rad','sr']
+  base_list = [0 for x in _unitLib.items('base_units')]
+  for i,(unitType,name) in enumerate(_unitLib.items('base_units')):
+      #_newUnit(name,1,_unitLib.base_types[unitType])
+      powers = list(base_list)
+      powers[i] = 1
+      #print '%5s'%name, powers
+      _newUnit(name,1,powers)
+      _unitLib.base_names.append(name)
+  #_unitLib.base_names=['m','kg','s','A','K', 'mol','cd','rad','sr']
+ 
   retry1 = set()
   retry2 = set()
   retryCount = 0

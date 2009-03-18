@@ -321,6 +321,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         """__sin__ should give known result with known input"""
         
         x=units.PhysicalQuantity('0 rad')
+        x.sin()
         self.assertEqual(x.sin(),numpy.sin(x.value))
         self.assertEqual(x.cos(),numpy.cos(x.value))
         self.assertEqual(x.tan(),numpy.tan(x.value))
@@ -393,7 +394,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         x=units.PhysicalQuantity('5cm')
         y = x.inBaseUnits()
         self.assertEqual(y,units.PhysicalQuantity('0.05m'))
-        #self.assertEqual(x,units.PhysicalQuantity('5cm'))   
+        self.assertEqual(x,units.PhysicalQuantity('5cm'))   
 
     known__isCompatible__Values=(('5m','cm',True),('1s','ms',True),('1m','ms',False))
 
