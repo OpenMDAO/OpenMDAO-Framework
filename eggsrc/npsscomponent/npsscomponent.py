@@ -1,5 +1,5 @@
 """
-An NPSS wrapper component
+An NPSS wrapper component.
 """
 
 __all__ = ('NPSScomponent',)
@@ -7,18 +7,32 @@ __version__ = '0.1'
 
 import os
 
-from openmdao.main import Component, Bool, Dict, String, StringList
+from openmdao.main import Component, ArrayVariable, Bool, Dict, Float, Int, \
+                          String, StringList
 from openmdao.main.component import RUN_OK, RUN_FAILED
-from openmdao.main.variable import INPUT
+from openmdao.main.variable import INPUT, UNDEFINED
 
 import npss
 
 class NPSScomponent(Component):
     """
-    An NPSS wrapper component.
+    An NPSS wrapper component.  Supports reload requests either internally
+    via a flag in the model or externally by setting the reload_model flag.
+
+    TODO: File variables.
+
+    TODO: Save external files as part of component state/config.
+
+    TODO: Support index argument to get() and set().
+
+    TODO: Detect & flag execution errors.
+
+    TODO: Save model state as well as component state.
+
+    TODO: Use buffer protocol for array access.
     """
 
-    _dummy = npss.npss()
+    _dummy = npss.npss()  # Just for context switching.
 
     @staticmethod
     def grab_context():
@@ -107,7 +121,7 @@ class NPSScomponent(Component):
         if arglist is not None:
             self._parse_arglist(arglist)
         self._top = None
-        self._reload_model()
+        self.reload()
 
     def __getstate__(self):
         """ Return dict representing this Component's state. """
@@ -120,13 +134,13 @@ class NPSScomponent(Component):
         """ Restore this Component's state. """
 # TODO: restore NPSS model state as well as component state.
         super(NPSScomponent, self).__setstate__(state)
-        # _top will be set during post_load via _reload_model().
+        # _top will be set during post_load via reload().
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
         if super(NPSScomponent, self).post_load():
             try:
-                self._reload_model()
+                self.reload()
                 return True
             except Exception, exc:
                 self.error('Reload caught exception: %s', str(exc))
@@ -140,7 +154,7 @@ class NPSScomponent(Component):
         super(NPSScomponent, self).pre_delete()
 
     def _parse_arglist(self, arglist):
-        """ Parse argument list. """
+        """ Parse argument list. Assumes flag argument separate from value. """
         access_next = False
         assembly_next = False
         dlm_next = False
@@ -288,7 +302,7 @@ class NPSScomponent(Component):
             arglist.append('-trace')
         return arglist
 
-    def _reload_model(self):
+    def reload(self):
         """ (Re)load model. """
         is_reload = False
         saved_inputs = []
@@ -336,7 +350,7 @@ class NPSScomponent(Component):
         if self.model_filename:
             # Parse NPSS model.
             self._top.parseFile(self.model_filename)
-            # Add any local model input files to external_files list.
+            # Add any *local* model input files to external_files list.
             cwd = os.getcwd()+'/'
             paths = self._top.inputFileList
             paths.sort()
@@ -364,7 +378,11 @@ class NPSScomponent(Component):
 
     def get(self, path, index=None):
         """ Return value for attribute. """
-        return getattr(self, path)
+        if index is None:
+            return getattr(self, path)
+        else:
+            self.raise_exception('Indexing not supported yet',
+                                 NotImplementedError)
 
     def __getattr__(self, name):
         """
@@ -395,7 +413,11 @@ class NPSScomponent(Component):
 
     def set(self, path, value, index=None):
         """ Set attribute value. """
-        setattr(self, path, value)
+        if index is None:
+            setattr(self, path, value)
+        else:
+            self.raise_exception('Indexing not supported yet',
+                                 NotImplementedError)
 
     def __setattr__(self, name, value):
         """ Set attribute value. """
@@ -423,7 +445,7 @@ class NPSScomponent(Component):
         if self.reload_model:
             self.info('External reload request.')
             try:
-                self._reload_model()
+                self.reload()
             except Exception, exc:
                 self.error('Exception during reload: %s', str(exc))
                 status = RUN_FAILED
@@ -439,7 +461,7 @@ class NPSScomponent(Component):
                     if reload_req:
                         self.info('Internal reload request.')
                         try:
-                            self._reload_model()
+                            self.reload()
                         except Exception, exc:
                             self.error('Exception during reload: %s', str(exc))
                             status = RUN_FAILED
@@ -456,4 +478,91 @@ class NPSScomponent(Component):
 
         NPSScomponent.grab_context()
         return status
+
+    def make_public(self, obj_info):
+        """
+        Overloading make_public() so that we can do the following
+        on-the-fly rather than having to manually define variables:
+
+        1. Get the correct array type (default is float).
+        2. Set the units from translated NPSS units.
+        3. Set the doc string from the description attribute.
+        """
+        if isinstance(obj_info, list):
+            lst = obj_info
+        else:
+            lst = [obj_info]
+
+        new_info = []
+        for entry in lst:
+            iostat = INPUT
+
+            if isinstance(entry, basestring):
+                name = entry
+            elif isinstance(entry, tuple):
+                name = entry[0]  # wrapper name
+                if len(entry) > 2:
+                    iostat = entry[2] # optional iostatus
+            else:
+                new_info.append(entry)
+                continue
+
+            # Get units.
+            try:
+                units = getattr(self, name+'.units')
+            except AttributeError:
+                units = UNDEFINED
+            else:
+                units = UNITS_MAP.get(units, UNDEFINED)
+
+            # Get doc string.
+            try:
+                doc = getattr(self, name+'.description')
+            except AttributeError:
+                doc = None
+            else:
+                if not doc:
+                    doc = None
+
+            # Get data type.
+            try:
+                typ = self.evalExpr(name+'.getDataType()')
+            except RuntimeError:
+                new_info.append(entry)
+                continue
+
+            # Primitive method to create correct type.
+            if typ == 'real':
+                dobj = Float(name, self, iostat, doc=doc, units=units)
+            elif typ == 'int':
+                dobj = Int(name, self, iostat, doc=doc)
+            elif typ == 'string':
+                dobj = String(name, self, iostat, doc=doc)
+            elif typ == 'real[]':
+                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
+                                     num_dims=1)
+            elif typ == 'int[]':
+                dobj = ArrayVariable(name, self, iostat, int, doc=doc,
+                                     num_dims=1)
+            elif typ == 'string[]':
+                dobj = StringList(name, self, iostat, doc=doc)
+            elif typ == 'real[][]':
+                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
+                                     num_dims=2)
+            elif typ == 'int[][]':
+                dobj = ArrayVariable(name, self, iostat, int, doc=doc,
+                                     num_dims=2)
+            elif typ == 'real[][][]':
+                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
+                                     num_dims=3)
+            else:
+                self.raise_exception('Unsupported NPSS type: %s' % typ,
+                                     NotImplementedError)
+
+            new_info.append(dobj)
+
+        return super(NPSScomponent, self).make_public(new_info)
+
+UNITS_MAP = {
+}
 

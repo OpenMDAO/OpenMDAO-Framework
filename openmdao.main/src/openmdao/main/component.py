@@ -108,7 +108,8 @@ class Component (Container):
         self._stop = False
         try:
             if self.parent is not None and IAssembly.providedBy(self.parent):
-                self.parent.update_inputs(self)
+                if not self.parent.update_inputs(self):
+                    return RUN_FAILED
             self.pre_execute()
             status = self.execute()
             if status is None:

@@ -2,7 +2,6 @@
 PARTIAL! Port of Karl's ModelCenter SBJ propulsion model.
 
 Known problems:
-    - Empty NPSS arrays cannot have their type automatically discovered.
     - No file variables.
     - Lots of links & other stuff still missing.
 """
@@ -399,26 +398,26 @@ class Model(Assembly):
         self.connect('NPSS_WATE.engine.WATE.WATE_Nozzle.outPort.outerRadius',
                      'NPSS_ANOPP.WATE_Core_Nozz.outPort.outerRadius')
 
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.AR_stg',
-#                     'NPSS_ANOPP.WATE_Fan.AR_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.AR_stg',
+                     'NPSS_ANOPP.WATE_Fan.AR_stg')
         self.connect('NPSS_WATE.engine.WATE.WATE_fan.areaIn',
                      'NPSS_ANOPP.WATE_Fan.areaIn')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.bypassLen_stg',
-#                     'NPSS_ANOPP.WATE_Fan.bypassLen_stg')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.hubRadius_stg',
-#                     'NPSS_ANOPP.WATE_Fan.hubRadius_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.bypassLen_stg',
+                     'NPSS_ANOPP.WATE_Fan.bypassLen_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.hubRadius_stg',
+                     'NPSS_ANOPP.WATE_Fan.hubRadius_stg')
         self.connect('NPSS_WATE.engine.WATE.WATE_fan.maxSpdRatio',
                      'NPSS_ANOPP.WATE_Fan.maxSpdRatio')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.numBlades_stg',
-#                     'NPSS_ANOPP.WATE_Fan.numBlades_stg')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.numStatorBlades_stg',
-#                     'NPSS_ANOPP.WATE_Fan.numStatorBlades_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.numBlades_stg',
+                     'NPSS_ANOPP.WATE_Fan.numBlades_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.numStatorBlades_stg',
+                     'NPSS_ANOPP.WATE_Fan.numStatorBlades_stg')
         self.connect('NPSS_WATE.engine.WATE.WATE_fan.spoolRPM',
                      'NPSS_ANOPP.WATE_Fan.spoolRPM')
         self.connect('NPSS_WATE.engine.WATE.WATE_fan.stg1TipRadius',
                      'NPSS_ANOPP.WATE_Fan.stg1TipRadius')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.tipRadius_stg',
-#                     'NPSS_ANOPP.WATE_Fan.tipRadius_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.tipRadius_stg',
+                     'NPSS_ANOPP.WATE_Fan.tipRadius_stg')
 
         self.connect('NPSS_WATE.engine.WATE.WATE_inlet.avgCowlDiam',
                      'NPSS_ANOPP.WATE_Inlet.avgCowlDiam')
@@ -428,16 +427,16 @@ class Model(Assembly):
                      'NPSS_ANOPP.WATE_Inlet.fanLength')
         self.connect('NPSS_WATE.engine.WATE.WATE_inlet.mostFwdToEngFFLength',
                      'NPSS_ANOPP.WATE_Inlet.mostFwdToEngFFLength')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.area_stg',
-#                     'NPSS_ANOPP.WATE_LPT.area_stg')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.hubRadius_stg',
-#                     'NPSS_ANOPP.WATE_LPT.hubRadius_stg')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.numBlades_stg',
-#                     'NPSS_ANOPP.WATE_LPT.numBlades_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.area_stg',
+                     'NPSS_ANOPP.WATE_LPT.area_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.hubRadius_stg',
+                     'NPSS_ANOPP.WATE_LPT.hubRadius_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.numBlades_stg',
+                     'NPSS_ANOPP.WATE_LPT.numBlades_stg')
         self.connect('NPSS_WATE.engine.WATE.WATE_LPT.numStages',
                      'NPSS_ANOPP.WATE_LPT.numStages')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.tipRadius_stg',
-#                     'NPSS_ANOPP.WATE_LPT.tipRadius_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.tipRadius_stg',
+                     'NPSS_ANOPP.WATE_LPT.tipRadius_stg')
 
         # Propulsion data.
         PropulsionData(parent=self)
@@ -478,5 +477,6 @@ class Model(Assembly):
 
 
 if __name__ == '__main__':
-    Model().run()
+    if Model().run() != RUN_OK:
+        print 'Run failed, check log file for more information.'
 
