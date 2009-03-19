@@ -64,6 +64,24 @@ class FloatTestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')
         
+    def test_units_None_to_None(self):
+        self.float1.units = None
+        self.float2.units = None
+        self.float1._convert(self.float2)
+        self.assertEqual(3.1415926, self.float1.value)
+        self.assertEqual(42., self.float2.value)
+        
+    def test_units_Unit_to_None(self):
+        self.float1.units = 'ft'
+        self.float2.units = None
+        try:
+            self.float1._convert(self.float2)
+        except TypeError, err:
+            self.assertEqual(str(err), 
+                "h1.float2 units (None) are incompatible with units (ft) of h1.float1")
+        else:
+            self.fail("ValueError expected")
+        
     def test_get(self):
         val = self.float1.get(None)
         self.assertEqual(val, 3.1415926)
