@@ -116,7 +116,7 @@ class PhysicalQuantity(object):
      s = args[0].strip()
      match = PhysicalQuantity._number.match(s)
      if match is None:
-       raise TypeError('No number found')
+       raise TypeError("No number found in input argument: '%s'"%s)
      self.value = float(match.group(0))
      self.unit = _findUnit(s[len(match.group(0)):].strip())
 
@@ -220,7 +220,7 @@ class PhysicalQuantity(object):
     self.value = self.convertValue(unit)
     self.unit = unit
 
-  def inUnitsOf(self, *units):
+  def inUnitsOf(self, unit):
     """
     Express the quantity in different units. If one unit is
     specified, a new PhysicalQuantity object is returned that
@@ -239,26 +239,11 @@ class PhysicalQuantity(object):
     @raises TypeError: if any of the specified units are not compatible
     with the original unit
     """
-    units = [_findUnit(x) for x in units]
-    if len(units) == 1:
-      unit = units[0]
-      value = self.convertValue(unit)
-      return self.__class__(value, unit)
-    else:
-      units.sort()
-      result = []
-      value = self.value
-      unit = self.unit
-      for i in range(len(units)-1,-1,-1):
-        value = value*unit.conversionFactorTo(units[i])
-        if i == 0:
-          rounded = value
-        else:
-          rounded = _round(value)
-        result.append(self.__class__(rounded, units[i]))
-        value = value - rounded
-        unit = units[i]
-      return tuple(result)
+    unit = _findUnit(unit)
+   
+    value = self.convertValue(unit)
+    return self.__class__(value, unit)
+
 
   # Contributed by Berthold Hoellmann
   def inBaseUnits(self):
@@ -536,12 +521,6 @@ def isPhysicalQuantity(x):
     """
     return hasattr(x, 'value') and hasattr(x, 'unit')
 
-def _round(val):
-    if val>0.0:
-        return math.floor(val)
-    else:
-        return math.ceil(val)
-
 #Helper Functions
 def _findUnit(unit):
   if type(unit) == type(''):
@@ -552,8 +531,11 @@ def _findUnit(unit):
         addUnit(unit,_unitLib.prefixes[name[0]]*_unitLib.unit_table[name[1:]])
       elif(name[0:2] in _unitLib.prefixes and name[2:] in _unitLib.unit_table):
         addUnit(unit,_unitLib.prefixes[name[0:2]]*_unitLib.unit_table[name[2:]])
-      else:  
-        unit =  eval(name, _unitLib.unit_table) 
+      else:
+        try:
+            unit =  eval(name, _unitLib.unit_table) 
+        except:
+            raise ValueError, "no unit named '%s' is defined"%name
         #raise KeyError, name + ' not defined in the unit library'
     unit = eval(name, _unitLib.unit_table)
     for cruft in ['__builtins__', '__args__']:

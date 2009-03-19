@@ -14,7 +14,7 @@ from pkg_resources import resource_string, resource_stream
 
 # the following class test each method in the NumberDict class
 
-class test_import(unittest.TestCase):
+class test_moduleLevelFunctions(unittest.TestCase):
     def test_importlib(self):
         
         #check to make sure the import fucntion errors if not all required base_units are there
@@ -96,7 +96,7 @@ class test_NumberDict(unittest.TestCase):
 class test__PhysicalQuantity(unittest.TestCase):
     
 
-    def test_known_same_init_Values(self):
+    def test_init(self):
         """__init__ should have the same result regardless of the constructor calling pattern"""
     
  
@@ -104,6 +104,28 @@ class test__PhysicalQuantity(unittest.TestCase):
         y=units.PhysicalQuantity(1,'m')
         self.assertEqual(x.value,y.value)
         self.assertEqual(x.unit,y.unit)
+        
+        #error for improper init argument
+        try:
+            x=units.PhysicalQuantity('m')
+        except TypeError,err:
+            self.assertEqual(str(err),"No number found in input argument: 'm'")
+        else:
+            self.fail("Expecting TypeError")
+            
+        try:
+            x=units.PhysicalQuantity('1in')
+        except ValueError,err:
+            self.assertEqual(str(err),"no unit named 'in' is defined")
+        else:
+            self.fail("Expecting ValueError")
+            
+        try:
+            x=units.PhysicalQuantity(1,None)
+        except TypeError,err:
+            self.assertEqual(str(err),"None is not a unit")
+        else:
+            self.fail("Expecting TypeError")            
 
     def test_str(self):
         """__str__ """
@@ -225,13 +247,24 @@ class test__PhysicalQuantity(unittest.TestCase):
         """multiplication should give known result with known input
         the unit of the product should be the product of the units"""
 
-        #known_mul_Values=(('1m','5m',5),('1cm','1cm',1),('1cm','5m',5),('7km','1m',7))
+        #PhysicalQuanity * scalar
+        x=units.PhysicalQuantity('1cm')
+        y = 12.3
+        self.assertEqual(x*y,units.PhysicalQuantity('12.3cm'))
+        self.assertEqual(y*x,units.PhysicalQuantity('12.3cm'))
         
+        #PhysicalQuantity * PhysicalQuantity
         x=units.PhysicalQuantity('1cm')
         y=units.PhysicalQuantity('1cm')
+        z=units.PhysicalQuantity('1cm**-1')
         self.assertEqual((x*y).value,1)
         self.assertEqual((x*y).unit,x.unit*y.unit)
         self.assertEqual(str(x*y),'1.0 cm**2')
+        
+        #multiplication where the result is dimensionless
+        self.assertEqual((x*z),1.0)
+        self.assertEqual(type(x*z),float)
+        self.assertEqual(str(x*z),'1.0')
         
         x=units.PhysicalQuantity('7kg')
         y=units.PhysicalQuantity('10.5m')
@@ -253,7 +286,15 @@ class test__PhysicalQuantity(unittest.TestCase):
     def test_div_known_Values(self):
         """__div__ should give known result with known input"""
         """the unit of the product should be the product of the units"""
-
+        
+        #scalar division
+        x=units.PhysicalQuantity('1cm')
+        y = 12.3
+        z = 1/12.3
+        self.assertAlmostEqual((x/y).value,units.PhysicalQuantity('%f cm'%z).value,4)
+        self.assertEqual((x/y).unit,units.PhysicalQuantity('%f cm'%z).unit)
+        self.assertEqual(y/x,units.PhysicalQuantity('12.3cm**-1'))
+        
         #unitless result
         x=units.PhysicalQuantity('1.0m')
         y=units.PhysicalQuantity('5m')
@@ -307,6 +348,20 @@ class test__PhysicalQuantity(unittest.TestCase):
             self.assertEqual(str(err),'cannot exponentiate units with non-zero offset')
         else: 
             self.fail("expected TypeError")
+            
+        #test for error if exponent is a PhysicalQuantity
+        try: 
+            x**x
+        except TypeError, err: 
+            self.assertEqual(str(err),'Exponents must be dimensionless')
+        else: 
+            self.fail("expected TypeError")
+        try: #__rpow__
+            2**x
+        except TypeError, err: 
+            self.assertEqual(str(err),'Exponents must be dimensionless')
+        else: 
+            self.fail("expected TypeError")            
         
     def test_abs_known_Values(self):
         """__abs__ should give known result with known input"""
@@ -410,7 +465,8 @@ class test__PhysicalQuantity(unittest.TestCase):
         except TypeError,err:
             self.assertEqual(str(err),'Incompatible units')
         else: 
-            self.fail("TypeError expected")        
+            self.fail("TypeError expected")    
+        
 
     def test_inBaseUnits(self):
         """inBaseUnits() should return a new PhysicalQuantity instance
@@ -420,8 +476,6 @@ class test__PhysicalQuantity(unittest.TestCase):
         y = x.inBaseUnits()
         self.assertEqual(y,units.PhysicalQuantity('0.05m'))
         self.assertEqual(x,units.PhysicalQuantity('5cm'))   
-
-    
 
     def test__isCompatible__known__Values(self):
         """isCompatible should return True for compatible units and False for incompatible ones"""
@@ -501,70 +555,107 @@ class test__PhysicalUnit(unittest.TestCase):
 
 
     known__pow__Values=(('1V',3),('1m',2),('1.1m',2))
-    def test__pow__known__Values(self):
-        """__pow__ should give known result with known input"""
+    def test_pow(self):
+        """power should error for offest units and for non-integer powers"""
 
-        for input_str,pwr in self.known__pow__Values:
-            x=units.PhysicalQuantity(input_str).unit
-            x.offset=0
-            self.assertEqual(x.__pow__(pwr),x.__pow__(pwr))
-            self.assertEqual((x*x).__pow__(pwr),(x*x).__pow__(pwr))
-            self.assertRaises(TypeError, x.__pow__,x)
-            self.assertRaises(TypeError, (x*x).__pow__,0.1)
-            x.offset=1
-            self.assertRaises(TypeError, x.__pow__,5)
+        x = units.PhysicalQuantity('1m')
+        y = units.PhysicalQuantity('1degF')
+        
+        z = x**3
+        self.assertEqual(z.unit,units.PhysicalQuantity('1m**3').unit)
+        x = z**(1.0/3.0) #checks inverse integer units
+        self.assertEqual(x.unit,units.PhysicalQuantity('1m').unit)
+        
+        #test offset units: 
+        try: 
+            y**17
+        except TypeError,err:
+            self.assertEqual(str(err),'cannot exponentiate units with non-zero offset')
+        else:
+            self.fail('Expecting TypeError')
+        
+        #test non-integer powers   
+        try: 
+            x**1.2
+        except TypeError,err:
+            self.assertEqual(str(err),'Only integer and inverse integer exponents allowed')
+        else:
+            self.fail('Expecting TypeError')      
+        try: 
+            x**(5.0/2.0)
+        except TypeError,err:
+            self.assertEqual(str(err),'Only integer and inverse integer exponents allowed')
+        else:
+            self.fail('Expecting TypeError')                
+            
+        
 
     known__conversionFactorTo__Values=(('1m','1cm',100),('1s','1ms',1000),('1ms','1s',0.001))
 
     def test_conversionFactorTo(self):
-        """__conversionFactorTo_ should give known result with known input"""
+        """conversionFactorTo should errror for units with different base power, should error for units with incompativle offset"""
+        
+        w = units.PhysicalQuantity('1cm')
+        x = units.PhysicalQuantity('1m')
+        y = units.PhysicalQuantity('1degF')
+        z1 = units.PhysicalQuantity('1degC')
+        z2 = units.PhysicalQuantity('1degK')
+        
+        self.assertEqual(w.unit.conversionFactorTo(x.unit),1/100.0)
+        try: #incompatible units
+            w.unit.conversionFactorTo(y.unit)
+        except TypeError,err:
+            self.assertEqual(str(err),"Incompatible units")
+        else:
+            self.fail("Expecting TypeError")
+        #compatible offset units    
+        self.assertEqual(z1.unit.conversionFactorTo(z2.unit),1.0)  
+        try: #incompatible offset units
+            y.unit.conversionFactorTo(z2.unit)
+        except TypeError,err:
+            self.assertEqual(str(err),"Unit conversion (degF to degK) cannot be expressed as a simple multiplicative factor")
+        else:
+            self.fail("Expecting TypeError")    
 
-        for input_str1,input_str2,result in self.known__conversionFactorTo__Values:
-            x=units.PhysicalQuantity(input_str1)
-            y=units.PhysicalQuantity(input_str2)
-            self.assertEqual(x.unit.conversionFactorTo(y.unit),result)
-        self.assertRaises(TypeError,units.PhysicalQuantity('1s').unit.conversionFactorTo,units.PhysicalQuantity('1m').unit)
-        x=units.PhysicalUnit('unit1',1,[1,0,0,0,0,0,0,0,0])
-        y=units.PhysicalUnit('unit2',2,[1,0,0,0,0,0,0,0,0])
-        y.offset=1
-        self.assertRaises(TypeError,x.conversionFactorTo,y)
+    known__conversionTupleTo__Values=(('1m','1s'),('1s','1degK'),('1ms','1rad'))
+    
+    def test_conversionTupleTo(self):
+        """test_conversionTupleTo shoudl error when units have different power lists"""
 
-    known__conversionTupleTo__Values=(('1m','1s'),('1s','1K'),('1ms','1rad'))
-    def test__conversionTupleTo__known__Values(self):
-        """__conversionTupleTo_ should give known result with known input"""
-
-        for input_str1,input_str2 in self.known__conversionTupleTo__Values:
-            x=units.PhysicalQuantity(input_str1)
-            y=units.PhysicalQuantity(input_str2)
-            self.assertRaises(TypeError,x.unit.conversionTupleTo,y.unit)
-
-    def test__Name__known__Values(self):
-        """__Name_ should give known result with known input"""
-        x=units.PhysicalQuantity('1m')
-        y=1/x
+        w = units.PhysicalQuantity('1cm')
+        x = units.PhysicalQuantity('1m')
+        y = units.PhysicalQuantity('1degF')
+        z1 = units.PhysicalQuantity('1degC')
+        z2 = units.PhysicalQuantity('1degK')
+        
+        #check for non offset units
+        self.assertEqual(w.unit.conversionTupleTo(x.unit),(1/100.0,0))
+        
+        #check for offset units
+        result = y.unit.conversionTupleTo(z1.unit)
+        self.assertAlmostEqual(result[0],0.556,3)
+        self.assertAlmostEqual(result[1],-32.0,3)
+        
+        #check for incompatible units
+        try:
+            x.unit.conversionTupleTo(z1.unit)
+        except TypeError,err: 
+            self.assertEqual(str(err),"Incompatible units")
+        else:
+            self.fail("Expecting TypeError")
+            
+    def test_name(self):
+        """name should return a mathematically correct representation of the unit"""
+        x1=units.PhysicalQuantity('1m')
+        x2 = units.PhysicalQuantity('1kg')
+        y=1/x1
         self.assertEqual(y.unit.name(),'1/m')
-        y=1/x/x
+        y=1/x1/x1
         self.assertEqual(y.unit.name(),'1/m**2')
-        y=x**2
+        y=x1**2
         self.assertEqual(y.unit.name(),'m**2')
-
-
-    def test__findUnit__known__Values(self):
-        """__findUnit_ should give known result with known input"""
-        x=units.PhysicalQuantity('1m')
-        y=units.PhysicalQuantity('1dam')
-        self.assertEqual(y.unit,units._findUnit('dam'))
-        self.assertEqual(x.unit,units._findUnit('m'))
-        self.assertRaises(KeyError,units._findUnit,'hello')
-        self.assertRaises(TypeError,units._findUnit,5)
-
-    def test__addUnit__known__Values(self):
-        """__addPrefixed_ should give known result with known input"""
-
-        self.assertRaises(KeyError,units.addUnit,'m',units.PhysicalUnit('1m',2,[0,0,0,0,0,0,0,0,0]))
-
-    def test__importLibrary__known__Values(self):
-        """__importLibrary_ should give known result with known input"""
+        y=x2/(x1**2)
+        self.assertEqual(y.unit.name(),'kg/m**2')
 
 
 if __name__ == "__main__":
