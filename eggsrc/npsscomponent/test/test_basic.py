@@ -231,7 +231,7 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.sample.i = 'goo'
         except RuntimeError, err:
-            self.assertEqual('ERROR(91041001) NCPVal error - tried to read a STRING as a INT', str(err))
+            self.assertEqual("Can't set 'sample.i': ERROR(91041001) NCPVal error - tried to read a STRING as a INT", str(err))
         else:
             self.fail('RuntimeError expected')
 
@@ -314,7 +314,7 @@ class NPSSTestCase(unittest.TestCase):
         try:
             NPSScomponent(arglist=['somefilethatdoesnotexist.npss'])
         except RuntimeError, err:
-            self.assertEqual("ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'somefilethatdoesnotexist.npss'", str(err))
+            self.assertEqual("parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'somefilethatdoesnotexist.npss'", str(err))
         else:
             self.fail('RuntimeError expected')
 
@@ -366,13 +366,13 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.sample.i = 8
         except RuntimeError, err:
-            self.assertEqual('no active session', str(err))
+            self.assertEqual('exists(sample.i) failed: no active session', str(err))
         else:
             self.fail('RuntimeError expected')
         try:
             child.exists('foobar')
         except RuntimeError, err:
-            self.assertEqual('no active session', str(err))
+            self.assertEqual('exists(kid.foobar) failed: no active session', str(err))
         else:
             self.fail('RuntimeError expected')
 
@@ -382,7 +382,7 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.sample.i = 8
         except RuntimeError, err:
-            self.assertEqual('no active session', str(err))
+            self.assertEqual('exists(sample.i) failed: no active session', str(err))
         else:
             self.fail('RuntimeError expected')
 
