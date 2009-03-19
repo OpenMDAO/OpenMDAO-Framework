@@ -73,7 +73,7 @@ class Vehicle(Assembly):
     def execute(self):
         
         self.set('Transmission.CurrentGear', self.CurrentGear)        
-        self.set('Transmission.Velocity', self.Velocity)        
+        self.set('Transmission.Velocity', self.Velocity*60.0/26.8224)        
         self.set('Engine.Throttle', self.Throttle)        
         self.set('VDyn.Velocity', self.Velocity)        
         
@@ -89,9 +89,12 @@ class Vehicle(Assembly):
 if __name__ == "__main__":        
     z = Vehicle("Testing")        
     z.CurrentGear = 1
-    z.Velocity = 20.0
-    z.Throttle = 1.0
+    z.Velocity = 60.0*(26.8224/60.0)
+    z.Throttle = .2
     z.execute()
-    print z.Acceleration, z.FuelBurn, z.Power, z.Torque
+    print "Accel = ", z.Acceleration
+    print "Fuelburn = ", z.FuelBurn
+    print "(Power, Torque) ", z.Power, z.Torque
+    print "RPM = ", z.Engine.RPM
 
 # End vehicle.py 
