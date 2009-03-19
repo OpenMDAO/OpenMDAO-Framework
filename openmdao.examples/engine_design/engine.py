@@ -78,7 +78,7 @@ class Engine(Component):
 
         Float('RPM', self, INPUT, units='1/min', default=1000.0, min_limit=1000,
               max_limit=6000, doc='Engine RPM')
-        Float('Throttle', self, INPUT, units=None, default=1.0, min_limit=0.1,
+        Float('Throttle', self, INPUT, units=None, default=1.0, min_limit=0.01,
               max_limit=1.0, doc='Throttle position (from low idle to wide open)')
 
         Float('Power', self, OUTPUT, units='kW', default=0.0,
