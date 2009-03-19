@@ -573,7 +573,7 @@ class NPSScomponent(Component):
         """ Return True if we can translate npss_units. """
         try:
             units = self.get_units_translation(npss_units)
-            return units is not None
+            return units is not UNDEFINED
         except KeyError:
             return False
 
