@@ -14,6 +14,8 @@ from openmdao.main.variable import INPUT, UNDEFINED
 
 import npss
 
+from units import UNITS_MAP
+
 class NPSScomponent(Component):
     """
     An NPSS wrapper component.  Supports reload requests either internally
@@ -30,6 +32,8 @@ class NPSScomponent(Component):
     TODO: Save model state as well as component state.
 
     TODO: Use buffer protocol for array access.
+
+    TODO: Safe multi-thread access (synchronized).
     """
 
     _dummy = npss.npss()  # Just for context switching.
@@ -125,14 +129,12 @@ class NPSScomponent(Component):
 
     def __getstate__(self):
         """ Return dict representing this Component's state. """
-# TODO: save NPSS model state as well as component state.
         state = super(NPSScomponent, self).__getstate__()
         state['_top'] = None  # pyNPSS is unpickleable.
         return state
 
     def __setstate__(self, state):
         """ Restore this Component's state. """
-# TODO: restore NPSS model state as well as component state.
         super(NPSScomponent, self).__setstate__(state)
         # _top will be set during post_load via reload().
 
@@ -368,7 +370,7 @@ class NPSScomponent(Component):
             for name, value in saved_inputs:
                 self.set(name, value)
 
-        NPSScomponent.grab_context()
+        self.grab_context()
         if pushed:
             self.pop_dir()
 
@@ -409,7 +411,7 @@ class NPSScomponent(Component):
             except AttributeError:
                 raise AttributeError(self.get_pathname()+' '+str(err))
         finally:
-            NPSScomponent.grab_context()
+            self.grab_context()
 
     def set(self, path, value, index=None):
         """ Set attribute value. """
@@ -436,7 +438,7 @@ class NPSScomponent(Component):
         except AttributeError:
             return super(NPSScomponent, self).__setattr__(name, value)
         finally:
-            NPSScomponent.grab_context()
+            self.grab_context()
 
     def execute(self):
         """ Perform operations associated with running the component. """
@@ -476,7 +478,7 @@ class NPSScomponent(Component):
                 self.error('Exception during run: %s', str(exc))
                 status = RUN_FAILED
 
-        NPSScomponent.grab_context()
+        self.grab_context()
         return status
 
     def make_public(self, obj_info):
@@ -507,15 +509,26 @@ class NPSScomponent(Component):
                 new_info.append(entry)
                 continue
 
-            # Get units.
+            try:
+                typ = self.evalExpr(name+'.getDataType()')
+            except RuntimeError:
+                new_info.append(entry)
+                continue
+
             try:
                 units = getattr(self, name+'.units')
             except AttributeError:
                 units = UNDEFINED
             else:
-                units = UNITS_MAP.get(units, UNDEFINED)
+                if units:
+                    if self.have_units_translation(units):
+                        units = self.get_units_translation(units)
+                    else:
+                        self.warning("No units translation for '%s'" % units)
+                        units = UNDEFINED
+                else:
+                    units = UNDEFINED
 
-            # Get doc string.
             try:
                 doc = getattr(self, name+'.description')
             except AttributeError:
@@ -523,13 +536,6 @@ class NPSScomponent(Component):
             else:
                 if not doc:
                     doc = None
-
-            # Get data type.
-            try:
-                typ = self.evalExpr(name+'.getDataType()')
-            except RuntimeError:
-                new_info.append(entry)
-                continue
 
             # Primitive method to create correct type.
             if typ == 'real':
@@ -563,6 +569,23 @@ class NPSScomponent(Component):
 
         return super(NPSScomponent, self).make_public(new_info)
 
-UNITS_MAP = {
-}
+    def have_units_translation(self, npss_units):
+        """ Return True if we can translate npss_units. """
+        try:
+            units = self.get_units_translation(npss_units)
+            return units is not None
+        except KeyError:
+            return False
+
+    @staticmethod
+    def get_units_translation(npss_units):
+        """ Return translation for npss_units. """
+        return UNITS_MAP[npss_units]
+
+    @staticmethod
+    def set_units_translation(npss_units, mdao_units):
+        """ Set translation for npss_units. """
+        assert isinstance(npss_units, basestring)
+        assert isinstance(mdao_units, basestring)
+        UNITS_MAP[npss_units] = mdao_units
 
