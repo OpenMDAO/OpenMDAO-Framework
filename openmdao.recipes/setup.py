@@ -10,7 +10,7 @@ except ImportError, e:
     from distutils.core import setup
 
 
-version = '0.0.1'
+version = '0.1.0'
 
 setup(name='openmdao.recipes',
       version=version,
@@ -32,7 +32,9 @@ setup(name='openmdao.recipes',
       install_requires=[
           'setuptools',
           'zc.recipe.egg==1.1.0',
-          'Sphinx',
+          'Sphinx==0.5.1',
+          'nose',
+          'coverage',
           'openmdao.util',
       ],
       entry_points="""

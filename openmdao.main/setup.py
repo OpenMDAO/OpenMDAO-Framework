@@ -10,7 +10,7 @@ except ImportError, e:
     from distutils.core import setup
 
 
-version = '0.0.1'
+version = '0.1.0'
 
 setup(name='openmdao.main',
       version=version,
@@ -35,7 +35,10 @@ setup(name='openmdao.main',
           'pyparsing',
           'numpy',
           'PyYAML',
-          # -*- Extra requirements: -*-
+          'zope.interface',
+          'zope.component',
+          'zope.schema',
+          'ScientificPython',
       ],
       entry_points="""
       # -*- Entry points: -*-

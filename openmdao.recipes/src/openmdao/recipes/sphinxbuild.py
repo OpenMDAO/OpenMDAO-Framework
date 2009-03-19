@@ -5,9 +5,11 @@ import sys
 import stat
 from subprocess import check_call, Popen
 import fnmatch
+import logging
 from pkg_resources import working_set, Environment
 
 import openmdao.util.pkg_sphinx_info as pkg_sphinx_info
+from openmdao.util.procutil import run_command
 
 script_template = """\
 #!%(python)s
@@ -29,6 +31,7 @@ class SphinxBuild(object):
         self.buildout = buildout
         self.name = name
         self.options = options
+        self.logger = logging.getLogger(name)
         self.branchdir = os.path.split(buildout['buildout']['directory'])[0]
         self.interpreter = os.path.join(buildout['buildout']['bin-directory'], 'python')
         self.executable = buildout['buildout']['executable']
@@ -72,9 +75,17 @@ class SphinxBuild(object):
         try:
             sys.path[0:0] = [os.path.abspath('python-scripts')]
 #            execfile(os.path.join('python-scripts','rebuild.py'))
-            check_call([self.interpreter, self.builder, '-P','-b', 'html', 
-                        '-d', os.path.join(self.builddir,'doctrees'), 
-                        '.', os.path.join(self.builddir,'html')])
+#            check_call([self.interpreter, self.builder, '-P','-b', 'html', 
+#                        '-d', os.path.join(self.builddir,'doctrees'), 
+#                        '.', os.path.join(self.builddir,'html')])
+            out,ret = run_command('%s %s -P -b html -d %s . %s' %
+                                    (self.interpreter, self.builder, 
+                                     os.path.join(self.builddir,'doctrees'), 
+                                     os.path.join(self.builddir,'html')))
+        except Exception, err:
+            self.logger.error(out)
+            self.logger.error(str(err))
+            raise zc.buildout.UserError('sphinx build failed')
         finally:
             os.chdir(startdir)
         
@@ -102,11 +113,13 @@ class SphinxBuild(object):
         os.chmod(scriptname, 0775)
         
         return [scriptname]
-        
-    update = install
+    
+    def update(self):
+        return []    
 
     def _write_src_docs(self):
         for pack in self.packages.split():
+            self.logger.info('creating autodoc file for %s' % pack)
             f = open(os.path.join(self.docdir,'srcdocs','packages',
                                   pack+'.rst'),'w')
             pkg_sphinx_info(self.env,self.branchdir, pack, f, 

@@ -3,7 +3,7 @@
 
 from setuptools import setup
 
-version = '0.0.1'
+version = '0.1.0'
 
 setup(name='openmdao.lib',
       version=version,
@@ -33,6 +33,7 @@ setup(name='openmdao.lib',
           'setuptools',
           'openmdao.main',
           'conmin',
+          'Pyevolve',
       ],
       entry_points="""
       [openmdao.drivers]
