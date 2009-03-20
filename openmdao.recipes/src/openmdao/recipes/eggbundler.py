@@ -30,18 +30,21 @@ class EggBundler(object):
         self.logger = logging.getLogger(name)
         self.bodir = buildout['buildout']['directory']
         self.branchdir = os.path.split(self.bodir)[0]
-        self.interpreter = os.path.join(buildout['buildout']['bin-directory'], 'python')
         self.executable = buildout['buildout']['executable']        
         self.egg_dir = buildout['buildout']['eggs-directory']
         self.develop = [x for x in buildout['buildout']['develop'].split() if x != '']
         self.partsdir = buildout['buildout']['parts-directory']
-        self.downloads = os.path.join(buildout['buildout']['download-cache'],
-                                      'dist')
         self.bundledir = os.path.join(self.partsdir, name)
         bundle_cache = os.path.join(self.bundledir,'buildout',
                                     'distrib-cache','dist')
         self.bundle_cache = bundle_cache
+        dcache =  buildout['buildout'].get('download-cache')
+        if dcache is None:
+            self.downloads = bundle_cache
+        else:
+            self.downloads = os.path.join(dcache,'dist')
         self.env = Environment([bundle_cache, self.downloads])
+        self.installed_env = Environment([self.egg_dir])
         self.index = PackageIndex(buildout['buildout']['index'])
         self.bundle_name = options['bundle_name']
         self.bundle_version = options['bundle_version']
@@ -58,29 +61,35 @@ class EggBundler(object):
         """Add a dependency for the given requirement and anything the resulting
         distrib depends on.
         """
+        self.logger.debug('looking for %s',req)
+        
         if req.project_name in excludes:
             return
         dist = env.best_match(req, ws)
-        if dist is not None:
+
+        if dist in deps:
+            return
+                        
+        if dist is None:
+            fetched = self.index.fetch_distribution(req,self.downloads)
+            if fetched is None:
+                self.logger.debug('could not find distrib for %s' % req)
+        else:
+            self.logger.debug('found dist %s' % dist.as_requirement)
             if dist.project_name not in excludes:
                 deps.add(dist)
-            reqs = dist.requires()
-            for r in reqs:
+            for r in dist.requires():
+                self.logger.info('%s required by %s' % (r,dist.project_name))
                 self._add_deps(deps, env, ws, r, excludes)
-        else:
-            dist = self.index.fetch_distribution(req, self.downloads)
-            if dist is None:
-                self.logger.error('Cannot find distrib for "%s"' % req)
-            else:
-                if dist.project_name not in excludes:
-                    deps.add(dist)
 
-    def _create_buildout_dir(self): 
+
+    def _create_buildout_dir(self):
+        """Creates a bootstrappable buildout dir with a buildout.cfg file
+        tailored to build from a download-cache.
+        """ 
         bodir = os.path.join(self.bundledir, 'buildout')  
-        #if not os.path.isdir(bodir):            
-        #    os.mkdir(bodir)
         shutil.copy(os.path.join(self.bodir, 'isolated_bootstrap.py'),
-                    os.path.join(bodir,'isolated_bootstrap.py'))
+                    os.path.join(bodir))
         
         # now create the buildout.cfg file
         bo = self.buildout
@@ -91,6 +100,8 @@ class EggBundler(object):
         f = open(os.path.join(bodir,'buildout.cfg'),'w')
         for sect,opts in bo.items():
             if sect=='buildout':
+                versions = self.buildout['buildout'].get('versions') or (self.name+'_release')
+                self.excludeparts.append(versions)
                 f.write('[buildout]\n\n')
                 f.write('newest = %s\n\n' % self.buildout['buildout']['newest'])
                 f.write('offline = %s\n\n' % self.buildout['buildout']['offline'])
@@ -100,8 +111,8 @@ class EggBundler(object):
                 f.write('\n\ndownload-cache = distrib-cache\n\n')
                 f.write('\n\n')
                 if self.fix_versions:
-                    f.write('versions = %s\n\n' % (self.name+'_release'))
-                    f.write('[%s]\n' % (self.name+'_release'))
+                    f.write('versions = %s\n\n' % versions)
+                    f.write('[%s]\n' % versions)
                     projs = ['%s = %s'%(x.project_name,x.version) 
                                                       for x in self.dists]
                     for proj in sorted(set(projs)):
@@ -121,7 +132,24 @@ class EggBundler(object):
                         else:
                             f.write('%s = %s\n\n' % (opt,val))
                     
-                    
+
+    def _build_dev_eggs(self):
+        """ Loop through all of the develop eggs and build real eggs to
+        put into the download-cache.
+        """
+        for degg in self.develop:
+            self.logger.info('building egg in %s' % degg)
+            os.chdir(degg)
+            cmd = '%s setup.py bdist_egg -d %s' % (self.executable, 
+                                                   self.bundle_cache)
+            out, ret = run_command(cmd)
+            if ret != 0:
+                self.logger.error(out)
+                raise zc.buildout.UserError(
+                     'error while building egg in %s (return code=%d)' 
+                      % (degg,ret))
+    
+                        
     def install(self):
         distribs = set()
         ws = WorkingSet()
@@ -130,46 +158,40 @@ class EggBundler(object):
         if not os.path.isdir(self.bundle_cache):
             os.makedirs(self.bundle_cache)
         
-        # loop through all of the develop eggs and build real eggs to
-        # put into the download-cache
         try:
-            for degg in self.develop:
-                self.logger.info('building egg in %s' % degg)
-                os.chdir(degg)
-                cmd = '%s setup.py bdist_egg -d %s' % (self.executable, 
-                                                       self.bundle_cache)
-                out, ret = run_command(cmd)
-                if ret != 0:
-                    self.logger.error(out)
-                    raise zc.buildout.UserError(
-                         'error while building egg in %s (return code=%d)' 
-                          % (degg,ret))
+            self._build_dev_eggs()
         finally:
             os.chdir(startdir)
         
         # collect dependencies for all develop eggs 
         tmpenv = Environment([self.bundle_cache])
-        excludes = [x for x in tmpenv]
-        for ex in excludes:
-            for dist in tmpenv[ex]:
+        devprojs = [x for x in tmpenv]  # list of project names
+        for dproj in devprojs:
+            for dist in tmpenv[dproj]:
                 self.dists.append(dist)
-                for r in dist.requires():
-                    self._add_deps(distribs, self.env, ws, r, excludes)
+                for req in dist.requires():
+                    self.logger.info('%s requires %s' %(dist.project_name,req))
+                    # use the installed environment to gather dependencies
+                    # because retrieving them from uninstalled ditros doesn't
+                    # work in all cases
+                    self._add_deps(distribs, self.installed_env, 
+                                   ws, req, devprojs)
         
         # build up a list of all egg dependencies we find in other recipes in
-        # this buildout.
+        # this buildout, as specified in the 'distrib_lists' attribute
         for dl in [x for x in self.options['distrib_lists'].split() if x != '']:
             part, attrib = dl.split('.')
             for spec in [x for x in self.buildout[part][attrib].split() 
                                                                 if x != '']:
-                self._add_deps(distribs, self.env, ws, 
-                               Requirement.parse(spec), excludes)
+                self._add_deps(distribs, self.installed_env, ws, 
+                               Requirement.parse(spec), devprojs)
         
         # get the total set of all distribs (including develop eggs & all deps)
         self.dists.extend(distribs)
         
         # Copy any extra stuff specified in the config
         for stuff in self.extra_stuff:
+            self.logger.debug('copying %s' % stuff)
             if os.path.isfile(stuff):
                 shutil.copy(stuff, self.bundledir)
             elif os.path.isdir(stuff):
@@ -182,8 +204,21 @@ class EggBundler(object):
         # The eggs made from the develop eggs are already there.
         self.logger.info('copying eggs')
         for dist in distribs:
-            shutil.copy(dist.location, os.path.join(self.bundle_cache,
-                                             os.path.basename(dist.location)))
+            if self.downloads is not None: # look first in download cache
+                cached = os.path.join(self.downloads,
+                                      os.path.basename(dist.location))
+                if os.path.isfile(cached):
+                    self.logger.debug('fetching %s from cache' % 
+                                       os.path.basename(cached))
+                    shutil.copy(cached, os.path.join(self.bundle_cache,
+                                             os.path.basename(cached)))
+            else:                                               
+                self.logger.debug('fetching %s from index' % 
+                                                          dist.project_name)
+                fetched = self.index.fetch_distribution(dist.as_requirement(), 
+                                                        self.bundle_cache)
+                if fetched is None:
+                    self.logger.debug('could not find %s' % dist.project_name)
         
         self.logger.info('creating buildout config')
         self._create_buildout_dir()                                  
@@ -199,7 +234,9 @@ class EggBundler(object):
                                     sys.version[:3]))
         tarf.close()
         
-        #rm(os.path.join(self.bundledir,'buildout',))
+        rm(os.path.join(self.bundledir,'buildout',))
+        for stuff in self.extra_stuff:
+            rm(os.path.join(self.bundledir,os.path.basename(stuff)))
             
         return [self.bundledir]
 

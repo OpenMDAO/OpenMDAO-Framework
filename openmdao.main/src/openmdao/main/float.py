@@ -122,6 +122,10 @@ class Float(Variable):
         """
         if self.units is UNDEFINED or var.units is UNDEFINED:
             return var.value
+        elif self.units is None and var.units is None:
+            return var.value
+        elif self.units is None or var.units is None:
+            self._incompatible_units(var, var.units)
         else:
             pq = PhysicalQuantity(var.value, var.units)
             pq.convertToUnit(self.units)

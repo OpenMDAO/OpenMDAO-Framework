@@ -15,7 +15,7 @@ setup(name='npsscomponent',
       include_package_data=True,
       zip_safe=False,
       packages = ['npsscomponent'],
-      package_data={'npsscomponent': ['test/*.py']},
+      package_data={'npsscomponent': ['test/*.py','test/*.mdl']},
       install_requires=[
           'pyNPSS'
       ],
