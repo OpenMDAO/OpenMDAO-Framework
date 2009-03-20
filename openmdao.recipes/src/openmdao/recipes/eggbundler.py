@@ -233,7 +233,10 @@ class EggBundler(object):
         
         rm(os.path.join(self.bundledir,'buildout',))
         for stuff in self.extra_stuff:
-            rm(os.path.join(self.bundledir,os.path.basename(stuff)))
+            try:
+                rm(os.path.join(self.bundledir,os.path.basename(stuff)))
+            except OSError, err:
+                self.logger.error(str(err))
             
         return [self.bundledir]
 
