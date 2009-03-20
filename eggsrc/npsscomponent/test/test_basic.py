@@ -5,6 +5,9 @@ Essentially stolen from test script for pyNPSS.
 
 import unittest
 
+import numpy
+from numpy.testing import assert_equal
+
 from npsscomponent import NPSScomponent
 
 # this string contains an NPSS input string, just because I wanted this test
@@ -167,14 +170,14 @@ class NPSSTestCase(unittest.TestCase):
 
     def test_gets(self):
         self.assertEqual(self.sample.i, 42)
-        self.assertEqual(self.sample.i1d, [1, 2, 3, 4])
-        self.assertEqual(self.sample.i2d, [[1, 2, 3, 4], [5, 6, 7, 8]])
+        assert_equal(self.sample.i1d, [1, 2, 3, 4])
+        assert_equal(self.sample.i2d, [[1, 2, 3, 4], [5, 6, 7, 8]])
 
         self.assertEqual(self.sample.r, 3.14)
-        self.assertEqual(self.sample.r1d, [1, 2, 3])
-        self.assertEqual(self.sample.r2d, [[1, 2, 3], [4, 5, 6]])
-        self.assertEqual(self.sample.r3d,
-                         [[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
+        assert_equal(self.sample.r1d, [1, 2, 3])
+        assert_equal(self.sample.r2d, [[1, 2, 3], [4, 5, 6]])
+        assert_equal(self.sample.r3d,
+                     [[[1, 2, 3], [4, 5, 6]], [[7, 8, 9], [10, 11, 12]]])
 
         self.assertEqual(self.sample.s, 'foo')
         self.assertEqual(self.sample.s1d, ['a', 'b', 'c'])
@@ -228,22 +231,22 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.sample.i = 'goo'
         except RuntimeError, err:
-            self.assertEqual('ERROR(91041001) NCPVal error - tried to read a STRING as a INT', str(err))
+            self.assertEqual("Can't set 'sample.i': ERROR(91041001) NCPVal error - tried to read a STRING as a INT", str(err))
         else:
             self.fail('RuntimeError expected')
 
     def test_functions(self):
         self.assertEqual(self.sample.int_adder(5, 3), 8)
         self.assertEqual(self.sample.s_concat('foo', 'bar'), 'foobar')
-        self.assertEqual(self.sample.dupI1D([1, 2]), [1, 1, 2, 2])
-        self.assertEqual(self.sample.I1DtoI2D([1, 2, 3]),
-                         [[1, 2, 3], [1, 2, 3]])
-        self.assertEqual(self.sample.dupR1D([1.1, 2.2]),
-                         [1.1, 1.1, 2.2, 2.2])
-        self.assertEqual(self.sample.R1DtoR2D([1.1, 2.2]),
-                         [[1.1, 2.2], [1.1, 2.2]])
-        self.assertEqual(self.sample.R2DtoR3D([[1.1, 2.2], [1.1, 2.2]]),
-                         [[[1.1, 2.2], [1.1, 2.2]], [[1.1, 2.2], [1.1, 2.2]]])
+        assert_equal(self.sample.dupI1D([1, 2]), [1, 1, 2, 2])
+        assert_equal(self.sample.I1DtoI2D([1, 2, 3]),
+                     [[1, 2, 3], [1, 2, 3]])
+        assert_equal(self.sample.dupR1D([1.1, 2.2]),
+                     [1.1, 1.1, 2.2, 2.2])
+        assert_equal(self.sample.R1DtoR2D([1.1, 2.2]),
+                     [[1.1, 2.2], [1.1, 2.2]])
+        assert_equal(self.sample.R2DtoR3D([[1.1, 2.2], [1.1, 2.2]]),
+                     [[[1.1, 2.2], [1.1, 2.2]], [[1.1, 2.2], [1.1, 2.2]]])
         self.assertEqual(self.sample.dupS1D(['a', 'b']),
                          ['a', 'a', 'b', 'b'])
         self.assertEqual(self.sample.S1DtoS2D(['a', 'b']),
@@ -261,10 +264,10 @@ class NPSSTestCase(unittest.TestCase):
 
         try:
             NPSScomponent(top=99)
-        except AttributeError, err:
+        except TypeError, err:
             self.assertEqual('top must be a string', str(err))
         else:
-            self.fail('AttributeError expected')
+            self.fail('TypeError expected')
 
         try:
             NPSScomponent(arglist=['-I .', 99])
@@ -311,7 +314,7 @@ class NPSSTestCase(unittest.TestCase):
         try:
             NPSScomponent(arglist=['somefilethatdoesnotexist.npss'])
         except RuntimeError, err:
-            self.assertEqual("ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'somefilethatdoesnotexist.npss'", str(err))
+            self.assertEqual("parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'somefilethatdoesnotexist.npss'", str(err))
         else:
             self.fail('RuntimeError expected')
 
@@ -328,13 +331,13 @@ class NPSSTestCase(unittest.TestCase):
 
         self.sample.r3d = [[[]]]
 
-        self.assertEqual(self.sample.i1d, [])
-        self.assertEqual(self.sample.r1d, [])
+        assert_equal(self.sample.i1d, [])
+        assert_equal(self.sample.r1d, [])
         self.assertEqual(self.sample.s1d, [])
-        self.assertEqual(self.sample.i2d, [[]])
-        self.assertEqual(self.sample.r2d, [[]])
+        assert_equal(self.sample.i2d, [[]])
+        assert_equal(self.sample.r2d, [[]])
         self.assertEqual(self.sample.s2d, [[]])
-        self.assertEqual(self.sample.r3d, [[[]]])
+        assert_equal(self.sample.r3d, [[[]]])
  
     def test_partial_empty(self):
         self.sample.i2d = [[], [1, 2, 3]]
@@ -363,13 +366,13 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.sample.i = 8
         except RuntimeError, err:
-            self.assertEqual('no active session', str(err))
+            self.assertEqual('exists(sample.i) failed: no active session', str(err))
         else:
             self.fail('RuntimeError expected')
         try:
             child.exists('foobar')
         except RuntimeError, err:
-            self.assertEqual('no active session', str(err))
+            self.assertEqual('exists(kid.foobar) failed: no active session', str(err))
         else:
             self.fail('RuntimeError expected')
 
@@ -379,26 +382,18 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.sample.i = 8
         except RuntimeError, err:
-            self.assertEqual('no active session', str(err))
+            self.assertEqual('exists(sample.i) failed: no active session', str(err))
         else:
             self.fail('RuntimeError expected')
 
     def test_numpy(self):
-        try:
-            import numpy
-        except ImportError:
-            print 'skipping numpy test because numpy not installed'
-            return
-
         eye = numpy.eye(3)
         self.sample.r2d = eye
-
-        self.assertEqual(self.sample.r2d, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
+        assert_equal(self.sample.r2d, [[1, 0, 0], [0, 1, 0], [0, 0, 1]])
 
         zips = numpy.ones(4)
         self.sample.r1d = zips
-
-        self.assertEqual(self.sample.r1d, [1, 1, 1, 1])
+        assert_equal(self.sample.r1d, [1, 1, 1, 1])
 
 #    def test_table(self):
 #        """ Test accessing a table. Currently this is expected to fail. """

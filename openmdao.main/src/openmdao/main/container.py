@@ -49,8 +49,7 @@ class Container(HierarchyMember):
         super(Container, self).__init__(name, parent, doc)            
         self._pub = {}  # A container for framework accessible objects.
         if parent is not None and \
-           IContainer.providedBy(parent) and \
-           add_to_parent:
+           IContainer.providedBy(parent) and add_to_parent:
             parent.add_child(self)
         
     def add_child(self, obj, private=False):
@@ -97,11 +96,11 @@ class Container(HierarchyMember):
         else:
             lst = [obj_info]
         
-        ref_name = None
-        iostat = INPUT
-        
-        for entry in lst:
+        for i, entry in enumerate(lst):
+            ref_name = None
+            iostat = INPUT
             dobj = None
+
             if isinstance(entry, basestring):
                 name = entry
                 typ = type(getattr(self, name))
@@ -122,8 +121,8 @@ class Container(HierarchyMember):
                     typ = type(dobj)
                 else:
                     self.raise_exception(
-                      'no IVariable interface available for the object named '+
-                      str(name), TypeError)
+                     'no IVariable interface available for the object at %d' % \
+                      i, TypeError)
                     
             if not IVariable.providedBy(dobj):
                 dobj = find_var_class(typ, name, self, iostatus=iostat, 

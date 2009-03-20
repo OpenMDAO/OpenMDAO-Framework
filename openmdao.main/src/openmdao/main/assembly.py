@@ -172,10 +172,16 @@ class Assembly(Component):
         try:
             deps = self._connections[incomp.name]
         except KeyError:
-            return  # no connected inputs for this component
+            return True  # no connected inputs for this component
 
         for invarname, outtuple in deps.items():
             invar = incomp.getvar(invarname)
             outvar = self.getvar('.'.join(outtuple[:2]))
-            invar.setvar(None, outvar)
-            
+            try:
+                invar.setvar(None, outvar)
+            except Exception, exc:
+                self.error("cannot set '%s' from '%s': %s",
+                           invarname, '.'.join(outtuple[:2]), str(exc))
+                return False
+        return True
+
