@@ -7,9 +7,6 @@ from pkg_resources import Environment, WorkingSet, Requirement
 from setuptools.package_index import PackageIndex
 import tarfile
 import logging
-import ConfigParser
-import copy
-from zc.buildout.buildout import _open as open_buildout_cfg
 
 from openmdao.util.procutil import run_command
 from openmdao.util.fileutil import rm
@@ -78,9 +75,9 @@ class EggBundler(object):
             self.logger.debug('found dist %s' % dist.as_requirement)
             if dist.project_name not in excludes:
                 deps.add(dist)
-            for r in dist.requires():
-                self.logger.info('%s required by %s' % (r,dist.project_name))
-                self._add_deps(deps, env, ws, r, excludes)
+            for req in dist.requires():
+                self.logger.info('%s required by %s' % (req, dist.project_name))
+                self._add_deps(deps, env, ws, req, excludes)
 
 
     def _create_buildout_dir(self):
@@ -99,7 +96,7 @@ class EggBundler(object):
                           '__buildout_signature__','index'])
         f = open(os.path.join(bodir,'buildout.cfg'),'w')
         for sect,opts in bo.items():
-            if sect=='buildout':
+            if sect == 'buildout':
                 versions = self.buildout['buildout'].get('versions') or (self.name+'_release')
                 self.excludeparts.append(versions)
                 f.write('[buildout]\n\n')
@@ -113,7 +110,7 @@ class EggBundler(object):
                 if self.fix_versions:
                     f.write('versions = %s\n\n' % versions)
                     f.write('[%s]\n' % versions)
-                    projs = ['%s = %s'%(x.project_name,x.version) 
+                    projs = ['%s = %s' % (x.project_name,x.version) 
                                                       for x in self.dists]
                     for proj in sorted(set(projs)):
                         f.write('%s\n' % proj)
