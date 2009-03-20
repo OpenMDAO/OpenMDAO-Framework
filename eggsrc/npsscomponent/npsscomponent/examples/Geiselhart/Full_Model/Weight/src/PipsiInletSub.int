@@ -22,7 +22,7 @@ class PipsiInletSub extends Subelement {
     value = 0.0 ;
     IOstatus = "input" ;
     description = "Projected area of the inlet" ;
-    units = "IN2" ; 
+    units = "in2" ; 
   }
   real eRamMap {
     value = 1.0 ;

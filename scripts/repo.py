@@ -100,7 +100,8 @@ def do_set(path, user, options):
             print 'Moving to repository root.'
         os.chdir(path)
     bin = os.path.join(path, 'buildout', 'bin')
-    os.environ['PATH'] = bin+os.pathsep+os.environ['PATH']
+    scripts = os.path.join(path, 'scripts')
+    os.environ['PATH'] = bin+os.pathsep+scripts+os.pathsep+os.environ['PATH']
     process = subprocess.Popen(os.environ['SHELL'])
     os.waitpid(process.pid, 0)
     sys.exit(process.returncode)
