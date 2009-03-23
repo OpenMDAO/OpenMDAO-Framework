@@ -137,6 +137,7 @@ class Engine(Component):
         l_a = conrod/(.5*stroke)          # a=half the stroke
         n = RPM/1000.0
         t_to_theta = RPM/60.0*2.0*pi
+        thetaStep *= pi/180.0
 
         # Burn duration valid for speeds between 1000 and 6000 RPM (Eq 3-6)
         burnDuration = (-1.6189*n*n + 19.886*n + 39.951)*pi/180.0
@@ -164,8 +165,15 @@ class Engine(Component):
         #Mw = (1.0 + AFR)/(AFR*MwAir + 1.0/MwFuel)
         Mw = (AFR*MwAir + MwFuel)/(1.0+AFR)
 
+        #Hohenberg Correlation: crank-angle independent portion
+        h_ind = 130.0*pow(disp, -0.06)*pow(Cm+1.4, 0.8)
+
         # FMEP (frictional Losses) (Eq 3-22)
         FMEP = .05*n*n + .15*n + .97
+
+        # Correct ambient P & T for losses
+        P0 = Pamb*Cf
+        T0 = Tamb*C_heat
 
 
         #--------------------------------------------------------------
@@ -175,7 +183,7 @@ class Engine(Component):
             '''Generator: angles from -360 to 180 deg'''
             angle = -2.0*pi
             while angle < pi:
-                angle += pi/180.0*thetastep
+                angle += thetaStep
                 yield angle
 
         # Initial value for all integration variables (and their dependents)
@@ -190,16 +198,17 @@ class Engine(Component):
             #--------------------------------------------------------------
             # Slider Crank Model
             #--------------------------------------------------------------
+            
+            s_theta = sin(theta)
+            c_theta = cos(theta)
+            term = (l_a**2 - s_theta**2)**.5
 
             # Clyinder Volume (Eq 3-1)
-            V = disp*( 1.0/(compRatio-1.0) + .5*(l_a + 1.0 - cos(theta) -
-                                                 pow( l_a**2 - sin(theta)**2, .5 ) ) )
-            dV_dtheta = .5*disp*sin(theta)*( 1.0 + cos(theta)/
-                                             pow( l_a**2 - sin(theta)**2, .5 ) )
+            V = disp*( 1.0/(compRatio-1.0) + .5*(l_a + 1.0 - c_theta - term) )
+            dV_dtheta = .5*disp*s_theta*( 1.0 + c_theta/term )
 
             # Exposed Combustion Area (Eq 3-2)
-            A = .5*pi*bore*( bore + stroke*(l_a + 1.0 - cos(theta) -
-                                            pow( l_a**2 - sin(theta)**2, .5 ) ) )
+            A = .5*pi*bore*( bore + stroke*(l_a + 1.0 - c_theta - term ) )
 
             #--------------------------------------------------------------
             # Weibe Function
@@ -243,75 +252,69 @@ class Engine(Component):
                 '''Function for integration'''
                 return (k-1)/V*(dQ_dtheta - Qloss) - k*P_in/V*dV_dtheta
 
-            P = P+dP_dtheta(P,theta)*pi/180.0*thetastep
-            #P_out = odeint( dP_dtheta, P, [ theta-pi/180.0*thetastep, theta ] )
+            P = P+dP_dtheta(P,theta)*thetastep
+            #P_out = odeint( dP_dtheta, P, [ theta-thetastep, theta ] )
             #P = P_out[1][0]
 
-            #--------------------------------------------------------------
-            # Valve Lift, Area, and Discharge Coefficient
-            #--------------------------------------------------------------
-
+            # Calculate mass flow only when intake valve is open
             if theta <= (IVC-180.0)*pi/180.0:
+
+                #--------------------------------------------------------------
+                # Valve Lift, Area, and Discharge Coefficient
+                #--------------------------------------------------------------
 
                 phi = pi*( IVO - IVC + 540 + 2.0*theta*180.0/pi )/( IVO + IVC + 180 )
 
                 # Valve Lift Function. (Eq 3-16)
                 Lv = .5*Liv*(1+cos(phi))
 
-            else:
-                Lv = 0.0
-
-            # Valve curtain area. (Eq 3-12)
-            Ar = pi*Div*Lv
-
-            LD = Lv/Div
-
-            # Discharge coefficient for inlet poppet valve. (Eq 3-18)
-            CD = ( 190.47*LD*LD*LD*LD - 143.13*LD*LD*LD +
-                   31.248*LD*LD - 2.5999*LD + 0.6913 )
-
-            #--------------------------------------------------------------
-            # Find pressure ratio for intake flow
-            #--------------------------------------------------------------
-
-            # Correct ambient P & T for losses
-            P0 = Pamb*Cf
-            T0 = Tamb*C_heat
-
-            if theta <= (IVC-180.0)*pi/180.0 and theta >= (IVO-360.0)*pi/180.0:
-
-                # Note 5.5 is a fudge factor that still needs investigation.
-                Pratio = (P+5.5*Pmix)/P0
-
-                # Pratio>1 means outflow
-                if Pratio>1:
-                    Pratio = 1.0/Pratio
-                    flow_direction = -1.0
+                # Valve curtain area. (Eq 3-12)
+                Ar = pi*Div*Lv
+    
+                LD = Lv/Div
+    
+                # Discharge coefficient for inlet poppet valve. (Eq 3-18)
+                CD = ( 190.47*LD*LD*LD*LD - 143.13*LD*LD*LD +
+                       31.248*LD*LD - 2.5999*LD + 0.6913 )
+                
+                #--------------------------------------------------------------
+                # Find pressure ratio for intake flow
+                #--------------------------------------------------------------
+    
+                if theta <= (IVC-180.0)*pi/180.0 and theta >= (IVO-360.0)*pi/180.0:
+    
+                    # Note 5.5 is a fudge factor that still needs investigation.
+                    Pratio = (P+5.5*Pmix)/P0
+    
+                    # Pratio>1 means outflow
+                    if Pratio>1:
+                        Pratio = 1.0/Pratio
+                        flow_direction = -1.0
+                    else:
+                        flow_direction = 1.0
+    
+                    Pratio = max( Pratio, Pratio_crit )
+    
                 else:
-                    flow_direction = 1.0
-
-                Pratio = max( Pratio, Pratio_crit )
-
-            else:
-                Pratio = 0.0
-                flow_direction = 0.0
-
-            #--------------------------------------------------------------
-            # Calculate Intake Mass Flow
-            #--------------------------------------------------------------
-
-            # Mass flow rate. (Eq 3-15)
-            # Note, 3-15 is wrong, or an approximation or something
-            # Changed to standard orifice equation for better results
-            def dm_dtheta(m_in, T_in):
-                '''Function for integration'''
-                return throttle*flow_direction*CD*Ar*P0/t_to_theta*( 
-                    2.0*1000.0*Mw/(Ru*T0) * (k/(k-1)) *
-                    (Pratio**(2.0/k) - Pratio**((k+1.0)/k)) )**.5
-
-            mass_in = mass_in + dm_dtheta(mass_in,theta)*pi/180.0*thetastep
-            #mass = odeint( dm_dtheta, mass_in, [ theta-pi/180.0*thetastep, theta ] )
-            #mass_in = mass[1][0]
+                    Pratio = 0.0
+                    flow_direction = 0.0
+    
+                #--------------------------------------------------------------
+                # Calculate Intake Mass Flow
+                #--------------------------------------------------------------
+    
+                # Mass flow rate. (Eq 3-15)
+                # Note, 3-15 is wrong, or an approximation or something
+                # Changed to standard orifice equation for better results
+                def dm_dtheta(m_in, T_in):
+                    '''Function for integration'''
+                    return throttle*flow_direction*CD*Ar*P0/t_to_theta*( 
+                        2.0*1000.0*Mw/(Ru*T0) * (k/(k-1)) *
+                        (Pratio**(2.0/k) - Pratio**((k+1.0)/k)) )**.5
+    
+                mass_in = mass_in + dm_dtheta(mass_in,theta)*thetastep
+                #mass = odeint( dm_dtheta, mass_in, [ theta-thetastep, theta ] )
+                #mass_in = mass[1][0]
 
 
             #--------------------------------------------------------------
@@ -329,7 +332,7 @@ class Engine(Component):
             #--------------------------------------------------------------
 
             # Hohenberg Correlation. (Eq 3-10)
-            h = 130.0*pow(disp, -0.06)*pow(P, 0.8)*pow(Tg, -0.4)*pow(Cm+1.4, 0.8)
+            h = h_ind*pow(P, 0.8)*pow(Tg, -0.4)
 
             #--------------------------------------------------------------
             # Calculate Heat Loss

@@ -36,6 +36,11 @@ class Engine_Optimization(Assembly):
         # CONMIN Design Variables 
         self.driver.design_vars = ['vehicle_sim.sparkAngle', 
                                        'vehicle_sim.bore' ]
+        
+        # CONMIN Constraint
+        # TODO: Conmin driver currently doesn't work if you don't have a
+        # constraint, so we add 1>0, which is never violated
+        self.driver.constraints = ['1']
 
         self.driver.lower_bounds = [-50, 65]
         self.driver.upper_bounds = [10, 100]
@@ -46,8 +51,30 @@ class Engine_Optimization(Assembly):
 
     
 if __name__ == "__main__":
+
+    def prz(Title):
+        print '---------------------------------'
+        print Title
+        print '---------------------------------'
+        print 'Engine: Bore = ', z.vehicle_sim.bore
+        print 'Engine: Spark Angle = ', z.vehicle_sim.sparkAngle
+        print '---------------------------------'
+        print '0-60 Accel Time = ', z.vehicle_sim.AccelTime
+        print '\n'
+    
+
+    import time
+    import profile
     
     z = Engine_Optimization("Top")
+    
+    z.vehicle_sim.run()
+    prz('Old Design')
+
+    tt = time.time()
     z.run()
+    #profile.run('z.run()')
+    prz('New Design')
+    print "Elapsed time: ", time.time()-tt
     
 # end engine_optimization.py
