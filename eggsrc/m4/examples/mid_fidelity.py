@@ -1,5 +1,10 @@
 """
 Simple M4 variable fidelity example.
+
+Runs a DOE on a MidFidelity component instance.
+Note that the MidFidelity component performs its correction calculations
+on the first execution, then on subsequent executions the corrected result
+is directly calculated.
 """
 
 from openmdao.main import Assembly, Float
@@ -81,7 +86,7 @@ def main():
     model = Model()
     status = model.run()
     if status == RUN_OK:
-        for i, case in enumerate(model.driver.outerator.plugin):
+        for i, case in enumerate(model.driver.outerator):
             print 'CASE %d:' % (i+1)
             for name, index, value in case.inputs:
                 print '    input:', name, index, value

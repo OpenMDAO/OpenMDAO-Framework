@@ -277,7 +277,7 @@ class Variable(HierarchyMember):
                                  str(type(val))+" failed", ValueError)        
     
     def make_public(self, child):
-        """Make a given object a member of this object's pubic interface."""
+        """Make a given object a member of this object's public interface."""
         self.raise_exception('make_public', NotImplemented)            
             
     def add_observer(self, obs_funct):
@@ -294,4 +294,3 @@ class Variable(HierarchyMember):
         for observer in self.observers:
             observer(self)
         
-    

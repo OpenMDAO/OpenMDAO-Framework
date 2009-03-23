@@ -1,10 +1,18 @@
 """
-PARTIAL! Port of Karl's ModelCenter SBJ propulsion model.
+PARTIAL! Port of Karl's ModelCenter SBJ propulsion process model.
+
+It's a fairly complex example of running multiple linked components
+in sequence.  Each NPSS component is run in it's own subdirectory,
+which is where the NPSS output is written.  The log file also has some
+information written to it in addition to what's shown on screen.
 
 Known problems:
-    - Empty NPSS arrays cannot have their type automatically discovered.
-    - No file variables.
-    - Lots of links & other stuff still missing.
+    - The components run, but since the port is only partial,
+      the results are quite wrong.
+    - No file variables yet.
+    - 'Design' variables are set as OUTPUTS and 'PropulsionData'
+      variables are set as INPUTS.  This looks odd, but is neccessary
+      until some more issues in the framework are ironed-out.
 """
 import os.path
 
@@ -91,7 +99,7 @@ class FLOPSdata(Container):
     def __init__(self, name='FLOPS', parent=None):
         super(FLOPSdata, self).__init__(name, parent)
 
-#        File ('engdeck', self, INPUT)
+#        File('engdeck', self, INPUT)
         Float('thrso', self, INPUT, default=0.)
         Float('weng',  self, INPUT, default=0.)
         Float('xnac',  self, INPUT, default=0.)
@@ -263,7 +271,7 @@ class Model(Assembly):
         arglist = []
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MC_ADP.mdl'))
-        TracingNPSS('NPSS_ADP', parent=self, directory='NPSS_ADP',
+        TracingNPSS('NPSS_ADP', self, directory='NPSS_ADP',
                     arglist=arglist, output_filename='NPSS.out')
         self.NPSS_ADP.run_command = 'mcRun()'
         self.NPSS_ADP.reload_flag = 'mcReload'
@@ -282,7 +290,7 @@ class Model(Assembly):
         arglist = []
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MC_SLS.mdl'))
-        TracingNPSS('NPSS_SLS', parent=self, directory='NPSS_SLS',
+        TracingNPSS('NPSS_SLS', self, directory='NPSS_SLS',
                     arglist=arglist, output_filename='NPSS.out')
         self.NPSS_SLS.run_command = 'mcRun()'
         self.NPSS_SLS.reload_flag = 'mcReload'
@@ -309,7 +317,7 @@ class Model(Assembly):
             '-I', '../Full_Model/ROSE/BaseClasses']
         arglist.append(os.path.join('..', 'Full_Model', 'Weight', 'run',
                                     'MCengine.mdl'))
-        TracingNPSS('NPSS_WATE', parent=self, directory='NPSS_WATE',
+        TracingNPSS('NPSS_WATE', self, directory='NPSS_WATE',
                     arglist=arglist, output_filename='NPSS.out')
         self.NPSS_WATE.run_command = 'mcRun()'
         self.NPSS_WATE.reload_flag = 'mcReload'
@@ -327,7 +335,7 @@ class Model(Assembly):
         arglist = []
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MCengine.mdl'))
-        TracingNPSS('NPSS_FLOPS', parent=self, directory='NPSS_FLOPS',
+        TracingNPSS('NPSS_FLOPS', self, directory='NPSS_FLOPS',
                     arglist=arglist, output_filename='NPSS.out')
         self.NPSS_FLOPS.run_command = 'mcRun()'
         self.NPSS_FLOPS.reload_flag = 'mcReload'
@@ -346,7 +354,7 @@ class Model(Assembly):
         arglist = []
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MCnoise.mdl'))
-        TracingNPSS('NPSS_ANOPP', parent=self, directory='NPSS_ANOPP',
+        TracingNPSS('NPSS_ANOPP', self, directory='NPSS_ANOPP',
                     arglist=arglist, output_filename='NPSS.out')
         self.NPSS_ANOPP.run_command = 'mcRun()'
         self.NPSS_ANOPP.reload_flag = 'mcReload'
@@ -399,26 +407,26 @@ class Model(Assembly):
         self.connect('NPSS_WATE.engine.WATE.WATE_Nozzle.outPort.outerRadius',
                      'NPSS_ANOPP.WATE_Core_Nozz.outPort.outerRadius')
 
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.AR_stg',
-#                     'NPSS_ANOPP.WATE_Fan.AR_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.AR_stg',
+                     'NPSS_ANOPP.WATE_Fan.AR_stg')
         self.connect('NPSS_WATE.engine.WATE.WATE_fan.areaIn',
                      'NPSS_ANOPP.WATE_Fan.areaIn')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.bypassLen_stg',
-#                     'NPSS_ANOPP.WATE_Fan.bypassLen_stg')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.hubRadius_stg',
-#                     'NPSS_ANOPP.WATE_Fan.hubRadius_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.bypassLen_stg',
+                     'NPSS_ANOPP.WATE_Fan.bypassLen_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.hubRadius_stg',
+                     'NPSS_ANOPP.WATE_Fan.hubRadius_stg')
         self.connect('NPSS_WATE.engine.WATE.WATE_fan.maxSpdRatio',
                      'NPSS_ANOPP.WATE_Fan.maxSpdRatio')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.numBlades_stg',
-#                     'NPSS_ANOPP.WATE_Fan.numBlades_stg')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.numStatorBlades_stg',
-#                     'NPSS_ANOPP.WATE_Fan.numStatorBlades_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.numBlades_stg',
+                     'NPSS_ANOPP.WATE_Fan.numBlades_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.numStatorBlades_stg',
+                     'NPSS_ANOPP.WATE_Fan.numStatorBlades_stg')
         self.connect('NPSS_WATE.engine.WATE.WATE_fan.spoolRPM',
                      'NPSS_ANOPP.WATE_Fan.spoolRPM')
         self.connect('NPSS_WATE.engine.WATE.WATE_fan.stg1TipRadius',
                      'NPSS_ANOPP.WATE_Fan.stg1TipRadius')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_fan.tipRadius_stg',
-#                     'NPSS_ANOPP.WATE_Fan.tipRadius_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_fan.tipRadius_stg',
+                     'NPSS_ANOPP.WATE_Fan.tipRadius_stg')
 
         self.connect('NPSS_WATE.engine.WATE.WATE_inlet.avgCowlDiam',
                      'NPSS_ANOPP.WATE_Inlet.avgCowlDiam')
@@ -428,16 +436,16 @@ class Model(Assembly):
                      'NPSS_ANOPP.WATE_Inlet.fanLength')
         self.connect('NPSS_WATE.engine.WATE.WATE_inlet.mostFwdToEngFFLength',
                      'NPSS_ANOPP.WATE_Inlet.mostFwdToEngFFLength')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.area_stg',
-#                     'NPSS_ANOPP.WATE_LPT.area_stg')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.hubRadius_stg',
-#                     'NPSS_ANOPP.WATE_LPT.hubRadius_stg')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.numBlades_stg',
-#                     'NPSS_ANOPP.WATE_LPT.numBlades_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.area_stg',
+                     'NPSS_ANOPP.WATE_LPT.area_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.hubRadius_stg',
+                     'NPSS_ANOPP.WATE_LPT.hubRadius_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.numBlades_stg',
+                     'NPSS_ANOPP.WATE_LPT.numBlades_stg')
         self.connect('NPSS_WATE.engine.WATE.WATE_LPT.numStages',
                      'NPSS_ANOPP.WATE_LPT.numStages')
-#        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.tipRadius_stg',
-#                     'NPSS_ANOPP.WATE_LPT.tipRadius_stg')
+        self.connect('NPSS_WATE.engine.WATE.WATE_LPT.tipRadius_stg',
+                     'NPSS_ANOPP.WATE_LPT.tipRadius_stg')
 
         # Propulsion data.
         PropulsionData(parent=self)
@@ -478,5 +486,6 @@ class Model(Assembly):
 
 
 if __name__ == '__main__':
-    Model().run()
+    if Model().run() != RUN_OK:
+        print 'Run failed, check log file for more information.'
 

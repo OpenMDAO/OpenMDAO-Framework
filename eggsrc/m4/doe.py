@@ -40,9 +40,8 @@ class DOE(FakeROSE):
         if cases is None:
             self.error('No cases generated')
             return RUN_FAILED
-        self.iterator.plugin = ListCaseIterator(cases)
-        results = []
-        self.outerator.plugin = results
+        self.iterator = ListCaseIterator(cases)
+        self.outerator = []
         return super(DOE, self).execute()
 
 

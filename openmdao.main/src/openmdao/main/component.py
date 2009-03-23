@@ -42,6 +42,7 @@ class Component (Container):
         self._stop = False
         self._input_changed = True
         self._dir_stack = []
+        self._sockets = {}
 
         # List of meta-data dictionaries.
         self.external_files = []
@@ -62,13 +63,54 @@ class Component (Container):
                 if not os.path.isdir(self.directory):
                     self.error("Path '%s' is not a directory.", self.directory)
 
-#    def add_socket (self, name, iface, doc=''):
-#        """Specify a named placeholder for a component with the given
-#        interface.
-#        """
+    def _get_socket_plugin(self, name):
+        """Return plugin for the named socket"""
+        try:
+            iface, plugin = self._sockets[name]
+        except KeyError:
+            self.raise_exception("no such socket '%s'" % name, AttributeError)
+        else:
+            if plugin is None:
+                self.raise_exception("socket '%s' is empty" % name,
+                                     RuntimeError)
+            return plugin
 
-#    def remove_socket (self, name):
-#        """Remove an existing Socket"""
+    def _set_socket_plugin(self, name, plugin):
+        """Set plugin for the named socket"""
+        try:
+            iface, current = self._sockets[name]
+        except KeyError:
+            self.raise_exception("no such socket '%s'" % name, AttributeError)
+        else:
+            if plugin is not None and iface is not None:
+                if not iface.providedBy(plugin):
+                    self.raise_exception("plugin does not support '%s'" % \
+                                         iface.__name__, ValueError)
+            self._sockets[name] = (iface, plugin)
+
+    def add_socket (self, name, iface, doc=''):
+        """Specify a named placeholder for a component with the given
+        interface.
+        """
+        assert isinstance(name, basestring)
+        self._sockets[name] = (iface, None)
+        setattr(self.__class__, name,
+                property(lambda self : self._get_socket_plugin(name),
+                         lambda self, plugin : self._set_socket_plugin(name, plugin),
+                         doc=doc))
+
+    def check_socket (self, name):
+        """Return True if socket is filled"""
+        try:
+            iface, plugin = self._sockets[name]
+        except KeyError:
+            self.raise_exception("no such socket '%s'" % name, AttributeError)
+        else:
+            return plugin is not None
+
+    def remove_socket (self, name):
+        """Remove an existing Socket"""
+        del self._sockets[name]
 
     def post_config (self):
         """Perform any final initialization after configuration has been set,
@@ -108,7 +150,8 @@ class Component (Container):
         self._stop = False
         try:
             if self.parent is not None and IAssembly.providedBy(self.parent):
-                self.parent.update_inputs(self)
+                if not self.parent.update_inputs(self):
+                    return RUN_FAILED
             self.pre_execute()
             status = self.execute()
             if status is None:
