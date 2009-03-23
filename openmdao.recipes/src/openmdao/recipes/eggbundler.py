@@ -112,9 +112,10 @@ class EggBundler(object):
                     f.write('[%s]\n' % versions)
                     projs = ['%s = %s' % (x.project_name,x.version) 
                                                       for x in self.dists]
+                    self.logger.debug('fixed version list:')
                     for proj in sorted(set(projs)):
-                        f.write('%s\n' % proj)
-                        
+                        self.logger.debug(proj)
+                        f.write('%s\n' % proj)                        
                 f.write('\n\n')
             elif sect not in self.excludeparts:
                 f.write('\n[%s]\n' % sect)
@@ -162,7 +163,7 @@ class EggBundler(object):
         
         # collect dependencies for all develop eggs 
         tmpenv = Environment([self.bundle_cache])
-        devprojs = [x for x in tmpenv]  # list of project names
+        devprojs = [x for x in tmpenv]  # list of dev project names
         for dproj in devprojs:
             for dist in tmpenv[dproj]:
                 self.dists.append(dist)
