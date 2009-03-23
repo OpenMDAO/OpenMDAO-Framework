@@ -132,7 +132,7 @@ class pyevolvedriver(Driver):
         self.DBAdapter = None #TODO: optional socket
 
         #outputs
-        self.best_individual= None #TODO: needs to be created as a framework variable
+        Wrapper('best_individual',self,OUTPUT,default = None)
 
         #internal stuff
         self._objective = None
@@ -201,6 +201,6 @@ class pyevolvedriver(Driver):
         self._set_GA_FunctionSlot(self.GA.stepCallback,self.stepCallback)
         self._set_GA_FunctionSlot(self.GA.terminationCriteria,self.terminationCriteria)
         
-        self.GA.evolve(freq_stats = self.freq_stats)
-        self.best = self.GA.bestIndividual()
+        self.GA.evolve(freq_stats = self.get('best_individule'))
+        self.set('best_individual',self.GA.bestIndividual())
 
