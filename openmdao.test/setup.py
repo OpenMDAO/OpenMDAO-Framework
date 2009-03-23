@@ -9,7 +9,7 @@ except ImportError, e:
     from distutils.core import setup
 
 
-version = '0.0.1'
+version = '0.1.0'
 
 setup(name='openmdao.test',
       version=version,
@@ -25,7 +25,7 @@ setup(name='openmdao.test',
       namespace_packages=["openmdao"],
       packages=['openmdao', 'openmdao.test'],
       package_dir={'': 'src'},
-      package_data={},
+      package_data={ 'openmdao.test': ['plugins/*.egg'] },
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,
