@@ -161,12 +161,26 @@ class WingProj(object):
 
             if not config.has_option('project attributes', 'proj.directory-list'):
                 config.set('project attributes', 'proj.directory-list',
-                            "[{'dirloc': loc('.'),\n"+
-                            "  'excludes': (),\n"+
+                            "[{'dirloc': loc('../../..'),\n"+
+                            "  'excludes': [u'openmdao.util/build',\n"+
+                                     "u'openmdao.lib/src/openmdao.lib.egg-info',\n"+
+                                     "u'buildout',\n"+
+                                     "u'plans',\n"+
+                                     "u'openmdao.test/src/openmdao.test.egg-info',\n"+
+                                     "u'docs',\n"+
+                                     "u'openmdao.lib/build',\n"+
+                                     "u'eggsrc/conmin/conmin.egg-info',\n"+
+                                     "u'openmdao.main/build',\n"+
+                                     "u'openmdao.recipes/build',\n"+
+                                     "u'openmdao.recipes/src/openmdao.recipes.egg-info',\n"+
+                                     "u'openmdao.test/build',\n"+
+                                     "u'openmdao.main/src/openmdao.main.egg-info',\n"+
+                                     "u'openmdao.util/src/openmdao.util.egg-info',\n"+
+                                     "u'eggsrc/npsscomponent/build'],\n"+
                             "  'filter': '*.py',\n"+
-                            "  'include_hidden': False,\n"+
-                            "  'recursive': True,\n"+
-                            "  'watch_for_changes': True}]")
+                            "  'include_hidden': 0,\n"+
+                            "  'recursive': 1,\n"+
+                            "  'watch_for_changes': 1}]")
             try:
                 self.logger.info('egg set has changed - writing config to %s' %
                                   newfname)
