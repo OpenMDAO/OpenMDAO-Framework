@@ -1,0 +1,53 @@
+# engine_optimization.py
+#
+# Optimize an engine disign using the sim_vehicle component.
+
+from openmdao.main import Assembly
+from openmdao.main import Float, Int
+from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.component import RUN_OK
+
+from sim_vehicle import Sim_Vehicle
+from openmdao.lib.drivers.conmindriver import CONMINdriver
+
+class Engine_Optimization(Assembly):
+    """ Engine_Optimization assembly. """
+    
+    def __init__(self, name, parent=None, directory=''):
+        ''' Creates a new Assembly containing a Sim_Vehicle and an optimizer'''
+        
+        super(Engine_Optimization, self).__init__(name, parent, directory)
+
+        # Create Sim_Vehicle component instances
+        vehicle_sim = Sim_Vehicle('vehicle_sim', parent=self)
+        self.add_child(vehicle_sim)
+        self.workflow.add_node(vehicle_sim)
+
+        # Create CONMIN Optimizer instance
+        CONMINdriver('driver', self)
+        
+        # CONMIN Flags
+        self.driver.iprint = 0
+        self.driver.maxiters = 30
+        
+        # CONMIN Objective 
+        self.driver.objective = 'vehicle_sim.AccelTime'
+        
+        # CONMIN Design Variables 
+        self.driver.design_vars = ['vehicle_sim.sparkAngle', 
+                                       'vehicle_sim.bore' ]
+
+        self.driver.lower_bounds = [-50, 65]
+        self.driver.upper_bounds = [10, 100]
+        
+    #def execute(self):
+        
+        #return RUN_OK
+
+    
+if __name__ == "__main__":
+    
+    z = Engine_Optimization("Top")
+    z.run()
+    
+# end engine_optimization.py
