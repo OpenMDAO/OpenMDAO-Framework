@@ -3,11 +3,13 @@
 __version__ = "0.1"
 
 from openmdao.main.driver import Driver
+from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main import Driver, ExprEvaluator, Int, Float, Bool, String
 
 from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
 from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
 from pyevolve import GenomeBase
-from openmdao.main.expreval import ExprEvaluator
+
 import random
 
 def G1DListCrossOverRealHypersphere(genome, **args):
@@ -62,28 +64,19 @@ def G1DListCrossOverRealHypersphere(genome, **args):
 
 class pyevolvedriver(Driver):
     """OpenMDAO wrapper for the pyevolve genetic algorithm framework. The 
-    wrapper uses two attributes to configure the GA: The wrapper conforms to the
-    pyevolve API for configuring the GA. It makes use of two attributes which
-    map to pyevolve objects: genome and GA. The default selection for genome is
-    G1DList. By default the wrapper uses the GsimpleGA engine from pyevolve with 
-    all its default settings. Currently, only the default configuration for the 
+    wrapper uses two attributes to configure the optmization: 
+    
+    The wrapper conforms to the pyevolve API for configuring the GA. It makes use 
+    of two attributes which map to pyevolve objects: genome and GA. The default 
+    selection for genome is G1DList. By default the wrapper uses the GsimpleGA engine 
+    from pyevolve with all its default settings. Currently, only the default configuration for the 
     genome is supported. 
 
     The standard pyevolve library is provided:
         G1Dlist,G1DBinaryString,G2dList,GAllele
         GsimpleGA,Initializators,Mutators,Consts,DBadapters
 
-    ** Example **
-    Setting up Genome
-    >>> genome = G1DList
-    >>> genome.initializator.set(Initializators.G1DListInitializatorReal)
-    >>> genome.mutator.set(Mutators.G1DListMutatorIntegerGaussian)
-    >>> genome.evaluator.set(somefunc)
-
-    :param freq_stats: the frequency which the driver records population information
-    :param genome: the particular genome for optimization
-    :param GA: the GA algorithm object, default configuration used GsimpleGA
-
+    TODO: Implement function-slots as sockets
     """
 
 
@@ -105,7 +98,7 @@ class pyevolvedriver(Driver):
                                  RuntimeError)            
     objective = property(_get_objective,_set_objective)
 
-    def get_objective_val(self):
+    def _get_objective_val(self):
         """evaluate the new objective"""
         if self.objective is None:
             return None
@@ -115,42 +108,44 @@ class pyevolvedriver(Driver):
     def __init__(self,name,parent=None,desc=None): 
         super(pyevolvedriver,self).__init__(name,parent,desc)
 
-        self.genome = GenomeBase.GenomeBase()
-        self.GA = GSimpleGA.GSimpleGA(self.genome)
+        self.genome = GenomeBase.GenomeBase() #TODO: Mandatory Socket
+        self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin
 
         #inputs - value of None means use default
-        self.decoder = None
-        self.freq_stats = None
-        self.selector = None
-        self.stepCallback = None
-        self.terminationCriteria = None
-        self.seed = None
-        self.DBAdapter = None
-        self.PopulationSize = None
-        self.SortType = None
-        self.MutationRate = None
-        self.CrossoverRate = None
-        self.Generations = None
-        self.Minimax = None
-        self.Elitism = None
+        Int('freq_stats',self,INPUT,default = 0)
+        Float('seed',self,INPUT,default = 0)
+        Float("PopulationSize",self,INPUT,default=80)
+        Float('population_size',self,INPUT,default = Consts.CDefGAPopulationSize)
+        
+        Bool('sort_type',self,INPUT,doc='use Consts.sortType["raw"],Consts.sortType["scaled"] ',default = Consts.sortType["scaled"]) # can accept
+        Float('mutation_rate',self,INPUT,default = Consts.CDefGAMutationRate)
+        Float('crossover_rate',self,INPUT,default = Consts.CDefGACrossoverRate)
+        Int('generations',self,INPUT,default = Consts.CDefGAGenerations)
+        Bool('mini_max',self,INPUT,default = Consts.minimaxType["minimize"],
+             doc = 'use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
+        Bool('elitism',self,INPUT,doc='True of False',default = True)
+        
+        self.decoder = None #TODO: mandatory socket       
+        self.selector = None #TODO: optional socket
+        self.stepCallback = None #TODO: optional socket
+        self.terminationCriteria = None #TODO: optional socket
+        self.DBAdapter = None #TODO: optional socket
 
         #outputs
-        self.best_individual= None
-        self.decoder = None
+        self.best_individual= None #TODO: needs to be created as a framework variable
 
         #internal stuff
         self._objective = None
 
-        #TODO Need to make a Genome socket
 
 
 
 
-    def set_GA_property(self,setFunc,val): 
-        if val != None: 
-            return setFunc(val)
 
-    def set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
+    def _set_GA_property(self,setFunc,framework_var): 
+        return setFunc(framework_var.get())
+
+    def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
         if funcList == None: return
         slot.clear()
         if not isinstance(funcList,list): funcList = [funcList]
@@ -165,7 +160,7 @@ class pyevolvedriver(Driver):
         self.decoder(genome)
 
         self.parent.workflow.run()
-        return self.get_objective_val()
+        return self._get_objective_val()
 
     def verify(self):
         #genome verify
@@ -190,21 +185,22 @@ class pyevolvedriver(Driver):
         self.verify()
         #configure the evaluator function of the genome
         self.genome.evaluator.set(self.evaluate)
-
+        
         self.GA = GSimpleGA.GSimpleGA(self.genome, self.seed)
-        self.set_GA_property(self.GA.setDBAdapter,self.DBAdapter)
-        self.set_GA_property(self.GA.setPopulationSize,self.PopulationSize)
-        self.set_GA_property(self.GA.setSortType,self.SortType)
-        self.set_GA_property(self.GA.setMutationRate,self.MutationRate)
-        self.set_GA_property(self.GA.setCrossoverRate,self.CrossoverRate)
-        self.set_GA_property(self.GA.setGenerations,self.Generations)
-        self.set_GA_property(self.GA.setMinimax,self.Minimax)
-        self.set_GA_property(self.GA.setElitism,self.Elitism)
+        self._set_GA_property(self.GA.setPopulationSize,self.getvar("population_size"))
+        self._set_GA_property(self.GA.setSortType,self.getvar("sort_type"))
+        self._set_GA_property(self.GA.setMutationRate,self.getvar("mutation_rate"))
+        self._set_GA_property(self.GA.setCrossoverRate,self.getvar("crossover_rate"))
+        self._set_GA_property(self.GA.setGenerations,self.getvar("generations"))
+        self._set_GA_property(self.GA.setMinimax,self.getvar("mini_max"))
+        self._set_GA_property(self.GA.setElitism,self.getvar("elitism"))
 
-        self.set_GA_FunctionSlot(self.GA.selector,self.selector)
-        self.set_GA_FunctionSlot(self.GA.stepCallback,self.stepCallback)
-        self.set_GA_FunctionSlot(self.GA.terminationCriteria,self.terminationCriteria)
-
+        #self._set_GA_property(self.GA.setDBAdapter,self.DBAdapter) #
+        
+        self._set_GA_FunctionSlot(self.GA.selector,self.selector)
+        self._set_GA_FunctionSlot(self.GA.stepCallback,self.stepCallback)
+        self._set_GA_FunctionSlot(self.GA.terminationCriteria,self.terminationCriteria)
+        
         self.GA.evolve(freq_stats = self.freq_stats)
         self.best = self.GA.bestIndividual()
 

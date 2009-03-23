@@ -22,6 +22,7 @@ class FloatTestCase(unittest.TestCase):
         self.float3 = Float('float3', self.hobj, INPUT, 
                        ref_name='internal_float3',
                        min_limit=0., max_limit=99., units='kg')
+                       
         
     def tearDown(self):
         """this teardown function will be called after each test"""
