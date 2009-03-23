@@ -1,5 +1,9 @@
 """
 Simple M4 DOE example.
+
+This just shows how you can set a special driver (the example M4 DOE driver)
+and use it to set component inputs and get component outputs.
+The component in question just evaluates a simple expression.
 """
 
 from openmdao.main import Assembly
@@ -41,7 +45,7 @@ def main():
     model = Model()
     status = model.run()
     if status == RUN_OK:
-        for i, case in enumerate(model.driver.outerator.plugin):
+        for i, case in enumerate(model.driver.outerator):
             print 'CASE %d:' % (i+1)
             for name, index, value in case.inputs:
                 print '    input:', name, index, value

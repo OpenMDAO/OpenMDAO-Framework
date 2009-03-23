@@ -16,7 +16,6 @@ from openmdao.main.interfaces import IComponent
 from openmdao.main.variable import INPUT, OUTPUT
 
 import wrapper
-import fakes
 
 class MidFidelity(Component):
     """ Wrapper for M4 variable fidelity capability. """
@@ -56,8 +55,8 @@ class MidFidelity(Component):
             doc='For Kriging method, nthets=1(SA),2(Cobyla),3(BFGS)')
 
         # Sockets.
-        fakes.FakeSocket('lofi_model', self, None, IComponent, True)
-        fakes.FakeSocket('hifi_model', self, None, IComponent, True)
+        self.add_socket('lofi_model', IComponent, 'Low fidelity model')
+        self.add_socket('hifi_model', IComponent, 'High fidelity model')
 
         self.input_mappings = []
         self.output_mappings = []
@@ -84,13 +83,13 @@ class MidFidelity(Component):
 
     def set_hifi_model(self, hifi):
         """ Set high fidelity model. """
-        self.hifi_model.plugin = hifi
+        self.hifi_model = hifi
         self._hifi_m4model = None
         self.need_updated_corrections = True
 
     def set_lofi_model(self, lofi):
         """ Set low fidelity model. """
-        self.lofi_model.plugin = lofi
+        self.lofi_model = lofi
         self._lofi_m4model = None
         self.need_updated_corrections = True
 
@@ -106,11 +105,11 @@ class MidFidelity(Component):
 
     def execute(self):
         """ Compute results based on mid-fidelity approximation. """
-        if self.lofi_model.plugin is None:
+        if self.lofi_model is None:
             self.error('No lofi model')
             return RUN_FAILED
 
-        if self.hifi_model.plugin is None:
+        if self.hifi_model is None:
             self.error('No hifi model')
             return RUN_FAILED
 
@@ -123,7 +122,7 @@ class MidFidelity(Component):
             for mid, low, high in self.output_mappings:
                 outputs.append(low)
             self._lofi_m4model = \
-                wrapper.M4Model(self.lofi_model.plugin, inputs, outputs)
+                wrapper.M4Model(self.lofi_model, inputs, outputs)
 
         # Wrap high fidelity model.
         if self._hifi_m4model is None:
@@ -134,7 +133,7 @@ class MidFidelity(Component):
             for mid, low, high in self.output_mappings:
                 outputs.append(high)
             self._hifi_m4model = \
-                wrapper.M4Model(self.hifi_model.plugin, inputs, outputs)
+                wrapper.M4Model(self.hifi_model, inputs, outputs)
 
         # If needed, update correction functions.
         if self.need_updated_corrections:
