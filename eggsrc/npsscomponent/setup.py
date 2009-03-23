@@ -11,7 +11,7 @@ setup(name='npsscomponent',
       author_email='',
       url='',
       license='',
-      py_modules=['npsscomponent'],
+      py_modules=['npsscomponent', 'units'],
       include_package_data=True,
       zip_safe=False,
       install_requires=[
@@ -21,5 +21,4 @@ setup(name='npsscomponent',
       # -*- Entry points: -*-
       """,
       )
-
 
