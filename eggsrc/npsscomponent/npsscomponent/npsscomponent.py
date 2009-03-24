@@ -153,6 +153,7 @@ class NPSScomponent(Component):
         if self._top is not None:
             self._top.closeSession()
             self._top = None
+            self.grab_context()
         super(NPSScomponent, self).pre_delete()
 
     def _parse_arglist(self, arglist):

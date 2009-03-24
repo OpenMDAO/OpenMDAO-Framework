@@ -3,6 +3,7 @@ Test of FileVariables.
 """
 
 import cPickle
+import shutil
 import unittest
 
 from openmdao.main import Assembly, Component, \
@@ -77,7 +78,8 @@ class FileTestCase(unittest.TestCase):
 
     def tearDown(self):
         """ Called after each test in this class. """
-        pass
+        shutil.rmtree('Source')
+        shutil.rmtree('Sink')
 
     def test_connectivity(self):
         self.assertNotEqual(self.tla.Sink.text_data, self.tla.Source.text_data)
