@@ -17,6 +17,7 @@ from openmdao.main.int import Int
 from openmdao.main.string import String
 from openmdao.main.stringlist import StringList
 from openmdao.main.arrayvar import ArrayVariable
+from openmdao.main.wrapper import Wrapper
 
 from openmdao.main.factory import Factory
 from openmdao.main.importfactory import ImportFactory

@@ -33,7 +33,7 @@ def _trans_lhs(strng, loc, tok, scope, validate):
             raise RuntimeError("cannot find variable '"+tok[0]+"'")
     
     full = scname + ".set('" + tok[0] + "',_@RHS@_"
-    if len(tok) > 1:
+    if len(tok) > 1 and tok[1] != '=':
         full += ","+tok[1]
             
     return ['=', full + ")"]

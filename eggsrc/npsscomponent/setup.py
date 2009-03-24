@@ -11,9 +11,11 @@ setup(name='npsscomponent',
       author_email='',
       url='',
       license='',
-      py_modules=['npsscomponent', 'units'],
+      #py_modules=['npsscomponent'],
       include_package_data=True,
       zip_safe=False,
+      packages = ['npsscomponent'],
+      package_data={'npsscomponent': ['test/*.py','test/*.mdl']},
       install_requires=[
           'pyNPSS'
       ],
@@ -21,4 +23,5 @@ setup(name='npsscomponent',
       # -*- Entry points: -*-
       """,
       )
+
 
