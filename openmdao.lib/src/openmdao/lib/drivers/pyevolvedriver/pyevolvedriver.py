@@ -3,6 +3,7 @@
 __version__ = "0.1"
 
 from openmdao.main.driver import Driver
+from openmdao.main.component import RUN_OK
 
 from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
 from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
@@ -156,4 +157,6 @@ class pyevolvedriver(Driver):
 
         self.GA.evolve(freq_stats = self.freq_stats)
         self.best = self.GA.bestIndividual()
+
+        return RUN_OK
 

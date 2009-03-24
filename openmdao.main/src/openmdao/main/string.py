@@ -1,6 +1,3 @@
-"""
-String: a Variable wrapper for python strings"""
-
 #public symbols
 __all__ = ['String']
 __version__ = "0.1"

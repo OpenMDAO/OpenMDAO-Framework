@@ -191,11 +191,6 @@ void mcRun() {
    // Evaluate ModelCenter link expressions.
    eval_links();
 
-   LocalOutFileStream out;
-   out.open("NPSS_ANOPP.textRep");
-   out << .getTextRep(TRUE);
-   out.close();
-
    for (i = 0 ; i < mcInputs.entries() ; ++i) {
      cout << "    " << mcInputs[i] << " = " << mcInputs[i]->value << endl;
    }

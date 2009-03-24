@@ -11,6 +11,7 @@ from openmdao.main.hierarchy import HierarchyMember
 from openmdao.main.variable import Variable
 from openmdao.main.bool import Bool
 from openmdao.main.dict import Dict
+from openmdao.main.filevar import FileVariable
 from openmdao.main.float import Float
 from openmdao.main.int import Int
 from openmdao.main.string import String
@@ -50,6 +51,7 @@ __all__ = ['HierarchyMember',
            'Variable',
            'Bool',
            'Dict',
+           'FileVariable',
            'Float',
            'Int',
            'String',
