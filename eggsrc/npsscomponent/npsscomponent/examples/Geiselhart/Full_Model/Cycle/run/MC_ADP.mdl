@@ -95,11 +95,6 @@ void mcRun() {
    int i;
    cout << "\nMC_ADP mcRun() executing in " << getcwd() << endl;
 
-   LocalOutFileStream out;
-   out.open("NPSS_ADP.textRep");
-   out << .getTextRep(TRUE);
-   out.close();
-
    for (i = 0 ; i < mcInputs.entries() ; ++i) {
      cout << "    " << mcInputs[i] << " = " << mcInputs[i]->value << endl;
    }

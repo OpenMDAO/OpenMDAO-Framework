@@ -7,10 +7,10 @@ __version__ = '0.1'
 
 import os
 
-from openmdao.main import Component, ArrayVariable, Bool, Dict, Float, Int, \
-                          String, StringList
+from openmdao.main import Component, ArrayVariable, Bool, Dict, Float, \
+                          FileVariable, Int, String, StringList
 from openmdao.main.component import RUN_OK, RUN_FAILED
-from openmdao.main.variable import INPUT, UNDEFINED
+from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
 
 import npss
 
@@ -20,8 +20,6 @@ class NPSScomponent(Component):
     """
     An NPSS wrapper component.  Supports reload requests either internally
     via a flag in the model or externally by setting the reload_model flag.
-
-    TODO: File variables.
 
     TODO: Save external files as part of component state/config.
 
@@ -155,6 +153,7 @@ class NPSScomponent(Component):
         if self._top is not None:
             self._top.closeSession()
             self._top = None
+            self.grab_context()
         super(NPSScomponent, self).pre_delete()
 
     def _parse_arglist(self, arglist):
@@ -502,6 +501,7 @@ class NPSScomponent(Component):
         1. Get the correct array type (default is float).
         2. Set the units from translated NPSS units.
         3. Set the doc string from the description attribute.
+        4. Create FileVariables for stream objects.
         """
         if isinstance(obj_info, list):
             lst = obj_info
@@ -511,6 +511,7 @@ class NPSScomponent(Component):
         new_info = []
         for entry in lst:
             iostat = INPUT
+            metadata = {}
 
             if isinstance(entry, basestring):
                 name = entry
@@ -525,8 +526,29 @@ class NPSScomponent(Component):
             try:
                 typ = self.evalExpr(name+'.getDataType()')
             except RuntimeError:
-                new_info.append(entry)
-                continue
+                try:
+                    typ = self.evalExpr(name+'.isA()')
+                except RuntimeError:
+                    new_info.append(entry)
+                    continue
+                else:
+                    if typ == 'InFileStream':
+                        typ = 'Stream'
+                        iostat = INPUT
+                    elif typ == 'OutFileStream':
+                        typ = 'Stream'
+                        iostat = OUTPUT
+                        metadata['content_type'] = \
+                            getattr(self, name+'.contentType')
+                        metadata['binary'] = \
+                            getattr(self, name+'.binary') != 0
+                        metadata['single_precision'] = \
+                            getattr(self, name+'.singlePrecision') != 0
+                        metadata['unformatted'] = \
+                            getattr(self, name+'.unformatted') != 0
+                    else:
+                        new_info.append(entry)
+                        continue
 
             try:
                 npss_units = getattr(self, name+'.units')
@@ -574,6 +596,10 @@ class NPSScomponent(Component):
             elif typ == 'real[][][]':
                 dobj = ArrayVariable(name, self, iostat, float, doc=doc,
                                      num_dims=3)
+            elif typ == 'Stream':
+                dobj = FileVariable(name, self, iostat, doc=doc,
+                                    ref_name=name+'.filename',
+                                    metadata=metadata)
             else:
                 self.raise_exception('Unsupported NPSS type: %s' % typ,
                                      NotImplementedError)
