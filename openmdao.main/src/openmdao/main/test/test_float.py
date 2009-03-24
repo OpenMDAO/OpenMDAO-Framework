@@ -14,6 +14,8 @@ class FloatTestCase(unittest.TestCase):
         self.hobj.internal_float1 = 3.1415926
         self.hobj.internal_float2 = 42.
         self.hobj.internal_float3 = 1.1
+        self.hobj.internal_float4 = 99.
+        self.hobj.internal_float5 = 0.
         self.float1 = Float('float1', self.hobj, INPUT, 
                        ref_name='internal_float1', default=98.9,
                        min_limit=0., max_limit=99., units='ft')
@@ -22,6 +24,10 @@ class FloatTestCase(unittest.TestCase):
         self.float3 = Float('float3', self.hobj, INPUT, 
                        ref_name='internal_float3',
                        min_limit=0., max_limit=99., units='kg')
+        self.float4 = Float('f4',self.hobj,INPUT,
+                            ref_name='internal_float4',units='K')
+        self.float5 = Float('f5',self.hobj,OUTPUT,
+                            ref_name='internal_float5',units='degC')
         
     def tearDown(self):
         """this teardown function will be called after each test"""
@@ -41,6 +47,11 @@ class FloatTestCase(unittest.TestCase):
         self.assertEqual(32.1, self.hobj.internal_float1)
 
     def test_unit_conversion(self):
+        # Celcius to Kelvin
+        self.float4.setvar(None, self.float5)
+        self.assertEqual(self.hobj.internal_float4, 273.15)
+        
+        # ft to inches
         self.hobj.internal_float2 = 12.  # inches
         self.float1.setvar(None, self.float2)
         self.assertEqual(self.hobj.internal_float1, 1.) # 12 inches = 1 ft

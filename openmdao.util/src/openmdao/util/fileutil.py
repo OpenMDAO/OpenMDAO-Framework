@@ -1,10 +1,13 @@
 """
 Misc. file utility routines
 """
-import os,sys
+import os
+import sys
+import shutil
 import linecache
 import fnmatch
 from os.path import islink, isdir
+from subprocess import Popen,PIPE,STDOUT
 
 
 def glob_walk(directory, include_list):
@@ -71,25 +74,26 @@ def dirtreegen(ddir):
 
 def find_files(pat, startdir):
     """Return a list of files (using a generator) that match
-    the given glob pattern.
+    the given glob pattern. Walks an entire directory structure.
     """
     for path, dirlist, filelist in os.walk(startdir):
         for name in fnmatch.filter(filelist, pat):
             yield os.path.join(path.name)
 
 
-def traceit(frame, event, arg):
-   """a function useful for tracing python execution. wherever you want the 
-   tracing to start, insert a call to sys.settrace(traceit)"""
-   if event == "line":
-       lineno = frame.f_lineno
-       filename = frame.f_globals["__file__"]
-       if (filename.endswith(".pyc") or
-           filename.endswith(".pyo")):
-           filename = filename[:-1]
-       name = frame.f_globals["__name__"]
-       line = linecache.getline(filename, lineno)
-       print "%s:%s: %s" % (name, lineno, line.rstrip())
-   return traceit
+def rm(path):
+    """Delete a file or directory"""
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+    else:
+        os.remove(path)
+        
 
+def copy(src, dest):
+    """Copy a file or directory"""
+    if os.path.isfile(src):
+        shutil.copy(src, dest)
+    elif os.path.isdir(src):
+        shutil.copytree(src, dest) 
+    
 

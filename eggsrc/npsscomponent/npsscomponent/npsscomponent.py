@@ -1,5 +1,5 @@
 """
-An NPSS wrapper component
+An NPSS wrapper component.
 """
 
 __all__ = ('NPSScomponent',)
@@ -7,18 +7,38 @@ __version__ = '0.1'
 
 import os
 
-from openmdao.main import Component, Bool, Dict, String, StringList
+from openmdao.main import Component, ArrayVariable, Bool, Dict, Float, Int, \
+                          String, StringList
 from openmdao.main.component import RUN_OK, RUN_FAILED
-from openmdao.main.variable import INPUT
+from openmdao.main.variable import INPUT, UNDEFINED
 
 import npss
 
+import units
+
 class NPSScomponent(Component):
     """
-    An NPSS wrapper component.
+    An NPSS wrapper component.  Supports reload requests either internally
+    via a flag in the model or externally by setting the reload_model flag.
+
+    TODO: File variables.
+
+    TODO: Save external files as part of component state/config.
+
+    TODO: Support index argument to get() and set().
+
+    TODO: Detect & flag execution errors.
+
+    TODO: Save model state as well as component state.
+
+    TODO: Use buffer protocol for array access.
+
+    TODO: Safe multi-thread access (synchronized).
+
+    TODO: CORBA support.
     """
 
-    _dummy = npss.npss()
+    _dummy = npss.npss()  # Just for context switching.
 
     @staticmethod
     def grab_context():
@@ -107,26 +127,24 @@ class NPSScomponent(Component):
         if arglist is not None:
             self._parse_arglist(arglist)
         self._top = None
-        self._reload_model()
+        self.reload()
 
     def __getstate__(self):
         """ Return dict representing this Component's state. """
-# TODO: save NPSS model state as well as component state.
         state = super(NPSScomponent, self).__getstate__()
         state['_top'] = None  # pyNPSS is unpickleable.
         return state
 
     def __setstate__(self, state):
         """ Restore this Component's state. """
-# TODO: restore NPSS model state as well as component state.
         super(NPSScomponent, self).__setstate__(state)
-        # _top will be set during post_load via _reload_model().
+        # _top will be set during post_load via reload().
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
         if super(NPSScomponent, self).post_load():
             try:
-                self._reload_model()
+                self.reload()
                 return True
             except Exception, exc:
                 self.error('Reload caught exception: %s', str(exc))
@@ -140,7 +158,7 @@ class NPSScomponent(Component):
         super(NPSScomponent, self).pre_delete()
 
     def _parse_arglist(self, arglist):
-        """ Parse argument list. """
+        """ Parse argument list. Assumes flag argument separate from value. """
         access_next = False
         assembly_next = False
         dlm_next = False
@@ -288,8 +306,9 @@ class NPSScomponent(Component):
             arglist.append('-trace')
         return arglist
 
-    def _reload_model(self):
+    def reload(self):
         """ (Re)load model. """
+        cwd = os.getcwd()+os.sep
         is_reload = False
         saved_inputs = []
         if self._top is not None:
@@ -301,6 +320,15 @@ class NPSScomponent(Component):
                     dst_comp, dst_attr = dst.split('.', 1)
                     if dst_comp == self.name:
                         saved_inputs.append((dst_attr, self.get(dst_attr)))
+            # Remove model input files from external_files list.
+            paths = self._top.inputFileList
+            for path in paths:
+                if path.startswith(cwd):
+                    path = path[len(cwd):]
+                for i, meta in enumerate(self.external_files):
+                    if meta['path'] == path:
+                        self.external_files.pop(i)
+                        break
             self._top.closeSession()
             self._top = None
 
@@ -315,7 +343,7 @@ class NPSScomponent(Component):
                        directory, exc.strerror)
 
         if is_reload:
-            self.info('Reloading session in %s', os.getcwd())
+            self.info('Reloading session in %s', cwd)
         arglist = self._generate_arglist()
         if self.output_filename:
             if not '-singleStream' in arglist:
@@ -327,7 +355,7 @@ class NPSScomponent(Component):
             self._top.cout.append = is_reload
             self._top.cout.filename = self.output_filename
             if is_reload:
-                msg = '\nReloading session in '+os.getcwd()+'\n'
+                msg = '\nReloading session in '+cwd+'\n'
                 if self.model_filename:
                     msg += 'Model filename '+self.model_filename+'\n'
                 self._top.cout.println(msg)
@@ -336,25 +364,26 @@ class NPSScomponent(Component):
         if self.model_filename:
             # Parse NPSS model.
             self._top.parseFile(self.model_filename)
-            # Add any local model input files to external_files list.
-            cwd = os.getcwd()+'/'
+            # Add non-NPSS distribution input files to external_files list.
             paths = self._top.inputFileList
             paths.sort()
             for path in paths:
+                if not path or path.startswith(os.environ['NPSS_TOP']):
+                    continue
                 if path.startswith(cwd):
                     path = path[len(cwd):]
-                    for meta in self.external_files:
-                        if meta['path'] == path:
-                            break
-                    else:
-                        self.external_files.append({'path':path, 'input':True})
+                for meta in self.external_files:
+                    if meta['path'] == path:
+                        break
+                else:
+                    self.external_files.append({'path':path, 'input':True})
 
         if is_reload:
             # Need to restore input values.
             for name, value in saved_inputs:
                 self.set(name, value)
 
-        NPSScomponent.grab_context()
+        self.grab_context()
         if pushed:
             self.pop_dir()
 
@@ -364,7 +393,11 @@ class NPSScomponent(Component):
 
     def get(self, path, index=None):
         """ Return value for attribute. """
-        return getattr(self, path)
+        if index is None:
+            return getattr(self, path)
+        else:
+            self.raise_exception('Indexing not supported yet',
+                                 NotImplementedError)
 
     def __getattr__(self, name):
         """
@@ -391,11 +424,15 @@ class NPSScomponent(Component):
             except AttributeError:
                 raise AttributeError(self.get_pathname()+' '+str(err))
         finally:
-            NPSScomponent.grab_context()
+            self.grab_context()
 
     def set(self, path, value, index=None):
         """ Set attribute value. """
-        setattr(self, path, value)
+        if index is None:
+            setattr(self, path, value)
+        else:
+            self.raise_exception('Indexing not supported yet',
+                                 NotImplementedError)
 
     def __setattr__(self, name, value):
         """ Set attribute value. """
@@ -414,7 +451,7 @@ class NPSScomponent(Component):
         except AttributeError:
             return super(NPSScomponent, self).__setattr__(name, value)
         finally:
-            NPSScomponent.grab_context()
+            self.grab_context()
 
     def execute(self):
         """ Perform operations associated with running the component. """
@@ -423,7 +460,7 @@ class NPSScomponent(Component):
         if self.reload_model:
             self.info('External reload request.')
             try:
-                self._reload_model()
+                self.reload()
             except Exception, exc:
                 self.error('Exception during reload: %s', str(exc))
                 status = RUN_FAILED
@@ -439,7 +476,7 @@ class NPSScomponent(Component):
                     if reload_req:
                         self.info('Internal reload request.')
                         try:
-                            self._reload_model()
+                            self.reload()
                         except Exception, exc:
                             self.error('Exception during reload: %s', str(exc))
                             status = RUN_FAILED
@@ -454,6 +491,109 @@ class NPSScomponent(Component):
                 self.error('Exception during run: %s', str(exc))
                 status = RUN_FAILED
 
-        NPSScomponent.grab_context()
+        self.grab_context()
         return status
+
+    def make_public(self, obj_info):
+        """
+        Overloading make_public() so that we can do the following
+        on-the-fly rather than having to manually define variables:
+
+        1. Get the correct array type (default is float).
+        2. Set the units from translated NPSS units.
+        3. Set the doc string from the description attribute.
+        """
+        if isinstance(obj_info, list):
+            lst = obj_info
+        else:
+            lst = [obj_info]
+
+        new_info = []
+        for entry in lst:
+            iostat = INPUT
+
+            if isinstance(entry, basestring):
+                name = entry
+            elif isinstance(entry, tuple):
+                name = entry[0]  # wrapper name
+                if len(entry) > 2:
+                    iostat = entry[2] # optional iostatus
+            else:
+                new_info.append(entry)
+                continue
+
+            try:
+                typ = self.evalExpr(name+'.getDataType()')
+            except RuntimeError:
+                new_info.append(entry)
+                continue
+
+            try:
+                npss_units = getattr(self, name+'.units')
+            except AttributeError:
+                mdao_units = UNDEFINED
+            else:
+                if npss_units:
+                    if self.have_units_translation(npss_units):
+                        mdao_units = self.get_units_translation(npss_units)
+                    else:
+                        self.warning("No units translation for '%s'" % npss_units)
+                        mdao_units = UNDEFINED
+                else:
+                    mdao_units = UNDEFINED
+
+            try:
+                doc = getattr(self, name+'.description')
+            except AttributeError:
+                doc = None
+            else:
+                if not doc:
+                    doc = None
+
+            # Primitive method to create correct type.
+            if typ == 'real':
+                dobj = Float(name, self, iostat, doc=doc, units=mdao_units)
+            elif typ == 'int':
+                dobj = Int(name, self, iostat, doc=doc)
+            elif typ == 'string':
+                dobj = String(name, self, iostat, doc=doc)
+            elif typ == 'real[]':
+                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
+                                     num_dims=1)
+            elif typ == 'int[]':
+                dobj = ArrayVariable(name, self, iostat, int, doc=doc,
+                                     num_dims=1)
+            elif typ == 'string[]':
+                dobj = StringList(name, self, iostat, doc=doc)
+            elif typ == 'real[][]':
+                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
+                                     num_dims=2)
+            elif typ == 'int[][]':
+                dobj = ArrayVariable(name, self, iostat, int, doc=doc,
+                                     num_dims=2)
+            elif typ == 'real[][][]':
+                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
+                                     num_dims=3)
+            else:
+                self.raise_exception('Unsupported NPSS type: %s' % typ,
+                                     NotImplementedError)
+
+            new_info.append(dobj)
+
+        return super(NPSScomponent, self).make_public(new_info)
+
+    @staticmethod
+    def have_units_translation(npss_units):
+        """ Return True if we can translate npss_units. """
+        return units.have_translation(npss_units)
+
+    @staticmethod
+    def get_units_translation(npss_units):
+        """ Return translation for npss_units. """
+        return units.get_translation(npss_units)
+
+    @staticmethod
+    def set_units_translation(npss_units, mdao_units):
+        """ Set translation for npss_units. """
+        return units.set_translation(npss_units, mdao_units)
 

@@ -40,7 +40,7 @@ class InstalledInlet extends Element {
 	 value = 0.0 ;
 	 IOstatus = "output" ;
 	 description = "Freestream tube area of the air into the inlet." ;
-	 units = "IN2" ; 
+	 units = "in2" ; 
   }
   real Dinstall { 
 	 value = 0.0 ;
