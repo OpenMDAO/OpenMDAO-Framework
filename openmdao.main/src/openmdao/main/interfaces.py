@@ -45,16 +45,8 @@ class IContainer (Interface):
     def get (name):
         """return the value of a public variable"""
 
-    def multiget (names):
-        """Return a tuple of values corresponding to the supplied attribute
-        names."""
-
     def set (name, value):
         """Set the value of a public variable"""
-
-    def multiset (pairs):
-        """Based on the tuple of input (name,value) pairs, set the values
-        of the specified named variables."""
 
     def save_state (outstream, format='cPickle'):
         """Save the state of this object and its children to the given
@@ -63,7 +55,7 @@ class IContainer (Interface):
         python extension classes will have to override. The format
         can be supplied in case something other than cPickle is needed."""
 
-    def restore_state (instream, format='cPickle'):
+    def load (instream, format='cPickle'):
         """Replace the current object in the hierarchy with the object
         loaded from the input stream. Pure python classes generally
         won't need to override this, but extensions will. The format
@@ -74,11 +66,6 @@ class IContainer (Interface):
         configure itself based on an older version. By default, values
         of dictionary entries from the old object will be copied to the
         new one."""
-
-    def move (old_name, new_name):
-        """move the named child object from the location indicated by the
-        relative pathname old_name to the location indicated by
-        new_name."""
 
 
 

@@ -118,6 +118,9 @@ The current package layout of the project is as follows:
 **openmdao.recipes**
     OpenMDAO specific recipes for zc.buildout_
 
+**openmdao.util**
+    OpenMDAO utility routines for file handling, subprocess execution, etc.
+
 **openmdao.test**
     Classes and utilities that are specific to testing various aspects
     of OpenMDAO
@@ -130,20 +133,48 @@ The current package layout of the project is as follows:
 Deployment
 ==========
 
-The basic OpenMDAO framework, contained in the openmdao.main egg, will be
-installable using easy_install. Included in that install will be scripts to 
-create sandboxes, start factory servers, and start object servers.
+Each OpenMDAO package will be distributable as a python egg, and each package's
+egg will have its own version number. Each specific version of an OpenMDAO
+package will also depend on a number specific versions of third party packages,
+and all of these will have to be obtained in order to assemble a complete
+working application.  This is accomplished by using zc.buildout_ to construct a
+python environment containing all of the necessary packages.  A buildout
+configuration file will be created for each *official* OpenMDAO release, and
+that configuration file will be pinned to a specific set of versioned eggs that
+are all compatible with each other. 
 
-OpenMDAO is an egg based framework, and any OpenMDAO model of any complexity
-will depend upon a large number of eggs.  Copying all of those eggs from an egg
-server every time a new sandbox is created could cause unwanted delays, so
-configuring the system to avoid unnecessary copying of distributions is
-important. The system will have a configurable list of search paths which can be
-URLs or file system paths, indicating the locations of egg servers or installed
-distributions respectively. These locations will be searched in the order that
-they appear in the search path.  If a location is a URL, that URL is assumed
-to be a distribution server, and the desired distribution, if found there, will
-be downloaded and installed in the sandbbox.  If a location is a directory, that
-directory will be searched for the distribution and if found will be linked to
-from the sandbox.
+In order to assemble a complete working version of OpenMDAO, the following
+steps are performed:
+
+    1. bootstrap a buildout using the appropriate python version, e.g.,
+         ``python2.5 bootstrap.py``
+    2. obtain a buildout configuration file from the OpenMDAO website, e.g.,
+          ``wget http://openmdao.org/releases/1.0.3/buildout``
+    3. execute the buildout using that configuration file, e.g.,
+          ``bin/buildout``
+    
+Any needed eggs will be downloaded from the web by the buildout script,
+either from the Python Package Index, from OpenMDAO's own package index, or from
+some other package index or from a local download cache. Once this process is
+completed, the user will have a complete version of the OpenMDAO framework.
+
+Another possibility is to bundle all of the necessary eggs into a large archive,
+either a tar file or a zip file, and the user can download the archive and run
+the buildout as mentioned above. 
+
+For Windows users, a self-extracting installer file will most likely be
+provided, and this installer will perform the needed buildout steps for the
+user.
+
+Once the user has installed the framework, the next step is to build or import
+some sort  of model, a configuration of plugin components that work together to
+solve some sort of problem. A complex OpenMDAO model may depend upon a large
+number of eggs.  Some of those eggs will be found in  the OpenMDAO standard
+library, but others will not. Downloading all of those eggs from a package index
+every time a new buildout is created could cause unwanted delays, so configuring
+the system to avoid unnecessary copying of distributions is important. One of
+the standard attributes available in a buildout configuration file is
+``download-cache``, and distributions needed by a buildout will be automatically
+copied there during download and automatically retrieved from there during later
+buildouts.
 

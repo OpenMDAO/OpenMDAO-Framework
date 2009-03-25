@@ -120,6 +120,6 @@ class SphinxBuild(object):
         
         return [scriptname]
     
-    def update(self):
-        return []    
+    
+    update = install  
 

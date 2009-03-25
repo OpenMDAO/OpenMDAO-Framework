@@ -62,6 +62,11 @@ class CONMINdriver(Driver):
         self._c = numarray.zeros(1, 'd')
         # temp storage
         self._ms1 = numarray.zeros(2, 'i')
+        
+        # temp storage for constraints
+        self.g1 = numarray.zeros(0,'d')
+        self.g2 = numarray.zeros(0,'d')
+        self.cons_is_linear = numarray.zeros(0, 'i') 
                 
         StringList('design_vars', self, INPUT)
         StringList('constraints', self, INPUT)

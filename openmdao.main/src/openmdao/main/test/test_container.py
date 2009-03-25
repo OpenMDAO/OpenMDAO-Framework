@@ -10,6 +10,7 @@ from openmdao.main.interfaces import IContainer
 from openmdao.main.variable import INPUT
 
 
+
 class ContainerTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -98,40 +99,38 @@ class ContainerTestCase(unittest.TestCase):
 
 
     def test_get_objs(self):
-        objs = self.root.get_objs(IContainer, recurse=True)
+        objs = self.root.get_objs(self.isCont, recurse=True)
         names = [x.get_pathname() for x in objs]
         self.assertEqual(names, ['root.c1', 'root.c2', 'root.c2.c21', 
                                  'root.c2.c22', 
                                  'root.c2.c22.c221'])
         
-        objs = self.root.get_objs(IContainer)
+        objs = self.root.get_objs(self.isCont)
         names = [x.get_pathname() for x in objs]
         self.assertEqual(names, ['root.c1', 'root.c2'])
         
-        objs = self.root.get_objs(IContainer, recurse=True, parent=self.root)
+        objs = self.root.get_objs(self.isContRootParent, recurse=True)
         names = [x.get_pathname() for x in objs]
         self.assertEqual(names, ['root.c1', 'root.c2'])        
 
-        objs = self.root.get_objs(IContainer, recurse=True, 
-                                  parent=self.root.get('c2'))
+        objs = self.root.get_objs(self.isContC2Parent, recurse=True)
         names = [x.get_pathname() for x in objs]
         self.assertEqual(names, ['root.c2.c21', 'root.c2.c22'])        
 
 
     def test_get_names(self):
-        names = self.root.get_names(IContainer, recurse=True)
+        
+        names = self.root.get_names(self.isCont, recurse=True)
         self.assertEqual(names, ['root.c1', 'root.c2', 'root.c2.c21',
                                  'root.c2.c22', 'root.c2.c22.c221'])
         
-        names = self.root.get_names(IContainer)
+        names = self.root.get_names(self.isCont)
         self.assertEqual(names, ['root.c1', 'root.c2'])
         
-        names = self.root.get_names(IContainer, recurse=True, 
-                                    parent=self.root)
+        names = self.root.get_names(self.isContRootParent, recurse=True)
         self.assertEqual(names, ['root.c1', 'root.c2'])        
 
-        names = self.root.get_names(IContainer, recurse=True, 
-                                    parent=self.root.get('c2'))
+        names = self.root.get_names(self.isContC2Parent, recurse=True)
         self.assertEqual(names, ['root.c2.c21', 'root.c2.c22'])        
 
     def test_create(self):
@@ -182,6 +181,14 @@ class ContainerTestCase(unittest.TestCase):
         inp = StringIO.StringIO(output.getvalue())
         newc1 = Container.load(inp, constants.SAVE_PICKLE)
                 
+    def isCont(self, obj):
+        return isinstance(obj,Container)
+    
+    def isContRootParent(self, obj):
+        return self.isCont(obj) and obj.parent==self.root
+    
+    def isContC2Parent(self, obj):
+        return self.isCont(obj) and obj.parent==self.root.get('c2')
         
 if __name__ == "__main__":
     unittest.main()

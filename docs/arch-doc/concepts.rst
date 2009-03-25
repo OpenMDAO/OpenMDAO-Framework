@@ -39,7 +39,7 @@ listed below:
 .. index:: pair: IVariable; plug-in interface
 .. index:: pair: IVariable; plug-in interface
 .. index:: pair: IGeomQueryObject; plug-in interface
-.. index:: pair: IGeomCreator; plug-in interface
+.. index:: pair: IGeomModifier; plug-in interface
 .. index:: pair: IResourceAllocator; plug-in interface
 .. index:: pair: IFactory; plug-in interface
 
@@ -61,8 +61,8 @@ other IVariables, e.g., perform unit conversion.
 :ref:`IGeomQueryObject<IGeomQueryObject>` - interface to objects with geometry.
 Geometric properties of the object can be queried.
 
-:ref:`IGeomCreator<IGeomCreator>` - interface to a geometry kernel that allows
-creation of new geometry.
+:ref:`IGeomModifier<IGeomCreator>` - interface to a geometry kernel that allows
+creation of new geometry and modification of existing geometry.
 
 :ref:`IResourceAllocator<IResourceAllocator>` - interface to objects that
 allocate memory and disk resources, sometimes on specific servers, based on a
@@ -151,8 +151,8 @@ built into OpenMDAO, is  not as polished as the commercial CAD approach.
 However, it has the advantage that any geometry created in this way will be
 available to any OpenMDAO user without requiring the purchase of a commercial
 package. This increases the probability of reuse by others, and over time could
-result in the creation by the OpenMDAO community of a library of high quality
-parametric parts available to anyone.
+result in the creation by the OpenMDAO community of a library of parametric
+parts available to anyone.
 
 There is unfortunately no common interface to cover creation, querying, and
 parametric manipulation that will work with both the CAPRI option and the open
@@ -222,14 +222,15 @@ with different versions of Python to exist in the same model.
 
 This can be accomplished by placing incompatible versions in different
 processes and letting them communicate across the process boundary. As long as
-the :term:`IPC` protocol used to communicate between them is the same on both
+the protocol used to communicate between the processes is the same on both
 sides of the connection, these *incompatible* components can coexist within a
 model.
 
 In OpenMDAO, this will be done by setting up an :term:`ObjServerFactory` in a
-virtual Python environment and having each :term:`ObjServer` spawned from that
-factory use that factory's environment. Each virtual Python environment can run
-a different Python version and can also have its own set of modules installed.
+self contained Python environment that was created using zc.buildout_ and having
+each :term:`ObjServer` spawned from that factory use that factory's environment.
+Each buildout environment can run a different Python version and can also
+have its own set of modules installed.
 
 Users often want to update a model as its constituent components evolve. To
 facilitate this process, we have added a config_from_obj() function to the
@@ -274,15 +275,16 @@ for Qt will have a similar license to Qt, but this is not certain.
 
 If a web based interface is used, there are questions about the richness of the
 interface relative to a traditional GUI. There are a number of javascript
-libraries like dojo_ for example that are still relatively immature, but they
-offer the promise of a browser based application with interactivity that
-approaches that of a desktop application. Projects like dojo are being actively
-developed, so they may reach the necessary level of maturity in the near
-future.  
+libraries like jquery_ and dojo_ for example that are still relatively immature,
+but they offer the promise of a browser based application with interactivity
+that approaches that of a desktop application. Projects like dojo are being
+actively developed, so they may reach the necessary level of maturity in the
+near future.  
 
 
 .. _dojo: http://www.dojotoolkit.org
 
+.. _jquery: http://jquery.com
 
 .. index:: view	
 
