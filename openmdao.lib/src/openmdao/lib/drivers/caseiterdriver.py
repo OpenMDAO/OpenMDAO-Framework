@@ -12,7 +12,7 @@ class CaseIteratorDriver(Driver):
     an ICaseIterator, and the system does its best to run those cases.
     """
 
-    def __init__(self, name='CaseIteratorDriver', parent=None):
+    def __init__(self, name, parent=None, doc=None):
         super(CaseIteratorDriver, self).__init__(name, parent)
         self.add_socket('iterator', ICaseIterator, 'Cases to evaluate')
         self.add_socket('outerator', None, 'Something to append() to')
@@ -21,7 +21,7 @@ class CaseIteratorDriver(Driver):
 # "Instance of <class> has no <attr> member"
 
     def execute(self):
-        """ Run each case in iterator record results in outerator. """
+        """ Run each case in iterator and record results in outerator. """
         if not self.check_socket('iterator'):
             self.error('No iterator plugin')
             return RUN_FAILED

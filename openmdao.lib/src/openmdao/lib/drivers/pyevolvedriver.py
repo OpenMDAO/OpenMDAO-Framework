@@ -105,8 +105,8 @@ class pyevolvedriver(Driver):
         else:
             return self._objective.evaluate()     
 
-    def __init__(self,name,parent=None,desc=None): 
-        super(pyevolvedriver,self).__init__(name,parent,desc)
+    def __init__(self,name,parent=None,doc=None): 
+        super(pyevolvedriver,self).__init__(name,parent,doc)
 
         self.genome = GenomeBase.GenomeBase() #TODO: Mandatory Socket
         self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin
@@ -203,8 +203,6 @@ class pyevolvedriver(Driver):
         
         self.GA.evolve(freq_stats = self.get('best_individual'))
         self.best_individual = self.GA.bestIndividual()
-
-
 
         return RUN_OK
 
