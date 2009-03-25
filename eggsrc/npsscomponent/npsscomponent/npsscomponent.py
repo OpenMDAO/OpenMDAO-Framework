@@ -14,7 +14,7 @@ from openmdao.main.variable import INPUT, UNDEFINED
 
 import npss
 
-from units import UNITS_MAP
+import units
 
 class NPSScomponent(Component):
     """
@@ -34,6 +34,8 @@ class NPSScomponent(Component):
     TODO: Use buffer protocol for array access.
 
     TODO: Safe multi-thread access (synchronized).
+
+    TODO: CORBA support.
     """
 
     _dummy = npss.npss()  # Just for context switching.
@@ -306,6 +308,7 @@ class NPSScomponent(Component):
 
     def reload(self):
         """ (Re)load model. """
+        cwd = os.getcwd()+os.sep
         is_reload = False
         saved_inputs = []
         if self._top is not None:
@@ -317,6 +320,15 @@ class NPSScomponent(Component):
                     dst_comp, dst_attr = dst.split('.', 1)
                     if dst_comp == self.name:
                         saved_inputs.append((dst_attr, self.get(dst_attr)))
+            # Remove model input files from external_files list.
+            paths = self._top.inputFileList
+            for path in paths:
+                if path.startswith(cwd):
+                    path = path[len(cwd):]
+                for i, meta in enumerate(self.external_files):
+                    if meta['path'] == path:
+                        self.external_files.pop(i)
+                        break
             self._top.closeSession()
             self._top = None
 
@@ -331,7 +343,7 @@ class NPSScomponent(Component):
                        directory, exc.strerror)
 
         if is_reload:
-            self.info('Reloading session in %s', os.getcwd())
+            self.info('Reloading session in %s', cwd)
         arglist = self._generate_arglist()
         if self.output_filename:
             if not '-singleStream' in arglist:
@@ -343,7 +355,7 @@ class NPSScomponent(Component):
             self._top.cout.append = is_reload
             self._top.cout.filename = self.output_filename
             if is_reload:
-                msg = '\nReloading session in '+os.getcwd()+'\n'
+                msg = '\nReloading session in '+cwd+'\n'
                 if self.model_filename:
                     msg += 'Model filename '+self.model_filename+'\n'
                 self._top.cout.println(msg)
@@ -352,18 +364,19 @@ class NPSScomponent(Component):
         if self.model_filename:
             # Parse NPSS model.
             self._top.parseFile(self.model_filename)
-            # Add any *local* model input files to external_files list.
-            cwd = os.getcwd()+'/'
+            # Add non-NPSS distribution input files to external_files list.
             paths = self._top.inputFileList
             paths.sort()
             for path in paths:
+                if not path or path.startswith(os.environ['NPSS_TOP']):
+                    continue
                 if path.startswith(cwd):
                     path = path[len(cwd):]
-                    for meta in self.external_files:
-                        if meta['path'] == path:
-                            break
-                    else:
-                        self.external_files.append({'path':path, 'input':True})
+                for meta in self.external_files:
+                    if meta['path'] == path:
+                        break
+                else:
+                    self.external_files.append({'path':path, 'input':True})
 
         if is_reload:
             # Need to restore input values.
@@ -516,18 +529,18 @@ class NPSScomponent(Component):
                 continue
 
             try:
-                units = getattr(self, name+'.units')
+                npss_units = getattr(self, name+'.units')
             except AttributeError:
-                units = UNDEFINED
+                mdao_units = UNDEFINED
             else:
-                if units:
-                    if self.have_units_translation(units):
-                        units = self.get_units_translation(units)
+                if npss_units:
+                    if self.have_units_translation(npss_units):
+                        mdao_units = self.get_units_translation(npss_units)
                     else:
-                        self.warning("No units translation for '%s'" % units)
-                        units = UNDEFINED
+                        self.warning("No units translation for '%s'" % npss_units)
+                        mdao_units = UNDEFINED
                 else:
-                    units = UNDEFINED
+                    mdao_units = UNDEFINED
 
             try:
                 doc = getattr(self, name+'.description')
@@ -539,7 +552,7 @@ class NPSScomponent(Component):
 
             # Primitive method to create correct type.
             if typ == 'real':
-                dobj = Float(name, self, iostat, doc=doc, units=units)
+                dobj = Float(name, self, iostat, doc=doc, units=mdao_units)
             elif typ == 'int':
                 dobj = Int(name, self, iostat, doc=doc)
             elif typ == 'string':
@@ -569,23 +582,18 @@ class NPSScomponent(Component):
 
         return super(NPSScomponent, self).make_public(new_info)
 
-    def have_units_translation(self, npss_units):
+    @staticmethod
+    def have_units_translation(npss_units):
         """ Return True if we can translate npss_units. """
-        try:
-            units = self.get_units_translation(npss_units)
-            return units is not UNDEFINED
-        except KeyError:
-            return False
+        return units.have_translation(npss_units)
 
     @staticmethod
     def get_units_translation(npss_units):
         """ Return translation for npss_units. """
-        return UNITS_MAP[npss_units]
+        return units.get_translation(npss_units)
 
     @staticmethod
     def set_units_translation(npss_units, mdao_units):
         """ Set translation for npss_units. """
-        assert isinstance(npss_units, basestring)
-        assert isinstance(mdao_units, basestring)
-        UNITS_MAP[npss_units] = mdao_units
+        return units.set_translation(npss_units, mdao_units)
 
