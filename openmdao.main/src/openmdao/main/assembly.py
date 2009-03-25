@@ -192,7 +192,8 @@ class Assembly(Component):
                     self.error("cannot transfer file from '%s' to '%s': %s",
                                '.'.join(outtuple[:2]),
                                '.'.join((incomp.name, invarname)), str(exc))
-                    return False
+                    raise exc
+                    #return False
                 finally:
                     incomp.push_dir(incomp.get_directory())
             else:
@@ -203,7 +204,8 @@ class Assembly(Component):
                     self.error("cannot set '%s' from '%s': %s",
                                '.'.join((incomp.name, invarname)),
                                '.'.join(outtuple[:2]), str(exc))
-                    return False
+                    raise exc
+                    #return False
         return True
 
     @staticmethod

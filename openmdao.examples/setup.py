@@ -24,6 +24,7 @@ setup(name='openmdao.examples',
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
+         'setuptools'
       ],
       entry_points="""
       # -*- Entry points: -*-
