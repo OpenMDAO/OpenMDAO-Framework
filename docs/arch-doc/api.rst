@@ -41,42 +41,61 @@ they should give a good indication of our intent.
             
     def remove_child(name):
             """Remove the specified child from this container and remove any
-            Variable objects from _pub that reference that child."""
-
-    def create (typ_name, name, version=None, factory=None):
-            """Create an object with the given type and the given name 
-            within this Container."""
-        
-    def delete (name):
-            """Remove the named object from this container and notify any
-            observers"""
+            Variable objects from _pub that reference that child. Notify any
+            observers."""
 
     def contains (path):
             """Return True if the child specified by the given dotted path
             name is publicly accessibly and is contained in this Container. 
             """
         
-    def get_objs_by_type (typ, recurse=False, attrdict):
+    def create (type_name, name, version=None, server=None, private=False,
+                res_desc=None):
+            """Create an object with the given type and the given name 
+            within this Container. Returns the new object."""
+        
+    def get (name):
+        """Return any public object specified by the given 
+        path, which may contain '.' characters.  
+        
+        Returns the value specified by the name. This will either be the value
+        of a Variable or some attribute of a Variable.
+        
+        """
+
+    def getvar (name):
+        """Return the public Variable specified by the given  path, which may
+        contain '.' characters.  
+        
+        Returns the specified Variable object.
+        """
+
+    def set (name, value, index=None):
+        """Set the value of the data object specified by the  given path, which
+        may contain '.' characters.  If path specifies a Variable, then its
+        value attribute will be set to the given value, subject to validation
+        and  constraints. index, if not None, should be a list of ints, at
+        most one for each array dimension of the target value.
+        
+        """ 
+
+    def setvar (name, varobj):
+        """Set the value of a Variable in this Container with another Variable.
+        This differs from setting to a simple value, because the destination
+        Variable can use info from the source Variable to perform conversions
+        if necessary, as in the case of Float Variables with differing units.
+        """
+
+    def get_objs (iface, recurse=False, attrdict):
             """Return a list of objects of the specified type that also have
             attributes with values that match those passed in the attrdict
-            dictionary. If type is an Interface, then a list of objects providing
-            that interface will be returned."""
+            dictionary. If type is an Interface, then a list of objects 
+            providing that interface will be returned.
+            """
 
     def get_pathname ():
             """Return the name (dot delimited) that uniquely
             identifies this object's location within a hierarchy of IContainers"""
-
-    def get (name):
-            """Return the value of a public Variable."""
-
-    def getvar (name):
-            """Return a public Variable."""
-
-    def set (name, value):
-            """Set the value of a public variable"""
-
-    def setvar (name, varobj):
-            """Set the value of a public Variable to the value of the Variable var."""
 
     def save (out, format=constants.SAVE_CPICKLE):
             """Save the state of this object and its children to the given 
