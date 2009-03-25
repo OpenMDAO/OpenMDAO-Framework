@@ -8,7 +8,7 @@ from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.exceptions import ConstraintError
 
-from vehicle import Vehicle
+from openmdao.examples.engine_design.vehicle import Vehicle
 
 class Sim_Vehicle(Component):
     def __init__(self, name, parent=None, doc=None, directory=''):
@@ -157,12 +157,14 @@ class Sim_Vehicle(Component):
         return RUN_OK
         
     
-if __name__ == "__main__": 
-    
+def test_it():    
     z = Sim_Vehicle("New")  
     z.vehicle = Vehicle("Test_Vehicle")
     z.execute()
     print "Gear:", z.vehicle.CurrentGear
     print "Time:", z.AccelTime
     
+if __name__ == "__main__": 
+    test_it()
+
 # End sim_vehicle.py        
