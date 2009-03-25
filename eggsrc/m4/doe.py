@@ -13,10 +13,9 @@ import mool.Optimization.DOE
 from openmdao.main import Int, String, Case, ListCaseIterator
 from openmdao.main.component import RUN_FAILED
 from openmdao.main.variable import INPUT
+from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
-from fakes import FakeROSE
-
-class DOE(FakeROSE):
+class DOE(CaseIteratorDriver):
     """ M4 Design Of Experiments driver. """
 
     def __init__(self, name='M4_DOE', parent=None):
@@ -24,7 +23,7 @@ class DOE(FakeROSE):
         self.design_variables = []    # List of (name, min, max) tuples.
         self.response_variables = []  # List of names.
 
-        # No 'Option' variable (yet?).
+        # No 'Option' variables yet.
         String('type', self, INPUT, default='ccd',
                doc='Type of experiment design.')
 
