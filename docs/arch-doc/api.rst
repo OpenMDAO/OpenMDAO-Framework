@@ -97,18 +97,19 @@ they should give a good indication of our intent.
             """Return the name (dot delimited) that uniquely
             identifies this object's location within a hierarchy of IContainers"""
 
-    def save (out, format=constants.SAVE_CPICKLE):
+    def save (out, format):
             """Save the state of this object and its children to the given 
-            output stream. Pure Python classes generally won't need to 
+            output stream using the specified format ('cPickle','pickle',or
+            'yaml'). Pure Python classes generally won't need to 
             override this because the base class version will suffice, but
             Python extension classes will have to override. The format
             can be supplied in case something other than cPickle is needed."""
 
-    def load (input, format=constants.SAVE_CPICKLE):
-            """Replace the current object in the hierarchy with the object
-            loaded from the input stream. Pure Python classes generally 
-            won't need to override this, but extensions will. The format
-            can be supplied in case something other than cPickle is needed."""
+    def load (input, format):
+            """Load an object of this type from the input stream using the
+            specified format. Pure python  classes generally won't need to
+            override this, but extensions will.  The format can be supplied in
+            case something other than cPickle is  needed."""
 
     def config_from_obj (obj):
             """This is intended to allow a newer version of a component to
@@ -131,10 +132,8 @@ they should give a good indication of our intent.
 
     state =  Attribute('the current state of this object(UNKNOWN,IDLE,RUNNING,WAITING)')
 
-    resource_desc = Attribute('a dict containing key-value pairs that are used to select a ResourceAllocator')
 
-
-    def add_socket (name, iface, desc=''):
+    def add_socket (name, iface, doc=''):
             """Specify a named placeholder for a component with the given
             interface."""
 
@@ -144,15 +143,6 @@ they should give a good indication of our intent.
     def post_config ():
             """Perform any final initialization after configuration has been set,
             and verify that the configuration is correct."""
-
-    def update_inputs ():
-            """Fetch input variables."""
-
-    def execute ():
-            """Perform calculations or other actions."""
-
-    def update_outputs ():
-            """Update output variables"""
 
     def run ():
             """Run this object. This should include fetching input variables,
@@ -164,12 +154,15 @@ they should give a good indication of our intent.
 
     def restart (input):
             """Restore state using a checkpoint file. The checkpoint file is typically a delta 
-	    from a full saved state file."""
+	        from a full saved state file."""
 
     def step ():
             """For Components that contain Workflows (e.g., Assembly), this will run
             one Component in the Workflow and return. For simple components, it is the
             same as run()."""
+
+    def stop (self):
+        """ Stop this component. """
 
     def require_gradients (varname, gradients):
             """Requests that the component be able to provide (after execution) a
@@ -212,10 +205,13 @@ they should give a good indication of our intent.
 
 ::
 
-    class IDriver (Interface):
-        """Executes a Workflow until certain criteria are met."""
+    class IDriver (IComponent):
+        """Executes a Workflow until certain criteria are met. Just a 
+        marker interface for now, its list of members is the same as
+        IComponent, but an IDriver is allowed to do some things that
+        an IComponent is not, e.g., introduce circular dependencies in
+        a dataflow graph."""
 
-        workflow = Attribute('the object that orders execution of components that are driven by this driver')
 	 	 
 -------
 
@@ -226,11 +222,14 @@ they should give a good indication of our intent.
 ::
 
     class IFactory (Interface):
-        """An object that creates and returns objects based on a type string"""
+        """An object that creates and returns objects based on a type string
+        and some other optional arguments."""
 
-    def create (type):
-            """Create an object of the specified type and return it, or a proxy
-            to it if it resides in another process."""
+    def create (typename, name=None, version=None, server=None, res_desc=None):
+        """Return an object of type typename, using the specified
+        package version, server location, and resource description.
+        
+        """
 
 -------
 
@@ -243,8 +242,8 @@ they should give a good indication of our intent.
 
     class IGeomQueryObject (Interface):
         """A Component representing an object having physical dimensions and
-        shape that can be queried for geometric information like surfaces, curves
-        etc."""
+        shape that can be queried for geometric information like surfaces,
+        curves etc."""
 
         modelID = Attribute('Identifies the model. This can either be a part or an assembly of parts')
 
@@ -258,13 +257,13 @@ they should give a good indication of our intent.
 .. index:: IGeomCreator
 
 
-.. _IGeomCreator:
+.. _IGeomModifier:
 
 ::
 
-    class IGeomCreator (Interface):
-        """An interface to a geometry kernel that allows new geometry to be
-        created."""
+    class IGeomModifier (Interface):
+        """An interface to a geometry kernel that allows geometry to be
+        created and modified."""
 
         # API to be determined
                 
@@ -304,7 +303,7 @@ they should give a good indication of our intent.
 
 ::
 
-    class IVariable (Interface):
+    class IVariable (IContainer):
         """ An object representing data to be passed between Components within
         the framework. It will perform validation when assigned to another
         IVariable. It can notify other objects when its value is modified."""
@@ -315,13 +314,14 @@ they should give a good indication of our intent.
 
     current = Attribute('if False, the value is not current')
 
-    def revert ():
+    def revert_to_default ():
         """ Return this Variable to its default value"""
 
-    def validate (variable):
-        """ Raise an exception if the assigned variable is not compatible"""
+    def validate_var (variable):
+        """ Raise an exception if the assigned IVariable object is not
+        compatible"""
 
-    def add_observer (obs_funct, *args, **metadata):
+    def add_observer (obs_funct, observer_funct):
         """ Add a function to be called when this variable is modified"""
 
     def notify_observers ():
