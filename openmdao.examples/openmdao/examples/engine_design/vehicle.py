@@ -131,10 +131,10 @@ class Vehicle(Assembly):
 
         # Vehicle Simulation Inputs
         Int('CurrentGear', self, INPUT, default=0,
-              doc='Gear Ratio in Fifth Gear')
+              doc='Current Gear')
         Float('Velocity', self, INPUT, units='mi/h', default=0.0,
               doc='Current Velocity of Vehicle')
-        Float('Throttle', self, INPUT, units=None, default=1.0, min_limit=0.1,
+        Float('Throttle', self, INPUT, units=None, default=1.0, min_limit=0.01,
               max_limit=1.0, doc='Throttle position (from low idle to wide open)')
 
         # Vehicle Simulation Outputs

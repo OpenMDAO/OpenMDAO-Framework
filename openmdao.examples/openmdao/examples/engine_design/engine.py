@@ -122,7 +122,7 @@ class Engine(Component):
         Div = self.Div*.001
         Liv = self.Liv*.001
         compRatio = self.compRatio
-        sparkAngle = self.sparkAngle
+        sparkAngle = self.sparkAngle*pi/180.0
         nCyl = self.nCyl
         IVO = self.IVO
         IVC = self.IVC
@@ -213,7 +213,7 @@ class Engine(Component):
             # Weibe Function
             #--------------------------------------------------------------
 
-            thetaSinceSpark = theta - sparkAngle*pi/180.0
+            thetaSinceSpark = theta - sparkAngle
 
             if thetaSinceSpark > 0:
 
@@ -349,4 +349,14 @@ class Engine(Component):
 
 # end engine.py        
 
-#z=Engine('TestEngine')
+if __name__ == "__main__": 
+    
+    z = Engine("Testing")
+    
+    import time
+    t1 = time.time()
+    
+    for jj in xrange(1,50):
+        z.execute()
+        
+    print "Elapsed time: ", time.time()-t1
