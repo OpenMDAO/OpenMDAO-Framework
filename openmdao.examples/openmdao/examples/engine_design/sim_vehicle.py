@@ -94,7 +94,7 @@ class Sim_Vehicle(Component):
             '''
         
         # Promote all design variables from the Vehicle assembly to Sim_Vehicle
-        # syntax here is temporary until socket interfaces are implemted.
+        # syntax here is temporary until socket interfaces are implemented.
         
         self.vehicle.stroke = self.stroke        
         self.vehicle.bore = self.bore        
