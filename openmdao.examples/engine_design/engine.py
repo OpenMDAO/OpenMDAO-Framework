@@ -116,18 +116,17 @@ class Engine(Component):
         thetastep = 1.0            # Simulation time stepsize (crank angle degrees)
 
         # Convert mm to m
-        stroke = self.stroke/1000
-        bore = self.bore/1000
-        conrod = self.conrod/1000
-        Div = self.Div/1000
-        Liv = self.Liv/1000
+        stroke = self.stroke*.001
+        bore = self.bore*.001
+        conrod = self.conrod*.001
+        Div = self.Div*.001
+        Liv = self.Liv*.001
         compRatio = self.compRatio
         sparkAngle = self.sparkAngle
         nCyl = self.nCyl
         IVO = self.IVO
         IVC = self.IVC
         RPM = self.RPM
-        throttle = self.Throttle       
 
         #--------------------------------------------------------------
         # Calculations independent of crank angle
@@ -135,9 +134,9 @@ class Engine(Component):
 
         disp = .25*pi*bore*bore*stroke*nCyl
         l_a = conrod/(.5*stroke)          # a=half the stroke
-        n = RPM/1000.0
+        n = RPM*.001
         t_to_theta = RPM/60.0*2.0*pi
-        thetaStep *= pi/180.0
+        thetastep *= pi/180.0
 
         # Burn duration valid for speeds between 1000 and 6000 RPM (Eq 3-6)
         burnDuration = (-1.6189*n*n + 19.886*n + 39.951)*pi/180.0
@@ -147,10 +146,10 @@ class Engine(Component):
 
         # Residual Mass
         # Exhaust gas (Mw = 30.4 g/mol, P = 1.52 atm)
-        m_res = 1.52*(101.325)*30.4*disp/(compRatio-1.0)/(T_exh*Ru)
+        m_res = 1.52*(101.325)*30.4*disp/((compRatio-1.0)*T_exh*Ru)
 
         # Mean Piston Speed
-        Cm = 2*stroke*RPM/60
+        Cm = 2*stroke*RPM/60.0
 
         # Frictional Loss Factor valid for speeds between 1000 and 6000 RPM (Eq 3-19)
         Cf = -0.019738*n + 0.986923
@@ -159,14 +158,14 @@ class Engine(Component):
         C_heat = -0.043624*n + 1.2953
 
         # Pressure ratio for choked flow in intake valve
-        Pratio_crit = pow( 2/(k+1), k/(k-1) )
+        Pratio_crit = (2/(k+1))**(k/(k-1))
 
         # Fuel-Air Molecular Weight
         #Mw = (1.0 + AFR)/(AFR*MwAir + 1.0/MwFuel)
         Mw = (AFR*MwAir + MwFuel)/(1.0+AFR)
 
         #Hohenberg Correlation: crank-angle independent portion
-        h_ind = 130.0*pow(disp, -0.06)*pow(Cm+1.4, 0.8)
+        h_ind = 130.0 * disp**(-0.06) * (Cm+1.4)**0.8
 
         # FMEP (frictional Losses) (Eq 3-22)
         FMEP = .05*n*n + .15*n + .97
@@ -183,7 +182,7 @@ class Engine(Component):
             '''Generator: angles from -360 to 180 deg'''
             angle = -2.0*pi
             while angle < pi:
-                angle += thetaStep
+                angle += thetastep
                 yield angle
 
         # Initial value for all integration variables (and their dependents)
@@ -220,44 +219,37 @@ class Engine(Component):
 
                 # Weibe Function for mass fraction burn (Eq 3-4)
                 # weibe = 1.0 - exp( -5.0*pow( thetaSinceSpark/burnDuration, 3 ) )
-                dWeibe_dtheta = - exp( -5.0*pow( thetaSinceSpark/burnDuration, 3 ) )*(
-                    -5.0*3.0*pow( thetaSinceSpark/burnDuration, 2 )/burnDuration)
+                dWeibe_dtheta = - exp( -5.0*(thetaSinceSpark/burnDuration)**3.0 )*(
+                    -15.0*(thetaSinceSpark/burnDuration)**2.0)/burnDuration
 
+                #--------------------------------------------------------------
+                # Calculate Total Heat Input
+                #--------------------------------------------------------------
+    
+                # Total Heat Input. (Eq 3-7)
+                # Mass_in is integrated as we go from IVO to IVC 
+                # .95 because not all mass is burned.
+                Q = .95*mass_in*Hu/(1.0+AFR)
+    
+                #--------------------------------------------------------------
+                # Calculate Heat Release
+                #--------------------------------------------------------------
+    
+                # Heat Release. (Eq 3-5)
+                dQ_dtheta = Q*dWeibe_dtheta
+    
             else:
-                weibe = 0.0
-                dWeibe_dtheta = 0.0
-
-            #--------------------------------------------------------------
-            # Calculate Total Heat Input
-            #--------------------------------------------------------------
-
-            # Total Heat Input. (Eq 3-7)
-            # Mass_in is integrated as we go from IVO to IVC 
-            # .95 because not all mass is burned.
-            Q = .95*mass_in*Hu/(1.0+AFR)
-
-            #--------------------------------------------------------------
-            # Calculate Heat Release
-            #--------------------------------------------------------------
-
-            # Heat Release. (Eq 3-5)
-            dQ_dtheta = Q*dWeibe_dtheta
+                dQ_dtheta = 0.0
 
             #--------------------------------------------------------------
             # Cylinder Pressure Model
             #--------------------------------------------------------------
 
             # Cylinder Pressure. (Eq 3-3)
-            def dP_dtheta(P_in, T_in):
-                '''Function for integration'''
-                return (k-1)/V*(dQ_dtheta - Qloss) - k*P_in/V*dV_dtheta
-
-            P = P+dP_dtheta(P,theta)*thetastep
-            #P_out = odeint( dP_dtheta, P, [ theta-thetastep, theta ] )
-            #P = P_out[1][0]
+            P += (((k-1)*(dQ_dtheta - Qloss) - k*P*dV_dtheta)/V)*thetastep
 
             # Calculate mass flow only when intake valve is open
-            if theta <= (IVC-180.0)*pi/180.0:
+            if theta <= (IVC-180.0)*pi/180.0 and theta >= (IVO-360.0)*pi/180.0:
 
                 #--------------------------------------------------------------
                 # Valve Lift, Area, and Discharge Coefficient
@@ -281,24 +273,18 @@ class Engine(Component):
                 # Find pressure ratio for intake flow
                 #--------------------------------------------------------------
     
-                if theta <= (IVC-180.0)*pi/180.0 and theta >= (IVO-360.0)*pi/180.0:
-    
-                    # Note 5.5 is a fudge factor that still needs investigation.
-                    Pratio = (P+5.5*Pmix)/P0
-    
-                    # Pratio>1 means outflow
-                    if Pratio>1:
-                        Pratio = 1.0/Pratio
-                        flow_direction = -1.0
-                    else:
-                        flow_direction = 1.0
-    
-                    Pratio = max( Pratio, Pratio_crit )
-    
+                # Note 5.5 is a fudge factor that still needs investigation.
+                Pratio = (P+5.5*Pmix)/P0
+
+                # Pratio>1 means outflow
+                if Pratio>1:
+                    Pratio = 1.0/Pratio
+                    flow_direction = -1.0
                 else:
-                    Pratio = 0.0
-                    flow_direction = 0.0
-    
+                    flow_direction = 1.0
+
+                Pratio = max( Pratio, Pratio_crit )
+
                 #--------------------------------------------------------------
                 # Calculate Intake Mass Flow
                 #--------------------------------------------------------------
@@ -306,15 +292,10 @@ class Engine(Component):
                 # Mass flow rate. (Eq 3-15)
                 # Note, 3-15 is wrong, or an approximation or something
                 # Changed to standard orifice equation for better results
-                def dm_dtheta(m_in, T_in):
-                    '''Function for integration'''
-                    return throttle*flow_direction*CD*Ar*P0/t_to_theta*( 
-                        2.0*1000.0*Mw/(Ru*T0) * (k/(k-1)) *
+                dm_dtheta = self.Throttle*flow_direction*CD*Ar*P0/t_to_theta*( 
+                        2000.0*Mw/(Ru*T0) * (k/(k-1)) *
                         (Pratio**(2.0/k) - Pratio**((k+1.0)/k)) )**.5
-    
-                mass_in = mass_in + dm_dtheta(mass_in,theta)*thetastep
-                #mass = odeint( dm_dtheta, mass_in, [ theta-thetastep, theta ] )
-                #mass_in = mass[1][0]
+                mass_in += dm_dtheta*thetastep
 
 
             #--------------------------------------------------------------
@@ -332,7 +313,7 @@ class Engine(Component):
             #--------------------------------------------------------------
 
             # Hohenberg Correlation. (Eq 3-10)
-            h = h_ind*pow(P, 0.8)*pow(Tg, -0.4)
+            h = h_ind * P**0.8 * Tg**(-0.4)
 
             #--------------------------------------------------------------
             # Calculate Heat Loss
@@ -346,12 +327,7 @@ class Engine(Component):
             #--------------------------------------------------------------
 
             # IMEP (Eq 3-23)
-            def IMEP(p_in, theta_in):
-                '''Function for integration'''
-                return (P+Pmix)*dV_dtheta
-            pmi = pmi + IMEP(pmi,theta)*pi/180.0*thetastep
-            #pmi_out = odeint( IMEP, pmi, [ theta-pi/180.0*thetastep, theta ] )
-            #pmi = pmi_out[1][0]
+            pmi += (P+Pmix)*dV_dtheta*thetastep
 
 
         # Effective Pressure (Eq 3-24)

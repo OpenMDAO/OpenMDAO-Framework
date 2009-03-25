@@ -209,7 +209,7 @@ class Vehicle(Assembly):
         
 if __name__ == "__main__":        
     z = Vehicle("Testing")        
-    z.CurrentGear = 4
+    z.CurrentGear = 1
     z.Velocity = 60.0*(26.8224/60.0)
     z.Throttle = .2
     z.execute()
