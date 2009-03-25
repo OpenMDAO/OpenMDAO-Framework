@@ -8,7 +8,7 @@ import numpy.random
 
 from openmdao.main import Assembly, Component, Case, ListCaseIterator, \
                           ArrayVariable, Float
-from openmdao.main.component import RUN_OK
+from openmdao.main.component import RUN_OK, RUN_FAILED
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
@@ -76,6 +76,50 @@ class DriverTestCase(unittest.TestCase):
                              rosen_suzuki(case.inputs[0][2]))
             self.assertEqual(results[i].outputs[1][2],
                              sum(case.inputs[1][2]))
+
+    def test_noinput(self):
+        cases = []
+        for i in range(10):
+            inputs = [('dc.x', None, numpy.random.normal(size=4)),
+                      ('dc.z', None, numpy.random.normal(size=10))]
+            outputs = [('dc.rosen_suzuki', None, None),
+                       ('dc.sum_y', None, None)]
+            cases.append(Case(inputs, outputs))
+
+        self.model.driver.iterator = ListCaseIterator(cases)
+        results = []
+        self.model.driver.outerator = results
+
+        status = self.model.run()
+        self.assertEqual(status, RUN_OK)
+
+        self.assertEqual(len(results), len(cases))
+        for i, case in enumerate(cases):
+            self.assertEqual(results[i].status, RUN_FAILED)
+            self.assertEqual(results[i].msg,
+                             "Model.driver: Exception setting 'dc.z': Model.dc: object has no attribute 'z'")
+
+    def test_nooutput(self):
+        cases = []
+        for i in range(10):
+            inputs = [('dc.x', None, numpy.random.normal(size=4)),
+                      ('dc.y', None, numpy.random.normal(size=10))]
+            outputs = [('dc.rosen_suzuki', None, None),
+                       ('dc.sum_z', None, None)]
+            cases.append(Case(inputs, outputs))
+
+        self.model.driver.iterator = ListCaseIterator(cases)
+        results = []
+        self.model.driver.outerator = results
+
+        status = self.model.run()
+        self.assertEqual(status, RUN_OK)
+
+        self.assertEqual(len(results), len(cases))
+        for i, case in enumerate(cases):
+            self.assertEqual(results[i].status, RUN_FAILED)
+            self.assertEqual(results[i].msg,
+                             "Model.driver: Exception getting 'dc.sum_z': Model.dc: object has no attribute 'sum_z'")
 
 
 if __name__ == "__main__":
