@@ -267,7 +267,7 @@ class Container(HierarchyMember):
         obj.setvar(name, variable)        
 
         
-    def get_objs(self, matchfunct, recurse=False, ):
+    def get_objs(self, matchfunct, recurse=False):
         """Return a list of objects that return a value of True when passed
         to matchfunct.
         
@@ -360,13 +360,3 @@ class Container(HierarchyMember):
             child.pre_delete()
         pass
 
-
-def _matches(obj, dct):
-    """ Return True if obj matches all items in dct. """
-    for key, val in dct.items():
-        try:
-            if getattr(obj, key) != val:
-                return False
-        except AttributeError:
-            return False
-    return True

@@ -8,7 +8,7 @@ By default, your top level ``buildout/bin`` directory will contain a script
 called ``test`` that uses a Python package called `nose
 <http://somethingaboutorange.com/mrl/projects/nose>`_ to run all of the unit
 tests for any package that you specify. For example, to run all of the unit
-tests in the openmdao package, do the following:
+tests in the openmdao namespace package, do the following:
 
 ::
 
@@ -18,12 +18,21 @@ which should generate output something like this:
 
 ::
 
-   ..
+   ......................................................................
+   .................................................
    ----------------------------------------------------------------------
-   Ran 95 tests in 0.888s
+   Ran 119 tests in 0.888s
 
    OK
 
+To run the full test suite, which includes the openmdao namespace package and
+other packages from eggsrc, type:
+
+::
+
+    bin/test --all
+    
+    
 To get a list of options available with ``bin/test``, type ``bin/test --help``
 from the ``buildout`` directory.
    
@@ -189,4 +198,4 @@ Test File Locations
 Unit tests are typically placed in a ``test`` subdirectory within the
 directory where the source code being tested is located.  For example,
 the test files for ``openmdao.main`` are located in
-``openmdao.main/openmdao/main/test``.
+``openmdao.main/src/openmdao/main/test``.
