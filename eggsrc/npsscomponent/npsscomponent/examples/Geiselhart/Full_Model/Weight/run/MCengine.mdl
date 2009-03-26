@@ -42,11 +42,6 @@ void mcRun() {
    int i;
    cout << "\nWeight MCengine mcRun() executing in " << getcwd() << endl;
 
-   LocalOutFileStream out;
-   out.open("NPSS_WATE.textRep");
-   out << .getTextRep(TRUE);
-   out.close();
-
    for (i = 0 ; i < mcInputs.entries() ; ++i) {
      cout << "    " << mcInputs[i] << " = " << mcInputs[i]->value << endl;
    }

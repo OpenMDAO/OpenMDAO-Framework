@@ -41,55 +41,75 @@ they should give a good indication of our intent.
             
     def remove_child(name):
             """Remove the specified child from this container and remove any
-            Variable objects from _pub that reference that child."""
-
-    def create (typ_name, name, version=None, factory=None):
-            """Create an object with the given type and the given name 
-            within this Container."""
-        
-    def delete (name):
-            """Remove the named object from this container and notify any
-            observers"""
+            Variable objects from _pub that reference that child. Notify any
+            observers."""
 
     def contains (path):
             """Return True if the child specified by the given dotted path
             name is publicly accessibly and is contained in this Container. 
             """
         
-    def get_objs_by_type (typ, recurse=False, attrdict):
+    def create (type_name, name, version=None, server=None, private=False,
+                res_desc=None):
+            """Create an object with the given type and the given name 
+            within this Container. Returns the new object."""
+        
+    def get (name):
+        """Return any public object specified by the given 
+        path, which may contain '.' characters.  
+        
+        Returns the value specified by the name. This will either be the value
+        of a Variable or some attribute of a Variable.
+        
+        """
+
+    def getvar (name):
+        """Return the public Variable specified by the given  path, which may
+        contain '.' characters.  
+        
+        Returns the specified Variable object.
+        """
+
+    def set (name, value, index=None):
+        """Set the value of the data object specified by the  given path, which
+        may contain '.' characters.  If path specifies a Variable, then its
+        value attribute will be set to the given value, subject to validation
+        and  constraints. index, if not None, should be a list of ints, at
+        most one for each array dimension of the target value.
+        
+        """ 
+
+    def setvar (name, varobj):
+        """Set the value of a Variable in this Container with another Variable.
+        This differs from setting to a simple value, because the destination
+        Variable can use info from the source Variable to perform conversions
+        if necessary, as in the case of Float Variables with differing units.
+        """
+
+    def get_objs (iface, recurse=False, attrdict):
             """Return a list of objects of the specified type that also have
             attributes with values that match those passed in the attrdict
-            dictionary. If type is an Interface, then a list of objects providing
-            that interface will be returned."""
+            dictionary. If type is an Interface, then a list of objects 
+            providing that interface will be returned.
+            """
 
     def get_pathname ():
             """Return the name (dot delimited) that uniquely
             identifies this object's location within a hierarchy of IContainers"""
 
-    def get (name):
-            """Return the value of a public Variable."""
-
-    def getvar (name):
-            """Return a public Variable."""
-
-    def set (name, value):
-            """Set the value of a public variable"""
-
-    def setvar (name, varobj):
-            """Set the value of a public Variable to the value of the Variable var."""
-
-    def save (out, format=constants.SAVE_CPICKLE):
+    def save (out, format):
             """Save the state of this object and its children to the given 
-            output stream. Pure Python classes generally won't need to 
+            output stream using the specified format ('cPickle','pickle',or
+            'yaml'). Pure Python classes generally won't need to 
             override this because the base class version will suffice, but
             Python extension classes will have to override. The format
             can be supplied in case something other than cPickle is needed."""
 
-    def load (input, format=constants.SAVE_CPICKLE):
-            """Replace the current object in the hierarchy with the object
-            loaded from the input stream. Pure Python classes generally 
-            won't need to override this, but extensions will. The format
-            can be supplied in case something other than cPickle is needed."""
+    def load (input, format):
+            """Load an object of this type from the input stream using the
+            specified format. Pure python  classes generally won't need to
+            override this, but extensions will.  The format can be supplied in
+            case something other than cPickle is  needed."""
 
     def config_from_obj (obj):
             """This is intended to allow a newer version of a component to
@@ -112,10 +132,8 @@ they should give a good indication of our intent.
 
     state =  Attribute('the current state of this object(UNKNOWN,IDLE,RUNNING,WAITING)')
 
-    resource_desc = Attribute('a dict containing key-value pairs that are used to select a ResourceAllocator')
 
-
-    def add_socket (name, iface, desc=''):
+    def add_socket (name, iface, doc=''):
             """Specify a named placeholder for a component with the given
             interface."""
 
@@ -125,15 +143,6 @@ they should give a good indication of our intent.
     def post_config ():
             """Perform any final initialization after configuration has been set,
             and verify that the configuration is correct."""
-
-    def update_inputs ():
-            """Fetch input variables."""
-
-    def execute ():
-            """Perform calculations or other actions."""
-
-    def update_outputs ():
-            """Update output variables"""
 
     def run ():
             """Run this object. This should include fetching input variables,
@@ -145,12 +154,15 @@ they should give a good indication of our intent.
 
     def restart (input):
             """Restore state using a checkpoint file. The checkpoint file is typically a delta 
-	    from a full saved state file."""
+	        from a full saved state file."""
 
     def step ():
             """For Components that contain Workflows (e.g., Assembly), this will run
             one Component in the Workflow and return. For simple components, it is the
             same as run()."""
+
+    def stop (self):
+        """ Stop this component. """
 
     def require_gradients (varname, gradients):
             """Requests that the component be able to provide (after execution) a
@@ -193,10 +205,13 @@ they should give a good indication of our intent.
 
 ::
 
-    class IDriver (Interface):
-        """Executes a Workflow until certain criteria are met."""
+    class IDriver (IComponent):
+        """Executes a Workflow until certain criteria are met. Just a 
+        marker interface for now, its list of members is the same as
+        IComponent, but an IDriver is allowed to do some things that
+        an IComponent is not, e.g., introduce circular dependencies in
+        a dataflow graph."""
 
-        workflow = Attribute('the object that orders execution of components that are driven by this driver')
 	 	 
 -------
 
@@ -207,11 +222,14 @@ they should give a good indication of our intent.
 ::
 
     class IFactory (Interface):
-        """An object that creates and returns objects based on a type string"""
+        """An object that creates and returns objects based on a type string
+        and some other optional arguments."""
 
-    def create (type):
-            """Create an object of the specified type and return it, or a proxy
-            to it if it resides in another process."""
+    def create (typename, name=None, version=None, server=None, res_desc=None):
+        """Return an object of type typename, using the specified
+        package version, server location, and resource description.
+        
+        """
 
 -------
 
@@ -224,8 +242,8 @@ they should give a good indication of our intent.
 
     class IGeomQueryObject (Interface):
         """A Component representing an object having physical dimensions and
-        shape that can be queried for geometric information like surfaces, curves
-        etc."""
+        shape that can be queried for geometric information like surfaces,
+        curves etc."""
 
         modelID = Attribute('Identifies the model. This can either be a part or an assembly of parts')
 
@@ -239,13 +257,13 @@ they should give a good indication of our intent.
 .. index:: IGeomCreator
 
 
-.. _IGeomCreator:
+.. _IGeomModifier:
 
 ::
 
-    class IGeomCreator (Interface):
-        """An interface to a geometry kernel that allows new geometry to be
-        created."""
+    class IGeomModifier (Interface):
+        """An interface to a geometry kernel that allows geometry to be
+        created and modified."""
 
         # API to be determined
                 
@@ -285,7 +303,7 @@ they should give a good indication of our intent.
 
 ::
 
-    class IVariable (Interface):
+    class IVariable (IContainer):
         """ An object representing data to be passed between Components within
         the framework. It will perform validation when assigned to another
         IVariable. It can notify other objects when its value is modified."""
@@ -296,13 +314,14 @@ they should give a good indication of our intent.
 
     current = Attribute('if False, the value is not current')
 
-    def revert ():
+    def revert_to_default ():
         """ Return this Variable to its default value"""
 
-    def validate (variable):
-        """ Raise an exception if the assigned variable is not compatible"""
+    def validate_var (variable):
+        """ Raise an exception if the assigned IVariable object is not
+        compatible"""
 
-    def add_observer (obs_funct, *args, **metadata):
+    def add_observer (obs_funct, observer_funct):
         """ Add a function to be called when this variable is modified"""
 
     def notify_observers ():

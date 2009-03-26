@@ -17,7 +17,7 @@ class Transmission(Component):
             Ratio3              # Gear Ratio in Third Gear
             Ratio4              # Gear Ratio in Fourth Gear
             Ratio5              # Gear Ratio in Fifth Gear
-            FinalDriveRatio5    # Final Drive Ratio
+            FinalDriveRatio     # Final Drive Ratio
             TireCircumference   # Circumference of tire (inches)
             
             # Simulation inputs
@@ -44,7 +44,7 @@ class Transmission(Component):
               doc='Gear Ratio in Fourth Gear')
         Float('Ratio5', self, INPUT, units=None, default=0.72,
               doc='Gear Ratio in Fifth Gear')
-        Float('FinalDriveRatio', self, INPUT, units=None, default=2.00,
+        Float('FinalDriveRatio', self, INPUT, units=None, default=2.80,
               doc='Final Drive Ratio')
         Float('TireCirc', self, INPUT, units='inch', default=75.0,
               doc='Circumference of tire (inches)')
@@ -67,14 +67,14 @@ class Transmission(Component):
                   self.Ratio5]
         
         Gear = self.CurrentGear
-        if Gear > 0 and self.Velocity > 0.0 :
-            self.RPM = (Ratios[Gear]*self.FinalDriveRatio*5280.0*12.0*self.Velocity
-                        )/(60.0*self.TireCirc)
-            self.TorqueRatio = Ratios[Gear]*self.FinalDriveRatio
+        
+        self.RPM = (Ratios[Gear]*self.FinalDriveRatio*5280.0*12.0*self.Velocity
+                    )/(60.0*self.TireCirc)
+        self.TorqueRatio = Ratios[Gear]*self.FinalDriveRatio
             
-        else:
-            self.RPM = 0.0
-            self.TorqueRatio = 0.0
+        # At low speeds, hold engine speed at 1000 RPM and feather the clutch
+        if self.RPM < 1000.0 and self.CurrentGear == 1 :
+            self.RPM = 1000.0
             
         return RUN_OK
         

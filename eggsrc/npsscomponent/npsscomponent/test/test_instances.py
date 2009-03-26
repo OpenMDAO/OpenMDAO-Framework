@@ -4,6 +4,7 @@ Test of multiple NPSS instances.
 
 import os.path
 import pkg_resources
+import shutil
 import unittest
 
 from openmdao.main import Assembly, Component, \
@@ -164,6 +165,8 @@ class NPSSTestCase(unittest.TestCase):
         """ Called after each test in this class. """
         self.tla.NPSS_A.pre_delete()
         self.tla.NPSS_B.pre_delete()
+        shutil.rmtree(self.tla.NPSS_A.directory)
+        shutil.rmtree(self.tla.NPSS_B.directory)
         self.tla = None
 
     def test_connectivity(self):
@@ -210,6 +213,4 @@ class NPSSTestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     unittest.main()
-    #suite = unittest.TestLoader().loadTestsFromTestCase(NPSSTestCase)
-    #unittest.TextTestRunner(verbosity=2).run(suite)
 

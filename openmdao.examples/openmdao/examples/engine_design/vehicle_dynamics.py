@@ -38,7 +38,7 @@ class Vehicle_Dynamics(Component):
               doc='Vehicle Mass')
         Float('Cf', self, INPUT, units=None, default=0.01,
               doc='Friction Coefficient (proportional to W)')
-        Float('Cd', self, INPUT, units=None, default=0.36,
+        Float('Cd', self, INPUT, units=None, default=0.3,
               doc='Drag Coefficient (proportional to V**2)')
         Float('Area', self, INPUT, units='m**2', default=2.164,
               doc='Frontal area')
@@ -67,8 +67,8 @@ class Vehicle_Dynamics(Component):
         
         Mass = self.Mass_Vehicle + self.Mass_Engine
         
-        Friction = self.Cf*Mass
-        Drag = self.Cd*self.Area*self.Velocity*self.Velocity
+        Friction = self.Cf*Mass*9.8
+        Drag = .5*(1.225)*self.Cd*self.Area*self.Velocity*self.Velocity
         
         self.Acceleration = (Torque/TireRadius - Friction - Drag)/Mass
             

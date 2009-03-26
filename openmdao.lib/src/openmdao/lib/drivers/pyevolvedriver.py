@@ -4,6 +4,7 @@ __version__ = "0.1"
 
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main import Driver, ExprEvaluator, Int, Float, Bool, String, Wrapper
+from openmdao.main.component import RUN_OK
 
 from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
 from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
@@ -104,8 +105,8 @@ class pyevolvedriver(Driver):
         else:
             return self._objective.evaluate()     
 
-    def __init__(self,name,parent=None,desc=None): 
-        super(pyevolvedriver,self).__init__(name,parent,desc)
+    def __init__(self,name,parent=None,doc=None): 
+        super(pyevolvedriver,self).__init__(name,parent,doc)
 
         self.genome = GenomeBase.GenomeBase() #TODO: Mandatory Socket
         self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin
@@ -203,5 +204,5 @@ class pyevolvedriver(Driver):
         self.GA.evolve(freq_stats = self.get('best_individual'))
         self.best_individual = self.GA.bestIndividual()
 
-
+        return RUN_OK
 

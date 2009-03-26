@@ -37,7 +37,9 @@ def get_resource_files(dist, exList=None, incList=None, dirname=''):
     exlist = exList or []
     inclist = incList or ['*']
     
-    for res in dist.resource_listdir(dirname):
+    flist = dist.resource_listdir(dirname)
+        
+    for res in flist:
         if dirname != '':
             respath = '/'.join([dirname, res])
         else:
@@ -98,8 +100,15 @@ def pkg_sphinx_info(env,startdir, pkg, outfile, show_undoc=False, underline='-')
     names = list(get_resource_files(dist,['*__init__.py','*setup.py','*test_*.py'],
                                     ['*.py']))            
     names.sort()
+    
+    exdirs = ['build','examples']
+            
     for name in names:
-        mod_sphinx_info(name, outfile, show_undoc=show_undoc)
+        for ex in exdirs:
+            if  name.startswith('%s/' % ex) or '/%s/'%ex in name:
+                break
+        else:       
+            mod_sphinx_info(name, outfile, show_undoc=show_undoc)
 
 # TODO: add metadata info to doc page        
 #    for md,val in get_metadata(dist):

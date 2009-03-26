@@ -9,14 +9,14 @@ information written to it in addition to what's shown on screen.
 Known problems:
     - The components run, but since the port is only partial,
       the results are quite wrong.
-    - No file variables yet.
     - 'Design' variables are set as OUTPUTS and 'PropulsionData'
       variables are set as INPUTS.  This looks odd, but is neccessary
       until some more issues in the framework are ironed-out.
 """
 import os.path
 
-from openmdao.main import Assembly, Component, Container, Float, ArrayVariable
+from openmdao.main import Assembly, Component, Container, Float, \
+                          ArrayVariable, FileVariable
 from openmdao.main.component import RUN_OK
 from openmdao.main.variable import INPUT, OUTPUT
 
@@ -99,7 +99,7 @@ class FLOPSdata(Container):
     def __init__(self, name='FLOPS', parent=None):
         super(FLOPSdata, self).__init__(name, parent)
 
-#        File('engdeck', self, INPUT)
+        FileVariable('engdeck', self, INPUT, default='engdeck')
         Float('thrso', self, INPUT, default=0.)
         Float('weng',  self, INPUT, default=0.)
         Float('xnac',  self, INPUT, default=0.)
@@ -478,8 +478,8 @@ class Model(Assembly):
         self.connect('NPSS_WATE.engine.weight',
                      'PropulsionData.FLOPS.weng')
 
-#        self.connect(self.NPSS_FLOPS, 'engine.FLOPsheetStream_File',
-#                     self.PropulsionData, 'FLOPS.engdeck')
+        self.connect('NPSS_FLOPS.engine.FLOPsheetStream',
+                     'PropulsionData.FLOPS.engdeck')
 
         self.connect('NPSS_FLOPS.engine.PERF.Fn',
                      'PropulsionData.FLOPS.thrso')
