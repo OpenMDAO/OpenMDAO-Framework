@@ -21,8 +21,8 @@ def rosen_suzuki(x):
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
-    def __init__(self, name, parent):
-        super(DrivenComponent, self).__init__(name, parent)
+    def __init__(self, *args, **kwargs):
+        super(DrivenComponent, self).__init__(*args, **kwargs)
         ArrayVariable('x', self, INPUT, default=[1., 1., 1., 1.])
         ArrayVariable('y', self, INPUT, default=[1., 1., 1., 1.])
         Float('rosen_suzuki', self, OUTPUT, default=0.)
@@ -38,8 +38,8 @@ class DrivenComponent(Component):
 class Model(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    def __init__(self, name='Model', parent=None):
-        super(Model, self).__init__(name, parent)
+    def __init__(self, *args, **kwargs):
+        super(Model, self).__init__(*args, **kwargs)
         CaseIteratorDriver('driver', self)
         self.workflow.add_node(DrivenComponent('dc', parent=self))
 
@@ -48,9 +48,10 @@ class DriverTestCase(unittest.TestCase):
     """ Test CaseIteratorDriver. """
 
     def setUp(self):
-        self.model = Model()
+        self.model = Model('TestModel')
 
     def tearDown(self):
+        self.model.pre_delete()
         self.model = None
 
     def test_normal(self):
@@ -97,7 +98,7 @@ class DriverTestCase(unittest.TestCase):
         for i, case in enumerate(cases):
             self.assertEqual(results[i].status, RUN_FAILED)
             self.assertEqual(results[i].msg,
-                             "Model.driver: Exception setting 'dc.z': Model.dc: object has no attribute 'z'")
+                             "TestModel.driver: Exception setting 'dc.z': TestModel.dc: object has no attribute 'z'")
 
     def test_nooutput(self):
         cases = []
@@ -119,7 +120,7 @@ class DriverTestCase(unittest.TestCase):
         for i, case in enumerate(cases):
             self.assertEqual(results[i].status, RUN_FAILED)
             self.assertEqual(results[i].msg,
-                             "Model.driver: Exception getting 'dc.sum_z': Model.dc: object has no attribute 'sum_z'")
+                             "TestModel.driver: Exception getting 'dc.sum_z': TestModel.dc: object has no attribute 'sum_z'")
 
 
 if __name__ == "__main__":

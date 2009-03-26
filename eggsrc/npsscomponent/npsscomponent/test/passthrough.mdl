@@ -19,6 +19,22 @@ string s_in, s_out;
 string s1d_in[], s1d_out[];
 string s2d_in[][], s2d_out[][];
 
+InFileStream text_in {
+    filename = "npss.txt";
+}
+InFileStream binary_in {
+    filename = "npss.bin";
+    binary = TRUE;
+}
+
+OutFileStream text_out {
+    filename = "npss.txt";
+}
+OutFileStream binary_out {
+    filename = "npss.bin";
+    binary = TRUE;
+}
+
 void calculate() {
     cout << sys.tstamp << "calculate() executing in '" << sys.pwd() << "'\n";
     cout << sys.tstamp << "XYZZY = '$XYZZY'\n";

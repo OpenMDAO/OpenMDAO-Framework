@@ -18,8 +18,8 @@ from m4.dummy_components import Model_A2d, Model_B2d
 class Model(Assembly):
     """ Simple M4 variable fidelity example.  """
 
-    def __init__(self, name='M4_VarFi', parent=None):
-        super(Model, self).__init__(name, parent)
+    def __init__(self, name='M4_VarFi', *args, **kwargs):
+        super(Model, self).__init__(name, *args, **kwargs)
 
         # The model is an M4 variable fidelity component.
         var_fi = VarFi(parent=self)
@@ -44,8 +44,8 @@ class Model(Assembly):
 class VarFi(MidFidelity):
     """ Example variable fidelity component. """
 
-    def __init__(self, name='VarFi', parent=None):
-        super(VarFi, self).__init__(name, parent)
+    def __init__(self, name='VarFi', *args, **kwargs):
+        super(VarFi, self).__init__(name, *args, **kwargs)
 
         # Inputs.
         self.rs_type = 'rbf'

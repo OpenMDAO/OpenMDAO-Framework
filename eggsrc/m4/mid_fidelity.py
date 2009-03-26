@@ -20,8 +20,8 @@ import wrapper
 class MidFidelity(Component):
     """ Wrapper for M4 variable fidelity capability. """
 
-    def __init__(self, name='M4_MidFi', parent=None):
-        super(MidFidelity, self).__init__(name, parent)
+    def __init__(self, name='M4_MidFi', *args, **kwargs):
+        super(MidFidelity, self).__init__(name, *args, **kwargs)
         self.need_updated_corrections = True
 
         # Inputs.

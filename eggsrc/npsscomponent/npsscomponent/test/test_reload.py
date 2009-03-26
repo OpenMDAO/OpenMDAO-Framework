@@ -2,6 +2,7 @@
 Test of NPSS auto-reload capability.
 """
 
+import os
 import os.path
 import pkg_resources
 import unittest
@@ -15,8 +16,8 @@ from npsscomponent import NPSScomponent
 class Source(Component):
     """ Just something to connect NPSS inputs to. """
 
-    def __init__(self, name='Source', parent=None):
-        super(Source, self).__init__(name, parent)
+    def __init__(self, name='Source', *args, **kwargs):
+        super(Source, self).__init__(name, *args, **kwargs)
         Bool('npss_reload', self, OUTPUT, default=False,
              doc='Test input to NPSS')
         Float('npss_in', self, OUTPUT, default=0.,
@@ -26,8 +27,8 @@ class Source(Component):
 class Sink(Component):
     """ Just something to connect NPSS outputs to. """
 
-    def __init__(self, name='Sink', parent=None):
-        super(Sink, self).__init__(name, parent)
+    def __init__(self, name='Sink', *args, **kwargs):
+        super(Sink, self).__init__(name, *args, **kwargs)
         Float('npss_out', self, INPUT, default=0.,
               doc='Test output from NPSS')
 
@@ -35,108 +36,128 @@ class Sink(Component):
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
 
-class NPSSTestCase(unittest.TestCase):
+class Model(Assembly):
+    """ Exercises NPSS auto-reload capability. """ 
 
-    def setUp(self):
-        """ Called before each test in this class. """
-        self.tla = Assembly('TLA')
-        self.tla.workflow.add_node(Source(parent=self.tla))
-        self.tla.Source.npss_in = 9
+    def __init__(self, *args, **kwargs):
+        super(Model, self).__init__(*args, **kwargs)
+
+        self.workflow.add_node(Source(parent=self))
+        self.Source.npss_in = 9
 
         directory = \
             os.path.join(pkg_resources.resource_filename('npsscomponent',
                                                          'test'))
         arglist = ['-trace', 'reload.mdl']
-        self.npss = NPSScomponent(parent=self.tla, directory=directory,
-                                  arglist=arglist, output_filename='reload.out')
-        self.npss.reload_flag = 'reload_requested'
-        Float('xyzzy_in',  self.npss, INPUT, doc='Test input')
-        Float('xyzzy_out', self.npss, OUTPUT, doc='Test output')
-        String('s', self.npss, INPUT, doc='Unconnected input')
+        NPSScomponent(parent=self, directory=directory,
+                      arglist=arglist, output_filename='reload.out')
+        self.NPSS.reload_flag = 'reload_requested'
+        Float('xyzzy_in',  self.NPSS, INPUT, doc='Test input')
+        Float('xyzzy_out', self.NPSS, OUTPUT, doc='Test output')
+        String('s', self.NPSS, INPUT, doc='Unconnected input')
 
-        self.tla.workflow.add_node(self.npss)
+        self.workflow.add_node(self.NPSS)
 
-        self.tla.workflow.add_node(Sink(parent=self.tla))
+        self.workflow.add_node(Sink(parent=self))
 
-        self.tla.connect('Source.npss_reload', 'NPSS.reload_model')
-        self.tla.connect('Source.npss_in', 'NPSS.xyzzy_in')
-        self.tla.connect('NPSS.xyzzy_out', 'Sink.npss_out')
+        self.connect('Source.npss_reload', 'NPSS.reload_model')
+        self.connect('Source.npss_in', 'NPSS.xyzzy_in')
+        self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
+
+
+class NPSSTestCase(unittest.TestCase):
+
+    def setUp(self):
+        """ Called before each test in this class. """
+        self.model = Model('TestModel')
 
     def tearDown(self):
         """ Called after each test in this class. """
-        self.npss.pre_delete()
-        self.npss = None
-        self.tla = None
+        self.model.pre_delete()
+        os.remove(os.path.join(self.model.NPSS.directory, 'reload.out'))
+        self.model = None
 
     def test_internal_reload(self):
-        self.assertEqual(self.npss.run_count, 0)
-        self.assertEqual(self.npss.mcRun_count, 0)
-        self.assertEqual(self.tla.Sink.npss_out, 0)
-        self.assertEqual(self.tla.Source.npss_in, 9)
+        self.assertEqual(self.model.NPSS.run_count, 0)
+        self.assertEqual(self.model.NPSS.mcRun_count, 0)
+        self.assertEqual(self.model.Sink.npss_out, 0)
+        self.assertEqual(self.model.Source.npss_in, 9)
 
-        self.tla.run()
-        self.assertEqual(self.npss.run_count, 1)
-        self.assertEqual(self.npss.mcRun_count, 0)
-        self.assertEqual(self.npss.xyzzy_out, 9)
-        self.assertEqual(self.tla.Sink.npss_out, 9)
+        self.model.run()
 
-        self.tla.run()
-        self.assertEqual(self.npss.run_count, 2)
-        self.assertEqual(self.npss.mcRun_count, 0)
-        self.assertEqual(self.tla.Sink.npss_out, 18)
+        self.assertEqual(self.model.NPSS.run_count, 1)
+        self.assertEqual(self.model.NPSS.mcRun_count, 0)
+        self.assertEqual(self.model.NPSS.xyzzy_out, 9)
+        self.assertEqual(self.model.Sink.npss_out, 9)
 
-        path = self.npss.get('reload_flag')
-        self.npss.set(path, True)
-        self.tla.debug('reload_flag = %d', self.npss.get(path))
-        self.tla.run()
-        self.assertEqual(self.npss.run_count, 1)
-        self.assertEqual(self.npss.mcRun_count, 0)
-        self.assertEqual(self.tla.Sink.npss_out, 9)
-        self.assertEqual(self.npss.s, 'unconnected')
+        self.model.run()
+
+        self.assertEqual(self.model.NPSS.run_count, 2)
+        self.assertEqual(self.model.NPSS.mcRun_count, 0)
+        self.assertEqual(self.model.Sink.npss_out, 18)
+
+        path = self.model.NPSS.get('reload_flag')
+        self.model.NPSS.set(path, True)
+        self.model.debug('reload_flag = %d', self.model.NPSS.get(path))
+
+        self.model.run()
+
+        self.assertEqual(self.model.NPSS.run_count, 1)
+        self.assertEqual(self.model.NPSS.mcRun_count, 0)
+        self.assertEqual(self.model.Sink.npss_out, 9)
+        self.assertEqual(self.model.NPSS.s, 'unconnected')
 
     def test_external_reload(self):
-        self.assertEqual(self.npss.run_count, 0)
-        self.assertEqual(self.npss.mcRun_count, 0)
-        self.assertEqual(self.tla.Sink.npss_out, 0)
-        self.assertEqual(self.tla.Source.npss_in, 9)
+        self.assertEqual(self.model.NPSS.run_count, 0)
+        self.assertEqual(self.model.NPSS.mcRun_count, 0)
+        self.assertEqual(self.model.Sink.npss_out, 0)
+        self.assertEqual(self.model.Source.npss_in, 9)
 
-        self.tla.run()
-        self.assertEqual(self.npss.run_count, 1)
-        self.assertEqual(self.npss.mcRun_count, 0)
-        self.assertEqual(self.npss.xyzzy_out, 9)
-        self.assertEqual(self.tla.Sink.npss_out, 9)
+        self.model.run()
 
-        self.tla.run()
-        self.assertEqual(self.npss.run_count, 2)
-        self.assertEqual(self.npss.mcRun_count, 0)
-        self.assertEqual(self.tla.Sink.npss_out, 18)
+        self.assertEqual(self.model.NPSS.run_count, 1)
+        self.assertEqual(self.model.NPSS.mcRun_count, 0)
+        self.assertEqual(self.model.NPSS.xyzzy_out, 9)
+        self.assertEqual(self.model.Sink.npss_out, 9)
 
-        self.tla.Source.npss_reload = True
-        self.tla.debug('Source.npss_reload = %d', self.tla.Source.npss_reload)
-        self.tla.run()
-        self.assertEqual(self.npss.run_count, 1)
-        self.assertEqual(self.npss.mcRun_count, 0)
-        self.assertEqual(self.tla.Sink.npss_out, 9)
-        self.assertEqual(self.npss.s, 'unconnected')
+        self.model.run()
+
+        self.assertEqual(self.model.NPSS.run_count, 2)
+        self.assertEqual(self.model.NPSS.mcRun_count, 0)
+        self.assertEqual(self.model.Sink.npss_out, 18)
+
+        self.model.Source.npss_reload = True
+        self.model.debug('Source.npss_reload = %d',
+                         self.model.Source.npss_reload)
+
+        self.model.run()
+
+        self.assertEqual(self.model.NPSS.run_count, 1)
+        self.assertEqual(self.model.NPSS.mcRun_count, 0)
+        self.assertEqual(self.model.Sink.npss_out, 9)
+        self.assertEqual(self.model.NPSS.s, 'unconnected')
  
     def test_custom_run(self):
-        self.assertEqual(self.npss.run_count, 0)
-        self.assertEqual(self.npss.mcRun_count, 0)
-        self.assertEqual(self.tla.Sink.npss_out, 0)
-        self.assertEqual(self.tla.Source.npss_in, 9)
+        self.assertEqual(self.model.NPSS.run_count, 0)
+        self.assertEqual(self.model.NPSS.mcRun_count, 0)
+        self.assertEqual(self.model.Sink.npss_out, 0)
+        self.assertEqual(self.model.Source.npss_in, 9)
 
-        self.tla.run()
-        self.assertEqual(self.npss.run_count, 1)
-        self.assertEqual(self.npss.mcRun_count, 0)
-        self.assertEqual(self.npss.xyzzy_out, 9)
-        self.assertEqual(self.tla.Sink.npss_out, 9)
+        self.model.run()
 
-        self.npss.run_command = 'mcRun()'
-        self.tla.run()
-        self.assertEqual(self.npss.run_count, 1)
-        self.assertEqual(self.npss.mcRun_count, 1)
-        self.assertEqual(self.tla.Sink.npss_out, 90)
-        self.assertEqual(self.npss.s, 'unconnected')
+        self.assertEqual(self.model.NPSS.run_count, 1)
+        self.assertEqual(self.model.NPSS.mcRun_count, 0)
+        self.assertEqual(self.model.NPSS.xyzzy_out, 9)
+        self.assertEqual(self.model.Sink.npss_out, 9)
+
+        self.model.NPSS.run_command = 'mcRun()'
+
+        self.model.run()
+
+        self.assertEqual(self.model.NPSS.run_count, 1)
+        self.assertEqual(self.model.NPSS.mcRun_count, 1)
+        self.assertEqual(self.model.Sink.npss_out, 90)
+        self.assertEqual(self.model.NPSS.s, 'unconnected')
 
 
 if __name__ == '__main__':

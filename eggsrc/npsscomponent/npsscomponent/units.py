@@ -1,8 +1,10 @@
 """
 Translation from NPSS units to OpenMDAO units.
-NPSS unit strings taken from /NPSS/dev/Executive/src/Common/UnitNames.ncp
 
-TODO: complete and verify translations.
+    .. parsed-literal::
+
+        TODO: complete and verify translations.
+
 """
 
 __all__ = (
@@ -34,6 +36,7 @@ def set_translation(npss_units, mdao_units):
     UNITS_MAP[npss_units] = mdao_units
 
 
+# NPSS unit strings taken from /NPSS/dev/Executive/src/Common/UnitNames.ncp
 # UNDEFINED => not specified.
 # None      => unitless.
 UNITS_MAP = {
