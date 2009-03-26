@@ -53,6 +53,7 @@ class EggBundler(object):
         self.parts = [x for x in buildout['buildout']['parts'].split() 
                                if x != '' and x not in self.excludeparts]
         self.dists = []
+        self.archive = bool(options.get('archive')) or True
 
     def _add_deps(self, deps, env, ws, req, excludes):
         """Add a dependency for the given requirement and anything the resulting
@@ -221,23 +222,24 @@ class EggBundler(object):
         self.logger.info('creating buildout config')
         self._create_buildout_dir()                                  
         
-        tarname = os.path.join(self.bundledir,'%s-bundle-%s-py%s.tar.gz' % 
+        if self.archive:
+            tarname = os.path.join(self.bundledir,'%s-bundle-%s-py%s.tar.gz' % 
                                    (self.bundle_name,self.bundle_version,
                                     sys.version[:3]))
-        self.logger.info('creating tar file %s' %  tarname)
+            self.logger.info('creating tar file %s' %  tarname)
            
-        tarf = tarfile.open(tarname, mode='w:gz')
-        tarf.add(self.bundledir,arcname='%s-%s-py%s' %
+            tarf = tarfile.open(tarname, mode='w:gz')
+            tarf.add(self.bundledir,arcname='%s-%s-py%s' %
                                    (self.bundle_name,self.bundle_version,
                                     sys.version[:3]))
-        tarf.close()
+            tarf.close()
         
-        rm(os.path.join(self.bundledir,'buildout',))
-        for stuff in self.extra_stuff:
-            try:
-                rm(os.path.join(self.bundledir,os.path.basename(stuff)))
-            except OSError, err:
-                self.logger.error(str(err))
+            rm(os.path.join(self.bundledir,'buildout',))
+            for stuff in self.extra_stuff:
+                try:
+                    rm(os.path.join(self.bundledir,os.path.basename(stuff)))
+                except OSError, err:
+                    self.logger.error(str(err))
             
         return [self.bundledir]
 
