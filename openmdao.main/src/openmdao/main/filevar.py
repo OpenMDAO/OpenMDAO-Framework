@@ -16,9 +16,9 @@ class FileVariable(Variable):
             default False
         'big_endian': bool
             default False
-        'unformatted': bool
-            default False
         'single_precision': bool
+            default False
+        'unformatted': bool
             default False
         'recordmark_8': bool
             default False
@@ -31,16 +31,15 @@ class FileVariable(Variable):
                                            ref_name=ref_name,
                                            ref_parent=ref_parent,
                                            default=default, doc=doc)
-        self.set_default(default)
-
         self.metadata = {
             'content_type' : '',
             'content_encoding' : '',
             'binary' : False,
             'big_endian' : False,
-            'unformatted' : False,
             'single_precision' : False,
+            'unformatted' : False,
             'recordmark_8' : False, }
+
         if metadata is not None:
             self.metadata.update(metadata)
 

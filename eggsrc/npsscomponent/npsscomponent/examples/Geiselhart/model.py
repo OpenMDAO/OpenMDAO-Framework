@@ -225,6 +225,7 @@ class ANOPPdata(Container):
 
 class TracingNPSS(NPSScomponent):
     """ Simply overrides execute() to trace start & stop times. """
+
     def execute(self):
         print self.get_pathname(), 'execution begins'
         status = super(TracingNPSS, self).execute()
@@ -249,8 +250,8 @@ class Model(Assembly):
             
         super(Model, self).connect(src_path, dst_path)
 
-    def __init__(self, name='Propulsion', parent=None, directory=''):
-        super(Model, self).__init__(name, parent, directory)
+    def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
+        super(Model, self).__init__(name, *args, **kwargs)
 
         model_dir = os.path.join('..', 'Full_Model', 'Cycle', 'run')
         includes = [

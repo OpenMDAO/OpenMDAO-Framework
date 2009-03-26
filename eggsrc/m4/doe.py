@@ -18,8 +18,8 @@ from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 class DOE(CaseIteratorDriver):
     """ M4 Design Of Experiments driver. """
 
-    def __init__(self, name='M4_DOE', parent=None):
-        super(DOE, self).__init__(name, parent)
+    def __init__(self, name='M4_DOE', *args, **kwargs):
+        super(DOE, self).__init__(name, *args, **kwargs)
         self.design_variables = []    # List of (name, min, max) tuples.
         self.response_variables = []  # List of names.
 

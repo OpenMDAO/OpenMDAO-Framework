@@ -21,19 +21,16 @@ class NPSScomponent(Component):
     An NPSS wrapper component.  Supports reload requests either internally
     via a flag in the model or externally by setting the reload_model flag.
 
-    TODO: Save external files as part of component state/config.
+    .. parsed-literal::
 
-    TODO: Support index argument to get() and set().
+        TODO: Save model files as part of component state/config.
+        TODO: Support index argument to get() and set().
+        TODO: Detect & flag execution errors.
+        TODO: Save model state as well as component state.
+        TODO: Use buffer protocol for array access.
+        TODO: Safe multi-thread access (synchronized).
+        TODO: CORBA support.
 
-    TODO: Detect & flag execution errors.
-
-    TODO: Save model state as well as component state.
-
-    TODO: Use buffer protocol for array access.
-
-    TODO: Safe multi-thread access (synchronized).
-
-    TODO: CORBA support.
     """
 
     _dummy = npss.npss()  # Just for context switching.
@@ -150,11 +147,11 @@ class NPSScomponent(Component):
 
     def pre_delete(self):
         """ Perform any required operations before the model is deleted. """
+        super(NPSScomponent, self).pre_delete()
         if self._top is not None:
             self._top.closeSession()
             self._top = None
             self.grab_context()
-        super(NPSScomponent, self).pre_delete()
 
     def _parse_arglist(self, arglist):
         """ Parse argument list. Assumes flag argument separate from value. """

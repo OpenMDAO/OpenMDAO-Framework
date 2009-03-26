@@ -1,4 +1,4 @@
-__all__ = ('CaseIteratorDriver', 'ICaseRecorder')
+__all__ = ('CaseIteratorDriver',)
 __version__ = '0.1'
 
 import Queue
@@ -9,6 +9,7 @@ from openmdao.main import Driver, Bool
 from openmdao.main.component import RUN_OK, RUN_FAILED, RUN_STOPPED, RUN_UNKNOWN
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.variable import INPUT
+from openmdao.main.util import filexfer
 
 
 SERVER_EMPTY    = 1
@@ -17,6 +18,7 @@ SERVER_COMPLETE = 3
 SERVER_ERROR    = 4
 
 class ServerError(Exception):
+    """ Raised when a server therad has problems. """
     pass
 
 
@@ -25,11 +27,16 @@ class CaseIteratorDriver(Driver):
     Run a set of cases provided by an ICaseIterator in a manner similar
     to the ROSE framework.
 
-    TODO: support concurrent evaluation.
+    .. parsed-literal::
+
+        TODO: define interface for 'outerator'.
+        TODO: support concurrent evaluation.
+        TODO: improve response to a stop request.
+
     """
 
-    def __init__(self, name, parent=None, doc=None):
-        super(CaseIteratorDriver, self).__init__(name, parent, doc)
+    def __init__(self, *args, **kwargs):
+        super(CaseIteratorDriver, self).__init__(*args, **kwargs)
 
         Bool('sequential', self, INPUT, default=True,
              doc='Evaluate cases sequentially.')
@@ -135,11 +142,10 @@ class CaseIteratorDriver(Driver):
         retrieved from Iterator.  Results are processed by Outerator.
         Returns True if there are more cases to run.
         """
-# TODO: improve response to a stop request.
         server_state = self._server_states.get(server, SERVER_EMPTY)
         if server_state == SERVER_EMPTY:
             try:
-                self.load_model(server)
+                self._load_model(server)
                 self._server_states[server] = SERVER_READY
                 return True
             except ServerError:
@@ -152,7 +158,6 @@ class CaseIteratorDriver(Driver):
                 return False
             # Check if there are cases that need to be rerun.
             if self._rerun:
-                self.debug('_rerun: %s', repr(self._rerun))
                 self._run_case(self._rerun.pop(0), server)
                 return True
             else:
@@ -170,11 +175,11 @@ class CaseIteratorDriver(Driver):
             try:
                 case = self._server_cases[server]
                 # Grab the data from the model.
-                case.status = self.model_status(server)
+                case.status = self._model_status(server)
                 for i, niv in enumerate(case.outputs):
                     try:
                         case.outputs[i] = (niv[0], niv[1],
-                            self.model_get(server, niv[0], niv[1]))
+                            self._model_get(server, niv[0], niv[1]))
                     except Exception, exc:
                         msg = "Exception getting '%s': %s" % (niv[0], str(exc))
                         self.error(msg)
@@ -185,10 +190,10 @@ class CaseIteratorDriver(Driver):
 
                 if case.status == RUN_OK:
                     if self.reload_model:
-                        self.model_cleanup(server)
-                        self.load_model(server)
+                        self._model_cleanup(server)
+                        self._load_model(server)
                 else:
-                    self.load_model(server)
+                    self._load_model(server)
                 self._server_states[server] = SERVER_READY
                 return True
             except ServerError:
@@ -197,7 +202,7 @@ class CaseIteratorDriver(Driver):
         
         elif server_state == SERVER_ERROR:
             try:
-                self.load_model(server)
+                self._load_model(server)
             except ServerError:
                 return True
             else:
@@ -210,12 +215,12 @@ class CaseIteratorDriver(Driver):
             self._server_cases[server] = case
             for name, index, value in case.inputs:
                 try:
-                    self.model_set(server, name, index, value)
+                    self._model_set(server, name, index, value)
                 except Exception, exc:
                     msg = "Exception setting '%s': %s" % (name, str(exc))
                     self.error(msg)
                     self.raise_exception(msg, ServerError)
-            self.model_execute(server)
+            self._model_execute(server)
             self._server_states[server] = SERVER_COMPLETE
         except ServerError, exc:
             self._server_states[server] = SERVER_ERROR
@@ -267,30 +272,22 @@ class CaseIteratorDriver(Driver):
                 return True
         return False
 
-    def load_model(self, server):
+    def _load_model(self, server):
         """ Load a model into a server. """
         if server is not None:
-            self._queues[server].put((self._load_model, server))
+            self._queues[server].put((self._remote_load_model, server))
         return True
 
-    def _load_model(self, server):
+    def _remote_load_model(self, server):
         """ Load model into server. """
-# TODO: use filexfer() utility.
-        inp = open(self._model_file, 'rb')
-        out = self._servers[server].open(self._model_file, 'wb')
-        chunk = 1 << 17    # 128KB
-        data = inp.read(chunk)
-        while data:
-            out.write(data)
-            data = inp.read(chunk)
-        inp.close()
-        out.close()
-        if not self._servers[server].load_model(self._model_file):
-            self.error('server.load_model failed :-(')
+        filexfer(None, self._model_file,
+                 self._servers[server], self._model_file, 'b')
+        if not self._servers[server]._load_model(self._model_file):
+            self.error('server._load_model failed :-(')
             return False
         return True
 
-    def model_set(self, server, name, index, value):
+    def _model_set(self, server, name, index, value):
         """ Set value in server's model. """
         comp_name, attr = name.split('.', 1)
         if server is None:
@@ -300,7 +297,7 @@ class CaseIteratorDriver(Driver):
         comp.set(attr, value, index)
         return True
 
-    def model_get(self, server, name, index):
+    def _model_get(self, server, name, index):
         """ Get value from server's model. """
         comp_name, attr = name.split('.', 1)
         if server is None:
@@ -309,26 +306,25 @@ class CaseIteratorDriver(Driver):
             comp = getattr(self._servers[server].tla, comp_name)
         return comp.get(attr, index)
 
-    def model_execute(self, server):
+    def _model_execute(self, server):
         """ Execute model in server. """
         if server is None:
             self.parent.workflow.run()
         else:
-            self._queues[server].put((self._model_execute, server))
+            self._queues[server].put((self._remote_model_execute, server))
 
-    def _model_execute(self, server):
+    def _remote_model_execute(self, server):
         """ Execute model. """
         self._servers[server].tla.run()
 
-    def model_status(self, server):
+    def _model_status(self, server):
         """ Return execute status from model. """
         if server is None:
             return self.parent.workflow.execute_status
         else:
             return self._servers[server].tla.execute_status
 
-    def model_cleanup(self, server):
+    def _model_cleanup(self, server):
         """ Clean up model resources. """
         return True
-
 

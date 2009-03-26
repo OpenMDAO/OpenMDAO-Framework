@@ -101,7 +101,7 @@ class Component (Container):
         setattr(self.__class__, name,
                 property(lambda self : self._get_socket_plugin(name),
                          lambda self, plugin : self._set_socket_plugin(name, plugin),
-                         doc=doc))
+                         None, doc))
 
     def check_socket (self, name):
         """Return True if socket is filled"""
