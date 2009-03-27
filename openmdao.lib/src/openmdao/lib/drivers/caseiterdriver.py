@@ -5,8 +5,8 @@ import Queue
 import threading
 import time
 
-from openmdao.main import Driver, Bool
-from openmdao.main.component import RUN_OK, RUN_FAILED, RUN_STOPPED, RUN_UNKNOWN
+from openmdao.main import Driver, Bool, Int
+from openmdao.main.exceptions import RunFailed, RunStopped
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.variable import INPUT
 from openmdao.main.util import filexfer
@@ -44,6 +44,9 @@ class CaseIteratorDriver(Driver):
         Bool('reload_model', self, INPUT, default=True,
              doc='Reload model between executions.')
 
+        Int('max_retries', self, INPUT, default=1, min_limit=0,
+            doc='Number of times to retry a case.')
+
         self.add_socket('iterator', ICaseIterator, 'Cases to evaluate.')
         self.add_socket('outerator', None, 'Something to append() to.')
 
@@ -58,17 +61,16 @@ class CaseIteratorDriver(Driver):
 
         self._server_states = {}
         self._server_cases = {}
+        self._exceptions = {}
         self._rerun = []
 
     def execute(self):
         """ Run each case in iterator and record results in outerator. """
         if not self.check_socket('iterator'):
-            self.error('No iterator plugin')
-            return RUN_FAILED
+            self.raise_exception('No iterator plugin', ValueError)
 
         if not self.check_socket('outerator'):
-            self.error('No outerator plugin')
-            return RUN_FAILED
+            self.raise_exception('No outerator plugin', ValueError)
 
         self._rerun = []
         self._iter = self.iterator.__iter__()
@@ -99,7 +101,7 @@ class CaseIteratorDriver(Driver):
                                                  args=(name,))
                 server_thread.setDaemon(True)
                 server_thread.start()
-                time.sleep(0.1)  # Pacing for GX at least.
+                time.sleep(0.1)  # Pacing.
 
             for i in range(self._n_servers):
                 name, status = self._reply_queue.get()
@@ -107,7 +109,7 @@ class CaseIteratorDriver(Driver):
                 if len(self._servers) < self._n_servers:
                     self.warning('Only %d servers created', len(self._servers))
             else:
-                self.raise_exception('No servers created!', RuntimeError)
+                self.raise_exception('No servers created!', RunFailed)
 
             # Kick-off initial state.
             for name in self._servers.keys():
@@ -132,9 +134,7 @@ class CaseIteratorDriver(Driver):
             self._in_use = {}
 
         if self._stop:
-            return RUN_STOPPED
-        else:
-            return RUN_OK
+            self.raise_exception('Stop requested', RunStopped)
 
     def _server_ready(self, server):
         """
@@ -167,28 +167,30 @@ class CaseIteratorDriver(Driver):
                 except StopIteration:
                     return False
                 else:
-                    case.status = RUN_UNKNOWN
+                    if not case.max_retries:
+                        case.max_retries = self.max_retries
+                    case.retries = 0
+                    case.msg = None
                     self._run_case(case, server)
                     return True
         
         elif server_state == SERVER_COMPLETE:
             try:
                 case = self._server_cases[server]
-                # Grab the data from the model.
-                case.status = self._model_status(server)
-                for i, niv in enumerate(case.outputs):
-                    try:
-                        case.outputs[i] = (niv[0], niv[1],
-                            self._model_get(server, niv[0], niv[1]))
-                    except Exception, exc:
-                        msg = "Exception getting '%s': %s" % (niv[0], str(exc))
-                        self.error(msg)
-                        case.status = RUN_FAILED
-                        case.msg = '%s: %s' % (self.get_pathname(), msg)
-                # Record the data.
+                exc = self._model_status(server)
+                if exc is None:
+                    for i, niv in enumerate(case.outputs):
+                        try:
+                            case.outputs[i] = (niv[0], niv[1],
+                                self._model_get(server, niv[0], niv[1]))
+                        except Exception, exc:
+                            msg = "Exception getting '%s': %s" % (niv[0], str(exc))
+                            case.msg = '%s: %s' % (self.get_pathname(), msg)
+                else:
+                    case.msg = str(exc)
                 self.outerator.append(case)
 
-                if case.status == RUN_OK:
+                if not case.msg:
                     if self.reload_model:
                         self._model_cleanup(server)
                         self._load_model(server)
@@ -218,17 +220,15 @@ class CaseIteratorDriver(Driver):
                     self._model_set(server, name, index, value)
                 except Exception, exc:
                     msg = "Exception setting '%s': %s" % (name, str(exc))
-                    self.error(msg)
                     self.raise_exception(msg, ServerError)
             self._model_execute(server)
             self._server_states[server] = SERVER_COMPLETE
         except ServerError, exc:
             self._server_states[server] = SERVER_ERROR
-            if case.status == RUN_UNKNOWN:
-                case.status = RUN_FAILED
-                self._rerun.append(case)  # Try one more time.
+            if case.retries < case.max_retries:
+                case.retries += 1
+                self._rerun.append(case)
             else:
-                case.status = RUN_FAILED
                 case.msg = str(exc)
                 self.outerator.append(case)
 
@@ -308,21 +308,25 @@ class CaseIteratorDriver(Driver):
 
     def _model_execute(self, server):
         """ Execute model in server. """
+        self._exceptions[server] = None
         if server is None:
-            self.parent.workflow.run()
+            try:
+                self.parent.workflow.run()
+            except Exception, exc:
+                self._exceptions[server] = exc
         else:
             self._queues[server].put((self._remote_model_execute, server))
 
     def _remote_model_execute(self, server):
         """ Execute model. """
-        self._servers[server].tla.run()
+        try:
+            self._servers[server].tla.run()
+        except Exception, exc:
+            self._exceptions[server] = exc
 
     def _model_status(self, server):
         """ Return execute status from model. """
-        if server is None:
-            return self.parent.workflow.execute_status
-        else:
-            return self._servers[server].tla.execute_status
+        return self._exceptions[server]
 
     def _model_cleanup(self, server):
         """ Clean up model resources. """

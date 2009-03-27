@@ -3,8 +3,7 @@
 # This openMDAO component contains an engine model found in Sitthiracha "AN
 # ANALYTICAL MODEL OF SPARK IGNITION ENGINE FOR PERFORMANCE PREDICTION"
 
-from openmdao.main.component import Component, RUN_OK
-from openmdao.main import Float, Int
+from openmdao.main import Component, Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 from math import pi, sin, cos, exp
 
@@ -354,8 +353,6 @@ class Engine(Component):
         # Engine Wieght (Empirical) (kg)
         self.EngineWeight = (100.0/.002)*(disp-.001) + 75.0
 
-        return RUN_OK
-
 # end engine.py        
 
 if __name__ == "__main__": 
@@ -369,3 +366,4 @@ if __name__ == "__main__":
         z.execute()
         
     print "Elapsed time: ", time.time()-t1
+

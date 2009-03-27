@@ -11,7 +11,7 @@ __version__ = '0.1'
 import mool.Optimization.DOE
 
 from openmdao.main import Int, String, Case, ListCaseIterator
-from openmdao.main.component import RUN_FAILED
+from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
@@ -37,11 +37,10 @@ class DOE(CaseIteratorDriver):
         """ Generate cases and run them. """
         cases = self.generate_cases()
         if cases is None:
-            self.error('No cases generated')
-            return RUN_FAILED
+            self.raise_exception('No cases generated', RunFailed)
         self.iterator = ListCaseIterator(cases)
         self.outerator = []
-        return super(DOE, self).execute()
+        super(DOE, self).execute()
 
 
 # pylint: disable-msg=E1101

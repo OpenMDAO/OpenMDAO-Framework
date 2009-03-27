@@ -13,7 +13,6 @@ from numpy.testing import assert_equal
 
 from openmdao.main import Assembly, Component, ArrayVariable, Bool, \
                           FileVariable, Float, Int, String, StringList
-from openmdao.main.component import RUN_OK
 from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent
@@ -59,8 +58,6 @@ class Source(Component):
         out = open(self.binary_file, 'wb')
         cPickle.dump(self.binary_data, out, 2)
         out.close()
-
-        return RUN_OK
 
 
 class Passthrough(NPSScomponent):
@@ -139,14 +136,12 @@ class Sink(Component):
         self.binary_data = cPickle.load(inp)
         inp.close()
 
-        return RUN_OK
-
 
 class Model(Assembly):
     """ Sends data through Source -> NPSS_A -> NPSS_B -> Sink. """
 
-    def __init__(self, *args, **kwargs):
-        super(Model, self).__init__(*args, **kwargs)
+    def __init__(self, name='TestModel', *args, **kwargs):
+        super(Model, self).__init__(name, *args, **kwargs)
 
         self.workflow.add_node(Source(parent=self))
         self.Source.b = True
@@ -224,7 +219,7 @@ class NPSSTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        self.model = Model('TestModel')
+        self.model = Model()
 
     def tearDown(self):
         """ Called after each test in this class. """

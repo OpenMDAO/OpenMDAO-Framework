@@ -9,7 +9,7 @@ import os
 
 from openmdao.main import Component, ArrayVariable, Bool, Dict, Float, \
                           FileVariable, Int, String, StringList
-from openmdao.main.component import RUN_OK, RUN_FAILED
+from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
 
 import npss
@@ -330,57 +330,50 @@ class NPSScomponent(Component):
 
         # Default session directory is set during initialization.
         directory = self.get_directory()
-        pushed = False
+        self.push_dir(directory)
         try:
-            self.push_dir(directory)
-            pushed = True
-        except OSError, exc:
-            self.error("Could not move to execution directory '%s': %s",
-                       directory, exc.strerror)
-
-        if is_reload:
-            self.info('Reloading session in %s', cwd)
-        arglist = self._generate_arglist()
-        if self.output_filename:
-            if not '-singleStream' in arglist:
-                arglist.insert(0, '-singleStream')
-
-        self._top = npss.npss(arglist=arglist, top=self._topstr)
-
-        if self.output_filename:
-            self._top.cout.append = is_reload
-            self._top.cout.filename = self.output_filename
             if is_reload:
-                msg = '\nReloading session in '+cwd+'\n'
-                if self.model_filename:
-                    msg += 'Model filename '+self.model_filename+'\n'
-                self._top.cout.println(msg)
-            self.info('output routed to %s', self.output_filename)
+                self.info('Reloading session in %s', cwd)
+            arglist = self._generate_arglist()
+            if self.output_filename:
+                if not '-singleStream' in arglist:
+                    arglist.insert(0, '-singleStream')
 
-        if self.model_filename:
-            # Parse NPSS model.
-            self._top.parseFile(self.model_filename)
-            # Add non-NPSS distribution input files to external_files list.
-            paths = self._top.inputFileList
-            paths.sort()
-            for path in paths:
-                if not path or path.startswith(os.environ['NPSS_TOP']):
-                    continue
-                if path.startswith(cwd):
-                    path = path[len(cwd):]
-                for meta in self.external_files:
-                    if meta['path'] == path:
-                        break
-                else:
-                    self.external_files.append({'path':path, 'input':True})
+            self._top = npss.npss(arglist=arglist, top=self._topstr)
 
-        if is_reload:
-            # Need to restore input values.
-            for name, value in saved_inputs:
-                self.set(name, value)
+            if self.output_filename:
+                self._top.cout.append = is_reload
+                self._top.cout.filename = self.output_filename
+                if is_reload:
+                    msg = '\nReloading session in '+cwd+'\n'
+                    if self.model_filename:
+                        msg += 'Model filename '+self.model_filename+'\n'
+                    self._top.cout.println(msg)
+                self.info('output routed to %s', self.output_filename)
 
-        self.grab_context()
-        if pushed:
+            if self.model_filename:
+                # Parse NPSS model.
+                self._top.parseFile(self.model_filename)
+                # Add non-NPSS distribution input files to external_files list.
+                paths = self._top.inputFileList
+                paths.sort()
+                for path in paths:
+                    if not path or path.startswith(os.environ['NPSS_TOP']):
+                        continue
+                    if path.startswith(cwd):
+                        path = path[len(cwd):]
+                    for meta in self.external_files:
+                        if meta['path'] == path:
+                            break
+                    else:
+                        self.external_files.append({'path':path, 'input':True})
+
+            if is_reload:
+                # Need to restore input values.
+                for name, value in saved_inputs:
+                    self.set(name, value)
+        finally:
+            self.grab_context()
             self.pop_dir()
 
     def create_in_model(self, base_typ, typ, name):
@@ -451,44 +444,39 @@ class NPSScomponent(Component):
 
     def execute(self):
         """ Perform operations associated with running the component. """
-        status = RUN_OK
-
-        if self.reload_model:
-            self.info('External reload request.')
-            try:
-                self.reload()
-            except Exception, exc:
-                self.error('Exception during reload: %s', str(exc))
-                status = RUN_FAILED
-        else:
-            if self.reload_flag:
+        try:
+            if self.reload_model:
+                self.info('External reload request.')
+                try:
+                    self.reload()
+                except Exception, exc:
+                    self.raise_exception('Exception during reload: %s' \
+                                         % str(exc), RunFailed)
+            elif self.reload_flag:
                 try:
                     reload_req = getattr(self._top, self.reload_flag)
                 except Exception, exc:
-                    self.error('Exception getting %s: %s',
-                               self.reload_flag, str(exc))
-                    status = RUN_FAILED
+                    self.raise_exception("Exception getting '%s': %s" \
+                                         % (self.reload_flag, str(exc)),
+                                         RunFailed)
                 else:
                     if reload_req:
                         self.info('Internal reload request.')
                         try:
                             self.reload()
                         except Exception, exc:
-                            self.error('Exception during reload: %s', str(exc))
-                            status = RUN_FAILED
-
-        if status == RUN_OK:
+                            self.raise_exception('Exception during reload: %s' \
+                                                 % str(exc), RunFailed)
             try:
                 if self.run_command:
                     self._top.parseString(self.run_command+';')
                 else:
                     self._top.run()
             except Exception, exc:
-                self.error('Exception during run: %s', str(exc))
-                status = RUN_FAILED
-
-        self.grab_context()
-        return status
+                self.raise_exception('Exception during run: %s' % str(exc),
+                                     RunFailed)
+        finally:
+            self.grab_context()
 
     def make_public(self, obj_info):
         """

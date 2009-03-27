@@ -5,7 +5,6 @@
 from openmdao.main import Assembly
 from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.component import RUN_OK
 
 from openmdao.examples.engine_design.sim_vehicle import Sim_Vehicle
 from openmdao.lib.drivers.conmindriver import CONMINdriver
@@ -45,10 +44,6 @@ class Engine_Optimization(Assembly):
         self.driver.lower_bounds = [-50, 65]
         self.driver.upper_bounds = [10, 100]
         
-    #def execute(self):
-        
-        #return RUN_OK
-
     
 if __name__ == "__main__":
 
