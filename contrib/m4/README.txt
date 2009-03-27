@@ -5,9 +5,9 @@ Hopefully it will provide a start for a real implementation.
 
 NOTE: because we don't have Python eggs for mool, SciPy, etc. yet, this
       code will run only if you add the following lines to the
-      [app] section of your buildout.cfg file and then re-run 
-      the buildout.  Note that the second path is there in order to 
-      find the SciPy distribution, which may be in a different place
+      [app] section of your buildout.cfg file (after the recipe)
+      and then re-run the buildout.  Note that the second path is there in 
+      order to find the SciPy distribution, which may be in a different place
       on your system, so you may have to modify that path.
 
 extra-paths = ${buildout:directory}/../contrib
