@@ -14,8 +14,8 @@ from openmdao.main.variable import INPUT, OUTPUT
 class Model_A2d(Component):
     """ Wrapper for M4 Model_A2d. """
 
-    def __init__(self, name='Model_A2d', parent=None):
-        super(Model_A2d, self).__init__(name, parent)
+    def __init__(self, name='Model_A2d', *args, **kwargs):
+        super(Model_A2d, self).__init__(name, *args, **kwargs)
         self._m4_comp = mool.Optimization.Models_test.Model_A2d()
 
         Float('x', self, INPUT, doc='X input value.', default=0.)
@@ -38,8 +38,8 @@ class Model_A2d(Component):
 class Model_B2d(Component):
     """ Wrapper for M4 Model_B2d. """
 
-    def __init__(self, name='Model_B2d', parent=None):
-        super(Model_B2d, self).__init__(name, parent)
+    def __init__(self, name='Model_B2d', *args, **kwargs):
+        super(Model_B2d, self).__init__(name, *args, **kwargs)
         self._m4_comp = mool.Optimization.Models_test.Model_B2d()
 
         Float('x', self, INPUT, doc='X input value.', default=0.)

@@ -267,7 +267,7 @@ class Container(HierarchyMember):
         obj.setvar(name, variable)        
 
         
-    def get_objs(self, matchfunct, recurse=False, ):
+    def get_objs(self, matchfunct, recurse=False):
         """Return a list of objects that return a value of True when passed
         to matchfunct.
         
@@ -348,19 +348,15 @@ class Container(HierarchyMember):
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
+        subcontainers = self.get_objs(IContainer.providedBy)
+        for child in subcontainers:
+            child.post_load()
         pass
 
     def pre_delete(self):
         """ Perform any required operations before the model is deleted. """
+        subcontainers = self.get_objs(IContainer.providedBy)
+        for child in subcontainers:
+            child.pre_delete()
         pass
 
-
-def _matches(obj, dct):
-    """ Return True if obj matches all items in dct. """
-    for key, val in dct.items():
-        try:
-            if getattr(obj, key) != val:
-                return False
-        except AttributeError:
-            return False
-    return True

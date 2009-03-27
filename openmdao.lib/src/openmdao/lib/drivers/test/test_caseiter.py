@@ -8,7 +8,7 @@ import numpy.random
 
 from openmdao.main import Assembly, Component, Case, ListCaseIterator, \
                           ArrayVariable, Float
-from openmdao.main.component import RUN_OK
+from openmdao.main.component import RUN_OK, RUN_FAILED
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
@@ -21,8 +21,8 @@ def rosen_suzuki(x):
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
-    def __init__(self, name, parent):
-        super(DrivenComponent, self).__init__(name, parent)
+    def __init__(self, *args, **kwargs):
+        super(DrivenComponent, self).__init__(*args, **kwargs)
         ArrayVariable('x', self, INPUT, default=[1., 1., 1., 1.])
         ArrayVariable('y', self, INPUT, default=[1., 1., 1., 1.])
         Float('rosen_suzuki', self, OUTPUT, default=0.)
@@ -38,8 +38,8 @@ class DrivenComponent(Component):
 class Model(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    def __init__(self, name='Model', parent=None):
-        super(Model, self).__init__(name, parent)
+    def __init__(self, *args, **kwargs):
+        super(Model, self).__init__(*args, **kwargs)
         CaseIteratorDriver('driver', self)
         self.workflow.add_node(DrivenComponent('dc', parent=self))
 
@@ -48,9 +48,10 @@ class DriverTestCase(unittest.TestCase):
     """ Test CaseIteratorDriver. """
 
     def setUp(self):
-        self.model = Model()
+        self.model = Model('TestModel')
 
     def tearDown(self):
+        self.model.pre_delete()
         self.model = None
 
     def test_normal(self):
@@ -76,6 +77,50 @@ class DriverTestCase(unittest.TestCase):
                              rosen_suzuki(case.inputs[0][2]))
             self.assertEqual(results[i].outputs[1][2],
                              sum(case.inputs[1][2]))
+
+    def test_noinput(self):
+        cases = []
+        for i in range(10):
+            inputs = [('dc.x', None, numpy.random.normal(size=4)),
+                      ('dc.z', None, numpy.random.normal(size=10))]
+            outputs = [('dc.rosen_suzuki', None, None),
+                       ('dc.sum_y', None, None)]
+            cases.append(Case(inputs, outputs))
+
+        self.model.driver.iterator = ListCaseIterator(cases)
+        results = []
+        self.model.driver.outerator = results
+
+        status = self.model.run()
+        self.assertEqual(status, RUN_OK)
+
+        self.assertEqual(len(results), len(cases))
+        for i, case in enumerate(cases):
+            self.assertEqual(results[i].status, RUN_FAILED)
+            self.assertEqual(results[i].msg,
+                             "TestModel.driver: Exception setting 'dc.z': TestModel.dc: object has no attribute 'z'")
+
+    def test_nooutput(self):
+        cases = []
+        for i in range(10):
+            inputs = [('dc.x', None, numpy.random.normal(size=4)),
+                      ('dc.y', None, numpy.random.normal(size=10))]
+            outputs = [('dc.rosen_suzuki', None, None),
+                       ('dc.sum_z', None, None)]
+            cases.append(Case(inputs, outputs))
+
+        self.model.driver.iterator = ListCaseIterator(cases)
+        results = []
+        self.model.driver.outerator = results
+
+        status = self.model.run()
+        self.assertEqual(status, RUN_OK)
+
+        self.assertEqual(len(results), len(cases))
+        for i, case in enumerate(cases):
+            self.assertEqual(results[i].status, RUN_FAILED)
+            self.assertEqual(results[i].msg,
+                             "TestModel.driver: Exception getting 'dc.sum_z': TestModel.dc: object has no attribute 'sum_z'")
 
 
 if __name__ == "__main__":

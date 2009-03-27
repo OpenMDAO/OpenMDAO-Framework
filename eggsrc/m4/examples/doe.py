@@ -15,8 +15,8 @@ import m4.dummy_components
 class Model(Assembly):
     """ Simple M4 DOE example.  """
 
-    def __init__(self, name='M4_DOE_example', parent=None):
-        super(Model, self).__init__(name, parent)
+    def __init__(self, name='M4_DOE_example', *args, **kwargs):
+        super(Model, self).__init__(name, *args, **kwargs)
 
         # The model is just an M4 test component.
         self.workflow.add_node(m4.dummy_components.Model_A2d(parent=self))
