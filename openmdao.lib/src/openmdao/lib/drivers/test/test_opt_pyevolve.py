@@ -14,11 +14,6 @@ from openmdao.main.variable import INPUT,OUTPUT
 from openmdao.lib.drivers import pyevolvedriver
 
 
-
-import openmdao.main.factorymanager as factorymanager
-from openmdao.main.importfactory import ImportFactory
-factorymanager.register_factory(ImportFactory())
-
 class SphereFunction(Component):
     """ 
     """

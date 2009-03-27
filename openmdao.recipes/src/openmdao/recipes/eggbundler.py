@@ -7,6 +7,7 @@ from pkg_resources import Environment, WorkingSet, Requirement
 from setuptools.package_index import PackageIndex
 import tarfile
 import logging
+import zc.buildout
 
 from openmdao.util.procutil import run_command
 from openmdao.util.fileutil import rm
@@ -46,14 +47,22 @@ class EggBundler(object):
         self.bundle_name = options['bundle_name']
         self.bundle_version = options['bundle_version']
         self.configs = options.get('buildout_configs') or ['buildout.cfg']
-        self.fix_versions = bool(options.get('fix_versions') or True)
+        fix = options.get('fix_versions')
+        if fix == 'false':
+            self.fix_versions = False
+        else:
+            self.fix_versions = True
         self.extra_stuff = (options.get('extra_data') or '').split()
         
         self.excludeparts = [x for x in options['exclude_parts'].split() if x != '']
         self.parts = [x for x in buildout['buildout']['parts'].split() 
                                if x != '' and x not in self.excludeparts]
         self.dists = []
-        self.archive = bool(options.get('archive')) or True
+        archive = options.get('archive')
+        if archive == 'false':
+            self.archive = False
+        else:
+            self.archive = True
 
     def _add_deps(self, deps, env, ws, req, excludes):
         """Add a dependency for the given requirement and anything the resulting
@@ -77,7 +86,7 @@ class EggBundler(object):
             if dist.project_name not in excludes:
                 deps.add(dist)
             for req in dist.requires():
-                self.logger.info('%s required by %s' % (req, dist.project_name))
+                self.logger.debug('%s required by %s' % (req, dist.project_name))
                 self._add_deps(deps, env, ws, req, excludes)
 
 
@@ -169,7 +178,7 @@ class EggBundler(object):
             for dist in tmpenv[dproj]:
                 self.dists.append(dist)
                 for req in dist.requires():
-                    self.logger.info('%s requires %s' %(dist.project_name,req))
+                    self.logger.debug('%s requires %s' %(dist.project_name,req))
                     # use the installed environment to gather dependencies
                     # because retrieving them from uninstalled ditros doesn't
                     # work in all cases
@@ -222,7 +231,7 @@ class EggBundler(object):
         self.logger.info('creating buildout config')
         self._create_buildout_dir()                                  
         
-        if self.archive:
+        if self.archive is True:
             tarname = os.path.join(self.bundledir,'%s-bundle-%s-py%s.tar.gz' % 
                                    (self.bundle_name,self.bundle_version,
                                     sys.version[:3]))

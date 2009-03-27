@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='npsscomponent',
       version="0.1",
@@ -14,8 +14,9 @@ setup(name='npsscomponent',
       #py_modules=['npsscomponent'],
       include_package_data=True,
       zip_safe=False,
-      packages = ['npsscomponent'],
-      package_data={'npsscomponent': ['test/*.py','test/*.mdl']},
+      packages = find_packages(), #['npsscomponent'],
+      package_data={'npsscomponent': ['test/*.py','test/*.mdl'],
+                     '': ['*.int','*.ncp','*.map','*.mdl','*.run','*.fnc']},
       install_requires=[
           'pyNPSS'
       ],
