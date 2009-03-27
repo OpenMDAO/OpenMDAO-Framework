@@ -10,9 +10,9 @@ from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.component import RUN_OK
 
-from engine import Engine
-from transmission import Transmission
-from vehicle_dynamics import Vehicle_Dynamics
+from openmdao.examples.engine_design.engine import Engine
+from openmdao.examples.engine_design.transmission import Transmission
+from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
 
 class Vehicle(Assembly):
     """ Vehicle assembly. """
@@ -57,7 +57,7 @@ class Vehicle(Assembly):
             Power                      # Power at engine output (KW)
             Torque                     # Torque at engine output (N*m)
             FuelBurn                   # Fuel burn rate (liters/sec)
-            Acceleration               # Calculated vehicle acceleration (m/s)
+            Acceleration               # Calculated vehicle acceleration (m/s^2)
             '''
         
         super(Vehicle, self).__init__(name, parent, directory)
@@ -144,7 +144,7 @@ class Vehicle(Assembly):
               doc='Torque at engine output')
         Float('FuelBurn', self, OUTPUT, units='l/s', default=0.0,
               doc='Torque at engine output')
-        Float('Acceleration', self, OUTPUT, units='m/s', default=0.0, 
+        Float('Acceleration', self, OUTPUT, units='m/(s*s)', default=0.0, 
               doc='Calculated vehicle acceleration ')        
         
         # Hook it all up
@@ -209,7 +209,7 @@ class Vehicle(Assembly):
         
 if __name__ == "__main__":        
     z = Vehicle("Testing")        
-    z.CurrentGear = 1
+    z.CurrentGear = 3
     z.Velocity = 60.0*(26.8224/60.0)
     z.Throttle = .2
     z.execute()

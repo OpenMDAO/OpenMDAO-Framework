@@ -7,7 +7,7 @@ from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.component import RUN_OK
 
-from sim_vehicle import Sim_Vehicle
+from openmdao.examples.engine_design.sim_vehicle import Sim_Vehicle
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 class Engine_Optimization(Assembly):
