@@ -121,7 +121,7 @@ class Engine(Component):
         Div = self.Div*.001
         Liv = self.Liv*.001
         compRatio = self.compRatio
-        sparkAngle = self.sparkAngle
+        sparkAngle = self.sparkAngle*pi/180.0
         nCyl = self.nCyl
         IVO = self.IVO
         IVC = self.IVC
@@ -133,12 +133,18 @@ class Engine(Component):
 
         disp = .25*pi*bore*bore*stroke*nCyl
         l_a = conrod/(.5*stroke)          # a=half the stroke
+        resVol = 1.0/(compRatio-1.0)
         n = RPM*.001
         t_to_theta = RPM/60.0*2.0*pi
         thetastep *= pi/180.0
+        intake_close = (IVC-180.0)*pi/180.0
+        intake_open = (IVO-360.0)*pi/180.0
 
         # Burn duration valid for speeds between 1000 and 6000 RPM (Eq 3-6)
+        # Burn end taken at dQ/dt = 1e-15 (very conservative)
         burnDuration = (-1.6189*n*n + 19.886*n + 39.951)*pi/180.0
+        burnEnd = 2.0*burnDuration
+        r_burnDuration = 1.0/burnDuration
 
         # Exhaust Temperature valid for speeds between 1000 and 6000 RPM (Eq 3-21)
         T_exh = 3.3955*n*n*n - 51.9*n*n + 279.49*n + 676.21
@@ -172,17 +178,18 @@ class Engine(Component):
         # Correct ambient P & T for losses
         P0 = Pamb*Cf
         T0 = Tamb*C_heat
-
-
-        #--------------------------------------------------------------
-        # Calculation loop runs over 3/4ths of the engine's Otto cycle
-        #--------------------------------------------------------------
-        def crankangle():
-            '''Generator: angles from -360 to 180 deg'''
-            angle = -2.0*pi
-            while angle < pi:
-                angle += thetastep
-                yield angle
+        
+        # Orifice equation constant terms
+        C1 = (2000.0*Mw/(Ru*T0) * (k/(k-1)))
+        C2 = thetastep*self.Throttle*P0/t_to_theta
+        e1 = 2.0/k
+        e2 = (k + 1.0)/k
+        
+        # Heat Input Eq Constant Term
+        Qfac = .95*Hu/(1.0+AFR)
+        
+        # Valve Lifting function constant terms
+        valve1 = pi/( IVO + IVC + 180 )
 
         # Initial value for all integration variables (and their dependents)
         mass_in = 0.0
@@ -191,7 +198,8 @@ class Engine(Component):
         Pmix = 0.0
         pmi = 0.0
 
-        for theta in crankangle():
+        for thetad in xrange(-360,181):
+            theta = thetad*thetastep
 
             #--------------------------------------------------------------
             # Slider Crank Model
@@ -200,26 +208,27 @@ class Engine(Component):
             s_theta = sin(theta)
             c_theta = cos(theta)
             term = (l_a**2 - s_theta**2)**.5
+            term2 = (l_a + 1.0 - c_theta - term) 
 
             # Clyinder Volume (Eq 3-1)
-            V = disp*( 1.0/(compRatio-1.0) + .5*(l_a + 1.0 - c_theta - term) )
+            V = disp*( resVol + .5*term2 )
             dV_dtheta = .5*disp*s_theta*( 1.0 + c_theta/term )
 
             # Exposed Combustion Area (Eq 3-2)
-            A = .5*pi*bore*( bore + stroke*(l_a + 1.0 - c_theta - term ) )
+            A = .5*pi*bore*( bore + stroke*term2 )
 
             #--------------------------------------------------------------
             # Weibe Function
             #--------------------------------------------------------------
 
-            thetaSinceSpark = theta - sparkAngle*pi/180.0
+            thetaSinceSpark = theta - sparkAngle
 
-            if thetaSinceSpark > 0:
+            if thetaSinceSpark > 0 and thetaSinceSpark < burnEnd:
 
                 # Weibe Function for mass fraction burn (Eq 3-4)
                 # weibe = 1.0 - exp( -5.0*pow( thetaSinceSpark/burnDuration, 3 ) )
-                dWeibe_dtheta = - exp( -5.0*(thetaSinceSpark/burnDuration)**3.0 )*(
-                    -15.0*(thetaSinceSpark/burnDuration)**2.0)/burnDuration
+                dWeibe_dtheta = - exp( -5.0*(thetaSinceSpark*r_burnDuration)**3.0 )*(
+                    -15.0*(thetaSinceSpark*r_burnDuration)**2.0)*r_burnDuration
 
                 #--------------------------------------------------------------
                 # Calculate Total Heat Input
@@ -228,7 +237,7 @@ class Engine(Component):
                 # Total Heat Input. (Eq 3-7)
                 # Mass_in is integrated as we go from IVO to IVC 
                 # .95 because not all mass is burned.
-                Q = .95*mass_in*Hu/(1.0+AFR)
+                Q = Qfac*mass_in
     
                 #--------------------------------------------------------------
                 # Calculate Heat Release
@@ -236,7 +245,7 @@ class Engine(Component):
     
                 # Heat Release. (Eq 3-5)
                 dQ_dtheta = Q*dWeibe_dtheta
-    
+                
             else:
                 dQ_dtheta = 0.0
 
@@ -248,13 +257,13 @@ class Engine(Component):
             P += (((k-1)*(dQ_dtheta - Qloss) - k*P*dV_dtheta)/V)*thetastep
 
             # Calculate mass flow only when intake valve is open
-            if theta <= (IVC-180.0)*pi/180.0 and theta >= (IVO-360.0)*pi/180.0:
+            if theta <= intake_close and theta >= intake_open:
 
                 #--------------------------------------------------------------
                 # Valve Lift, Area, and Discharge Coefficient
                 #--------------------------------------------------------------
 
-                phi = pi*( IVO - IVC + 540 + 2.0*theta*180.0/pi )/( IVO + IVC + 180 )
+                phi = valve1*( IVO - IVC + 540 + 2.0*thetad )
 
                 # Valve Lift Function. (Eq 3-16)
                 Lv = .5*Liv*(1+cos(phi))
@@ -282,8 +291,9 @@ class Engine(Component):
                 else:
                     flow_direction = 1.0
 
-                Pratio = max( Pratio, Pratio_crit )
-
+                if Pratio < Pratio_crit:
+                    Pratio = Pratio_crit
+                
                 #--------------------------------------------------------------
                 # Calculate Intake Mass Flow
                 #--------------------------------------------------------------
@@ -291,10 +301,9 @@ class Engine(Component):
                 # Mass flow rate. (Eq 3-15)
                 # Note, 3-15 is wrong, or an approximation or something
                 # Changed to standard orifice equation for better results
-                dm_dtheta = self.Throttle*flow_direction*CD*Ar*P0/t_to_theta*( 
-                        2000.0*Mw/(Ru*T0) * (k/(k-1)) *
-                        (Pratio**(2.0/k) - Pratio**((k+1.0)/k)) )**.5
-                mass_in += dm_dtheta*thetastep
+                dm_dtheta = flow_direction*CD*Ar*C2*( C1*
+                        (Pratio**e1 - Pratio**e2) )**.5
+                mass_in += dm_dtheta
 
 
             #--------------------------------------------------------------
@@ -326,11 +335,11 @@ class Engine(Component):
             #--------------------------------------------------------------
 
             # IMEP (Eq 3-23)
-            pmi += (P+Pmix)*dV_dtheta*thetastep
+            pmi += (P+Pmix)*dV_dtheta
 
 
         # Effective Pressure (Eq 3-24)
-        BMEP = pmi/disp - FMEP
+        BMEP = pmi*thetastep/disp - FMEP
 
         # Effective Power (kwatt=kN*m/sec) (Eq 3-25)
         self.Power = 0.5*BMEP*RPM*disp*nCyl/60
@@ -346,4 +355,15 @@ class Engine(Component):
 
 # end engine.py        
 
-#z=Engine('TestEngine')
+if __name__ == "__main__": 
+    
+    z = Engine("Testing")
+    
+    import time
+    t1 = time.time()
+    
+    for jj in xrange(1,50):
+        z.execute()
+        
+    print "Elapsed time: ", time.time()-t1
+

@@ -149,7 +149,7 @@ class Sim_Vehicle(Component):
             self.vehicle.Velocity = Velocity/2.23693629
         
             Time += self.TimeStep
-            print Time, self.vehicle.CurrentGear, Velocity, self.vehicle.Transmission.RPM, self.vehicle.Engine.RPM
+            #print Time, self.vehicle.CurrentGear, Velocity, self.vehicle.Transmission.RPM, self.vehicle.Engine.RPM
         
         self.AccelTime = Time
         
