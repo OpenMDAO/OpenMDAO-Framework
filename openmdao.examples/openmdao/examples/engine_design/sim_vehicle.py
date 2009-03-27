@@ -3,8 +3,7 @@
 # Simulates a vehicle to obatain the following.
 # Vehicle assembly fits in the socket.
 
-from openmdao.main.component import Component, RUN_OK
-from openmdao.main import Float, Int
+from openmdao.main import Component, Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.exceptions import ConstraintError
 
@@ -153,8 +152,6 @@ class Sim_Vehicle(Component):
             print Time, self.vehicle.CurrentGear, Velocity, self.vehicle.Transmission.RPM, self.vehicle.Engine.RPM
         
         self.AccelTime = Time
-            
-        return RUN_OK
         
     
 def test_it():    

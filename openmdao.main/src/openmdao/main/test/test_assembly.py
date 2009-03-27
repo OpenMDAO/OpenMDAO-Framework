@@ -2,8 +2,7 @@
 
 import unittest
 
-from openmdao.main.component import Component, RUN_OK
-from openmdao.main import Assembly, Float, String
+from openmdao.main import Assembly, Component, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
 
 
@@ -38,7 +37,6 @@ class DummyComp(Component):
         # pylint: disable-msg=E1101
         if hasattr(self, 'dummy'):
             self.dummy.run()
-        return RUN_OK
 
 
 class ContainerTestCase(unittest.TestCase):

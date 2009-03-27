@@ -10,7 +10,7 @@ import numpy.numarray as numarray
 
 from openmdao.main import Driver, ArrayVariable, String, StringList, \
                           ExprEvaluator
-from openmdao.main.component import RUN_OK, RUN_STOPPED
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.variable import INPUT
 
 
@@ -206,9 +206,7 @@ class CONMINdriver(Driver):
         self.cnmn1.igoto = 0
         
         # perform an initial run for self-consistency
-        status = self.parent.workflow.run()
-        if status != RUN_OK:
-            return status
+        self.parent.workflow.run()
         
         # get the initial values of the design variables
         for i, dv in enumerate(self._design_vars):
@@ -218,7 +216,7 @@ class CONMINdriver(Driver):
         # loop until optimized
         while conmin.cnmn1.igoto or self._first is True:
             if self._stop:
-                return RUN_STOPPED
+                self.raise_exception('Stop requested', RunStopped)
 
             self._first = False            
             
@@ -240,10 +238,8 @@ class CONMINdriver(Driver):
             self._update_design_variables()
 
             # update the model
-            status = self.parent.workflow.run()
+            self.parent.workflow.run()
 # TODO: 'step around' ill-behaved cases.
-            if status != RUN_OK:
-                return status
 
             # calculate objective and constraints
             if conmin.cnmn1.info == 1:
@@ -253,7 +249,6 @@ class CONMINdriver(Driver):
             elif conmin.cnmn1.info == 2:
                 self.raise_exception('user defined gradients not yet supported',
                                      NotImplementedError)
-        return RUN_OK
 
     def _update_objective_val(self):
         """Evaluate the new objective."""
@@ -334,6 +329,4 @@ class CONMINdriver(Driver):
 
         self.cnmn1.iprint = self.iprint
         self.cnmn1.itmax = self.maxiters
-
-
 

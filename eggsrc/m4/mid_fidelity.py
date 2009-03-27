@@ -11,7 +11,6 @@ __version__ = '0.1'
 import mool.Optimization.MidFiModel
 
 from openmdao.main import Component, ArrayVariable, Float, Int, String
-from openmdao.main.component import RUN_OK, RUN_FAILED
 from openmdao.main.interfaces import IComponent
 from openmdao.main.variable import INPUT, OUTPUT
 
@@ -106,12 +105,10 @@ class MidFidelity(Component):
     def execute(self):
         """ Compute results based on mid-fidelity approximation. """
         if self.lofi_model is None:
-            self.error('No lofi model')
-            return RUN_FAILED
+            self.raise_exception('No lofi model plugin', ValueError)
 
         if self.hifi_model is None:
-            self.error('No hifi model')
-            return RUN_FAILED
+            self.raise_exception('No hifi model plugin', ValueError)
 
         # Wrap low fidelity model.
         if self._lofi_m4model is None:
@@ -159,8 +156,8 @@ class MidFidelity(Component):
             elif self.doe_type == 'oa3':
                 min_samples = (nvars-1)**3
             else:
-                self.error("Unknown DOE type '%s'", self.doe_type)
-                return RUN_FAILED
+                msg = "Unknown DOE type '%s'" % self.doe_type
+                self.raise_exception(msg, ValueError)
 
             if self.n_samples < min_samples:
                 self.warning('Updating n_samples to minimum for DOE: %d',
@@ -179,8 +176,8 @@ class MidFidelity(Component):
             elif self.rs_type == 'kriging':
                 min_samples = nvars
             else:
-                self.error("Unknown RS type '%s'", self.rs_type)
-                return RUN_FAILED
+                msg = "Unknown RS type '%s'" % self.rs_type
+                self.raise_exception(msg, ValueError)
 
             if self.n_samples < min_samples:
                 self.warning('Updating n_samples to minimum for RS: %d',
@@ -229,6 +226,4 @@ class MidFidelity(Component):
             result = self._midfi_model.RunModel(vec, i)
             self.debug('    result %s', str(result))
             setattr(self, mapping[0], result)
-
-        return RUN_OK
 

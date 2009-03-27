@@ -7,8 +7,8 @@ import shutil
 import unittest
 
 from openmdao.main import Assembly, Component, \
-                          ArrayVariable, FileVariable, StringList
-from openmdao.main.component import RUN_OK
+                          ArrayVariable, FileVariable, StringList, Bool
+from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT
 
 # pylint: disable-msg=E1101
@@ -20,6 +20,7 @@ class Source(Component):
 
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
+        Bool('write_files', self, INPUT, default=True)
         StringList('text_data', self, INPUT, default=[])
         ArrayVariable('binary_data', self, INPUT, float, default=[])
         FileVariable('text_file', self, OUTPUT, default='source.txt')
@@ -28,15 +29,14 @@ class Source(Component):
 
     def execute(self):
         """ Write test data to files. """
-        out = open(self.text_file, 'w')
-        out.write(self.text_data)
-        out.close()
+        if self.write_files:
+            out = open(self.text_file, 'w')
+            out.write(self.text_data)
+            out.close()
 
-        out = open(self.binary_file, 'wb')
-        cPickle.dump(self.binary_data, out, 2)
-        out.close()
-
-        return RUN_OK
+            out = open(self.binary_file, 'wb')
+            cPickle.dump(self.binary_data, out, 2)
+            out.close()
 
 
 class Sink(Component):
@@ -59,14 +59,12 @@ class Sink(Component):
         self.binary_data = cPickle.load(inp)
         inp.close()
 
-        return RUN_OK
-
 
 class Model(Assembly):
     """ Transfer files from producer to consumer. """
 
-    def __init__(self, *args, **kwargs):
-        super(Model, self).__init__(*args, **kwargs)
+    def __init__(self, name='FileVar_TestModel', *args, **kwargs):
+        super(Model, self).__init__(name, *args, **kwargs)
 
         self.workflow.add_node(Source(parent=self, directory='Source'))
         self.workflow.add_node(Sink(parent=self, directory='Sink'))
@@ -82,7 +80,7 @@ class FileTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        self.model = Model('TestModel')
+        self.model = Model()
 
     def tearDown(self):
         """ Called after each test in this class. """
@@ -107,6 +105,16 @@ class FileTestCase(unittest.TestCase):
                          self.model.Source.binary_data)
         self.assertEqual(
             self.model.Sink.getvar('binary_file').metadata['binary'], True)
+
+    def test_src_failure(self):
+        self.model.Source.write_files = False
+        try:
+            self.model.run()
+        except IOError, exc:
+            if str(exc).find('source.txt') < 0:
+                self.fail("Wrong message '%s'" % str(exc))
+        else:
+            self.fail('IOError expected')
 
 
 if __name__ == '__main__':

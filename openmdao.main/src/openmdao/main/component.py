@@ -10,22 +10,16 @@ import os.path
 from zope.interface import implements
 
 from openmdao.main.interfaces import IComponent, IAssembly
-from openmdao.main import Container, Int, String
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main import Container, String
+from openmdao.main.variable import INPUT
 from openmdao.main.constants import SAVE_PICKLE
+from openmdao.main.exceptions import RunFailed
 
 # Execution states.
 STATE_UNKNOWN = -1
 STATE_IDLE    = 0
 STATE_RUNNING = 1
 STATE_WAITING = 2
-
-# Run completion status.
-RUN_UNKNOWN     = -1
-RUN_OK          = 0
-RUN_FAILED      = 1
-RUN_STOPPED     = 2
-RUN_INTERRUPTED = 3
 
 
 class Component (Container):
@@ -49,9 +43,6 @@ class Component (Container):
 
         String('directory', self, INPUT, default=directory,
                doc='If non-null, the directory to execute in.')
-
-        Int('execute_status', self, OUTPUT, default=RUN_UNKNOWN,
-            doc='Status code from last execution.')
 
 # pylint: disable-msg=E1101
         if self.directory:
@@ -132,7 +123,7 @@ class Component (Container):
         have already been set. 
         This should be overridden in derived classes.
         """
-        return RUN_OK
+        pass
     
     def post_execute (self):
         """Update output variables and anything else needed after execution"""
@@ -146,25 +137,18 @@ class Component (Container):
         try:
             self.push_dir(directory)
         except OSError, exc:
-            self.error("Could not move to execution directory '%s': %s",
-                       directory, exc.strerror)
-            self.execute_status = RUN_FAILED
-            return self.execute_status
+            msg = "Could not move to execution directory '%s': %s" % \
+                  (directory, exc.strerror)
+            self.raise_exception(msg, RunFailed)
 
         self.state = STATE_RUNNING
         self._stop = False
         try:
             if self.parent is not None and IAssembly.providedBy(self.parent):
-                if not self.parent.update_inputs(self):
-                    self.execute_status = RUN_FAILED
-                    return self.execute_status
+                self.parent.update_inputs(self)
             self.pre_execute()
-            self.execute_status = self.execute()
-            if self.execute_status is None:
-                self.error('execute() did not return a run status!')
-                self.execute_status = RUN_FAILED
+            self.execute()
             self.post_execute()
-            return self.execute_status
         finally:
             self.state = STATE_IDLE
             self.pop_dir()

@@ -7,7 +7,6 @@ The component in question just evaluates a simple expression.
 """
 
 from openmdao.main import Assembly
-from openmdao.main.component import RUN_OK
 
 import m4.doe
 import m4.dummy_components
@@ -43,20 +42,16 @@ class Model(Assembly):
 def main():
     """ Run model and print results. """
     model = Model()
-    status = model.run()
-    if status == RUN_OK:
-        for i, case in enumerate(model.driver.outerator):
-            print 'CASE %d:' % (i+1)
-            for name, index, value in case.inputs:
-                print '    input:', name, index, value
-            if case.status == RUN_OK:
-                for name, index, value in case.outputs:
-                    print '    output:', name, index, value
-            else:
-                print '    FAILED, status = %d, msg: %s' % \
-                      (case.status, case.msg)
-    else:
-        print 'Run failed, status', status
+    model.run()
+    for i, case in enumerate(model.driver.outerator):
+        print 'CASE %d:' % (i+1)
+        for name, index, value in case.inputs:
+            print '    input:', name, index, value
+        if case.msg:
+            print '    FAILED: %s' % case.msg
+        else:
+            for name, index, value in case.outputs:
+                print '    output:', name, index, value
 
 
 if __name__ == '__main__':

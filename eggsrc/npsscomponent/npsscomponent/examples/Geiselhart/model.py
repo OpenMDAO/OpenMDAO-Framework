@@ -17,7 +17,6 @@ import os.path
 
 from openmdao.main import Assembly, Component, Container, Float, \
                           ArrayVariable, FileVariable
-from openmdao.main.component import RUN_OK
 from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent
@@ -90,8 +89,6 @@ class PropulsionData(Component):
         self.FLOPS.xnac = \
             (self.link_inletLength \
              + self.link_length) / 12.
-
-        return RUN_OK
 
 
 class FLOPSdata(Container):
@@ -487,6 +484,5 @@ class Model(Assembly):
 
 
 if __name__ == '__main__':
-    if Model().run() != RUN_OK:
-        print 'Run failed, check log file for more information.'
+    Model().run()
 

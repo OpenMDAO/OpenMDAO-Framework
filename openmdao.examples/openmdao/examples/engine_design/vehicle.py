@@ -8,7 +8,6 @@
 from openmdao.main import Assembly
 from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.component import RUN_OK
 
 from engine import Engine
 from transmission import Transmission
@@ -203,8 +202,6 @@ class Vehicle(Assembly):
         self.Torque = self.get('Engine.Torque')    
         self.FuelBurn = self.get('Engine.FuelBurn')      
         self.Acceleration = self.get('VDyn.Acceleration') 
-        
-        return RUN_OK
 
         
 if __name__ == "__main__":        

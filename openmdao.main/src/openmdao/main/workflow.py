@@ -2,7 +2,7 @@
 from zope.interface import implements
 
 from openmdao.main.component import Component, STATE_RUNNING, STATE_WAITING
-from openmdao.main.component import RUN_OK, RUN_STOPPED
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import IWorkflow, IComponent, IDriver
 
 __all__ = ['Workflow']
@@ -42,16 +42,12 @@ class Workflow(Component):
 
     def execute(self):
         """ Run through the nodes in the workflow list. """
-        status = RUN_OK
         for node in self.nodes:
             self.state = STATE_WAITING
-            status = node.run()
+            node.run()
             self.state = STATE_RUNNING
-            if status is not RUN_OK:
-                return status
             if self._stop:
-                return RUN_STOPPED
-        return RUN_OK
+                self.raise_exception('Stop requested', RunStopped)
     
     def step(self):
         """Run a single component in the Workflow"""
@@ -61,15 +57,12 @@ class Workflow(Component):
         self.state = STATE_WAITING
         node = self._iterator.next()
         try:
-            status = node.run()
+            node.run()
         except StopIteration, err:
             self._iterator = None
             raise err
         self.state = STATE_RUNNING
-        if status is RUN_OK:
-            return RUN_STOPPED
-        else:
-            return status
+        self.raise_exception('Step complete', RunStopped)
 
     def steppable(self):
         """ Return True if it makes sense to 'step' this component. """

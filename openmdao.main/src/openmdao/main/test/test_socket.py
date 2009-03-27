@@ -3,7 +3,6 @@ import unittest
 
 from openmdao.main import Component, ListCaseIterator, Case, Int
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.main.component import RUN_OK
 from openmdao.main.variable import OUTPUT
 
 
@@ -17,7 +16,6 @@ class SocketComp(Component):
         self.num_cases = 0
         for case in self.iterator:
             self.num_cases += 1
-        return RUN_OK
 
 
 class SocketTestCase(unittest.TestCase):
@@ -32,8 +30,7 @@ class SocketTestCase(unittest.TestCase):
 
     def test_normal(self):
         self.sc.iterator = ListCaseIterator([Case(), Case(), Case()])
-        status = self.sc.run()
-        self.assertEqual(status, RUN_OK)
+        self.sc.run()
         self.assertEqual(self.sc.num_cases, 3)
 
     def test_no_socket(self):
@@ -76,6 +73,13 @@ class SocketTestCase(unittest.TestCase):
         self.assertEqual(self.sc.check_socket('iterator'), False)
         self.sc.iterator = ListCaseIterator([Case(), Case(), Case()])
         self.assertEqual(self.sc.check_socket('iterator'), True)
+
+        try:
+            self.sc.check_socket('no_socket')
+        except AttributeError, exc:
+            self.assertEqual("SocketComp: no such socket 'no_socket'",                             str(exc))
+        else:
+            self.fail('AttributeError expected')
 
 
 if __name__ == "__main__":

@@ -1,6 +1,5 @@
 
-from openmdao.main.component import Component, RUN_OK
-from openmdao.main import Float
+from openmdao.main import Component, Float
 from openmdao.main.variable import INPUT, OUTPUT
 from math import pi
 
@@ -28,5 +27,4 @@ class HollowSphere(Component):
         self.inner_volume = 4.0/3.0*pi*self.radius**3
         self.volume = 4.0/3.0*pi*(self.radius+self.thickness)**3
         self.solid_volume = self.volume-self.inner_volume
-        return RUN_OK
 

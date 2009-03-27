@@ -3,8 +3,7 @@
 # This openMDAO component contains a simple transmission model
 # Transmission is a 5-speed manual.
 
-from openmdao.main.component import Component, RUN_OK
-from openmdao.main import Float, Int
+from openmdao.main import Component, Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 
 class Transmission(Component):
@@ -75,7 +74,5 @@ class Transmission(Component):
         # At low speeds, hold engine speed at 1000 RPM and feather the clutch
         if self.RPM < 1000.0 and self.CurrentGear == 1 :
             self.RPM = 1000.0
-            
-        return RUN_OK
         
 # End Transmission.py
