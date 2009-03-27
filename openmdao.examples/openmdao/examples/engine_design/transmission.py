@@ -50,7 +50,7 @@ class Transmission(Component):
               doc='Circumference of tire (inches)')
 
         Int('CurrentGear', self, INPUT, default=0,
-              doc='Gear Ratio in Fifth Gear')
+              doc='Current Gear')
         Float('Velocity', self, INPUT, units='mi/h', default=0.0,
               doc='Current Velocity of Vehicle')
 
@@ -63,7 +63,7 @@ class Transmission(Component):
         ''' The 5-speed manual transmission is simulated by determining the
             torque output and engine RPM via the gear ratios.
             '''
-        Ratios = [None, self.Ratio1, self.Ratio2, self.Ratio3, self.Ratio4,
+        Ratios = [0.0, self.Ratio1, self.Ratio2, self.Ratio3, self.Ratio4,
                   self.Ratio5]
         
         Gear = self.CurrentGear

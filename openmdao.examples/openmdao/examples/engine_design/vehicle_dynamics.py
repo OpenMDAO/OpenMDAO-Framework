@@ -26,7 +26,7 @@ class Vehicle_Dynamics(Component):
             TireCircumference   # Circumference of tire (m)
             
             # Outputs
-            Acceleration        # Calculated vehicle acceleration (m/s)
+            Acceleration        # Calculated vehicle acceleration (m/s^2)
             
             '''
         
@@ -54,7 +54,7 @@ class Vehicle_Dynamics(Component):
         Float('TireCirc', self, INPUT, units='m', default=2.0,
               doc='Circumference of tire')
         
-        Float('Acceleration', self, OUTPUT, units='m/s', default=0.0, 
+        Float('Acceleration', self, OUTPUT, units='m/(s*s)', default=0.0, 
               doc='Calculated vehicle acceleration ')        
         
     def execute(self):
