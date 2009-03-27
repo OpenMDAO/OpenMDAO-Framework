@@ -11,6 +11,8 @@ import zc.buildout
 
 from openmdao.util.procutil import run_command
 from openmdao.util.fileutil import rm
+
+
     
 class EggBundler(object):
     """Collect all of the eggs (not installed) that are used in the current
@@ -52,7 +54,6 @@ class EggBundler(object):
             self.fix_versions = False
         else:
             self.fix_versions = True
-        self.extra_stuff = (options.get('extra_data') or '').split()
         
         self.excludeparts = [x for x in options['exclude_parts'].split() if x != '']
         self.parts = [x for x in buildout['buildout']['parts'].split() 
@@ -63,6 +64,16 @@ class EggBundler(object):
             self.archive = False
         else:
             self.archive = True
+            
+        extra_stuff = (options.get('extra_data') or '').split()
+        self.extra_stuff = []
+        for stuff in extra_stuff:
+            try:
+                src,dest = stuff.split('=')
+            except ValueError:
+                src = stuff
+                dest = os.path.basename(stuff)
+            self.extra_stuff.append((src,dest))
 
     def _add_deps(self, deps, env, ws, req, excludes):
         """Add a dependency for the given requirement and anything the resulting
@@ -198,15 +209,26 @@ class EggBundler(object):
         self.dists.extend(distribs)
         
         # Copy any extra stuff specified in the config
-        for stuff in self.extra_stuff:
-            self.logger.debug('copying %s' % stuff)
-            if os.path.isfile(stuff):
-                shutil.copy(stuff, self.bundledir)
-            elif os.path.isdir(stuff):
-                dest = os.path.join(self.bundledir,os.path.basename(stuff))
-                if os.path.exists(dest):
-                    rm(dest)
-                shutil.copytree(stuff, dest) 
+        for src,dest in self.extra_stuff:
+            self.logger.debug('copying %s to %s' % (src, dest))
+            if os.path.isdir(src):
+                if not os.path.exists(dest): 
+                    os.makedirs(dest)
+            else:
+                dname = os.path.dirname(dest)
+                if dname != '':
+                    if not os.path.exists(dname): 
+                        os.makedirs(dname)
+                
+            if os.path.isfile(src):
+                shutil.copy(src, os.path.join(self.bundledir, dest))
+            elif os.path.isdir(src):
+                ddest = os.path.join(self.bundledir, dest)
+                if os.path.exists(ddest):
+                    rm(ddest)
+                shutil.copytree(src, ddest) 
+            else:
+                self.logger.error('%s is not a file or directory' % src)
             
         # Copy all of the dependent distribs into the cache directory.
         # The eggs made from the develop eggs are already there.
@@ -243,12 +265,14 @@ class EggBundler(object):
                                     sys.version[:3]))
             tarf.close()
         
-            rm(os.path.join(self.bundledir,'buildout',))
-            for stuff in self.extra_stuff:
-                try:
-                    rm(os.path.join(self.bundledir,os.path.basename(stuff)))
-                except OSError, err:
-                    self.logger.error(str(err))
+            # delete everything but the tar file
+            for name in os.listdir(self.bundledir):
+                pname = os.path.join(self.bundledir, name)
+                if pname != tarname:
+                    try:
+                        rm(pname)
+                    except OSError, err:
+                        self.logger.error(str(err))
             
         return [self.bundledir]
 
