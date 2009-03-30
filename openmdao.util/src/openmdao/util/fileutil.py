@@ -1,13 +1,36 @@
 """
 Misc. file utility routines
 """
+
+
 import os
+from os import makedirs
 import sys
 import shutil
 import linecache
 import fnmatch
 from os.path import islink, isdir
+from os.path import normpath,dirname,exists,abspath
 from subprocess import Popen,PIPE,STDOUT
+
+
+def makepath(path):
+    """ creates missing directories for the given path and
+        returns a normalized absolute version of the path.
+
+    - if the given path already exists in the filesystem
+      the filesystem is not modified.
+
+    - otherwise makepath creates directories along the given path
+      using the dirname() of the path. You may append
+      a '/' to the path if you want it to be a directory path.
+
+    from holger@trillke.net 2002/03/18
+    """
+
+    dpath = normpath(dirname(path))
+    if not exists(dpath): makedirs(dpath)
+    return normpath(abspath(path))
 
 
 def glob_walk(directory, include_list):

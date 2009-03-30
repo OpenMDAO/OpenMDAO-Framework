@@ -78,8 +78,6 @@ class pyevolvedriver(Driver):
     TODO: Implement function-slots as sockets
     """
 
-
-
     def _get_objective(self):
         if self._objective is None:
             return ''
@@ -134,10 +132,6 @@ class pyevolvedriver(Driver):
 
         #internal stuff
         self._objective = None
-
-
-
-
 
 
     def _set_GA_property(self,setFunc,framework_var): 

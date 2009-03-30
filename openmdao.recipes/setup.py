@@ -14,15 +14,15 @@ version = '0.1.0'
 
 setup(name='openmdao.recipes',
       version=version,
-      description="OpenMDAO framework infrastructure",
+      description="Recipes for OpenMDAO buildouts",
       long_description="""\
 """,
       classifiers=[],
-      keywords='recipe buildout mdao',
+      keywords='recipe buildout openmdao',
       author='',
       author_email='',
       url='',
-      license='NASA Open Source Agreement',
+      license='NASA Open Source Agreement 1.3',
       namespace_packages=["openmdao"],
       packages=['openmdao', 'openmdao.recipes'],
       package_dir={'': 'src'},
@@ -39,7 +39,7 @@ setup(name='openmdao.recipes',
       ],
       entry_points="""
       [zc.buildout]
-      default = openmdao.recipes.wingproj:WingProj
+      default = openmdao.recipes.isolatedegg:IsolatedEgg
       isolatedegg = openmdao.recipes.isolatedegg:IsolatedEgg
       wingproj = openmdao.recipes.wingproj:WingProj
       sphinxbuild = openmdao.recipes.sphinxbuild:SphinxBuild
