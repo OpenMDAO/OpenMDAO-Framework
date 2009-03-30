@@ -3,8 +3,7 @@
 # This openMDAO component determines the vehicle acceleration based on the
 # power output of the engine, modified by the transmission torque ratio.
 
-from openmdao.main.component import Component, RUN_OK
-from openmdao.main import Float
+from openmdao.main import Component, Float
 from openmdao.main.variable import INPUT, OUTPUT
 from math import pi
 
@@ -26,7 +25,7 @@ class Vehicle_Dynamics(Component):
             TireCircumference   # Circumference of tire (m)
             
             # Outputs
-            Acceleration        # Calculated vehicle acceleration (m/s)
+            Acceleration        # Calculated vehicle acceleration (m/s^2)
             
             '''
         
@@ -54,7 +53,7 @@ class Vehicle_Dynamics(Component):
         Float('TireCirc', self, INPUT, units='m', default=2.0,
               doc='Circumference of tire')
         
-        Float('Acceleration', self, OUTPUT, units='m/s', default=0.0, 
+        Float('Acceleration', self, OUTPUT, units='m/(s*s)', default=0.0, 
               doc='Calculated vehicle acceleration ')        
         
     def execute(self):
@@ -71,7 +70,5 @@ class Vehicle_Dynamics(Component):
         Drag = .5*(1.225)*self.Cd*self.Area*self.Velocity*self.Velocity
         
         self.Acceleration = (Torque/TireRadius - Friction - Drag)/Mass
-            
-        return RUN_OK
         
 # End Vehicle_Dynamics.py

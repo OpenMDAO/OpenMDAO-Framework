@@ -12,6 +12,8 @@ from openmdao.main import Component
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.filevar import FileVariable
 from openmdao.main.tarjan import strongly_connected_components
+from openmdao.main.util import filexfer
+from openmdao.main.exceptions import RunFailed
 
 
 class Assembly(Component):
@@ -177,7 +179,7 @@ class Assembly(Component):
         try:
             deps = self._connections[incomp.name]
         except KeyError:
-            return True  # no connected inputs for this component
+            return   # no connected inputs for this component
 
         for invarname, outtuple in deps.items():
             invar = incomp.getvar(invarname)
@@ -189,11 +191,10 @@ class Assembly(Component):
                     self.xfer_file(outcomp, outvar, incomp, invar)
                     invar.metadata = outvar.metadata.copy()
                 except Exception, exc:
-                    self.error("cannot transfer file from '%s' to '%s': %s",
-                               '.'.join(outtuple[:2]),
-                               '.'.join((incomp.name, invarname)), str(exc))
-                    raise exc
-                    #return False
+                    msg = "cannot transfer file from '%s' to '%s': %s" % \
+                          ('.'.join(outtuple[:2]),
+                           '.'.join((incomp.name, invarname)), str(exc))
+                    self.raise_exception(msg, type(exc))
                 finally:
                     incomp.push_dir(incomp.get_directory())
             else:
@@ -201,12 +202,10 @@ class Assembly(Component):
                 try:
                     invar.setvar(None, outvar)
                 except Exception, exc:
-                    self.error("cannot set '%s' from '%s': %s",
-                               '.'.join((incomp.name, invarname)),
-                               '.'.join(outtuple[:2]), str(exc))
-                    raise exc
-                    #return False
-        return True
+                    msg = "cannot set '%s' from '%s': %s" % \
+                          ('.'.join((incomp.name, invarname)),
+                           '.'.join(outtuple[:2]), str(exc))
+                    self.raise_exception(msg, type(exc))
 
     @staticmethod
     def xfer_file(src_comp, src_var, dst_comp, dst_var):
@@ -218,36 +217,5 @@ class Assembly(Component):
                 mode = 'b'
             else:
                 mode = ''
-            Assembly.filexfer(None, src_path, None, dst_path, mode)
-
-# TODO: move this to some utility module?.
-    @staticmethod
-    def filexfer(src_server, src_path, dst_server, dst_path, mode=''):
-        """ Transfer file from one place to another. """
-        if src_server is None:
-            src_file = open(src_path, 'r'+mode)
-        else:
-            src_file = src_server.open(src_path, 'r'+mode)
-    
-        if dst_server is None:
-            dst_file = open(dst_path, 'w'+mode)
-        else:
-            dst_file = dst_server.open(dst_path, 'w'+mode)
-
-        chunk = 1 << 17    # 128KB
-        data = src_file.read(chunk)
-        while data:
-            dst_file.write(data)
-            data = src_file.read(chunk)
-        src_file.close()
-        dst_file.close()
-
-        if src_server is None:
-            mode = os.stat(src_path).st_mode
-        else:
-            mode = src_server.stat(src_path).st_mode
-        if dst_server is None:
-            os.chmod(dst_path, mode)
-        else:
-            dst_server.chmod(dst_path, mode)
+            filexfer(None, src_path, None, dst_path, mode)
 

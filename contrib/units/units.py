@@ -668,7 +668,7 @@ def importLibrary(libfilepointer):
   if(len(retry1) >0):
     raise ValueError, "The following units were not defined because they could not be resolved as a function of any other defined units:%s"%[x[0] for x in retry1]
 
-defaultLib = resource_stream(__name__, 'unitLibdefualt.ini')
+defaultLib = resource_stream(__name__, 'unitLibdefault.ini')
 importLibrary(defaultLib)
 
 

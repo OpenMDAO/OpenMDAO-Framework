@@ -8,7 +8,6 @@ is directly calculated.
 """
 
 from openmdao.main import Assembly, Float
-from openmdao.main.component import RUN_OK
 from openmdao.main.variable import INPUT, OUTPUT
 
 from m4.doe import DOE
@@ -18,8 +17,8 @@ from m4.dummy_components import Model_A2d, Model_B2d
 class Model(Assembly):
     """ Simple M4 variable fidelity example.  """
 
-    def __init__(self, name='M4_VarFi', parent=None):
-        super(Model, self).__init__(name, parent)
+    def __init__(self, name='M4_VarFi', *args, **kwargs):
+        super(Model, self).__init__(name, *args, **kwargs)
 
         # The model is an M4 variable fidelity component.
         var_fi = VarFi(parent=self)
@@ -44,8 +43,8 @@ class Model(Assembly):
 class VarFi(MidFidelity):
     """ Example variable fidelity component. """
 
-    def __init__(self, name='VarFi', parent=None):
-        super(VarFi, self).__init__(name, parent)
+    def __init__(self, name='VarFi', *args, **kwargs):
+        super(VarFi, self).__init__(name, *args, **kwargs)
 
         # Inputs.
         self.rs_type = 'rbf'
@@ -84,20 +83,16 @@ class VarFi(MidFidelity):
 def main():
     """ Run model and print results. """
     model = Model()
-    status = model.run()
-    if status == RUN_OK:
-        for i, case in enumerate(model.driver.outerator):
-            print 'CASE %d:' % (i+1)
-            for name, index, value in case.inputs:
-                print '    input:', name, index, value
-            if case.status == RUN_OK:
-                for name, index, value in case.outputs:
-                    print '    output:', name, index, value
-            else:
-                print '    FAILED, status = %d, msg: %s' % \
-                      (case.status, case.msg)
-    else:
-        print 'Run failed, status', status
+    model.run()
+    for i, case in enumerate(model.driver.outerator):
+        print 'CASE %d:' % (i+1)
+        for name, index, value in case.inputs:
+            print '    input:', name, index, value
+        if case.msg:
+            print '    FAILED: %s' % case.msg
+        else:
+            for name, index, value in case.outputs:
+                print '    output:', name, index, value
 
 
 if __name__ == '__main__':

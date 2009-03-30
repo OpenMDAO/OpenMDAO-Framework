@@ -13,19 +13,13 @@ from openmdao.main.interfaces import IComponent, IAssembly
 from openmdao.main import Container, String
 from openmdao.main.variable import INPUT
 from openmdao.main.constants import SAVE_PICKLE
+from openmdao.main.exceptions import RunFailed
 
 # Execution states.
 STATE_UNKNOWN = -1
 STATE_IDLE    = 0
 STATE_RUNNING = 1
 STATE_WAITING = 2
-
-# Run completion status.
-RUN_UNKNOWN     = -1
-RUN_OK          = 0
-RUN_FAILED      = 1
-RUN_STOPPED     = 2
-RUN_INTERRUPTED = 3
 
 
 class Component (Container):
@@ -47,10 +41,10 @@ class Component (Container):
         # List of meta-data dictionaries.
         self.external_files = []
 
-        self.directory = directory  # For PyLint.
         String('directory', self, INPUT, default=directory,
                doc='If non-null, the directory to execute in.')
 
+# pylint: disable-msg=E1101
         if self.directory:
             if not os.path.exists(self.directory):
 # TODO: Security!
@@ -62,6 +56,7 @@ class Component (Container):
             else:
                 if not os.path.isdir(self.directory):
                     self.error("Path '%s' is not a directory.", self.directory)
+# pylint: enable-msg=E1101
 
     def _get_socket_plugin(self, name):
         """Return plugin for the named socket"""
@@ -97,7 +92,7 @@ class Component (Container):
         setattr(self.__class__, name,
                 property(lambda self : self._get_socket_plugin(name),
                          lambda self, plugin : self._set_socket_plugin(name, plugin),
-                         doc=doc))
+                         None, doc))
 
     def check_socket (self, name):
         """Return True if socket is filled"""
@@ -128,7 +123,7 @@ class Component (Container):
         have already been set. 
         This should be overridden in derived classes.
         """
-        return RUN_OK
+        pass
     
     def post_execute (self):
         """Update output variables and anything else needed after execution"""
@@ -142,23 +137,18 @@ class Component (Container):
         try:
             self.push_dir(directory)
         except OSError, exc:
-            self.error("Could not move to execution directory '%s': %s",
-                       directory, exc.strerror)
-            return RUN_FAILED
+            msg = "Could not move to execution directory '%s': %s" % \
+                  (directory, exc.strerror)
+            self.raise_exception(msg, RunFailed)
 
         self.state = STATE_RUNNING
         self._stop = False
         try:
             if self.parent is not None and IAssembly.providedBy(self.parent):
-                if not self.parent.update_inputs(self):
-                    return RUN_FAILED
+                self.parent.update_inputs(self)
             self.pre_execute()
-            status = self.execute()
-            if status is None:
-                self.error('execute() did not return a run status!')
-                status = RUN_FAILED
+            self.execute()
             self.post_execute()
-            return status
         finally:
             self.state = STATE_IDLE
             self.pop_dir()

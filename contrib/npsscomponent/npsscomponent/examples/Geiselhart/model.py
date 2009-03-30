@@ -17,7 +17,6 @@ import os.path
 
 from openmdao.main import Assembly, Component, Container, Float, \
                           ArrayVariable, FileVariable
-from openmdao.main.component import RUN_OK
 from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent
@@ -90,8 +89,6 @@ class PropulsionData(Component):
         self.FLOPS.xnac = \
             (self.link_inletLength \
              + self.link_length) / 12.
-
-        return RUN_OK
 
 
 class FLOPSdata(Container):
@@ -225,6 +222,7 @@ class ANOPPdata(Container):
 
 class TracingNPSS(NPSScomponent):
     """ Simply overrides execute() to trace start & stop times. """
+
     def execute(self):
         print self.get_pathname(), 'execution begins'
         status = super(TracingNPSS, self).execute()
@@ -249,8 +247,8 @@ class Model(Assembly):
             
         super(Model, self).connect(src_path, dst_path)
 
-    def __init__(self, name='Propulsion', parent=None, directory=''):
-        super(Model, self).__init__(name, parent, directory)
+    def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
+        super(Model, self).__init__(name, *args, **kwargs)
 
         model_dir = os.path.join('..', 'Full_Model', 'Cycle', 'run')
         includes = [
@@ -486,6 +484,5 @@ class Model(Assembly):
 
 
 if __name__ == '__main__':
-    if Model().run() != RUN_OK:
-        print 'Run failed, check log file for more information.'
+    Model().run()
 

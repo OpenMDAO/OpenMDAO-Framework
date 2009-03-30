@@ -348,9 +348,13 @@ class Container(HierarchyMember):
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
-        pass
+        subcontainers = self.get_objs(IContainer.providedBy)
+        for child in subcontainers:
+            child.post_load()
 
     def pre_delete(self):
         """ Perform any required operations before the model is deleted. """
-        pass
+        subcontainers = self.get_objs(IContainer.providedBy)
+        for child in subcontainers:
+            child.pre_delete()
 

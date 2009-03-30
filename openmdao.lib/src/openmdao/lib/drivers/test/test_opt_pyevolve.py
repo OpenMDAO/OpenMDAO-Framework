@@ -7,7 +7,7 @@ import unittest
 import numpy
 
 
-from openmdao.main.component import Component, RUN_OK
+from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
 from openmdao.main import Float
 from openmdao.main.variable import INPUT,OUTPUT
@@ -28,7 +28,6 @@ class SphereFunction(Component):
     def execute(self):
         """ calculate the sume of the squares for the list of numbers """
         self.total = sum([x**2 for x in self.points])
-        return RUN_OK
         
 
 class pyevolvedriverTestCase(unittest.TestCase):

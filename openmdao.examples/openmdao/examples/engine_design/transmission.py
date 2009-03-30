@@ -3,8 +3,7 @@
 # This openMDAO component contains a simple transmission model
 # Transmission is a 5-speed manual.
 
-from openmdao.main.component import Component, RUN_OK
-from openmdao.main import Float, Int
+from openmdao.main import Component, Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 
 class Transmission(Component):
@@ -50,7 +49,7 @@ class Transmission(Component):
               doc='Circumference of tire (inches)')
 
         Int('CurrentGear', self, INPUT, default=0,
-              doc='Gear Ratio in Fifth Gear')
+              doc='Current Gear')
         Float('Velocity', self, INPUT, units='mi/h', default=0.0,
               doc='Current Velocity of Vehicle')
 
@@ -63,7 +62,7 @@ class Transmission(Component):
         ''' The 5-speed manual transmission is simulated by determining the
             torque output and engine RPM via the gear ratios.
             '''
-        Ratios = [None, self.Ratio1, self.Ratio2, self.Ratio3, self.Ratio4,
+        Ratios = [0.0, self.Ratio1, self.Ratio2, self.Ratio3, self.Ratio4,
                   self.Ratio5]
         
         Gear = self.CurrentGear
@@ -75,7 +74,5 @@ class Transmission(Component):
         # At low speeds, hold engine speed at 1000 RPM and feather the clutch
         if self.RPM < 1000.0 and self.CurrentGear == 1 :
             self.RPM = 1000.0
-            
-        return RUN_OK
         
 # End Transmission.py

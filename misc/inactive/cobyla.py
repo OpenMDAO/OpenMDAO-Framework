@@ -11,7 +11,7 @@ __version__ = "0.1"
 from scipy.optimize.cobyla import fmin_cobyla
 
 from openmdao.main import Driver
-from openmdao.main.component import STATE_WAITING, RUN_UNKNOWN
+from openmdao.main.component import STATE_WAITING
 from openmdao.main import Float
 from openmdao.main import String
 from openmdao.main import StringList
@@ -40,7 +40,6 @@ class COBYLA(Driver):
         self.rhobeg = 0.1
         self.rhoend = 0.0001
         self.maxiters = 1000
-        self.status = RUN_UNKNOWN
         self.iter_count = 0
         self.xmin = []
         self.iprint = 0
@@ -74,7 +73,7 @@ class COBYLA(Driver):
         for name, val in zip(self.design_vars, dvars):
             eval(translate_expr(name+'='+str(val), self))
         self.state = STATE_WAITING
-        self.status = self.parent.workflow.run()
+        self.parent.workflow.run()
         
         if self._stop is True:
             raise StopIteration()
@@ -92,8 +91,6 @@ class COBYLA(Driver):
                                 consargs=(),
                                 rhobeg=self.rhobeg, rhoend=self.rhoend,
                                 iprint=self.iprint, maxfun=self.maxiters)
-        
-        return self.status
 
 
     def add_constraint(self, constraint):
