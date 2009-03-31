@@ -3,12 +3,17 @@ __all__ = ["Assembly"]
 
 __version__ = "0.1"
 
+import os
+
 from zope.interface import implements
 
 from openmdao.main.interfaces import IAssembly
 from openmdao.main import Component
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.filevar import FileVariable
 from openmdao.main.tarjan import strongly_connected_components
+from openmdao.main.util import filexfer
+from openmdao.main.exceptions import RunFailed
 
 
 class Assembly(Component):
@@ -22,7 +27,7 @@ class Assembly(Component):
         super(Assembly, self).__init__(name, parent, doc=doc,
                                        directory=directory)
         self._connections = {} # dependencies between Components
-        self.driver = self.create('openmdao.main.driver.Driver','driver')
+        self.driver = self.create('openmdao.main.driver.Driver', 'driver')
         self.workflow = self.create('openmdao.main.workflow.Workflow',
                                     'workflow')
     
@@ -168,14 +173,49 @@ class Assembly(Component):
         return conns
     
     def update_inputs(self, incomp):
-        """Transfer input data to the specified component"""
+        """Transfer input data to the specified component.
+        Note that we're called after incomp has set its execution directory,
+        so we'll need to account for this during file transfers."""
         try:
             deps = self._connections[incomp.name]
         except KeyError:
-            return  # no connected inputs for this component
+            return   # no connected inputs for this component
 
         for invarname, outtuple in deps.items():
             invar = incomp.getvar(invarname)
-            outvar = self.getvar('.'.join(outtuple[:2]))
-            invar.setvar(None, outvar)
-            
+            if isinstance(invar, FileVariable):
+                outcomp = getattr(self, outtuple[0])
+                outvar = outcomp.getvar(outtuple[1])
+                incomp.pop_dir()
+                try:
+                    self.xfer_file(outcomp, outvar, incomp, invar)
+                    invar.metadata = outvar.metadata.copy()
+                except Exception, exc:
+                    msg = "cannot transfer file from '%s' to '%s': %s" % \
+                          ('.'.join(outtuple[:2]),
+                           '.'.join((incomp.name, invarname)), str(exc))
+                    self.raise_exception(msg, type(exc))
+                finally:
+                    incomp.push_dir(incomp.get_directory())
+            else:
+                outvar = self.getvar('.'.join(outtuple[:2]))
+                try:
+                    invar.setvar(None, outvar)
+                except Exception, exc:
+                    msg = "cannot set '%s' from '%s': %s" % \
+                          ('.'.join((incomp.name, invarname)),
+                           '.'.join(outtuple[:2]), str(exc))
+                    self.raise_exception(msg, type(exc))
+
+    @staticmethod
+    def xfer_file(src_comp, src_var, dst_comp, dst_var):
+        """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """
+        src_path = os.path.join(src_comp.get_directory(), src_var.value)
+        dst_path = os.path.join(dst_comp.get_directory(), dst_var.value)
+        if src_path != dst_path:
+            if src_var.metadata['binary']:
+                mode = 'b'
+            else:
+                mode = ''
+            filexfer(None, src_path, None, dst_path, mode)
+

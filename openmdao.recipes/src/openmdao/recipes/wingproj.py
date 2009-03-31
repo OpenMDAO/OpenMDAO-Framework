@@ -5,6 +5,8 @@ import sys
 import stat
 import fnmatch
 import ConfigParser
+import zc.buildout
+import logging
 from pkg_resources import working_set, get_entry_map
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
 
@@ -64,7 +66,9 @@ class WingProj(object):
         self.buildout = buildout
         self.name = name
         self.options = options
+        self.logger = logging.getLogger(name)
         self.branchdir = os.path.split(buildout['buildout']['directory'])[0]
+        self.partsdir = buildout['buildout']['parts-directory']
         dev_egg_dir = buildout['buildout']['develop-eggs-directory']
         dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
         # grab the first line of each dev egg link file
@@ -74,9 +78,9 @@ class WingProj(object):
         # try to find the default.wpr file in the user's home directory
         try:
             if sys.platform == 'win32':
-                home = os.env['HOMEDRIVE']+os.env['HOMEPATH']
+                home = os.environ['HOMEDRIVE']+os.environ['HOMEPATH']
             else:
-                home = os.env['HOME']
+                home = os.environ['HOME']
         except:
             home = ''
         
@@ -122,14 +126,20 @@ class WingProj(object):
                 
     def install(self):
         
-        newfname = os.path.join(self.branchdir,'wingproj.wpr')
+        if not os.path.isdir(os.path.join(self.partsdir,'wingproj')):
+            os.makedirs(os.path.join(self.partsdir,'wingproj'))
+            
+        newfname = os.path.join(self.partsdir, 'wingproj','wingproj.wpr')
         if os.path.isfile(newfname):
             oldfile = newfname
         else:
             oldfile = self.wingproj
         
+        self.logger.info('reading wing config from %s' % oldfile)
+        
         config = ConfigParser.ConfigParser()
         config.read(oldfile)
+        
         if config.has_option('user attributes', 'proj.pypath'):
             pypath = config.get('user attributes', 'proj.pypath')
             oldnames = self._unformat(pypath)
@@ -142,7 +152,8 @@ class WingProj(object):
         
         diff = oldset ^ newset
         
-        if len(diff) > 0:       
+        if len(diff) > 0:    
+               
             config.set('user attributes', 'proj.pypath', 
                        _wingify(dict({None: ('custom',':'.join(newnames))}), left_margin=18))
             config.set('user attributes', 'proj.pyexec', 
@@ -150,31 +161,53 @@ class WingProj(object):
 
             if not config.has_option('project attributes', 'proj.directory-list'):
                 config.set('project attributes', 'proj.directory-list',
-                            "[{'dirloc': loc('.'),\n"+
-                            "  'excludes': (),\n"+
+                            "[{'dirloc': loc('../../..'),\n"+
+                            "  'excludes': [u'openmdao.util/build',\n"+
+                                     "u'openmdao.lib/src/openmdao.lib.egg-info',\n"+
+                                     "u'buildout',\n"+
+                                     "u'plans',\n"+
+                                     "u'openmdao.test/src/openmdao.test.egg-info',\n"+
+                                     "u'docs',\n"+
+                                     "u'openmdao.lib/build',\n"+
+                                     "u'eggsrc/conmin/conmin.egg-info',\n"+
+                                     "u'openmdao.main/build',\n"+
+                                     "u'openmdao.recipes/build',\n"+
+                                     "u'openmdao.recipes/src/openmdao.recipes.egg-info',\n"+
+                                     "u'openmdao.test/build',\n"+
+                                     "u'openmdao.main/src/openmdao.main.egg-info',\n"+
+                                     "u'openmdao.util/src/openmdao.util.egg-info',\n"+
+                                     "u'eggsrc/npsscomponent/build'],\n"+
                             "  'filter': '*.py',\n"+
-                            "  'include_hidden': False,\n"+
-                            "  'recursive': True,\n"+
-                            "  'watch_for_changes': True}]")
+                            "  'include_hidden': 0,\n"+
+                            "  'recursive': 1,\n"+
+                            "  'watch_for_changes': 1}]")
             try:
+                self.logger.info('egg set has changed - writing config to %s' %
+                                  newfname)
                 newfile = open(newfname, 'wb')
                 newfile.write(_wing_header)
                 config.write(newfile)
+            except Exception, err:
+                self.logger.error(str(err))
+                raise zc.buildout.UserError('write of config failed')
             finally:
                 newfile.close()
         
         # create a bin/wing script
         scriptname = os.path.join(self.buildout['buildout']['directory'],
                                   'bin','wing')
-        script = open(scriptname, 'w')
-        script.write(script_template % dict(python=self.executable,
-                                            proj=newfname))
-        script.close()
         try:
+            script = open(scriptname, 'w')
+            script.write(script_template % dict(python=self.executable,
+                                                proj=newfname))
+            script.close()
             os.chmod(scriptname, 0755)
         except OSError, err:
-            print str(err)
+            self.logger.error(str(err))
+            raise zc.buildout.UserError('creation of wing script failed')
         return [scriptname]
-        
-    update = install
+
+     
+    def update(self):   
+        pass
 

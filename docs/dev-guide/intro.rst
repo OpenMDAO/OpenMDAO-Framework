@@ -102,26 +102,29 @@ this:
     
     
 ``openmdao.main``
-    Python package containing all infrastructure source for OpenMDAO
+    Python package containing all infrastructure source for OpenMDAO.
     
 ``openmdao.lib``
     Python package containing source for the OpenMDAO standard library of 
-    modules
+    modules.
     
 ``openmdao.recipes``
     Python package containing source for any buildout recipes developed for
-    OpenMDAO
-    
-``openmdao.test``
-    Python package containing source for various OpenMDAO plugins used for
-    testing
+    OpenMDAO.
     
 ``openmdao.util``
     Python package containing source for various python utility routines
     used by OpenMDAO developers.
     
+``openmdao.test``
+    Python package containing source for various OpenMDAO plugins used for
+    testing.
+    
+``openmdao.examples``
+    Python package containing examples of using OpenMDAO.
+    
 ``misc``
-    Miscellaneous scripts and configuration files used by OpenMDAO developers
+    Miscellaneous scripts and configuration files used by OpenMDAO developers.
  
 .. index:: egg
     
@@ -142,9 +145,10 @@ OpenMDAO is large enough that it makes sense to split it up into multiple Python
 packages, but we want all of those packages to be under the umbrella of
 ``openmdao``. To do this in Python, we use what is called a *namespace*
 package.  Namespace  packages all have a similar directory layout.  Currently in
-OpenMDAO,  ``openmdao.main``, ``openmdao.lib``, ``openmdao.recipes``, ``openmdao.util``,and
-``openmdao.test`` are all namespace packages that are in the ``openmdao``
-namespace.  They all  have a layout like this:
+OpenMDAO,  ``openmdao.main``, ``openmdao.lib``, ``openmdao.recipes``,
+``openmdao.util`` and ``openmdao.test`` are all namespace
+packages that are in the ``openmdao`` namespace.  They all  have a layout like
+this:
 
 ``openmdao.<package>``
     The top level directory for the package denoted by ``<package>``. This
@@ -218,27 +222,30 @@ command will be *hard-wired* into all of the buildout-generated scripts. Note
 that isolated_bootstrap.py is a modified version of bootstrap.py, which can be
 found in the <branch_name>/misc/branch_config directory. Using
 isolated_bootstrap.py will isolate your buildout from the system level python
-install, while the regular bootstrap.py will use distributions from the system
-level if available.
+install, while using the regular bootstrap.py will allow use of distributions
+from the system level.
 
 
-At this point, your buildout area should be configured, and your 
-``buildout`` directory should contain the following subdirectories:
+At this point, your `buildout`` directory should contain the following
+subdirectories:
 
 ``bin``
-    Contains a buildout script, a buildout specific Python interpreter, a
-    test script, and other scripts that depend upon which parts you have
-    included as part of your buildout.
+    Contains the buildout script, and after you run your buildout it will 
+    contain a number of scripts generated during the buildout. These scripts
+    will have a hardwired sys.path in them that includes all of the eggs
+    that have been specified as dependencies in the buildout config file.
 
 ``develop-eggs``
-    Contains links to any directories that you have
-    specified in the *develop* list in your ``buildout.cfg`` file.
+    After running the buildout, contains links to any directories that have
+    been specified in the *develop* list in the ``buildout.cfg`` file.
     
 ``eggs``
-    Contains all of the installed eggs you have listed as dependencies in your
+    After running the buildout, contains all of the installed eggs not
+    specified as *develop* eggs that you are listed as dependencies in the
     ``buildout.cfg`` file.
     
 ``parts``
-    Contains any files specific to any parts you have installed as part of your
-    buildout. These could be anything. They do not have to be Python related.
+    After running the buildout, contains any files specific to any parts that
+    have been installed as part of the buildout. These could be anything. They
+    do not have to be Python related.
 

@@ -22,6 +22,7 @@ class FloatTestCase(unittest.TestCase):
         self.float3 = Float('float3', self.hobj, INPUT, 
                        ref_name='internal_float3',
                        min_limit=0., max_limit=99., units='kg')
+                       
         
     def tearDown(self):
         """this teardown function will be called after each test"""
@@ -63,6 +64,23 @@ class FloatTestCase(unittest.TestCase):
                              "h1.float1: Units of 'bogus' are invalid")
         else:
             self.fail('ValueError expected')
+        
+    def test_units_None_to_None(self):
+        self.float1.units = None
+        self.float2.units = None
+        self.float1.setvar(None, self.float2)
+        self.assertEqual(42.0, self.float1.value)
+        
+    def test_units_Unit_to_None(self):
+        self.float1.units = 'ft'
+        self.float2.units = None
+        try:
+            self.float1._convert(self.float2)
+        except TypeError, err:
+            self.assertEqual(str(err), 
+                "h1.float2 units (None) are incompatible with units (ft) of h1.float1")
+        else:
+            self.fail("TypeError expected")
         
     def test_get(self):
         val = self.float1.get(None)

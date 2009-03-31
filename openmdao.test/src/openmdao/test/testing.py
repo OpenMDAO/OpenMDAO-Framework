@@ -15,7 +15,7 @@ def run_openmdao_suite():
     as bin/test.  Add any directories to search for tests to tlist.
     """
     
-    tlist = ['openmdao', '../eggsrc/npsscomponent']
+    tlist = ['openmdao', 'npsscomponent']
     
     if '--all' in sys.argv:
         sys.argv.remove('--all')

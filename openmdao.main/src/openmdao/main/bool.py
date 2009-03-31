@@ -1,7 +1,3 @@
-"""
-Bool: a Variable wrapper for booleans
-"""
-
 #public symbols
 __all__ = ['Bool']
 __version__ = "0.1"
@@ -10,7 +6,7 @@ from openmdao.main.variable import Variable, UNDEFINED
 from openmdao.main.vartypemap import add_var_type_map
             
 class Bool(Variable):
-    """A boolean Variable"""
+    """A Variable wrapper for booleans."""
     
     def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
                  default=UNDEFINED, doc=None):

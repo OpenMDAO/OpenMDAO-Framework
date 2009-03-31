@@ -13,19 +13,13 @@ from openmdao.main.interfaces import IComponent, IAssembly
 from openmdao.main import Container, String
 from openmdao.main.variable import INPUT
 from openmdao.main.constants import SAVE_PICKLE
+from openmdao.main.exceptions import RunFailed
 
 # Execution states.
 STATE_UNKNOWN = -1
 STATE_IDLE    = 0
 STATE_RUNNING = 1
 STATE_WAITING = 2
-
-# Run completion status.
-RUN_UNKNOWN     = -1
-RUN_OK          = 0
-RUN_FAILED      = 1
-RUN_STOPPED     = 2
-RUN_INTERRUPTED = 3
 
 
 class Component (Container):
@@ -42,14 +36,15 @@ class Component (Container):
         self._stop = False
         self._input_changed = True
         self._dir_stack = []
+        self._sockets = {}
 
         # List of meta-data dictionaries.
         self.external_files = []
 
-        self.directory = directory  # For PyLint.
         String('directory', self, INPUT, default=directory,
                doc='If non-null, the directory to execute in.')
 
+# pylint: disable-msg=E1101
         if self.directory:
             if not os.path.exists(self.directory):
 # TODO: Security!
@@ -61,14 +56,56 @@ class Component (Container):
             else:
                 if not os.path.isdir(self.directory):
                     self.error("Path '%s' is not a directory.", self.directory)
+# pylint: enable-msg=E1101
 
-#    def add_socket (self, name, iface, doc=''):
-#        """Specify a named placeholder for a component with the given
-#        interface.
-#        """
+    def _get_socket_plugin(self, name):
+        """Return plugin for the named socket"""
+        try:
+            iface, plugin = self._sockets[name]
+        except KeyError:
+            self.raise_exception("no such socket '%s'" % name, AttributeError)
+        else:
+            if plugin is None:
+                self.raise_exception("socket '%s' is empty" % name,
+                                     RuntimeError)
+            return plugin
 
-#    def remove_socket (self, name):
-#        """Remove an existing Socket"""
+    def _set_socket_plugin(self, name, plugin):
+        """Set plugin for the named socket"""
+        try:
+            iface, current = self._sockets[name]
+        except KeyError:
+            self.raise_exception("no such socket '%s'" % name, AttributeError)
+        else:
+            if plugin is not None and iface is not None:
+                if not iface.providedBy(plugin):
+                    self.raise_exception("plugin does not support '%s'" % \
+                                         iface.__name__, ValueError)
+            self._sockets[name] = (iface, plugin)
+
+    def add_socket (self, name, iface, doc=''):
+        """Specify a named placeholder for a component with the given
+        interface.
+        """
+        assert isinstance(name, basestring)
+        self._sockets[name] = (iface, None)
+        setattr(self.__class__, name,
+                property(lambda self : self._get_socket_plugin(name),
+                         lambda self, plugin : self._set_socket_plugin(name, plugin),
+                         None, doc))
+
+    def check_socket (self, name):
+        """Return True if socket is filled"""
+        try:
+            iface, plugin = self._sockets[name]
+        except KeyError:
+            self.raise_exception("no such socket '%s'" % name, AttributeError)
+        else:
+            return plugin is not None
+
+    def remove_socket (self, name):
+        """Remove an existing Socket"""
+        del self._sockets[name]
 
     def post_config (self):
         """Perform any final initialization after configuration has been set,
@@ -86,7 +123,7 @@ class Component (Container):
         have already been set. 
         This should be overridden in derived classes.
         """
-        return RUN_OK
+        pass
     
     def post_execute (self):
         """Update output variables and anything else needed after execution"""
@@ -100,9 +137,9 @@ class Component (Container):
         try:
             self.push_dir(directory)
         except OSError, exc:
-            self.error("Could not move to execution directory '%s': %s",
-                       directory, exc.strerror)
-            return RUN_FAILED
+            msg = "Could not move to execution directory '%s': %s" % \
+                  (directory, exc.strerror)
+            self.raise_exception(msg, RunFailed)
 
         self.state = STATE_RUNNING
         self._stop = False
@@ -110,12 +147,8 @@ class Component (Container):
             if self.parent is not None and IAssembly.providedBy(self.parent):
                 self.parent.update_inputs(self)
             self.pre_execute()
-            status = self.execute()
-            if status is None:
-                self.error('execute() did not return a run status!')
-                status = RUN_FAILED
+            self.execute()
             self.post_execute()
-            return status
         finally:
             self.state = STATE_IDLE
             self.pop_dir()

@@ -49,8 +49,7 @@ class Container(HierarchyMember):
         super(Container, self).__init__(name, parent, doc)            
         self._pub = {}  # A container for framework accessible objects.
         if parent is not None and \
-           IContainer.providedBy(parent) and \
-           add_to_parent:
+           IContainer.providedBy(parent) and add_to_parent:
             parent.add_child(self)
         
     def add_child(self, obj, private=False):
@@ -70,7 +69,8 @@ class Container(HierarchyMember):
         
     def remove_child(self, name):
         """Remove the specified child from this container and remove any
-        Variable objects from _pub that reference that child."""
+        Variable objects from _pub that reference that child. Notify any
+        observers."""
         dels = []
         for key, val in self._pub.items():
             if val.ref_name == name:
@@ -97,11 +97,11 @@ class Container(HierarchyMember):
         else:
             lst = [obj_info]
         
-        ref_name = None
-        iostat = INPUT
-        
-        for entry in lst:
+        for i, entry in enumerate(lst):
+            ref_name = None
+            iostat = INPUT
             dobj = None
+
             if isinstance(entry, basestring):
                 name = entry
                 typ = type(getattr(self, name))
@@ -122,8 +122,8 @@ class Container(HierarchyMember):
                     typ = type(dobj)
                 else:
                     self.raise_exception(
-                      'no IVariable interface available for the object named '+
-                      str(name), TypeError)
+                     'no IVariable interface available for the object at %d' % \
+                      i, TypeError)
                     
             if not IVariable.providedBy(dobj):
                 dobj = find_var_class(typ, name, self, iostatus=iostat, 
@@ -161,7 +161,7 @@ class Container(HierarchyMember):
     def create(self, type_name, name, version=None, server=None, 
                private=False, res_desc=None):
         """Create a new object of the specified type inside of this
-        Container. The object must have a 'name' attribute.
+        Container.
         
         Returns the new object.        
         """
@@ -171,9 +171,10 @@ class Container(HierarchyMember):
 
     def get(self, path, index=None):
         """Return any public object specified by the given 
-        path, which may contain '.' characters.  If the name matches the name of a Variable,
-        the value of the Variable will be returned. Attributes of variables may also be 
-        returned.
+        path, which may contain '.' characters.  
+        
+        Returns the value specified by the name. This will either be the value
+        of a Variable or some attribute of a Variable.
         
         """
         assert(isinstance(path, basestring))
@@ -195,8 +196,9 @@ class Container(HierarchyMember):
     
     def getvar(self, path):
         """Return the public Variable specified by the given 
-        path, which may contain '.' characters.  Only returns Variables,
-        not attributes or other Containers.
+        path, which may contain '.' characters.  
+        
+        Returns the specified Variable object.
         """
         assert(isinstance(path, basestring))
         try:
@@ -217,10 +219,11 @@ class Container(HierarchyMember):
                                      AttributeError)
                 
     def set(self, path, value, index=None):
-        """Set the value of the data object specified by the 
-        given path, which may contain '.' characters.  If path specifies a Variable, then
-        its value attribute will be set to the given value, subject to validation and 
-        constraints.
+        """Set the value of the data object specified by the  given path, which
+        may contain '.' characters.  If path specifies a Variable, then its
+        value attribute will be set to the given value, subject to validation
+        and  constraints. index, if not None, should be a list of ints, at
+        most one for each array dimension of the target value.
         
         """ 
         assert(isinstance(path, basestring))
@@ -262,47 +265,41 @@ class Container(HierarchyMember):
             self.raise_exception("object has no attribute '"+
                                  str(base)+"'", AttributeError)
         obj.setvar(name, variable)        
+
         
-    def get_objs(self, iface, recurse=False, **kwargs):
-        """Return a list of objects with the specified interface that
-        also have attributes with values that match those passed as named
-        args.
+    def get_objs(self, matchfunct, recurse=False):
+        """Return a list of objects that return a value of True when passed
+        to matchfunct.
         
         """            
-        def _recurse_get_objs(obj, iface, visited, **kwargs):
+        def _recurse_get_objs(obj, matchfunct, visited):
             objs = []
             for child in obj.__dict__.values():
                 if id(child) in visited:
                     continue
                 visited.add(id(child))
-                if iface.providedBy(child):
+                if matchfunct(child):
                     objs.append(child)
                 if IContainer.providedBy(child):
-                    objs.extend(_recurse_get_objs(child, iface, 
-                                                  visited, **kwargs))
+                    objs.extend(_recurse_get_objs(child, matchfunct, visited))
             return objs
             
         objs = []
         visited = set()
         
         if recurse:
-            objs = _recurse_get_objs(self, iface, visited, **kwargs)
+            return _recurse_get_objs(self, matchfunct, visited)
         else:
-            objs = [child for child in self.__dict__.values() 
-                                               if iface.providedBy(child)]
+            return [child for child in self.__dict__.values() 
+                                               if matchfunct(child)]
             
-        if len(kwargs) > 0:
-            return [x for x in objs if _matches(x, kwargs)]
-        else:
-            return objs
-
-        
-    def get_names(self, iface, recurse=False, **kwargs):
+       
+    def get_names(self, matchfunct, recurse=False):
         """Return a list of objects that provide the specified interface and
         also have attributes with values that match those passed as named
         args"""
         return [x.get_pathname() 
-                    for x in self.get_objs(iface, recurse, **kwargs)]
+                    for x in self.get_objs(matchfunct, recurse)]
         
     def config_from_obj(self, obj):
         """This is intended to allow a newer version of a component to
@@ -351,19 +348,13 @@ class Container(HierarchyMember):
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
-        pass
+        subcontainers = self.get_objs(IContainer.providedBy)
+        for child in subcontainers:
+            child.post_load()
 
     def pre_delete(self):
         """ Perform any required operations before the model is deleted. """
-        pass
+        subcontainers = self.get_objs(IContainer.providedBy)
+        for child in subcontainers:
+            child.pre_delete()
 
-
-def _matches(obj, dct):
-    """ Return True if obj matches all items in dct. """
-    for key, val in dct.items():
-        try:
-            if getattr(obj, key) != val:
-                return False
-        except AttributeError:
-            return False
-    return True

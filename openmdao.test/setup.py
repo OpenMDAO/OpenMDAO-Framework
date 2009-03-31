@@ -9,23 +9,31 @@ except ImportError, e:
     from distutils.core import setup
 
 
-version = '0.0.1'
+version = '0.1.0'
 
 setup(name='openmdao.test',
       version=version,
       description="OpenMDAO framework testing package",
       long_description="""\
 """,
-      classifiers=[],
+      classifiers=[
+        'Development Status :: 2 - Pre-Alpha',
+        'Intended Audience :: Science/Research',
+        'License :: OSI Approved',
+        'Natural Language :: English',
+        'Operating System :: OS Independent',
+        'Programming Language :: Python :: 2.5',
+        'Topic :: Scientific/Engineering',
+      ],
       keywords='testing',
       author='',
       author_email='',
       url='',
-      license='NASA Open Source Agreement',
+      license='NASA Open Source Agreement 1.3',
       namespace_packages=["openmdao"],
       packages=['openmdao', 'openmdao.test'],
       package_dir={'': 'src'},
-      package_data={},
+      package_data={ 'openmdao.test': ['plugins/*.egg'] },
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,

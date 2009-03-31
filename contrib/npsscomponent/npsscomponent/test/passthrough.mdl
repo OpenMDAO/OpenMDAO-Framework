@@ -1,0 +1,57 @@
+//
+// Model used by test_instances.py
+//
+
+#include "System.fnc"
+
+int b_in, b_out;
+
+real f_in, f_out;
+real f1d_in[], f1d_out[];
+real f2d_in[][], f2d_out[][];
+real f3d_in[][][], f3d_out[][][];
+
+int i_in, i_out;
+int i1d_in[], i1d_out[];
+int i2d_in[][], i2d_out[][];
+
+string s_in, s_out;
+string s1d_in[], s1d_out[];
+string s2d_in[][], s2d_out[][];
+
+InFileStream text_in {
+    filename = "npss.txt";
+}
+InFileStream binary_in {
+    filename = "npss.bin";
+    binary = TRUE;
+}
+
+OutFileStream text_out {
+    filename = "npss.txt";
+}
+OutFileStream binary_out {
+    filename = "npss.bin";
+    binary = TRUE;
+}
+
+void calculate() {
+    cout << sys.tstamp << "calculate() executing in '" << sys.pwd() << "'\n";
+    cout << sys.tstamp << "XYZZY = '$XYZZY'\n";
+
+    b_out = b_in;
+
+    f_out = f_in;
+    f1d_out = f1d_in;
+    f2d_out = f2d_in;
+    f3d_out = f3d_in;
+
+    i_out = i_in;
+    i1d_out = i1d_in;
+    i2d_out = i2d_in;
+
+    s_out = s_in;
+    s1d_out = s1d_in;
+    s2d_out = s2d_in;
+}
+

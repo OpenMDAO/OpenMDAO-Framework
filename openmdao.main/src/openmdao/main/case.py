@@ -17,7 +17,8 @@ class Case(object):
     executing the case.
 
     """
-    def __init__(self, inputs=None, outputs=None, status=None, msg=None):
+    def __init__(self, inputs=None, outputs=None, max_retries=None,
+                 retries=None, msg=None):
         """If inputs or outputs are supplied to the constructor, each must be an
         iterator that returns (name,index,value) tuples. 
         
@@ -26,13 +27,18 @@ class Case(object):
         self.outputs = outputs or [] # a list of name,index,value tuples 
                                      # Values for each output will be filled 
                                      # in after the case completes
-        self.status = status
+        self.max_retries = max_retries
+        self.retries = retries
         self.msg = msg
 
     def __str__(self):
-        return 'Case:\n    inputs'+str(self.inputs) + \
-               '\n    outputs'+str(self.outputs) + \
-               '\n    status='+str(self.status)+', msg:'+str(self.msg)
+        return 'Case:\n' \
+               '    inputs: %s\n' \
+               '    outputs: %s\n' \
+               '    max_retries: %s, retries: %d\n' \
+               '    msg: %s' % \
+               (str(self.inputs), str(self.outputs),
+                str(self.max_retries), str(selfretries), msg)
 
 
 class FileCaseIterator(object):
