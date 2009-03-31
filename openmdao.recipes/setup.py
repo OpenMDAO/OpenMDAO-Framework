@@ -32,7 +32,7 @@ setup(name='openmdao.recipes',
       install_requires=[
           'setuptools',
           'zc.recipe.egg==1.1.0',
-          'Sphinx==0.5.1',
+          'Sphinx',
           'nose',
           'coverage',
           'openmdao.util',
