@@ -8,7 +8,7 @@ import rfc822
 import StringIO
 
 from pkg_resources import Environment
-from pkg_resources import get_distribution, resource_listdir
+from pkg_resources import get_distribution, resource_listdir,load_entry_point
 from pkg_resources import WorkingSet, Requirement
 
 from openmdao.util.procutil import run_command
@@ -18,11 +18,22 @@ script_template = """\
 
 import webbrowser
 
-wb = webbrowser.get("%(browser)s")
+wb = webbrowser.get(%(browser)s)
 wb.open(r"%(index)s")
 
 """
 
+bld_template = """\
+#!%s
+
+import sys
+from pkg_resources import load_entry_point
+bld = load_entry_point("Sphinx","console_scripts","sphinx-build")
+args = ['-P', '-b', 'html', '-d', '%s', '.', '%s']
+                
+sys.exit(bld(argv=args))
+
+""" 
 
 
 def mod_sphinx_info(mod, outfile, show_undoc=False):
@@ -216,14 +227,23 @@ class SphinxBuild(object):
             os.makedirs(os.path.join(self.builddir,'html'))
         if not os.path.isdir(os.path.join(self.builddir,'doctrees')):
             os.makedirs(os.path.join(self.builddir,'doctrees'))
+       
+        
+        # create the builddocs script
+        bspath = os.path.join(self.buildout['buildout']['directory'],'bin',
+                               'builddocs')
+        bld_script = open(bspath, 'w')
+        bld_script.write(bld_template % (self.executable,
+                                         os.path.join(self.builddir,"doctrees"),
+                                         os.path.join(self.builddir,"html")))
+        bld_script.close()
             
         # build the docs using Sphinx
         try:
-            sys.path[0:0] = [os.path.abspath('python-scripts')]
-            out,ret = run_command('%s %s -P -b html -d %s . %s' %
-                                    (self.interpreter, self.builder, 
-                                     os.path.join(self.builddir,'doctrees'), 
-                                     os.path.join(self.builddir,'html')))
+            # run our little build script using the python interpreter that
+            # knows how to find everything in the buildout, so it will use
+            # the version of Sphinx in the buildout
+            out, ret = run_command('%s %s' % (self.interpreter, bspath))
         except Exception, err:
             self.logger.error(out)
             self.logger.error(str(err))
@@ -239,11 +259,15 @@ class SphinxBuild(object):
                                     'bin','docs.bat'), 'w')
             bat.write("@echo off\npython %s"%(scriptname,))
             bat.close()
-            browser = self.options.get('browser') or 'windows-default'
+            #browser = self.options.get('browser') or 'windows-default'
         else:
             scriptname = os.path.join(self.buildout['buildout']['directory'],
                                      'bin','docs')
-            browser = self.options.get('browser') or 'firefox'
+                                     
+        browser = self.options.get('browser') or ''
+        if browser != '':
+            browser = "'%s'" % browser
+            
         script = open(scriptname, 'w')
         
         idxpath = os.path.join(self.branchdir, self.docdir, self.builddir,
