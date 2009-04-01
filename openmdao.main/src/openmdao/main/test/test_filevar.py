@@ -8,7 +8,6 @@ import unittest
 
 from openmdao.main import Assembly, Component, \
                           ArrayVariable, FileVariable, StringList, Bool
-from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT
 
 # pylint: disable-msg=E1101

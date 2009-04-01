@@ -308,16 +308,26 @@ class Container(HierarchyMember):
         new one."""
         raise NotImplementedError("config_from_obj")
     
-    def save (self, outstream, format=SAVE_CPICKLE):
+    def save (self, outstream, format=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
         output stream. Pure python classes generally won't need to
         override this because the base class version will suffice, but
         python extension classes will have to override. The format
         can be supplied in case something other than cPickle is needed."""
+        if isinstance(outstream, basestring):
+            if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+                mode = 'wb'
+            else:
+                mode = 'w'
+            try:
+                outstream = open(outstream, mode)
+            except IOError, exc:
+                self.raise_exception(exc.args, type(exc))
+
         if format is SAVE_CPICKLE:
-            cPickle.dump(self, outstream, -1) # -1 means use highest protocol
+            cPickle.dump(self, outstream, proto) # -1 means use highest protocol
         elif format is SAVE_PICKLE:
-            pickle.dump(self, outstream, -1)
+            pickle.dump(self, outstream, proto)
         elif format is SAVE_YAML:
             yaml.dump(self, outstream)
         elif format is SAVE_LIBYAML:
@@ -325,7 +335,8 @@ class Container(HierarchyMember):
                 self.warning('libyaml not available, using yaml instead')
             yaml.dump(self, outstream, Dumper=Dumper)
         else:
-            raise RuntimeError('cannot save object using format '+str(format))
+            self.raise_exception('cannot save object using format '+str(format),
+                                 RuntimeError)
     
     @staticmethod
     def load (instream, format=SAVE_CPICKLE):
@@ -333,6 +344,13 @@ class Container(HierarchyMember):
         classes generally won't need to override this, but extensions will. 
         The format can be supplied in case something other than cPickle is 
         needed."""
+        if isinstance(instream, basestring):
+            if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+                mode = 'rb'
+            else:
+                mode = 'r'
+            instream = open(instream, mode)
+
         if format is SAVE_CPICKLE:
             return cPickle.load(instream)
         elif format is SAVE_PICKLE:
