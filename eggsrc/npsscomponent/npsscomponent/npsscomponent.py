@@ -137,13 +137,12 @@ class NPSScomponent(Component):
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
-        if super(NPSScomponent, self).post_load():
-            try:
-                self.reload()
-                return True
-            except Exception, exc:
-                self.error('Reload caught exception: %s', str(exc))
-        return False
+        super(NPSScomponent, self).post_load()
+        try:
+            self.reload()
+        except Exception, exc:
+            self.raise_exception('Reload caught exception: %s' % exc.args,
+                                 type(exc))
 
     def pre_delete(self):
         """ Perform any required operations before the model is deleted. """
@@ -304,7 +303,6 @@ class NPSScomponent(Component):
 
     def reload(self):
         """ (Re)load model. """
-        cwd = os.getcwd()+os.sep
         is_reload = False
         saved_inputs = []
         if self._top is not None:
@@ -318,6 +316,7 @@ class NPSScomponent(Component):
                         saved_inputs.append((dst_attr, self.get(dst_attr)))
             # Remove model input files from external_files list.
             paths = self._top.inputFileList
+            cwd = self.get_directory()+os.sep
             for path in paths:
                 if path.startswith(cwd):
                     path = path[len(cwd):]
@@ -332,6 +331,7 @@ class NPSScomponent(Component):
         directory = self.get_directory()
         self.push_dir(directory)
         try:
+            cwd = os.getcwd()+os.sep
             if is_reload:
                 self.info('Reloading session in %s', cwd)
             arglist = self._generate_arglist()

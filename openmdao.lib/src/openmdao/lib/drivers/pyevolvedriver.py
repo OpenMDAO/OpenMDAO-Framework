@@ -61,6 +61,7 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     
     return (sister,brother)
 
+
 class pyevolvedriver(Driver):
     """OpenMDAO wrapper for the pyevolve genetic algorithm framework. The 
     wrapper uses two attributes to configure the optmization: 
@@ -77,8 +78,6 @@ class pyevolvedriver(Driver):
 
     TODO: Implement function-slots as sockets
     """
-
-
 
     def _get_objective(self):
         if self._objective is None:
@@ -136,13 +135,6 @@ class pyevolvedriver(Driver):
         self._objective = None
 
 
-
-
-
-
-    def _set_GA_property(self,setFunc,framework_var): 
-        return setFunc(framework_var.get())
-
     def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
         if funcList == None: return
         slot.clear()
@@ -153,10 +145,8 @@ class pyevolvedriver(Driver):
             else: slot.add(func)
         slot.setRandomApply(RandomApply)
 
-
     def evaluate(self,genome):
         self.decoder(genome)
-
         self.parent.workflow.run()
         return self._get_objective_val()
 
@@ -165,14 +155,13 @@ class pyevolvedriver(Driver):
         if not isinstance(self.genome,GenomeBase.GenomeBase):
             self.raise_exception("genome provided is not valid. Does not inherit from pyevolve.GenomeBase.GenomeBase",TypeError)
 
-            #decoder verify
+        #decoder verify
         if self.decoder == None: # check if None first
             self.raise_exception("decoder specified as 'None'. A valid decoder must be present",TypeError)
         try: # won't work if decoder is None
             self.decoder(self.genome)
         except TypeError:
             self.raise_exception("decoder specified as does not have the right signature. Must take only 1 argument",TypeError)
-
 
     def execute(self):
         """ Perform the optimization"""
@@ -186,20 +175,20 @@ class pyevolvedriver(Driver):
         
         self.GA = GSimpleGA.GSimpleGA(self.genome, self.seed)
         
-        self._set_GA_property(self.GA.setPopulationSize,self.getvar("population_size"))
-        self._set_GA_property(self.GA.setSortType,self.getvar("sort_type"))
-        self._set_GA_property(self.GA.setMutationRate,self.getvar("mutation_rate"))
-        self._set_GA_property(self.GA.setCrossoverRate,self.getvar("crossover_rate"))
-        self._set_GA_property(self.GA.setGenerations,self.getvar("generations"))
-        self._set_GA_property(self.GA.setMinimax,self.getvar("mini_max"))
-        self._set_GA_property(self.GA.setElitism,self.getvar("elitism"))
+        self.GA.setPopulationSize(self.population_size)
+        self.GA.setSortType(self.sort_type)
+        self.GA.setMutationRate(self.mutation_rate)
+        self.GA.setCrossoverRate(self.crossover_rate)
+        self.GA.setGenerations(self.generations)
+        self.GA.setMinimax(self.mini_max)
+        self.GA.setElitism(self.elitism)
 
-        #self._set_GA_property(self.GA.setDBAdapter,self.DBAdapter) #
+        #self.GA.setDBAdapter(self.DBAdapter) #
         
         self._set_GA_FunctionSlot(self.GA.selector,self.selector)
         self._set_GA_FunctionSlot(self.GA.stepCallback,self.stepCallback)
         self._set_GA_FunctionSlot(self.GA.terminationCriteria,self.terminationCriteria)
         
-        self.GA.evolve(freq_stats = self.get('best_individual'))
+        self.GA.evolve(freq_stats = self.freq_stats)
         self.best_individual = self.GA.bestIndividual()
 

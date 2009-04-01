@@ -44,8 +44,6 @@ class pyevolvedriverTestCase(unittest.TestCase):
     def decoder(self,genome):
         sphere = self.top.comp
         sphere.points = [x for x in genome]
-        
-    
     
     def setUp(self):
         self.top = Assembly('top',None)
@@ -72,13 +70,12 @@ class pyevolvedriverTestCase(unittest.TestCase):
         
         #configure the GAengine 
         self.top.driver.decoder = self.decoder  
-        self.top.driver.set('freq_stats',0)
-        self.top.driver.set('seed',123)
+        self.top.driver.freq_stats = 0
+        self.top.driver.seed = 123
         
-        self.top.driver.set('mutation_rate',.02)
-        self.top.driver.set('generations',1)
-        self.top.driver.set('mini_max',pyevolvedriver.Consts.minimaxType["minimize"])
-        
+        self.top.driver.mutation_rate = .02
+        self.top.driver.generations = 1
+        self.top.driver.mini_max = pyevolvedriver.Consts.minimaxType["minimize"]
         
         #self.top.driver.DBAdapter = None #TODO: Implement this
         self.top.driver.selector = None
@@ -88,8 +85,8 @@ class pyevolvedriverTestCase(unittest.TestCase):
         
         self.top.run()
         
-        self.assertAlmostEqual(self.top.driver.get('best_individual').score,0.1519,places = 4)
-        x0,x1 = [x for x in self.top.driver.get('best_individual')] 
+        self.assertAlmostEqual(self.top.driver.best_individual.score,0.1519,places = 4)
+        x0,x1 = [x for x in self.top.driver.best_individual] 
         self.assertAlmostEqual(x0,0.0063,places = 4)
         self.assertAlmostEqual(x1,.3897,places = 4)
         
@@ -105,13 +102,12 @@ class pyevolvedriverTestCase(unittest.TestCase):
 
         #configure the GAengine 
         self.top.driver.decoder = self.decoder  
-        self.top.driver.set('freq_stats',0)
-        self.top.driver.set('seed',123)
+        self.top.driver.freq_stats = 0
+        self.top.driver.seed = 123
         
-        self.top.driver.set('mutation_rate',.02)
-        self.top.driver.set('generations',1)
-        self.top.driver.set('mini_max',pyevolvedriver.Consts.minimaxType["minimize"])
-        
+        self.top.driver.mutation_rate = .02
+        self.top.driver.generations = 1
+        self.top.driver.mini_max = pyevolvedriver.Consts.minimaxType["minimize"]
         
         #self.top.driver.DBAdapter = None #TODO: Implement this
         self.top.driver.selector = None
@@ -121,10 +117,11 @@ class pyevolvedriverTestCase(unittest.TestCase):
         
         self.top.run()
         
-        self.assertAlmostEqual(self.top.driver.get('best_individual').score,0.0058,places = 4)
-        x0,x1 = [x for x in self.top.driver.get('best_individual')] 
+        self.assertAlmostEqual(self.top.driver.best_individual.score,0.0058,places = 4)
+        x0,x1 = [x for x in self.top.driver.best_individual] 
         self.assertAlmostEqual(x0, -0.0130,places = 4)
         self.assertAlmostEqual(x1,-0.0753,places = 4)
+
     #for some reason this test changes the answers of the other two optimzier tests above
     # may have to do with random number generation... if you remove this test, the previous two will fail
     def test_hypersphereCrossover_int(self): 
@@ -140,13 +137,12 @@ class pyevolvedriverTestCase(unittest.TestCase):
 
         #configure the GAengine 
         self.top.driver.decoder = self.decoder  
-        self.top.driver.set('freq_stats',0)
-        self.top.driver.set('seed',123)
+        self.top.driver.freq_stats = 0
+        self.top.driver.seed = 123
         
-        self.top.driver.set('mutation_rate',.02)
-        self.top.driver.set('generations',1)
-        self.top.driver.set('mini_max',pyevolvedriver.Consts.minimaxType["minimize"])
-        
+        self.top.driver.mutation_rate = .02
+        self.top.driver.generations = 1
+        self.top.driver.mini_max = pyevolvedriver.Consts.minimaxType["minimize"]
         
         #self.top.driver.DBAdapter = None #TODO: Implement this
         self.top.driver.selector = None
@@ -156,8 +152,8 @@ class pyevolvedriverTestCase(unittest.TestCase):
         
         self.top.run()
         
-        self.assertAlmostEqual(self.top.driver.get('best_individual').score,0.0,places = 4)
-        x0,x1 = [x for x in self.top.driver.get('best_individual')] 
+        self.assertAlmostEqual(self.top.driver.best_individual.score,0.0,places = 4)
+        x0,x1 = [x for x in self.top.driver.best_individual] 
         self.assertAlmostEqual(x0,0,places = 4)
         self.assertAlmostEqual(x1,0,places = 4)   
     
@@ -259,9 +255,6 @@ class pyevolvedriverTestCase(unittest.TestCase):
             self.assertEqual(str(err), "top.driver: genome provided is not valid. Does not inherit from pyevolve.GenomeBase.GenomeBase")
         else: 
             self.fail("TypeError expected")
-        
-    
-
         
     
 if __name__ == '__main__':
