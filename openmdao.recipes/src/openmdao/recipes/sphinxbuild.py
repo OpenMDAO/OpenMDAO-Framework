@@ -245,9 +245,14 @@ class SphinxBuild(object):
             # the version of Sphinx in the buildout
             out, ret = run_command('%s %s' % (self.interpreter, bspath))
         except Exception, err:
-            self.logger.error(out)
             self.logger.error(str(err))
             raise zc.buildout.UserError('sphinx build failed')
+        else:
+            if ret == 0:
+                map(self.logger.info, out.splitlines())
+            else:
+                map(self.logger.error, out.splitlines())
+                raise zc.buildout.UserError('sphinx build failed')
         finally:
             os.chdir(startdir)
         
