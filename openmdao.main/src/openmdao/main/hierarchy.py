@@ -5,7 +5,7 @@ __version__ = "0.1"
 
 
 import weakref
-from openmdao.main.log import logger
+from openmdao.main.log import Logger, LOG_DEBUG
 
 class HierarchyMember(object):
     """Base class for all objects living in the framework accessible
@@ -22,6 +22,10 @@ class HierarchyMember(object):
         if doc is not None:
             self.__doc__ = doc
 
+        # Replace pathname to keep loggers from interfering with each other.
+        self._logger = Logger(self.get_pathname().replace('.', ','))
+        self.log_level = LOG_DEBUG
+
     def get(self, path, index=None):
         """Get a child object using a dotted path name. 
         (not implemented)
@@ -37,12 +41,18 @@ class HierarchyMember(object):
     def get_pathname(self):
         """ Return full path name to this container. """
         if self.parent is None:
-            return self.name
+            if self.name is None:
+                return ''
+            else:
+                return self.name
         else:
             try:
                 path = self.parent.get_pathname()
             except AttributeError:
-                return self.name
+                if self.name is None:
+                    return ''
+                else:
+                    return self.name
             else:
                 return '.'.join([path, self.name])
 
@@ -75,25 +85,36 @@ class HierarchyMember(object):
         self.__dict__ = state
     
     # error reporting stuff
+    def _get_log_level(self):
+        """ Return logging message level. """
+        return self._logger.level
+
+    def _set_log_level(self, level):
+        """ Set logging message level. """
+        self._logger.level = level
+
+    log_level = property(_get_log_level, _set_log_level,
+                         doc='Logging message level.')
+
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception"""
         full_msg = '%s: %s' % (self.get_pathname(), msg)
-#        logger.error(full_msg)
+#        self._logger.error(msg)
         raise exception_class(full_msg)
     
-    def error(self, msg, *args, **kwargs):
+    def error(self, *args, **kwargs):
         """Record an error message"""
-        logger.error(self.get_pathname()+': '+msg, *args, **kwargs)
+        self._logger.error(*args, **kwargs)
         
-    def warning(self, msg, *args, **kwargs):
+    def warning(self, *args, **kwargs):
         """Record a warning message"""
-        logger.warn(self.get_pathname()+': '+msg, *args, **kwargs)
+        self._logger.warning(*args, **kwargs)
         
-    def info(self, msg, *args, **kwargs):
+    def info(self, *args, **kwargs):
         """Record an informational message"""
-        logger.info(self.get_pathname()+': '+msg, *args, **kwargs)
+        self._logger.info(*args, **kwargs)
         
-    def debug(self, msg, *args, **kwargs):
+    def debug(self, *args, **kwargs):
         """Record a debug message"""
-        logger.debug(self.get_pathname()+': '+msg, *args, **kwargs)
+        self._logger.debug(*args, **kwargs)
 
