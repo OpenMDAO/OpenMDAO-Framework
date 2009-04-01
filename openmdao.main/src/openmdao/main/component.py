@@ -85,7 +85,7 @@ class Component (Container):
 
     def add_socket (self, name, iface, doc=''):
         """Specify a named placeholder for a component with the given
-        interface.
+        interface or prototype.
         """
         assert isinstance(name, basestring)
         self._sockets[name] = (iface, None)
