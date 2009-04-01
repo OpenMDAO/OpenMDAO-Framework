@@ -253,8 +253,6 @@ class NPSSTestCase(unittest.TestCase):
                          [['a', 'b'], ['a', 'b']])
 
     def test_invalid_command_args(self):
-        self.assertRaises(TypeError, NPSScomponent, farglist=['-I .'])
-
         try:
             NPSScomponent(arglist=['-foobar'])
         except ValueError, err:

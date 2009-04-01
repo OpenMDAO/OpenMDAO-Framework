@@ -13,7 +13,6 @@ from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.filevar import FileVariable
 from openmdao.main.tarjan import strongly_connected_components
 from openmdao.main.util import filexfer
-from openmdao.main.exceptions import RunFailed
 
 
 class Assembly(Component):
