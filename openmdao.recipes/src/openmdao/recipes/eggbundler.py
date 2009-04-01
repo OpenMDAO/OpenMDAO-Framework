@@ -7,9 +7,12 @@ from pkg_resources import Environment, WorkingSet, Requirement
 from setuptools.package_index import PackageIndex
 import tarfile
 import logging
+import zc.buildout
 
 from openmdao.util.procutil import run_command
 from openmdao.util.fileutil import rm
+
+
     
 class EggBundler(object):
     """Collect all of the eggs (not installed) that are used in the current
@@ -46,13 +49,31 @@ class EggBundler(object):
         self.bundle_name = options['bundle_name']
         self.bundle_version = options['bundle_version']
         self.configs = options.get('buildout_configs') or ['buildout.cfg']
-        self.fix_versions = bool(options.get('fix_versions') or True)
-        self.extra_stuff = (options.get('extra_data') or '').split()
+        fix = options.get('fix_versions')
+        if fix == 'false':
+            self.fix_versions = False
+        else:
+            self.fix_versions = True
         
         self.excludeparts = [x for x in options['exclude_parts'].split() if x != '']
         self.parts = [x for x in buildout['buildout']['parts'].split() 
                                if x != '' and x not in self.excludeparts]
         self.dists = []
+        archive = options.get('archive')
+        if archive == 'false':
+            self.archive = False
+        else:
+            self.archive = True
+            
+        extra_stuff = (options.get('extra_data') or '').split()
+        self.extra_stuff = []
+        for stuff in extra_stuff:
+            try:
+                src,dest = stuff.split('=')
+            except ValueError:
+                src = stuff
+                dest = os.path.basename(stuff)
+            self.extra_stuff.append((src,dest))
 
     def _add_deps(self, deps, env, ws, req, excludes):
         """Add a dependency for the given requirement and anything the resulting
@@ -76,7 +97,7 @@ class EggBundler(object):
             if dist.project_name not in excludes:
                 deps.add(dist)
             for req in dist.requires():
-                self.logger.info('%s required by %s' % (req, dist.project_name))
+                self.logger.debug('%s required by %s' % (req, dist.project_name))
                 self._add_deps(deps, env, ws, req, excludes)
 
 
@@ -168,7 +189,7 @@ class EggBundler(object):
             for dist in tmpenv[dproj]:
                 self.dists.append(dist)
                 for req in dist.requires():
-                    self.logger.info('%s requires %s' %(dist.project_name,req))
+                    self.logger.debug('%s requires %s' %(dist.project_name,req))
                     # use the installed environment to gather dependencies
                     # because retrieving them from uninstalled ditros doesn't
                     # work in all cases
@@ -188,15 +209,26 @@ class EggBundler(object):
         self.dists.extend(distribs)
         
         # Copy any extra stuff specified in the config
-        for stuff in self.extra_stuff:
-            self.logger.debug('copying %s' % stuff)
-            if os.path.isfile(stuff):
-                shutil.copy(stuff, self.bundledir)
-            elif os.path.isdir(stuff):
-                dest = os.path.join(self.bundledir,os.path.basename(stuff))
-                if os.path.exists(dest):
-                    rm(dest)
-                shutil.copytree(stuff, dest) 
+        for src,dest in self.extra_stuff:
+            self.logger.debug('copying %s to %s' % (src, dest))
+            if os.path.isdir(src):
+                if not os.path.exists(dest): 
+                    os.makedirs(dest)
+            else:
+                dname = os.path.dirname(dest)
+                if dname != '':
+                    if not os.path.exists(dname): 
+                        os.makedirs(dname)
+                
+            if os.path.isfile(src):
+                shutil.copy(src, os.path.join(self.bundledir, dest))
+            elif os.path.isdir(src):
+                ddest = os.path.join(self.bundledir, dest)
+                if os.path.exists(ddest):
+                    rm(ddest)
+                shutil.copytree(src, ddest) 
+            else:
+                self.logger.error('%s is not a file or directory' % src)
             
         # Copy all of the dependent distribs into the cache directory.
         # The eggs made from the develop eggs are already there.
@@ -221,23 +253,26 @@ class EggBundler(object):
         self.logger.info('creating buildout config')
         self._create_buildout_dir()                                  
         
-        tarname = os.path.join(self.bundledir,'%s-bundle-%s-py%s.tar.gz' % 
+        if self.archive is True:
+            tarname = os.path.join(self.bundledir,'%s-bundle-%s-py%s.tar.gz' % 
                                    (self.bundle_name,self.bundle_version,
                                     sys.version[:3]))
-        self.logger.info('creating tar file %s' %  tarname)
+            self.logger.info('creating tar file %s' %  tarname)
            
-        tarf = tarfile.open(tarname, mode='w:gz')
-        tarf.add(self.bundledir,arcname='%s-%s-py%s' %
+            tarf = tarfile.open(tarname, mode='w:gz')
+            tarf.add(self.bundledir,arcname='%s-%s-py%s' %
                                    (self.bundle_name,self.bundle_version,
                                     sys.version[:3]))
-        tarf.close()
+            tarf.close()
         
-        rm(os.path.join(self.bundledir,'buildout',))
-        for stuff in self.extra_stuff:
-            try:
-                rm(os.path.join(self.bundledir,os.path.basename(stuff)))
-            except OSError, err:
-                self.logger.error(str(err))
+            # delete everything but the tar file
+            for name in os.listdir(self.bundledir):
+                pname = os.path.join(self.bundledir, name)
+                if pname != tarname:
+                    try:
+                        rm(pname)
+                    except OSError, err:
+                        self.logger.error(str(err))
             
         return [self.bundledir]
 
