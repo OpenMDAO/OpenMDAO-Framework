@@ -98,13 +98,13 @@ class ContainerTestCase(unittest.TestCase):
             self.fail('AttributeError expected')
 
     def test_get_objs(self):
-        objs = self.root.get_objs(self.isCont, recurse=True)
+        objs = self.root.get_objs(IContainer.providedBy, recurse=True)
         names = [x.get_pathname() for x in objs]
         self.assertEqual(sorted(names),
                          ['root.c1', 'root.c2', 'root.c2.c21', 
                           'root.c2.c22', 'root.c2.c22.c221'])
         
-        objs = self.root.get_objs(self.isCont)
+        objs = self.root.get_objs(IContainer.providedBy)
         names = [x.get_pathname() for x in objs]
         self.assertEqual(sorted(names), ['root.c1', 'root.c2'])
         
@@ -117,12 +117,12 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(sorted(names), ['root.c2.c21', 'root.c2.c22'])        
 
     def test_get_names(self):
-        names = self.root.get_names(self.isCont, recurse=True)
+        names = self.root.get_names(IContainer.providedBy, recurse=True)
         self.assertEqual(sorted(names),
                          ['root.c1', 'root.c2', 'root.c2.c21',
                           'root.c2.c22', 'root.c2.c22.c221'])
         
-        names = self.root.get_names(self.isCont)
+        names = self.root.get_names(IContainer.providedBy)
         self.assertEqual(sorted(names), ['root.c1', 'root.c2'])
         
         names = self.root.get_names(self.isContRootParent, recurse=True)
@@ -179,14 +179,11 @@ class ContainerTestCase(unittest.TestCase):
         inp = StringIO.StringIO(output.getvalue())
         newc1 = Container.load(inp, constants.SAVE_PICKLE)
                 
-    def isCont(self, obj):
-        return isinstance(obj, Container)
-    
     def isContRootParent(self, obj):
-        return self.isCont(obj) and obj.parent==self.root
+        return IContainer.providedBy(obj) and obj.parent==self.root
     
     def isContC2Parent(self, obj):
-        return self.isCont(obj) and obj.parent==self.root.get('c2')
+        return IContainer.providedBy(obj) and obj.parent==self.root.get('c2')
         
 
 if __name__ == "__main__":

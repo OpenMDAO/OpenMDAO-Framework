@@ -178,7 +178,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.disconnect('comp2.s')
         except RuntimeError, err:
-            self.assertEqual('top: comp2.s is not connected', str(err))
+            self.assertEqual('top.comp2.s: not connected', str(err))
         else:
             self.fail('exception expected')
 
@@ -194,7 +194,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.disconnect('comp4.r')
         except RuntimeError, err:
-            self.assertEqual(str(err), 'top: comp4.r is not connected')
+            self.assertEqual(str(err), 'top.comp4.r: not connected')
         else:            
             self.fail('exception expected')
         

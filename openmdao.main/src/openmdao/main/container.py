@@ -58,6 +58,9 @@ class Container(HierarchyMember):
         interface if private is False.
         """
         if IContainer.providedBy(obj):
+            # if an old child with that name exists, remove it
+            if hasattr(self, obj.name):
+                self.remove_child(obj.name)
             setattr(self, obj.name, obj)
             obj.parent = self
             if private is False:
@@ -77,6 +80,7 @@ class Container(HierarchyMember):
                 dels.append(key)
         for dname in dels:
             del self._pub[dname]
+        # TODO: notify observers
         delattr(self, name)
         
     def make_public(self, obj_info):
@@ -267,40 +271,46 @@ class Container(HierarchyMember):
         obj.setvar(name, variable)        
 
         
-    def get_objs(self, matchfunct, recurse=False):
+    def get_objs(self, matchfunct, recurse=False, pub=False):
         """Return a list of objects that return a value of True when passed
         to matchfunct.
         
         """            
-        def _recurse_get_objs(obj, matchfunct, visited):
+        def _recurse_get_objs(dictionary, matchfunct, visited, pub):
             objs = []
-            for child in obj.__dict__.values():
+            for child in dictionary.values():
                 if id(child) in visited:
                     continue
                 visited.add(id(child))
                 if matchfunct(child):
                     objs.append(child)
                 if IContainer.providedBy(child):
-                    objs.extend(_recurse_get_objs(child, matchfunct, visited))
+                    if pub: 
+                        objs.extend(_recurse_get_objs(child._pub, matchfunct, visited, pub))
+                    else:
+                        objs.extend(_recurse_get_objs(child.__dict__, matchfunct, visited, pub))
             return objs
-            
+        
+        if pub:
+            thedict = self._pub
+        else:
+            thedict = self.__dict__
         objs = []
         visited = set()
         
         if recurse:
-            return _recurse_get_objs(self, matchfunct, visited)
+            return _recurse_get_objs(thedict, matchfunct, visited, pub)
         else:
-            return [child for child in self.__dict__.values() 
+            return [child for child in thedict.values() 
                                                if matchfunct(child)]
             
        
-    def get_names(self, matchfunct, recurse=False):
-        """Return a list of objects that provide the specified interface and
-        also have attributes with values that match those passed as named
-        args"""
+    def get_names(self, matchfunct, recurse=False, pub=False):
+        """Return the names of a list of objects that cause the matchfunct to 
+        return True."""
         return [x.get_pathname() 
-                    for x in self.get_objs(matchfunct, recurse)]
-        
+                    for x in self.get_objs(matchfunct, recurse, pub)]
+    
     def config_from_obj(self, obj):
         """This is intended to allow a newer version of a component to
         configure itself based on an older version. By default, values

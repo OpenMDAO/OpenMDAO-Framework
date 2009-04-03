@@ -51,9 +51,12 @@ class Variable(HierarchyMember):
             
         self.observers = None
         self.permission = None
-        self._constraints = []
         self.iostatus = iostatus
+        self._source = None
+        #self._destinations = {}
+        self._constraints = []
         self._set_count = 0
+        
         
         if IContainer.providedBy(parent):
             parent.make_public(self)
@@ -83,6 +86,11 @@ class Variable(HierarchyMember):
         # will have to do it again if it has constraints
         self.set_default(default)
 
+    @property
+    def source(self):
+        """Return the source Variable connected to this Variable, or None"""
+        return self._source
+        
     def _get_ref_value(self):
         return getattr(self._refparent, self.ref_name)        
         
@@ -145,6 +153,26 @@ class Variable(HierarchyMember):
         """
         self._constraints.remove(con)
 
+    def is_destination(self):
+        """Return True if this Variable is connected to a source."""
+        return self._source is not None
+    
+    def connect_src(self, path):
+        """Connect this Variable to a source Variable, either via a normal
+        connection or a passthru connection.
+        """
+        if self._source is None:
+            self._source = path
+        else:
+            self.raise_exception('already connected', RuntimeError)
+        
+    def disconnect_src(self):
+        """Disconnect this Variable from a source Variable."""
+        if self._source is None:
+            self.raise_exception('not connected', RuntimeError)
+        else:
+            self._source = None
+            
     def _pre_assign(self, val):
         """This should be overridden to perform necessary validations at
         assignment time but this base version should still be called from within the
@@ -185,9 +213,19 @@ class Variable(HierarchyMember):
             self.raise_exception("assignment to incompatible variable '"+
                                  variable.get_pathname()+"' of type '"+
                                  str(type(variable))+"'", TypeError)
-        if self.iostatus != INPUT or self.iostatus == variable.iostatus:
-            self.raise_exception('incompatible iostatus with '+
-                                 variable.get_pathname(),ValueError)
+            
+    def check_direction(self, variable, passthru=False):
+        """Raise a RuntimeError if this Variable and the one passed in are
+        not directionally compatible.
+        """
+        if passthru:
+            if self.iostatus != variable.iostatus:
+                self.raise_exception('iostatus incompatible for passthru connection to '+
+                                     variable.get_pathname(), RuntimeError)
+        else:
+            if self.iostatus != INPUT or self.iostatus == variable.iostatus:
+                self.raise_exception('iostatus incompatible for connection to '+
+                                     variable.get_pathname(), RuntimeError)
 
     def _convert(self, variable):
         """Some Variables, e.g., Float, will need to override this in order to

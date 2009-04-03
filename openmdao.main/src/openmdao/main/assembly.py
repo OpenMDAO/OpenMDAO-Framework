@@ -4,10 +4,11 @@ __all__ = ["Assembly"]
 __version__ = "0.1"
 
 import os
+import copy
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IAssembly
+from openmdao.main.interfaces import IAssembly, IComponent, IVariable
 from openmdao.main import Component
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.filevar import FileVariable
@@ -15,33 +16,60 @@ from openmdao.main.tarjan import strongly_connected_components
 from openmdao.main.util import filexfer
 
 
+def connected_dest_vars(obj):
+    return IVariable.providedBy(obj) and obj.source is not None
+        
+def _add_dependency(dep_graph, srccompname, destcompname):
+    if destcompname in dep_graph:
+        if srccompname not in dep_graph[destcompname]:
+            dep_graph[destcompname].append(srccompname)
+    else:                
+        dep_graph[destcompname] = [srccompname]
+        
+    if srccompname not in dep_graph:
+        dep_graph[srccompname] = []
+    
+
 class Assembly(Component):
     """A container for Components, a Driver, and a Workflow. It manages
     connections between Components."""
-
    
     implements(IAssembly)
     
     def __init__(self, name, parent=None, doc=None, directory=''):
         super(Assembly, self).__init__(name, parent, doc=doc,
                                        directory=directory)
-        self._connections = {} # dependencies between Components
+        #self._connections = {} # dependencies between Components
         self.driver = self.create('openmdao.main.driver.Driver', 'driver')
         self.workflow = self.create('openmdao.main.workflow.Workflow',
                                     'workflow')
+        self._dep_graph = None
+
+        
+    def get_dependency_graph(self):
+        """Return a component dependency graph in the form of a dictionary"""
+        if self._dep_graph is not None:
+            return self._dep_graph
+        
+        dep_graph = {}
+        for src,dest in self.list_connections():
+            srccompname, srccomp, srcvarname, srcvar = self.split_varpath(src)
+            if srccompname is None:
+                continue
+            destcompname, destcomp, destvarname, destvar = self.split_varpath(dest)
+            if destcompname is None:
+                continue
+            
+            _add_dependency(dep_graph, destcompname, srccompname)
+                
+        return dep_graph
     
     def _check_circular_deps(self, incomp, invar, outname):
-        """Raises an exception if a circular dependency is detected"""
-        dep_graph = {}
-        for compname, deps in self._connections.items():
-            outs = set()
-            for outtuple in deps.values():
-                outobj = self.get(outtuple[0])
-                out = outobj.name
-                outs.add(out)
-                if out not in dep_graph:
-                    dep_graph[out] = []
-            dep_graph[compname] = list(outs)
+        """Create a dependency graph based on the current graph with the
+        addition of the proposed new connection, and raise an exception if a 
+        circular dependency is detected.
+        """
+        dep_graph = self.get_dependency_graph()
         
         # now add the new dep
         out = outname.split('.')[0]
@@ -49,74 +77,94 @@ class Assembly(Component):
         if incomp == out:
             self.raise_exception('Cannot connect a component ('+
                                  incomp+') to itself', RuntimeError)
-        
-        if incomp not in dep_graph:
-            dep_graph[incomp] = [out]
-        else:
-            if outname not in dep_graph[incomp]:
-                dep_graph[incomp].append(out)
-        if out not in dep_graph:
-            dep_graph[out] = []
 
-        sccomps = strongly_connected_components(dep_graph)
+        new_graph = copy.deepcopy(dep_graph)
+        _add_dependency(new_graph, incomp, out)
+        
+        sccomps = strongly_connected_components(new_graph)
         for comp in sccomps:
             if len(comp) > 1:
                 self.raise_exception('Circular dependency would be '+
                                      'created by connecting '+
                                      incomp+'.'+invar+' to '+outname, 
                                      RuntimeError)
+        return new_graph
 
-    def connect(self, outpath, inpath):
-        """Connect one output variable to one input variable"""
+    def split_varpath(self, path):
+        """Return a tuple of compname,component,varname,variable given a path
+        name of the form 'compname.varname'. If the name is of the form 'varname'
+        then compname will be None and comp is self.
+        """
+        try:
+            compname, varname = path.split('.', 1)
+        except ValueError:
+            compname = None
+            comp = self
+            varname = path
+            var = getattr(self, varname)
+        else:
+            comp = getattr(self, compname)
+            if not IComponent.providedBy(comp):
+                self.raise_exception('%s is not a Component' % compname, TypeError)               
+            var = comp.getvar(varname)
+        if not IVariable.providedBy(var):
+            self.raise_exception('%s is not a Variable' % varname, TypeError)
+        return (compname, comp, varname, var)
 
-        #outcomp and variable name
-        outcompname, outvarname = outpath.split('.', 1)
-        outcomp = getattr(self, outcompname)
-        outvar = outcomp.getvar(outvarname)
-        if outvar.iostatus != OUTPUT:
-            self.raise_exception(outvar.get_pathname()+
-                                 ' must be an OUTPUT variable',
+    
+    def connect(self, srcpath, destpath):
+        """Connect one src Variable to one destination Variable. This could be
+        a normal connection (output to input) or a passthru connection."""
+
+        srccompname, srccomp, srcvarname, srcvar = self.split_varpath(srcpath)
+        destcompname, destcomp, destvarname, destvar = self.split_varpath(destpath)
+        
+        # if the Variables involved in the connection are from different
+        # scoping levels, then it's a passthru connection
+        if srccomp is self or destcomp is self:
+            if srccomp is destcomp:
+                self.raise_exception('cannot connect "%s" to "%s" on same component' %
+                                      (srcvarname, destvarname), RuntimeError)
+            else:
+                passthru = True
+        else:
+            passthru = False                   
+            if srcvar.iostatus != OUTPUT:
+                self.raise_exception(srcvar.get_pathname()+
+                                     ' must be an OUTPUT variable',
+                                     RuntimeError)
+            if destvar.iostatus != INPUT:
+                self.raise_exception(destvar.get_pathname()+
+                                     ' must be an INPUT variable',
+                                     RuntimeError)
+        
+        if destvar.is_destination():
+            self.raise_exception(destpath+' is already connected',
                                  RuntimeError)
-      
-        #incomp and variable name
-        incompname, invarname = inpath.split('.', 1)
-        incomp = getattr(self, incompname)
-        invar = incomp.getvar(invarname)
-        
-        if invar.iostatus != INPUT:
-            self.raise_exception(invar.get_pathname()+
-                                 ' must be an INPUT variable',
-                                 RuntimeError)
-        
-        if incompname in self._connections:
-            for iname in self._connections[incompname].keys():
-                if iname == invarname:
-                    self.raise_exception(inpath+' is already connected',
-                                         RuntimeError)
-        
+                    
         # test compatability
-        invar.validate_var(outvar)
+        destvar.validate_var(srcvar)
         
-        self._check_circular_deps(incompname, invarname, outpath)
+        new_graph = self._check_circular_deps(destcompname, destvarname, srcpath) 
         
-        if incompname not in self._connections:
-            self._connections[incompname] = {}
+        destvar.connect_src(srcpath)
+        self._dep_graph = new_graph
             
-        self._connections[incompname][inpath.split('.', 1)[1]] = (outcompname, 
-                                                                 outvarname)
-        
-    def disconnect(self, inpath):
-        """Remove a connection between two Components."""
-        incompname, invarname = inpath.split('.', 1)
-        
-        if incompname not in self._connections or \
-           invarname not in self._connections[incompname]:
-            self.raise_exception(inpath+' is not connected', RuntimeError)
-        del self._connections[incompname][invarname]
+    def disconnect(self, varpath):
+        """Remove all connections from a given variable."""
+        var = self.getvar(varpath)
+        found = False
+        if var.source is None: # may be a source, so try to find destination
+            for src,dest in self.list_connections():
+                if src == varpath:
+                    found = True
+                    self.getvar(dest).disconnect_src()
                     
-        if len(self._connections[incompname]) == 0:
-            del self._connections[incompname]
-                    
+        if found is False:
+            var.disconnect_src()
+            
+        self._dep_graph = None  # force regeneration of dep_graph
+
     def execute(self):
         """run this Assembly by handing control to the driver"""
         return self.driver.run()
@@ -136,20 +184,14 @@ class Assembly(Component):
         """
         
         # TODO: notify observers of removal...
-        
-        if name in self._connections:
-            del self._connections[name]
-            
-        discons = []
-        for incompname, indict in self._connections.items():
-            for invarname, outtuple in indict.items():
-                if outtuple[0] == name:
-                    # disconnect any inputs reading from outputs 
-                    # of this component
-                    discons.append('.'.join([incompname, invarname]))
-
-        for disc in discons:
-            self.disconnect(disc)
+                 
+        for src,dest in self.list_connections():
+            srccompname,srccomp,srcvarname,srcvar = self.split_varpath(src)
+            destcompname,destcomp,destvarname,destvar = self.split_varpath(dest)
+            # disconnect any vars reading from vars of this component, and all
+            # destination vars in the component being removed
+            if srccompname == name or destcompname == name:
+                destvar.disconnect_src()
             
         self.workflow.remove_node(getattr(self, name))           
         Component.remove_child(self, name)
@@ -158,52 +200,45 @@ class Assembly(Component):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         conns = []
-        for comp, inputs in self._connections.items():
-            for inp, outinfo in inputs.items():
-                outcomp = self.getvar(outinfo[0])
-                outvar = outcomp.getvar(outinfo[1])
+        for comp in self.get_objs(IComponent.providedBy):
+            for var in comp.get_objs(connected_dest_vars, pub=True):
                 if fullpath is True:
-                    inname = '.'.join([self.getvar(comp).get_pathname(), inp])
-                    outname = outvar.get_pathname()
+                    inname = var.get_pathname()
+                    outname = self.getvar(var.source).get_pathname()
                 else:
-                    inname = '.'.join([comp, inp])
-                    outname = '.'.join([outcomp.name, outvar.name])
+                    inname = '.'.join([var.parent.name, var.name])
+                    outname = var.source
                 conns.append((outname, inname))
+        
         return conns
     
     def update_inputs(self, incomp):
         """Transfer input data to the specified component.
         Note that we're called after incomp has set its execution directory,
         so we'll need to account for this during file transfers."""
-        try:
-            deps = self._connections[incomp.name]
-        except KeyError:
-            return   # no connected inputs for this component
-
-        for invarname, outtuple in deps.items():
-            invar = incomp.getvar(invarname)
-            if isinstance(invar, FileVariable):
-                outcomp = getattr(self, outtuple[0])
-                outvar = outcomp.getvar(outtuple[1])
+        
+        for var in incomp.get_objs(connected_dest_vars, pub=True):
+            srccompname, srccomp, srcvarname, srcvar = self.split_varpath(var.source)
+            if isinstance(var, FileVariable):
                 incomp.pop_dir()
                 try:
-                    self.xfer_file(outcomp, outvar, incomp, invar)
-                    invar.metadata = outvar.metadata.copy()
+                    self.xfer_file(srccomp, srcvar, incomp, var)
+                    var.metadata = srcvar.metadata.copy()
                 except Exception, exc:
                     msg = "cannot transfer file from '%s' to '%s': %s" % \
-                          ('.'.join(outtuple[:2]),
-                           '.'.join((incomp.name, invarname)), str(exc))
+                          (var.source,
+                           '.'.join((incomp.name, var.name)), str(exc))
                     self.raise_exception(msg, type(exc))
                 finally:
                     incomp.push_dir(incomp.get_directory())
             else:
-                outvar = self.getvar('.'.join(outtuple[:2]))
+                srcvar = self.getvar(var.source)
                 try:
-                    invar.setvar(None, outvar)
+                    var.setvar(None, srcvar)
                 except Exception, exc:
                     msg = "cannot set '%s' from '%s': %s" % \
-                          ('.'.join((incomp.name, invarname)),
-                           '.'.join(outtuple[:2]), str(exc))
+                          ('.'.join((incomp.name, var.name)),
+                           srcvar, str(exc))
                     self.raise_exception(msg, type(exc))
 
     @staticmethod
