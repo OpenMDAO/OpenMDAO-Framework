@@ -158,4 +158,4 @@ class Logger(object):
     def log(self, level, msg, *args, **kwargs):
         """ Log a message at a specified level. """
         self._logger.log(level, msg, *args, **kwargs)
-    
+
