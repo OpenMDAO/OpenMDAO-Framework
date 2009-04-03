@@ -10,6 +10,7 @@
 */parts/
 */eggs/
 */develop-eggs
+*/**/pylint
 ~*
 wingproj.wpr
 buildout/.installed.cfg

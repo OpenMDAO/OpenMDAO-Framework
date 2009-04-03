@@ -5,6 +5,7 @@ TODO: load/save of NPSS model state.
 """
 
 import cPickle
+import logging
 import os
 import os.path
 import pkg_resources
@@ -18,13 +19,14 @@ from openmdao.main.variable import OUTPUT
 
 from npsscomponent import NPSScomponent
 
+ORIG_DIR = os.getcwd()
 
 class Passthrough(NPSScomponent):
     """ An NPSS component that passes-through various types of variable. """
 
     def __init__(self):
         directory = pkg_resources.resource_filename('npsscomponent', 'test')
-        arglist = ['passthrough.mdl']
+        arglist = 'passthrough.mdl'
         super(Passthrough, self).__init__('NPSS', directory=directory,
                                           arglist=arglist)
 
@@ -55,12 +57,21 @@ class NPSSTestCase(unittest.TestCase):
         if self.npss is not None:
             self.npss.pre_delete()
             self.npss = None
+
+        if os.getcwd() != ORIG_DIR:
+            bad_dir = os.getcwd()
+            os.chdir(ORIG_DIR)
+            self.fail('Ended in %s, expected %s' % (bad_dir, ORIG_DIR))
+
         try:
             os.remove('npss.pickle')
         except OSError:
             pass
 
     def test_load_save(self):
+        logging.debug('')
+        logging.debug('test_load_save')
+
         saved_values = {}
         for name, var in self.npss._pub.items():
             saved_values[name] = var.get('value')
@@ -83,6 +94,9 @@ class NPSSTestCase(unittest.TestCase):
                     self.assertEqual(getattr(self.npss, name), val)
 
     def test_nofile(self):
+        logging.debug('')
+        logging.debug('test_nofile')
+
         self.npss.pre_delete()
         self.npss = None
         try:
@@ -93,6 +107,9 @@ class NPSSTestCase(unittest.TestCase):
             self.fail('Expected IOError')
 
     def test_badfile(self):
+        logging.debug('')
+        logging.debug('test_badfile')
+
         self.npss.pre_delete()
         self.npss = None
         directory = pkg_resources.resource_filename('npsscomponent', 'test')
@@ -103,6 +120,23 @@ class NPSSTestCase(unittest.TestCase):
             self.assertEqual(str(exc), "invalid load key, '\"'.")
         else:
             self.fail('Expected UnpicklingError')
+
+    def test_nomodel(self):
+        logging.debug('')
+        logging.debug('test_nomodel')
+
+        self.npss.model_filename = 'xyzzy.mdl'
+        self.npss.save('npss.pickle')
+        self.npss.pre_delete()
+        self.npss = None
+
+        self.npss = NPSScomponent.load('npss.pickle')
+        try:
+            self.npss.post_load()
+        except RuntimeError, exc:
+            self.assertEqual(str(exc), "NPSS: Reload caught exception: parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'xyzzy.mdl'")
+        else:
+            self.fail('Expected RuntimeError')
 
 
 if __name__ == '__main__':
