@@ -102,19 +102,19 @@ class HierarchyMember(object):
 #        self._logger.error(msg)
         raise exception_class(full_msg)
     
-    def error(self, *args, **kwargs):
+    def error(self, msg, *args, **kwargs):
         """Record an error message"""
-        self._logger.error(*args, **kwargs)
+        self._logger.error(msg, *args, **kwargs)
         
-    def warning(self, *args, **kwargs):
+    def warning(self, msg, *args, **kwargs):
         """Record a warning message"""
-        self._logger.warning(*args, **kwargs)
+        self._logger.warning(msg, *args, **kwargs)
         
-    def info(self, *args, **kwargs):
+    def info(self, msg, *args, **kwargs):
         """Record an informational message"""
-        self._logger.info(*args, **kwargs)
+        self._logger.info(msg, *args, **kwargs)
         
-    def debug(self, *args, **kwargs):
+    def debug(self, msg, *args, **kwargs):
         """Record a debug message"""
-        self._logger.debug(*args, **kwargs)
+        self._logger.debug(msg, *args, **kwargs)
 
