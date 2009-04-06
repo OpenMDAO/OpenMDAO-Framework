@@ -19,15 +19,15 @@ from openmdao.main.util import filexfer
 def connected_dest_vars(obj):
     return IVariable.providedBy(obj) and obj.source is not None
         
-def _add_dependency(dep_graph, srccompname, destcompname):
-    if destcompname in dep_graph:
-        if srccompname not in dep_graph[destcompname]:
-            dep_graph[destcompname].append(srccompname)
+def _add_dependency(dep_graph, src, dest):
+    if dest in dep_graph:
+        if src not in dep_graph[dest]:
+            dep_graph[dest].append(src)
     else:                
-        dep_graph[destcompname] = [srccompname]
+        dep_graph[dest] = [src]
         
-    if srccompname not in dep_graph:
-        dep_graph[srccompname] = []
+    if src not in dep_graph:
+        dep_graph[src] = []
     
 
 class Assembly(Component):
@@ -39,12 +39,43 @@ class Assembly(Component):
     def __init__(self, name, parent=None, doc=None, directory=''):
         super(Assembly, self).__init__(name, parent, doc=doc,
                                        directory=directory)
-        #self._connections = {} # dependencies between Components
+
         self.driver = self.create('openmdao.main.driver.Driver', 'driver')
         self.workflow = self.create('openmdao.main.workflow.Workflow',
                                     'workflow')
         self._dep_graph = None
 
+
+    def create_passthru(self, varname, alias=None):
+        """Create a Variable that's a copy of var, make it a public member of self,
+        and create a passthru connection between it and var.  If alias is not None,
+        the name of the 'promoted' Variable will be the alias.
+        """
+        # varname must have two parts
+        compname, vname = varname.split('.')
+        
+        comp = getattr(self, compname)
+        var = comp.getvar(vname)
+        
+        # check to see if var is already connected
+        if var.is_destination():
+            self.raise_exception('%s is already connected' % 
+                                '.'.join([var.parent.name,var.name]), RuntimeError)
+            
+        if alias is None:
+            name = vname
+        else:
+            name = alias
+            
+        # check to see if a public Variable already exists with the given varname
+        if self.contains(name):
+            self.raise_exception('%s is already a public Variable' % name, 
+                                 RuntimeError)
+        
+        newvar = var.make_passthru(name, self)
+        
+        self.connect(name, varname)  # create the passthru connection
+        
         
     def get_dependency_graph(self):
         """Return a component dependency graph in the form of a dictionary"""

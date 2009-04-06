@@ -83,13 +83,12 @@ class Container(HierarchyMember):
         # TODO: notify observers
         delattr(self, name)
         
-    def make_public(self, obj_info):
+    def make_public(self, obj_info, iostatus=INPUT):
         """Adds the given object(s) as framework-accessible data object(s) of
-        this Container. obj_info can be a single non-Variable object, a list
+        this Container. obj_info can be an object, the name of an object, a list
         of names of objects in this container instance, or a list of tuples of
         the form (name, alias, iostatus), where name is the name of an object
-        within this container instance. If iostatus is not supplied, the
-        default value is INPUT. This function attempts to locate an object
+        within this container instance. This function attempts to locate an object
         with an IVariable interface that can wrap each object passed into the
         function.
         
@@ -101,9 +100,9 @@ class Container(HierarchyMember):
         else:
             lst = [obj_info]
         
-        for i, entry in enumerate(lst):
+        for entry in lst:
             ref_name = None
-            iostat = INPUT
+            iostat = iostatus
             dobj = None
 
             if isinstance(entry, basestring):
@@ -126,8 +125,8 @@ class Container(HierarchyMember):
                     typ = type(dobj)
                 else:
                     self.raise_exception(
-                     'no IVariable interface available for the object at %d' % \
-                      i, TypeError)
+                     'no IVariable interface available for %s' % \
+                      str(entry), TypeError)
                     
             if not IVariable.providedBy(dobj):
                 dobj = find_var_class(typ, name, self, iostatus=iostat, 

@@ -53,7 +53,6 @@ class Variable(HierarchyMember):
         self.permission = None
         self.iostatus = iostatus
         self._source = None
-        #self._destinations = {}
         self._constraints = []
         self._set_count = 0
         
