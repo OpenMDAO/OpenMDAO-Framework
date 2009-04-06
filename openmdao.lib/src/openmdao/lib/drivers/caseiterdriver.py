@@ -184,7 +184,8 @@ class CaseIteratorDriver(Driver):
                             case.outputs[i] = (niv[0], niv[1],
                                 self._model_get(server, niv[0], niv[1]))
                         except Exception, exc:
-                            msg = "Exception getting '%s': %s" % (niv[0], str(exc))
+                            msg = "Exception getting '%s': %s" % \
+                                  (niv[0], str(exc))
                             case.msg = '%s: %s' % (self.get_pathname(), msg)
                 else:
                     case.msg = str(exc)

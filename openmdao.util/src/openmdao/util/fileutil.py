@@ -5,13 +5,10 @@ Misc. file utility routines
 
 import os
 from os import makedirs
-import sys
 import shutil
-import linecache
 import fnmatch
 from os.path import islink, isdir
 from os.path import normpath,dirname,exists,abspath
-from subprocess import Popen,PIPE,STDOUT
 
 
 def makepath(path):
@@ -41,14 +38,14 @@ def glob_walk(directory, include_list):
         include_list = [include_list]
 
     def included(name, include_list):
-       #True if the given name is matched by the include list
-       for m in include_list:
-          if fnmatch.fnmatchcase(name, m): 
-              return True
-       return False
+        #True if the given name is matched by the include list
+        for m in include_list:
+            if fnmatch.fnmatchcase(name, m): 
+                return True
+        return False
        
     if included(directory, include_list):
-       yield directory
+        yield directory
 
     for f in os.listdir(directory):
         fullpath = os.path.join(directory,f)
@@ -64,21 +61,21 @@ def glob_walk(directory, include_list):
 def excluding_walk(ddir,excludeList):
     """walk a directory tree, using a generator, excluding specified files/dirs"""
     def included(name,excludeList):
-       #False if the given name is part of the exlude list
-       for m in excludeList:
-          if fnmatch.fnmatchcase(name, m): return False
-       return True
+        #False if the given name is part of the exlude list
+        for m in excludeList:
+            if fnmatch.fnmatchcase(name, m): return False
+        return True
        
     if included(os.path.basename(ddir),excludeList):
-       yield dir
-       for f in os.listdir(ddir):
-           if included(f,excludeList):
-              fullpath = os.path.join(ddir,f)
-              if isdir(fullpath) and not islink(fullpath):
-                  for x in excluding_walk(fullpath,excludeList): 
-                      yield x
-              else:
-                  yield fullpath
+        yield dir
+        for f in os.listdir(ddir):
+            if included(f,excludeList):
+                fullpath = os.path.join(ddir,f)
+                if isdir(fullpath) and not islink(fullpath):
+                    for x in excluding_walk(fullpath,excludeList): 
+                        yield x
+                else:
+                    yield fullpath
             
 
 
@@ -87,12 +84,12 @@ def dirtreegen(ddir):
     names relative to the starting dir. Links are not followed."""
     yield ddir
     for f in os.listdir(ddir):
-       fullpath = os.path.join(ddir,f)
-       if os.path.isdir(fullpath) and not os.path.islink(fullpath):
-           for x in dirtreegen(fullpath):  # recurse into subdir
-               yield x
-       else:
-           yield fullpath
+        fullpath = os.path.join(ddir,f)
+        if os.path.isdir(fullpath) and not os.path.islink(fullpath):
+            for x in dirtreegen(fullpath):  # recurse into subdir
+                yield x
+        else:
+            yield fullpath
 
 
 def find_files(pat, startdir):

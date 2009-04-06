@@ -2,15 +2,19 @@
 Test of NPSS auto-reload capability.
 """
 
+import logging
 import os
 import os.path
 import pkg_resources
 import unittest
 
 from openmdao.main import Assembly, Component, Bool, Float, String
+from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent
+
+ORIG_DIR = os.getcwd()
 
 
 class Source(Component):
@@ -48,7 +52,7 @@ class Model(Assembly):
         directory = \
             os.path.join(pkg_resources.resource_filename('npsscomponent',
                                                          'test'))
-        arglist = ['-trace', 'reload.mdl']
+        arglist = '-trace reload.mdl'
         NPSScomponent(parent=self, directory=directory,
                       arglist=arglist, output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
@@ -76,8 +80,15 @@ class NPSSTestCase(unittest.TestCase):
         self.model.pre_delete()
         os.remove(os.path.join(self.model.NPSS.directory, 'reload.out'))
         self.model = None
+        if os.getcwd() != ORIG_DIR:
+            bad_dir = os.getcwd()
+            os.chdir(ORIG_DIR)
+            self.fail('Ended in %s, expected %s' % (bad_dir, ORIG_DIR))
 
     def test_internal_reload(self):
+        logging.debug('')
+        logging.debug('test_internal_reload')
+
         self.assertEqual(self.model.NPSS.run_count, 0)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.Sink.npss_out, 0)
@@ -96,7 +107,7 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.Sink.npss_out, 18)
 
-        path = self.model.NPSS.get('reload_flag')
+        path = self.model.NPSS.reload_flag
         self.model.NPSS.set(path, True)
         self.model.debug('reload_flag = %d', self.model.NPSS.get(path))
 
@@ -107,7 +118,28 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.npss_out, 9)
         self.assertEqual(self.model.NPSS.s, 'unconnected')
 
+        self.model.NPSS.set(path, True)
+        self.model.debug('reload_flag = %d', self.model.NPSS.get(path))
+        self.model.NPSS.model_filename = 'no_such_model'
+        try:
+            self.model.run()
+        except RunFailed, exc:
+            self.assertEqual(str(exc), "TestModel.NPSS: Exception during reload: parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'no_such_model'")
+        else:
+            self.fail('Expected RunFailed')
+
+        self.model.NPSS.reload_flag = 'no_such_variable'
+        try:
+            self.model.run()
+        except RunFailed, exc:
+            self.assertEqual(str(exc), "TestModel.NPSS: Exception getting 'no_such_variable': no_such_variable not found")
+        else:
+            self.fail('Expected RunFailed')
+
     def test_external_reload(self):
+        logging.debug('')
+        logging.debug('test_external_reload')
+
         self.assertEqual(self.model.NPSS.run_count, 0)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.Sink.npss_out, 0)
@@ -137,7 +169,18 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.npss_out, 9)
         self.assertEqual(self.model.NPSS.s, 'unconnected')
  
+        self.model.NPSS.model_filename = 'no_such_model'
+        try:
+            self.model.run()
+        except RunFailed, exc:
+            self.assertEqual(str(exc), "TestModel.NPSS: Exception during reload: parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'no_such_model'")
+        else:
+            self.fail('Expected RunFailed')
+
     def test_custom_run(self):
+        logging.debug('')
+        logging.debug('test_custom_run')
+
         self.assertEqual(self.model.NPSS.run_count, 0)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.Sink.npss_out, 0)

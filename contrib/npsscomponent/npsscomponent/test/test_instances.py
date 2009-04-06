@@ -3,6 +3,7 @@ Test of multiple NPSS instances.
 """
 
 import cPickle
+import logging
 import os
 import os.path
 import pkg_resources
@@ -17,6 +18,7 @@ from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent
 
+ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -64,8 +66,8 @@ class Passthrough(NPSScomponent):
     """ An NPSS component that passes-through various types of variable. """
 
     def __init__(self, name, parent=None, doc=None, directory=''):
-        arglist = ['-D', 'XYZZY=twisty narrow passages',
-                   '-trace', os.path.join('..', 'passthrough.mdl')]
+        arglist = ['-D', 'XYZZY=twisty narrow passages', '-D', 'FLAG',
+                   '-I', '.', '-trace', os.path.join('..', 'passthrough.mdl')]
         super(Passthrough, self).__init__(name, parent, doc, directory,
                                           arglist, 'passthrough.out')
 
@@ -226,11 +228,16 @@ class NPSSTestCase(unittest.TestCase):
         self.model.pre_delete()
         shutil.rmtree(self.model.NPSS_A.directory)
         shutil.rmtree(self.model.NPSS_B.directory)
-        for path in ('source.txt', 'source.bin', 'sink.txt', 'sink.bin'):
-            os.remove(path)
         self.model = None
+        if os.getcwd() != ORIG_DIR:
+            bad_dir = os.getcwd()
+            os.chdir(ORIG_DIR)
+            self.fail('Ended in %s, expected %s' % (bad_dir, ORIG_DIR))
 
     def test_connectivity(self):
+        logging.debug('')
+        logging.debug('test_connectivity')
+
         self.assertNotEqual(self.model.Sink.b,   self.model.Source.b)
         self.assertNotEqual(self.model.Sink.f,   self.model.Source.f)
         self.assertNotEqual(self.model.Sink.f1d, self.model.Source.f1d)
@@ -266,6 +273,16 @@ class NPSSTestCase(unittest.TestCase):
                          self.model.Source.binary_data)
         self.assertEqual(
             self.model.Sink.getvar('binary_file').metadata['binary'], True)
+
+        for path in ('source.txt', 'source.bin', 'sink.txt', 'sink.bin'):
+            os.remove(path)  # Will raise exception if any files don't exist.
+
+    def test_preprocessor(self):
+        logging.debug('')
+        logging.debug('test_preprocessor')
+
+        self.assertEqual(self.model.NPSS_A.xyzzy_val, 'twisty narrow passages')
+        self.assertEqual(self.model.NPSS_A.flag_val, 1)
 
 
 if __name__ == '__main__':
