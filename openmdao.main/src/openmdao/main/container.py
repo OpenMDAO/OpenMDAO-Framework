@@ -250,20 +250,24 @@ class Container(HierarchyMember):
         This differs from setting to a simple value, because the destination
         Variable can use info from the source Variable to perform conversions
         if necessary, as in the case of Float Variables with differing units.
+
         """
+        assert(isinstance(path, basestring))
         try:
             base, name = path.split('.', 1)
         except ValueError:
             base = path
             name = None
+
         try:
             obj = self._pub[base]
         except KeyError:
-            self.raise_exception("object has no attribute '"+
-                                 base+"'", AttributeError)
+            self.raise_exception("object has no attribute '"+ base+"'",
+                                 AttributeError)
         except TypeError:
-            self.raise_exception("object has no attribute '"+
-                                 str(base)+"'", AttributeError)
+            self.raise_exception("object has no attribute '"+str(base)+"'",
+                                 AttributeError)
+
         obj.setvar(name, variable)        
 
         
@@ -322,7 +326,8 @@ class Container(HierarchyMember):
             try:
                 outstream = open(outstream, mode)
             except IOError, exc:
-                self.raise_exception(exc.args, type(exc))
+                self.raise_exception("Can't save to '%s': %s" % \
+                                     (outstream, exc.strerror), type(exc))
 
         if format is SAVE_CPICKLE:
             cPickle.dump(self, outstream, proto) # -1 means use highest protocol

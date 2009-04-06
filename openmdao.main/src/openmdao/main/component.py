@@ -51,11 +51,13 @@ class Component (Container):
                 try:
                     os.makedirs(self.directory)
                 except OSError, exc:
-                    self.error("Could not create directory '%s': %s",
-                               self.directory, exc.strerror)
+                    self.raise_exception("Can't create execution directory '%s': %s" \
+                                         % (self.directory, exc.strerror),
+                                         OSError)
             else:
                 if not os.path.isdir(self.directory):
-                    self.error("Path '%s' is not a directory.", self.directory)
+                    self.raise_exception("Execution directory path '%s' is not a directory." \
+                                         % self.directory, ValueError)
 # pylint: enable-msg=E1101
 
     def _get_socket_plugin(self, name):

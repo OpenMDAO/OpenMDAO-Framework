@@ -3,11 +3,13 @@ Test of FileVariables.
 """
 
 import cPickle
+import os
 import shutil
 import unittest
 
 from openmdao.main import Assembly, Component, \
                           ArrayVariable, FileVariable, StringList, Bool
+from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT
 
 # pylint: disable-msg=E1101
@@ -114,6 +116,38 @@ class FileTestCase(unittest.TestCase):
                 self.fail("Wrong message '%s'" % str(exc))
         else:
             self.fail('IOError expected')
+
+    def test_bad_directory(self):
+        try:
+            self.source = Source(directory='/no-permission-to-create')
+        except OSError, exc:
+            self.assertEqual(str(exc), "Source: Can't create execution directory '/no-permission-to-create': Permission denied")
+        else:
+            self.fail('Expected OSError')
+
+    def test_not_directory(self):
+        directory = 'plain_file'
+        out = open(directory, 'w')
+        print >>out, 'Hello world!'
+        out.close()
+
+        try:
+            self.source = Source(directory=directory)
+        except ValueError, exc:
+            self.assertEqual(str(exc), "Source: Execution directory path 'plain_file' is not a directory.")
+        else:
+            self.fail('Expected ValueError')
+        finally:
+            os.remove(directory)
+
+    def test_bad_new_directory(self):
+        self.model.Source.directory = '/no-such-directory'
+        try:
+            self.model.run()
+        except RunFailed, exc:
+            self.assertEqual(str(exc), "FileVar_TestModel.Source: Could not move to execution directory '/no-such-directory': No such file or directory")
+        else:
+            self.fail('Expected RunFailed')
 
 
 if __name__ == '__main__':

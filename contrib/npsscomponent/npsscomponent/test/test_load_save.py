@@ -15,6 +15,7 @@ from numpy import ndarray
 from numpy.testing import assert_equal
 
 from openmdao.main import Bool, FileVariable
+from openmdao.main.constants import SAVE_LIBYAML
 from openmdao.main.variable import OUTPUT
 
 from npsscomponent import NPSScomponent
@@ -137,6 +138,29 @@ class NPSSTestCase(unittest.TestCase):
             self.assertEqual(str(exc), "NPSS: Reload caught exception: parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'xyzzy.mdl'")
         else:
             self.fail('Expected RuntimeError')
+
+    def test_badsave(self):
+        logging.debug('')
+        logging.debug('test_badsave')
+
+        try:
+            self.npss.save('/no-permission')
+        except IOError, exc:
+            self.assertEqual(str(exc), "NPSS: Can't save to '/no-permission': Permission denied")
+        else:
+            self.fail('Expected IOError')
+
+    def test_save_yaml(self):
+        logging.debug('')
+        logging.debug('test_save_yaml')
+
+        # This currently fails, not sure why.
+        try:
+            self.npss.save('npss.pickle', SAVE_LIBYAML)
+        except TypeError, exc:
+            self.assertEqual(str(exc), 'data type not understood')
+        else:
+            self.fail('Expected TypeError')
 
 
 if __name__ == '__main__':
