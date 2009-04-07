@@ -51,7 +51,7 @@ class ContainerVariable(Variable):
                 except TypeError, err:
                     self.raise_exception(str(err), TypeError)
         else:
-            container = getattr(self.parent, self.ref_name)
+            container = getattr(self._refparent, self.ref_name)
             return container.get(name, index)
 
 

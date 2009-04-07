@@ -9,7 +9,7 @@ import copy
 from zope.interface import implements
 
 from openmdao.main.interfaces import IAssembly, IComponent, IVariable
-from openmdao.main import Component
+from openmdao.main import Component, Container
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.filevar import FileVariable
 from openmdao.main.tarjan import strongly_connected_components
@@ -17,17 +17,18 @@ from openmdao.main.util import filexfer
 
 
 def connected_dest_vars(obj):
+    """Return True if obj provides the IVariable interface and is connected."""
     return IVariable.providedBy(obj) and obj.source is not None
         
-def _add_dependency(dep_graph, srccompname, destcompname):
-    if destcompname in dep_graph:
-        if srccompname not in dep_graph[destcompname]:
-            dep_graph[destcompname].append(srccompname)
+def _add_dependency(dep_graph, src, dest):
+    if dest in dep_graph:
+        if src not in dep_graph[dest]:
+            dep_graph[dest].append(src)
     else:                
-        dep_graph[destcompname] = [srccompname]
+        dep_graph[dest] = [src]
         
-    if srccompname not in dep_graph:
-        dep_graph[srccompname] = []
+    if src not in dep_graph:
+        dep_graph[src] = []
     
 
 class Assembly(Component):
@@ -39,12 +40,47 @@ class Assembly(Component):
     def __init__(self, name, parent=None, doc=None, directory=''):
         super(Assembly, self).__init__(name, parent, doc=doc,
                                        directory=directory)
-        #self._connections = {} # dependencies between Components
+
         self.driver = self.create('openmdao.main.driver.Driver', 'driver')
         self.workflow = self.create('openmdao.main.workflow.Workflow',
                                     'workflow')
         self._dep_graph = None
 
+
+    def create_passthru(self, varname, alias=None):
+        """Create a Variable that's a copy of var, make it a public member of self,
+        and create a passthru connection between it and var.  If alias is not None,
+        the name of the 'promoted' Variable will be the alias.
+        """
+        # varname must have two parts
+        compname, vname = varname.split('.')
+        
+        comp = getattr(self, compname)
+        var = comp.getvar(vname)
+        
+        # check to see if var is already connected
+        if var.is_destination():
+            self.raise_exception('%s is already connected' % 
+                                '.'.join([var.parent.name,var.name]), RuntimeError)
+        
+        name = alias or vname
+            
+        # check to see if a public Variable already exists with the given varname
+        if self.contains(name):
+            self.raise_exception('%s is already a public Variable' % name, 
+                                 RuntimeError)
+        
+        newvar = var.create_passthru(self, name=name)
+        self.make_public(newvar)
+        
+        # create the passthru connection 
+        if var.iostatus is INPUT:
+            self.connect(name, varname)
+        elif var.iostatus is OUTPUT:
+            self.connect(varname, name)
+        else:
+            self.raise_exception('unknown iostatus %s' % str(var.iostatus))
+        
         
     def get_dependency_graph(self):
         """Return a component dependency graph in the form of a dictionary"""
@@ -101,7 +137,7 @@ class Assembly(Component):
             compname = None
             comp = self
             varname = path
-            var = getattr(self, varname)
+            var = self._pub[varname]
         else:
             comp = getattr(self, compname)
             if not IComponent.providedBy(comp):
@@ -125,10 +161,7 @@ class Assembly(Component):
             if srccomp is destcomp:
                 self.raise_exception('cannot connect "%s" to "%s" on same component' %
                                       (srcvarname, destvarname), RuntimeError)
-            else:
-                passthru = True
         else:
-            passthru = False                   
             if srcvar.iostatus != OUTPUT:
                 self.raise_exception(srcvar.get_pathname()+
                                      ' must be an OUTPUT variable',
@@ -145,10 +178,13 @@ class Assembly(Component):
         # test compatability
         destvar.validate_var(srcvar)
         
-        new_graph = self._check_circular_deps(destcompname, destvarname, srcpath) 
+        if srccomp is not self and destcomp is not self:
+            self._dep_graph = self._check_circular_deps(destcompname, 
+                                                        destvarname, 
+                                                        srcpath) 
         
+        #print 'connect_src: %s to %s' % (srcpath,destvar.name)
         destvar.connect_src(srcpath)
-        self._dep_graph = new_graph
             
     def disconnect(self, varpath):
         """Remove all connections from a given variable."""
@@ -165,9 +201,10 @@ class Assembly(Component):
             
         self._dep_graph = None  # force regeneration of dep_graph
 
+    
     def execute(self):
-        """run this Assembly by handing control to the driver"""
-        return self.driver.run()
+        """run this Assembly"""
+        return self.driver.run()    
 
     def step(self):
         """Execute a single step."""
@@ -196,20 +233,21 @@ class Assembly(Component):
         self.workflow.remove_node(getattr(self, name))           
         Component.remove_child(self, name)
 
-    def list_connections(self, fullpath=False):
+    def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         conns = []
-        for comp in self.get_objs(IComponent.providedBy):
-            for var in comp.get_objs(connected_dest_vars, pub=True):
-                if fullpath is True:
-                    inname = var.get_pathname()
-                    outname = self.getvar(var.source).get_pathname()
-                else:
-                    inname = '.'.join([var.parent.name, var.name])
-                    outname = var.source
-                conns.append((outname, inname))
+        containers = [x for x in self.values(pub=False,recurse=False) if
+                                                      isinstance(x,Container)]
+        for cont in containers:
+            for name,var in [x for x in cont.items(recurse=False) if
+                                   IVariable.providedBy(x[1]) and x[1].is_destination()]:
+                conns.append((var.source,'.'.join([cont.name,name])))
         
+        # don't forget passthru vars on our boundary
+        if show_passthru:
+            conns.extend([(x[1].source,x[0]) for x in self.items(recurse=False) if
+                                   IVariable.providedBy(x[1]) and x[1].is_destination()])
         return conns
     
     def update_inputs(self, incomp):
@@ -217,7 +255,10 @@ class Assembly(Component):
         Note that we're called after incomp has set its execution directory,
         so we'll need to account for this during file transfers."""
         
-        for var in incomp.get_objs(connected_dest_vars, pub=True):
+        vars = [x[1] for x in incomp.items(recurse=False) if
+                               IVariable.providedBy(x[1]) and x[1].is_destination()]
+        
+        for var in vars:
             srccompname, srccomp, srcvarname, srcvar = self.split_varpath(var.source)
             if isinstance(var, FileVariable):
                 incomp.pop_dir()

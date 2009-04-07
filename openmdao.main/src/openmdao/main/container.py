@@ -5,6 +5,7 @@ __all__ = ["Container"]
 
 __version__ = "0.1"
 
+import sys
 import copy
 import pickle
 import cPickle
@@ -33,7 +34,7 @@ from zope.interface import implements
 from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main import HierarchyMember
 from openmdao.main.variable import INPUT
-from openmdao.main.vartypemap import find_var_class
+from openmdao.main.vartypemap import make_variable_wrapper
 from openmdao.main.log import logger
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.main.constants import SAVE_YAML, SAVE_LIBYAML
@@ -51,12 +52,46 @@ class Container(HierarchyMember):
         if parent is not None and \
            IContainer.providedBy(parent) and add_to_parent:
             parent.add_child(self)
+    
+    def items(self, pub=True, recurse=False):
+        """Return an iterator that returns a list of tuples of the form 
+        (rel_pathname, obj) for each
+        child of this Container. If pub is True, only iterate through the public
+        dict of any Container. If recurse is True, also iterate through all
+        child Containers of each Container found based on the value of pub.
+        """
+        if pub:
+            return self._get_pub_items(recurse)
+        else:
+            return self._get_all_items(set(), recurse)
+    
+    def keys(self, pub=True, recurse=False):
+        """Return an iterator that will return the relative pathnames of
+        children of this Container. If pub is True, only children from
+        the pub dict will be included. If recurse is True, child Containers
+        will also be iterated over.
+        """
+        for entry in map(lambda x: x[0], self.items(pub,recurse)):
+            yield entry
         
+    def values(self, pub=True, recurse=False):
+        """Return an iterator that will return the
+        children of this Container. If pub is True, only children from
+        the pub dict will be included. If recurse is True, child Containers
+        will also be iterated over.
+        """
+        for entry in map(lambda x: x[1], self.items(pub,recurse)):
+            yield entry
+        
+                    
     def add_child(self, obj, private=False):
         """Add an object (must provide IContainer interface) to this
         Container, and make it a member of this Container's public
         interface if private is False.
         """
+        if obj == self:
+            self.raise_exception('cannot make an object a child of itself',
+                                 RuntimeError)
         if IContainer.providedBy(obj):
             # if an old child with that name exists, remove it
             if hasattr(self, obj.name):
@@ -83,13 +118,12 @@ class Container(HierarchyMember):
         # TODO: notify observers
         delattr(self, name)
         
-    def make_public(self, obj_info):
+    def make_public(self, obj_info, iostatus=INPUT):
         """Adds the given object(s) as framework-accessible data object(s) of
-        this Container. obj_info can be a single non-Variable object, a list
+        this Container. obj_info can be an object, the name of an object, a list
         of names of objects in this container instance, or a list of tuples of
         the form (name, alias, iostatus), where name is the name of an object
-        within this container instance. If iostatus is not supplied, the
-        default value is INPUT. This function attempts to locate an object
+        within this container instance. This function attempts to locate an object
         with an IVariable interface that can wrap each object passed into the
         function.
         
@@ -101,9 +135,9 @@ class Container(HierarchyMember):
         else:
             lst = [obj_info]
         
-        for i, entry in enumerate(lst):
+        for entry in lst:
             ref_name = None
-            iostat = INPUT
+            iostat = iostatus
             dobj = None
 
             if isinstance(entry, basestring):
@@ -126,11 +160,11 @@ class Container(HierarchyMember):
                     typ = type(dobj)
                 else:
                     self.raise_exception(
-                     'no IVariable interface available for the object at %d' % \
-                      i, TypeError)
+                     'no IVariable interface available for %s' % \
+                      str(entry), TypeError)
                     
             if not IVariable.providedBy(dobj):
-                dobj = find_var_class(typ, name, self, iostatus=iostat, 
+                dobj = make_variable_wrapper(typ, name, self, iostatus=iostat, 
                                       ref_name=ref_name)
             
             if IVariable.providedBy(dobj):
@@ -255,6 +289,7 @@ class Container(HierarchyMember):
         Variable can use info from the source Variable to perform conversions
         if necessary, as in the case of Float Variables with differing units.
         """
+        assert(isinstance(path, basestring))
         try:
             base, name = path.split('.', 1)
         except ValueError:
@@ -270,47 +305,7 @@ class Container(HierarchyMember):
                                  str(base)+"'", AttributeError)
         obj.setvar(name, variable)        
 
-        
-    def get_objs(self, matchfunct, recurse=False, pub=False):
-        """Return a list of objects that return a value of True when passed
-        to matchfunct.
-        
-        """            
-        def _recurse_get_objs(dictionary, matchfunct, visited, pub):
-            objs = []
-            for child in dictionary.values():
-                if id(child) in visited:
-                    continue
-                visited.add(id(child))
-                if matchfunct(child):
-                    objs.append(child)
-                if IContainer.providedBy(child):
-                    if pub: 
-                        objs.extend(_recurse_get_objs(child._pub, matchfunct, visited, pub))
-                    else:
-                        objs.extend(_recurse_get_objs(child.__dict__, matchfunct, visited, pub))
-            return objs
-        
-        if pub:
-            thedict = self._pub
-        else:
-            thedict = self.__dict__
-        objs = []
-        visited = set()
-        
-        if recurse:
-            return _recurse_get_objs(thedict, matchfunct, visited, pub)
-        else:
-            return [child for child in thedict.values() 
-                                               if matchfunct(child)]
-            
-       
-    def get_names(self, matchfunct, recurse=False, pub=False):
-        """Return the names of a list of objects that cause the matchfunct to 
-        return True."""
-        return [x.get_pathname() 
-                    for x in self.get_objs(matchfunct, recurse, pub)]
-    
+
     def config_from_obj(self, obj):
         """This is intended to allow a newer version of a component to
         configure itself based on an older version. By default, values
@@ -376,13 +371,41 @@ class Container(HierarchyMember):
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
-        subcontainers = self.get_objs(IContainer.providedBy)
-        for child in subcontainers:
-            child.post_load()
+        [x.post_load() for x in self.values(pub=False) 
+                                                if isinstance(x,Container)]
 
     def pre_delete(self):
         """ Perform any required operations before the model is deleted. """
-        subcontainers = self.get_objs(IContainer.providedBy)
-        for child in subcontainers:
-            child.pre_delete()
+        [x.pre_delete() for x in self.values(pub=False) 
+                                                if isinstance(x,Container)]
 
+    def _get_pub_items(self, recurse=False):
+        """Generate a list of tuples of the form (rel_pathname, obj) for each
+        child of this Container. Only iterate through the public
+        dict of any Container. If recurse is True, also iterate through all
+        public child Containers of each Container found.
+        """
+        for name,obj in self._pub.items():
+            yield (name, obj)
+            cont = None
+            if hasattr(obj,'value') and isinstance(obj.value,Container):
+                cont = obj.value
+            elif isinstance(obj, Container):
+                cont = obj
+            if cont and recurse:
+                for chname, child in cont._get_pub_items(recurse):
+                    yield ('.'.join([name,chname]), child)
+                   
+    def _get_all_items(self, visited, recurse=False):
+        """Generate a list of tuples of the form (rel_pathname, obj) for each
+        child of this Container.  If recurse is True, also iterate through all
+        child Containers of each Container found.
+        """
+        for name,obj in self.__dict__.items():
+            if not name.startswith('_') and id(obj) not in visited:
+                visited.add(id(obj))
+                yield (name, obj)
+                if isinstance(obj, Container) and recurse:
+                    for chname, child in obj._get_all_items(visited, recurse):
+                        yield ('.'.join([name,chname]), child)
+                   

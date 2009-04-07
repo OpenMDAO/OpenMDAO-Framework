@@ -5,9 +5,19 @@ import unittest
 from openmdao.main import Assembly, Component, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
 
+class NestedDumb(Component):
+    def __init__(self, name):
+        super(NestedDumb, self).__init__(name)
+        self.rval_in = 4.
+        self.rval_out = 7.
+        Float('rval_in', self, INPUT, units='cm')
+        Float('rval_out', self, OUTPUT, units='cm')
+
+        def execute(self):
+            self.rval_out = self.rval_in * 1.5
 
 class DummyComp(Component):
-    def __init__(self, name, nest=False):
+    def __init__(self, name):
         super(DummyComp, self).__init__(name)
         self.r = 1.0
         self.r2 = -1.0
@@ -24,19 +34,17 @@ class DummyComp(Component):
         Float('r2out', self, OUTPUT, units='cm/s')
         String('sout', self, OUTPUT)
         
-        # hack a quick way to get nested containers for testing
-        if nest is True:
-            self.add_child(DummyComp('dummy'), private=True)
-            self.make_public([('dummy_in','dummy'), 
-                              ('dummy_out','dummy',OUTPUT)])
-        
+        # make a nested container with input and output ContainerVars
+        self.add_child(NestedDumb('dummy'), private=True)
+        self.make_public([('dummy_in','dummy'), 
+                          ('dummy_out','dummy',OUTPUT)])
+                
     def execute(self):
         self.rout = self.r * 1.5
         self.r2out = self.r2 + 10.0
         self.sout = self.s[::-1]
         # pylint: disable-msg=E1101
-        if hasattr(self, 'dummy'):
-            self.dummy.run()
+        self.dummy.run()
 
 
 class ContainerTestCase(unittest.TestCase):
@@ -44,12 +52,15 @@ class ContainerTestCase(unittest.TestCase):
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.asm = Assembly('top', None)
-        dc = DummyComp('comp1', True)
+        dc = DummyComp('comp1')
         self.asm.add_child(dc)
         self.asm.workflow.add_node(dc)
-        dc2 = DummyComp('comp2', True)
+        dc2 = DummyComp('comp2')
         self.asm.add_child(dc2)
         self.asm.workflow.add_node(dc2)
+        dc3 = DummyComp('comp3')  
+        self.asm.add_child(dc3)
+        self.asm.workflow.add_node(dc3)
         
     
     def tearDown(self):
@@ -80,21 +91,43 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(comp2.rout, 6.75)
         self.assertEqual(comp2.s, 'emit a nopu ecno')
         self.assertEqual(comp2.sout, 'once upon a time')
-        
 
     def test_connect_containers(self):
         dum1 = self.asm.get('comp1.dummy_out')
-        dum1.set('r', 75.4)
+        dum1.set('rval_in', 75.4)
         self.asm.connect('comp1.dummy_out','comp2.dummy_in')
         self.asm.run()
-        self.assertEqual(self.asm.get('comp2.dummy_in.r'), 75.4)
+        self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
+        self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
         
     def test_connect_containers_sub(self):
         dum1 = self.asm.get('comp1.dummy_out')
-        dum1.set('r', 75.4)
-        self.asm.connect('comp1.dummy_out.rout','comp2.dummy_in.r')
+        dum1.set('rval_in', 75.4)
+        self.asm.connect('comp1.dummy_out.rval_out','comp2.dummy_in.rval_in')
         self.asm.run()
-        self.assertEqual(self.asm.get('comp2.dummy_in.r'), 75.4*1.5)
+        self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4*1.5)
+        
+    def test_create_passthru(self):
+        self.asm.set('comp3.r', 75.4)
+        self.asm.create_passthru('comp3.rout')
+        self.assertEqual(self.asm.get('comp3.r'), 75.4)
+        self.assertEqual(self.asm.get('rout'), 0.0)
+        self.asm.run()
+        self.assertEqual(self.asm.get('comp3.rout'), 75.4*1.5)
+        self.assertEqual(self.asm.get('rout'), 75.4*1.5)
+        
+    def test_create_passthru_alias(self):
+        dum1 = self.asm.set('comp1.r', 75.4)
+        self.asm.create_passthru('comp1.r','foobar')
+        self.assertEqual(self.asm.get('foobar'), 75.4)
+        self.asm.run()
+        self.assertEqual(self.asm.get('foobar'), 75.4)
+        
+    #def test_container_passthru(self):
+        #self.asm.set('comp1.dummy_out.r', 75.4)
+        #self.asm.create_passthru('comp1.dummy_out','dummy_out_passthru')
+        #self.asm.run()
+        #self.assertEqual(self.asm.get('dummy_out_passthru'), 75.4)
         
     def test_invalid_connect(self):
         try:
@@ -203,18 +236,16 @@ class ContainerTestCase(unittest.TestCase):
         self.asm.add_child(DummyComp('comp3'))
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.connect('comp3.sout', 'comp2.s')
-        conns = self.asm.list_connections(fullpath=True)
-        self.assertEqual(conns, [('top.comp3.sout', 'top.comp2.s'),
-                                 ('top.comp1.rout', 'top.comp2.r')])
-        conns = self.asm.list_connections(fullpath=False)
+        conns = self.asm.list_connections()
         self.assertEqual(conns, [('comp3.sout', 'comp2.s'),
                                  ('comp1.rout', 'comp2.r')])
         self.asm.remove_child('comp3')
-        conns = self.asm.list_connections(fullpath=False)
+        conns = self.asm.list_connections()
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])
         self.asm.run()
         
         
 if __name__ == "__main__":
     unittest.main()
+
 

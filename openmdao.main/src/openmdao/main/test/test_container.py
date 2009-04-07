@@ -14,9 +14,19 @@ from openmdao.main.variable import INPUT
 class ContainerTestCase(unittest.TestCase):
 
     def setUp(self):
-        """this setup function will be called before each test"""
+        """This sets up the following hierarchy of Containers:
         
-        # build a simple hierarchy of Containers
+                       root
+                       /  \
+                     c1    c2
+                          /  \
+                        c21  c22
+                             /
+                          c221
+                          /
+                        number
+        """
+        
         self.root = Container('root', None)
         c1 = Container('c1', None)
         c2 = Container('c2', None)
@@ -64,6 +74,35 @@ class ContainerTestCase(unittest.TestCase):
     def test_get_attribute(self):
         units = self.root.get('c2.c22.c221.number.units')
         self.assertEqual(units, "ft/s")
+
+    def test_keys(self):
+        lst = [x for x in self.root.keys(recurse=True)]
+        self.assertEqual(lst, 
+            ['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
+        
+    def test_pub_items(self):
+        lst = map(lambda x: x[0], self.root.items(recurse=True))
+        self.assertEqual(lst, 
+            ['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
+        
+    def test_full_items(self):
+        lst = map(lambda x: x[0], self.root.items(pub=False,recurse=True))
+        self.assertEqual(lst, ['name', 'c2', 'c2.c22', 'c2.c22.c221', 
+                               'c2.c22.c221.name', 'c2.c22.c221.number', 
+                               'c2.c22.name', 'c2.c21', 'c2.c21.name', 
+                               'c2.name', 'c1', 'c1.name'])
+        items = [(x[0],isinstance(x[1],Container) or str(x[1])) 
+                    for x in self.root.items(pub=False,recurse=True)]
+        
+        # values of True in the list below just indicate that the value
+        # is a Container
+        self.assertEqual(items, [('name', 'root'), ('c2', True), 
+                                 ('c2.c22', True), ('c2.c22.c221', True), 
+                                 ('c2.c22.c221.name', 'c221'), 
+                                 ('c2.c22.c221.number', '3.14'), 
+                                 ('c2.c22.name', 'c22'), ('c2.c21', True), 
+                                 ('c2.c21.name', 'c21'), ('c2.name', 'c2'), 
+                                 ('c1', True), ('c1.name', 'c1')])
         
     def test_bad_get(self):
         try:
@@ -97,38 +136,23 @@ class ContainerTestCase(unittest.TestCase):
         else:
             self.fail('AttributeError expected')
 
-    def test_get_objs(self):
-        objs = self.root.get_objs(IContainer.providedBy, recurse=True)
-        names = [x.get_pathname() for x in objs]
+    def test_iteration(self):
+        names = [x.get_pathname() for x in self.root.values(pub=False,recurse=True)
+                                         if IContainer.providedBy(x)]
         self.assertEqual(sorted(names),
                          ['root.c1', 'root.c2', 'root.c2.c21', 
                           'root.c2.c22', 'root.c2.c22.c221'])
         
-        objs = self.root.get_objs(IContainer.providedBy)
-        names = [x.get_pathname() for x in objs]
+        names = [x.get_pathname() for x in self.root.values(pub=False)
+                                         if IContainer.providedBy(x)]
         self.assertEqual(sorted(names), ['root.c1', 'root.c2'])
         
-        objs = self.root.get_objs(self.isContRootParent, recurse=True)
-        names = [x.get_pathname() for x in objs]
+        names = [x.get_pathname() for x in self.root.values(pub=False,recurse=True)
+                                 if IContainer.providedBy(x) and x.parent==self.root]
         self.assertEqual(sorted(names), ['root.c1', 'root.c2'])        
 
-        objs = self.root.get_objs(self.isContC2Parent, recurse=True)
-        names = [x.get_pathname() for x in objs]
-        self.assertEqual(sorted(names), ['root.c2.c21', 'root.c2.c22'])        
-
-    def test_get_names(self):
-        names = self.root.get_names(IContainer.providedBy, recurse=True)
-        self.assertEqual(sorted(names),
-                         ['root.c1', 'root.c2', 'root.c2.c21',
-                          'root.c2.c22', 'root.c2.c22.c221'])
-        
-        names = self.root.get_names(IContainer.providedBy)
-        self.assertEqual(sorted(names), ['root.c1', 'root.c2'])
-        
-        names = self.root.get_names(self.isContRootParent, recurse=True)
-        self.assertEqual(sorted(names), ['root.c1', 'root.c2'])        
-
-        names = self.root.get_names(self.isContC2Parent, recurse=True)
+        names = [x.get_pathname() for x in self.root.values(pub=False,recurse=True)
+                                 if IContainer.providedBy(x) and x.parent==self.root.c2]
         self.assertEqual(sorted(names), ['root.c2.c21', 'root.c2.c22'])        
 
     def test_create(self):
@@ -179,12 +203,6 @@ class ContainerTestCase(unittest.TestCase):
         inp = StringIO.StringIO(output.getvalue())
         newc1 = Container.load(inp, constants.SAVE_PICKLE)
                 
-    def isContRootParent(self, obj):
-        return IContainer.providedBy(obj) and obj.parent==self.root
-    
-    def isContC2Parent(self, obj):
-        return IContainer.providedBy(obj) and obj.parent==self.root.get('c2')
-        
 
 if __name__ == "__main__":
     unittest.main()

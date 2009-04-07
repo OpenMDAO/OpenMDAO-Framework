@@ -5,7 +5,7 @@ of a certain type.
 """
 
 #public symbols
-__all__ = ['find_var_class', 'add_var_type_map']
+__all__ = ['make_variable_wrapper', 'add_var_type_map']
 
 __version__ = "0.1"
 
@@ -19,7 +19,7 @@ from openmdao.main.interfaces import IVariable
 __var_type_map__ = {}
 
 
-def find_var_class(typ, name, parent, iostatus, ref_name=None):
+def make_variable_wrapper(typ, name, parent, iostatus, ref_name=None):
     """Look up a Variable class that can be used to wrap the given type.
     
     Returns a new Variable instance or None if none can be found.

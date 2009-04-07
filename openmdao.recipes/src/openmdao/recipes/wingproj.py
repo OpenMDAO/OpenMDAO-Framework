@@ -72,7 +72,8 @@ class WingProj(object):
         dev_egg_dir = buildout['buildout']['develop-eggs-directory']
         dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
         # grab the first line of each dev egg link file
-        self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() for f in dev_eggs]
+        self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() 
+                            for f in dev_eggs]
         self.executable = buildout['buildout']['executable']
         
         # try to find the default.wpr file in the user's home directory
@@ -155,7 +156,7 @@ class WingProj(object):
         if len(diff) > 0:    
                
             config.set('user attributes', 'proj.pypath', 
-                       _wingify(dict({None: ('custom',':'.join(newnames))}), left_margin=18))
+                       _wingify(dict({None: ('custom',':'.join(newset))}), left_margin=18))
             config.set('user attributes', 'proj.pyexec', 
                        _wingify(dict({None: ('custom', self.executable)}), left_margin=18))
 
@@ -208,6 +209,5 @@ class WingProj(object):
         return [scriptname]
 
      
-    def update(self):   
-        pass
+    update = install
 

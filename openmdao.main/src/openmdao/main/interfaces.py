@@ -33,11 +33,28 @@ class IContainer (Interface):
         """Remove the named object from this container and notify any
         observers"""
 
-    def get_objs (iface, recurse=False, attrdict=None):
-        """Return a list of objects with the specified interface that also have
-        attributes with values that match those passed in the attrdict
-        dictionary."""
-
+    def items(self, pub=True, recurse=False):
+        """Return an iterator that returns a list of tuples of the form 
+        (rel_pathname, obj) for each
+        child of this Container. If pub is True, only iterate through the public
+        dict of any Container. If recurse is True, also iterate through all
+        child Containers of each Container found based on the value of pub.
+        """
+        
+    def keys(self, pub=True, recurse=False):
+        """Return an iterator that will return the relative pathnames of
+        children of this Container. If pub is True, only children from
+        the pub dict will be included. If recurse is True, child Containers
+        will also be iterated over.
+        """
+        
+    def values(self, pub=True, recurse=False):
+        """Return an iterator that will return the
+        children of this Container. If pub is True, only children from
+        the pub dict will be included. If recurse is True, child Containers
+        will also be iterated over.
+        """
+        
     def get_pathname ():
         """Return the name (dot delimited) that uniquely
         identifies this object's location within a hierarchy of IContainers"""

@@ -2,6 +2,7 @@
 __all__ = ['Variable', 'UNDEFINED']
 __version__ = "0.1"
 
+import copy
 from zope.interface import implements
 
 from openmdao.main.interfaces import IContainer, IVariable
@@ -20,6 +21,17 @@ class _Undefined ( object ):
 # use this to represent undefined value rather than None    
 UNDEFINED = _Undefined()
 
+# come events to allow specific types of observer notification
+
+class VariableChangedEvent(object):
+    def __init__(self, var):
+        self.var = var
+        
+class VariableRemovedEvent(object):
+    def __init__(self, var):
+        self.var = var
+
+    
 class Variable(HierarchyMember):
     """ An object representing data to be passed between Components within
     the framework. It will perform validation when assigned to another
@@ -53,9 +65,7 @@ class Variable(HierarchyMember):
         self.permission = None
         self.iostatus = iostatus
         self._source = None
-        #self._destinations = {}
         self._constraints = []
-        self._set_count = 0
         
         
         if IContainer.providedBy(parent):
@@ -111,12 +121,9 @@ class Variable(HierarchyMember):
         """Return True if the object identified by path is an attribute of
         this object.
         """
-        if '.' in path:
-            return False
-        else:
-            return hasattr(self, path)
+        return hasattr(self, path)
     
-    def _set_value(self, var):
+    def _set_value(self, val):
         """Assign this Variable's value to the value of another Variable or 
         directly to another value.  Checks validity of the new value before assignment.
         Called by setting the 'value' property.
@@ -124,8 +131,7 @@ class Variable(HierarchyMember):
         if self.iostatus == OUTPUT:
             raise RuntimeError(self.get_pathname()+
                                ' is an OUTPUT Variable and cannot be set.')
-        setattr(self._refparent, self.ref_name, self._pre_assign(var))
-        self._set_count += 1
+        setattr(self._refparent, self.ref_name, self._pre_assign(val))
         if self.observers is not None:
             self._notify_observers()
 
@@ -317,18 +323,40 @@ class Variable(HierarchyMember):
     def make_public(self, child):
         """Make a given object a member of this object's public interface."""
         self.raise_exception('make_public', NotImplemented)            
-            
-    def add_observer(self, obs_funct):
+
+    def add_observer(self, obs_funct, event_class):
         """ Add a function to be called when this variable is modified. The
-        function should accept this Variable as an argument.
+        function should accept the specified event_class_name as an argument.
         """
         if self.observers is None:
-            self.observers = [obs_funct]
+            self.observers = { event_class: [obs_funct] }
         else:
-            self.observers.append(obs_funct)
+            evlist = self.observers.get(event_class)
+            if evlist:
+                evlist.append(obs_funct)
+            else:                
+                self.observers[event_class] = { event_class: [obs_funct] }
 
-    def _notify_observers(self):
+    def _notify_observers(self, event):
         """Call each observer on the observers list."""
-        for observer in self.observers:
-            observer(self)
+        for obs in self.observers.get(event.__class__.__name__, []):
+            obs(self)
         
+    def create_passthru(self, parent, name=None, deepcopy=True):
+        """Create a passthru version of self that can be made public in the 
+        containing scope.
+        """
+        if deepcopy:
+            newvar = copy.deepcopy(self)
+        else:
+            newvar = copy.copy(self)
+        
+        if name is not None:
+            newvar.name = name
+            
+        newvar.parent = parent
+        # make the passthru Variable refer to our 'value' attribute
+        newvar._refparent = self
+        newvar.ref_name = 'value'
+        return newvar
+    
