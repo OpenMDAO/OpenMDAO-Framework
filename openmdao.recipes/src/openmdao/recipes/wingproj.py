@@ -5,8 +5,10 @@ import sys
 import stat
 import fnmatch
 import ConfigParser
-import zc.buildout
 import logging
+
+import zc.buildout
+
 from pkg_resources import working_set, get_entry_map
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
 

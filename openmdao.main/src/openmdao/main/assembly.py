@@ -64,6 +64,11 @@ class Assembly(Component):
                                 '.'.join([var.parent.name,var.name]), RuntimeError)
         
         name = alias or vname
+        
+        # make sure name isn't a dotted path
+        if '.' in name:
+            self.raise_exception('%s must be a simple name, not a dotted path' %
+                                 name)
             
         # check to see if a public Variable already exists with the given varname
         if self.contains(name):
@@ -141,7 +146,10 @@ class Assembly(Component):
         else:
             comp = getattr(self, compname)
             if not IComponent.providedBy(comp):
-                self.raise_exception('%s is not a Component' % compname, TypeError)               
+                self.raise_exception('%s is not a Component' % compname, TypeError)
+            if '.' in varname:
+                self.raise_exception('%s must be a simple name, not a dotted path' %
+                                     varname, NameError)
             var = comp.getvar(varname)
         if not IVariable.providedBy(var):
             self.raise_exception('%s is not a Variable' % varname, TypeError)

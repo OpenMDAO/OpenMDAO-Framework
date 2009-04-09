@@ -7,6 +7,7 @@ __version__ = "0.1"
 
 import sys
 import copy
+import pprint
 import pickle
 import cPickle
 import yaml
@@ -52,7 +53,20 @@ class Container(HierarchyMember):
         if parent is not None and \
            IContainer.providedBy(parent) and add_to_parent:
             parent.add_child(self)
-    
+
+    def dump_refs(self, memo=None):
+        if memo is None:
+            memo = {}
+        if id(self) not in memo:
+            memo[id(self)] = '&%s'%self.get_pathname()
+        id_dict = { 'self': memo[id(self)] }
+        for k,v in self.items(pub=True,recurse=False):
+            if IContainer.providedBy(v):
+                id_dict[k] = v.dump_refs(memo)
+            else:
+                id_dict[k] = memo.get(id(v),id(v))
+        return id_dict
+        
     def items(self, pub=True, recurse=False):
         """Return an iterator that returns a list of tuples of the form 
         (rel_pathname, obj) for each

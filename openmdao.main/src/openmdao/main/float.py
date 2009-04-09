@@ -18,7 +18,7 @@ class Float(Variable):
                  min_limit=None, max_limit=None):
         self.units = units
         super(Float, self).__init__(name, parent, iostatus, 
-                                    val_type=(float,int,long), 
+                                    val_types=(float,int,long), 
                                     ref_name=ref_name, ref_parent=ref_parent,
                                     default=default, doc=doc)
         self._min_limit = None

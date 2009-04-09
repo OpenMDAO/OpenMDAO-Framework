@@ -13,8 +13,9 @@ class NestedDumb(Component):
         Float('rval_in', self, INPUT, units='cm')
         Float('rval_out', self, OUTPUT, units='cm')
 
-        def execute(self):
-            self.rval_out = self.rval_in * 1.5
+    def execute(self):
+        print 'executing %s' % self.get_pathname()
+        self.rval_out = self.rval_in * 1.5
 
 class DummyComp(Component):
     def __init__(self, name):
@@ -40,11 +41,12 @@ class DummyComp(Component):
                           ('dummy_out','dummy',OUTPUT)])
                 
     def execute(self):
+        print 'executing %s' % self.get_pathname()
         self.rout = self.r * 1.5
         self.r2out = self.r2 + 10.0
         self.sout = self.s[::-1]
         # pylint: disable-msg=E1101
-        self.dummy.run()
+        self.dummy.execute()
 
 
 class ContainerTestCase(unittest.TestCase):
@@ -63,10 +65,6 @@ class ContainerTestCase(unittest.TestCase):
         self.asm.workflow.add_node(dc3)
         
     
-    def tearDown(self):
-        """this teardown function will be called after each test"""
-        pass
-
     def test_data_passing(self):
         comp1 = self.asm.get('comp1.value')
         comp2 = self.asm.get('comp2.value')
@@ -93,18 +91,21 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(comp2.sout, 'once upon a time')
 
     def test_connect_containers(self):
-        dum1 = self.asm.get('comp1.dummy_out')
-        dum1.set('rval_in', 75.4)
+        self.asm.set('comp1.dummy_in.rval_in', 75.4)
         self.asm.connect('comp1.dummy_out','comp2.dummy_in')
         self.asm.run()
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
         
     def test_connect_containers_sub(self):
-        dum1 = self.asm.get('comp1.dummy_out')
-        dum1.set('rval_in', 75.4)
+        self.asm.set('comp1.dummy_in.rval_in', 75.4)
         self.asm.connect('comp1.dummy_out.rval_out','comp2.dummy_in.rval_in')
+        #from pprint import pprint
+        #print '\npre run - comp1\n',pprint(self.asm.comp1.dummy.dump_refs())
+        #print '\npre run - comp2\n',pprint(self.asm.comp2.dummy.dump_refs())
         self.asm.run()
+        #print '\npost run - comp1\n',pprint(self.asm.comp1.dummy.dump_refs())
+        #print '\npost run - comp2\n',pprint(self.asm.comp2.dummy.dump_refs())
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4*1.5)
         
     def test_create_passthru(self):
@@ -160,7 +161,7 @@ class ContainerTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.units','comp2.s')
         except NameError, err:
             self.assertEqual(str(err), 
-                    "top.comp1.rout: 'units' is not a Variable object")
+                    "top: rout.units must be a simple name, not a dotted path")
         else:
             self.fail('NameError expected')
         
@@ -169,9 +170,9 @@ class ContainerTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.value','comp2.r2')
         except NameError, err:
             self.assertEqual(str(err), 
-                        "top.comp1.rout: 'value' is not a Variable object")
+                        "top: rout.value must be a simple name, not a dotted path")
         else:
-            self.fail('exception expected')
+            self.fail('NameError expected')
         
      
     def test_circular_dependency(self):

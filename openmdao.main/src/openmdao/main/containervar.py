@@ -16,8 +16,14 @@ class ContainerVariable(Variable):
                  default=None, doc=None):
         super(ContainerVariable, self).__init__(name, parent, iostatus, 
                                                 ref_name=ref_name, 
-                                                default=default, doc=doc)
+                                                doc=doc)
+        
 
+    def dump_refs(self, memo):
+        id_dict = super(ContainerVariable, self).dump_refs(memo)
+        id_dict['val'] = self.value.dump_refs(memo)
+        return id_dict
+        
     def getvar(self, name=None):
         """Return this Variable or a Variable child of our value, which is
         itself a Container.
@@ -62,14 +68,27 @@ class ContainerVariable(Variable):
         if path is None and index is None:
             val = self._pre_assign(value)
             newcont = copy.deepcopy(val)
-            newcont.name = self.name
+            newcont.name = self.ref_name
             newcont.parent = self.parent
             # this will replace the container
             setattr(self.parent, self.ref_name, newcont)  
             return
         
+        print 'path is %s, value is %s' % (path, value)
         container = getattr(self.parent, self.ref_name)
         container.set(path, value, index)
+
+        
+    def setvar(self, name, var):
+        """Call set() to force replacement of our Container with the Container 
+        that var refers to.
+        """
+        if name is None: # they're setting this Variable
+            self.validate_var(var)
+            self.set(None, var.value)
+        else:
+            self.raise_exception("cannot assign a Variable to attribute '"+
+                                 name+"'", RuntimeError)
 
     def contains(self, path):
         """Return true if a child with the given path name exists in the public

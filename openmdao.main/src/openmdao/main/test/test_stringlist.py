@@ -150,12 +150,10 @@ class StringListTestCase(unittest.TestCase):
                              min_length=1, max_length=5)
         except ValueError, err:
             self.assertEqual(str(err), "h1.sl4: invalid default value:  "+
-                             "incompatible with type <type 'int'>")
+                             "incompatible type <type 'int'> is not one of ['list']")
         else:
             self.fail("ValueError expected")
 
 if __name__ == "__main__":
     unittest.main()
-    #suite = unittest.TestLoader().loadTestsFromTestCase(ContainerTestCase)
-    #unittest.TextTestRunner(verbosity=2).run(suite)    
 

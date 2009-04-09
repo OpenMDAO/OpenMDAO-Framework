@@ -41,7 +41,7 @@ class Variable(HierarchyMember):
     implements(IVariable, IContainer)
     
     def __init__(self, name, parent, iostatus, 
-                 val_type=object, ref_name=None, ref_parent=None, 
+                 val_types=None, ref_name=None, ref_parent=None, 
                  default=UNDEFINED, doc=None):
         """Note that Variable calls _pre_assign from here, so if _pre_assign
         requires any attributes from a derived class, those attributes must be
@@ -67,35 +67,90 @@ class Variable(HierarchyMember):
         self._source = None
         self._constraints = []
         
-        
         if IContainer.providedBy(parent):
             parent.make_public(self)
         else:
             raise TypeError("parent of Variable '"+name+
                             "' is not an IContainer")
 
-        if isinstance(val_type, (tuple, type)):
-            self.val_type = val_type
-        elif isinstance(val_type, list):
-            self.val_type = tuple(val_type)
-        else:
-            self.raise_exception('val_type must be a type, a class, or a tuple',
-                                 TypeError) 
-            
+        self._set_val_types(val_types, default)
+                    
         # Create the real object if it doesn't already exist.
-        if not hasattr(self._refparent, self.ref_name):
+        if self._find(self._refparent, self.ref_name) is None:
             if default is UNDEFINED or default is None:
                 self.raise_exception('default must be supplied'
                                      ' with implicit creation.', ValueError)
             else:
-                setattr(self._refparent, self.ref_name,
-                        self._pre_assign(default))
+                self._find_and_set(self._refparent, self.ref_name,
+                                   self._pre_assign(default))
 
         # we'll check the validity of the default value here, but
         # we don't know the constraints yet, so the derived class
         # will have to do it again if it has constraints
         self.set_default(default)
 
+    def dump_refs(self, memo=None):
+        if memo is None:
+            memo = {}
+        if id(self) not in memo:
+            memo[id(self)] = '&%s'%self.get_pathname()
+        id_dict = { 'self': id(self), 
+                    'parent': (memo.get(id(self.parent),id(self.parent)),
+                               '(%s)'%type(self.parent).__name__) }
+        if self.parent != self._refparent:
+            id_dict['refparent'] = memo.get(id(self._refparent),id(self._refparent))
+        if isinstance(self.value,float):
+            id_dict['value'] = self.value
+        return id_dict
+
+    def _set_val_types(self, val_types, default):
+        """Set self.val_types to what was provided, or guess based on default
+        value or referenced value.
+        """
+        if isinstance(val_types, tuple):
+            self.val_types = val_types
+        elif isinstance(val_types, list):
+            self.val_types = tuple(val_types)
+        elif isinstance(val_types, type):
+            self.val_types = (val_types,)
+        elif val_types is None and default is not None:
+            if default is UNDEFINED:
+                self.val_types = (type(self._get_ref_value()),)
+            elif default is not None:
+                self.val_types = (type(default),)
+        else:
+            self.raise_exception('val_types must be a type, a class, or a tuple',
+                                 TypeError) 
+        
+    def _find(self, scope, path):
+        """Locate the object specified by the dotted pathname 'path' within the
+        object called scope. Return the object or None if the object is not 
+        found.
+        """
+        parts = path.split('.')
+        obj = scope
+        for part in parts:
+            try:
+                obj = getattr(obj, part)
+            except AttributeError:
+                return None
+        return obj
+
+    def _find_and_set(self, scope, path, value):
+        """Locate the object specified by the dotted pathname 'path' within the
+        object called scope and set it to value. If the last entry in the 
+        dotted path doesn't exist, it will be created.
+        """
+        try:
+            partpath,endpath = path.rsplit('.', 1)
+        except ValueError:
+            setattr(scope, path, value)
+            return
+        obj = self._find(scope, partpath)
+        if obj is None:
+            self.raise_exception('object %s does not exist' % partpath, NameError)
+        setattr(obj, endpath, value)
+            
     @property
     def source(self):
         """Return the source Variable connected to this Variable, or None"""
@@ -105,13 +160,18 @@ class Variable(HierarchyMember):
         return getattr(self._refparent, self.ref_name)        
         
     def set_default(self, default):
+        if default is None:
+            self.default = None
+            return
         try:
             if default is UNDEFINED:
-                self.default = self._pre_assign(self._get_ref_value())
-            elif default is None:
-                self.default = None
+                tmp = self._get_ref_value()
             else:
-                self.default = self._pre_assign(default)
+                tmp = default
+            # if val_types isn't set yet, set it based on the default value
+            if self.val_types is None:
+                self.val_types = (type(tmp),)
+            self.default = self._pre_assign(tmp)
         except (ValueError, TypeError), err:
             self.raise_exception('invalid default value: '+ 
                         str(err).replace(self.get_pathname()+':','',1),
@@ -132,6 +192,7 @@ class Variable(HierarchyMember):
             raise RuntimeError(self.get_pathname()+
                                ' is an OUTPUT Variable and cannot be set.')
         setattr(self._refparent, self.ref_name, self._pre_assign(val))
+        print 'set value of %s to %s' % (self.get_pathname(), str(self._pre_assign(val)))
         if self.observers is not None:
             self._notify_observers()
 
@@ -184,14 +245,15 @@ class Variable(HierarchyMember):
         assignment time but this base version should still be called from within the
         overridden version. If validations fail, they should raise a ValueError.
         Note that val should just be a simple value, not a Variable. This
-        routine performs a simple type check on the value if the self.val_type
+        routine performs a simple type check on the value if the self.val_types
         attribute has been set.
         
         Returns the validated value.
         """
-        if not isinstance(val, self.val_type):        
-            self.raise_exception('incompatible with type '+
-                                 str(type(val)), ValueError)
+        if type(val) not in self.val_types:        
+            self.raise_exception('incompatible type %s is not one of %s' %
+                                 (str(type(val)),
+                                  str([x.__name__ for x in self.val_types])) , ValueError)
         
         # test against any constraints placed on this variable
         try:
@@ -214,7 +276,7 @@ class Variable(HierarchyMember):
         """Raise a TypeError if the given Variable is incompatible. This is
         called on the INPUT side of a connection. The value attribute of the
         Variable is not checked at this time."""
-        if not isinstance(variable, type(self)):
+        if type(variable) != type(self):
             # TODO: could try to obtain adapter here...
             self.raise_exception("assignment to incompatible variable '"+
                                  variable.get_pathname()+"' of type '"+
