@@ -7,6 +7,7 @@ Exception classes for OpenMDAO
 #public symbols
 __all__ = [
     'ConstraintError',
+    'CircularDependencyError',
     'RunFailed',
     'RunInterrupted',
     'RunStopped']
@@ -16,6 +17,11 @@ __version__ = "0.1"
 
 class ConstraintError(ValueError):
     """Raised when a constraint is violated."""
+    def __init__(self, msg):
+        super(ConstraintError, self).__init__(msg)
+        
+class CircularDependencyError(RuntimeError):
+    """Raised when a circular dependency occurs."""
     def __init__(self, msg):
         super(ConstraintError, self).__init__(msg)
         
