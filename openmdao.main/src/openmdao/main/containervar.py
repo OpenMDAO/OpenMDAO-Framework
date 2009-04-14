@@ -19,11 +19,6 @@ class ContainerVariable(Variable):
                                                 doc=doc)
         
 
-    def dump_refs(self, memo):
-        id_dict = super(ContainerVariable, self).dump_refs(memo)
-        id_dict['val'] = self.value.dump_refs(memo)
-        return id_dict
-        
     def getvar(self, name=None):
         """Return this Variable or a Variable child of our value, which is
         itself a Container.
@@ -74,7 +69,6 @@ class ContainerVariable(Variable):
             setattr(self.parent, self.ref_name, newcont)  
             return
         
-        print 'path is %s, value is %s' % (path, value)
         container = getattr(self.parent, self.ref_name)
         container.set(path, value, index)
 

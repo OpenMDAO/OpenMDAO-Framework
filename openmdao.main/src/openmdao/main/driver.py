@@ -8,10 +8,11 @@ from zope.interface import implements
 
 from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component, STATE_WAITING
+from openmdao.main import Assembly
 
 
-class Driver(Component):
-    """ A driver is used to run a workflow in an assembly. """
+class Driver(Assembly):
+    """ A driver is used to run a Workflow in a Model. """
     
     implements(IDriver)
 
@@ -19,7 +20,7 @@ class Driver(Component):
         super(Driver, self).__init__(name, parent, doc=doc)
         
     def execute(self):
-        """ Run the assembly by invoking run() on the workflow. """
+        """ Run the Model by invoking run() on the Workflow. """
         self.state = STATE_WAITING
         status = self.parent.workflow.run()
         #self.state = STATE_RUNNING
@@ -30,7 +31,7 @@ class Driver(Component):
         return self.parent.workflow.step()
         
     def stop(self):
-        """ Stop the assembly by stopping the workflow. """
+        """ Stop the Model by stopping the Workflow. """
         self._stop = True
         self.parent.workflow.stop()
         

@@ -1,12 +1,12 @@
 
 import unittest
 
-from openmdao.main import Component, ListCaseIterator, Case, Int
+from openmdao.main import Assembly, Component, ListCaseIterator, Case, Int
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.variable import OUTPUT
 
 
-class SocketComp(Component):
+class SocketComp(Assembly):
     def __init__(self):
         super(SocketComp, self).__init__('SocketComp')
         self.add_socket('iterator', ICaseIterator, 'cases to evaluate')
@@ -69,13 +69,13 @@ class SocketTestCase(unittest.TestCase):
         else:
             self.fail('AttributeError expected')
 
-    def test_check_socket(self):
-        self.assertEqual(self.sc.check_socket('iterator'), False)
+    def test_socket_filled(self):
+        self.assertEqual(self.sc.socket_filled('iterator'), False)
         self.sc.iterator = ListCaseIterator([Case(), Case(), Case()])
-        self.assertEqual(self.sc.check_socket('iterator'), True)
+        self.assertEqual(self.sc.socket_filled('iterator'), True)
 
         try:
-            self.sc.check_socket('no_socket')
+            self.sc.socket_filled('no_socket')
         except AttributeError, exc:
             self.assertEqual("SocketComp: no such socket 'no_socket'",                             str(exc))
         else:

@@ -15,7 +15,7 @@ Known problems:
 """
 import os.path
 
-from openmdao.main import Assembly, Component, Container, Float, \
+from openmdao.main import Model, Component, Container, Float, \
                           ArrayVariable, FileVariable
 from openmdao.main.variable import INPUT, OUTPUT
 
@@ -230,7 +230,7 @@ class TracingNPSS(NPSScomponent):
         return status
 
 
-class Model(Assembly):
+class SBJModel(Model):
     """ SBJ propulsion model. """
 
     def connect(self, src_path, dst_path):
@@ -245,10 +245,10 @@ class Model(Assembly):
         if isinstance(dst_comp, NPSScomponent):
             dst_comp.make_public(rest)
             
-        super(Model, self).connect(src_path, dst_path)
+        super(SBJModel, self).connect(src_path, dst_path)
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+        super(SBJModel, self).__init__(name, *args, **kwargs)
 
         model_dir = os.path.join('..', 'Full_Model', 'Cycle', 'run')
         includes = [
@@ -484,5 +484,5 @@ class Model(Assembly):
 
 
 if __name__ == '__main__':
-    Model().run()
+    SBJModel().run()
 

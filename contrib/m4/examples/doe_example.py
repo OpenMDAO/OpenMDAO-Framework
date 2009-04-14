@@ -6,16 +6,16 @@ and use it to set component inputs and get component outputs.
 The component in question just evaluates a simple expression.
 """
 
-from openmdao.main import Assembly
+from openmdao.main import Model
 
 import m4.doe
 import m4.dummy_components
 
-class Model(Assembly):
+class MyModel(Model):
     """ Simple M4 DOE example.  """
 
     def __init__(self, name='M4_DOE_example', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+        super(MyModel, self).__init__(name, *args, **kwargs)
 
         # The model is just an M4 test component.
         self.workflow.add_node(m4.dummy_components.Model_A2d(parent=self))
@@ -41,7 +41,7 @@ class Model(Assembly):
 
 def main():
     """ Run model and print results. """
-    model = Model()
+    model = MyModel()
     model.run()
     for i, case in enumerate(model.driver.outerator):
         print 'CASE %d:' % (i+1)

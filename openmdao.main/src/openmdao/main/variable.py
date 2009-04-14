@@ -89,20 +89,6 @@ class Variable(HierarchyMember):
         # will have to do it again if it has constraints
         self.set_default(default)
 
-    def dump_refs(self, memo=None):
-        if memo is None:
-            memo = {}
-        if id(self) not in memo:
-            memo[id(self)] = '&%s'%self.get_pathname()
-        id_dict = { 'self': id(self), 
-                    'parent': (memo.get(id(self.parent),id(self.parent)),
-                               '(%s)'%type(self.parent).__name__) }
-        if self.parent != self._refparent:
-            id_dict['refparent'] = memo.get(id(self._refparent),id(self._refparent))
-        if isinstance(self.value,float):
-            id_dict['value'] = self.value
-        return id_dict
-
     def _set_val_types(self, val_types, default):
         """Set self.val_types to what was provided, or guess based on default
         value or referenced value.
@@ -192,7 +178,6 @@ class Variable(HierarchyMember):
             raise RuntimeError(self.get_pathname()+
                                ' is an OUTPUT Variable and cannot be set.')
         setattr(self._refparent, self.ref_name, self._pre_assign(val))
-        print 'set value of %s to %s' % (self.get_pathname(), str(self._pre_assign(val)))
         if self.observers is not None:
             self._notify_observers()
 
@@ -358,10 +343,18 @@ class Variable(HierarchyMember):
 
     def get_entry(self, index):
         """Retrieve the entry indicated by index."""
-        val = self.value
-        for i in index:
-            val = val[i]
-        return val
+        l = len(index)
+        if l == 1:
+            return self.value[index[0]]
+        elif l == 2:
+            return self.value[index[0]][index[1]]
+        elif l == 3:
+            return self.value[index[0]][index[1]][index[2]]
+        else:
+            val = self.value
+            for i in index:
+                val = val[i]
+            return val
     
     def set_entry(self, val, index):
         """Set the value of the entry indicated by index.
@@ -369,15 +362,19 @@ class Variable(HierarchyMember):
         """
         tmp = self._pre_assign_entry(val, index)
         try:
-            val = self.value
-            for i in index[:-1]:
-                val = val[i]
-            val[index[len(index)-1]] = tmp
-        except TypeError:
-            self.raise_exception("assigning index "+str(index)+
-                                 " to a value of type "+
-                                 str(type(val))+" failed", ValueError)        
-        except IndexError:
+            l = len(index)
+            if l == 1:
+                self.value[index[0]] = tmp
+            elif l == 2:
+                self.value[index[0]][index[1]] = tmp
+            elif l == 3:
+                self.value[index[0]][index[1]][index[2]] = tmp
+            else:
+                value = self.value
+                for i in index[:-1]:
+                    value = value[i]
+                self.value[index[len(index)-1]] = tmp
+        except (TypeError, IndexError):
             self.raise_exception("assigning index "+str(index)+
                                  " to a value of type "+
                                  str(type(val))+" failed", ValueError)        

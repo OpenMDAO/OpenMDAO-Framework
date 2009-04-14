@@ -6,7 +6,7 @@ import cPickle
 import shutil
 import unittest
 
-from openmdao.main import Assembly, Component, \
+from openmdao.main import Model, Component, \
                           ArrayVariable, FileVariable, StringList, Bool
 from openmdao.main.variable import INPUT, OUTPUT
 
@@ -59,11 +59,11 @@ class Sink(Component):
         inp.close()
 
 
-class Model(Assembly):
+class MyModel(Model):
     """ Transfer files from producer to consumer. """
 
     def __init__(self, name='FileVar_TestModel', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+        super(MyModel, self).__init__(name, *args, **kwargs)
 
         self.workflow.add_node(Source(parent=self, directory='Source'))
         self.workflow.add_node(Sink(parent=self, directory='Sink'))
@@ -79,7 +79,7 @@ class FileTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        self.model = Model()
+        self.model = MyModel()
 
     def tearDown(self):
         """ Called after each test in this class. """

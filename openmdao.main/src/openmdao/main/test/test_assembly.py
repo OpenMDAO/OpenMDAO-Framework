@@ -2,7 +2,7 @@
 
 import unittest
 
-from openmdao.main import Assembly, Component, Float, String
+from openmdao.main import Model, Assembly, Component, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
 
 class NestedDumb(Component):
@@ -14,7 +14,6 @@ class NestedDumb(Component):
         Float('rval_out', self, OUTPUT, units='cm')
 
     def execute(self):
-        print 'executing %s' % self.get_pathname()
         self.rval_out = self.rval_in * 1.5
 
 class DummyComp(Component):
@@ -41,7 +40,6 @@ class DummyComp(Component):
                           ('dummy_out','dummy',OUTPUT)])
                 
     def execute(self):
-        print 'executing %s' % self.get_pathname()
         self.rout = self.r * 1.5
         self.r2out = self.r2 + 10.0
         self.sout = self.s[::-1]
@@ -49,11 +47,11 @@ class DummyComp(Component):
         self.dummy.execute()
 
 
-class ContainerTestCase(unittest.TestCase):
+class AssemblyTestCase(unittest.TestCase):
 
     def setUp(self):
         """this setup function will be called before each test in this class"""
-        self.asm = Assembly('top', None)
+        self.asm = Model('top', None)
         dc = DummyComp('comp1')
         self.asm.add_child(dc)
         self.asm.workflow.add_node(dc)
@@ -96,17 +94,15 @@ class ContainerTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
-        
-    def test_connect_containers_sub(self):
-        self.asm.set('comp1.dummy_in.rval_in', 75.4)
-        self.asm.connect('comp1.dummy_out.rval_out','comp2.dummy_in.rval_in')
-        #from pprint import pprint
-        #print '\npre run - comp1\n',pprint(self.asm.comp1.dummy.dump_refs())
-        #print '\npre run - comp2\n',pprint(self.asm.comp2.dummy.dump_refs())
-        self.asm.run()
-        #print '\npost run - comp1\n',pprint(self.asm.comp1.dummy.dump_refs())
-        #print '\npost run - comp2\n',pprint(self.asm.comp2.dummy.dump_refs())
-        self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4*1.5)
+    
+    ## currently, connecting directly to/from Variables from a Container
+    ## inside of a ContainerVariable is not allowed.  Maybe later we can
+    ## add the ability to create passthru variables on-the-fly or something
+    #def test_connect_containers_sub(self):
+        #self.asm.set('comp1.dummy_in.rval_in', 75.4)
+        #self.asm.connect('comp1.dummy_out.rval_out','comp2.dummy_in.rval_in')
+        #self.asm.run()
+        #self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4*1.5)
         
     def test_create_passthru(self):
         self.asm.set('comp3.r', 75.4)
@@ -118,17 +114,34 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(self.asm.get('rout'), 75.4*1.5)
         
     def test_create_passthru_alias(self):
-        dum1 = self.asm.set('comp1.r', 75.4)
+        self.asm.set('comp1.r', 75.4)
         self.asm.create_passthru('comp1.r','foobar')
         self.assertEqual(self.asm.get('foobar'), 75.4)
         self.asm.run()
         self.assertEqual(self.asm.get('foobar'), 75.4)
         
-    #def test_container_passthru(self):
-        #self.asm.set('comp1.dummy_out.r', 75.4)
-        #self.asm.create_passthru('comp1.dummy_out','dummy_out_passthru')
-        #self.asm.run()
-        #self.assertEqual(self.asm.get('dummy_out_passthru'), 75.4)
+    def test_passthru_already_connected(self):
+        self.asm.connect('comp1.rout','comp2.r')
+        self.asm.connect('comp1.sout','comp2.s')
+        # this should fail since we're creating a second connection
+        # to an input
+        try:
+            self.asm.create_passthru('comp2.r')
+        except RuntimeError, err:
+            self.assertEqual(str(err), 'top: comp2.r is already connected')
+        else:
+            self.fail('RuntimeError expected')
+        self.asm.set('comp1.s', 'some new string')
+        # this one should be OK since outputs can have multiple connections
+        self.asm.create_passthru('comp1.sout')
+        self.asm.run()
+        self.assertEqual(self.asm.get('sout'), 'some new string'[::-1])
+        
+    def test_container_passthru(self):
+        self.asm.set('comp1.dummy_out.rval_in', 75.4)
+        self.asm.create_passthru('comp1.dummy_out','dummy_out_passthru')
+        self.asm.run()
+        self.assertEqual(self.asm.get('dummy_out_passthru.rval_out'), 75.4*1.5)
         
     def test_invalid_connect(self):
         try:
@@ -150,9 +163,8 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp1.r')
         except RuntimeError, err:
-            self.assertEqual(
-                'top: Cannot connect a component (comp1) to itself',
-                str(err))
+            self.assertEqual('top: Cannot connect comp1.rout to comp1.r. Both are on same component.',
+                             str(err))
         else:
             self.fail('exception expected')
      
@@ -180,8 +192,8 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp2.rout','comp1.r')
         except RuntimeError, err:
-            self.assertEqual('top: Circular dependency would be created by'+
-                             ' connecting comp1.r to comp2.rout', str(err))
+            self.assertEqual("top: Circular dependency (['comp2', 'comp1']) would be created by"+
+                             " connecting comp2.rout to comp1.r", str(err))
         else:
             self.fail('exception expected')
 
@@ -212,7 +224,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.disconnect('comp2.s')
         except RuntimeError, err:
-            self.assertEqual('top.comp2.s: not connected', str(err))
+            self.assertEqual('top: comp2.s is not connected', str(err))
         else:
             self.fail('exception expected')
 
@@ -228,7 +240,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             self.asm.disconnect('comp4.r')
         except RuntimeError, err:
-            self.assertEqual(str(err), 'top.comp4.r: not connected')
+            self.assertEqual(str(err), 'top: comp4.r is not connected')
         else:            
             self.fail('exception expected')
         

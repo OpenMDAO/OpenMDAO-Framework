@@ -57,10 +57,9 @@ class Vehicle_Dynamics(Component):
               doc='Calculated vehicle acceleration ')        
         
     def execute(self):
-        ''' Calculates the instantaneous acceleration for the vehicle.
-        
-            '''
-        
+        ''' Calculates the instantaneous acceleration for the vehicle.       
+            '''        
+        print '%s.execute()' % self.get_pathname()
         Torque = self.Engine_Torque*self.Torque_Ratio
         TireRadius = self.TireCirc/(2.0*pi)
         

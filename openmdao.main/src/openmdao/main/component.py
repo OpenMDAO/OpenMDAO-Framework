@@ -1,26 +1,28 @@
 
 #public symbols
-#__all__ = ['Component']
+__all__ = ['Component']
 
 __version__ = "0.1"
 
 import os
 import os.path
+import copy
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IComponent, IAssembly
+from openmdao.main.interfaces import IComponent, IVariable
 from openmdao.main import Container, String
-from openmdao.main.variable import INPUT
+from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.constants import SAVE_PICKLE
 from openmdao.main.exceptions import RunFailed
+from openmdao.main.filevar import FileVariable
+from openmdao.main.util import filexfer
 
 # Execution states.
 STATE_UNKNOWN = -1
 STATE_IDLE    = 0
 STATE_RUNNING = 1
 STATE_WAITING = 2
-
 
 class Component (Container):
     """This is the base class for all objects containing Variables that are 
@@ -35,8 +37,8 @@ class Component (Container):
         self.state = STATE_IDLE
         self._stop = False
         self._input_changed = True
+        self._need_check_config = True
         self._dir_stack = []
-        self._sockets = {}
 
         # List of meta-data dictionaries.
         self.external_files = []
@@ -58,65 +60,18 @@ class Component (Container):
                     self.error("Path '%s' is not a directory.", self.directory)
 # pylint: enable-msg=E1101
 
-    def _get_socket_plugin(self, name):
-        """Return plugin for the named socket"""
-        try:
-            iface, plugin = self._sockets[name]
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-        else:
-            if plugin is None:
-                self.raise_exception("socket '%s' is empty" % name,
-                                     RuntimeError)
-            return plugin
-
-    def _set_socket_plugin(self, name, plugin):
-        """Set plugin for the named socket"""
-        try:
-            iface, current = self._sockets[name]
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-        else:
-            if plugin is not None and iface is not None:
-                if not iface.providedBy(plugin):
-                    self.raise_exception("plugin does not support '%s'" % \
-                                         iface.__name__, ValueError)
-            self._sockets[name] = (iface, plugin)
-
-    def add_socket (self, name, iface, doc=''):
-        """Specify a named placeholder for a component with the given
-        interface or prototype.
+    def check_config (self):
+        """Verify that the configuration of this component is correct. This function is
+        called once prior to the first execution of this component, and may be called
+        explicitly at other times if desired.
         """
-        assert isinstance(name, basestring)
-        self._sockets[name] = (iface, None)
-        setattr(self.__class__, name,
-                property(lambda self : self._get_socket_plugin(name),
-                         lambda self, plugin : self._set_socket_plugin(name, plugin),
-                         None, doc))
-
-    def check_socket (self, name):
-        """Return True if socket is filled"""
-        try:
-            iface, plugin = self._sockets[name]
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-        else:
-            return plugin is not None
-
-    def remove_socket (self, name):
-        """Remove an existing Socket"""
-        del self._sockets[name]
-
-    def post_config (self):
-        """Perform any final initialization after configuration has been set,
-        and verify that the configuration is correct.
-        """
-        pass
+        pass         
     
     def pre_execute (self):
         """update input variables and anything else needed prior 
         to execution."""
-        pass
+        if self._need_check_config:
+            self.check_config()
     
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
@@ -144,7 +99,7 @@ class Component (Container):
         self.state = STATE_RUNNING
         self._stop = False
         try:
-            if self.parent is not None and IAssembly.providedBy(self.parent):
+            if self.parent is not None and IComponent.providedBy(self.parent):
                 self.parent.update_inputs(self)
             self.pre_execute()
             self.execute()
@@ -191,7 +146,7 @@ class Component (Container):
         self.load(instream)
 
     def step (self):
-        """For Components that contain Workflows (e.g., Assembly), this will run
+        """For Components that contain Workflows (e.g., Model), this will run
         one Component in the Workflow and return. For simple components, it is
         the same as run().
         """
@@ -201,6 +156,7 @@ class Component (Container):
         """ Stop this component. """
         self._stop = True
 
+    
 # TODO: uncomment require_gradients and require_hessians after they're better thought out
     
     #def require_gradients (self, varname, gradients):

@@ -47,8 +47,8 @@ class CaseIteratorDriver(Driver):
         Int('max_retries', self, INPUT, default=1, min_limit=0,
             doc='Number of times to retry a case.')
 
-        self.add_socket('iterator', ICaseIterator, 'Cases to evaluate.')
-        self.add_socket('outerator', None, 'Something to append() to.')
+        self.add_socket('iterator', ICaseIterator, 'Cases to evaluate.', required=True)
+        self.add_socket('outerator', None, 'Something to append() to.', required=True)
 
         self._iter = None
         self._n_servers = 0
@@ -66,12 +66,6 @@ class CaseIteratorDriver(Driver):
 
     def execute(self):
         """ Run each case in iterator and record results in outerator. """
-        if not self.check_socket('iterator'):
-            self.raise_exception('No iterator plugin', ValueError)
-
-        if not self.check_socket('outerator'):
-            self.raise_exception('No outerator plugin', ValueError)
-
         self._rerun = []
         self._iter = self.iterator.__iter__()
 

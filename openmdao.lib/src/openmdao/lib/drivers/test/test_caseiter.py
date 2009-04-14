@@ -6,7 +6,7 @@ import unittest
 
 import numpy.random
 
-from openmdao.main import Assembly, Component, Case, ListCaseIterator, \
+from openmdao.main import Model, Component, Case, ListCaseIterator, \
                           ArrayVariable, Float
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
@@ -33,11 +33,11 @@ class DrivenComponent(Component):
         self.sum_y = sum(self.y)
 
 
-class Model(Assembly):
+class MyModel(Model):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
     def __init__(self, name='CID_TestModel', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+        super(MyModel, self).__init__(name, *args, **kwargs)
         CaseIteratorDriver('driver', self)
         self.workflow.add_node(DrivenComponent('dc', parent=self))
 
@@ -46,7 +46,7 @@ class DriverTestCase(unittest.TestCase):
     """ Test CaseIteratorDriver. """
 
     def setUp(self):
-        self.model = Model()
+        self.model = MyModel()
 
     def tearDown(self):
         self.model.pre_delete()
@@ -116,10 +116,11 @@ class DriverTestCase(unittest.TestCase):
                              "CID_TestModel.driver: Exception getting 'dc.sum_z': CID_TestModel.dc: object has no attribute 'sum_z'")
 
     def test_noiterator(self):
+        self.model.driver.outerator = []
         try:
             self.model.run()
         except ValueError, exc:
-            self.assertEqual(str(exc), 'CID_TestModel.driver: No iterator plugin')
+            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'iterator' is not present")
         else:
             self.fail('ValueError expected')
 
@@ -128,7 +129,7 @@ class DriverTestCase(unittest.TestCase):
         try:
             self.model.run()
         except ValueError, exc:
-            self.assertEqual(str(exc), 'CID_TestModel.driver: No outerator plugin')
+            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'outerator' is not present")
         else:
             self.fail('ValueError expected')
 

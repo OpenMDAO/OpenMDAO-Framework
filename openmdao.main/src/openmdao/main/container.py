@@ -54,19 +54,6 @@ class Container(HierarchyMember):
            IContainer.providedBy(parent) and add_to_parent:
             parent.add_child(self)
 
-    def dump_refs(self, memo=None):
-        if memo is None:
-            memo = {}
-        if id(self) not in memo:
-            memo[id(self)] = '&%s'%self.get_pathname()
-        id_dict = { 'self': memo[id(self)] }
-        for k,v in self.items(pub=True,recurse=False):
-            if IContainer.providedBy(v):
-                id_dict[k] = v.dump_refs(memo)
-            else:
-                id_dict[k] = memo.get(id(v),id(v))
-        return id_dict
-        
     def items(self, pub=True, recurse=False):
         """Return an iterator that returns a list of tuples of the form 
         (rel_pathname, obj) for each
@@ -108,7 +95,7 @@ class Container(HierarchyMember):
                                  RuntimeError)
         if IContainer.providedBy(obj):
             # if an old child with that name exists, remove it
-            if hasattr(self, obj.name):
+            if self.contains(obj.name):
                 self.remove_child(obj.name)
             setattr(self, obj.name, obj)
             obj.parent = self
@@ -119,9 +106,9 @@ class Container(HierarchyMember):
                     "' object has does not provide the IContainer interface",
                     TypeError)
         
-    def remove_child(self, name):
+    def remove_child(self, name, delete=True):
         """Remove the specified child from this container and remove any
-        Variable objects from _pub that reference that child. Notify any
+        public Variable objects that reference that child. Notify any
         observers."""
         dels = []
         for key, val in self._pub.items():
@@ -130,7 +117,9 @@ class Container(HierarchyMember):
         for dname in dels:
             del self._pub[dname]
         # TODO: notify observers
-        delattr(self, name)
+        
+        if delete:
+            delattr(self, name)
         
     def make_public(self, obj_info, iostatus=INPUT):
         """Adds the given object(s) as framework-accessible data object(s) of

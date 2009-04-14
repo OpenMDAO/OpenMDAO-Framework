@@ -6,10 +6,7 @@ Test the pyevolve optimizer driver
 import unittest
 import numpy
 
-
-from openmdao.main.component import Component
-from openmdao.main.assembly import Assembly
-from openmdao.main import Float
+from openmdao.main import Model, Component, Float
 from openmdao.main.variable import INPUT,OUTPUT
 from openmdao.lib.drivers import pyevolvedriver
 
@@ -41,7 +38,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         sphere.points = [x for x in genome]
     
     def setUp(self):
-        self.top = Assembly('top',None)
+        self.top = Model('top',None)
         self.top.add_child(SphereFunction('comp',self.top))
         self.top.workflow.add_node(self.top.comp)
         self.top.add_child(pyevolvedriver.pyevolvedriver('driver'))

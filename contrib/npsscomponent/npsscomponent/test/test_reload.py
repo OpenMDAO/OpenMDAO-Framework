@@ -7,7 +7,7 @@ import os.path
 import pkg_resources
 import unittest
 
-from openmdao.main import Assembly, Component, Bool, Float, String
+from openmdao.main import Model, Component, Bool, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent
@@ -36,11 +36,11 @@ class Sink(Component):
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
 
-class Model(Assembly):
+class MyModel(Model):
     """ Exercises NPSS auto-reload capability. """ 
 
     def __init__(self, *args, **kwargs):
-        super(Model, self).__init__(*args, **kwargs)
+        super(MyModel, self).__init__(*args, **kwargs)
 
         self.workflow.add_node(Source(parent=self))
         self.Source.npss_in = 9
@@ -69,7 +69,7 @@ class NPSSTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        self.model = Model('TestModel')
+        self.model = MyModel('TestModel')
 
     def tearDown(self):
         """ Called after each test in this class. """

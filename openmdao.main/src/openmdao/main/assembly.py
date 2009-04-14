@@ -1,51 +1,146 @@
+
 #public symbols
-__all__ = ["Assembly"]
+__all__ = ['Assembly']
 
 __version__ = "0.1"
 
 import os
+import os.path
 import copy
 
 from zope.interface import implements
+import networkx as nx
 
 from openmdao.main.interfaces import IAssembly, IComponent, IVariable
-from openmdao.main import Component, Container
+from openmdao.main import Container, Component, String
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.filevar import FileVariable
+from openmdao.main.constants import SAVE_PICKLE
+from openmdao.main.exceptions import RunFailed
 from openmdao.main.tarjan import strongly_connected_components
+from openmdao.main.filevar import FileVariable
 from openmdao.main.util import filexfer
 
+# Execution states.
+STATE_UNKNOWN = -1
+STATE_IDLE    = 0
+STATE_RUNNING = 1
+STATE_WAITING = 2
 
-def connected_dest_vars(obj):
-    """Return True if obj provides the IVariable interface and is connected."""
-    return IVariable.providedBy(obj) and obj.source is not None
-        
-def _add_dependency(dep_graph, src, dest):
-    if dest in dep_graph:
-        if src not in dep_graph[dest]:
-            dep_graph[dest].append(src)
-    else:                
-        dep_graph[dest] = [src]
-        
-    if src not in dep_graph:
-        dep_graph[src] = []
-    
 
-class Assembly(Component):
-    """A container for Components, a Driver, and a Workflow. It manages
-    connections between Components."""
-   
+class Assembly (Component):
+    """This is the base class for all objects containing Variables that are 
+       accessible to the OpenMDAO framework and are 'runnable'.
+    """
+
     implements(IAssembly)
     
     def __init__(self, name, parent=None, doc=None, directory=''):
-        super(Assembly, self).__init__(name, parent, doc=doc,
-                                       directory=directory)
+        super(Assembly, self).__init__(name, parent, doc)
+        
+        self.state = STATE_IDLE
+        self._stop = False
+        self._input_changed = True
+        self._dir_stack = []
+        self._sockets = {}
+        self._dep_graph = nx.MultiDiGraph(name=name)
 
-        self.driver = self.create('openmdao.main.driver.Driver', 'driver')
-        self.workflow = self.create('openmdao.main.workflow.Workflow',
-                                    'workflow')
-        self._dep_graph = None
+        # List of meta-data dictionaries.
+        self.external_files = []
 
+        String('directory', self, INPUT, default=directory,
+               doc='If non-null, the directory to execute in.')
+
+# pylint: disable-msg=E1101
+        if self.directory:
+            if not os.path.exists(self.directory):
+# TODO: Security!
+                try:
+                    os.makedirs(self.directory)
+                except OSError, exc:
+                    self.error("Could not create directory '%s': %s",
+                               self.directory, exc.strerror)
+            else:
+                if not os.path.isdir(self.directory):
+                    self.error("Path '%s' is not a directory.", self.directory)
+# pylint: enable-msg=E1101
+
+    def _get_socket_plugin(self, name):
+        """Return plugin for the named socket"""
+        try:
+            plugin = self._sockets[name][1]
+        except KeyError:
+            self.raise_exception("no such socket '%s'" % name, AttributeError)
+        else:
+            if plugin is None:
+                self.raise_exception("socket '%s' is empty" % name,
+                                     RuntimeError)
+            return plugin
+
+    def _set_socket_plugin(self, name, plugin):
+        """Set plugin for the named socket"""
+        try:
+            iface, current, required = self._sockets[name]
+        except KeyError:
+            self.raise_exception("no such socket '%s'" % name, AttributeError)
+        else:
+            if plugin is not None and iface is not None:
+                if not iface.providedBy(plugin):
+                    self.raise_exception("plugin does not support '%s'" % \
+                                         iface.__name__, ValueError)
+            self._sockets[name] = (iface, plugin, required)
+
+    def add_socket (self, name, iface, doc='', required=True):
+        """Specify a named placeholder for a component with the given
+        interface or prototype.
+        """
+        assert isinstance(name, basestring)
+        self._sockets[name] = (iface, None, required)
+        setattr(self.__class__, name,
+                property(lambda self : self._get_socket_plugin(name),
+                         lambda self, plugin : self._set_socket_plugin(name, plugin),
+                         None, doc))
+
+    def socket_filled (self, name):
+        """Return True if socket is filled"""
+        try:
+            return self._sockets[name][1] is not None
+        except KeyError:
+            self.raise_exception("no such socket '%s'" % name, AttributeError)
+
+    def remove_socket (self, name):
+        """Remove an existing Socket"""
+        del self._sockets[name]
+
+    def add_child(self, obj, private=False):
+        """Update Compnent graph and call base class add_child"""
+        super(Assembly, self).add_child(obj)
+        if IComponent.providedBy(obj):
+            self._dep_graph.add_node(obj.name)
+        
+    def remove_child(self, name):
+        """Remove the named object from this container and notify any 
+        observers.
+        """
+        if '.' in name:
+            self.raise_exception('remove_child does not allow dotted path names like %s' %
+                                 name, ValueError)
+        
+        obj = self.get(name)
+        if IComponent.providedBy(obj):
+            for srccompname,destcompname,key in self._dep_graph.edges(nbunch=[name], keys=True):
+                srcvarname,destvarname = key
+                self.getvar('.'.join([destcompname,destvarname])).disconnect_src()
+            
+            # removal of edges should be taken care of within the graph library
+            self._dep_graph.remove_node(name)
+            
+        if name in self._sockets:
+            setattr(self, name, None)
+            # set delete to False, otherwise delattr will fail because
+            # named object is a property
+            super(Assembly, self).remove_child(name, delete=False)
+        else:
+            super(Assembly, self).remove_child(name)
 
     def create_passthru(self, varname, alias=None):
         """Create a Variable that's a copy of var, make it a public member of self,
@@ -86,51 +181,6 @@ class Assembly(Component):
         else:
             self.raise_exception('unknown iostatus %s' % str(var.iostatus))
         
-        
-    def get_dependency_graph(self):
-        """Return a component dependency graph in the form of a dictionary"""
-        if self._dep_graph is not None:
-            return self._dep_graph
-        
-        dep_graph = {}
-        for src,dest in self.list_connections():
-            srccompname, srccomp, srcvarname, srcvar = self.split_varpath(src)
-            if srccompname is None:
-                continue
-            destcompname, destcomp, destvarname, destvar = self.split_varpath(dest)
-            if destcompname is None:
-                continue
-            
-            _add_dependency(dep_graph, destcompname, srccompname)
-                
-        return dep_graph
-    
-    def _check_circular_deps(self, incomp, invar, outname):
-        """Create a dependency graph based on the current graph with the
-        addition of the proposed new connection, and raise an exception if a 
-        circular dependency is detected.
-        """
-        dep_graph = self.get_dependency_graph()
-        
-        # now add the new dep
-        out = outname.split('.')[0]
-        
-        if incomp == out:
-            self.raise_exception('Cannot connect a component ('+
-                                 incomp+') to itself', RuntimeError)
-
-        new_graph = copy.deepcopy(dep_graph)
-        _add_dependency(new_graph, incomp, out)
-        
-        sccomps = strongly_connected_components(new_graph)
-        for comp in sccomps:
-            if len(comp) > 1:
-                self.raise_exception('Circular dependency would be '+
-                                     'created by connecting '+
-                                     incomp+'.'+invar+' to '+outname, 
-                                     RuntimeError)
-        return new_graph
-
     def split_varpath(self, path):
         """Return a tuple of compname,component,varname,variable given a path
         name of the form 'compname.varname'. If the name is of the form 'varname'
@@ -154,7 +204,6 @@ class Assembly(Component):
         if not IVariable.providedBy(var):
             self.raise_exception('%s is not a Variable' % varname, TypeError)
         return (compname, comp, varname, var)
-
     
     def connect(self, srcpath, destpath):
         """Connect one src Variable to one destination Variable. This could be
@@ -163,13 +212,14 @@ class Assembly(Component):
         srccompname, srccomp, srcvarname, srcvar = self.split_varpath(srcpath)
         destcompname, destcomp, destvarname, destvar = self.split_varpath(destpath)
         
-        # if the Variables involved in the connection are from different
-        # scoping levels, then it's a passthru connection
-        if srccomp is self or destcomp is self:
+        if srccompname == destcompname:
+            self.raise_exception('Cannot connect %s to %s. Both are on same component.' %
+                                 (srcpath,destpath), RuntimeError)
+        if srccomp is self or destcomp is self: # it's a passthru connection
             if srccomp is destcomp:
-                self.raise_exception('cannot connect "%s" to "%s" on same component' %
+                self.raise_exception('Cannot connect "%s" to "%s" on same component' %
                                       (srcvarname, destvarname), RuntimeError)
-        else:
+        else: # it's not a passthru connection so must connect OUTPUT to INPUT
             if srcvar.iostatus != OUTPUT:
                 self.raise_exception(srcvar.get_pathname()+
                                      ' must be an OUTPUT variable',
@@ -187,71 +237,52 @@ class Assembly(Component):
         destvar.validate_var(srcvar)
         
         if srccomp is not self and destcomp is not self:
-            self._dep_graph = self._check_circular_deps(destcompname, 
-                                                        destvarname, 
-                                                        srcpath) 
-        
-        #print 'connect_src: %s to %s' % (srcpath,destvar.name)
+            print 'adding edge %s' % str((srccompname,destcompname,(srcvarname,destvarname)))
+            self._dep_graph.add_edge(srccompname, destcompname, data=None,
+                                     key=(srcvarname, destvarname))
+            strongly_connected = nx.algorithms.traversal.strongly_connected_components(self._dep_graph)
+            for strcon in strongly_connected:
+                if len(strcon) > 1:
+                    self._dep_graph.remove_edge(srccompname, destcompname, 
+                                                key=(srcvarname, destvarname))
+                    self.raise_exception('Circular dependency (%s) would be created by connecting %s to %s' %
+                                         (str(strcon), srcpath, destpath), RuntimeError)       
         destvar.connect_src(srcpath)
             
     def disconnect(self, varpath):
         """Remove all connections from a given variable."""
-        var = self.getvar(varpath)
-        found = False
-        if var.source is None: # may be a source, so try to find destination
-            for src,dest in self.list_connections():
-                if src == varpath:
-                    found = True
-                    self.getvar(dest).disconnect_src()
-                    
-        if found is False:
-            var.disconnect_src()
+        compname,varname = varpath.split('.')
+        to_remove = []
+        graph = self._dep_graph
+        nodes = [compname]
+        # loop over output edges from the variable's parent component
+        for srccompname,destcompname,key in graph.edges(nbunch=nodes, keys=True):
+            srcvarname,destvarname = key
+            if varname == srcvarname:
+                to_remove.append((srccompname,destcompname,key))
+                self.getvar('.'.join([destcompname,destvarname])).disconnect_src()
+                
+        # loop over input edges from the variable's parent component
+        for srccompname,destcompname,key in graph.in_edges_iter(nbunch=nodes, keys=True):
+            srcvarname,destvarname = key
+            if varname == destvarname:
+                to_remove.append((srccompname,destcompname,key))
+                self.getvar('.'.join([destcompname,destvarname])).disconnect_src()
+                
+        for rem in to_remove:
+            graph.remove_edge(rem[0],rem[1],key=rem[2])
             
-        self._dep_graph = None  # force regeneration of dep_graph
-
-    
-    def execute(self):
-        """run this Assembly"""
-        return self.driver.run()    
-
-    def step(self):
-        """Execute a single step."""
-        self.driver.step()
-
-    def stop(self):
-        """ Stop by telling the driver to stop. """
-        self._stop = True
-        self.driver.stop()
-
-    def remove_child(self, name):
-        """Remove the named object from this container and notify any 
-        observers.
-        """
-        
-        # TODO: notify observers of removal...
-                 
-        for src,dest in self.list_connections():
-            srccompname,srccomp,srcvarname,srcvar = self.split_varpath(src)
-            destcompname,destcomp,destvarname,destvar = self.split_varpath(dest)
-            # disconnect any vars reading from vars of this component, and all
-            # destination vars in the component being removed
-            if srccompname == name or destcompname == name:
-                destvar.disconnect_src()
+        if len(to_remove) == 0:
+            self.raise_exception('%s is not connected' % varpath, RuntimeError)
             
-        self.workflow.remove_node(getattr(self, name))           
-        Component.remove_child(self, name)
 
     def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         conns = []
-        containers = [x for x in self.values(pub=False,recurse=False) if
-                                                      isinstance(x,Container)]
-        for cont in containers:
-            for name,var in [x for x in cont.items(recurse=False) if
-                                   IVariable.providedBy(x[1]) and x[1].is_destination()]:
-                conns.append((var.source,'.'.join([cont.name,name])))
-        
+        for srccomp,destcomp,key in self._dep_graph.edges(keys=True):
+            conns.append(('.'.join([srccomp,key[0]]), '.'.join([destcomp,key[1]])))
+            
         # don't forget passthru vars on our boundary
         if show_passthru:
             conns.extend([(x[1].source,x[0]) for x in self.items(recurse=False) if
@@ -290,6 +321,29 @@ class Assembly(Component):
                            srcvar, str(exc))
                     self.raise_exception(msg, type(exc))
 
+    def check_config (self):
+        """Verify that the configuration of this component is correct. This function is
+        called once prior to the first execution of this Assembly, and prior to execution
+        if any children are added or removed, or if self._need_check_config is True.
+        """
+        for name,sock in self._sockets.items():
+            iface, current, required = sock
+            if current is None and required is True:
+                self.raise_exception("required plugin '%s' is not present" % name,
+                                     ValueError)
+
+    def get_workflow(self, name=None):
+        """Return a Workflow object that will execute whatever Components are necessary
+        to make the specified name valid. The specified name can be an output Variable
+        or a Component. If name is None, then all child Components will be executed in
+        data flow order.
+        """
+        workflow = self._workflows.get(name)
+        if workflow is not None:
+            return workflow
+        else: # calculate a new Workflow for name
+            return DataFlow(self, name)
+                    
     @staticmethod
     def xfer_file(src_comp, src_var, dst_comp, dst_var):
         """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """

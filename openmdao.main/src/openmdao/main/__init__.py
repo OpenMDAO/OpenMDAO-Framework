@@ -26,6 +26,7 @@ from openmdao.main.pkg_res_factory import PkgResourcesFactory
 from openmdao.main.container import Container
 from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
+from openmdao.main.model import Model
 from openmdao.main.driver import Driver
 from openmdao.main.workflow import Workflow
 

@@ -6,7 +6,7 @@ Interfaces for the OpenMDAO project.
 # pylint: disable-msg=E0213,E0211,W0232
 
 #public symbols
-__all__ = ['IContainer', 'IComponent', 'IAssembly', 'IDriver', 'IFactory',
+__all__ = ['IContainer', 'IComponent', 'IAssembly', 'IModel', 'IDriver', 'IFactory',
            'IGeomQueryObject', 'IGeomModifier', 'IResourceAllocator',
            'IVariable', 'IWorkflow', 'ICaseIterator']
 
@@ -57,13 +57,21 @@ class IContainer (Interface):
         
     def get_pathname ():
         """Return the name (dot delimited) that uniquely
-        identifies this object's location within a hierarchy of IContainers"""
+        identifies this object's location within a hierarchy of IContainers."""
 
     def get (name):
-        """return the value of a public variable"""
+        """Return the value of a public Variable."""
+
+    def getvar (name):
+        """return the public Variable specified by name."""
 
     def set (name, value):
-        """Set the value of a public variable"""
+        """Set the value of a public variable."""
+        
+    def setvar(name, var):
+        """Set the value of the named public Variable with the value of
+        the Variable specified by var.
+        """
 
     def save_state (outstream, format='cPickle'):
         """Save the state of this object and its children to the given
@@ -86,7 +94,7 @@ class IContainer (Interface):
 
 
 
-class IComponent (Interface):
+class IComponent (IContainer):
     """A runnable Container. This interface is provided by the Component
     class"""
 
@@ -106,17 +114,9 @@ class IComponent (Interface):
         """Remove an existing Socket"""
 
     def post_config ():
-        """Perform any final initialization after configuration has been set,
-        and verify that the configuration is correct."""
-
-    def update_inputs ():
-        """Fetch input variables."""
-
-    def execute ():
-        """Perform calculations or other actions."""
-
-    def update_outputs ():
-        """Update output variables"""
+        """Perform any final initialization and verification after configuration 
+        has been set and this Component is installed in the hierarchy.
+        """
 
     def run ():
         """Run this object. This should include fetching input variables,
@@ -140,57 +140,98 @@ class IComponent (Interface):
         typically a delta from a full saved state file."""
 
     def step ():
-        """For Components that contain Workflows (e.g., Assembly), this will run
+        """For Components that contain Workflows (e.g., Model), this will run
         one Component in the Workflow and return. For simple components, it is the
         same as run()."""
 
-    def require_gradients (varname, gradients):
-        """Requests that the component be able to provide (after execution) a
-        list of gradients of a variable w.r.t. a list of variables. The format
-        of the gradients list is [dvar_1, dvar_2, ..., dvar_n]. The component
-        should return a list with entries of either a name, a tuple of the
-        form (name,index) or None.  None indicates that the component cannot
-        compute the specified derivative. name indicates the name of a
-        scalar variable in the component that contains the gradient value, and
-        (name,index) indicates the name of an array variable and the index of
-        the entry containing the gradient value. If the component cannot
-        compute any gradients of the requested varname, it can just return
-        None."""
+    #def require_gradients (varname, gradients):
+        #"""Requests that the component be able to provide (after execution) a
+        #list of gradients of a variable w.r.t. a list of variables. The format
+        #of the gradients list is [dvar_1, dvar_2, ..., dvar_n]. The component
+        #should return a list with entries of either a name, a tuple of the
+        #form (name,index) or None.  None indicates that the component cannot
+        #compute the specified derivative. name indicates the name of a
+        #scalar variable in the component that contains the gradient value, and
+        #(name,index) indicates the name of an array variable and the index of
+        #the entry containing the gradient value. If the component cannot
+        #compute any gradients of the requested varname, it can just return
+        #None."""
 
-    def require_hessians (varname, deriv_vars):
-        """Requests that the component be able to provide (after execution)
-        the hessian of a variable w.r.t. a list of variables. The format of
-        deriv_vars is [dvar_1, dvar_2, ..., dvar_n]. The component should
-        return one of the following:
-          1) a name, which would indicate that the component contains
-                      a 2D array variable or matrix containing the hessian
-          2) an array of the form [[dx1dx1, dx1dx2, ... dx1dxn],
-                                            ...
-                                   [dxndx1, dxndx2, ... dxndxn]]
-             with entries of either name, (name,index), or None. name
-             indicates that a scalar variable in the component contains the
-             desired hessian matrix entry. (name,index) indicates that
-             an array variable contains the value at the specified index.
-             If index is a list with two entries, that indicates that
-             the variable containing the entry is a 2d array or matrix.
-          3) None, which means the the component cannot compute any values
-             of the hessian."""
+    #def require_hessians (varname, deriv_vars):
+        #"""Requests that the component be able to provide (after execution)
+        #the hessian of a variable w.r.t. a list of variables. The format of
+        #deriv_vars is [dvar_1, dvar_2, ..., dvar_n]. The component should
+        #return one of the following:
+          #1) a name, which would indicate that the component contains
+                      #a 2D array variable or matrix containing the hessian
+          #2) an array of the form [[dx1dx1, dx1dx2, ... dx1dxn],
+                                            #...
+                                   #[dxndx1, dxndx2, ... dxndxn]]
+             #with entries of either name, (name,index), or None. name
+             #indicates that a scalar variable in the component contains the
+             #desired hessian matrix entry. (name,index) indicates that
+             #an array variable contains the value at the specified index.
+             #If index is a list with two entries, that indicates that
+             #the variable containing the entry is a 2d array or matrix.
+          #3) None, which means the the component cannot compute any values
+             #of the hessian."""
 
 
+class IAssembly (IComponent):
+    """Contains a collection of child Components/Containers and manages 
+    connections between its children.
+    """
+    
+    def add_socket (name, iface, doc=''):
+        """Specify a named placeholder for a component with the given
+        interface or prototype.
+        """
 
-class IAssembly (Interface):
-    """Contains a workflow, a driver, and a collection of child 
-    Compnents/Containers and manages connections between its children."""
+    def socket_filled (name):
+        """Return True if socket is filled"""
+
+    def remove_socket (name):
+        """Remove an existing Socket"""
+
+    def remove_child(name):
+        """Remove the named object from this container and notify any 
+        observers.
+        """
+
+    def create_passthru(self, varname, alias=None):
+        """Create a Variable that's a copy of var, make it a public member of self,
+        and create a passthru connection between it and var.  If alias is not None,
+        the name of the 'promoted' Variable will be the alias.
+        """
+        
+    def connect(self, srcpath, destpath):
+        """Connect one src Variable to one destination Variable. This could be
+        a normal connection (output to input) or a passthru connection."""
+            
+    def disconnect(self, varpath):
+        """Remove all connections from a given variable."""
+
+    def list_connections(self, show_passthru=True):
+        """Return a list of tuples of the form (outvarpath, invarpath). Each entry
+        represents the connection from one output Variable to one input Variable.
+        outvarpath and invarpath are pathnames relative to enclosing scope.
+        """
     
     def update_inputs(comp_name):
         """update the inputs for the named child component."""
+
+
+class IModel (IAssembly):
+    """Contains a Workflow, a Driver, and a collection of child 
+    Compnents/Containers and manages connections between its children."""
+    
+    workflow = Attribute('the object that orders execution of components')
+    driver = Attribute('the object that manages iteration of components')
     
     
-class IDriver (Interface):
+class IDriver (IComponent):
     """Executes a Workflow until certain criteria are met."""
 
-    workflow = Attribute('the object that orders execution of'+
-                         'components that are driven by this driver')
 
 
 
@@ -286,7 +327,7 @@ class ICaseIterator(Interface):
         """Return an iterator object."""
         
     def next():
-        """Return the next item. If no items remain, raise a StopIteration
+        """Return the next Case. If no Cases remain, raise a StopIteration
         exception.
         """
 

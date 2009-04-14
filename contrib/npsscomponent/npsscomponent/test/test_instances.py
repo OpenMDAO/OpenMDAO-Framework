@@ -11,7 +11,7 @@ import unittest
 
 from numpy.testing import assert_equal
 
-from openmdao.main import Assembly, Component, ArrayVariable, Bool, \
+from openmdao.main import Model, Component, ArrayVariable, Bool, \
                           FileVariable, Float, Int, String, StringList
 from openmdao.main.variable import INPUT, OUTPUT
 
@@ -137,11 +137,11 @@ class Sink(Component):
         inp.close()
 
 
-class Model(Assembly):
+class MyModel(Model):
     """ Sends data through Source -> NPSS_A -> NPSS_B -> Sink. """
 
     def __init__(self, name='TestModel', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+        super(MyModel, self).__init__(name, *args, **kwargs)
 
         self.workflow.add_node(Source(parent=self))
         self.Source.b = True
@@ -219,7 +219,7 @@ class NPSSTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        self.model = Model()
+        self.model = MyModel()
 
     def tearDown(self):
         """ Called after each test in this class. """
