@@ -12,13 +12,8 @@ from openmdao.main import HierarchyMember
 INPUT = 1
 OUTPUT = 2
 
-class _Undefined ( object ):
-    """A class used to define a special undefined object."""
-    def __repr__ ( self ):
-        return '<undefined>'
-    
 # use this to represent undefined value rather than None    
-UNDEFINED = _Undefined()
+UNDEFINED = '<undefined>'
 
 class Variable(HierarchyMember):
     """ An object representing data to be passed between Components within
@@ -71,7 +66,7 @@ class Variable(HierarchyMember):
             
         # Create the real object if it doesn't already exist.
         if not hasattr(self._refparent, self.ref_name):
-            if default is UNDEFINED or default is None:
+            if default == UNDEFINED or default is None:
                 self.raise_exception('default must be supplied'
                                      ' with implicit creation.', ValueError)
             else:
@@ -88,7 +83,7 @@ class Variable(HierarchyMember):
         
     def set_default(self, default):
         try:
-            if default is UNDEFINED:
+            if default == UNDEFINED:
                 self.default = self._pre_assign(self._get_ref_value())
             elif default is None:
                 self.default = None

@@ -124,7 +124,9 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.run()
         except RunFailed, exc:
-            self.assertEqual(str(exc), "TestModel.NPSS: Exception during reload: parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'no_such_model'")
+            self.assertEqual(str(exc).startswith(
+                "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
+                True)
         else:
             self.fail('Expected RunFailed')
 
@@ -173,7 +175,9 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.run()
         except RunFailed, exc:
-            self.assertEqual(str(exc), "TestModel.NPSS: Exception during reload: parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'no_such_model'")
+            self.assertEqual(str(exc).startswith(
+                "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
+                True)
         else:
             self.fail('Expected RunFailed')
 

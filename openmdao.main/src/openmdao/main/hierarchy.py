@@ -4,6 +4,7 @@ __all__ = ["HierarchyMember"]
 __version__ = "0.1"
 
 
+import traceback
 import weakref
 from openmdao.main.log import Logger, LOG_DEBUG
 
@@ -39,7 +40,7 @@ class HierarchyMember(object):
         raise NotImplementedError('set') 
     
     def get_pathname(self):
-        """ Return full path name to this container. """
+        """Return full path name to this container."""
         if self.parent is None:
             if self.name is None:
                 return ''
@@ -71,7 +72,7 @@ class HierarchyMember(object):
     parent = property(_get_parent, _set_parent)
     
     def __getstate__(self):
-        """ Return dict representing this container's state. """
+        """Return dict representing this container's state."""
         state = self.__dict__.copy()
         if state['_parent'] is not None:
             # remove weakref to parent because it won't pickle
@@ -79,18 +80,18 @@ class HierarchyMember(object):
         return state
     
     def __setstate__(self, state):
-        """ Restore this component's state. """
+        """Restore this component's state."""
         if state['_parent'] is not None:
             state['_parent'] = weakref.ref(state['_parent'])
         self.__dict__ = state
     
     # error reporting stuff
     def _get_log_level(self):
-        """ Return logging message level. """
+        """Return logging message level."""
         return self._logger.level
 
     def _set_log_level(self, level):
-        """ Set logging message level. """
+        """Set logging message level."""
         self._logger.level = level
 
     log_level = property(_get_log_level, _set_log_level,
@@ -102,6 +103,11 @@ class HierarchyMember(object):
 #        self._logger.error(msg)
         raise exception_class(full_msg)
     
+    def exception(self, msg, *args, **kwargs):
+        """Log traceback from within exception handler."""
+        self._logger.critical(msg, *args, **kwargs)
+        self._logger.critical(traceback.format_exc())
+
     def error(self, msg, *args, **kwargs):
         """Record an error message"""
         self._logger.error(msg, *args, **kwargs)

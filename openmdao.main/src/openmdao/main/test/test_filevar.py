@@ -119,7 +119,7 @@ class FileTestCase(unittest.TestCase):
 
     def test_bad_directory(self):
         try:
-            self.source = Source(directory='/no-permission-to-create')
+            Source(directory='/no-permission-to-create')
         except OSError, exc:
             self.assertEqual(str(exc), "Source: Can't create execution directory '/no-permission-to-create': Permission denied")
         else:
@@ -128,7 +128,7 @@ class FileTestCase(unittest.TestCase):
     def test_not_directory(self):
         directory = 'plain_file'
         out = open(directory, 'w')
-        print >>out, 'Hello world!'
+        out.write('Hello world!\n')
         out.close()
 
         try:

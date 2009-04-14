@@ -135,7 +135,9 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.npss.post_load()
         except RuntimeError, exc:
-            self.assertEqual(str(exc), "NPSS: Reload caught exception: parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'xyzzy.mdl'")
+            self.assertEqual(str(exc).startswith(
+                "NPSS: Reload caught exception: Model file 'xyzzy.mdl' not found while reloading in"),
+                True)
         else:
             self.fail('Expected RuntimeError')
 
