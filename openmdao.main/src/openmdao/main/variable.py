@@ -205,26 +205,6 @@ class Variable(HierarchyMember):
         """
         self._constraints.remove(con)
 
-    def is_destination(self):
-        """Return True if this Variable is connected to a source."""
-        return self._source is not None
-    
-    def connect_src(self, path):
-        """Connect this Variable to a source Variable, either via a normal
-        connection or a passthru connection.
-        """
-        if self._source is None:
-            self._source = path
-        else:
-            self.raise_exception('already connected', RuntimeError)
-        
-    def disconnect_src(self):
-        """Disconnect this Variable from a source Variable."""
-        if self._source is None:
-            self.raise_exception('not connected', RuntimeError)
-        else:
-            self._source = None
-            
     def _pre_assign(self, val):
         """This should be overridden to perform necessary validations at
         assignment time but this base version should still be called from within the
