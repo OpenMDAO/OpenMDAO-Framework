@@ -6,7 +6,6 @@ import os
 
 from openmdao.main import Component, ArrayVariable, Bool, Dict, Float, \
                           FileVariable, Int, String, StringList
-from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
 
 import npss
@@ -492,14 +491,14 @@ class NPSScomponent(Component):
                 self.reload()
             except Exception, exc:
                 self.raise_exception('Exception during reload: %s' \
-                                     % str(exc), RunFailed)
+                                     % str(exc), RuntimeError)
         elif self.reload_flag:
             try:
                 reload_req = getattr(self._top, self.reload_flag)
             except Exception, exc:
                 self.raise_exception("Exception getting '%s': %s" \
                                      % (self.reload_flag, str(exc)),
-                                     RunFailed)
+                                     RuntimeError)
             else:
                 if reload_req:
                     self.info('Internal reload request.')
@@ -507,7 +506,7 @@ class NPSScomponent(Component):
                         self.reload()
                     except Exception, exc:
                         self.raise_exception('Exception during reload: %s' \
-                                             % str(exc), RunFailed)
+                                             % str(exc), RuntimeError)
         try:
             if self.run_command:
                 self._top.parseString(self.run_command+';')
@@ -515,7 +514,7 @@ class NPSScomponent(Component):
                 self._top.run()
         except Exception, exc:
             self.raise_exception('Exception during run: %s' % str(exc),
-                                 RunFailed)
+                                 RuntimeError)
 
     def make_public(self, obj_info):
         """

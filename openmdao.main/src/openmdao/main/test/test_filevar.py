@@ -9,7 +9,6 @@ import unittest
 
 from openmdao.main import Assembly, Component, \
                           ArrayVariable, FileVariable, StringList, Bool
-from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT
 
 # pylint: disable-msg=E1101
@@ -144,10 +143,10 @@ class FileTestCase(unittest.TestCase):
         self.model.Source.directory = '/no-such-directory'
         try:
             self.model.run()
-        except RunFailed, exc:
+        except RuntimeError, exc:
             self.assertEqual(str(exc), "FileVar_TestModel.Source: Could not move to execution directory '/no-such-directory': No such file or directory")
         else:
-            self.fail('Expected RunFailed')
+            self.fail('Expected RuntimeError')
 
 
 if __name__ == '__main__':

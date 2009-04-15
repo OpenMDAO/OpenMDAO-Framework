@@ -13,7 +13,6 @@ from openmdao.main.interfaces import IComponent, IAssembly
 from openmdao.main import Container, String
 from openmdao.main.variable import INPUT
 from openmdao.main.constants import SAVE_PICKLE
-from openmdao.main.exceptions import RunFailed
 
 # Execution states.
 STATE_UNKNOWN = -1
@@ -141,7 +140,7 @@ class Component (Container):
         except OSError, exc:
             msg = "Could not move to execution directory '%s': %s" % \
                   (directory, exc.strerror)
-            self.raise_exception(msg, RunFailed)
+            self.raise_exception(msg, RuntimeError)
 
         self.state = STATE_RUNNING
         self._stop = False

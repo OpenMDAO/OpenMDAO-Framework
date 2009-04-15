@@ -358,7 +358,7 @@ class Container(HierarchyMember):
             name = self.name
         if version is None:
             try:
-                version = self.version
+                version = self.__version__
             except AttributeError:
                 version = '0.1'
         py_version = platform.python_version_tuple()

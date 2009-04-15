@@ -9,7 +9,6 @@ import pkg_resources
 import unittest
 
 from openmdao.main import Assembly, Component, Bool, Float, String
-from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent
@@ -123,20 +122,20 @@ class NPSSTestCase(unittest.TestCase):
         self.model.NPSS.model_filename = 'no_such_model'
         try:
             self.model.run()
-        except RunFailed, exc:
+        except RuntimeError, exc:
             self.assertEqual(str(exc).startswith(
                 "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
                 True)
         else:
-            self.fail('Expected RunFailed')
+            self.fail('Expected RuntimeError')
 
         self.model.NPSS.reload_flag = 'no_such_variable'
         try:
             self.model.run()
-        except RunFailed, exc:
+        except RuntimeError, exc:
             self.assertEqual(str(exc), "TestModel.NPSS: Exception getting 'no_such_variable': no_such_variable not found")
         else:
-            self.fail('Expected RunFailed')
+            self.fail('Expected RuntimeError')
 
     def test_external_reload(self):
         logging.debug('')
@@ -174,12 +173,12 @@ class NPSSTestCase(unittest.TestCase):
         self.model.NPSS.model_filename = 'no_such_model'
         try:
             self.model.run()
-        except RunFailed, exc:
+        except RuntimeError, exc:
             self.assertEqual(str(exc).startswith(
                 "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
                 True)
         else:
-            self.fail('Expected RunFailed')
+            self.fail('Expected RuntimeError')
 
     def test_custom_run(self):
         logging.debug('')
