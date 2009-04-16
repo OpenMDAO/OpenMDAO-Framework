@@ -17,7 +17,6 @@ from openmdao.main import Container, Component, String
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.constants import SAVE_PICKLE
 from openmdao.main.exceptions import RunFailed
-from openmdao.main.tarjan import strongly_connected_components
 from openmdao.main.filevar import FileVariable
 from openmdao.main.util import filexfer
 
@@ -43,6 +42,15 @@ class Assembly (Component):
         self._input_changed = True
         self._dir_stack = []
         self._sockets = {}
+        
+        # a graph of Components, with connections between Variables
+        # as directed edges.  MultiDiGraph supports multiple edges
+        # between the same two nodes, so each connection between
+        # two Variables is a separate edge.
+        # Each edge has data of the form (srcvar,destvar) and a
+        # key of the form (srcvarname, destvarname). The key
+        # is used to differentiate between edges that connect the
+        # same two nodes.
         self._dep_graph = nx.MultiDiGraph(name=name)
 
         # List of meta-data dictionaries.
@@ -232,56 +240,100 @@ class Assembly (Component):
         # test compatability
         destvar.validate_var(srcvar)
         
-        #if srccomp is not self and destcomp is not self:
-        self._dep_graph.add_edge(srccompname or '', destcompname or '', data=(srcvar, destvar),
+        # update the graph
+        # NOTE: We can't use the same name, for example '', for passthru sources and destinations
+        # because they'll show up as circular dependencies, so instead we're using #dest and #src
+        # to indicate passthru variables at the boundary of the current scope.
+        self._dep_graph.add_edge(srccompname or '#src', destcompname or '#dest', data=(srcvar, destvar),
                                  key=(srcvarname, destvarname))
         strongly_connected = nx.algorithms.traversal.strongly_connected_components(self._dep_graph)
         for strcon in strongly_connected:
             if len(strcon) > 1:
-                self._dep_graph.remove_edge(srccompname or '', destcompname or '', 
+                self._dep_graph.remove_edge(srccompname or '#src', destcompname or '#dest', 
                                             key=(srcvarname, destvarname))
                 self.raise_exception('Circular dependency (%s) would be created by connecting %s to %s' %
                                      (str(strcon), srcpath, destpath), RuntimeError)       
-            
+
     def disconnect(self, varpath):
-        """Remove all connections from a given variable."""
-        compname, comp, varname, var = self.split_varpath(varpath)
-        compname,varname = varpath.split('.')
+        """Remove all connections to/from a given variable in the current scope. 
+        This does not remove connections to boundary Variables from the parent scope.
+        """
+        try:
+            srcname, varname = varpath.split('.')
+            destname = srcname
+        except ValueError:
+            if '.' in varpath: # this means we have at least 2 dots
+                self.raise_exception('%s must be a simple name, not a dotted path' %
+                                     varpath.split('.',1)[1], NameError)
+            srcname = '#src'
+            destname = '#dest'
+            
         to_remove = []
         graph = self._dep_graph
-        # loop over output and input edges of the variable's parent component
-        for srccompname,destcompname,key in chain(graph.edges(compname, keys=True),
-                                                  graph.in_edges_iter(compname, keys=True)):
-            srcvarname,destvarname = key
-            if varname == srcvarname or varname == destvarname:
+        # loop over outgoing edges of the variable's parent component
+        for srccompname,destcompname,key in graph.edges(srcname, keys=True):
+            if varname == key[0]: # it's a source
                 to_remove.append((srccompname,destcompname,key))
-                
-        for rem in to_remove:
-            graph.remove_edge(rem[0],rem[1],key=rem[2])
-            
+        # loop over incoming edges
+        for srccompname,destcompname,key in graph.in_edges_iter(destname, keys=True):
+            if varname == key[1]: # it's a destination
+                to_remove.append((srccompname,destcompname,key))
+                           
         if len(to_remove) == 0:
             self.raise_exception('%s is not connected' % varpath, RuntimeError)
+        else:
+            graph.remove_edges_from(to_remove)
 
     def is_destination(self, varpath):
         """Return True if the Variable specified by varname is a destination. This means
         that either it's an input connected to an output, or it's the destination part of
         a passtru connection.
         """
-        compname, comp, varname, var = self.split_varpath(varpath)
-        if compname is None:
-            compname = ''
+        try:
+            compname, varname = varpath.split('.')
+        except ValueError:
+            if '.' in varpath: # this means we have at least 2 dots
+                self.raise_exception('%s must be a simple name, not a dotted path' %
+                                     varpath.split('.',1)[1], NameError)
+
+            for src,dest,key in self._dep_graph.in_edges_iter('#dest', keys=True):
+                if varpath == key[1]:
+                    return True
+            
+            if self.parent is None:
+                return False
+            else:
+                return self.parent.is_destination('.'.join([self.name, varpath]))
+            
+        
+        # look at incoming connections to the var's parent Component, and if
+        # var is on the destination side of any of them, it's a destination
         for src,dest,key in self._dep_graph.in_edges_iter(compname, keys=True):
             if varname == key[1]:
                 return True
-        if compname == '' and self.parent is not None: # need to check if we're connected from higher scope
-            return self.parent.is_destination('.'.join([self.name,varname]))
         return False
-    
+
+    def invalidate_comps(self, varpaths):
+        """For a given collection of Variables specified by local 
+        paths (parentname.varname), mark all Variables that depend 
+        on any of them as needing an update.
+        """
+        for varpath in varpaths:
+            var = self.getvar(varpath)
+            for src,dest,key,data in self._dep_graph.edges(compname, 
+                                                           data=True, keys=True):
+                if var is data[0]:  # it's a source
+                    if not data[1].invalid:
+                        data[1].invalid = True
+            
+        
     def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         conns = []
         for srccomp,destcomp,key in self._dep_graph.edges(keys=True):
+            if srccomp.startswith('#'): srccomp = ''
+            if destcomp.startswith('#'): destcomp = ''
             if show_passthru is True or (srccomp != '' and destcomp != ''):
                 conns.append(('.'.join([srccomp,key[0]]), '.'.join([destcomp,key[1]])))
         return conns
@@ -294,7 +346,11 @@ class Assembly (Component):
         for src,dest,data in self._dep_graph.in_edges_iter(incomp.name,
                                                            data=True):
             srcvar,var = data
-            if src == '':
+            # Variables at the scope boundary have their component specified as
+            # either #dest or #src depending on whether they're an input or an output.
+            # If we used the same name for their component, for example '', then
+            # the graph would think it had a circular dependency.
+            if src.startswith('#'):
                 srccomp = self
             else:
                 srccomp = self.get(src)
@@ -305,8 +361,8 @@ class Assembly (Component):
                     var.metadata = srcvar.metadata.copy()
                 except Exception, exc:
                     msg = "cannot transfer file from '%s' to '%s': %s" % \
-                          (var.source,
-                           '.'.join((incomp.name, var.name)), str(exc))
+                          ('.'.join((src, srcvar.name)),
+                           '.'.join((dest, var.name)), str(exc))
                     self.raise_exception(msg, type(exc))
                 finally:
                     incomp.push_dir(incomp.get_directory())
@@ -319,38 +375,13 @@ class Assembly (Component):
                            srcvar, str(exc))
                     self.raise_exception(msg, type(exc))
             
-        #vars = [x[1] for x in incomp.items(recurse=False) if
-                               #IVariable.providedBy(x[1]) and x[1].is_destination()]
-        
-        #for var in vars:
-            #srccompname, srccomp, srcvarname, srcvar = self.split_varpath(var.source)
-            #if isinstance(var, FileVariable):
-                #incomp.pop_dir()
-                #try:
-                    #self.xfer_file(srccomp, srcvar, incomp, var)
-                    #var.metadata = srcvar.metadata.copy()
-                #except Exception, exc:
-                    #msg = "cannot transfer file from '%s' to '%s': %s" % \
-                          #(var.source,
-                           #'.'.join((incomp.name, var.name)), str(exc))
-                    #self.raise_exception(msg, type(exc))
-                #finally:
-                    #incomp.push_dir(incomp.get_directory())
-            #else:
-                #srcvar = self.getvar(var.source)
-                #try:
-                    #var.setvar(None, srcvar)
-                #except Exception, exc:
-                    #msg = "cannot set '%s' from '%s': %s" % \
-                          #('.'.join((incomp.name, var.name)),
-                           #srcvar, str(exc))
-                    #self.raise_exception(msg, type(exc))
 
     def check_config (self):
         """Verify that the configuration of this component is correct. This function is
         called once prior to the first execution of this Assembly, and prior to execution
         if any children are added or removed, or if self._need_check_config is True.
         """
+        super(Assembly, self).check_config()
         for name,sock in self._sockets.items():
             iface, current, required = sock
             if current is None and required is True:

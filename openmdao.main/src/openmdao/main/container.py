@@ -72,8 +72,8 @@ class Container(HierarchyMember):
         the pub dict will be included. If recurse is True, child Containers
         will also be iterated over.
         """
-        for entry in map(lambda x: x[0], self.items(pub,recurse)):
-            yield entry
+        for entry in self.items(pub,recurse):
+            yield entry[0]
         
     def values(self, pub=True, recurse=False):
         """Return an iterator that will return the
@@ -81,8 +81,8 @@ class Container(HierarchyMember):
         the pub dict will be included. If recurse is True, child Containers
         will also be iterated over.
         """
-        for entry in map(lambda x: x[1], self.items(pub,recurse)):
-            yield entry
+        for entry in self.items(pub,recurse):
+            yield entry[1]
         
                     
     def add_child(self, obj, private=False):
@@ -390,14 +390,15 @@ class Container(HierarchyMember):
         """
         for name,obj in self._pub.items():
             yield (name, obj)
-            cont = None
-            if hasattr(obj,'value') and isinstance(obj.value,Container):
-                cont = obj.value
-            elif isinstance(obj, Container):
-                cont = obj
-            if cont and recurse:
-                for chname, child in cont._get_pub_items(recurse):
-                    yield ('.'.join([name,chname]), child)
+            if recurse:
+                cont = None
+                if hasattr(obj,'value') and isinstance(obj.value,Container):
+                    cont = obj.value
+                elif isinstance(obj, Container):
+                    cont = obj
+                if cont:
+                    for chname, child in cont._get_pub_items(recurse):
+                        yield ('.'.join([name,chname]), child)
                    
     def _get_all_items(self, visited, recurse=False):
         """Generate a list of tuples of the form (rel_pathname, obj) for each
@@ -408,7 +409,7 @@ class Container(HierarchyMember):
             if not name.startswith('_') and id(obj) not in visited:
                 visited.add(id(obj))
                 yield (name, obj)
-                if isinstance(obj, Container) and recurse:
+                if recurse and isinstance(obj, Container):
                     for chname, child in obj._get_all_items(visited, recurse):
                         yield ('.'.join([name,chname]), child)
                    

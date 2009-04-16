@@ -36,10 +36,11 @@ class Component (Container):
         
         self.state = STATE_IDLE
         self._stop = False
-        self._input_changed = True
+        self._updated = False  # if False, component needs to run in order
+                               # for its output Variables to be correct
         self._need_check_config = True
         self._dir_stack = []
-
+        
         # List of meta-data dictionaries.
         self.external_files = []
 
@@ -67,22 +68,34 @@ class Component (Container):
         """
         pass         
     
-    def pre_execute (self):
-        """update input variables and anything else needed prior 
-        to execution."""
+    def _pre_execute (self):
+        """Update input variables and anything else needed prior 
+        to execution. """
+        if self.parent is not None and IComponent.providedBy(self.parent):
+            self.parent.update_inputs(self)
+            
         if self._need_check_config:
             self.check_config()
+            self._need_check_config = False
     
+    def _execute_if_needed(self):
+        """Only call execute() if any of our outputs are invalid."""
+        for obj in self.values():
+            if IVariable.providedBy(obj) and obj.iostatus == OUTPUT and obj.valid == False:
+                self.execute()
+                return
+            
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
-        have already been set. 
-        This should be overridden in derived classes.
+        have already been set. This should be overridden in derived classes.
         """
         pass
     
-    def post_execute (self):
-        """Update output variables and anything else needed after execution"""
-        pass
+    def _post_execute (self):
+        """Update output variables and anything else needed after execution."""
+        for obj in self.values():
+            if IVariable.providedBy(obj):
+                obj.valid == True
     
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
@@ -99,11 +112,9 @@ class Component (Container):
         self.state = STATE_RUNNING
         self._stop = False
         try:
-            if self.parent is not None and IComponent.providedBy(self.parent):
-                self.parent.update_inputs(self)
-            self.pre_execute()
+            self._pre_execute()
             self.execute()
-            self.post_execute()
+            self._post_execute()
         finally:
             self.state = STATE_IDLE
             self.pop_dir()

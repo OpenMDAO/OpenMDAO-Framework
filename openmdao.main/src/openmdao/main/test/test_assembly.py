@@ -52,15 +52,21 @@ class AssemblyTestCase(unittest.TestCase):
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.asm = Model('top', None)
-        dc = DummyComp('comp1')
-        self.asm.add_child(dc)
-        self.asm.workflow.add_node(dc)
-        dc2 = DummyComp('comp2')
-        self.asm.add_child(dc2)
-        self.asm.workflow.add_node(dc2)
-        dc3 = DummyComp('comp3')  
-        self.asm.add_child(dc3)
-        self.asm.workflow.add_node(dc3)
+        dc1 = DummyComp('comp1')
+        self.asm.add_child(dc1)
+        self.asm.workflow.add_node(dc1)
+        
+        nested = Model('nested')
+        self.asm.add_child(nested)
+        self.asm.workflow.add_node(nested)
+        nested_dc = DummyComp('comp1')
+        nested.add_child(nested_dc)
+        nested.workflow.add_node(nested_dc)
+        
+        children = [DummyComp(x) for x in ['comp2','comp3']]
+        for child in children:
+            self.asm.add_child(child)
+            self.asm.workflow.add_node(child)
         
     
     def test_data_passing(self):
@@ -113,6 +119,16 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(self.asm.get('comp3.rout'), 75.4*1.5)
         self.assertEqual(self.asm.get('rout'), 75.4*1.5)
         
+    def test_passthru_nested(self):
+        self.asm.set('comp1.r', 8.)
+        self.asm.nested.create_passthru('comp1.r')
+        self.asm.nested.create_passthru('comp1.rout', 'foobar')
+        self.asm.connect('comp1.rout', 'nested.r')
+        self.asm.connect('nested.foobar','comp2.r')
+        self.asm.run()
+        self.assertEqual(self.asm.get('comp1.rout'), 12.)
+        self.assertEqual(self.asm.get('comp2.rout'), 27.)
+                
     def test_create_passthru_alias(self):
         self.asm.set('comp1.r', 75.4)
         self.asm.create_passthru('comp1.r','foobar')
@@ -142,6 +158,9 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.create_passthru('comp1.dummy_out','dummy_out_passthru')
         self.asm.run()
         self.assertEqual(self.asm.get('dummy_out_passthru.rval_out'), 75.4*1.5)
+        
+    def test_discon_reconnect_passthru(self):
+        self.fail('unfinished test')
         
     def test_invalid_connect(self):
         try:

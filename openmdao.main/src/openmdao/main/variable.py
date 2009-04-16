@@ -64,8 +64,8 @@ class Variable(HierarchyMember):
         self.observers = None
         self.permission = None
         self.iostatus = iostatus
-        self._source = None
         self._constraints = []
+        self.valid = False
         
         if IContainer.providedBy(parent):
             parent.make_public(self)
@@ -137,11 +137,6 @@ class Variable(HierarchyMember):
             self.raise_exception('object %s does not exist' % partpath, NameError)
         setattr(obj, endpath, value)
             
-    @property
-    def source(self):
-        """Return the source Variable connected to this Variable, or None"""
-        return self._source
-        
     def _get_ref_value(self):
         return getattr(self._refparent, self.ref_name)        
         
@@ -162,7 +157,7 @@ class Variable(HierarchyMember):
             self.raise_exception('invalid default value: '+ 
                         str(err).replace(self.get_pathname()+':','',1),
                         type(err))
-        
+
     def contains(self, path):
         """Return True if the object identified by path is an attribute of
         this object.
@@ -178,6 +173,7 @@ class Variable(HierarchyMember):
             raise RuntimeError(self.get_pathname()+
                                ' is an OUTPUT Variable and cannot be set.')
         setattr(self._refparent, self.ref_name, self._pre_assign(val))
+        self.parent._updated = False
         if self.observers is not None:
             self._notify_observers()
 
