@@ -101,7 +101,7 @@ class Variable(HierarchyMember):
             self.val_types = (val_types,)
         elif val_types is None and default is not None:
             if default is UNDEFINED:
-                self.val_types = (type(self._get_ref_value()),)
+                self.val_types = (type(self._get_value()),)
             elif default is not None:
                 self.val_types = (type(default),)
         else:
@@ -113,9 +113,8 @@ class Variable(HierarchyMember):
         object called scope. Return the object or None if the object is not 
         found.
         """
-        parts = path.split('.')
         obj = scope
-        for part in parts:
+        for part in path.split('.'):
             try:
                 obj = getattr(obj, part)
             except AttributeError:
@@ -137,16 +136,13 @@ class Variable(HierarchyMember):
             self.raise_exception('object %s does not exist' % partpath, NameError)
         setattr(obj, endpath, value)
             
-    def _get_ref_value(self):
-        return getattr(self._refparent, self.ref_name)        
-        
     def set_default(self, default):
         if default is None:
             self.default = None
             return
         try:
             if default is UNDEFINED:
-                tmp = self._get_ref_value()
+                tmp = self._get_value()
             else:
                 tmp = default
             # if val_types isn't set yet, set it based on the default value
@@ -173,11 +169,13 @@ class Variable(HierarchyMember):
             raise RuntimeError(self.get_pathname()+
                                ' is an OUTPUT Variable and cannot be set.')
         setattr(self._refparent, self.ref_name, self._pre_assign(val))
-        self.parent._updated = False
+        if self.valid is True:
+            self.valid = False
+            self.parent.invalidate_deps(self)
+            
         if self.observers is not None:
             self._notify_observers()
-
-
+        
     def _get_value(self):
         """"Called when getting the 'value' property."""
         return getattr(self._refparent, self.ref_name)

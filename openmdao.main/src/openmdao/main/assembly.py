@@ -302,7 +302,8 @@ class Assembly (Component):
             
             if self.parent is None:
                 return False
-            else:
+            else: # check to see if this input var on our boundary is a destination in 
+                  # the parent scope
                 return self.parent.is_destination('.'.join([self.name, varpath]))
             
         
@@ -313,20 +314,12 @@ class Assembly (Component):
                 return True
         return False
 
-    def invalidate_comps(self, varpaths):
-        """For a given collection of Variables specified by local 
-        paths (parentname.varname), mark all Variables that depend 
-        on any of them as needing an update.
+    def execute (self):
+        """Perform calculations or other actions, assuming that inputs 
+        have already been set. This should be overridden in derived classes.
         """
-        for varpath in varpaths:
-            var = self.getvar(varpath)
-            for src,dest,key,data in self._dep_graph.edges(compname, 
-                                                           data=True, keys=True):
-                if var is data[0]:  # it's a source
-                    if not data[1].invalid:
-                        data[1].invalid = True
-            
-        
+        pass
+    
     def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
@@ -388,18 +381,64 @@ class Assembly (Component):
                 self.raise_exception("required plugin '%s' is not present" % name,
                                      ValueError)
 
-    def get_workflow(self, name=None):
-        """Return a Workflow object that will execute whatever Components are necessary
-        to make the specified name valid. The specified name can be an output Variable
-        or a Component. If name is None, then all child Components will be executed in
-        data flow order.
+    def get_invalidated_outputs(self, invars):
+        return invalidate_deps(invars)
+                
+    def invalidate_deps(self, vars):
+        """Mark all Variables that depend on vars as invalid. vars must be INPUT Variables
+        and they must all have the same parent. Return a list of invalidated OUTPUT Variables
+        based on the set of invalidated INPUTs.
         """
-        workflow = self._workflows.get(name)
-        if workflow is not None:
-            return workflow
-        else: # calculate a new Workflow for name
-            return DataFlow(self, name)
-                    
+        # TODO: find a cleaner way to do this
+        
+        assert(len(vars) > 0)
+        assert(vars[0].iostatus == INPUT)
+        
+        if vars[0].parent == self:
+            pname = '#src'
+        else:
+            pname = vars[0].parent.name
+        nodes = { pname: vars }      
+        visited_nodes = set(['#dest']) #add '#dest' so we'll skip it
+        
+        my_outs = []
+        while len(nodes) > 0:
+            nodename, vars = nodes.popitem()
+            if nodename == '#src':  # INPUT var on our boundary
+                for src,dest,data in self._dep_graph.edges('#src', data=True):
+                    srcvar,destvar = data
+                    if destvar.valid == True and srcvar in vars: # only look at provided inputs
+                        destvar.valid == False
+                        cname = destvar.parent.name
+                        if cname not in visited_nodes:
+                            if cname not in nodes:
+                                nodes[cname] = []
+                            else:
+                                nodes[cname].append(destvar)
+            else:
+                node = getattr(self, nodename)
+                outs = node.get_invalidated_outputs(vars)
+                for src,dest,data in self._dep_graph.edges(nodename, data=True):
+                    srcvar,destvar = data
+                    if srcvar.iostatus == INPUT or srcvar in outs: # source is newly marked
+                        if destvar.valid == True:
+                            destvar.valid = False  # invalidate the destination
+                            comp = destvar.parent
+                            if comp == self:   # destvar is an OUTPUT on our boundary
+                                my_outs.append(destvar)
+                                cname = '#dest'
+                            else:
+                                cname = comp.name
+                            if cname not in visited_nodes:
+                                if cname not in nodes:
+                                    nodes[cname] = []
+                                else:
+                                    nodes[cname].append(destvar)
+            visited_nodes.add(nodename)
+            
+        return my_outs
+
+
     @staticmethod
     def xfer_file(src_comp, src_var, dst_comp, dst_var):
         """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """

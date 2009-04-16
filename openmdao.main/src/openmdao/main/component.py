@@ -71,19 +71,23 @@ class Component (Container):
     def _pre_execute (self):
         """Update input variables and anything else needed prior 
         to execution. """
-        if self.parent is not None and IComponent.providedBy(self.parent):
-            self.parent.update_inputs(self)
-            
         if self._need_check_config:
             self.check_config()
             self._need_check_config = False
     
     def _execute_if_needed(self):
         """Only call execute() if any of our outputs are invalid."""
-        for obj in self.values():
-            if IVariable.providedBy(obj) and obj.iostatus == OUTPUT and obj.valid == False:
-                self.execute()
-                return
+        if self.parent is None: # if parent is None, we're not part of an Assembly
+                                # so Variable validity doesn't apply. Just execute.
+            self.execute()
+        else:
+            for obj in self.values():
+                if IVariable.providedBy(obj) and obj.valid == False:
+                    if IComponent.providedBy(self.parent):
+                        self.parent.update_inputs(self)
+            
+                    self.execute()
+                    return
             
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
@@ -93,9 +97,8 @@ class Component (Container):
     
     def _post_execute (self):
         """Update output variables and anything else needed after execution."""
-        for obj in self.values():
-            if IVariable.providedBy(obj):
-                obj.valid == True
+        for obj in [x for x in self.values() if IVariable.providedBy(x)]:
+            obj.valid == True
     
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
@@ -113,7 +116,7 @@ class Component (Container):
         self._stop = False
         try:
             self._pre_execute()
-            self.execute()
+            self._execute_if_needed()
             self._post_execute()
         finally:
             self.state = STATE_IDLE
@@ -167,6 +170,27 @@ class Component (Container):
         """ Stop this component. """
         self._stop = True
 
+    def get_invalidated_outputs(self, invars):
+        """Return a list of outputs we've invalidates based on the list of input 
+        Variables.  An Assembly may invalidate only a subset of its outputs, but
+        we're a simple Component, so we'll invalidate all valid ones, regardless
+        of which invars are changed.  We don't return outputs that were already 
+        invalid before the call.
+        """
+        outs = []
+        for out in [x for x in self.values() 
+                         if IVariable.providedBy(x) and 
+                            x.iostatus==OUTPUT and x.valid is True]:
+            out.valid = False
+            outs.append(out)
+        return outs
+            
+    
+    def invalidate_deps(self, var):
+        """If we have a parent Assembly, pass this call up 
+        to it since we don't have a dependency graph."""
+        if self.parent:
+            self.parent.ivalidate_deps(var)
     
 # TODO: uncomment require_gradients and require_hessians after they're better thought out
     
