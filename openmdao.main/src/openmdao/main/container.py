@@ -17,13 +17,6 @@ except ImportError:
     from yaml import Loader, Dumper
     _libyaml = False
 
-import os
-import platform
-import shutil
-import subprocess
-import tempfile
-import zipfile
-
 import weakref
 # the following is a monkey-patch to correct a problem with
 # copying/deepcopying weakrefs There is an issue in the python issue tracker
@@ -37,7 +30,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IComponent, IContainer, IVariable
+from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main import HierarchyMember
 from openmdao.main.variable import INPUT
 from openmdao.main.vartypemap import find_var_class
@@ -348,104 +341,6 @@ class Container(HierarchyMember):
             self.raise_exception('cannot save object using format '+str(format),
                                  RuntimeError)
     
-    def save_to_egg(self, name=None, version=None,
-                    format=SAVE_CPICKLE, proto=-1):
-        """ Save state and external files to an egg, returns egg name. """
-        # TODO: handle custom class definitions.
-        # TODO: scan for FileVariables.
-        # TODO: record required packages.
-        if name is None:
-            name = self.name
-        if version is None:
-            try:
-                version = self.__version__
-            except AttributeError:
-                version = '0.1'
-        py_version = platform.python_version_tuple()
-        py_version = '%s.%s' % (py_version[0], py_version[1])
-        egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
-        orig_dir = os.getcwd()
-        self.debug('Saving to %s in %s...', egg_name, orig_dir)
-
-        # Get external files related to components.
-        files = set()
-        for component in self.get_objs(IComponent.providedBy, True):
-            directory = component.get_directory()
-            for i, metadata in enumerate(component.external_files):
-                path = metadata['path']
-                if not os.path.isabs(path):
-                    path = os.path.join(directory, path)
-                path = os.path.normpath(path)
-                if path.startswith(orig_dir):
-                    metadata['path'] = path[len(orig_dir)+1:]
-                    component.external_files[i] = metadata
-                    files.add(metadata['path'])
-        files = sorted(files)
-
-        # Move to scratch area.
-        tmpdir = tempfile.mkdtemp()
-        os.chdir(tmpdir)
-
-        # Link original directory to object name.
-        os.symlink(orig_dir, name)
-
-        # Save state of object hierarchy.
-        if format is SAVE_CPICKLE or format is SAVE_PICKLE:
-            state_name = name+'.pickle'
-        elif format is SAVE_LIBYAML or format is SAVE_YAML:
-            state_name = name+'.yaml'
-        else:
-            self.raise_exception("Unknown format '%s'." % str(format),
-                                 RuntimeError)
-        self.save(os.path.join(name, state_name), format, proto)
-
-        # Save everything to an egg.
-        package_files = [state_name]
-        package_files.extend(files)
-
-        if os.path.exists(os.path.join(name, '__init.py')):
-            remove_init = False
-        else:
-            out = open(os.path.join(name, '__init__.py'), 'w')
-            out.close()
-            remove_init = True
-
-        out = open('setup.py', 'w')
-
-        out.write('import setuptools\n')
-        out.write('\n')
-
-        out.write('package_files = [\n')
-        for filename in package_files:
-            out.write("    '%s',\n" % filename)
-        out.write('    ]\n')
-        out.write('\n')
-
-        out.write('setuptools.setup(\n')
-        out.write("    name='%s',\n" % name)
-        out.write("    description='%s',\n" % self.__doc__.strip())
-        out.write("    version='%s',\n" % version)
-        out.write("    packages=['%s'],\n" % name)
-        out.write("    package_data={'%s' : package_files})\n" % name)
-        out.write('\n')
-
-        out.close()
-
-        stdout = open('setup.py.out', 'w')
-        subprocess.check_call(['python', 'setup.py', 'bdist_egg',
-                               '-d', orig_dir],
-                              stdout=stdout, stderr=subprocess.STDOUT)
-        stdout.close()
-
-        # Cleanup.
-        os.remove(os.path.join(name, state_name))
-        if remove_init:
-            os.remove(os.path.join(name, '__init__.py'))
-        os.chdir(orig_dir)
-        shutil.rmtree(tmpdir)
-
-        return egg_name
-
     @staticmethod
     def load (instream, format=SAVE_CPICKLE):
         """Load an object of this type from the input stream. Pure python 
@@ -471,46 +366,6 @@ class Container(HierarchyMember):
             return yaml.load(instream, Loader=Loader)
         else:
             raise RuntimeError('cannot load object using format '+str(format))
-
-    @staticmethod
-    def load_from_egg(filename):
-        """ Load state and external files from an egg, returns top object. """
-        # TODO: handle custom class definitions.
-        # TODO: handle required packages.
-        logger.debug('Loading from %s in %s...', filename, os.getcwd())
-        archive = zipfile.ZipFile(filename, 'r')
-        name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
-        logger.debug("    name '%s'", name)
-        for info in archive.infolist():
-            if not info.filename.startswith(name):
-                continue  # EGG-INFO
-            if info.filename.endswith('.pyc') or \
-               info.filename.endswith('.pyo'):
-                continue  # Don't assume compiled OK for this platform.
-            logger.debug("    extracting '%s'...", info.filename)
-            dirname = os.path.dirname(info.filename)
-            dirname = dirname[len(name)+1:]
-            if dirname and not os.path.exists(dirname):
-                os.makedirs(dirname)
-            path = info.filename[len(name)+1:]
-            out = open(path, 'w')
-            out.write(archive.read(info.filename))
-            out.close()
-
-        if os.path.exists(name+'.pickle'):
-            top = Container.load(name+'.pickle', SAVE_CPICKLE)
-        elif os.path.exists(name+'.yaml'):
-            top = Container.load(name+'.yaml', SAVE_LIBYAML)
-        else:
-            raise RuntimeError('No top object pickle or yaml save file.')
-
-        for component in top.get_objs(IComponent.providedBy, True):
-            directory = component.get_directory()
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-
-        top.post_load()
-        return top
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """

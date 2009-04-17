@@ -30,7 +30,6 @@ class NPSScomponent(Component):
 
     .. parsed-literal::
 
-        TODO: Save model files as part of component state/config.
         TODO: Support index argument to get() and set().
         TODO: Detect & flag execution errors.
         TODO: Save model state as well as component state.

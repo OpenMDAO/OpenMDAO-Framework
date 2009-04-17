@@ -1,8 +1,9 @@
 """
-Test of FileVariables.
+Test saving and loading of simulations as eggs.
 """
 
 import cPickle
+import logging
 import os
 import shutil
 import unittest
@@ -14,18 +15,35 @@ from openmdao.main.variable import INPUT, OUTPUT
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
 
+EXTERNAL_FILENAME = 'xyzzy'
+
+source_init = False
+sink_init = False
+
 
 class Source(Component):
     """ Produces files. """
 
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
+
+        global source_init
+        source_init = True
+
         Bool('write_files', self, INPUT, default=True)
         StringList('text_data', self, INPUT, default=[])
         ArrayVariable('binary_data', self, INPUT, float, default=[])
         FileVariable('text_file', self, OUTPUT, default='source.txt')
         FileVariable('binary_file', self, OUTPUT, default='source.bin',
                      metadata={'binary':True})
+
+        # Example of external file that isn't a variable.
+        self.push_dir(self.get_directory())
+        out = open(EXTERNAL_FILENAME, 'w')
+        out.write('Twisty narrow passages.\n')
+        out.close()
+        self.pop_dir()
+        self.external_files.append({'path':EXTERNAL_FILENAME})
 
     def execute(self):
         """ Write test data to files. """
@@ -44,6 +62,10 @@ class Sink(Component):
 
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
+
+        global sink_init
+        sink_init = True
+
         StringList('text_data', self, OUTPUT, default=[])
         ArrayVariable('binary_data', self, OUTPUT, float, default=[])
         FileVariable('text_file', self, INPUT, default='sink.txt')
@@ -63,7 +85,7 @@ class Sink(Component):
 class Model(Assembly):
     """ Transfer files from producer to consumer. """
 
-    def __init__(self, name='FileVar_TestModel', *args, **kwargs):
+    def __init__(self, name='Egg_TestModel', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
 
         self.workflow.add_node(Source(parent=self, directory='Source'))
@@ -76,20 +98,29 @@ class Model(Assembly):
         self.Source.binary_data = [3.14159, 2.781828, 42]
 
 
-class FileTestCase(unittest.TestCase):
+class EggTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        self.model = Model()
+        self.model = Model(directory='Egg')
 
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
-        shutil.rmtree('Source')
-        shutil.rmtree('Sink')
         self.model = None
+        os.remove(self.egg_name)
+        shutil.rmtree('Egg')
+        shutil.rmtree('EggTest')
 
-    def test_connectivity(self):
+    def test_save_load(self):
+        logging.debug('')
+        logging.debug('test_save_load')
+
+        global source_init, sink_init
+
+        # Verify initial state.
+        self.assertEqual(source_init, True)
+        self.assertEqual(sink_init, True)
         self.assertNotEqual(self.model.Sink.text_data,
                             self.model.Source.text_data)
         self.assertNotEqual(self.model.Sink.binary_data,
@@ -97,8 +128,15 @@ class FileTestCase(unittest.TestCase):
         self.assertNotEqual(
             self.model.Sink.getvar('binary_file').metadata['binary'], True)
 
-        self.model.run()
+        external = os.path.join(self.model.get_directory(),
+                                'Source', EXTERNAL_FILENAME)
+        self.assertEqual(os.path.exists(external), True)
 
+        # Save to egg.
+        self.egg_name = self.model.save_to_egg()
+
+        # Run and verify correct operation.
+        self.model.run()
         self.assertEqual(self.model.Sink.text_data,
                          self.model.Source.text_data)
         self.assertEqual(self.model.Sink.binary_data,
@@ -106,50 +144,46 @@ class FileTestCase(unittest.TestCase):
         self.assertEqual(
             self.model.Sink.getvar('binary_file').metadata['binary'], True)
 
-    def test_src_failure(self):
-        self.model.Source.write_files = False
+        # Restore in test directory.
+        orig_dir = os.getcwd()
+        os.mkdir('EggTest')
+        os.chdir('EggTest')
         try:
+            # Clear flags to detect if loading calls __init__.
+            source_init = False
+            sink_init = False
+
+            # Load from saved initial state in egg.
+            self.model.pre_delete()
+            self.model = Component.load_from_egg(os.path.join('..',
+                                                              self.egg_name))
+            self.model.post_load()
+
+            # Verify initial state.
+            self.assertEqual(source_init, False)
+            self.assertEqual(sink_init, False)
+            self.assertNotEqual(self.model.Sink.text_data,
+                                self.model.Source.text_data)
+            self.assertNotEqual(self.model.Sink.binary_data,
+                                self.model.Source.binary_data)
+            self.assertNotEqual(
+                self.model.Sink.getvar('binary_file').metadata['binary'], True)
+
+            external = os.path.join(self.model.get_directory(),
+                                    'Source', EXTERNAL_FILENAME)
+            self.assertEqual(os.path.exists(external), True)
+
+            # Run and verify correct operation.
             self.model.run()
-        except IOError, exc:
-            if str(exc).find('source.txt') < 0:
-                self.fail("Wrong message '%s'" % str(exc))
-        else:
-            self.fail('IOError expected')
+            self.assertEqual(self.model.Sink.text_data,
+                             self.model.Source.text_data)
+            self.assertEqual(self.model.Sink.binary_data,
+                             self.model.Source.binary_data)
+            self.assertEqual(
+                self.model.Sink.getvar('binary_file').metadata['binary'], True)
 
-    def test_bad_directory(self):
-        try:
-            Source(directory='/no-permission-to-create')
-        except OSError, exc:
-            self.assertEqual(str(exc), "Source: Can't create execution directory '/no-permission-to-create': Permission denied")
-        else:
-            self.fail('Expected OSError')
-
-    def test_not_directory(self):
-        directory = 'plain_file'
-        out = open(directory, 'w')
-        out.write('Hello world!\n')
-        out.close()
-
-        try:
-            self.source = Source(directory=directory)
-        except ValueError, exc:
-            path = os.path.join(os.getcwd(), directory)
-            self.assertEqual(str(exc),
-                "Source: Execution directory path '%s' is not a directory." \
-                % path)
-        else:
-            self.fail('Expected ValueError')
         finally:
-            os.remove(directory)
-
-    def test_bad_new_directory(self):
-        self.model.Source.directory = '/no-such-directory'
-        try:
-            self.model.run()
-        except RuntimeError, exc:
-            self.assertEqual(str(exc), "FileVar_TestModel.Source: Could not move to execution directory '/no-such-directory': No such file or directory")
-        else:
-            self.fail('Expected RuntimeError')
+            os.chdir(orig_dir)
 
 
 if __name__ == '__main__':

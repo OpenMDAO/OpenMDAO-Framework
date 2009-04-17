@@ -118,8 +118,8 @@ class Assembly(Component):
             del self._connections[incompname]
                     
     def execute(self):
-        """run this Assembly by handing control to the driver"""
-        return self.driver.run()
+        """Run this Assembly by handing control to the driver."""
+        self.driver.run()
 
     def step(self):
         """Execute a single step."""

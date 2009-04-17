@@ -4,15 +4,24 @@
 
 __version__ = "0.1"
 
+import datetime
 import os
 import os.path
+import platform
+import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
 
 from zope.interface import implements
 
 from openmdao.main.interfaces import IComponent, IAssembly
 from openmdao.main import Container, String
+from openmdao.main.log import logger
 from openmdao.main.variable import INPUT
-from openmdao.main.constants import SAVE_PICKLE
+from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE, \
+                                    SAVE_YAML, SAVE_LIBYAML
 
 # Execution states.
 STATE_UNKNOWN = -1
@@ -40,23 +49,33 @@ class Component (Container):
         # List of meta-data dictionaries.
         self.external_files = []
 
+        # If we have no parent, then make directory absolute to
+        # stop get_directory() scan.  Can be removed if we get a 'root' obj.
+        if parent is None:
+            if directory:
+                if not os.path.isabs(directory):
+                    directory = os.path.join(os.getcwd(), directory)
+            else:
+                directory = os.getcwd()
+
         String('directory', self, INPUT, default=directory,
                doc='If non-null, the directory to execute in.')
 
 # pylint: disable-msg=E1101
-        if self.directory:
-            if not os.path.exists(self.directory):
+        dirpath = self.get_directory()
+        if dirpath:
+            if not os.path.exists(dirpath):
 # TODO: Security!
                 try:
-                    os.makedirs(self.directory)
+                    os.makedirs(dirpath)
                 except OSError, exc:
                     self.raise_exception("Can't create execution directory '%s': %s" \
-                                         % (self.directory, exc.strerror),
+                                         % (dirpath, exc.strerror),
                                          OSError)
             else:
-                if not os.path.isdir(self.directory):
+                if not os.path.isdir(dirpath):
                     self.raise_exception("Execution directory path '%s' is not a directory." \
-                                         % self.directory, ValueError)
+                                         % dirpath, ValueError)
 # pylint: enable-msg=E1101
 
     def _get_socket_plugin(self, name):
@@ -161,7 +180,14 @@ class Component (Container):
             if self.parent is not None and IComponent.providedBy(self.parent):
                 parent_dir = self.parent.get_directory()
             else:
-                parent_dir = os.getcwd()
+# TODO: fix this hack by having some form of root object
+#       that holds the absolute path of the server's directory.
+#       (this would also be the root of the visible filesystem for security)
+#       Normally we shouldn't get here due to the directory fix in __init__.
+                if self.state == STATE_RUNNING:
+                    parent_dir = self._dir_stack[-1]
+                else:
+                    parent_dir = os.getcwd()
             path = os.path.join(parent_dir, path)
         return path
 
@@ -190,6 +216,170 @@ class Component (Container):
         overridden, this should also be overridden.
         """
         self.load(instream)
+
+    def save_to_egg(self, name=None, version=None,
+                    format=SAVE_CPICKLE, proto=-1, dst_dir=None):
+        """ Save state and external files to an egg, returns egg name. """
+        # TODO: check for setup.py errors!
+        # TODO: handle custom class definitions.
+        # TODO: scan for FileVariables.
+        # TODO: record required packages, buildout.cfg.
+        orig_dir = os.getcwd()
+
+        if name is None:
+            name = self.name
+        if version is None:
+            try:
+                version = sys.modules[self.__module__].__version__
+            except AttributeError:
+                now = datetime.datetime.now()  # Could consider using utcnow().
+                version = '%d.%d.%d.%d.%d' % \
+                          (now.year, now.month, now.day, now.hour, now.minute)
+        if dst_dir is None:
+            dst_dir = orig_dir
+        if not os.access(dst_dir, os.W_OK):
+            self.raise_exception("Can't save to '%s', no write permission" \
+                                 % dst_dir, IOError)
+
+        py_version = platform.python_version_tuple()
+        py_version = '%s.%s' % (py_version[0], py_version[1])
+        egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
+        self.debug('Saving to %s in %s...', egg_name, orig_dir)
+
+        # Save top object's directory, we'll be clobbering it later.
+        obj_dir = self.get_directory()
+
+        # Get external files related to components.
+        files = set()
+        components = [self]
+        components.extend(self.get_objs(IComponent.providedBy, True))
+        for component in components:
+            directory = component.get_directory()
+            for i, metadata in enumerate(component.external_files):
+                path = metadata['path']
+                if not os.path.isabs(path):
+                    path = os.path.join(directory, path)
+                path = os.path.normpath(path)
+                if path.startswith(obj_dir):
+                    metadata['path'] = path[len(obj_dir)+1:]
+                    component.external_files[i] = metadata
+                    files.add(metadata['path'])
+        files = sorted(files)
+
+        # Move to scratch area.
+        tmp_dir = tempfile.mkdtemp()
+        os.chdir(tmp_dir)
+        try:
+            # Link original directory to object name.
+            os.symlink(obj_dir, name)
+
+            # Save state of object hierarchy.
+            if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+                state_name = name+'.pickle'
+            elif format is SAVE_LIBYAML or format is SAVE_YAML:
+                state_name = name+'.yaml'
+            else:
+                self.raise_exception("Unknown format '%s'." % str(format),
+                                     RuntimeError)
+
+            self.directory = ''  # Must save in relative form.
+            state_path = os.path.join(name, state_name)
+            try:
+                self.save(state_path, format, proto)
+            except Exception, exc:
+                if os.path.exists(state_path):
+                    os.remove(state_path)
+                self.raise_exception("Can't save to '%s': %s" % \
+                                     (state_path, str(exc)), type(exc))
+
+            # Save everything to an egg.
+            package_files = [state_name]
+            package_files.extend(files)
+
+            if not os.path.exists(os.path.join(name, '__init__.py')):
+                remove_init = True
+                out = open(os.path.join(name, '__init__.py'), 'w')
+                out.close()
+            else:
+                remove_init = False
+
+            out = open('setup.py', 'w')
+
+            out.write('import setuptools\n')
+            out.write('\n')
+
+            out.write('package_files = [\n')
+            for filename in package_files:
+                out.write("    '%s',\n" % filename)
+            out.write('    ]\n')
+            out.write('\n')
+
+            out.write('setuptools.setup(\n')
+            out.write("    name='%s',\n" % name)
+            out.write("    description='%s',\n" % self.__doc__.strip())
+            out.write("    version='%s',\n" % version)
+            out.write("    packages=['%s'],\n" % name)
+            out.write("    package_data={'%s' : package_files})\n" % name)
+            out.write('\n')
+
+            out.close()
+
+            stdout = open('setup.py.out', 'w')
+            subprocess.check_call(['python', 'setup.py', 'bdist_egg',
+                                   '-d', dst_dir],
+                                  stdout=stdout, stderr=subprocess.STDOUT)
+            stdout.close()
+
+            os.remove(os.path.join(name, state_name))
+            if remove_init:
+                os.remove(os.path.join(name, '__init__.py'))
+
+        finally:
+            self.directory = obj_dir
+            os.chdir(orig_dir)
+            shutil.rmtree(tmp_dir)
+
+        return egg_name
+
+    @staticmethod
+    def load_from_egg(filename):
+        """ Load state and external files from an egg, returns top object. """
+        # TODO: handle custom class definitions.
+        # TODO: handle required packages.
+        logger.debug('Loading from %s in %s...', filename, os.getcwd())
+        archive = zipfile.ZipFile(filename, 'r')
+        name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
+        logger.debug("    name '%s'", name)
+        for info in archive.infolist():
+            if not info.filename.startswith(name):
+                continue  # EGG-INFO
+            if info.filename.endswith('.pyc') or \
+               info.filename.endswith('.pyo'):
+                continue  # Don't assume compiled OK for this platform.
+            logger.debug("    extracting '%s'...", info.filename)
+            dirname = os.path.dirname(info.filename)
+            dirname = dirname[len(name)+1:]
+            if dirname and not os.path.exists(dirname):
+                os.makedirs(dirname)
+            path = info.filename[len(name)+1:]
+            out = open(path, 'w')
+            out.write(archive.read(info.filename))
+            out.close()
+
+        if os.path.exists(name+'.pickle'):
+            top = Container.load(name+'.pickle', SAVE_CPICKLE)
+        elif os.path.exists(name+'.yaml'):
+            top = Container.load(name+'.yaml', SAVE_LIBYAML)
+        else:
+            raise RuntimeError('No top object pickle or yaml save file.')
+
+        for component in top.get_objs(IComponent.providedBy, True):
+            directory = component.get_directory()
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+
+        top.post_load()
+        return top
 
     def step (self):
         """For Components that contain Workflows (e.g., Assembly), this will run

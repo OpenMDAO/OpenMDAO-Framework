@@ -21,6 +21,8 @@ from openmdao.main.variable import INPUT, OUTPUT
 
 from npsscomponent import NPSScomponent
 
+__version__ = '0.1'
+
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
 
@@ -512,7 +514,6 @@ def print_info(root, level=0):
 
 def test_save_load():
     """ Save model and then reload & run. """
-    import os
     import shutil
 
     model = Model()
@@ -523,12 +524,15 @@ def test_save_load():
         shutil.rmtree('test_dir')
     os.mkdir('test_dir')
     os.chdir('test_dir')
+    try:
 
-    new_model = Container.load_from_egg(os.path.join('..', egg_name))
-#    print_info(new_model)
+        new_model = Component.load_from_egg(os.path.join('..', egg_name))
+#        print_info(new_model)
 
-    print '\nrunning new model...'
-    new_model.run()
+        print '\nrunning new model...'
+        new_model.run()
+    finally:
+        os.chdir('..')
 
 
 if __name__ == '__main__':
