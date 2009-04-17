@@ -25,7 +25,7 @@ class Model(Assembly):
         # by default, fill the driver and workflow sockets with a simple one-pass
         # driver and a sequential workflow
         self.driver = self.create('openmdao.main.Driver', 'driver')
-        self.workflow = self.create('openmdao.main.Workflow','workflow')
+        self.workflow = self.create('openmdao.main.Dataflow','workflow')
    
     def execute(self):
         """run this model"""
@@ -42,6 +42,6 @@ class Model(Assembly):
 
     def remove_child(self, name):
         """Remove the named object from our workflow."""
-        self.workflow.remove_node(getattr(self, name))           
+        #self.workflow.remove_node(getattr(self, name))           
         super(Model,self).remove_child(name)
 

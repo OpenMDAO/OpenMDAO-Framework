@@ -34,7 +34,7 @@ from zope.interface import implements
 
 from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main import HierarchyMember
-from openmdao.main.variable import INPUT
+from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.vartypemap import make_variable_wrapper
 from openmdao.main.log import logger
 from openmdao.main.factorymanager import create as fmcreate
@@ -83,8 +83,22 @@ class Container(HierarchyMember):
         """
         for entry in self.items(pub,recurse):
             yield entry[1]
-        
-                    
+    
+    def has_invalid_inputs(self):
+        return len(self.invalid_inputs()) > 0
+    
+    def invalid_inputs(self):
+        return [x for x in self._pub.values() if IVariable.providedBy(x) 
+                                                 and x.iostatus==INPUT 
+                                                 and x.valid is False]
+    def has_invalid_outputs(self):
+        return len(self.invalid_outputs()) > 0
+    
+    def invalid_outputs(self):
+        return [x for x in self._pub.values() if IVariable.providedBy(x) 
+                                                 and x.iostatus==OUTPUT 
+                                                 and x.valid is False]
+    
     def add_child(self, obj, private=False):
         """Add an object (must provide IContainer interface) to this
         Container, and make it a member of this Container's public

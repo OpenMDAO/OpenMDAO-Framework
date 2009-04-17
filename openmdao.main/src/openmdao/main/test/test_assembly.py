@@ -5,16 +5,20 @@ import unittest
 from openmdao.main import Model, Assembly, Component, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
 
-class NestedDumb(Component):
+class Multiplier(Component):
     def __init__(self, name):
-        super(NestedDumb, self).__init__(name)
+        super(Multiplier, self).__init__(name)
         self.rval_in = 4.
         self.rval_out = 7.
+        self.mult = 1.5
+        self.run_count = 0
         Float('rval_in', self, INPUT, units='cm')
         Float('rval_out', self, OUTPUT, units='cm')
+        Float('mult', self, INPUT)
 
     def execute(self):
-        self.rval_out = self.rval_in * 1.5
+        self.run_count += 1
+        self.rval_out = self.rval_in * self.mult
 
 class DummyComp(Component):
     def __init__(self, name):
@@ -35,7 +39,7 @@ class DummyComp(Component):
         String('sout', self, OUTPUT)
         
         # make a nested container with input and output ContainerVars
-        self.add_child(NestedDumb('dummy'), private=True)
+        self.add_child(Multiplier('dummy'), private=True)
         self.make_public([('dummy_in','dummy'), 
                           ('dummy_out','dummy',OUTPUT)])
                 
@@ -68,7 +72,32 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.add_child(child)
             self.asm.workflow.add_node(child)
         
-    
+    def test_lazy_eval(self):
+        top = Assembly('top', None)
+        top.add_child(Multiplier('comp1'))
+        top.add_child(Multiplier('comp2'))
+        top.comp1.mult = 2.0
+        top.comp2.mult = 4.0
+        top.connect('comp1.rval_out', 'comp2.rval_in')
+        top.set('comp1.rval_in', 5.0)
+        top.run()
+        self.assertEqual(top.get('comp1.rval_out'), 10.)
+        self.assertEqual(top.get('comp2.rval_in'), 10.)
+        self.assertEqual(top.get('comp2.rval_out'), 40.)
+        self.assertEqual(top.comp1.run_count, 1)
+        self.assertEqual(top.comp2.run_count, 1)
+        
+        # now change an input (mult) on comp2. This should only 
+        # cause comp2 to execute when we run next time.
+        top.set('comp2.mult', 3.0)
+        top.run()
+        self.assertEqual(top.get('comp1.rval_out'), 10.)
+        self.assertEqual(top.get('comp2.rval_in'), 10.)
+        self.assertEqual(top.get('comp2.rval_out'), 30.)
+        self.assertEqual(top.comp1.run_count, 1)
+        self.assertEqual(top.comp2.run_count, 2)
+        
+        
     def test_data_passing(self):
         comp1 = self.asm.get('comp1.value')
         comp2 = self.asm.get('comp2.value')
@@ -159,8 +188,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(self.asm.get('dummy_out_passthru.rval_out'), 75.4*1.5)
         
-    def test_discon_reconnect_passthru(self):
-        self.fail('unfinished test')
+#    def test_discon_reconnect_passthru(self):
+#        self.fail('unfinished test')
         
     def test_invalid_connect(self):
         try:

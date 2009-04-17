@@ -29,6 +29,7 @@ from openmdao.main.assembly import Assembly
 from openmdao.main.model import Model
 from openmdao.main.driver import Driver
 from openmdao.main.workflow import Workflow
+from openmdao.main.dataflow import Dataflow
 
 from openmdao.main.exceptions import ConstraintError
 

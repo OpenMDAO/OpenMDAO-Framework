@@ -171,7 +171,7 @@ class Variable(HierarchyMember):
         setattr(self._refparent, self.ref_name, self._pre_assign(val))
         if self.valid is True:
             self.valid = False
-            self.parent.invalidate_deps(self)
+            self.parent.invalidate_deps([self])
             
         if self.observers is not None:
             self._notify_observers()

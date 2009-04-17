@@ -40,6 +40,13 @@ class Workflow(Component):
                 comp.remove_node(node)
         self.nodes = nodes
 
+    def _execute_if_needed(self):
+        """Override of Component version to force execution even if we have
+        no invalid inputs or outputs.
+        """
+        if __debug__: self._logger.debug('executing %s' % self.get_pathname())
+        self.execute()
+            
     def execute(self):
         """ Run through the nodes in the workflow list. """
         for node in self.nodes:

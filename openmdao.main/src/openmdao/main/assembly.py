@@ -252,7 +252,20 @@ class Assembly (Component):
                 self._dep_graph.remove_edge(srccompname or '#src', destcompname or '#dest', 
                                             key=(srcvarname, destvarname))
                 self.raise_exception('Circular dependency (%s) would be created by connecting %s to %s' %
-                                     (str(strcon), srcpath, destpath), RuntimeError)       
+                                     (str(strcon), srcpath, destpath), RuntimeError)    
+                
+        # invalidate destvar if necessary
+        if destcomp is self and destvar.iostatus == OUTPUT: # passthru output
+            destvar.valid = srcvar.valid
+            if destvar.valid is False and self.parent:
+                # tell the parent that anyone connected to our boundary output is invalid.
+                # Note that it's a dest var in this scope, but a src var in the parent scope.
+                dests = self.parent.find_destinations(destvar)
+                if len(dests) > 0:
+                    self.parent.invalidate_deps(dests)
+        else:
+            destvar.valid = False
+            self.invalidate_deps([destvar])
 
     def disconnect(self, varpath):
         """Remove all connections to/from a given variable in the current scope. 
@@ -284,6 +297,20 @@ class Assembly (Component):
         else:
             graph.remove_edges_from(to_remove)
 
+    def find_destinations(self, var):
+        """For the given source, return a list of destination Variables."""
+        dests = []
+        if var.parent == self:
+            for src,dest,data in self._dep_graph.in_edges_iter('#src', data=True):
+                if var == data[0]:
+                    dests.append(data[1])
+        else:
+            for src,dest,data in self._dep_graph.in_edges_iter(var.parent.name, data=True):
+                if var == data[0]:
+                    dests.append(data[1])
+        return dests
+        
+        
     def is_destination(self, varpath):
         """Return True if the Variable specified by varname is a destination. This means
         that either it's an input connected to an output, or it's the destination part of
@@ -315,11 +342,19 @@ class Assembly (Component):
         return False
 
     def execute (self):
-        """Perform calculations or other actions, assuming that inputs 
-        have already been set. This should be overridden in derived classes.
-        """
-        pass
+        """Run child components in data flow order."""
+        for comp in self.get_component_iterator():
+            comp.run()
     
+    def get_component_iterator(self, compnames=None):
+        """Return a dataflow ordered iterator over the set of Components 
+        specified by compnames, or over all of our child Components if 
+        compnames is None.
+        """
+        for compname in nx.topological_sort(self._dep_graph):
+            if (compnames is None or compname in compnames) and not compname.startswith('#'):
+                yield getattr(self, compname)
+        
     def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
@@ -339,6 +374,8 @@ class Assembly (Component):
         for src,dest,data in self._dep_graph.in_edges_iter(incomp.name,
                                                            data=True):
             srcvar,var = data
+            if var.valid:  # don't need to update valid inputs
+                continue 
             # Variables at the scope boundary have their component specified as
             # either #dest or #src depending on whether they're an input or an output.
             # If we used the same name for their component, for example '', then
@@ -382,7 +419,7 @@ class Assembly (Component):
                                      ValueError)
 
     def get_invalidated_outputs(self, invars):
-        return invalidate_deps(invars)
+        return self.invalidate_deps(invars)
                 
     def invalidate_deps(self, vars):
         """Mark all Variables that depend on vars as invalid. vars must be INPUT Variables

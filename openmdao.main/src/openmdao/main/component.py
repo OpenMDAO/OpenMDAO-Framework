@@ -10,7 +10,7 @@ import copy
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IComponent, IVariable
+from openmdao.main.interfaces import IComponent, IVariable, IDriver
 from openmdao.main import Container, String
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.constants import SAVE_PICKLE
@@ -79,16 +79,22 @@ class Component (Container):
         """Only call execute() if any of our outputs are invalid."""
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.
+            if __debug__: self._logger.debug('executing %s' % self.get_pathname())
             self.execute()
         else:
-            for obj in self.values():
-                if IVariable.providedBy(obj) and obj.valid == False:
-                    if IComponent.providedBy(self.parent):
-                        self.parent.update_inputs(self)
-            
-                    self.execute()
-                    return
-            
+            doit = False
+            if self.has_invalid_inputs() and IComponent.providedBy(self.parent):
+                if __debug__: self._logger.debug('updating inputs for %s' % self.get_pathname())
+                self.parent.update_inputs(self)
+                doit = True
+            if doit is False and self.has_invalid_outputs():
+                doit = True
+                
+            if doit:
+                # we have at least one invalid input or output, so execute
+                if __debug__: self._logger.debug('executing %s' % self.get_pathname())
+                self.execute()
+                            
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
         have already been set. This should be overridden in derived classes.
@@ -97,8 +103,8 @@ class Component (Container):
     
     def _post_execute (self):
         """Update output variables and anything else needed after execution."""
-        for obj in [x for x in self.values() if IVariable.providedBy(x)]:
-            obj.valid == True
+        for obj in (self.invalid_inputs()+self.invalid_outputs()):
+            obj.valid = True
     
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
@@ -186,11 +192,11 @@ class Component (Container):
         return outs
             
     
-    def invalidate_deps(self, var):
+    def invalidate_deps(self, vars):
         """If we have a parent Assembly, pass this call up 
         to it since we don't have a dependency graph."""
         if self.parent:
-            self.parent.ivalidate_deps(var)
+            self.parent.invalidate_deps(vars)
     
 # TODO: uncomment require_gradients and require_hessians after they're better thought out
     
