@@ -5,9 +5,11 @@
 
 from openmdao.main import Component, Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.exceptions import ConstraintError
+from openmdao.main.exceptions import ConstraintError, RunFailed
 
 from openmdao.examples.engine_design.vehicle import Vehicle
+
+from csv import reader
 
 class Sim_Vehicle(Component):
     def __init__(self, name, parent=None, doc=None, directory=''):
@@ -19,6 +21,8 @@ class Sim_Vehicle(Component):
             
             # Outputs
             AccelTime         # Time to reach 60 mph from start
+            EPACity           # Fuel economy for city driving
+            EPAHighway        # Fuel economy for highway driving
             '''
         
         super(Sim_Vehicle, self).__init__(name, parent, doc, directory)    
@@ -67,7 +71,7 @@ class Sim_Vehicle(Component):
         # Promoted From Vehicle -> Vehicle_Dynamics
         Float('Mass_Vehicle', self, INPUT, units='kg', default=1200.0,
               doc='Vehicle Mass')
-        Float('Cf', self, INPUT, units=None, default=0.01,
+        Float('Cf', self, INPUT, units=None, default=0.035,
               doc='Friction Coefficient (proportional to W)')
         Float('Cd', self, INPUT, units=None, default=0.3,
               doc='Drag Coefficient (proportional to V**2)')
@@ -83,6 +87,10 @@ class Sim_Vehicle(Component):
         # Outputs
         Float('AccelTime', self, OUTPUT, units='s', default=0.0, 
               doc='Time to reach Endspeed starting from rest')
+        Float('EPACity', self, OUTPUT, units='mi/galUS', default=0.0, 
+              doc='EPA Fuel economy - City')
+        Float('EPAHighway', self, OUTPUT, units='mi/galUS', default=0.0, 
+              doc='EPA Fuel economy - Highway')
         
         # NOTE: This stuff will be replaced with Sockets when implemented
         self.vehicle = Vehicle("Test_Vehicle")
@@ -130,7 +138,7 @@ class Sim_Vehicle(Component):
         self.vehicle.CurrentGear = 1
         self.vehicle.Throttle = 1.0
         self.vehicle.Velocity = 0.0
-            
+                   
         while Velocity < self.EndSpeed:
             
             # Find acceleration.
@@ -150,16 +158,176 @@ class Sim_Vehicle(Component):
         
             Time += self.TimeStep
             #print Time, self.vehicle.CurrentGear, Velocity, self.vehicle.Transmission.RPM, self.vehicle.Engine.RPM
-        
+                   
         self.AccelTime = Time
         
+        #--------------------------------------------------------------------
+        # Simulate EPA driving profiles
+        #--------------------------------------------------------------------
+        
+        profilenames = [ "EPA-city.csv", "EPA-highway.csv" ]
+        
+        ThrottleMin = .07
+        ThrottleMax = 1.0
+        ShiftPoint1 = 10.0
+        MaxError = .01
+
+        self.vehicle.CurrentGear = 1
+        self.vehicle.Velocity = 0.0
+        
+        FuelEconomy = []
+        
+        def findgear():
+            '''
+               Finds the nearest gear in the appropriate range for the currently
+               commanded velocity. 
+               This is intended to be called recursively.
+               '''
+            # Note, shifts gear if RPM is too low or too high
+            try:
+                self.vehicle.execute()
+            except ConstraintError:
+                if self.vehicle.Transmission.RPM > self.vehicle.Engine.RPM:
+                    self.vehicle.CurrentGear += 1
+                    
+                    if self.vehicle.CurrentGear > 5:
+                        self.raise_exception("Transmission gearing cannot achieve maximum speed in EPA test.", RunFailed)
+                    
+                else:
+                    self.vehicle.CurrentGear -= 1
+                    
+                findgear()
+                
+        
+        for profilename in profilenames:
+            
+            profileReader = reader(open(profilename), delimiter=',')
+            
+            Time1 = 0.0
+            Velocity1 = 0.0
+            Distance = 0.0
+            Fuelburn = 0.0
+            
+            for row in profileReader:
+                
+                Time2 = float(row[0])
+                Velocity2 = float(row[1])
+                CONVERGED = 0
+                
+                self.vehicle.Velocity = Velocity1/2.23693629
+                CommandAccel = (Velocity2-Velocity1)/(Time2-Time1)
+                
+                #------------------------------------------------------------
+                # Choose the correct Gear
+                #------------------------------------------------------------
+
+                # First, if speed is less than 10 mph, put it in first gear.
+                # Note: some funky gear ratios might not like this.
+                # So, it's a hack for now.
+                
+                if Velocity1 < ShiftPoint1:
+                    self.vehicle.CurrentGear = 1
+                    
+                # Find out min and max accel in current gear.
+                
+                self.vehicle.Throttle = ThrottleMin
+                findgear()                    
+                AccelMin = self.vehicle.Acceleration*2.23693629
+                
+                # Upshift if commanded accel is less than closed-throttle accel
+                # The net effect of this will often be a shift to a higher gear when
+                # the vehicle stops accelerating, which is reasonable.
+                # Note, this isn't a While loop, because we don't want to shift to 5th every
+                # time we slow down.
+                if CommandAccel < AccelMin and self.vehicle.CurrentGear < 5 and Velocity1 > ShiftPoint1:
+                    self.vehicle.CurrentGear += 1
+                    findgear()
+                    AccelMin = self.vehicle.Acceleration*2.23693629
+                
+                self.vehicle.Throttle = ThrottleMax
+                self.vehicle.execute()
+                AccelMax = self.vehicle.Acceleration*2.23693629
+                
+                # Downshift if commanded accel is more than wide-open-throttle accel
+                while CommandAccel > AccelMax and self.vehicle.CurrentGear > 1:
+                    self.vehicle.CurrentGear -= 1
+                    findgear()
+                    AccelMax = self.vehicle.Acceleration*2.23693629
+                
+                # If engine cannot accelerate quickly enough to match profile, then raise exception    
+                if CommandAccel > AccelMax:
+                    self.raise_exception("Vehicle is unable to achieve acceleration required to match EPA driving profile.", RunFailed)
+                        
+                #------------------------------------------------------------
+                # Bisection solution to find correct Throttle position
+                #------------------------------------------------------------
+
+                # Deceleration at closed throttle
+                if CommandAccel < AccelMin:
+                    self.vehicle.Throttle = ThrottleMin
+                    self.vehicle.execute()
+                    
+                else:
+                    self.vehicle.Throttle = ThrottleMin
+                    self.vehicle.execute()
+                    
+                    minAcc = self.vehicle.Acceleration*2.23693629
+                    maxAcc = AccelMax
+                    minThrottle = ThrottleMin
+                    maxThrottle = ThrottleMax
+                    newThrottle = .5*(minThrottle + maxThrottle)
+                    
+                    # Numerical solution to find throttle that matches accel
+                    while not CONVERGED:
+                    
+                        self.vehicle.Throttle = newThrottle
+                        self.vehicle.execute()
+                        newAcc = self.vehicle.Acceleration*2.23693629
+                        
+                        if abs(CommandAccel-newAcc) < MaxError:
+                            CONVERGED = 1
+                        else:
+                            if newAcc < CommandAccel:
+                                minThrottle = newThrottle
+                                minAcc = newAcc
+                                Step = (CommandAccel-minAcc)/(maxAcc-newAcc)
+                                newThrottle = minThrottle + Step*(maxThrottle-minThrottle)
+                            else:
+                                maxThrottle = newThrottle
+                                Step = (CommandAccel-minAcc)/(newAcc-minAcc)
+                                newThrottle = minThrottle + Step*(maxThrottle-minThrottle)
+                                maxAcc = newAcc
+                          
+                        #print CommandAccel, newAcc, minThrottle, newThrottle
+                Distance += .5*(Velocity2+Velocity1)*(Time2-Time1)
+                Fuelburn += self.vehicle.FuelBurn*(Time2-Time1)
+                
+                Velocity1 = Velocity2
+                Time1 = Time2
+                
+                #print "T = %f, V = %f, Acc = %f" % (Time1, Velocity1, CommandAccel)
+                #print self.vehicle.CurrentGear, AccelMin, AccelMax
+                
+            # Convert liter to gallon and sec/hr to hr/hr
+            Distance = Distance/3600.0
+            Fuelburn = Fuelburn*(0.264172052)
+            FuelEconomy.append(Distance/Fuelburn)
+            
+        self.EPACity = FuelEconomy[0]
+        self.EPAHighway = FuelEconomy[1]
     
 def test_it():    
+    import time
+    tt = time.time()
+    
     z = Sim_Vehicle("New")  
     z.vehicle = Vehicle("Test_Vehicle")
     z.execute()
-    print "Gear:", z.vehicle.CurrentGear
     print "Time:", z.AccelTime
+    print "City:", z.EPACity
+    print "Highway:", z.EPAHighway
+    
+    print "\nElapsed time: ", time.time()-tt
     
 if __name__ == "__main__": 
     test_it()

@@ -1,0 +1,45 @@
+! File engineC.pyf
+
+python module engineC
+interface
+  subroutine RunEngineCycle(stroke, bore, conrod, compRatio, sparkAngle, nCyl, IVO, IVC, Liv, Div, k, R, Ru, Hu, Tw, AFR, Pexth, Tamb, Pamb, Air_Density, MwAir, MwFuel, RPM, Throttle, thetastep, Fuel_Density, Power, Torque, FuelBurn, EngineWeight)
+
+    intent(c) RunEngineCycle      ! RunEngineCycle is a C function
+    intent(c)                     ! all RunEngineCycle arguments are 
+                                  ! considered as C based
+
+    double precision intent(in) :: stroke  
+    double precision intent(in) :: bore  
+    double precision intent(in) :: conrod  
+    double precision intent(in) :: compRatio  
+    double precision intent(in) :: sparkAngle  
+    integer intent(in) :: nCyl  
+    double precision intent(in) :: IVO  
+    double precision intent(in) :: IVC  
+    double precision intent(in) :: Liv  
+    double precision intent(in) :: Div  
+    double precision intent(in) :: k  
+    double precision intent(in) :: R  
+    double precision intent(in) :: Ru  
+    double precision intent(in) :: Hu  
+    double precision intent(in) :: Tw  
+    double precision intent(in) :: AFR  
+    double precision intent(in) :: Pexth  
+    double precision intent(in) :: Tamb  
+    double precision intent(in) :: Pamb  
+    double precision intent(in) :: Air_Density  
+    double precision intent(in) :: MwAir  
+    double precision intent(in) :: MwFuel  
+    double precision intent(in) :: RPM  
+    double precision intent(in) :: Throttle  
+    double precision intent(in) :: thetastep  
+    double precision intent(in) :: Fuel_Density  
+    double precision intent(out) :: Power(1)  
+    double precision intent(out) :: Torque(1)  
+    double precision intent(out) :: FuelBurn(1)  
+    double precision intent(out) :: EngineWeight(1) 
+                                
+
+  end subroutine RunEngineCycle
+end interface
+end python module engineC
