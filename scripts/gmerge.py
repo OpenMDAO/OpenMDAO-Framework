@@ -11,6 +11,8 @@ The user will have the option to update the file_x.OTHER or the file_x.THIS
 version  of file_x, and will be prompted after the graphical merge to determine
 which one should be used to overwrite file_x.
 
+NOTE: meld2.4 must be in your path for this to work!
+
 
 usage: gmerge.py filename
 
