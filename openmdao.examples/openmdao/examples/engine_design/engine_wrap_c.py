@@ -163,7 +163,7 @@ if __name__ == "__main__":
     import time
     t1 = time.time()
     
-    for jj in xrange(1,50):
+    for jj in xrange(1,500):
         z.execute()
 
     print z.Throttle, z.Power, z.Torque, z.FuelBurn, z.EngineWeight
