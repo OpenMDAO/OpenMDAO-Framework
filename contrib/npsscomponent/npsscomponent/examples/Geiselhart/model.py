@@ -18,6 +18,7 @@ import os.path
 from openmdao.main import Assembly, Component, Container, Float, \
                           ArrayVariable, FileVariable
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.component import Simulation
 
 from npsscomponent import NPSScomponent
 
@@ -526,6 +527,7 @@ def test_save_load():
     os.chdir('test_dir')
     try:
 
+        Simulation._simulation = None
         new_model = Component.load_from_egg(os.path.join('..', egg_name))
 #        print_info(new_model)
 

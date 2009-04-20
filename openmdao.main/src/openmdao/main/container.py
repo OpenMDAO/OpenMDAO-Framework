@@ -17,6 +17,14 @@ except ImportError:
     from yaml import Loader, Dumper
     _libyaml = False
 
+import datetime
+import os
+import platform
+import shutil
+import subprocess
+import sys
+import tempfile
+
 import weakref
 # the following is a monkey-patch to correct a problem with
 # copying/deepcopying weakrefs There is an issue in the python issue tracker
@@ -309,7 +317,121 @@ class Container(HierarchyMember):
         of dictionary entries from the old object will be copied to the
         new one."""
         raise NotImplementedError("config_from_obj")
-    
+
+    def save_to_egg(self, name=None, version=None, relative=True,
+                    src_dir=None, src_files=None,
+                    format=SAVE_CPICKLE, proto=-1, dst_dir=None):
+        """Save state and other files to an egg.
+        name defaults to the name of the container.
+        version defaults to the container's module __version__.
+        If relative is True, all paths are relative to src_dir.
+        src_dir is the root of all (relative) src_files.
+        dst_dir is the directory to write the egg in.
+        Returns the egg's filename."""
+        # TODO: check for setup.py errors!
+        # TODO: handle custom class definitions.
+        # TODO: scan for FileVariables.
+        # TODO: record required packages, buildout.cfg.
+        orig_dir = os.getcwd()
+
+        if name is None:
+            name = self.name
+        if version is None:
+            try:
+                version = sys.modules[self.__module__].__version__
+            except AttributeError:
+                now = datetime.datetime.now()  # Could consider using utcnow().
+                version = '%d.%d.%d.%d.%d' % \
+                          (now.year, now.month, now.day, now.hour, now.minute)
+        if dst_dir is None:
+            dst_dir = orig_dir
+        if not os.access(dst_dir, os.W_OK):
+            self.raise_exception("Can't save to '%s', no write permission" \
+                                 % dst_dir, IOError)
+
+        py_version = platform.python_version_tuple()
+        py_version = '%s.%s' % (py_version[0], py_version[1])
+        egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
+        self.debug('Saving to %s in %s...', egg_name, orig_dir)
+
+        # Move to scratch area.
+        tmp_dir = tempfile.mkdtemp()
+        os.chdir(tmp_dir)
+        try:
+            if src_dir:
+                # Link original directory to object name.
+                os.symlink(src_dir, name)
+            else:
+                os.mkdir(name)
+
+            # Save state of object hierarchy.
+            if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+                state_name = name+'.pickle'
+            elif format is SAVE_LIBYAML or format is SAVE_YAML:
+                state_name = name+'.yaml'
+            else:
+                self.raise_exception("Unknown format '%s'." % str(format),
+                                     RuntimeError)
+
+            state_path = os.path.join(name, state_name)
+            try:
+                self.save(state_path, format, proto)
+            except Exception, exc:
+                if os.path.exists(state_path):
+                    os.remove(state_path)
+                self.raise_exception("Can't save to '%s': %s" % \
+                                     (state_path, str(exc)), type(exc))
+
+            # Save everything to an egg.
+            if src_files is None:
+                src_files = set()
+            src_files.add(state_name)
+            src_files = sorted(src_files)
+
+            if not os.path.exists(os.path.join(name, '__init__.py')):
+                remove_init = True
+                out = open(os.path.join(name, '__init__.py'), 'w')
+                out.close()
+            else:
+                remove_init = False
+
+            out = open('setup.py', 'w')
+
+            out.write('import setuptools\n')
+            out.write('\n')
+
+            out.write('package_files = [\n')
+            for filename in src_files:
+                out.write("    '%s',\n" % filename)
+            out.write('    ]\n')
+            out.write('\n')
+
+            out.write('setuptools.setup(\n')
+            out.write("    name='%s',\n" % name)
+            out.write("    description='%s',\n" % self.__doc__.strip())
+            out.write("    version='%s',\n" % version)
+            out.write("    packages=['%s'],\n" % name)
+            out.write("    package_data={'%s' : package_files})\n" % name)
+            out.write('\n')
+
+            out.close()
+
+            stdout = open('setup.py.out', 'w')
+            subprocess.check_call(['python', 'setup.py', 'bdist_egg',
+                                   '-d', dst_dir],
+                                  stdout=stdout, stderr=subprocess.STDOUT)
+            stdout.close()
+
+            os.remove(os.path.join(name, state_name))
+            if remove_init:
+                os.remove(os.path.join(name, '__init__.py'))
+
+        finally:
+            os.chdir(orig_dir)
+            shutil.rmtree(tmp_dir)
+
+        return egg_name
+
     def save (self, outstream, format=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
         output stream. Pure python classes generally won't need to

@@ -103,14 +103,18 @@ class EggTestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test in this class. """
         self.model = Model(directory='Egg')
+        self.egg_name = None
 
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
         self.model = None
-        os.remove(self.egg_name)
-        shutil.rmtree('Egg')
-        shutil.rmtree('EggTest')
+        if self.egg_name:
+            os.remove(self.egg_name)
+        if os.path.exists('Egg'):
+            shutil.rmtree('Egg')
+        if os.path.exists('EggTest'):
+            shutil.rmtree('EggTest')
 
     def test_save_load(self):
         logging.debug('')

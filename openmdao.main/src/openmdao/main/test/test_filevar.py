@@ -10,6 +10,7 @@ import unittest
 from openmdao.main import Assembly, Component, \
                           ArrayVariable, FileVariable, StringList, Bool
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.component import Simulation
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -80,6 +81,7 @@ class FileTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
+        Simulation._simulation = None
         self.model = Model()
 
     def tearDown(self):
@@ -118,11 +120,12 @@ class FileTestCase(unittest.TestCase):
 
     def test_bad_directory(self):
         try:
-            Source(directory='/no-permission-to-create')
-        except OSError, exc:
-            self.assertEqual(str(exc), "Source: Can't create execution directory '/no-permission-to-create': Permission denied")
+            Source(directory='/illegal')
+        except ValueError, exc:
+            self.assertEqual(str(exc).startswith(
+                "Source: Illegal execution directory '/illegal', not a decendant of"), True)
         else:
-            self.fail('Expected OSError')
+            self.fail('Expected ValueError')
 
     def test_not_directory(self):
         directory = 'plain_file'
@@ -143,13 +146,14 @@ class FileTestCase(unittest.TestCase):
             os.remove(directory)
 
     def test_bad_new_directory(self):
-        self.model.Source.directory = '/no-such-directory'
+        self.model.Source.directory = '/illegal'
         try:
             self.model.run()
-        except RuntimeError, exc:
-            self.assertEqual(str(exc), "FileVar_TestModel.Source: Could not move to execution directory '/no-such-directory': No such file or directory")
+        except ValueError, exc:
+            self.assertEqual(str(exc).startswith(
+                "FileVar_TestModel.Source: Illegal directory '/illegal', not a decendant of"), True)
         else:
-            self.fail('Expected RuntimeError')
+            self.fail('Expected ValueError')
 
 
 if __name__ == '__main__':

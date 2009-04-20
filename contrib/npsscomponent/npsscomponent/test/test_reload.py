@@ -10,6 +10,7 @@ import unittest
 
 from openmdao.main import Assembly, Component, Bool, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.component import Simulation
 
 from npsscomponent import NPSScomponent
 
@@ -48,12 +49,8 @@ class Model(Assembly):
         self.workflow.add_node(Source(parent=self))
         self.Source.npss_in = 9
 
-        directory = \
-            os.path.join(pkg_resources.resource_filename('npsscomponent',
-                                                         'test'))
-        arglist = '-trace reload.mdl'
-        NPSScomponent(parent=self, directory=directory,
-                      arglist=arglist, output_filename='reload.out')
+        NPSScomponent(parent=self, arglist='-trace reload.mdl',
+                      output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
         Float('xyzzy_in',  self.NPSS, INPUT, doc='Test input')
         Float('xyzzy_out', self.NPSS, OUTPUT, doc='Test output')
@@ -70,19 +67,21 @@ class Model(Assembly):
 
 class NPSSTestCase(unittest.TestCase):
 
+    directory = \
+        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+
     def setUp(self):
         """ Called before each test in this class. """
+        Simulation._simulation = None
+        os.chdir(NPSSTestCase.directory)
         self.model = Model('TestModel')
 
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
-        os.remove(os.path.join(self.model.NPSS.directory, 'reload.out'))
+        os.remove('reload.out')
         self.model = None
-        if os.getcwd() != ORIG_DIR:
-            bad_dir = os.getcwd()
-            os.chdir(ORIG_DIR)
-            self.fail('Ended in %s, expected %s' % (bad_dir, ORIG_DIR))
+        os.chdir(ORIG_DIR)
 
     def test_internal_reload(self):
         logging.debug('')

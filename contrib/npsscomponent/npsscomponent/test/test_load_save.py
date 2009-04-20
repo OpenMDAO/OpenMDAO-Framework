@@ -18,6 +18,7 @@ from numpy.testing import assert_equal
 from openmdao.main import Bool, FileVariable
 from openmdao.main.constants import SAVE_LIBYAML
 from openmdao.main.variable import OUTPUT
+from openmdao.main.component import Simulation
 
 from npsscomponent import NPSScomponent
 
@@ -27,10 +28,7 @@ class Passthrough(NPSScomponent):
     """ An NPSS component that passes-through various types of variable. """
 
     def __init__(self):
-        directory = pkg_resources.resource_filename('npsscomponent', 'test')
-        arglist = 'passthrough.mdl'
-        super(Passthrough, self).__init__('NPSS', directory=directory,
-                                          arglist=arglist)
+        super(Passthrough, self).__init__('NPSS', arglist='passthrough.mdl')
 
         # Automagic interface variable creation (not for Bool though).
         Bool('b_out', self, OUTPUT)
@@ -50,8 +48,13 @@ class Passthrough(NPSScomponent):
 
 class NPSSTestCase(unittest.TestCase):
 
+    directory = \
+        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+
     def setUp(self):
         """ Called before each test in this class. """
+        Simulation._simulation = None
+        os.chdir(NPSSTestCase.directory)
         self.npss = Passthrough()
         self.egg_name = None
 
@@ -61,13 +64,10 @@ class NPSSTestCase(unittest.TestCase):
             self.npss.pre_delete()
             self.npss = None
 
-        if os.getcwd() != ORIG_DIR:
-            bad_dir = os.getcwd()
-            os.chdir(ORIG_DIR)
-            self.fail('Ended in %s, expected %s' % (bad_dir, ORIG_DIR))
-
         if self.egg_name and os.path.exists(self.egg_name):
             os.remove(self.egg_name)
+
+        os.chdir(ORIG_DIR)
 
     def test_load_save(self):
         logging.debug('')
