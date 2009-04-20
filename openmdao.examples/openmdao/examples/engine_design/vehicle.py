@@ -9,7 +9,7 @@ from openmdao.main import Assembly
 from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 
-from openmdao.examples.engine_design.engine import Engine
+from openmdao.examples.engine_design.engine_wrap_c import Engine
 from openmdao.examples.engine_design.transmission import Transmission
 from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
 
