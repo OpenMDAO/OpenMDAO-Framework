@@ -22,6 +22,7 @@ class VehicleTestCase(unittest.TestCase):
         self.model.CurrentGear = 3
         self.model.Velocity = 60.0*(26.8224/60.0)
         self.model.Throttle = .2
+        self.model.Cf = .01
         self.model.execute()
         
         self.assertAlmostEqual(self.model.Acceleration, 
