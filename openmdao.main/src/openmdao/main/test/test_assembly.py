@@ -99,8 +99,8 @@ class AssemblyTestCase(unittest.TestCase):
         
         
     def test_data_passing(self):
-        comp1 = self.asm.get('comp1.value')
-        comp2 = self.asm.get('comp2.value')
+        comp1 = self.asm.get('comp1')
+        comp2 = self.asm.get('comp2')
         self.asm.connect('comp1.rout','comp2.r')
         self.asm.connect('comp1.sout','comp2.s')
         self.asm.set('comp1.r', 3.0)

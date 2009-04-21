@@ -28,21 +28,21 @@ class DictTestCase(unittest.TestCase):
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual(self.dict1.value, {'item1':1, 'item2':2})
-        self.assertEqual(self.dict2.value, {'key1':'a', 'key2':'b'})
+        self.assertEqual(self.dict1.get_value(), {'item1':1, 'item2':2})
+        self.assertEqual(self.dict2.get_value(), {'key1':'a', 'key2':'b'})
 
         # check default value
         self.assertEqual(self.dict1.default, {})
         self.assertEqual(self.dict2.default, {})
 
         # assignment
-        self.dict1.value = self.dict2.value
-        self.assertEqual(self.dict1.value, {'key1':'a', 'key2':'b'})
+        self.dict1.set_value(self.dict2.get_value())
+        self.assertEqual(self.dict1.get_value(), {'key1':'a', 'key2':'b'})
 
         # make sure value gets transferred to internal variable
         self.assertEqual(self.hobj.internal_dict1, {'key1':'a', 'key2':'b'})
-        self.dict1.value = {'item1':1, 'item2':2}
-        self.assertEqual(self.dict1.value, {'item1':1, 'item2':2})
+        self.dict1.set_value({'item1':1, 'item2':2})
+        self.assertEqual(self.dict1.get_value(), {'item1':1, 'item2':2})
         self.assertEqual(self.hobj.internal_dict1, {'item1':1, 'item2':2})
 
     def test_get(self):

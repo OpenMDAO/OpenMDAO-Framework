@@ -40,26 +40,29 @@ class Workflow(Component):
                 comp.remove_node(node)
         self.nodes = nodes
 
-    def _execute_if_needed(self):
-        """Override of Component version to force execution even if we have
-        no invalid inputs or outputs.
-        """
-        if __debug__: self._logger.debug('executing %s' % self.get_pathname())
+    def run (self, force=False):
+        """Run this Workflow."""
         self.execute()
-            
+
     def execute(self):
         """ Run through the nodes in the workflow list. """
-        for node in self.nodes:
+        if __debug__: self._logger.debug('executing %s' % self.get_pathname())
+        for node in self.nodes_iter():
             self.state = STATE_WAITING
             node.run()
             self.state = STATE_RUNNING
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
     
+    def nodes_iter(self):
+        """Iterate through the nodes."""
+        for node in self.nodes:
+            yield node
+    
     def step(self):
         """Run a single component in the Workflow"""
         if self._iterator is None:
-            self._iterator = self.nodes.__iter__()
+            self._iterator = self.nodes_iter()
             
         self.state = STATE_WAITING
         node = self._iterator.next()
@@ -81,7 +84,7 @@ class Workflow(Component):
         We assume it's OK to to call stop() on something that isn't running.
         """
         self._stop = True
-        for node in self.nodes:
+        for node in self.nodes_iter():
             node.stop()
 
     def get_nodes(self):

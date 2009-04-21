@@ -8,13 +8,13 @@ __version__ = "0.1"
 import conmin.conmin as conmin
 import numpy.numarray as numarray
 
-from openmdao.main import Driver, ArrayVariable, String, StringList, \
+from openmdao.main import RefExprDriver, ArrayVariable, String, StringList, \
                           ExprEvaluator
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.variable import INPUT
 
 
-class CONMINdriver(Driver):
+class CONMINdriver(RefExprDriver):
     """ Driver wrapper of Fortran version of CONMIN. 
     
     NOTE: This implementation does not support multiple instances of

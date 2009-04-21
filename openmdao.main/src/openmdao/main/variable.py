@@ -42,7 +42,7 @@ class Variable(HierarchyMember):
     
     def __init__(self, name, parent, iostatus, 
                  val_types=None, ref_name=None, ref_parent=None, 
-                 default=UNDEFINED, doc=None):
+                 default=UNDEFINED, doc=None, implicit_creation=True):
         """Note that Variable calls _pre_assign from here, so if _pre_assign
         requires any attributes from a derived class, those attributes must be
         set before the Variable __init__ function is called.
@@ -66,6 +66,7 @@ class Variable(HierarchyMember):
         self.iostatus = iostatus
         self._constraints = []
         self.valid = False
+        self._passthru = None
         
         if IContainer.providedBy(parent):
             parent.make_public(self)
@@ -76,7 +77,7 @@ class Variable(HierarchyMember):
         self._set_val_types(val_types, default)
                     
         # Create the real object if it doesn't already exist.
-        if self._find(self._refparent, self.ref_name) is None:
+        if implicit_creation and self._find(self._refparent, self.ref_name) is None:
             if default is UNDEFINED or default is None:
                 self.raise_exception('default must be supplied'
                                      ' with implicit creation.', ValueError)
@@ -101,7 +102,7 @@ class Variable(HierarchyMember):
             self.val_types = (val_types,)
         elif val_types is None and default is not None:
             if default is UNDEFINED:
-                self.val_types = (type(self._get_value()),)
+                self.val_types = (type(self.get_value()),)
             elif default is not None:
                 self.val_types = (type(default),)
         else:
@@ -142,7 +143,12 @@ class Variable(HierarchyMember):
             return
         try:
             if default is UNDEFINED:
-                tmp = self._get_value()
+                try: # it may be too early for get_value() to work properly, so
+                     # just try it and see
+                    tmp = self.get_value()
+                except Exception:
+                    self.default = None
+                    return
             else:
                 tmp = default
             # if val_types isn't set yet, set it based on the default value
@@ -160,15 +166,17 @@ class Variable(HierarchyMember):
         """
         return hasattr(self, path)
     
-    def _set_value(self, val):
+    def set_value(self, val):
         """Assign this Variable's value to the value of another Variable or 
         directly to another value.  Checks validity of the new value before assignment.
-        Called by setting the 'value' property.
         """
         if self.iostatus == OUTPUT:
             raise RuntimeError(self.get_pathname()+
                                ' is an OUTPUT Variable and cannot be set.')
-        setattr(self._refparent, self.ref_name, self._pre_assign(val))
+        if self._passthru is None:
+            setattr(self._refparent, self.ref_name, self._pre_assign(val))
+        else:
+            self._passthru.set_value(val)
         if self.valid is True:
             self.valid = False
             self.parent.invalidate_deps([self])
@@ -176,16 +184,16 @@ class Variable(HierarchyMember):
         if self.observers is not None:
             self._notify_observers()
         
-    def _get_value(self):
-        """"Called when getting the 'value' property."""
-        return getattr(self._refparent, self.ref_name)
-    
-    value = property(_get_value, _set_value)
-        
-        
+    def get_value(self):
+        """"Called when getting the 'value' of this Variable. """
+        if self._passthru is None:
+            return getattr(self._refparent, self.ref_name)
+        else:
+            return self._passthru.get_value()
+         
     def revert_to_default(self):
         """ Return this Variable to its default value"""
-        self.value = self.default
+        self.set_value(self.default)
 
     def add_constraint(self, con):
         """Add a Constraint object to the list of Constraint objects for
@@ -259,7 +267,7 @@ class Variable(HierarchyMember):
         convert units from those in connected variables. By default, no 
         conversion is performed.
         """
-        return variable.value
+        return variable.get_value()
     
     def setvar(self, name, var):
         """Assign this Variable to another Variable, which generally just
@@ -267,7 +275,7 @@ class Variable(HierarchyMember):
         override _convert to handle things like unit conversion."""
         if name is None: # they're setting this Variable
             self.validate_var(var)
-            self.value = self._convert(var)
+            self.set_value(self._convert(var))
         else:
             self.raise_exception("cannot assign a Variable to attribute '"+
                                  name+"'", RuntimeError)
@@ -279,7 +287,7 @@ class Variable(HierarchyMember):
         this Variable."""
         if name is None or name == 'value': # they're setting this Variable
             if index is None:
-                self.value = value
+                self.set_value(value)
             else:
                 self.set_entry(value, index)                    
         else:  # they're setting an attribute (units, etc.)
@@ -301,9 +309,9 @@ class Variable(HierarchyMember):
         
     def get(self, name=None, index=None):
         """Return the named attribute"""
-        if name is None:
+        if name is None or name == 'value':
             if index is None:
-                return self.value
+                return self.get_value()
             else:
                 return self.get_entry(index)
         else:  # getting an attribute of this Variable
@@ -319,13 +327,13 @@ class Variable(HierarchyMember):
         """Retrieve the entry indicated by index."""
         l = len(index)
         if l == 1:
-            return self.value[index[0]]
+            return self.get_value()[index[0]]
         elif l == 2:
-            return self.value[index[0]][index[1]]
+            return self.get_value()[index[0]][index[1]]
         elif l == 3:
-            return self.value[index[0]][index[1]][index[2]]
+            return self.get_value()[index[0]][index[1]][index[2]]
         else:
-            val = self.value
+            val = self.get_value()
             for i in index:
                 val = val[i]
             return val
@@ -338,16 +346,16 @@ class Variable(HierarchyMember):
         try:
             l = len(index)
             if l == 1:
-                self.value[index[0]] = tmp
+                self.get_value()[index[0]] = tmp
             elif l == 2:
-                self.value[index[0]][index[1]] = tmp
+                self.get_value()[index[0]][index[1]] = tmp
             elif l == 3:
-                self.value[index[0]][index[1]][index[2]] = tmp
+                self.get_value()[index[0]][index[1]][index[2]] = tmp
             else:
-                value = self.value
+                value = self.get_value()
                 for i in index[:-1]:
                     value = value[i]
-                self.value[index[len(index)-1]] = tmp
+                self.get_value()[index[len(index)-1]] = tmp
         except (TypeError, IndexError):
             self.raise_exception("assigning index "+str(index)+
                                  " to a value of type "+
@@ -388,8 +396,8 @@ class Variable(HierarchyMember):
             newvar.name = name
             
         newvar.parent = parent
-        # make the passthru Variable refer to our 'value' attribute
-        newvar._refparent = self
-        newvar.ref_name = 'value'
+        newvar._passthru = self
+        #newvar._refparent = self
+        #newvar.ref_name = 'value'
         return newvar
     

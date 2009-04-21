@@ -121,13 +121,13 @@ class Float(Variable):
         it's already been done in validate_var.
         """
         if self.units is UNDEFINED or var.units is UNDEFINED:
-            return var.value
+            return var.get_value()
         elif self.units is None and var.units is None:
-            return var.value
+            return var.get_value()
         elif self.units is None or var.units is None:
             self._incompatible_units(var, var.units)
         else:
-            pq = PhysicalQuantity(var.value, var.units)
+            pq = PhysicalQuantity(var.get_value(), var.units)
             pq.convertToUnit(self.units)
             return pq.value
     

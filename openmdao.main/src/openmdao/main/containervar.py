@@ -33,7 +33,7 @@ class ContainerVariable(Variable):
         or one of the children of its value, which is itself a Container.
         """
         if name is None:
-            val = self.value
+            val = self.get_value()
             if index is None:
                 return val
             for i in index:
@@ -79,7 +79,7 @@ class ContainerVariable(Variable):
         """
         if name is None: # they're setting this Variable
             self.validate_var(var)
-            self.set(None, var.value)
+            self.set(None, var.get_value())
         else:
             self.raise_exception("cannot assign a Variable to attribute '"+
                                  name+"'", RuntimeError)

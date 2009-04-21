@@ -48,11 +48,11 @@ class pyevolvedriverTestCase(unittest.TestCase):
     
     def test_weirdVariableNameProblem(self):
         x = Float("PopulationSize",self.top.driver,INPUT,default=80)
-        self.assertEqual(x.value,80)
+        self.assertEqual(x.get_value(),80)
     
     #basic test to make sure optmizer is working 
     def test_optimizeSphere(self):
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.objective.value = "comp.total" 
         #configure the genome
         #TODO: genome should be plugged into a socket
         self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
@@ -83,7 +83,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(x1,.3897,places = 4)
         
     def test_hypersphereCrossover_real(self):
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.objective.value = "comp.total" 
         #configure the genome
         #TODO: genome should be plugged into a socket
         self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
@@ -118,7 +118,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
     # may have to do with random number generation... if you remove this test, the previous two will fail
     def test_hypersphereCrossover_int(self): 
     
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.objective.value = "comp.total" 
         #configure the genome
         #TODO: genome should be plugged into a socket
         self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
@@ -150,7 +150,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(x1,0,places = 4)   
     
     def test_noObjectiveSet(self):
-        #self.top.driver.objective = "comp.total" 
+        #self.top.driver.objective.value = "comp.total" 
         self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
         self.top.driver.genome.setParams(rangemin=-5.12, rangemax=5.13)
         self.top.driver.genome.initializator.set(pyevolvedriver.Initializators.G1DListInitializatorReal)
@@ -186,7 +186,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         
     def test_invalidObjective(self):
         try:
-            self.top.driver.objective = "comp.badojbjective"        
+            self.top.driver.objective.value = "comp.badojbjective"        
         except RuntimeError, err:
             self.assertEqual(str(err), "top.driver: objective specified, 'comp.badojbjective', is not valid a valid OpenMDAO object. If it does exist in the model, a framework variable may need to be created")
         else: 
@@ -194,15 +194,15 @@ class pyevolvedriverTestCase(unittest.TestCase):
     
     def test_noComp(self):
         try: 
-            self.top.driver.objective = None
-        except RuntimeError, err: 
-            self.assertEqual(str(err), 'top.driver: No objective has been set')
+            self.top.driver.objective.value = None
+        except TypeError, err:
+            self.assertEqual(str(err), "top.driver.objective: reference must be a string")
         else:
             self.fail("RuntimeError expected")
     
     #should throw an error because no decode function is provided
     def test_noDecoder(self):
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.objective.value = "comp.total" 
         self.top.driver.decoder = None
         try:
             self.top.driver.run()
@@ -213,7 +213,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
 
     
     def test_wrongDecoderSignature(self):
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.objective.value = "comp.total" 
         def decodeBad(genome,secondArgument):
             pass
         self.top.driver.decoder = decodeBad
@@ -227,7 +227,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
     
     #should throw and error about the lack of a genome
     def test_noGenomeTest(self): 
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.objective.value = "comp.total" 
         self.top.driver.genome = None
         try:
             self.top.driver.run()
@@ -239,7 +239,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
     
     #should throw an error becuase genome does not inherit from GenomeBase
     def test_GenomeNotGenomeTest(self):
-        self.top.driver.objective = "comp.total" 
+        self.top.driver.objective.value = "comp.total" 
         self.top.driver.genome = [1,2]
         try:
             self.top.driver.run()

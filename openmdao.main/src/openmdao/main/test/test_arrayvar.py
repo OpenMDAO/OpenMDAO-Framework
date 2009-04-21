@@ -31,9 +31,9 @@ class ArrayVarTestCase(unittest.TestCase):
         self.array2 = None
 
     def test_assignment(self):
-        self.assert_(numpy.all(numpy.array([1.2,3.4,5.6])==self.array1.value))
+        self.assert_(numpy.all(numpy.array([1.2,3.4,5.6])==self.array1.get_value()))
         self.hobj.set('array1', numpy.array([1.,2.,3.,4.,5.]))
-        self.assert_(numpy.all(numpy.array([1.,2.,3.,4.,5.])==self.array1.value))
+        self.assert_(numpy.all(numpy.array([1.,2.,3.,4.,5.])==self.array1.get_value()))
         
     def test_set_entry(self):
         self.hobj.set('array1', -99.9, [2])

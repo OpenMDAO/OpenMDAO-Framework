@@ -94,7 +94,7 @@ class StringList(Variable):
         if len(index) > 1:
             self.raise_exception('StringList does not support nested lists',
                                  IndexError)
-        if index[0] >= len(self.value) or index[0] < 0:
+        if index[0] >= len(self.get_value()) or index[0] < 0:
             self.raise_exception('index '+str(index[0])+' out of range',
                                  IndexError)
         return val

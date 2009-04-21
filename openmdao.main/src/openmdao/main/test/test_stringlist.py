@@ -29,15 +29,15 @@ class StringListTestCase(unittest.TestCase):
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual(["abcd", "def"], self.sl1.value)
+        self.assertEqual(["abcd", "def"], self.sl1.get_value())
         # check default value
         self.assertEqual(["foo"], self.sl1.default)
-        self.sl1.value = self.sl2.value
-        self.assertEqual([], self.sl1.value)
+        self.sl1.set_value(self.sl2.get_value())
+        self.assertEqual([], self.sl1.get_value())
         # make sure value gets transferred to internal variable
         self.assertEqual([], self.hobj.internal_sl1)
-        self.sl1.value = ["qq"]
-        self.assertEqual(["qq"], self.sl1.value)
+        self.sl1.set_value(["qq"])
+        self.assertEqual(["qq"], self.sl1.get_value())
         self.assertEqual(["qq"], self.hobj.internal_sl1)
     
     def test_get(self):
@@ -48,9 +48,9 @@ class StringListTestCase(unittest.TestCase):
         
     def test_set(self):
         self.sl1.set(None, '___', [1])
-        self.assertEqual(["abcd", "___"], self.sl1.value)
+        self.assertEqual(["abcd", "___"], self.sl1.get_value())
         self.sl1.set('value', '000', [0])
-        self.assertEqual(["000", "___"], self.sl1.value)
+        self.assertEqual(["000", "___"], self.sl1.get_value())
         
     def test_bad_set(self):
         try:
@@ -83,7 +83,7 @@ class StringListTestCase(unittest.TestCase):
         
     def test_bad_assignment(self):
         try:
-            self.sl1.value = ["foo", 1, 2]
+            self.sl1.set_value(["foo", 1, 2])
         except ValueError, err:
             self.assertEqual(str(err), 
                 "h1.sl1: list contains non-string entries")
@@ -92,14 +92,14 @@ class StringListTestCase(unittest.TestCase):
         
     def test_constraint_violations(self):
         try:
-            self.sl3.value = []
+            self.sl3.set_value([])
         except ConstraintError, err:
             self.assertEqual(str(err), 
                 "h1.sl3: min length constraint '0 >= 1' has been violated")
         else:
             self.fail('ConstraintError expected')
         try:
-            self.sl3.value = ["a", "b", "c", "d", "e", "f", "g"]
+            self.sl3.set_value(["a", "b", "c", "d", "e", "f", "g"])
         except ConstraintError, err:
             self.assertEqual(str(err), 
                 "h1.sl3: max length constraint '7 <= 5' has been violated")

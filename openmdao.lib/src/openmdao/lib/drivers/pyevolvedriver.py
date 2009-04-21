@@ -2,14 +2,15 @@
 
 __version__ = "0.1"
 
-from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main import Driver, ExprEvaluator, Int, Float, Bool, String, Wrapper
+import random
 
 from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
 from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
 from pyevolve import GenomeBase
 
-import random
+from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main import Driver, ExprEvaluator, Int, Float, Bool, String, RefVariable
+from openmdao.main.wrapper import Wrapper
 
 def G1DListCrossOverRealHypersphere(genome, **args):
     """ A genome reproduction algorithm, developed by Tristan Hearn at 
@@ -79,29 +80,29 @@ class pyevolvedriver(Driver):
     TODO: Implement function-slots as sockets
     """
 
-    def _get_objective(self):
-        if self._objective is None:
-            return ''
-        else:
-            return self._objective.text
+    #def _get_objective(self):
+        #if self._objective is None:
+            #return ''
+        #else:
+            #return self._objective.text
 
-    def _set_objective(self,obj):
-        self._objective = None
-        try:
-            self._objective = ExprEvaluator(obj,self)
-        except AttributeError,err:
-            self.raise_exception('No objective has been set', RuntimeError)
-        except RuntimeError,err:
-            self.raise_exception("objective specified, '"+str(obj)+"', is not valid a valid OpenMDAO object. If it does exist in the model, a framework variable may need to be created",
-                                 RuntimeError)            
-    objective = property(_get_objective,_set_objective)
+    #def _set_objective(self,obj):
+        #self._objective = None
+        #try:
+            #self._objective = ExprEvaluator(obj,self)
+        #except AttributeError,err:
+            #self.raise_exception('No objective has been set', RuntimeError)
+        #except RuntimeError,err:
+            #self.raise_exception("objective specified, '"+str(obj)+"', is not valid a valid OpenMDAO object. If it does exist in the model, a framework variable may need to be created",
+                                 #RuntimeError)            
+    #objective = property(_get_objective,_set_objective)
 
-    def _get_objective_val(self):
-        """evaluate the new objective"""
-        if self.objective is None:
-            return None
-        else:
-            return self._objective.evaluate()     
+    #def _get_objective_val(self):
+        #"""evaluate the new objective"""
+        #if self.objective is None:
+            #return None
+        #else:
+            #return self._objective.evaluate()     
 
     def __init__(self,name,parent=None,doc=None): 
         super(pyevolvedriver,self).__init__(name,parent,doc)
@@ -110,6 +111,7 @@ class pyevolvedriver(Driver):
         self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin
 
         #inputs - value of None means use default
+        RefVariable('objective', self, INPUT)
         Int('freq_stats',self,INPUT,default = 0)
         Float('seed',self,INPUT,default = 0)
         Float('population_size',self,INPUT,default = Consts.CDefGAPopulationSize)
@@ -132,7 +134,7 @@ class pyevolvedriver(Driver):
         Wrapper('best_individual',self,OUTPUT,default = self.genome)
 
         #internal stuff
-        self._objective = None
+        #self._objective = None
 
 
     def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
@@ -148,7 +150,8 @@ class pyevolvedriver(Driver):
     def evaluate(self,genome):
         self.decoder(genome)
         self.parent.workflow.run()
-        return self._get_objective_val()
+        #return self._get_objective_val()
+        return self.objective.refvalue
 
     def verify(self):
         #genome verify
@@ -166,7 +169,9 @@ class pyevolvedriver(Driver):
     def execute(self):
         """ Perform the optimization"""
         
-        if self.objective == '':
+        #if self.objective == '':
+        # check objective value
+        if self.objective.get_value() == '':
             self.raise_exception("objective specified as None, please provide an objective expression.",RuntimeError)
         
         self.verify()

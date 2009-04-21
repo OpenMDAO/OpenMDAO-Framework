@@ -312,7 +312,6 @@ class IVariable (Interface):
         """Call data_changed(self,args,metadata) on all of this object's
         observers."""
 
-
 class IWorkflow(Interface):
     """An object that executes its nodes in a specified order.
     """

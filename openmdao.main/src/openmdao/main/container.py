@@ -241,7 +241,7 @@ class Container(HierarchyMember):
                 if index is not None:
                     return self._pub[path].get_entry(index)
                 else:
-                    return self._pub[path].value
+                    return self._pub[path].get_value()
             except KeyError:
                 self.raise_exception("object has no attribute '"+path+"'",
                                      AttributeError)
@@ -406,8 +406,8 @@ class Container(HierarchyMember):
             yield (name, obj)
             if recurse:
                 cont = None
-                if hasattr(obj,'value') and isinstance(obj.value,Container):
-                    cont = obj.value
+                if hasattr(obj,'get_value') and isinstance(obj.get_value(),Container):
+                    cont = obj.get_value()
                 elif isinstance(obj, Container):
                     cont = obj
                 if cont:

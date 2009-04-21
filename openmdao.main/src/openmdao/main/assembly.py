@@ -479,8 +479,8 @@ class Assembly (Component):
     @staticmethod
     def xfer_file(src_comp, src_var, dst_comp, dst_var):
         """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """
-        src_path = os.path.join(src_comp.get_directory(), src_var.value)
-        dst_path = os.path.join(dst_comp.get_directory(), dst_var.value)
+        src_path = os.path.join(src_comp.get_directory(), src_var.get_value())
+        dst_path = os.path.join(dst_comp.get_directory(), dst_var.get_value())
         if src_path != dst_path:
             if src_var.metadata['binary']:
                 mode = 'b'

@@ -15,6 +15,7 @@ x is an float variable
 """
 
 import numpy
+import logging
 
 from openmdao.main.expreval import translate_expr, ExprEvaluator
 from openmdao.main import Container, Component
@@ -44,14 +45,11 @@ tests = [
      "scope.parent.set('c.b',-scope.parent.get('comp.x'),[2])"),
 ]
 
-
-#for tst in tests:
-#    trans = translate_expr(tst[0], scope=top.a, validate=False)
-#    if trans != tst[1]:
-#        raise AssertionError(trans+" == "+tst[1])  
-
 for tst in tests:
     ex = ExprEvaluator(tst[0], top.a, validate=False)
+    logging.getLogger('').info('expr: %s' % ex.text)
+    logging.getLogger('').info('inputs: %s' % str(ex.get_external_inputs()))
+    logging.getLogger('').info('outputs: %s' % str(ex.get_external_outputs()))
     if ex.scoped_text != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+ex.scoped_text+" == "+tst[1])  
 
@@ -75,17 +73,31 @@ tests = [
 ]
 
 
-#for tst in tests:
-#    trans = translate_expr(tst[0], scope=top, validate=False)
-#    if trans != tst[1]:
-#        raise AssertionError('for input of '+tst[0]+', '+trans+" == "+tst[1])  
-    
-    
-
 for tst in tests:
     ex = ExprEvaluator(tst[0], top, validate=False)
+    logging.getLogger('').info('expr: %s' % ex.text)
+    logging.getLogger('').info('inputs: %s' % str(ex.get_external_inputs()))
+    logging.getLogger('').info('outputs: %s' % str(ex.get_external_outputs()))
     if ex.scoped_text != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+ex.scoped_text+" == "+tst[1])  
+    
+
+ex = ExprEvaluator('comp.x', top, single_name=True)
+assert(3.14 == ex.evaluate())
+
+# test setting the value of a referenced variable
+ex.set(75.4)
+assert(top.comp.x == 75.4)
+
+# verify that single_name will not allow expressions with multiple objects
+try:
+    ex = ExprEvaluator('comp.x+comp.x', top, single_name=True)
+except RuntimeError, err:
+    expected = "Expected end of text (at char 6), (line:1, col:7) - comp.x>!<+comp.x"
+    if str(err) != expected:
+        raise AssertionError(str(err)+'=='+expected)
+else:
+    raise AssertionError('RuntimeError expected')
     
 
 # now try some bogus expressions

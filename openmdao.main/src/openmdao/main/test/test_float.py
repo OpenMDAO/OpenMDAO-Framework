@@ -30,15 +30,15 @@ class FloatTestCase(unittest.TestCase):
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual(3.1415926, self.float1.value)
+        self.assertEqual(3.1415926, self.float1.get_value())
         # check default value
         self.assertEqual(98.9, self.float1.default)
-        self.float1.value = self.float2.value
-        self.assertEqual(42., self.float1.value)
+        self.float1.set_value(self.float2.get_value())
+        self.assertEqual(42., self.float1.get_value())
         # make sure value gets transferred to internal variable
         self.assertEqual(42., self.hobj.internal_float1)
-        self.float1.value = 32.1
-        self.assertEqual(32.1, self.float1.value)
+        self.float1.set_value(32.1)
+        self.assertEqual(32.1, self.float1.get_value())
         self.assertEqual(32.1, self.hobj.internal_float1)
 
     def test_unit_conversion(self):
@@ -69,7 +69,7 @@ class FloatTestCase(unittest.TestCase):
         self.float1.units = None
         self.float2.units = None
         self.float1.setvar(None, self.float2)
-        self.assertEqual(42.0, self.float1.value)
+        self.assertEqual(42.0, self.float1.get_value())
         
     def test_units_Unit_to_None(self):
         self.float1.units = 'ft'
@@ -109,7 +109,7 @@ class FloatTestCase(unittest.TestCase):
         
     def test_constraint_violations(self):
         try:
-            self.float1.value = 124
+            self.float1.set_value(124)
         except ConstraintError, err:
             self.assertEqual(str(err), 
                         "h1.float1: constraint '124 <= 99.0' has been violated")
@@ -117,7 +117,7 @@ class FloatTestCase(unittest.TestCase):
             self.fail(
                 'expected exception for max_limit violation did not happen')
         try:
-            self.float1.value = -3
+            self.float1.set_value(-3)
         except ConstraintError, err:
             self.assertEqual(str(err), 
                         "h1.float1: constraint '-3 >= 0.0' has been violated")
