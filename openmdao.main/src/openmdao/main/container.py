@@ -24,6 +24,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import zipfile
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -38,7 +39,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IContainer, IVariable
+from openmdao.main.interfaces import IComponent, IContainer, IVariable
 from openmdao.main import HierarchyMember
 from openmdao.main.variable import INPUT
 from openmdao.main.vartypemap import find_var_class
@@ -247,8 +248,8 @@ class Container(HierarchyMember):
             self.raise_exception("object has no attribute '"+base+"'", 
                                  AttributeError)
         except TypeError:
-            self.raise_exception("object has no attribute '"+str(base)+
-                                 "'", AttributeError)
+            self.raise_exception("object has no attribute '"+str(base)+"'",
+                                 AttributeError)
             
         obj.set(name, value, index)        
 
@@ -270,7 +271,7 @@ class Container(HierarchyMember):
         try:
             obj = self._pub[base]
         except KeyError:
-            self.raise_exception("object has no attribute '"+ base+"'",
+            self.raise_exception("object has no attribute '"+base+"'",
                                  AttributeError)
         except TypeError:
             self.raise_exception("object has no attribute '"+str(base)+"'",
@@ -330,7 +331,6 @@ class Container(HierarchyMember):
         Returns the egg's filename."""
         # TODO: check for setup.py errors!
         # TODO: handle custom class definitions.
-        # TODO: scan for FileVariables.
         # TODO: record required packages, buildout.cfg.
         orig_dir = os.getcwd()
 
@@ -464,6 +464,46 @@ class Container(HierarchyMember):
                                  RuntimeError)
     
     @staticmethod
+    def load_from_egg (filename):
+        """Load state and other files from an egg, returns top object."""
+        # TODO: handle custom class definitions.
+        # TODO: handle required packages.
+        logger.debug('Loading from %s in %s...', filename, os.getcwd())
+        archive = zipfile.ZipFile(filename, 'r')
+        name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
+        logger.debug("    name '%s'", name)
+        for info in archive.infolist():
+            if not info.filename.startswith(name):
+                continue  # EGG-INFO
+            if info.filename.endswith('.pyc') or \
+               info.filename.endswith('.pyo'):
+                continue  # Don't assume compiled OK for this platform.
+            logger.debug("    extracting '%s'...", info.filename)
+            dirname = os.path.dirname(info.filename)
+            dirname = dirname[len(name)+1:]
+            if dirname and not os.path.exists(dirname):
+                os.makedirs(dirname)
+            path = info.filename[len(name)+1:]
+            out = open(path, 'w')
+            out.write(archive.read(info.filename))
+            out.close()
+
+        if os.path.exists(name+'.pickle'):
+            top = Container.load(name+'.pickle', SAVE_CPICKLE)
+        elif os.path.exists(name+'.yaml'):
+            top = Container.load(name+'.yaml', SAVE_LIBYAML)
+        else:
+            raise RuntimeError('No top object pickle or yaml save file.')
+
+        for component in top.get_objs(IComponent.providedBy, True):
+            directory = component.get_directory()
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+
+        top.post_load()
+        return top
+
+    @staticmethod
     def load (instream, format=SAVE_CPICKLE):
         """Load an object of this type from the input stream. Pure python 
         classes generally won't need to override this, but extensions will. 
@@ -491,13 +531,11 @@ class Container(HierarchyMember):
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
-        subcontainers = self.get_objs(IContainer.providedBy)
-        for child in subcontainers:
+        for child in self.get_objs(IContainer.providedBy):
             child.post_load()
 
     def pre_delete(self):
         """ Perform any required operations before the model is deleted. """
-        subcontainers = self.get_objs(IContainer.providedBy)
-        for child in subcontainers:
+        for child in self.get_objs(IContainer.providedBy):
             child.pre_delete()
 

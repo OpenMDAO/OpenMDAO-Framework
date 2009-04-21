@@ -6,15 +6,13 @@ __version__ = "0.1"
 
 import os
 import os.path
-import zipfile
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IComponent, IAssembly
-from openmdao.main import Container, String
-from openmdao.main.log import logger
+from openmdao.main.interfaces import IVariable, IContainer, IComponent, IAssembly
+from openmdao.main import Container, String, FileVariable
 from openmdao.main.variable import INPUT
-from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
+from openmdao.main.constants import SAVE_CPICKLE
 
 # Execution states.
 STATE_UNKNOWN = -1
@@ -248,6 +246,7 @@ class Component (Container):
 
         fixup_dirs = []  # Used to restore original component config.
         fixup_meta = []
+        fixup_fvar = []
 
         # Process all components in bottom-up order.
         # We have to check relative paths like '../somedir' and if
@@ -256,6 +255,8 @@ class Component (Container):
         components.extend(self.get_objs(IComponent.providedBy, True))
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
+
+            # Process execution directory.
             comp_dir = comp.get_directory()
             if relative:
                 if comp_dir.startswith(src_dir):
@@ -267,20 +268,44 @@ class Component (Container):
                         "Can't save, %s directory '%s' doesn't start with '%s'." \
                         % (comp.get_pathname(), comp_dir, src_dir))
 
+            # Process external files.
             for metadata in comp.external_files:
                 path = metadata['path']
+                if not os.path.isabs(path):
+                    path = os.path.join(comp_dir, path)
+                path = os.path.normpath(path)
+                if not os.path.exists(path):
+                    continue
                 if relative:
-                    if not os.path.isabs(path):
-                        path = os.path.join(comp_dir, path)
-                    path = os.path.normpath(path)
                     if path.startswith(src_dir):
                         path = path[len(src_dir):]
-                        fixup_meta.append((metadata, metadata['path']))
-                        metadata['path'] = path
+                        if os.path.isabs(metadata['path']):
+                            fixup_meta.append((metadata, metadata['path']))
+                            metadata['path'] = path
                     else:
                         self.raise_exception(
                             "Can't save, %s file '%s' doesn't start with '%s'." \
                             % (comp.get_pathname(), path, src_dir))
+                src_files.add(path)
+
+            # Process FileVariables for this component only.
+            for fvar in comp._get_file_vars():
+                path = fvar.value
+                if not os.path.isabs(path):
+                    path = os.path.join(comp_dir, path)
+                path = os.path.normpath(path)
+                if not os.path.exists(path):
+                    continue
+                if relative:
+                    if path.startswith(src_dir):
+                        path = path[len(src_dir):]
+                        if os.path.isabs(fvar.value):
+                            fixup_fvar.append((fvar, fvar.value))
+                            fvar.value = path
+                    else:
+                        self.raise_exception(
+                            "Can't save, %s path '%s' doesn't start with '%s'." \
+                            % (fvar.get_pathname(), path, src_dir))
                 src_files.add(path)
         try:
             return super(Component, self).save_to_egg(name, version, relative,
@@ -292,46 +317,29 @@ class Component (Container):
                 comp.directory = path
             for meta, path in fixup_meta:
                 meta['path'] = path
+            for fvar, path in fixup_fvar:
+                fvar.value = path
 
-    @staticmethod
-    def load_from_egg (filename):
-        """Load state and other files from an egg, returns top object."""
-        # TODO: handle custom class definitions.
-        # TODO: handle required packages.
-        logger.debug('Loading from %s in %s...', filename, os.getcwd())
-        archive = zipfile.ZipFile(filename, 'r')
-        name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
-        logger.debug("    name '%s'", name)
-        for info in archive.infolist():
-            if not info.filename.startswith(name):
-                continue  # EGG-INFO
-            if info.filename.endswith('.pyc') or \
-               info.filename.endswith('.pyo'):
-                continue  # Don't assume compiled OK for this platform.
-            logger.debug("    extracting '%s'...", info.filename)
-            dirname = os.path.dirname(info.filename)
-            dirname = dirname[len(name)+1:]
-            if dirname and not os.path.exists(dirname):
-                os.makedirs(dirname)
-            path = info.filename[len(name)+1:]
-            out = open(path, 'w')
-            out.write(archive.read(info.filename))
-            out.close()
+    def _get_file_vars(self):
+        """Return list of FileVariables owned by this component."""
 
-        if os.path.exists(name+'.pickle'):
-            top = Container.load(name+'.pickle', SAVE_CPICKLE)
-        elif os.path.exists(name+'.yaml'):
-            top = Container.load(name+'.yaml', SAVE_LIBYAML)
-        else:
-            raise RuntimeError('No top object pickle or yaml save file.')
+        def _recurse_get_file_vars(container, file_vars):
+            """Scan both normal __dict__ and _pub."""
+            objs = container.__dict__.values()
+            objs.extend(container._pub.values())
+            for obj in objs:
+                if isinstance(obj, FileVariable):
+                    file_vars.add(obj)
+                elif IComponent.providedBy(obj):
+                    continue
+                elif IVariable.providedBy(obj):
+                    continue
+                elif IContainer.providedBy(obj):
+                    _recurse_get_file_vars(obj, file_vars)
 
-        for component in top.get_objs(IComponent.providedBy, True):
-            directory = component.get_directory()
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-
-        top.post_load()
-        return top
+        file_vars = set()
+        _recurse_get_file_vars(self, file_vars)
+        return file_vars
 
     def step (self):
         """For Components that contain Workflows (e.g., Assembly), this will run
