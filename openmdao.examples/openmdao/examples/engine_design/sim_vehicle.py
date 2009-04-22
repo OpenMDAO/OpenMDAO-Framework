@@ -9,6 +9,7 @@ from openmdao.main.exceptions import ConstraintError, RunFailed
 
 from openmdao.examples.engine_design.vehicle import Vehicle
 
+from pkg_resources import resource_stream
 from csv import reader
 
 class Sim_Vehicle(Component):
@@ -148,10 +149,17 @@ class Sim_Vehicle(Component):
                 self.vehicle.execute()
             except ConstraintError:
                 self.vehicle.CurrentGear += 1
-                self.vehicle.execute()
+                
+                try:
+                    self.vehicle.execute()
+                except ConstraintError:
+                    self.raise_exception("Gearing problem in Acceleration test.", RunFailed)
 
             # Accleration converted to mph/s
             Acceleration = self.vehicle.Acceleration*2.23693629
+            
+            if Acceleration <= 0.0:
+                self.raise_exception("Vehicle could not reach maximum speed in Acceleration test.", RunFailed)
                 
             Velocity += Acceleration*self.TimeStep
             self.vehicle.Velocity = Velocity/2.23693629
@@ -201,7 +209,8 @@ class Sim_Vehicle(Component):
         
         for profilename in profilenames:
             
-            profileReader = reader(open(profilename), delimiter=',')
+            profile_stream = resource_stream('openmdao.examples.engine_design',profilename)
+            profileReader = reader(profile_stream, delimiter=',')
             
             Time1 = 0.0
             Velocity1 = 0.0
@@ -323,9 +332,9 @@ def test_it():
     z = Sim_Vehicle("New")  
     z.vehicle = Vehicle("Test_Vehicle")
     z.execute()
-    print "Time:", z.AccelTime
-    print "City:", z.EPACity
-    print "Highway:", z.EPAHighway
+    print "Time (0-60): ", z.AccelTime
+    print "City MPG: ", z.EPACity
+    print "Highway MPG: ", z.EPAHighway
     
     print "\nElapsed time: ", time.time()-tt
     
