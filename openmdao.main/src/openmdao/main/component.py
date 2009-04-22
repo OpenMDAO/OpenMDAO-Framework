@@ -241,6 +241,8 @@ class Component (Container):
         """
         if src_dir is None:
             src_dir = self.get_directory()
+        if src_dir.endswith(os.sep):
+            src_dir = src_dir[:-1]
         if src_files is None:
             src_files = set()
 
@@ -255,58 +257,80 @@ class Component (Container):
         components.extend(self.get_objs(IComponent.providedBy, True))
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
+#            self.debug('Saving %s', comp.get_pathname())
 
             # Process execution directory.
             comp_dir = comp.get_directory()
+#            self.debug("    directory '%s'", comp.directory)
             if relative:
                 if comp_dir.startswith(src_dir):
-                    if os.path.isabs(comp.directory):
+                    if comp_dir == src_dir and comp.directory:
                         fixup_dirs.append((comp, comp.directory))
-                        comp.directory = cmp.directory[len(src_dir)+1:]
+                        comp.directory = ''
+#                        self.debug("        directory now '%s'", comp.directory)
+                    elif os.path.isabs(comp.directory):
+                        parent_dir = comp.parent.get_directory()
+                        fixup_dirs.append((comp, comp.directory))
+                        comp.directory = self._relpath(comp_dir, parent_dir)
+#                        self.debug("        directory now '%s'", comp.directory)
                 else:
                     self.raise_exception(
                         "Can't save, %s directory '%s' doesn't start with '%s'." \
-                        % (comp.get_pathname(), comp_dir, src_dir))
+                        % (comp.get_pathname(), comp_dir, src_dir), ValueError)
 
             # Process external files.
             for metadata in comp.external_files:
                 path = metadata['path']
+#                self.debug('    external path %s', path)
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
                 path = os.path.normpath(path)
                 if not os.path.exists(path):
+#                    self.debug("        '%s' does not exist" % path)
                     continue
                 if relative:
                     if path.startswith(src_dir):
-                        path = path[len(src_dir):]
+                        save_path = self._relpath(path, src_dir)
                         if os.path.isabs(metadata['path']):
+                            path = self._relpath(path, comp_dir)
                             fixup_meta.append((metadata, metadata['path']))
                             metadata['path'] = path
+#                            self.debug('        path now %s', path)
                     else:
                         self.raise_exception(
                             "Can't save, %s file '%s' doesn't start with '%s'." \
-                            % (comp.get_pathname(), path, src_dir))
-                src_files.add(path)
+                            % (comp.get_pathname(), path, src_dir), ValueError)
+                else:
+                    save_path = path
+#                self.debug('        adding %s', save_path)
+                src_files.add(save_path)
 
             # Process FileVariables for this component only.
-            for fvar in comp._get_file_vars():
+            for fvar in comp.get_file_vars():
                 path = fvar.value
+#                self.debug('    fvar %s path %s', fvar.name, path)
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
                 path = os.path.normpath(path)
                 if not os.path.exists(path):
+#                    self.debug("        '%s' does not exist" % path)
                     continue
                 if relative:
                     if path.startswith(src_dir):
-                        path = path[len(src_dir):]
+                        save_path = self._relpath(path, src_dir)
                         if os.path.isabs(fvar.value):
+                            path = self._relpath(path, comp_dir)
                             fixup_fvar.append((fvar, fvar.value))
                             fvar.value = path
+#                            self.debug('        path now %s', path)
                     else:
                         self.raise_exception(
                             "Can't save, %s path '%s' doesn't start with '%s'." \
-                            % (fvar.get_pathname(), path, src_dir))
-                src_files.add(path)
+                            % (fvar.get_pathname(), path, src_dir), ValueError)
+                else:
+                    save_path = path
+#                self.debug('        adding %s', save_path)
+                src_files.add(save_path)
         try:
             return super(Component, self).save_to_egg(name, version, relative,
                                                       src_dir, src_files,
@@ -320,10 +344,10 @@ class Component (Container):
             for fvar, path in fixup_fvar:
                 fvar.value = path
 
-    def _get_file_vars(self):
+    def get_file_vars (self):
         """Return list of FileVariables owned by this component."""
 
-        def _recurse_get_file_vars(container, file_vars):
+        def _recurse_get_file_vars (container, file_vars):
             """Scan both normal __dict__ and _pub."""
             objs = container.__dict__.values()
             objs.extend(container._pub.values())
@@ -340,6 +364,33 @@ class Component (Container):
         file_vars = set()
         _recurse_get_file_vars(self, file_vars)
         return file_vars
+
+    def _relpath (self, path1, path2):
+        """Return path for path1 relative to path2."""
+        assert os.path.isabs(path1)
+        assert os.path.isabs(path2)
+
+        if path1.endswith(os.sep):
+            path = path1[:-1]
+        else:
+            path = path1
+        if path2.endswith(os.sep):
+            start = path2[:-1]
+        else:
+            start = path2
+
+        if path == start:
+            return ''
+
+        relpath = ''
+        while start:
+            if path.startswith(start):
+                return os.path.join(relpath, path[len(start)+1:])
+            relpath = os.path.join('..', relpath)
+            start = os.path.dirname(start)
+
+        self.raise_exception("'%s' has no common prefix with '%s'" \
+                             % (path1, path2), ValueError)
 
     def step (self):
         """For Components that contain Workflows (e.g., Assembly), this will run
@@ -394,5 +445,4 @@ class Component (Container):
 
              """
         return None
-    
     

@@ -8,14 +8,18 @@ import os
 import shutil
 import unittest
 
-from openmdao.main import Assembly, Component, \
+from openmdao.main import Assembly, Component, Container, \
                           ArrayVariable, FileVariable, StringList, Bool
 from openmdao.main.variable import INPUT, OUTPUT
 
-# pylint: disable-msg=E1101
+from openmdao.main.component import Simulation
+
+# pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
-EXTERNAL_FILENAME = 'xyzzy'
+__version__ = '1.2.3'  # Used in forming egg name.
+
+EXTERNAL_FILES = ('xyzzy', '../sub/data2', 'hello', '../sub/data4')
 
 source_init = False
 sink_init = False
@@ -26,24 +30,57 @@ class Source(Component):
 
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
+        self.directory = self.get_directory()  # Force absolute.
 
         global source_init
         source_init = True
 
         Bool('write_files', self, INPUT, default=True)
         StringList('text_data', self, INPUT, default=[])
-        ArrayVariable('binary_data', self, INPUT, float, default=[])
         FileVariable('text_file', self, OUTPUT, default='source.txt')
-        FileVariable('binary_file', self, OUTPUT, default='source.bin',
-                     metadata={'binary':True})
 
-        # Example of external file that isn't a variable.
-        self.push_dir(self.get_directory())
-        out = open(EXTERNAL_FILENAME, 'w')
+        Subcontainer('sub', parent=self)
+
+        # Absolute external file that exists at time of save.
+        path = os.path.join(self.directory, EXTERNAL_FILES[0])
+        out = open(path, 'w')
         out.write('Twisty narrow passages.\n')
         out.close()
+        self.external_files.append({'path':path})
+
+        # Absolute external file that exists at time of save, in separate tree.
+        path = os.path.join(self.directory, EXTERNAL_FILES[1])
+        leaf = os.path.dirname(path)
+        if not os.path.exists(leaf):
+            os.makedirs(leaf)
+        out = open(path, 'w')
+        out.write('Some external data.\n')
+        out.close()
+        self.external_files.append({'path':path})
+
+        # Relative external file that exists at time of save.
+        self.push_dir(self.get_directory())
+        path = EXTERNAL_FILES[2]
+        out = open(path, 'w')
+        out.write('Hello world!\n')
+        out.close()
         self.pop_dir()
-        self.external_files.append({'path':EXTERNAL_FILENAME})
+        self.external_files.append({'path':path})
+
+        # Relative external file that exists at time of save, in separate tree.
+        self.push_dir(self.get_directory())
+        path = EXTERNAL_FILES[3]
+        leaf = os.path.dirname(path)
+        if not os.path.exists(leaf):
+            os.makedirs(leaf)
+        out = open(path, 'w')
+        out.write('Some more external data.\n')
+        out.close()
+        self.pop_dir()
+        self.external_files.append({'path':path})
+
+        # External file that doesn't exist at time of save.
+        self.external_files.append({'path':'does-not-exist'})
 
     def execute(self):
         """ Write test data to files. """
@@ -52,9 +89,21 @@ class Source(Component):
             out.write(self.text_data)
             out.close()
 
-            out = open(self.binary_file, 'wb')
-            cPickle.dump(self.binary_data, out, 2)
+            out = open(self.sub.binary_file, 'wb')
+            cPickle.dump(self.sub.binary_data, out, 2)
             out.close()
+
+
+class Subcontainer(Container):
+    """ Just a subcontainer for Source. """
+
+    def __init__(self, name='Subcontainer', parent=None):
+        super(Subcontainer, self).__init__(name, parent)
+
+        ArrayVariable('binary_data', self, INPUT, float, default=[])
+        FileVariable('binary_file', self, OUTPUT,
+                     default=os.path.join('..', 'sub', 'source.bin'),
+                     metadata={'binary':True})
 
 
 class Sink(Component):
@@ -68,8 +117,21 @@ class Sink(Component):
 
         StringList('text_data', self, OUTPUT, default=[])
         ArrayVariable('binary_data', self, OUTPUT, float, default=[])
-        FileVariable('text_file', self, INPUT, default='sink.txt')
+
+        # Absolute FileVariable that exists at time of save.
+        FileVariable('text_file', self, INPUT,
+                     default=os.path.join(self.get_directory(), 'sink.txt'))
+        out = open(self.text_file, 'w')
+        out.write('Absolute FileVariable that exists at time of save.\n')
+        out.close()
+
+        # Relative FileVariable that exists at time of save.
         FileVariable('binary_file', self, INPUT, default='sink.bin')
+        self.push_dir(self.get_directory())
+        out = open(self.binary_file, 'w')
+        out.write('Relative FileVariable that exists at time of save.\n')
+        out.close()
+        self.pop_dir()
 
     def execute(self):
         """ Read test data from files. """
@@ -82,6 +144,13 @@ class Sink(Component):
         inp.close()
 
 
+class Oddball(Component):
+    """ Just a component that needs a separate directory to be created. """
+
+    def __init__(self, name='Oddball', *args, **kwargs):
+        super(Oddball, self).__init__(name, *args, **kwargs)
+
+
 class Model(Assembly):
     """ Transfer files from producer to consumer. """
 
@@ -89,13 +158,14 @@ class Model(Assembly):
         super(Model, self).__init__(name, *args, **kwargs)
 
         self.workflow.add_node(Source(parent=self, directory='Source'))
+        self.workflow.add_node(Oddball(parent=self, directory='Oddball'))
         self.workflow.add_node(Sink(parent=self, directory='Sink'))
 
         self.connect('Source.text_file', 'Sink.text_file')
-        self.connect('Source.binary_file', 'Sink.binary_file')
+        self.connect('Source.sub.binary_file', 'Sink.binary_file')
 
-        self.Source.text_data = 'Hello World!'
-        self.Source.binary_data = [3.14159, 2.781828, 42]
+        self.Source.text_data = 'oiuyoiuyoiuy'
+        self.Source.sub.binary_data = [3.14159, 2.781828, 42]
 
 
 class EggTestCase(unittest.TestCase):
@@ -113,12 +183,10 @@ class EggTestCase(unittest.TestCase):
             os.remove(self.egg_name)
         if os.path.exists('Egg'):
             shutil.rmtree('Egg')
-        if os.path.exists('EggTest'):
-            shutil.rmtree('EggTest')
 
-    def test_save_load(self):
+    def test_save_load_pickle(self):
         logging.debug('')
-        logging.debug('test_save_load')
+        logging.debug('test_save_load_pickle')
 
         global source_init, sink_init
 
@@ -128,13 +196,13 @@ class EggTestCase(unittest.TestCase):
         self.assertNotEqual(self.model.Sink.text_data,
                             self.model.Source.text_data)
         self.assertNotEqual(self.model.Sink.binary_data,
-                            self.model.Source.binary_data)
+                            self.model.Source.sub.binary_data)
         self.assertNotEqual(
             self.model.Sink.getvar('binary_file').metadata['binary'], True)
 
-        external = os.path.join(self.model.get_directory(),
-                                'Source', EXTERNAL_FILENAME)
-        self.assertEqual(os.path.exists(external), True)
+        for path in EXTERNAL_FILES:
+            path = os.path.join(self.model.Source.get_directory(), path)
+            self.assertEqual(os.path.exists(path), True)
 
         # Save to egg.
         self.egg_name = self.model.save_to_egg()
@@ -144,12 +212,14 @@ class EggTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.text_data,
                          self.model.Source.text_data)
         self.assertEqual(self.model.Sink.binary_data,
-                         self.model.Source.binary_data)
+                         self.model.Source.sub.binary_data)
         self.assertEqual(
             self.model.Sink.getvar('binary_file').metadata['binary'], True)
 
         # Restore in test directory.
         orig_dir = os.getcwd()
+        if os.path.exists('EggTest'):
+            shutil.rmtree('EggTest')
         os.mkdir('EggTest')
         os.chdir('EggTest')
         try:
@@ -159,35 +229,118 @@ class EggTestCase(unittest.TestCase):
 
             # Load from saved initial state in egg.
             self.model.pre_delete()
+            Simulation._simulation = None
             self.model = Component.load_from_egg(os.path.join('..',
                                                               self.egg_name))
-            self.model.post_load()
-
             # Verify initial state.
             self.assertEqual(source_init, False)
             self.assertEqual(sink_init, False)
             self.assertNotEqual(self.model.Sink.text_data,
                                 self.model.Source.text_data)
             self.assertNotEqual(self.model.Sink.binary_data,
-                                self.model.Source.binary_data)
+                                self.model.Source.sub.binary_data)
             self.assertNotEqual(
                 self.model.Sink.getvar('binary_file').metadata['binary'], True)
 
-            external = os.path.join(self.model.get_directory(),
-                                    'Source', EXTERNAL_FILENAME)
-            self.assertEqual(os.path.exists(external), True)
+            for path in EXTERNAL_FILES:
+                path = os.path.join(self.model.Source.get_directory(), path)
+                self.assertEqual(os.path.exists(path), True)
 
             # Run and verify correct operation.
             self.model.run()
             self.assertEqual(self.model.Sink.text_data,
                              self.model.Source.text_data)
             self.assertEqual(self.model.Sink.binary_data,
-                             self.model.Source.binary_data)
+                             self.model.Source.sub.binary_data)
             self.assertEqual(
                 self.model.Sink.getvar('binary_file').metadata['binary'], True)
 
         finally:
             os.chdir(orig_dir)
+            shutil.rmtree('EggTest')
+            Simulation._simulation = None
+
+    def test_save_bad_directory(self):
+        logging.debug('')
+        logging.debug('test_save_bad_directory')
+
+        self.model.Oddball.directory = os.getcwd()
+        try:
+            self.model.save_to_egg()
+        except ValueError, exc:
+            self.assertEqual(str(exc).startswith(
+                "Egg_TestModel: Can't save, Egg_TestModel.Oddball directory"),
+                True)
+        else:
+            self.fail('Expected ValueError')
+
+    def test_save_bad_external(self):
+        logging.debug('')
+        logging.debug('test_save_bad_external')
+
+        path = os.path.join(os.getcwd(), 'bad-external')
+        out = open(path, 'w')
+        out.close()
+        metadata = self.model.Source.external_files[0]
+        metadata['path'] = path
+        try:
+            self.model.save_to_egg()
+        except ValueError, exc:
+            self.assertEqual(str(exc).startswith(
+                "Egg_TestModel: Can't save, Egg_TestModel.Source file"), True)
+        else:
+            self.fail('Expected ValueError')
+        finally:
+            os.remove(path)
+
+    def test_save_bad_filevar(self):
+        logging.debug('')
+        logging.debug('test_save_bad_filevar')
+
+        path = os.path.join(os.getcwd(), 'bad-file-variable')
+        out = open(path, 'w')
+        out.close()
+        self.model.Source.text_file = path
+        try:
+            self.model.save_to_egg()
+        except ValueError, exc:
+            self.assertEqual(str(exc).startswith(
+                "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"), True)
+        else:
+            self.fail('Expected ValueError')
+        finally:
+            os.remove(path)
+
+    def test_save_bad_format(self):
+        logging.debug('')
+        logging.debug('test_save_bad_format')
+        try:
+            self.model.save_to_egg(format='unknown')
+        except RuntimeError, exc:
+            self.assertEqual(str(exc),
+                             "Egg_TestModel: Unknown format 'unknown'.")
+        else:
+            self.fail('Expected RuntimeError')
+
+    def test_save_load_container(self):
+        logging.debug('')
+        logging.debug('test_save_load_container')
+
+        # Save to egg.
+        self.egg_name = self.model.Source.sub.save_to_egg()
+
+        # Restore in test directory.
+        orig_dir = os.getcwd()
+        if os.path.exists('EggTest'):
+            shutil.rmtree('EggTest')
+        os.mkdir('EggTest')
+        os.chdir('EggTest')
+        try:
+            sub = Container.load_from_egg(os.path.join('..', self.egg_name))
+            self.assertEqual(sub.binary_data, self.model.Source.sub.binary_data)
+        finally:
+            os.chdir(orig_dir)
+            shutil.rmtree('EggTest')
 
 
 if __name__ == '__main__':
