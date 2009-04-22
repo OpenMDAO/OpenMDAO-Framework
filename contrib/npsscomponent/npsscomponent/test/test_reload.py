@@ -72,8 +72,9 @@ class NPSSTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        Simulation._simulation = None
+        # Reset simulation root so we can legally access files.
         os.chdir(NPSSTestCase.directory)
+        Simulation.reset()
         self.model = Model('TestModel')
 
     def tearDown(self):
@@ -82,6 +83,7 @@ class NPSSTestCase(unittest.TestCase):
         os.remove('reload.out')
         self.model = None
         os.chdir(ORIG_DIR)
+        Simulation.reset()
 
     def test_internal_reload(self):
         logging.debug('')

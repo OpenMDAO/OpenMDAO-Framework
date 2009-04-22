@@ -21,31 +21,37 @@ STATE_RUNNING = 1
 STATE_WAITING = 2
 
 
-class Simulation(object):
+class Simulation (object):
     """Singleton object used to hold top-level items such as root directory."""
 
-    _simulation = None
+    __simulation = None
 
     @staticmethod
     def get_simulation():
         """Return the simulation singleton."""
-        if Simulation._simulation is None:
+        if Simulation.__simulation is None:
             Simulation()
-        return Simulation._simulation
+        return Simulation.__simulation
+
+    @staticmethod
+    def reset():
+        """Reset the singleton so the current directory is the root."""
+        Simulation.__simulation = None
+        Simulation()
 
     def __init__(self):
-        if Simulation._simulation is not None:
+        if Simulation.__simulation is not None:
             raise RuntimeError('Only one Simulation object may be created!')
-        Simulation._simulation = self
-        self._root = os.getcwd()
+        Simulation.__simulation = self
+        self.__root = os.getcwd()
 
     @property
     def root(self):
         """Execution root directory. Root of all legal file paths."""
-        return self._root
+        return self.__root
 
     def legal_path(self, path):
-        """Return True is path is legal (decendant of our root)."""
+        """Return True if path is legal (decendant of our root)."""
         return path.startswith(self.root)
 
 
@@ -391,6 +397,29 @@ class Component (Container):
 
         self.raise_exception("'%s' has no common prefix with '%s'" \
                              % (path1, path2), ValueError)
+
+    @staticmethod
+    def load_from_egg (filename):
+        """Load state and other files from an egg, returns top object."""
+# This doesn't work:
+#    AttributeError: 'super' object has no attribute 'load_from_egg'
+#        top = super(Component).load_from_egg(filename)
+        top = Container.load_from_egg(filename)
+
+        if IComponent.providedBy(top):
+            top.directory = os.getcwd()
+            for component in top.get_objs(IComponent.providedBy, True):
+                directory = component.get_directory()
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
+
+        top.post_load()
+        return top
+
+    def post_load(self):
+        """ Perform any required operations after model has been loaded. """
+        for child in self.get_objs(IContainer.providedBy):
+            child.post_load()
 
     def step (self):
         """For Components that contain Workflows (e.g., Assembly), this will run

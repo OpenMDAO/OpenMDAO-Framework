@@ -10,7 +10,6 @@ import unittest
 from openmdao.main import Assembly, Component, \
                           ArrayVariable, FileVariable, StringList, Bool
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.component import Simulation
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -78,10 +77,10 @@ class Model(Assembly):
 
 
 class FileTestCase(unittest.TestCase):
+    """ Test of FileVariables. """
 
     def setUp(self):
         """ Called before each test in this class. """
-        Simulation._simulation = None
         self.model = Model()
 
     def tearDown(self):

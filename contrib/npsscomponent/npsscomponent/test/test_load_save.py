@@ -53,8 +53,9 @@ class NPSSTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        Simulation._simulation = None
+        # Reset simulation root so we can legally access files.
         os.chdir(NPSSTestCase.directory)
+        Simulation.reset()
         self.npss = Passthrough()
         self.egg_name = None
 
@@ -68,6 +69,7 @@ class NPSSTestCase(unittest.TestCase):
             os.remove(self.egg_name)
 
         os.chdir(ORIG_DIR)
+        Simulation.reset()
 
     def test_load_save(self):
         logging.debug('')

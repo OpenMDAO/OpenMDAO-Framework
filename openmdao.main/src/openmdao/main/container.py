@@ -39,7 +39,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IComponent, IContainer, IVariable
+from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main import HierarchyMember
 from openmdao.main.variable import INPUT
 from openmdao.main.vartypemap import find_var_class
@@ -489,19 +489,11 @@ class Container(HierarchyMember):
             out.close()
 
         if os.path.exists(name+'.pickle'):
-            top = Container.load(name+'.pickle', SAVE_CPICKLE)
+            return Container.load(name+'.pickle', SAVE_CPICKLE)
         elif os.path.exists(name+'.yaml'):
-            top = Container.load(name+'.yaml', SAVE_LIBYAML)
-        else:
-            raise RuntimeError('No top object pickle or yaml save file.')
+            return Container.load(name+'.yaml', SAVE_LIBYAML)
 
-        for component in top.get_objs(IComponent.providedBy, True):
-            directory = component.get_directory()
-            if not os.path.exists(directory):
-                os.makedirs(directory)
-
-        top.post_load()
-        return top
+        raise RuntimeError('No top object pickle or yaml save file.')
 
     @staticmethod
     def load (instream, format=SAVE_CPICKLE):

@@ -12,8 +12,6 @@ from openmdao.main import Assembly, Component, Container, \
                           ArrayVariable, FileVariable, StringList, Bool
 from openmdao.main.variable import INPUT, OUTPUT
 
-from openmdao.main.component import Simulation
-
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
@@ -169,6 +167,7 @@ class Model(Assembly):
 
 
 class EggTestCase(unittest.TestCase):
+    """ Test saving and loading of simulations as eggs. """
 
     def setUp(self):
         """ Called before each test in this class. """
@@ -229,9 +228,10 @@ class EggTestCase(unittest.TestCase):
 
             # Load from saved initial state in egg.
             self.model.pre_delete()
-            Simulation._simulation = None
             self.model = Component.load_from_egg(os.path.join('..',
                                                               self.egg_name))
+            self.model.directory = os.getcwd()
+
             # Verify initial state.
             self.assertEqual(source_init, False)
             self.assertEqual(sink_init, False)
@@ -258,7 +258,6 @@ class EggTestCase(unittest.TestCase):
         finally:
             os.chdir(orig_dir)
             shutil.rmtree('EggTest')
-            Simulation._simulation = None
 
     def test_save_bad_directory(self):
         logging.debug('')
@@ -341,6 +340,18 @@ class EggTestCase(unittest.TestCase):
         finally:
             os.chdir(orig_dir)
             shutil.rmtree('EggTest')
+
+    def test_load_nofile(self):
+        logging.debug('')
+        logging.debug('test_load_nofile')
+
+        try:
+            Component.load_from_egg('no-such-egg')
+        except IOError, exc:
+            self.assertEqual(str(exc),
+                             "[Errno 2] No such file or directory: 'no-such-egg'")
+        else:
+            self.fail('Expected IOError')
 
 
 if __name__ == '__main__':

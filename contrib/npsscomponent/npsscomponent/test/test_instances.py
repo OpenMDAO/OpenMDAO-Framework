@@ -219,8 +219,9 @@ class NPSSTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        Simulation._simulation = None
+        # Set new simulation root so we can legally access files.
         os.chdir(NPSSTestCase.directory)
+        Simulation.reset()
         self.model = Model()
 
     def tearDown(self):
@@ -231,6 +232,7 @@ class NPSSTestCase(unittest.TestCase):
         self.model = None
         end_dir = os.getcwd()
         os.chdir(ORIG_DIR)
+        Simulation.reset()
         if end_dir != NPSSTestCase.directory:
             self.fail('Ended in %s, expected %s' \
                       % (end_dir, NPSSTestCase.directory))
