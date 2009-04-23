@@ -15,7 +15,7 @@ from numpy.testing import assert_equal
 from openmdao.main import Assembly, Component, ArrayVariable, Bool, \
                           FileVariable, Float, Int, String, StringList
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.component import Simulation
+from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
 
@@ -220,8 +220,7 @@ class NPSSTestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test in this class. """
         # Set new simulation root so we can legally access files.
-        os.chdir(NPSSTestCase.directory)
-        Simulation.reset()
+        SimulationRoot.chdir(NPSSTestCase.directory)
         self.model = Model()
 
     def tearDown(self):
@@ -231,8 +230,7 @@ class NPSSTestCase(unittest.TestCase):
         shutil.rmtree(self.model.NPSS_B.directory)
         self.model = None
         end_dir = os.getcwd()
-        os.chdir(ORIG_DIR)
-        Simulation.reset()
+        SimulationRoot.chdir(ORIG_DIR)
         if end_dir != NPSSTestCase.directory:
             self.fail('Ended in %s, expected %s' \
                       % (end_dir, NPSSTestCase.directory))

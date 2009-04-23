@@ -21,38 +21,32 @@ STATE_RUNNING = 1
 STATE_WAITING = 2
 
 
-class Simulation (object):
-    """Singleton object used to hold top-level items such as root directory."""
+class SimulationRoot (object):
+    """Singleton object used to hold root directory."""
 
-    __simulation = None
-
-    @staticmethod
-    def get_simulation():
-        """Return the simulation singleton."""
-        if Simulation.__simulation is None:
-            Simulation()
-        return Simulation.__simulation
+    # Execution root directory. Root of all legal file paths.
+    __root = None
 
     @staticmethod
-    def reset():
-        """Reset the singleton so the current directory is the root."""
-        Simulation.__simulation = None
-        Simulation()
+    def chdir (path):
+        """Change to directory 'path' and set the singleton's root.
+        Normally not called, but useful in special situations."""
+        os.chdir(path)
+        SimulationRoot.__root = os.getcwd()
 
-    def __init__(self):
-        if Simulation.__simulation is not None:
-            raise RuntimeError('Only one Simulation object may be created!')
-        Simulation.__simulation = self
-        self.__root = os.getcwd()
+    @staticmethod
+    def get_root ():
+        """Return this simulation's root directory path."""
+        if SimulationRoot.__root is None:
+            SimulationRoot.__root = os.getcwd()
+        return SimulationRoot.__root
 
-    @property
-    def root(self):
-        """Execution root directory. Root of all legal file paths."""
-        return self.__root
-
-    def legal_path(self, path):
+    @staticmethod
+    def legal_path (path):
         """Return True if path is legal (decendant of our root)."""
-        return path.startswith(self.root)
+        if SimulationRoot.__root is None:
+            SimulationRoot.__root = os.getcwd()
+        return path.startswith(SimulationRoot.__root)
 
 
 class Component (Container):
@@ -80,10 +74,11 @@ class Component (Container):
 # pylint: disable-msg=E1101
         dirpath = self.get_directory()
         if dirpath:
-            if not Simulation.get_simulation().legal_path(dirpath):
+            if not SimulationRoot.legal_path(dirpath):
                 self.raise_exception(
                     "Illegal execution directory '%s', not a decendant of '%s'." \
-                    % (dirpath, Simulation.get_simulation().root), ValueError)
+                    % (dirpath, SimulationRoot.get_root()),
+                    ValueError)
             if not os.path.exists(dirpath):
                 try:
                     os.makedirs(dirpath)
@@ -173,13 +168,14 @@ class Component (Container):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
         """
-        directory = self.get_directory()
-        try:
-            self.push_dir(directory)
-        except OSError, exc:
-            msg = "Could not move to execution directory '%s': %s" % \
-                  (directory, exc.strerror)
-            self.raise_exception(msg, RuntimeError)
+        if self.directory:
+            directory = self.get_directory()
+            try:
+                self.push_dir(directory)
+            except OSError, exc:
+                msg = "Could not move to execution directory '%s': %s" % \
+                      (directory, exc.strerror)
+                self.raise_exception(msg, RuntimeError)
 
         self.state = STATE_RUNNING
         self._stop = False
@@ -191,7 +187,8 @@ class Component (Container):
             self.post_execute()
         finally:
             self.state = STATE_IDLE
-            self.pop_dir()
+            if self.directory:
+                self.pop_dir()
 
     def get_directory (self):
         """Return absolute path of execution directory."""
@@ -200,7 +197,7 @@ class Component (Container):
             if self.parent is not None and IComponent.providedBy(self.parent):
                 parent_dir = self.parent.get_directory()
             else:
-                parent_dir = Simulation.get_simulation().root
+                parent_dir = SimulationRoot.get_root()
             path = os.path.join(parent_dir, path)
         return path
 
@@ -209,10 +206,10 @@ class Component (Container):
         if not directory:
             directory = '.'
         cwd = os.getcwd()
-        if not Simulation.get_simulation().legal_path(directory):
+        if not SimulationRoot.legal_path(directory):
             self.raise_exception(
                 "Illegal directory '%s', not a decendant of '%s'." % \
-                (directory, Simulation.get_simulation().root), ValueError)
+                (directory, SimulationRoot.get_root()), ValueError)
         os.chdir(directory)
         self._dir_stack.append(cwd)
 
@@ -233,16 +230,17 @@ class Component (Container):
         """
         self.load(instream)
 
-    def save_to_egg (self, name=None, version=None, relative=True,
-                     src_dir=None, src_files=None,
-                     format=SAVE_CPICKLE, proto=-1, dst_dir=None):
+    def save_to_egg (self, name=None, version=None, force_relative=True,
+                     src_dir=None, src_files=None, dst_dir=None,
+                     format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
         name defaults to the name of the component.
         version defaults to the component's module __version__.
-        If relative is True, all paths are relative to src_dir.
+        If force_relative is True, all paths are relative to src_dir.
         src_dir defaults to the component's directory.
         src_files should be a set, and defaults to component's external files.
         dst_dir is the directory to write the egg in.
+        tmp_dir is the directory to use for temporary files.
         Returns the egg's filename.
         """
         if src_dir is None:
@@ -268,7 +266,7 @@ class Component (Container):
             # Process execution directory.
             comp_dir = comp.get_directory()
 #            self.debug("    directory '%s'", comp.directory)
-            if relative:
+            if force_relative:
                 if comp_dir.startswith(src_dir):
                     if comp_dir == src_dir and comp.directory:
                         fixup_dirs.append((comp, comp.directory))
@@ -294,7 +292,7 @@ class Component (Container):
                 if not os.path.exists(path):
 #                    self.debug("        '%s' does not exist" % path)
                     continue
-                if relative:
+                if force_relative:
                     if path.startswith(src_dir):
                         save_path = self._relpath(path, src_dir)
                         if os.path.isabs(metadata['path']):
@@ -321,7 +319,7 @@ class Component (Container):
                 if not os.path.exists(path):
 #                    self.debug("        '%s' does not exist" % path)
                     continue
-                if relative:
+                if force_relative:
                     if path.startswith(src_dir):
                         save_path = self._relpath(path, src_dir)
                         if os.path.isabs(fvar.value):
@@ -338,9 +336,11 @@ class Component (Container):
 #                self.debug('        adding %s', save_path)
                 src_files.add(save_path)
         try:
-            return super(Component, self).save_to_egg(name, version, relative,
+            return super(Component, self).save_to_egg(name, version,
+                                                      force_relative,
                                                       src_dir, src_files,
-                                                      format, proto, dst_dir)
+                                                      dst_dir, format, proto,
+                                                      tmp_dir)
         finally:
             # If any component config has been modified, restore it.
             for comp, path in fixup_dirs:

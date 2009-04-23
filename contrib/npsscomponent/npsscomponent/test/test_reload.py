@@ -10,7 +10,7 @@ import unittest
 
 from openmdao.main import Assembly, Component, Bool, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.component import Simulation
+from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
 
@@ -73,8 +73,7 @@ class NPSSTestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test in this class. """
         # Reset simulation root so we can legally access files.
-        os.chdir(NPSSTestCase.directory)
-        Simulation.reset()
+        SimulationRoot.chdir(NPSSTestCase.directory)
         self.model = Model('TestModel')
 
     def tearDown(self):
@@ -82,8 +81,7 @@ class NPSSTestCase(unittest.TestCase):
         self.model.pre_delete()
         os.remove('reload.out')
         self.model = None
-        os.chdir(ORIG_DIR)
-        Simulation.reset()
+        SimulationRoot.chdir(ORIG_DIR)
 
     def test_internal_reload(self):
         logging.debug('')

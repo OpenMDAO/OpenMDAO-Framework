@@ -217,10 +217,11 @@ class EggTestCase(unittest.TestCase):
 
         # Restore in test directory.
         orig_dir = os.getcwd()
-        if os.path.exists('EggTest'):
-            shutil.rmtree('EggTest')
-        os.mkdir('EggTest')
-        os.chdir('EggTest')
+        test_dir = 'EggTest'
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+        os.mkdir(test_dir)
+        os.chdir(test_dir)
         try:
             # Clear flags to detect if loading calls __init__.
             source_init = False
@@ -257,7 +258,7 @@ class EggTestCase(unittest.TestCase):
 
         finally:
             os.chdir(orig_dir)
-            shutil.rmtree('EggTest')
+            shutil.rmtree(test_dir)
 
     def test_save_bad_directory(self):
         logging.debug('')
@@ -330,16 +331,17 @@ class EggTestCase(unittest.TestCase):
 
         # Restore in test directory.
         orig_dir = os.getcwd()
-        if os.path.exists('EggTest'):
-            shutil.rmtree('EggTest')
-        os.mkdir('EggTest')
-        os.chdir('EggTest')
+        test_dir = 'EggTest'
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+        os.mkdir(test_dir)
+        os.chdir(test_dir)
         try:
             sub = Container.load_from_egg(os.path.join('..', self.egg_name))
             self.assertEqual(sub.binary_data, self.model.Source.sub.binary_data)
         finally:
             os.chdir(orig_dir)
-            shutil.rmtree('EggTest')
+            shutil.rmtree(test_dir)
 
     def test_load_nofile(self):
         logging.debug('')

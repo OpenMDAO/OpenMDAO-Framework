@@ -18,11 +18,12 @@ from numpy.testing import assert_equal
 from openmdao.main import Bool, FileVariable
 from openmdao.main.constants import SAVE_LIBYAML
 from openmdao.main.variable import OUTPUT
-from openmdao.main.component import Simulation
+from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
 
 ORIG_DIR = os.getcwd()
+
 
 class Passthrough(NPSScomponent):
     """ An NPSS component that passes-through various types of variable. """
@@ -54,8 +55,7 @@ class NPSSTestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test in this class. """
         # Reset simulation root so we can legally access files.
-        os.chdir(NPSSTestCase.directory)
-        Simulation.reset()
+        SimulationRoot.chdir(NPSSTestCase.directory)
         self.npss = Passthrough()
         self.egg_name = None
 
@@ -68,8 +68,7 @@ class NPSSTestCase(unittest.TestCase):
         if self.egg_name and os.path.exists(self.egg_name):
             os.remove(self.egg_name)
 
-        os.chdir(ORIG_DIR)
-        Simulation.reset()
+        SimulationRoot.chdir(ORIG_DIR)
 
     def test_load_save(self):
         logging.debug('')
@@ -90,9 +89,8 @@ class NPSSTestCase(unittest.TestCase):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
-            self.npss = NPSScomponent.load_from_egg(os.path.join('..',
-                                                                 self.egg_name))
-            self.npss.post_load()
+            self.npss = \
+                NPSScomponent.load_from_egg(os.path.join('..', self.egg_name))
 
             for name, val in saved_values.items():
                 if name == 'directory':
@@ -116,7 +114,7 @@ class NPSSTestCase(unittest.TestCase):
         self.npss.pre_delete()
         self.npss = None
         try:
-            self.npss = NPSScomponent.load_from_egg('no-such-egg')
+            NPSScomponent.load_from_egg('no-such-egg')
         except IOError, exc:
             self.assertEqual(str(exc),
                 "[Errno 2] No such file or directory: 'no-such-egg'")

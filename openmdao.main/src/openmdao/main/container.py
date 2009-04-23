@@ -319,15 +319,16 @@ class Container(HierarchyMember):
         new one."""
         raise NotImplementedError("config_from_obj")
 
-    def save_to_egg(self, name=None, version=None, relative=True,
-                    src_dir=None, src_files=None,
-                    format=SAVE_CPICKLE, proto=-1, dst_dir=None):
+    def save_to_egg(self, name=None, version=None, force_relative=True,
+                    src_dir=None, src_files=None, dst_dir=None,
+                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
         name defaults to the name of the container.
         version defaults to the container's module __version__.
-        If relative is True, all paths are relative to src_dir.
+        If force_relative is True, all paths are relative to src_dir.
         src_dir is the root of all (relative) src_files.
         dst_dir is the directory to write the egg in.
+        tmp_dir is the directory to use for temporary files.
         Returns the egg's filename."""
         # TODO: check for setup.py errors!
         # TODO: handle custom class definitions.
@@ -355,7 +356,7 @@ class Container(HierarchyMember):
         self.debug('Saving to %s in %s...', egg_name, orig_dir)
 
         # Move to scratch area.
-        tmp_dir = tempfile.mkdtemp()
+        tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
         os.chdir(tmp_dir)
         try:
             if src_dir:
@@ -402,6 +403,10 @@ class Container(HierarchyMember):
 
             out.write('package_files = [\n')
             for filename in src_files:
+                path = os.path.join(name, filename)
+                if not os.path.exists(path):
+                    self.raise_exception("Can't save, '%s' does not exist" % \
+                                         path, ValueError)
                 out.write("    '%s',\n" % filename)
             out.write('    ]\n')
             out.write('\n')

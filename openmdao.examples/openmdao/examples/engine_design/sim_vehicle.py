@@ -153,13 +153,13 @@ class Sim_Vehicle(Component):
                 try:
                     self.vehicle.execute()
                 except ConstraintError:
-                    self.raise_exception("Gearing problem in Acceleration test.", RunFailed)
+                    self.raise_exception("Gearing problem in Acceleration test.", RuntimeError)
 
             # Accleration converted to mph/s
             Acceleration = self.vehicle.Acceleration*2.23693629
             
             if Acceleration <= 0.0:
-                self.raise_exception("Vehicle could not reach maximum speed in Acceleration test.", RunFailed)
+                self.raise_exception("Vehicle could not reach maximum speed in Acceleration test.", RuntimeError)
                 
             Velocity += Acceleration*self.TimeStep
             self.vehicle.Velocity = Velocity/2.23693629
