@@ -10,7 +10,7 @@ import copy
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IComponent, IVariable, IDriver
+from openmdao.main.interfaces import IComponent, IAssembly, IVariable, IDriver
 from openmdao.main import Container, String
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.constants import SAVE_PICKLE
@@ -195,7 +195,7 @@ class Component (Container):
     def invalidate_deps(self, vars):
         """If we have a parent Assembly, pass this call up 
         to it since we don't have a dependency graph."""
-        if self.parent:
+        if self.parent and IAssembly.providedBy(self.parent):
             self.parent.invalidate_deps(vars)
     
 # TODO: uncomment require_gradients and require_hessians after they're better thought out

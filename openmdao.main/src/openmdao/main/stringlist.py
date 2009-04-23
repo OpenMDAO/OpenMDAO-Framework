@@ -70,14 +70,15 @@ class StringList(Variable):
             
     def _pre_assign(self, val):
         """Return the value of the specified Variable after
-        checking against min and max length limits.
+        checking against min and max length limits and verifying that
+        all contents are strings.
         """
         newval = super(StringList, self)._pre_assign(val)
         
-        for strng in newval:
-            if not isinstance(strng, basestring):
-                raise ValueError(self.get_pathname()+
-                                 ': list contains non-string entries')
+        nonstrings = [s for s in newval if not isinstance(s,basestring)]
+        if len(nonstrings) > 0:
+            self.raise_exception('list contains non-string entries',
+                                 ValueError)            
             
         return newval
         

@@ -5,7 +5,7 @@ __version__ = "0.1"
 
 import os
 
-from openmdao.main import Assembly
+from openmdao.main.assembly import Assembly
 from openmdao.main.interfaces import IDriver, IWorkflow
 
 

@@ -31,7 +31,8 @@ def _trans_lhs(strng, loc, tok, scope, validate, exprobj):
                           " being used instead (if found)")
         if validate is True and not scope.parent.contains(tok[0]):
             raise RuntimeError("cannot find variable '"+tok[0]+"'")
-        exprobj._register_output((scope.parent, tok[0]))
+        
+        exprobj._register_output(tok[0])
         
     full = scname + ".set('" + tok[0] + "',_@RHS@_"
     if len(tok) > 1 and tok[1] != '=':
@@ -88,7 +89,7 @@ def _trans_fancyname(strng, loc, tok, scope, validate, exprobj):
                                  not scope.parent.contains(tok[0])):
             raise RuntimeError("cannot find variable '"+tok[0]+"'")
     
-        exprobj._register_input((scope.parent, tok[0]))
+        exprobj._register_input(tok[0])
         
     if len(tok) == 1 or (len(tok) > 1 and tok[1].startswith('[')):
         full = scname + ".get('" + tok[0] + "'"
@@ -268,39 +269,34 @@ class ExprEvaluator(object):
                 raise RuntimeError(
                     'ExprEvaluator cannot evaluate expression without scope.')
             
-            _local_setter = val # _local_setter is used in compiled assignment statement
+            # self.assignment_code is a compiled version of an assignment statement
+            # of the form  'somevar = _local_setter', so we set _local_setter here
+            # and the exec call will pull it out of locals()
+            _local_setter = val 
             exec(self._assignment_code, scope.__dict__, locals())
             
         else: # self.single_name is False
             raise ValueError('trying to set an input expression')
         
-    def _resolve_dep_list(self, lst):
-        result = []
-        myscope = self._scope()
-        if myscope is None:
-            raise RuntimeError(
-                'ExprEvaluator cannot determine input dependencies without scope.')
-        for scope,name in lst:
-            if scope is None:
-                scope = myscope
-            result.append('.'.join([scope.get_pathname(), name]))
-        return set(result)
-        
-    def _register_input(self, tup):
-        """Adds a Variable name to the input list. Called during expression parsing."""
-        self._inputs.append(tup)
+    def _register_input(self, name):
+        """Adds a Variable name to the input list. 
+        Called during expression parsing.
+        """
+        self._inputs.append(name)
     
-    def _register_output(self, tup):
-        """Adds a Variable name to the output list. Called during expression parsing."""
-        self._outputs.append(tup)
+    def _register_output(self, name):
+        """Adds a Variable name to the output list. 
+        Called during expression parsing.
+        """
+        self._outputs.append(name)
         
     def get_external_inputs(self):
         """Returns a list of inputs coming from objects outside of our
         specified scope."""
-        return self._resolve_dep_list(self._inputs)
+        return set(self._inputs)
     
     def get_external_outputs(self):
         """Returns a list of outputs to objects outside of our
         specified scope."""
-        return self._resolve_dep_list(self._outputs)
+        return set(self._outputs)
     

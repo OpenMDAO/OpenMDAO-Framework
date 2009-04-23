@@ -169,10 +169,9 @@ class pyevolvedriver(Driver):
     def execute(self):
         """ Perform the optimization"""
         
-        #if self.objective == '':
         # check objective value
-        if self.objective.get_value() == '':
-            self.raise_exception("objective specified as None, please provide an objective expression.",RuntimeError)
+        #if self.objective == '':
+            #self.raise_exception("objective specified as None, please provide an objective expression.",RuntimeError)
         
         self.verify()
         #configure the evaluator function of the genome

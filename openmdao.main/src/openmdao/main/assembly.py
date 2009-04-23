@@ -12,8 +12,9 @@ from itertools import chain
 from zope.interface import implements
 import networkx as nx
 
-from openmdao.main.interfaces import IAssembly, IComponent, IVariable
+from openmdao.main.interfaces import IAssembly, IComponent, IDriver, IVariable
 from openmdao.main import Container, Component, String
+from openmdao.main.dataflow import Dataflow
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.constants import SAVE_PICKLE
 from openmdao.main.exceptions import RunFailed
@@ -52,26 +53,12 @@ class Assembly (Component):
         # is used to differentiate between edges that connect the
         # same two nodes.
         self._dep_graph = nx.MultiDiGraph(name=name)
+        self._dataflow = Dataflow('dataflow', self)
 
         # List of meta-data dictionaries.
         self.external_files = []
 
-        String('directory', self, INPUT, default=directory,
-               doc='If non-null, the directory to execute in.')
 
-# pylint: disable-msg=E1101
-        if self.directory:
-            if not os.path.exists(self.directory):
-# TODO: Security!
-                try:
-                    os.makedirs(self.directory)
-                except OSError, exc:
-                    self.error("Could not create directory '%s': %s",
-                               self.directory, exc.strerror)
-            else:
-                if not os.path.isdir(self.directory):
-                    self.error("Path '%s' is not a directory.", self.directory)
-# pylint: enable-msg=E1101
 
     def _get_socket_plugin(self, name):
         """Return plugin for the named socket"""
@@ -118,6 +105,7 @@ class Assembly (Component):
 
     def remove_socket (self, name):
         """Remove an existing Socket"""
+        # TODO: what about the property we've installed in the class?
         del self._sockets[name]
 
     def add_child(self, obj, private=False):
@@ -343,18 +331,12 @@ class Assembly (Component):
 
     def execute (self):
         """Run child components in data flow order."""
-        for comp in self.get_component_iterator():
-            comp.run()
+        #drivers = [x for x in self.values() if IDriver.providedBy(x)]
+        #if len(drivers) == 1:
+            #drivers[0].run()
+        #else:
+        self._dataflow.run()
     
-    def get_component_iterator(self, compnames=None):
-        """Return a dataflow ordered iterator over the set of Components 
-        specified by compnames, or over all of our child Components if 
-        compnames is None.
-        """
-        for compname in nx.topological_sort(self._dep_graph):
-            if (compnames is None or compname in compnames) and not compname.startswith('#'):
-                yield getattr(self, compname)
-        
     def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """

@@ -14,8 +14,45 @@ from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotF
 
 script_template = """#!%(python)s
 
+import os
+import os.path
+import fnmatch
+import platform
+
+def find_files(pat, startdir):
+    for path, dirlist, filelist in os.walk(startdir):
+        for name in fnmatch.filter(filelist, pat):
+            yield os.path.join(path, name)
+
+def find_bzr(path=None):
+    if not path:
+        path = os.getcwd()
+    if not os.path.exists(path):
+        return None
+    while path:
+        if os.path.exists(os.path.join(path, '.bzr')):
+            return path
+        else:
+            pth = path
+            path = os.path.dirname(path)
+            if path == pth:
+                return None
+    return None
+
+# in order to find all of our shared libraries, find them
+# all and put their directories in LD_LIBRARY_PATH
+env = os.environ
+if platform.system != 'Windows':
+    libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
+    bzrtop = find_bzr()
+    if bzrtop:
+        sodirs = set([os.path.dirname(x) for x in find_files('*.so',bzrtop)])
+        libs.extend(sodirs)
+        env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
+
+
 from subprocess import Popen
-Popen(["wing3.1", "%(proj)s"])
+Popen(["wing3.1", "%(proj)s"], env=env)
 
 """
 
