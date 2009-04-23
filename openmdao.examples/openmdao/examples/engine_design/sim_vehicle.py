@@ -5,7 +5,7 @@
 
 from openmdao.main import Component, Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.exceptions import ConstraintError, RunFailed
+from openmdao.main.exceptions import ConstraintError
 
 from openmdao.examples.engine_design.vehicle import Vehicle
 
@@ -153,13 +153,13 @@ class Sim_Vehicle(Component):
                 try:
                     self.vehicle.execute()
                 except ConstraintError:
-                    self.raise_exception("Gearing problem in Acceleration test.", RunFailed)
+                    self.raise_exception("Gearing problem in Acceleration test.", RuntimeError)
 
             # Accleration converted to mph/s
             Acceleration = self.vehicle.Acceleration*2.23693629
             
             if Acceleration <= 0.0:
-                self.raise_exception("Vehicle could not reach maximum speed in Acceleration test.", RunFailed)
+                self.raise_exception("Vehicle could not reach maximum speed in Acceleration test.", RuntimeError)
                 
             Velocity += Acceleration*self.TimeStep
             self.vehicle.Velocity = Velocity/2.23693629
@@ -199,7 +199,7 @@ class Sim_Vehicle(Component):
                     self.vehicle.CurrentGear += 1
                     
                     if self.vehicle.CurrentGear > 5:
-                        self.raise_exception("Transmission gearing cannot achieve maximum speed in EPA test.", RunFailed)
+                        self.raise_exception("Transmission gearing cannot achieve maximum speed in EPA test.", RuntimeError)
                     
                 else:
                     self.vehicle.CurrentGear -= 1
@@ -265,7 +265,7 @@ class Sim_Vehicle(Component):
                 
                 # If engine cannot accelerate quickly enough to match profile, then raise exception    
                 if CommandAccel > AccelMax:
-                    self.raise_exception("Vehicle is unable to achieve acceleration required to match EPA driving profile.", RunFailed)
+                    self.raise_exception("Vehicle is unable to achieve acceleration required to match EPA driving profile.", RuntimeError)
                         
                 #------------------------------------------------------------
                 # Bisection solution to find correct Throttle position

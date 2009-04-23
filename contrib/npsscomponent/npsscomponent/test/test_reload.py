@@ -9,8 +9,8 @@ import pkg_resources
 import unittest
 
 from openmdao.main import Assembly, Component, Bool, Float, String
-from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
 
@@ -49,12 +49,8 @@ class Model(Assembly):
         self.workflow.add_node(Source(parent=self))
         self.Source.npss_in = 9
 
-        directory = \
-            os.path.join(pkg_resources.resource_filename('npsscomponent',
-                                                         'test'))
-        arglist = '-trace reload.mdl'
-        NPSScomponent(parent=self, directory=directory,
-                      arglist=arglist, output_filename='reload.out')
+        NPSScomponent(parent=self, arglist='-trace reload.mdl',
+                      output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
         Float('xyzzy_in',  self.NPSS, INPUT, doc='Test input')
         Float('xyzzy_out', self.NPSS, OUTPUT, doc='Test output')
@@ -71,19 +67,21 @@ class Model(Assembly):
 
 class NPSSTestCase(unittest.TestCase):
 
+    directory = \
+        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+
     def setUp(self):
         """ Called before each test in this class. """
+        # Reset simulation root so we can legally access files.
+        SimulationRoot.chdir(NPSSTestCase.directory)
         self.model = Model('TestModel')
 
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
-        os.remove(os.path.join(self.model.NPSS.directory, 'reload.out'))
+        os.remove('reload.out')
         self.model = None
-        if os.getcwd() != ORIG_DIR:
-            bad_dir = os.getcwd()
-            os.chdir(ORIG_DIR)
-            self.fail('Ended in %s, expected %s' % (bad_dir, ORIG_DIR))
+        SimulationRoot.chdir(ORIG_DIR)
 
     def test_internal_reload(self):
         logging.debug('')
@@ -123,18 +121,20 @@ class NPSSTestCase(unittest.TestCase):
         self.model.NPSS.model_filename = 'no_such_model'
         try:
             self.model.run()
-        except RunFailed, exc:
-            self.assertEqual(str(exc), "TestModel.NPSS: Exception during reload: parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'no_such_model'")
+        except RuntimeError, exc:
+            self.assertEqual(str(exc).startswith(
+                "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
+                True)
         else:
-            self.fail('Expected RunFailed')
+            self.fail('Expected RuntimeError')
 
         self.model.NPSS.reload_flag = 'no_such_variable'
         try:
             self.model.run()
-        except RunFailed, exc:
+        except RuntimeError, exc:
             self.assertEqual(str(exc), "TestModel.NPSS: Exception getting 'no_such_variable': no_such_variable not found")
         else:
-            self.fail('Expected RunFailed')
+            self.fail('Expected RuntimeError')
 
     def test_external_reload(self):
         logging.debug('')
@@ -172,10 +172,12 @@ class NPSSTestCase(unittest.TestCase):
         self.model.NPSS.model_filename = 'no_such_model'
         try:
             self.model.run()
-        except RunFailed, exc:
-            self.assertEqual(str(exc), "TestModel.NPSS: Exception during reload: parseFile() failed: ERROR(991031001) in MemberFunction 'parseFile': Couldn't find file 'no_such_model'")
+        except RuntimeError, exc:
+            self.assertEqual(str(exc).startswith(
+                "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
+                True)
         else:
-            self.fail('Expected RunFailed')
+            self.fail('Expected RuntimeError')
 
     def test_custom_run(self):
         logging.debug('')
