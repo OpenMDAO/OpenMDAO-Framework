@@ -75,7 +75,7 @@ class Float(Variable):
         return self._units
     
     def _set_units(self, units):
-        if units is not UNDEFINED and units is not None :
+        if units != UNDEFINED and units is not None :
             # this will raise an exception if units are bad
             try:
                 mypq = PhysicalQuantity(1., units)
@@ -101,7 +101,7 @@ class Float(Variable):
         super(Float, self).validate_var(var)
         
         # allow assignment if either Variable has unassigned units
-        if self.units is UNDEFINED or var.units is UNDEFINED:
+        if self.units == UNDEFINED or var.units == UNDEFINED:
             pass
         elif self.units is None and var.units is None:
             pass
@@ -114,13 +114,12 @@ class Float(Variable):
                 self._incompatible_units(var, var.units)
                 
             # allow value without units to be assigned to val with units
-
      
     def _convert(self, var):
         """Perform unit conversion here. Validation is not necessary because 
         it's already been done in validate_var.
         """
-        if self.units is UNDEFINED or var.units is UNDEFINED:
+        if self.units == UNDEFINED or var.units == UNDEFINED:
             return var.value
         elif self.units is None and var.units is None:
             return var.value

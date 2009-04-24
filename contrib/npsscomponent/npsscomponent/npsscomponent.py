@@ -6,10 +6,10 @@ import os
 
 from openmdao.main import Component, ArrayVariable, Bool, Dict, Float, \
                           FileVariable, Int, String, StringList
-from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
 
 import npss
+npss.isolateContexts(True)
 
 import units
 
@@ -30,7 +30,6 @@ class NPSScomponent(Component):
 
     .. parsed-literal::
 
-        TODO: Save model files as part of component state/config.
         TODO: Support index argument to get() and set().
         TODO: Detect & flag execution errors.
         TODO: Save model state as well as component state.
@@ -41,12 +40,8 @@ class NPSScomponent(Component):
 
     """
 
-    _dummy = npss.npss()  # Just for context switching.
-
-    @staticmethod
-    def grab_context():
-        """ Cause a session switch to save correct directory context. """
-        NPSScomponent._dummy.exists('COPYRIGHT')
+    # 1st session gets bad context for some reason...
+    dummy = npss.npss()
 
     def __init__(self, name='NPSS', parent=None, doc=None, directory='',
                  arglist=None, output_filename='', top=''):
@@ -151,17 +146,15 @@ class NPSScomponent(Component):
         try:
             self.reload()
         except Exception, exc:
-            self.raise_exception('Reload caught exception: %s' % exc.args,
+            self.raise_exception('Reload caught exception: %s' % str(exc),
                                  type(exc))
 
     def pre_delete(self):
         """ Perform any required operations before the model is deleted. """
-        orig_dir = os.getcwd()  # pre_delete() may change the cwd.
         super(NPSScomponent, self).pre_delete()
         if self._top is not None:
             self._top.closeSession()
             self._top = None
-        os.chdir(orig_dir)
 
     def _parse_arglist(self, arglist):
         """ Parse argument list. Assumes flag argument separate from value. """
@@ -375,6 +368,9 @@ class NPSScomponent(Component):
 
         # Default session directory is set during initialization.
         directory = self.get_directory()
+        if not os.path.exists(directory):
+            raise RuntimeError("Execution directory '%s' not found." \
+                               % directory)
         self.push_dir(directory)
         try:
             cwd = os.getcwd()+os.sep
@@ -398,6 +394,9 @@ class NPSScomponent(Component):
                 self.info('output routed to %s', self.output_filename)
 
             if self.model_filename:
+                if not os.path.exists(self.model_filename):
+                    raise RuntimeError("Model file '%s' not found while reloading in '%s'." \
+                                       % (self.model_filename, cwd))
                 # Parse NPSS model.
                 self._top.parseFile(self.model_filename)
                 # Add non-NPSS distribution input files to external_files list.
@@ -419,7 +418,6 @@ class NPSScomponent(Component):
                 for name, value in saved_inputs:
                     self.set(name, value)
         finally:
-            self.grab_context()
             self.pop_dir()
 
     def create_in_model(self, base_typ, typ, name):
@@ -458,8 +456,6 @@ class NPSScomponent(Component):
                 return super(NPSScomponent, self).__getattribute__(name)
             except AttributeError:
                 raise AttributeError(self.get_pathname()+' '+str(err))
-        finally:
-            self.grab_context()
 
     def set(self, path, value, index=None):
         """ Set attribute value. """
@@ -485,44 +481,39 @@ class NPSScomponent(Component):
             setattr(top, name, value)
         except AttributeError:
             return super(NPSScomponent, self).__setattr__(name, value)
-        finally:
-            self.grab_context()
 
     def execute(self):
         """ Perform operations associated with running the component. """
-        try:
-            if self.reload_model:
-                self.info('External reload request.')
-                try:
-                    self.reload()
-                except Exception, exc:
-                    self.raise_exception('Exception during reload: %s' \
-                                         % str(exc), RunFailed)
-            elif self.reload_flag:
-                try:
-                    reload_req = getattr(self._top, self.reload_flag)
-                except Exception, exc:
-                    self.raise_exception("Exception getting '%s': %s" \
-                                         % (self.reload_flag, str(exc)),
-                                         RunFailed)
-                else:
-                    if reload_req:
-                        self.info('Internal reload request.')
-                        try:
-                            self.reload()
-                        except Exception, exc:
-                            self.raise_exception('Exception during reload: %s' \
-                                                 % str(exc), RunFailed)
+        if self.reload_model:
+            self.info('External reload request.')
             try:
-                if self.run_command:
-                    self._top.parseString(self.run_command+';')
-                else:
-                    self._top.run()
+                self.reload()
             except Exception, exc:
-                self.raise_exception('Exception during run: %s' % str(exc),
-                                     RunFailed)
-        finally:
-            self.grab_context()
+                self.raise_exception('Exception during reload: %s' \
+                                     % str(exc), RuntimeError)
+        elif self.reload_flag:
+            try:
+                reload_req = getattr(self._top, self.reload_flag)
+            except Exception, exc:
+                self.raise_exception("Exception getting '%s': %s" \
+                                     % (self.reload_flag, str(exc)),
+                                     RuntimeError)
+            else:
+                if reload_req:
+                    self.info('Internal reload request.')
+                    try:
+                        self.reload()
+                    except Exception, exc:
+                        self.raise_exception('Exception during reload: %s' \
+                                             % str(exc), RuntimeError)
+        try:
+            if self.run_command:
+                self._top.parseString(self.run_command+';')
+            else:
+                self._top.run()
+        except Exception, exc:
+            self.raise_exception('Exception during run: %s' % str(exc),
+                                 RuntimeError)
 
     def make_public(self, obj_info):
         """

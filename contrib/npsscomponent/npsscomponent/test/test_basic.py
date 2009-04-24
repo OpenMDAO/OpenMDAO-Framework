@@ -10,6 +10,8 @@ from numpy.testing import assert_equal
 
 from npsscomponent import NPSScomponent
 
+from openmdao.main.variable import OUTPUT
+
 # this string contains an NPSS input string, just because I wanted this test
 # to be self-contained and not require a separate NPSS input file.
 NPSS_INPUT = """
@@ -499,6 +501,10 @@ class NPSSTestCase(unittest.TestCase):
             self.assertEqual(str(exc), 'NPSS: Unsupported NPSS type: string[][]')
         else:
             self.fail('Expected NotImplementedError')
+
+        self.npss.make_public(('solver.converged', '', OUTPUT))
+        self.assertEqual(self.npss.get('solver.converged'), 0)
+        self.assertEqual(self.npss.getvar('solver.converged').value, 0)
 
         self.npss.make_public('cin')
 
