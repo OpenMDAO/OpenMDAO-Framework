@@ -148,7 +148,11 @@ class Sim_Vehicle(Component):
             try:
                 self.vehicle.execute()
             except ConstraintError:
+                
                 self.vehicle.CurrentGear += 1
+                
+                if self.vehicle.CurrentGear > 5:
+                    self.raise_exception("Transmission gearing cannot achieve maximum speed in Acceleration test.", RunFailed)
                 
                 try:
                     self.vehicle.execute()
