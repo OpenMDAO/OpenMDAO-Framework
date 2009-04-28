@@ -438,7 +438,7 @@ class NPSScomponent(Component):
         Note that this is not __getattribute__.
         This gets called only when the normal methods fail.
         """
-        if name == '_top':
+        if name.startswith('_'):
             return object.__getattribute__(self, name)
 
         try:
@@ -467,7 +467,7 @@ class NPSScomponent(Component):
 
     def __setattr__(self, name, value):
         """ Set attribute value. """
-        if name == '_top':
+        if name.startswith('_'):
             return object.__setattr__(self, name, value)
 
         try:

@@ -251,6 +251,7 @@ class Model(Assembly):
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
+        self.external_files.append({'path':'README.txt'})
 
         model_dir = os.path.join('..', 'Full_Model', 'Cycle', 'run')
         includes = [
