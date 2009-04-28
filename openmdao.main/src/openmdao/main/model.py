@@ -17,10 +17,10 @@ class Model(Assembly):
         super(Model, self).__init__(name, parent, doc=doc,
                                        directory=directory)
 
-        self.add_socket('driver', IDriver, doc='A Driver object is required here',
-                        required=True)
-        self.add_socket('workflow', IWorkflow, doc='A Workflow object is required here',
-                        required=True)
+        #self.add_socket('driver', IDriver, doc='A Driver object is required here',
+        #                required=True)
+        #self.add_socket('workflow', IWorkflow, doc='A Workflow object is required here',
+        #                required=True)
         
         # by default, fill the driver and workflow sockets with a simple one-pass
         # driver and a sequential workflow

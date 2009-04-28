@@ -35,7 +35,7 @@ class Vehicle_Dynamics(Component):
         # Pylint: disable-msg=E1101
         Float('Mass_Vehicle', self, INPUT, units='kg', default=1200.0,
               doc='Vehicle Mass')
-        Float('Cf', self, INPUT, units=None, default=0.01,
+        Float('Cf', self, INPUT, units=None, default=0.035,
               doc='Friction Coefficient (proportional to W)')
         Float('Cd', self, INPUT, units=None, default=0.3,
               doc='Drag Coefficient (proportional to V**2)')

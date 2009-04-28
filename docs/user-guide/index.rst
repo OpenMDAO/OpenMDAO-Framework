@@ -11,6 +11,7 @@ User's Guide
    
    intro.rst
    using.rst
+   example.rst
    features.rst
    components.rst
    changes.rst

@@ -82,7 +82,7 @@ def _trans_fancyname(strng, loc, tok, scope, validate, exprobj):
     else:
         scname = 'scope.parent'
         if hasattr(scope, tok[0]):
-            scope.warning("attribute '"+tok[0]+"' is private"+
+            scope.warning("attribute '%s' is private" % tok[0]+
                           " so a public value in the parent is"+
                           " being used instead (if found)")
         if validate is True and (scope.parent is None or 
@@ -257,8 +257,8 @@ class ExprEvaluator(object):
         try:
             return eval(self._code, scope.__dict__, locals())
         except Exception, err:
-            raise type(err)("ExprEvaluator failed evaluating expression '%s'."+
-                            "Caught message is: %s" %(self._text,str(err)))
+            raise type(err)("ExprEvaluator failed evaluating expression "+
+                            "'%s'. Caught message is: %s" %(self._text,str(err)))
 
     def set(self, val):
         """Set the value of the referenced object to the specified value."""

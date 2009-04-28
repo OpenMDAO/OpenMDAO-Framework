@@ -3,6 +3,7 @@ Test of multiple NPSS instances.
 """
 
 import cPickle
+import logging
 import os
 import os.path
 import pkg_resources
@@ -14,9 +15,11 @@ from numpy.testing import assert_equal
 from openmdao.main import Model, Component, ArrayVariable, Bool, \
                           FileVariable, Float, Int, String, StringList
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
 
+ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -64,8 +67,8 @@ class Passthrough(NPSScomponent):
     """ An NPSS component that passes-through various types of variable. """
 
     def __init__(self, name, parent=None, doc=None, directory=''):
-        arglist = ['-D', 'XYZZY=twisty narrow passages',
-                   '-trace', os.path.join('..', 'passthrough.mdl')]
+        arglist = ['-D', 'XYZZY=twisty narrow passages', '-D', 'FLAG',
+                   '-I', '.', '-trace', os.path.join('..', 'passthrough.mdl')]
         super(Passthrough, self).__init__(name, parent, doc, directory,
                                           arglist, 'passthrough.out')
 
@@ -160,17 +163,11 @@ class MyModel(Model):
         self.Source.binary_data = [3.14159, 2.781828, 42]
 
         name = 'NPSS_A'
-        directory = \
-            os.path.join(pkg_resources.resource_filename('npsscomponent',
-                                                         'test'), name)
-        Passthrough(name, self, directory=directory)
+        Passthrough(name, self, directory=name)
         self.workflow.add_node(self.NPSS_A)
 
         name = 'NPSS_B'
-        directory = \
-            os.path.join(pkg_resources.resource_filename('npsscomponent',
-                                                         'test'), name)
-        Passthrough(name, self, directory=directory)
+        Passthrough(name, self, directory=name)
         self.workflow.add_node(self.NPSS_B)
 
         self.workflow.add_node(Sink(parent=self))
@@ -217,8 +214,13 @@ class MyModel(Model):
 
 class NPSSTestCase(unittest.TestCase):
 
+    directory = \
+        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+
     def setUp(self):
         """ Called before each test in this class. """
+        # Set new simulation root so we can legally access files.
+        SimulationRoot.chdir(NPSSTestCase.directory)
         self.model = MyModel()
 
     def tearDown(self):
@@ -226,11 +228,17 @@ class NPSSTestCase(unittest.TestCase):
         self.model.pre_delete()
         shutil.rmtree(self.model.NPSS_A.directory)
         shutil.rmtree(self.model.NPSS_B.directory)
-        for path in ('source.txt', 'source.bin', 'sink.txt', 'sink.bin'):
-            os.remove(path)
         self.model = None
+        end_dir = os.getcwd()
+        SimulationRoot.chdir(ORIG_DIR)
+        if end_dir != NPSSTestCase.directory:
+            self.fail('Ended in %s, expected %s' \
+                      % (end_dir, NPSSTestCase.directory))
 
     def test_connectivity(self):
+        logging.debug('')
+        logging.debug('test_connectivity')
+
         self.assertNotEqual(self.model.Sink.b,   self.model.Source.b)
         self.assertNotEqual(self.model.Sink.f,   self.model.Source.f)
         self.assertNotEqual(self.model.Sink.f1d, self.model.Source.f1d)
@@ -266,6 +274,16 @@ class NPSSTestCase(unittest.TestCase):
                          self.model.Source.binary_data)
         self.assertEqual(
             self.model.Sink.getvar('binary_file').metadata['binary'], True)
+
+        for path in ('source.txt', 'source.bin', 'sink.txt', 'sink.bin'):
+            os.remove(path)  # Will raise exception if any files don't exist.
+
+    def test_preprocessor(self):
+        logging.debug('')
+        logging.debug('test_preprocessor')
+
+        self.assertEqual(self.model.NPSS_A.xyzzy_val, 'twisty narrow passages')
+        self.assertEqual(self.model.NPSS_A.flag_val, 1)
 
 
 if __name__ == '__main__':

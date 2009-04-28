@@ -69,6 +69,13 @@ class SocketTestCase(unittest.TestCase):
         else:
             self.fail('AttributeError expected')
 
+        try:
+            self.sc.iterator = None
+        except AttributeError, exc:
+            self.assertEqual("SocketComp: no such socket 'iterator'", str(exc))
+        else:
+            self.fail('AttributeError expected')
+
     def test_socket_filled(self):
         self.assertEqual(self.sc.socket_filled('iterator'), False)
         self.sc.iterator = ListCaseIterator([Case(), Case(), Case()])

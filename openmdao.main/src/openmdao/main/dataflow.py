@@ -26,12 +26,12 @@ class Dataflow(Workflow):
         if self.parent and IAssembly.providedBy(self.parent):
             drivers = [x for x in self.parent.values(pub=False) 
                                   if IDriver.providedBy(x)]
-            if len(drivers) > 0:
+            if len(drivers) > 1:
                 self.graph = self.parent._dep_graph.copy()
                 for driver in drivers:
-                    for outdep in driver.get_ref_outputs():
+                    for outdep in driver.get_ref_successors():
                         self.graph.add_edge(driver.name, outdep.split('.',1)[0])
-                    for indep in driver.get_ref_inputs():
+                    for indep in driver.get_ref_predecessors():
                         self.graph.add_edge(indep.split('.',1)[0], driver.name)
 
                 #sccs = nx.strongly_connected_components(self.graph)
@@ -39,19 +39,30 @@ class Dataflow(Workflow):
                 #name2strong = {}
                 #for i,strong in enumerate(sccs):
                     #strong_graph.add_node(i)
-                    #for name in strong:
-                        
-                
+                    #for name in strong:                                       
             else:
                 self.graph = self.parent._dep_graph
-            self.compnames = [x.name for x in self.parent.values(pub=False) 
-                                  if IComponent.providedBy(x) and x is not self]
-            self.execute()
-        
+                if len(self.nodes) > 0:
+                    self.compnames = set([x.name for x in self.nodes])
+                else:
+                    self.compnames = set([x.name for x in self.parent.values(pub=False) 
+                                       if IComponent.providedBy(x) and x is not self])
+                self.execute()        
+        else:
+            self.raise_exception('dataflow requires an Assembly parent',RuntimeError)
+            
     def nodes_iter(self):
         """Iterate through the nodes in dataflow order."""
         if self.parent:
-            for compname in nx.topological_sort(self.graph):
-                if compname in self.compnames and not compname.startswith('#'):
+            sortedvars = nx.topological_sort(self.graph)
+            completed = set()
+            for varname in sortedvars:
+                try:
+                    compname, name = varname.split('.',1)
+                except ValueError:
+                    continue  # skip over boundary vars
+                #if compname in self.compnames and not compname.startswith('#'):
+                if compname in self.compnames and not compname in completed:
+                    completed.add(compname)
                     yield getattr(self.parent, compname)
     

@@ -10,10 +10,6 @@ tools that will enable system analysis and optimization.
 
 
 
-Software Utilities and Tools Included with OpenMDAO
-===================================================
-
-
 Installing OpenMDAO
 ===================
 
@@ -38,5 +34,9 @@ Notation Conventions
 
 Various font and syntax conventions are used in this guide. Examples are 
 explained below:
+
+
+Software Utilities and Tools Included with OpenMDAO
+===================================================
 
 

@@ -19,6 +19,24 @@ class Multiplier(Component):
     def execute(self):
         self.run_count += 1
         self.rval_out = self.rval_in * self.mult
+        
+class Simple(Component):
+    def __init__(self, name):
+        super(Simple, self).__init__(name)
+        self.a = 4.
+        self.b = 5.
+        self.c = 7.
+        self.d = 1.5
+        self.run_count = 0
+        Float('a', self, INPUT, units='cm')
+        Float('b', self, INPUT, units='m')
+        Float('c', self, OUTPUT, units='cm')
+        Float('d', self, OUTPUT, units='mm')
+
+    def execute(self):
+        self.run_count += 1
+        self.c = self.a + self.b
+        self.d = self.a - self.b
 
 class DummyComp(Component):
     def __init__(self, name):
@@ -97,6 +115,32 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.comp1.run_count, 1)
         self.assertEqual(top.comp2.run_count, 2)
         
+    def test_var_preds(self):
+        top = Assembly('top', None)
+        sub = top.add_child(Assembly('sub'))
+        sub.add_child(Simple('comp1'))
+        sub.add_child(Simple('comp2'))
+        sub.add_child(Simple('comp3'))
+        sub.add_child(Simple('comp4'))
+        sub.add_child(Simple('comp5'))
+        sub.add_child(Simple('comp6'))
+        
+        sub.create_passthru('comp1.a', 'a1')
+        sub.create_passthru('comp3.a', 'a3')
+        sub.create_passthru('comp2.b', 'b2')
+        sub.create_passthru('comp4.b', 'b4')
+        sub.create_passthru('comp6.b', 'b6')
+        sub.create_passthru('comp2.c', 'c2')
+        sub.create_passthru('comp4.c', 'c4')
+        sub.create_passthru('comp1.d', 'd1')
+        sub.create_passthru('comp3.d', 'd3')
+        sub.create_passthru('comp5.d', 'd5')
+        
+        sub.connect('comp1.c', 'comp4.a')
+        sub.connect('comp5.c', 'comp1.b')
+        sub.connect('comp2.d', 'comp5.b')
+        sub.connect('comp3.c', 'comp5.a')
+        sub.connect('comp4.d', 'comp6.a')
         
     def test_data_passing(self):
         comp1 = self.asm.get('comp1')

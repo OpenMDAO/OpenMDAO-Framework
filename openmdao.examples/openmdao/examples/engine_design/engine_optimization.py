@@ -54,6 +54,8 @@ if __name__ == "__main__":
         print 'Engine: Spark Angle = ', z.vehicle_sim.sparkAngle
         print '---------------------------------'
         print '0-60 Accel Time = ', z.vehicle_sim.AccelTime
+        print 'EPA City MPG = ', z.vehicle_sim.EPACity
+        print 'EPA Highway MPG = ', z.vehicle_sim.EPAHighway
         print '\n'
     
 

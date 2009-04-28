@@ -9,7 +9,7 @@ import networkx as nx
 
 from openmdao.main.interfaces import IDriver, IComponent, IAssembly
 from openmdao.main.component import Component, STATE_WAITING, STATE_IDLE
-from openmdao.main import Assembly
+from openmdao.main import Assembly, RefVariable
 
 
 class Driver(Assembly):
@@ -74,3 +74,23 @@ class Driver(Assembly):
         if __debug__: self._logger.debug('executing %s' % self.get_pathname())
         self.execute()
         
+    def get_ref_successors(self):
+        """Return a set of names of successor components based on the 
+        contents of our output RefVariables.
+        """
+        outs = set()
+        for refout in [v for v in self.values() if isinstance(v,RefVariable) 
+                                 and v.iostatus==OUTPUT]:
+            outs.update(refout.get_referenced_components())
+        return outs
+    
+    def get_ref_predecessors(self):
+        """Return a set of names of predecessor components based on the 
+        contents of our input RefVariables.
+        """
+        ins = set()
+        for refin in [v for v in self.values() if isinstance(v,RefVariable) 
+                                 and v.iostatus==INPUT]:
+            ins.update(refin.get_referenced_components())
+        return ins
+    

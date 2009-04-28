@@ -13,15 +13,10 @@ from openmdao.main import HierarchyMember
 INPUT = 1
 OUTPUT = 2
 
-class _Undefined ( object ):
-    """A class used to define a special undefined object."""
-    def __repr__ ( self ):
-        return '<undefined>'
-    
 # use this to represent undefined value rather than None    
-UNDEFINED = _Undefined()
+UNDEFINED = '<undefined>'
 
-# come events to allow specific types of observer notification
+# some events to allow specific types of observer notification
 
 class VariableChangedEvent(object):
     def __init__(self, var):
@@ -177,6 +172,7 @@ class Variable(HierarchyMember):
             setattr(self._refparent, self.ref_name, self._pre_assign(val))
         else:
             self._passthru.set_value(val)
+            
         if self.valid is True:
             self.valid = False
             self.parent.invalidate_deps([self])

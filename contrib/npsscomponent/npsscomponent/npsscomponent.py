@@ -1,6 +1,3 @@
-"""
-An NPSS wrapper component.
-"""
 
 __all__ = ('NPSScomponent',)
 __version__ = '0.1'
@@ -9,10 +6,10 @@ import os
 
 from openmdao.main import Component, ArrayVariable, Bool, Dict, Float, \
                           FileVariable, Int, String, StringList
-from openmdao.main.exceptions import RunFailed
 from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
 
 import npss
+npss.isolateContexts(True)
 
 import units
 
@@ -21,28 +18,36 @@ class NPSScomponent(Component):
     An NPSS wrapper component.  Supports reload requests either internally
     via a flag in the model or externally by setting the reload_model flag.
 
+    arglist is a list of arguments just like the command-line arguments to
+    NPSS.  If arglist is a string, it will be split on whitespace to create
+    a list.  See the NPSS User Guide for more information.
+
+    If outfile is non-null, NPSS generated output will be routed to that file.
+
+    If top is non-null, it is taken as the name of the 'top' object.
+
+    NOTE: returned arrays are a *copy* of the NPSS data.
+
     .. parsed-literal::
 
-        TODO: Save model files as part of component state/config.
         TODO: Support index argument to get() and set().
         TODO: Detect & flag execution errors.
         TODO: Save model state as well as component state.
         TODO: Use buffer protocol for array access.
         TODO: Safe multi-thread access (synchronized).
         TODO: CORBA support.
+        TODO: function/table attribute support.
 
     """
 
-    _dummy = npss.npss()  # Just for context switching.
-
-    @staticmethod
-    def grab_context():
-        """ Cause a session switch to save correct directory context. """
-        NPSScomponent._dummy.exists('COPYRIGHT')
+    # 1st session gets bad context for some reason...
+    dummy = npss.npss()
 
     def __init__(self, name='NPSS', parent=None, doc=None, directory='',
                  arglist=None, output_filename='', top=''):
         super(NPSScomponent, self).__init__(name, parent, doc, directory)
+        if not isinstance(top, basestring):
+            self.raise_exception('top must be a string', TypeError)
         self._topstr = top
 
         # Model options.
@@ -141,7 +146,7 @@ class NPSScomponent(Component):
         try:
             self.reload()
         except Exception, exc:
-            self.raise_exception('Reload caught exception: %s' % exc.args,
+            self.raise_exception('Reload caught exception: %s' % str(exc),
                                  type(exc))
 
     def pre_delete(self):
@@ -150,7 +155,6 @@ class NPSScomponent(Component):
         if self._top is not None:
             self._top.closeSession()
             self._top = None
-            self.grab_context()
 
     def _parse_arglist(self, arglist):
         """ Parse argument list. Assumes flag argument separate from value. """
@@ -163,11 +167,23 @@ class NPSScomponent(Component):
         obj_next = False
         preproc_next = False
 
-        for arg in arglist:
+        if isinstance(arglist, basestring):
+            args = arglist.split()
+        else:
+            try:
+                args = iter(arglist)
+            except TypeError, exc:
+                self.raise_exception(exc.args[0], type(exc))
+
+        for arg in args:
             if arg == '-C':
                 obj_next = True
             elif obj_next:
-                self.preloaded_objs.append(arg)
+                if self._check_path(arg):
+                    self.preloaded_objs.append(arg)
+                else:
+                    self.raise_exception("object '%s' does not exist" % arg,
+                                         ValueError)
                 obj_next = False
             elif arg == '-D':
                 preproc_next = True
@@ -188,7 +204,11 @@ class NPSScomponent(Component):
             elif arg == '-I':
                 include_next = True
             elif include_next:
-                self.include_dirs.append(arg)
+                if self._check_path(arg):
+                    self.include_dirs.append(arg)
+                else:
+                    self.raise_exception("include path '%s' does not exist" % arg,
+                                         ValueError)
                 include_next = False
             elif arg == '-X':
                 assembly_next = True
@@ -213,7 +233,11 @@ class NPSScomponent(Component):
             elif arg == '-l':
                 dlm_next = True
             elif dlm_next:
-                self.preloaded_dlms.append(arg)
+                if self._check_path(arg):
+                    self.preloaded_dlms.append(arg)
+                else:
+                    self.raise_exception("DLM path '%s' does not exist" % arg,
+                                         ValueError)
                 dlm_next = False
             elif arg == '-noconstants':
                 self.use_constants = False
@@ -228,14 +252,22 @@ class NPSScomponent(Component):
             elif arg == '-ns':
                 ns_next = True
             elif ns_next:
-                self.ns_ior = arg
+                if self._check_path(arg):
+                    self.ns_ior = arg
+                else:
+                    self.raise_exception("NameServer IOR path '%s' does not exist" % arg,
+                                         ValueError)
                 ns_next = False
             elif arg == '-trace':
                 self.trace_execution = True
             elif arg.startswith('-'):
                 self.raise_exception("illegal option '%s'" % arg, ValueError)
             else:
-                self.model_filename = arg
+                if self._check_path(arg):
+                    self.model_filename = arg
+                else:
+                    self.raise_exception("model file '%s' does not exist" % arg,
+                                         ValueError)
 
         if access_next:
             self.raise_exception("expected default access type", ValueError)
@@ -253,6 +285,13 @@ class NPSScomponent(Component):
             self.raise_exception("expected object path", ValueError)
         elif preproc_next:
             self.raise_exception("expected preprocessor value", ValueError)
+
+    def _check_path(self, path):
+        """ Return True if path can be found. """
+        if os.path.isabs(path):
+            return os.path.exists(path)
+        else:
+            return os.path.exists(os.path.join(self.get_directory(), path))
 
     def _generate_arglist(self):
         """ Generate argument list. """
@@ -329,6 +368,9 @@ class NPSScomponent(Component):
 
         # Default session directory is set during initialization.
         directory = self.get_directory()
+        if not os.path.exists(directory):
+            raise RuntimeError("Execution directory '%s' not found." \
+                               % directory)
         self.push_dir(directory)
         try:
             cwd = os.getcwd()+os.sep
@@ -352,6 +394,9 @@ class NPSScomponent(Component):
                 self.info('output routed to %s', self.output_filename)
 
             if self.model_filename:
+                if not os.path.exists(self.model_filename):
+                    raise RuntimeError("Model file '%s' not found while reloading in '%s'." \
+                                       % (self.model_filename, cwd))
                 # Parse NPSS model.
                 self._top.parseFile(self.model_filename)
                 # Add non-NPSS distribution input files to external_files list.
@@ -373,7 +418,6 @@ class NPSScomponent(Component):
                 for name, value in saved_inputs:
                     self.set(name, value)
         finally:
-            self.grab_context()
             self.pop_dir()
 
     def create_in_model(self, base_typ, typ, name):
@@ -412,8 +456,6 @@ class NPSScomponent(Component):
                 return super(NPSScomponent, self).__getattribute__(name)
             except AttributeError:
                 raise AttributeError(self.get_pathname()+' '+str(err))
-        finally:
-            self.grab_context()
 
     def set(self, path, value, index=None):
         """ Set attribute value. """
@@ -439,44 +481,39 @@ class NPSScomponent(Component):
             setattr(top, name, value)
         except AttributeError:
             return super(NPSScomponent, self).__setattr__(name, value)
-        finally:
-            self.grab_context()
 
     def execute(self):
         """ Perform operations associated with running the component. """
-        try:
-            if self.reload_model:
-                self.info('External reload request.')
-                try:
-                    self.reload()
-                except Exception, exc:
-                    self.raise_exception('Exception during reload: %s' \
-                                         % str(exc), RunFailed)
-            elif self.reload_flag:
-                try:
-                    reload_req = getattr(self._top, self.reload_flag)
-                except Exception, exc:
-                    self.raise_exception("Exception getting '%s': %s" \
-                                         % (self.reload_flag, str(exc)),
-                                         RunFailed)
-                else:
-                    if reload_req:
-                        self.info('Internal reload request.')
-                        try:
-                            self.reload()
-                        except Exception, exc:
-                            self.raise_exception('Exception during reload: %s' \
-                                                 % str(exc), RunFailed)
+        if self.reload_model:
+            self.info('External reload request.')
             try:
-                if self.run_command:
-                    self._top.parseString(self.run_command+';')
-                else:
-                    self._top.run()
+                self.reload()
             except Exception, exc:
-                self.raise_exception('Exception during run: %s' % str(exc),
-                                     RunFailed)
-        finally:
-            self.grab_context()
+                self.raise_exception('Exception during reload: %s' \
+                                     % str(exc), RuntimeError)
+        elif self.reload_flag:
+            try:
+                reload_req = getattr(self._top, self.reload_flag)
+            except Exception, exc:
+                self.raise_exception("Exception getting '%s': %s" \
+                                     % (self.reload_flag, str(exc)),
+                                     RuntimeError)
+            else:
+                if reload_req:
+                    self.info('Internal reload request.')
+                    try:
+                        self.reload()
+                    except Exception, exc:
+                        self.raise_exception('Exception during reload: %s' \
+                                             % str(exc), RuntimeError)
+        try:
+            if self.run_command:
+                self._top.parseString(self.run_command+';')
+            else:
+                self._top.run()
+        except Exception, exc:
+            self.raise_exception('Exception during run: %s' % str(exc),
+                                 RuntimeError)
 
     def make_public(self, obj_info):
         """

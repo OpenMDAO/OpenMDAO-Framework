@@ -99,9 +99,12 @@ def do_set(path, user, options):
         if options.verbose:
             print 'Moving to repository root.'
         os.chdir(path)
+
     bin = os.path.join(path, 'buildout', 'bin')
     scripts = os.path.join(path, 'scripts')
-    os.environ['PATH'] = bin+os.pathsep+scripts+os.pathsep+os.environ['PATH']
+    os.environ['PATH'] = \
+        bin+os.pathsep+scripts+os.pathsep+os.environ.get('PATH', '')
+
     process = subprocess.Popen(os.environ['SHELL'])
     os.waitpid(process.pid, 0)
     sys.exit(process.returncode)

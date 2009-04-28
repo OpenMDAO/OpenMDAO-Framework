@@ -54,18 +54,20 @@ class RefVariable(Variable):
     refvalue = property(_get_referenced_value, _set_referenced_value)
     
     def get_referenced_varpaths(self):
-        """Return a tuple of the form (src_set, dest_set) based on the
-        names of Variables referenced in the string expression. The contents
-        of the sets are full Variable pathnames.
+        """Return a set of source or dest Variable pathnames relative to
+        self.parent and based on the names of Variables referenced in our 
+        reference string. 
         """
-        return (self._getexpr().get_external_outputs(), 
-                self._getexpr().get_external_inputs())
+        if self.iostatus == OUTPUT:
+            return self._getexpr().get_external_outputs()
+        else:
+            return self._getexpr().get_external_inputs()
     
     def get_referenced_components(self):
-        """Return a tuple of the form (src_comps, dest_comps) based on
-        the names of Variables referenced in the string expression.
+        """Return a list of source or dest Component names based on the 
+        pathnames of Variables referenced in our reference string. 
         """
-        raise NotImplementedError('get_referenced_components')
+        return [x.split('.')[0] for x in self.get_referenced_varpaths()]
         
 
 class RefVariableArray(Variable):

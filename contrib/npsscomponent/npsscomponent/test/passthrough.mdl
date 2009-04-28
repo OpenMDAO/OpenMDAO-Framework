@@ -35,6 +35,9 @@ OutFileStream binary_out {
     binary = TRUE;
 }
 
+string xyzzy_val = "$XYZZY";
+int flag_val = $FLAG;
+
 void calculate() {
     cout << sys.tstamp << "calculate() executing in '" << sys.pwd() << "'\n";
     cout << sys.tstamp << "XYZZY = '$XYZZY'\n";

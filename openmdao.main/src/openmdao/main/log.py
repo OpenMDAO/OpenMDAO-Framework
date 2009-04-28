@@ -1,15 +1,47 @@
 """
 This is just a wrapper for the logging module.
+Messages can be routed to the console via enable_console().
+If the file 'logger.cfg' exists, it can be used to configure logging.
+See the Python documentation for logging.config for details.
+The example below is equivalent to calling enable_console():
+
+.. parsed-literal::
+
+    [loggers]
+    keys=root
+
+    [handlers]
+    keys=consoleHandler
+
+    [formatters]
+    keys=consoleFormatter
+
+    [logger_root]
+    level=DEBUG
+    handlers=consoleHandler
+
+    [handler_consoleHandler]
+    class=StreamHandler
+    level=DEBUG
+    formatter=consoleFormatter
+    args=(sys.stderr,)
+
+    [formatter_consoleFormatter]
+    format=%(levelname)s %(name)s: %(message)s
+
 """
 
 #public symbols
-__all__ = ['logger', 'getLogger', 'Logger',
+__all__ = ['logger', 'getLogger', 'enable_console', 'disable_console', 'Logger',
            'LOG_DEBUG', 'LOG_INFO', 'LOG_WARNING', 'LOG_ERROR', 'LOG_CRITICAL']
 
 __version__ = '0.1'
 
 
 import logging
+import logging.config
+import os.path
+
 
 LOG_DEBUG    = logging.DEBUG
 LOG_INFO     = logging.INFO
@@ -37,24 +69,39 @@ logging.addLevelName(logging.CRITICAL, 'C')
 
 logger = logging.getLogger('')
 
-# define a Handler which writes INFO messages or higher to the sys.stderr
-console = logging.StreamHandler()
-console.setLevel(logging.DEBUG)
-# set a format which is simpler for console use
-#formatter = logging.Formatter('%(name)-12s: %(levelname)-8s %(message)s')
-formatter = logging.Formatter('%(levelname)-6s %(message)s')
-# tell the handler to use this format
-console.setFormatter(formatter)
-# add the handler to the root logger
-#logger.addHandler(console)
+# Optional handler which writes messages to sys.stderr
+CONSOLE = None
+
+# If a logging config file exists, use it.
+if os.path.exists('logging.cfg'):
+    logging.config.fileConfig('logging.cfg')
 
 
 def getLogger(name):
+    """ Return the named logger. """
     return logging.getLogger(name)
     
 
+def enable_console():
+    """ Configure logging to receive log messages at the console. """
+    global CONSOLE
+    if CONSOLE is None:
+        # define a Handler which writes messages to sys.stderr
+        CONSOLE = logging.StreamHandler()
+        CONSOLE.setLevel(logging.DEBUG)
+        # set a format which is simpler for console use
+        formatter = logging.Formatter('%(levelname)s %(name)s: %(message)s')
+        # tell the handler to use this format
+        CONSOLE.setFormatter(formatter)
+    logger.addHandler(CONSOLE)
+
+def disable_console():
+    """ Stop receiving log messages at the console. """
+    logger.removeHandler(CONSOLE)
+
+
 class Logger(object):
-    """ Pickle-able logger. Mostly a pass-through to real logger."""
+    """ Pickle-able logger. Mostly a pass-through to a real logger."""
 
     def __init__(self, name, level=None):
         self._name = name
@@ -111,4 +158,4 @@ class Logger(object):
     def log(self, level, msg, *args, **kwargs):
         """ Log a message at a specified level. """
         self._logger.log(level, msg, *args, **kwargs)
-    
+

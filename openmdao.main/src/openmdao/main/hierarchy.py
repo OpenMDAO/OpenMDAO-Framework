@@ -4,6 +4,7 @@ __all__ = ["HierarchyMember"]
 __version__ = "0.1"
 
 
+import traceback
 import weakref
 from openmdao.main.log import Logger, LOG_DEBUG
 
@@ -95,19 +96,24 @@ class HierarchyMember(object):
 #        self._logger.error(msg)
         raise exception_class(full_msg)
     
-    def error(self, *args, **kwargs):
+    def exception(self, msg, *args, **kwargs):
+        """Log traceback from within exception handler."""
+        self._logger.critical(msg, *args, **kwargs)
+        self._logger.critical(traceback.format_exc())
+
+    def error(self, msg, *args, **kwargs):
         """Record an error message"""
-        self._logger.error(*args, **kwargs)
+        self._logger.error(msg, *args, **kwargs)
         
-    def warning(self, *args, **kwargs):
+    def warning(self, msg, *args, **kwargs):
         """Record a warning message"""
-        self._logger.warning(*args, **kwargs)
+        self._logger.warning(msg, *args, **kwargs)
         
-    def info(self, *args, **kwargs):
+    def info(self, msg, *args, **kwargs):
         """Record an informational message"""
-        self._logger.info(*args, **kwargs)
+        self._logger.info(msg, *args, **kwargs)
         
-    def debug(self, *args, **kwargs):
+    def debug(self, msg, *args, **kwargs):
         """Record a debug message"""
-        self._logger.debug(*args, **kwargs)
+        self._logger.debug(msg, *args, **kwargs)
 

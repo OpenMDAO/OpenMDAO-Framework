@@ -19,6 +19,15 @@ except ImportError:
     from yaml import Loader, Dumper
     _libyaml = False
 
+import datetime
+import os
+import platform
+import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
+
 import weakref
 # the following is a monkey-patch to correct a problem with
 # copying/deepcopying weakrefs There is an issue in the python issue tracker
@@ -31,6 +40,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint: enable-msg=W0212
 
 from zope.interface import implements
+import networkx as nx
 
 from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main import HierarchyMember
@@ -50,6 +60,7 @@ class Container(HierarchyMember):
     def __init__(self, name, parent=None, doc=None, add_to_parent=True):
         super(Container, self).__init__(name, parent, doc)            
         self._pub = {}  # A container for framework accessible objects.
+        self._io_graph = None
         if parent is not None and \
            IContainer.providedBy(parent) and add_to_parent:
             parent.add_child(self)
@@ -85,19 +96,38 @@ class Container(HierarchyMember):
             yield entry[1]
     
     def has_invalid_inputs(self):
-        return len(self.invalid_inputs()) > 0
+        """Return True if this object has any invalid input Variables."""
+        return len(self.get_inputs(valid=False)) > 0
     
-    def invalid_inputs(self):
-        return [x for x in self._pub.values() if IVariable.providedBy(x) 
-                                                 and x.iostatus==INPUT 
-                                                 and x.valid is False]
+    def get_inputs(self, valid=None):
+        """Return a list of input Variables. If valid is True or False, 
+        return only inputs with a matching .valid attribute.
+        If valid is None, return inputs regardless of validity.
+        """
+        if valid is None:
+            return [x for x in self._pub.values() if IVariable.providedBy(x) 
+                                                     and x.iostatus == INPUT]
+        else:
+            return [x for x in self._pub.values() if IVariable.providedBy(x) 
+                                                     and x.iostatus == INPUT 
+                                                     and x.valid == valid]
+        
     def has_invalid_outputs(self):
-        return len(self.invalid_outputs()) > 0
+        """Return True if this object has any invalid output Variables."""
+        return len(self.get_outputs(valid=False)) > 0
     
-    def invalid_outputs(self):
-        return [x for x in self._pub.values() if IVariable.providedBy(x) 
-                                                 and x.iostatus==OUTPUT 
-                                                 and x.valid is False]
+    def get_outputs(self, valid=None):
+        """Return a list of output Variables. If valid is True or False, 
+        return only outputs with a matching .valid attribute.
+        If valid is None, return outputs regardless of validity.
+        """
+        if valid is None:
+            return [x for x in self._pub.values() if IVariable.providedBy(x) 
+                                                     and x.iostatus == OUTPUT]
+        else:
+            return [x for x in self._pub.values() if IVariable.providedBy(x) 
+                                                     and x.iostatus == OUTPUT 
+                                                     and x.valid == valid]
     
     def add_child(self, obj, private=False):
         """Add an object (must provide IContainer interface) to this
@@ -119,6 +149,7 @@ class Container(HierarchyMember):
             self.raise_exception("'"+str(type(obj))+
                     "' object has does not provide the IContainer interface",
                     TypeError)
+        return obj
         
     def remove_child(self, name, delete=True):
         """Remove the specified child from this container and remove any
@@ -329,7 +360,125 @@ class Container(HierarchyMember):
         of dictionary entries from the old object will be copied to the
         new one."""
         raise NotImplementedError("config_from_obj")
-    
+
+    def save_to_egg(self, name=None, version=None, force_relative=True,
+                    src_dir=None, src_files=None, dst_dir=None,
+                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
+        """Save state and other files to an egg.
+        name defaults to the name of the container.
+        version defaults to the container's module __version__.
+        If force_relative is True, all paths are relative to src_dir.
+        src_dir is the root of all (relative) src_files.
+        dst_dir is the directory to write the egg in.
+        tmp_dir is the directory to use for temporary files.
+        Returns the egg's filename."""
+        # TODO: check for setup.py errors!
+        # TODO: handle custom class definitions.
+        # TODO: record required packages, buildout.cfg.
+        orig_dir = os.getcwd()
+
+        if name is None:
+            name = self.name
+        if version is None:
+            try:
+                version = sys.modules[self.__module__].__version__
+            except AttributeError:
+                now = datetime.datetime.now()  # Could consider using utcnow().
+                version = '%d.%d.%d.%d.%d' % \
+                          (now.year, now.month, now.day, now.hour, now.minute)
+        if dst_dir is None:
+            dst_dir = orig_dir
+        if not os.access(dst_dir, os.W_OK):
+            self.raise_exception("Can't save to '%s', no write permission" \
+                                 % dst_dir, IOError)
+
+        py_version = platform.python_version_tuple()
+        py_version = '%s.%s' % (py_version[0], py_version[1])
+        egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
+        self.debug('Saving to %s in %s...', egg_name, orig_dir)
+
+        # Move to scratch area.
+        tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
+        os.chdir(tmp_dir)
+        try:
+            if src_dir:
+                # Link original directory to object name.
+                os.symlink(src_dir, name)
+            else:
+                os.mkdir(name)
+
+            # Save state of object hierarchy.
+            if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+                state_name = name+'.pickle'
+            elif format is SAVE_LIBYAML or format is SAVE_YAML:
+                state_name = name+'.yaml'
+            else:
+                self.raise_exception("Unknown format '%s'." % str(format),
+                                     RuntimeError)
+
+            state_path = os.path.join(name, state_name)
+            try:
+                self.save(state_path, format, proto)
+            except Exception, exc:
+                if os.path.exists(state_path):
+                    os.remove(state_path)
+                self.raise_exception("Can't save to '%s': %s" % \
+                                     (state_path, str(exc)), type(exc))
+
+            # Save everything to an egg.
+            if src_files is None:
+                src_files = set()
+            src_files.add(state_name)
+            src_files = sorted(src_files)
+
+            if not os.path.exists(os.path.join(name, '__init__.py')):
+                remove_init = True
+                out = open(os.path.join(name, '__init__.py'), 'w')
+                out.close()
+            else:
+                remove_init = False
+
+            out = open('setup.py', 'w')
+
+            out.write('import setuptools\n')
+            out.write('\n')
+
+            out.write('package_files = [\n')
+            for filename in src_files:
+                path = os.path.join(name, filename)
+                if not os.path.exists(path):
+                    self.raise_exception("Can't save, '%s' does not exist" % \
+                                         path, ValueError)
+                out.write("    '%s',\n" % filename)
+            out.write('    ]\n')
+            out.write('\n')
+
+            out.write('setuptools.setup(\n')
+            out.write("    name='%s',\n" % name)
+            out.write("    description='%s',\n" % self.__doc__.strip())
+            out.write("    version='%s',\n" % version)
+            out.write("    packages=['%s'],\n" % name)
+            out.write("    package_data={'%s' : package_files})\n" % name)
+            out.write('\n')
+
+            out.close()
+
+            stdout = open('setup.py.out', 'w')
+            subprocess.check_call(['python', 'setup.py', 'bdist_egg',
+                                   '-d', dst_dir],
+                                  stdout=stdout, stderr=subprocess.STDOUT)
+            stdout.close()
+
+            os.remove(os.path.join(name, state_name))
+            if remove_init:
+                os.remove(os.path.join(name, '__init__.py'))
+
+        finally:
+            os.chdir(orig_dir)
+            shutil.rmtree(tmp_dir)
+
+        return egg_name
+
     def save (self, outstream, format=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
         output stream. Pure python classes generally won't need to
@@ -344,7 +493,8 @@ class Container(HierarchyMember):
             try:
                 outstream = open(outstream, mode)
             except IOError, exc:
-                self.raise_exception(exc.args, type(exc))
+                self.raise_exception("Can't save to '%s': %s" % \
+                                     (outstream, exc.strerror), type(exc))
 
         if format is SAVE_CPICKLE:
             cPickle.dump(self, outstream, proto) # -1 means use highest protocol
@@ -360,6 +510,38 @@ class Container(HierarchyMember):
             self.raise_exception('cannot save object using format '+str(format),
                                  RuntimeError)
     
+    @staticmethod
+    def load_from_egg (filename):
+        """Load state and other files from an egg, returns top object."""
+        # TODO: handle custom class definitions.
+        # TODO: handle required packages.
+        logger.debug('Loading from %s in %s...', filename, os.getcwd())
+        archive = zipfile.ZipFile(filename, 'r')
+        name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
+        logger.debug("    name '%s'", name)
+        for info in archive.infolist():
+            if not info.filename.startswith(name):
+                continue  # EGG-INFO
+            if info.filename.endswith('.pyc') or \
+               info.filename.endswith('.pyo'):
+                continue  # Don't assume compiled OK for this platform.
+            logger.debug("    extracting '%s'...", info.filename)
+            dirname = os.path.dirname(info.filename)
+            dirname = dirname[len(name)+1:]
+            if dirname and not os.path.exists(dirname):
+                os.makedirs(dirname)
+            path = info.filename[len(name)+1:]
+            out = open(path, 'w')
+            out.write(archive.read(info.filename))
+            out.close()
+
+        if os.path.exists(name+'.pickle'):
+            return Container.load(name+'.pickle', SAVE_CPICKLE)
+        elif os.path.exists(name+'.yaml'):
+            return Container.load(name+'.yaml', SAVE_LIBYAML)
+
+        raise RuntimeError('No top object pickle or yaml save file.')
+
     @staticmethod
     def load (instream, format=SAVE_CPICKLE):
         """Load an object of this type from the input stream. Pure python 
@@ -427,3 +609,33 @@ class Container(HierarchyMember):
                     for chname, child in obj._get_all_items(visited, recurse):
                         yield ('.'.join([name,chname]), child)
                    
+
+    def get_pred_inputs(self, outputs, valid=None):
+        """Return a list of input Variables on this object that the given list
+        of output Variables (also on this object) depend upon.  For a simple
+        Container, this will just return all of the inputs, but an Assembly,
+        for example, may return only a subset of its inputs. If valid is
+        True or False, return only inputs with a matching .valid attribute.
+        If valid is None, return inputs regardless of validity.
+        """
+        return self.get_inputs(valid=valid)
+
+    def get_io_graph(self):
+        """Return a graph connecting our input variables to our output variables.
+        In the case of a simple Container, all inputs variables are connected
+        to all output variables.
+        """
+        if self._io_graph is None:
+            self._io_graph = nx.LabeledDiGraph()
+            vars = [x for x in self._pub.values() if IVariable.providedBy(x)]
+            ins = [x for x in vars if x.iostatus == INPUT]
+            outs = [x for x in vars if x.iostatus == OUTPUT]
+            for var in vars:
+                self._io_graph.add_node('%s.%s' % (self.name, var.name), var)
+            
+            # specify edges, where edge data is a tuple of (invar, outvar)
+            edges = [('%s.%s'%(self.name,x.name),'%s.%s'%(self.name,y.name)) 
+                                                         for x in ins for y in outs]
+            self._io_graph.add_edges_from(edges)
+        return self._io_graph
+    
