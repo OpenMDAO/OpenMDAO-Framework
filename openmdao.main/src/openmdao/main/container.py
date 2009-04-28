@@ -329,7 +329,6 @@ class Container(HierarchyMember):
         dst_dir is the directory to write the egg in.
         tmp_dir is the directory to use for temporary files.
         Returns the egg's filename."""
-        # TODO: handle custom class definitions.
         # TODO: record required packages, buildout.cfg.
         orig_dir = os.getcwd()
 
@@ -353,31 +352,41 @@ class Container(HierarchyMember):
         egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
         self.debug('Saving to %s in %s...', egg_name, orig_dir)
 
-        # Determine set of required imports for loader.
-        imports = set()
+        # Fixup objects, classes, & sys.modules for __main__ imports.
+        fixup_objects = []
+        fixup_classes = {}
+        fixup_modules = set()
+
         objs = self.get_objs(IContainer.providedBy, recurse=True)
         objs.append(self)
         for obj in objs:
             mod = obj.__module__
             if mod == '__main__':
-                # Need to determine 'real' module name.
-                if '.' not in sys.path:
-                    sys.path.append('.')
-                cls = obj.__class__.__name__
-                for arg in sys.argv:
-                    if arg.endswith('.py'):
-                        mod = os.path.basename(arg)[:-3]
-                        try:
-                            module = __import__(mod, fromlist=[cls])
-                            imports.add((mod, cls))
+                classname = obj.__class__.__name__
+                mod = obj.__class__.__module__
+                if mod == '__main__':
+                    # Need to determine 'real' module name.
+                    if '.' not in sys.path:
+                        sys.path.append('.')
+                    for arg in sys.argv:
+                        if arg.endswith('.py'):
+                            mod = os.path.basename(arg)[:-3]
+                            try:
+                                module = __import__(mod, fromlist=[classname])
+                            except ImportError:
+                                pass
+                            else:
+                                old = obj.__class__
+                                new = getattr(module, classname)
+                                fixup_classes[classname] = (old, new)
+                                fixup_modules.add(mod)
                             break
-                        except ImportError:
-                            pass
-                else:
-                    self.raise_exception("Can't find module for '%s'" % \
-                                         cls, RuntimeError)
-        imports = list(imports)
-        imports.sort(key=lambda modcls: modcls[0]+'.'+modcls[1])
+                    else:
+                        self.raise_exception("Can't find module for '%s'" % \
+                                             classname, RuntimeError)
+                obj.__class__ = fixup_classes[classname][1]
+                obj.__module__ = mod
+                fixup_objects.append(obj)
 
         # Move to scratch area.
         tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
@@ -404,6 +413,7 @@ class Container(HierarchyMember):
             except Exception, exc:
                 if os.path.exists(state_path):
                     os.remove(state_path)
+#                self.exception("Can't save to '%s': %s", state_path, str(exc))
                 self.raise_exception("Can't save to '%s': %s" % \
                                      (state_path, str(exc)), type(exc))
 
@@ -424,18 +434,14 @@ class Container(HierarchyMember):
             # Create loader script.
             out = open(os.path.join(name, '__loader__.py'), 'w')
             out.write("""\
+import os.path
 import sys
 if not '.' in sys.path:
     sys.path.append('.')
 
-from openmdao.main.container import Container
-from openmdao.main.constants import SAVE_CPICKLE,  SAVE_LIBYAML
+from openmdao.main import Container, Component
+from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
 
-""")
-            for mod, cls in imports:
-                out.write('from %s import %s\n' % (mod, cls))
-
-            out.write("""
 def load():
     state_name = '%s'
     if state_name.endswith('.pickle'):
@@ -446,8 +452,6 @@ def load():
                        state_name)
 
 if __name__ == '__main__':
-    import os.path
-    from openmdao.main.component import Component
     model = Component.load_from_egg(os.path.join('..', '%s'))
     model.run()
 """ % (state_name, egg_name))
@@ -514,6 +518,16 @@ if __name__ == '__main__':
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(tmp_dir)
+            # Restore objects, classes, & sys.modules for __main__ imports.
+            for obj in fixup_objects:
+                obj.__module__ = '__main__'
+                classname = obj.__class__.__name__
+                obj.__class__ = fixup_classes[classname][0]
+            for classname in fixup_classes.keys():
+                new = fixup_classes[classname][1]
+                del new
+            for mod in fixup_modules:
+                del sys.modules[mod]
 
         return egg_name
 
@@ -551,7 +565,6 @@ if __name__ == '__main__':
     @staticmethod
     def load_from_egg (filename):
         """Load state and other files from an egg, returns top object."""
-        # TODO: handle custom class definitions.
         # TODO: handle required packages.
         logger.debug('Loading from %s in %s...', filename, os.getcwd())
         archive = zipfile.ZipFile(filename, 'r')
