@@ -18,8 +18,11 @@ import os.path
 from openmdao.main import Assembly, Component, Container, Float, \
                           ArrayVariable, FileVariable
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
+
+__version__ = '0.1'
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -225,9 +228,8 @@ class TracingNPSS(NPSScomponent):
 
     def execute(self):
         print self.get_pathname(), 'execution begins'
-        status = super(TracingNPSS, self).execute()
+        super(TracingNPSS, self).execute()
         print self.get_pathname(), '    complete'
-        return status
 
 
 class Model(Assembly):
@@ -249,6 +251,7 @@ class Model(Assembly):
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
+        self.external_files.append({'path':'README.txt'})
 
         model_dir = os.path.join('..', 'Full_Model', 'Cycle', 'run')
         includes = [
@@ -271,6 +274,8 @@ class Model(Assembly):
         arglist.append(os.path.join(model_dir, 'MC_ADP.mdl'))
         TracingNPSS('NPSS_ADP', self, directory='NPSS_ADP',
                     arglist=arglist, output_filename='NPSS.out')
+        self.NPSS_ADP.external_files.append(
+            {'path':os.path.join(model_dir, 'MC_ADP.run')})
         self.NPSS_ADP.run_command = 'mcRun()'
         self.NPSS_ADP.reload_flag = 'mcReload'
         self.workflow.add_node(self.NPSS_ADP)
@@ -290,6 +295,8 @@ class Model(Assembly):
         arglist.append(os.path.join(model_dir, 'MC_SLS.mdl'))
         TracingNPSS('NPSS_SLS', self, directory='NPSS_SLS',
                     arglist=arglist, output_filename='NPSS.out')
+        self.NPSS_SLS.external_files.append(
+            {'path':os.path.join(model_dir, 'MC_SLS.run')})
         self.NPSS_SLS.run_command = 'mcRun()'
         self.NPSS_SLS.reload_flag = 'mcReload'
         self.workflow.add_node(self.NPSS_SLS)
@@ -304,6 +311,7 @@ class Model(Assembly):
         self.connect('Design.TOCThrust', 'NPSS_SLS.engine.TOCThrust')
 
         # WATE.
+        wate_dir = os.path.join('..', 'Full_Model', 'Weight', 'run')
         arglist = [
             '-I', '../Full_Model/Components',
             '-I', '../Full_Model/Weight',
@@ -313,10 +321,11 @@ class Model(Assembly):
             '-I', '../Full_Model/Weight/run',
             '-I', '../Full_Model/ROSE',
             '-I', '../Full_Model/ROSE/BaseClasses']
-        arglist.append(os.path.join('..', 'Full_Model', 'Weight', 'run',
-                                    'MCengine.mdl'))
+        arglist.append(os.path.join(wate_dir, 'MCengine.mdl'))
         TracingNPSS('NPSS_WATE', self, directory='NPSS_WATE',
                     arglist=arglist, output_filename='NPSS.out')
+        self.NPSS_WATE.external_files.append(
+            {'path':os.path.join(wate_dir, 'MCengine.run')})
         self.NPSS_WATE.run_command = 'mcRun()'
         self.NPSS_WATE.reload_flag = 'mcReload'
         self.workflow.add_node(self.NPSS_WATE)
@@ -335,6 +344,8 @@ class Model(Assembly):
         arglist.append(os.path.join(model_dir, 'MCengine.mdl'))
         TracingNPSS('NPSS_FLOPS', self, directory='NPSS_FLOPS',
                     arglist=arglist, output_filename='NPSS.out')
+        self.NPSS_FLOPS.external_files.append(
+            {'path':os.path.join(model_dir, 'MCengine.run')})
         self.NPSS_FLOPS.run_command = 'mcRun()'
         self.NPSS_FLOPS.reload_flag = 'mcReload'
         self.workflow.add_node(self.NPSS_FLOPS)
@@ -354,6 +365,8 @@ class Model(Assembly):
         arglist.append(os.path.join(model_dir, 'MCnoise.mdl'))
         TracingNPSS('NPSS_ANOPP', self, directory='NPSS_ANOPP',
                     arglist=arglist, output_filename='NPSS.out')
+        self.NPSS_ANOPP.external_files.append(
+            {'path':os.path.join(model_dir, 'MCnoise.run')})
         self.NPSS_ANOPP.run_command = 'mcRun()'
         self.NPSS_ANOPP.reload_flag = 'mcReload'
         self.workflow.add_node(self.NPSS_ANOPP)
@@ -483,6 +496,48 @@ class Model(Assembly):
                      'PropulsionData.FLOPS.thrso')
 
 
+def print_info(root, level=0):
+    """ Print some internal data sarting at root. """
+    from openmdao.main.interfaces import IComponent
+    try:
+        pub = getattr(root, '_pub')
+    except AttributeError:
+        return
+
+    if IComponent.providedBy(root):
+        for metadata in root.external_files:
+            print '%s%s' % ('    '*level, str(metadata))
+
+    for name in sorted(pub.keys()):
+        obj = root.get(name)
+        print '%s.%s = %s' % ('    '*level, name, str(obj))
+        print_info(obj, level+1)
+
+
+def test_save_load():
+    """ Save model and then reload & run. """
+    import shutil
+
+    model = Model()
+    egg_name = model.save_to_egg()
+#    print_info(model)
+
+    if os.path.exists('test_dir'):
+        shutil.rmtree('test_dir')
+    os.mkdir('test_dir')
+    SimulationRoot.chdir('test_dir')
+    try:
+        new_model = Component.load_from_egg(os.path.join('..', egg_name))
+#        print_info(new_model)
+
+        print '\nrunning new model...'
+        new_model.run()
+    finally:
+        SimulationRoot.chdir('..')
+
+
 if __name__ == '__main__':
-    Model().run()
+#    Model().run()
+
+    test_save_load()
 

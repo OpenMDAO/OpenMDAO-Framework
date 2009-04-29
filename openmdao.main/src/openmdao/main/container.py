@@ -1,5 +1,4 @@
 
-
 #public symbols
 __all__ = ["Container"]
 
@@ -16,6 +15,15 @@ try:
 except ImportError:
     from yaml import Loader, Dumper
     _libyaml = False
+
+import datetime
+import os
+import platform
+import shutil
+import subprocess
+import sys
+import tempfile
+import zipfile
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -239,8 +247,8 @@ class Container(HierarchyMember):
             self.raise_exception("object has no attribute '"+base+"'", 
                                  AttributeError)
         except TypeError:
-            self.raise_exception("object has no attribute '"+str(base)+
-                                 "'", AttributeError)
+            self.raise_exception("object has no attribute '"+str(base)+"'",
+                                 AttributeError)
             
         obj.set(name, value, index)        
 
@@ -250,20 +258,24 @@ class Container(HierarchyMember):
         This differs from setting to a simple value, because the destination
         Variable can use info from the source Variable to perform conversions
         if necessary, as in the case of Float Variables with differing units.
+
         """
+        assert(isinstance(path, basestring))
         try:
             base, name = path.split('.', 1)
         except ValueError:
             base = path
             name = None
+
         try:
             obj = self._pub[base]
         except KeyError:
-            self.raise_exception("object has no attribute '"+
-                                 base+"'", AttributeError)
+            self.raise_exception("object has no attribute '"+base+"'",
+                                 AttributeError)
         except TypeError:
-            self.raise_exception("object has no attribute '"+
-                                 str(base)+"'", AttributeError)
+            self.raise_exception("object has no attribute '"+str(base)+"'",
+                                 AttributeError)
+
         obj.setvar(name, variable)        
 
         
@@ -284,10 +296,8 @@ class Container(HierarchyMember):
                     objs.extend(_recurse_get_objs(child, matchfunct, visited))
             return objs
             
-        objs = []
-        visited = set()
-        
         if recurse:
+            visited = set()
             return _recurse_get_objs(self, matchfunct, visited)
         else:
             return [child for child in self.__dict__.values() 
@@ -307,7 +317,220 @@ class Container(HierarchyMember):
         of dictionary entries from the old object will be copied to the
         new one."""
         raise NotImplementedError("config_from_obj")
-    
+
+    def save_to_egg(self, name=None, version=None, force_relative=True,
+                    src_dir=None, src_files=None, dst_dir=None,
+                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
+        """Save state and other files to an egg.
+        name defaults to the name of the container.
+        version defaults to the container's module __version__.
+        If force_relative is True, all paths are relative to src_dir.
+        src_dir is the root of all (relative) src_files.
+        dst_dir is the directory to write the egg in.
+        tmp_dir is the directory to use for temporary files.
+        Returns the egg's filename."""
+        # TODO: record required packages, buildout.cfg.
+        orig_dir = os.getcwd()
+
+        if name is None:
+            name = self.name
+        if version is None:
+            try:
+                version = sys.modules[self.__module__].__version__
+            except AttributeError:
+                now = datetime.datetime.now()  # Could consider using utcnow().
+                version = '%d.%d.%d.%d.%d' % \
+                          (now.year, now.month, now.day, now.hour, now.minute)
+        if dst_dir is None:
+            dst_dir = orig_dir
+        if not os.access(dst_dir, os.W_OK):
+            self.raise_exception("Can't save to '%s', no write permission" \
+                                 % dst_dir, IOError)
+
+        py_version = platform.python_version_tuple()
+        py_version = '%s.%s' % (py_version[0], py_version[1])
+        egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
+        self.debug('Saving to %s in %s...', egg_name, orig_dir)
+
+        # Fixup objects, classes, & sys.modules for __main__ imports.
+        fixup_objects = []
+        fixup_classes = {}
+        fixup_modules = set()
+
+        objs = self.get_objs(IContainer.providedBy, recurse=True)
+        objs.append(self)
+        for obj in objs:
+            mod = obj.__module__
+            if mod == '__main__':
+                classname = obj.__class__.__name__
+                mod = obj.__class__.__module__
+                if mod == '__main__':
+                    # Need to determine 'real' module name.
+                    if '.' not in sys.path:
+                        sys.path.append('.')
+                    for arg in sys.argv:
+                        if arg.endswith('.py'):
+                            mod = os.path.basename(arg)[:-3]
+                            try:
+                                module = __import__(mod, fromlist=[classname])
+                            except ImportError:
+                                pass
+                            else:
+                                old = obj.__class__
+                                new = getattr(module, classname)
+                                fixup_classes[classname] = (old, new)
+                                fixup_modules.add(mod)
+                            break
+                    else:
+                        self.raise_exception("Can't find module for '%s'" % \
+                                             classname, RuntimeError)
+                obj.__class__ = fixup_classes[classname][1]
+                obj.__module__ = mod
+                fixup_objects.append(obj)
+
+        # Move to scratch area.
+        tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
+        os.chdir(tmp_dir)
+        try:
+            if src_dir:
+                # Link original directory to object name.
+                os.symlink(src_dir, name)
+            else:
+                os.mkdir(name)
+
+            # Save state of object hierarchy.
+            if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+                state_name = name+'.pickle'
+            elif format is SAVE_LIBYAML or format is SAVE_YAML:
+                state_name = name+'.yaml'
+            else:
+                self.raise_exception("Unknown format '%s'." % str(format),
+                                     RuntimeError)
+
+            state_path = os.path.join(name, state_name)
+            try:
+                self.save(state_path, format, proto)
+            except Exception, exc:
+                if os.path.exists(state_path):
+                    os.remove(state_path)
+#                self.exception("Can't save to '%s': %s", state_path, str(exc))
+                self.raise_exception("Can't save to '%s': %s" % \
+                                     (state_path, str(exc)), type(exc))
+
+            # Add state file to set of files to save.
+            if src_files is None:
+                src_files = set()
+            src_files.add(state_name)
+            src_files = sorted(src_files)
+
+            # If needed, make an empty __init__.py
+            if not os.path.exists(os.path.join(name, '__init__.py')):
+                remove_init = True
+                out = open(os.path.join(name, '__init__.py'), 'w')
+                out.close()
+            else:
+                remove_init = False
+
+            # Create loader script.
+            out = open(os.path.join(name, '__loader__.py'), 'w')
+            out.write("""\
+import os.path
+import sys
+if not '.' in sys.path:
+    sys.path.append('.')
+
+from openmdao.main import Container, Component
+from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
+
+def load():
+    state_name = '%s'
+    if state_name.endswith('.pickle'):
+        return Container.load(state_name, SAVE_CPICKLE)
+    elif state_name.endswith('.yaml'):
+        return Container.load(state_name, SAVE_LIBYAML)
+    raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
+                       state_name)
+
+if __name__ == '__main__':
+    model = Component.load_from_egg(os.path.join('..', '%s'))
+    model.run()
+""" % (state_name, egg_name))
+            out.close()
+
+            # Save everything to an egg via setuptools.
+            out = open('setup.py', 'w')
+
+            out.write('import setuptools\n')
+            out.write('\n')
+
+            out.write('package_files = [\n')
+            for filename in src_files:
+                path = os.path.join(name, filename)
+                if not os.path.exists(path):
+                    self.raise_exception("Can't save, '%s' does not exist" % \
+                                         path, ValueError)
+                out.write("    '%s',\n" % filename)
+            out.write(']\n')
+            out.write('\n')
+
+            modules = []
+            out.write('requirements = [\n')
+            for module in modules:
+                out.write("    '%s',\n" % module)
+            out.write(']\n')
+            out.write('\n')
+
+            out.write("entry_points = {\n")
+            out.write("    'openmdao.top' : [\n")
+            out.write("        'top = __loader__:load',\n")
+            out.write("    ],\n")
+            out.write("    'openmdao.components' : [\n")
+            out.write("        '%s = __loader__:load',\n" % name)
+            out.write("    ],\n")
+            out.write("}\n")
+            out.write("\n")
+
+            out.write("setuptools.setup(\n")
+            out.write("    name='%s',\n" % name)
+            out.write('    description="""%s""",\n' % self.__doc__.strip())
+            out.write("    version='%s',\n" % version)
+            out.write("    packages=['%s'],\n" % name)
+            out.write("    package_data={'%s' : package_files},\n" % name)
+            out.write("    zip_safe=False,\n")
+            out.write("    install_requires=requirements,\n")
+            out.write("    entry_points=entry_points,\n")
+            out.write(")\n")
+            out.write("\n")
+
+            out.close()
+
+            stdout = open('setup.py.out', 'w')
+            subprocess.check_call(['python', 'setup.py', 'bdist_egg',
+                                   '-d', dst_dir],
+                                  stdout=stdout, stderr=subprocess.STDOUT)
+            stdout.close()
+
+            os.remove(os.path.join(name, state_name))
+            os.remove(os.path.join(name, '__loader__.py'))
+            if remove_init:
+                os.remove(os.path.join(name, '__init__.py'))
+
+        finally:
+            os.chdir(orig_dir)
+            shutil.rmtree(tmp_dir)
+            # Restore objects, classes, & sys.modules for __main__ imports.
+            for obj in fixup_objects:
+                obj.__module__ = '__main__'
+                classname = obj.__class__.__name__
+                obj.__class__ = fixup_classes[classname][0]
+            for classname in fixup_classes.keys():
+                new = fixup_classes[classname][1]
+                del new
+            for mod in fixup_modules:
+                del sys.modules[mod]
+
+        return egg_name
+
     def save (self, outstream, format=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
         output stream. Pure python classes generally won't need to
@@ -322,7 +545,8 @@ class Container(HierarchyMember):
             try:
                 outstream = open(outstream, mode)
             except IOError, exc:
-                self.raise_exception(exc.args, type(exc))
+                self.raise_exception("Can't save to '%s': %s" % \
+                                     (outstream, exc.strerror), type(exc))
 
         if format is SAVE_CPICKLE:
             cPickle.dump(self, outstream, proto) # -1 means use highest protocol
@@ -338,6 +562,41 @@ class Container(HierarchyMember):
             self.raise_exception('cannot save object using format '+str(format),
                                  RuntimeError)
     
+    @staticmethod
+    def load_from_egg (filename):
+        """Load state and other files from an egg, returns top object."""
+        # TODO: handle required packages.
+        logger.debug('Loading from %s in %s...', filename, os.getcwd())
+        archive = zipfile.ZipFile(filename, 'r')
+        name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
+        logger.debug("    name '%s'", name)
+        for info in archive.infolist():
+            if not info.filename.startswith(name):
+                continue  # EGG-INFO
+            if info.filename.endswith('.pyc') or \
+               info.filename.endswith('.pyo'):
+                continue  # Don't assume compiled OK for this platform.
+            logger.debug("    extracting '%s'...", info.filename)
+            dirname = os.path.dirname(info.filename)
+            dirname = dirname[len(name)+1:]
+            if dirname and not os.path.exists(dirname):
+                os.makedirs(dirname)
+            path = info.filename[len(name)+1:]
+            out = open(path, 'w')
+            out.write(archive.read(info.filename))
+            out.close()
+
+        if os.path.exists(name+'.pickle') or os.path.exists(name+'.yaml'):
+            if '.' not in sys.path:
+                sys.path.append('.')
+# pkg_resources.load_entry_point?
+            if '__loader__' in  sys.modules.keys():
+                del sys.modules['__loader__']
+            loader = __import__('__loader__')
+            return loader.load()
+
+        raise RuntimeError('No top object pickle or yaml save file.')
+
     @staticmethod
     def load (instream, format=SAVE_CPICKLE):
         """Load an object of this type from the input stream. Pure python 
@@ -366,13 +625,11 @@ class Container(HierarchyMember):
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
-        subcontainers = self.get_objs(IContainer.providedBy)
-        for child in subcontainers:
+        for child in self.get_objs(IContainer.providedBy):
             child.post_load()
 
     def pre_delete(self):
         """ Perform any required operations before the model is deleted. """
-        subcontainers = self.get_objs(IContainer.providedBy)
-        for child in subcontainers:
+        for child in self.get_objs(IContainer.providedBy):
             child.pre_delete()
 

@@ -3,6 +3,7 @@ Test of FileVariables.
 """
 
 import cPickle
+import os
 import shutil
 import unittest
 
@@ -76,6 +77,7 @@ class Model(Assembly):
 
 
 class FileTestCase(unittest.TestCase):
+    """ Test of FileVariables. """
 
     def setUp(self):
         """ Called before each test in this class. """
@@ -114,6 +116,43 @@ class FileTestCase(unittest.TestCase):
                 self.fail("Wrong message '%s'" % str(exc))
         else:
             self.fail('IOError expected')
+
+    def test_bad_directory(self):
+        try:
+            Source(directory='/illegal')
+        except ValueError, exc:
+            self.assertEqual(str(exc).startswith(
+                "Source: Illegal execution directory '/illegal', not a decendant of"), True)
+        else:
+            self.fail('Expected ValueError')
+
+    def test_not_directory(self):
+        directory = 'plain_file'
+        out = open(directory, 'w')
+        out.write('Hello world!\n')
+        out.close()
+
+        try:
+            self.source = Source(directory=directory)
+        except ValueError, exc:
+            path = os.path.join(os.getcwd(), directory)
+            self.assertEqual(str(exc),
+                "Source: Execution directory path '%s' is not a directory." \
+                % path)
+        else:
+            self.fail('Expected ValueError')
+        finally:
+            os.remove(directory)
+
+    def test_bad_new_directory(self):
+        self.model.Source.directory = '/illegal'
+        try:
+            self.model.run()
+        except ValueError, exc:
+            self.assertEqual(str(exc).startswith(
+                "FileVar_TestModel.Source: Illegal directory '/illegal', not a decendant of"), True)
+        else:
+            self.fail('Expected ValueError')
 
 
 if __name__ == '__main__':

@@ -6,6 +6,7 @@ import fnmatch
 import logging
 import rfc822
 import StringIO
+import zc.buildout
 
 from pkg_resources import Environment
 from pkg_resources import get_distribution, resource_listdir,load_entry_point

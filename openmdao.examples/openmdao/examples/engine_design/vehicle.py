@@ -9,7 +9,7 @@ from openmdao.main import Assembly
 from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 
-from openmdao.examples.engine_design.engine import Engine
+from openmdao.examples.engine_design.engine_wrap_c import Engine
 from openmdao.examples.engine_design.transmission import Transmission
 from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
 
@@ -120,7 +120,7 @@ class Vehicle(Assembly):
         # Promoted From Vehicle_Dynamics
         Float('Mass_Vehicle', self, INPUT, units='kg', default=1200.0,
               doc='Vehicle Mass')
-        Float('Cf', self, INPUT, units=None, default=0.01,
+        Float('Cf', self, INPUT, units=None, default=0.035,
               doc='Friction Coefficient (proportional to W)')
         Float('Cd', self, INPUT, units=None, default=0.3,
               doc='Drag Coefficient (proportional to V**2)')
@@ -206,10 +206,13 @@ class Vehicle(Assembly):
         
 if __name__ == "__main__":        
     z = Vehicle("Testing")        
-    z.CurrentGear = 3
-    z.Velocity = 60.0*(26.8224/60.0)
-    z.Throttle = .2
-    z.execute()
+    z.CurrentGear = 1
+    z.Velocity = 20.0*(26.8224/60.0)
+    #z.Throttle = .2
+    for throttle in xrange(1,101,1):
+        z.Throttle = throttle/100.0
+        z.execute()
+        print throttle, z.Acceleration
     
     def prz(zz):
         print "Accel = ", zz.Acceleration
@@ -217,6 +220,6 @@ if __name__ == "__main__":
         print "(Power, Torque) ", zz.Power, zz.Torque
         print "RPM = ", zz.Engine.RPM
         
-    prz(z)
+#    prz(z)
 
 # End vehicle.py 

@@ -2,6 +2,7 @@
 Test of NPSS auto-reload capability.
 """
 
+import logging
 import os
 import os.path
 import pkg_resources
@@ -9,8 +10,11 @@ import unittest
 
 from openmdao.main import Assembly, Component, Bool, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
+
+ORIG_DIR = os.getcwd()
 
 
 class Source(Component):
@@ -45,12 +49,8 @@ class Model(Assembly):
         self.workflow.add_node(Source(parent=self))
         self.Source.npss_in = 9
 
-        directory = \
-            os.path.join(pkg_resources.resource_filename('npsscomponent',
-                                                         'test'))
-        arglist = ['-trace', 'reload.mdl']
-        NPSScomponent(parent=self, directory=directory,
-                      arglist=arglist, output_filename='reload.out')
+        NPSScomponent(parent=self, arglist='-trace reload.mdl',
+                      output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
         Float('xyzzy_in',  self.NPSS, INPUT, doc='Test input')
         Float('xyzzy_out', self.NPSS, OUTPUT, doc='Test output')
@@ -67,17 +67,26 @@ class Model(Assembly):
 
 class NPSSTestCase(unittest.TestCase):
 
+    directory = \
+        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+
     def setUp(self):
         """ Called before each test in this class. """
+        # Reset simulation root so we can legally access files.
+        SimulationRoot.chdir(NPSSTestCase.directory)
         self.model = Model('TestModel')
 
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
-        os.remove(os.path.join(self.model.NPSS.directory, 'reload.out'))
+        os.remove('reload.out')
         self.model = None
+        SimulationRoot.chdir(ORIG_DIR)
 
     def test_internal_reload(self):
+        logging.debug('')
+        logging.debug('test_internal_reload')
+
         self.assertEqual(self.model.NPSS.run_count, 0)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.Sink.npss_out, 0)
@@ -96,7 +105,7 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.Sink.npss_out, 18)
 
-        path = self.model.NPSS.get('reload_flag')
+        path = self.model.NPSS.reload_flag
         self.model.NPSS.set(path, True)
         self.model.debug('reload_flag = %d', self.model.NPSS.get(path))
 
@@ -107,7 +116,30 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.npss_out, 9)
         self.assertEqual(self.model.NPSS.s, 'unconnected')
 
+        self.model.NPSS.set(path, True)
+        self.model.debug('reload_flag = %d', self.model.NPSS.get(path))
+        self.model.NPSS.model_filename = 'no_such_model'
+        try:
+            self.model.run()
+        except RuntimeError, exc:
+            self.assertEqual(str(exc).startswith(
+                "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
+                True)
+        else:
+            self.fail('Expected RuntimeError')
+
+        self.model.NPSS.reload_flag = 'no_such_variable'
+        try:
+            self.model.run()
+        except RuntimeError, exc:
+            self.assertEqual(str(exc), "TestModel.NPSS: Exception getting 'no_such_variable': no_such_variable not found")
+        else:
+            self.fail('Expected RuntimeError')
+
     def test_external_reload(self):
+        logging.debug('')
+        logging.debug('test_external_reload')
+
         self.assertEqual(self.model.NPSS.run_count, 0)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.Sink.npss_out, 0)
@@ -137,7 +169,20 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.npss_out, 9)
         self.assertEqual(self.model.NPSS.s, 'unconnected')
  
+        self.model.NPSS.model_filename = 'no_such_model'
+        try:
+            self.model.run()
+        except RuntimeError, exc:
+            self.assertEqual(str(exc).startswith(
+                "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
+                True)
+        else:
+            self.fail('Expected RuntimeError')
+
     def test_custom_run(self):
+        logging.debug('')
+        logging.debug('test_custom_run')
+
         self.assertEqual(self.model.NPSS.run_count, 0)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.Sink.npss_out, 0)

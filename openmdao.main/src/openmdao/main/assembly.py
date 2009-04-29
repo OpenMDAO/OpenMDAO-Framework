@@ -118,8 +118,8 @@ class Assembly(Component):
             del self._connections[incompname]
                     
     def execute(self):
-        """run this Assembly by handing control to the driver"""
-        return self.driver.run()
+        """Run this Assembly by handing control to the driver."""
+        self.driver.run()
 
     def step(self):
         """Execute a single step."""
@@ -185,7 +185,6 @@ class Assembly(Component):
             if isinstance(invar, FileVariable):
                 outcomp = getattr(self, outtuple[0])
                 outvar = outcomp.getvar(outtuple[1])
-                incomp.pop_dir()
                 try:
                     self.xfer_file(outcomp, outvar, incomp, invar)
                     invar.metadata = outvar.metadata.copy()
@@ -194,8 +193,6 @@ class Assembly(Component):
                           ('.'.join(outtuple[:2]),
                            '.'.join((incomp.name, invarname)), str(exc))
                     self.raise_exception(msg, type(exc))
-                finally:
-                    incomp.push_dir(incomp.get_directory())
             else:
                 outvar = self.getvar('.'.join(outtuple[:2]))
                 try:
