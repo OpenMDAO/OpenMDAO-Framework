@@ -73,22 +73,22 @@ class AssemblyTestCase(unittest.TestCase):
 
     def setUp(self):
         """this setup function will be called before each test in this class"""
-        self.asm = Model('top', None)
+        self.asm = Assembly('top', None)
         dc1 = DummyComp('comp1')
         self.asm.add_child(dc1)
-        self.asm.workflow.add_node(dc1)
+        #self.asm.workflow.add_node(dc1)
         
         nested = Model('nested')
         self.asm.add_child(nested)
-        self.asm.workflow.add_node(nested)
+        #self.asm.workflow.add_node(nested)
         nested_dc = DummyComp('comp1')
         nested.add_child(nested_dc)
-        nested.workflow.add_node(nested_dc)
+        #nested.workflow.add_node(nested_dc)
         
         children = [DummyComp(x) for x in ['comp2','comp3']]
         for child in children:
             self.asm.add_child(child)
-            self.asm.workflow.add_node(child)
+            #self.asm.workflow.add_node(child)
         
     def test_lazy_eval(self):
         top = Assembly('top', None)
@@ -284,7 +284,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp2.rout','comp1.r')
         except RuntimeError, err:
-            self.assertEqual("top: Circular dependency (['comp2', 'comp1']) would be created by"+
+            self.assertEqual("top: Circular dependency (['comp1.rout', 'comp2.r', 'comp2.rout', 'comp1.r']) would be created by"+
                              " connecting comp2.rout to comp1.r", str(err))
         else:
             self.fail('exception expected')

@@ -171,9 +171,9 @@ class Container(HierarchyMember):
         this Container. obj_info can be an object, the name of an object, a list
         of names of objects in this container instance, or a list of tuples of
         the form (name, alias, iostatus), where name is the name of an object
-        within this container instance. This function attempts to locate an object
-        with an IVariable interface that can wrap each object passed into the
-        function.
+        within this container instance. If either type of tuple is supplied,
+        this function attempts to locate an object with an IVariable interface 
+        that can wrap each object named in the tuple.
         
         Returns None.
         """            
@@ -184,6 +184,7 @@ class Container(HierarchyMember):
             lst = [obj_info]
         
         for entry in lst:
+            need_wrapper = True
             ref_name = None
             iostat = iostatus
             dobj = None
@@ -206,16 +207,18 @@ class Container(HierarchyMember):
                 if hasattr(dobj, 'name'):
                     name = dobj.name
                     typ = type(dobj)
+                    if IContainer.providedBy(dobj):
+                        need_wrapper = False
                 else:
                     self.raise_exception(
-                     'no IVariable interface available for %s' % \
+                     'cannot make %s a public framework object' % \
                       str(entry), TypeError)
                     
-            if not IVariable.providedBy(dobj):
+            if need_wrapper and not IVariable.providedBy(dobj):
                 dobj = make_variable_wrapper(typ, name, self, iostatus=iostat, 
                                       ref_name=ref_name)
             
-            if IVariable.providedBy(dobj):
+            if IContainer.providedBy(dobj):
                 dobj.parent = self
                 self._pub[dobj.name] = dobj
             else:
@@ -263,7 +266,10 @@ class Container(HierarchyMember):
         of a Variable or some attribute of a Variable.
         
         """
-        assert(isinstance(path, basestring))
+        assert(path is None or isinstance(path, basestring))
+        
+        if path is None:
+            return self
         
         try:
             base, name = path.split('.', 1)
@@ -272,7 +278,7 @@ class Container(HierarchyMember):
                 if index is not None:
                     return self._pub[path].get_entry(index)
                 else:
-                    return self._pub[path].get_value()
+                    return self._pub[path].get(None)
             except KeyError:
                 self.raise_exception("object has no attribute '"+path+"'",
                                      AttributeError)
@@ -610,19 +616,9 @@ class Container(HierarchyMember):
                         yield ('.'.join([name,chname]), child)
                    
 
-    def get_pred_inputs(self, outputs, valid=None):
-        """Return a list of input Variables on this object that the given list
-        of output Variables (also on this object) depend upon.  For a simple
-        Container, this will just return all of the inputs, but an Assembly,
-        for example, may return only a subset of its inputs. If valid is
-        True or False, return only inputs with a matching .valid attribute.
-        If valid is None, return inputs regardless of validity.
-        """
-        return self.get_inputs(valid=valid)
-
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output variables.
-        In the case of a simple Container, all inputs variables are connected
+        In the case of a simple Container, all input variables are connected
         to all output variables.
         """
         if self._io_graph is None:
@@ -631,10 +627,10 @@ class Container(HierarchyMember):
             ins = [x for x in vars if x.iostatus == INPUT]
             outs = [x for x in vars if x.iostatus == OUTPUT]
             for var in vars:
-                self._io_graph.add_node('%s.%s' % (self.name, var.name), var)
+                self._io_graph.add_node('%s.%s' % (self.name, var.name), data=var)
             
             # specify edges, where edge data is a tuple of (invar, outvar)
-            edges = [('%s.%s'%(self.name,x.name),'%s.%s'%(self.name,y.name)) 
+            edges = [('.'.join([self.name,x.name]),'.'.join([self.name,y.name])) 
                                                          for x in ins for y in outs]
             self._io_graph.add_edges_from(edges)
         return self._io_graph

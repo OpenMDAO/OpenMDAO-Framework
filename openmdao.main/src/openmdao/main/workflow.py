@@ -46,7 +46,6 @@ class Workflow(Component):
 
     def execute(self):
         """ Run through the nodes in the workflow list. """
-        if __debug__: self._logger.debug('executing workflow %s' % self.get_pathname())
         for node in self.nodes_iter():
             self.state = STATE_WAITING
             node.run()
@@ -86,8 +85,3 @@ class Workflow(Component):
         self._stop = True
         for node in self.nodes_iter():
             node.stop()
-
-    def get_nodes(self):
-        """ Return nodes in flow as a tuple. """
-        return tuple(self.nodes)
-

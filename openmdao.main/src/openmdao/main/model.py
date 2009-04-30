@@ -17,31 +17,31 @@ class Model(Assembly):
         super(Model, self).__init__(name, parent, doc=doc,
                                        directory=directory)
 
-        #self.add_socket('driver', IDriver, doc='A Driver object is required here',
-        #                required=True)
-        #self.add_socket('workflow', IWorkflow, doc='A Workflow object is required here',
-        #                required=True)
+        ##self.add_socket('driver', IDriver, doc='A Driver object is required here',
+        ##                required=True)
+        ##self.add_socket('workflow', IWorkflow, doc='A Workflow object is required here',
+        ##                required=True)
         
-        # by default, fill the driver and workflow sockets with a simple one-pass
-        # driver and a sequential workflow
-        self.driver = self.create('openmdao.main.Driver', 'driver')
-        self.workflow = self.create('openmdao.main.Dataflow','workflow')
+        ## by default, fill the driver and workflow sockets with a simple one-pass
+        ## driver and a sequential workflow
+        #self.driver = self.create('openmdao.main.Driver', 'driver')
+        #self.workflow = self.create('openmdao.main.Dataflow','workflow')
    
-    def execute(self):
-        """run this model"""
-        return self.driver.run()    
+    #def execute(self):
+        #"""run this model"""
+        #return self.driver.run()    
 
-    def step(self):
-        """Execute a single step."""
-        self.driver.step()
+    #def step(self):
+        #"""Execute a single step."""
+        #self.driver.step()
 
-    def stop(self):
-        """ Stop by telling the driver to stop. """
-        self._stop = True
-        self.driver.stop()
+    #def stop(self):
+        #""" Stop by telling the driver to stop. """
+        #self._stop = True
+        #self.driver.stop()
 
-    def remove_child(self, name):
-        """Remove the named object from our workflow."""
-        #self.workflow.remove_node(getattr(self, name))           
-        super(Model,self).remove_child(name)
+    #def remove_child(self, name):
+        #"""Remove the named object from our workflow."""
+        ##self.workflow.remove_node(getattr(self, name))           
+        #super(Model,self).remove_child(name)
 

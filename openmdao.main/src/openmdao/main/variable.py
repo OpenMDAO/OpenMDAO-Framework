@@ -174,6 +174,7 @@ class Variable(HierarchyMember):
             self._passthru.set_value(val)
             
         if self.valid is True:
+            self._logger.debug('invalidating %s'%self.get_pathname())
             self.valid = False
             self.parent.invalidate_deps([self])
             
@@ -379,21 +380,16 @@ class Variable(HierarchyMember):
         for obs in self.observers.get(event.__class__.__name__, []):
             obs(self)
         
-    def create_passthru(self, parent, name=None, deepcopy=True):
+    def create_passthru(self, parent, name=None):
         """Create a passthru version of self that can be made public in the 
         containing scope.
         """
-        if deepcopy:
-            newvar = copy.deepcopy(self)
-        else:
-            newvar = copy.copy(self)
+        newvar = copy.copy(self)
         
         if name is not None:
             newvar.name = name
             
         newvar.parent = parent
         newvar._passthru = self
-        #newvar._refparent = self
-        #newvar.ref_name = 'value'
         return newvar
     

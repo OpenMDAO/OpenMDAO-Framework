@@ -36,26 +36,31 @@ class Assembly (Component):
         
         self.state = STATE_IDLE
         self._stop = False
-        self._input_changed = True
         self._dir_stack = []
         self._sockets = {}
         self._child_io_graphs = {}
         self._need_child_io_update = True
         
-        # a graph of Components, with connections between Variables
-        # as directed edges.  MultiDiGraph supports multiple edges
-        # between the same two nodes, so each connection between
-        # two Variables is a separate edge.
-        # Each edge has data of the form (srcvar,destvar) and a
-        # key of the form (srcvarname, destvarname). The key
-        # is used to differentiate between edges that connect the
-        # same two nodes.
-        self._dep_graph = nx.LabeledDiGraph()
+        # A graph of Variable names (local path), with connections between 
+        # Variables as directed edges.  Children are queried for dependencies
+        # between their inputs and outputs so they can also be represented
+        # in the graph.  Each node in the graph also contains the actual
+        # Variable object as data.
+        self._var_graph = nx.LabeledDiGraph()
+        
+        self._comp_graph = nx.DiGraph()
+        
+        # add any Variables we may have inherited from our base classes
+        # to our graph, since our version of add_child wasn't active yet
+        for missing in [v for v in self.values() if IVariable.providedBy(v)
+                                                 and v.name not in self._var_graph]:
+            self._var_graph.add_node(missing.name, data=missing)
+        
+        
         self._dataflow = Dataflow('dataflow', self)
 
         # List of meta-data dictionaries.
         self.external_files = []
-
 
 
     def _get_socket_plugin(self, name):
@@ -107,10 +112,9 @@ class Assembly (Component):
         del self._sockets[name]
 
     def add_child(self, obj, private=False):
-        """Update Compnent graph and call base class add_child"""
+        """Update dependency graph and call base class add_child"""
         super(Assembly, self).add_child(obj)
         if IComponent.providedBy(obj):
-            #self._dep_graph.add_node(obj.name)
             # This is too early to get accurate Variable info from 
             # the child since it's __init__ function may not be complete
             # yet (in the case of auto-registration by the Container base class),
@@ -118,16 +122,44 @@ class Assembly (Component):
             # it in later
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
+            self.get_comp_graph().add_node(obj.name)
         return obj
     
-    def _update_child_io_graph_info(self):
+    def get_var_graph(self):
+        """Returns the Variable dependency graph, after updating it with child
+        info if necessary.
+        """
         if self._need_child_io_update:
-            for childname in [name for name,val in self._child_io_graphs.items() if val is None]:
-                graph = getattr(self, childname).get_io_graph()
-                self._child_io_graphs[childname] = graph.copy()
-                self._dep_graph.add_nodes_from(graph, data=True)
-                self._dep_graph.add_edges_from(graph.edges())
-            self._need_child_io_update = False
+            self._update_child_io_graph_info()
+        return self._var_graph
+    
+    def get_comp_graph(self):
+        """Return our component graph, creating it from our var graph if necessary."""
+        if self._comp_graph is None:
+            self._comp_graph = nx.DiGraph()
+            for varname,var in self._dep_graph.nodes(data=True):
+                if var.parent is not self:
+                    self._comp_graph.add_node(var.parent.name)
+             
+            seen = set()
+            for u,v in self._dep_graph.edges():
+                uparts = u.split('.')
+                vparts = v.split('.')
+                if uparts[0] != vparts[0] and len(uparts) > 1 and len(vparts) > 1:
+                    key = ' '.join([uparts[0],vparts[0]])
+                    if key not in seen:
+                        self._comp_graph.add_edge(uparts[0],vparts[0])
+                        seen.add(key)
+                    
+        return self._comp_graph
+    
+    def _update_child_io_graph_info(self):
+        for childname in [name for name,val in self._child_io_graphs.items() if val is None]:
+            graph = getattr(self, childname).get_io_graph()
+            self._child_io_graphs[childname] = graph.copy()
+            self._var_graph.add_nodes_from(graph.nodes_iter(data=True))
+            self._var_graph.add_edges_from(graph.edges())
+        self._need_child_io_update = False
             
     def remove_child(self, name):
         """Remove the named object from this container and notify any 
@@ -135,15 +167,14 @@ class Assembly (Component):
         """
         if '.' in name:
             self.raise_exception('remove_child does not allow dotted path names like %s' %
-                                 name, ValueError)
-        
+                                 name, ValueError)        
         obj = self.get(name)
         if IComponent.providedBy(obj):
-            #self._dep_graph.remove_node(name)
+            self.get_comp_graph().remove_node(obj.name)
             if name in self._child_io_graphs:
                 childgraph = self._child_io_graphs[name]
                 if childgraph is not None:
-                    self._dep_graph.remove_nodes_from(childgraph)
+                    self._var_graph.remove_nodes_from(childgraph)
                 del self._child_io_graphs[name]
             
         if name in self._sockets:
@@ -167,8 +198,7 @@ class Assembly (Component):
         # check to see if var is already connected
         if self.is_destination(varname):
             self.raise_exception('%s is already connected' % 
-                                 varname, RuntimeError)
-        
+                                 varname, RuntimeError)        
         name = alias or vname
         
         # make sure name isn't a dotted path
@@ -179,11 +209,11 @@ class Assembly (Component):
         # check to see if a public Variable already exists with the given varname
         if self.contains(name):
             self.raise_exception('%s is already a public Variable' % name, 
-                                 RuntimeError)
-        
+                                 RuntimeError)        
         var = comp.getvar(vname)
         newvar = var.create_passthru(self, name=name)
         self.make_public(newvar)
+        self._var_graph.add_node(newvar.name, data=newvar)
         
         # create the passthru connection 
         if var.iostatus == INPUT:
@@ -239,176 +269,145 @@ class Assembly (Component):
             if destvar.iostatus != INPUT:
                 self.raise_exception(destvar.get_pathname()+
                                      ' must be an INPUT variable',
-                                     RuntimeError)
-        
+                                     RuntimeError)        
         if self.is_destination(destpath):
             self.raise_exception(destpath+' is already connected',
-                                 RuntimeError)
-                    
+                                 RuntimeError)                    
         # test compatability
         destvar.validate_var(srcvar)
         
-        ## update the graph
-        ## NOTE: We can't use the same name, for example '', for passthru sources and destinations
-        ## because they'll show up as circular dependencies, so instead we're using #dest and #src
-        ## to indicate passthru variables at the boundary of the current scope.
-        ## We're storing src and dest variables in the edge data, and using the dest varname
-        ## as the key.
-        #self._dep_graph.add_edge(srccompname or '#src', destcompname or '#dest', 
-                                 #data=(srcvar, destvar),
-                                 #key=destvarname)
-        self._update_child_io_graph_info() # make sure we have all of the child io graph data
-        self._dep_graph.add_edge(srcpath, destpath)
-        strongly_connected = nx.algorithms.traversal.strongly_connected_components(self._dep_graph)
+        if self._need_child_io_update:
+            self._update_child_io_graph_info() # make sure we have all of the child io graph data
+        self._var_graph.add_edge(srcpath, destpath)
+        self._logger.debug('adding edge %s --> %s' % (srcpath,destpath))
+        strongly_connected = nx.algorithms.traversal.strongly_connected_components(self._var_graph)
         for strcon in strongly_connected:
             if len(strcon) > 1:
-                #self._dep_graph.remove_edge(srccompname or '#src', destcompname or '#dest', 
-                                            #key=destvarname)
-                self._dep_graph.remove_edge(srcpath, destpath)
+                self._var_graph.remove_edge(srcpath, destpath)
                 self.raise_exception('Circular dependency (%s) would be created by connecting %s to %s' %
-                                     (str(strcon), srcpath, destpath), RuntimeError)    
+                                     (str(strcon), srcpath, destpath), RuntimeError) 
                 
+        if destcomp is not self and srccomp is not self: # neither var is on boundary
+            self.get_comp_graph().add_edge(srccompname, destcompname)
+            
         # invalidate destvar if necessary
-        if destcomp is self and destvar.iostatus == OUTPUT: # passthru output
+        if destcomp is self and destvar.iostatus == OUTPUT: # boundary output
+            if destvar.valid is True and srcvar.valid is False:
+                self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
             destvar.valid = srcvar.valid
+                
             #if destvar.valid is False and self.parent:
                 ## tell the parent that anyone connected to our boundary output 
                 ## is invalid.
                 ## Note that it's a dest var in this scope, but a src var in the 
                 ## parent scope.
-                ##dests = self.parent.find_destinations(destvar)
-                ##if len(dests) > 0:
-                    ##self.parent.invalidate_deps(dests)
                 #self.parent.invalidate_deps([destvar])
+        elif srccomp is self and srcvar.iostatus == INPUT: # passthru input
+            if srcvar.valid is True and destvar.valid is False:
+                self._logger.debug('(connect) invalidating %s' % srcvar.get_pathname())
+            srcvar.valid = destvar.valid
         else:
+            self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
             destvar.valid = False
             self.invalidate_deps([destvar])
             
         self._io_graph = None
 
-    def disconnect(self, varpath):
+    def disconnect(self, varpath, varpath2=None):
         """Remove all connections to/from a given variable in the current scope. 
         This does not remove connections to boundary Variables from the parent scope.
         """
+        if self._need_child_io_update:
+            self._update_child_io_graph_info() # make sure we have all of the child io graph data
         
-        # TODO: add ability to remove a single connection between two vars
-        
-        self._update_child_io_graph_info() # make sure we have all of the child io graph data
-        
-        try:
-            srcname, varname = varpath.split('.')
-            destname = srcname
-        except ValueError:
-            if '.' in varpath: # this means we have at least 2 dots
-                self.raise_exception('%s must be a simple name, not a dotted path' %
-                                     varpath.split('.',1)[1], NameError)
-            srcname = '#src'
-            destname = '#dest'
-            
-        to_remove = []
-        graph = self._dep_graph
-        # loop over outgoing edges of the variable's parent component
-        for srccompname,destcompname,key,data in graph.edges(srcname, data=True, keys=True):
-            if varname == data[0].name: # it's a source
-                to_remove.append((srccompname,destcompname,key))
-        # loop over incoming edges
-        for srccompname,destcompname,key in graph.in_edges_iter(destname, keys=True):
-            if varname == key: # it's a destination
-                to_remove.append((srccompname,destcompname,key))
-                           
-        if len(to_remove) == 0:
-            self.raise_exception('%s is not connected' % varpath, RuntimeError)
-        else:
-            graph.remove_edges_from(to_remove)
-            
+        if varpath2 is not None:
+            self._var_graph.remove_edge(varpath, varpath2)
+        else:  # remove all connections from the Variable
+            graph = self._var_graph
+            edges = [(v, varpath) for v in graph.pred[varpath].keys()]
+            edges.extend([(varpath, v) for v in graph.succ[varpath].keys()])
+            graph.remove_edges_from(edges)
         self._io_graph = None  # the io graph has changed, so have to remake it
+        self._comp_graph = None # remake the component graph too.
 
-    def find_destinations(self, var):
-        """For the given source, return a list of destination Variables."""
-        dests = []
-        if var.parent == self:
-            for src,dest,data in self._dep_graph.in_edges_iter('#src', data=True):
-                if var == data[0]:
-                    dests.append(data[1])
-        else:
-            for node in self._dep_graph.succ[var.parent.name]:
-                for src,dest,data in self._dep_graph.in_edges_iter(node, data=True):
-                    if var == data[0]:
-                        dests.append(data[1])
-        return dests
-        
-        
     def is_destination(self, varpath):
-        """Return True if the Variable specified by varname is a destination. This means
-        that either it's an input connected to an output, or it's the destination part of
-        a passtru connection.
+        """Return True if the Variable specified by varname is a destination according
+        to our graph. This means that either it's an input connected to an output, or 
+        it's the destination part of a passtru connection.
         """
-        self._update_child_io_graph_info() # make sure we have all of the child io graph data
-        return len(self._dep_graph.pred[varpath]) > 0
-        #try:
-            #compname, varname = varpath.split('.', 1)
-        #except ValueError:
-            #if '#dest' in self._dep_graph.pred:
-                #return varpath in self._dep_graph.pred['#dest']  
-            #else:
-                #return False
-        
-        #return varname in self._dep_graph.pred[compname]
+        if self._need_child_io_update:
+            self._update_child_io_graph_info() # make sure we have all of the child io graph data
+        if '.' in varpath:
+            var = self._var_graph.label.get(varpath, None)
+            return var is not None and var.iostatus == INPUT and (len(self._var_graph.pred[varpath]) > 0)
+            
+        return len(self._var_graph.pred[varpath]) > 0
 
     def execute (self):
-        """Run child components in data flow order."""
+        """By default, run child components in data flow order."""
         self._dataflow.run()
     
     def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         conns = []
-        for srccomp,destcomp,key in self._dep_graph.edges(keys=True):
-            if srccomp.startswith('#'): srccomp = ''
-            if destcomp.startswith('#'): destcomp = ''
-            if show_passthru is True or (srccomp != '' and destcomp != ''):
-                conns.append(('.'.join([srccomp,key[0]]), '.'.join([destcomp,key[1]])))
+        graph = self._var_graph
+        for outname, inname in graph.edges():
+            outvar = graph.label[outname]
+            invar = graph.label[inname]
+            if outvar.parent is self or invar.parent is self:
+                if show_passthru:
+                    conns.append((outname, inname))
+            elif outvar.iostatus == OUTPUT:
+                    conns.append((outname, inname))
         return conns
     
-    def update_inputs(self, incomp):
+    def update_inputs(self, varnames):
         """Transfer input data to the specified component.
         Note that we're called after incomp has set its execution directory,
         so we'll need to account for this during file transfers."""
         
-        for src,dest,data in self._dep_graph.in_edges_iter(incomp.name,
-                                                           data=True):
-            srcvar,var = data
-            if var.valid:  # don't need to update valid inputs
-                continue 
-            # Variables at the scope boundary have their component specified as
-            # either #dest or #src depending on whether they're an input or an output.
-            # If we used the same name for their component, for example '', then
-            # the graph would think it had a circular dependency.
-            if src.startswith('#'):
-                srccomp = self
-            else:
-                srccomp = self.get(src)
-            if isinstance(var, FileVariable):
-                incomp.pop_dir()
-                try:
-                    self.xfer_file(srccomp, srcvar, incomp, var)
-                    var.metadata = srcvar.metadata.copy()
-                except Exception, exc:
-                    msg = "cannot transfer file from '%s' to '%s': %s" % \
-                          ('.'.join((src, srcvar.name)),
-                           '.'.join((dest, var.name)), str(exc))
-                    self.raise_exception(msg, type(exc))
-                finally:
-                    incomp.push_dir(incomp.get_directory())
-            else:
-                try:
-                    var.setvar(None, srcvar)
-                except Exception, exc:
-                    msg = "cannot set '%s' from '%s': %s" % \
-                          ('.'.join((incomp.name, var.name)),
-                           srcvar, str(exc))
-                    self.raise_exception(msg, type(exc))
-            
+        for vname in varnames:
+            preds = self._var_graph.pred.get(vname, None)
+            var = self._var_graph.label[vname]
+            if preds: # if var has a source
+                for srcname in preds.keys():
+                    srcvar = self._var_graph.label[srcname]
+                    if not srcvar.valid:
+                        # need to backtrack to get a valid source value
+                        if srcvar.parent is self: # a boundary var
+                            if self.parent and IAssembly.providedBy(self.parent):
+                                self.parent.update_inputs(['.'.join([self.name,srcvar.name])])
+                            else:
+                                self.raise_exception(
+                                    'invalid source Variable found (%s), with no way to update it' 
+                                    % srcname, RuntimeError)
+                        else: # a non-boundary var
+                            self._logger.debug('**update_inputs causing %s to run'%srcvar.parent.get_pathname())
+                            srcvar.parent.run()
+                    incomp = var.parent
+                    if isinstance(var, FileVariable):
+                        incomp.pop_dir()
+                        try:
+                            self.xfer_file(srcvar.parent, srcvar, incomp, var)
+                            var.metadata = srcvar.metadata.copy()
+                        except Exception, exc:
+                            msg = "cannot transfer file from '%s' to '%s': %s" % \
+                                  ('.'.join((src, srcvar.name)),
+                                   '.'.join((dest, var.name)), str(exc))
+                            self.raise_exception(msg, type(exc))
+                        finally:
+                            incomp.push_dir(incomp.get_directory())
+                    else:
+                        try:
+                            var.setvar(None, srcvar)
+                        except Exception, exc:
+                            msg = "cannot set '%s' from '%s': %s" % \
+                                  ('.'.join((incomp.name, var.name)),
+                                   srcvar, str(exc))
+                            self.raise_exception(msg, type(exc))
+            self._logger.debug('(update_inputs) validating %s' % var.get_pathname())
+            var.valid = True
 
     def check_config (self):
         """Verify that the configuration of this component is correct. This function is
@@ -422,193 +421,68 @@ class Assembly (Component):
                 self.raise_exception("required plugin '%s' is not present" % name,
                                      ValueError)
 
-    def var_preds(self, vars):
-        """Return a set of Variables on our incoming boundary that are connected
-        to the given Variables on the outgoing boundary. All entries in vars must be 
-        children of this object and they must be destinations according to this object's 
-        graph.  vars must be an iterable.
-        """
-        pred_vars = set()
-        # perform a breadth first traversal of predecessors, starting at our outgoing 
-        # boundary, '#dest'
-        comp_queue = deque([('#dest', vars)])
-        
-        while len(comp_queue) > 0:
-            compname, varlist = comp_queue.popleft()
-            if compname[0] == '#':
-                if compname == '#src':
-                    pred_vars.update(varlist)
-                    continue
-                else:
-                    varlist = set(varlist)
-            else:
-                varlist = set(getattr(self, compname).var_preds(varlist))
-            
-            # loop over the predecessors to the current graph node and
-            # find the subset of source vars that correspond to the current set
-            # of dest vars
-            for name,node in self._dep_graph.pred[compname].items():
-                outs = [node[v.name][0] for v in varlist if v.name in node]
-                if len(outs) > 0:
-                    # see if the Component is already in the queue
-                    for qname,outlist in comp_queue:
-                        if name == qname:
-                            outlist.update(outs)
-                            break
-                    else:
-                        comp_queue.append((name, set(outs)))
-        
-        return pred_vars
+    #def var_preds(self, vars):
+        #"""Return a set of Variables on our incoming boundary that are connected
+        #to the given Variables on the outgoing boundary. All entries in vars must be 
+        #children of this object and they must be destinations according to this object's 
+        #graph.  vars must be an iterable.
+        #"""
+        #if self._need_child_io_update:
+            #self._update_child_io_graph_info() # make sure we have all of the child io graph data
+        #varnames = [v.get_pathname(rel_to_scope=self) for v in vars]
+        #pred = self._var_graph.pred   #predecessor nodes in the graph
+        #stack = set(varnames)
+        #pred_vars = set()
+        #while len(stack) > 0:
+            #name = stack.pop()
+            #for vname in pred[name]:
+                #if '.' not in vname:
+                    #pred_vars.add(vname)
+                #stack.add(vname)
+        #return pred_vars
     
-    def var_successors(self, vars):
-        """Return a list of OUTPUT boundary Variables that are successors to the 
-        INPUT Variables given.
-        """
-        succ_vars = set()
-        # perform a breadth first traversal of predecessors, starting at our incoming 
-        # boundary, '#src'
-        comp_queue = deque([('#src', vars)])
+    #def var_successors(self, vars):
+        #"""Return a list of OUTPUT boundary Variables that are successors to the 
+        #INPUT Variables given.
+        #"""
+        #if self._need_child_io_update:
+            #self._update_child_io_graph_info() # make sure we have all of the child io graph data
+        #varnames = [v.get_pathname(rel_to_scope=self) for v in vars]
+        #succ = self._var_graph.succ  #successor nodes in the graph
+        #stack = set(varnames)
+        #succ_vars = set()
+        #while len(stack) > 0:
+            #name = stack.pop()
+            #for vname in succ[name]:
+                #if '.' not in vname:
+                    #succ_vars.add(vname)
+                #stack.add(vname)
+        #return succ_vars
         
-        while len(comp_queue) > 0:
-            compname, varlist = comp_queue.popleft()
-            if compname[0] == '#':
-                if compname == '#dest':
-                    succ_vars.update(varlist)
-                    continue
-                else:
-                    varlist = set(varlist)
-            else:
-                varlist = set(getattr(self, compname).var_successors(varlist))
-            
-            # loop over the successors to the current graph node and
-            # find the subset of dest vars that correspond to the current set
-            # of src vars
-            for name,node in self._dep_graph.succ[compname].items():
-                ins = []
-                for dest,data in node.items():
-                    if data[0] in varlist:
-                        ins.append(data[1])
-                if len(ins) > 0:
-                    # see if the Component is already in the queue
-                    for qname,inlist in comp_queue:
-                        if name == qname:
-                            inlist.update(ins)
-                            break
-                    else:
-                        comp_queue.append((name, set(ins)))
-        
-        return succ_vars
-        
-    #def get_invalidated_outputs(self, invars):
-        #return self.invalidate_deps(invars)
-                
     def invalidate_deps(self, vars):
-        """Mark all Variables invalid that depend on vars.
-        """
-        nodes = []
-        for var in vars:
-            nodes =
-        ## TODO: find a cleaner way to do this
-        
-        #if vars[0].parent == self:
-            #pname = '#src'
-        #else:
-            #pname = vars[0].parent.name
-        #nodes = { pname: vars }      
-        #visited_nodes = set(['#dest']) #add '#dest' so we'll skip it
-        
-        #my_outs = []
-        #while len(nodes) > 0:
-            #nodename, vars = nodes.popitem()
-            #if nodename == '#src':  # INPUT var on our boundary
-                #for src,dest,data in self._dep_graph.edges('#src', data=True):
-                    #srcvar,destvar = data
-                    #if destvar.valid == True and srcvar in vars: # only look at provided inputs
-                        #destvar.valid == False
-                        #cname = destvar.parent.name
-                        #if cname not in visited_nodes:
-                            #if cname not in nodes:
-                                #nodes[cname] = []
-                            #else:
-                                #nodes[cname].append(destvar)
-            #else:
-                #node = getattr(self, nodename)
-                #outs = node.get_invalidated_outputs(vars)
-                #for src,dest,data in self._dep_graph.edges(nodename, data=True):
-                    #srcvar,destvar = data
-                    #if srcvar.iostatus == INPUT or srcvar in outs: # source is newly marked
-                        #if destvar.valid == True:
-                            #destvar.valid = False  # invalidate the destination
-                            #comp = destvar.parent
-                            #if comp == self:   # destvar is an OUTPUT on our boundary
-                                #my_outs.append(destvar)
-                                #cname = '#dest'
-                            #else:
-                                #cname = comp.name
-                            #if cname not in visited_nodes:
-                                #if cname not in nodes:
-                                    #nodes[cname] = []
-                                #else:
-                                    #nodes[cname].append(destvar)
-            #visited_nodes.add(nodename)
-            
-        return my_outs
-
-
-    def _get_preds_for_node(self, nodename, outputs, valid, boundary_ins):
-        """Return dict of predecessor nodes and their outputs that
-        have influence over any of the Variables in outputs, which are a
-        subset of the outputs from the node specified by nodename.
-        """
-        nodes = {}
-        comp = getattr(self, nodename)
-        ins = comp.get_pred_inputs(outputs, valid)
-        
-        for src,dest,data in self._dep_graph.in_edges(nodename, data=True):
-            srcvar,destvar = data
-            if destvar in ins and valid is None or srcvar.valid == valid:
-                if srcvar.parent is self:
-                    boundary_ins.add(srcvar)
-                else:
-                    if src not in nodes:
-                        nodes[src] = []
-                    nodes[src].append(srcvar)
-        return nodes
-    
-    def get_pred_inputs(self, outputs, valid=None):
-        """Return a list of input Variables on this object that the given list
-        of output Variables (also on this object) depend upon.  If valid is
-        True or False, return only inputs with a matching .valid attribute.
-        If valid is None, return inputs regardless of validity.
-        """
-        boundary_ins = set()
-        nodes = {}
-        
-        # first, get a list of predecessor nodes and their corresponding
-        # outputs that have influence over our given set of outputs
-        for src,dest,data in self._dep_graph.in_edges('#dest', data=True):
-            srcvar,destvar = data
-            if destvar in outputs:
-                if valid is None or srcvar.valid == valid:
-                    if srcvar.parent is self:  # this really shouldn't happen
-                        boundary_ins.add(srcvar)
-                    else:
-                        if src not in nodes:
-                            nodes[src] = []
-                        nodes[src].append(srcvar)
-                        
-        while len(nodes) > 0:
-            nodename, outputs = nodes.popitem()
-            self._get_preds(nodename, outputs, valid, nodes, boundary_ins)
-        
-        return boundary_ins
+        """Mark all Variables invalid that depend on vars."""
+        if self._need_child_io_update:
+            self._update_child_io_graph_info() # make sure we have all of the child io graph data
+        varnames = [v.get_pathname(rel_to_scope=self) for v in vars]
+        succ = self._var_graph.succ  #successor nodes in the graph
+        label = self._var_graph.label # node data
+        stack = set(varnames)
+        while len(stack) > 0:
+            name = stack.pop()
+            for vname in succ[name]:
+                var = label[vname]
+                if var.valid is True:
+                    self._logger.debug('(invalidate_deps) invalidating %s' % var.get_pathname())
+                    var.valid = False
+                    stack.add(vname)
 
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output variables.
         """
         # for now, just use the dumb Component version, which says that all inputs
         # map to all outputs.
-        # TODO: make this truly reflect the IO relationships in the assembly
+        # TODO: make this truly reflect the IO relationships in the assembly so we
+        #       won't run any children unnecessarily
         return super(Assembly, self).get_io_graph()
     
     @staticmethod

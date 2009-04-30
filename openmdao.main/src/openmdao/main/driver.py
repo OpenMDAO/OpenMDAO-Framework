@@ -65,32 +65,4 @@ class Driver(Assembly):
         """Called after each iteration."""
         self._continue = False
     
-    def _execute_if_needed(self):
-        """Overridden from the Component version to force Drivers to 
-        execute even if they have no invalid outputs.
-        """
-        if self.parent and IAssembly.providedBy(self.parent):
-            self.parent.update_inputs(self)
-        if __debug__: self._logger.debug('executing %s' % self.get_pathname())
-        self.execute()
-        
-    def get_ref_successors(self):
-        """Return a set of names of successor components based on the 
-        contents of our output RefVariables.
-        """
-        outs = set()
-        for refout in [v for v in self.values() if isinstance(v,RefVariable) 
-                                 and v.iostatus==OUTPUT]:
-            outs.update(refout.get_referenced_components())
-        return outs
-    
-    def get_ref_predecessors(self):
-        """Return a set of names of predecessor components based on the 
-        contents of our input RefVariables.
-        """
-        ins = set()
-        for refin in [v for v in self.values() if isinstance(v,RefVariable) 
-                                 and v.iostatus==INPUT]:
-            ins.update(refin.get_referenced_components())
-        return ins
     
