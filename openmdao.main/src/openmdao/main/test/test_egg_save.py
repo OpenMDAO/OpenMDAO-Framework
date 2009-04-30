@@ -349,11 +349,10 @@ class EggTestCase(unittest.TestCase):
 
         try:
             Component.load_from_egg('no-such-egg')
-        except IOError, exc:
-            self.assertEqual(str(exc),
-                             "[Errno 2] No such file or directory: 'no-such-egg'")
+        except ValueError, exc:
+            self.assertEqual(str(exc), "'no-such-egg' not found.")
         else:
-            self.fail('Expected IOError')
+            self.fail('Expected ValueError')
 
 
 if __name__ == '__main__':
