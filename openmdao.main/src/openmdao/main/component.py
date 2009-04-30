@@ -416,7 +416,7 @@ class Component (Container):
         top.post_load()
         return top
 
-    def post_load(self):
+    def post_load (self):
         """ Perform any required operations after model has been loaded. """
         for child in self.get_objs(IContainer.providedBy):
             child.post_load()

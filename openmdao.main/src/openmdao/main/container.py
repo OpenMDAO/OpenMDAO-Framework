@@ -18,6 +18,7 @@ except ImportError:
 
 import datetime
 import os
+import pkg_resources
 import platform
 import shutil
 import subprocess
@@ -432,7 +433,7 @@ class Container(HierarchyMember):
                 remove_init = False
 
             # Create loader script.
-            out = open(os.path.join(name, '__loader__.py'), 'w')
+            out = open(os.path.join(name, '%s_loader.py' % name), 'w')
             out.write("""\
 import os.path
 import sys
@@ -482,10 +483,10 @@ if __name__ == '__main__':
 
             out.write("entry_points = {\n")
             out.write("    'openmdao.top' : [\n")
-            out.write("        'top = __loader__:load',\n")
+            out.write("        'top = %s_loader:load',\n" % name)
             out.write("    ],\n")
             out.write("    'openmdao.components' : [\n")
-            out.write("        '%s = __loader__:load',\n" % name)
+            out.write("        '%s = %s_loader:load',\n" % (name, name))
             out.write("    ],\n")
             out.write("}\n")
             out.write("\n")
@@ -511,7 +512,7 @@ if __name__ == '__main__':
             stdout.close()
 
             os.remove(os.path.join(name, state_name))
-            os.remove(os.path.join(name, '__loader__.py'))
+            os.remove(os.path.join(name, '%s_loader.py' % name))
             if remove_init:
                 os.remove(os.path.join(name, '__init__.py'))
 
@@ -567,35 +568,65 @@ if __name__ == '__main__':
         """Load state and other files from an egg, returns top object."""
         # TODO: handle required packages.
         logger.debug('Loading from %s in %s...', filename, os.getcwd())
+        if not os.path.exists(filename):
+            raise ValueError("'%s' not found." % filename)
+
+        distributions = \
+            [dist for dist in pkg_resources.find_distributions(filename,
+                                                               only=True)]
+        if not distributions:
+            raise RuntimeError("No distributions found in '%s'." % filename)
+
+        dist = distributions[0]
+        logger.debug('    project_name: %s', dist.project_name)
+        logger.debug('    key: %s', dist.key)
+        logger.debug('    extras: %s', dist.extras)
+        logger.debug('    version: %s', dist.version)
+        logger.debug('    parsed_version: %s', dist.parsed_version)
+        logger.debug('    py_version: %s', dist.py_version)
+        logger.debug('    platform: %s', dist.platform)
+        logger.debug('    precedence: %s', dist.precedence)
+        logger.debug('    entry points:')
+        maps = dist.get_entry_map()
+        for group in maps.keys():
+            logger.debug('        group %s:' % group)
+            for name in maps[group]:
+                logger.debug('            %s', name)
+
         archive = zipfile.ZipFile(filename, 'r')
         name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
         logger.debug("    name '%s'", name)
+
         for info in archive.infolist():
             if not info.filename.startswith(name):
                 continue  # EGG-INFO
             if info.filename.endswith('.pyc') or \
                info.filename.endswith('.pyo'):
                 continue  # Don't assume compiled OK for this platform.
-            logger.debug("    extracting '%s'...", info.filename)
+
+            logger.debug("    extracting '%s' (%d bytes)...",
+                         info.filename, info.file_size)
             dirname = os.path.dirname(info.filename)
             dirname = dirname[len(name)+1:]
             if dirname and not os.path.exists(dirname):
                 os.makedirs(dirname)
             path = info.filename[len(name)+1:]
+            # TODO: use 2.6 ability to extract to filename.
             out = open(path, 'w')
             out.write(archive.read(info.filename))
             out.close()
 
-        if os.path.exists(name+'.pickle') or os.path.exists(name+'.yaml'):
-            if '.' not in sys.path:
-                sys.path.append('.')
-# pkg_resources.load_entry_point?
-            if '__loader__' in  sys.modules.keys():
-                del sys.modules['__loader__']
-            loader = __import__('__loader__')
-            return loader.load()
-
-        raise RuntimeError('No top object pickle or yaml save file.')
+        info = dist.get_entry_info('openmdao.top', 'top')
+        if info is None:
+            raise RuntimeError("No openmdao.top 'top' entry point.")
+        if info.module_name in sys.modules.keys():
+            logger.debug("    removing existing '%s' module",
+                         info.module_name)
+            del sys.modules[info.module_name]            
+        if not '.' in sys.path:
+            sys.path.append('.')
+        loader = dist.load_entry_point('openmdao.top', 'top')
+        return loader()
 
     @staticmethod
     def load (instream, format=SAVE_CPICKLE):

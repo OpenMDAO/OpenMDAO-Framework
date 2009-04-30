@@ -4,7 +4,6 @@ Test of NPSS auto-reload capability.
 
 import logging
 import os
-import os.path
 import pkg_resources
 import unittest
 
@@ -67,8 +66,7 @@ class Model(Assembly):
 
 class NPSSTestCase(unittest.TestCase):
 
-    directory = \
-        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+    directory = pkg_resources.resource_filename('npsscomponent', 'test')
 
     def setUp(self):
         """ Called before each test in this class. """
