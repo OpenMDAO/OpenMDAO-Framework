@@ -7,7 +7,7 @@ from openmdao.main import Variable
 from openmdao.main.variable import INPUT,OUTPUT
 
 class Wrapper(Variable):
-    """A Variable which wraps any arbitrary python object, allowing access to its methods and attributes. 
+    """A Variable which wraps any arbitrary Python object, allowing access to its methods and attributes. 
     Can only be connected with other Wrapper instances which contain the exact same type as itself."""
     
     def validate_var(self, var):

@@ -61,7 +61,7 @@ other IVariables, e.g., perform unit conversion.
 :ref:`IGeomQueryObject<IGeomQueryObject>` - interface to objects with geometry.
 Geometric properties of the object can be queried.
 
-:ref:`IGeomModifier<IGeomCreator>` - interface to a geometry kernel that allows
+:ref:`IGeomModifier<IGeomModifier>` - interface to a geometry kernel that allows
 creation of new geometry and modification of existing geometry.
 
 :ref:`IResourceAllocator<IResourceAllocator>` - interface to objects that
@@ -72,9 +72,7 @@ resource description.
 used by the framework. This creation may involve the creation of a remote
 instance of an object and a  proxy to represent it in the local process.
 
-(See the section  :ref:`Application-Programming-Interface-(API)` for details
-on these interfaces.)
-
+.. seealso:: :ref:`Application-Programming-Interface-(API)` 
 
 .. index:: geometry
 .. index:: Component
@@ -201,8 +199,7 @@ The component developer will also be able to specify units and valid ranges on
 inputs to the component, which increases the likelihood that users
 of the component will generate valid results. 
 
-(For more information see the :ref:`Publishing-Components` section under
-*Important Processes.*)
+.. seealso:: :ref:`Publishing-Components`
 
 
 .. index:: ObjServerFactory
@@ -227,7 +224,7 @@ sides of the connection, these *incompatible* components can coexist within a
 model.
 
 In OpenMDAO, this will be done by setting up an :term:`ObjServerFactory` in a
-self contained Python environment that was created using zc.buildout_ and having
+self contained Python environment that was created using zc.buildout and having
 each :term:`ObjServer` spawned from that factory use that factory's environment.
 Each buildout environment can run a different Python version and can also
 have its own set of modules installed.
@@ -306,8 +303,8 @@ describes the different views that will be available to a user of the GUI.
 .. index:: pair: view; dataflow
 
 
-Dataflow View
-_____________
+*Dataflow View*
+_______________
 
 This view will show the components that make up the process model and the data
 connections between those components. Users will be able to drag & drop a 
@@ -340,8 +337,8 @@ as shown below.
 .. index:: workflow; sequential
 
 
-Workflow View
-_____________
+*Workflow View*
+_______________
 
 This view shows the execution ordering of the components within an 
 :term:`Assembly`. A :term:`Workflow` can include other Workflows, and a number
@@ -373,8 +370,8 @@ concurrent execution, and sequential execution. (See the figure below showing
 
 .. index:: pair: problem formulation; view
 
-Data-driven Problem Formulation View
-____________________________________
+*Data-driven Problem Formulation View*
+______________________________________
 
 The problem formulation_ view (shown in the next figure) allows a number of desired
 outputs to be specified and connected to a particular component. Based on that
@@ -421,8 +418,8 @@ problem formulation view.
 .. index:: Sockets
 
 
-Plug-in View
-____________
+*Plug-in View*
+______________
 
 The figure below shows an example of a `plug-in view`_, which shows any Sockets
 existing in a particular :term:`Component`. A  :term:`Socket` is just a placeholder
@@ -463,8 +460,8 @@ threats to be protected against.
 .. index:: threat definition
 .. index:: pair: security; mechanism
 
-Threat Definition
-_________________
+*Threat Definition*
+___________________
 
 
 In this system, the threats to be protected against are access to a simulation
@@ -493,8 +490,8 @@ isolate a simulation's servers from general Internet access if necessary.
 .. index:: guest ID
 
 
-User Access
-___________
+*User Access*
+_____________
 
 
 For a given simulation, there is only one class of valid user. Either you can
@@ -518,8 +515,8 @@ user.
 .. index:: pair: simulation; distributed
 .. index:: encryption
 
-Distributed Simulations
-_______________________
+*Distributed Simulations*
+_________________________
 
 
 For distributed simulations, only the top-level server may be accessed
@@ -542,8 +539,8 @@ in such circumstances.
 .. index:: pair: locking; simulation
 
 
-Method and Variable Accessibility
-_________________________________
+*Method and Variable Accessibility*
+___________________________________
 
 
 Methods and variables have *attributes* controlling their accessibility.
@@ -560,8 +557,8 @@ against inadvertent access by users during their simulations.
 .. index:: debugging
 .. index:: manhole
 
-Debugging
-_________
+*Debugging*
+___________
 
 
 For debugging purposes, a *manhole* is optionally provided, which has a separate

@@ -160,7 +160,7 @@ class CONMINdriver(Driver):
             return self._objective.text
         
     objective = property(_get_objective, _set_objective, None, 
-       'An string containing the objective function expression.')
+       'A string containing the objective function expression.')
 
     def _set_lower_bounds(self, val):
         vv = numarray.zeros(len(val)+2)

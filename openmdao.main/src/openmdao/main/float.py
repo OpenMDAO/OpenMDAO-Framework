@@ -48,7 +48,7 @@ class Float(Variable):
                 self._min_limit.min = value
     
     min_limit = property(_get_min_limit, _set_min_limit, None,
-                         'Sets a lower limit on the value of this Variable')
+                         'Sets a lower limit on the value of this Variable.')
     
     def _get_max_limit(self):
         if self._max_limit is None:
@@ -69,7 +69,7 @@ class Float(Variable):
                 self._max_limit.max = value
     
     max_limit = property(_get_max_limit, _set_max_limit, None,
-                         'Sets an upper limit on the value of this Variable')
+                         'Sets an upper limit on the value of this Variable.')
 
     def _get_units(self):
         return self._units
@@ -87,7 +87,7 @@ class Float(Variable):
         self._units = units      
         
     units = property(_get_units, _set_units, None,
-                     'Sets the units string for this Variable')
+                     'Sets the units string for this Variable.')
     
     def _incompatible_units(self, variable, units):
         raise TypeError(variable.get_pathname()+' units ('+

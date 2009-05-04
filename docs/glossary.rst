@@ -6,7 +6,7 @@ Glossary
 
 
 .. glossary::
-
+      :sorted:
 
       **API**
 	    Application Programming Interface. A set of functions that can be called from
@@ -122,11 +122,6 @@ Glossary
       **GUI**
         Graphical User Interface. A computer operating system that is based upon icons
         and visual relationships rather than text.
-
-
-      **IGeomCreator**
-        An interface to a geometry kernel that allows the creation of new geometry.
-    
     
       **IGeomQueryObject**
         An interface to an object having physical dimensions and shape, with

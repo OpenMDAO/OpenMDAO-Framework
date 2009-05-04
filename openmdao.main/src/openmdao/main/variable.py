@@ -123,14 +123,14 @@ class Variable(HierarchyMember):
 
 
     def _get_value(self):
-        """"Called when getting the 'value' property."""
+        """Called when getting the 'value' property."""
         return getattr(self._refparent, self.ref_name)
     
     value = property(_get_value, _set_value)
         
         
     def revert_to_default(self):
-        """ Return this Variable to its default value"""
+        """ Return this Variable to its default value."""
         self.value = self.default
 
     def add_constraint(self, con):
@@ -208,10 +208,10 @@ class Variable(HierarchyMember):
                                  name+"'", RuntimeError)
         
     def set(self, name, value, index=None):
-        """Set the value of the attribute specified by the given name. value
-        is assumed to be a value and not a Variable object. Assignment to
-        'value' will force a check against any constraints registered with
-        this Variable."""
+        """Set the value of the attribute specified by the given name. The
+        argument value is assumed to be a value and not a Variable object.
+        Assignment to 'value' will force a check against any constraints
+        registered with this Variable."""
         if name is None or name == 'value': # they're setting this Variable
             if index is None:
                 self.value = value
@@ -225,7 +225,7 @@ class Variable(HierarchyMember):
                                      ValueError)
             
     def getvar(self, name=None):
-        """Retrieved a named Variable from this object, or return 
+        """Retrieve a named Variable from this object, or return 
         self if the name is None.
         """
         if name is None:
@@ -235,7 +235,7 @@ class Variable(HierarchyMember):
                                  NameError)        
         
     def get(self, name=None, index=None):
-        """Return the named attribute"""
+        """Return the named attribute."""
         if name is None:
             if index is None:
                 return self.value

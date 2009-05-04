@@ -10,7 +10,7 @@ from openmdao.main import ExprEvaluator
 
 class Case(object):
     """Contains all information necessary to specify an input 'case', i.e., a
-    list of name,index,value tuples for all inputs to the case, and all outputs
+    list of name, index, value tuples for all inputs to the case, and all outputs
     collected after running the case, an indicator of the exit status of the
     case, and a string containing error messages associated  with the running of
     the case. The value entry of output triples should be set to None prior to

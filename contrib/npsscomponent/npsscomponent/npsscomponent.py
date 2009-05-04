@@ -526,7 +526,7 @@ class NPSScomponent(Component):
 
     def make_public(self, obj_info):
         """
-        Overloading make_public() so that we can do the following
+        Overload make_public() so that we can do the following
         on-the-fly rather than having to manually define variables:
 
         1. Get the correct array type (default is float).

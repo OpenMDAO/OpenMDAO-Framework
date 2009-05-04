@@ -48,7 +48,7 @@ def strongly_connected_components(graph):
 
 
 def topological_sort(graph):
-    """sort the graph into DFS order"""
+    """Sort the graph into DFS order."""
     count = { }
     for node in graph:
         count[node] = 0
@@ -72,7 +72,7 @@ def topological_sort(graph):
 
 
 def robust_topological_sort(graph):
-    """ First identify strongly connected components,
+    """ First identify strongly connected components, and
         then perform a topological sort on these components. """
 
     components = strongly_connected_components(graph)

@@ -97,24 +97,24 @@ class HierarchyMember(object):
                          doc='Logging message level.')
 
     def raise_exception(self, msg, exception_class=Exception):
-        """Raise an exception"""
+        """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)
 #        self._logger.error(msg)
         raise exception_class(full_msg)
     
     def error(self, msg, *args, **kwargs):
-        """Record an error message"""
+        """Record an error message."""
         self._logger.error(msg, *args, **kwargs)
         
     def warning(self, msg, *args, **kwargs):
-        """Record a warning message"""
+        """Record a warning message."""
         self._logger.warning(msg, *args, **kwargs)
         
     def info(self, msg, *args, **kwargs):
-        """Record an informational message"""
+        """Record an informational message."""
         self._logger.info(msg, *args, **kwargs)
         
     def debug(self, msg, *args, **kwargs):
-        """Record a debug message"""
+        """Record a debug message."""
         self._logger.debug(msg, *args, **kwargs)
 

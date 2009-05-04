@@ -24,7 +24,7 @@ STATE_WAITING = 2
 
 class Component (Container):
     """This is the base class for all objects containing Variables that are 
-       accessible to the OpenMDAO framework and are 'runnable'.
+       accessible to the OpenMDAO framework and are 'runnable.'
     """
 
     implements(IComponent)
@@ -95,7 +95,7 @@ class Component (Container):
                          None, doc))
 
     def check_socket (self, name):
-        """Return True if socket is filled"""
+        """Return True if socket is filled."""
         try:
             iface, plugin = self._sockets[name]
         except KeyError:
@@ -104,17 +104,17 @@ class Component (Container):
             return plugin is not None
 
     def remove_socket (self, name):
-        """Remove an existing Socket"""
+        """Remove an existing Socket."""
         del self._sockets[name]
 
     def post_config (self):
-        """Perform any final initialization after configuration has been set,
+        """Perform any final initialization after configuration has been set
         and verify that the configuration is correct.
         """
         pass
     
     def pre_execute (self):
-        """update input variables and anything else needed prior 
+        """Update input variables and anything else needed prior 
         to execution."""
         pass
     
@@ -126,7 +126,7 @@ class Component (Container):
         pass
     
     def post_execute (self):
-        """Update output variables and anything else needed after execution"""
+        """Update output variables and anything else needed after execution."""
         pass
     
     def run (self, force=False):
@@ -179,7 +179,7 @@ class Component (Container):
 
     def checkpoint (self, outstream, format=SAVE_PICKLE):
         """Save sufficient information for a restart. By default, this
-        just calls save()
+        just calls save().
         """
         self.save(outstream, format)
 
@@ -235,10 +235,10 @@ class Component (Container):
                indicates that a scalar variable in the component contains the
                desired hessian matrix entry. (name,index) indicates that
                an array variable contains the value at the specified index.
-               If index is a list with two entries, that indicates that
-               the variable containing the entry is a 2d array or matrix.
+               If index is a list with two entries, it indicates that
+               the variable containing the entry is a 2D array or matrix.
 
-            3) None, which means the the component cannot compute any values
+            3) None, which means the component cannot compute any values
                of the hessian.
 
              """

@@ -15,7 +15,7 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     """ A genome reproduction algorithm, developed by Tristan Hearn at 
     the NASA Glenn Research Center, which uses a hypersphere defined
     by a pair of parents to find the space of possible children. 
-    children are then picked at random from that space. """
+    Children are then picked at random from that space. """
 
     
     gMom = args['mom']
