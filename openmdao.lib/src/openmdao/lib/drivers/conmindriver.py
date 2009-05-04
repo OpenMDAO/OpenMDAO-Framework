@@ -77,6 +77,18 @@ class CONMINdriver(Driver):
                           'constraint_vals', 'objective_val',
                           'iprint', 'maxiters'])
         
+    def __getstate__(self):
+        """Return dict representing this container's state."""
+        state = super(CONMINdriver, self).__getstate__()
+        state['cnmn1'] = None
+        return state
+
+    def __setstate__(self, state):
+        """Restore this component's state."""
+        super(CONMINdriver, self).__setstate__(state)
+        self.cnmn1 = conmin.cnmn1
+        self._first = True
+
     def _set_desvars(self, dv):
         self._first = True
         self._design_vars = []
@@ -287,7 +299,8 @@ class CONMINdriver(Driver):
             self.cnmn1.nside = 0
 
         self.cnmn1.nacmx1 = max(len(self._design_vars),
-                                    len(self._constraints)+conmin.cnmn1.nside)+1
+                                len(self._constraints)+self.cnmn1.nside) + 1
+
         n1 = len(self._design_vars)+2
         #n2 = len(self._constraints)+2*len(self._design_vars)
         n3 = self.cnmn1.nacmx1

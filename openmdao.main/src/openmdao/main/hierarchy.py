@@ -3,7 +3,6 @@ __all__ = ["HierarchyMember"]
 
 __version__ = "0.1"
 
-
 import traceback
 import weakref
 from openmdao.main.log import Logger, LOG_DEBUG
@@ -81,9 +80,9 @@ class HierarchyMember(object):
     
     def __setstate__(self, state):
         """Restore this component's state."""
-        if state['_parent'] is not None:
-            state['_parent'] = weakref.ref(state['_parent'])
         self.__dict__ = state
+        if self._parent is not None:
+            self._parent = weakref.ref(self._parent)
     
     # error reporting stuff
     def _get_log_level(self):
