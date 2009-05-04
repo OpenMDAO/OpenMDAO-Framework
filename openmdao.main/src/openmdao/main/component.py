@@ -136,7 +136,7 @@ class Component (Container):
         """Update output variables and anything else needed after execution."""
         # make our Variables valid again
         for var in self.get_outputs(valid=False):
-            self._logger.debug('(postexecute) validating %s' % var.get_pathname())
+            #self._logger.debug('(postexecute) validating %s' % var.get_pathname())
             var.valid = True
         self._execute_needed = False
         
@@ -144,6 +144,7 @@ class Component (Container):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
         """
+        self._logger.debug('run %s' % self.get_pathname())
         if self.directory:
             directory = self.get_directory()
             try:
@@ -159,6 +160,7 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._execute_needed or force:
+                self._logger.debug('execute %s' % self.get_pathname())
                 self.execute()
             self._post_execute()
         finally:
@@ -410,18 +412,23 @@ class Component (Container):
         """Stop this component."""
         self._stop = True
 
-    def invalidate_deps(self, vars):
-        """If we have a parent Assembly, pass this call up 
-        to it since we don't have a dependency graph."""
-        if self.parent and IAssembly.providedBy(self.parent):
-            self.parent.invalidate_deps(vars)
-        else: # otherwise, just invalidate all of our outputs
-            for out in [x for x in self._pub.values() 
-                                            if IVariable.providedBy(x) and 
-                                            x.iostatus==OUTPUT]:
-                self._logger.debug('(component.invalidate_deps) invalidating %s' % out.get_pathname())
-                out.valid = False
+    def invalidate_deps(self, vars, notify_parent=False):
+        """Invalidate all of our outputs."""
+        outs = [x for x in self._pub.values() if IVariable.providedBy(x) and 
+                                                 x.iostatus==OUTPUT and x.valid==True]
+        for out in outs:
+            #self._logger.debug('(component.invalidate_deps) invalidating %s' % out.get_pathname())
+            out.valid = False
             
+        if notify_parent and self.parent and len(outs) > 0:
+            self.parent.invalidate_deps(outs, True)
+        return outs    
+
+    def update_outputs(self, outnames):
+        """Do what is necessary to make the specified output Variables valid.
+        For a simple Component, this will result in a run().
+        """
+        self.run()
         
 # TODO: uncomment require_gradients and require_hessians after they're better thought out
     

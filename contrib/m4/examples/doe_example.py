@@ -18,7 +18,8 @@ class MyModel(Model):
         super(MyModel, self).__init__(name, *args, **kwargs)
 
         # The model is just an M4 test component.
-        self.workflow.add_node(m4.dummy_components.Model_A2d(parent=self))
+        m4.dummy_components.Model_A2d(parent=self)
+        #self.workflow.add_node(m4.dummy_components.Model_A2d(parent=self))
 
         # Specify DOE.
         doe = m4.doe.DOE(parent=self)

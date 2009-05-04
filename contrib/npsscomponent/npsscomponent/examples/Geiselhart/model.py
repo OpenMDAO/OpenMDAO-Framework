@@ -265,7 +265,7 @@ class SBJModel(Model):
 
         # Design variables.
         Design(parent=self)
-        self.workflow.add_node(self.Design)
+        #self.workflow.add_node(self.Design)
 
         # ADP.
         arglist = []
@@ -277,7 +277,7 @@ class SBJModel(Model):
             {'path':os.path.join(model_dir, 'MC_ADP.run')})
         self.NPSS_ADP.run_command = 'mcRun()'
         self.NPSS_ADP.reload_flag = 'mcReload'
-        self.workflow.add_node(self.NPSS_ADP)
+        #self.workflow.add_node(self.NPSS_ADP)
 
         self.connect('Design.alt',       'NPSS_ADP.engine.alt')
         self.connect('Design.extractionRatio', 'NPSS_ADP.engine.extractionRatio')
@@ -298,7 +298,7 @@ class SBJModel(Model):
             {'path':os.path.join(model_dir, 'MC_SLS.run')})
         self.NPSS_SLS.run_command = 'mcRun()'
         self.NPSS_SLS.reload_flag = 'mcReload'
-        self.workflow.add_node(self.NPSS_SLS)
+        #self.workflow.add_node(self.NPSS_SLS)
 
         self.connect('Design.alt',       'NPSS_SLS.engine.alt')
         self.connect('Design.extractionRatio', 'NPSS_SLS.engine.extractionRatio')
@@ -327,7 +327,7 @@ class SBJModel(Model):
             {'path':os.path.join(wate_dir, 'MCengine.run')})
         self.NPSS_WATE.run_command = 'mcRun()'
         self.NPSS_WATE.reload_flag = 'mcReload'
-        self.workflow.add_node(self.NPSS_WATE)
+        #self.workflow.add_node(self.NPSS_WATE)
 
         self.connect('Design.alt',       'NPSS_WATE.engine.ambient.Zalt')
         self.connect('Design.MN',        'NPSS_WATE.engine.ambient.ZMN')
@@ -347,7 +347,7 @@ class SBJModel(Model):
             {'path':os.path.join(model_dir, 'MCengine.run')})
         self.NPSS_FLOPS.run_command = 'mcRun()'
         self.NPSS_FLOPS.reload_flag = 'mcReload'
-        self.workflow.add_node(self.NPSS_FLOPS)
+        #self.workflow.add_node(self.NPSS_FLOPS)
 
         self.connect('Design.alt',       'NPSS_FLOPS.engine.alt')
         self.connect('Design.extractionRatio', 'NPSS_FLOPS.engine.extractionRatio')
@@ -368,7 +368,7 @@ class SBJModel(Model):
             {'path':os.path.join(model_dir, 'MCnoise.run')})
         self.NPSS_ANOPP.run_command = 'mcRun()'
         self.NPSS_ANOPP.reload_flag = 'mcReload'
-        self.workflow.add_node(self.NPSS_ANOPP)
+        #self.workflow.add_node(self.NPSS_ANOPP)
 
         self.connect('Design.alt',       'NPSS_ANOPP.engine.alt')
         self.connect('Design.extractionRatio', 'NPSS_ANOPP.engine.extractionRatio')
@@ -459,7 +459,7 @@ class SBJModel(Model):
 
         # Propulsion data.
         PropulsionData(parent=self)
-        self.workflow.add_node(self.PropulsionData)
+        #self.workflow.add_node(self.PropulsionData)
 
 #       PropulsionData.FLOPS.dnac =
 #           2*(NPSS_WATE.engine.WATE.WATE_fan.bladeTipRadius

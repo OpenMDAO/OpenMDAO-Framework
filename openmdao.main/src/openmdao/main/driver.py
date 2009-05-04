@@ -65,4 +65,26 @@ class Driver(Assembly):
         """Called after each iteration."""
         self._continue = False
     
+    def get_ref_successors(self):
+        """Return a set of names of successor Variables based on the 
+        contents of our output RefVariables.
+        """
+        outs = set()
+        for refout in [v for v in self._pub 
+                       if (isinstance(v,RefVariable) or isinstance(v,RefArrayVariable))
+                                            and v.iostatus==OUTPUT]:
+            outs.update(refout.get_referenced_compnames())
+        return outs
+    
+    def get_ref_predecessors(self):
+        """Return a set of names of predecessor Variables based on the 
+        contents of our input RefVariables.
+        """
+        ins = set()
+        for refin in [v for v in self._pub  
+                       if (isinstance(v,RefVariable) or isinstance(v,RefArrayVariable))
+                                 and v.iostatus==INPUT]:
+            ins.update(refin.get_referenced_compnames())
+        return ins
+    
     

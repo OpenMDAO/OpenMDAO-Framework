@@ -155,9 +155,12 @@ class Model(Assembly):
     def __init__(self, name='Egg_TestModel', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
 
-        self.workflow.add_node(Source(parent=self, directory='Source'))
-        self.workflow.add_node(Oddball(parent=self, directory='Oddball'))
-        self.workflow.add_node(Sink(parent=self, directory='Sink'))
+        Source(parent=self, directory='Source')
+        Oddball(parent=self, directory='Oddball')
+        Sink(parent=self, directory='Sink')
+        #self.workflow.add_node(Source(parent=self, directory='Source'))
+        #self.workflow.add_node(Oddball(parent=self, directory='Oddball'))
+        #self.workflow.add_node(Sink(parent=self, directory='Sink'))
 
         self.connect('Source.text_file', 'Sink.text_file')
         self.connect('Source.sub.binary_file', 'Sink.binary_file')

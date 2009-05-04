@@ -66,8 +66,10 @@ class MyModel(Model):
     def __init__(self, name='FileVar_TestModel', *args, **kwargs):
         super(MyModel, self).__init__(name, *args, **kwargs)
 
-        self.workflow.add_node(Source(parent=self, directory='Source'))
-        self.workflow.add_node(Sink(parent=self, directory='Sink'))
+        Source(parent=self, directory='Source')
+        Sink(parent=self, directory='Sink')
+        #self.workflow.add_node(Source(parent=self, directory='Source'))
+        #self.workflow.add_node(Sink(parent=self, directory='Sink'))
 
         self.connect('Source.text_file', 'Sink.text_file')
         self.connect('Source.binary_file', 'Sink.binary_file')

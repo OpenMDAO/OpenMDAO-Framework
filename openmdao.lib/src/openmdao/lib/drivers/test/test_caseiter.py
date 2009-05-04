@@ -39,7 +39,8 @@ class MyModel(Model):
     def __init__(self, name='CID_TestModel', *args, **kwargs):
         super(MyModel, self).__init__(name, *args, **kwargs)
         CaseIteratorDriver('driver', self)
-        self.workflow.add_node(DrivenComponent('dc', parent=self))
+        DrivenComponent('dc', parent=self)
+        #self.workflow.add_node(DrivenComponent('dc', parent=self))
 
 
 class DriverTestCase(unittest.TestCase):

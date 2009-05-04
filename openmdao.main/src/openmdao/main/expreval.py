@@ -212,8 +212,8 @@ class ExprEvaluator(object):
     
     def __init__(self, text, scope, single_name=False, validate=True):
         self._scope = weakref.ref(scope)
-        self._inputs = []
-        self._outputs = []
+        self.input_names = set()
+        self.output_names = set()
         self.validate = validate
         self.single_name = single_name
         self.text = text  # this calls _set_text
@@ -222,6 +222,8 @@ class ExprEvaluator(object):
     
     def _set_text(self, text):
         self._text = text
+        self.input_names = set()
+        self.output_names = set()
         self.scoped_text = translate_expr(text, self, 
                                           single_name=self.single_name)
         self._code = compile(self.scoped_text, '<string>','eval')
@@ -279,24 +281,13 @@ class ExprEvaluator(object):
             raise ValueError('trying to set an input expression')
         
     def _register_input(self, name):
-        """Adds a Variable name to the input list. 
+        """Adds a Variable name to the input set. 
         Called during expression parsing.
         """
-        self._inputs.append(name)
+        self.input_names.add(name)
     
     def _register_output(self, name):
-        """Adds a Variable name to the output list. 
+        """Adds a Variable name to the output set. 
         Called during expression parsing.
         """
-        self._outputs.append(name)
-        
-    def get_external_inputs(self):
-        """Returns a list of inputs coming from objects outside of our
-        specified scope."""
-        return set(self._inputs)
-    
-    def get_external_outputs(self):
-        """Returns a list of outputs to objects outside of our
-        specified scope."""
-        return set(self._outputs)
-    
+        self.output_names.add(name)

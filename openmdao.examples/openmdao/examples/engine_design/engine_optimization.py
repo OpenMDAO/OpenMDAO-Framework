@@ -19,7 +19,7 @@ class Engine_Optimization(Model):
         # Create Sim_Vehicle component instances
         vehicle_sim = Sim_Vehicle('vehicle_sim', parent=self)
         self.add_child(vehicle_sim)
-        self.workflow.add_node(vehicle_sim)
+        #self.workflow.add_node(vehicle_sim)
 
         # Create CONMIN Optimizer instance
         CONMINdriver('driver', self)

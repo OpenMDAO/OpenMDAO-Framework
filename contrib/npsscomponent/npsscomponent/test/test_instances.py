@@ -146,7 +146,8 @@ class MyModel(Model):
     def __init__(self, name='TestModel', *args, **kwargs):
         super(MyModel, self).__init__(name, *args, **kwargs)
 
-        self.workflow.add_node(Source(parent=self))
+        Source(parent=self)
+        #self.workflow.add_node(Source(parent=self))
         self.Source.b = True
         self.Source.f = 3.14159
         self.Source.f1d = [3.14159, 2.781828]
@@ -164,13 +165,14 @@ class MyModel(Model):
 
         name = 'NPSS_A'
         Passthrough(name, self, directory=name)
-        self.workflow.add_node(self.NPSS_A)
+        #self.workflow.add_node(self.NPSS_A)
 
         name = 'NPSS_B'
         Passthrough(name, self, directory=name)
-        self.workflow.add_node(self.NPSS_B)
+        #self.workflow.add_node(self.NPSS_B)
 
-        self.workflow.add_node(Sink(parent=self))
+        Sink(parent=self)
+        #self.workflow.add_node(Sink(parent=self))
 
         self.connect('Source.b',   'NPSS_A.b_in')
         self.connect('Source.f',   'NPSS_A.f_in')
