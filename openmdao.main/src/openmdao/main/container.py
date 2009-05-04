@@ -157,7 +157,7 @@ class Container(HierarchyMember):
         observers."""
         dels = []
         for key, val in self._pub.items():
-            if val.ref_name == name:
+            if IVariable.providedBy(val) and val.ref_name == name:
                 dels.append(key)
         for dname in dels:
             del self._pub[dname]
@@ -623,15 +623,20 @@ class Container(HierarchyMember):
         """
         if self._io_graph is None:
             self._io_graph = nx.LabeledDiGraph()
-            vars = [x for x in self._pub.values() if IVariable.providedBy(x)]
-            ins = [x for x in vars if x.iostatus == INPUT]
-            outs = [x for x in vars if x.iostatus == OUTPUT]
-            for var in vars:
+            varlist = [x for x in self._pub.values() if IVariable.providedBy(x)]
+            ins = ['.'.join([self.name,x.name]) for x in varlist if x.iostatus == INPUT]
+            outs = ['.'.join([self.name,x.name]) for x in varlist if x.iostatus == OUTPUT]
+            
+            # add a node for the component
+            self._io_graph.add_node(self.name, data=self)
+            
+            # add nodes for all of the variables
+            for var in varlist:
                 self._io_graph.add_node('%s.%s' % (self.name, var.name), data=var)
             
-            # specify edges, where edge data is a tuple of (invar, outvar)
-            edges = [('.'.join([self.name,x.name]),'.'.join([self.name,y.name])) 
-                                                         for x in ins for y in outs]
-            self._io_graph.add_edges_from(edges)
+            # specify edges, with all inputs as predecessors to the component node,
+            # and all outputs as successors to the component node
+            self._io_graph.add_edges_from([(i, self.name) for i in ins])
+            self._io_graph.add_edges_from([(self.name, o) for o in outs])
         return self._io_graph
     

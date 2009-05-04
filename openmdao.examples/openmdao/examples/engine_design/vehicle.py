@@ -74,17 +74,17 @@ class Vehicle(Model):
         self.add_socket('Transmission', IComponent, required=True)
         comp1 = Transmission('Transmission', parent=self)
         self.add_child(comp1)
-        self.workflow.add_node(comp1)
+        #self.workflow.add_node(comp1)
         
         self.add_socket('Engine', IComponent, required=True)
         comp2 = Engine('Engine', parent=self)
         self.add_child(comp2)
-        self.workflow.add_node(comp2)
+        #self.workflow.add_node(comp2)
 
         self.add_socket('VDyn', IComponent, required=True)
         comp3 = Vehicle_Dynamics('VDyn', parent=self)
         self.add_child(comp3)
-        self.workflow.add_node(comp3)
+        #self.workflow.add_node(comp3)
 
         # Create input and output ports at the model level
         # pylint: disable-msg=E1101

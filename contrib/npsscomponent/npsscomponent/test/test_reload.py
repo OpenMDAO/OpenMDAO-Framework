@@ -46,7 +46,8 @@ class MyModel(Model):
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
 
-        self.workflow.add_node(Source(parent=self))
+        Source(parent=self)
+        #self.workflow.add_node(Source(parent=self))
         self.Source.npss_in = 9
 
         NPSScomponent(parent=self, arglist='-trace reload.mdl',
@@ -56,9 +57,10 @@ class MyModel(Model):
         Float('xyzzy_out', self.NPSS, OUTPUT, doc='Test output')
         String('s', self.NPSS, INPUT, doc='Unconnected input')
 
-        self.workflow.add_node(self.NPSS)
+        #self.workflow.add_node(self.NPSS)
 
-        self.workflow.add_node(Sink(parent=self))
+        Sink(parent=self)
+        #self.workflow.add_node(Sink(parent=self))
 
         self.connect('Source.npss_reload', 'NPSS.reload_model')
         self.connect('Source.npss_in', 'NPSS.xyzzy_in')

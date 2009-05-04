@@ -29,7 +29,7 @@ from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
 from openmdao.main.model import Model
 from openmdao.main.driver import Driver
-from openmdao.main.refexprdriver import RefExprDriver
+#from openmdao.main.refexprdriver import RefExprDriver
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 

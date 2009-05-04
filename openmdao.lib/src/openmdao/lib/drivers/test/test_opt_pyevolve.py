@@ -40,7 +40,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
     def setUp(self):
         self.top = Model('top',None)
         self.top.add_child(SphereFunction('comp',self.top))
-        self.top.workflow.add_node(self.top.comp)
+        #self.top.workflow.add_node(self.top.comp)
         self.top.add_child(pyevolvedriver.pyevolvedriver('driver'))
 
     def tearDown(self):

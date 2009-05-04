@@ -18,6 +18,7 @@ import os
 import os.path
 import fnmatch
 import platform
+from subprocess import Popen
 
 def find_files(pat, startdir):
     for path, dirlist, filelist in os.walk(startdir):
@@ -42,17 +43,17 @@ def find_bzr(path=None):
 # in order to find all of our shared libraries, find them
 # all and put their directories in LD_LIBRARY_PATH
 env = os.environ
-if platform.system != 'Windows':
+if platform.system() != 'Windows':
     libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
     bzrtop = find_bzr()
     if bzrtop:
         sodirs = set([os.path.dirname(x) for x in find_files('*.so',bzrtop)])
         libs.extend(sodirs)
         env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
+    Popen(["wing3.1", r"%(proj)s"], env=env)
+else:
+    Popen(["wing", r"%(proj)s"], env=env)
 
-
-from subprocess import Popen
-Popen(["wing3.1", "%(proj)s"], env=env)
 
 """
 
@@ -195,7 +196,7 @@ class WingProj(object):
         if len(diff) > 0:    
                
             config.set('user attributes', 'proj.pypath', 
-                       _wingify(dict({None: ('custom',':'.join(newset))}), left_margin=18))
+                       _wingify(dict({None: ('custom',os.pathsep.join(newset))}), left_margin=18))
             config.set('user attributes', 'proj.pyexec', 
                        _wingify(dict({None: ('custom', self.executable)}), left_margin=18))
 

@@ -11,6 +11,7 @@ from collections import deque
 
 from zope.interface import implements
 import networkx as nx
+from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
 
 from openmdao.main.interfaces import IAssembly, IComponent, IDriver, IVariable
 from openmdao.main import Container, String
@@ -122,7 +123,7 @@ class Assembly (Component):
             # it in later
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
-            self.get_comp_graph().add_node(obj.name)
+            self._comp_graph.add_node(obj.name)
         return obj
     
     def get_var_graph(self):
@@ -132,27 +133,7 @@ class Assembly (Component):
         if self._need_child_io_update:
             self._update_child_io_graph_info()
         return self._var_graph
-    
-    def get_comp_graph(self):
-        """Return our component graph, creating it from our var graph if necessary."""
-        if self._comp_graph is None:
-            self._comp_graph = nx.DiGraph()
-            for varname,var in self._dep_graph.nodes(data=True):
-                if var.parent is not self:
-                    self._comp_graph.add_node(var.parent.name)
-             
-            seen = set()
-            for u,v in self._dep_graph.edges():
-                uparts = u.split('.')
-                vparts = v.split('.')
-                if uparts[0] != vparts[0] and len(uparts) > 1 and len(vparts) > 1:
-                    key = ' '.join([uparts[0],vparts[0]])
-                    if key not in seen:
-                        self._comp_graph.add_edge(uparts[0],vparts[0])
-                        seen.add(key)
-                    
-        return self._comp_graph
-    
+        
     def _update_child_io_graph_info(self):
         for childname in [name for name,val in self._child_io_graphs.items() if val is None]:
             graph = getattr(self, childname).get_io_graph()
@@ -170,7 +151,7 @@ class Assembly (Component):
                                  name, ValueError)        
         obj = self.get(name)
         if IComponent.providedBy(obj):
-            self.get_comp_graph().remove_node(obj.name)
+            self._comp_graph.remove_node(obj.name)
             if name in self._child_io_graphs:
                 childgraph = self._child_io_graphs[name]
                 if childgraph is not None:
@@ -278,17 +259,29 @@ class Assembly (Component):
         
         if self._need_child_io_update:
             self._update_child_io_graph_info() # make sure we have all of the child io graph data
-        self._var_graph.add_edge(srcpath, destpath)
         self._logger.debug('adding edge %s --> %s' % (srcpath,destpath))
-        strongly_connected = nx.algorithms.traversal.strongly_connected_components(self._var_graph)
-        for strcon in strongly_connected:
-            if len(strcon) > 1:
-                self._var_graph.remove_edge(srcpath, destpath)
-                self.raise_exception('Circular dependency (%s) would be created by connecting %s to %s' %
-                                     (str(strcon), srcpath, destpath), RuntimeError) 
-                
+        
         if destcomp is not self and srccomp is not self: # neither var is on boundary
-            self.get_comp_graph().add_edge(srccompname, destcompname)
+            # if an edge already exists between the two components, just increment the ref count
+            try:
+                self._comp_graph[srccompname][destcompname] += 1
+            except KeyError:
+                self._comp_graph.add_edge(srccompname, destcompname, data=1)
+                
+            if not is_directed_acyclic_graph(self._comp_graph):
+                # do a little extra work here to give more info to the user in the error message
+                strongly_connected = strongly_connected_components(self._comp_graph)
+                refcount = self._comp_graph[srccompname][destcompname] - 1
+                if refcount == 0:
+                    self._comp_graph.remove_edge(srccompname, destcompname)
+                else:
+                    self._comp_graph[srccompname][destcompname] = refcount
+                for strcon in strongly_connected:
+                    if len(strcon) > 1:
+                        self.raise_exception('circular dependency (%s) would be created by connecting %s to %s' %
+                                     (str(strcon), srcpath, destpath), RuntimeError) 
+                        
+        self._var_graph.add_edge(srcpath, destpath)
             
         # invalidate destvar if necessary
         if destcomp is self and destvar.iostatus == OUTPUT: # boundary output
@@ -320,15 +313,24 @@ class Assembly (Component):
         if self._need_child_io_update:
             self._update_child_io_graph_info() # make sure we have all of the child io graph data
         
+        var = self._var_graph.label[varpath]
         if varpath2 is not None:
+            if varpath2 not in self._var_graph[varpath]:
+                self.raise_exception('%s is not connected' % varpath)
             self._var_graph.remove_edge(varpath, varpath2)
+            var2 = self._var_graph.label[varpath2]
+            if var.parent is not self and var2.parent is not self:
+                refcount = self._comp_graph[var.parent.name][var2.parent.name] - 1
+                if refcount == 0:
+                    self._comp_graph.remove_edge(var.parent.name, var2.parent.name)
+                else:
+                    self._comp_graph[var.parent.name][var2.parent.name] = refcount
         else:  # remove all connections from the Variable
-            graph = self._var_graph
-            edges = [(v, varpath) for v in graph.pred[varpath].keys()]
-            edges.extend([(varpath, v) for v in graph.succ[varpath].keys()])
-            graph.remove_edges_from(edges)
+            if len(self._var_graph.pred[varpath]) == 0:
+                self.raise_exception('%s is not connected' % varpath)
+            self._var_graph.remove_node(varpath)
+            self._var_graph.add_node(varpath, data=var)
         self._io_graph = None  # the io graph has changed, so have to remake it
-        self._comp_graph = None # remake the component graph too.
 
     def is_destination(self, varpath):
         """Return True if the Variable specified by varname is a destination according
@@ -363,7 +365,7 @@ class Assembly (Component):
         return conns
     
     def update_inputs(self, varnames):
-        """Transfer input data to the specified component.
+        """Transfer input data to the specified variables.
         Note that we're called after incomp has set its execution directory,
         so we'll need to account for this during file transfers."""
         
@@ -383,8 +385,7 @@ class Assembly (Component):
                                     'invalid source Variable found (%s), with no way to update it' 
                                     % srcname, RuntimeError)
                         else: # a non-boundary var
-                            self._logger.debug('**update_inputs causing %s to run'%srcvar.parent.get_pathname())
-                            srcvar.parent.run()
+                            srcvar.parent.update_outputs([srcvar.name])
                     incomp = var.parent
                     if isinstance(var, FileVariable):
                         incomp.pop_dir()
@@ -406,8 +407,13 @@ class Assembly (Component):
                                   ('.'.join((incomp.name, var.name)),
                                    srcvar, str(exc))
                             self.raise_exception(msg, type(exc))
-            self._logger.debug('(update_inputs) validating %s' % var.get_pathname())
             var.valid = True
+
+    def update_outputs(self, outnames):
+        """Execute any necessary internal or predecessor components in order to
+        make the specified output variables valid.
+        """
+        self.update_inputs(outnames)
 
     def check_config (self):
         """Verify that the configuration of this component is correct. This function is
@@ -420,70 +426,33 @@ class Assembly (Component):
             if current is None and required is True:
                 self.raise_exception("required plugin '%s' is not present" % name,
                                      ValueError)
-
-    #def var_preds(self, vars):
-        #"""Return a set of Variables on our incoming boundary that are connected
-        #to the given Variables on the outgoing boundary. All entries in vars must be 
-        #children of this object and they must be destinations according to this object's 
-        #graph.  vars must be an iterable.
-        #"""
-        #if self._need_child_io_update:
-            #self._update_child_io_graph_info() # make sure we have all of the child io graph data
-        #varnames = [v.get_pathname(rel_to_scope=self) for v in vars]
-        #pred = self._var_graph.pred   #predecessor nodes in the graph
-        #stack = set(varnames)
-        #pred_vars = set()
-        #while len(stack) > 0:
-            #name = stack.pop()
-            #for vname in pred[name]:
-                #if '.' not in vname:
-                    #pred_vars.add(vname)
-                #stack.add(vname)
-        #return pred_vars
-    
-    #def var_successors(self, vars):
-        #"""Return a list of OUTPUT boundary Variables that are successors to the 
-        #INPUT Variables given.
-        #"""
-        #if self._need_child_io_update:
-            #self._update_child_io_graph_info() # make sure we have all of the child io graph data
-        #varnames = [v.get_pathname(rel_to_scope=self) for v in vars]
-        #succ = self._var_graph.succ  #successor nodes in the graph
-        #stack = set(varnames)
-        #succ_vars = set()
-        #while len(stack) > 0:
-            #name = stack.pop()
-            #for vname in succ[name]:
-                #if '.' not in vname:
-                    #succ_vars.add(vname)
-                #stack.add(vname)
-        #return succ_vars
         
-    def invalidate_deps(self, vars):
-        """Mark all Variables invalid that depend on vars."""
+    def invalidate_deps(self, vars, notify_parent=False):
+        """Mark all Variables invalid that depend on vars.
+        Returns a list of our newly invalidated boundary outputs.
+        """
         if self._need_child_io_update:
             self._update_child_io_graph_info() # make sure we have all of the child io graph data
         varnames = [v.get_pathname(rel_to_scope=self) for v in vars]
         succ = self._var_graph.succ  #successor nodes in the graph
         label = self._var_graph.label # node data
         stack = set(varnames)
+        outs = []
         while len(stack) > 0:
             name = stack.pop()
             for vname in succ[name]:
                 var = label[vname]
-                if var.valid is True:
-                    self._logger.debug('(invalidate_deps) invalidating %s' % var.get_pathname())
+                if IVariable.providedBy(var) and var.valid is True:
                     var.valid = False
+                    if var.parent is self:
+                        outs.append(var)
+                    else:
+                        for newvar in var.parent.invalidate_deps([var]):
+                            stack.add('.'.join([newvar.parent.name, newvar.name]))
                     stack.add(vname)
-
-    def get_io_graph(self):
-        """Return a graph connecting our input variables to our output variables.
-        """
-        # for now, just use the dumb Component version, which says that all inputs
-        # map to all outputs.
-        # TODO: make this truly reflect the IO relationships in the assembly so we
-        #       won't run any children unnecessarily
-        return super(Assembly, self).get_io_graph()
+        if notify_parent and self.parent:
+            self.parent.invalidate_deps(outs, True)
+        return outs
     
     @staticmethod
     def xfer_file(src_comp, src_var, dst_comp, dst_var):

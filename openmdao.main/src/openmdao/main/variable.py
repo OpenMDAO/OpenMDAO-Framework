@@ -165,6 +165,7 @@ class Variable(HierarchyMember):
         """Assign this Variable's value to the value of another Variable or 
         directly to another value.  Checks validity of the new value before assignment.
         """
+        self._logger.debug('setting %s to value of %s' % (self.get_pathname(),str(val)))
         if self.iostatus == OUTPUT:
             raise RuntimeError(self.get_pathname()+
                                ' is an OUTPUT Variable and cannot be set.')
@@ -176,7 +177,10 @@ class Variable(HierarchyMember):
         if self.valid is True:
             self._logger.debug('invalidating %s'%self.get_pathname())
             self.valid = False
-            self.parent.invalidate_deps([self])
+            # since we've been newly invlidated, notify our parent (or it's parent) so dependent vars
+            # can also be invalidated
+            if self.parent and hasattr(self.parent, 'invalidate_deps'):
+                self.parent.invalidate_deps([self], notify_parent=True)
             
         if self.observers is not None:
             self._notify_observers()
@@ -246,18 +250,18 @@ class Variable(HierarchyMember):
                                  variable.get_pathname()+"' of type '"+
                                  str(type(variable))+"'", TypeError)
             
-    def check_direction(self, variable, passthru=False):
-        """Raise a RuntimeError if this Variable and the one passed in are
-        not directionally compatible.
-        """
-        if passthru:
-            if self.iostatus != variable.iostatus:
-                self.raise_exception('iostatus incompatible for passthru connection to '+
-                                     variable.get_pathname(), RuntimeError)
-        else:
-            if self.iostatus != INPUT or self.iostatus == variable.iostatus:
-                self.raise_exception('iostatus incompatible for connection to '+
-                                     variable.get_pathname(), RuntimeError)
+    #def check_direction(self, variable, passthru=False):
+        #"""Raise a RuntimeError if this Variable and the one passed in are
+        #not directionally compatible.
+        #"""
+        #if passthru:
+            #if self.iostatus != variable.iostatus:
+                #self.raise_exception('iostatus incompatible for passthru connection to '+
+                                     #variable.get_pathname(), RuntimeError)
+        #else:
+            #if self.iostatus != INPUT or self.iostatus == variable.iostatus:
+                #self.raise_exception('iostatus incompatible for connection to '+
+                                     #variable.get_pathname(), RuntimeError)
 
     def _convert(self, variable):
         """Some Variables, e.g., Float, will need to override this in order to
@@ -271,8 +275,9 @@ class Variable(HierarchyMember):
         means to assign our value to the value of var. Some Variables will
         override _convert to handle things like unit conversion."""
         if name is None: # they're setting this Variable
-            self.validate_var(var)
-            self.set_value(self._convert(var))
+            if self._passthru is not var:
+                self.validate_var(var)
+                self.set_value(self._convert(var))
         else:
             self.raise_exception("cannot assign a Variable to attribute '"+
                                  name+"'", RuntimeError)

@@ -63,11 +63,11 @@ class RefVariable(Variable):
         else:
             return self._getexpr().get_external_inputs()
     
-    def get_referenced_components(self):
-        """Return a list of source or dest Component names based on the 
+    def get_referenced_compnames(self):
+        """Return a set of source or dest Component names based on the 
         pathnames of Variables referenced in our reference string. 
         """
-        return [x.split('.')[0] for x in self.get_referenced_varpaths()]
+        return set([x.split('.')[0] for x in self.get_referenced_varpaths()])
         
 
 class RefVariableArray(Variable):
@@ -148,19 +148,20 @@ class RefVariableArray(Variable):
     refvalue = property(_get_referenced_values, _set_referenced_values)
     
     def get_referenced_varpaths(self):
-        """Return a tuple of the form (src_set, dest_set) based on the
-        names of Variables referenced in the string expression.
-        """
-        outputs = []
-        inputs = []
-        for expr in self._exprs:
-            outputs.extend(expr.get_external_outputs())
-            inputs.extend(expr.get_external_inputs())
-        return (set(outputs), set(inputs))
+        """Return the set of Variables referenced in the string expression."""
+        if self.iostatus == OUTPUT:
+            sets = [ex.get_external_outputs() for ex in self._exprs]
+        else:
+            sets = [ex.get_external_inputs() for ex in self._exprs]
+        ret = set()
+        for s in sets:
+            ret.update(s)
+        return ret
     
-    def get_referenced_components(self):
-        """Return a tuple of the form (src_comps, dest_comps) based on
-        the names of Variables referenced in the string expression.
+    def get_referenced_compnames(self):
+        """Return a set of Component names based on the 
+        pathnames of Variables referenced in our reference string. 
         """
-        raise NotImplementedError('get_referenced_components')
+        return set([x.split('.')[0] for x in self.get_referenced_varpaths()])
+        
     

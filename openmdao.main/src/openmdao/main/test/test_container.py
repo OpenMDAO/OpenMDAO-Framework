@@ -87,20 +87,22 @@ class ContainerTestCase(unittest.TestCase):
         
     def test_full_items(self):
         lst = map(lambda x: x[0], self.root.items(pub=False,recurse=True))
-        self.assertEqual(lst, ['name', 'c2', 'c2.c22', 'c2.c22.c221', 
-                               'c2.c22.c221.name', 'c2.c22.c221.number', 
-                               'c2.c22.name', 'c2.c21', 'c2.c21.name', 
+        self.assertEqual(lst, ['name', 'c2', 'c2.c22', 'c2.c22.name', 
+                               'c2.c22.c221', 'c2.c22.c221.name', 'c2.c22.c221.number', 
+                               'c2.c21', 'c2.c21.name',
                                'c2.name', 'c1', 'c1.name'])
+        
         items = [(x[0],isinstance(x[1],Container) or str(x[1])) 
                     for x in self.root.items(pub=False,recurse=True)]
         
         # values of True in the list below just indicate that the value
         # is a Container
         self.assertEqual(items, [('name', 'root'), ('c2', True), 
-                                 ('c2.c22', True), ('c2.c22.c221', True), 
+                                 ('c2.c22', True), ('c2.c22.name', 'c22'),
+                                 ('c2.c22.c221', True), 
                                  ('c2.c22.c221.name', 'c221'), 
                                  ('c2.c22.c221.number', '3.14'), 
-                                 ('c2.c22.name', 'c22'), ('c2.c21', True), 
+                                 ('c2.c21', True), 
                                  ('c2.c21.name', 'c21'), ('c2.name', 'c2'), 
                                  ('c1', True), ('c1.name', 'c1')])
         

@@ -24,7 +24,18 @@ class Simple(Component):
         self.run_count += 1
         self.c = self.a + self.b
         self.d = self.a - self.b
+        self._logger.debug('**** %s: a=%d, b=%d, c=%d, d=%d' % (self.get_pathname(),self.a,self.b,self.c,self.d))
 
+allcomps = ['sub.comp1','sub.comp2','sub.comp3','sub.comp4','sub.comp5','sub.comp6',
+            'comp7','comp8']
+allouts = ['sub.comp1.c', 'sub.comp1.d',
+           'sub.comp2.c', 'sub.comp2.d',
+           'sub.comp3.c', 'sub.comp3.d',
+           'sub.comp4.c', 'sub.comp4.d',
+           'sub.comp5.c', 'sub.comp5.d',
+           'sub.comp6.c', 'sub.comp6.d',
+           'comp7.c', 'comp7.d',
+           'comp8.c', 'comp8.d']
 
 class DepGraphTestCase(unittest.TestCase):
 
@@ -40,6 +51,7 @@ class DepGraphTestCase(unittest.TestCase):
         sub.add_child(Simple('comp6'))
 
         top.add_child(Simple('comp7'))
+        top.add_child(Simple('comp8'))
 
         sub.create_passthru('comp1.a', 'a1')
         sub.create_passthru('comp3.a', 'a3')
@@ -59,94 +71,76 @@ class DepGraphTestCase(unittest.TestCase):
         sub.connect('comp4.d', 'comp6.a')
         
         top.connect('comp7.c', 'sub.a3')
+        top.connect('sub.c4', 'comp8.a')
+        top.connect('sub.d3', 'comp8.b')
         
-    #def test_var_preds(self):
-        #self.setUp()
-        #sub = self.top.sub
-        
-        #vars = [sub.getvar('c4')]
-        #self.assertEqual(sub.var_preds(vars), set(['b4', 'a1', 'a3', 'b2']))
-        
-        #vars = [sub.getvar('d1')]
-        #self.assertEqual(sub.var_preds(vars), set(['a1', 'b2', 'a3']))
-        
-        #vars = [sub.getvar('d5')]
-        #self.assertEqual(sub.var_preds(vars), set(['b2', 'a3']))
-        
-        #vars = [sub.getvar('d3')]
-        #self.assertEqual(sub.var_preds(vars), set(['a3']))
-        
-        #vars = [sub.getvar(x) for x in ['c4','c2','d1','d3','d5']]
-        #self.assertEqual(sub.var_preds(vars),  set(['b2', 'a3', 'a1', 'b4']))
-        
-        #sub.disconnect('comp1.b')
-        #vars = [sub.getvar('c4')]
-        #self.assertEqual(sub.var_preds(vars), set(['b4', 'a1']))
-        
-    #def test_var_successors(self):
-        #sub = self.top.sub
-        
-        #vars = [sub.getvar('a1')]
-        #self.assertEqual(sub.var_successors(vars), set(['d1','c4']))
-        
-        #vars = [sub.getvar('b4')]
-        #self.assertEqual(sub.var_successors(vars), set(['c4']))
-        
-        #vars = [sub.getvar('b2')]
-        #self.assertEqual(sub.var_successors(vars), set(['c2','d5','d1','c4']))
-        
-        #vars = [sub.getvar('a3')]
-        #self.assertEqual(sub.var_successors(vars), set(['d3','d5','d1','c4']))
-        
-        #vars = [sub.getvar('b6')]
-        #self.assertEqual(sub.var_successors(vars), set([]))
-        
-        #vars = [sub.getvar(x) for x in ['a1','b4','b2','a3','b6']]
-        #self.assertEqual(sub.var_successors(vars),  set(['c4','c2','d5','d1','d3']))
-        
-        #sub.disconnect('comp1.b')
-        #vars = [sub.getvar('a3')]
-        #self.assertEqual(sub.var_successors(vars), set(['d3','d5']))
-
-    def test_lazy(self):
-        top = self.top
-        sub = self.top.sub
-        allcomps = ['sub.comp1','sub.comp2','sub.comp3','sub.comp4','sub.comp5','sub.comp6','comp7']
-        self.assertEqual([0, 0, 0, 0, 0, 0, 0], [top.get(x).run_count for x in allcomps])
-        logging.getLogger('').debug('***** 1st run *****')
         self.top.run()        
-        self.assertEqual([1, 1, 1, 1, 1, 1, 1], [top.get(x).run_count for x in allcomps])
-        self.assertEqual(sub.get('comp3.c'),5)
-        self.assertEqual(sub.get('comp1.c'),5)
-        self.assertEqual(sub.get('comp1.d'),-3)
-        logging.getLogger('').debug('***** 2nd run *****')
+
+    def test_lazy1(self):
+        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], 
+                         [self.top.get(x).run_count for x in allcomps])
+        outs = [(5,-3),(3,-1),(5,1),(7,3),(4,6),(5,1),(3,-1),(8,6)]
+        for comp,vals in zip(allcomps,outs):
+            self.assertEqual((comp,vals[0],vals[1]), 
+                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
         self.top.run()  
         # run_count should stay at 1 for all comps
-        self.assertEqual([1, 1, 1, 1, 1, 1, 1], [top.get(x).run_count for x in allcomps])
+        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], 
+                         [self.top.get(x).run_count for x in allcomps])
         
-        sub.set('b6', 777)
+    def test_lazy2(self):
+        self.top.set('sub.b6', 3)
         self.top.run()  
         # run_count should change only for comp6
-        self.assertEqual([1, 1, 1, 1, 1, 2, 1], [top.get(x).run_count for x in allcomps])
+        self.assertEqual([1, 1, 1, 1, 1, 2, 1, 1], 
+                         [self.top.get(x).run_count for x in allcomps])
+        outs = [(5,-3),(3,-1),(5,1),(7,3),(4,6),(6,0),(3,-1),(8,6)]
+        for comp,vals in zip(allcomps,outs):
+            self.assertEqual((comp,vals[0],vals[1]), 
+                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
         
-        sub.set('a3', 111)
+    def test_lazy3(self):
+        self.top.set('comp7.a', 3)
         self.top.run()  
         # run_count should change for all sub comps but comp2
-        self.assertEqual([2, 1, 2, 2, 2, 3, 1], [top.get(x).run_count for x in allcomps])
+        self.assertEqual([2, 1, 2, 2, 2, 2, 2, 2], 
+                         [self.top.get(x).run_count for x in allcomps])
+        outs = [(7,-5),(3,-1),(7,3),(9,5),(6,8),(7,3),(5,1),(12,6)]
+        for comp,vals in zip(allcomps,outs):
+            self.assertEqual((comp,vals[0],vals[1]), 
+                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
     
-        sub.set('comp2.a', 5)
+    def test_lazy4(self):
+        self.top.sub.set('b2', 5)
         self.top.run()  
-        # run_count should change for all sub comps but comp3 
-        self.assertEqual([3, 2, 2, 3, 3, 4, 1], [top.get(x).run_count for x in allcomps])
+        # run_count should change for all sub comps but comp3 and comp7 
+        self.assertEqual([2, 2, 1, 2, 2, 2, 1, 2], 
+                         [self.top.get(x).run_count for x in allcomps])
+        outs = [(2,0),(6,-4),(5,1),(4,0),(1,9),(2,-2),(3,-1),(5,3)]
+        for comp,vals in zip(allcomps,outs):
+            self.assertEqual((comp,vals[0],vals[1]), 
+                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
     
-        top.set('comp7.a', 5)
-        self.top.run()  
-        # run_count should change for comp7 and all subs but comp2
-        self.assertEqual([4, 2, 3, 4, 4, 5, 2], [top.get(x).run_count for x in allcomps])
-        
-        top.set('comp7.b', 4)
-        logging.getLogger('').debug('***** running top.sub.comp1 directly *****')
-        top.sub.comp1.run()
+    def test_lazy_inside_out(self):
+        self.top.set('comp7.b', 4)
+        # now run sub.comp1 directly to make sure it will force
+        # running of all components that supply its inputs
+        self.top.sub.comp1.run()
+        self.assertEqual([2, 1, 2, 1, 2, 1, 2, 1], 
+                         [self.top.get(x).run_count for x in allcomps])
+        outs = [(7,-5),(3,-1),(7,3),(7,3),(6,8),(5,1),(5,-3),(8,6)]
+        for comp,vals in zip(allcomps,outs):
+            self.assertEqual((comp,vals[0],vals[1]), 
+                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
+            
+        # now run comp8 directly, which should force sub.comp4 to run
+        self.top.comp8.run()
+        self.assertEqual([2, 1, 2, 2, 2, 1, 2, 2], 
+                         [self.top.get(x).run_count for x in allcomps])
+        outs = [(7,-5),(3,-1),(7,3),(9,5),(6,8),(5,1),(5,-3),(12,6)]
+        for comp,vals in zip(allcomps,outs):
+            self.assertEqual((comp,vals[0],vals[1]), 
+                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
     
 if __name__ == "__main__":
     
