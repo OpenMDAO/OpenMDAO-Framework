@@ -152,7 +152,7 @@ class Sim_Vehicle(Component):
                 self.vehicle.CurrentGear += 1
                 
                 if self.vehicle.CurrentGear > 5:
-                    self.raise_exception("Transmission gearing cannot achieve maximum speed in Acceleration test.", RunFailed)
+                    self.raise_exception("Transmission gearing cannot achieve maximum speed in Acceleration test.", RuntimeError)
                 
                 try:
                     self.vehicle.execute()
@@ -319,7 +319,7 @@ class Sim_Vehicle(Component):
                 Time1 = Time2
                 
                 #print "T = %f, V = %f, Acc = %f" % (Time1, Velocity1, CommandAccel)
-                #print self.vehicle.CurrentGear, AccelMin, AccelMax
+                print "Gear = %f, V = %f, Throttle = %f, Fuelburn = %f" % (self.vehicle.CurrentGear, self.vehicle.Velocity, self.vehicle.Throttle, Fuelburn)
                 
             # Convert liter to gallon and sec/hr to hr/hr
             Distance = Distance/3600.0
