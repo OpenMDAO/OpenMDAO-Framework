@@ -330,7 +330,7 @@ class Container(HierarchyMember):
         dst_dir is the directory to write the egg in.
         tmp_dir is the directory to use for temporary files.
         Returns the egg's filename."""
-        # TODO: record required packages, buildout.cfg.
+        # TODO: create buildout.cfg.
         orig_dir = os.getcwd()
 
         if name is None:
@@ -424,6 +424,41 @@ class Container(HierarchyMember):
             src_files.add(state_name)
             src_files = sorted(src_files)
 
+            # Determine classes used by recording them during an unpickle.
+            self._required_classes = set()
+            if format == SAVE_CPICKLE or format == SAVE_PICKLE:
+                inp = open(state_path, 'rb')
+            else:
+                scratch = '__unpickle__'
+                self.save(scratch, SAVE_CPICKLE)
+                inp = open(scratch, 'rb')
+            unpickler = cPickle.Unpickler(inp)
+            unpickler.find_global = self._record_class
+            obj = unpickler.load()
+            del obj
+            inp.close()
+            if format != SAVE_CPICKLE and format != SAVE_PICKLE:
+                os.remove(scratch)
+
+            # Determine modules required.
+            required_modules = set()
+            for cls in self._required_classes:
+                self._add_modules(cls, required_modules)
+
+            # Determine distributions required.
+            required_distributions = set()
+            working_set = pkg_resources.WorkingSet()
+            for module in required_modules:
+                path = module.__file__
+                for dist in working_set:
+                    if path.startswith(dist.location):
+                        required_distributions.add(dist)
+                        break
+            self.debug('    required distributions:')
+            for dist in sorted(required_distributions,
+                               key=lambda dist: dist.project_name):
+                self.debug('        %s %s', dist.project_name, dist.version)
+     
             # If needed, make an empty __init__.py
             if not os.path.exists(os.path.join(name, '__init__.py')):
                 remove_init = True
@@ -474,10 +509,10 @@ if __name__ == '__main__':
             out.write(']\n')
             out.write('\n')
 
-            modules = []
             out.write('requirements = [\n')
-            for module in modules:
-                out.write("    '%s',\n" % module)
+            for dist in required_distributions:
+                out.write("    '%s == %s',\n" % \
+                          (dist.project_name, dist.version))
             out.write(']\n')
             out.write('\n')
 
@@ -531,6 +566,25 @@ if __name__ == '__main__':
                 del sys.modules[mod]
 
         return egg_name
+
+    def _record_class(self, modname, classname):
+        """Record class referenced during dummy unpickle."""
+        cls = getattr(sys.modules[modname], classname)
+        if modname != '__builtin__':
+            self._required_classes.add(cls)
+        return cls
+
+    def _add_modules(self, cls, required_modules):
+        """Record modules required by class."""
+        modname = cls.__module__
+        if modname == '__builtin__':
+            return
+        module = sys.modules[modname]
+        if os.path.isabs(module.__file__):
+            required_modules.add(module)
+        else:
+            for base in cls.__bases__:
+                self._add_modules(base, required_modules)
 
     def save (self, outstream, format=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
@@ -586,6 +640,9 @@ if __name__ == '__main__':
         logger.debug('    py_version: %s', dist.py_version)
         logger.debug('    platform: %s', dist.platform)
         logger.debug('    precedence: %s', dist.precedence)
+        logger.debug('    requires:')
+        for req in dist.requires():
+            logger.debug('        %s', str(req))
         logger.debug('    entry points:')
         maps = dist.get_entry_map()
         for group in maps.keys():
