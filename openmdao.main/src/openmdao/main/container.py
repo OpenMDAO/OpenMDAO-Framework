@@ -330,7 +330,6 @@ class Container(HierarchyMember):
         dst_dir is the directory to write the egg in.
         tmp_dir is the directory to use for temporary files.
         Returns the egg's filename."""
-        # TODO: create buildout.cfg.
         orig_dir = os.getcwd()
 
         if name is None:
@@ -392,6 +391,10 @@ class Container(HierarchyMember):
         # Move to scratch area.
         tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
         os.chdir(tmp_dir)
+
+        buildout = 'buildout.cfg'
+        buildout_path = os.path.join(name, buildout)
+        buildout_orig = buildout_path+'-orig'
         try:
             if src_dir:
                 # Link original directory to object name.
@@ -422,7 +425,6 @@ class Container(HierarchyMember):
             if src_files is None:
                 src_files = set()
             src_files.add(state_name)
-            src_files = sorted(src_files)
 
             # Determine classes used by recording them during an unpickle.
             self._required_classes = set()
@@ -454,28 +456,49 @@ class Container(HierarchyMember):
                     if path.startswith(dist.location):
                         required_distributions.add(dist)
                         break
+            required_distributions = sorted(required_distributions,
+                                            key=lambda dist: dist.project_name)
             self.debug('    required distributions:')
-            for dist in sorted(required_distributions,
-                               key=lambda dist: dist.project_name):
+            for dist in required_distributions:
                 self.debug('        %s %s', dist.project_name, dist.version)
      
+            # Create buildout.cfg
+            if os.path.exists(buildout_path):
+                os.rename(buildout_path, buildout_orig)
+            out = open(buildout_path, 'w')
+            out.write("""\
+[buildout]
+parts = obj
+index = http://torpedo.grc.nasa.gov:31001
+
+[obj]
+recipe = openmdao.recipes:isolatedegg
+eggs =
+""")
+            for dist in required_distributions:
+                out.write("    %s\n" % dist.project_name)
+            out.close()
+            src_files.add(buildout)
+
             # If needed, make an empty __init__.py
-            if not os.path.exists(os.path.join(name, '__init__.py')):
+            init_path = os.path.join(name, '__init__.py')
+            if not os.path.exists(init_path):
                 remove_init = True
-                out = open(os.path.join(name, '__init__.py'), 'w')
+                out = open(init_path, 'w')
                 out.close()
             else:
                 remove_init = False
 
             # Create loader script.
-            out = open(os.path.join(name, '%s_loader.py' % name), 'w')
+            loader = '%s_loader.py' % name
+            loader_path = os.path.join(name, loader)
+            out = open(loader_path, 'w')
             out.write("""\
-import os.path
 import sys
 if not '.' in sys.path:
     sys.path.append('.')
 
-from openmdao.main import Container, Component
+from openmdao.main import Container
 from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
 
 def load():
@@ -486,11 +509,7 @@ def load():
         return Container.load(state_name, SAVE_LIBYAML)
     raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
                        state_name)
-
-if __name__ == '__main__':
-    model = Component.load_from_egg(os.path.join('..', '%s'))
-    model.run()
-""" % (state_name, egg_name))
+""" % state_name)
             out.close()
 
             # Save everything to an egg via setuptools.
@@ -500,7 +519,7 @@ if __name__ == '__main__':
             out.write('\n')
 
             out.write('package_files = [\n')
-            for filename in src_files:
+            for filename in sorted(src_files):
                 path = os.path.join(name, filename)
                 if not os.path.exists(path):
                     self.raise_exception("Can't save, '%s' does not exist" % \
@@ -546,12 +565,14 @@ if __name__ == '__main__':
                                   stdout=stdout, stderr=subprocess.STDOUT)
             stdout.close()
 
-            os.remove(os.path.join(name, state_name))
-            os.remove(os.path.join(name, '%s_loader.py' % name))
+            os.remove(state_path)
+            os.remove(loader_path)
             if remove_init:
-                os.remove(os.path.join(name, '__init__.py'))
+                os.remove(init_path)
 
         finally:
+            if os.path.exists(buildout_orig):
+                os.rename(buildout_orig, buildout_path)
             os.chdir(orig_dir)
             shutil.rmtree(tmp_dir)
             # Restore objects, classes, & sys.modules for __main__ imports.
@@ -620,7 +641,7 @@ if __name__ == '__main__':
     @staticmethod
     def load_from_egg (filename):
         """Load state and other files from an egg, returns top object."""
-        # TODO: handle required packages.
+        # TODO: run buildout to get required packages.
         logger.debug('Loading from %s in %s...', filename, os.getcwd())
         if not os.path.exists(filename):
             raise ValueError("'%s' not found." % filename)
@@ -633,13 +654,9 @@ if __name__ == '__main__':
 
         dist = distributions[0]
         logger.debug('    project_name: %s', dist.project_name)
-        logger.debug('    key: %s', dist.key)
-        logger.debug('    extras: %s', dist.extras)
         logger.debug('    version: %s', dist.version)
-        logger.debug('    parsed_version: %s', dist.parsed_version)
         logger.debug('    py_version: %s', dist.py_version)
         logger.debug('    platform: %s', dist.platform)
-        logger.debug('    precedence: %s', dist.precedence)
         logger.debug('    requires:')
         for req in dist.requires():
             logger.debug('        %s', str(req))

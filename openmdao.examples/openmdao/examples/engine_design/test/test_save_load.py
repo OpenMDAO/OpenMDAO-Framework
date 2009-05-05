@@ -19,8 +19,9 @@ class EngineOptimizationTestCase(unittest.TestCase):
         self.model = Engine_Optimization("Test_Vehicle")
 
     def tearDown(self):
-        self.model.pre_delete()
-        self.model = None
+        if self.model is not None:
+            self.model.pre_delete()
+            self.model = None
         
     def test_save_load(self):
         logging.debug('')
@@ -41,16 +42,48 @@ class EngineOptimizationTestCase(unittest.TestCase):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
-            self.model = Component.load_from_egg(os.path.join('..', egg_name))
-
-            self.model.run()
-        
-            self.assertAlmostEqual(self.model.vehicle_sim.AccelTime, 
-                                   5.9, places=6)
-            self.assertAlmostEqual(self.model.vehicle_sim.EPACity, 
-                                   25.18837, places=4)
-            self.assertAlmostEqual(self.model.vehicle_sim.EPAHighway, 
-                                   30.91469, places=4)
+            if False:
+                self.model = Component.load_from_egg(os.path.join('..',
+                                                     egg_name))
+                self.model.run()
+                self.assertAlmostEqual(self.model.vehicle_sim.AccelTime, 
+                                       5.9, places=6)
+                self.assertAlmostEqual(self.model.vehicle_sim.EPACity, 
+                                       25.18837, places=4)
+                self.assertAlmostEqual(self.model.vehicle_sim.EPAHighway, 
+                                       30.91469, places=4)
+            else:
+                import subprocess
+                out = open('test.py', 'w')
+                out.write("""\
+import os.path
+import unittest
+from openmdao.main import Component
+class TestCase(unittest.TestCase):
+    def test_load(self):
+        model = Component.load_from_egg(os.path.join('..', '%s'))
+        model.run()
+        self.assertAlmostEqual(model.vehicle_sim.AccelTime, 
+                               5.9, places=6)
+        self.assertAlmostEqual(model.vehicle_sim.EPACity, 
+                               25.18837, places=4)
+        self.assertAlmostEqual(model.vehicle_sim.EPAHighway, 
+                               30.91469, places=4)
+if __name__ == '__main__':
+    unittest.main()
+""" % egg_name)
+                out.close()
+                logging.debug('Load model and run test in subprocess...')
+                out = open('test.out', 'w')
+                retcode = subprocess.call(['python', 'test.py'],
+                                          stdout=out, stderr=subprocess.STDOUT)
+                out.close()
+                inp = open('test.out', 'r')
+                for line in inp.readlines():
+                    logging.debug(line[:-1])
+                inp.close()
+                logging.debug('    retcode %d', retcode)
+                self.assertEqual(retcode, 0)
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)
