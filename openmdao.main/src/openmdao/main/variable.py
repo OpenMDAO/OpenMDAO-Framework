@@ -1,5 +1,6 @@
 #public symbols
-__all__ = ['Variable', 'UNDEFINED']
+__all__ = ['Variable', 'UNDEFINED', 
+           'VariableChangedEvent', 'VariableRemovePendingEvent']
 __version__ = "0.1"
 
 import copy
@@ -22,7 +23,7 @@ class VariableChangedEvent(object):
     def __init__(self, var):
         self.var = var
         
-class VariableRemovedEvent(object):
+class VariableRemovePendingEvent(object):
     def __init__(self, var):
         self.var = var
 
@@ -250,19 +251,6 @@ class Variable(HierarchyMember):
                                  variable.get_pathname()+"' of type '"+
                                  str(type(variable))+"'", TypeError)
             
-    #def check_direction(self, variable, passthru=False):
-        #"""Raise a RuntimeError if this Variable and the one passed in are
-        #not directionally compatible.
-        #"""
-        #if passthru:
-            #if self.iostatus != variable.iostatus:
-                #self.raise_exception('iostatus incompatible for passthru connection to '+
-                                     #variable.get_pathname(), RuntimeError)
-        #else:
-            #if self.iostatus != INPUT or self.iostatus == variable.iostatus:
-                #self.raise_exception('iostatus incompatible for connection to '+
-                                     #variable.get_pathname(), RuntimeError)
-
     def _convert(self, variable):
         """Some Variables, e.g., Float, will need to override this in order to
         convert units from those in connected variables. By default, no 
@@ -374,7 +362,7 @@ class Variable(HierarchyMember):
         if self.observers is None:
             self.observers = { event_class: [obs_funct] }
         else:
-            evlist = self.observers.get(event_class)
+            evlist = self.observers.get(event_class, None)
             if evlist:
                 evlist.append(obs_funct)
             else:                

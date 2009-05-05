@@ -14,10 +14,12 @@ class RefVariable(Variable):
     
     def __init__(self, name, parent, iostatus, default=UNDEFINED, doc=None):
         self._expr = None
-        # install a property in our parent's class if the name isn't already used
+        # put ourself in our parent's __dict__ if the name isn't already used
         if parent and not hasattr(parent.__class__, name) and not hasattr(parent, name):
-            setattr(parent.__class__, name,
-                property(lambda parent : parent.getvar(name), None, None))
+            parent.__dict__[name] = self
+            ## dynamically adding properties doesn't play nice with pickle, so don't do it
+            #setattr(parent.__class__, name,
+            #    property(lambda parent : parent.getvar(name), None, None))
         super(RefVariable, self).__init__(name, parent, iostatus, doc=doc,
                                           val_types=(basestring,str,unicode), 
                                           implicit_creation=False)
@@ -33,8 +35,12 @@ class RefVariable(Variable):
                 single_name = True
             else:
                 single_name = False
-            self._expr = ExprEvaluator(refval, self.parent, 
-                                       single_name=single_name)
+            if self.parent:
+                self._expr = ExprEvaluator(refval, self.parent, 
+                                           single_name=single_name)
+            else:
+                self.raise_exception('RefVariable requires self.parent to exist.',
+                                     RuntimeError)
         else:
             self.raise_exception('reference must be a string', TypeError)
     
@@ -59,9 +65,9 @@ class RefVariable(Variable):
         reference string. 
         """
         if self.iostatus == OUTPUT:
-            return self._getexpr().get_external_outputs()
+            return self._getexpr().output_names
         else:
-            return self._getexpr().get_external_inputs()
+            return self._getexpr().input_names
     
     def get_referenced_compnames(self):
         """Return a set of source or dest Component names based on the 
@@ -79,15 +85,16 @@ class RefVariableArray(Variable):
         self._exprs = []
         # install a property in our parent's class if the name isn't already used
         if parent and not hasattr(parent.__class__, name) and not hasattr(parent, name):
-            setattr(parent.__class__, name,
-                property(lambda parent : parent.getvar(name), None, None))
-        super(RefVariable, self).__init__(name, parent, iostatus, doc=doc,
+            parent.__dict__[name] = self
+            #setattr(parent.__class__, name,
+             #   property(lambda parent : parent.getvar(name), None, None))
+        super(RefVariableArray, self).__init__(name, parent, iostatus, doc=doc,
                                           val_types=(list), 
                                           implicit_creation=False)
             
             
     def _pre_assign(self, val):
-        newval = super(StringList, self)._pre_assign(val)
+        newval = super(RefVariableArray, self)._pre_assign(val)
         
         nonstrings = [s for s in newval if not isinstance(s,basestring)]
         if len(nonstrings) > 0:
@@ -106,7 +113,7 @@ class RefVariableArray(Variable):
             self.raise_exception('invalid list index: '+str(index),
                                  IndexError)            
         if len(index) > 1:
-            self.raise_exception('RefVarArray does not support nested lists',
+            self.raise_exception('RefVariableArray does not support nested lists',
                                  IndexError)
         if index[0] >= len(self.get_value()) or index[0] < 0:
             self.raise_exception('index '+str(index[0])+' out of range',
@@ -122,9 +129,13 @@ class RefVariableArray(Variable):
         else:
             single_name = False
         try:
-            for s in refval:
-                self._exprs.append(ExprEvaluator(s, self.parent, 
-                                                 single_name=single_name))
+            if self.parent:
+                for s in refval:
+                    self._exprs.append(ExprEvaluator(s, self.parent, 
+                                                     single_name=single_name))
+            else:
+                self.raise_exception('RefVariableArray requires self.parent to exist.',
+                                     RuntimeError)
         except Exception, err:
             self._exprs = []
             raise err
@@ -141,7 +152,7 @@ class RefVariableArray(Variable):
     def _set_referenced_values(self, vals):
         """Set the values of the objects referred to by our reference strings."""
         if len(vals) != len(self._exprs):
-            self.raise_exception('RefVar array and list of assigned values have different lengths')
+            self.raise_exception('RefVariableArray and list of assigned values have different lengths')
         for val,expr in zip(vals, self._exprs):
             expr.set(val)
         
@@ -150,9 +161,9 @@ class RefVariableArray(Variable):
     def get_referenced_varpaths(self):
         """Return the set of Variables referenced in the string expression."""
         if self.iostatus == OUTPUT:
-            sets = [ex.get_external_outputs() for ex in self._exprs]
+            sets = [ex.output_names for ex in self._exprs]
         else:
-            sets = [ex.get_external_inputs() for ex in self._exprs]
+            sets = [ex.input_names for ex in self._exprs]
         ret = set()
         for s in sets:
             ret.update(s)

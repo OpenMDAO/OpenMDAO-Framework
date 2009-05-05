@@ -28,9 +28,11 @@ class Workflow(Component):
 
     def add_node(self, node):
         """ Add a new node to the end of the flow. """
-        assert IComponent.providedBy(node)
-        assert not IDriver.providedBy(node)
-        self.nodes.append(node)
+        if IComponent.providedBy(node) and not IDriver.providedBy(node):
+            self.nodes.append(node)
+        else:
+            self.raise_exception('%s is either a Driver or is not a Component' % node.get_pathname(),
+                                 TypeError)
         
     def remove_node(self, node):
         """Remove a component from this Workflow and any of its children."""

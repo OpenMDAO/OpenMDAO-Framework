@@ -18,6 +18,7 @@ from openmdao.main import Container, String
 from openmdao.main.component import Component, STATE_IDLE
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.refvariable import RefVariable, RefVariableArray
 from openmdao.main.constants import SAVE_PICKLE
 from openmdao.main.exceptions import RunFailed, CircularDependencyError
 from openmdao.main.filevar import FileVariable
@@ -41,6 +42,7 @@ class Assembly (Component):
         self._sockets = {}
         self._child_io_graphs = {}
         self._need_child_io_update = True
+        self._drivers = []
         
         # A graph of Variable names (local path), with connections between 
         # Variables as directed edges.  Children are queried for dependencies
@@ -63,7 +65,9 @@ class Assembly (Component):
         # List of meta-data dictionaries.
         self.external_files = []
 
-
+    def get_component_graph(self):
+        return self._comp_graph
+    
     def _get_socket_plugin(self, name):
         """Return plugin for the named socket"""
         try:
@@ -124,6 +128,8 @@ class Assembly (Component):
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
             self._comp_graph.add_node(obj.name)
+        if IDriver.providedBy(obj):
+            self._drivers.append(obj)
         return obj
     
     def get_var_graph(self):
@@ -142,9 +148,14 @@ class Assembly (Component):
             self._var_graph.add_edges_from(graph.edges())
         self._need_child_io_update = False
             
+    def get_io_graph(self):
+        """For now, just return our base class version of get_io_graph."""
+        # TODO: make this return an actual graph of inputs to outputs based on 
+        #       the contents of this Assembly
+        return super(Assembly, self).get_io_graph()
+    
     def remove_child(self, name):
-        """Remove the named object from this container and notify any 
-        observers.
+        """Remove the named object from this container and notify any observers.
         """
         if '.' in name:
             self.raise_exception('remove_child does not allow dotted path names like %s' %
@@ -157,6 +168,8 @@ class Assembly (Component):
                 if childgraph is not None:
                     self._var_graph.remove_nodes_from(childgraph)
                 del self._child_io_graphs[name]
+        if IDriver.providedBy(obj):
+            self._drivers.remove(obj)
             
         if name in self._sockets:
             setattr(self, name, None)
@@ -287,14 +300,14 @@ class Assembly (Component):
         if destcomp is self and destvar.iostatus == OUTPUT: # boundary output
             if destvar.valid is True and srcvar.valid is False:
                 self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
+                if self.parent:
+                    # tell the parent that anyone connected to our boundary output 
+                    # is invalid.
+                    # Note that it's a dest var in this scope, but a src var in the 
+                    # parent scope.
+                    self.parent.invalidate_deps([destvar], True)
             destvar.valid = srcvar.valid
                 
-            #if destvar.valid is False and self.parent:
-                ## tell the parent that anyone connected to our boundary output 
-                ## is invalid.
-                ## Note that it's a dest var in this scope, but a src var in the 
-                ## parent scope.
-                #self.parent.invalidate_deps([destvar])
         elif srccomp is self and srcvar.iostatus == INPUT: # passthru input
             if srcvar.valid is True and destvar.valid is False:
                 self._logger.debug('(connect) invalidating %s' % srcvar.get_pathname())
@@ -369,9 +382,15 @@ class Assembly (Component):
         Note that we're called after incomp has set its execution directory,
         so we'll need to account for this during file transfers."""
         
+        if self._need_child_io_update:
+            self._update_child_io_graph_info() # make sure we have all of the child io graph data
+            
         for vname in varnames:
             preds = self._var_graph.pred.get(vname, None)
             var = self._var_graph.label[vname]
+            if isinstance(var, RefVariable) or isinstance(var, RefVariableArray):
+                # ref var has changed, so dependency graph for driver may have changed
+                pass  # TODO: do something here
             if preds: # if var has a source
                 for srcname in preds.keys():
                     srcvar = self._var_graph.label[srcname]

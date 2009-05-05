@@ -17,6 +17,8 @@ class RefVariableTestCase(unittest.TestCase):
         RefVariable('desvar', self.comp1, OUTPUT)
         Float('x',self.comp2, OUTPUT, default=99.9)
         Float('y',self.comp2, INPUT, default=99.9)
+        Float('x',self.comp1, OUTPUT, default=99.9)
+        Float('y',self.comp1, INPUT, default=99.9)
         
     def test_assignment(self):
         self.comp1.objective.value = 'comp2.x'
@@ -26,13 +28,12 @@ class RefVariableTestCase(unittest.TestCase):
         self.comp1.desvar.refvalue = 3.14
         self.assertEqual(self.comp2.y, 3.14)
 
+    def test_ref_comps(self):
+        self.comp1.objective.value = 'comp2.x+3*comp1.x'
+        comps = self.comp1.objective.get_referenced_compnames()
+        self.assertEqual(set(['comp2','comp1']), comps)
+        
     def test_bad_assign(self):
-        try:
-            self.comp1.objective = 'comp2.x'
-        except AttributeError, err:
-            self.assertEqual(str(err), "can't set attribute")
-        else:
-            self.fail('expected AttributeError')
         try:
             self.comp1.objective.value = None
         except TypeError, err:

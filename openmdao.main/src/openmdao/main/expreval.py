@@ -179,7 +179,7 @@ def translate_expr(text, exprobj, single_name=False):
     
     try:
         if single_name:
-            simple_str = lhs_fancyname + StringEnd()
+            simple_str = fancyname + StringEnd()
             return ''.join(simple_str.parseString(text))
         else:
             return ''.join(equation.parseString(text))
@@ -255,7 +255,6 @@ class ExprEvaluator(object):
         if scope is None:
             raise RuntimeError(
                     'ExprEvaluator cannot evaluate expression without scope.')
-        
         try:
             return eval(self._code, scope.__dict__, locals())
         except Exception, err:
