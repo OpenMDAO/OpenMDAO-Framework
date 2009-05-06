@@ -24,7 +24,6 @@ class Simple(Component):
         self.run_count += 1
         self.c = self.a + self.b
         self.d = self.a - self.b
-        self._logger.debug('**** %s: a=%d, b=%d, c=%d, d=%d' % (self.get_pathname(),self.a,self.b,self.c,self.d))
 
 allcomps = ['sub.comp1','sub.comp2','sub.comp3','sub.comp4','sub.comp5','sub.comp6',
             'comp7','comp8']
