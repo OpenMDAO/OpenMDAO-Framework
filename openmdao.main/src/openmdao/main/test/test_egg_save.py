@@ -270,9 +270,8 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg()
         except ValueError, exc:
-            self.assertEqual(str(exc).startswith(
-                "Egg_TestModel: Can't save, Egg_TestModel.Oddball directory"),
-                True)
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball directory"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
 
@@ -288,8 +287,8 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg()
         except ValueError, exc:
-            self.assertEqual(str(exc).startswith(
-                "Egg_TestModel: Can't save, Egg_TestModel.Source file"), True)
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Source file"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
         finally:
@@ -306,8 +305,8 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg()
         except ValueError, exc:
-            self.assertEqual(str(exc).startswith(
-                "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"), True)
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
         finally:

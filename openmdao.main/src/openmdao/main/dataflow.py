@@ -67,6 +67,12 @@ class Dataflow(Workflow):
         else:
             self._graph[comp1name][comp2name] = refcount
     
+    def run_subset(self, exclude=None):
+        """Run only a subset of our child Components, excluding those specified."""
+        for node in self.nodes_iter():
+            if node != self and node not in exclude:
+                node.run()
+        
     def nodes_iter(self):
         """Iterate through the nodes in dataflow order, allowing for multiple Driver
         loops within the same Assembly.
