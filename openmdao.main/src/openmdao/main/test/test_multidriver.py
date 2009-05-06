@@ -74,25 +74,23 @@ class MultiDriverTestCase(unittest.TestCase):
         top.add_child(CONMINdriver('driver1',top))
         top.driver1.iprint = 0
         top.driver1.maxiters = 30
-        top.driver1.set('objective', 'adder3.sum')
-        top.driver1.set('design_vars', ['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x'])
+        top.driver1.objective.value = 'adder3.sum+50.'
+        top.driver1.design_vars.value = ['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']
         top.driver1.lower_bounds = [-10, -10, -10, -10]
         top.driver1.upper_bounds = [99, 99, 99, 99]
-        top.driver1.set('constraints', [
+        top.driver1.constraints.value = [
             'comp1.x**2 + comp2.x**2 + comp3.x**2 + comp4.x**2 + comp1.x-comp2.x+comp3.x-comp4.x-8.0',
             'comp1.x**2 + 2.*comp2.x**2 + comp3.x**2 + 2.*comp4.x**2 - comp1.x - comp4.x -10.',
             '2.0*comp1.x**2 + comp2.x**2 + comp3.x**2 + 2.0*comp1.x - comp2.x - comp4.x -5.0',
-        ])
+        ]
         self.opt_objective = 6.
         self.opt_design_vars = [0., 1., 2., -1.]
         
 
     def test_one_driver(self):
-        self.assertEqual(['driver1', 'comp2', 'comp3', 'comp1', 'comp4', 'adder3'], 
+        self.assertEqual(['comp2', 'comp3', 'comp1', 'comp4', 'adder3'], 
                          self.top.driver1.sorted_components())
         self.top.run()
-        val = self.top.comp1.f_x+self.top.comp2.f_x+self.top.comp3.f_x+self.top.comp4.f_x
-        self.assertEqual(6.0, val)
         self.assertAlmostEqual(self.opt_objective, 
                                self.top.driver1.objective.refvalue, places=2)
         self.assertAlmostEqual(self.opt_design_vars[0], 

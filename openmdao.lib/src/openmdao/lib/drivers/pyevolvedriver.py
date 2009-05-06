@@ -17,7 +17,6 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     the NASA Glenn Research Center, which uses a hypersphere defined
     by a pair of parents to find the space of possible children. 
     children are then picked at random from that space. """
-
     
     gMom = args['mom']
     gDad = args['dad']
@@ -30,7 +29,7 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     numparents = 2.0
         
     # find the center of mass (average value) between the two parents for each dimension
-    cmass = [(gm+gd)/2.0 for gm,gd in zip(gMom,gDad)]
+    cmass = [(gm+gd)*0.5 for gm,gd in zip(gMom,gDad)]
     
     radius = max(sum([(cm-gM)**2 for cm,gM in zip(cmass,gMom)]),
                  sum([(cm-gD)**2 for cm,gD in zip(cmass,gDad)])
@@ -80,30 +79,6 @@ class pyevolvedriver(Driver):
     TODO: Implement function-slots as sockets
     """
 
-    #def _get_objective(self):
-        #if self._objective is None:
-            #return ''
-        #else:
-            #return self._objective.text
-
-    #def _set_objective(self,obj):
-        #self._objective = None
-        #try:
-            #self._objective = ExprEvaluator(obj,self)
-        #except AttributeError,err:
-            #self.raise_exception('No objective has been set', RuntimeError)
-        #except RuntimeError,err:
-            #self.raise_exception("objective specified, '"+str(obj)+"', is not valid a valid OpenMDAO object. If it does exist in the model, a framework variable may need to be created",
-                                 #RuntimeError)            
-    #objective = property(_get_objective,_set_objective)
-
-    #def _get_objective_val(self):
-        #"""evaluate the new objective"""
-        #if self.objective is None:
-            #return None
-        #else:
-            #return self._objective.evaluate()     
-
     def __init__(self,name,parent=None,doc=None): 
         super(pyevolvedriver,self).__init__(name,parent,doc)
 
@@ -111,7 +86,8 @@ class pyevolvedriver(Driver):
         self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin
 
         #inputs - value of None means use default
-        RefVariable('objective', self, INPUT)
+        RefVariable('objective', self, INPUT,
+                          doc= 'A string containing the objective function expression.')
         Int('freq_stats',self,INPUT,default = 0)
         Float('seed',self,INPUT,default = 0)
         Float('population_size',self,INPUT,default = Consts.CDefGAPopulationSize)
@@ -133,9 +109,6 @@ class pyevolvedriver(Driver):
         #outputs
         Wrapper('best_individual',self,OUTPUT,default = self.genome)
 
-        #internal stuff
-        #self._objective = None
-
 
     def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
         if funcList == None: return
@@ -149,29 +122,29 @@ class pyevolvedriver(Driver):
 
     def evaluate(self,genome):
         self.decoder(genome)
-        self.parent.workflow.run()
-        #return self._get_objective_val()
+        self.run_referenced_comps()
         return self.objective.refvalue
 
     def verify(self):
         #genome verify
         if not isinstance(self.genome,GenomeBase.GenomeBase):
-            self.raise_exception("genome provided is not valid. Does not inherit from pyevolve.GenomeBase.GenomeBase",TypeError)
+            self.raise_exception(
+                "genome provided is not valid. Does not inherit from pyevolve.GenomeBase.GenomeBase",
+                TypeError)
 
         #decoder verify
         if self.decoder == None: # check if None first
-            self.raise_exception("decoder specified as 'None'. A valid decoder must be present",TypeError)
+            self.raise_exception("decoder specified as 'None'. A valid decoder must be present",
+                                 TypeError)
         try: # won't work if decoder is None
             self.decoder(self.genome)
         except TypeError:
-            self.raise_exception("decoder specified as does not have the right signature. Must take only 1 argument",TypeError)
+            self.raise_exception(
+                "decoder specified as does not have the right signature. Must take only 1 argument",
+                TypeError)
 
     def execute(self):
         """ Perform the optimization"""
-        
-        # check objective value
-        #if self.objective == '':
-            #self.raise_exception("objective specified as None, please provide an objective expression.",RuntimeError)
         
         self.verify()
         #configure the evaluator function of the genome

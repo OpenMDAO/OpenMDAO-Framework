@@ -39,8 +39,8 @@ class Simple(Component):
         self.d = self.a - self.b
 
 class DummyComp(Component):
-    def __init__(self, name):
-        super(DummyComp, self).__init__(name)
+    def __init__(self, name, parent=None):
+        super(DummyComp, self).__init__(name, parent)
         self.r = 1.0
         self.r2 = -1.0
         self.rout = 0.0
@@ -72,23 +72,16 @@ class DummyComp(Component):
 class AssemblyTestCase(unittest.TestCase):
 
     def setUp(self):
-        """this setup function will be called before each test in this class"""
+        """
+                         top
+                      /       \
+                      
+        """
         self.asm = Assembly('top', None)
-        dc1 = DummyComp('comp1')
-        self.asm.add_child(dc1)
-        #self.asm.workflow.add_node(dc1)
-        
-        nested = Model('nested')
-        self.asm.add_child(nested)
-        #self.asm.workflow.add_node(nested)
-        nested_dc = DummyComp('comp1')
-        nested.add_child(nested_dc)
-        #nested.workflow.add_node(nested_dc)
-        
-        children = [DummyComp(x) for x in ['comp2','comp3']]
-        for child in children:
-            self.asm.add_child(child)
-            #self.asm.workflow.add_node(child)
+        dc1 = DummyComp('comp1', self.asm)        
+        nested = Assembly('nested', self.asm)
+        nested_dc = DummyComp('comp1', nested)        
+        children = [DummyComp(x, self.asm) for x in ['comp2','comp3']]
         
     def test_lazy_eval(self):
         top = Assembly('top', None)
@@ -203,11 +196,11 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(self.asm.get('comp2.rout'), 27.)
                 
     def test_create_passthru_alias(self):
-        self.asm.set('comp1.r', 75.4)
-        self.asm.create_passthru('comp1.r','foobar')
-        self.assertEqual(self.asm.get('foobar'), 75.4)
+        self.asm.nested.set('comp1.r', 75.4)
+        self.asm.nested.create_passthru('comp1.r','foobar')
+        self.assertEqual(self.asm.nested.get('foobar'), 75.4)
         self.asm.run()
-        self.assertEqual(self.asm.get('foobar'), 75.4)
+        self.assertEqual(self.asm.nested.get('foobar'), 75.4)
         
     def test_passthru_already_connected(self):
         self.asm.connect('comp1.rout','comp2.r')
@@ -284,7 +277,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp2.rout','comp1.r')
         except RuntimeError, err:
-            self.assertEqual("top: circular dependency (['comp2', 'comp1']) would be created by"+
+            self.assertEqual("top.dataflow: circular dependency (['comp2', 'comp1']) would be created by"+
                              " connecting comp2.rout to comp1.r", str(err))
         else:
             self.fail('exception expected')

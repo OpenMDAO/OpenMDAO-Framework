@@ -17,7 +17,7 @@ from openmdao.main.interfaces import IAssembly, IComponent, IDriver, IVariable
 from openmdao.main import Container, String
 from openmdao.main.component import Component, STATE_IDLE
 from openmdao.main.dataflow import Dataflow
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.variable import Variable, INPUT, OUTPUT
 from openmdao.main.refvariable import RefVariable, RefVariableArray
 from openmdao.main.constants import SAVE_PICKLE
 from openmdao.main.exceptions import RunFailed, CircularDependencyError
@@ -51,11 +51,10 @@ class Assembly (Component):
         # Variable object as data.
         self._var_graph = nx.LabeledDiGraph()
         
-        self._comp_graph = nx.DiGraph()
-        
         # add any Variables we may have inherited from our base classes
-        # to our graph, since our version of add_child wasn't active yet
-        for missing in [v for v in self.values() if IVariable.providedBy(v)
+        # to our graph, since our version of add_child wasn't active 
+        # when they were added.
+        for missing in [v for v in self.values() if isinstance(v, Variable)
                                                  and v.name not in self._var_graph]:
             self._var_graph.add_node(missing.name, data=missing)
         
@@ -65,8 +64,8 @@ class Assembly (Component):
         # List of meta-data dictionaries.
         self.external_files = []
 
-    def get_component_graph(self):
-        return self._comp_graph
+    def get_dataflow(self):
+        return self._dataflow
     
     def _get_socket_plugin(self, name):
         """Return plugin for the named socket"""
@@ -127,7 +126,7 @@ class Assembly (Component):
             # it in later
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
-            self._comp_graph.add_node(obj.name)
+            self._dataflow.add_node(obj.name)
         if IDriver.providedBy(obj):
             self._drivers.append(obj)
         return obj
@@ -162,7 +161,7 @@ class Assembly (Component):
                                  name, ValueError)        
         obj = self.get(name)
         if IComponent.providedBy(obj):
-            self._comp_graph.remove_node(obj.name)
+            self._dataflow.remove_node(obj.name)
             if name in self._child_io_graphs:
                 childgraph = self._child_io_graphs[name]
                 if childgraph is not None:
@@ -231,13 +230,13 @@ class Assembly (Component):
             var = self._pub[varname]
         else:
             comp = getattr(self, compname)
-            if not IComponent.providedBy(comp):
-                self.raise_exception('%s is not a Component' % compname, TypeError)
+            if not isinstance(comp, Container):
+                self.raise_exception('%s is not a Container' % compname, TypeError)
             if '.' in varname:
                 self.raise_exception('%s must be a simple name, not a dotted path' %
                                      varname, NameError)
             var = comp.getvar(varname)
-        if not IVariable.providedBy(var):
+        if not isinstance(var, Variable):
             self.raise_exception('%s is not a Variable' % varname, TypeError)
         return (compname, comp, varname, var)
     
@@ -272,34 +271,17 @@ class Assembly (Component):
         
         if self._need_child_io_update:
             self._update_child_io_graph_info() # make sure we have all of the child io graph data
-        self._logger.debug('adding edge %s --> %s' % (srcpath,destpath))
+        if __debug__: self._logger.debug('adding edge to var graph %s --> %s' % (srcpath,destpath))
         
         if destcomp is not self and srccomp is not self: # neither var is on boundary
-            # if an edge already exists between the two components, just increment the ref count
-            try:
-                self._comp_graph[srccompname][destcompname] += 1
-            except KeyError:
-                self._comp_graph.add_edge(srccompname, destcompname, data=1)
-                
-            if not is_directed_acyclic_graph(self._comp_graph):
-                # do a little extra work here to give more info to the user in the error message
-                strongly_connected = strongly_connected_components(self._comp_graph)
-                refcount = self._comp_graph[srccompname][destcompname] - 1
-                if refcount == 0:
-                    self._comp_graph.remove_edge(srccompname, destcompname)
-                else:
-                    self._comp_graph[srccompname][destcompname] = refcount
-                for strcon in strongly_connected:
-                    if len(strcon) > 1:
-                        self.raise_exception('circular dependency (%s) would be created by connecting %s to %s' %
-                                     (str(strcon), srcpath, destpath), RuntimeError) 
+            self._dataflow.connect(srccompname, destcompname, srcvarname, destvarname)
                         
         self._var_graph.add_edge(srcpath, destpath)
             
         # invalidate destvar if necessary
         if destcomp is self and destvar.iostatus == OUTPUT: # boundary output
             if destvar.valid is True and srcvar.valid is False:
-                self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
+                if __debug__: self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
                 if self.parent:
                     # tell the parent that anyone connected to our boundary output 
                     # is invalid.
@@ -310,10 +292,10 @@ class Assembly (Component):
                 
         elif srccomp is self and srcvar.iostatus == INPUT: # passthru input
             if srcvar.valid is True and destvar.valid is False:
-                self._logger.debug('(connect) invalidating %s' % srcvar.get_pathname())
+                if __debug__: self._logger.debug('(connect) invalidating %s' % srcvar.get_pathname())
             srcvar.valid = destvar.valid
         else:
-            self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
+            if __debug__: self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
             destvar.valid = False
             self.invalidate_deps([destvar])
             
@@ -333,16 +315,24 @@ class Assembly (Component):
             self._var_graph.remove_edge(varpath, varpath2)
             var2 = self._var_graph.label[varpath2]
             if var.parent is not self and var2.parent is not self:
-                refcount = self._comp_graph[var.parent.name][var2.parent.name] - 1
-                if refcount == 0:
-                    self._comp_graph.remove_edge(var.parent.name, var2.parent.name)
-                else:
-                    self._comp_graph[var.parent.name][var2.parent.name] = refcount
+                self._dataflow.disconnect(var.parent.name, var2.parent.name)
         else:  # remove all connections from the Variable
             if len(self._var_graph.pred[varpath]) == 0:
-                self.raise_exception('%s is not connected' % varpath)
+                self.raise_exception('%s is not connected' % varpath, RuntimeError)
             self._var_graph.remove_node(varpath)
             self._var_graph.add_node(varpath, data=var)
+            if var.parent is not self:
+                # remove outgoing edges
+                for u,v in self._var_graph[varpath]:
+                    var2 = self._var_graph.label[v]
+                    if var2.parent is not self and isinstance(var2, Variable):
+                        self._dataflow.disconnect(var.parent.name, var2.parent.name)
+                # remove incoming edges
+                for u,v in self._var_graph.in_edges(varpath):
+                    var2 = self._var_graph.label[u]
+                    if var2.parent is not self and isinstance(var2, Variable):
+                        self._dataflow.disconnect(var2.parent.name, var.parent.name)
+                
         self._io_graph = None  # the io graph has changed, so have to remake it
 
     def is_destination(self, varpath):
@@ -388,16 +378,13 @@ class Assembly (Component):
         for vname in varnames:
             preds = self._var_graph.pred.get(vname, None)
             var = self._var_graph.label[vname]
-            if isinstance(var, RefVariable) or isinstance(var, RefVariableArray):
-                # ref var has changed, so dependency graph for driver may have changed
-                pass  # TODO: do something here
             if preds: # if var has a source
                 for srcname in preds.keys():
                     srcvar = self._var_graph.label[srcname]
                     if not srcvar.valid:
                         # need to backtrack to get a valid source value
                         if srcvar.parent is self: # a boundary var
-                            if self.parent and IAssembly.providedBy(self.parent):
+                            if self.parent and isinstance(self.parent, Assembly):
                                 self.parent.update_inputs(['.'.join([self.name,srcvar.name])])
                             else:
                                 self.raise_exception(
@@ -413,8 +400,8 @@ class Assembly (Component):
                             var.metadata = srcvar.metadata.copy()
                         except Exception, exc:
                             msg = "cannot transfer file from '%s' to '%s': %s" % \
-                                  ('.'.join((src, srcvar.name)),
-                                   '.'.join((dest, var.name)), str(exc))
+                                  ('.'.join((srcvar.parent.name, srcvar.name)),
+                                   '.'.join((var.parent.name, var.name)), str(exc))
                             self.raise_exception(msg, type(exc))
                         finally:
                             incomp.push_dir(incomp.get_directory())
@@ -441,7 +428,7 @@ class Assembly (Component):
         """
         super(Assembly, self).check_config()
         for name,sock in self._sockets.items():
-            iface, current, required = sock
+            iface, current, required, doc = sock
             if current is None and required is True:
                 self.raise_exception("required plugin '%s' is not present" % name,
                                      ValueError)
@@ -459,9 +446,10 @@ class Assembly (Component):
         outs = []
         while len(stack) > 0:
             name = stack.pop()
-            for vname in succ[name]:
+            successors = succ.get(name, [])
+            for vname in successors:
                 var = label[vname]
-                if IVariable.providedBy(var) and var.valid is True:
+                if isinstance(var, Variable) and var.valid is True:
                     var.valid = False
                     if var.parent is self:
                         outs.append(var)

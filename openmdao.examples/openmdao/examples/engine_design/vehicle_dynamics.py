@@ -59,7 +59,7 @@ class Vehicle_Dynamics(Component):
     def execute(self):
         ''' Calculates the instantaneous acceleration for the vehicle.       
             '''        
-        print '%s.execute()' % self.get_pathname()
+        #print '%s.execute()' % self.get_pathname()
         Torque = self.Engine_Torque*self.Torque_Ratio
         TireRadius = self.TireCirc/(2.0*pi)
         

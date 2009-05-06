@@ -166,7 +166,7 @@ class Variable(HierarchyMember):
         """Assign this Variable's value to the value of another Variable or 
         directly to another value.  Checks validity of the new value before assignment.
         """
-        self._logger.debug('setting %s to value of %s' % (self.get_pathname(),str(val)))
+        #if __debug__: self._logger.debug('setting %s to value of %s' % (self.get_pathname(),str(val)))
         if self.iostatus == OUTPUT:
             raise RuntimeError(self.get_pathname()+
                                ' is an OUTPUT Variable and cannot be set.')
@@ -176,7 +176,7 @@ class Variable(HierarchyMember):
             self._passthru.set_value(val)
             
         if self.valid is True:
-            self._logger.debug('invalidating %s'%self.get_pathname())
+            if __debug__: self._logger.debug('invalidating %s'%self.get_pathname())
             self.valid = False
             # since we've been newly invlidated, notify our parent (or it's parent) so dependent vars
             # can also be invalidated
@@ -350,7 +350,15 @@ class Variable(HierarchyMember):
             self.raise_exception("assigning index "+str(index)+
                                  " to a value of type "+
                                  str(type(val))+" failed", ValueError)        
-    
+        finally:
+            if self.valid is True:
+                if __debug__: self._logger.debug('invalidating %s'%self.get_pathname())
+                self.valid = False
+                # since we've been newly invlidated, notify our parent (or it's parent) so dependent vars
+                # can also be invalidated
+                if self.parent and hasattr(self.parent, 'invalidate_deps'):
+                    self.parent.invalidate_deps([self], notify_parent=True)
+            
     def make_public(self, child):
         """Make a given object a member of this object's public interface."""
         self.raise_exception('make_public', NotImplemented)            

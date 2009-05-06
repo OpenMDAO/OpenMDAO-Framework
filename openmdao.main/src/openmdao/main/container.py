@@ -44,7 +44,7 @@ import networkx as nx
 
 from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main import HierarchyMember
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.variable import Variable, INPUT, OUTPUT
 from openmdao.main.vartypemap import make_variable_wrapper
 from openmdao.main.log import logger
 from openmdao.main.factorymanager import create as fmcreate
@@ -62,7 +62,7 @@ class Container(HierarchyMember):
         self._pub = {}  # A container for framework accessible objects.
         self._io_graph = None
         if parent is not None and \
-           IContainer.providedBy(parent) and add_to_parent:
+           isinstance(parent, Container) and add_to_parent:
             parent.add_child(self)
 
     def items(self, pub=True, recurse=False):
@@ -105,10 +105,10 @@ class Container(HierarchyMember):
         If valid is None, return inputs regardless of validity.
         """
         if valid is None:
-            return [x for x in self._pub.values() if IVariable.providedBy(x) 
+            return [x for x in self._pub.values() if isinstance(x, Variable) 
                                                      and x.iostatus == INPUT]
         else:
-            return [x for x in self._pub.values() if IVariable.providedBy(x) 
+            return [x for x in self._pub.values() if isinstance(x, Variable) 
                                                      and x.iostatus == INPUT 
                                                      and x.valid == valid]
         
@@ -122,10 +122,10 @@ class Container(HierarchyMember):
         If valid is None, return outputs regardless of validity.
         """
         if valid is None:
-            return [x for x in self._pub.values() if IVariable.providedBy(x) 
+            return [x for x in self._pub.values() if isinstance(x, Variable)
                                                      and x.iostatus == OUTPUT]
         else:
-            return [x for x in self._pub.values() if IVariable.providedBy(x) 
+            return [x for x in self._pub.values() if isinstance(x, Variable) 
                                                      and x.iostatus == OUTPUT 
                                                      and x.valid == valid]
     
@@ -521,17 +521,17 @@ class Container(HierarchyMember):
         """Load state and other files from an egg, returns top object."""
         # TODO: handle custom class definitions.
         # TODO: handle required packages.
-        logger.debug('Loading from %s in %s...', filename, os.getcwd())
+        if __debug__: logger.debug('Loading from %s in %s...', filename, os.getcwd())
         archive = zipfile.ZipFile(filename, 'r')
         name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
-        logger.debug("    name '%s'", name)
+        if __debug__: logger.debug("    name '%s'", name)
         for info in archive.infolist():
             if not info.filename.startswith(name):
                 continue  # EGG-INFO
             if info.filename.endswith('.pyc') or \
                info.filename.endswith('.pyo'):
                 continue  # Don't assume compiled OK for this platform.
-            logger.debug("    extracting '%s'...", info.filename)
+            if __debug__: logger.debug("    extracting '%s'...", info.filename)
             dirname = os.path.dirname(info.filename)
             dirname = dirname[len(name)+1:]
             if dirname and not os.path.exists(dirname):
@@ -623,7 +623,7 @@ class Container(HierarchyMember):
         """
         if self._io_graph is None:
             self._io_graph = nx.LabeledDiGraph()
-            varlist = [x for x in self._pub.values() if IVariable.providedBy(x)]
+            varlist = [x for x in self._pub.values() if isinstance(x, Variable)]
             ins = ['.'.join([self.name,x.name]) for x in varlist if x.iostatus == INPUT]
             outs = ['.'.join([self.name,x.name]) for x in varlist if x.iostatus == OUTPUT]
             

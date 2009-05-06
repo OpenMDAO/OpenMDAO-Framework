@@ -6,21 +6,19 @@ Test the pyevolve optimizer driver
 import unittest
 import numpy
 
-from openmdao.main import Model, Component, Float
+from openmdao.main import Assembly, Component, Float, ArrayVariable
 from openmdao.main.variable import INPUT,OUTPUT
 from openmdao.lib.drivers import pyevolvedriver
 
 
 class SphereFunction(Component):
-    """ 
-    """
-    
     def __init__(self, name, parent=None, desc=None):
         super(SphereFunction, self).__init__(name, parent, desc)
         self.points = []
         self.total = 0
         
         Float('total',self,iostatus=OUTPUT)
+        ArrayVariable('points', self, iostatus=INPUT)
     
     def execute(self):
         """ calculate the sume of the squares for the list of numbers """
@@ -35,12 +33,11 @@ class pyevolvedriverTestCase(unittest.TestCase):
     #   evaluation 
     def decoder(self,genome):
         sphere = self.top.comp
-        sphere.points = [x for x in genome]
+        sphere.set('points', [x for x in genome])
     
     def setUp(self):
-        self.top = Model('top',None)
+        self.top = Assembly('top',None)
         self.top.add_child(SphereFunction('comp',self.top))
-        #self.top.workflow.add_node(self.top.comp)
         self.top.add_child(pyevolvedriver.pyevolvedriver('driver'))
 
     def tearDown(self):
@@ -180,7 +177,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         try:
             self.top.run()
         except RuntimeError, err: 
-            self.assertEqual(str(err),"top.driver: objective specified as None, please provide an objective expression." )
+            self.assertEqual(str(err),"top.driver.objective: reference is undefined" )
         else: 
             self.fail("expecting RuntimeError")
         
@@ -188,7 +185,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         try:
             self.top.driver.objective.value = "comp.badojbjective"        
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver: objective specified, 'comp.badojbjective', is not valid a valid OpenMDAO object. If it does exist in the model, a framework variable may need to be created")
+            self.assertEqual(str(err), "top.driver.objective: cannot find variable 'comp.badojbjective'")
         else: 
             self.fail("RuntimeError expected")
     

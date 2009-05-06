@@ -33,7 +33,9 @@ class Driver(Assembly):
                                                                    isinstance(v,RefVariableArray)]
         if len(invalid_refs) > 0:
             self._ref_graph = None  # force regeneration of ref graph
-            
+        
+        self._sorted_comps = None
+        
         super(Driver, self)._pre_execute()
                 
     def execute(self):
@@ -115,27 +117,31 @@ class Driver(Assembly):
     def sorted_components(self):
         """Return the names of our referenced components, sorted in dataflow order.
         """
-        if self.parent and IAssembly.providedBy(self.parent):
-            nbunch = self.get_referenced_comps()
-            graph = self.parent.get_component_graph().subgraph(nbunch=nbunch)
-            graph.add_edges_from(self.get_ref_graph(skip_inputs=True).edges())
-            self._sorted_comps = nx.topological_sort(graph)
-            if self._sorted_comps is None:
-                for strcon in strongly_connected_components(graph):
-                    if len(strcon) > 1:
-                        self.raise_exception('subgraph for driver %s has a cycle (%s)' %
-                                     (self.get_pathname(), str(strcon)), RuntimeError) 
-        else:
-            self.raise_exception('Driver requires an Assembly parent to determine dataflow', 
-                                 RuntimeError)
+        if self._sorted_comps is None:
+            if self.parent and isinstance(self.parent, Assembly):
+                nbunch = self.get_referenced_comps()
+                graph = self.parent.get_dataflow().get_graph().subgraph(nbunch=nbunch)
+                graph.add_edges_from(self.get_ref_graph(skip_inputs=True).edges())
+                self._sorted_comps = nx.topological_sort(graph)
+                if self._sorted_comps is None:
+                    for strcon in strongly_connected_components(graph):
+                        if len(strcon) > 1:
+                            self.raise_exception('subgraph for driver %s has a cycle (%s)' %
+                                         (self.get_pathname(), str(strcon)), RuntimeError)
+                if self.name in self._sorted_comps:
+                    self._sorted_comps.remove(self.name)
+            else:
+                self.raise_exception('Driver requires an Assembly parent to determine dataflow', 
+                                     RuntimeError)
         return self._sorted_comps
     
     def run_referenced_comps(self):
         """Runs the set of components that we reference via our reference variables."""
         if self.parent:
-            for compname in self.sorted_components():
-                if compname != self.name:
-                    getattr(self.parent, compname).run()
+            sorted_comps = self.sorted_components()
+            self.debug('attempting to run loop components %s' % str(sorted_comps))
+            for compname in sorted_comps:
+                getattr(self.parent, compname).run()
         else:
             self.raise_exception('Driver cannot run referenced components without a parent',
                                  RuntimeError)

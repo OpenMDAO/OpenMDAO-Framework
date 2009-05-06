@@ -92,5 +92,12 @@ class ArrayVariable(Variable):
         """Set the entry at index of our array value."""
         tmp = self._pre_assign_entry(val, index)
         self.get_value()[tuple(index)] = tmp
+        if self.valid is True:
+            if __debug__: self._logger.debug('invalidating %s'%self.get_pathname())
+            self.valid = False
+            # since we've been newly invlidated, notify our parent (or it's parent) so dependent vars
+            # can also be invalidated
+            if self.parent and hasattr(self.parent, 'invalidate_deps'):
+                self.parent.invalidate_deps([self], notify_parent=True)
 
 add_var_type_map(ArrayVariable, numpy.ndarray)

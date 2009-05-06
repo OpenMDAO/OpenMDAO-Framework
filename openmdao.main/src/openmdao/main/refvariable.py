@@ -17,9 +17,9 @@ class RefVariable(Variable):
         # put ourself in our parent's __dict__ if the name isn't already used
         if parent and not hasattr(parent.__class__, name) and not hasattr(parent, name):
             parent.__dict__[name] = self
-            ## dynamically adding properties doesn't play nice with pickle, so don't do it
-            #setattr(parent.__class__, name,
-            #    property(lambda parent : parent.getvar(name), None, None))
+        else:
+            self.warning('unable to register RefVariable %s in parent __dict__ due to name conflict'%
+                         name)
         super(RefVariable, self).__init__(name, parent, iostatus, doc=doc,
                                           val_types=(basestring,str,unicode), 
                                           implicit_creation=False)
@@ -36,8 +36,11 @@ class RefVariable(Variable):
             else:
                 single_name = False
             if self.parent:
-                self._expr = ExprEvaluator(refval, self.parent, 
-                                           single_name=single_name)
+                try:
+                    self._expr = ExprEvaluator(refval, self.parent, 
+                                               single_name=single_name)
+                except RuntimeError, err:
+                    self.raise_exception(str(err), RuntimeError)
             else:
                 self.raise_exception('RefVariable requires self.parent to exist.',
                                      RuntimeError)
@@ -83,11 +86,12 @@ class RefVariableArray(Variable):
     
     def __init__(self, name, parent, iostatus, default=UNDEFINED, doc=None):
         self._exprs = []
-        # install a property in our parent's class if the name isn't already used
+        # put ourself in our parent's __dict__ if the name isn't already used
         if parent and not hasattr(parent.__class__, name) and not hasattr(parent, name):
             parent.__dict__[name] = self
-            #setattr(parent.__class__, name,
-             #   property(lambda parent : parent.getvar(name), None, None))
+        else:
+            self.warning('unable to register RefVariableArray %s in parent __dict__ due to name conflict'%
+                         name)
         super(RefVariableArray, self).__init__(name, parent, iostatus, doc=doc,
                                           val_types=(list), 
                                           implicit_creation=False)
@@ -131,8 +135,11 @@ class RefVariableArray(Variable):
         try:
             if self.parent:
                 for s in refval:
-                    self._exprs.append(ExprEvaluator(s, self.parent, 
-                                                     single_name=single_name))
+                    try:
+                        self._exprs.append(ExprEvaluator(s, self.parent, 
+                                                         single_name=single_name))
+                    except RuntimeError, err:
+                        self.raise_exception(str(err), RuntimeError)
             else:
                 self.raise_exception('RefVariableArray requires self.parent to exist.',
                                      RuntimeError)
@@ -154,6 +161,7 @@ class RefVariableArray(Variable):
         if len(vals) != len(self._exprs):
             self.raise_exception('RefVariableArray and list of assigned values have different lengths')
         for val,expr in zip(vals, self._exprs):
+            if __debug__: self.debug('setting refvar %s to %s' % (expr.scoped_assignment_text, str(val)))
             expr.set(val)
         
     refvalue = property(_get_referenced_values, _set_referenced_values)

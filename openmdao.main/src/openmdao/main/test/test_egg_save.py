@@ -23,7 +23,7 @@ source_init = False
 sink_init = False
 
 
-class Source(Component):
+class Source(Assembly):
     """ Produces files. """
 
     def __init__(self, name='Source', *args, **kwargs):
@@ -38,6 +38,7 @@ class Source(Component):
         FileVariable('text_file', self, OUTPUT, default='source.txt')
 
         Subcontainer('sub', parent=self)
+        self.create_passthru('sub.binary_file')
 
         # Absolute external file that exists at time of save.
         path = os.path.join(self.directory, EXTERNAL_FILES[0])
@@ -158,12 +159,10 @@ class Model(Assembly):
         Source(parent=self, directory='Source')
         Oddball(parent=self, directory='Oddball')
         Sink(parent=self, directory='Sink')
-        #self.workflow.add_node(Source(parent=self, directory='Source'))
-        #self.workflow.add_node(Oddball(parent=self, directory='Oddball'))
-        #self.workflow.add_node(Sink(parent=self, directory='Sink'))
 
         self.connect('Source.text_file', 'Sink.text_file')
-        self.connect('Source.sub.binary_file', 'Sink.binary_file')
+        #self.connect('Source.sub.binary_file', 'Sink.binary_file')
+        self.connect('Source.binary_file', 'Sink.binary_file')
 
         self.Source.text_data = 'oiuyoiuyoiuy'
         self.Source.sub.binary_data = [3.14159, 2.781828, 42]

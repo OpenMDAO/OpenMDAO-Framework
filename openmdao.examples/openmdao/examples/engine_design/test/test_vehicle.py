@@ -33,4 +33,8 @@ class VehicleTestCase(unittest.TestCase):
                                81.7322022986, places=8)        
         self.assertAlmostEqual(self.model.Engine.RPM, 
                                3216.9984, places=8)        
+
+        
+if __name__ == "__main__":
+    unittest.main()
         

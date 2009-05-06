@@ -48,8 +48,8 @@ tests = [
 for tst in tests:
     ex = ExprEvaluator(tst[0], top.a, validate=False)
     logging.getLogger('').info('expr: %s' % ex.text)
-    logging.getLogger('').info('inputs: %s' % str(ex.get_external_inputs()))
-    logging.getLogger('').info('outputs: %s' % str(ex.get_external_outputs()))
+    logging.getLogger('').info('inputs: %s' % str(ex.input_names))
+    logging.getLogger('').info('outputs: %s' % str(ex.output_names))
     if ex.scoped_text != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+ex.scoped_text+" == "+tst[1])  
 
@@ -76,8 +76,8 @@ tests = [
 for tst in tests:
     ex = ExprEvaluator(tst[0], top, validate=False)
     logging.getLogger('').info('expr: %s' % ex.text)
-    logging.getLogger('').info('inputs: %s' % str(ex.get_external_inputs()))
-    logging.getLogger('').info('outputs: %s' % str(ex.get_external_outputs()))
+    logging.getLogger('').info('inputs: %s' % str(ex.input_names))
+    logging.getLogger('').info('outputs: %s' % str(ex.output_names))
     if ex.scoped_text != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+ex.scoped_text+" == "+tst[1])  
     

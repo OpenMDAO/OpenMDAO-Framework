@@ -1,4 +1,4 @@
-__all__ = ('CaseIteratorDriver',)
+__all__ = ('CaseIteratorDriver','ServerError')
 __version__ = '0.1'
 
 import Queue

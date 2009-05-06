@@ -16,9 +16,9 @@ class Workflow(Component):
 
     implements(IWorkflow)
     
-    def __init__(self, name, parent=None):
+    def __init__(self, name, parent=None, add_to_parent=True):
         """ Create an empty flow. """
-        super(Workflow, self).__init__(name, parent)
+        super(Workflow, self).__init__(name, parent, add_to_parent=add_to_parent)
         self.nodes = []
         self._iterator = None
 
@@ -48,6 +48,7 @@ class Workflow(Component):
 
     def execute(self):
         """ Run through the nodes in the workflow list. """
+        if __debug__: self._logger.debug('execute %s' % self.get_pathname())
         for node in self.nodes_iter():
             self.state = STATE_WAITING
             node.run()

@@ -40,7 +40,6 @@ class MyModel(Model):
         super(MyModel, self).__init__(name, *args, **kwargs)
         CaseIteratorDriver('driver', self)
         DrivenComponent('dc', parent=self)
-        #self.workflow.add_node(DrivenComponent('dc', parent=self))
 
 
 class DriverTestCase(unittest.TestCase):
@@ -94,7 +93,7 @@ class DriverTestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         for i, case in enumerate(cases):
             self.assertEqual(results[i].msg,
-                             "CID_TestModel.driver: Exception setting 'dc.z': CID_TestModel.dc: object has no attribute 'z'")
+                "CID_TestModel.driver: Exception setting 'dc.z': CID_TestModel.dc: object has no attribute 'z'")
 
     def test_nooutput(self):
         cases = []

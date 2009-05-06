@@ -59,8 +59,8 @@ class Component (Container):
 
     implements(IComponent)
     
-    def __init__(self, name, parent=None, doc=None, directory=''):
-        super(Component, self).__init__(name, parent, doc)
+    def __init__(self, name, parent=None, doc=None, directory='', add_to_parent=True):
+        super(Component, self).__init__(name, parent, doc, add_to_parent=add_to_parent)
         
         self.state = STATE_IDLE
         self._stop = False
@@ -116,7 +116,7 @@ class Component (Container):
                                 # so Variable validity doesn't apply. Just execute.
             self._execute_needed = True
         else:
-            if IAssembly.providedBy(self.parent):
+            if hasattr(self.parent, 'update_inputs'):
                 invalid_ins = self.get_inputs(valid=False)
                 if len(invalid_ins) > 0:
                     self.parent.update_inputs(
@@ -136,7 +136,6 @@ class Component (Container):
         """Update output variables and anything else needed after execution."""
         # make our Variables valid again
         for var in self.get_outputs(valid=False):
-            #self._logger.debug('(postexecute) validating %s' % var.get_pathname())
             var.valid = True
         self._execute_needed = False
         
@@ -144,7 +143,6 @@ class Component (Container):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
         """
-        self._logger.debug('run %s' % self.get_pathname())
         if self.directory:
             directory = self.get_directory()
             try:
@@ -160,7 +158,7 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._execute_needed or force:
-                self._logger.debug('execute %s' % self.get_pathname())
+                if __debug__: self._logger.debug('execute %s' % self.get_pathname())
                 self.execute()
             self._post_execute()
         finally:
@@ -172,7 +170,7 @@ class Component (Container):
         """Return absolute path of execution directory."""
         path = self.directory
         if not os.path.isabs(path):
-            if self.parent is not None and IComponent.providedBy(self.parent):
+            if self.parent is not None and isinstance(self.parent, Component):
                 parent_dir = self.parent.get_directory()
             else:
                 parent_dir = SimulationRoot.get_root()
@@ -237,7 +235,7 @@ class Component (Container):
         # we do that after adjusting a parent, things can go bad.
         components = [self]
         components.extend([c for c in self.values(pub=False, recurse=True)
-                                if IComponent.providedBy(c)])
+                                if isinstance(c, Component)])
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
 #            self.debug('Saving %s', comp.get_pathname())
@@ -339,11 +337,11 @@ class Component (Container):
             for obj in objs:
                 if isinstance(obj, FileVariable):
                     file_vars.add(obj)
-                elif IComponent.providedBy(obj):
+                elif isinstance(obj, Component):
                     continue
-                elif IVariable.providedBy(obj):
+                elif isinstance(obj, Variable):
                     continue
-                elif IContainer.providedBy(obj):
+                elif isinstance(obj, Container):
                     _recurse_get_file_vars(obj, file_vars)
 
         file_vars = set()
@@ -414,10 +412,10 @@ class Component (Container):
 
     def invalidate_deps(self, vars, notify_parent=False):
         """Invalidate all of our outputs."""
-        outs = [x for x in self._pub.values() if IVariable.providedBy(x) and 
+        outs = [x for x in self._pub.values() if isinstance(x, Variable) and 
                                                  x.iostatus==OUTPUT and x.valid==True]
         for out in outs:
-            #self._logger.debug('(component.invalidate_deps) invalidating %s' % out.get_pathname())
+            #if __debug__: self._logger.debug('(component.invalidate_deps) invalidating %s' % out.get_pathname())
             out.valid = False
             
         if notify_parent and self.parent and len(outs) > 0:

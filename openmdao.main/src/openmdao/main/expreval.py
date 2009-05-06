@@ -231,10 +231,10 @@ class ExprEvaluator(object):
             old_validate = self.validate
             try:
                 self.validate = False
-                scoped_assignment_text = translate_expr(
+                self.scoped_assignment_text = translate_expr(
                                             '%s = _local_setter' % self.text, 
                                             self)
-                self._assignment_code = compile(scoped_assignment_text, 
+                self._assignment_code = compile(self.scoped_assignment_text, 
                                                 '<string>','exec')
             finally:
                 self.validate = old_validate

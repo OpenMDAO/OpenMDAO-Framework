@@ -35,4 +35,23 @@ class EngineOptimizationTestCase(unittest.TestCase):
                                25.18837, places=4)
         self.assertAlmostEqual(self.model.vehicle_sim.EPAHighway, 
                                30.91469, places=4)
+
+if __name__ == "__main__":
+    import sys
+    
+    if len(sys.argv) > 1 and sys.argv[1] == '-prof':
+        import cProfile
+        import pstats
         
+        sys.argv.remove('-prof') #unittest doesn't like -prof
+        #cProfile.run('unittest.main()', 'profout')        
+        p = pstats.Stats('profout')
+        p.strip_dirs()
+        p.sort_stats('cum', 'time')
+        p.print_stats()
+        print '\n\n---------------------\n\n'
+        p.print_callers()
+        print '\n\n---------------------\n\n'
+        p.print_callees()
+    else:
+        unittest.main()
