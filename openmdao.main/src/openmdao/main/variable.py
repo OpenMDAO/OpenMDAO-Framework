@@ -176,7 +176,7 @@ class Variable(HierarchyMember):
             self._passthru.set_value(val)
             
         if self.valid is True:
-            if __debug__: self._logger.debug('invalidating %s'%self.get_pathname())
+            #if __debug__: self._logger.debug('invalidating %s'%self.get_pathname())
             self.valid = False
             # since we've been newly invlidated, notify our parent (or it's parent) so dependent vars
             # can also be invalidated
@@ -352,7 +352,7 @@ class Variable(HierarchyMember):
                                  str(type(val))+" failed", ValueError)        
         finally:
             if self.valid is True:
-                if __debug__: self._logger.debug('invalidating %s'%self.get_pathname())
+                #if __debug__: self._logger.debug('invalidating %s'%self.get_pathname())
                 self.valid = False
                 # since we've been newly invlidated, notify our parent (or it's parent) so dependent vars
                 # can also be invalidated

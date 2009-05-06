@@ -139,7 +139,7 @@ class Driver(Assembly):
         """Runs the set of components that we reference via our reference variables."""
         if self.parent:
             sorted_comps = self.sorted_components()
-            self.debug('attempting to run loop components %s' % str(sorted_comps))
+            #self.debug('attempting to run loop components %s' % str(sorted_comps))
             for compname in sorted_comps:
                 getattr(self.parent, compname).run()
         else:

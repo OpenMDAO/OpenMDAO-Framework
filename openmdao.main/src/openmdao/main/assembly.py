@@ -271,7 +271,7 @@ class Assembly (Component):
         
         if self._need_child_io_update:
             self._update_child_io_graph_info() # make sure we have all of the child io graph data
-        if __debug__: self._logger.debug('adding edge to var graph %s --> %s' % (srcpath,destpath))
+        #if __debug__: self._logger.debug('adding edge to var graph %s --> %s' % (srcpath,destpath))
         
         if destcomp is not self and srccomp is not self: # neither var is on boundary
             self._dataflow.connect(srccompname, destcompname, srcvarname, destvarname)
@@ -281,7 +281,7 @@ class Assembly (Component):
         # invalidate destvar if necessary
         if destcomp is self and destvar.iostatus == OUTPUT: # boundary output
             if destvar.valid is True and srcvar.valid is False:
-                if __debug__: self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
+                #if __debug__: self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
                 if self.parent:
                     # tell the parent that anyone connected to our boundary output 
                     # is invalid.
@@ -291,11 +291,11 @@ class Assembly (Component):
             destvar.valid = srcvar.valid
                 
         elif srccomp is self and srcvar.iostatus == INPUT: # passthru input
-            if srcvar.valid is True and destvar.valid is False:
-                if __debug__: self._logger.debug('(connect) invalidating %s' % srcvar.get_pathname())
+            #if srcvar.valid is True and destvar.valid is False:
+                #if __debug__: self._logger.debug('(connect) invalidating %s' % srcvar.get_pathname())
             srcvar.valid = destvar.valid
         else:
-            if __debug__: self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
+            #if __debug__: self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
             destvar.valid = False
             self.invalidate_deps([destvar])
             
@@ -398,7 +398,8 @@ class Assembly (Component):
                             srcvar.parent.update_outputs([srcvar.name])
                     incomp = var.parent
                     if isinstance(var, FileVariable):
-                        incomp.pop_dir()
+                        if incomp.directory:
+                            incomp.pop_dir()
                         try:
                             self.xfer_file(srcvar.parent, srcvar, incomp, var)
                             var.metadata = srcvar.metadata.copy()
@@ -408,7 +409,8 @@ class Assembly (Component):
                                    '.'.join((var.parent.name, var.name)), str(exc))
                             self.raise_exception(msg, type(exc))
                         finally:
-                            incomp.push_dir(incomp.get_directory())
+                            if incomp.directory:
+                                incomp.push_dir(incomp.get_directory())
                     else:
                         try:
                             var.setvar(None, srcvar)
