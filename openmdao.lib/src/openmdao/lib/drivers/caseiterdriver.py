@@ -6,7 +6,7 @@ import threading
 import time
 
 from openmdao.main import Driver, Bool, Int
-from openmdao.main.exceptions import RunFailed, RunStopped
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.variable import INPUT
 from openmdao.main.util import filexfer
@@ -109,7 +109,7 @@ class CaseIteratorDriver(Driver):
                 if len(self._servers) < self._n_servers:
                     self.warning('Only %d servers created', len(self._servers))
             else:
-                self.raise_exception('No servers created!', RunFailed)
+                self.raise_exception('No servers created!', RuntimeError)
 
             # Kick-off initial state.
             for name in self._servers.keys():

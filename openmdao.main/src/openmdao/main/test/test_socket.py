@@ -62,8 +62,16 @@ class SocketTestCase(unittest.TestCase):
         self.sc.iterator = ListCaseIterator([Case(), Case(), Case()])
         plugin = self.sc.iterator
         self.sc.remove_socket('iterator')
+
         try:
             plugin = self.sc.iterator
+        except AttributeError, exc:
+            self.assertEqual("SocketComp: no such socket 'iterator'", str(exc))
+        else:
+            self.fail('AttributeError expected')
+
+        try:
+            self.sc.iterator = None
         except AttributeError, exc:
             self.assertEqual("SocketComp: no such socket 'iterator'", str(exc))
         else:

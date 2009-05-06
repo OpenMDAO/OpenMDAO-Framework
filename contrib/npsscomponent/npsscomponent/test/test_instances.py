@@ -15,6 +15,7 @@ from numpy.testing import assert_equal
 from openmdao.main import Assembly, Component, ArrayVariable, Bool, \
                           FileVariable, Float, Int, String, StringList
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
 
@@ -162,17 +163,11 @@ class Model(Assembly):
         self.Source.binary_data = [3.14159, 2.781828, 42]
 
         name = 'NPSS_A'
-        directory = \
-            os.path.join(pkg_resources.resource_filename('npsscomponent',
-                                                         'test'), name)
-        Passthrough(name, self, directory=directory)
+        Passthrough(name, self, directory=name)
         self.workflow.add_node(self.NPSS_A)
 
         name = 'NPSS_B'
-        directory = \
-            os.path.join(pkg_resources.resource_filename('npsscomponent',
-                                                         'test'), name)
-        Passthrough(name, self, directory=directory)
+        Passthrough(name, self, directory=name)
         self.workflow.add_node(self.NPSS_B)
 
         self.workflow.add_node(Sink(parent=self))
@@ -219,8 +214,12 @@ class Model(Assembly):
 
 class NPSSTestCase(unittest.TestCase):
 
+    directory = pkg_resources.resource_filename('npsscomponent', 'test')
+
     def setUp(self):
         """ Called before each test in this class. """
+        # Set new simulation root so we can legally access files.
+        SimulationRoot.chdir(NPSSTestCase.directory)
         self.model = Model()
 
     def tearDown(self):
@@ -229,10 +228,11 @@ class NPSSTestCase(unittest.TestCase):
         shutil.rmtree(self.model.NPSS_A.directory)
         shutil.rmtree(self.model.NPSS_B.directory)
         self.model = None
-        if os.getcwd() != ORIG_DIR:
-            bad_dir = os.getcwd()
-            os.chdir(ORIG_DIR)
-            self.fail('Ended in %s, expected %s' % (bad_dir, ORIG_DIR))
+        end_dir = os.getcwd()
+        SimulationRoot.chdir(ORIG_DIR)
+        if end_dir != NPSSTestCase.directory:
+            self.fail('Ended in %s, expected %s' \
+                      % (end_dir, NPSSTestCase.directory))
 
     def test_connectivity(self):
         logging.debug('')
