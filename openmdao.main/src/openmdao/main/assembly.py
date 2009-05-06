@@ -34,7 +34,7 @@ class Assembly (Component):
     implements(IAssembly)
     
     def __init__(self, name, parent=None, doc=None, directory=''):
-        super(Assembly, self).__init__(name, parent, doc)
+        super(Assembly, self).__init__(name, parent, doc, directory=directory)
         
         self.state = STATE_IDLE
         self._stop = False
@@ -359,7 +359,11 @@ class Assembly (Component):
         graph = self._var_graph
         for outname, inname in graph.edges():
             outvar = graph.label[outname]
+            if not isinstance(outvar, Variable):
+                continue
             invar = graph.label[inname]
+            if not isinstance(invar, Variable):
+                continue
             if outvar.parent is self or invar.parent is self:
                 if show_passthru:
                     conns.append((outname, inname))
