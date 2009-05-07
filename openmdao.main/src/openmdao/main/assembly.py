@@ -34,7 +34,7 @@ class Assembly (Component):
     implements(IAssembly)
     
     def __init__(self, name, parent=None, doc=None, directory=''):
-        super(Assembly, self).__init__(name, parent, doc)
+        super(Assembly, self).__init__(name, parent, doc, directory)
         
         self.state = STATE_IDLE
         self._stop = False
@@ -394,7 +394,8 @@ class Assembly (Component):
                             srcvar.parent.update_outputs([srcvar.name])
                     incomp = var.parent
                     if isinstance(var, FileVariable):
-                        incomp.pop_dir()
+                        if incomp.directory:
+                            incomp.pop_dir()
                         try:
                             self.xfer_file(srcvar.parent, srcvar, incomp, var)
                             var.metadata = srcvar.metadata.copy()
@@ -404,7 +405,8 @@ class Assembly (Component):
                                    '.'.join((var.parent.name, var.name)), str(exc))
                             self.raise_exception(msg, type(exc))
                         finally:
-                            incomp.push_dir(incomp.get_directory())
+                            if incomp.directory:
+                                incomp.push_dir(incomp.get_directory())
                     else:
                         try:
                             var.setvar(None, srcvar)

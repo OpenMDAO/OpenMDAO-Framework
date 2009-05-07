@@ -299,9 +299,9 @@ class Component (Container):
                 if force_relative:
                     if path.startswith(src_dir):
                         save_path = self._relpath(path, src_dir)
-                        if os.path.isabs(fvar.value):
+                        if os.path.isabs(fvar.get_value()):
                             path = self._relpath(path, comp_dir)
-                            fixup_fvar.append((fvar, fvar.value))
+                            fixup_fvar.append((fvar, fvar.get_value()))
                             fvar.set_value(path)
 #                            self.debug('        path now %s', path)
                     else:
@@ -325,7 +325,7 @@ class Component (Container):
             for meta, path in fixup_meta:
                 meta['path'] = path
             for fvar, path in fixup_fvar:
-                fvar.value = path
+                fvar.set_value(path)
 
     def get_file_vars (self):
         """Return list of FileVariables owned by this component."""
