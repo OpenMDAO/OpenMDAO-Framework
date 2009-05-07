@@ -515,7 +515,7 @@ class NPSScomponent(Component):
             self.raise_exception('Exception during run: %s' % str(exc),
                                  RuntimeError)
 
-    def make_public(self, obj_info):
+    def make_public(self, obj_info, iostatus=INPUT):
         """
         Overloading make_public() so that we can do the following
         on-the-fly rather than having to manually define variables:
@@ -532,7 +532,7 @@ class NPSScomponent(Component):
 
         new_info = []
         for entry in lst:
-            iostat = INPUT
+            iostat = iostatus
             metadata = {}
 
             if isinstance(entry, basestring):

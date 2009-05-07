@@ -306,7 +306,7 @@ class CaseIteratorDriver(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
-                self.parent.workflow.run()
+                self.parent.run_subset(exclude=[self])
             except Exception, exc:
                 self._exceptions[server] = exc
         else:

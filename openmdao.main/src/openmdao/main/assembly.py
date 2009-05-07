@@ -20,7 +20,7 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.variable import Variable, INPUT, OUTPUT
 from openmdao.main.refvariable import RefVariable, RefVariableArray
 from openmdao.main.constants import SAVE_PICKLE
-from openmdao.main.exceptions import RunFailed, CircularDependencyError
+from openmdao.main.exceptions import CircularDependencyError
 from openmdao.main.filevar import FileVariable
 from openmdao.main.util import filexfer
 
@@ -271,7 +271,7 @@ class Assembly (Component):
         
         if self._need_child_io_update:
             self._update_child_io_graph_info() # make sure we have all of the child io graph data
-        if __debug__: self._logger.debug('adding edge to var graph %s --> %s' % (srcpath,destpath))
+        #if __debug__: self._logger.debug('adding edge to var graph %s --> %s' % (srcpath,destpath))
         
         if destcomp is not self and srccomp is not self: # neither var is on boundary
             self._dataflow.connect(srccompname, destcompname, srcvarname, destvarname)
@@ -281,7 +281,7 @@ class Assembly (Component):
         # invalidate destvar if necessary
         if destcomp is self and destvar.iostatus == OUTPUT: # boundary output
             if destvar.valid is True and srcvar.valid is False:
-                if __debug__: self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
+                #if __debug__: self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
                 if self.parent:
                     # tell the parent that anyone connected to our boundary output 
                     # is invalid.
@@ -291,11 +291,11 @@ class Assembly (Component):
             destvar.valid = srcvar.valid
                 
         elif srccomp is self and srcvar.iostatus == INPUT: # passthru input
-            if srcvar.valid is True and destvar.valid is False:
-                if __debug__: self._logger.debug('(connect) invalidating %s' % srcvar.get_pathname())
+            #if srcvar.valid is True and destvar.valid is False:
+                #if __debug__: self._logger.debug('(connect) invalidating %s' % srcvar.get_pathname())
             srcvar.valid = destvar.valid
         else:
-            if __debug__: self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
+            #if __debug__: self._logger.debug('(connect) invalidating %s' % destvar.get_pathname())
             destvar.valid = False
             self.invalidate_deps([destvar])
             
@@ -359,7 +359,11 @@ class Assembly (Component):
         graph = self._var_graph
         for outname, inname in graph.edges():
             outvar = graph.label[outname]
+            if not isinstance(outvar, Variable):
+                continue
             invar = graph.label[inname]
+            if not isinstance(invar, Variable):
+                continue
             if outvar.parent is self or invar.parent is self:
                 if show_passthru:
                     conns.append((outname, inname))
@@ -462,7 +466,11 @@ class Assembly (Component):
         if notify_parent and self.parent:
             self.parent.invalidate_deps(outs, True)
         return outs
-    
+
+    def run_subset(self, exclude=None):
+        """Run only a subset of our child Components, excluding those specified."""
+        self._dataflow.run_subset(exclude=exclude)
+        
     @staticmethod
     def xfer_file(src_comp, src_var, dst_comp, dst_var):
         """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """

@@ -14,7 +14,6 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IVariabl
 from openmdao.main import Container, String, Variable
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
-from openmdao.main.exceptions import RunFailed
 from openmdao.main.filevar import FileVariable
 from openmdao.main.util import filexfer
 
@@ -158,7 +157,7 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._execute_needed or force:
-                if __debug__: self._logger.debug('execute %s' % self.get_pathname())
+                #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
                 self.execute()
             self._post_execute()
         finally:

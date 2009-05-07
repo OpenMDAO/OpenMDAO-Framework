@@ -161,7 +161,7 @@ class RefVariableArray(Variable):
         if len(vals) != len(self._exprs):
             self.raise_exception('RefVariableArray and list of assigned values have different lengths')
         for val,expr in zip(vals, self._exprs):
-            if __debug__: self.debug('setting refvar %s to %s' % (expr.scoped_assignment_text, str(val)))
+            #if __debug__: self.debug('setting refvar %s to %s' % (expr.scoped_assignment_text, str(val)))
             expr.set(val)
         
     refvalue = property(_get_referenced_values, _set_referenced_values)

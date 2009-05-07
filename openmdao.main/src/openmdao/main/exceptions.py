@@ -1,5 +1,3 @@
-
-
 """
 Exception classes for OpenMDAO
 """
@@ -8,7 +6,6 @@ Exception classes for OpenMDAO
 __all__ = [
     'ConstraintError',
     'CircularDependencyError',
-    'RunFailed',
     'RunInterrupted',
     'RunStopped']
 
@@ -23,13 +20,8 @@ class ConstraintError(ValueError):
 class CircularDependencyError(RuntimeError):
     """Raised when a circular dependency occurs."""
     def __init__(self, msg):
-        super(RuntimeError, self).__init__(msg)
+        super(CircularDependencyError, self).__init__(msg)
         
-class RunFailed(RuntimeError):
-    """Raised when run() failed for some reason."""
-    def __init__(self, msg):
-        super(RunFailed, self).__init__(msg)
-
 class RunInterrupted(RuntimeError):
     """Raised when run() was interrupted, implying an inconsistent state."""
     def __init__(self, msg):

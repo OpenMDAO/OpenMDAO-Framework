@@ -54,7 +54,6 @@ class MyModel(Model):
         NPSScomponent(parent=self, arglist='-trace reload.mdl',
                       output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
-        Bool('rerun', self.NPSS, INPUT, default=False)
         Float('xyzzy_in',  self.NPSS, INPUT, doc='Test input')
         Float('xyzzy_out', self.NPSS, OUTPUT, doc='Test output')
         String('s', self.NPSS, INPUT, doc='Unconnected input')
@@ -65,11 +64,9 @@ class MyModel(Model):
         self.connect('Source.npss_in', 'NPSS.xyzzy_in')
         self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
 
-        self.connect('rerun_flag', 'Source.rerun')
-
     def rerun(self):
         self.debug('rerun()')
-        self.set('rerun_flag', True)
+        self.Source.set('rerun', True)
         self.run()
 
 
@@ -128,7 +125,7 @@ class NPSSTestCase(unittest.TestCase):
         self.model.debug('reload_flag = %d', self.model.NPSS.get(path))
         self.model.NPSS.model_filename = 'no_such_model'
         try:
-            self.model.run()
+            self.model.rerun()
         except RuntimeError, exc:
             self.assertEqual(str(exc).startswith(
                 "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
@@ -179,7 +176,7 @@ class NPSSTestCase(unittest.TestCase):
  
         self.model.NPSS.model_filename = 'no_such_model'
         try:
-            self.model.run()
+            self.model.rerun()
         except RuntimeError, exc:
             self.assertEqual(str(exc).startswith(
                 "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),

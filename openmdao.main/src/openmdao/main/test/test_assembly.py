@@ -72,11 +72,6 @@ class DummyComp(Component):
 class AssemblyTestCase(unittest.TestCase):
 
     def setUp(self):
-        """
-                         top
-                      /       \
-                      
-        """
         self.asm = Assembly('top', None)
         dc1 = DummyComp('comp1', self.asm)        
         nested = Assembly('nested', self.asm)
@@ -335,8 +330,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.connect('comp3.sout', 'comp2.s')
         conns = self.asm.list_connections()
-        self.assertEqual(conns, [('comp3.sout', 'comp2.s'),
-                                 ('comp1.rout', 'comp2.r')])
+        self.assertEqual(conns, [('comp1.rout', 'comp2.r'),
+                                 ('comp3.sout', 'comp2.s')])
         self.asm.remove_child('comp3')
         conns = self.asm.list_connections()
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])

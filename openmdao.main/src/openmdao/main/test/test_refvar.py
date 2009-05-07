@@ -56,7 +56,7 @@ class RefVariableTestCase(unittest.TestCase):
             self.comp1.desvar.refvalue = None
         except ValueError, err:
             self.assertEqual(str(err), 
-                "top.comp2.y: incompatible type <type 'NoneType'> is not one of ['float', 'int', 'long']")
+                "top.comp2.y: incompatible type <type 'NoneType'> is not one of ['float', 'int', 'long', 'float64']")
         else:
             self.fail('expected ValueError')
         
