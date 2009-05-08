@@ -529,7 +529,8 @@ def test_save_load():
     SimulationRoot.chdir('test_dir')
     try:
         if False:
-            new_model = Component.load_from_egg(os.path.join('..', egg_name))
+            new_model = Component.load_from_egg(os.path.join('..', egg_name),
+                                                False)  # Don't try to install.
 #            print_info(new_model)
             print '\nrunning new model...'
             new_model.run()
@@ -538,7 +539,7 @@ def test_save_load():
             out.write("""\
 import os.path
 from openmdao.main import Component
-model = Component.load_from_egg(os.path.join('..', '%s'))
+model = Component.load_from_egg(os.path.join('..', '%s'), False)
 model.run()
 """ % egg_name)
             out.close()

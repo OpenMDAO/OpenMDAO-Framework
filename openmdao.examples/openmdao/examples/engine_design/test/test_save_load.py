@@ -44,7 +44,8 @@ class EngineOptimizationTestCase(unittest.TestCase):
         try:
             if False:
                 self.model = Component.load_from_egg(os.path.join('..',
-                                                     egg_name))
+                                                                  egg_name),
+                                                     install=False)
                 self.model.run()
                 self.assertAlmostEqual(self.model.vehicle_sim.AccelTime, 
                                        5.9, places=6)
@@ -61,7 +62,7 @@ import unittest
 from openmdao.main import Component
 class TestCase(unittest.TestCase):
     def test_load(self):
-        model = Component.load_from_egg(os.path.join('..', '%s'))
+        model = Component.load_from_egg(os.path.join('..', '%s'), install=False)
         model.run()
         self.assertAlmostEqual(model.vehicle_sim.AccelTime, 
                                5.9, places=6)
