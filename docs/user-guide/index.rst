@@ -7,7 +7,9 @@ User's Guide
    :maxdepth: 3
    
    example.rst
-   changes.rst
+   changes
+ 
+   
    
    
    
