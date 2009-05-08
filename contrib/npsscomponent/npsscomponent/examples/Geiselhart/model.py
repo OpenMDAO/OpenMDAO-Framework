@@ -18,7 +18,6 @@ import os.path
 from openmdao.main import Assembly, Component, Container, Float, \
                           ArrayVariable, FileVariable
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
 
@@ -517,6 +516,8 @@ def print_info(root, level=0):
 def test_save_load():
     """ Save model and then reload & run. """
     import shutil
+    import subprocess
+    from openmdao.main.component import SimulationRoot
 
     model = Model()
     egg_name = model.save_to_egg()
@@ -527,17 +528,29 @@ def test_save_load():
     os.mkdir('test_dir')
     SimulationRoot.chdir('test_dir')
     try:
-        new_model = Component.load_from_egg(os.path.join('..', egg_name))
-#        print_info(new_model)
-
-        print '\nrunning new model...'
-        new_model.run()
+        if False:
+            new_model = Component.load_from_egg(os.path.join('..', egg_name),
+                                                False)  # Don't try to install.
+#            print_info(new_model)
+            print '\nrunning new model...'
+            new_model.run()
+        else:
+            out = open('test.py', 'w')
+            out.write("""\
+import os.path
+from openmdao.main import Component
+model = Component.load_from_egg(os.path.join('..', '%s'), False)
+model.run()
+""" % egg_name)
+            out.close()
+            print '\nRunning in subprocess...'
+            retcode = subprocess.call(['python', 'test.py'])
+            print '    retcode', retcode
     finally:
         SimulationRoot.chdir('..')
 
 
 if __name__ == '__main__':
 #    Model().run()
-
     test_save_load()
 

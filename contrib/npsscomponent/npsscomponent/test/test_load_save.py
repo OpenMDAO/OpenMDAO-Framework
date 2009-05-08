@@ -88,7 +88,8 @@ class NPSSTestCase(unittest.TestCase):
         os.chdir(test_dir)
         try:
             self.npss = \
-                NPSScomponent.load_from_egg(os.path.join('..', self.egg_name))
+                NPSScomponent.load_from_egg(os.path.join('..', self.egg_name),
+                                            install=False)
 
             for name, val in saved_values.items():
                 if name == 'directory':
@@ -153,7 +154,8 @@ class NPSSTestCase(unittest.TestCase):
             try:
                 self.npss = \
                     NPSScomponent.load_from_egg(os.path.join('..',
-                                                             self.egg_name))
+                                                             self.egg_name),
+                                                             install=False)
             except RuntimeError, exc:
                 self.assertEqual(str(exc).startswith(
                     "NPSS: Reload caught exception: Model file 'xyzzy.mdl' not found while reloading in"),

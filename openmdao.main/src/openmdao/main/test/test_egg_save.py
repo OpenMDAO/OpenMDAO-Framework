@@ -230,7 +230,8 @@ class EggTestCase(unittest.TestCase):
             # Load from saved initial state in egg.
             self.model.pre_delete()
             self.model = Component.load_from_egg(os.path.join('..',
-                                                              self.egg_name))
+                                                              self.egg_name),
+                                                 install=False)
             self.model.directory = os.getcwd()
 
             # Verify initial state.
@@ -337,7 +338,8 @@ class EggTestCase(unittest.TestCase):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
-            sub = Container.load_from_egg(os.path.join('..', self.egg_name))
+            sub = Container.load_from_egg(os.path.join('..', self.egg_name),
+                                          install=False)
             self.assertEqual(sub.binary_data, self.model.Source.sub.binary_data)
         finally:
             os.chdir(orig_dir)

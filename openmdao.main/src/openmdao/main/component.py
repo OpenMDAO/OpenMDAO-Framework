@@ -234,13 +234,22 @@ class Component (Container):
                      src_dir=None, src_files=None, dst_dir=None,
                      format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
-        name defaults to the name of the component.
-        version defaults to the component's module __version__.
-        If force_relative is True, all paths are relative to src_dir.
-        src_dir defaults to the component's directory.
-        src_files should be a set, and defaults to component's external files.
-        dst_dir is the directory to write the egg in.
-        tmp_dir is the directory to use for temporary files.
+
+            name defaults to the name of the component.
+
+            version defaults to the component's module __version__.
+
+            If force_relative is True, all paths are relative to src_dir.
+
+            src_dir defaults to the component's directory.
+
+            src_files should be a set, and defaults to component's external files.
+
+            dst_dir is the directory to write the egg in.
+
+            tmp_dir is the directory to use for temporary files.
+
+        The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
         """
         if src_dir is None:
@@ -399,12 +408,12 @@ class Component (Container):
                              % (path1, path2), ValueError)
 
     @staticmethod
-    def load_from_egg (filename):
-        """Load state and other files from an egg, returns top object."""
+    def load (instream, format=SAVE_CPICKLE, do_post_load=True):
+        """Load object(s) from instream."""
 # This doesn't work:
-#    AttributeError: 'super' object has no attribute 'load_from_egg'
-#        top = super(Component).load_from_egg(filename)
-        top = Container.load_from_egg(filename)
+#    AttributeError: 'super' object has no attribute 'load'
+#        top = super(Component).load(instream, format)
+        top = Container.load(instream, format, False)
 
         if IComponent.providedBy(top):
             top.directory = os.getcwd()
@@ -413,13 +422,9 @@ class Component (Container):
                 if not os.path.exists(directory):
                     os.makedirs(directory)
 
-        top.post_load()
+        if do_post_load:
+            top.post_load()
         return top
-
-    def post_load (self):
-        """ Perform any required operations after model has been loaded. """
-        for child in self.get_objs(IContainer.providedBy):
-            child.post_load()
 
     def step (self):
         """For Components that contain Workflows (e.g., Assembly), this will run
