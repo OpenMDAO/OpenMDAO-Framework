@@ -184,8 +184,7 @@ class CaseIteratorDriver(Driver):
                             case.outputs[i] = (niv[0], niv[1],
                                 self._model_get(server, niv[0], niv[1]))
                         except Exception, exc:
-                            msg = "Exception getting '%s': %s" % \
-                                  (niv[0], str(exc))
+                            msg = "Exception getting '%s': %s" % (niv[0], exc)
                             case.msg = '%s: %s' % (self.get_pathname(), msg)
                 else:
                     case.msg = str(exc)
@@ -220,7 +219,7 @@ class CaseIteratorDriver(Driver):
                 try:
                     self._model_set(server, name, index, value)
                 except Exception, exc:
-                    msg = "Exception setting '%s': %s" % (name, str(exc))
+                    msg = "Exception setting '%s': %s" % (name, exc)
                     self.raise_exception(msg, ServerError)
             self._model_execute(server)
             self._server_states[server] = SERVER_COMPLETE

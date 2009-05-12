@@ -352,7 +352,7 @@ class Container(HierarchyMember):
                 version = sys.modules[self.__module__].__version__
             except AttributeError:
                 now = datetime.datetime.now()  # Could consider using utcnow().
-                version = '%d.%d.%d.%d.%d' % \
+                version = '%d.%02d.%02d.%02d.%02d' % \
                           (now.year, now.month, now.day, now.hour, now.minute)
         if dst_dir is None:
             dst_dir = orig_dir
@@ -377,7 +377,8 @@ class Container(HierarchyMember):
             if mod == '__main__':
                 classname = obj.__class__.__name__
                 mod = obj.__class__.__module__
-                if mod == '__main__':
+                if mod == '__main__' and \
+                   (classname not in fixup_classes.keys()):
                     # Need to determine 'real' module name.
                     if '.' not in sys.path:
                         sys.path.append('.')
@@ -393,12 +394,12 @@ class Container(HierarchyMember):
                                 new = getattr(module, classname)
                                 fixup_classes[classname] = (old, new)
                                 fixup_modules.add(mod)
-                            break
+                                break
                     else:
                         self.raise_exception("Can't find module for '%s'" % \
                                              classname, RuntimeError)
                 obj.__class__ = fixup_classes[classname][1]
-                obj.__module__ = mod
+                obj.__module__ = obj.__class__.__module__
                 fixup_objects.append(obj)
 
         # Move to scratch area.
@@ -421,7 +422,7 @@ class Container(HierarchyMember):
             elif format is SAVE_LIBYAML or format is SAVE_YAML:
                 state_name = name+'.yaml'
             else:
-                self.raise_exception("Unknown format '%s'." % str(format),
+                self.raise_exception("Unknown format '%s'." % format,
                                      RuntimeError)
 
             state_path = os.path.join(name, state_name)
@@ -430,9 +431,9 @@ class Container(HierarchyMember):
             except Exception, exc:
                 if os.path.exists(state_path):
                     os.remove(state_path)
-#                self.exception("Can't save to '%s': %s", state_path, str(exc))
+#                self.exception("Can't save to '%s': %s", state_path, exc)
                 self.raise_exception("Can't save to '%s': %s" % \
-                                     (state_path, str(exc)), type(exc))
+                                     (state_path, exc), type(exc))
 
             # Add state file to set of files to save.
             if src_files is None:
@@ -491,8 +492,7 @@ interpreter = python
 eggs =
 """ % {'name':name, 'server':EGG_SERVER_URL})
             for dist in required_distributions:
-                out.write("    %s == %s\n" % \
-                          (dist.project_name, dist.version))
+                out.write("    %s == %s\n" % (dist.project_name, dist.version))
             out.close()
             src_files.add(buildout)
 
@@ -510,6 +510,7 @@ eggs =
             loader_path = os.path.join(name, loader+'.py')
             out = open(loader_path, 'w')
             out.write("""\
+import os
 import sys
 if not '.' in sys.path:
     sys.path.append('.')
@@ -536,7 +537,10 @@ def load():
 
 def eggsecutable():
     '''Unpack egg.'''
-    Component.load_from_egg(sys.path[0])
+    install = os.environ.get('OPENMDAO_INSTALL', '1')
+    if install:
+        install = int(install)
+    Component.load_from_egg(sys.path[0], install=install)
 
 def main():
     '''Load state and run.'''
@@ -684,7 +688,7 @@ setuptools.setup(
                 self.warning('libyaml not available, using yaml instead')
             yaml.dump(self, outstream, Dumper=Dumper)
         else:
-            self.raise_exception('cannot save object using format '+str(format),
+            self.raise_exception('cannot save object using format %s' % format,
                                  RuntimeError)
     
     @staticmethod
@@ -797,7 +801,7 @@ setuptools.setup(
                 logger.warn('libyaml not available, using yaml instead')
             top = yaml.load(instream, Loader=Loader)
         else:
-            raise RuntimeError('cannot load object using format '+str(format))
+            raise RuntimeError('cannot load object using format %s' % format)
 
         if do_post_load:
             top.post_load()
