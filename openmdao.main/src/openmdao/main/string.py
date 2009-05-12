@@ -8,7 +8,7 @@ from openmdao.main.vartypemap import add_var_type_map
 from openmdao.main.constraint import MinLengthConstraint, MaxLengthConstraint
             
 class String(Variable):
-    """A Variable wrapper for a python string attribute."""
+    """A Variable wrapper for a Python string attribute."""
     
     def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
                  default=UNDEFINED, doc=None, min_length=None, max_length=None):

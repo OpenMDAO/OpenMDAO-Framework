@@ -67,7 +67,7 @@ class Assembly(Component):
                                      RuntimeError)
 
     def connect(self, outpath, inpath):
-        """Connect one output variable to one input variable"""
+        """Connect one output variable to one input variable."""
 
         #outcomp and variable name
         outcompname, outvarname = outpath.split('.', 1)
@@ -173,8 +173,8 @@ class Assembly(Component):
     
     def update_inputs(self, incomp):
         """Transfer input data to the specified component.
-        Note that we're called after incomp has set its execution directory,
-        so we'll need to account for this during file transfers."""
+        (Note that update_inputs is called after incomp has set its execution directory,
+        so we'll need to account for this during file transfers.)"""
         try:
             deps = self._connections[incomp.name]
         except KeyError:

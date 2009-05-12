@@ -182,7 +182,7 @@ class ExprEvaluator(object):
     during later evaluations.  A scoping object is required at construction time
     and that object determines the form of the  translated expression. 
     Variables that are local to the scoping object do not need to be translated,
-    where variables from other objects must  be accessed using the appropriate
+    whereas variables from other objects must  be accessed using the appropriate
     set() or get() call.  Array entry access and function invocation are also
     translated in a similar way.  For example, the expression "a+b[2]-comp.y(x)"
     for a scoping object that contains attributes a and b, but not comp,x or y,
@@ -227,7 +227,7 @@ class ExprEvaluator(object):
         return self._text
     
     text = property(_get_text, _set_text, None,
-                    'The original text of the expression')
+                    'The original text of the expression.')
         
     def evaluate(self, scope=None):
         """Return the value of the scoped string, evaluated 

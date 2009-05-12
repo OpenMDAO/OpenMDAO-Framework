@@ -254,7 +254,7 @@ they should give a good indication of our intent.
 -------
      
         
-.. index:: IGeomCreator
+.. index:: IGeomModifier
 
 
 .. _IGeomModifier:

@@ -53,10 +53,10 @@ class EntryPtLoader(object):
         self.ctor = None
     
     def create(self, env, name):
-        """Return the object created by calling the entry point specified by
-        typ. If necessary, first activate the distribution and load the entry
-        point, and check for conflicting version dependencies before loading.
-        """
+        """Return the object created by calling the entry point.If
+        necessary, first activate the distribution and load the entry
+        point, and check for conflicting version dependencies before
+        loading. """
         if self.ctor is None:
             import_version(self.entry_pt.module_name,
                            self.dist.as_requirement(), env)
