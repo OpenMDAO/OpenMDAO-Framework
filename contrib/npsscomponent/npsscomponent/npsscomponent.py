@@ -146,7 +146,7 @@ class NPSScomponent(Component):
         try:
             self.reload()
         except Exception, exc:
-            self.raise_exception('Reload caught exception: %s' % str(exc),
+            self.raise_exception('Reload caught exception: %s' % exc,
                                  type(exc))
 
     def pre_delete(self):
@@ -489,14 +489,14 @@ class NPSScomponent(Component):
             try:
                 self.reload()
             except Exception, exc:
-                self.raise_exception('Exception during reload: %s' \
-                                     % str(exc), RuntimeError)
+                self.raise_exception('Exception during reload: %s' % exc,
+                                     RuntimeError)
         elif self.reload_flag:
             try:
                 reload_req = getattr(self._top, self.reload_flag)
             except Exception, exc:
                 self.raise_exception("Exception getting '%s': %s" \
-                                     % (self.reload_flag, str(exc)),
+                                     % (self.reload_flag, exc),
                                      RuntimeError)
             else:
                 if reload_req:
@@ -505,14 +505,14 @@ class NPSScomponent(Component):
                         self.reload()
                     except Exception, exc:
                         self.raise_exception('Exception during reload: %s' \
-                                             % str(exc), RuntimeError)
+                                             % exc, RuntimeError)
         try:
             if self.run_command:
                 self._top.parseString(self.run_command+';')
             else:
                 self._top.run()
         except Exception, exc:
-            self.raise_exception('Exception during run: %s' % str(exc),
+            self.raise_exception('Exception during run: %s' % exc,
                                  RuntimeError)
 
     def make_public(self, obj_info):

@@ -4,6 +4,7 @@
 
 __version__ = "0.1"
 
+import glob
 import os
 import os.path
 
@@ -295,28 +296,33 @@ class Component (Container):
             for metadata in comp.external_files:
                 path = metadata['path']
 #                self.debug('    external path %s', path)
+                path = os.path.expanduser(path)
+                path = os.path.expandvars(path)
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
-                path = os.path.normpath(path)
-                if not os.path.exists(path):
-#                    self.debug("        '%s' does not exist" % path)
-                    continue
-                if force_relative:
-                    if path.startswith(src_dir):
-                        save_path = self._relpath(path, src_dir)
-                        if os.path.isabs(metadata['path']):
-                            path = self._relpath(path, comp_dir)
-                            fixup_meta.append((metadata, metadata['path']))
-                            metadata['path'] = path
-#                            self.debug('        path now %s', path)
+                paths = glob.glob(path)
+                for path in paths:
+#                    self.debug('    expanded path %s', path)
+                    path = os.path.normpath(path)
+                    if not os.path.exists(path):
+#                        self.debug("        '%s' does not exist" % path)
+                        continue
+                    if force_relative:
+                        if path.startswith(src_dir):
+                            save_path = self._relpath(path, src_dir)
+                            if os.path.isabs(metadata['path']):
+                                path = self._relpath(path, comp_dir)
+                                fixup_meta.append((metadata, metadata['path']))
+                                metadata['path'] = path
+#                                self.debug('        path now %s', path)
+                        else:
+                            self.raise_exception(
+                                "Can't save, %s file '%s' doesn't start with '%s'." \
+                                % (comp.get_pathname(), path, src_dir), ValueError)
                     else:
-                        self.raise_exception(
-                            "Can't save, %s file '%s' doesn't start with '%s'." \
-                            % (comp.get_pathname(), path, src_dir), ValueError)
-                else:
-                    save_path = path
-#                self.debug('        adding %s', save_path)
-                src_files.add(save_path)
+                        save_path = path
+#                    self.debug('        adding %s', save_path)
+                    src_files.add(save_path)
 
             # Process FileVariables for this component only.
             for fvar in comp.get_file_vars():
