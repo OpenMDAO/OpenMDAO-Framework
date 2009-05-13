@@ -20,7 +20,7 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.variable import Variable, INPUT, OUTPUT
 from openmdao.main.refvariable import RefVariable, RefVariableArray
 from openmdao.main.constants import SAVE_PICKLE
-from openmdao.main.exceptions import RunFailed, CircularDependencyError
+from openmdao.main.exceptions import CircularDependencyError
 from openmdao.main.filevar import FileVariable
 from openmdao.main.util import filexfer
 
@@ -34,7 +34,7 @@ class Assembly (Component):
     implements(IAssembly)
     
     def __init__(self, name, parent=None, doc=None, directory=''):
-        super(Assembly, self).__init__(name, parent, doc, directory=directory)
+        super(Assembly, self).__init__(name, parent, doc, directory)
         
         self.state = STATE_IDLE
         self._stop = False

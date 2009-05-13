@@ -35,10 +35,10 @@ class Case(object):
         return 'Case:\n' \
                '    inputs: %s\n' \
                '    outputs: %s\n' \
-               '    max_retries: %s, retries: %d\n' \
+               '    max_retries: %s, retries: %s\n' \
                '    msg: %s' % \
-               (str(self.inputs), str(self.outputs),
-                str(self.max_retries), str(selfretries), msg)
+               (self.inputs, self.outputs,
+                self.max_retries, self.retries, self.msg)
 
 
 class FileCaseIterator(object):

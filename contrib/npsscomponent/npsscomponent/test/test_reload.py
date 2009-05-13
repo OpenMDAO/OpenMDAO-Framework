@@ -22,6 +22,7 @@ class Source(Component):
 
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
+        Bool('rerun', self, INPUT, default=False)
         Bool('npss_reload', self, OUTPUT, default=False,
              doc='Test input to NPSS')
         Float('npss_in', self, OUTPUT, default=0.,
@@ -45,6 +46,7 @@ class MyModel(Model):
 
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
+        Bool('rerun_flag', self, INPUT, default=False)
 
         Source(parent=self)
         self.Source.npss_in = 9
@@ -61,6 +63,11 @@ class MyModel(Model):
         self.connect('Source.npss_reload', 'NPSS.reload_model')
         self.connect('Source.npss_in', 'NPSS.xyzzy_in')
         self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
+
+    def rerun(self):
+        self.debug('rerun()')
+        self.Source.set('rerun', True)
+        self.run()
 
 
 class NPSSTestCase(unittest.TestCase):
@@ -90,14 +97,14 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.npss_out, 0)
         self.assertEqual(self.model.Source.npss_in, 9)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.NPSS.xyzzy_out, 9)
         self.assertEqual(self.model.Sink.npss_out, 9)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 2)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
@@ -107,7 +114,7 @@ class NPSSTestCase(unittest.TestCase):
         self.model.NPSS.set(path, True)
         self.model.debug('reload_flag = %d', self.model.NPSS.get(path))
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
@@ -118,7 +125,7 @@ class NPSSTestCase(unittest.TestCase):
         self.model.debug('reload_flag = %d', self.model.NPSS.get(path))
         self.model.NPSS.model_filename = 'no_such_model'
         try:
-            self.model.run()
+            self.model.rerun()
         except RuntimeError, exc:
             self.assertEqual(str(exc).startswith(
                 "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
@@ -143,14 +150,14 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.npss_out, 0)
         self.assertEqual(self.model.Source.npss_in, 9)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.NPSS.xyzzy_out, 9)
         self.assertEqual(self.model.Sink.npss_out, 9)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 2)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
@@ -160,7 +167,7 @@ class NPSSTestCase(unittest.TestCase):
         self.model.debug('Source.npss_reload = %d',
                          self.model.Source.npss_reload)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
@@ -169,7 +176,7 @@ class NPSSTestCase(unittest.TestCase):
  
         self.model.NPSS.model_filename = 'no_such_model'
         try:
-            self.model.run()
+            self.model.rerun()
         except RuntimeError, exc:
             self.assertEqual(str(exc).startswith(
                 "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
@@ -186,7 +193,7 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.npss_out, 0)
         self.assertEqual(self.model.Source.npss_in, 9)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
@@ -195,7 +202,7 @@ class NPSSTestCase(unittest.TestCase):
 
         self.model.NPSS.run_command = 'mcRun()'
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 1)

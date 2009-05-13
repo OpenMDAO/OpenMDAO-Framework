@@ -5,7 +5,6 @@ __all__ = ["Container"]
 
 __version__ = "0.1"
 
-import sys
 import copy
 import pprint
 import pickle

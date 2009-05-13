@@ -14,7 +14,6 @@ from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IVariabl
 from openmdao.main import Container, String, Variable
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
-from openmdao.main.exceptions import RunFailed
 from openmdao.main.filevar import FileVariable
 from openmdao.main.util import filexfer
 
