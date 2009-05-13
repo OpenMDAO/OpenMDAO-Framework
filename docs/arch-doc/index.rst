@@ -3,10 +3,6 @@
 Architecture Document
 =====================
 
-:Release: |version|
-:Date: |today|
-
-
 .. toctree::
    :maxdepth: 3
    

@@ -50,7 +50,7 @@ class Workflow(Component):
                 self.raise_exception('Stop requested', RunStopped)
     
     def step(self):
-        """Run a single component in the Workflow"""
+        """Run a single component in the Workflow."""
         if self._iterator is None:
             self._iterator = self.nodes.__iter__()
             

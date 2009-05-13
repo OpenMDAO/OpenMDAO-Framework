@@ -26,7 +26,7 @@ class Driver(Component):
         return status
 
     def step(self):
-        """Execute a single step"""
+        """Execute a single step."""
         return self.parent.workflow.step()
         
     def stop(self):

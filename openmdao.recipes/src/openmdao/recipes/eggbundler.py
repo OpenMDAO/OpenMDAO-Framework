@@ -16,7 +16,7 @@ from openmdao.util.fileutil import rm
     
 class EggBundler(object):
     """Collect all of the eggs (not installed) that are used in the current
-    buildout, and put them along with a custom buildout config into a 
+    buildout and put them along with a custom buildout config into a 
     gzipped tar file.  The tar file should provide a totally self-contained
     buildout environment (after bootstrapping the buildout). If the
     'fix_versions' variable is set to true in the buildout, the bundle

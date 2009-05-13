@@ -2,9 +2,6 @@
 Source Documentation
 ====================
 
-:Release: |version|
-:Date: |today|
-
 
 .. toctree::
    :maxdepth: 3

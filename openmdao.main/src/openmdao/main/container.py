@@ -93,14 +93,14 @@ class Container(HierarchyMember):
         delattr(self, name)
         
     def make_public(self, obj_info):
-        """Adds the given object(s) as framework-accessible data object(s) of
-        this Container. obj_info can be a single non-Variable object, a list
-        of names of objects in this container instance, or a list of tuples of
-        the form (name, alias, iostatus), where name is the name of an object
-        within this container instance. If iostatus is not supplied, the
-        default value is INPUT. This function attempts to locate an object
-        with an IVariable interface that can wrap each object passed into the
-        function.
+        """Adds the given object(s) as framework-accessible data object(s)
+        of this Container. The argument obj_info can be a single
+        non-Variable object, a list of names of objects in this container
+        instance, or a list of tuples of the form (name, alias, iostatus),
+        where name is the name of an object within this container instance.
+        If iostatus is not supplied, the default value is INPUT. This
+        function attempts to locate an object with an IVariable interface
+        that can wrap each object passed into the function.
         
         Returns None.
         """            
@@ -235,7 +235,7 @@ class Container(HierarchyMember):
         """Set the value of the data object specified by the  given path, which
         may contain '.' characters.  If path specifies a Variable, then its
         value attribute will be set to the given value, subject to validation
-        and  constraints. index, if not None, should be a list of ints, at
+        and  constraints. If index is not None, it should be a list of ints, at
         most one for each array dimension of the target value.
         
         """ 
@@ -312,7 +312,7 @@ class Container(HierarchyMember):
     def get_names(self, matchfunct, recurse=False):
         """Return a list of objects that provide the specified interface and
         also have attributes with values that match those passed as named
-        args"""
+        args."""
         return [x.get_pathname() 
                     for x in self.get_objs(matchfunct, recurse)]
         
@@ -662,9 +662,9 @@ setuptools.setup(
 
     def save (self, outstream, format=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
-        output stream. Pure python classes generally won't need to
+        output stream. Pure Python classes generally won't need to
         override this because the base class version will suffice, but
-        python extension classes will have to override. The format
+        Python extension classes will have to override. The format
         can be supplied in case something other than cPickle is needed."""
         if isinstance(outstream, basestring):
             if format is SAVE_CPICKLE or format is SAVE_PICKLE:
