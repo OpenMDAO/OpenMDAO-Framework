@@ -1,12 +1,13 @@
 #public symbols
-__all__ = ['RefVariable']
+__all__ = ['RefVariable', 'RefVariableArray']
 __version__ = "0.1"
 
 
 from openmdao.main.variable import Variable, INPUT, OUTPUT, UNDEFINED
 from openmdao.main.constraint import MinLengthConstraint, MaxLengthConstraint
 from openmdao.main import ExprEvaluator
-            
+
+    
 class RefVariable(Variable):
     """A Variable that references, via a pathname, another Variable in the
     framework.
