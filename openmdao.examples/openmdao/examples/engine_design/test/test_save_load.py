@@ -4,6 +4,7 @@
 
 import logging
 import os
+import platform
 import shutil
 import subprocess
 import unittest
@@ -41,21 +42,42 @@ class EngineOptimizationTestCase(unittest.TestCase):
         os.chdir(test_dir)
         egg_path = os.path.join('..', egg_name)
         try:
+            # Find what is hopefully the correct 'python' command.
+            python = 'python'
+            if orig_dir.endswith('buildout'):
+                python = os.path.join(orig_dir, 'bin', python)
+            else:
+                index = orig_dir.find('openmdao.examples')
+                if index > 0:
+                    python = os.path.join(orig_dir[:index],
+                                          'buildout', 'bin', python)
+
             logging.debug('Unpacking in subprocess...')
-            env = os.environ
-            env['OPENMDAO_INSTALL'] = '0'
-            env['OPENMDAO_INSTALL_DEBUG'] = '0'
-            retcode = subprocess.call(['sh', egg_path], env=env)
+            if platform.platform().startswith('Windows'):
+                logging.debug('    python %s' % python)
+                out = open('unpack.py', 'w')
+                out.write("""\
+from openmdao.main import Component
+Component.load_from_egg('%s', install=False)
+""" % egg_path)
+                out.close()
+                retcode = subprocess.call([python, 'unpack.py'])
+            else:
+                env = os.environ
+                env['OPENMDAO_INSTALL'] = '0'
+                env['OPENMDAO_INSTALL_DEBUG'] = '0'
+                retcode = subprocess.call(['sh', egg_path], env=env)
             self.assertEqual(retcode, 0)
+
+            logging.debug('Load state and run test in subprocess...')
+            logging.debug('    python %s' % python)
 
             out = open('test.py', 'w')
             out.write("""\
 import sys
 if not '.' in sys.path:
     sys.path.append('.')
-import os.path
 import unittest
-from openmdao.main import Component
 class TestCase(unittest.TestCase):
     def test_load(self):
         loader = __import__('%s_loader')
@@ -72,19 +94,6 @@ if __name__ == '__main__':
 """ % self.model.name)
             out.close()
 
-            # Find what is hopefully the correct 'python' command.
-            python = 'python'
-            if orig_dir.endswith('buildout'):
-                python = os.path.join(orig_dir, 'bin', python)
-            else:
-                index = orig_dir.find('openmdao.examples')
-                if index > 0:
-                    python = os.path.join(orig_dir[:index],
-                                          'buildout', 'bin', python)
-
-            logging.debug('Load state and run test in subprocess...')
-            logging.debug('    orig_dir %s' % orig_dir)
-            logging.debug('      python %s' % python)
             out = open('test.out', 'w')
             retcode = subprocess.call([python, 'test.py'],
                                       stdout=out, stderr=subprocess.STDOUT)
