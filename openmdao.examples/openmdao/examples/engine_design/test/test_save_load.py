@@ -32,8 +32,6 @@ class EngineOptimizationTestCase(unittest.TestCase):
         self.model.driver.maxiters = 1
 
         egg_name = self.model.save_to_egg()
-        self.model.pre_delete()
-        self.model = None
 
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
@@ -41,15 +39,27 @@ class EngineOptimizationTestCase(unittest.TestCase):
             shutil.rmtree(test_dir)
         os.mkdir(test_dir)
         os.chdir(test_dir)
+        egg_path = os.path.join('..', egg_name)
         try:
+            logging.debug('Unpacking in subprocess...')
+            env = os.environ
+            env['OPENMDAO_INSTALL'] = '0'
+            env['OPENMDAO_INSTALL_DEBUG'] = '0'
+            retcode = subprocess.call(['sh', egg_path], env=env)
+            self.assertEqual(retcode, 0)
+
             out = open('test.py', 'w')
             out.write("""\
+import sys
+if not '.' in sys.path:
+    sys.path.append('.')
 import os.path
 import unittest
 from openmdao.main import Component
 class TestCase(unittest.TestCase):
     def test_load(self):
-        model = Component.load_from_egg(os.path.join('..', '%s'), install=False)
+        loader = __import__('%s_loader')
+        model = loader.load()
         model.run()
         self.assertAlmostEqual(model.vehicle_sim.AccelTime, 
                                5.9, places=6)
@@ -59,7 +69,7 @@ class TestCase(unittest.TestCase):
                                30.91469, places=4)
 if __name__ == '__main__':
     unittest.main()
-""" % egg_name)
+""" % self.model.name)
             out.close()
 
             # Find what is hopefully the correct 'python' command.
@@ -72,7 +82,7 @@ if __name__ == '__main__':
                     python = os.path.join(orig_dir[:index],
                                           'buildout', 'bin', python)
 
-            logging.debug('Load model and run test in subprocess...')
+            logging.debug('Load state and run test in subprocess...')
             logging.debug('    orig_dir %s' % orig_dir)
             logging.debug('      python %s' % python)
             out = open('test.out', 'w')
@@ -81,9 +91,8 @@ if __name__ == '__main__':
             out.close()
             inp = open('test.out', 'r')
             for line in inp.readlines():
-                logging.debug(line[:-1])
+                logging.debug(line.rstrip())
             inp.close()
-            logging.debug('    retcode %d', retcode)
             self.assertEqual(retcode, 0)
 
         finally:
