@@ -121,7 +121,7 @@ class Dataflow(Workflow):
                     self.raise_exception('cannot break loop %s into a sortable graph' %
                                          strongs[sccomp], RuntimeError)
                 for compname in sorted_names:
-                    #if __debug__: self._logger.debug('dataflow yielding %s' % compname)
                     if compname != self.name:
+                        #if __debug__: self._logger.debug('dataflow yielding %s' % compname)
                         yield getattr(self.parent, compname)                
     

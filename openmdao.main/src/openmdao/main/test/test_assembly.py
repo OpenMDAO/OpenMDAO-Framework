@@ -21,8 +21,8 @@ class Multiplier(Component):
         self.rval_out = self.rval_in * self.mult
         
 class Simple(Component):
-    def __init__(self, name):
-        super(Simple, self).__init__(name)
+    def __init__(self, name, parent=None):
+        super(Simple, self).__init__(name, parent)
         self.a = 4.
         self.b = 5.
         self.c = 7.
@@ -72,6 +72,14 @@ class DummyComp(Component):
 class AssemblyTestCase(unittest.TestCase):
 
     def setUp(self):
+        """
+        top
+            comp1
+            nested
+                comp1
+            comp2
+            comp3
+        """
         self.asm = Assembly('top', None)
         dc1 = DummyComp('comp1', self.asm)        
         nested = Assembly('nested', self.asm)
@@ -298,6 +306,37 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout','comp2.r')
         self.asm.run()
         self.assertEqual(comp2.r, 9.0)
+        
+    def test_input_passthru_to_2_inputs(self):
+        asm = Assembly('top')
+        nest = Assembly('nested', asm)
+        Simple('comp1', nest)
+        Simple('comp2', nest)
+        nest.create_passthru('comp1.a') # comp1.a has cm units
+        nest.connect('a', 'comp2.b')  # comp2.b has m units
+        self.assertEqual(nest.get('comp1.a'), 4.)
+        self.assertEqual(nest.get('comp2.b'), 5.)
+        nest.set('a', 0.5)
+        self.assertEqual(nest.get('comp1.a'), 0.5)
+        self.assertEqual(nest.get('comp2.b'), 5.)
+        self.assertEqual(nest.getvar('comp2.b').valid, False)
+        asm.run()
+        self.assertEqual(nest.get('comp1.a'), 0.5)
+        self.assertEqual(nest.get('comp2.b'), 0.005) # check unit conversion
+        
+    def test_connect_2_outs_to_passthru(self):
+        asm = Assembly('top')
+        nest = Assembly('nested', asm)
+        Simple('comp1', nest)
+        Simple('comp2', nest)
+        nest.create_passthru('comp1.c')
+        try:
+            nest.connect('comp2.d', 'c')
+        except RuntimeError, err:
+            self.assertEqual(str(err), 'top.nested: c is already connected')
+        else:
+            self.fail('RuntimeError expected')
+        
  
     def test_discon_not_connected(self):
         self.asm.connect('comp1.rout','comp2.r')

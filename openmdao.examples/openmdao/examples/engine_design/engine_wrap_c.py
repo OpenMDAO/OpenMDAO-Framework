@@ -139,7 +139,7 @@ class Engine(Component):
         
         # Call the C model and pass it what it needs.
         
-        (Power, Torque, FuelBurn, EngineWeight) = RunEngineCycle(
+        Power, Torque, FuelBurn, EngineWeight = RunEngineCycle(
                     stroke, bore, conrod, compRatio, sparkAngle,
                     nCyl, IVO, IVC, Liv, Div, k,
                     R, Ru, Hu, Tw, AFR, Pexth,
@@ -164,7 +164,7 @@ if __name__ == "__main__":
     t1 = time.time()
     
     for jj in xrange(1,500):
-        z.execute()
+        z.run()
 
     print z.Throttle, z.Power, z.Torque, z.FuelBurn, z.EngineWeight
         

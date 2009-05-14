@@ -23,6 +23,7 @@ class Driver(Assembly):
     def __init__(self, name, parent=None, doc=None):
         super(Driver, self).__init__(name, parent, doc=doc)
         self._ref_graph = None
+        self._ref_graph_noinputs = None
         self._sorted_comps = None
         
     def _pre_execute (self):
@@ -33,6 +34,8 @@ class Driver(Assembly):
                                                                    isinstance(v,RefVariableArray)]
         if len(invalid_refs) > 0:
             self._ref_graph = None  # force regeneration of ref graph
+            self._ref_graph_noinputs = None
+            
         
         self._sorted_comps = None
         
@@ -40,7 +43,9 @@ class Driver(Assembly):
                 
     def execute(self):
         """ Iterate over a collection of Components until some condition
-        is met. """
+        is met. If you don't want to structure your driver to use pre_iteration,
+        post_iteration, etc., just override this function.
+        """
         self.state = STATE_WAITING
         self.start_iteration()
         while self.continue_iteration():
@@ -105,14 +110,21 @@ class Driver(Assembly):
         """Returns the dependency graph for this Driver based on
         RefVariables and RefVariableArrays.
         """
-        self._ref_graph = nx.DiGraph()
-        for refout in self.get_referenced_comps(iostatus=OUTPUT):
-            self._ref_graph.add_edge(self.name, refout)
-        if not skip_inputs:
-            for refin in self.get_referenced_comps(iostatus=INPUT):
-                self._ref_graph.add_edge(refin, self.name)
+        if skip_inputs:
+            if self._ref_graph_noinputs is None:
+                self._ref_graph_noinputs = nx.DiGraph()
+                for refout in self.get_referenced_comps(iostatus=OUTPUT):
+                    self._ref_graph_noinputs.add_edge(self.name, refout)
+            return self._ref_graph_noinputs
+        else:  # don't skip inputs
+            if self._ref_graph is None:
+                self._ref_graph = nx.DiGraph()
+                for refout in self.get_referenced_comps(iostatus=OUTPUT):
+                    self._ref_graph.add_edge(self.name, refout)
+                for refin in self.get_referenced_comps(iostatus=INPUT):
+                    self._ref_graph.add_edge(refin, self.name)
 
-        return self._ref_graph
+            return self._ref_graph
     
     def sorted_components(self):
         """Return the names of our referenced components, sorted in dataflow order.

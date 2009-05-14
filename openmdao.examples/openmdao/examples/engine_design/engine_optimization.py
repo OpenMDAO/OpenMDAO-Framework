@@ -2,6 +2,7 @@
 #
 # Optimize an engine disign using the sim_vehicle component.
 
+from openmdao.main.interfaces import IComponent
 from openmdao.main import Model, Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 
@@ -17,8 +18,9 @@ class Engine_Optimization(Model):
         super(Engine_Optimization, self).__init__(name, parent, directory)
 
         # Create Sim_Vehicle component instances
-        vehicle_sim = Sim_Vehicle('vehicle_sim', parent=self)
-        self.add_child(vehicle_sim)
+        self.add_socket('vehicle_sim', IComponent, required=True)
+        Sim_Vehicle('vehicle_sim', parent=self)
+        #self.add_child(vehicle_sim)
         #self.workflow.add_node(vehicle_sim)
 
         # Create CONMIN Optimizer instance
@@ -33,10 +35,10 @@ class Engine_Optimization(Model):
         
         # CONMIN Design Variables 
         self.driver.design_vars.value = ['vehicle_sim.sparkAngle', 
-                                       'vehicle_sim.bore' ]
+                                         'vehicle_sim.bore' ]
         
         # CONMIN Constraint
-        # TODO: Conmin driver currently doesn't work if you don't have a
+        # FIXME: Conmin driver currently doesn't work if you don't have a
         # constraint, so we add 1>0, which is never violated
         self.driver.constraints.value = ['1']
 
@@ -50,8 +52,8 @@ if __name__ == "__main__":
         print '---------------------------------'
         print Title
         print '---------------------------------'
-        print 'Engine: Bore = ', z.vehicle_sim.bore
-        print 'Engine: Spark Angle = ', z.vehicle_sim.sparkAngle
+        print 'Engine: Bore = ', z.vehicle_sim.get('bore')
+        print 'Engine: Spark Angle = ', z.vehicle_sim.get('sparkAngle')
         print '---------------------------------'
         print '0-60 Accel Time = ', z.vehicle_sim.AccelTime
         print 'EPA City MPG = ', z.vehicle_sim.EPACity

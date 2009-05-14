@@ -66,34 +66,33 @@ class CONMINdriver(Driver):
                 
         RefVariableArray('design_vars', self, OUTPUT, default=[],
                 doc='An array of design variable names. These names can include array indexing.')
-        self.design_vars.add_observer(self._force_config, VariableChangedEvent)
+        self.design_vars.add_observer(self._refs_changed, VariableChangedEvent)
         
         RefVariableArray('constraints', self, INPUT, default=[],
                 doc= 'An array of expression strings indicating constraints.'+
                 ' A value of < 0 for the expression indicates that the constraint '+
                 'is violated.')
-        self.constraints.add_observer(self._force_config, VariableChangedEvent)
+        self.constraints.add_observer(self._refs_changed, VariableChangedEvent)
         
         RefVariable('objective', self, INPUT,
                           doc= 'A string containing the objective function expression.')
-        self.objective.add_observer(self._force_config, VariableChangedEvent)
+        self.objective.add_observer(self._refs_changed, VariableChangedEvent)
         
         av = ArrayVariable('upper_bounds', self, INPUT,
             doc='Array of constraints on the maximum value of each design variable.')
-        av.add_observer(self._force_config, VariableChangedEvent)
+        av.add_observer(self._refs_changed, VariableChangedEvent)
         
         av = ArrayVariable('lower_bounds', self, INPUT,
             doc='Array of constraints on the minimum value of each design variable.')
-        av.add_observer(self._force_config, VariableChangedEvent)
+        av.add_observer(self._refs_changed, VariableChangedEvent)
         
         self.make_public(['iprint', 'maxiters'])
         
-    def _force_config(self, obj):
+    def _refs_changed(self, obj):
         """This is called if any of our ref variables change, forcing us to possibly
         resize our arrays.
         """
         self._first = True
-        
     
     def execute(self):
         """Perform the optimization."""
