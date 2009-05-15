@@ -30,8 +30,9 @@ class Driver(Assembly):
         """Call base class _pre_execute after determining if we have any invalid
         ref variables, which will cause us to have to regenerate our ref dependency graph.
         """
-        invalid_refs = [v for v in self.get_inputs(valid=False) if isinstance(v,RefVariable) or
-                                                                   isinstance(v,RefVariableArray)]
+        invalid_refs = [v for v in self.get_inputs(valid=False) 
+                            if isinstance(v,RefVariable) or
+                               isinstance(v,RefVariableArray)]
         if len(invalid_refs) > 0:
             self._ref_graph = None  # force regeneration of ref graph
             self._ref_graph_noinputs = None
@@ -44,7 +45,8 @@ class Driver(Assembly):
     def execute(self):
         """ Iterate over a collection of Components until some condition
         is met. If you don't want to structure your driver to use pre_iteration,
-        post_iteration, etc., just override this function.
+        post_iteration, etc., just override this function. As a result, none
+        of the *_iteration() functions will be called.
         """
         self.state = STATE_WAITING
         self.start_iteration()
@@ -54,15 +56,6 @@ class Driver(Assembly):
             self.post_iteration()
         self.state = STATE_IDLE
 
-    def step(self):
-        """Execute a single step"""
-        return self.parent.workflow.step()
-        
-    def stop(self):
-        """ Stop the Model by stopping the Workflow. """
-        self._stop = True
-        self.parent.workflow.stop()
-    
     def start_iteration(self):
         """Called just prior to the beginning of an iteration loop. This can 
         be overridden by inherited classes. It can be used to perform any 
@@ -87,6 +80,15 @@ class Driver(Assembly):
     def post_iteration(self):
         """Called after each iteration."""
         self._continue = False
+            
+    def step(self):
+        """Execute a single step"""
+        return self.parent.workflow.step()
+        
+    def stop(self):
+        """ Stop the Model by stopping the Workflow. """
+        self._stop = True
+        self.parent.workflow.stop()
     
     def get_referenced_comps(self, iostatus=None):
         """Return a set of names of Components that we reference based on the 
@@ -127,7 +129,8 @@ class Driver(Assembly):
             return self._ref_graph
     
     def sorted_components(self):
-        """Return the names of our referenced components, sorted in dataflow order.
+        """Return the names of our referenced components, 
+        sorted in dataflow order.
         """
         if self._sorted_comps is None:
             if self.parent and isinstance(self.parent, Assembly):
@@ -151,7 +154,7 @@ class Driver(Assembly):
         """Runs the set of components that we reference via our reference variables."""
         if self.parent:
             sorted_comps = self.sorted_components()
-            #self.debug('attempting to run loop components %s' % str(sorted_comps))
+            #if __debug__: self.debug('attempting to run loop components %s' % str(sorted_comps))
             for compname in sorted_comps:
                 getattr(self.parent, compname).run()
         else:

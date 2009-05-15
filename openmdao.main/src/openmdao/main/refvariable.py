@@ -10,7 +10,10 @@ from openmdao.main import ExprEvaluator
     
 class RefVariable(Variable):
     """A Variable that references, via a pathname, another Variable in the
-    framework.
+    framework. If it's an OUTPUT, then the string may only be the pathname of
+    a single variable (with optional array indexing), but if it's an INPUT,
+    it may be any valid expression and may reference any number of other
+    variables.
     """
     
     def __init__(self, name, parent, iostatus, default=UNDEFINED, doc=None):
@@ -41,7 +44,12 @@ class RefVariable(Variable):
                     self._expr = ExprEvaluator(refval, self.parent, 
                                                single_name=single_name)
                 except RuntimeError, err:
-                    self.raise_exception(str(err), RuntimeError)
+                    msg = str(err)
+                    if msg.startswith('Expected'):
+                        self.raise_exception("invalid ref variable value '%s'"%
+                                             refval, RuntimeError)
+                    else:
+                        self.raise_exception(str(err), RuntimeError)
             else:
                 self.raise_exception('RefVariable requires self.parent to exist.',
                                      RuntimeError)

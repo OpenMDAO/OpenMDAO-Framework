@@ -68,6 +68,20 @@ class RefVariableTestCase(unittest.TestCase):
             self.assertEqual(str(err), "top.comp2.x is an OUTPUT Variable and cannot be set.")
         else:
             self.fail('expected RuntimeError')
+
+    def test_novar_expr(self):
+        asm = Assembly('top')
+        ref = RefVariable('ref', asm, INPUT)
+        ref.value = '1+2'
+        self.assertEqual(ref.refvalue, 3)
+        
+        outref = RefVariable('refout', asm, OUTPUT)
+        try:
+            outref.value = '2'
+        except RuntimeError, err:
+            self.assertEqual(str(err), "top.refout: invalid ref variable value '2'")
+        else:
+            self.fail('RuntimeError expected')
         
 
 if __name__ == "__main__":

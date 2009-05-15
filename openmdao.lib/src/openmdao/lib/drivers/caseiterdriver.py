@@ -7,7 +7,7 @@ import time
 
 from openmdao.main import Driver, Bool, Int
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.interfaces import ICaseIterator
+from openmdao.main.interfaces import ICaseIterator, IComponent
 from openmdao.main.variable import INPUT
 from openmdao.main.util import filexfer
 
@@ -49,6 +49,7 @@ class CaseIteratorDriver(Driver):
 
         self.add_socket('iterator', ICaseIterator, 'Cases to evaluate.', required=True)
         self.add_socket('outerator', None, 'Something to append() to.', required=True)
+        self.add_socket('model', IComponent, 'Model to be executed.', required=True)
 
         self._iter = None
         self._n_servers = 0
@@ -306,7 +307,7 @@ class CaseIteratorDriver(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
-                self.parent.run_subset(exclude=[self])
+                self.model.run()
             except Exception, exc:
                 self._exceptions[server] = exc
         else:

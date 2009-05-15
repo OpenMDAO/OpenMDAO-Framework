@@ -38,8 +38,8 @@ class MyModel(Model):
 
     def __init__(self, name='CID_TestModel', *args, **kwargs):
         super(MyModel, self).__init__(name, *args, **kwargs)
-        CaseIteratorDriver('driver', self)
-        DrivenComponent('dc', parent=self)
+        cid = CaseIteratorDriver('driver', self)
+        cid.model = DrivenComponent('dc', self)
 
 
 class DriverTestCase(unittest.TestCase):
