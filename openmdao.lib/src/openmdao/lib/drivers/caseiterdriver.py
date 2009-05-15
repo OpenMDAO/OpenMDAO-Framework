@@ -285,22 +285,22 @@ class CaseIteratorDriver(Driver):
 
     def _model_set(self, server, name, index, value):
         """ Set value in server's model. """
-        comp_name, attr = name.split('.', 1)
         if server is None:
-            comp = getattr(self.parent, comp_name)
+            self.parent.set(name, value, index)
         else:
+            comp_name, attr = name.split('.', 1)
             comp = getattr(self._servers[server].tla, comp_name)
-        comp.set(attr, value, index)
+            comp.set(attr, value, index)
         return True
 
     def _model_get(self, server, name, index):
         """ Get value from server's model. """
-        comp_name, attr = name.split('.', 1)
         if server is None:
-            comp = getattr(self.parent, comp_name)
+            return self.parent.get(name, index)
         else:
+            comp_name, attr = name.split('.', 1)
             comp = getattr(self._servers[server].tla, comp_name)
-        return comp.get(attr, index)
+            return comp.get(attr, index)
 
     def _model_execute(self, server):
         """ Execute model in server. """
