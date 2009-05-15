@@ -150,7 +150,8 @@ class Assembly (Component):
     def get_io_graph(self):
         """For now, just return our base class version of get_io_graph."""
         # TODO: make this return an actual graph of inputs to outputs based on 
-        #       the contents of this Assembly
+        #       the contents of this Assembly instead of a graph where all outputs
+        #       depend on all inputs
         return super(Assembly, self).get_io_graph()
     
     def remove_child(self, name):

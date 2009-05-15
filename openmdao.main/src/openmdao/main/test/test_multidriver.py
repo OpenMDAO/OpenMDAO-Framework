@@ -3,7 +3,7 @@
 import unittest
 import logging
 
-from openmdao.main import Model, Assembly, Component, Float
+from openmdao.main import Model, Assembly, Component, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
@@ -21,8 +21,7 @@ class PolyOrder2(Component):
         
     def execute(self):
         self.f_x = self.x*(self.c2*self.x + self.c1) + self.c0
-        
-        
+               
 class Adder(Component):
     """Outputs the sum of its two inputs."""
     def __init__(self, name, parent):
@@ -34,7 +33,31 @@ class Adder(Component):
     def execute(self):
         self.sum = self.x1 + self.x2
         
-            
+class TwoVarComp(Component):
+    """For inputs a and b, outputs 7a^2+b^4-4ab-10a-8b"""
+    def __init__(self, name, parent):
+        super(TwoVarComp, self).__init__(name, parent)
+        Float('a', self, INPUT, default=0.0)
+        Float('b', self, INPUT, default=0.0)
+        Float('f_x', self, OUTPUT, default = 0.0)
+        
+    def execute(self):
+        self.f_x = (7.*self.a*self.a+self.b**4-4.*self.a*self.b-
+                    10.*self.a-8.*self.b)
+        
+class ExprComp(Component):
+    """Evaluates an expression based on the input x and assigns it to f_x"""
+    def __init__(self, name, parent, expr='x'):
+        super(ExprComp, self).__init__(name, parent)
+        Float('x', self, INPUT, default=0.0)
+        Float('f_x', self, OUTPUT, default = 0.0)
+        String('expr', self, INPUT, default = expr)
+        
+    def execute(self):
+        x = self.x
+        self.f_x = eval(self.expr)
+    
+        
 class MultiDriverTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -99,8 +122,46 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.opt_design_vars[3], 
                                self.top.comp4.x, places=1)
         
-#    def test_2_drivers(self):
-#        self.fail('test not implemented')
+    def test_2_drivers(self):
+        """
+        Test problem 9 (Hock and Schittkowski 100)
+          objective = (x(1) - 10.0)**2 + 5.0*(x(2) - 12.0)**2 + x(3)**4 + 3.0*(x(4)  &
+               - 11.0)**2 + 10.0*x(5)**6 + 7.0*x(6)**2 + x(7)**4 - 4.0*x(6)*x(7) &
+               - 10.0*x(6) - 8.0*x(7)
+          con(1) = 127.0 - 2.0*x(1)**2 - 3.0*x(2)**4 - x(3) - 4.0*x(4)**2 - 5.0*x(5)
+          con(2) = 282.0 - 7.0*x(1) - 3.0*x(2) - 10.0*x(3)**2 - x(4) + x(5)
+          con(3) = 196.0 - 23.0*x(1) - x(2)**2 - 6.0*x(6)**2 + 8.0*x(7)
+          con(4) = -4.0*x(1)**2 - x(2)**2 + 3.0*x(1)*x(2) - 2.0*x(3)**2 - 5.0*x(6) + 11.0*x(7)
+        """
+        TwoVarComp('comp67', self.top)
+        ExprComp('compa1', self.top, expr='(x-10.)**2')
+        ExprComp('compa2', self.top, expr='5.0*(x - 12.0)**2')
+        ExprComp('compa3', self.top, expr='x**4')
+        ExprComp('compa4', self.top, expr='3.0*(x- 11.0)**2')
+        ExprComp('compa5', self.top, expr='10.0*x**6')
+        drv = CONMINdriver('driver2',self.top)
+        drv.maxiters = 130
+        drv.objective.value = 'compa1.f_x + compa2.f_x + compa3.f_x + compa4.f_x + compa5.f_x + comp67.f_x'
+        drv.design_vars.value = ['compa1.x', 'compa2.x', 'compa3.x', 'compa4.x', 
+                                 'compa5.x', 'comp67.a', 'comp67.b']
+        drv.lower_bounds = [-10]*7
+        drv.upper_bounds = [99]*7
+        drv.constraints.value = [
+          '127.0 - 2.0*compa1.x**2 - 3.0*compa2.x**4 - compa3.x - 4.0*compa4.x**2 - 5.0*compa5.x',
+          '282.0 - 7.0*compa1.x - 3.0*compa2.x - 10.0*compa3.x**2 - compa4.x + compa5.x',
+          '196.0 - 23.0*compa1.x - compa2.x**2 - 6.0*comp67.a**2 + 8.0*comp67.b',
+          '-4.0*compa1.x**2 - compa2.x**2 + 3.0*compa1.x*compa2.x - 2.0*compa3.x**2 - 5.0*comp67.a + 11.0*comp67.b'
+        ]
+        # expected optimal values
+        self.opt_objective = 680.630
+        self.opt_design_vars = [2.33050, 1.95137, -0.477538, 4.36573, 
+                                -0.624488, 1.03813, 1.59423]
+        self.top.run()
+        self.assertEqual(self.opt_design_vars, drv.design_vals)
+        self.assertAlmostEqual(self.opt_objective, 
+                               self.top.driver2.objective.refvalue, places=2)
+        self.assertAlmostEqual(self.opt_design_vars[0], 
+                               self.top.compa1.x, places=3)
     
 if __name__ == "__main__":
     

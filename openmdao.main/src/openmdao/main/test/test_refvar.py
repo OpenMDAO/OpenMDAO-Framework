@@ -79,7 +79,7 @@ class RefVariableTestCase(unittest.TestCase):
         try:
             outref.value = '2'
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.refout: invalid ref variable value '2'")
+            self.assertEqual(str(err), "top.refout: invalid output ref variable value '2'")
         else:
             self.fail('RuntimeError expected')
         

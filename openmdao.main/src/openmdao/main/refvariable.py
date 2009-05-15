@@ -46,8 +46,9 @@ class RefVariable(Variable):
                 except RuntimeError, err:
                     msg = str(err)
                     if msg.startswith('Expected'):
-                        self.raise_exception("invalid ref variable value '%s'"%
-                                             refval, RuntimeError)
+                        direction = 'output' if self.iostatus==OUTPUT else 'input'
+                        self.raise_exception("invalid %s ref variable value '%s'" %
+                                             (direction, refval), RuntimeError)
                     else:
                         self.raise_exception(str(err), RuntimeError)
             else:
