@@ -32,8 +32,6 @@ class EngineOptimizationTestCase(unittest.TestCase):
         self.model.driver.maxiters = 1
 
         egg_name = self.model.save_to_egg()
-        self.model.pre_delete()
-        self.model = None
 
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
@@ -41,27 +39,8 @@ class EngineOptimizationTestCase(unittest.TestCase):
             shutil.rmtree(test_dir)
         os.mkdir(test_dir)
         os.chdir(test_dir)
+        egg_path = os.path.join('..', egg_name)
         try:
-            out = open('test.py', 'w')
-            out.write("""\
-import os.path
-import unittest
-from openmdao.main import Component
-class TestCase(unittest.TestCase):
-    def test_load(self):
-        model = Component.load_from_egg(os.path.join('..', '%s'), install=False)
-        model.run()
-        self.assertAlmostEqual(model.vehicle_sim.AccelTime, 
-                               5.9, places=6)
-        self.assertAlmostEqual(model.vehicle_sim.EPACity, 
-                               25.18837, places=4)
-        self.assertAlmostEqual(model.vehicle_sim.EPAHighway, 
-                               30.91469, places=4)
-if __name__ == '__main__':
-    unittest.main()
-""" % egg_name)
-            out.close()
-
             # Find what is hopefully the correct 'python' command.
             python = 'python'
             if orig_dir.endswith('buildout'):
@@ -72,18 +51,50 @@ if __name__ == '__main__':
                     python = os.path.join(orig_dir[:index],
                                           'buildout', 'bin', python)
 
-            logging.debug('Load model and run test in subprocess...')
-            logging.debug('    orig_dir %s' % orig_dir)
-            logging.debug('      python %s' % python)
+            logging.debug('Unpacking in subprocess...')
+            logging.debug('    python %s' % python)
+            out = open('unpack.py', 'w')
+            out.write("""\
+from openmdao.main import Component
+Component.load_from_egg('%s', install=False)
+""" % egg_path)
+            out.close()
+            retcode = subprocess.call([python, 'unpack.py'])
+            self.assertEqual(retcode, 0)
+
+            logging.debug('Load state and run test in subprocess...')
+            logging.debug('    python %s' % python)
+
+            out = open('test.py', 'w')
+            out.write("""\
+import sys
+if not '.' in sys.path:
+    sys.path.append('.')
+import unittest
+class TestCase(unittest.TestCase):
+    def test_load(self):
+        loader = __import__('%s_loader')
+        model = loader.load()
+        model.run()
+        self.assertAlmostEqual(model.vehicle_sim.AccelTime, 
+                               5.9, places=6)
+        self.assertAlmostEqual(model.vehicle_sim.EPACity, 
+                               25.18837, places=4)
+        self.assertAlmostEqual(model.vehicle_sim.EPAHighway, 
+                               30.91469, places=4)
+if __name__ == '__main__':
+    unittest.main()
+""" % self.model.name)
+            out.close()
+
             out = open('test.out', 'w')
             retcode = subprocess.call([python, 'test.py'],
                                       stdout=out, stderr=subprocess.STDOUT)
             out.close()
             inp = open('test.out', 'r')
             for line in inp.readlines():
-                logging.debug(line[:-1])
+                logging.debug(line.rstrip())
             inp.close()
-            logging.debug('    retcode %d', retcode)
             self.assertEqual(retcode, 0)
 
         finally:

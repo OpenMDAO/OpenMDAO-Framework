@@ -1,5 +1,5 @@
 
-__all__ = ('ExternalCode', 'ExternalCode.PIPE', 'ExternalCode.STDOUT')
+__all__ = ('ExternalCode',)
 __version__ = '0.1'
 
 import os.path

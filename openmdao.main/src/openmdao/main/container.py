@@ -44,7 +44,7 @@ from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main import HierarchyMember
 from openmdao.main.variable import INPUT
 from openmdao.main.vartypemap import find_var_class
-from openmdao.main.log import logger
+from openmdao.main.log import logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.main.constants import SAVE_YAML, SAVE_LIBYAML
 from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
@@ -510,6 +510,7 @@ eggs =
             loader_path = os.path.join(name, loader+'.py')
             out = open(loader_path, 'w')
             out.write("""\
+import logging
 import os
 import sys
 if not '.' in sys.path:
@@ -518,6 +519,7 @@ if not '.' in sys.path:
 try:
     from openmdao.main import Component
     from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
+    from openmdao.main.log import enable_console
 except ImportError:
     print 'No OpenMDAO distribution available.'
     if __name__ != '__main__':
@@ -540,6 +542,12 @@ def eggsecutable():
     install = os.environ.get('OPENMDAO_INSTALL', '1')
     if install:
         install = int(install)
+    debug = os.environ.get('OPENMDAO_INSTALL_DEBUG', '1')
+    if debug:
+        debug = int(debug)
+    if debug:
+        enable_console()
+        logging.getLogger().setLevel(logging.DEBUG)
     Component.load_from_egg(sys.path[0], install=install)
 
 def main():
@@ -589,7 +597,7 @@ setuptools.setup(
     name='%(name)s',
     description='''%(doc)s''',
     version='%(version)s',
-    packages=['%(name)s'],
+    packages=setuptools.find_packages(),
     package_data={'%(name)s' : package_files},
     zip_safe=False,
     install_requires=requirements,
@@ -600,21 +608,32 @@ setuptools.setup(
 
             out.close()
 
-            stdout = open('setup.py.out', 'w')
-            try:
-                subprocess.check_call(['python', 'setup.py', 'bdist_egg',
-                                       '-d', dst_dir],
-                                      stdout=stdout, stderr=subprocess.STDOUT)
-            except subprocess.CalledProcessError:
-                stdout.close()
-                self.error('save_to_egg failed due to setup.py error:')
-                stdout = open('setup.py.out', 'r')
-                for line in stdout.readlines():
-                    self.error('    '+line[:-1])
+            # Use environment since 'python' might not recognize '-u'.
+            env = os.environ
+            env['PYTHONUNBUFFERED'] = '1'
+            proc = subprocess.Popen(['python', 'setup.py', 'bdist_egg',
+                                     '-d', dst_dir], env=env,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+            output = []
+            while proc.returncode is None:
+                line = proc.stdout.readline().rstrip()
+                self.debug('    '+line)
+                output.append(line)
+                proc.poll()
+            for line in proc.stdout:
+                line = line.rstrip()
+                self.debug('    '+line)
+                output.append(line)
+
+            if proc.returncode != 0:
+                if self.log_level > LOG_DEBUG:
+                    for line in output:
+                        self.error('    '+line)
+                self.error('save_to_egg failed due to setup.py error %d:',
+                           proc.returncode)
                 self.raise_exception('setup.py failed, check log for info.',
                                      RuntimeError)
-            else:
-                stdout.close()
 
             os.remove(state_path)
             os.remove(loader_path)
