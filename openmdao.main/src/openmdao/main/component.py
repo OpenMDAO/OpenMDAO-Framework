@@ -157,7 +157,7 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._execute_needed or force:
-                #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
+                if __debug__: self._logger.debug('execute %s' % self.get_pathname())
                 self.execute()
             self._post_execute()
         finally:
