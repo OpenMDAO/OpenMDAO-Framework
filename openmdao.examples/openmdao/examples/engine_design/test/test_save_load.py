@@ -4,7 +4,6 @@
 
 import logging
 import os
-import platform
 import shutil
 import subprocess
 import unittest
@@ -53,20 +52,14 @@ class EngineOptimizationTestCase(unittest.TestCase):
                                           'buildout', 'bin', python)
 
             logging.debug('Unpacking in subprocess...')
-            if platform.platform().startswith('Windows'):
-                logging.debug('    python %s' % python)
-                out = open('unpack.py', 'w')
-                out.write("""\
+            logging.debug('    python %s' % python)
+            out = open('unpack.py', 'w')
+            out.write("""\
 from openmdao.main import Component
 Component.load_from_egg('%s', install=False)
 """ % egg_path)
-                out.close()
-                retcode = subprocess.call([python, 'unpack.py'])
-            else:
-                env = os.environ
-                env['OPENMDAO_INSTALL'] = '0'
-                env['OPENMDAO_INSTALL_DEBUG'] = '0'
-                retcode = subprocess.call(['sh', egg_path], env=env)
+            out.close()
+            retcode = subprocess.call([python, 'unpack.py'])
             self.assertEqual(retcode, 0)
 
             logging.debug('Load state and run test in subprocess...')
