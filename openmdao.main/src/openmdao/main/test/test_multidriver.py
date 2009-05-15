@@ -2,6 +2,7 @@
 
 import unittest
 import logging
+from math import sqrt
 
 from openmdao.main import Model, Assembly, Component, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
@@ -89,7 +90,31 @@ class MultiDriverTestCase(unittest.TestCase):
                                self.top.comp4.x, places=1)
         
     def test_2_drivers(self):
-        pass
+        ExprComp('comp1a',self.top, expr='x**2')
+        ExprComp('comp2a',self.top, expr='x-5.0*sqrt(x)')
+        self.top.connect('comp1a.f_x', 'comp2a.x')
+        drv = CONMINdriver('driver1a',self.top)
+        drv.maxiters = 40
+        drv.objective.value = 'comp2a.f_x'
+        drv.design_vars.value = ['comp1a.x']
+        drv.lower_bounds = [0]
+        drv.upper_bounds = [99]
+        drv.constraints.value = ['driver1.objective.refvalue'] # this just forces driver1 to run first
+        self.top.run()
+        self.assertAlmostEqual(self.opt_objective, 
+                               self.top.driver1.objective.refvalue, places=2)
+        self.assertAlmostEqual(self.opt_design_vars[0], 
+                               self.top.comp1.x, places=1)
+        self.assertAlmostEqual(self.opt_design_vars[1], 
+                               self.top.comp2.x, places=2)
+        self.assertAlmostEqual(self.opt_design_vars[2], 
+                               self.top.comp3.x, places=2)
+        self.assertAlmostEqual(self.opt_design_vars[3], 
+                               self.top.comp4.x, places=1)
+        self.assertAlmostEqual(-6.2498054387439232, 
+                               self.top.driver1a.objective.refvalue, places=5)
+        self.assertAlmostEqual(2.4860514783551508, 
+                               self.top.comp1a.x, places=5)
     
 if __name__ == "__main__":
     
