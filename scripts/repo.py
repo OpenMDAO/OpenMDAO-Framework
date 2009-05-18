@@ -106,11 +106,6 @@ def do_set(path, user, options):
             print 'Moving to repository root.'
         os.chdir(path)
 
-    bin = os.path.join(path, 'buildout', 'bin')
-    scripts = os.path.join(path, 'scripts')
-    os.environ['PATH'] = \
-        bin+os.pathsep+scripts+os.pathsep+os.environ.get('PATH', '')
-
     os.environ['OPENMDAO_REPO'] = find_repository(os.getcwd(), user)
 
     process = subprocess.Popen(os.environ['SHELL'])
