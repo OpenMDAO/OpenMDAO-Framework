@@ -68,8 +68,6 @@ class MyModel(Assembly):
 
         Source(parent=self, directory='Source')
         Sink(parent=self, directory='Sink')
-        #self.workflow.add_node(Source(parent=self, directory='Source'))
-        #self.workflow.add_node(Sink(parent=self, directory='Sink'))
 
         self.connect('Source.text_file', 'Sink.text_file')
         self.connect('Source.binary_file', 'Sink.binary_file')

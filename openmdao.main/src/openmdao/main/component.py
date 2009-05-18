@@ -413,9 +413,8 @@ class Component (Container):
         return top
 
     def step (self):
-        """For Components that contain Workflows (e.g., Assembly), this will run
-        one Component in the Workflow and return. For simple components, it is
-        the same as run().
+        """For Components that run other components (e.g., Assembly or Drivers), this will run
+        one Component and return. For simple components, it is the same as run().
         """
         self.run()
 

@@ -72,24 +72,14 @@ class Driver(Assembly):
         pass
         
     def run_iteration(self):
-        """Run a single iteration over a group of Components. This is generally
+        """Run a single iteration over a group of Components. This is
         overridden in derived classes."""
-        if self.parent:
-            self.parent.workflow.run()
+        pass
 
     def post_iteration(self):
         """Called after each iteration."""
         self._continue = False
             
-    def step(self):
-        """Execute a single step."""
-        return self.parent.workflow.step()
-        
-    def stop(self):
-        """ Stop the Model by stopping the Workflow. """
-        self._stop = True
-        self.parent.workflow.stop()
-    
     def get_referenced_comps(self, iostatus=None):
         """Return a set of names of Components that we reference based on the 
         contents of our RefVariables and RefVariableArrays.  If iostatus is
@@ -135,7 +125,7 @@ class Driver(Assembly):
         if self._sorted_comps is None:
             if self.parent and isinstance(self.parent, Assembly):
                 nbunch = self.get_referenced_comps()
-                graph = self.parent.get_dataflow().get_graph().subgraph(nbunch=nbunch)
+                graph = self.parent.get_component_graph().subgraph(nbunch=nbunch)
                 graph.add_edges_from(self.get_ref_graph(skip_inputs=True).edges())
                 self._sorted_comps = nx.topological_sort(graph)
                 if self._sorted_comps is None:
