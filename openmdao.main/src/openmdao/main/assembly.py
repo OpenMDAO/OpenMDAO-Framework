@@ -65,8 +65,8 @@ class Assembly (Component):
         # List of meta-data dictionaries.
         self.external_files = []
 
-    def get_dataflow(self):
-        return self._dataflow
+    def get_component_graph(self):
+        return self._dataflow.get_graph()
     
     def _get_socket_plugin(self, name):
         """Return plugin for the named socket"""

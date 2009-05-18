@@ -125,7 +125,7 @@ class Driver(Assembly):
         if self._sorted_comps is None:
             if self.parent and isinstance(self.parent, Assembly):
                 nbunch = self.get_referenced_comps()
-                graph = self.parent.get_dataflow().get_graph().subgraph(nbunch=nbunch)
+                graph = self.parent.get_component_graph().subgraph(nbunch=nbunch)
                 graph.add_edges_from(self.get_ref_graph(skip_inputs=True).edges())
                 self._sorted_comps = nx.topological_sort(graph)
                 if self._sorted_comps is None:
