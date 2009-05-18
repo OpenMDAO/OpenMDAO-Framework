@@ -50,17 +50,16 @@ class Vehicle_Dynamics(Component):
               doc='Current Velocity of Vehicle')
         Float('Torque_Ratio', self, INPUT, units=None, default=0.0, 
               doc='Ratio of output torque to engine torque')        
-        Float('TireCirc', self, INPUT, units='m', default=2.0,
+        Float('TireCirc', self, INPUT, units='m', default=1.905,
               doc='Circumference of tire')
         
         Float('Acceleration', self, OUTPUT, units='m/(s*s)', default=0.0, 
               doc='Calculated vehicle acceleration ')        
         
     def execute(self):
-        ''' Calculates the instantaneous acceleration for the vehicle.
-        
-            '''
-        
+        ''' Calculates the instantaneous acceleration for the vehicle.       
+            '''        
+        #print '%s.execute()' % self.get_pathname()
         Torque = self.Engine_Torque*self.Torque_Ratio
         TireRadius = self.TireCirc/(2.0*pi)
         

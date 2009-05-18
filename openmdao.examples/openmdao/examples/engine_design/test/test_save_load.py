@@ -8,8 +8,7 @@ import shutil
 import subprocess
 import unittest
 
-from openmdao.examples.engine_design.engine_optimization \
-    import Engine_Optimization
+from openmdao.examples.engine_design.engine_optimization import Engine_Optimization
 
 
 class EngineOptimizationTestCase(unittest.TestCase):
@@ -27,8 +26,8 @@ class EngineOptimizationTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
-        self.model.vehicle_sim.bore = 100
-        self.model.vehicle_sim.sparkAngle = -35.368341874
+        self.model.vehicle_sim.set('bore', 100)
+        self.model.vehicle_sim.set('sparkAngle', -35.368341874)
         self.model.driver.maxiters = 1
 
         egg_name = self.model.save_to_egg()
@@ -77,11 +76,11 @@ class TestCase(unittest.TestCase):
         model = loader.load()
         model.run()
         self.assertAlmostEqual(model.vehicle_sim.AccelTime, 
-                               5.9, places=6)
+                               5.5999999999999961, places=6)
         self.assertAlmostEqual(model.vehicle_sim.EPACity, 
-                               25.18837, places=4)
+                               25.15551809930237, places=4)
         self.assertAlmostEqual(model.vehicle_sim.EPAHighway, 
-                               30.91469, places=4)
+                               32.800993976480768, places=4)
 if __name__ == '__main__':
     unittest.main()
 """ % self.model.name)

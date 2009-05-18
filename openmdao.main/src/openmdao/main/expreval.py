@@ -20,7 +20,7 @@ def _trans_unary(strng, loc, tok):
     return tok
 
     
-def _trans_lhs(strng, loc, tok, scope, validate):
+def _trans_lhs(strng, loc, tok, scope, validate, exprobj):
     if scope.contains(tok[0]):
         scname = 'scope'
     else:
@@ -31,7 +31,9 @@ def _trans_lhs(strng, loc, tok, scope, validate):
                           " being used instead (if found)")
         if validate is True and not scope.parent.contains(tok[0]):
             raise RuntimeError("cannot find variable '"+tok[0]+"'")
-    
+        
+        exprobj._register_output(tok[0])
+        
     full = scname + ".set('" + tok[0] + "',_@RHS@_"
     if len(tok) > 1 and tok[1] != '=':
         full += ","+tok[1]
@@ -67,7 +69,7 @@ def _trans_arglist(strng, loc, tok):
         full += ','+tok[index]
     return [full+")"]
 
-def _trans_fancyname(strng, loc, tok, scope, validate):
+def _trans_fancyname(strng, loc, tok, scope, validate, exprobj):
     # if we find the named object in the current scope, then we don't need to 
     # do any translation.  The scope object is assumed to have a contains() 
     # function.
@@ -75,16 +77,20 @@ def _trans_fancyname(strng, loc, tok, scope, validate):
         scname = 'scope'
         if hasattr(scope, tok[0]):
             return tok  # use name unmodified for faster local access
+    elif tok[0] == '_local_setter': # used in assigment statements
+        return tok
     else:
         scname = 'scope.parent'
         if hasattr(scope, tok[0]):
-            scope.warning("attribute '"+tok[0]+"' is private"+
+            scope.warning("attribute '%s' is private" % tok[0]+
                           " so a public value in the parent is"+
                           " being used instead (if found)")
         if validate is True and (scope.parent is None or 
                                  not scope.parent.contains(tok[0])):
             raise RuntimeError("cannot find variable '"+tok[0]+"'")
     
+        exprobj._register_input(tok[0])
+        
     if len(tok) == 1 or (len(tok) > 1 and tok[1].startswith('[')):
         full = scname + ".get('" + tok[0] + "'"
         if len(tok) > 1:
@@ -97,10 +103,11 @@ def _trans_fancyname(strng, loc, tok, scope, validate):
     return [full + ")"]
     
 
-def translate_expr(text, exprobj):
+def translate_expr(text, exprobj, single_name=False):
     """A function to translate an expression using dotted names into a new
     expression string containing the appropriate calls to resolve those dotted
-    names in the framework, e.g., get('a.b.c') or invoke('a.b.c',1,2,3).
+    names in the framework, e.g., 'a.b.c' becomes get('a.b.c') or 'a.b.c(1,2,3)'
+    becomes invoke('a.b.c',1,2,3).
     """
     scope = exprobj._scope()
     validate = exprobj.validate
@@ -149,9 +156,10 @@ def translate_expr(text, exprobj):
     
     # set up the scope name translation here. Parse actions called from
     # pyparsing only take 3 args, so we wrap our function in a lambda function
-    # with an extra argument to specify the scope used for the translation.
+    # with extra arguments to specify the scope used for the translation,
+    # the validation flag, and the ExprEvaluator object.
     fancyname.setParseAction(
-        lambda s,loc,tok: _trans_fancyname(s,loc,tok,scope, validate))
+        lambda s,loc,tok: _trans_fancyname(s,loc,tok,scope, validate, exprobj))
 
     addop  = plus | minus
     multop = mult | div
@@ -165,12 +173,16 @@ def translate_expr(text, exprobj):
     
     lhs_fancyname = pathname + ZeroOrMore(arrayindex)
     lhs = lhs_fancyname + assignop
-    lhs.setParseAction(lambda s,loc,tok: _trans_lhs(s,loc,tok,scope,validate))
+    lhs.setParseAction(lambda s,loc,tok: _trans_lhs(s,loc,tok,scope,validate,exprobj))
     equation = Optional(lhs) + Combine(expr) + StringEnd()
     equation.setParseAction(lambda s,loc,tok: _trans_assign(s,loc,tok, exprobj))
     
     try:
-        return ''.join(equation.parseString(text))
+        if single_name:
+            simple_str = fancyname + StringEnd()
+            return ''.join(simple_str.parseString(text))
+        else:
+            return ''.join(equation.parseString(text))
     except ParseException, err:
         raise RuntimeError(str(err)+' - '+err.markInputline())
 
@@ -191,13 +203,20 @@ class ExprEvaluator(object):
     
     If validate is True, any objects referenced in the expression must exist
     at creation time (or any time later that text is set to a different value)
-    or a RuntimeError will be raised.
+    or a RuntimeError will be raised.  If validate is False, error reporting will
+    be delayed until the expression is evaluated.
+    
+    If single_name is True, the expression can only be the name one object, with
+    optional array indexing, but general expressions are not allowed.
     """
     
-    def __init__(self, text, scope, validate=True):
+    def __init__(self, text, scope, single_name=False, validate=True):
         self._scope = weakref.ref(scope)
+        self.input_names = set()
+        self.output_names = set()
         self.validate = validate
-        self.text = text
+        self.single_name = single_name
+        self.text = text  # this calls _set_text
         self.rhs = ''
         self.lhs = ''
     
@@ -220,25 +239,71 @@ class ExprEvaluator(object):
 
     def _set_text(self, text):
         self._text = text
-        self.scoped_text = translate_expr(text, self)
-        self._code = compile(self.scoped_text, '<string>', 'eval')
+        self.input_names = set()
+        self.output_names = set()
+        self.scoped_text = translate_expr(text, self, 
+                                          single_name=self.single_name)
+        self._code = compile(self.scoped_text, '<string>','eval')
+        if self.single_name: # set up a compiled assignment statement
+            old_validate = self.validate
+            try:
+                self.validate = False
+                self.scoped_assignment_text = translate_expr(
+                                            '%s = _local_setter' % self.text, 
+                                            self)
+                self._assignment_code = compile(self.scoped_assignment_text, 
+                                                '<string>','exec')
+            finally:
+                self.validate = old_validate
         
     def _get_text(self):
         return self._text
     
     text = property(_get_text, _set_text, None,
-                    'The original text of the expression.')
+                    'The untranslated text of the expression')
         
-    def evaluate(self, scope=None):
+    def evaluate(self):
         """Return the value of the scoped string, evaluated 
         using the eval() function.
         """
-        if scope is None:
-            scope = self._scope()
+        scope = self._scope()
+        
         # object referred to by weakref may no longer exist
         if scope is None:
             raise RuntimeError(
-                'ExprEvaluator cannot evaluate expression without scope.')
-        
-        return eval(self._code, scope.__dict__, locals())
+                    'ExprEvaluator cannot evaluate expression without scope.')
+        try:
+            return eval(self._code, scope.__dict__, locals())
+        except Exception, err:
+            raise type(err)("ExprEvaluator failed evaluating expression "+
+                            "'%s'. Caught message is: %s" %(self._text,str(err)))
 
+    def set(self, val):
+        """Set the value of the referenced object to the specified value."""
+        if self.single_name:
+            scope = self._scope()
+            # object referred to by weakref may no longer exist
+            if scope is None:
+                raise RuntimeError(
+                    'ExprEvaluator cannot evaluate expression without scope.')
+            
+            # self.assignment_code is a compiled version of an assignment statement
+            # of the form  'somevar = _local_setter', so we set _local_setter here
+            # and the exec call will pull it out of locals()
+            _local_setter = val 
+            exec(self._assignment_code, scope.__dict__, locals())
+            
+        else: # self.single_name is False
+            raise ValueError('trying to set an input expression')
+        
+    def _register_input(self, name):
+        """Adds a Variable name to the input set. 
+        Called during expression parsing.
+        """
+        self.input_names.add(name)
+    
+    def _register_output(self, name):
+        """Adds a Variable name to the output set. 
+        Called during expression parsing.
+        """
+        self.output_names.add(name)

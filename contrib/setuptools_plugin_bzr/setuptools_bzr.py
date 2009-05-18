@@ -5,13 +5,13 @@ from subprocess import Popen,PIPE,STDOUT
 
 
 def _run_command(cmd, sh=True):
-   """Run a command using Popen and return its output (stdout and stderr)
-   and its return code as a tuple.
-   """
+    """Run a command using Popen and return its output (stdout and stderr)
+    and its return code as a tuple.
+    """
 
-   p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=sh)
-   output = p.communicate()[0]
-   return (output, p.returncode)
+    p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=sh)
+    output = p.communicate()[0]
+    return (output, p.returncode)
 
 
 def findfiles(dirname):

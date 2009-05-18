@@ -11,14 +11,14 @@ from openmdao.main import Assembly
 import m4.doe
 import m4.dummy_components
 
-class Model(Assembly):
+class MyModel(Assembly):
     """ Simple M4 DOE example.  """
 
     def __init__(self, name='M4_DOE_example', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+        super(MyModel, self).__init__(name, *args, **kwargs)
 
         # The model is just an M4 test component.
-        self.workflow.add_node(m4.dummy_components.Model_A2d(parent=self))
+        m4.dummy_components.Model_A2d(parent=self)
 
         # Specify DOE.
         doe = m4.doe.DOE(parent=self)
@@ -41,7 +41,7 @@ class Model(Assembly):
 
 def main():
     """ Run model and print results. """
-    model = Model()
+    model = MyModel()
     model.run()
     for i, case in enumerate(model.driver.outerator):
         print 'CASE %d:' % (i+1)

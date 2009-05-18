@@ -28,21 +28,21 @@ class BoolTestCase(unittest.TestCase):
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual(True, self.bool1.value)
-        self.assertEqual(False, self.bool2.value)
+        self.assertEqual(True, self.bool1.get_value())
+        self.assertEqual(False, self.bool2.get_value())
 
         # check default value
         self.assertEqual(True, self.bool1.default)
         self.assertEqual(False, self.bool2.default)
 
         # assignment
-        self.bool1.value = self.bool2.value
-        self.assertEqual(False, self.bool1.value)
+        self.bool1.set_value(self.bool2.get_value())
+        self.assertEqual(False, self.bool1.get_value())
 
         # make sure value gets transferred to internal variable
         self.assertEqual(False, self.hobj.internal_bool1)
-        self.bool1.value = True
-        self.assertEqual(True, self.bool1.value)
+        self.bool1.set_value(True)
+        self.assertEqual(True, self.bool1.get_value())
         self.assertEqual(True, self.hobj.internal_bool1)
 
     def test_get(self):

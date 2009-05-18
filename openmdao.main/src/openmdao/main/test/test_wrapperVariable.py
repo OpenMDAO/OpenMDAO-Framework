@@ -1,7 +1,8 @@
 # pylint: disable-msg=C0111,C0103
 import unittest
 
-from openmdao.main import Container,Wrapper,Float,Variable
+from openmdao.main import Container,Float,Variable
+from openmdao.main.wrapper import Wrapper
 from openmdao.main.variable import INPUT, OUTPUT
 
 import random
@@ -38,7 +39,7 @@ class test_Variable_as_Wrapper(unittest.TestCase):
         pass
         
     def test_createVariable(self):
-        self.assertEqual(self.Justin.value,Person('Justin',.5))
+        self.assertEqual(self.Justin.get_value(),Person('Justin',.5))
         
     def test_attrAccess(self):
         self.assertEqual(self.Justin.get().fullname,'Justin')
