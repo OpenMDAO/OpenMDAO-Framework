@@ -155,10 +155,8 @@ class CONMINdriverTestCase(unittest.TestCase):
     
     def setUp(self):
         self.top = Assembly('top',None)
-        comp = OptGolinskiComponent('comp', self.top)
-        self.top.add_child(comp)
-        self.top.workflow.add_node(comp)
-        self.top.add_child(CONMINdriver('driver'))
+        OptGolinskiComponent('comp', self.top)
+        CONMINdriver('driver', self.top)
         self.top.driver.iprint = 0
         self.top.driver.maxiters = 30
         

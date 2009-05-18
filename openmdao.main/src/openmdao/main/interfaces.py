@@ -140,9 +140,8 @@ class IComponent (IContainer):
         typically a delta from a full saved state file."""
 
     def step ():
-        """For Components that contain Workflows (e.g., Model), this will run
-        one Component in the Workflow and return. For simple components, it is the
-        same as run()."""
+        """For Components that execute other Components (e.g., Workflows), this will run
+        one Component and return. For simple components, it is the same as run()."""
 
     #def require_gradients (varname, gradients):
         #"""Requests that the component be able to provide (after execution) a

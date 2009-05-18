@@ -353,6 +353,10 @@ class Assembly (Component):
     def execute (self):
         """By default, run child components in data flow order."""
         self._dataflow.run()
+        
+    def step(self):
+        """Execute a single child component and return."""
+        self._dataflow.step()
     
     def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).

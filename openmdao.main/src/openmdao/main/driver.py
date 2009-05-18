@@ -72,24 +72,14 @@ class Driver(Assembly):
         pass
         
     def run_iteration(self):
-        """Run a single iteration over a group of Components. This is generally
+        """Run a single iteration over a group of Components. This is
         overridden in derived classes."""
-        if self.parent:
-            self.parent.workflow.run()
+        pass
 
     def post_iteration(self):
         """Called after each iteration."""
         self._continue = False
             
-    def step(self):
-        """Execute a single step."""
-        return self.parent.workflow.step()
-        
-    def stop(self):
-        """ Stop the Model by stopping the Workflow. """
-        self._stop = True
-        self.parent.workflow.stop()
-    
     def get_referenced_comps(self, iostatus=None):
         """Return a set of names of Components that we reference based on the 
         contents of our RefVariables and RefVariableArrays.  If iostatus is

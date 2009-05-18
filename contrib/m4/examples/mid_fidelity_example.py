@@ -22,7 +22,6 @@ class MyModel(Assembly):
 
         # The model is an M4 variable fidelity component.
         var_fi = VarFi(parent=self)
-        #self.workflow.add_node(var_fi)
 
         # Specify DOE.
         doe = DOE(parent=self)
