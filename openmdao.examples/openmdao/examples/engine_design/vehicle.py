@@ -7,7 +7,7 @@
 
 from zope.interface import implements, Interface
 
-from openmdao.main import Model, Assembly
+from openmdao.main import Assembly
 from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.interfaces import IComponent
@@ -19,13 +19,13 @@ from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
 class IVehicle(Interface):
     """Vehicle Model interface"""
     
-class Vehicle(Model):
-    """ Vehicle model. """
+class Vehicle(Assembly):
+    """ Vehicle assembly. """
     
     implements(IVehicle)
     
     def __init__(self, name, parent=None, directory=''):
-        ''' Creates a new Vehicle Model object
+        ''' Creates a new Vehicle Assembly object
 
             # Design parameters promoted from Engine
             stroke = 78.8              # Stroke (mm)
@@ -71,16 +71,19 @@ class Vehicle(Model):
 
         # Create component instances
         
-        self.add_socket('Transmission', IComponent, required=True)
+        # FIXME: uncomment add_socket after sockets work with pickle
+        #self.add_socket('Transmission', IComponent, required=True)
         Transmission('Transmission', parent=self)
         
-        self.add_socket('Engine', IComponent, required=True)
+        # FIXME: uncomment add_socket after sockets work with pickle
+        #self.add_socket('Engine', IComponent, required=True)
         Engine('Engine', parent=self)
 
-        self.add_socket('VDyn', IComponent, required=True)
+        # FIXME: uncomment add_socket after sockets work with pickle
+        #self.add_socket('VDyn', IComponent, required=True)
         Vehicle_Dynamics('VDyn', parent=self)
 
-        # Create input and output ports at the model level
+        # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
         # "Instance of <class> has no <attr> member"        
         

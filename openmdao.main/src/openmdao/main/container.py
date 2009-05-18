@@ -1,12 +1,10 @@
 
-
 #public symbols
 __all__ = ["Container"]
 
 __version__ = "0.1"
 
 import copy
-import pprint
 import pickle
 import cPickle
 import yaml
@@ -20,11 +18,13 @@ except ImportError:
 
 import datetime
 import os
+import pkg_resources
 import platform
 import shutil
 import subprocess
 import sys
 import tempfile
+import zc.buildout.easy_install
 import zipfile
 
 import weakref
@@ -45,10 +45,13 @@ from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main import HierarchyMember
 from openmdao.main.variable import Variable, INPUT, OUTPUT
 from openmdao.main.vartypemap import make_variable_wrapper
-from openmdao.main.log import logger
+from openmdao.main.log import logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.main.constants import SAVE_YAML, SAVE_LIBYAML
 from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
+
+EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
+
 
 class Container(HierarchyMember):
     """ Base class for all objects having Variables that are visible 
@@ -268,16 +271,20 @@ class Container(HierarchyMember):
         assert(path is None or isinstance(path, basestring))
         
         if path is None:
-            return self
+	    if index is None:
+		return self
+	    else:
+		self.raise_exception('%s is not a Variable. Cannot retrieve index %s'%
+				     (self.get_pathname(),str(index)), AttributeError)
         
         try:
             base, name = path.split('.', 1)
         except ValueError:
             try:
-                if index is not None:
-                    return self._pub[path].get_entry(index)
-                else:
+                if index is None:
                     return self._pub[path].get(None)
+                else:
+                    return self._pub[path].get_entry(index)
             except KeyError:
                 self.raise_exception("object has no attribute '"+path+"'",
                                      AttributeError)
@@ -348,6 +355,7 @@ class Container(HierarchyMember):
         except ValueError:
             base = path
             name = None
+
         try:
             obj = self._pub[base]
         except KeyError:
@@ -370,16 +378,22 @@ class Container(HierarchyMember):
                     src_dir=None, src_files=None, dst_dir=None,
                     format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
-        name defaults to the name of the container.
-        version defaults to the container's module __version__.
-        If force_relative is True, all paths are relative to src_dir.
-        src_dir is the root of all (relative) src_files.
-        dst_dir is the directory to write the egg in.
-        tmp_dir is the directory to use for temporary files.
-        Returns the egg's filename."""
-        # TODO: check for setup.py errors!
-        # TODO: handle custom class definitions.
-        # TODO: record required packages, buildout.cfg.
+
+            name defaults to the name of the container.
+
+            version defaults to the container's module __version__.
+
+            If force_relative is True, all paths are relative to src_dir.
+
+            src_dir is the root of all (relative) src_files.
+
+            dst_dir is the directory to write the egg in.
+
+            tmp_dir is the directory to use for temporary files.
+
+        The resulting egg can be unpacked on UNIX via 'sh egg-file'.
+        Returns the egg's filename.
+        """
         orig_dir = os.getcwd()
 
         if name is None:
@@ -389,7 +403,7 @@ class Container(HierarchyMember):
                 version = sys.modules[self.__module__].__version__
             except AttributeError:
                 now = datetime.datetime.now()  # Could consider using utcnow().
-                version = '%d.%d.%d.%d.%d' % \
+                version = '%d.%02d.%02d.%02d.%02d' % \
                           (now.year, now.month, now.day, now.hour, now.minute)
         if dst_dir is None:
             dst_dir = orig_dir
@@ -402,9 +416,49 @@ class Container(HierarchyMember):
         egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
         self.debug('Saving to %s in %s...', egg_name, orig_dir)
 
+        # Fixup objects, classes, & sys.modules for __main__ imports.
+        fixup_objects = []
+        fixup_classes = {}
+        fixup_modules = set()
+
+        objs = [x for x in self.values(pub=False, recurse=True) if IContainer.providedBy(x)]
+        objs.append(self)
+        for obj in objs:
+            mod = obj.__module__
+            if mod == '__main__':
+                classname = obj.__class__.__name__
+                mod = obj.__class__.__module__
+                if mod == '__main__' and \
+                   (classname not in fixup_classes.keys()):
+                    # Need to determine 'real' module name.
+                    if '.' not in sys.path:
+                        sys.path.append('.')
+                    for arg in sys.argv:
+                        if arg.endswith('.py'):
+                            mod = os.path.basename(arg)[:-3]
+                            try:
+                                module = __import__(mod, fromlist=[classname])
+                            except ImportError:
+                                pass
+                            else:
+                                old = obj.__class__
+                                new = getattr(module, classname)
+                                fixup_classes[classname] = (old, new)
+                                fixup_modules.add(mod)
+                                break
+                    else:
+                        self.raise_exception("Can't find module for '%s'" % \
+                                             classname, RuntimeError)
+                obj.__class__ = fixup_classes[classname][1]
+                obj.__module__ = obj.__class__.__module__
+                fixup_objects.append(obj)
+
         # Move to scratch area.
         tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
         os.chdir(tmp_dir)
+        buildout = 'buildout.cfg'
+        buildout_path = os.path.join(name, buildout)
+        buildout_orig = buildout_path+'-orig'
         try:
             if src_dir:
                 # Link original directory to object name.
@@ -430,65 +484,253 @@ class Container(HierarchyMember):
                 self.raise_exception("Can't save to '%s': %s" % \
                                      (state_path, str(exc)), type(exc))
 
-            # Save everything to an egg.
+            # Add state file to set of files to save.
             if src_files is None:
                 src_files = set()
             src_files.add(state_name)
-            src_files = sorted(src_files)
 
-            if not os.path.exists(os.path.join(name, '__init__.py')):
+            # Determine classes used by recording them during an unpickle.
+            self._required_classes = set()
+            if format == SAVE_CPICKLE or format == SAVE_PICKLE:
+                inp = open(state_path, 'rb')
+            else:
+                scratch = '__unpickle__'
+                self.save(scratch, SAVE_CPICKLE)
+                inp = open(scratch, 'rb')
+            unpickler = cPickle.Unpickler(inp)
+            unpickler.find_global = self._record_class
+            obj = unpickler.load()
+            del obj
+            inp.close()
+            if format != SAVE_CPICKLE and format != SAVE_PICKLE:
+                os.remove(scratch)
+
+            # Determine modules required.
+            required_modules = set()
+            for cls in self._required_classes:
+                self._add_modules(cls, required_modules)
+
+            # Determine distributions required.
+            required_distributions = set()
+            working_set = pkg_resources.WorkingSet()
+            for module in required_modules:
+                path = module.__file__
+                for dist in working_set:
+                    if path.startswith(dist.location):
+                        required_distributions.add(dist)
+                        break
+            required_distributions = sorted(required_distributions,
+                                            key=lambda dist: dist.project_name)
+            self.debug('    required distributions:')
+            for dist in required_distributions:
+                self.debug('        %s %s', dist.project_name, dist.version)
+     
+            # Create buildout.cfg
+            if os.path.exists(buildout_path):
+                os.rename(buildout_path, buildout_orig)
+            out = open(buildout_path, 'w')
+            out.write("""\
+[buildout]
+parts = %(name)s
+index = %(server)s
+unzip = true
+
+[%(name)s]
+recipe = zc.recipe.egg:scripts
+interpreter = python
+eggs =
+""" % {'name':name, 'server':EGG_SERVER_URL})
+            for dist in required_distributions:
+                out.write("    %s == %s\n" % (dist.project_name, dist.version))
+            out.close()
+            src_files.add(buildout)
+
+            # If needed, make an empty __init__.py
+            init_path = os.path.join(name, '__init__.py')
+            if not os.path.exists(init_path):
                 remove_init = True
-                out = open(os.path.join(name, '__init__.py'), 'w')
+                out = open(init_path, 'w')
                 out.close()
             else:
                 remove_init = False
 
+            # Create loader script.
+            loader = '%s_loader' % name
+            loader_path = os.path.join(name, loader+'.py')
+            out = open(loader_path, 'w')
+            out.write("""\
+import logging
+import os
+import sys
+if not '.' in sys.path:
+    sys.path.append('.')
+
+try:
+    from openmdao.main import Component
+    from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
+    from openmdao.main.log import enable_console
+except ImportError:
+    print 'No OpenMDAO distribution available.'
+    if __name__ != '__main__':
+        print 'You can unzip the egg to access the enclosed files.'
+        print 'To get OpenMDAO, please visit openmdao.org'
+    sys.exit(1)
+
+def load():
+    '''Create object(s) from state file.'''
+    state_name = '%s'
+    if state_name.endswith('.pickle'):
+        return Component.load(state_name, SAVE_CPICKLE)
+    elif state_name.endswith('.yaml'):
+        return Component.load(state_name, SAVE_LIBYAML)
+    raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
+                       state_name)
+
+def eggsecutable():
+    '''Unpack egg.'''
+    install = os.environ.get('OPENMDAO_INSTALL', '1')
+    if install:
+        install = int(install)
+    debug = os.environ.get('OPENMDAO_INSTALL_DEBUG', '1')
+    if debug:
+        debug = int(debug)
+    if debug:
+        enable_console()
+        logging.getLogger().setLevel(logging.DEBUG)
+    Component.load_from_egg(sys.path[0], install=install)
+
+def main():
+    '''Load state and run.'''
+    model = load()
+    model.run()
+
+if __name__ == '__main__':
+    main()
+""" % state_name)
+            out.close()
+
+            # Save everything to an egg via setuptools.
             out = open('setup.py', 'w')
 
             out.write('import setuptools\n')
-            out.write('\n')
-
-            out.write('package_files = [\n')
-            for filename in src_files:
+            out.write('\npackage_files = [\n')
+            for filename in sorted(src_files):
                 path = os.path.join(name, filename)
                 if not os.path.exists(path):
                     self.raise_exception("Can't save, '%s' does not exist" % \
                                          path, ValueError)
                 out.write("    '%s',\n" % filename)
-            out.write('    ]\n')
-            out.write('\n')
+            out.write(']\n')
 
-            out.write('setuptools.setup(\n')
-            out.write("    name='%s',\n" % name)
-            out.write("    description='%s',\n" % self.__doc__.strip())
-            out.write("    version='%s',\n" % version)
-            out.write("    packages=['%s'],\n" % name)
-            out.write("    package_data={'%s' : package_files})\n" % name)
-            out.write('\n')
+            out.write('\nrequirements = [\n')
+            for dist in required_distributions:
+                out.write("    '%s == %s',\n" % \
+                          (dist.project_name, dist.version))
+            out.write(']\n')
+
+            out.write("""
+entry_points = {
+    'openmdao.top' : [
+        'top = %(loader)s:load',
+    ],
+    'openmdao.components' : [
+        '%(name)s = %(loader)s:load',
+    ],
+    'setuptools.installation' : [
+        'eggsecutable = %(name)s.%(loader)s:eggsecutable',
+    ],
+}
+
+setuptools.setup(
+    name='%(name)s',
+    description='''%(doc)s''',
+    version='%(version)s',
+    packages=setuptools.find_packages(),
+    package_data={'%(name)s' : package_files},
+    zip_safe=False,
+    install_requires=requirements,
+    entry_points=entry_points,
+)
+""" % {'name':name, 'loader':loader,
+       'doc':self.__doc__.strip(), 'version':version})
 
             out.close()
 
-            stdout = open('setup.py.out', 'w')
-            subprocess.check_call(['python', 'setup.py', 'bdist_egg',
-                                   '-d', dst_dir],
-                                  stdout=stdout, stderr=subprocess.STDOUT)
-            stdout.close()
+            # Use environment since 'python' might not recognize '-u'.
+            env = os.environ
+            env['PYTHONUNBUFFERED'] = '1'
+            proc = subprocess.Popen(['python', 'setup.py', 'bdist_egg',
+                                     '-d', dst_dir], env=env,
+                                    stdout=subprocess.PIPE,
+                                    stderr=subprocess.STDOUT)
+            output = []
+            while proc.returncode is None:
+                line = proc.stdout.readline().rstrip()
+                self.debug('    '+line)
+                output.append(line)
+                proc.poll()
+            for line in proc.stdout:
+                line = line.rstrip()
+                self.debug('    '+line)
+                output.append(line)
 
-            os.remove(os.path.join(name, state_name))
+            if proc.returncode != 0:
+                if self.log_level > LOG_DEBUG:
+                    for line in output:
+                        self.error('    '+line)
+                self.error('save_to_egg failed due to setup.py error %d:',
+                           proc.returncode)
+                self.raise_exception('setup.py failed, check log for info.',
+                                     RuntimeError)
+
+            os.remove(state_path)
+            os.remove(loader_path)
             if remove_init:
-                os.remove(os.path.join(name, '__init__.py'))
+                os.remove(init_path)
 
         finally:
+            if os.path.exists(buildout_orig):
+                os.rename(buildout_orig, buildout_path)
+            elif os.path.exists(buildout_path):
+                os.remove(buildout_path)
             os.chdir(orig_dir)
             shutil.rmtree(tmp_dir)
+            # Restore objects, classes, & sys.modules for __main__ imports.
+            for obj in fixup_objects:
+                obj.__module__ = '__main__'
+                classname = obj.__class__.__name__
+                obj.__class__ = fixup_classes[classname][0]
+            for classname in fixup_classes.keys():
+                new = fixup_classes[classname][1]
+                del new
+            for mod in fixup_modules:
+                del sys.modules[mod]
 
         return egg_name
+    def _record_class(self, modname, classname):
+        """Record class referenced during dummy unpickle."""
+        cls = getattr(sys.modules[modname], classname)
+        if modname != '__builtin__':
+            self._required_classes.add(cls)
+        return cls
+
+    def _add_modules(self, cls, required_modules):
+        """Record modules required by class."""
+        modname = cls.__module__
+        if modname == '__builtin__':
+            return
+        module = sys.modules[modname]
+        if os.path.isabs(module.__file__):
+            required_modules.add(module)
+        else:
+            for base in cls.__bases__:
+                self._add_modules(base, required_modules)
 
     def save (self, outstream, format=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
-        output stream. Pure python classes generally won't need to
+        output stream. Pure Python classes generally won't need to
         override this because the base class version will suffice, but
-        python extension classes will have to override. The format
+        Python extension classes will have to override. The format
         can be supplied in case something other than cPickle is needed."""
         if isinstance(outstream, basestring):
             if format is SAVE_CPICKLE or format is SAVE_PICKLE:
@@ -516,40 +758,93 @@ class Container(HierarchyMember):
                                  RuntimeError)
     
     @staticmethod
-    def load_from_egg (filename):
+    def load_from_egg (filename, install=True):
         """Load state and other files from an egg, returns top object."""
-        # TODO: handle custom class definitions.
-        # TODO: handle required packages.
-        if __debug__: logger.debug('Loading from %s in %s...', filename, os.getcwd())
+        logger.debug('Loading from %s in %s...', filename, os.getcwd())
+        if not os.path.exists(filename):
+            raise ValueError("'%s' not found." % filename)
+
+        # Check for a distribution.
+        distributions = \
+            [dist for dist in pkg_resources.find_distributions(filename,
+                                                               only=True)]
+        if not distributions:
+            raise RuntimeError("No distributions found in '%s'." % filename)
+
+        dist = distributions[0]
+        logger.debug('    project_name: %s', dist.project_name)
+        logger.debug('    version: %s', dist.version)
+        logger.debug('    py_version: %s', dist.py_version)
+        logger.debug('    platform: %s', dist.platform)
+        logger.debug('    requires:')
+        for req in dist.requires():
+            logger.debug('        %s', req)
+        logger.debug('    entry points:')
+        maps = dist.get_entry_map()
+        for group in maps.keys():
+            logger.debug('        group %s:' % group)
+            for name in maps[group]:
+                logger.debug('            %s', name)
+
+        # Extract files.
         archive = zipfile.ZipFile(filename, 'r')
         name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
-        if __debug__: logger.debug("    name '%s'", name)
+        logger.debug("    name '%s'", name)
+
         for info in archive.infolist():
             if not info.filename.startswith(name):
                 continue  # EGG-INFO
             if info.filename.endswith('.pyc') or \
                info.filename.endswith('.pyo'):
                 continue  # Don't assume compiled OK for this platform.
-            if __debug__: logger.debug("    extracting '%s'...", info.filename)
+            logger.debug("    extracting '%s' (%d bytes)...",
+                         info.filename, info.file_size)
             dirname = os.path.dirname(info.filename)
             dirname = dirname[len(name)+1:]
             if dirname and not os.path.exists(dirname):
                 os.makedirs(dirname)
             path = info.filename[len(name)+1:]
+            # TODO: use 2.6 ability to extract to filename.
             out = open(path, 'w')
             out.write(archive.read(info.filename))
             out.close()
 
-        if os.path.exists(name+'.pickle'):
-            return Container.load(name+'.pickle', SAVE_CPICKLE)
-        elif os.path.exists(name+'.yaml'):
-            return Container.load(name+'.yaml', SAVE_LIBYAML)
+        if install:
+            # Locate the installation (eggs) directory.
+# TODO: fix this hack!
+            install_dir = \
+                os.path.dirname(
+                    os.path.dirname(
+                        os.path.dirname(
+                            os.path.dirname(zc.buildout.__file__))))
+            logger.debug('    installing in %s', install_dir)
 
-        raise RuntimeError('No top object pickle or yaml save file.')
+            # Grab any distributions we depend on.
+            try:
+                zc.buildout.easy_install.install(
+                    [str(req) for req in dist.requires()], install_dir,
+                    index=EGG_SERVER_URL,
+                    always_unzip=True
+                    )
+            except Exception, exc:
+                raise RuntimeError("Install failed: '%s'" % exc)
+
+        # Invoke the top object's loader.
+        info = dist.get_entry_info('openmdao.top', 'top')
+        if info is None:
+            raise RuntimeError("No openmdao.top 'top' entry point.")
+        if info.module_name in sys.modules.keys():
+            logger.debug("    removing existing '%s' module",
+                         info.module_name)
+            del sys.modules[info.module_name]            
+        if not '.' in sys.path:
+            sys.path.append('.')
+        loader = dist.load_entry_point('openmdao.top', 'top')
+        return loader()
 
     @staticmethod
-    def load (instream, format=SAVE_CPICKLE):
-        """Load an object of this type from the input stream. Pure python 
+    def load (instream, format=SAVE_CPICKLE, do_post_load=True):
+        """Load object(s) from the input stream. Pure python 
         classes generally won't need to override this, but extensions will. 
         The format can be supplied in case something other than cPickle is 
         needed."""
@@ -561,27 +856,31 @@ class Container(HierarchyMember):
             instream = open(instream, mode)
 
         if format is SAVE_CPICKLE:
-            return cPickle.load(instream)
+            top = cPickle.load(instream)
         elif format is SAVE_PICKLE:
-            return pickle.load(instream)
+            top = pickle.load(instream)
         elif format is SAVE_YAML:
-            return yaml.load(instream)
+            top = yaml.load(instream)
         elif format is SAVE_LIBYAML:
             if _libyaml is False:
                 logger.warn('libyaml not available, using yaml instead')
-            return yaml.load(instream, Loader=Loader)
+            top = yaml.load(instream, Loader=Loader)
         else:
-            raise RuntimeError('cannot load object using format '+str(format))
+            raise RuntimeError('cannot load object using format %s' % format)
+
+        if do_post_load:
+            top.post_load()
+        return top
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
         [x.post_load() for x in self.values(pub=False) 
-                                                if isinstance(x,Container)]
+                                          if isinstance(x,Container)]
 
     def pre_delete(self):
         """ Perform any required operations before the model is deleted. """
         [x.pre_delete() for x in self.values(pub=False) 
-                                                if isinstance(x,Container)]
+                                          if isinstance(x,Container)]
 
     def _get_pub_items(self, recurse=False):
         """Generate a list of tuples of the form (rel_pathname, obj) for each

@@ -6,7 +6,7 @@ Interfaces for the OpenMDAO project.
 # pylint: disable-msg=E0213,E0211,W0232
 
 #public symbols
-__all__ = ['IContainer', 'IComponent', 'IAssembly', 'IModel', 'IDriver', 'IFactory',
+__all__ = ['IContainer', 'IComponent', 'IAssembly', 'IDriver', 'IFactory',
            'IGeomQueryObject', 'IGeomModifier', 'IResourceAllocator',
            'IVariable', 'IWorkflow', 'ICaseIterator']
 
@@ -220,18 +220,9 @@ class IAssembly (IComponent):
     def update_inputs(varnames):
         """Update the inputs named in varnames."""
 
-
-class IModel (IAssembly):
-    """Contains a Workflow, a Driver, and a collection of child 
-    Compnents/Containers and manages connections between its children."""
-    
-    workflow = Attribute('the object that orders execution of components')
-    driver = Attribute('the object that manages iteration of components')
-    
     
 class IDriver (IComponent):
     """Executes a Workflow until certain criteria are met."""
-
 
 
 

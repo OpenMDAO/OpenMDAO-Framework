@@ -1,6 +1,6 @@
 
 """
-Mapping functions used to find a Variable wrapper for a python object 
+Mapping functions used to find a Variable wrapper for a Python object 
 of a certain type.
 """
 
@@ -34,7 +34,7 @@ def make_variable_wrapper(typ, name, parent, iostatus, ref_name=None):
 
 
 def add_var_type_map(varclass, typ):
-    """Add a Variable class to the Variable-to-type map"""
+    """Add a Variable class to the Variable-to-type map."""
     if typ not in __var_type_map__:
         if IVariable.implementedBy(varclass):
             __var_type_map__[typ] = varclass

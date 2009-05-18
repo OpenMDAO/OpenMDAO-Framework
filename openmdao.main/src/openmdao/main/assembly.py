@@ -34,7 +34,8 @@ class Assembly (Component):
     implements(IAssembly)
     
     def __init__(self, name, parent=None, doc=None, directory=''):
-        super(Assembly, self).__init__(name, parent, doc, directory)
+        super(Assembly, self).__init__(name, parent, doc=doc,
+                                       directory=directory)
         
         self.state = STATE_IDLE
         self._stop = False

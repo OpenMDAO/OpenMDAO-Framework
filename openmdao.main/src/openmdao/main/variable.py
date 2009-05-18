@@ -160,8 +160,11 @@ class Variable(HierarchyMember):
         """Return True if the object identified by path is an attribute of
         this object.
         """
-        return hasattr(self, path)
-    
+	try:
+	    return hasattr(self, path)
+	except:
+	    return False
+
     def set_value(self, val):
         """Assign this Variable's value to the value of another Variable or 
         directly to another value.  Checks validity of the new value before assignment.
@@ -288,7 +291,7 @@ class Variable(HierarchyMember):
                                      ValueError)
             
     def getvar(self, name=None):
-        """Retrieved a named Variable from this object, or return 
+        """Retrieve a named Variable from this object, or return 
         self if the name is None.
         """
         if name is None:

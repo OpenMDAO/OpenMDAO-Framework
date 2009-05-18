@@ -9,7 +9,7 @@ from openmdao.main import Factory
 from openmdao.main.log import logger
    
 class ImportFactory(Factory):
-    """Creates objects using the standard python __import__ mechanism. The 
+    """Creates objects using the standard Python __import__ mechanism. The 
     object must have a ctor with the same name as the module, minus the file 
     extension.  For example, to create a MyComp object, the module must be 
     named MyComp.py (or .pyc or .pyo). This factory does not support specific 
@@ -23,7 +23,7 @@ class ImportFactory(Factory):
                res_desc=None):
         """Tries to import the given named module and return a factory 
         function from it. The factory function or constructor must have the same
-        name as the module. The module must be importable in the current python
+        name as the module. The module must be importable in the current Python
         environment.
         """
                 

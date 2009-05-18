@@ -4,11 +4,10 @@ Test of NPSS auto-reload capability.
 
 import logging
 import os
-import os.path
 import pkg_resources
 import unittest
 
-from openmdao.main import Model, Component, Bool, Float, String
+from openmdao.main import Assembly, Component, Bool, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.component import SimulationRoot
 
@@ -41,7 +40,7 @@ class Sink(Component):
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
 
-class MyModel(Model):
+class MyModel(Assembly):
     """ Exercises NPSS auto-reload capability. """ 
 
     def __init__(self, *args, **kwargs):
@@ -72,8 +71,7 @@ class MyModel(Model):
 
 class NPSSTestCase(unittest.TestCase):
 
-    directory = \
-        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+    directory = pkg_resources.resource_filename('npsscomponent', 'test')
 
     def setUp(self):
         """ Called before each test in this class. """

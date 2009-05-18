@@ -62,7 +62,7 @@ class Workflow(Component):
             yield node
     
     def step(self):
-        """Run a single component in the Workflow"""
+        """Run a single component in the Workflow."""
         if self._iterator is None:
             self._iterator = self.nodes_iter()
             

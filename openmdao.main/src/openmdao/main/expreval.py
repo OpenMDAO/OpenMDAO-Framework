@@ -194,7 +194,7 @@ class ExprEvaluator(object):
     during later evaluations.  A scoping object is required at construction time
     and that object determines the form of the  translated expression. 
     Variables that are local to the scoping object do not need to be translated,
-    where variables from other objects must  be accessed using the appropriate
+    whereas variables from other objects must  be accessed using the appropriate
     set() or get() call.  Array entry access and function invocation are also
     translated in a similar way.  For example, the expression "a+b[2]-comp.y(x)"
     for a scoping object that contains attributes a and b, but not comp,x or y,
@@ -220,6 +220,23 @@ class ExprEvaluator(object):
         self.rhs = ''
         self.lhs = ''
     
+    def __getstate__(self):
+        """Return dict representing this container's state."""
+        state = self.__dict__.copy()
+        if state['_scope'] is not None:
+            # remove weakref to scope because it won't pickle
+            state['_scope'] = self._scope()
+        state['_code'] = None  # <type 'code'> won't pickle either.
+        return state
+
+    def __setstate__(self, state):
+        """Restore this component's state."""
+        self.__dict__ = state
+        if self._scope is not None:
+            self._scope = weakref.ref(self._scope)
+        if self.scoped_text:
+            self._code = compile(self.scoped_text, '<string>', 'eval')
+
     def _set_text(self, text):
         self._text = text
         self.input_names = set()

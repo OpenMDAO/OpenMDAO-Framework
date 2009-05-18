@@ -12,7 +12,7 @@ import unittest
 
 from numpy.testing import assert_equal
 
-from openmdao.main import Model, Component, ArrayVariable, Bool, \
+from openmdao.main import Assembly, Component, ArrayVariable, Bool, \
                           FileVariable, Float, Int, String, StringList
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.component import SimulationRoot
@@ -140,7 +140,7 @@ class Sink(Component):
         inp.close()
 
 
-class MyModel(Model):
+class MyModel(Assembly):
     """ Sends data through Source -> NPSS_A -> NPSS_B -> Sink. """
 
     def __init__(self, name='TestModel', *args, **kwargs):
@@ -216,8 +216,7 @@ class MyModel(Model):
 
 class NPSSTestCase(unittest.TestCase):
 
-    directory = \
-        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+    directory = pkg_resources.resource_filename('npsscomponent', 'test')
 
     def setUp(self):
         """ Called before each test in this class. """

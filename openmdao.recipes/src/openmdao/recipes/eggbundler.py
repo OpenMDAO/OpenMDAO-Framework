@@ -16,7 +16,7 @@ from openmdao.util.fileutil import rm
     
 class EggBundler(object):
     """Collect all of the eggs (not installed) that are used in the current
-    buildout, and put them along with a custom buildout config into a 
+    buildout and put them along with a custom buildout config into a 
     gzipped tar file.  The tar file should provide a totally self-contained
     buildout environment (after bootstrapping the buildout). If the
     'fix_versions' variable is set to true in the buildout, the bundle
@@ -118,11 +118,13 @@ class EggBundler(object):
         f = open(os.path.join(bodir,'buildout.cfg'),'w')
         for sect,opts in bo.items():
             if sect == 'buildout':
-                versions = self.buildout['buildout'].get('versions') or (self.name+'_release')
+                versions = self.buildout['buildout'].get('versions') or \
+                           (self.name+'_release')
                 self.excludeparts.append(versions)
                 f.write('[buildout]\n\n')
                 f.write('newest = %s\n\n' % self.buildout['buildout']['newest'])
                 f.write('offline = %s\n\n' % self.buildout['buildout']['offline'])
+                f.write('index = %s\n\n' % self.buildout['buildout']['index'])
                 f.write('parts = \n')
                 for part in self.parts:
                     f.write('   %s\n' % part)
@@ -131,8 +133,8 @@ class EggBundler(object):
                 if self.fix_versions:
                     f.write('versions = %s\n\n' % versions)
                     f.write('[%s]\n' % versions)
-                    projs = ['%s = %s' % (x.project_name,x.version) 
-                                                      for x in self.dists]
+                    projs = ['%s = %s' % (x.project_name, x.version) 
+                          for x in self.dists if x.project_name != 'setuptools']
                     self.logger.debug('fixed version list:')
                     for proj in sorted(set(projs)):
                         self.logger.debug(proj)
@@ -149,7 +151,7 @@ class EggBundler(object):
                                 if line.strip() != '':
                                     f.write('  %s\n' % line)
                         else:
-                            f.write('%s = %s\n\n' % (opt,val))
+                            f.write('%s = %s\n\n' % (opt, val))
                     
 
     def _build_dev_eggs(self):
@@ -169,6 +171,13 @@ class EggBundler(object):
                       % (degg,ret))
     
                         
+    def tarfile_name(self):
+        """ Returns name of tar file to be created. """
+        return os.path.join(self.bundledir, '%s-bundle-%s-py%s.tar.gz' % 
+                                            (self.bundle_name,
+                                             self.bundle_version,
+                                             sys.version[:3]))
+
     def install(self):
         distribs = set()
         ws = WorkingSet()
@@ -189,7 +198,8 @@ class EggBundler(object):
             for dist in tmpenv[dproj]:
                 self.dists.append(dist)
                 for req in dist.requires():
-                    self.logger.debug('%s requires %s' %(dist.project_name,req))
+                    self.logger.debug('%s requires %s' % \
+                                      (dist.project_name, req))
                     # use the installed environment to gather dependencies
                     # because retrieving them from uninstalled ditros doesn't
                     # work in all cases
@@ -209,7 +219,7 @@ class EggBundler(object):
         self.dists.extend(distribs)
         
         # Copy any extra stuff specified in the config
-        for src,dest in self.extra_stuff:
+        for src, dest in self.extra_stuff:
             self.logger.debug('copying %s to %s' % (src, dest))
             if os.path.isdir(src):
                 if not os.path.exists(dest): 
@@ -253,16 +263,32 @@ class EggBundler(object):
         self.logger.info('creating buildout config')
         self._create_buildout_dir()                                  
         
+        out = open(os.path.join(self.bundledir, 'README.txt'), 'w')
+        out.write("""\
+To get started (on UNIX):
+
+1. Move to buildout directory.
+     cd buildout
+
+2. Create an isolated Python environment.
+     python isolated_bootstrap.py
+
+3. Get dependent distributions and install.
+     bin/buildout
+
+4. Test the installation.
+     bin/test --all
+""")
+        out.close()
+
         if self.archive is True:
-            tarname = os.path.join(self.bundledir,'%s-bundle-%s-py%s.tar.gz' % 
-                                   (self.bundle_name,self.bundle_version,
-                                    sys.version[:3]))
-            self.logger.info('creating tar file %s' %  tarname)
+            tarname =  self.tarfile_name()
+            self.logger.info('creating tar file %s' % tarname)
            
             tarf = tarfile.open(tarname, mode='w:gz')
-            tarf.add(self.bundledir,arcname='%s-%s-py%s' %
-                                   (self.bundle_name,self.bundle_version,
-                                    sys.version[:3]))
+            tarf.add(self.bundledir, arcname='%s-%s-py%s' %
+                                    (self.bundle_name, self.bundle_version,
+                                     sys.version[:3]))
             tarf.close()
         
             # delete everything but the tar file
@@ -278,5 +304,9 @@ class EggBundler(object):
 
    
     def update(self):
-        return []             
+        """ Ensure we have a bundle if only update gets run. """
+        if not os.path.exists(self.tarfile_name()):
+            return self.install()
+        else:
+            return []             
 

@@ -7,14 +7,14 @@ on the first execution, then on subsequent executions the corrected result
 is directly calculated.
 """
 
-from openmdao.main import Model, Float
+from openmdao.main import Assembly, Float
 from openmdao.main.variable import INPUT, OUTPUT
 
 from m4.doe import DOE
 from m4.mid_fidelity import MidFidelity 
 from m4.dummy_components import Model_A2d, Model_B2d
 
-class MyModel(Model):
+class MyModel(Assembly):
     """ Simple M4 variable fidelity example.  """
 
     def __init__(self, name='M4_VarFi', *args, **kwargs):

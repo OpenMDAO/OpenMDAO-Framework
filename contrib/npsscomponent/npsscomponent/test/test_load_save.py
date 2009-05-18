@@ -10,7 +10,6 @@ import os.path
 import pkg_resources
 import shutil
 import unittest
-import zipfile
 
 from numpy import ndarray
 from numpy.testing import assert_equal
@@ -49,8 +48,7 @@ class Passthrough(NPSScomponent):
 
 class NPSSTestCase(unittest.TestCase):
 
-    directory = \
-        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+    directory = pkg_resources.resource_filename('npsscomponent', 'test')
 
     def setUp(self):
         """ Called before each test in this class. """
@@ -90,7 +88,8 @@ class NPSSTestCase(unittest.TestCase):
         os.chdir(test_dir)
         try:
             self.npss = \
-                NPSScomponent.load_from_egg(os.path.join('..', self.egg_name))
+                NPSScomponent.load_from_egg(os.path.join('..', self.egg_name),
+                                            install=False)
 
             for name, val in saved_values.items():
                 if name == 'directory':
@@ -115,11 +114,10 @@ class NPSSTestCase(unittest.TestCase):
         self.npss = None
         try:
             NPSScomponent.load_from_egg('no-such-egg')
-        except IOError, exc:
-            self.assertEqual(str(exc),
-                "[Errno 2] No such file or directory: 'no-such-egg'")
+        except ValueError, exc:
+            self.assertEqual(str(exc), "'no-such-egg' not found.")
         else:
-            self.fail('Expected IOError')
+            self.fail('Expected ValueError')
 
     def test_badfile(self):
         logging.debug('')
@@ -131,17 +129,18 @@ class NPSSTestCase(unittest.TestCase):
         badfile = os.path.join(directory, 'test_load_save.py')
         try:
             self.npss = NPSScomponent.load_from_egg(badfile)
-        except zipfile.BadZipfile, exc:
-            self.assertEqual(str(exc), 'File is not a zip file')
+        except RuntimeError, exc:
+            self.assertEqual(str(exc).startswith('No distributions found in'),
+                                                 True)
         else:
-            self.fail('Expected BadZipfile')
+            self.fail('Expected RuntimeError')
 
     def test_nomodel(self):
         logging.debug('')
         logging.debug('test_nomodel')
 
         self.npss.model_filename = 'xyzzy.mdl'
-        self.egg_name = self.npss.save_to_egg()
+        self.egg_name = self.npss.save_to_egg(version='0.0')
         self.npss.pre_delete()
         self.npss = None
 
@@ -155,7 +154,8 @@ class NPSSTestCase(unittest.TestCase):
             try:
                 self.npss = \
                     NPSScomponent.load_from_egg(os.path.join('..',
-                                                             self.egg_name))
+                                                             self.egg_name),
+                                                             install=False)
             except RuntimeError, exc:
                 self.assertEqual(str(exc).startswith(
                     "NPSS: Reload caught exception: Model file 'xyzzy.mdl' not found while reloading in"),

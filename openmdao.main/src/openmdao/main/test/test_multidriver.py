@@ -4,7 +4,7 @@ import unittest
 import logging
 from math import sqrt
 
-from openmdao.main import Model, Assembly, Component, Float, String
+from openmdao.main import Assembly, Component, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 

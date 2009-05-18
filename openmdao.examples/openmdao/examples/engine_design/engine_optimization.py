@@ -3,25 +3,24 @@
 # Optimize an engine disign using the sim_vehicle component.
 
 from openmdao.main.interfaces import IComponent
-from openmdao.main import Model, Float, Int
+from openmdao.main import Assembly, Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 
 from openmdao.examples.engine_design.sim_vehicle import Sim_Vehicle
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-class Engine_Optimization(Model):
+class Engine_Optimization(Assembly):
     """ Engine_Optimization model. """
     
     def __init__(self, name, parent=None, directory=''):
-        ''' Creates a new Model containing a Sim_Vehicle and an optimizer'''
+        ''' Creates a new Assembly containing a Sim_Vehicle and an optimizer'''
         
         super(Engine_Optimization, self).__init__(name, parent, directory)
 
         # Create Sim_Vehicle component instances
-        self.add_socket('vehicle_sim', IComponent, required=True)
+        # FIXME: uncomment add_socket after sockets work with pickle
+        #self.add_socket('vehicle_sim', IComponent, required=True)
         Sim_Vehicle('vehicle_sim', parent=self)
-        #self.add_child(vehicle_sim)
-        #self.workflow.add_node(vehicle_sim)
 
         # Create CONMIN Optimizer instance
         CONMINdriver('driver', self)

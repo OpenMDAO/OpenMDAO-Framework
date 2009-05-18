@@ -6,7 +6,7 @@ import unittest
 
 import numpy.random
 
-from openmdao.main import Model, Component, Case, ListCaseIterator, \
+from openmdao.main import Assembly, Component, Case, ListCaseIterator, \
                           ArrayVariable, Float
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
@@ -33,7 +33,7 @@ class DrivenComponent(Component):
         self.sum_y = sum(self.y)
 
 
-class MyModel(Model):
+class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
     def __init__(self, name='CID_TestModel', *args, **kwargs):

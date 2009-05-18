@@ -3,7 +3,7 @@
 import unittest
 import logging
 
-from openmdao.main import Model, Assembly, Component, Int
+from openmdao.main import Assembly, Component, Int
 from openmdao.main.variable import INPUT, OUTPUT
 
         

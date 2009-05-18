@@ -40,7 +40,6 @@ class CONMINdriver(Driver):
         self.design_vals = numarray.zeros(0,'d')
         self.lower_bounds = numarray.zeros(0,'d')
         self.upper_bounds = numarray.zeros(0,'d')
-        #self.constraint_vals = numarray.zeros(0,'d')
         self.cons_active_or_violated  = numarray.zeros(0, 'i')
         self.iprint = 0
         self.maxiters = 40
@@ -66,34 +65,55 @@ class CONMINdriver(Driver):
                 
         RefVariableArray('design_vars', self, OUTPUT, default=[],
                 doc='An array of design variable names. These names can include array indexing.')
-        self.design_vars.add_observer(self._refs_changed, VariableChangedEvent)
+        #self.design_vars.add_observer(self._refs_changed, VariableChangedEvent)
         
         RefVariableArray('constraints', self, INPUT, default=[],
                 doc= 'An array of expression strings indicating constraints.'+
                 ' A value of < 0 for the expression indicates that the constraint '+
                 'is violated.')
-        self.constraints.add_observer(self._refs_changed, VariableChangedEvent)
+        #self.constraints.add_observer(self._refs_changed, VariableChangedEvent)
         
         RefVariable('objective', self, INPUT,
                           doc= 'A string containing the objective function expression.')
-        self.objective.add_observer(self._refs_changed, VariableChangedEvent)
+        #self.objective.add_observer(self._refs_changed, VariableChangedEvent)
         
         av = ArrayVariable('upper_bounds', self, INPUT,
             doc='Array of constraints on the maximum value of each design variable.')
-        av.add_observer(self._refs_changed, VariableChangedEvent)
+        #av.add_observer(self._refs_changed, VariableChangedEvent)
         
         av = ArrayVariable('lower_bounds', self, INPUT,
             doc='Array of constraints on the minimum value of each design variable.')
-        av.add_observer(self._refs_changed, VariableChangedEvent)
+        #av.add_observer(self._refs_changed, VariableChangedEvent)
         
         self.make_public(['iprint', 'maxiters'])
         
-    def _refs_changed(self, obj):
-        """This is called if any of our ref variables change, forcing us to possibly
-        resize our arrays.
-        """
-        self._first = True
+    #def _refs_changed(self, obj):
+        #"""This is called if any of our ref variables change, forcing us to possibly
+        #resize our arrays.
+        #"""
+        #self._first = True
     
+    def __getstate__(self):
+        """Return dict representing this container's state."""
+        state = super(CONMINdriver, self).__getstate__()
+        state['cnmn1'] = None
+        return state
+
+    def __setstate__(self, state):
+        """Restore this component's state."""
+        super(CONMINdriver, self).__setstate__(state)
+        self.cnmn1 = conmin.cnmn1
+        self._first = True
+
+    def _pre_execute (self):
+        """Override base class _pre_execute in order to determine if ref
+        variables have changed.
+        """
+        # if any of the listed variables are invalid, we have to resize CONMIN arrays
+        self._first = not all([self.getvar(v).valid for v in ['objective', 'constraints', 'design_vars', 
+                                                              'upper_bounds', 'lower_bounds']])
+        super(CONMINdriver, self)._pre_execute()
+        
     def execute(self):
         """Perform the optimization."""
         sorted_comps = self.sorted_components()

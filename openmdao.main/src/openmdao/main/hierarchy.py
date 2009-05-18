@@ -3,7 +3,6 @@ __all__ = ["HierarchyMember"]
 
 __version__ = "0.1"
 
-
 import traceback
 import weakref
 from openmdao.main.log import Logger, LOG_DEBUG
@@ -22,7 +21,7 @@ class HierarchyMember(object):
         
         if doc is not None:
             self.__doc__ = doc
-        
+
         # Replace pathname to keep loggers from interfering with each other.
         self._logger = Logger(self.get_pathname().replace('.', ','))
         self.log_level = LOG_DEBUG
@@ -65,7 +64,7 @@ class HierarchyMember(object):
     parent = property(_get_parent, _set_parent)
     
     def __getstate__(self):
-        """ Return dict representing this container's state. """
+        """Return dict representing this container's state."""
         state = self.__dict__.copy()
         if state['_parent'] is not None:
             # remove weakref to parent because it won't pickle
@@ -73,25 +72,25 @@ class HierarchyMember(object):
         return state
     
     def __setstate__(self, state):
-        """ Restore this component's state. """
-        if state['_parent'] is not None:
-            state['_parent'] = weakref.ref(state['_parent'])
+        """Restore this component's state."""
         self.__dict__ = state
+        if self._parent is not None:
+            self._parent = weakref.ref(self._parent)
     
     # error reporting stuff
     def _get_log_level(self):
-        """ Return logging message level. """
+        """Return logging message level."""
         return self._logger.level
 
     def _set_log_level(self, level):
-        """ Set logging message level. """
+        """Set logging message level."""
         self._logger.level = level
 
     log_level = property(_get_log_level, _set_log_level,
                          doc='Logging message level.')
 
     def raise_exception(self, msg, exception_class=Exception):
-        """Raise an exception"""
+        """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)
 #        self._logger.error(msg)
         raise exception_class(full_msg)
@@ -102,18 +101,18 @@ class HierarchyMember(object):
         self._logger.critical(traceback.format_exc())
 
     def error(self, msg, *args, **kwargs):
-        """Record an error message"""
+        """Record an error message."""
         self._logger.error(msg, *args, **kwargs)
         
     def warning(self, msg, *args, **kwargs):
-        """Record a warning message"""
+        """Record a warning message."""
         self._logger.warning(msg, *args, **kwargs)
         
     def info(self, msg, *args, **kwargs):
-        """Record an informational message"""
+        """Record an informational message."""
         self._logger.info(msg, *args, **kwargs)
         
     def debug(self, msg, *args, **kwargs):
-        """Record a debug message"""
+        """Record a debug message."""
         self._logger.debug(msg, *args, **kwargs)
 

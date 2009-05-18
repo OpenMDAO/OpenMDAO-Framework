@@ -1,9 +1,9 @@
 # sim_vehicle.py
 #
 # Simulates a vehicle to obatain the following.
-# Vehicle model fits in the socket.
+# Vehicle assembly fits in the socket.
 
-from openmdao.main import Assembly, Float, Int
+from openmdao.main import Component, Assembly, Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.exceptions import ConstraintError
 
@@ -74,7 +74,6 @@ class Sim_Vehicle(Assembly):
         Float('EPAHighway', self, OUTPUT, units='mi/galUS', default=0.0, 
               doc='EPA Fuel economy - Highway')
         
-        # NOTE: This stuff will be replaced with Sockets when implemented
         
     def execute(self):
         ''' Simulate the vehicle model at full throttle.'''

@@ -2,7 +2,7 @@
 
 import unittest
 
-from openmdao.main import Model, Assembly, Component, Float, String
+from openmdao.main import Assembly, Component, Float, String
 from openmdao.main.variable import INPUT, OUTPUT
 
 class Multiplier(Component):

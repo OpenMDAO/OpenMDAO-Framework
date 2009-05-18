@@ -8,7 +8,7 @@ __version__ = "0.1"
 class Factory(object):
     """Base class for objects that know how to create other objects
     based on a type argument and several optional arguments (version,
-    server id, resource description, and name.
+    server id, resource description, and name).
     """
     def __init__(self):
         pass

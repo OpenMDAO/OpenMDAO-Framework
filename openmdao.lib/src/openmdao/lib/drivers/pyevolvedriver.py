@@ -9,14 +9,14 @@ from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapte
 from pyevolve import GenomeBase
 
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main import Driver, ExprEvaluator, Int, Float, Bool, String, RefVariable
+from openmdao.main import Driver, Int, Float, Bool, String, RefVariable
 from openmdao.main.wrapper import Wrapper
 
 def G1DListCrossOverRealHypersphere(genome, **args):
     """ A genome reproduction algorithm, developed by Tristan Hearn at 
     the NASA Glenn Research Center, which uses a hypersphere defined
     by a pair of parents to find the space of possible children. 
-    children are then picked at random from that space. """
+    Children are then picked at random from that space. """
     
     gMom = args['mom']
     gDad = args['dad']
@@ -29,7 +29,7 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     numparents = 2.0
         
     # find the center of mass (average value) between the two parents for each dimension
-    cmass = [(gm+gd)*0.5 for gm,gd in zip(gMom,gDad)]
+    cmass = [(gm+gd)/2.0 for gm,gd in zip(gMom,gDad)]
     
     radius = max(sum([(cm-gM)**2 for cm,gM in zip(cmass,gMom)]),
                  sum([(cm-gD)**2 for cm,gD in zip(cmass,gDad)])

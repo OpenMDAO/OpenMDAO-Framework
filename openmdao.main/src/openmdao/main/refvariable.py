@@ -18,6 +18,7 @@ class RefVariable(Variable):
     
     def __init__(self, name, parent, iostatus, default=UNDEFINED, doc=None):
         self._expr = None
+        self._value = None
         # put ourself in our parent's __dict__ if the name isn't already used
         if parent and not hasattr(parent.__class__, name) and not hasattr(parent, name):
             parent.__dict__[name] = self
@@ -27,10 +28,19 @@ class RefVariable(Variable):
         super(RefVariable, self).__init__(name, parent, iostatus, doc=doc,
                                           val_types=(basestring,str,unicode), 
                                           implicit_creation=False)
-            
+
+    def __getstate__(self):
+        """Return dict representing this container's state."""
+        state = super(RefVariable, self).__getstate__()
+        state['_expr'] = None
+        return state
+
     def _getexpr(self):
         if self._expr is None:
-            self.raise_exception('reference is undefined', RuntimeError)
+            if self._value is not None:
+                self.set_value(self._value)
+            else:
+                self.raise_exception('reference is undefined', RuntimeError)
         return self._expr
     
     def set_value(self, refval):
@@ -54,6 +64,7 @@ class RefVariable(Variable):
             else:
                 self.raise_exception('RefVariable requires self.parent to exist.',
                                      RuntimeError)
+            self._value = refval
         else:
             self.raise_exception('reference must be a string', TypeError)
     
@@ -96,6 +107,7 @@ class RefVariableArray(Variable):
     
     def __init__(self, name, parent, iostatus, default=UNDEFINED, doc=None):
         self._exprs = []
+        self._value = None
         # put ourself in our parent's __dict__ if the name isn't already used
         if parent and not hasattr(parent.__class__, name) and not hasattr(parent, name):
             parent.__dict__[name] = self
@@ -107,11 +119,25 @@ class RefVariableArray(Variable):
                                           implicit_creation=False)
             
             
+    def __getstate__(self):
+        """Return dict representing this container's state."""
+        state = super(RefVariableArray, self).__getstate__()
+        state['_exprs'] = None
+        return state
+
+    def _get_exprs(self):
+        # self._exprs should only be none after we've been unpickled
+        if self._exprs is None:
+            if self._value is not None:
+                self.set_value(self._value)
+            else:
+                self.raise_exception('no references are defined', RuntimeError)
+        return self._exprs
+    
     def _pre_assign(self, val):
         newval = super(RefVariableArray, self)._pre_assign(val)
         
-        nonstrings = [s for s in newval if not isinstance(s,basestring)]
-        if len(nonstrings) > 0:
+        if not all([isinstance(s,basestring) for s in newval]):
             self.raise_exception('list contains non-string entries',
                                  ValueError)            
         return newval
@@ -150,6 +176,7 @@ class RefVariableArray(Variable):
                                                          single_name=single_name))
                     except RuntimeError, err:
                         self.raise_exception(str(err), RuntimeError)
+                self._value = refval
             else:
                 self.raise_exception('RefVariableArray requires self.parent to exist.',
                                      RuntimeError)
@@ -158,19 +185,19 @@ class RefVariableArray(Variable):
             raise err
     
     def get_value(self):
-        return [s.text for s in self._exprs]
+        return [s.text for s in self._get_exprs()]
     
     value = property(get_value, set_value)
     
     def _get_referenced_values(self):
         """Evaluate the string expressions and return the result."""
-        return [x.evaluate() for x in self._exprs]
+        return [x.evaluate() for x in self._get_exprs()]
     
     def _set_referenced_values(self, vals):
         """Set the values of the objects referred to by our reference strings."""
-        if len(vals) != len(self._exprs):
+        if len(vals) != len(self._get_exprs()):
             self.raise_exception('RefVariableArray and list of assigned values have different lengths')
-        for val,expr in zip(vals, self._exprs):
+        for val,expr in zip(vals, self._get_exprs()):
             #if __debug__: self.debug('setting refvar %s to %s' % (expr.scoped_assignment_text, str(val)))
             expr.set(val)
         
@@ -179,9 +206,9 @@ class RefVariableArray(Variable):
     def get_referenced_varpaths(self):
         """Return the set of Variables referenced in the string expression."""
         if self.iostatus == OUTPUT:
-            sets = [ex.output_names for ex in self._exprs]
+            sets = [ex.output_names for ex in self._get_exprs()]
         else:
-            sets = [ex.input_names for ex in self._exprs]
+            sets = [ex.input_names for ex in self._get_exprs()]
         ret = set()
         for s in sets:
             ret.update(s)

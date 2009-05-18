@@ -29,8 +29,8 @@ returned to the original caller.
 .. index:: ImportFactory
 
 
-Creation of Local Components
-____________________________
+*Creation of Local Components*
+______________________________
 
 
 When a new object is requested and the module containing the requested type is
@@ -51,8 +51,8 @@ requested type.
 .. index:: ObjServer
 .. index:: proxy
 
-Creation of Distributed Components
-__________________________________
+*Creation of Distributed Components*
+____________________________________
 
 
 When a request is made for a new object of a type that is not available via a local
@@ -89,8 +89,8 @@ shows a more `detailed creation process`_ for a distributed component.
 .. index:: Components; connecting
 
 
-Connecting Components
-_____________________
+*Connecting Components*
+_______________________
 
 
 Components communicate by linking output Variables of one component to input
@@ -366,5 +366,6 @@ to require login or be open to anyone.
 
    Component Publishing
    
-(Also see the section on :ref:`Component-Publishing` under *Key Concepts.*)
+.. seealso:: :ref:`Component-Publishing`
+
 

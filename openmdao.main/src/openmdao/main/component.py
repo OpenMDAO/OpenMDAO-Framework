@@ -1,9 +1,10 @@
 
 #public symbols
-__all__ = ['Component']
+__all__ = ['Component', 'SimulationRoot']
 
 __version__ = "0.1"
 
+import glob
 import os
 import os.path
 import copy
@@ -22,6 +23,7 @@ STATE_UNKNOWN = -1
 STATE_IDLE    = 0
 STATE_RUNNING = 1
 STATE_WAITING = 2
+
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -63,8 +65,6 @@ class Component (Container):
         
         self.state = STATE_IDLE
         self._stop = False
-        self._updated = False  # if False, component needs to run in order
-                               # for its output Variables to be correct
         self._need_check_config = True
         self._execute_needed = True
         
@@ -106,7 +106,9 @@ class Component (Container):
         pass         
     
     def _pre_execute (self):
-        """Make preparations for execution. Do not override this function."""
+        """Make preparations for execution. Overrides of this function are not
+        recommended, but if unavoidable they should still call this version.
+        """
         if self._need_check_config:
             self.check_config()
             self._need_check_config = False
@@ -132,7 +134,10 @@ class Component (Container):
         pass
     
     def _post_execute (self):
-        """Update output variables and anything else needed after execution."""
+        """Update output variables and anything else needed after execution. 
+        Overrides of this function are not recommended, but if unavoidable 
+        they should still call this version.
+        """
         # make our Variables valid again
         for var in self.get_outputs(valid=False):
             var.valid = True
@@ -153,11 +158,10 @@ class Component (Container):
 
         self.state = STATE_RUNNING
         self._stop = False
-        
         try:
             self._pre_execute()
             if self._execute_needed or force:
-                if __debug__: self._logger.debug('execute %s' % self.get_pathname())
+                #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
                 self.execute()
             self._post_execute()
         finally:
@@ -194,7 +198,7 @@ class Component (Container):
 
     def checkpoint (self, outstream, format=SAVE_CPICKLE):
         """Save sufficient information for a restart. By default, this
-        just calls save()
+        just calls save().
         """
         self.save(outstream, format)
 
@@ -209,13 +213,22 @@ class Component (Container):
                      src_dir=None, src_files=None, dst_dir=None,
                      format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
-        name defaults to the name of the component.
-        version defaults to the component's module __version__.
-        If force_relative is True, all paths are relative to src_dir.
-        src_dir defaults to the component's directory.
-        src_files should be a set, and defaults to component's external files.
-        dst_dir is the directory to write the egg in.
-        tmp_dir is the directory to use for temporary files.
+
+            name defaults to the name of the component.
+
+            version defaults to the component's module __version__.
+
+            If force_relative is True, all paths are relative to src_dir.
+
+            src_dir defaults to the component's directory.
+
+            src_files should be a set, and defaults to component's external files.
+
+            dst_dir is the directory to write the egg in.
+
+            tmp_dir is the directory to use for temporary files.
+
+        The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
         """
         if src_dir is None:
@@ -262,28 +275,33 @@ class Component (Container):
             for metadata in comp.external_files:
                 path = metadata['path']
 #                self.debug('    external path %s', path)
+                path = os.path.expanduser(path)
+                path = os.path.expandvars(path)
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
-                path = os.path.normpath(path)
-                if not os.path.exists(path):
-#                    self.debug("        '%s' does not exist" % path)
-                    continue
-                if force_relative:
-                    if path.startswith(src_dir):
-                        save_path = self._relpath(path, src_dir)
-                        if os.path.isabs(metadata['path']):
-                            path = self._relpath(path, comp_dir)
-                            fixup_meta.append((metadata, metadata['path']))
-                            metadata['path'] = path
-#                            self.debug('        path now %s', path)
+                paths = glob.glob(path)
+                for path in paths:
+#                    self.debug('    expanded path %s', path)
+                    path = os.path.normpath(path)
+                    if not os.path.exists(path):
+#                        self.debug("        '%s' does not exist" % path)
+                        continue
+                    if force_relative:
+                        if path.startswith(src_dir):
+                            save_path = self._relpath(path, src_dir)
+                            if os.path.isabs(metadata['path']):
+                                path = self._relpath(path, comp_dir)
+                                fixup_meta.append((metadata, metadata['path']))
+                                metadata['path'] = path
+#                                self.debug('        path now %s', path)
+                        else:
+                            self.raise_exception(
+                                "Can't save, %s file '%s' doesn't start with '%s'." \
+                                % (comp.get_pathname(), path, src_dir), ValueError)
                     else:
-                        self.raise_exception(
-                            "Can't save, %s file '%s' doesn't start with '%s'." \
-                            % (comp.get_pathname(), path, src_dir), ValueError)
-                else:
-                    save_path = path
-#                self.debug('        adding %s', save_path)
-                src_files.add(save_path)
+                        save_path = path
+#                    self.debug('        adding %s', save_path)
+                    src_files.add(save_path)
 
             # Process FileVariables for this component only.
             for fvar in comp.get_file_vars():
@@ -375,12 +393,12 @@ class Component (Container):
                              % (path1, path2), ValueError)
 
     @staticmethod
-    def load_from_egg (filename):
-        """Load state and other files from an egg, returns top object."""
+    def load (instream, format=SAVE_CPICKLE, do_post_load=True):
+        """Load object(s) from instream."""
 # This doesn't work:
-#    AttributeError: 'super' object has no attribute 'load_from_egg'
-#        top = super(Component).load_from_egg(filename)
-        top = Container.load_from_egg(filename)
+#    AttributeError: 'super' object has no attribute 'load'
+#        top = super(Component).load(instream, format)
+        top = Container.load(instream, format, False)
 
         if IComponent.providedBy(top):
             top.directory = os.getcwd()
@@ -390,16 +408,12 @@ class Component (Container):
                 if not os.path.exists(directory):
                     os.makedirs(directory)
 
-        top.post_load()
+        if do_post_load:
+            top.post_load()
         return top
 
-    def post_load(self):
-        """ Perform any required operations after model has been loaded. """
-        [c.post_load() for c in self.values(pub=False)
-                                   if IContainer.providedBy(c)]        
-
     def step (self):
-        """For Components that contain Workflows (e.g., Model), this will run
+        """For Components that contain Workflows (e.g., Assembly), this will run
         one Component in the Workflow and return. For simple components, it is
         the same as run().
         """

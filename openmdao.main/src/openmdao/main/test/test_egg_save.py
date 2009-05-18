@@ -232,7 +232,8 @@ class EggTestCase(unittest.TestCase):
             # Load from saved initial state in egg.
             self.model.pre_delete()
             self.model = Component.load_from_egg(os.path.join('..',
-                                                              self.egg_name))
+                                                              self.egg_name),
+                                                 install=False)
             self.model.directory = os.getcwd()
 
             # Verify initial state.
@@ -338,7 +339,8 @@ class EggTestCase(unittest.TestCase):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
-            sub = Container.load_from_egg(os.path.join('..', self.egg_name))
+            sub = Container.load_from_egg(os.path.join('..', self.egg_name),
+                                          install=False)
             self.assertEqual(sub.binary_data, self.model.Source.sub.binary_data)
         finally:
             os.chdir(orig_dir)
@@ -350,11 +352,10 @@ class EggTestCase(unittest.TestCase):
 
         try:
             Component.load_from_egg('no-such-egg')
-        except IOError, exc:
-            self.assertEqual(str(exc),
-                             "[Errno 2] No such file or directory: 'no-such-egg'")
+        except ValueError, exc:
+            self.assertEqual(str(exc), "'no-such-egg' not found.")
         else:
-            self.fail('Expected IOError')
+            self.fail('Expected ValueError')
 
 
 if __name__ == '__main__':

@@ -1,6 +1,6 @@
 
 """
-A manager over the creation of framework objects, either locally or remotely.
+Manages the creation of framework objects, either locally or remotely.
 """
 
 
@@ -41,7 +41,7 @@ def get_factory_names():
 
 
 def register_factory(fct):
-    """Add a Factory to the factory list"""
+    """Add a Factory to the factory list."""
     if fct not in _factories:
         _factories.append(fct)      
           

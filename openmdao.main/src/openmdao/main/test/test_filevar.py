@@ -7,7 +7,7 @@ import os
 import shutil
 import unittest
 
-from openmdao.main import Model, Component, \
+from openmdao.main import Assembly, Component, \
                           ArrayVariable, FileVariable, StringList, Bool
 from openmdao.main.variable import INPUT, OUTPUT
 
@@ -60,7 +60,7 @@ class Sink(Component):
         inp.close()
 
 
-class MyModel(Model):
+class MyModel(Assembly):
     """ Transfer files from producer to consumer. """
 
     def __init__(self, name='FileVar_TestModel', *args, **kwargs):

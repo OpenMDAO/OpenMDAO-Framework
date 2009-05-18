@@ -15,12 +15,12 @@ Known problems:
 """
 import os.path
 
-from openmdao.main import Model, Component, Container, Float, \
+from openmdao.main import Assembly, Component, Container, Float, \
                           ArrayVariable, FileVariable
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
+
 __version__ = '0.1'
 
 # pylint: disable-msg=E1101
@@ -229,10 +229,9 @@ class TracingNPSS(NPSScomponent):
         print self.get_pathname(), 'execution begins'
         super(TracingNPSS, self).execute()
         print self.get_pathname(), '    complete'
-        return status
 
 
-class SBJModel(Model):
+class Model(Assembly):
     """ SBJ propulsion model. """
 
     def connect(self, src_path, dst_path):
@@ -247,10 +246,11 @@ class SBJModel(Model):
         if isinstance(dst_comp, NPSScomponent):
             dst_comp.make_public(rest)
             
-        super(SBJModel, self).connect(src_path, dst_path)
+        super(Model, self).connect(src_path, dst_path)
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
-        super(SBJModel, self).__init__(name, *args, **kwargs)
+        super(Model, self).__init__(name, *args, **kwargs)
+        self.external_files.append({'path':'README.txt'})
 
         model_dir = os.path.join('..', 'Full_Model', 'Cycle', 'run')
         includes = [
@@ -495,48 +495,34 @@ class SBJModel(Model):
                      'PropulsionData.FLOPS.thrso')
 
 
-def print_info(root, level=0):
-    """ Print some internal data sarting at root. """
-    from openmdao.main.interfaces import IComponent
-    try:
-        pub = getattr(root, '_pub')
-    except AttributeError:
-        return
-
-    if IComponent.providedBy(root):
-        for metadata in root.external_files:
-            print '%s%s' % ('    '*level, str(metadata))
-
-    for name in sorted(pub.keys()):
-        obj = root.get(name)
-        print '%s.%s = %s' % ('    '*level, name, str(obj))
-        print_info(obj, level+1)
-
-
 def test_save_load():
     """ Save model and then reload & run. """
     import shutil
+    import subprocess
+    from openmdao.main.component import SimulationRoot
 
-    model = SBJModel()
+    model = Model()
     egg_name = model.save_to_egg()
-#    print_info(model)
 
     if os.path.exists('test_dir'):
         shutil.rmtree('test_dir')
     os.mkdir('test_dir')
     SimulationRoot.chdir('test_dir')
+    egg_path = os.path.join('..', egg_name)
     try:
-        new_model = Component.load_from_egg(os.path.join('..', egg_name))
-#        print_info(new_model)
-
-        print '\nrunning new model...'
-        new_model.run()
+        print '\nUnpacking in subprocess...'
+        os.environ['OPENMDAO_INSTALL'] = '0'
+        retcode = subprocess.call(['sh', egg_path])
+        print '    retcode', retcode
+        if retcode == 0:
+            print '\nRunning in subprocess...'
+            retcode = subprocess.call(['python', model.name+'_loader.py'])
+            print '    retcode', retcode
     finally:
         SimulationRoot.chdir('..')
 
 
 if __name__ == '__main__':
-#    SBJModel().run()
-
+#    Model().run()
     test_save_load()
 
