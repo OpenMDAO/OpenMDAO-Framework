@@ -111,6 +111,8 @@ def do_set(path, user, options):
     os.environ['PATH'] = \
         bin+os.pathsep+scripts+os.pathsep+os.environ.get('PATH', '')
 
+    os.environ['OPENMDAO_REPO'] = find_repository(os.getcwd(), user)
+
     process = subprocess.Popen(os.environ['SHELL'])
     os.waitpid(process.pid, 0)
     sys.exit(process.returncode)
