@@ -469,10 +469,6 @@ class Assembly (Component):
             self.parent.invalidate_deps(outs, True)
         return outs
 
-    def run_subset(self, exclude=None):
-        """Run only a subset of our child Components, excluding those specified."""
-        self._dataflow.run_subset(exclude=exclude)
-        
     @staticmethod
     def xfer_file(src_comp, src_var, dst_comp, dst_var):
         """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """
