@@ -5,15 +5,55 @@ import sys
 import stat
 import fnmatch
 import ConfigParser
-import zc.buildout
 import logging
+
+import zc.buildout
+
 from pkg_resources import working_set, get_entry_map
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
 
 script_template = """#!%(python)s
 
+import os
+import os.path
+import fnmatch
+import platform
 from subprocess import Popen
-Popen(["wing3.1", "%(proj)s"])
+
+def find_files(pat, startdir):
+    for path, dirlist, filelist in os.walk(startdir):
+        for name in fnmatch.filter(filelist, pat):
+            yield os.path.join(path, name)
+
+def find_bzr(path=None):
+    if not path:
+        path = os.getcwd()
+    if not os.path.exists(path):
+        return None
+    while path:
+        if os.path.exists(os.path.join(path, '.bzr')):
+            return path
+        else:
+            pth = path
+            path = os.path.dirname(path)
+            if path == pth:
+                return None
+    return None
+
+# in order to find all of our shared libraries, find them
+# all and put their directories in LD_LIBRARY_PATH
+env = os.environ
+if platform.system() != 'Windows':
+    libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
+    bzrtop = find_bzr()
+    if bzrtop:
+        sodirs = set([os.path.dirname(x) for x in find_files('*.so',bzrtop)])
+        libs.extend(sodirs)
+        env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
+    Popen(["wing3.1", r"%(proj)s"], env=env)
+else:
+    Popen(["wing", r"%(proj)s"], env=env)
+
 
 """
 
@@ -72,7 +112,8 @@ class WingProj(object):
         dev_egg_dir = buildout['buildout']['develop-eggs-directory']
         dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
         # grab the first line of each dev egg link file
-        self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() for f in dev_eggs]
+        self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() 
+                            for f in dev_eggs]
         self.executable = buildout['buildout']['executable']
         
         # try to find the default.wpr file in the user's home directory
@@ -155,7 +196,7 @@ class WingProj(object):
         if len(diff) > 0:    
                
             config.set('user attributes', 'proj.pypath', 
-                       _wingify(dict({None: ('custom',':'.join(newnames))}), left_margin=18))
+                       _wingify(dict({None: ('custom',os.pathsep.join(newset))}), left_margin=18))
             config.set('user attributes', 'proj.pyexec', 
                        _wingify(dict({None: ('custom', self.executable)}), left_margin=18))
 
@@ -208,6 +249,5 @@ class WingProj(object):
         return [scriptname]
 
      
-    def update(self):   
-        pass
+    update = install
 

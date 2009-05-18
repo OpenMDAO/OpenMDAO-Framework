@@ -5,10 +5,13 @@ Misc. file utility routines
 
 import os
 from os import makedirs
+import sys
 import shutil
+import linecache
 import fnmatch
 from os.path import islink, isdir
 from os.path import normpath,dirname,exists,abspath
+from subprocess import Popen,PIPE,STDOUT
 
 
 def makepath(path):
@@ -38,7 +41,7 @@ def glob_walk(directory, include_list):
         include_list = [include_list]
 
     def included(name, include_list):
-        #True if the given name is matched by the include list
+       #True if the given name is matched by the include list
         for m in include_list:
             if fnmatch.fnmatchcase(name, m): 
                 return True
@@ -61,7 +64,7 @@ def glob_walk(directory, include_list):
 def excluding_walk(ddir,excludeList):
     """walk a directory tree, using a generator, excluding specified files/dirs"""
     def included(name,excludeList):
-        #False if the given name is part of the exlude list
+       #False if the given name is part of the exlude list
         for m in excludeList:
             if fnmatch.fnmatchcase(name, m): return False
         return True
@@ -98,7 +101,7 @@ def find_files(pat, startdir):
     """
     for path, dirlist, filelist in os.walk(startdir):
         for name in fnmatch.filter(filelist, pat):
-            yield os.path.join(path.name)
+            yield os.path.join(path, name)
 
 
 def rm(path):
@@ -117,3 +120,18 @@ def copy(src, dest):
         shutil.copytree(src, dest) 
     
 
+def find_bzr(path=None):
+    """ Return bzr root directory path, or None. """
+    if not path:
+        path = os.getcwd()
+    if not os.path.exists(path):
+        return None
+    while path:
+        if os.path.exists(os.path.join(path, '.bzr')):
+            return path
+        else:
+            pth = path
+            path = os.path.dirname(path)
+            if path == pth:
+                return None
+    return None

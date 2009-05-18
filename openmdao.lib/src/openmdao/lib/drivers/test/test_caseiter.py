@@ -33,20 +33,20 @@ class DrivenComponent(Component):
         self.sum_y = sum(self.y)
 
 
-class Model(Assembly):
+class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
     def __init__(self, name='CID_TestModel', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
-        CaseIteratorDriver('driver', self)
-        self.workflow.add_node(DrivenComponent('dc', parent=self))
+        super(MyModel, self).__init__(name, *args, **kwargs)
+        cid = CaseIteratorDriver('driver', self)
+        cid.model = DrivenComponent('dc', self)
 
 
 class DriverTestCase(unittest.TestCase):
     """ Test CaseIteratorDriver. """
 
     def setUp(self):
-        self.model = Model()
+        self.model = MyModel()
 
     def tearDown(self):
         self.model.pre_delete()
@@ -93,7 +93,7 @@ class DriverTestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         for i, case in enumerate(cases):
             self.assertEqual(results[i].msg,
-                             "CID_TestModel.driver: Exception setting 'dc.z': CID_TestModel.dc: object has no attribute 'z'")
+                "CID_TestModel.driver: Exception setting 'dc.z': CID_TestModel.dc: object has no attribute 'z'")
 
     def test_nooutput(self):
         cases = []
@@ -116,10 +116,11 @@ class DriverTestCase(unittest.TestCase):
                              "CID_TestModel.driver: Exception getting 'dc.sum_z': CID_TestModel.dc: object has no attribute 'sum_z'")
 
     def test_noiterator(self):
+        self.model.driver.outerator = []
         try:
             self.model.run()
         except ValueError, exc:
-            self.assertEqual(str(exc), 'CID_TestModel.driver: No iterator plugin')
+            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'iterator' is not present")
         else:
             self.fail('ValueError expected')
 
@@ -128,7 +129,7 @@ class DriverTestCase(unittest.TestCase):
         try:
             self.model.run()
         except ValueError, exc:
-            self.assertEqual(str(exc), 'CID_TestModel.driver: No outerator plugin')
+            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'outerator' is not present")
         else:
             self.fail('ValueError expected')
 

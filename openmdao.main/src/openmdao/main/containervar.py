@@ -16,7 +16,8 @@ class ContainerVariable(Variable):
                  default=None, doc=None):
         super(ContainerVariable, self).__init__(name, parent, iostatus, 
                                                 ref_name=ref_name, 
-                                                default=default, doc=doc)
+                                                doc=doc)
+        
 
     def getvar(self, name=None):
         """Return this Variable or a Variable child of our value, which is
@@ -32,7 +33,7 @@ class ContainerVariable(Variable):
         or one of the children of its value, which is itself a Container.
         """
         if name is None:
-            val = self.value
+            val = self.get_value()
             if index is None:
                 return val
             for i in index:
@@ -51,7 +52,7 @@ class ContainerVariable(Variable):
                 except TypeError, err:
                     self.raise_exception(str(err), TypeError)
         else:
-            container = getattr(self.parent, self.ref_name)
+            container = getattr(self._refparent, self.ref_name)
             return container.get(name, index)
 
 
@@ -62,7 +63,7 @@ class ContainerVariable(Variable):
         if path is None and index is None:
             val = self._pre_assign(value)
             newcont = copy.deepcopy(val)
-            newcont.name = self.name
+            newcont.name = self.ref_name
             newcont.parent = self.parent
             # this will replace the container
             setattr(self.parent, self.ref_name, newcont)  
@@ -70,6 +71,18 @@ class ContainerVariable(Variable):
         
         container = getattr(self.parent, self.ref_name)
         container.set(path, value, index)
+
+        
+    def setvar(self, name, var):
+        """Call set() to force replacement of our Container with the Container 
+        that var refers to.
+        """
+        if name is None: # they're setting this Variable
+            self.validate_var(var)
+            self.set(None, var.get_value())
+        else:
+            self.raise_exception("cannot assign a Variable to attribute '"+
+                                 name+"'", RuntimeError)
 
     def contains(self, path):
         """Return true if a child with the given path name exists in the public

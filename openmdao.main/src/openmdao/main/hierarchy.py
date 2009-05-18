@@ -38,24 +38,17 @@ class HierarchyMember(object):
         """
         raise NotImplementedError('set') 
     
-    def get_pathname(self):
-        """Return full path name to this container."""
-        if self.parent is None:
-            if self.name is None:
-                return ''
-            else:
-                return self.name
-        else:
-            try:
-                path = self.parent.get_pathname()
-            except AttributeError:
-                if self.name is None:
-                    return ''
-                else:
-                    return self.name
-            else:
-                return '.'.join([path, self.name])
-
+    def get_pathname(self, rel_to_scope=None):
+        """ Return full path name to this container, relative to scope
+        rel_to_scope. If rel_to_scope is None, return the full pathname.
+        """
+        path = []
+        obj = self
+        while obj is not None and obj != rel_to_scope and obj.name is not None:
+            path.append(obj.name)
+            obj = obj.parent
+        return '.'.join(path[::-1])
+    
     def _get_parent(self):
         if self._parent is None:
             return None

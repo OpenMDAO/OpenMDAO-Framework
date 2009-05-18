@@ -4,6 +4,7 @@ __all__ = ["Float"]
 
 __version__ = "0.1"
 
+import numpy
 
 from openmdao.main.variable import Variable, UNDEFINED
 from openmdao.main.vartypemap import add_var_type_map
@@ -18,7 +19,7 @@ class Float(Variable):
                  min_limit=None, max_limit=None):
         self.units = units
         super(Float, self).__init__(name, parent, iostatus, 
-                                    val_type=(float,int,long), 
+                                    val_types=(float,int,long,numpy.float64), 
                                     ref_name=ref_name, ref_parent=ref_parent,
                                     default=default, doc=doc)
         self._min_limit = None
@@ -75,7 +76,7 @@ class Float(Variable):
         return self._units
     
     def _set_units(self, units):
-        if units != UNDEFINED and units is not None :
+        if units is not UNDEFINED and units is not None :
             # this will raise an exception if units are bad
             try:
                 mypq = PhysicalQuantity(1., units)
@@ -101,7 +102,7 @@ class Float(Variable):
         super(Float, self).validate_var(var)
         
         # allow assignment if either Variable has unassigned units
-        if self.units == UNDEFINED or var.units == UNDEFINED:
+        if self.units is UNDEFINED or var.units is UNDEFINED:
             pass
         elif self.units is None and var.units is None:
             pass
@@ -114,19 +115,20 @@ class Float(Variable):
                 self._incompatible_units(var, var.units)
                 
             # allow value without units to be assigned to val with units
+
      
     def _convert(self, var):
         """Perform unit conversion here. Validation is not necessary because 
         it's already been done in validate_var.
         """
-        if self.units == UNDEFINED or var.units == UNDEFINED:
-            return var.value
+        if self.units is UNDEFINED or var.units is UNDEFINED:
+            return var.get_value()
         elif self.units is None and var.units is None:
-            return var.value
+            return var.get_value()
         elif self.units is None or var.units is None:
             self._incompatible_units(var, var.units)
         else:
-            pq = PhysicalQuantity(var.value, var.units)
+            pq = PhysicalQuantity(var.get_value(), var.units)
             pq.convertToUnit(self.units)
             return pq.value
     

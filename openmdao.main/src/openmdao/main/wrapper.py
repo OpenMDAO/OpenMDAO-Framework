@@ -15,7 +15,7 @@ class Wrapper(Variable):
         is called on the INPUT side of a connection."""
         #super(Wrapper, self).validate_var(var)
 
-        if not isinstance(var.value,type(self.value)):
+        if not isinstance(var.get_value(),type(self.get_value())):
             raise TypeError("%s contains an object of type: %s which is incompatible with the type contained in %s: %s"\
-                            %(self.get_pathname(),type(self.value),var.get_pathname(),type(var.value)))
+                            %(self.get_pathname(),type(self.get_value()),var.get_pathname(),type(var.get_value())))
 

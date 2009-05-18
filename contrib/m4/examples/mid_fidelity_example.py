@@ -14,15 +14,15 @@ from m4.doe import DOE
 from m4.mid_fidelity import MidFidelity 
 from m4.dummy_components import Model_A2d, Model_B2d
 
-class Model(Assembly):
+class MyModel(Assembly):
     """ Simple M4 variable fidelity example.  """
 
     def __init__(self, name='M4_VarFi', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+        super(MyModel, self).__init__(name, *args, **kwargs)
 
         # The model is an M4 variable fidelity component.
         var_fi = VarFi(parent=self)
-        self.workflow.add_node(var_fi)
+        #self.workflow.add_node(var_fi)
 
         # Specify DOE.
         doe = DOE(parent=self)
@@ -82,7 +82,7 @@ class VarFi(MidFidelity):
 
 def main():
     """ Run model and print results. """
-    model = Model()
+    model = MyModel()
     model.run()
     for i, case in enumerate(model.driver.outerator):
         print 'CASE %d:' % (i+1)

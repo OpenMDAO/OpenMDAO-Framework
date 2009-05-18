@@ -35,7 +35,7 @@ class ArrayVariable(Variable):
         """
         # TODO: add unit conversion code here if type is float, or create an
         # entirely separate FloatArray class...
-        return variable.value
+        return variable.get_value()
         
     def _pre_assign(self, val):
         """Returns the transformed, validated value, 
@@ -51,7 +51,7 @@ class ArrayVariable(Variable):
         except ValueError:
             self.raise_exception("new type '"+type(val).__name__+
                                  "' is not compatible with type '"+
-                                 type(self.value).__name__+"'", ValueError)
+                                 type(self.get_value()).__name__+"'", ValueError)
             
         if self.fixed_size is not None and self.fixed_size != check_val.shape:
             self.raise_exception('expected array of size '+
@@ -65,7 +65,7 @@ class ArrayVariable(Variable):
         myval = self.get_entry(index)
         valtype = numpy.obj2sctype(type(val))
         if valtype is not None and numpy.can_cast(valtype, 
-                                                  self.value.dtype.type):
+                                                  self.get_value().dtype.type):
             return val
         else:
             self.raise_exception('value type '+type(myval).__name__+
@@ -82,7 +82,7 @@ class ArrayVariable(Variable):
             self.raise_exception('index must be a list or a tuple',
                                  IndexError)           
         try:
-            myval = self.value[tuple(index)]
+            myval = self.get_value()[tuple(index)]
         except IndexError:
             self.raise_exception('invalid index: '+str(tuple(index)), 
                                  IndexError)
@@ -91,6 +91,13 @@ class ArrayVariable(Variable):
     def set_entry(self, val, index):
         """Set the entry at index of our array value."""
         tmp = self._pre_assign_entry(val, index)
-        self.value[tuple(index)] = tmp
+        self.get_value()[tuple(index)] = tmp
+        if self.valid is True:
+            #if __debug__: self._logger.debug('invalidating %s'%self.get_pathname())
+            self.valid = False
+            # since we've been newly invlidated, notify our parent (or it's parent) so dependent vars
+            # can also be invalidated
+            if self.parent and hasattr(self.parent, 'invalidate_deps'):
+                self.parent.invalidate_deps([self], notify_parent=True)
 
 add_var_type_map(ArrayVariable, numpy.ndarray)

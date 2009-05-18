@@ -62,6 +62,7 @@ class Transmission(Component):
         ''' The 5-speed manual transmission is simulated by determining the
             torque output and engine RPM via the gear ratios.
             '''
+        #print '%s.execute()' % self.get_pathname()
         Ratios = [0.0, self.Ratio1, self.Ratio2, self.Ratio3, self.Ratio4,
                   self.Ratio5]
         

@@ -5,20 +5,24 @@
 # the velocity and commanded throttle/gear positions given a set of design.
 # parameters.
 
+from zope.interface import implements, Interface
+
 from openmdao.main import Assembly
 from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.interfaces import IComponent
 
+from openmdao.examples.engine_design.engine_wrap_c import Engine
 from openmdao.examples.engine_design.transmission import Transmission
 from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
 
-try:
-    from openmdao.examples.engine_design.engine_wrap_c import Engine
-except:
-    from openmdao.examples.engine_design.engine import Engine
-
+class IVehicle(Interface):
+    """Vehicle Model interface"""
+    
 class Vehicle(Assembly):
     """ Vehicle assembly. """
+    
+    implements(IVehicle)
     
     def __init__(self, name, parent=None, directory=''):
         ''' Creates a new Vehicle Assembly object
@@ -67,89 +71,60 @@ class Vehicle(Assembly):
 
         # Create component instances
         
-        comp1 = Transmission('Transmission', parent=self)
-        self.add_child(comp1)
-        self.workflow.add_node(comp1)
+        # FIXME: uncomment add_socket after sockets work with pickle
+        #self.add_socket('Transmission', IComponent, required=True)
+        Transmission('Transmission', parent=self)
         
-        comp2 = Engine('Engine', parent=self)
-        self.add_child(comp2)
-        self.workflow.add_node(comp2)
+        # FIXME: uncomment add_socket after sockets work with pickle
+        #self.add_socket('Engine', IComponent, required=True)
+        Engine('Engine', parent=self)
 
-        comp3 = Vehicle_Dynamics('VDyn', parent=self)
-        self.add_child(comp3)
-        self.workflow.add_node(comp3)
+        # FIXME: uncomment add_socket after sockets work with pickle
+        #self.add_socket('VDyn', IComponent, required=True)
+        Vehicle_Dynamics('VDyn', parent=self)
 
         # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
         # "Instance of <class> has no <attr> member"        
         
         # Promoted From Engine
-        Float('stroke', self, INPUT, units='mm', default=78.8,
-              doc='Cylinder Stroke')
-        Float('bore', self, INPUT, units='mm', default=82.0, 
-              doc='Cylinder Bore')
-        Float('conrod', self, INPUT, units='mm', default=115.0, 
-              doc='Connecting Rod Length')
-        Float('compRatio', self, INPUT, units=None, default=9.3, 
-              doc='Compression Ratio')
-        Float('sparkAngle', self, INPUT, units='deg', default=-37.0,
-              doc = 'Spark Angle with respect to TDC (Top Dead Center)')
-        Int('nCyl', self, INPUT, default=6,
-            doc = 'Number of Cylinders')
-        Float('IVO', self, INPUT, units='deg', default=11.0,
-              doc = 'Intake Valve Open before TDC (Top Dead Center)')
-        Float('IVC', self, INPUT, units='deg', default=53.0,
-              doc = 'Intake Valve Open after BDC (Bottom Dead Center)')
-        Float('Liv', self, INPUT, units='mm', default=8.0, 
-              doc='Maximum Valve Lift')
-        Float('Div', self, INPUT, units='mm', default=41.2, 
-              doc='Inlet Valve Diameter')
+        self.create_passthru('Engine.stroke')
+        self.create_passthru('Engine.bore')
+        self.create_passthru('Engine.conrod')
+        self.create_passthru('Engine.compRatio')
+        self.create_passthru('Engine.sparkAngle')
+        self.create_passthru('Engine.nCyl')
+        self.create_passthru('Engine.IVO')
+        self.create_passthru('Engine.IVC')
+        self.create_passthru('Engine.Liv')
+        self.create_passthru('Engine.Div')
+        self.create_passthru('Engine.Throttle')
+        self.create_passthru('Engine.Power')
+        self.create_passthru('Engine.Torque')
+        self.create_passthru('Engine.FuelBurn')
 
         # Promoted From Transmission
-        Float('Ratio1', self, INPUT, units=None, default=3.54,
-              doc='Gear Ratio in First Gear')
-        Float('Ratio2', self, INPUT, units=None, default=2.13,
-              doc='Gear Ratio in Second Gear')
-        Float('Ratio3', self, INPUT, units=None, default=1.36,
-              doc='Gear Ratio in Third Gear')
-        Float('Ratio4', self, INPUT, units=None, default=1.03,
-              doc='Gear Ratio in Fourth Gear')
-        Float('Ratio5', self, INPUT, units=None, default=0.72,
-              doc='Gear Ratio in Fifth Gear')
-        Float('FinalDriveRatio', self, INPUT, units=None, default=2.8,
-              doc='Final Drive Ratio')
-        Float('TireCirc', self, INPUT, units='inch', default=75.0,
-              doc='Circumference of tire (inches)')
+        self.create_passthru('Transmission.Ratio1')
+        self.create_passthru('Transmission.Ratio2')
+        self.create_passthru('Transmission.Ratio3')
+        self.create_passthru('Transmission.Ratio4')
+        self.create_passthru('Transmission.Ratio5')
+        self.create_passthru('Transmission.FinalDriveRatio')
+        self.create_passthru('Transmission.TireCirc')
+        self.create_passthru('Transmission.CurrentGear')
+        self.create_passthru('Transmission.Velocity')
 
         # Promoted From Vehicle_Dynamics
-        Float('Mass_Vehicle', self, INPUT, units='kg', default=1200.0,
-              doc='Vehicle Mass')
-        Float('Cf', self, INPUT, units=None, default=0.035,
-              doc='Friction Coefficient (proportional to W)')
-        Float('Cd', self, INPUT, units=None, default=0.3,
-              doc='Drag Coefficient (proportional to V**2)')
-        Float('Area', self, INPUT, units='m**2', default=2.164,
-              doc='Frontal area')
+        self.create_passthru('VDyn.Mass_Vehicle')
+        self.create_passthru('VDyn.Cf')
+        self.create_passthru('VDyn.Cd')
+        self.create_passthru('VDyn.Area')
+        #self.create_passthru('VDyn.Velocity')
+        self.connect('Velocity', 'VDyn.Velocity')
+        self.connect('TireCirc', 'VDyn.TireCirc')
+        self.create_passthru('VDyn.Acceleration')
         # NOTE: Tire Circumference also needed by Transmission.
 
-        # Vehicle Simulation Inputs
-        Int('CurrentGear', self, INPUT, default=0,
-              doc='Current Gear')
-        Float('Velocity', self, INPUT, units='mi/h', default=0.0,
-              doc='Current Velocity of Vehicle')
-        Float('Throttle', self, INPUT, units=None, default=1.0, min_limit=0.01,
-              max_limit=1.0, doc='Throttle position (from low idle to wide open)')
-
-        # Vehicle Simulation Outputs
-        Float('Power', self, OUTPUT, units='kW', default=0.0,
-              doc='Power at engine output')
-        Float('Torque', self, OUTPUT, units='N*m', default=0.0,
-              doc='Torque at engine output')
-        Float('FuelBurn', self, OUTPUT, units='l/s', default=0.0,
-              doc='Torque at engine output')
-        Float('Acceleration', self, OUTPUT, units='m/(s*s)', default=0.0, 
-              doc='Calculated vehicle acceleration ')        
-        
         # Hook it all up
         
         self.connect('Transmission.RPM','Engine.RPM')
@@ -157,66 +132,19 @@ class Vehicle(Assembly):
         self.connect('Engine.Torque','VDyn.Engine_Torque')
         self.connect('Engine.EngineWeight','VDyn.Mass_Engine')
 
-        #self.connect('CurrentGear','Transmission.CurrentGear')
-        #self.connect('Velocity','Transmission.Velocity')
-        #self.connect('Throttle','Engine.Throttle')
-        #self.connect('Velocity','VDyn.Velocity')
-        #self.connect('Engine.Power','Power')
-        #self.connect('Engine.Torque','Torque')
-        #self.connect('Engine.FuelBurn','FuelBurn')
-        #self.connect('VDyn.Acceleration','Acceleration')
 
         
-    def execute(self):
-        
-        self.set('Engine.stroke', self.stroke)        
-        self.set('Engine.bore', self.bore)        
-        self.set('Engine.conrod', self.conrod)        
-        self.set('Engine.compRatio', self.compRatio)        
-        self.set('Engine.sparkAngle', self.sparkAngle)        
-        self.set('Engine.nCyl', self.nCyl)        
-        self.set('Engine.IVO', self.IVO)        
-        self.set('Engine.IVC', self.IVC)        
-        self.set('Engine.Liv', self.Liv)        
-        self.set('Engine.Div', self.Div)        
-
-        self.set('Transmission.Ratio1', self.Ratio1)        
-        self.set('Transmission.Ratio2', self.Ratio2)        
-        self.set('Transmission.Ratio3', self.Ratio3)        
-        self.set('Transmission.Ratio4', self.Ratio4)        
-        self.set('Transmission.Ratio5', self.Ratio5)        
-        self.set('Transmission.FinalDriveRatio', self.FinalDriveRatio)        
-        self.set('Transmission.TireCirc', self.TireCirc)        
-
-        self.set('VDyn.Mass_Vehicle', self.Mass_Vehicle)        
-        self.set('VDyn.Cf', self.Cf)        
-        self.set('VDyn.Cd', self.Cd)        
-        self.set('VDyn.Area', self.Area)        
-        #self.set('Transmission.TireCirc', self.TireCirc)        
-
-        self.set('Transmission.CurrentGear', self.CurrentGear)        
-        self.set('Transmission.Velocity', self.Velocity*60.0/26.8224)        
-        self.set('Engine.Throttle', self.Throttle)        
-        self.set('VDyn.Velocity', self.Velocity)        
-        #self.VDyn.setvar('Velocity', self.getvar("Velocity"))
-        
-        super(Vehicle, self).execute()
-        
-        self.Power =self.get('Engine.Power')    
-        self.Torque = self.get('Engine.Torque')    
-        self.FuelBurn = self.get('Engine.FuelBurn')      
-        self.Acceleration = self.get('VDyn.Acceleration') 
-
-        
-if __name__ == "__main__":        
-    z = Vehicle("Testing")        
-    z.CurrentGear = 1
-    z.Velocity = 20.0*(26.8224/60.0)
+if __name__ == "__main__": 
+    top = Assembly('top')
+    z = Vehicle("Testing", parent=top)        
+    z.set('CurrentGear', 1)
+    z.set('Velocity', 20.0*(26.8224/60.0))
     #z.Throttle = .2
-    for throttle in xrange(1,101,1):
-        z.Throttle = throttle/100.0
-        z.execute()
-        print throttle, z.Acceleration
+#    for throttle in xrange(1,101,1):
+#        z.set('Throttle', throttle/100.0)
+    z.set('Throttle', 1.0)
+    z.run()
+    print z.get('Acceleration')
     
     def prz(zz):
         print "Accel = ", zz.Acceleration

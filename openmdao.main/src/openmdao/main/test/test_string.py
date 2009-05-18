@@ -29,27 +29,27 @@ class StringTestCase(unittest.TestCase):
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual("abcd", self.s1.value)
+        self.assertEqual("abcd", self.s1.get_value())
         # check default value
         self.assertEqual("foo", self.s1.default)
-        self.s1.value = self.s2.value
-        self.assertEqual("xyz", self.s1.value)
+        self.s1.set_value(self.s2.get_value())
+        self.assertEqual("xyz", self.s1.get_value())
         # make sure value gets transferred to internal variable
         self.assertEqual("xyz", self.hobj.internal_s1)
-        self.s1.value = "qq"
-        self.assertEqual("qq", self.s1.value)
+        self.s1.set_value("qq")
+        self.assertEqual("qq", self.s1.get_value())
         self.assertEqual("qq", self.hobj.internal_s1)
         
     def test_constraint_violations(self):
         try:
-            self.s3.value = ""
+            self.s3.set_value("")
         except ConstraintError, err:
             self.assertEqual(str(err), 
                     "h1.s3: min length constraint '0 >= 1' has been violated")
         else:
             self.fail('ConstraintError expected')
         try:
-            self.s3.value = "abcdefghi"
+            self.s3.set_value("abcdefghi")
         except ConstraintError, err:
             self.assertEqual(str(err), 
                     "h1.s3: max length constraint '9 <= 5' has been violated")

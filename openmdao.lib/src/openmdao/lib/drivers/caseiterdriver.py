@@ -1,4 +1,4 @@
-__all__ = ('CaseIteratorDriver',)
+__all__ = ('CaseIteratorDriver','ServerError')
 __version__ = '0.1'
 
 import Queue
@@ -7,7 +7,7 @@ import time
 
 from openmdao.main import Driver, Bool, Int
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.interfaces import ICaseIterator
+from openmdao.main.interfaces import ICaseIterator, IComponent
 from openmdao.main.variable import INPUT
 from openmdao.main.util import filexfer
 
@@ -47,8 +47,9 @@ class CaseIteratorDriver(Driver):
         Int('max_retries', self, INPUT, default=1, min_limit=0,
             doc='Number of times to retry a case.')
 
-        self.add_socket('iterator', ICaseIterator, 'Cases to evaluate.')
-        self.add_socket('outerator', None, 'Something to append() to.')
+        self.add_socket('iterator', ICaseIterator, 'Cases to evaluate.', required=True)
+        self.add_socket('outerator', None, 'Something to append() to.', required=True)
+        self.add_socket('model', IComponent, 'Model to be executed.', required=True)
 
         self._iter = None
         self._n_servers = 0
@@ -66,12 +67,6 @@ class CaseIteratorDriver(Driver):
 
     def execute(self):
         """ Run each case in iterator and record results in outerator. """
-        if not self.check_socket('iterator'):
-            self.raise_exception('No iterator plugin', ValueError)
-
-        if not self.check_socket('outerator'):
-            self.raise_exception('No outerator plugin', ValueError)
-
         self._rerun = []
         self._iter = self.iterator.__iter__()
 
@@ -289,29 +284,29 @@ class CaseIteratorDriver(Driver):
 
     def _model_set(self, server, name, index, value):
         """ Set value in server's model. """
-        comp_name, attr = name.split('.', 1)
         if server is None:
-            comp = getattr(self.parent, comp_name)
+            self.parent.set(name, value, index)
         else:
+            comp_name, attr = name.split('.', 1)
             comp = getattr(self._servers[server].tla, comp_name)
-        comp.set(attr, value, index)
+            comp.set(attr, value, index)
         return True
 
     def _model_get(self, server, name, index):
         """ Get value from server's model. """
-        comp_name, attr = name.split('.', 1)
         if server is None:
-            comp = getattr(self.parent, comp_name)
+            return self.parent.get(name, index)
         else:
+            comp_name, attr = name.split('.', 1)
             comp = getattr(self._servers[server].tla, comp_name)
-        return comp.get(attr, index)
+            return comp.get(attr, index)
 
     def _model_execute(self, server):
         """ Execute model in server. """
         self._exceptions[server] = None
         if server is None:
             try:
-                self.parent.workflow.run()
+                self.model.run()
             except Exception, exc:
                 self._exceptions[server] = exc
         else:

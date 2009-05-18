@@ -6,6 +6,7 @@
 
 from openmdao.main.log import logger
 from openmdao.main.hierarchy import HierarchyMember
+from openmdao.main.expreval import ExprEvaluator
 
 # Variable stuff
 from openmdao.main.variable import Variable
@@ -17,7 +18,7 @@ from openmdao.main.int import Int
 from openmdao.main.string import String
 from openmdao.main.stringlist import StringList
 from openmdao.main.arrayvar import ArrayVariable
-from openmdao.main.wrapper import Wrapper
+from openmdao.main.refvariable import RefVariable, RefVariableArray
 
 from openmdao.main.factory import Factory
 from openmdao.main.importfactory import ImportFactory
@@ -28,6 +29,7 @@ from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
 from openmdao.main.driver import Driver
 from openmdao.main.workflow import Workflow
+from openmdao.main.dataflow import Dataflow
 
 from openmdao.main.exceptions import ConstraintError
 
@@ -35,7 +37,6 @@ from openmdao.main.exceptions import ConstraintError
 from openmdao.main.containervar import ContainerVariable
 
 
-from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 
 
