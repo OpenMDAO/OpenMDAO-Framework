@@ -107,7 +107,7 @@ class RefVariableArray(Variable):
     
     def __init__(self, name, parent, iostatus, default=UNDEFINED, doc=None):
         self._exprs = []
-        self._value = None
+        self._value = []
         # put ourself in our parent's __dict__ if the name isn't already used
         if parent and not hasattr(parent.__class__, name) and not hasattr(parent, name):
             parent.__dict__[name] = self
@@ -128,10 +128,7 @@ class RefVariableArray(Variable):
     def _get_exprs(self):
         # self._exprs should only be none after we've been unpickled
         if self._exprs is None:
-            if self._value is not None:
-                self.set_value(self._value)
-            else:
-                self.raise_exception('no references are defined', RuntimeError)
+            self.set_value(self._value)
         return self._exprs
     
     def _pre_assign(self, val):

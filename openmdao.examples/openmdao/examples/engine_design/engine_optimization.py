@@ -34,11 +34,6 @@ class Engine_Optimization(Assembly):
         self.driver.design_vars.value = ['vehicle_sim.sparkAngle', 
                                          'vehicle_sim.bore' ]
         
-        # CONMIN Constraint
-        # FIXME: Conmin driver currently doesn't work if you don't have a
-        # constraint, so we add 1>0, which is never violated
-        self.driver.constraints.value = ['1']
-
         self.driver.lower_bounds = [-50, 65]
         self.driver.upper_bounds = [10, 100]
         
