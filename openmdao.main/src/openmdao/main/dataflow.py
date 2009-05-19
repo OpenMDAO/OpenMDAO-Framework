@@ -35,19 +35,20 @@ class Dataflow(Workflow):
         
     def connect(self, srccompname, destcompname, srcvarname, destvarname):
         # if an edge already exists between the two components, just increment the ref count
+        graph = self._graph
         try:
-            self._graph[srccompname][destcompname] += 1
+            graph[srccompname][destcompname] += 1
         except KeyError:
-            self._graph.add_edge(srccompname, destcompname, data=1)
+            graph.add_edge(srccompname, destcompname, data=1)
             
-        if not is_directed_acyclic_graph(self._graph):
+        if not is_directed_acyclic_graph(graph):
             # do a little extra work here to give more info to the user in the error message
-            strongly_connected = strongly_connected_components(self._graph)
-            refcount = self._graph[srccompname][destcompname] - 1
+            strongly_connected = strongly_connected_components(graph)
+            refcount = graph[srccompname][destcompname] - 1
             if refcount == 0:
-                self._graph.remove_edge(srccompname, destcompname)
+                graph.remove_edge(srccompname, destcompname)
             else:
-                self._graph[srccompname][destcompname] = refcount
+                graph[srccompname][destcompname] = refcount
             for strcon in strongly_connected:
                 if len(strcon) > 1:
                     self.raise_exception(
@@ -76,7 +77,7 @@ class Dataflow(Workflow):
         for compname in pargraph:
             obj = getattr(self.parent, compname)
             if IDriver.providedBy(obj):
-                graph.add_edges_from(obj.get_ref_graph().edges())
+                graph.add_edges_from(obj.get_ref_graph().edges_iter())
                 
         # create a new graph with strongly connected components as nodes so we
         # can eliminate cycles and topologically sort the strongly connected components
@@ -88,7 +89,7 @@ class Dataflow(Workflow):
             for node in strong:
                 strong_dict[node] = i # map nodes to their strongly connected comp
         for node in graph.nodes():
-            for u,v in graph.edges(node):
+            for u,v in graph.edges_iter(node):
                 if strong_dict[u] != strong_dict[v]:
                     strong_graph.add_edge(strong_dict[u], strong_dict[v])
         sorted_strongs = nx.topological_sort(strong_graph)
@@ -109,7 +110,7 @@ class Dataflow(Workflow):
                 for compname in strongs[sccomp]:
                     obj = getattr(self.parent, compname)
                     if IDriver.providedBy(obj):
-                        scc_graph.add_edges_from(obj.get_ref_graph(skip_inputs=True).edges())
+                        scc_graph.add_edges_from(obj.get_ref_graph(skip_inputs=True).edges_iter())
                 sorted_names = nx.topological_sort(scc_graph)
                 if sorted_names == None:
                     self.raise_exception('cannot break loop %s into a sortable graph' %
