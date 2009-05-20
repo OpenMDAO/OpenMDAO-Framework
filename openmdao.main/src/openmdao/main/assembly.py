@@ -216,7 +216,7 @@ class Assembly (Component):
         elif var.iostatus == OUTPUT:
             self.connect(varname, name)
         else:
-            self.raise_exception('unknown iostatus %s' % str(var.iostatus))
+            self.raise_exception('unknown iostatus %s' % var.iostatus)
         
     def split_varpath(self, path):
         """Return a tuple of compname,component,varname,variable given a path
@@ -412,7 +412,7 @@ class Assembly (Component):
                         except Exception, exc:
                             msg = "cannot transfer file from '%s' to '%s': %s" % \
                                   ('.'.join((srcvar.parent.name, srcvar.name)),
-                                   '.'.join((var.parent.name, var.name)), str(exc))
+                                   '.'.join((var.parent.name, var.name)), exc)
                             self.raise_exception(msg, type(exc))
                         finally:
                             if incomp.directory:
@@ -423,7 +423,7 @@ class Assembly (Component):
                         except Exception, exc:
                             msg = "cannot set '%s' from '%s': %s" % \
                                   ('.'.join((incomp.name, var.name)),
-                                   srcvar, str(exc))
+                                   srcname, exc)
                             self.raise_exception(msg, type(exc))
             var.valid = True
 

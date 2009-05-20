@@ -74,7 +74,7 @@ class Variable(HierarchyMember):
                     
         # Create the real object if it doesn't already exist.
         if implicit_creation and self._find(self._refparent, self.ref_name) is None:
-            if default is UNDEFINED or default is None:
+            if default is None or default == UNDEFINED:
                 self.raise_exception('default must be supplied'
                                      ' with implicit creation.', ValueError)
             else:
@@ -97,7 +97,7 @@ class Variable(HierarchyMember):
         elif isinstance(val_types, type):
             self.val_types = (val_types,)
         elif val_types is None and default is not None:
-            if default is UNDEFINED:
+            if default == UNDEFINED:
                 self.val_types = (type(self.get_value()),)
             elif default is not None:
                 self.val_types = (type(default),)
@@ -138,7 +138,7 @@ class Variable(HierarchyMember):
             self.default = None
             return
         try:
-            if default is UNDEFINED:
+            if default == UNDEFINED:
                 try: # it may be too early for get_value() to work properly, so
                      # just try it and see
                     tmp = self.get_value()

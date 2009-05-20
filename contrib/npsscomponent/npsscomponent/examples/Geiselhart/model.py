@@ -13,9 +13,11 @@ Known problems:
       variables are set as INPUTS.  This looks odd, but is neccessary
       until some more issues in the framework are ironed-out.
 """
+import npss
+import numpy
 import os.path
 
-from openmdao.main import Assembly, Component, Container, Float, \
+from openmdao.main import Assembly, Component, Container, Float, Int, String, \
                           ArrayVariable, FileVariable
 from openmdao.main.variable import INPUT, OUTPUT
 
@@ -70,6 +72,7 @@ class PropulsionData(Component):
 
     def execute(self):
         """ Evaluate link expressions. """
+        print self.get_pathname(), 'execution begins'
 
 #       PropulsionData.FLOPS.dnac =
 #           2*(NPSS_WATE.engine.WATE.WATE_fan.bladeTipRadius
@@ -91,6 +94,8 @@ class PropulsionData(Component):
         self.FLOPS.xnac = \
             (self.link_inletLength \
              + self.link_length) / 12.
+
+        print self.get_pathname(), '    complete'
 
 
 class FLOPSdata(Container):
@@ -235,18 +240,60 @@ class Model(Assembly):
     """ SBJ propulsion model. """
 
     def connect(self, src_path, dst_path):
-        """ Overriding default to dynamically make_public() for NPSS. """
+        """ Overriding default to dynamically publicise/hoist variables. """
         comp, rest = src_path.split('.', 1)
         src_comp = getattr(self, comp)
-        if isinstance(src_comp, NPSScomponent):
+        if rest.find('.') > 0:
+            src_path = self.hoist(src_comp, rest, OUTPUT)
+        elif isinstance(src_comp, NPSScomponent):
             src_comp.make_public((rest, '', OUTPUT))
+            self._var_graph.add_node(src_path, data=src_comp.getvar(rest))
 
         comp, rest = dst_path.split('.', 1)
         dst_comp = getattr(self, comp)
-        if isinstance(dst_comp, NPSScomponent):
+        if rest.find('.') > 0:
+            dst_path = self.hoist(dst_comp, rest, INPUT)
+        elif isinstance(dst_comp, NPSScomponent):
             dst_comp.make_public(rest)
-            
+            self._var_graph.add_node(dst_path, data=dst_comp.getvar(rest))
+
         super(Model, self).connect(src_path, dst_path)
+
+    def hoist(self, comp, path, io_status):
+        """ Hoist a variable so that it may be connected. """
+        name = '_'+path.replace('.', '_')
+        try:
+            var = comp.getvar(path)
+        except AttributeError:
+            val = comp.get(path)
+            if isinstance(val, float):
+                var = Float(name, comp, io_status, ref_name=path)
+            elif isinstance(val, int):
+                var = Int(name, comp, io_status, ref_name=path)
+            elif isinstance(val, basestring):
+                var = String(name, comp, io_status, ref_name=path)
+            elif isinstance(val, numpy.ndarray):
+                if val.dtype.char == 'd':
+                    var = ArrayVariable(name, comp, io_status, float,
+                                        ref_name=path)
+                elif val.dtype.char in ('i', 'l'):
+                    var = ArrayVariable(name, comp, io_status, int,
+                                        ref_name=path)
+                else:
+                    self.raise_exception('hoist %s: unexpected array type %s' %
+                                         (path, val.dtype.char), TypeError)
+            elif isinstance(val, npss.npss):
+                var = FileVariable(name, comp, io_status, ref_name=path+'.filename')
+            else:
+                self.raise_exception('hoist %s: unexpected type %s' %
+                                     (path, type(val)), TypeError)
+
+        newpath = comp.name+'.'+name
+        if newpath not in self._var_graph.nodes():
+            passthru = var.create_passthru(comp, name)
+            comp.make_public(passthru)
+            self._var_graph.add_node(newpath, data=passthru)
+        return newpath
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
