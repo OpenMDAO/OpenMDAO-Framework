@@ -707,6 +707,7 @@ setuptools.setup(
                 del sys.modules[mod]
 
         return egg_name
+    
     def _record_class(self, modname, classname):
         """Record class referenced during dummy unpickle."""
         cls = getattr(sys.modules[modname], classname)
@@ -916,25 +917,26 @@ setuptools.setup(
 
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output variables.
-        In the case of a simple Container, all input variables are connected
-        to all output variables.
+        In the case of a simple Container, all input variables are predecessors to
+	the Container, and all output variables are successors to the Container.
         """
         if self._io_graph is None:
             self._io_graph = nx.LabeledDiGraph()
+	    io_graph = self._io_graph
             varlist = [x for x in self._pub.values() if isinstance(x, Variable)]
             ins = ['.'.join([self.name,x.name]) for x in varlist if x.iostatus == INPUT]
             outs = ['.'.join([self.name,x.name]) for x in varlist if x.iostatus == OUTPUT]
             
             # add a node for the component
-            self._io_graph.add_node(self.name, data=self)
+            io_graph.add_node(self.name, data=self)
             
             # add nodes for all of the variables
             for var in varlist:
-                self._io_graph.add_node('%s.%s' % (self.name, var.name), data=var)
+                io_graph.add_node('%s.%s' % (self.name, var.name), data=var)
             
             # specify edges, with all inputs as predecessors to the component node,
             # and all outputs as successors to the component node
-            self._io_graph.add_edges_from([(i, self.name) for i in ins])
-            self._io_graph.add_edges_from([(self.name, o) for o in outs])
+            io_graph.add_edges_from([(i, self.name) for i in ins])
+            io_graph.add_edges_from([(self.name, o) for o in outs])
         return self._io_graph
     

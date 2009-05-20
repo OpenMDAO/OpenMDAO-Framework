@@ -105,16 +105,18 @@ class Driver(Assembly):
         if skip_inputs:
             if self._ref_graph_noinputs is None:
                 self._ref_graph_noinputs = nx.DiGraph()
+                graph = self._ref_graph_noinputs
                 for refout in self.get_referenced_comps(iostatus=OUTPUT):
-                    self._ref_graph_noinputs.add_edge(self.name, refout)
+                    graph.add_edge(self.name, refout)
             return self._ref_graph_noinputs
         else:  # don't skip inputs
             if self._ref_graph is None:
                 self._ref_graph = nx.DiGraph()
+                graph = self._ref_graph
                 for refout in self.get_referenced_comps(iostatus=OUTPUT):
-                    self._ref_graph.add_edge(self.name, refout)
+                    graph.add_edge(self.name, refout)
                 for refin in self.get_referenced_comps(iostatus=INPUT):
-                    self._ref_graph.add_edge(refin, self.name)
+                    graph.add_edge(refin, self.name)
 
             return self._ref_graph
     
@@ -126,9 +128,9 @@ class Driver(Assembly):
             if self.parent and isinstance(self.parent, Assembly):
                 nbunch = self.get_referenced_comps()
                 graph = self.parent.get_component_graph().subgraph(nbunch=nbunch)
-                graph.add_edges_from(self.get_ref_graph(skip_inputs=True).edges())
-                self._sorted_comps = nx.topological_sort(graph)
-                if self._sorted_comps is None:
+                graph.add_edges_from(self.get_ref_graph(skip_inputs=True).edges_iter())
+                self._sorted_comps = nx.topological_sort(graph) 
+                if self._sorted_comps is None:  # _sorted_comps is None if not a DAG
                     for strcon in strongly_connected_components(graph):
                         if len(strcon) > 1:
                             self.raise_exception('subgraph for driver %s has a cycle (%s)' %
