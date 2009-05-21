@@ -39,3 +39,4 @@ contrib/npsscomponent/npsscomponent/examples/Geiselhart/engdeck
 contrib/npsscomponent/npsscomponent/examples/Geiselhart/NPSS_*
 contrib/npsscomponent/npsscomponent/test/openmdao_log.txt
 docs/srcdocs/packages/npsscomponent.rst
+openmdao.util.rst

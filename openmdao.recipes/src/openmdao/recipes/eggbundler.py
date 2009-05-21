@@ -171,7 +171,7 @@ class EggBundler(object):
                       % (degg,ret))
     
                         
-    def tarfile_name(self):
+    def _tarfile_name(self):
         """ Returns name of tar file to be created. """
         return os.path.join(self.bundledir, '%s-bundle-%s-py%s.tar.gz' % 
                                             (self.bundle_name,
@@ -282,7 +282,7 @@ To get started (on UNIX):
         out.close()
 
         if self.archive is True:
-            tarname =  self.tarfile_name()
+            tarname =  self._tarfile_name()
             self.logger.info('creating tar file %s' % tarname)
            
             tarf = tarfile.open(tarname, mode='w:gz')
@@ -305,7 +305,7 @@ To get started (on UNIX):
    
     def update(self):
         """ Ensure we have a bundle if only update gets run. """
-        if not os.path.exists(self.tarfile_name()):
+        if not os.path.exists(self._tarfile_name()):
             return self.install()
         else:
             return []             

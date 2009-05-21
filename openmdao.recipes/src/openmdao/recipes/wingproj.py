@@ -242,10 +242,14 @@ class WingProj(object):
             script.write(script_template % dict(python=self.executable,
                                                 proj=newfname))
             script.close()
-            os.chmod(scriptname, 0755)
         except OSError, err:
             self.logger.error(str(err))
             raise zc.buildout.UserError('creation of wing script failed')
+        try:
+            os.chmod(scriptname, 0775)
+        except (AttributeError, os.error):
+            pass
+            
         return [scriptname]
 
      
