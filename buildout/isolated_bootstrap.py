@@ -76,11 +76,11 @@ import zc.buildout.easy_install
 import os.path
 import os
 
-# monkey patch zc.buildout.easy_install._script to change 
+# monkey patch zc.buildout.easy_install._script and _pyscript to change 
 # the chmod from 0755 to 0775
 _zc_easy_install_script = zc.buildout.easy_install._script
 
-def _myscript(module_name, attrs, path, dest, executable, arguments,
+def _script(module_name, attrs, path, dest, executable, arguments,
             initialization, rsetup):
     gen = _zc_easy_install_script(module_name, attrs, path, dest, 
                                   executable, arguments,
@@ -91,7 +91,19 @@ def _myscript(module_name, attrs, path, dest, executable, arguments,
         pass
     return gen
         
-zc.buildout.easy_install._script = _myscript
+zc.buildout.easy_install._script = _script
+
+_zc_easy_install_pyscript = zc.buildout.easy_install._pyscript
+
+def _pyscript(path, dest, executable, rsetup):
+    gen = _zc_easy_install_pyscript(path, dest, executable, rsetup)
+    try:
+        os.chmod(dest, 0775)
+    except (AttributeError, os.error):
+        pass
+    return gen
+        
+zc.buildout.easy_install._pyscript = _pyscript
     
 prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
 sys.path[:] = [  prefx+'.zip',
