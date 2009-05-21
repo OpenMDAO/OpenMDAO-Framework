@@ -4,6 +4,7 @@ import os.path
 import rfc822
 import StringIO
 import fnmatch
+import pprint
 
 from pkg_resources import get_entry_map, get_importer, find_distributions
 from pkg_resources import Environment, Distribution, EggMetadata
@@ -45,7 +46,7 @@ def get_metadata(dist, dirname=''):
     """
     
     for name in dist.metadata_listdir(dirname):
-        print 'name = ',name
+        #print 'name = ',name
         if dirname != '':
             path = '/'.join([dirname, name])
         else:
@@ -85,8 +86,9 @@ class EggWrapper(object):
             
         dist = dists[0]
         
-        if self.path != dist.location:
-            raise RuntimeError('%s is not a valid distribution'%self.path)
+        if os.path.abspath(self.path).lower() != os.path.abspath(dist.location).lower():
+            raise RuntimeError('%s is not a valid distribution (dist.location=%s)'%
+                    (os.path.abspath(self.path),dist.location))
          
         # getting access to metadata in a zipped egg doesn't seem to work
         # right, so just use a ZipFile to access files under the EGG-INFO
@@ -125,6 +127,14 @@ class EggWrapper(object):
             self.metadata['entry_points'][gname] = [ep for ep in group]
 
 
-ew = EggWrapper(sys.argv[1])
-print 'metadata = ',ew.metadata
+if __name__ == '__main__':
+    ew = EggWrapper(sys.argv[1])
+    if len(sys.argv) > 2:
+        try:
+            print ew.metadata[sys.argv[2]]
+        except:
+            print 'ERROR: metadata %s not found' % sys.argv[2]
+    else:
+        print pprint.pprint(ew.metadata)
         
+

@@ -36,7 +36,7 @@ sys.exit(bld(argv=args))
 """ 
 
 
-def mod_sphinx_info(mod, outfile, show_undoc=False):
+def _mod_sphinx_info(mod, outfile, show_undoc=False):
     name = os.path.splitext(mod.replace('/', '.'))[0]
     short = os.path.basename(name)
     
@@ -59,7 +59,7 @@ def _match(name, inlist):
     return False
     
     
-def get_resource_files(dist, exList=None, incList=None, dirname=''):
+def _get_resource_files(dist, exList=None, incList=None, dirname=''):
     """Retrieve resource file pathnames from within a distribution."""
     
     exlist = exList or []
@@ -73,7 +73,7 @@ def get_resource_files(dist, exList=None, incList=None, dirname=''):
         else:
             respath = res
         if dist.resource_isdir(respath):
-            for r in get_resource_files(dist, exlist, inclist, respath):
+            for r in _get_resource_files(dist, exlist, inclist, respath):
                 if _match(r, inclist) and not _match(r, exlist):
                     yield r
         else:
@@ -81,7 +81,7 @@ def get_resource_files(dist, exList=None, incList=None, dirname=''):
                 yield respath
 
                 
-def get_metadata(dist, dirname=''):
+def _get_metadata(dist, dirname=''):
     """Retrieve metadata from within a distribution and return it as
     a generator of tuples of the form (metadata_key, value).
     """
@@ -92,7 +92,7 @@ def get_metadata(dist, dirname=''):
         else:
             path = name
         if dist.metadata_isdir(path):
-            for md in get_metadata(dist, path):
+            for md in _get_metadata(dist, path):
                 yield md
         elif name.endswith('.txt'):
             yield (path[:-4], [x.strip() for x in dist.get_metadata(path).splitlines() if x.strip() != ''])
@@ -109,7 +109,7 @@ def get_metadata(dist, dirname=''):
             yield (path, dist.get_metadata(path))
                 
             
-def pkg_sphinx_info(env, startdir, pkg, outfile, show_undoc=False,
+def _pkg_sphinx_info(env, startdir, pkg, outfile, show_undoc=False,
                     underline='-'):
     """Generate Sphinx autodoc directives for all of the modules in 
     the given package.
@@ -121,12 +121,13 @@ def pkg_sphinx_info(env, startdir, pkg, outfile, show_undoc=False,
     
     ws = WorkingSet()
     dist = env.best_match(Requirement.parse(pkg), ws)
-
+    if dist is None:
+        logging.error('no dist found for Requirement(%s)'%pkg)
     print >> outfile, 'Package %s' % pkg
     print >> outfile, underline*(len('Package ')+len(pkg))
     print >> outfile, '\n\n'
     
-    names = list(get_resource_files(dist,
+    names = list(_get_resource_files(dist,
                                     ['*__init__.py','*setup.py','*/test/*.py'],
                                     ['*.py']))            
     names.sort()
@@ -138,10 +139,10 @@ def pkg_sphinx_info(env, startdir, pkg, outfile, show_undoc=False,
             if  name.startswith('%s/' % ex) or '/%s/'%ex in name:
                 break
         else:       
-            mod_sphinx_info(name, outfile, show_undoc=show_undoc)
+            _mod_sphinx_info(name, outfile, show_undoc=show_undoc)
 
 # TODO: add metadata info to doc page        
-#    for md,val in get_metadata(dist):
+#    for md,val in _get_metadata(dist):
 #        print "%s:\n%s\n"%(md,val)
 
 
@@ -161,7 +162,7 @@ if __name__ == '__main__':
         outf = sys.stdout
     
     if len(args) == 1:
-        pkg_sphinx_info(args[0], outf, options.show_undoc)
+        _pkg_sphinx_info(args[0], outf, options.show_undoc)
     else:
         parser.print_help()
         sys.exit(-1)
@@ -201,7 +202,7 @@ class SphinxBuild(object):
             self.logger.info('creating autodoc file for %s' % pack)
             f = open(os.path.join(self.docdir, 'srcdocs', 'packages',
                                   pack+'.rst'), 'w')
-            pkg_sphinx_info(self.env, self.branchdir, pack, f, 
+            _pkg_sphinx_info(self.env, self.branchdir, pack, f, 
                             show_undoc=True, underline='-')
             f.close()
 
@@ -242,6 +243,10 @@ class SphinxBuild(object):
                                         os.path.join(self.builddir, "doctrees"),
                                         os.path.join(self.builddir, "html")))
         bld_script.close()
+        try:
+            os.chmod(bspath, 0775)
+        except (AttributeError, os.error):
+            pass
             
         # build the docs using Sphinx
         try:
@@ -286,7 +291,10 @@ class SphinxBuild(object):
                                             browser=browser,
                                             index=idxpath))
         script.close()
-        os.chmod(scriptname, 0775)
+        try:
+            os.chmod(scriptname, 0775)
+        except (AttributeError, os.error):
+            pass
         
         return [scriptname]
     
