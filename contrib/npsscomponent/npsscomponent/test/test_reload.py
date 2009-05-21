@@ -4,7 +4,6 @@ Test of NPSS auto-reload capability.
 
 import logging
 import os
-import os.path
 import pkg_resources
 import unittest
 
@@ -22,6 +21,7 @@ class Source(Component):
 
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
+        Bool('rerun', self, INPUT, default=False)
         Bool('npss_reload', self, OUTPUT, default=False,
              doc='Test input to NPSS')
         Float('npss_in', self, OUTPUT, default=0.,
@@ -40,13 +40,14 @@ class Sink(Component):
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
 
-class Model(Assembly):
+class MyModel(Assembly):
     """ Exercises NPSS auto-reload capability. """ 
 
     def __init__(self, *args, **kwargs):
-        super(Model, self).__init__(*args, **kwargs)
+        super(MyModel, self).__init__(*args, **kwargs)
+        Bool('rerun_flag', self, INPUT, default=False)
 
-        self.workflow.add_node(Source(parent=self))
+        Source(parent=self)
         self.Source.npss_in = 9
 
         NPSScomponent(parent=self, arglist='-trace reload.mdl',
@@ -56,25 +57,27 @@ class Model(Assembly):
         Float('xyzzy_out', self.NPSS, OUTPUT, doc='Test output')
         String('s', self.NPSS, INPUT, doc='Unconnected input')
 
-        self.workflow.add_node(self.NPSS)
-
-        self.workflow.add_node(Sink(parent=self))
+        Sink(parent=self)
 
         self.connect('Source.npss_reload', 'NPSS.reload_model')
         self.connect('Source.npss_in', 'NPSS.xyzzy_in')
         self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
 
+    def rerun(self):
+        self.debug('rerun()')
+        self.Source.set('rerun', True)
+        self.run()
+
 
 class NPSSTestCase(unittest.TestCase):
 
-    directory = \
-        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+    directory = pkg_resources.resource_filename('npsscomponent', 'test')
 
     def setUp(self):
         """ Called before each test in this class. """
         # Reset simulation root so we can legally access files.
         SimulationRoot.chdir(NPSSTestCase.directory)
-        self.model = Model('TestModel')
+        self.model = MyModel('TestModel')
 
     def tearDown(self):
         """ Called after each test in this class. """
@@ -92,14 +95,14 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.npss_out, 0)
         self.assertEqual(self.model.Source.npss_in, 9)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.NPSS.xyzzy_out, 9)
         self.assertEqual(self.model.Sink.npss_out, 9)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 2)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
@@ -109,7 +112,7 @@ class NPSSTestCase(unittest.TestCase):
         self.model.NPSS.set(path, True)
         self.model.debug('reload_flag = %d', self.model.NPSS.get(path))
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
@@ -120,7 +123,7 @@ class NPSSTestCase(unittest.TestCase):
         self.model.debug('reload_flag = %d', self.model.NPSS.get(path))
         self.model.NPSS.model_filename = 'no_such_model'
         try:
-            self.model.run()
+            self.model.rerun()
         except RuntimeError, exc:
             self.assertEqual(str(exc).startswith(
                 "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
@@ -145,14 +148,14 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.npss_out, 0)
         self.assertEqual(self.model.Source.npss_in, 9)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
         self.assertEqual(self.model.NPSS.xyzzy_out, 9)
         self.assertEqual(self.model.Sink.npss_out, 9)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 2)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
@@ -162,7 +165,7 @@ class NPSSTestCase(unittest.TestCase):
         self.model.debug('Source.npss_reload = %d',
                          self.model.Source.npss_reload)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
@@ -171,7 +174,7 @@ class NPSSTestCase(unittest.TestCase):
  
         self.model.NPSS.model_filename = 'no_such_model'
         try:
-            self.model.run()
+            self.model.rerun()
         except RuntimeError, exc:
             self.assertEqual(str(exc).startswith(
                 "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
@@ -188,7 +191,7 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.npss_out, 0)
         self.assertEqual(self.model.Source.npss_in, 9)
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 0)
@@ -197,7 +200,7 @@ class NPSSTestCase(unittest.TestCase):
 
         self.model.NPSS.run_command = 'mcRun()'
 
-        self.model.run()
+        self.model.rerun()
 
         self.assertEqual(self.model.NPSS.run_count, 1)
         self.assertEqual(self.model.NPSS.mcRun_count, 1)

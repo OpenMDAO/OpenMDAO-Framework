@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """
-Record lock/unlock state of a repository.
+Repository maintenance.
+Can record lock/unlock state of a repository.
 Useful to keep multiple developers from stepping on each other,
 but requires some discipline :-(
 """
@@ -9,6 +10,7 @@ import optparse
 import os
 import os.path
 import pwd
+import stat
 import subprocess
 import sys
 import time
@@ -16,13 +18,15 @@ import time
 LOCKFILE = 'repo_lock'
 
 def main():
-    """ Repository lockfile maintenance. """
+    """ Repository maintenance. """
 
-    usage = '%prog OP [options] [repository], where OP may be:\n' \
-            '   check  -- check for lock\n' \
-            '   lock   -- lock repository\n' \
-            '   unlock -- unlock repository\n' \
-            '   set    -- set this as current repository'
+    usage = """\
+%prog OP [options] repository, where OP may be:
+   check  -- check for lock
+   lock   -- lock repository
+   unlock -- unlock repository
+   set    -- set this as current repository
+   fix    -- fix permissions"""
 
     parser = optparse.OptionParser(usage)
     parser.add_option('-f', '--force', action='store_true',
@@ -56,6 +60,8 @@ def main():
         do_unlock(path, options)
     elif operation == 'set':
         do_set(path, this_user, options)
+    elif operation == 'fix':
+        do_fix(path, options)
     else:
         parser.print_help()
         sys.exit(1)
@@ -100,15 +106,93 @@ def do_set(path, user, options):
             print 'Moving to repository root.'
         os.chdir(path)
 
-    bin = os.path.join(path, 'buildout', 'bin')
-    scripts = os.path.join(path, 'scripts')
-    os.environ['PATH'] = \
-        bin+os.pathsep+scripts+os.pathsep+os.environ.get('PATH', '')
+    os.environ['OPENMDAO_REPO'] = find_repository(os.getcwd(), user)
 
     process = subprocess.Popen(os.environ['SHELL'])
     os.waitpid(process.pid, 0)
     sys.exit(process.returncode)
 
+def do_fix(path, options):
+    """ Check/fix permissions. """
+    for dirpath, dirnames, filenames in os.walk(path):
+        if options.verbose:
+            print dirpath[len(path):]
+
+        names = dirnames
+        names.extend(filenames)
+        for name in names:
+            path = os.path.join(dirpath, name)
+            info = os.stat(path)
+            mode = info.st_mode
+
+            fixup = mode
+            if (mode & stat.S_IRUSR) and not (mode & stat.S_IRGRP):
+                fixup |= stat.S_IRGRP
+            if (mode & stat.S_IWUSR) and not (mode & stat.S_IWGRP):
+                fixup |= stat.S_IWGRP
+            if (mode & stat.S_IXUSR) and not (mode & stat.S_IXGRP):
+                fixup |= stat.S_IXGRP
+
+            if options.verbose:
+                if fixup != mode:
+                    print '   fixing %s %s' % (permission_bits(mode), name)
+                else:
+                    print '   %s %s' % (permission_bits(mode), name)
+            elif fixup != mode:
+                print 'fixing %s %s' % (permission_bits(mode), path)
+
+            if fixup != mode:
+                try:
+                    os.chmod(path, fixup)
+                except OSError, exc:
+                    print '    %s' % exc
+                    print '    (owner %s)' % pwd.getpwuid(info.st_uid).pw_name
+
+
+def permission_bits(mode):
+    """ Format permission bits in UNIX 'ls' style. """
+    bits = ''
+
+    if mode & stat.S_IRUSR:
+        bits += 'r'
+    else:
+        bits += '-'
+    if mode & stat.S_IWUSR:
+        bits += 'w'
+    else:
+        bits += '-'
+    if mode & stat.S_IXUSR:
+        bits += 'x'
+    else:
+        bits += '-'
+
+    if mode & stat.S_IRGRP:
+        bits += 'r'
+    else:
+        bits += '-'
+    if mode & stat.S_IWGRP:
+        bits += 'w'
+    else:
+        bits += '-'
+    if mode & stat.S_IXGRP:
+        bits += 'x'
+    else:
+        bits += '-'
+
+    if mode & stat.S_IROTH:
+        bits += 'r'
+    else:
+        bits += '-'
+    if mode & stat.S_IWOTH:
+        bits += 'w'
+    else:
+        bits += '-'
+    if mode & stat.S_IXOTH:
+        bits += 'x'
+    else:
+        bits += '-'
+    
+    return bits
 
 def find_repository(repository, user):
     """ Return repository's root directory path, or None. """
@@ -145,13 +229,13 @@ def check_lockfile(path):
     path = os.path.join(path, LOCKFILE)
     if os.path.exists(path):
         try:
-            stat = os.stat(path)
+            info = os.stat(path)
         except OSError, exc:
             print 'Cannot access lockfile:', exc
             sys.exit(1)
         else:
-            user = pwd.getpwuid(stat.st_uid).pw_name
-            mtime = time.asctime(time.localtime(stat.st_mtime))
+            user = pwd.getpwuid(info.st_uid).pw_name
+            mtime = time.asctime(time.localtime(info.st_mtime))
             return (user, mtime)
     else:
         return (None, None)

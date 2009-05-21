@@ -9,7 +9,6 @@ import StringIO
 import zc.buildout
 
 from pkg_resources import Environment
-from pkg_resources import get_distribution, resource_listdir,load_entry_point
 from pkg_resources import WorkingSet, Requirement
 
 from openmdao.util.procutil import run_command
@@ -37,7 +36,7 @@ sys.exit(bld(argv=args))
 """ 
 
 
-def mod_sphinx_info(mod, outfile, show_undoc=False):
+def _mod_sphinx_info(mod, outfile, show_undoc=False):
     name = os.path.splitext(mod.replace('/', '.'))[0]
     short = os.path.basename(name)
     
@@ -60,7 +59,7 @@ def _match(name, inlist):
     return False
     
     
-def get_resource_files(dist, exList=None, incList=None, dirname=''):
+def _get_resource_files(dist, exList=None, incList=None, dirname=''):
     """Retrieve resource file pathnames from within a distribution."""
     
     exlist = exList or []
@@ -74,7 +73,7 @@ def get_resource_files(dist, exList=None, incList=None, dirname=''):
         else:
             respath = res
         if dist.resource_isdir(respath):
-            for r in get_resource_files(dist, exlist, inclist, respath):
+            for r in _get_resource_files(dist, exlist, inclist, respath):
                 if _match(r, inclist) and not _match(r, exlist):
                     yield r
         else:
@@ -82,7 +81,7 @@ def get_resource_files(dist, exList=None, incList=None, dirname=''):
                 yield respath
 
                 
-def get_metadata(dist, dirname=''):
+def _get_metadata(dist, dirname=''):
     """Retrieve metadata from within a distribution and return it as
     a generator of tuples of the form (metadata_key, value).
     """
@@ -93,14 +92,14 @@ def get_metadata(dist, dirname=''):
         else:
             path = name
         if dist.metadata_isdir(path):
-            for md in get_metadata(dist, path):
+            for md in _get_metadata(dist, path):
                 yield md
         elif name.endswith('.txt'):
             yield (path[:-4], [x.strip() for x in dist.get_metadata(path).splitlines() if x.strip() != ''])
         elif name == 'PKG-INFO':
             instr = StringIO.StringIO(dist.get_metadata(name))
             message = rfc822.Message(instr)
-            for k,v in message.items():
+            for k, v in message.items():
                 yield (k, v)
         elif name == 'not-zip-safe':
             yield ('zip-safe', False)
@@ -110,7 +109,8 @@ def get_metadata(dist, dirname=''):
             yield (path, dist.get_metadata(path))
                 
             
-def pkg_sphinx_info(env,startdir, pkg, outfile, show_undoc=False, underline='-'):
+def _pkg_sphinx_info(env, startdir, pkg, outfile, show_undoc=False,
+                    underline='-'):
     """Generate Sphinx autodoc directives for all of the modules in 
     the given package.
     
@@ -121,26 +121,28 @@ def pkg_sphinx_info(env,startdir, pkg, outfile, show_undoc=False, underline='-')
     
     ws = WorkingSet()
     dist = env.best_match(Requirement.parse(pkg), ws)
-
+    if dist is None:
+        logging.error('no dist found for Requirement(%s)'%pkg)
     print >> outfile, 'Package %s' % pkg
     print >> outfile, underline*(len('Package ')+len(pkg))
     print >> outfile, '\n\n'
     
-    names = list(get_resource_files(dist,['*__init__.py','*setup.py','*test_*.py'],
+    names = list(_get_resource_files(dist,
+                                    ['*__init__.py','*setup.py','*/test/*.py'],
                                     ['*.py']))            
     names.sort()
     
-    exdirs = ['build','examples']
+    exdirs = ['build', 'examples']
             
     for name in names:
         for ex in exdirs:
             if  name.startswith('%s/' % ex) or '/%s/'%ex in name:
                 break
         else:       
-            mod_sphinx_info(name, outfile, show_undoc=show_undoc)
+            _mod_sphinx_info(name, outfile, show_undoc=show_undoc)
 
 # TODO: add metadata info to doc page        
-#    for md,val in get_metadata(dist):
+#    for md,val in _get_metadata(dist):
 #        print "%s:\n%s\n"%(md,val)
 
 
@@ -148,9 +150,9 @@ if __name__ == '__main__':
     from optparse import OptionParser
     
     parser = OptionParser()
-    parser.add_option("-u","", action="store_true", dest="show_undoc",
+    parser.add_option("-u", "", action="store_true", dest="show_undoc",
                       help="show undocumented members")
-    parser.add_option("-o","", action="store", type='string', dest="out",
+    parser.add_option("-o", "", action="store", type='string', dest="out",
                       help="output filename (defaults to stdout)")
     (options, args) = parser.parse_args(sys.argv[1:])
     
@@ -160,7 +162,7 @@ if __name__ == '__main__':
         outf = sys.stdout
     
     if len(args) == 1:
-        pkg_sphinx_info(args[0], outf, options.show_undoc)
+        _pkg_sphinx_info(args[0], outf, options.show_undoc)
     else:
         parser.print_help()
         sys.exit(-1)
@@ -179,7 +181,8 @@ class SphinxBuild(object):
         self.options = options
         self.logger = logging.getLogger(name)
         self.branchdir = os.path.split(buildout['buildout']['directory'])[0]
-        self.interpreter = os.path.join(buildout['buildout']['bin-directory'], 'python')
+        self.interpreter = os.path.join(buildout['buildout']['bin-directory'],
+                                        'python')
         self.executable = buildout['buildout']['executable']
         
         self.packages = options.get('packages') or ''  
@@ -197,21 +200,23 @@ class SphinxBuild(object):
     def _write_src_docs(self):
         for pack in self.packages.split():
             self.logger.info('creating autodoc file for %s' % pack)
-            f = open(os.path.join(self.docdir,'srcdocs','packages',
-                                  pack+'.rst'),'w')
-            pkg_sphinx_info(self.env,self.branchdir, pack, f, 
+            f = open(os.path.join(self.docdir, 'srcdocs', 'packages',
+                                  pack+'.rst'), 'w')
+            _pkg_sphinx_info(self.env, self.branchdir, pack, f, 
                             show_undoc=True, underline='-')
             f.close()
 
                
     def install(self):
-        dev_eggs = fnmatch.filter(os.listdir(self.dev_egg_dir),'*.egg-link')
+        dev_eggs = fnmatch.filter(os.listdir(self.dev_egg_dir), '*.egg-link')
         # grab the first line of each dev egg link file
         self.dev_eggs = [
-           open(os.path.join(self.dev_egg_dir,f),'r').readlines()[0].strip() 
-                                                               for f in dev_eggs]
-        self.env = Environment(self.dev_eggs+[os.path.join(self.egg_dir,x) 
-                          for x in fnmatch.filter(os.listdir(self.egg_dir),'*.egg')])
+           open(os.path.join(self.dev_egg_dir, f), 'r').readlines()[0].strip() 
+           for f in dev_eggs]
+        eggs = self.dev_eggs + \
+               [os.path.join(self.egg_dir, x) 
+                for x in fnmatch.filter(os.listdir(self.egg_dir), '*.egg')]
+        self.env = Environment(eggs)
         
         startdir = os.getcwd()
         if not os.path.isdir(self.docdir):
@@ -224,20 +229,24 @@ class SphinxBuild(object):
         os.chdir(self.docdir)        
         
         # make necessary directories if they aren't already there
-        if not os.path.isdir(os.path.join(self.builddir,'html')):
-            os.makedirs(os.path.join(self.builddir,'html'))
-        if not os.path.isdir(os.path.join(self.builddir,'doctrees')):
-            os.makedirs(os.path.join(self.builddir,'doctrees'))
+        if not os.path.isdir(os.path.join(self.builddir, 'html')):
+            os.makedirs(os.path.join(self.builddir, 'html'))
+        if not os.path.isdir(os.path.join(self.builddir, 'doctrees')):
+            os.makedirs(os.path.join(self.builddir, 'doctrees'))
        
         
         # create the builddocs script
-        bspath = os.path.join(self.buildout['buildout']['directory'],'bin',
-                               'builddocs')
+        bspath = os.path.join(self.buildout['buildout']['directory'], 'bin',
+                              'builddocs')
         bld_script = open(bspath, 'w')
         bld_script.write(bld_template % (self.executable,
-                                         os.path.join(self.builddir,"doctrees"),
-                                         os.path.join(self.builddir,"html")))
+                                        os.path.join(self.builddir, "doctrees"),
+                                        os.path.join(self.builddir, "html")))
         bld_script.close()
+        try:
+            os.chmod(bspath, 0775)
+        except (AttributeError, os.error):
+            pass
             
         # build the docs using Sphinx
         try:
@@ -282,7 +291,10 @@ class SphinxBuild(object):
                                             browser=browser,
                                             index=idxpath))
         script.close()
-        os.chmod(scriptname, 0775)
+        try:
+            os.chmod(scriptname, 0775)
+        except (AttributeError, os.error):
+            pass
         
         return [scriptname]
     

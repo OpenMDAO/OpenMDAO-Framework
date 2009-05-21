@@ -27,7 +27,7 @@ class FileVariable(Variable):
     def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
                  default=UNDEFINED, doc=None, metadata=None):
         super(FileVariable, self).__init__(name, parent, iostatus, 
-                                           val_type=basestring, 
+                                           val_types=(basestring,str,unicode), 
                                            ref_name=ref_name,
                                            ref_parent=ref_parent,
                                            default=default, doc=doc)

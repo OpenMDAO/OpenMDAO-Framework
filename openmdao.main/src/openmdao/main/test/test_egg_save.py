@@ -23,7 +23,7 @@ source_init = False
 sink_init = False
 
 
-class Source(Component):
+class Source(Assembly):
     """ Produces files. """
 
     def __init__(self, name='Source', *args, **kwargs):
@@ -38,6 +38,7 @@ class Source(Component):
         FileVariable('text_file', self, OUTPUT, default='source.txt')
 
         Subcontainer('sub', parent=self)
+        self.create_passthru('sub.binary_file')
 
         # Absolute external file that exists at time of save.
         path = os.path.join(self.directory, EXTERNAL_FILES[0])
@@ -155,12 +156,13 @@ class Model(Assembly):
     def __init__(self, name='Egg_TestModel', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
 
-        self.workflow.add_node(Source(parent=self, directory='Source'))
-        self.workflow.add_node(Oddball(parent=self, directory='Oddball'))
-        self.workflow.add_node(Sink(parent=self, directory='Sink'))
+        Source(parent=self, directory='Source')
+        Oddball(parent=self, directory='Oddball')
+        Sink(parent=self, directory='Sink')
 
         self.connect('Source.text_file', 'Sink.text_file')
-        self.connect('Source.sub.binary_file', 'Sink.binary_file')
+        #self.connect('Source.sub.binary_file', 'Sink.binary_file')
+        self.connect('Source.binary_file', 'Sink.binary_file')
 
         self.Source.text_data = 'oiuyoiuyoiuy'
         self.Source.sub.binary_data = [3.14159, 2.781828, 42]
@@ -230,7 +232,8 @@ class EggTestCase(unittest.TestCase):
             # Load from saved initial state in egg.
             self.model.pre_delete()
             self.model = Component.load_from_egg(os.path.join('..',
-                                                              self.egg_name))
+                                                              self.egg_name),
+                                                 install=False)
             self.model.directory = os.getcwd()
 
             # Verify initial state.
@@ -268,9 +271,8 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg()
         except ValueError, exc:
-            self.assertEqual(str(exc).startswith(
-                "Egg_TestModel: Can't save, Egg_TestModel.Oddball directory"),
-                True)
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball directory"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
 
@@ -286,8 +288,8 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg()
         except ValueError, exc:
-            self.assertEqual(str(exc).startswith(
-                "Egg_TestModel: Can't save, Egg_TestModel.Source file"), True)
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Source file"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
         finally:
@@ -304,8 +306,8 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg()
         except ValueError, exc:
-            self.assertEqual(str(exc).startswith(
-                "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"), True)
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
         finally:
@@ -337,7 +339,8 @@ class EggTestCase(unittest.TestCase):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
-            sub = Container.load_from_egg(os.path.join('..', self.egg_name))
+            sub = Container.load_from_egg(os.path.join('..', self.egg_name),
+                                          install=False)
             self.assertEqual(sub.binary_data, self.model.Source.sub.binary_data)
         finally:
             os.chdir(orig_dir)
@@ -349,11 +352,10 @@ class EggTestCase(unittest.TestCase):
 
         try:
             Component.load_from_egg('no-such-egg')
-        except IOError, exc:
-            self.assertEqual(str(exc),
-                             "[Errno 2] No such file or directory: 'no-such-egg'")
+        except ValueError, exc:
+            self.assertEqual(str(exc), "'no-such-egg' not found.")
         else:
-            self.fail('Expected IOError')
+            self.fail('Expected ValueError')
 
 
 if __name__ == '__main__':

@@ -363,7 +363,7 @@ if __name__ == "__main__":
     t1 = time.time()
     
     for jj in xrange(1,50):
-        z.execute()
+        z.run()
         
     print "Elapsed time: ", time.time()-t1
 

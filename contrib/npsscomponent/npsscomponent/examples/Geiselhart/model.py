@@ -13,12 +13,13 @@ Known problems:
       variables are set as INPUTS.  This looks odd, but is neccessary
       until some more issues in the framework are ironed-out.
 """
+import npss
+import numpy
 import os.path
 
-from openmdao.main import Assembly, Component, Container, Float, \
+from openmdao.main import Assembly, Component, Container, Float, Int, String, \
                           ArrayVariable, FileVariable
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
 
@@ -71,6 +72,7 @@ class PropulsionData(Component):
 
     def execute(self):
         """ Evaluate link expressions. """
+        print self.get_pathname(), 'execution begins'
 
 #       PropulsionData.FLOPS.dnac =
 #           2*(NPSS_WATE.engine.WATE.WATE_fan.bladeTipRadius
@@ -92,6 +94,8 @@ class PropulsionData(Component):
         self.FLOPS.xnac = \
             (self.link_inletLength \
              + self.link_length) / 12.
+
+        print self.get_pathname(), '    complete'
 
 
 class FLOPSdata(Container):
@@ -236,18 +240,60 @@ class Model(Assembly):
     """ SBJ propulsion model. """
 
     def connect(self, src_path, dst_path):
-        """ Overriding default to dynamically make_public() for NPSS. """
+        """ Overriding default to dynamically publicise/hoist variables. """
         comp, rest = src_path.split('.', 1)
         src_comp = getattr(self, comp)
-        if isinstance(src_comp, NPSScomponent):
+        if rest.find('.') > 0:
+            src_path = self.hoist(src_comp, rest, OUTPUT)
+        elif isinstance(src_comp, NPSScomponent):
             src_comp.make_public((rest, '', OUTPUT))
+            self._var_graph.add_node(src_path, data=src_comp.getvar(rest))
 
         comp, rest = dst_path.split('.', 1)
         dst_comp = getattr(self, comp)
-        if isinstance(dst_comp, NPSScomponent):
+        if rest.find('.') > 0:
+            dst_path = self.hoist(dst_comp, rest, INPUT)
+        elif isinstance(dst_comp, NPSScomponent):
             dst_comp.make_public(rest)
-            
+            self._var_graph.add_node(dst_path, data=dst_comp.getvar(rest))
+
         super(Model, self).connect(src_path, dst_path)
+
+    def hoist(self, comp, path, io_status):
+        """ Hoist a variable so that it may be connected. """
+        name = '_'+path.replace('.', '_')
+        try:
+            var = comp.getvar(path)
+        except AttributeError:
+            val = comp.get(path)
+            if isinstance(val, float):
+                var = Float(name, comp, io_status, ref_name=path)
+            elif isinstance(val, int):
+                var = Int(name, comp, io_status, ref_name=path)
+            elif isinstance(val, basestring):
+                var = String(name, comp, io_status, ref_name=path)
+            elif isinstance(val, numpy.ndarray):
+                if val.dtype.char == 'd':
+                    var = ArrayVariable(name, comp, io_status, float,
+                                        ref_name=path)
+                elif val.dtype.char in ('i', 'l'):
+                    var = ArrayVariable(name, comp, io_status, int,
+                                        ref_name=path)
+                else:
+                    self.raise_exception('hoist %s: unexpected array type %s' %
+                                         (path, val.dtype.char), TypeError)
+            elif isinstance(val, npss.npss):
+                var = FileVariable(name, comp, io_status, ref_name=path+'.filename')
+            else:
+                self.raise_exception('hoist %s: unexpected type %s' %
+                                     (path, type(val)), TypeError)
+
+        newpath = comp.name+'.'+name
+        if newpath not in self._var_graph.nodes():
+            passthru = var.create_passthru(comp, name)
+            comp.make_public(passthru)
+            self._var_graph.add_node(newpath, data=passthru)
+        return newpath
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
@@ -266,7 +312,6 @@ class Model(Assembly):
 
         # Design variables.
         Design(parent=self)
-        self.workflow.add_node(self.Design)
 
         # ADP.
         arglist = []
@@ -278,7 +323,6 @@ class Model(Assembly):
             {'path':os.path.join(model_dir, 'MC_ADP.run')})
         self.NPSS_ADP.run_command = 'mcRun()'
         self.NPSS_ADP.reload_flag = 'mcReload'
-        self.workflow.add_node(self.NPSS_ADP)
 
         self.connect('Design.alt',       'NPSS_ADP.engine.alt')
         self.connect('Design.extractionRatio', 'NPSS_ADP.engine.extractionRatio')
@@ -299,7 +343,6 @@ class Model(Assembly):
             {'path':os.path.join(model_dir, 'MC_SLS.run')})
         self.NPSS_SLS.run_command = 'mcRun()'
         self.NPSS_SLS.reload_flag = 'mcReload'
-        self.workflow.add_node(self.NPSS_SLS)
 
         self.connect('Design.alt',       'NPSS_SLS.engine.alt')
         self.connect('Design.extractionRatio', 'NPSS_SLS.engine.extractionRatio')
@@ -328,7 +371,6 @@ class Model(Assembly):
             {'path':os.path.join(wate_dir, 'MCengine.run')})
         self.NPSS_WATE.run_command = 'mcRun()'
         self.NPSS_WATE.reload_flag = 'mcReload'
-        self.workflow.add_node(self.NPSS_WATE)
 
         self.connect('Design.alt',       'NPSS_WATE.engine.ambient.Zalt')
         self.connect('Design.MN',        'NPSS_WATE.engine.ambient.ZMN')
@@ -348,7 +390,6 @@ class Model(Assembly):
             {'path':os.path.join(model_dir, 'MCengine.run')})
         self.NPSS_FLOPS.run_command = 'mcRun()'
         self.NPSS_FLOPS.reload_flag = 'mcReload'
-        self.workflow.add_node(self.NPSS_FLOPS)
 
         self.connect('Design.alt',       'NPSS_FLOPS.engine.alt')
         self.connect('Design.extractionRatio', 'NPSS_FLOPS.engine.extractionRatio')
@@ -369,7 +410,6 @@ class Model(Assembly):
             {'path':os.path.join(model_dir, 'MCnoise.run')})
         self.NPSS_ANOPP.run_command = 'mcRun()'
         self.NPSS_ANOPP.reload_flag = 'mcReload'
-        self.workflow.add_node(self.NPSS_ANOPP)
 
         self.connect('Design.alt',       'NPSS_ANOPP.engine.alt')
         self.connect('Design.extractionRatio', 'NPSS_ANOPP.engine.extractionRatio')
@@ -460,7 +500,6 @@ class Model(Assembly):
 
         # Propulsion data.
         PropulsionData(parent=self)
-        self.workflow.add_node(self.PropulsionData)
 
 #       PropulsionData.FLOPS.dnac =
 #           2*(NPSS_WATE.engine.WATE.WATE_fan.bladeTipRadius
@@ -496,48 +535,34 @@ class Model(Assembly):
                      'PropulsionData.FLOPS.thrso')
 
 
-def print_info(root, level=0):
-    """ Print some internal data sarting at root. """
-    from openmdao.main.interfaces import IComponent
-    try:
-        pub = getattr(root, '_pub')
-    except AttributeError:
-        return
-
-    if IComponent.providedBy(root):
-        for metadata in root.external_files:
-            print '%s%s' % ('    '*level, str(metadata))
-
-    for name in sorted(pub.keys()):
-        obj = root.get(name)
-        print '%s.%s = %s' % ('    '*level, name, str(obj))
-        print_info(obj, level+1)
-
-
 def test_save_load():
     """ Save model and then reload & run. """
     import shutil
+    import subprocess
+    from openmdao.main.component import SimulationRoot
 
     model = Model()
     egg_name = model.save_to_egg()
-#    print_info(model)
 
     if os.path.exists('test_dir'):
         shutil.rmtree('test_dir')
     os.mkdir('test_dir')
     SimulationRoot.chdir('test_dir')
+    egg_path = os.path.join('..', egg_name)
     try:
-        new_model = Component.load_from_egg(os.path.join('..', egg_name))
-#        print_info(new_model)
-
-        print '\nrunning new model...'
-        new_model.run()
+        print '\nUnpacking in subprocess...'
+        os.environ['OPENMDAO_INSTALL'] = '0'
+        retcode = subprocess.call(['sh', egg_path])
+        print '    retcode', retcode
+        if retcode == 0:
+            print '\nRunning in subprocess...'
+            retcode = subprocess.call(['python', model.name+'_loader.py'])
+            print '    retcode', retcode
     finally:
         SimulationRoot.chdir('..')
 
 
 if __name__ == '__main__':
 #    Model().run()
-
     test_save_load()
 

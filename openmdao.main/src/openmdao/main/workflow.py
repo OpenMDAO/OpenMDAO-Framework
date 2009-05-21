@@ -16,9 +16,9 @@ class Workflow(Component):
 
     implements(IWorkflow)
     
-    def __init__(self, name, parent=None):
+    def __init__(self, name, parent=None, add_to_parent=True):
         """ Create an empty flow. """
-        super(Workflow, self).__init__(name, parent)
+        super(Workflow, self).__init__(name, parent, add_to_parent=add_to_parent)
         self.nodes = []
         self._iterator = None
 
@@ -28,9 +28,11 @@ class Workflow(Component):
 
     def add_node(self, node):
         """ Add a new node to the end of the flow. """
-        assert IComponent.providedBy(node)
-        assert not IDriver.providedBy(node)
-        self.nodes.append(node)
+        if IComponent.providedBy(node) and not IDriver.providedBy(node):
+            self.nodes.append(node)
+        else:
+            self.raise_exception('%s is either a Driver or is not a Component' % node.get_pathname(),
+                                 TypeError)
         
     def remove_node(self, node):
         """Remove a component from this Workflow and any of its children."""
@@ -40,19 +42,29 @@ class Workflow(Component):
                 comp.remove_node(node)
         self.nodes = nodes
 
+    def run (self, force=False):
+        """Run this Workflow."""
+        self.execute()
+
     def execute(self):
         """ Run through the nodes in the workflow list. """
-        for node in self.nodes:
+        #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
+        for node in self.nodes_iter():
             self.state = STATE_WAITING
             node.run()
             self.state = STATE_RUNNING
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
     
+    def nodes_iter(self):
+        """Iterate through the nodes."""
+        for node in self.nodes:
+            yield node
+    
     def step(self):
-        """Run a single component in the Workflow"""
+        """Run a single component in the Workflow."""
         if self._iterator is None:
-            self._iterator = self.nodes.__iter__()
+            self._iterator = self.nodes_iter()
             
         self.state = STATE_WAITING
         node = self._iterator.next()
@@ -74,10 +86,5 @@ class Workflow(Component):
         We assume it's OK to to call stop() on something that isn't running.
         """
         self._stop = True
-        for node in self.nodes:
+        for node in self.nodes_iter():
             node.stop()
-
-    def get_nodes(self):
-        """ Return nodes in flow as a tuple. """
-        return tuple(self.nodes)
-

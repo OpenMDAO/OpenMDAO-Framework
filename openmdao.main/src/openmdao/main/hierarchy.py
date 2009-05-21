@@ -38,24 +38,17 @@ class HierarchyMember(object):
         """
         raise NotImplementedError('set') 
     
-    def get_pathname(self):
-        """Return full path name to this container."""
-        if self.parent is None:
-            if self.name is None:
-                return ''
-            else:
-                return self.name
-        else:
-            try:
-                path = self.parent.get_pathname()
-            except AttributeError:
-                if self.name is None:
-                    return ''
-                else:
-                    return self.name
-            else:
-                return '.'.join([path, self.name])
-
+    def get_pathname(self, rel_to_scope=None):
+        """ Return full path name to this container, relative to scope
+        rel_to_scope. If rel_to_scope is None, return the full pathname.
+        """
+        path = []
+        obj = self
+        while obj is not None and obj != rel_to_scope and obj.name is not None:
+            path.append(obj.name)
+            obj = obj.parent
+        return '.'.join(path[::-1])
+    
     def _get_parent(self):
         if self._parent is None:
             return None
@@ -97,7 +90,7 @@ class HierarchyMember(object):
                          doc='Logging message level.')
 
     def raise_exception(self, msg, exception_class=Exception):
-        """Raise an exception"""
+        """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)
 #        self._logger.error(msg)
         raise exception_class(full_msg)
@@ -108,18 +101,18 @@ class HierarchyMember(object):
         self._logger.critical(traceback.format_exc())
 
     def error(self, msg, *args, **kwargs):
-        """Record an error message"""
+        """Record an error message."""
         self._logger.error(msg, *args, **kwargs)
         
     def warning(self, msg, *args, **kwargs):
-        """Record a warning message"""
+        """Record a warning message."""
         self._logger.warning(msg, *args, **kwargs)
         
     def info(self, msg, *args, **kwargs):
-        """Record an informational message"""
+        """Record an informational message."""
         self._logger.info(msg, *args, **kwargs)
         
     def debug(self, msg, *args, **kwargs):
-        """Record a debug message"""
+        """Record a debug message."""
         self._logger.debug(msg, *args, **kwargs)
 

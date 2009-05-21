@@ -8,9 +8,10 @@ from zope.interface import implements
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main import ExprEvaluator
 
+
 class Case(object):
     """Contains all information necessary to specify an input 'case', i.e., a
-    list of name,index,value tuples for all inputs to the case, and all outputs
+    list of name, index, value tuples for all inputs to the case, and all outputs
     collected after running the case, an indicator of the exit status of the
     case, and a string containing error messages associated  with the running of
     the case. The value entry of output triples should be set to None prior to
@@ -23,22 +24,22 @@ class Case(object):
         iterator that returns (name,index,value) tuples. 
         
         """
-        self.inputs = inputs or [] # a list of name,index,value tuples 
-        self.outputs = outputs or [] # a list of name,index,value tuples 
-                                     # Values for each output will be filled 
-                                     # in after the case completes
-        self.max_retries = max_retries
-        self.retries = retries
-        self.msg = msg
-
+        self.inputs = inputs or []      # a list of name,index,value tuples 
+        self.outputs = outputs or []    # a list of name,index,value tuples 
+                                        # Values for each output will be filled 
+                                        # in after the case completes
+        self.max_retries = max_retries  # times to retry after error(s)
+        self.retries = retries          # times case was retried
+        self.msg = msg                  # If non-null, error message.
+                                        # Implies outputs are invalid.  
     def __str__(self):
         return 'Case:\n' \
                '    inputs: %s\n' \
                '    outputs: %s\n' \
-               '    max_retries: %s, retries: %d\n' \
+               '    max_retries: %s, retries: %s\n' \
                '    msg: %s' % \
-               (str(self.inputs), str(self.outputs),
-                str(self.max_retries), str(selfretries), msg)
+               (self.inputs, self.outputs,
+                self.max_retries, self.retries, self.msg)
 
 
 class FileCaseIterator(object):

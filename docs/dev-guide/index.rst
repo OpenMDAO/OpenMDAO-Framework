@@ -2,10 +2,6 @@
 Developer's Guide
 =================
 
-:Release: |version|
-:Date: |today|
-
-
 .. toctree::
    :maxdepth: 3
    
@@ -14,4 +10,5 @@ Developer's Guide
    testing
    distributions
    grc-users
+   changes
 

@@ -1,18 +1,22 @@
 
 #public symbols
-#__all__ = ['Component']
+__all__ = ['Component', 'SimulationRoot']
 
 __version__ = "0.1"
 
+import glob
 import os
 import os.path
+import copy
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IVariable, IContainer, IComponent, IAssembly
-from openmdao.main import Container, String, FileVariable
-from openmdao.main.variable import INPUT
-from openmdao.main.constants import SAVE_CPICKLE
+from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IVariable, IDriver
+from openmdao.main import Container, String, Variable
+from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
+from openmdao.main.filevar import FileVariable
+from openmdao.main.util import filexfer
 
 # Execution states.
 STATE_UNKNOWN = -1
@@ -56,15 +60,16 @@ class Component (Container):
 
     implements(IComponent)
     
-    def __init__(self, name, parent=None, doc=None, directory=''):
-        super(Component, self).__init__(name, parent, doc)
+    def __init__(self, name, parent=None, doc=None, directory='', add_to_parent=True):
+        super(Component, self).__init__(name, parent, doc, add_to_parent=add_to_parent)
         
         self.state = STATE_IDLE
         self._stop = False
-        self._input_changed = True
+        self._need_check_config = True
+        self._execute_needed = True
+        
         self._dir_stack = []
-        self._sockets = {}
-
+        
         # List of meta-data dictionaries.
         self.external_files = []
 
@@ -93,77 +98,51 @@ class Component (Container):
                         % dirpath, ValueError)
 # pylint: enable-msg=E1101
 
-    def _get_socket_plugin(self, name):
-        """Return plugin for the named socket"""
-        try:
-            iface, plugin = self._sockets[name]
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-        else:
-            if plugin is None:
-                self.raise_exception("socket '%s' is empty" % name,
-                                     RuntimeError)
-            return plugin
-
-    def _set_socket_plugin(self, name, plugin):
-        """Set plugin for the named socket"""
-        try:
-            iface, current = self._sockets[name]
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-        else:
-            if plugin is not None and iface is not None:
-                if not iface.providedBy(plugin):
-                    self.raise_exception("plugin does not support '%s'" % \
-                                         iface.__name__, ValueError)
-            self._sockets[name] = (iface, plugin)
-
-    def add_socket (self, name, iface, doc=''):
-        """Specify a named placeholder for a component with the given
-        interface or prototype.
+    def check_config (self):
+        """Verify that the configuration of this component is correct. This function is
+        called once prior to the first execution of this component, and may be called
+        explicitly at other times if desired.
         """
-        assert isinstance(name, basestring)
-        self._sockets[name] = (iface, None)
-        setattr(self.__class__, name,
-                property(lambda self : self._get_socket_plugin(name),
-                         lambda self, plugin : self._set_socket_plugin(name, plugin),
-                         None, doc))
-
-    def check_socket (self, name):
-        """Return True if socket is filled"""
-        try:
-            iface, plugin = self._sockets[name]
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-        else:
-            return plugin is not None
-
-    def remove_socket (self, name):
-        """Remove an existing Socket"""
-        del self._sockets[name]
-
-    def post_config (self):
-        """Perform any final initialization after configuration has been set,
-        and verify that the configuration is correct.
+        pass         
+    
+    def _pre_execute (self):
+        """Make preparations for execution. Overrides of this function are not
+        recommended, but if unavoidable they should still call this version.
         """
-        pass
+        if self._need_check_config:
+            self.check_config()
+            self._need_check_config = False
+        
+        if self.parent is None: # if parent is None, we're not part of an Assembly
+                                # so Variable validity doesn't apply. Just execute.
+            self._execute_needed = True
+        else:
+            if hasattr(self.parent, 'update_inputs'):
+                invalid_ins = self.get_inputs(valid=False)
+                if len(invalid_ins) > 0:
+                    self.parent.update_inputs(
+                            ['.'.join([self.name,x.name]) for x in invalid_ins])
+                    self._execute_needed = True
+            if self._execute_needed is False and self.has_invalid_outputs():
+                self._execute_needed = True
     
-    def pre_execute (self):
-        """update input variables and anything else needed prior 
-        to execution."""
-        pass
-    
+                            
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
-        have already been set. 
-        This should be overridden in derived classes.
+        have already been set. This should be overridden in derived classes.
         """
         pass
     
-    def post_execute (self):
-        """Update output variables and anything else needed after execution"""
-        pass
-    
+    def _post_execute (self):
+        """Update output variables and anything else needed after execution. 
+        Overrides of this function are not recommended, but if unavoidable 
+        they should still call this version.
+        """
+        # make our Variables valid again
+        for var in self.get_outputs(valid=False):
+            var.valid = True
+        self._execute_needed = False
+        
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
@@ -180,11 +159,11 @@ class Component (Container):
         self.state = STATE_RUNNING
         self._stop = False
         try:
-            if self.parent is not None and IAssembly.providedBy(self.parent):
-                self.parent.update_inputs(self)
-            self.pre_execute()
-            self.execute()
-            self.post_execute()
+            self._pre_execute()
+            if self._execute_needed or force:
+                #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
+                self.execute()
+            self._post_execute()
         finally:
             self.state = STATE_IDLE
             if self.directory:
@@ -194,7 +173,7 @@ class Component (Container):
         """Return absolute path of execution directory."""
         path = self.directory
         if not os.path.isabs(path):
-            if self.parent is not None and IComponent.providedBy(self.parent):
+            if self.parent is not None and isinstance(self.parent, Component):
                 parent_dir = self.parent.get_directory()
             else:
                 parent_dir = SimulationRoot.get_root()
@@ -219,7 +198,7 @@ class Component (Container):
 
     def checkpoint (self, outstream, format=SAVE_CPICKLE):
         """Save sufficient information for a restart. By default, this
-        just calls save()
+        just calls save().
         """
         self.save(outstream, format)
 
@@ -234,13 +213,22 @@ class Component (Container):
                      src_dir=None, src_files=None, dst_dir=None,
                      format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
-        name defaults to the name of the component.
-        version defaults to the component's module __version__.
-        If force_relative is True, all paths are relative to src_dir.
-        src_dir defaults to the component's directory.
-        src_files should be a set, and defaults to component's external files.
-        dst_dir is the directory to write the egg in.
-        tmp_dir is the directory to use for temporary files.
+
+            name defaults to the name of the component.
+
+            version defaults to the component's module __version__.
+
+            If force_relative is True, all paths are relative to src_dir.
+
+            src_dir defaults to the component's directory.
+
+            src_files should be a set, and defaults to component's external files.
+
+            dst_dir is the directory to write the egg in.
+
+            tmp_dir is the directory to use for temporary files.
+
+        The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
         """
         if src_dir is None:
@@ -258,7 +246,8 @@ class Component (Container):
         # We have to check relative paths like '../somedir' and if
         # we do that after adjusting a parent, things can go bad.
         components = [self]
-        components.extend(self.get_objs(IComponent.providedBy, True))
+        components.extend([c for c in self.values(pub=False, recurse=True)
+                                if isinstance(c, Component)])
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
 #            self.debug('Saving %s', comp.get_pathname())
@@ -286,32 +275,37 @@ class Component (Container):
             for metadata in comp.external_files:
                 path = metadata['path']
 #                self.debug('    external path %s', path)
+                path = os.path.expanduser(path)
+                path = os.path.expandvars(path)
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
-                path = os.path.normpath(path)
-                if not os.path.exists(path):
-#                    self.debug("        '%s' does not exist" % path)
-                    continue
-                if force_relative:
-                    if path.startswith(src_dir):
-                        save_path = self._relpath(path, src_dir)
-                        if os.path.isabs(metadata['path']):
-                            path = self._relpath(path, comp_dir)
-                            fixup_meta.append((metadata, metadata['path']))
-                            metadata['path'] = path
-#                            self.debug('        path now %s', path)
+                paths = glob.glob(path)
+                for path in paths:
+#                    self.debug('    expanded path %s', path)
+                    path = os.path.normpath(path)
+                    if not os.path.exists(path):
+#                        self.debug("        '%s' does not exist" % path)
+                        continue
+                    if force_relative:
+                        if path.startswith(src_dir):
+                            save_path = self._relpath(path, src_dir)
+                            if os.path.isabs(metadata['path']):
+                                path = self._relpath(path, comp_dir)
+                                fixup_meta.append((metadata, metadata['path']))
+                                metadata['path'] = path
+#                                self.debug('        path now %s', path)
+                        else:
+                            self.raise_exception(
+                                "Can't save, %s file '%s' doesn't start with '%s'." \
+                                % (comp.get_pathname(), path, src_dir), ValueError)
                     else:
-                        self.raise_exception(
-                            "Can't save, %s file '%s' doesn't start with '%s'." \
-                            % (comp.get_pathname(), path, src_dir), ValueError)
-                else:
-                    save_path = path
-#                self.debug('        adding %s', save_path)
-                src_files.add(save_path)
+                        save_path = path
+#                    self.debug('        adding %s', save_path)
+                    src_files.add(save_path)
 
             # Process FileVariables for this component only.
             for fvar in comp.get_file_vars():
-                path = fvar.value
+                path = fvar.get_value()
 #                self.debug('    fvar %s path %s', fvar.name, path)
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
@@ -322,10 +316,10 @@ class Component (Container):
                 if force_relative:
                     if path.startswith(src_dir):
                         save_path = self._relpath(path, src_dir)
-                        if os.path.isabs(fvar.value):
+                        if os.path.isabs(fvar.get_value()):
                             path = self._relpath(path, comp_dir)
-                            fixup_fvar.append((fvar, fvar.value))
-                            fvar.value = path
+                            fixup_fvar.append((fvar, fvar.get_value()))
+                            fvar.set_value(path)
 #                            self.debug('        path now %s', path)
                     else:
                         self.raise_exception(
@@ -348,7 +342,7 @@ class Component (Container):
             for meta, path in fixup_meta:
                 meta['path'] = path
             for fvar, path in fixup_fvar:
-                fvar.value = path
+                fvar.set_value(path)
 
     def get_file_vars (self):
         """Return list of FileVariables owned by this component."""
@@ -360,11 +354,11 @@ class Component (Container):
             for obj in objs:
                 if isinstance(obj, FileVariable):
                     file_vars.add(obj)
-                elif IComponent.providedBy(obj):
+                elif isinstance(obj, Component):
                     continue
-                elif IVariable.providedBy(obj):
+                elif isinstance(obj, Variable):
                     continue
-                elif IContainer.providedBy(obj):
+                elif isinstance(obj, Container):
                     _recurse_get_file_vars(obj, file_vars)
 
         file_vars = set()
@@ -399,32 +393,28 @@ class Component (Container):
                              % (path1, path2), ValueError)
 
     @staticmethod
-    def load_from_egg (filename):
-        """Load state and other files from an egg, returns top object."""
+    def load (instream, format=SAVE_CPICKLE, do_post_load=True):
+        """Load object(s) from instream."""
 # This doesn't work:
-#    AttributeError: 'super' object has no attribute 'load_from_egg'
-#        top = super(Component).load_from_egg(filename)
-        top = Container.load_from_egg(filename)
+#    AttributeError: 'super' object has no attribute 'load'
+#        top = super(Component).load(instream, format)
+        top = Container.load(instream, format, False)
 
         if IComponent.providedBy(top):
             top.directory = os.getcwd()
-            for component in top.get_objs(IComponent.providedBy, True):
+            for component in [c for c in top.values(pub=False, recurse=True)
+                                                if IComponent.providedBy(c)]:
                 directory = component.get_directory()
                 if not os.path.exists(directory):
                     os.makedirs(directory)
 
-        top.post_load()
+        if do_post_load:
+            top.post_load()
         return top
 
-    def post_load(self):
-        """ Perform any required operations after model has been loaded. """
-        for child in self.get_objs(IContainer.providedBy):
-            child.post_load()
-
     def step (self):
-        """For Components that contain Workflows (e.g., Assembly), this will run
-        one Component in the Workflow and return. For simple components, it is
-        the same as run().
+        """For Components that run other components (e.g., Assembly or Drivers), this will run
+        one Component and return. For simple components, it is the same as run().
         """
         self.run()
 
@@ -432,46 +422,67 @@ class Component (Container):
         """Stop this component."""
         self._stop = True
 
-    def require_gradients (self, varname, gradients):
-        """Requests that the component be able to provide (after execution) a
-        list of gradients w.r.t. a list of variables. The format
-        of the gradients list is [dvar_1, dvar_2, ..., dvar_n]. The component
-        should return a list with entries of either a name, a tuple of the
-        form (name,index) or None.  None indicates that the component cannot
-        compute the specified derivative. name indicates the name of a
-        scalar variable in the component that contains the gradient value, and
-        (name,index) indicates the name of an array variable and the index of
-        the entry containing the gradient value. If the component cannot
-        compute any gradients of the requested varname, it can just return
-        None.
+    def invalidate_deps(self, vars, notify_parent=False):
+        """Invalidate all of our outputs."""
+        outs = [x for x in self._pub.values() if isinstance(x, Variable) and 
+                                                 x.iostatus==OUTPUT and x.valid==True]
+        for out in outs:
+            #if __debug__: self._logger.debug('(component.invalidate_deps) invalidating %s' % out.get_pathname())
+            out.valid = False
+            
+        if notify_parent and self.parent and len(outs) > 0:
+            self.parent.invalidate_deps(outs, True)
+        return outs    
+
+    def update_outputs(self, outnames):
+        """Do what is necessary to make the specified output Variables valid.
+        For a simple Component, this will result in a run().
         """
-        return None
+        self.run()
+        
+# TODO: uncomment require_gradients and require_hessians after they're better thought out
+    
+    #def require_gradients (self, varname, gradients):
+        #"""Requests that the component be able to provide (after execution) a
+        #list of gradients w.r.t. a list of variables. The format
+        #of the gradients list is [dvar_1, dvar_2, ..., dvar_n]. The component
+        #should return a list with entries of either a name, a tuple of the
+        #form (name,index) or None.  None indicates that the component cannot
+        #compute the specified derivative. name indicates the name of a
+        #scalar variable in the component that contains the gradient value, and
+        #(name,index) indicates the name of an array variable and the index of
+        #the entry containing the gradient value. If the component cannot
+        #compute any gradients of the requested varname, it can just return
+        #None.
+        #"""
+        #return None
 
-    def require_hessians (self, varname, deriv_vars):
-        """ Requests that the component be able to provide (after execution)
-        the hessian w.r.t. a list of variables. The format of
-        deriv_vars is [dvar_1, dvar_2, ..., dvar_n]. The component should
-        return one of the following:
+    #def require_hessians (self, varname, deriv_vars):
+        #""" Requests that the component be able to provide (after execution)
+        #the hessian w.r.t. a list of variables. The format of
+        #deriv_vars is [dvar_1, dvar_2, ..., dvar_n]. The component should
+        #return one of the following:
 
-            1) a name, which would indicate that the component contains
-               a 2D array variable or matrix containing the hessian
+            #1) a name, which would indicate that the component contains
+               #a 2D array variable or matrix containing the hessian
 
-            2) an array of the form 
+            #2) an array of the form 
 
-               [[dx1dx1, dx1dx2, ... dx1dxn],
-               [           ...             ],
-               [dxndx1, dxndx2, ... dxndxn]]
+               #[[dx1dx1, dx1dx2, ... dx1dxn],
+               #[           ...             ],
+               #[dxndx1, dxndx2, ... dxndxn]]
 
-               with entries of either name, (name,index), or None. name
-               indicates that a scalar variable in the component contains the
-               desired hessian matrix entry. (name,index) indicates that
-               an array variable contains the value at the specified index.
-               If index is a list with two entries, that indicates that
-               the variable containing the entry is a 2d array or matrix.
+               #with entries of either name, (name,index), or None. name
+               #indicates that a scalar variable in the component contains the
+               #desired hessian matrix entry. (name,index) indicates that
+               #an array variable contains the value at the specified index.
+               #If index is a list with two entries, that indicates that
+               #the variable containing the entry is a 2d array or matrix.
 
-            3) None, which means the the component cannot compute any values
-               of the hessian.
+            #3) None, which means the the component cannot compute any values
+               #of the hessian.
 
-             """
-        return None
+             #"""
+        #return None
+    
     

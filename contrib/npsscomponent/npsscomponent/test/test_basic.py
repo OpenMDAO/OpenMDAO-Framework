@@ -504,7 +504,7 @@ class NPSSTestCase(unittest.TestCase):
 
         self.npss.make_public(('solver.converged', '', OUTPUT))
         self.assertEqual(self.npss.get('solver.converged'), 0)
-        self.assertEqual(self.npss.getvar('solver.converged').value, 0)
+        self.assertEqual(self.npss.getvar('solver.converged').get_value(), 0)
 
         self.npss.make_public('cin')
 

@@ -1,11 +1,11 @@
 
 """
-Mapping functions used to find a Variable wrapper for a python object 
+Mapping functions used to find a Variable wrapper for a Python object 
 of a certain type.
 """
 
 #public symbols
-__all__ = ['find_var_class', 'add_var_type_map']
+__all__ = ['make_variable_wrapper', 'add_var_type_map']
 
 __version__ = "0.1"
 
@@ -19,7 +19,7 @@ from openmdao.main.interfaces import IVariable
 __var_type_map__ = {}
 
 
-def find_var_class(typ, name, parent, iostatus, ref_name=None):
+def make_variable_wrapper(typ, name, parent, iostatus, ref_name=None):
     """Look up a Variable class that can be used to wrap the given type.
     
     Returns a new Variable instance or None if none can be found.
@@ -34,7 +34,7 @@ def find_var_class(typ, name, parent, iostatus, ref_name=None):
 
 
 def add_var_type_map(varclass, typ):
-    """Add a Variable class to the Variable-to-type map"""
+    """Add a Variable class to the Variable-to-type map."""
     if typ not in __var_type_map__:
         if IVariable.implementedBy(varclass):
             __var_type_map__[typ] = varclass

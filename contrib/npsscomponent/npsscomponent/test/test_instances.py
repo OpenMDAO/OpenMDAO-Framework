@@ -140,13 +140,13 @@ class Sink(Component):
         inp.close()
 
 
-class Model(Assembly):
+class MyModel(Assembly):
     """ Sends data through Source -> NPSS_A -> NPSS_B -> Sink. """
 
     def __init__(self, name='TestModel', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+        super(MyModel, self).__init__(name, *args, **kwargs)
 
-        self.workflow.add_node(Source(parent=self))
+        Source(parent=self)
         self.Source.b = True
         self.Source.f = 3.14159
         self.Source.f1d = [3.14159, 2.781828]
@@ -164,13 +164,11 @@ class Model(Assembly):
 
         name = 'NPSS_A'
         Passthrough(name, self, directory=name)
-        self.workflow.add_node(self.NPSS_A)
 
         name = 'NPSS_B'
         Passthrough(name, self, directory=name)
-        self.workflow.add_node(self.NPSS_B)
 
-        self.workflow.add_node(Sink(parent=self))
+        Sink(parent=self)
 
         self.connect('Source.b',   'NPSS_A.b_in')
         self.connect('Source.f',   'NPSS_A.f_in')
@@ -214,14 +212,13 @@ class Model(Assembly):
 
 class NPSSTestCase(unittest.TestCase):
 
-    directory = \
-        os.path.join(pkg_resources.resource_filename('npsscomponent', 'test'))
+    directory = pkg_resources.resource_filename('npsscomponent', 'test')
 
     def setUp(self):
         """ Called before each test in this class. """
         # Set new simulation root so we can legally access files.
         SimulationRoot.chdir(NPSSTestCase.directory)
-        self.model = Model()
+        self.model = MyModel()
 
     def tearDown(self):
         """ Called after each test in this class. """

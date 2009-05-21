@@ -1,6 +1,3 @@
-"""
-A driver is used to run a workflow in an assembly.
-"""
 
 #public symbols
 __all__ = ["COBYLA"]
@@ -82,7 +79,7 @@ class COBYLA(Driver):
 
         
     def execute(self):
-        """ Run the assembly by invoking run() on the workflow. """
+        """ Run the model by invoking run() on the workflow. """
         self.iter_count = 0
         # get initial values of design vars
         dvinit = [eval(translate_expr(a, self)) for a in self.design_vars]
