@@ -405,12 +405,11 @@ the base class Component. A very simple component is shown here:
         	    torque output and engine RPM via the gear ratios.
 	            '''
 
-This new Transmission component does nothing yet. It does have the two functions that all components must
-have. The __init__ function is run once before the model is executed. This is a convenient place to set up
-simulation constants. It is also where the inputs and outputs will be declared. The super call is always
-required so that the parent's __init__ function is executed. Similarly, the execute function runs the model.
-There are some other functions defined in the Component API, but these two are the only ones needed in the
-tutorial.
+This new Transmission component does nothing yet. It does have the two functions that all components must have.
+The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
+constants. It is also where the inputs and outputs will be declared. The super call is always required so that the
+__init__ function of the base class is executed. Similarly, the execute function runs the model. There are some
+other functions defined in the Component API, but these two are the only ones needed in the tutorial.
 
 The next step is to add the inputs and outputs that are defined in our model description above.
 
@@ -459,10 +458,10 @@ instead of loading everything into the workspace. A component's inputs and outpu
 OpenMDAO. The :term:`Variable` is actually an object that resides in the component and has several member
 functions for interaction.
 
-The Float and Int functions are used to create the input and output variables on a component for floating
-point and integer input respectively. String variables and arrays are also possible using the String and
-ArrayVariable functions. The Variable constructor requires the first five inputs but also allows a few optional
-parameters to be specified.
+The Float and Int constructors are used to create the input and output variables on a component for floating point
+and integer input respectively. String variables and arrays are also possible using the String and ArrayVariable
+constructors. The Variable constructor requires the first five inputs but also allows a few optional parameters to
+be specified.
 
 The first parameter gives the variable a name. This name needs to follow Python's standard for variable
 names, so it must begin with a letter or underscore and should consist of only alphanumeric characters and
@@ -477,10 +476,9 @@ The fourth parameter is used to specify the units for this variable. OpenMDAO ut
 which is part of the Scientific Python package. This allows for unit checking and conversion when connecting
 the outputs and inputs of components. The units are defined using the definitions given in Scientific Python,
 which can be found at http://www.astro.rug.nl/efidad/Scientific.Physics.PhysicalQuantities.html. If a
-variable is dimensionless, the unit should be set to "None."
+variable is dimensionless, the units should be set to "None."
 
-The fifth required parameter is the default value. Note that a default value must also be defined for
-outputs.
+The fifth parameter is an optional default value. 
 
 There are a couple more parameters of interest that can be seen by inspecting the __init__ function in
 engine.py.
@@ -493,12 +491,12 @@ engine.py.
 	              max_limit=6000, doc='Engine RPM')
 
 Here, a minimum and maximum limit have been set for the engine input variable RPM. If the engine component is
-commanded to operate outside of the limits on this variable, an exception will be thrown. This exception can
-be caught elsewhere so that some kind of recovery behavior can be defined (e.g., shifting the gear in the
-transmission component to lower the engine RPM.)
+commanded to operate outside of the limits on this variable, a ConstraintError exception will be raised. This
+exception can be caught elsewhere so that some kind of recovery behavior can be defined (e.g., shifting the gear
+in the transmission component to lower the engine RPM.)
 
 Finally, transmission.py needs to actually do something when it is executed. This code illustrates how to use
-the input and output variables to perform calculation. 
+the input and output variables to perform a calculation. 
 
 .. _Code4: 
 
