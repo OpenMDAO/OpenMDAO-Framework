@@ -21,7 +21,7 @@ def main():
     """ Repository maintenance. """
 
     usage = """\
-%prog OP [options] [repository], where OP may be:
+%prog OP [options] repository, where OP may be:
    check  -- check for lock
    lock   -- lock repository
    unlock -- unlock repository

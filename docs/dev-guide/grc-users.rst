@@ -39,6 +39,12 @@ The overall directory structure for OpenMDAO looks like this:
     Top level directory of an active branch for :term:`ticket` ``<ticket number>``
     with description ``<desc>`` and owned by user ``<username>``
     
+``/OpenMDAO/dev/shared``
+    Directory for repositories shared between developers.
+
+``/OpenMDAO/dev/shared/working_main``
+    Shared repository for all developers.
+
 ``/OpenMDAO/eggs``
     Directory containing Python distributions for all packages used in
     OpenMDAO
@@ -137,4 +143,52 @@ have changed. Select ``Discard Changes and Reload`` if your Wing path needs to
 be updated. Otherwise, select ``Don't Reload`` to keep your existing project
 file. 
 
+
+.. index:: repo.py
+
+Repository Utility
+==================
+
+``repo.py`` is a utility script for manipulating and navigating in repositories.
+
+::
+
+    Usage: repo.py OP [options] repository, where OP may be:
+       check  -- check for lock
+       lock   -- lock repository
+       unlock -- unlock repository
+       set    -- set this as current repository
+       fix    -- fix permissions
+
+    Options:
+      -h, --help     show this help message and exit
+      -f, --force    forced unlock
+      -v, --verbose  print info messages
+
+Repository is a directory under ``/OpenMDAO/dev/<username>`` or
+``/OpenMDAO/dev/shared``.
+
+The ``check``, ``lock``, and ``unlock`` operations can be used to avoid
+more than one developer trying to update a shared repository at the same time.
+Before making changes, do a ``lock``.  If that succeeds, then proceed with
+your changes and when complete, do an ``unlock``.  If the ``lock`` fails, then
+you'll know who to wait for.  The ``check`` operation will test for a locked
+repository.  Note that no enforcement is done.  Locking/unlocking merely
+sets a flag.  If people ignore this convention, then they can potentially
+interfere with each other's changes to the shared repository.
+
+The ``set`` operation sets the given repository directory as your current
+repository.  This will start a new shell process with the ``OPENMDAO_REPO``
+environment variable set to the full path of the repository.  The local
+system scripts will use this to update your ``PATH`` so the ``buildout/bin``
+and ``scripts`` directories are at the beginning.  You will also get some
+convenient aliases for navigating around in the repository directory
+structure.  Finally, if the repository is under ``/OpenMDAO/dev/shared``,
+your umask will be set to 002, allowing others in the ``mdao`` group to
+update files you own.
+
+The ``fix`` operation is used to fix file permissions in shared repositories.
+It will traverse the directory tree and try to ensure all operations enabled
+for owner are also enabled for group.  If you don't own the file,
+the operation will fail and the owner's user id will be reported.
 
