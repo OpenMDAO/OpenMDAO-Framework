@@ -18,8 +18,6 @@ class Engine_Optimization(Assembly):
         super(Engine_Optimization, self).__init__(name, parent, directory)
 
         # Create Sim_Vehicle component instances
-        # FIXME: uncomment add_socket after sockets work with pickle
-        #self.add_socket('vehicle_sim', IComponent, required=True)
         Sim_Vehicle('vehicle_sim', parent=self)
 
         # Create CONMIN Optimizer instance
