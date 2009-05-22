@@ -651,13 +651,20 @@ Now, the Vehicle assembly has its own inputs and outputs, and can be accessed ju
 Executing the Vehicle Assembly
 ------------------------------
 
+The vehicle assembly can be manipulated in the Python shell in the same manner as the engine component above. As inputs, the Vehicle takes a commanded Velocity, Throttle Position, a Gear Shift position, and a set of vehicle design parameters, and returns the vehicles instantaneous acceleration and rate of fuel burn. 
+
 	>>> from openmdao.examples.engine_design.vehicle import Vehicle
 	>>> MyCar = Vehicle("New_Car")
 	>>> MyCar.set("Velocity",25)
 	>>> MyCar.set("CurrentGear",3)
 	>>> MyCar.set("Throttle",.5)
+	>>> MyCar.run()
+	>>> MyCar.get("Acceleration")
+	1.1086409681485778
+	>>> MyCar.get("FuelBurn")
+	0.0027991856504909715
 
-
+When the Vehicle is run, we are essentially performing a simple multidisciplinary analysis via the OpenMDAO framework. Try setting the simulation variables to other values, including ones that should trigger an exception. (One way to do this is to command a high velocity in first gear, which should violate the maximum RPM that the engine allows.) Note that the design variables are also manipulated the same way using the set and get functions.
 
 Wrapping an External Module using f2py
 --------------------------------------
@@ -667,6 +674,32 @@ bottleneck during repeated execution. As an interpreted language, Python is not 
 implementation of a numerical algorithm, particularly where performance is important. Much can be gained by
 implementing the engine model in a compiled language like C or Fortran.
 
+One of the most important characteristics of Python is that it was designed to be smoothly integrated with other languages, in particular C (in which Python was written) and related languages (Fortran and C++). This is particularly important for a scripting language, where code execution is generally slower, and it is often necessary to use a compiled language like C for implementing computationally intensive functions. On top of this native integration ability, the community has developed some excellent tools, such as F2PY (http://cens.ioc.ee/projects/f2py2e/) (Fortran to Python) and SWIG (Simplified Wrapper and Interface Generator), that simplify the process of building the wrapper for a code. As the name implies, F2PY is a python utility that takes a Fortran source code file and compiles and generates a wrapped object callable from Python. F2PY is actually part of the numerical computing package NumPy. Another tool with broader application is the Simplified Wrapper and Interface Generator (SWIG), which can be used to generate wrappers for C and C++ functions for execution in a variety of different target languages, including Python. For the most general case, Python has the built-in capability to wrap any shared object or dynamically loadable library (DLL) written in any language. This ctypes package is a foreign function interface, and it allows an object to be wrapped without recompiling the library. Care has to be taken when using ctypes to wrap a function that passes data types not native to C. 
+
+The main algorithm in engine.py was rewritten in C as engine.C. A wrapped shared object of engine.C was created using F2Py; this tool can also be used to generate wrappers for C code provided that the signature file engine.pyf is manually created. This file engine.pyf defines the interface for the functions found in engine.C, and can be viewed in openmdao.examples/openmdao/examples/engine_design. The C code has been placed in a function called RunEngineCycle that takes the design and simulation variables as inputs. 
+
+.. _Code8: 
+
+::
+
+	from openmdao.examples.engine_design.engineC import RunEngineCycle
+	
+        # Call the C model and pass it what it needs.
+        
+        Power, Torque, FuelBurn, EngineWeight = RunEngineCycle(
+                    stroke, bore, conrod, compRatio, sparkAngle,
+                    nCyl, IVO, IVC, Liv, Div, k,
+                    R, Ru, Hu, Tw, AFR, Pexth,
+                    Tamb, Pamb, Air_Density, MwAir, MwFuel,
+                    RPM, Throttle, thetastep, Fuel_Density)
+
+        
+        # Interogate results of engine simulation and store.
+        
+        self.Power = Power[0]
+        self.Torque = Torque[0]
+        self.FuelBurn = FuelBurn[0]
+        self.EngineWeight = EngineWeight[0]
 
 
 Sockets and Interfaces
