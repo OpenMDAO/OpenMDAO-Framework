@@ -26,7 +26,7 @@ class HierarchyMember(object):
         self._logger = Logger(self.get_pathname().replace('.', ','))
         self.log_level = LOG_DEBUG
 
-    def get(self, path, index=None):
+    def get(self, path, index=None, force_valid=False):
         """Get a child object using a dotted path name. 
         (not implemented)
         """

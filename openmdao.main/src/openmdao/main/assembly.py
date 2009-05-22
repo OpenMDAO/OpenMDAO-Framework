@@ -34,8 +34,6 @@ class Assembly (Component):
     implements(IAssembly)
     
     def __init__(self, name, parent=None, doc=None, directory=''):
-        super(Assembly, self).__init__(name, parent, doc=doc,
-                                       directory=directory)
         
         self.state = STATE_IDLE
         self._stop = False
@@ -43,7 +41,6 @@ class Assembly (Component):
         self._sockets = {}
         self._child_io_graphs = {}
         self._need_child_io_update = True
-        self._drivers = []
         
         # A hybrid graph of Variable names (local path) and component names, 
         # with connections between Variables/Components as directed edges.  
@@ -67,8 +64,11 @@ class Assembly (Component):
         #
         self._var_graph = nx.LabeledDiGraph()
         
+        super(Assembly, self).__init__(name, parent, doc=doc,
+                                       directory=directory)
+        
         # add any Variables we may have inherited from our base classes
-        # to our graph, since our version of add_child wasn't active 
+        # to our graph, since our version of make_public wasn't active 
         # when they were added.
         for missing in [v for v in self.values() if isinstance(v, Variable)
                                                  and v.name not in self._var_graph]:
@@ -131,7 +131,7 @@ class Assembly (Component):
         # TODO: what about the property we've installed in the class?
         del self._sockets[name]
 
-    def add_child(self, obj, private=False):
+    def add_child(self, obj):
         """Update dependency graph and call base class add_child"""
         super(Assembly, self).add_child(obj)
         if IComponent.providedBy(obj):
@@ -143,10 +143,20 @@ class Assembly (Component):
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
             self._dataflow.add_node(obj.name)
-        if IDriver.providedBy(obj):
-            self._drivers.append(obj)
         return obj
-    
+
+    def make_public(self, obj_info, iostatus=INPUT):
+        """Update the variable graph with any new variables added to
+        the public area.
+        """
+        pubs = super(Assembly, self).make_public(obj_info, iostatus)
+        
+        for obj in pubs:
+            if IVariable.providedBy(obj):
+                self._var_graph.add_node(obj.name, data=obj)
+
+        return pubs
+        
     def get_var_graph(self):
         """Returns the Variable dependency graph, after updating it with child
         info if necessary.
@@ -183,8 +193,6 @@ class Assembly (Component):
                 if childgraph is not None:
                     self._var_graph.remove_nodes_from(childgraph)
                 del self._child_io_graphs[name]
-        if IDriver.providedBy(obj):
-            self._drivers.remove(obj)
             
         if name in self._sockets:
             setattr(self, name, None)
@@ -222,7 +230,6 @@ class Assembly (Component):
         var = comp.getvar(vname)
         newvar = var.create_passthru(self, name=name)
         self.make_public(newvar)
-        self._var_graph.add_node(newvar.name, data=newvar)
         
         # create the passthru connection 
         if var.iostatus == INPUT:

@@ -52,7 +52,8 @@ class RefVariable(Variable):
             if self.parent:
                 try:
                     self._expr = ExprEvaluator(refval, self.parent, 
-                                               single_name=single_name)
+                                               single_name=single_name,
+                                               force_valid=True)
                 except RuntimeError, err:
                     msg = str(err)
                     if msg.startswith('Expected'):
@@ -125,6 +126,9 @@ class RefVariableArray(Variable):
         state['_exprs'] = None
         return state
 
+    def __len__(self):
+        return len(self._get_exprs())
+    
     def _get_exprs(self):
         # self._exprs should only be none after we've been unpickled
         if self._exprs is None:
@@ -170,7 +174,8 @@ class RefVariableArray(Variable):
                 for s in refval:
                     try:
                         self._exprs.append(ExprEvaluator(s, self.parent, 
-                                                         single_name=single_name))
+                                                         single_name=single_name,
+                                                         force_valid=True))
                     except RuntimeError, err:
                         self.raise_exception(str(err), RuntimeError)
                 self._value = refval

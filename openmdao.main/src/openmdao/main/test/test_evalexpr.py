@@ -46,7 +46,7 @@ tests = [
 ]
 
 for tst in tests:
-    ex = ExprEvaluator(tst[0], top.a, validate=False)
+    ex = ExprEvaluator(tst[0], top.a, lazy_check=True)
     if ex.scoped_text != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+ex.scoped_text+" == "+tst[1])  
 
@@ -71,7 +71,7 @@ tests = [
 
 
 for tst in tests:
-    ex = ExprEvaluator(tst[0], top, validate=False)
+    ex = ExprEvaluator(tst[0], top, lazy_check=True)
     if ex.scoped_text != tst[1]:
         raise AssertionError('for input of '+tst[0]+', '+ex.scoped_text+" == "+tst[1])  
     
