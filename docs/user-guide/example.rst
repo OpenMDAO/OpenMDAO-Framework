@@ -17,6 +17,8 @@ framework architecture is done by writing Python code. While the tutorial proble
 user to utilize the framework via all available interfaces, it is difficult to construct a tutorial that
 achieves the same level of interactivity for a scripting interface as for a graphical one. 
 
+In order to use this tutorial, it is assumed that the user has already created a local copy of the code repository. Please see the OpenMDAO Developers Guide for details on how to do this.
+
 Problem Overview
 ----------------
 
@@ -542,15 +544,119 @@ An instance of the class Engine can be created by typing the following:
 	>>> from openmdao.examples.engine_design.engine import Engine
 	>>> MyEngine = Engine("New Engine")
 
-The object MyEngine is an engine created with default values for all of its inputs.
+The object MyEngine is an engine created with default values for all of its inputs. We can interact with the input and output variables by using the get and set functions.
+
+	>>> MyEngine.get("bore")
+	82.0
+	>>> MyEngine.get("stroke")
+	78.799999999999997
+	
+Let's change the engine speed from it's default value (1000 RPM) to 2500 RPM.
+
+	>>> MyEngine.set("RPM",2500)
+	>>> MyEngine.get("RPM")
+	2500
+
+Now, let's try setting the engine speed to a value that exceeds the maximum, which is 6000 RPM.
+
+	>>> MyEngine.set("RPM",7500)
+	Traceback (most recent call last):
+	.
+	.
+	.
+	ConstraintError: New Engine.RPM: constraint '7500 <= 6000' has been violated
+
+The vabiable raises and exception indicating that its maximum value has been violated. This exception can be handled to provide some logical response to this condition; this will be seen in the acceleration simulation. Now, run the engine and examine the Power and Torque at 2500 RPM.
+
+	>>> MyEngine.run()
+	>>> MyEngine.get("Torque")
+	203.9632284998996
+	>>> MyEngine.get("Power")
+	53.397448354811743
+	
+The component is executed by calling the run function, which runs the _pre_execute (which determines if the component needs to be executed), execute (which is the function we created in the Engine class above), and _post_execute (which validates the outputs.) These _pre_execute and _post_execute functions are private functions, as denoted by the leading underscore, and are not intended for users to redefine in their components. The thing to remember is that a component is always executed by calling run().
+
+Assemblies
+----------
+
+Now that python components representing the three vehicle subsystems have been created, they need to be connected so that they can be executed in sequence. In OpenMDAO, a component that contains a collection of other components is called an assembly. The assembly allows a set of components to be linked together by connecting their inputs and outputs. The data connections define an execution order based on the principle of lazy evaluation, where a component is triggered to run by an invalidation (i.e., a change) in any of its inputs.
+In addition, an assembly can also contain a driver, such as an optimizer or a design study. When an assembly does not contain a driver, the assembly executes the components based on the data connection.
+
+For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission, Engine, and Vehicle_Dynamics components.
+
+.. _Code5: 
+
+::
+
+	from openmdao.main import Assembly
+	
+	from openmdao.main import Float, Int
+	from openmdao.main.variable import INPUT, OUTPUT
+
+	from openmdao.examples.engine_design.engine import Engine
+	from openmdao.examples.engine_design.transmission import Transmission
+	from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
+	
+	class Vehicle(Assembly):
+	    ''' Vehicle assembly. '''
+    
+	    def __init__(self, name, parent=None, directory=''):
+	        ''' Creates a new Vehicle Assembly object '''
+
+	        super(Vehicle, self).__init__(name, parent, directory)
+
+	        # Create component instances
+        
+	        Transmission('Transmission', parent=self)
+	        Engine('Engine', parent=self)
+	        Vehicle_Dynamics('VDyn', parent=self)
+
+The Engine, Transmission, and Vehicle_Dynamics components are imported the same way as they were in the Python shell, using openmdao.examples.engine_design namespace. In creating a new class, the main difference between a component and an assembly is that an assembly inherits from the Assembly class instead of the Component class. This gives it the ability to contain other components, and to manage their data flow.
+
+Notice here that an instance of the Transmission, Engine, and Vehicle_Dynamics are created, with the parent set to "self", which in this context is Vehicle. This way, these components are created as part of the assembly, and are acessible through Vehicle.Transmission, etc.
+
+Now that the components are instantiated in the assembly, they need to be hooked up:
+
+.. _Code6: 
+
+::
+
+	self.connect('Transmission.RPM','Engine.RPM')
+        self.connect('Transmission.TorqueRatio','VDyn.Torque_Ratio')
+        self.connect('Engine.Torque','VDyn.Engine_Torque')
+        self.connect('Engine.EngineWeight','VDyn.Mass_Engine')
+	
+The first argument in the call to self.connect is the output variable, and the second argument is the input variable. In order for a connection to be valid, the units of the output and input must be of the same class (i.e., length, speed, etc.) If they differ within the same class (e.g., meters vs. inches), then the unit is converted to the correct unit before being sent from the output component to the input component.
+
+The Vehicle assembly behaves like any other component when interacting with the external world. It has inputs and outputs, it can be hoooked up to other components and included in other assemblies, and it can be run. In order for the Vehicle block to be connected to other components and used in a simulation or design study, the inputs and outputs have to be assigned. We essentially just want to promote the design and simulation variables from the Engine, Transmission, and Vehicle_Dyanmics components to the input and output of the Vehicle component. This can be done by creating passthroughs in the Vehicle assembly.
+
+.. _Code7: 
+
+::
+
+	self.create_passthru('Engine.stroke')
+	self.create_passthru('Engine.bore')
+	# ...
+	# ...
+	self.create_passthru('Transmission.Ratio1')
+	self.create_passthru('Transmission.Ratio2')
+	# ...
+	# ...
+	self.create_passthru('VDyn.Mass_Vehicle')
+	self.create_passthru('VDyn.Cf')
+		
+Now, the Vehicle assembly has its own inputs and outputs, and can be accessed just like in any other component.
 
 
-Models and Assemblies
----------------------
+Executing the Vehicle Assembly
+------------------------------
 
+	>>> from openmdao.examples.engine_design.vehicle import Vehicle
+	>>> MyCar = Vehicle("New_Car")
+	>>> MyCar.set("Velocity",25)
+	>>> MyCar.set("CurrentGear",3)
+	>>> MyCar.set("Throttle",.5)
 
-Executing a Model
------------------
 
 
 Wrapping an External Module using f2py
