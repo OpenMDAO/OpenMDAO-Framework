@@ -444,7 +444,7 @@ class NPSSTestCase(unittest.TestCase):
         for path in ('source.txt', 'source.bin', 'sink.txt', 'sink.bin'):
             os.remove(path)  # Will raise exception if any files don't exist.
 
-    def zest_preprocessor(self):
+    def test_preprocessor(self):
         logging.debug('')
         logging.debug('test_preprocessor')
 

@@ -271,11 +271,11 @@ class Container(HierarchyMember):
         assert(path is None or isinstance(path, basestring))
         
         if path is None:
-	    if index is None:
-		return self
-	    else:
-		self.raise_exception('%s is not a Variable. Cannot retrieve index %s'%
-				     (self.get_pathname(),str(index)), AttributeError)
+            if index is None:
+                return self
+            else:
+                self.raise_exception('%s is not a Variable. Cannot retrieve index %s'%
+                                     (self.get_pathname(),str(index)), AttributeError)
         
         try:
             base, name = path.split('.', 1)
@@ -408,58 +408,34 @@ class Container(HierarchyMember):
         if dst_dir is None:
             dst_dir = orig_dir
         if not os.access(dst_dir, os.W_OK):
-            self.raise_exception("Can't save to '%s', no write permission" \
-                                 % dst_dir, IOError)
+            self.raise_exception("Can't save to '%s', no write permission" %
+                                 dst_dir, IOError)
 
         py_version = platform.python_version_tuple()
         py_version = '%s.%s' % (py_version[0], py_version[1])
         egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
         self.debug('Saving to %s in %s...', egg_name, orig_dir)
 
-        # Fixup objects, classes, & sys.modules for __main__ imports.
-        fixup_objects = []
-        fixup_classes = {}
-        fixup_modules = set()
-
-        objs = [x for x in self.values(pub=False, recurse=True) if IContainer.providedBy(x)]
-        objs.append(self)
-        for obj in objs:
-            mod = obj.__module__
-            if mod == '__main__':
-                classname = obj.__class__.__name__
-                mod = obj.__class__.__module__
-                if mod == '__main__' and \
-                   (classname not in fixup_classes.keys()):
-                    # Need to determine 'real' module name.
-                    if '.' not in sys.path:
-                        sys.path.append('.')
-                    for arg in sys.argv:
-                        if arg.endswith('.py'):
-                            mod = os.path.basename(arg)[:-3]
-                            try:
-                                module = __import__(mod, fromlist=[classname])
-                            except ImportError:
-                                pass
-                            else:
-                                old = obj.__class__
-                                new = getattr(module, classname)
-                                fixup_classes[classname] = (old, new)
-                                fixup_modules.add(mod)
-                                break
-                    else:
-                        self.raise_exception("Can't find module for '%s'" % \
-                                             classname, RuntimeError)
-                obj.__class__ = fixup_classes[classname][1]
-                obj.__module__ = obj.__class__.__module__
-                fixup_objects.append(obj)
-
-        # Move to scratch area.
-        tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
-        os.chdir(tmp_dir)
         buildout = 'buildout.cfg'
         buildout_path = os.path.join(name, buildout)
         buildout_orig = buildout_path+'-orig'
+
+        tmp_dir = None
+
+        # Get a list of all objects we'll be saving.
+        objs = self._get_objects()
+        objs.append(self)
+
+        # Fixup objects, classes, & sys.modules for __main__ imports.
+        fixup = self._fix_objects(objs)
         try:
+            # Determine distributions required.
+            required_distributions = self._get_distributions(objs)
+
+            # Move to scratch area.
+            tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
+            os.chdir(tmp_dir)
+
             if src_dir:
                 # Link original directory to object name.
                 os.symlink(src_dir, name)
@@ -472,7 +448,7 @@ class Container(HierarchyMember):
             elif format is SAVE_LIBYAML or format is SAVE_YAML:
                 state_name = name+'.yaml'
             else:
-                self.raise_exception("Unknown format '%s'." % str(format),
+                self.raise_exception("Unknown format '%s'." % format,
                                      RuntimeError)
 
             state_path = os.path.join(name, state_name)
@@ -481,50 +457,14 @@ class Container(HierarchyMember):
             except Exception, exc:
                 if os.path.exists(state_path):
                     os.remove(state_path)
-                self.raise_exception("Can't save to '%s': %s" % \
-                                     (state_path, str(exc)), type(exc))
+                self.raise_exception("Can't save to '%s': %s" %
+                                     (state_path, exc), type(exc))
 
             # Add state file to set of files to save.
             if src_files is None:
                 src_files = set()
             src_files.add(state_name)
 
-            # Determine classes used by recording them during an unpickle.
-            self._required_classes = set()
-            if format == SAVE_CPICKLE or format == SAVE_PICKLE:
-                inp = open(state_path, 'rb')
-            else:
-                scratch = '__unpickle__'
-                self.save(scratch, SAVE_CPICKLE)
-                inp = open(scratch, 'rb')
-            unpickler = cPickle.Unpickler(inp)
-            unpickler.find_global = self._record_class
-            obj = unpickler.load()
-            del obj
-            inp.close()
-            if format != SAVE_CPICKLE and format != SAVE_PICKLE:
-                os.remove(scratch)
-
-            # Determine modules required.
-            required_modules = set()
-            for cls in self._required_classes:
-                self._add_modules(cls, required_modules)
-
-            # Determine distributions required.
-            required_distributions = set()
-            working_set = pkg_resources.WorkingSet()
-            for module in required_modules:
-                path = module.__file__
-                for dist in working_set:
-                    if path.startswith(dist.location):
-                        required_distributions.add(dist)
-                        break
-            required_distributions = sorted(required_distributions,
-                                            key=lambda dist: dist.project_name)
-            self.debug('    required distributions:')
-            for dist in required_distributions:
-                self.debug('        %s %s', dist.project_name, dist.version)
-     
             # Create buildout.cfg
             if os.path.exists(buildout_path):
                 os.rename(buildout_path, buildout_orig)
@@ -557,8 +497,161 @@ eggs =
             # Create loader script.
             loader = '%s_loader' % name
             loader_path = os.path.join(name, loader+'.py')
-            out = open(loader_path, 'w')
-            out.write("""\
+            self._write_loader_script(loader_path, state_name)
+
+            # Save everything to an egg via setuptools.
+            self._write_egg_via_setuptools(name, version, loader, src_files,
+                                           required_distributions, dst_dir)
+            os.remove(state_path)
+            os.remove(loader_path)
+            if remove_init:
+                os.remove(init_path)
+
+        finally:
+            if os.path.exists(buildout_orig):
+                os.rename(buildout_orig, buildout_path)
+            elif os.path.exists(buildout_path):
+                os.remove(buildout_path)
+            os.chdir(orig_dir)
+            if tmp_dir:
+                shutil.rmtree(tmp_dir)
+            self._restore_objects(fixup)
+
+        return egg_name
+
+    def _get_objects(self):
+        """Get objects to be saved."""
+
+        def _recurse_get_objects(obj, objs, visited):
+            """Use __getstate__(), or scan __dict__."""
+            try:
+                state = obj.__getstate__()
+            except AttributeError:
+                try:
+                    state = obj.__dict__
+                except AttributeError:
+                    return
+            except Exception, exc:
+                self.error("During save_to_egg, _get_objects error %s: %s",
+                           type(obj), exc)
+                return
+
+            if isinstance(state, dict):
+                state = state.values()
+            for obj in state:
+                oid = id(obj)
+                if oid in visited:
+                    continue
+                visited.add(oid)
+                objs.append(obj)
+                _recurse_get_objects(obj, objs, visited)
+
+        objs = []
+        visited = set()
+        visited.add(id(self._parent))  # Don't want our parent.
+        _recurse_get_objects(self, objs, visited)
+        return objs
+
+    def _fix_objects(self, objs):
+        """Fixup objects, classes, & sys.modules for __main__ imports."""
+        fixup_objects = []
+        fixup_classes = {}
+        fixup_modules = set()
+
+        for obj in objs:
+            try:
+                mod = obj.__module__
+            except AttributeError:
+                continue
+            if mod == '__main__':
+                classname = obj.__class__.__name__
+                mod = obj.__class__.__module__
+                if mod == '__main__' and \
+                   (classname not in fixup_classes.keys()):
+                    # Need to determine 'real' module name.
+                    if '.' not in sys.path:
+                        sys.path.append('.')
+                    for arg in sys.argv:
+                        if arg.endswith('.py'):
+                            mod = os.path.basename(arg)[:-3]
+                            try:
+                                module = __import__(mod, fromlist=[classname])
+                            except ImportError:
+                                pass
+                            else:
+                                old = obj.__class__
+                                new = getattr(module, classname)
+                                fixup_classes[classname] = (old, new)
+                                fixup_modules.add(mod)
+                                break
+                    else:
+                        self._restore_objects((fixup_objects, fixup_classes,
+                                               fixup_modules))
+                        self.raise_exception("Can't find module for '%s'" % \
+                                             classname, RuntimeError)
+                obj.__class__ = fixup_classes[classname][1]
+                obj.__module__ = obj.__class__.__module__
+                fixup_objects.append(obj)
+
+        return (fixup_objects, fixup_classes, fixup_modules)
+
+    def _restore_objects(self, fixup):
+        """Restore objects, classes, & sys.modules for __main__ imports."""
+        fixup_objects, fixup_classes, fixup_modules = fixup
+
+        for obj in fixup_objects:
+            obj.__module__ = '__main__'
+            classname = obj.__class__.__name__
+            obj.__class__ = fixup_classes[classname][0]
+
+        for classname in fixup_classes.keys():
+            new = fixup_classes[classname][1]
+            del new
+
+        for mod in fixup_modules:
+            del sys.modules[mod]
+
+    def _get_distributions(self, objs):
+        """Return distributions used by objs."""
+
+        def _add_modules(cls, modules):
+            """Record modules required by class."""
+            modname = cls.__module__
+            if modname == '__builtin__':
+                return
+            module = sys.modules[modname]
+            if os.path.isabs(module.__file__):
+                modules.add(module)
+            else:
+                for base in cls.__bases__:
+                    _add_modules(base, modules)
+
+        modules = set()
+        for obj in objs:
+            _add_modules(obj.__class__, modules)
+
+        distributions = set()
+        working_set = pkg_resources.WorkingSet()
+        for module in modules:
+            path = module.__file__
+            for dist in working_set:
+                if dist.project_name == 'da':
+                    continue
+                if path.startswith(dist.location):
+                    distributions.add(dist)
+                    break
+
+        distributions = sorted(distributions,
+                               key=lambda dist: dist.project_name)
+        self.debug('    required distributions:')
+        for dist in distributions:
+            self.debug('        %s %s', dist.project_name, dist.version)
+        return distributions
+
+    def _write_loader_script(self, path, state_name):
+        """Write script used for loading object(s)."""
+        out = open(path, 'w')
+        out.write("""\
 import logging
 import os
 import sys
@@ -607,28 +700,31 @@ def main():
 if __name__ == '__main__':
     main()
 """ % state_name)
-            out.close()
+        out.close()
 
-            # Save everything to an egg via setuptools.
-            out = open('setup.py', 'w')
+    def _write_egg_via_setuptools(self, name, version, loader, src_files,
+                                  distributions, dst_dir):
+        """Save everything to an egg via setuptools."""
+        out = open('setup.py', 'w')
 
-            out.write('import setuptools\n')
-            out.write('\npackage_files = [\n')
-            for filename in sorted(src_files):
-                path = os.path.join(name, filename)
-                if not os.path.exists(path):
-                    self.raise_exception("Can't save, '%s' does not exist" % \
-                                         path, ValueError)
-                out.write("    '%s',\n" % filename)
-            out.write(']\n')
+        out.write('import setuptools\n')
 
-            out.write('\nrequirements = [\n')
-            for dist in required_distributions:
-                out.write("    '%s == %s',\n" % \
-                          (dist.project_name, dist.version))
-            out.write(']\n')
+        out.write('\npackage_files = [\n')
+        for filename in sorted(src_files):
+            path = os.path.join(name, filename)
+            if not os.path.exists(path):
+                self.raise_exception("Can't save, '%s' does not exist" % \
+                                     path, ValueError)
+            out.write("    '%s',\n" % filename)
+        out.write(']\n')
 
-            out.write("""
+        out.write('\nrequirements = [\n')
+        for dist in distributions:
+            out.write("    '%s == %s',\n" % \
+                      (dist.project_name, dist.version))
+        out.write(']\n')
+
+        out.write("""
 entry_points = {
     'openmdao.top' : [
         'top = %(loader)s:load',
@@ -654,78 +750,36 @@ setuptools.setup(
 """ % {'name':name, 'loader':loader,
        'doc':self.__doc__.strip(), 'version':version})
 
-            out.close()
+        out.close()
 
-            # Use environment since 'python' might not recognize '-u'.
-            env = os.environ
-            env['PYTHONUNBUFFERED'] = '1'
-            proc = subprocess.Popen(['python', 'setup.py', 'bdist_egg',
-                                     '-d', dst_dir], env=env,
-                                    stdout=subprocess.PIPE,
-                                    stderr=subprocess.STDOUT)
-            output = []
-            while proc.returncode is None:
-                line = proc.stdout.readline().rstrip()
-                self.debug('    '+line)
-                output.append(line)
-                proc.poll()
-            for line in proc.stdout:
-                line = line.rstrip()
-                self.debug('    '+line)
-                output.append(line)
+        # Use environment since 'python' might not recognize '-u'.
+        env = os.environ
+        env['PYTHONUNBUFFERED'] = '1'
+        proc = subprocess.Popen(['python', 'setup.py', 'bdist_egg',
+                                 '-d', dst_dir], env=env,
+                                stdout=subprocess.PIPE,
+                                stderr=subprocess.STDOUT)
+        output = []
+        while proc.returncode is None:
+            line = proc.stdout.readline().rstrip()
+            self.debug('    '+line)
+            output.append(line)
+            proc.poll()
+        for line in proc.stdout:
+            if not line:
+                break
+            line = line.rstrip()
+            self.debug('    '+line)
+            output.append(line)
 
-            if proc.returncode != 0:
-                if self.log_level > LOG_DEBUG:
-                    for line in output:
-                        self.error('    '+line)
-                self.error('save_to_egg failed due to setup.py error %d:',
-                           proc.returncode)
-                self.raise_exception('setup.py failed, check log for info.',
-                                     RuntimeError)
-
-            os.remove(state_path)
-            os.remove(loader_path)
-            if remove_init:
-                os.remove(init_path)
-
-        finally:
-            if os.path.exists(buildout_orig):
-                os.rename(buildout_orig, buildout_path)
-            elif os.path.exists(buildout_path):
-                os.remove(buildout_path)
-            os.chdir(orig_dir)
-            shutil.rmtree(tmp_dir)
-            # Restore objects, classes, & sys.modules for __main__ imports.
-            for obj in fixup_objects:
-                obj.__module__ = '__main__'
-                classname = obj.__class__.__name__
-                obj.__class__ = fixup_classes[classname][0]
-            for classname in fixup_classes.keys():
-                new = fixup_classes[classname][1]
-                del new
-            for mod in fixup_modules:
-                del sys.modules[mod]
-
-        return egg_name
-    
-    def _record_class(self, modname, classname):
-        """Record class referenced during dummy unpickle."""
-        cls = getattr(sys.modules[modname], classname)
-        if modname != '__builtin__':
-            self._required_classes.add(cls)
-        return cls
-
-    def _add_modules(self, cls, required_modules):
-        """Record modules required by class."""
-        modname = cls.__module__
-        if modname == '__builtin__':
-            return
-        module = sys.modules[modname]
-        if os.path.isabs(module.__file__):
-            required_modules.add(module)
-        else:
-            for base in cls.__bases__:
-                self._add_modules(base, required_modules)
+        if proc.returncode != 0:
+            if self.log_level > LOG_DEBUG:
+                for line in output:
+                    self.error('    '+line)
+            self.error('save_to_egg failed due to setup.py error %d:',
+                       proc.returncode)
+            self.raise_exception('setup.py failed, check log for info.',
+                                 RuntimeError)
 
     def save (self, outstream, format=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
@@ -837,7 +891,7 @@ setuptools.setup(
         if info.module_name in sys.modules.keys():
             logger.debug("    removing existing '%s' module",
                          info.module_name)
-            del sys.modules[info.module_name]            
+            del sys.modules[info.module_name]
         if not '.' in sys.path:
             sys.path.append('.')
         loader = dist.load_entry_point('openmdao.top', 'top')
@@ -874,12 +928,12 @@ setuptools.setup(
         return top
 
     def post_load(self):
-        """ Perform any required operations after model has been loaded. """
+        """Perform any required operations after model has been loaded."""
         [x.post_load() for x in self.values(pub=False) 
                                           if isinstance(x,Container)]
 
     def pre_delete(self):
-        """ Perform any required operations before the model is deleted. """
+        """Perform any required operations before the model is deleted."""
         [x.pre_delete() for x in self.values(pub=False) 
                                           if isinstance(x,Container)]
 
@@ -889,43 +943,44 @@ setuptools.setup(
         dict of any Container. If recurse is True, also iterate through all
         public child Containers of each Container found.
         """
-        for name,obj in self._pub.items():
+        for name, obj in self._pub.items():
             yield (name, obj)
             if recurse:
                 cont = None
-                if hasattr(obj,'get_value') and isinstance(obj.get_value(),Container):
+                if hasattr(obj, 'get_value') and \
+                   isinstance(obj.get_value(), Container):
                     cont = obj.get_value()
                 elif isinstance(obj, Container):
                     cont = obj
                 if cont:
                     for chname, child in cont._get_pub_items(recurse):
-                        yield ('.'.join([name,chname]), child)
+                        yield ('.'.join([name, chname]), child)
                    
     def _get_all_items(self, visited, recurse=False):
         """Generate a list of tuples of the form (rel_pathname, obj) for each
         child of this Container.  If recurse is True, also iterate through all
         child Containers of each Container found.
         """
-        for name,obj in self.__dict__.items():
+        for name, obj in self.__dict__.items():
             if not name.startswith('_') and id(obj) not in visited:
                 visited.add(id(obj))
                 yield (name, obj)
                 if recurse and isinstance(obj, Container):
                     for chname, child in obj._get_all_items(visited, recurse):
-                        yield ('.'.join([name,chname]), child)
+                        yield ('.'.join([name, chname]), child)
                    
 
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output variables.
         In the case of a simple Container, all input variables are predecessors to
-	the Container, and all output variables are successors to the Container.
+        the Container, and all output variables are successors to the Container.
         """
         if self._io_graph is None:
             self._io_graph = nx.LabeledDiGraph()
-	    io_graph = self._io_graph
+            io_graph = self._io_graph
             varlist = [x for x in self._pub.values() if isinstance(x, Variable)]
-            ins = ['.'.join([self.name,x.name]) for x in varlist if x.iostatus == INPUT]
-            outs = ['.'.join([self.name,x.name]) for x in varlist if x.iostatus == OUTPUT]
+            ins = ['.'.join([self.name, x.name]) for x in varlist if x.iostatus == INPUT]
+            outs = ['.'.join([self.name, x.name]) for x in varlist if x.iostatus == OUTPUT]
             
             # add a node for the component
             io_graph.add_node(self.name, data=self)
