@@ -13,11 +13,9 @@ Known problems:
       variables are set as INPUTS.  This looks odd, but is neccessary
       until some more issues in the framework are ironed-out.
 """
-import npss
-import numpy
 import os.path
 
-from openmdao.main import Assembly, Component, Container, Float, Int, String, \
+from openmdao.main import Assembly, Component, Container, Float, \
                           ArrayVariable, FileVariable
 from openmdao.main.variable import INPUT, OUTPUT
 
@@ -245,17 +243,23 @@ class Model(Assembly):
         src_comp = getattr(self, comp)
         if rest.find('.') > 0:
             src_path = self.hoist(src_comp, rest, OUTPUT)
-        elif isinstance(src_comp, NPSScomponent):
-            src_comp.make_public((rest, '', OUTPUT))
-            self._var_graph.add_node(src_path, data=src_comp.getvar(rest))
+        else:
+            try:
+                src_comp.getvar(rest)
+            except AttributeError:
+                src_comp.make_public((rest, '', OUTPUT))
+                self._var_graph.add_node(src_path, data=src_comp.getvar(rest))
 
         comp, rest = dst_path.split('.', 1)
         dst_comp = getattr(self, comp)
         if rest.find('.') > 0:
             dst_path = self.hoist(dst_comp, rest, INPUT)
-        elif isinstance(dst_comp, NPSScomponent):
-            dst_comp.make_public(rest)
-            self._var_graph.add_node(dst_path, data=dst_comp.getvar(rest))
+        else:
+            try:
+                dst_comp.getvar(rest)
+            except AttributeError:
+                dst_comp.make_public(rest)
+                self._var_graph.add_node(dst_path, data=dst_comp.getvar(rest))
 
         super(Model, self).connect(src_path, dst_path)
 
@@ -265,28 +269,8 @@ class Model(Assembly):
         try:
             var = comp.getvar(path)
         except AttributeError:
-            val = comp.get(path)
-            if isinstance(val, float):
-                var = Float(name, comp, io_status, ref_name=path)
-            elif isinstance(val, int):
-                var = Int(name, comp, io_status, ref_name=path)
-            elif isinstance(val, basestring):
-                var = String(name, comp, io_status, ref_name=path)
-            elif isinstance(val, numpy.ndarray):
-                if val.dtype.char == 'd':
-                    var = ArrayVariable(name, comp, io_status, float,
-                                        ref_name=path)
-                elif val.dtype.char in ('i', 'l'):
-                    var = ArrayVariable(name, comp, io_status, int,
-                                        ref_name=path)
-                else:
-                    self.raise_exception('hoist %s: unexpected array type %s' %
-                                         (path, val.dtype.char), TypeError)
-            elif isinstance(val, npss.npss):
-                var = FileVariable(name, comp, io_status, ref_name=path+'.filename')
-            else:
-                self.raise_exception('hoist %s: unexpected type %s' %
-                                     (path, type(val)), TypeError)
+            comp.make_public((name, path, io_status))
+            var = comp.getvar(name)
 
         newpath = comp.name+'.'+name
         if newpath not in self._var_graph.nodes():

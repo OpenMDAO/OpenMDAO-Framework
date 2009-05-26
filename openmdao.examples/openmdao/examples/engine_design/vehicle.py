@@ -76,16 +76,8 @@ class Vehicle(Assembly):
 
         # Create component instances
         
-        # FIXME: uncomment add_socket after sockets work with pickle
-        #self.add_socket('Transmission', IComponent, required=True)
         Transmission('Transmission', parent=self)
-        
-        # FIXME: uncomment add_socket after sockets work with pickle
-        #self.add_socket('Engine', IComponent, required=True)
         Engine('Engine', parent=self)
-
-        # FIXME: uncomment add_socket after sockets work with pickle
-        #self.add_socket('VDyn', IComponent, required=True)
         Vehicle_Dynamics('VDyn', parent=self)
 
         # Create input and output ports at the assembly level

@@ -7,11 +7,19 @@ __version__ = "0.1"
 
 import conmin.conmin as conmin
 import numpy.numarray as numarray
+from copy import copy
+
 
 from openmdao.main import Driver, ArrayVariable, String, StringList, \
                           RefVariable, RefVariableArray
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.variable import INPUT, OUTPUT, VariableChangedEvent
+
+
+class datastructure(object):
+    ''' Just a primitive data structure. Not sure why Python has none'''
+    def __init__(self):
+        '''Initialize'''
 
 
 class CONMINdriver(Driver):
@@ -23,7 +31,6 @@ class CONMINdriver(Driver):
     
     .. parsed-literal::
     
-       TODO: add copy/restore of common block info per instance    
        TODO: make CONMIN's handling of user calculated gradients 
              accessible through CONMINdriver
             
@@ -32,10 +39,11 @@ class CONMINdriver(Driver):
     def __init__(self, name, parent=None, doc=None):
         super(CONMINdriver, self).__init__(name, parent, doc)
         
-        # TODO: this really needs to be a copy 
-        # (see conmin user's guide for how to save state)
-        self.cnmn1 = conmin.cnmn1
-
+        # Save data from common blocks into our CONMINdriver object
+        self.cnmn1 = datastructure()
+        self.consav = datastructure()
+        self._save_common_blocks()
+        
         self._first = True
         self.design_vals = numarray.zeros(0,'d')
         self.lower_bounds = numarray.zeros(0,'d')
@@ -44,18 +52,20 @@ class CONMINdriver(Driver):
         self.iprint = 0
         self.maxiters = 40
         self.gradients = None
+        
         # vector of scaling parameters
         self.scal = numarray.ones(2, 'd')
+        
         # gradient of objective w.r.t x[i]
         self.df = numarray.zeros(2, 'd')
+        
         # move direction in the optimization space
         self.s = numarray.zeros(2, 'd')
         self.gradients = numarray.zeros((2, 1), 'd')
+        
         # temp storage
         self._b = numarray.zeros((1, 1), 'd')
-        # temp storage
         self._c = numarray.zeros(1, 'd')
-        # temp storage
         self._ms1 = numarray.zeros(2, 'i')
         
         # temp storage for constraints
@@ -129,7 +139,8 @@ class CONMINdriver(Driver):
         # get the initial values of the design variables
         for i, val in enumerate(self.design_vars.refvalue):
             self.design_vals[i] = val
-            
+
+
         # loop until optimized
         while conmin.cnmn1.igoto or self._first is True:
             if self._stop:
@@ -156,7 +167,11 @@ class CONMINdriver(Driver):
             self.design_vars.refvalue = [float(val) for val in self.design_vals[:-2]]
 
             # update the model
+            # common blocks are saved before, and loaded after execution
+            self._save_common_blocks()
             self.run_referenced_comps()
+            self._load_common_blocks()            
+            
 # TODO: 'step around' ill-behaved cases.
 
             # calculate objective and constraints
@@ -164,6 +179,7 @@ class CONMINdriver(Driver):
                 # update constraint value array
                 for i, con in enumerate(self.constraints.refvalue):
                     self.constraint_vals[i] = con
+                    
             # calculate gradients
             elif conmin.cnmn1.info == 2:
                 self.raise_exception('user defined gradients not yet supported',
@@ -275,4 +291,106 @@ class CONMINdriver(Driver):
 
         self.cnmn1.iprint = self.iprint
         self.cnmn1.itmax = self.maxiters
+        
+        # The CONSAV common block, which contains temp variables that allow the
+        # optimization to be stepped externally, needs to be initialzed to an
+        # empty state before executing.
 
+        self.consav.dm1 = 0.0
+        self.consav.dm2 = 0.0
+        self.consav.dm3 = 0.0
+        self.consav.dm4 = 0.0
+        self.consav.dm5 = 0.0
+        self.consav.dm6 = 0.0
+        self.consav.dm7 = 0.0
+        self.consav.dm8 = 0.0
+        self.consav.dm9 = 0.0
+        self.consav.dm10 = 0.0
+        self.consav.dm11 = 0.0
+        self.consav.dm12 = 0.0
+        self.consav.dct = 0.0
+        self.consav.dctl = 0.0
+        self.consav.phi = 0.0
+        self.consav.abobj = 0.0
+        self.consav.cta = 0.0
+        self.consav.ctam = 0.0
+        self.consav.ctbm = 0.0
+        self.consav.obj1 = 0.0
+        self.consav.slope = 0.0
+        self.consav.dx = 0.0
+        self.consav.dx1 = 0.0
+        self.consav.fi = 0.0
+        self.consav.xi = 0.0
+        self.consav.dftdf1 = 0.0
+        self.consav.alp = 0.0
+        self.consav.fff = 0.0
+        self.consav.a1 = 0.0
+        self.consav.a2 = 0.0
+        self.consav.a3 = 0.0
+        self.consav.a4 = 0.0
+        self.consav.f1 = 0.0
+        self.consav.f2 = 0.0
+        self.consav.f3 = 0.0
+        self.consav.f4 = 0.0
+        self.consav.cv1 = 0.0
+        self.consav.cv2 = 0.0
+        self.consav.cv3 = 0.0
+        self.consav.cv4 = 0.0
+        self.consav.app = 0.0
+        self.consav.alpca = 0.0
+        self.consav.alpfes = 0.0
+        self.consav.alpln = 0.0
+        self.consav.alpmin = 0.0
+        self.consav.alpnc = 0.0
+        self.consav.alpsav = 0.0
+        self.consav.alpsid = 0.0
+        self.consav.alptot = 0.0
+        self.consav.rspace = 0.0
+        self.consav.idm1 = 0
+        self.consav.idm2 = 0
+        self.consav.idm3 = 0
+        self.consav.jdir = 0
+        self.consav.iobj = 0
+        self.consav.kobj = 0
+        self.consav.kcount = 0
+        self.consav.ncal = [0, 0]
+        self.consav.nfeas = 0
+        self.consav.mscal = 0
+        self.consav.ncobj = 0
+        self.consav.nvc = 0
+        self.consav.kount = 0
+        self.consav.icount = 0
+        self.consav.igood1 = 0
+        self.consav.igood2 = 0
+        self.consav.igood3 = 0
+        self.consav.igood4 = 0
+        self.consav.ibest = 0
+        self.consav.iii = 0
+        self.consav.nlnc = 0
+        self.consav.jgoto = 0
+        self.consav.ispace = [0, 0]
+        
+        self._load_common_blocks()
+
+    def _load_common_blocks(self):
+        ''' Reloads the common blocks using the intermediate info saved in the class. '''
+        
+        for item in dir(conmin.cnmn1):
+            setattr( conmin.cnmn1, item, getattr(self.cnmn1, item))
+        
+        for item in dir(conmin.consav):
+            setattr( conmin.consav, item, getattr(self.consav, item))
+        
+        
+    def _save_common_blocks(self):
+        ''' Saves the common block data to the class to prevent trampling by
+            other instances of CONMIN
+            '''
+        
+        for item in dir(conmin.cnmn1):
+            setattr( self.cnmn1, item, getattr(conmin.cnmn1, item))
+        
+        for item in dir(conmin.consav):
+            setattr( self.consav, item, getattr(conmin.consav, item))
+        
+        
