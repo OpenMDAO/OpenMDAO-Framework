@@ -67,7 +67,7 @@ _wing_header = """#!wing
 _LINE_WIDTH = 68
 
 def _wingify(obj, left_margin=0):
-    """Take an object, convert to a string, split it on commas. If any piece 
+    """Take a dict, convert to a string, split it on commas. If any piece 
     is longer than 80 chars, split it up into smaller chunks. Finally, recombine 
     it all back into a string with each entry on a new line
     """
