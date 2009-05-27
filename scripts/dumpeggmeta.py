@@ -182,7 +182,6 @@ def get_metadata(path):
         metadata['entry_points'][gname] = [ep for ep in group]
     
     return metadata    
-
     
 if __name__ == '__main__':
     if len(sys.argv) > 2:

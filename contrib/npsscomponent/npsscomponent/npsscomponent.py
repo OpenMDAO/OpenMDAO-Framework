@@ -537,8 +537,12 @@ class NPSScomponent(Component):
 
             if isinstance(entry, basestring):
                 name = entry
+                ref_name = name
             elif isinstance(entry, tuple):
                 name = entry[0]  # wrapper name
+                ref_name = entry[1]  # internal name
+                if not ref_name:
+                    ref_name = name
                 if len(entry) > 2:
                     iostat = entry[2] # optional iostatus
             else:
@@ -546,10 +550,10 @@ class NPSScomponent(Component):
                 continue
 
             try:
-                typ = self.evalExpr(name+'.getDataType()')
+                typ = self.evalExpr(ref_name+'.getDataType()')
             except RuntimeError:
                 try:
-                    typ = self.evalExpr(name+'.isA()')
+                    typ = self.evalExpr(ref_name+'.isA()')
                 except RuntimeError:
                     new_info.append(entry)
                     continue
@@ -561,19 +565,19 @@ class NPSScomponent(Component):
                         typ = 'Stream'
                         iostat = OUTPUT
                         metadata['content_type'] = \
-                            getattr(self, name+'.contentType')
+                            getattr(self, ref_name+'.contentType')
                         metadata['binary'] = \
-                            getattr(self, name+'.binary') != 0
+                            getattr(self, ref_name+'.binary') != 0
                         metadata['single_precision'] = \
-                            getattr(self, name+'.singlePrecision') != 0
+                            getattr(self, ref_name+'.singlePrecision') != 0
                         metadata['unformatted'] = \
-                            getattr(self, name+'.unformatted') != 0
+                            getattr(self, ref_name+'.unformatted') != 0
                     else:
                         new_info.append(entry)
                         continue
 
             try:
-                npss_units = getattr(self, name+'.units')
+                npss_units = getattr(self, ref_name+'.units')
             except AttributeError:
                 mdao_units = UNDEFINED
             else:
@@ -587,7 +591,7 @@ class NPSScomponent(Component):
                     mdao_units = UNDEFINED
 
             try:
-                doc = getattr(self, name+'.description')
+                doc = getattr(self, ref_name+'.description')
             except AttributeError:
                 doc = None
             else:
@@ -596,31 +600,33 @@ class NPSScomponent(Component):
 
             # Primitive method to create correct type.
             if typ == 'real':
-                dobj = Float(name, self, iostat, doc=doc, units=mdao_units)
+                dobj = Float(name, self, iostat, doc=doc, units=mdao_units,
+                             ref_name=ref_name)
             elif typ == 'int':
-                dobj = Int(name, self, iostat, doc=doc)
+                dobj = Int(name, self, iostat, doc=doc, ref_name=ref_name)
             elif typ == 'string':
-                dobj = String(name, self, iostat, doc=doc)
+                dobj = String(name, self, iostat, doc=doc, ref_name=ref_name)
             elif typ == 'real[]':
                 dobj = ArrayVariable(name, self, iostat, float, doc=doc,
-                                     num_dims=1)
+                                     num_dims=1, ref_name=ref_name)
             elif typ == 'int[]':
                 dobj = ArrayVariable(name, self, iostat, int, doc=doc,
-                                     num_dims=1)
+                                     num_dims=1, ref_name=ref_name)
             elif typ == 'string[]':
-                dobj = StringList(name, self, iostat, doc=doc)
+                dobj = StringList(name, self, iostat, doc=doc,
+                                  ref_name=ref_name)
             elif typ == 'real[][]':
                 dobj = ArrayVariable(name, self, iostat, float, doc=doc,
-                                     num_dims=2)
+                                     num_dims=2, ref_name=ref_name)
             elif typ == 'int[][]':
                 dobj = ArrayVariable(name, self, iostat, int, doc=doc,
-                                     num_dims=2)
+                                     num_dims=2, ref_name=ref_name)
             elif typ == 'real[][][]':
                 dobj = ArrayVariable(name, self, iostat, float, doc=doc,
-                                     num_dims=3)
+                                     num_dims=3, ref_name=ref_name)
             elif typ == 'Stream':
                 dobj = FileVariable(name, self, iostat, doc=doc,
-                                    ref_name=name+'.filename',
+                                    ref_name=ref_name+'.filename',
                                     metadata=metadata)
             else:
                 self.raise_exception('Unsupported NPSS type: %s' % typ,

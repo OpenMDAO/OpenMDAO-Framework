@@ -38,6 +38,25 @@ OutFileStream binary_out {
 string xyzzy_val = "$XYZZY";
 int flag_val = $FLAG;
 
+
+VariableContainer sub {
+    int b_in, b_out;
+
+    real f_in, f_out;
+    real f1d_in[], f1d_out[];
+    real f2d_in[][], f2d_out[][];
+    real f3d_in[][][], f3d_out[][][];
+
+    int i_in, i_out;
+    int i1d_in[], i1d_out[];
+    int i2d_in[][], i2d_out[][];
+
+    string s_in, s_out;
+    string s1d_in[], s1d_out[];
+    string s2d_in[][], s2d_out[][];
+}
+
+
 void calculate() {
     cout << sys.tstamp << "calculate() executing in '" << sys.pwd() << "'\n";
     cout << sys.tstamp << "XYZZY = '$XYZZY'\n";
@@ -56,5 +75,21 @@ void calculate() {
     s_out = s_in;
     s1d_out = s1d_in;
     s2d_out = s2d_in;
+
+
+    sub.b_out = sub.b_in;
+
+    sub.f_out = sub.f_in;
+    sub.f1d_out = sub.f1d_in;
+    sub.f2d_out = sub.f2d_in;
+    sub.f3d_out = sub.f3d_in;
+
+    sub.i_out = sub.i_in;
+    sub.i1d_out = sub.i1d_in;
+    sub.i2d_out = sub.i2d_in;
+
+    sub.s_out = sub.s_in;
+    sub.s1d_out = sub.s1d_in;
+    sub.s2d_out = sub.s2d_in;
 }
 
