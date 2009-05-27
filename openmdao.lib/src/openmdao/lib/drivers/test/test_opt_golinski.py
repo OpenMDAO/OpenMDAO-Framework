@@ -149,7 +149,7 @@ class OptGolinskiComponent(Component):
 
 
 
-class CONMINdriverTestCase(unittest.TestCase):
+class GolinskiTestCase(unittest.TestCase):
     """test CONMIN optimizer component"""
 
     
@@ -196,10 +196,17 @@ class CONMINdriverTestCase(unittest.TestCase):
 
     def test_opt1(self):
         """Golinski optimization using CONMIN"""
-        self.top.driver.objective = 'comp.result'
+        self.top.driver.objective.value = 'comp.result'
         #                                
         #  maximize x[0] value
         iter  = 1
+        self.top.driver.design_vars.value = ['comp.x[1]','comp.x[2]',
+                                             'comp.x[3]','comp.x[4]']
+        self.top.driver.lower_bounds = [0.70, 17.0, 7.300, 7.300]
+        self.top.driver.upper_bounds = [0.80, 28.0, 8.300, 8.300]
+        #  25 CONSTRAINTS  defined in the problem
+        #  reduced to 1 constraint
+        self.top.driver.constraints.value = ['1.0 - 40.0/(comp.x[2] * comp.x[3])']
         while iter < 4:
             # print  'iter     ',iter
             g00 = self.top.comp.x[0]
@@ -211,20 +218,12 @@ class CONMINdriverTestCase(unittest.TestCase):
             g16 = self.top.comp.x[6]
             # print 'starting initial design variables ****** x0 to x6'
             # print  g00, g11, g12, g13, g14, g15, g16
-            self.top.comp.x[0]  = self.getx0(g11,g12)
-            self.top.comp.x[5]  = self.getx5(g11,g12,g13)
-            self.top.comp.x[6] = self.getx6(g11,g12,g14)
-            self.top.driver.design_vars = ['comp.x[1]','comp.x[2]',
-                                           'comp.x[3]','comp.x[4]']
-            self.top.driver.lower_bounds = [0.70, 17.0, 7.300, 7.300]
-            self.top.driver.upper_bounds = [0.80, 28.0, 8.300, 8.300]
+            self.top.comp.set('x', self.getx0(g11,g12), [0])
+            self.top.comp.set('x', self.getx5(g11,g12,g13), [5])
+            self.top.comp.set('x', self.getx6(g11,g12,g14), [6])
             # print ' *********************************'
             # print ' *********************************'
             # pylint: disable-msg=C0301
-            #  25 CONSTRAINTS  defined in the problem
-            #  reduced to 1 constraint
-            self.top.driver.constraints = [
-            '1.0 - 40.0/(comp.x[2] * comp.x[3])' ]
              
             # print  '  before run values ..x0 - x6...'
             # print 'x0 = ', self.top.comp.x[0]
@@ -252,7 +251,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         print 'Obj FUNCTION Val = ', self.top.comp.result 
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.objective_val, places=2)
+                               self.top.driver.objective.refvalue, places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
                                self.top.comp.x[1], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
@@ -265,9 +264,9 @@ class CONMINdriverTestCase(unittest.TestCase):
         
     def test_bad_objective(self):
         try:
-            self.top.driver.objective = 'comp.missing'
+            self.top.driver.objective.value = 'comp.missing'
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver: objective 'comp.missing' is invalid")
+            self.assertEqual(str(err), "top.driver.objective: cannot find variable 'comp.missing'")
         else:
             self.fail('RuntimeError expected')
 
@@ -276,60 +275,62 @@ class CONMINdriverTestCase(unittest.TestCase):
         try:
             self.top.run()
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver: no design variables specified")
+            self.assertEqual(str(err), "top.driver.objective: reference is undefined")
         else:
             self.fail('RuntimeError expected')
     
     def test_no_objective(self):
-        self.top.driver.design_vars = ['comp.x[1]','comp.x[2]',
-                                       'comp.x[3]','comp.x[4]']
+        self.top.driver.design_vars.value = ['comp.x[1]','comp.x[2]',
+                                             'comp.x[3]','comp.x[4]']
         try:
             self.top.run()
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver: no objective specified")
+            self.assertEqual(str(err), "top.driver.objective: reference is undefined")
         else:
             self.fail('RuntimeError expected')
             
     def test_get_objective(self):
-        self.top.driver.objective = 'comp.result'
-        self.assertEqual('comp.result', self.top.driver.objective)
+        self.top.driver.objective.value = 'comp.result'
+        self.assertEqual('comp.result', self.top.driver.objective.value)
     
     def test_update_objective(self):
         try:
-            self.top.driver._update_objective_val()
+            x = self.top.driver.objective.refvalue
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver: No objective has been set")
+            self.assertEqual(str(err), "top.driver.objective: reference is undefined")
         else:
             self.fail('RuntimeError expected')
-        self.assertEqual(self.top.driver.objective_val, 0)
-        #self.top.comp.result = 99.
-        self.top.driver.objective = 'comp.result'
-        self.top.driver._update_objective_val()
-        #self.assertEqual(self.top.driver.objective_val, 99.)
+        self.top.driver.objective.value = 'comp.result'
+        self.top.comp.x = numpy.array([0,0,0,0,0,0,0],dtype=float)
+        self.top.driver.design_vars.value = ['comp.x[1]','comp.x[2]',
+                                             'comp.x[3]','comp.x[4]']
+        self.top.driver.design_vars.refvalue = [0, 0, 0, 0]
+        self.assertEqual(self.top.driver.objective.refvalue, 0.)
+        
     
     def test_bad_design_vars(self):
         try:
-            self.top.driver.design_vars = ['comp_bogus.x[0]','comp.x[1]']
+            self.top.driver.design_vars.value = ['comp_bogus.x[0]','comp.x[1]']
         except RuntimeError, err:
-            self.assertEqual(str(err), 
-                    "top.driver: design variable 'comp_bogus.x[0]' is invalid")
+            self.assertEqual(str(err), "top.driver.design_vars: cannot find variable 'comp_bogus.x'")
         else:
             self.fail('RuntimeError expected')
     
     def test_bad_constraint(self):
         try:
-            self.top.driver.constraints = ['bogus.flimflam']
+            self.top.driver.constraints.value = ['bogus.flimflam']
         except RuntimeError, err:
             self.assertEqual(str(err), 
-                    "top.driver: constraint 'bogus.flimflam' is invalid")
+                "top.driver.constraints: cannot find variable 'bogus.flimflam'")
         else:
             self.fail('RuntimeError expected')
             
     def test_lower_bounds_mismatch(self):
-        #self.top.driver.design_vars = ['comp.x[1]','comp.x[2]','comp.x[3]','comp.x[4]']
-        self.top.driver.design_vars = ['comp.x[1]','comp.x[2]']
+        self.top.driver.objective.value = 'comp.result'
+        self.top.driver.design_vars.value = ['comp.x[1]','comp.x[2]']
         try:
             self.top.driver.lower_bounds = [0, 0, 0, 0]
+            self.top.run()
         except ValueError, err:
             self.assertEqual(str(err),
                              "top.driver: size of new lower bound array"+
@@ -338,9 +339,11 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.fail('ValueError expected')
             
     def test_upper_bounds_mismatch(self):
-        self.top.driver.design_vars = ['comp.x[1]','comp.x[2]']
+        self.top.driver.objective.value = 'comp.result'
+        self.top.driver.design_vars.value = ['comp.x[1]','comp.x[2]']
         try:
             self.top.driver.upper_bounds = [99]
+            self.top.run()
         except ValueError, err:
             self.assertEqual(str(err),"top.driver: size of new upper bound array"+
                              " (1) does not match number of design vars (2)")
