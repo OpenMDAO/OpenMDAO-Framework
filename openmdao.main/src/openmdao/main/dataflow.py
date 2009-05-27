@@ -97,7 +97,8 @@ class Dataflow(Workflow):
         # For each strongly connected component, we need to break the loop somewhere
         # and topologically sort it to get a good ordering.  We'll break the loop
         # by removing edges due to ref variable inputs on the Driver. If there's more
-        # than one Driver in a strongly connected component, we may have issues...
+        # than one Driver in a strongly connected component, we have to break that
+        # SCC up into smaller SCCs.
         for sccomp in sorted_strongs:
             if len(strongs[sccomp]) == 1:  # no loop, just a single component
                 compname = strongs[sccomp][0]
