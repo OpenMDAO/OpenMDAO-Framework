@@ -17,6 +17,7 @@ import time
 
 LOCKFILE = 'repo_lock'
 
+
 def main():
     """ Repository maintenance. """
 
@@ -107,10 +108,7 @@ def do_set(path, user, options):
         os.chdir(path)
 
     os.environ['OPENMDAO_REPO'] = find_repository(os.getcwd(), user)
-
-    process = subprocess.Popen(os.environ['SHELL'])
-    os.waitpid(process.pid, 0)
-    sys.exit(process.returncode)
+    sys.exit(subprocess.call(os.environ['SHELL']))
 
 def do_fix(path, options):
     """ Check/fix permissions. """

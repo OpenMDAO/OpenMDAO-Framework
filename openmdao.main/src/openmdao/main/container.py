@@ -437,8 +437,12 @@ class Container(HierarchyMember):
             os.chdir(tmp_dir)
 
             if src_dir:
-                # Link original directory to object name.
-                os.symlink(src_dir, name)
+                if sys.platform == 'win32':
+                    # Copy original directory to object name.
+                    shutil.copytree(src_dir, name)
+                else:
+                    # Just link original directory to object name.
+                    os.symlink(src_dir, name)
             else:
                 os.mkdir(name)
 
@@ -538,7 +542,14 @@ eggs =
 
             if isinstance(state, dict):
                 state = state.values()
+
             for obj in state:
+                try:
+                    mod = obj.__module__
+                except AttributeError:
+                    continue
+                if mod == '__builtin__':
+                    continue  # No need to process these.
                 oid = id(obj)
                 if oid in visited:
                     continue

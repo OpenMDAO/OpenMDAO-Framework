@@ -5,11 +5,24 @@ __version__ = '0.1'
 import os.path
 import signal
 import subprocess
+import sys
 import time
+
+if sys.platform == 'win32':
+    import win32api
 
 from openmdao.main import Component, Bool, Float, Int, String
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.variable import INPUT, OUTPUT
+
+
+# TODO: better process kill implementation (2.6 terminate, process tree).
+def kill_proc(proc, sig):
+    """ Kill process with given signal. """
+    if sys.platform == 'win32':
+        win32api.TerminateProcess(int(proc._handle), -1)
+    else:
+        os.kill(proc.pid, sig)
 
 
 class ExternalCode(Component):
@@ -120,8 +133,7 @@ class ExternalCode(Component):
                 if (self.timeout > 0) and (npolls < 0):
                     self.timed_out = True
                     self.return_code = None
-# TODO: better process kill implementation (2.6 terminate, process tree).
-                    os.kill(self._process.pid, signal.SIGKILL)
+                    kill_proc(self._process, signal.SIGKILL)
                     self.raise_exception('Timed out', RunInterrupted)
                 time.sleep(poll_delay)
                 try:
@@ -160,7 +172,5 @@ class ExternalCode(Component):
         """ Stop the external code. """
         self._stop = True
         if self._process:
-            os.kill(self._process.pid, signal.SIGTERM)
-            # new in version 2.6
-            # self._process.terminate()
+            kill_proc(self._process, signal.SIGTERM)
 
