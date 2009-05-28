@@ -22,7 +22,7 @@ class EngineOptimizationTestCase(unittest.TestCase):
         # We are just testing the mechanics of the Engine_Optimization component, so
         # set the design variables at the global minimum.
         
-        self.model.vehicle_sim.set('bore', 100)
+        self.model.vehicle_sim.set('bore', 95)
         self.model.vehicle_sim.set('sparkAngle', -35.368341874)
 
         self.model.driver.maxiters = 1
