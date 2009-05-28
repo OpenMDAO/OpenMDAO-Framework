@@ -57,7 +57,7 @@ class DummyComp(Component):
         String('sout', self, OUTPUT)
         
         # make a nested container with input and output ContainerVars
-        self.add_child(Multiplier('dummy'), private=True)
+        self.add_child(Multiplier('dummy'))
         self.make_public([('dummy_in','dummy'), 
                           ('dummy_out','dummy',OUTPUT)])
                 

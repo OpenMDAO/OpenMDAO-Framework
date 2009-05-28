@@ -46,7 +46,7 @@ class Driver(Assembly):
         """ Iterate over a collection of Components until some condition
         is met. If you don't want to structure your driver to use pre_iteration,
         post_iteration, etc., just override this function. As a result, none
-        of the *_iteration() functions will be called.
+        of the <start/pre/post/continue>_iteration() functions will be called.
         """
         self.state = STATE_WAITING
         self.start_iteration()
@@ -78,7 +78,7 @@ class Driver(Assembly):
 
     def post_iteration(self):
         """Called after each iteration."""
-        self._continue = False
+        self._continue = False  # by default, stop after one iteration
             
     def get_referenced_comps(self, iostatus=None):
         """Return a set of names of Components that we reference based on the 
@@ -126,8 +126,8 @@ class Driver(Assembly):
         """
         if self._sorted_comps is None:
             if self.parent and isinstance(self.parent, Assembly):
-                nbunch = self.get_referenced_comps()
-                graph = self.parent.get_component_graph().subgraph(nbunch=nbunch)
+                graph = self.parent.get_component_graph().subgraph(
+                                           nbunch=self.get_referenced_comps())
                 graph.add_edges_from(self.get_ref_graph(skip_inputs=True).edges_iter())
                 self._sorted_comps = nx.topological_sort(graph) 
                 if self._sorted_comps is None:  # _sorted_comps is None if not a DAG
@@ -145,9 +145,7 @@ class Driver(Assembly):
     def run_referenced_comps(self):
         """Runs the set of components that we reference via our reference variables."""
         if self.parent:
-            sorted_comps = self.sorted_components()
-            #if __debug__: self.debug('attempting to run loop components %s' % str(sorted_comps))
-            for compname in sorted_comps:
+            for compname in self.sorted_components():
                 getattr(self.parent, compname).run()
         else:
             self.raise_exception('Driver cannot run referenced components without a parent',

@@ -300,10 +300,17 @@ class Variable(HierarchyMember):
             self.raise_exception("'"+name+"' is not a Variable object", 
                                  NameError)        
         
-    def get(self, name=None, index=None):
+    def get(self, name=None, index=None, force_valid=False):
         """Return the named attribute"""
         if name is None or name == 'value':
             if index is None:
+		if force_valid and self.valid is False:
+		    try:
+			self.parent.update_outputs([self.name])
+		    except Exception, err:
+			raise err.__class__(
+			    'The following error occurred while updating %s to be valid: %s' %
+			    (self.get_pathname(), str(err)))
                 return self.get_value()
             else:
                 return self.get_entry(index)
@@ -316,8 +323,10 @@ class Variable(HierarchyMember):
                     val = val[i]
                 return val
 
-    def get_entry(self, index):
+    def get_entry(self, index, force_valid=False):
         """Retrieve the entry indicated by index."""
+	if force_valid and self.valid is False:
+	    self.parent.update_outputs([self.name])
         l = len(index)
         if l == 1:
             return self.get_value()[index[0]]

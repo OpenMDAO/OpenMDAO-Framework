@@ -22,6 +22,10 @@ import sys, os
 # absolute, like shown here.
 #sys.path.append(os.path.abspath('.'))
 
+# add repository scripts directory so we can autodoc its modules
+sys.path.append(os.path.join(os.path.dirname(os.path.abspath('.')),'scripts'))
+
+
 # General configuration
 # ---------------------
 
