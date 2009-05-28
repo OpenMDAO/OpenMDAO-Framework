@@ -678,7 +678,7 @@ One of the most important characteristics of Python is that it was designed to b
 
 The main algorithm in engine.py was rewritten in C as engine.C. A wrapped shared object of engine.C was created using F2Py; this tool can also be used to generate wrappers for C code provided that the signature file engine.pyf is manually created. This file engine.pyf defines the interface for the functions found in engine.C, and can be viewed in openmdao.examples/openmdao/examples/engine_design. The C code has been placed in a function called RunEngineCycle that takes the design and simulation variables as inputs. 
 
-The C function containing the engine simulation algorithm is called RunEngineCycle. The function can be imported and used just like any python function:
+The C function containing the engine simulation algorithm is called RunEngineCycle. A new python component named engine_wrap_c.py was created to replace engine.py. This component contains the same inputs and outputs as engine.py, but replaces the engine internal calculations with a call to the C function RunEngineCycle. The function can be imported and used just like any python function:
 
 .. _Code8: 
 
