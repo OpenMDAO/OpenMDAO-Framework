@@ -566,7 +566,7 @@ Now, let's try setting the engine speed to a value that exceeds the maximum, whi
 	.
 	ConstraintError: New Engine.RPM: constraint '7500 <= 6000' has been violated
 
-The vabiable raises and exception indicating that its maximum value has been violated. This exception can be handled to provide some logical response to this condition; this will be seen in the acceleration simulation. Now, run the engine and examine the Power and Torque at 2500 RPM.
+The variable raises and exception indicating that its maximum value has been violated. This exception can be handled to provide some logical response to this condition; this will be seen in the acceleration simulation. Now, run the engine and examine the Power and Torque at 2500 RPM.
 
 	>>> MyEngine.run()
 	>>> MyEngine.get("Torque")
@@ -611,7 +611,7 @@ For the vehicle simulation, a Vehicle assembly is needed that can sequentially e
 	        Engine('Engine', parent=self)
 	        Vehicle_Dynamics('VDyn', parent=self)
 
-The Engine, Transmission, and Vehicle_Dynamics components are imported the same way as they were in the Python shell, using openmdao.examples.engine_design namespace. In creating a new class, the main difference between a component and an assembly is that an assembly inherits from the Assembly class instead of the Component class. This gives it the ability to contain other components, and to manage their data flow.
+The Engine, Transmission, and Vehicle_Dynamics components are imported the same way as they were in the Python shell, using openmdao.examples.engine_design name-space. In creating a new class, the main difference between a component and an assembly is that an assembly inherits from the Assembly class instead of the Component class. This gives it the ability to contain other components, and to manage their data flow.
 
 Notice here that an instance of the Transmission, Engine, and Vehicle_Dynamics are created, with the parent set to "self", which in this context is Vehicle. This way, these components are created as part of the assembly, and are acessible through Vehicle.Transmission, etc.
 
@@ -678,6 +678,8 @@ One of the most important characteristics of Python is that it was designed to b
 
 The main algorithm in engine.py was rewritten in C as engine.C. A wrapped shared object of engine.C was created using F2Py; this tool can also be used to generate wrappers for C code provided that the signature file engine.pyf is manually created. This file engine.pyf defines the interface for the functions found in engine.C, and can be viewed in openmdao.examples/openmdao/examples/engine_design. The C code has been placed in a function called RunEngineCycle that takes the design and simulation variables as inputs. 
 
+The C function containing the engine simulation algorithm is called RunEngineCycle. The function can be imported and used just like any python function:
+
 .. _Code8: 
 
 ::
@@ -700,6 +702,8 @@ The main algorithm in engine.py was rewritten in C as engine.C. A wrapped shared
         self.Torque = Torque[0]
         self.FuelBurn = FuelBurn[0]
         self.EngineWeight = EngineWeight[0]
+
+Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first element (element zero.)
 
 
 Sockets and Interfaces
