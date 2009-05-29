@@ -12,10 +12,15 @@ from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.interfaces import IComponent
 
-from openmdao.examples.engine_design.engine_wrap_c import Engine
 from openmdao.examples.engine_design.transmission import Transmission
 from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
 
+try:
+    from openmdao.examples.engine_design.engine_wrap_c import Engine
+except:
+    from openmdao.examples.engine_design.engine import Engine
+
+    
 class IVehicle(Interface):
     """Vehicle Model interface"""
     

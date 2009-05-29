@@ -5,7 +5,6 @@ TODO: load/save of NPSS model state.
 """
 
 import logging
-import os
 import os.path
 import pkg_resources
 import shutil

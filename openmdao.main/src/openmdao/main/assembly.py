@@ -408,9 +408,7 @@ class Assembly (Component):
                             if parent and isinstance(parent, Assembly):
                                 parent.update_inputs(['.'.join([self.name, srcvar.name])])
                             else:
-                                self.raise_exception(
-                                    'invalid source Variable found (%s), with no way to update it' 
-                                    % srcname, RuntimeError)
+                                srcvar.valid = True
                         else: # a non-boundary var
                             srcvar.parent.update_outputs([srcvar.name])
                     incomp = var.parent

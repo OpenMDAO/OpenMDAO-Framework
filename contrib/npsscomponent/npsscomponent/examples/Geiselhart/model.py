@@ -46,6 +46,12 @@ class Design(Component):
         Float('I_divergFact',    self, OUTPUT, default=0.5)
         Float('cowl_angle',      self, OUTPUT, default=6)
 
+    def execute(self):
+        """ Just to trace execution. """
+        print self.get_pathname(), 'execution begins'
+        super(Design, self).execute()
+        print self.get_pathname(), '    complete'
+
 
 class PropulsionData(Component):
     """ Computed propulsion data. """
