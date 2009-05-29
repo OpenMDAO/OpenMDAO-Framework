@@ -10,6 +10,7 @@ import unittest
 
 from openmdao.main import Assembly, Component, Container, \
                           ArrayVariable, FileVariable, StringList, Bool
+from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
 from openmdao.main.variable import INPUT, OUTPUT
 
 # pylint: disable-msg=E1101,E1103
@@ -39,6 +40,9 @@ class Source(Assembly):
 
         Subcontainer('sub', parent=self)
         self.create_passthru('sub.binary_file')
+
+        # Some objects that must be restored.
+        self.obj_list = [DataObj(i) for i in range(3)]
 
         # Absolute external file that exists at time of save.
         path = os.path.join(self.directory, EXTERNAL_FILES[0])
@@ -103,6 +107,13 @@ class Subcontainer(Container):
         FileVariable('binary_file', self, OUTPUT,
                      default=os.path.join('..', 'sub', 'source.bin'),
                      metadata={'binary':True})
+
+
+class DataObj(object):
+    """ Just a custom class for objects to save & reload. """
+
+    def __init__(self, data):
+        self.data = data
 
 
 class Sink(Component):
@@ -185,10 +196,7 @@ class EggTestCase(unittest.TestCase):
         if os.path.exists('Egg'):
             shutil.rmtree('Egg')
 
-    def test_save_load_pickle(self):
-        logging.debug('')
-        logging.debug('test_save_load_pickle')
-
+    def save_load(self, format):
         global source_init, sink_init
 
         # Verify initial state.
@@ -205,8 +213,11 @@ class EggTestCase(unittest.TestCase):
             path = os.path.join(self.model.Source.get_directory(), path)
             self.assertEqual(os.path.exists(path), True)
 
+        for i in range(3):
+            self.assertEqual(self.model.Source.obj_list[i].data, i)
+
         # Save to egg.
-        self.egg_name = self.model.save_to_egg()
+        self.egg_name = self.model.save_to_egg(format=format)
 
         # Run and verify correct operation.
         self.model.run()
@@ -250,6 +261,9 @@ class EggTestCase(unittest.TestCase):
                 path = os.path.join(self.model.Source.get_directory(), path)
                 self.assertEqual(os.path.exists(path), True)
 
+            for i in range(3):
+                self.assertEqual(self.model.Source.obj_list[i].data, i)
+
             # Run and verify correct operation.
             self.model.run()
             self.assertEqual(self.model.Sink.text_data,
@@ -262,6 +276,18 @@ class EggTestCase(unittest.TestCase):
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)
+
+    def test_save_load_pickle(self):
+        logging.debug('')
+        logging.debug('test_save_load_pickle')
+        self.save_load(SAVE_CPICKLE)
+
+# Fails to load. It appears you can't have more than one level of
+# back-pointers when loading YAML. (A component works, but an assembly doesn't)
+#    def test_save_load_yaml(self):
+#        logging.debug('')
+#        logging.debug('test_save_load_yaml')
+#        self.save_load(SAVE_LIBYAML)
 
     def test_save_bad_directory(self):
         logging.debug('')
