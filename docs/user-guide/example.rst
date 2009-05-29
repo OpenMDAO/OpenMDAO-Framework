@@ -709,6 +709,8 @@ Notice that the return values are stored in lists, so a scalar value is accessed
 Sockets and Interfaces
 ----------------------
 
+Now that we have a functional (and reasonably quick) vehicle component, we now need to complete the problem by providing a way to simulate the acceleration and the EPA fuel economy estimates.
+
 
 Solving an Optimization Problem
 -------------------------------
