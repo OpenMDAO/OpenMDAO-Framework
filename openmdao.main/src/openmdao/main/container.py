@@ -133,10 +133,10 @@ class Container(HierarchyMember):
                                                      and x.iostatus == OUTPUT 
                                                      and x.valid == valid]
     
-    def add_child(self, obj, private=False):
+    def add_child(self, obj):
         """Add an object (must provide IContainer interface) to this
         Container, and make it a member of this Container's public
-        interface if private is False.
+        interface.
         """
         if obj == self:
             self.raise_exception('cannot make an object a child of itself',
@@ -147,8 +147,7 @@ class Container(HierarchyMember):
                 self.remove_child(obj.name)
             setattr(self, obj.name, obj)
             obj.parent = self
-            if private is False:
-                self.make_public(obj)
+            self.make_public(obj)
         else:
             self.raise_exception("'"+str(type(obj))+
                     "' object has does not provide the IContainer interface",
@@ -179,9 +178,10 @@ class Container(HierarchyMember):
         this function attempts to locate an object with an IVariable interface 
         that can wrap each object named in the tuple.
         
-        Returns None.
+        Returns a list of objects added to the public area.
         """            
 # pylint: disable-msg=R0912
+        pubs = []
         if isinstance(obj_info, list):
             lst = obj_info
         else:
@@ -225,10 +225,12 @@ class Container(HierarchyMember):
             if IContainer.providedBy(dobj):
                 dobj.parent = self
                 self._pub[dobj.name] = dobj
+                pubs.append(dobj)
             else:
                 self.raise_exception(
                     'no IVariable interface available for the object named '+
                     str(name), TypeError)
+        return pubs
 
     def make_private(self, name):
         """Remove the named object from the _pub container, which will make it
@@ -252,14 +254,14 @@ class Container(HierarchyMember):
         return False
             
     def create(self, type_name, name, version=None, server=None, 
-               private=False, res_desc=None):
+               res_desc=None):
         """Create a new object of the specified type inside of this
         Container.
         
         Returns the new object.        
         """
         obj = fmcreate(type_name, name, version, server, res_desc)
-        self.add_child(obj, private)
+        self.add_child(obj)
         return obj
 
     def get(self, path, index=None):
@@ -288,7 +290,7 @@ class Container(HierarchyMember):
                 else:
                     return self._pub[path].get_entry(index)
             except KeyError:
-                self.raise_exception("object has no attribute '"+path+"'",
+                self.raise_exception("object has no attribute '%s'" % path, 
                                      AttributeError)
 
         return self._pub[base].get(name, index)
@@ -381,17 +383,12 @@ class Container(HierarchyMember):
                     format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
 
-            name defaults to the name of the container.
-
-            version defaults to the container's module __version__.
-
-            If force_relative is True, all paths are relative to src_dir.
-
-            src_dir is the root of all (relative) src_files.
-
-            dst_dir is the directory to write the egg in.
-
-            tmp_dir is the directory to use for temporary files.
+        - `name` defaults to the name of the container.
+        - `version` defaults to the container's module __version__.
+        - If `force_relative` is True, all paths are relative to `src_dir`.
+        - `src_dir` is the root of all (relative) `src_files`.
+        - `dst_dir` is the directory to write the egg in.
+        - `tmp_dir` is the directory to use for temporary files.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
@@ -635,6 +632,7 @@ eggs =
         prefixes = []
         site_lib = os.path.dirname(site.__file__)
         site_pkg = site_lib+os.sep+'site-packages'
+        py_version = 'python%d.%d' % (sys.version_info[0], sys.version_info[1])
 
         # For each object found...
         for obj in objs:
@@ -691,7 +689,8 @@ eggs =
                     for dist in working_set:
                         loc = dist.location
                         # Protect against a 'bare' location.
-                        if loc.endswith('site-packages'):
+                        if loc.endswith('site-packages') or \
+                           loc.endswith(py_version):
                             loc += os.sep+dist.project_name
                         if path.startswith(loc):
                             distributions.add(dist)
@@ -700,9 +699,9 @@ eggs =
 #                            self.debug('        adding %s %s',
 #                                       dist.project_name, dist.version)
                             break
-#                    else:
-#                        self.debug("        no distribution found for '%s'",
-#                                   path)
+                    else:
+                        self.warning("        no distribution found for '%s'",
+                                     path)
 
         distributions = sorted(distributions,
                                key=lambda dist: dist.project_name)

@@ -23,7 +23,9 @@ def _match(name, inlist):
     
 
 def get_resource_files(dist, exList=None, incList=None, dirname=''):
-    """Retrieve resource file pathnames from within a distribution."""
+    """A generator that retrieves resource file pathnames from 
+    within a distribution.
+    """
     
     exlist = exList or []
     inclist = incList or ['*']
@@ -42,9 +44,9 @@ def get_resource_files(dist, exList=None, incList=None, dirname=''):
                 yield respath
 
 
-def get_dist_metadata(dist, dirname=''):
-    """Retrieve metadata from within a distribution and return it as
-    a dict.
+def _getdist_metadata(dist, dirname=''):
+    """Retrieve metadata from within a distribution.
+    Returns a dict.
     """
     metadata = {}
     for name in dist.metadata_listdir(dirname):
@@ -53,7 +55,7 @@ def get_dist_metadata(dist, dirname=''):
         else:
             path = name
         if dist.metadata_isdir(path):
-            for md in get_dist_metadata(dist, path):
+            for md in _getdist_metadata(dist, path):
                 metadata[md[0]] = md[1]
         elif name.endswith('.txt'):
             metadata[path[:-4]] = [x.strip() for x in 
@@ -72,9 +74,9 @@ def get_dist_metadata(dist, dirname=''):
     return metadata
     
                 
-def meta_from_tarfile(path):
-    """Retrieve metadata from a tar file of a python source distribution
-    and return it as a dict.
+def _meta_from_tarfile(path):
+    """Retrieve metadata from a tar file of a python source distribution.
+    Returns a dict.
     """
     metadata = {}
     oldpkginfo = None
@@ -108,8 +110,10 @@ def meta_from_tarfile(path):
 
     return metadata              
 
-def meta_from_zipped_egg(path):
-    """Retrieve metadata from a zipped egg file and return it as a dict."""
+def _meta_from_zipped_egg(path):
+    """Retrieve metadata from a zipped egg file.
+    Returns a dict.
+    """
     metadata = {}
     zf = zipfile.ZipFile(path, 'r')
     for name in zf.namelist():
@@ -138,11 +142,12 @@ def get_metadata(path):
     path can be an installed egg, a zipped egg file, or a 
     zipped or unzipped tar file of a python distutils or setuptools
     source distribution.
+    Returns a dict.
     """
 
     if path.lower().endswith('.tar') or '.tar.gz' in path.lower():
         # it's a tar file or gzipped tar file
-        return meta_from_tarfile(path)
+        return _meta_from_tarfile(path)
 
     dists = [x for x in find_distributions(path,only=True)]
     if len(dists) == 0:
@@ -160,12 +165,12 @@ def get_metadata(path):
     if os.path.isfile(path):
         if path.lower().endswith('.egg'):
             # it's a zip file
-            metadata = meta_from_zipped_egg(path)
+            metadata = _meta_from_zipped_egg(path)
         else:
             raise RuntimeError('cannot process file %s: unknown file type' %
                                 path)
     else:
-        metadata = get_dist_metadata(dist)
+        metadata = _getdist_metadata(dist)
 
 
     metadata['py_version'] = dist.py_version
@@ -177,7 +182,6 @@ def get_metadata(path):
         metadata['entry_points'][gname] = [ep for ep in group]
     
     return metadata    
-
     
 if __name__ == '__main__':
     if len(sys.argv) > 2:

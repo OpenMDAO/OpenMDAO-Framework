@@ -146,28 +146,6 @@ def _pkg_sphinx_info(env, startdir, pkg, outfile, show_undoc=False,
 #        print "%s:\n%s\n"%(md,val)
 
 
-if __name__ == '__main__':
-    from optparse import OptionParser
-    
-    parser = OptionParser()
-    parser.add_option("-u", "", action="store_true", dest="show_undoc",
-                      help="show undocumented members")
-    parser.add_option("-o", "", action="store", type='string', dest="out",
-                      help="output filename (defaults to stdout)")
-    (options, args) = parser.parse_args(sys.argv[1:])
-    
-    if options.out:
-        outf = open(options.out, 'w')
-    else:
-        outf = sys.stdout
-    
-    if len(args) == 1:
-        _pkg_sphinx_info(args[0], outf, options.show_undoc)
-    else:
-        parser.print_help()
-        sys.exit(-1)
-
-
     
 class SphinxBuild(object):
     """Build Sphinx documentation and create a script to bring up the
@@ -186,6 +164,8 @@ class SphinxBuild(object):
         self.executable = buildout['buildout']['executable']
         
         self.packages = options.get('packages') or ''  
+        self.srcdirs = options.get('srcdirs') or ''  
+        self.srcmods = options.get('srcmods') or ''  
         self.docdir = options.get('doc_dir') or 'docs'
         self.builddir = options.get('build_dir') or '_build' 
         self.builder = options.get('build_script') or os.path.join(
@@ -198,12 +178,36 @@ class SphinxBuild(object):
 
 
     def _write_src_docs(self):
+        # first, clean up the old stuff, if any
+        pkgdir = os.path.join(self.docdir, 'srcdocs', 'packages')
+        moddir = os.path.join(self.docdir, 'srcdocs', 'modules')
+        
+        for name in os.listdir(pkgdir):
+            os.remove(os.path.join(pkgdir, name))
+        
+        for name in os.listdir(moddir):
+            os.remove(os.path.join(moddir, name))
+        
         for pack in self.packages.split():
             self.logger.info('creating autodoc file for %s' % pack)
-            f = open(os.path.join(self.docdir, 'srcdocs', 'packages',
-                                  pack+'.rst'), 'w')
+            f = open(os.path.join(pkgdir, pack+'.rst'), 'w')
             _pkg_sphinx_info(self.env, self.branchdir, pack, f, 
                             show_undoc=True, underline='-')
+            f.close()
+        
+        srcs = []
+        for srcdir in self.srcdirs.split():
+            for src in os.listdir(os.path.join(self.branchdir, srcdir)):
+                if src.endswith('.py'):
+                    srcs.append(os.path.join(srcdir, src))
+                    
+        srcs.extend(self.srcmods.split())
+        
+        for src in srcs:
+            f = open(os.path.join(self.docdir, 'srcdocs', 'modules',
+                                  os.path.basename(src)+'.rst'), 'w')
+            self.logger.info('creating autodoc file for %s' % src)
+            _mod_sphinx_info(os.path.basename(src), f)
             f.close()
 
                
@@ -300,4 +304,27 @@ class SphinxBuild(object):
     
     
     update = install  
+
+    
+if __name__ == '__main__':
+    from optparse import OptionParser
+    
+    parser = OptionParser()
+    parser.add_option("-u", "", action="store_true", dest="show_undoc",
+                      help="show undocumented members")
+    parser.add_option("-o", "", action="store", type='string', dest="out",
+                      help="output filename (defaults to stdout)")
+    (options, args) = parser.parse_args(sys.argv[1:])
+    
+    if options.out:
+        outf = open(options.out, 'w')
+    else:
+        outf = sys.stdout
+    
+    if len(args) == 1:
+        _pkg_sphinx_info(args[0], outf, options.show_undoc)
+    else:
+        parser.print_help()
+        sys.exit(-1)
+
 

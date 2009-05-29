@@ -19,7 +19,7 @@ class RefVariable(Variable):
     def __init__(self, name, parent, iostatus, default=UNDEFINED, doc=None):
         self._expr = None
         self._value = None
-        # put ourself in our parent's __dict__ if the name isn't already used
+        # put self in our parent's __dict__ if the name isn't already used
         if parent and not hasattr(parent.__class__, name) and not hasattr(parent, name):
             parent.__dict__[name] = self
         else:
@@ -125,6 +125,9 @@ class RefVariableArray(Variable):
         state['_exprs'] = None
         return state
 
+    def __len__(self):
+        return len(self._get_exprs())
+    
     def _get_exprs(self):
         # self._exprs should only be none after we've been unpickled
         if self._exprs is None:

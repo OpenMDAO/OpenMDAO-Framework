@@ -214,19 +214,13 @@ class Component (Container):
                      format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
 
-            name defaults to the name of the component.
-
-            version defaults to the component's module __version__.
-
-            If force_relative is True, all paths are relative to src_dir.
-
-            src_dir defaults to the component's directory.
-
-            src_files should be a set, and defaults to component's external files.
-
-            dst_dir is the directory to write the egg in.
-
-            tmp_dir is the directory to use for temporary files.
+        - `name` defaults to the name of the component.
+        - `version` defaults to the component's module __version__.
+        - If `force_relative` is True, all paths are relative to `src_dir`.
+        - `src_dir` defaults to the component's directory.
+        - `src_files` should be a set, and defaults to component's external files.
+        - `dst_dir` is the directory to write the egg in.
+        - `tmp_dir` is the directory to use for temporary files.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.

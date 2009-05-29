@@ -1,6 +1,6 @@
 #public symbols
 __all__ = ['Variable', 'UNDEFINED', 
-           'VariableChangedEvent', 'VariableRemovePendingEvent']
+	   'VariableChangedEvent', 'VariableRemovePendingEvent']
 __version__ = "0.1"
 
 import copy
@@ -45,6 +45,13 @@ class Variable(HierarchyMember):
         """
         super(Variable, self).__init__(name, parent, doc)        
 
+        self.valid = False
+        self.observers = None
+        self.permission = None
+        self.iostatus = iostatus
+        self._constraints = []
+        self._passthru = None
+        
         # by default, name of the variable is the same as the obj it refers to
         if ref_name is None:
             self.ref_name = name
@@ -57,13 +64,6 @@ class Variable(HierarchyMember):
         else:
             self._refparent = ref_parent
             
-        self.observers = None
-        self.permission = None
-        self.iostatus = iostatus
-        self._constraints = []
-        self.valid = False
-        self._passthru = None
-        
         if IContainer.providedBy(parent):
             parent.make_public(self)
         else:

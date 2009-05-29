@@ -8,3 +8,5 @@ Source Documentation
    :glob:
    
    packages/*
+
+   modules/*
