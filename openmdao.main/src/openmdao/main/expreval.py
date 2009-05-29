@@ -101,8 +101,6 @@ def _trans_fancyname(strng, loc, tok, exprobj):
         full = scname + ".get('" + tok[0] + "'"
         if len(tok) > 1:
             full += ","+tok[1]
-        if exprobj.force_valid is True:
-            full += ",force_valid=True"
     else:
         full = scname + ".invoke('" + tok[0] + "'"
         if len(tok[1]) > 2:
@@ -218,13 +216,11 @@ class ExprEvaluator(object):
     optional array indexing, but general expressions are not allowed.
     """
     
-    def __init__(self, text, scope, single_name=False, lazy_check=False, 
-                 force_valid=False):
+    def __init__(self, text, scope, single_name=False, lazy_check=False):
         self._scope = weakref.ref(scope)
         self.input_names = set()
         self.output_names = set()
         self.lazy_check = lazy_check
-        self.force_valid = force_valid
         self.single_name = single_name
         self.text = text  # this calls _set_text
         self.rhs = ''

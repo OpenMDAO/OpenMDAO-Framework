@@ -1,6 +1,6 @@
 #public symbols
 __all__ = ['Variable', 'UNDEFINED', 
-           'VariableChangedEvent', 'VariableRemovePendingEvent']
+	   'VariableChangedEvent', 'VariableRemovePendingEvent']
 __version__ = "0.1"
 
 import copy
@@ -45,6 +45,13 @@ class Variable(HierarchyMember):
         """
         super(Variable, self).__init__(name, parent, doc)        
 
+        self.valid = False
+        self.observers = None
+        self.permission = None
+        self.iostatus = iostatus
+        self._constraints = []
+        self._passthru = None
+        
         # by default, name of the variable is the same as the obj it refers to
         if ref_name is None:
             self.ref_name = name
@@ -57,13 +64,6 @@ class Variable(HierarchyMember):
         else:
             self._refparent = ref_parent
             
-        self.observers = None
-        self.permission = None
-        self.iostatus = iostatus
-        self._constraints = []
-        self.valid = False
-        self._passthru = None
-        
         if IContainer.providedBy(parent):
             parent.make_public(self)
         else:
@@ -300,17 +300,10 @@ class Variable(HierarchyMember):
             self.raise_exception("'"+name+"' is not a Variable object", 
                                  NameError)        
         
-    def get(self, name=None, index=None, force_valid=False):
+    def get(self, name=None, index=None):
         """Return the named attribute"""
         if name is None or name == 'value':
             if index is None:
-		if force_valid and self.valid is False:
-		    try:
-			self.parent.update_outputs([self.name])
-		    except Exception, err:
-			raise err.__class__(
-			    'The following error occurred while updating %s to be valid: %s' %
-			    (self.get_pathname(), str(err)))
                 return self.get_value()
             else:
                 return self.get_entry(index)
@@ -323,10 +316,8 @@ class Variable(HierarchyMember):
                     val = val[i]
                 return val
 
-    def get_entry(self, index, force_valid=False):
+    def get_entry(self, index):
         """Retrieve the entry indicated by index."""
-	if force_valid and self.valid is False:
-	    self.parent.update_outputs([self.name])
         l = len(index)
         if l == 1:
             return self.get_value()[index[0]]
