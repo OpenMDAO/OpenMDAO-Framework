@@ -17,10 +17,12 @@ except ImportError:
     _libyaml = False
 
 import datetime
+import modulefinder
 import os
 import pkg_resources
 import platform
 import shutil
+import site
 import subprocess
 import sys
 import tempfile
@@ -85,7 +87,7 @@ class Container(HierarchyMember):
         the pub dict will be included. If recurse is True, child Containers
         will also be iterated over.
         """
-        for entry in self.items(pub,recurse):
+        for entry in self.items(pub, recurse):
             yield entry[0]
         
     def values(self, pub=True, recurse=False):
@@ -94,7 +96,7 @@ class Container(HierarchyMember):
         the pub dict will be included. If recurse is True, child Containers
         will also be iterated over.
         """
-        for entry in self.items(pub,recurse):
+        for entry in self.items(pub, recurse):
             yield entry[1]
     
     def has_invalid_inputs(self):
@@ -179,7 +181,7 @@ class Container(HierarchyMember):
         Returns a list of objects added to the public area.
         """            
 # pylint: disable-msg=R0912
-	pubs = []
+        pubs = []
         if isinstance(obj_info, list):
             lst = obj_info
         else:
@@ -223,12 +225,12 @@ class Container(HierarchyMember):
             if IContainer.providedBy(dobj):
                 dobj.parent = self
                 self._pub[dobj.name] = dobj
-		pubs.append(dobj)
+                pubs.append(dobj)
             else:
                 self.raise_exception(
                     'no IVariable interface available for the object named '+
                     str(name), TypeError)
-	return pubs
+        return pubs
 
     def make_private(self, name):
         """Remove the named object from the _pub container, which will make it
@@ -252,7 +254,7 @@ class Container(HierarchyMember):
         return False
             
     def create(self, type_name, name, version=None, server=None, 
-	       res_desc=None):
+               res_desc=None):
         """Create a new object of the specified type inside of this
         Container.
         
@@ -289,7 +291,7 @@ class Container(HierarchyMember):
                     return self._pub[path].get_entry(index)
             except KeyError:
                 self.raise_exception("object has no attribute '%s'" % path, 
-				     AttributeError)
+                                     AttributeError)
 
         return self._pub[base].get(name, index)
 
@@ -381,17 +383,12 @@ class Container(HierarchyMember):
                     format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
 
-            name defaults to the name of the container.
-
-            version defaults to the container's module __version__.
-
-            If force_relative is True, all paths are relative to src_dir.
-
-            src_dir is the root of all (relative) src_files.
-
-            dst_dir is the directory to write the egg in.
-
-            tmp_dir is the directory to use for temporary files.
+        - `name` defaults to the name of the container.
+        - `version` defaults to the container's module __version__.
+        - If `force_relative` is True, all paths are relative to `src_dir`.
+        - `src_dir` is the root of all (relative) `src_files`.
+        - `dst_dir` is the directory to write the egg in.
+        - `tmp_dir` is the directory to use for temporary files.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
@@ -626,33 +623,85 @@ eggs =
 
     def _get_distributions(self, objs):
         """Return distributions used by objs."""
-
-        def _add_modules(cls, modules):
-            """Record modules required by class."""
-            modname = cls.__module__
-            if modname == '__builtin__':
-                return
-            module = sys.modules[modname]
-            if os.path.isabs(module.__file__):
-                modules.add(module)
-            else:
-                for base in cls.__bases__:
-                    _add_modules(base, modules)
-
-        modules = set()
-        for obj in objs:
-            _add_modules(obj.__class__, modules)
-
-        distributions = set()
         working_set = pkg_resources.WorkingSet()
-        for module in modules:
-            path = module.__file__
-            for dist in working_set:
-                if dist.project_name == 'da':
-                    continue
-                if path.startswith(dist.location):
-                    distributions.add(dist)
+#        for dist in working_set:
+#            self.debug('    %s %s', dist.project_name, dist.version)
+#            self.debug('        %s', dist.location)
+        distributions = set()
+        modules = ['__builtin__']
+        prefixes = []
+        site_lib = os.path.dirname(site.__file__)
+        site_pkg = site_lib+os.sep+'site-packages'
+        py_version = 'python%d.%d' % (sys.version_info[0], sys.version_info[1])
+
+        # For each object found...
+        for obj in objs:
+            try:
+                name = obj.__module__
+            except AttributeError:
+                continue
+#            self.debug('    obj module %s', name)
+            if name in modules:
+#                self.debug('        already known')
+                continue
+            modules.append(name)
+
+            # Skip modules in distributions we already know about.
+            path = sys.modules[name].__file__
+            if path.startswith(site_lib) and not path.startswith(site_pkg):
+#                self.debug("    skipping(1) '%s'", path)
+                continue
+            for prefix in prefixes:
+                if path.startswith(prefix):
+#                    self.debug("    skipping(2) '%s'", path)
                     break
+            else:
+                # Use module finder to get modules that object requires.
+                if path.endswith('.pyc') or path.endswith('.pyo'):
+                    path = path[:-1]
+#                self.debug("    analyzing '%s'...", path)
+                finder = modulefinder.ModuleFinder()
+                finder.run_script(path)
+
+                # For each found module...
+                for name, module in sorted(finder.modules.items(),
+                                           key=lambda item: item[0]):
+#                    self.debug('    found %s', name)
+                    if name in modules:
+#                        self.debug('        already known')
+                        continue
+                    if name != '__main__':
+                        modules.append(name)
+                    try:
+                        path = module.__file__
+                    except AttributeError:
+#                        self.debug('        no __file__')
+                        continue
+                    if not path:
+#                        self.debug('        null __file__')
+                        continue
+                    if path.startswith(site_lib) and \
+                       not path.startswith(site_pkg):
+#                        self.debug("        skipping '%s'", path)
+                        continue
+
+                    # Record distribution.
+                    for dist in working_set:
+                        loc = dist.location
+                        # Protect against a 'bare' location.
+                        if loc.endswith('site-packages') or \
+                           loc.endswith(py_version):
+                            loc += os.sep+dist.project_name
+                        if path.startswith(loc):
+                            distributions.add(dist)
+                            if loc.endswith('.egg'):
+                                prefixes.append(loc)
+#                            self.debug('        adding %s %s',
+#                                       dist.project_name, dist.version)
+                            break
+                    else:
+                        self.warning("        no distribution found for '%s'",
+                                     path)
 
         distributions = sorted(distributions,
                                key=lambda dist: dist.project_name)
@@ -902,13 +951,17 @@ setuptools.setup(
         if info is None:
             raise RuntimeError("No openmdao.top 'top' entry point.")
         if info.module_name in sys.modules.keys():
-            logger.debug("    removing existing '%s' module",
+            logger.debug("    removing existing '%s' in sys.modules",
                          info.module_name)
             del sys.modules[info.module_name]
         if not '.' in sys.path:
             sys.path.append('.')
-        loader = dist.load_entry_point('openmdao.top', 'top')
-        return loader()
+        try:
+            loader = dist.load_entry_point('openmdao.top', 'top')
+            return loader()
+        except Exception, exc:
+            logger.exception('Loader exception:')
+            raise exc
 
     @staticmethod
     def load (instream, format=SAVE_CPICKLE, do_post_load=True):
