@@ -36,7 +36,6 @@ class Driver(Assembly):
         if len(invalid_refs) > 0:
             self._ref_graph = None  # force regeneration of ref graph
             self._ref_graph_noinputs = None
-            
         
         self._sorted_comps = None
         

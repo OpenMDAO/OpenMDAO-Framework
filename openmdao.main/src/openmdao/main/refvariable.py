@@ -19,7 +19,7 @@ class RefVariable(Variable):
     def __init__(self, name, parent, iostatus, default=UNDEFINED, doc=None):
         self._expr = None
         self._value = None
-        # put ourself in our parent's __dict__ if the name isn't already used
+        # put self in our parent's __dict__ if the name isn't already used
         if parent and not hasattr(parent.__class__, name) and not hasattr(parent, name):
             parent.__dict__[name] = self
         else:
@@ -52,8 +52,7 @@ class RefVariable(Variable):
             if self.parent:
                 try:
                     self._expr = ExprEvaluator(refval, self.parent, 
-                                               single_name=single_name,
-                                               force_valid=True)
+                                               single_name=single_name)
                 except RuntimeError, err:
                     msg = str(err)
                     if msg.startswith('Expected'):
@@ -174,8 +173,7 @@ class RefVariableArray(Variable):
                 for s in refval:
                     try:
                         self._exprs.append(ExprEvaluator(s, self.parent, 
-                                                         single_name=single_name,
-                                                         force_valid=True))
+                                                         single_name=single_name))
                     except RuntimeError, err:
                         self.raise_exception(str(err), RuntimeError)
                 self._value = refval

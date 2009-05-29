@@ -262,7 +262,7 @@ class Container(HierarchyMember):
         self.add_child(obj)
         return obj
 
-    def get(self, path, index=None, force_valid=False):
+    def get(self, path, index=None):
         """Return any public object specified by the given 
         path, which may contain '.' characters.  
         
@@ -284,14 +284,14 @@ class Container(HierarchyMember):
         except ValueError:
             try:
                 if index is None:
-                    return self._pub[path].get(None, force_valid=force_valid)
+                    return self._pub[path].get(None)
                 else:
-                    return self._pub[path].get_entry(index, force_valid=force_valid)
+                    return self._pub[path].get_entry(index)
             except KeyError:
                 self.raise_exception("object has no attribute '%s'" % path, 
 				     AttributeError)
 
-        return self._pub[base].get(name, index, force_valid=force_valid)
+        return self._pub[base].get(name, index)
 
     
     def getvar(self, path):

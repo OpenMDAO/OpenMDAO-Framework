@@ -135,13 +135,9 @@ class CONMINdriverTestCase(unittest.TestCase):
         else:
             self.fail('RuntimeError expected')
             
-        self.assertEqual(self.top.comp.result, 0.)
-        self.top.comp.run()
-        self.assertEqual(self.top.comp.result, 31.)
+        self.top.comp.result = 88.
         self.top.driver.objective.value = 'comp.result'
-        self.assertEqual(self.top.driver.objective.refvalue, 31.)
-        self.top.comp.set('x', [0.,0.,0.,0.])
-        self.assertEqual(self.top.driver.objective.refvalue, 50.)
+        self.assertEqual(self.top.driver.objective.refvalue, 88.)
         
     
     def test_bad_design_vars(self):
