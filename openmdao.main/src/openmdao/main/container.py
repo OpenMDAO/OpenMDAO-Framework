@@ -526,14 +526,20 @@ eggs =
         """Get objects to be saved."""
 
         def _recurse_get_objects(obj, objs, visited):
-            """Use __getstate__(), or scan __dict__."""
+            """Use __getstate__(), or scan __dict__, or scan container."""
             try:
                 state = obj.__getstate__()
             except AttributeError:
                 try:
                     state = obj.__dict__
                 except AttributeError:
-                    return
+                    if isinstance(obj, dict) or \
+                       isinstance(obj, list) or \
+                       isinstance(obj, set)  or \
+                       isinstance(obj, tuple):
+                        state = obj
+                    else:
+                        return  # Some non-container primitive.
             except Exception, exc:
                 self.error("During save_to_egg, _get_objects error %s: %s",
                            type(obj), exc)
@@ -543,22 +549,14 @@ eggs =
                 state = state.values()
 
             for obj in state:
-                try:
-                    mod = obj.__module__
-                except AttributeError:
+                if id(obj) in visited:
                     continue
-                if mod == '__builtin__':
-                    continue  # No need to process these.
-                oid = id(obj)
-                if oid in visited:
-                    continue
-                visited.add(oid)
+                visited.append(id(obj))
                 objs.append(obj)
                 _recurse_get_objects(obj, objs, visited)
 
         objs = []
-        visited = set()
-        visited.add(id(self._parent))  # Don't want our parent.
+        visited = [id(self._parent)]  # Don't include our parent.
         _recurse_get_objects(self, objs, visited)
         return objs
 
@@ -597,7 +595,7 @@ eggs =
                     else:
                         self._restore_objects((fixup_objects, fixup_classes,
                                                fixup_modules))
-                        self.raise_exception("Can't find module for '%s'" % \
+                        self.raise_exception("Can't find module for '%s'" %
                                              classname, RuntimeError)
                 obj.__class__ = fixup_classes[classname][1]
                 obj.__module__ = obj.__class__.__module__
@@ -752,7 +750,11 @@ def eggsecutable():
     if debug:
         enable_console()
         logging.getLogger().setLevel(logging.DEBUG)
-    Component.load_from_egg(sys.path[0], install=install)
+    try:
+        Component.load_from_egg(sys.path[0], install=install)
+    except Exception, exc:
+        print str(exc)
+        sys.exit(1)
 
 def main():
     '''Load state and run.'''
@@ -775,15 +777,14 @@ if __name__ == '__main__':
         for filename in sorted(src_files):
             path = os.path.join(name, filename)
             if not os.path.exists(path):
-                self.raise_exception("Can't save, '%s' does not exist" % \
+                self.raise_exception("Can't save, '%s' does not exist" %
                                      path, ValueError)
             out.write("    '%s',\n" % filename)
         out.write(']\n')
 
         out.write('\nrequirements = [\n')
         for dist in distributions:
-            out.write("    '%s == %s',\n" % \
-                      (dist.project_name, dist.version))
+            out.write("    '%s == %s',\n" % (dist.project_name, dist.version))
         out.write(']\n')
 
         out.write("""
@@ -914,6 +915,7 @@ setuptools.setup(
             if info.filename.endswith('.pyc') or \
                info.filename.endswith('.pyo'):
                 continue  # Don't assume compiled OK for this platform.
+
             logger.debug("    extracting '%s' (%d bytes)...",
                          info.filename, info.file_size)
             dirname = os.path.dirname(info.filename)
@@ -959,9 +961,43 @@ setuptools.setup(
         try:
             loader = dist.load_entry_point('openmdao.top', 'top')
             return loader()
+        except pkg_resources.DistributionNotFound, exc:
+            logger.error('Distribution not found: %s', exc)
+            visited = []
+            Container._check_requirements(dist, visited)
+            raise exc
+        except pkg_resources.VersionConflict, exc:
+            logger.error('Version conflict: %s', exc)
+            visited = []
+            Container._check_requirements(dist, visited)
+            raise exc
         except Exception, exc:
             logger.exception('Loader exception:')
             raise exc
+
+    @staticmethod
+    def _check_requirements(dist, visited, level=1):
+        visited.append(dist)
+        indent  = '    ' * level
+        indent2 = '    ' * (level + 1)
+        working_set = pkg_resources.WorkingSet()
+        for req in dist.requires():
+            logger.debug('%schecking %s', indent, req)
+            dist = None
+            try:
+                dist = working_set.find(req)
+            except pkg_resources.VersionConflict:
+                dist = working_set.by_key[req.key]
+                logger.debug('%sconflicts with %s %s', indent2,
+                             dist.project_name, dist.version)
+            else:
+                if dist is None:
+                    logger.debug('%sno distribution found', indent2)
+                else: 
+                    logger.debug('%s%s %s', indent2,
+                                 dist.project_name, dist.version)
+                    if not dist in visited:
+                        Container._check_requirements(dist, visited, level+1)
 
     @staticmethod
     def load (instream, format=SAVE_CPICKLE, do_post_load=True):
