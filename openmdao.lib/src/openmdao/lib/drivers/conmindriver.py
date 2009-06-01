@@ -115,10 +115,13 @@ class CONMINdriver(Driver):
     def execute(self):
         """Perform the optimization."""
         # set conmin array sizes and such
-        if self._first is True:
-            self._config_conmin()
+        #if self._first is True:
+        self._config_conmin()
         self.cnmn1.igoto = 0
         
+        # perform an initial run for self-consistency
+        self.run_referenced_comps()
+
         # get the initial values of the design variables
         for i, val in enumerate(self.design_vars.refvalue):
             self.design_vals[i] = val
@@ -129,12 +132,10 @@ class CONMINdriver(Driver):
                 self.raise_exception('Stop requested', RunStopped)
 
             self._first = False            
-            
+                        
             # calculate objective
-            # NOTE: this actually forces any invalid Variables to be updated
-            #       by running any outdated components, so this is where
-            #       the iteration actually happens.
             self.cnmn1.obj = numarray.array(self.objective.refvalue)
+            
 # TODO: 'step around' ill-behaved cases.
             
             self._load_common_blocks()
@@ -158,7 +159,10 @@ class CONMINdriver(Driver):
             
             # update the design variables in the model
             self.design_vars.refvalue = [float(val) for val in self.design_vals[:-2]]
-
+            
+            # update the model
+            self.run_referenced_comps()
+            
             # calculate constraints
             if self.cnmn1.info == 1:
                 # update constraint value array

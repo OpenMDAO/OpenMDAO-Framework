@@ -424,7 +424,7 @@ class NPSScomponent(Component):
         """ Create object in model. """
         return self._top.create(base_typ, typ, name)
 
-    def get(self, path, index=None, force_valid=False):
+    def get(self, path, index=None):
         """ Return value for attribute. """
         if index is None:
             return getattr(self, path)

@@ -580,7 +580,7 @@ Assemblies
 ----------
 
 Now that python components representing the three vehicle subsystems have been created, they need to be connected so that they can be executed in sequence. In OpenMDAO, a component that contains a collection of other components is called an assembly. The assembly allows a set of components to be linked together by connecting their inputs and outputs. The data connections define an execution order based on the principle of lazy evaluation, where a component is triggered to run by an invalidation (i.e., a change) in any of its inputs.
-In addition, an assembly can also contain a driver, such as an optimizer or a design study. When an assembly does not contain a driver, the assembly executes the components based on the data connection.
+In addition, an assembly can also contain a driver, such as an optimizer or a design study. When an assembly does not explicitly contain a driver, the assembly executes the components based on the data connection.
 
 For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission, Engine, and Vehicle_Dynamics components.
 
@@ -672,9 +672,9 @@ Wrapping an External Module using f2py
 As the most computationally intensive component, the engine model in engine.py is the main performance
 bottleneck during repeated execution. As an interpreted language, Python is not the ideal choice for the
 implementation of a numerical algorithm, particularly where performance is important. Much can be gained by
-implementing the engine model in a compiled language like C or Fortran.
+implementing the engine model in a compiled language like C or FORTRAN.
 
-One of the most important characteristics of Python is that it was designed to be smoothly integrated with other languages, in particular C (in which Python was written) and related languages (Fortran and C++). This is particularly important for a scripting language, where code execution is generally slower, and it is often necessary to use a compiled language like C for implementing computationally intensive functions. On top of this native integration ability, the community has developed some excellent tools, such as F2PY (http://cens.ioc.ee/projects/f2py2e/) (Fortran to Python) and SWIG (Simplified Wrapper and Interface Generator), that simplify the process of building the wrapper for a code. As the name implies, F2PY is a python utility that takes a Fortran source code file and compiles and generates a wrapped object callable from Python. F2PY is actually part of the numerical computing package NumPy. Another tool with broader application is the Simplified Wrapper and Interface Generator (SWIG), which can be used to generate wrappers for C and C++ functions for execution in a variety of different target languages, including Python. For the most general case, Python has the built-in capability to wrap any shared object or dynamically loadable library (DLL) written in any language. This ctypes package is a foreign function interface, and it allows an object to be wrapped without recompiling the library. Care has to be taken when using ctypes to wrap a function that passes data types not native to C. 
+One of the most important characteristics of Python is that it was designed to be smoothly integrated with other languages, in particular C (in which Python was written) and related languages (FORTRAN and C++). This is particularly important for a scripting language, where code execution is generally slower, and it is often necessary to use a compiled language like C for implementing computationally intensive functions. On top of this native integration ability, the community has developed some excellent tools, such as F2PY (http://cens.ioc.ee/projects/f2py2e/) (FORTRAN to Python) and SWIG (Simplified Wrapper and Interface Generator), that simplify the process of building the wrapper for a code. As the name implies, F2PY is a python utility that takes a FORTRAN source code file and compiles and generates a wrapped object callable from Python. F2PY is actually part of the numerical computing package NumPy. Another tool with broader application is the Simplified Wrapper and Interface Generator (SWIG), which can be used to generate wrappers for C and C++ functions for execution in a variety of different target languages, including Python. For the most general case, Python has the built-in capability to wrap any shared object or dynamically loadable library (DLL) written in any language. This ctypes package is a foreign function interface, and it allows an object to be wrapped without recompiling the library. Care has to be taken when using ctypes to wrap a function that passes data types not native to C. 
 
 The main algorithm in engine.py was rewritten in C as engine.C. A wrapped shared object of engine.C was created using F2Py; this tool can also be used to generate wrappers for C code provided that the signature file engine.pyf is manually created. This file engine.pyf defines the interface for the functions found in engine.C, and can be viewed in openmdao.examples/openmdao/examples/engine_design. The C code has been placed in a function called RunEngineCycle that takes the design and simulation variables as inputs. 
 
@@ -703,14 +703,17 @@ The C function containing the engine simulation algorithm is called RunEngineCyc
         self.FuelBurn = FuelBurn[0]
         self.EngineWeight = EngineWeight[0]
 
-Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first element (element zero.)
+Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first element (element zero.) This is not typically needed for return values from FORTRAN codes compiled with f2py, but it seemes to be needed for C codes for which the signature file is manually created. This is something that might be fixable, and will be investigated.
 
 
 Sockets and Interfaces
 ----------------------
 
-Now that we have a functional (and reasonably quick) vehicle component, we now need to complete the problem by providing a way to simulate the acceleration and the EPA fuel economy estimates.
+Now that we have a functional (and reasonably quick) vehicle component, we need to complete the problem by providing a way to simulate the acceleration and the EPA fuel economy estimates. The acceleration test requires an integration in time with the vehicle component being executed at each time step to produce the instantaneous acceleration. The EPA fuel economy tests are a bit more tricky, requiring an integration in time, but the vehicle component must be executed while varying the throttle and gear position inputs to match a desired acceleration for the integration segment. Both of these solution procedures were implemented in a component called Sim_Vehicle, which requires a Vehicle component to perform simulation.
 
+At this point, there are a couple of ways to implement this kind of problem in OpenMDAO. One way is to implement the solution procedure as a driver (or two drivers if prefered.) So far, drivers have only been mentioned as an attribute of assemblies, and they will be more thoroughly treated in the next section. Implementing the vehicle simulation as a driver might be a bit confusing for one's first exposure to drivers, particularly since it involves nesting the simulation driver with an optimizer, so the vehicle simulations were implemented as a Component instead. However, this leads to the introduction to the concept of "Sockets", which requires the implementation to be an Assembly instead of a Component.
+
+In order to investigate designs, a Vehicle class was defined. This class has a set of specific inputs and outputs that include the design variables for the engine, transmission, and dynamics, and the simulation variables velocity, gear position and throttle position. These inputs and outputs comprise an interface for the Vehicle class.
 
 Solving an Optimization Problem
 -------------------------------

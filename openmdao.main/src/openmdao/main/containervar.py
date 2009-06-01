@@ -28,7 +28,7 @@ class ContainerVariable(Variable):
         container = getattr(self.parent, self.ref_name)
         return container.getvar(name)
 
-    def get(self, name=None, index=None, force_valid=False):
+    def get(self, name=None, index=None):
         """Return the value of this Variable, one of its attributes,
         or one of the children of its value, which is itself a Container.
         """
@@ -53,7 +53,7 @@ class ContainerVariable(Variable):
                     self.raise_exception(str(err), TypeError)
         else:
             container = getattr(self._refparent, self.ref_name)
-            return container.get(name, index, force_valid=force_valid)
+            return container.get(name, index)
 
 
     def set(self, path, value, index=None):

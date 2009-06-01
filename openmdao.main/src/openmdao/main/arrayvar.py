@@ -73,10 +73,8 @@ class ArrayVariable(Variable):
                                  ' is not compatible with new value type '+
                                  type(val).__name__, ValueError)
         
-    def get_entry(self, index, force_valid=False):
+    def get_entry(self, index):
         """Return the value of the entry at index in our array value."""
-	if force_valid and self.valid is False:
-	    self.parent.update_outputs([self.name])
         if len(index) == 0:
             self.raise_exception('empty index not allowed',
                                  IndexError)
