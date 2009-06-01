@@ -19,13 +19,13 @@ class Engine(Component):
             stroke = 78.8              # Stroke (mm)
             bore = 82.0                # Bore (mm)
             conrod = 115.0             # Connecting Rod (mm)
-            compRatio = 9.3            # Compression Ratio
-            sparkAngle = -37.0         # Spark Angle ref TDC (degree)
+            comp_ratio = 9.3           # Compression Ratio
+            spark_angle = -37.0        # Spark Angle ref TDC (degree)
             nCyl = 6                   # Number of Cylinders
             IVO = 11.0                 # Intake Valve Open before TDC (degree BTDC)
             IVC = 53.0                 # Intake Valve Close after BDC (degree ABDC)
-            Liv = 8.0                  # Maximum Valve Lift (mm)
-            Div = 41.2                 # Inlet Valve Dia (mm)
+            L_v = 8.0                  # Maximum Valve Lift (mm)
+            D_v = 41.2                 # Inlet Valve Dia (mm)
 
             # Constants
             k = 1.3                    # k (Specific heat ratio for Air)
@@ -34,12 +34,12 @@ class Engine(Component):
             Hu = 44000.0               # Heating Value for gasoline (44000 kJ/kg)
             Tw = 400.0                 # Tw (Combustion Wall Temperature 400 degrees K)
             AFR = 14.6                 # Air Fuel Ratio for gasoline
-            Pexth = 152                # Exhaust gas pressure
-            Pamb = 101.325             # Ambient Pressure (kPa)
-            Tamb = 298                 # Ambient Temperature (deg K)
-            Air_Density = 1.2          # Air Density (1.2 kg/m**2)
-            MwAir = 28.97              # Molecular Weight of Air (g/mol)
-            MwFuel = 114               # Molecular Weight of Gasoline (g/mol)
+            P_exth = 152               # Exhaust gas pressure
+            P_amb = 101.325            # Ambient Pressure (kPa)
+            T_amb = 298                # Ambient Temperature (deg K)
+            air_density = 1.2          # Air Density (1.2 kg/m**2)
+            mw_air = 28.97             # Molecular Weight of Air (g/mol)
+            mw_fuel = 114              # Molecular Weight of Gasoline (g/mol)
 
             # Simulation inputs
             RPM = 1000.0               # RPM
@@ -47,10 +47,10 @@ class Engine(Component):
             thetastep = 1.0            # Simulation time stepsize (crank angle degrees)
 
             # Outputs
-            Power                      # Power at engine output (KW)
-            Torque                     # Torque at engine output (N*m)
-            FuelBurn                   # Fuel burn rate (liters/sec)
-            EngineWeight               # Engine weight estimation (kg)
+            power                      # Power at engine output (KW)
+            torque                     # Torque at engine output (N*m)
+            fuel_burn                  # Fuel burn rate (liters/sec)
+            engine_weight              # Engine weight estimation (kg)
             '''
 
         super(Engine, self).__init__(name, parent, doc, directory)        
@@ -64,9 +64,9 @@ class Engine(Component):
               doc='Cylinder Bore')
         Float('conrod', self, INPUT, units='mm', default=115.0, 
               doc='Connecting Rod Length')
-        Float('compRatio', self, INPUT, units=None, default=9.3, 
+        Float('comp_ratio', self, INPUT, units=None, default=9.3, 
               doc='Compression Ratio')
-        Float('sparkAngle', self, INPUT, units='deg', default=-37.0,
+        Float('spark_angle', self, INPUT, units='deg', default=-37.0,
               doc = 'Spark Angle with respect to TDC (Top Dead Center)')
         Int('nCyl', self, INPUT, default=6,
             doc = 'Number of Cylinders')
@@ -74,23 +74,23 @@ class Engine(Component):
               doc = 'Intake Valve Open before TDC (Top Dead Center)')
         Float('IVC', self, INPUT, units='deg', default=53.0,
               doc = 'Intake Valve Open after BDC (Bottom Dead Center)')
-        Float('Liv', self, INPUT, units='mm', default=8.0, 
+        Float('L_v', self, INPUT, units='mm', default=8.0, 
               doc='Maximum Valve Lift')
-        Float('Div', self, INPUT, units='mm', default=41.2, 
+        Float('D_v', self, INPUT, units='mm', default=41.2, 
               doc='Inlet Valve Diameter')
 
         Float('RPM', self, INPUT, units='1/min', default=1000.0, min_limit=1000,
               max_limit=6000, doc='Engine RPM')
-        Float('Throttle', self, INPUT, units=None, default=1.0, min_limit=0.01,
+        Float('throttle', self, INPUT, units=None, default=1.0, min_limit=0.01,
               max_limit=1.0, doc='Throttle position (from low idle to wide open)')
 
-        Float('Power', self, OUTPUT, units='kW', default=0.0,
+        Float('power', self, OUTPUT, units='kW', default=0.0,
               doc='Power at engine output')
-        Float('Torque', self, OUTPUT, units='N*m', default=0.0,
+        Float('torque', self, OUTPUT, units='N*m', default=0.0,
               doc='Torque at engine output')
-        Float('FuelBurn', self, OUTPUT, units='l/s', default=0.0,
-              doc='Torque at engine output')
-        Float('EngineWeight', self, OUTPUT, units='kg', default=0.0,
+        Float('fuel_burn', self, OUTPUT, units='l/s', default=0.0,
+              doc='Fuel Burn Rate')
+        Float('engine_weight', self, OUTPUT, units='kg', default=0.0,
               doc='Engine weight estimation')
 
 
@@ -108,13 +108,13 @@ class Engine(Component):
         Hu = 44000.0               # Heating Value for gasoline (44000 kJ/kg)
         Tw = 400.0                 # Tw (Combustion Wall Temperature 400 degrees K)
         AFR = 14.6                 # Air Fuel Ratio for gasoline
-        Pexth = 152                # Exhaust gas pressure
-        Pamb = 101.325             # Ambient Pressure (kPa)
-        Tamb = 298                 # Ambient Temperature (deg K)
-        Air_Density = 1.2          # Air Density (1.2 kg/m**2)
-        Fuel_Density = 740.0       # Gasoline Density (740.0 kg/m**2)
-        MwAir = 28.97              # Molecular Weight of Air (g/mol)
-        MwFuel = 114               # Molecular Weight of Gasoline (g/mol)
+        P_exth = 152               # Exhaust gas pressure
+        P_amb = 101.325            # Ambient Pressure (kPa)
+        T_amb = 298                # Ambient Temperature (deg K)
+        air_density = 1.2          # Air Density (1.2 kg/m**2)
+        fuel_density = 740.0       # Gasoline Density (740.0 kg/m**2)
+        mw_air = 28.97             # Molecular Weight of Air (g/mol)
+        mw_fuel = 114              # Molecular Weight of Gasoline (g/mol)
 
         thetastep = 1.0            # Simulation time stepsize (crank angle degrees)
 
@@ -122,37 +122,37 @@ class Engine(Component):
         stroke = self.stroke*.001
         bore = self.bore*.001
         conrod = self.conrod*.001
-        Div = self.Div*.001
-        Liv = self.Liv*.001
-        compRatio = self.compRatio
-        sparkAngle = self.sparkAngle*pi/180.0
+        D_v = self.D_v*.001
+        L_v = self.L_v*.001
+        comp_ratio = self.comp_ratio
+        spark_angle = self.spark_angle*pi/180.0
         nCyl = self.nCyl
         IVO = self.IVO
         IVC = self.IVC
         RPM = self.RPM
-        Throttle = self.Throttle
+        throttle = self.throttle
         
-        Power = 0.0
-        Torque = 0.0
-        FuelBurn = 0.0
-        EngineWeight = 0.0
+        power = 0.0
+        torque = 0.0
+        fuel_burn = 0.0
+        Engine_weight = 0.0
         
         # Call the C model and pass it what it needs.
         
-        Power, Torque, FuelBurn, EngineWeight = RunEngineCycle(
-                    stroke, bore, conrod, compRatio, sparkAngle,
-                    nCyl, IVO, IVC, Liv, Div, k,
-                    R, Ru, Hu, Tw, AFR, Pexth,
-                    Tamb, Pamb, Air_Density, MwAir, MwFuel,
-                    RPM, Throttle, thetastep, Fuel_Density)
+        power, torque, fuel_burn, engine_weight = RunEngineCycle(
+                    stroke, bore, conrod, comp_ratio, spark_angle,
+                    nCyl, IVO, IVC, L_v, D_v, k,
+                    R, Ru, Hu, Tw, AFR, P_exth,
+                    T_amb, P_amb, air_density, mw_air, mw_fuel,
+                    RPM, throttle, thetastep, fuel_density)
 
         
         # Interogate results of engine simulation and store.
         
-        self.Power = Power[0]
-        self.Torque = Torque[0]
-        self.FuelBurn = FuelBurn[0]
-        self.EngineWeight = EngineWeight[0]
+        self.power = power[0]
+        self.torque = torque[0]
+        self.fuel_burn = fuel_burn[0]
+        self.engine_weight = engine_weight[0]
 
 # end engine.py        
 
@@ -166,7 +166,7 @@ if __name__ == "__main__":
     for jj in xrange(1,500):
         z.run()
 
-    print z.Throttle, z.Power, z.Torque, z.FuelBurn, z.EngineWeight
+    print z.throttle, z.power, z.torque, z.fuel_burn, z.engine_weight
         
     print "Elapsed time: ", time.time()-t1
 

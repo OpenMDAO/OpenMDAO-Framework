@@ -11,51 +11,51 @@ class Transmission(Component):
         ''' Creates a new Transmission object
         
             # Design parameters
-            Ratio1              # Gear Ratio in First Gear
-            Ratio2              # Gear Ratio in Second Gear
-            Ratio3              # Gear Ratio in Third Gear
-            Ratio4              # Gear Ratio in Fourth Gear
-            Ratio5              # Gear Ratio in Fifth Gear
-            FinalDriveRatio     # Final Drive Ratio
-            TireCircumference   # Circumference of tire (inches)
+            ratio1              # Gear ratio in First Gear
+            ratio2              # Gear ratio in Second Gear
+            ratio3              # Gear ratio in Third Gear
+            ratio4              # Gear ratio in Fourth Gear
+            ratio5              # Gear ratio in Fifth Gear
+            final_drive_ratio   # Final Drive Ratio
+            tire_circumference  # Circumference of tire (inches)
             
             # Simulation inputs
-            CurrentGear         # Gear Position
-            Velocity            # Vehicle velocity needed to determine engine
+            current_gear        # Gear Position
+            velocity            # Vehicle velocity needed to determine engine
                                   RPM (m/s)
             
             # Outputs
-            TorqueRatio         # Ratio of output torque to engine torque
-            EngineRPM           # EngineRPM 
+            torque_ratio        # Ratio of output torque to engine torque
+            RPM                 # RPM of the engine
             '''
         
         super(Transmission, self).__init__(name, parent, doc, directory)        
         
         # set up interface to the framework  
         # Pylint: disable-msg=E1101
-        Float('Ratio1', self, INPUT, units=None, default=3.54,
-              doc='Gear Ratio in First Gear')
-        Float('Ratio2', self, INPUT, units=None, default=2.13,
-              doc='Gear Ratio in Second Gear')
-        Float('Ratio3', self, INPUT, units=None, default=1.36,
-              doc='Gear Ratio in Third Gear')
-        Float('Ratio4', self, INPUT, units=None, default=1.03,
-              doc='Gear Ratio in Fourth Gear')
-        Float('Ratio5', self, INPUT, units=None, default=0.72,
-              doc='Gear Ratio in Fifth Gear')
-        Float('FinalDriveRatio', self, INPUT, units=None, default=2.80,
+        Float('ratio1', self, INPUT, units=None, default=3.54,
+              doc='Gear ratio in First Gear')
+        Float('ratio2', self, INPUT, units=None, default=2.13,
+              doc='Gear ratio in Second Gear')
+        Float('ratio3', self, INPUT, units=None, default=1.36,
+              doc='Gear ratio in Third Gear')
+        Float('ratio4', self, INPUT, units=None, default=1.03,
+              doc='Gear ratio in Fourth Gear')
+        Float('ratio5', self, INPUT, units=None, default=0.72,
+              doc='Gear ratio in Fifth Gear')
+        Float('final_drive_ratio', self, INPUT, units=None, default=2.80,
               doc='Final Drive Ratio')
-        Float('TireCirc', self, INPUT, units='inch', default=75.0,
+        Float('tire_circ', self, INPUT, units='inch', default=75.0,
               doc='Circumference of tire (inches)')
 
-        Int('CurrentGear', self, INPUT, default=0,
+        Int('current_gear', self, INPUT, default=0,
               doc='Current Gear')
-        Float('Velocity', self, INPUT, units='mi/h', default=0.0,
+        Float('velocity', self, INPUT, units='mi/h', default=0.0,
               doc='Current Velocity of Vehicle')
 
         Float('RPM', self, OUTPUT, units='1/min', default=1000.0, 
               doc='Engine RPM')        
-        Float('TorqueRatio', self, OUTPUT, units=None, default=0.0, 
+        Float('torque_ratio', self, OUTPUT, units=None, default=0.0, 
               doc='Ratio of output torque to engine torque')        
         
     def execute(self):
@@ -63,17 +63,17 @@ class Transmission(Component):
             torque output and engine RPM via the gear ratios.
             '''
         #print '%s.execute()' % self.get_pathname()
-        Ratios = [0.0, self.Ratio1, self.Ratio2, self.Ratio3, self.Ratio4,
-                  self.Ratio5]
+        ratios = [0.0, self.ratio1, self.ratio2, self.ratio3, self.ratio4,
+                  self.ratio5]
         
-        Gear = self.CurrentGear
+        gear = self.current_gear
         
-        self.RPM = (Ratios[Gear]*self.FinalDriveRatio*5280.0*12.0*self.Velocity
-                    )/(60.0*self.TireCirc)
-        self.TorqueRatio = Ratios[Gear]*self.FinalDriveRatio
+        self.RPM = (ratios[gear]*self.final_drive_ratio*5280.0*12.0*self.velocity
+                    )/(60.0*self.tire_circ)
+        self.torque_ratio = ratios[gear]*self.final_drive_ratio
             
         # At low speeds, hold engine speed at 1000 RPM and feather the clutch
-        if self.RPM < 1000.0 and self.CurrentGear == 1 :
+        if self.RPM < 1000.0 and self.current_gear == 1 :
             self.RPM = 1000.0
         
 # End Transmission.py

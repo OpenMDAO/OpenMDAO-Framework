@@ -28,10 +28,10 @@ class Engine_Optimization(Assembly):
         self.driver.maxiters = 30
         
         # CONMIN Objective 
-        self.driver.objective.value = 'vehicle_sim.AccelTime'
+        self.driver.objective.value = 'vehicle_sim.accel_time'
         
         # CONMIN Design Variables 
-        self.driver.design_vars.value = ['vehicle_sim.sparkAngle', 
+        self.driver.design_vars.value = ['vehicle_sim.spark_angle', 
                                          'vehicle_sim.bore' ]
         
         self.driver.lower_bounds = [-50, 65]
@@ -45,11 +45,11 @@ if __name__ == "__main__":
         print Title
         print '---------------------------------'
         print 'Engine: Bore = ', z.vehicle_sim.get('bore')
-        print 'Engine: Spark Angle = ', z.vehicle_sim.get('sparkAngle')
+        print 'Engine: Spark Angle = ', z.vehicle_sim.get('spark_angle')
         print '---------------------------------'
-        print '0-60 Accel Time = ', z.vehicle_sim.AccelTime
-        print 'EPA City MPG = ', z.vehicle_sim.EPACity
-        print 'EPA Highway MPG = ', z.vehicle_sim.EPAHighway
+        print '0-60 Accel Time = ', z.vehicle_sim.accel_time
+        print 'EPA City MPG = ', z.vehicle_sim.EPA_city
+        print 'EPA Highway MPG = ', z.vehicle_sim.EPA_highway
         print '\n'
     
 

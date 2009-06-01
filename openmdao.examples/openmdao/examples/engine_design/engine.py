@@ -15,13 +15,13 @@ class Engine(Component):
             stroke = 78.8              # Stroke (mm)
             bore = 82.0                # Bore (mm)
             conrod = 115.0             # Connecting Rod (mm)
-            compRatio = 9.3            # Compression Ratio
-            sparkAngle = -37.0         # Spark Angle ref TDC (degree)
-            nCyl = 6                   # Number of Cylinders
+            comp_ratio = 9.3           # Compression Ratio
+            spark_angle = -37.0        # Spark Angle ref TDC (degree)
+            ncyl = 6                   # Number of Cylinders
             IVO = 11.0                 # Intake Valve Open before TDC (degree BTDC)
             IVC = 53.0                 # Intake Valve Close after BDC (degree ABDC)
-            Liv = 8.0                  # Maximum Valve Lift (mm)
-            Div = 41.2                 # Inlet Valve Dia (mm)
+            liv = 8.0                  # Maximum Valve Lift (mm)
+            div = 41.2                 # Inlet Valve Dia (mm)
 
             # Constants
             k = 1.3                    # k (Specific heat ratio for Air)
@@ -30,12 +30,12 @@ class Engine(Component):
             Hu = 44000.0               # Heating Value for gasoline (44000 kJ/kg)
             Tw = 400.0                 # Tw (Combustion Wall Temperature 400 degrees K)
             AFR = 14.6                 # Air Fuel Ratio for gasoline
-            Pexth = 152                # Exhaust gas pressure
-            Pamb = 101.325             # Ambient Pressure (kPa)
-            Tamb = 298                 # Ambient Temperature (deg K)
-            Air_Density = 1.2          # Air Density (1.2 kg/m**2)
-            MwAir = 28.97              # Molecular Weight of Air (g/mol)
-            MwFuel = 114               # Molecular Weight of Gasoline (g/mol)
+            P_exth = 152               # Exhaust gas pressure
+            P_amb = 101.325            # Ambient Pressure (kPa)
+            T_amb = 298                # Ambient Temperature (deg K)
+            air_density = 1.2          # Air Density (1.2 kg/m**2)
+            mw_air = 28.97             # Molecular Weight of Air (g/mol)
+            mw_fuel = 114              # Molecular Weight of Gasoline (g/mol)
 
             # Simulation inputs
             RPM = 1000.0               # RPM
@@ -43,10 +43,10 @@ class Engine(Component):
             thetastep = 1.0            # Simulation time stepsize (crank angle degrees)
 
             # Outputs
-            Power                      # Power at engine output (KW)
-            Torque                     # Torque at engine output (N*m)
-            FuelBurn                   # Fuel burn rate (liters/sec)
-            EngineWeight               # Engine weight estimation (kg)
+            power                      # Power at engine output (KW)
+            torque                     # Torque at engine output (N*m)
+            fuel_burn                  # Fuel burn rate (liters/sec)
+            engine_weight              # Engine weight estimation (kg)
             '''
 
         super(Engine, self).__init__(name, parent, doc, directory)        
@@ -60,33 +60,33 @@ class Engine(Component):
               doc='Cylinder Bore')
         Float('conrod', self, INPUT, units='mm', default=115.0, 
               doc='Connecting Rod Length')
-        Float('compRatio', self, INPUT, units=None, default=9.3, 
+        Float('comp_ratio', self, INPUT, units=None, default=9.3, 
               doc='Compression Ratio')
-        Float('sparkAngle', self, INPUT, units='deg', default=-37.0,
+        Float('spark_angle', self, INPUT, units='deg', default=-37.0,
               doc = 'Spark Angle with respect to TDC (Top Dead Center)')
-        Int('nCyl', self, INPUT, default=6,
+        Int('ncyl', self, INPUT, default=6,
             doc = 'Number of Cylinders')
         Float('IVO', self, INPUT, units='deg', default=11.0,
               doc = 'Intake Valve Open before TDC (Top Dead Center)')
         Float('IVC', self, INPUT, units='deg', default=53.0,
               doc = 'Intake Valve Open after BDC (Bottom Dead Center)')
-        Float('Liv', self, INPUT, units='mm', default=8.0, 
+        Float('liv', self, INPUT, units='mm', default=8.0, 
               doc='Maximum Valve Lift')
-        Float('Div', self, INPUT, units='mm', default=41.2, 
+        Float('div', self, INPUT, units='mm', default=41.2, 
               doc='Inlet Valve Diameter')
 
         Float('RPM', self, INPUT, units='1/min', default=1000.0, min_limit=1000,
               max_limit=6000, doc='Engine RPM')
-        Float('Throttle', self, INPUT, units=None, default=1.0, min_limit=0.01,
+        Float('throttle', self, INPUT, units=None, default=1.0, min_limit=0.01,
               max_limit=1.0, doc='Throttle position (from low idle to wide open)')
 
-        Float('Power', self, OUTPUT, units='kW', default=0.0,
+        Float('power', self, OUTPUT, units='kW', default=0.0,
               doc='Power at engine output')
-        Float('Torque', self, OUTPUT, units='N*m', default=0.0,
+        Float('torque', self, OUTPUT, units='N*m', default=0.0,
               doc='Torque at engine output')
-        Float('FuelBurn', self, OUTPUT, units='l/s', default=0.0,
-              doc='Torque at engine output')
-        Float('EngineWeight', self, OUTPUT, units='kg', default=0.0,
+        Float('fuel_burn', self, OUTPUT, units='l/s', default=0.0,
+              doc='Fuel Burn Rate')
+        Float('engine_weight', self, OUTPUT, units='kg', default=0.0,
               doc='Engine weight estimation')
 
 
@@ -104,13 +104,13 @@ class Engine(Component):
         Hu = 44000.0               # Heating Value for gasoline (44000 kJ/kg)
         Tw = 400.0                 # Tw (Combustion Wall Temperature 400 degrees K)
         AFR = 14.6                 # Air Fuel Ratio for gasoline
-        Pexth = 152                # Exhaust gas pressure
-        Pamb = 101.325             # Ambient Pressure (kPa)
-        Tamb = 298                 # Ambient Temperature (deg K)
-        Air_Density = 1.2          # Air Density (1.2 kg/m**2)
-        Fuel_Density = 740.0       # Gasoline Density (740.0 kg/m**2)
-        MwAir = 28.97              # Molecular Weight of Air (g/mol)
-        MwFuel = 114               # Molecular Weight of Gasoline (g/mol)
+        P_exth = 152               # Exhaust gas pressure
+        P_amb = 101.325            # Ambient Pressure (kPa)
+        T_amb = 298                # Ambient Temperature (deg K)
+        air_density = 1.2          # Air Density (1.2 kg/m**2)
+        fuel_density = 740.0       # Gasoline Density (740.0 kg/m**2)
+        mw_air = 28.97              # Molecular Weight of Air (g/mol)
+        mw_fuel = 114               # Molecular Weight of Gasoline (g/mol)
 
         thetastep = 1.0            # Simulation time stepsize (crank angle degrees)
 
@@ -118,11 +118,11 @@ class Engine(Component):
         stroke = self.stroke*.001
         bore = self.bore*.001
         conrod = self.conrod*.001
-        Div = self.Div*.001
-        Liv = self.Liv*.001
-        compRatio = self.compRatio
-        sparkAngle = self.sparkAngle*pi/180.0
-        nCyl = self.nCyl
+        div = self.div*.001
+        liv = self.liv*.001
+        comp_ratio = self.comp_ratio
+        spark_angle = self.spark_angle*pi/180.0
+        ncyl = self.ncyl
         IVO = self.IVO
         IVC = self.IVC
         RPM = self.RPM
@@ -131,9 +131,9 @@ class Engine(Component):
         # Calculations independent of crank angle
         #--------------------------------------------------------------
 
-        disp = .25*pi*bore*bore*stroke*nCyl
+        disp = .25*pi*bore*bore*stroke*ncyl
         l_a = conrod/(.5*stroke)          # a=half the stroke
-        resVol = 1.0/(compRatio-1.0)
+        resVol = 1.0/(comp_ratio-1.0)
         n = RPM*.001
         t_to_theta = RPM/60.0*2.0*pi
         thetastep *= pi/180.0
@@ -142,16 +142,16 @@ class Engine(Component):
 
         # Burn duration valid for speeds between 1000 and 6000 RPM (Eq 3-6)
         # Burn end taken at dQ/dt = 1e-15 (very conservative)
-        burnDuration = (-1.6189*n*n + 19.886*n + 39.951)*pi/180.0
-        burnEnd = 2.0*burnDuration
-        r_burnDuration = 1.0/burnDuration
+        burn_duration = (-1.6189*n*n + 19.886*n + 39.951)*pi/180.0
+        burn_end = 2.0*burn_duration
+        r_burn_duration = 1.0/burn_duration
 
         # Exhaust Temperature valid for speeds between 1000 and 6000 RPM (Eq 3-21)
         T_exh = 3.3955*n*n*n - 51.9*n*n + 279.49*n + 676.21
 
         # Residual Mass
-        # Exhaust gas (Mw = 30.4 g/mol, P = 1.52 atm)
-        m_res = 1.52*(101.325)*30.4*disp/((compRatio-1.0)*T_exh*Ru)
+        # Exhaust gas (mw = 30.4 g/mol, P = 1.52 atm)
+        m_res = 1.52*(101.325)*30.4*disp/((comp_ratio-1.0)*T_exh*Ru)
 
         # Mean Piston Speed
         Cm = 2*stroke*RPM/60.0
@@ -166,8 +166,8 @@ class Engine(Component):
         Pratio_crit = (2/(k+1))**(k/(k-1))
 
         # Fuel-Air Molecular Weight
-        #Mw = (1.0 + AFR)/(AFR*MwAir + 1.0/MwFuel)
-        Mw = (AFR*MwAir + MwFuel)/(1.0+AFR)
+        #mw = (1.0 + AFR)/(AFR*mw_air + 1.0/mw_fuel)
+        mw = (AFR*mw_air + mw_fuel)/(1.0+AFR)
 
         #Hohenberg Correlation: crank-angle independent portion
         h_ind = 130.0 * disp**(-0.06) * (Cm+1.4)**0.8
@@ -176,12 +176,12 @@ class Engine(Component):
         FMEP = .05*n*n + .15*n + .97
 
         # Correct ambient P & T for losses
-        P0 = Pamb*Cf
-        T0 = Tamb*C_heat
+        P0 = P_amb*Cf
+        T0 = T_amb*C_heat
         
         # Orifice equation constant terms
-        C1 = (2000.0*Mw/(Ru*T0) * (k/(k-1)))
-        C2 = thetastep*self.Throttle*P0/t_to_theta
+        C1 = (2000.0*mw/(Ru*T0) * (k/(k-1)))
+        C2 = thetastep*self.throttle*P0/t_to_theta
         e1 = 2.0/k
         e2 = (k + 1.0)/k
         
@@ -194,7 +194,7 @@ class Engine(Component):
         # Initial value for all integration variables (and their dependents)
         mass_in = 0.0
         Qloss = 0.0
-        P = Pexth
+        P = P_exth
         Pmix = 0.0
         pmi = 0.0
 
@@ -221,14 +221,14 @@ class Engine(Component):
             # Weibe Function
             #--------------------------------------------------------------
 
-            thetaSinceSpark = theta - sparkAngle
+            thetaSinceSpark = theta - spark_angle
 
-            if thetaSinceSpark > 0 and thetaSinceSpark < burnEnd:
+            if thetaSinceSpark > 0 and thetaSinceSpark < burn_end:
 
                 # Weibe Function for mass fraction burn (Eq 3-4)
-                # weibe = 1.0 - exp( -5.0*pow( thetaSinceSpark/burnDuration, 3 ) )
-                dWeibe_dtheta = - exp( -5.0*(thetaSinceSpark*r_burnDuration)**3.0 )*(
-                    -15.0*(thetaSinceSpark*r_burnDuration)**2.0)*r_burnDuration
+                # weibe = 1.0 - exp( -5.0*pow( thetaSinceSpark/burn_duration, 3 ) )
+                dWeibe_dtheta = - exp( -5.0*(thetaSinceSpark*r_burn_duration)**3.0 )*(
+                    -15.0*(thetaSinceSpark*r_burn_duration)**2.0)*r_burn_duration
 
                 #--------------------------------------------------------------
                 # Calculate Total Heat Input
@@ -266,12 +266,12 @@ class Engine(Component):
                 phi = valve1*( IVO - IVC + 540 + 2.0*thetad )
 
                 # Valve Lift Function. (Eq 3-16)
-                Lv = .5*Liv*(1+cos(phi))
+                Lv = .5*liv*(1+cos(phi))
 
                 # Valve curtain area. (Eq 3-12)
-                Ar = pi*Div*Lv
+                Ar = pi*div*Lv
     
-                LD = Lv/Div
+                LD = Lv/div
     
                 # Discharge coefficient for inlet poppet valve. (Eq 3-18)
                 CD = ( 190.47*LD*LD*LD*LD - 143.13*LD*LD*LD +
@@ -311,10 +311,10 @@ class Engine(Component):
             #--------------------------------------------------------------
 
             # Temperature
-            Tg = P*V*Mw/((mass_in+m_res)*Ru)
+            Tg = P*V*mw/((mass_in+m_res)*Ru)
 
             # Mixture Pressure (kPa)
-            Pmix = mass_in*T0*Ru/(Mw*V)
+            Pmix = mass_in*T0*Ru/(mw*V)
 
             #--------------------------------------------------------------
             # Calculate Heat Transfer Coefficient
@@ -342,16 +342,16 @@ class Engine(Component):
         BMEP = pmi*thetastep/disp - FMEP
 
         # Effective Power (kwatt=kN*m/sec) (Eq 3-25)
-        self.Power = 0.5*BMEP*RPM*disp*nCyl/60
+        self.power = 0.5*BMEP*RPM*disp*ncyl/60
 
         # Torque (kN*m->Nm) (Eq 3-26)
-        self.Torque = 30.0*self.Power/(pi*RPM)*1000.0
+        self.torque = 30.0*self.power/(pi*RPM)*1000.0
 
         # Fuel Burn (liters/sec)
-        self.FuelBurn = (nCyl*mass_in*1000.0*RPM)/(60.0*Fuel_Density*(1.0+AFR)*2.0)
+        self.fuel_burn = (ncyl*mass_in*1000.0*RPM)/(60.0*fuel_density*(1.0+AFR)*2.0)
 
         # Engine Wieght (Empirical) (kg)
-        self.EngineWeight = (100.0/.002)*(disp-.001) + 75.0
+        self.engine_weight = (100.0/.002)*(disp-.001) + 75.0
 
 # end engine.py        
 
