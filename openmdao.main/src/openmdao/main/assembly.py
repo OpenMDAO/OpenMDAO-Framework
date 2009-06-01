@@ -107,17 +107,22 @@ class Assembly (Component):
         return self._dataflow.get_graph()
     
     def socket_filled (self, name):
-        """Return True if socket is filled"""
-        if name in self._sockets:
+        """Return True if socket is filled."""
+        try:
             return self._sockets[name][1] is not None
-        else:
+        except KeyError:
             self.raise_exception("no Socket named '%s'" % name, AttributeError)
             
     def list_sockets(self):
+        """Return a list of names of Sockets for this Assembly."""
         return self._sockets.keys()
+    
+    def get_socket(self, name):
+        """Return the Socket object with the given name."""
+        return self._sockets[name][0]
 
     def add_child(self, obj):
-        """Update dependency graph and call base class add_child"""
+        """Update dependency graph and call base class add_child."""
         super(Assembly, self).add_child(obj)
         if IComponent.providedBy(obj):
             # This is too early to get accurate Variable info from 
