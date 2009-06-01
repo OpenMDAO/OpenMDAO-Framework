@@ -106,13 +106,6 @@ class IComponent (IContainer):
 
     directory = Attribute('If non-null, the directory to execute in.')
 
-    def add_socket (name, iface, doc=''):
-        """Specify a named placeholder for a component with the given
-        interface."""
-
-    def remove_socket (name):
-        """Remove an existing Socket"""
-
     def post_config ():
         """Perform any final initialization and verification after configuration 
         has been set and this Component is installed in the hierarchy.
@@ -181,17 +174,6 @@ class IAssembly (IComponent):
     connections between its children.
     """
     
-    def add_socket (name, iface, doc=''):
-        """Specify a named placeholder for a component with the given
-        interface or prototype.
-        """
-
-    def socket_filled (name):
-        """Return True if socket is filled"""
-
-    def remove_socket (name):
-        """Remove an existing Socket"""
-
     def remove_child(name):
         """Remove the named object from this container and notify any 
         observers.

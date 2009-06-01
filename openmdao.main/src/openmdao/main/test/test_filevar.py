@@ -113,7 +113,7 @@ class FileTestCase(unittest.TestCase):
             self.model.run()
         except IOError, exc:
             if str(exc).find('source.txt') < 0:
-                self.fail("Wrong message '%s'" % str(exc))
+                self.fail("Wrong message '%s'" % exc)
         else:
             self.fail('IOError expected')
 
@@ -122,7 +122,8 @@ class FileTestCase(unittest.TestCase):
             Source(directory='/illegal')
         except ValueError, exc:
             self.assertEqual(str(exc).startswith(
-                "Source: Illegal execution directory '/illegal', not a decendant of"), True)
+                "Source: Illegal execution directory '/illegal', not a decendant of"),
+                True)
         else:
             self.fail('Expected ValueError')
 
@@ -137,7 +138,7 @@ class FileTestCase(unittest.TestCase):
         except ValueError, exc:
             path = os.path.join(os.getcwd(), directory)
             self.assertEqual(str(exc),
-                "Source: Execution directory path '%s' is not a directory." \
+                "Source: Execution directory path '%s' is not a directory."
                 % path)
         else:
             self.fail('Expected ValueError')
@@ -150,7 +151,8 @@ class FileTestCase(unittest.TestCase):
             self.model.run()
         except ValueError, exc:
             self.assertEqual(str(exc).startswith(
-                "FileVar_TestModel.Source: Illegal directory '/illegal', not a decendant of"), True)
+                "FileVar_TestModel.Source: Illegal directory '/illegal', not a decendant of"),
+                True)
         else:
             self.fail('Expected ValueError')
 
