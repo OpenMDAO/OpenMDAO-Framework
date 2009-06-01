@@ -7,7 +7,7 @@ __version__ = "0.1"
 import os
 import os.path
 import copy
-from collections import deque
+import inspect
 
 from zope.interface import implements
 import networkx as nx
@@ -17,6 +17,7 @@ from openmdao.main.interfaces import IAssembly, IComponent, IDriver, IVariable
 from openmdao.main import Container, String
 from openmdao.main.component import Component, STATE_IDLE
 from openmdao.main.dataflow import Dataflow
+from openmdao.main.socket import Socket
 from openmdao.main.variable import Variable, INPUT, OUTPUT
 from openmdao.main.refvariable import RefVariable, RefVariableArray
 from openmdao.main.constants import SAVE_PICKLE
@@ -24,21 +25,36 @@ from openmdao.main.exceptions import CircularDependencyError
 from openmdao.main.filevar import FileVariable
 from openmdao.main.util import filexfer
 
-
+class MetaAssembly(type):
+    """Metaclass for Assembly that makes Socket declaration a little nicer
+    by telling the Socket objects what their names are.
+    """
+    def __init__ ( cls, class_name, bases, class_dict ):
+        super(MetaAssembly, cls).__init__(class_name, bases, class_dict)
+        socks = cls.__dict__.get('_sockets', {})
+        for name, obj in class_dict.items():
+            if isinstance(obj, Socket):
+                obj.name = name
+                socks[name] = obj
+        cls._sockets = socks
+ 
+        
 class Assembly (Component):
     """This is a container of Components. It understands how
     to connect their inputs and outputs and how to handle
     Sockets.
     """
 
-    implements(IAssembly)
+    __metaclass__ = MetaAssembly
+    
+    #implements(IAssembly)
     
     def __init__(self, name, parent=None, doc=None, directory=''):
         
         self.state = STATE_IDLE
         self._stop = False
         self._dir_stack = []
-        self._sockets = {}
+        self._socket_objs = {}
         self._child_io_graphs = {}
         self._need_child_io_update = True
         
@@ -83,53 +99,12 @@ class Assembly (Component):
     def get_component_graph(self):
         return self._dataflow.get_graph()
     
-    def _get_socket_plugin(self, name):
-        """Return plugin for the named socket"""
-        try:
-            plugin = self._sockets[name][1]
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-        else:
-            if plugin is None:
-                self.raise_exception("socket '%s' is empty" % name,
-                                     RuntimeError)
-            return plugin
-
-    def _set_socket_plugin(self, name, plugin):
-        """Set plugin for the named socket"""
-        try:
-            iface, current, required, doc = self._sockets[name]
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-        else:
-            if plugin is not None and iface is not None:
-                if not iface.providedBy(plugin):
-                    self.raise_exception("plugin does not support '%s'" % \
-                                         iface.__name__, ValueError)
-            self._sockets[name] = (iface, plugin, required, doc)
-
-    def add_socket (self, name, iface, doc='', required=True):
-        """Specify a named placeholder for a component with the given
-        interface or prototype.
-        """
-        assert isinstance(name, basestring)
-        self._sockets[name] = (iface, None, required, doc)
-        setattr(self.__class__, name,
-                property(lambda self : self._get_socket_plugin(name),
-                         lambda self, plugin : self._set_socket_plugin(name, plugin),
-                         None, doc))
-
     def socket_filled (self, name):
         """Return True if socket is filled"""
-        try:
-            return self._sockets[name][1] is not None
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-
-    def remove_socket (self, name):
-        """Remove an existing Socket"""
-        # TODO: what about the property we've installed in the class?
-        del self._sockets[name]
+        if name in self.__class__._sockets:
+            return name in self._socket_objs
+        else:
+            self.raise_exception("no Socket named '%s'" % name, AttributeError)
 
     def add_child(self, obj):
         """Update dependency graph and call base class add_child"""
@@ -194,13 +169,9 @@ class Assembly (Component):
                     self._var_graph.remove_nodes_from(childgraph)
                 del self._child_io_graphs[name]
             
-        if name in self._sockets:
-            setattr(self, name, None)
-            # set delete to False, otherwise delattr will fail because
-            # named object is a property
-            super(Assembly, self).remove_child(name, delete=False)
-        else:
-            super(Assembly, self).remove_child(name)
+        if name in self._socket_objs:
+            del self._socket_objs[name]
+        super(Assembly, self).remove_child(name)
 
     def create_passthru(self, varname, alias=None):
         """Create a Variable that's a copy of var, make it a public member of self,
@@ -448,11 +419,10 @@ class Assembly (Component):
         if any children are added or removed, or if self._need_check_config is True.
         """
         super(Assembly, self).check_config()
-        for name,sock in self._sockets.items():
-            iface, current, required, doc = sock
-            if current is None and required is True:
+        for name, sock in self.__class__._sockets.items():
+            if sock.required and name not in self._socket_objs:
                 self.raise_exception("required plugin '%s' is not present" % name,
-                                     ValueError)
+                                     ValueError)                
         
     def invalidate_deps(self, vars, notify_parent=False):
         """Mark all Variables invalid that depend on vars.
