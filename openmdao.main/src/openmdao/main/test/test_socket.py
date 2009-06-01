@@ -2,7 +2,7 @@
 import unittest
 
 from openmdao.main import Assembly, Component, ListCaseIterator, Case, Int
-from openmdao.main.interfaces import ICaseIterator
+from openmdao.main.interfaces import ICaseIterator, IAssembly
 from openmdao.main.variable import OUTPUT
 from openmdao.main.socket import Socket
 
@@ -19,7 +19,18 @@ class SocketComp(Assembly):
         for case in self.iterator:
             self.num_cases += 1
 
-
+class SocketComp2(SocketComp):
+    somesocket = Socket(None, 'a dumb socket')
+    
+    def __init__(self):
+        super(SocketComp2, self).__init__()
+        
+class SocketComp3(SocketComp2):
+    iterator = Socket(IAssembly, 'another dumb socket')
+    
+    def __init__(self):
+        super(SocketComp3, self).__init__()
+        
 class SocketTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -73,7 +84,23 @@ class SocketTestCase(unittest.TestCase):
                              str(exc))
         else:
             self.fail('AttributeError expected')
+            
+    def test_inherit_sockets(self):
+        sc2 = SocketComp2()
+        self.assertEqual(sc2.socket_filled('iterator'), False)
+        sc2.iterator = ListCaseIterator([Case(), Case(), Case()])
+        self.assertEqual(sc2.socket_filled('iterator'), True)
 
+        self.assertEqual(sc2.socket_filled('somesocket'), False)
+        sc2.somesocket = Case()
+        self.assertEqual(sc2.socket_filled('somesocket'), True)
+        
+        self.assertEqual(['iterator', 'somesocket'], sorted(sc2.list_sockets()))
+        
+    def test_socket_override(self):
+        sc3 = SocketComp3()
+        self.assertEqual(sc3._sockets['iterator'][0].iface, IAssembly)
+        
 
 if __name__ == "__main__":
     unittest.main()

@@ -31,13 +31,19 @@ class MetaAssembly(type):
     """
     def __init__ ( cls, class_name, bases, class_dict ):
         super(MetaAssembly, cls).__init__(class_name, bases, class_dict)
-        socks = cls.__dict__.get('_sockets', {})
+        socks = {}
+        
+        # get Sockets from base classes
+        for base in bases[::-1]:
+            if hasattr(base, '_class_sockets'):
+                for name,obj in base._class_sockets.items():
+                    socks[name] = obj
+                    
         for name, obj in class_dict.items():
             if isinstance(obj, Socket):
                 obj.name = name
                 socks[name] = obj
-        cls._sockets = socks
- 
+        cls._class_sockets = socks
         
 class Assembly (Component):
     """This is a container of Components. It understands how
@@ -47,14 +53,15 @@ class Assembly (Component):
 
     __metaclass__ = MetaAssembly
     
-    #implements(IAssembly)
+    implements(IAssembly)
     
     def __init__(self, name, parent=None, doc=None, directory=''):
         
         self.state = STATE_IDLE
         self._stop = False
         self._dir_stack = []
-        self._socket_objs = {}
+        self._sockets = dict([(s.name, (s, None)) 
+                              for s in self.__class__._class_sockets.values()])
         self._child_io_graphs = {}
         self._need_child_io_update = True
         
@@ -101,10 +108,13 @@ class Assembly (Component):
     
     def socket_filled (self, name):
         """Return True if socket is filled"""
-        if name in self.__class__._sockets:
-            return name in self._socket_objs
+        if name in self._sockets:
+            return self._sockets[name][1] is not None
         else:
             self.raise_exception("no Socket named '%s'" % name, AttributeError)
+            
+    def list_sockets(self):
+        return self._sockets.keys()
 
     def add_child(self, obj):
         """Update dependency graph and call base class add_child"""
@@ -169,8 +179,8 @@ class Assembly (Component):
                     self._var_graph.remove_nodes_from(childgraph)
                 del self._child_io_graphs[name]
             
-        if name in self._socket_objs:
-            del self._socket_objs[name]
+        if name in self._sockets:
+            self._sockets[name][1] = None
         super(Assembly, self).remove_child(name)
 
     def create_passthru(self, varname, alias=None):
@@ -419,8 +429,9 @@ class Assembly (Component):
         if any children are added or removed, or if self._need_check_config is True.
         """
         super(Assembly, self).check_config()
-        for name, sock in self.__class__._sockets.items():
-            if sock.required and name not in self._socket_objs:
+        for name, tup in self._sockets.items():
+            sock, current = tup
+            if sock.required and current is None:
                 self.raise_exception("required plugin '%s' is not present" % name,
                                      ValueError)                
         

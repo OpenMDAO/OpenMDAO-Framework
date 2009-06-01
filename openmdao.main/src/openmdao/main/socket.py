@@ -18,19 +18,23 @@ class Socket(object):
             return self  # allow direct access to Socket object throught owner class
         else:
             try:
-                return instance._socket_objs[self.name][0]
+                plugin = instance._sockets[self.name][1]
             except KeyError:
-                instance.raise_exception("socket '%s' is empty" % self.name,
+                instance.raise_exception("socket '%s' does not exist" % self.name,
                                          RuntimeError)
+            if plugin is None:
+                instance.raise_exception("socket '%s' is empty" % self.name,
+                                         RuntimeError) 
+            return plugin
     
     def __set__(self, instance, plugin):
         if plugin is None:
-            del instance._socket_objs[self.name]
+            instance._sockets[self.name] = (self, None)
         else:
             if self.iface is not None:
                 if not self.iface.providedBy(plugin):
                     instance.raise_exception(
                         "Socket '%s' requires interface '%s'" % \
                         (self.name, self.iface.__name__), ValueError)
-            instance._socket_objs[self.name] = (plugin, self)
+            instance._sockets[self.name] = (self, plugin)
     
