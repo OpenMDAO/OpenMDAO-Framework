@@ -99,7 +99,7 @@ class SocketTestCase(unittest.TestCase):
         
     def test_socket_override(self):
         sc3 = SocketComp3()
-        self.assertEqual(sc3._sockets['iterator'][0].iface, IAssembly)
+        self.assertEqual(sc3.get_socket('iterator').iface, IAssembly)
         
 
 if __name__ == "__main__":
