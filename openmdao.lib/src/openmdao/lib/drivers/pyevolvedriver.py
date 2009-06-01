@@ -8,9 +8,8 @@ from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
 from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
 from pyevolve import GenomeBase
 
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.variable import Variable, INPUT, OUTPUT
 from openmdao.main import Driver, Int, Float, Bool, String, RefVariable
-from openmdao.main.wrapper import Wrapper
 
 def G1DListCrossOverRealHypersphere(genome, **args):
     """ A genome reproduction algorithm, developed by Tristan Hearn at 
@@ -107,7 +106,7 @@ class pyevolvedriver(Driver):
         self.DBAdapter = None #TODO: optional socket
 
         #outputs
-        Wrapper('best_individual',self,OUTPUT,default = self.genome)
+        Variable('best_individual',self,OUTPUT,default = self.genome)
 
 
     def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
