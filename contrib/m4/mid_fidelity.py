@@ -13,11 +13,16 @@ import mool.Optimization.MidFiModel
 from openmdao.main import Component, ArrayVariable, Float, Int, String
 from openmdao.main.interfaces import IComponent
 from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.socket import Socket
 
 import wrapper
 
 class MidFidelity(Component):
     """ Wrapper for M4 variable fidelity capability. """
+
+    # Sockets.
+    lofi_model = Socket(IComponent, 'Low fidelity model')
+    hifi_model = Socket(IComponent, 'High fidelity model')
 
     def __init__(self, name='M4_MidFi', *args, **kwargs):
         super(MidFidelity, self).__init__(name, *args, **kwargs)
@@ -52,10 +57,6 @@ class MidFidelity(Component):
 
         Int('ntheta', self, INPUT, default=3,
             doc='For Kriging method, nthets=1(SA),2(Cobyla),3(BFGS)')
-
-        # Sockets.
-        self.add_socket('lofi_model', IComponent, 'Low fidelity model')
-        self.add_socket('hifi_model', IComponent, 'High fidelity model')
 
         self.input_mappings = []
         self.output_mappings = []
