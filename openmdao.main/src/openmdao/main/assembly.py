@@ -115,6 +115,9 @@ class Assembly (Component):
             
     def list_sockets(self):
         return self._sockets.keys()
+    
+    def get_socket(self, name):
+        return self._sockets[name][0]
 
     def add_child(self, obj):
         """Update dependency graph and call base class add_child"""
