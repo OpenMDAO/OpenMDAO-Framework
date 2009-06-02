@@ -5,7 +5,13 @@ __version__ = "0.1"
 
 import traceback
 import weakref
+import re
+
 from openmdao.main.log import Logger, LOG_DEBUG
+
+# regex to check for valid names.  Added '.' as allowed because
+# npsscomponent uses it, but it could cause problems in other contexts...
+_namecheck_rgx = re.compile('[_a-zA-Z][_a-zA-Z0-9\.]*')
 
 class HierarchyMember(object):
     """Base class for all objects living in the framework accessible
@@ -26,6 +32,12 @@ class HierarchyMember(object):
         self._logger = Logger(self.get_pathname().replace('.', ','))
         self.log_level = LOG_DEBUG
 
+        if name is not None:
+            m = _namecheck_rgx.search(name)
+            if m is None or m.group() != name:
+                self.raise_exception("name '%s' contains illegal characters" %
+                                     name, NameError)
+            
     def get(self, path, index=None):
         """Get a child object using a dotted path name. 
         (not implemented)

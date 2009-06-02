@@ -299,7 +299,8 @@ class Assembly (Component):
         else:
             destvar.valid = False
             self.invalidate_deps([destvar])
-            
+        
+        destvar._source = srcvar
         self._io_graph = None
 
     def disconnect(self, varpath, varpath2=None):
@@ -310,27 +311,42 @@ class Assembly (Component):
         var = vargraph.label[varpath]
         if varpath2 is not None:
             if varpath2 not in vargraph[varpath]:
-                self.raise_exception('%s is not connected' % varpath)
-            vargraph.remove_edge(varpath, varpath2)
+                self.raise_exception('%s is not connected to %s' % 
+                                     (varpath, varpath2), RuntimeError)
             var2 = vargraph.label[varpath2]
+            if var2._source == var:
+                var2._source = None
+            elif var._source == var2:
+                var._source = None
+            else:
+                self.raise_exception('%s and %s are not connected' %
+                                     (varpath, varpath2), RuntimeError) 
+            vargraph.remove_edge(varpath, varpath2)
             if var.parent is not self and var2.parent is not self:
-                self._dataflow.disconnect(var.parent.name, var2.parent.name)
+                self._dataflow.disconnect(var.parent.name, 
+                                          var2.parent.name)
         else:  # remove all connections from the Variable
             if len(vargraph.pred[varpath]) == 0:
-                self.raise_exception('%s is not connected' % varpath, RuntimeError)
-            vargraph.remove_node(varpath)
-            vargraph.add_node(varpath, data=var)
-            if var.parent is not self:
-                # remove outgoing edges
-                for u,v in vargraph[varpath]:
-                    var2 = vargraph.label[v]
-                    if var2.parent is not self and isinstance(var2, Variable):
-                        self._dataflow.disconnect(var.parent.name, var2.parent.name)
-                # remove incoming edges
-                for u,v in vargraph.in_edges_iter(varpath):
-                    var2 = vargraph.label[u]
-                    if var2.parent is not self and isinstance(var2, Variable):
-                        self._dataflow.disconnect(var2.parent.name, var.parent.name)
+                self.raise_exception('%s is not connected' % 
+                                     varpath, RuntimeError)
+            # remove outgoing edges
+            to_remove = []
+            for u,v in vargraph.edges_iter(varpath):
+                var2 = vargraph.label[v]
+                if isinstance(var2, Variable):
+                    to_remove.append((u,v))
+                    if var2.parent is not self and var.parent is not self:
+                        self._dataflow.disconnect(var.parent.name, 
+                                                  var2.parent.name)
+            # remove incoming edges
+            for u,v in vargraph.in_edges_iter(varpath):
+                var2 = vargraph.label[u]
+                if isinstance(var2, Variable):
+                    to_remove.append((u,v))
+                    if var2.parent is not self and var.parent is not self:
+                        self._dataflow.disconnect(var2.parent.name, 
+                                                  var.parent.name)
+            vargraph.remove_edges_from(to_remove)
                 
         self._io_graph = None  # the io graph has changed, so have to remake it
 
