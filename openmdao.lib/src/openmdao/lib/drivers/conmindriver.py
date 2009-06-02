@@ -102,15 +102,6 @@ class CONMINdriver(Driver):
         super(CONMINdriver, self).__setstate__(state)
         self.cnmn1 = conmin.cnmn1
         self._first = True
-
-    def _pre_execute (self):
-        """Override base class _pre_execute in order to determine if ref
-        variables have changed.
-        """
-        # if any of the listed variables are invalid, we have to resize CONMIN arrays
-        self._first = not all([self.getvar(v).valid for v in ['objective', 'constraints', 'design_vars', 
-                                                              'upper_bounds', 'lower_bounds']])
-        super(CONMINdriver, self)._pre_execute()
         
     def execute(self):
         """Perform the optimization."""
@@ -118,6 +109,7 @@ class CONMINdriver(Driver):
         #if self._first is True:
         self._config_conmin()
         self.cnmn1.igoto = 0
+        self._first = True
         
         # perform an initial run for self-consistency
         self.run_referenced_comps()

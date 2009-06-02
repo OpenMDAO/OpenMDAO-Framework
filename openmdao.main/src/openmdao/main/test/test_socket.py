@@ -31,6 +31,10 @@ class SocketComp3(SocketComp2):
     def __init__(self):
         super(SocketComp3, self).__init__()
         
+class SocketComp4(SocketComp3):
+    def __init__(self):
+        super(SocketComp4, self).__init__()
+        
 class SocketTestCase(unittest.TestCase):
 
     def setUp(self):
@@ -100,7 +104,8 @@ class SocketTestCase(unittest.TestCase):
     def test_socket_override(self):
         sc3 = SocketComp3()
         self.assertEqual(sc3.get_socket('iterator').iface, IAssembly)
-        
+        sc4 = SocketComp4()
+        self.assertEqual(sc4.get_socket('iterator').iface, IAssembly)
 
 if __name__ == "__main__":
     unittest.main()
