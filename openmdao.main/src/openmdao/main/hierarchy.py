@@ -10,8 +10,8 @@ import re
 from openmdao.main.log import Logger, LOG_DEBUG
 
 # regex to check for valid names.  Added '.' as allowed because
-# npsscomponent uses it, but it could cause problems in other contexts...
-_namecheck_rgx = re.compile('[_a-zA-Z][_a-zA-Z0-9\.]*')
+# npsscomponent uses it...
+_namecheck_rgx = re.compile('([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
 
 class HierarchyMember(object):
     """Base class for all objects living in the framework accessible

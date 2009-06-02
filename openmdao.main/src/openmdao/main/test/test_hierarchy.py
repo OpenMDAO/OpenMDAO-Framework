@@ -24,7 +24,8 @@ class HierarchyTestCase(unittest.TestCase):
         self.assertEqual(self.h1.__doc__ , "a hierarchy member")
     
     def test_names(self):
-        for name in ['8foobar', 'abc def', 'abc*', 'abc!xx', 'a+b', '0', ' blah', 'blah ']:
+        for name in ['8foobar', 'abc def', 'abc*', 'abc!xx', 'a+b', '0', ' blah', 'blah '
+                     '.', 'abc.', 'abc..xyz']:
             try:
                 h1 = HierarchyMember(name)
             except NameError, err:
