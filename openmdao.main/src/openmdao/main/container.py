@@ -394,6 +394,8 @@ class Container(HierarchyMember):
         Returns the egg's filename.
         """
         orig_dir = os.getcwd()
+        if src_dir and not os.path.isabs(src_dir):
+            src_dir = os.path.abspath(src_dir)
 
         if name is None:
             name = self.name
@@ -428,8 +430,9 @@ class Container(HierarchyMember):
         # Fixup objects, classes, & sys.modules for __main__ imports.
         fixup = self._fix_objects(objs)
         try:
-            # Determine distributions required.
-            required_distributions = self._get_distributions(objs)
+            # Determine distributions and local modules required.
+            required_distributions, local_modules = \
+                self._get_distributions(objs)
 
             # Move to scratch area.
             tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
@@ -444,6 +447,13 @@ class Container(HierarchyMember):
                     os.symlink(src_dir, name)
             else:
                 os.mkdir(name)
+
+            # If orig_dir isn't src_dir, copy local modules from orig_dir.
+            if orig_dir != src_dir:
+                for path in local_modules:
+                    path = orig_dir+os.sep+path
+#                    self.debug('    copy %s -> %s', path, name)
+                    shutil.copy(path, name)
 
             # Save state of object hierarchy.
             if format is SAVE_CPICKLE or format is SAVE_PICKLE:
@@ -620,17 +630,19 @@ eggs =
             del sys.modules[mod]
 
     def _get_distributions(self, objs):
-        """Return distributions used by objs."""
+        """Return (distributions, local_modules) used by objs."""
         working_set = pkg_resources.WorkingSet()
 #        for dist in working_set:
 #            self.debug('    %s %s', dist.project_name, dist.version)
 #            self.debug('        %s', dist.location)
         distributions = set()
+        local_modules = set()
         modules = ['__builtin__']
         prefixes = []
         site_lib = os.path.dirname(site.__file__)
         site_pkg = site_lib+os.sep+'site-packages'
         py_version = 'python%d.%d' % (sys.version_info[0], sys.version_info[1])
+        cwd = os.getcwd()
 
         # For each object found...
         for obj in objs:
@@ -698,15 +710,26 @@ eggs =
 #                                       dist.project_name, dist.version)
                             break
                     else:
-                        self.warning("        no distribution found for '%s'",
-                                     path)
+                        if not os.path.isabs(path):
+                            # No distribution expected.
+                            if os.path.dirname(path) == '.':
+                                # May need to be copied later.
+                                local_modules.add(path)
+                        elif path.startswith(cwd):
+                            # No distribution expected.
+                            if os.path.dirname(path) == cwd:
+                                # May need to be copied later.
+                                local_modules.add(path)
+                        else:
+                            self.warning("        no distribution found for '%s'",
+                                         path)
 
         distributions = sorted(distributions,
                                key=lambda dist: dist.project_name)
         self.debug('    required distributions:')
         for dist in distributions:
             self.debug('        %s %s', dist.project_name, dist.version)
-        return distributions
+        return (distributions, local_modules)
 
     def _write_loader_script(self, path, state_name):
         """Write script used for loading object(s)."""
@@ -824,16 +847,18 @@ setuptools.setup(
                                 stderr=subprocess.STDOUT)
         output = []
         while proc.returncode is None:
-            line = proc.stdout.readline().rstrip()
-            self.debug('    '+line)
-            output.append(line)
+            line = proc.stdout.readline()
+            if line:
+                line = line.rstrip()
+                self.debug('    '+line)
+                output.append(line)
             proc.poll()
-        for line in proc.stdout:
-            if not line:
-                break
+        line = proc.stdout.readline()
+        while line:
             line = line.rstrip()
             self.debug('    '+line)
             output.append(line)
+            line = proc.stdout.readline()
 
         if proc.returncode != 0:
             if self.log_level > LOG_DEBUG:
