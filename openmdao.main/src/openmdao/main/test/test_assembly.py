@@ -111,33 +111,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(top.comp1.run_count, 1)
         self.assertEqual(top.comp2.run_count, 2)
         
-    def test_var_preds(self):
-        top = Assembly('top', None)
-        sub = top.add_child(Assembly('sub'))
-        sub.add_child(Simple('comp1'))
-        sub.add_child(Simple('comp2'))
-        sub.add_child(Simple('comp3'))
-        sub.add_child(Simple('comp4'))
-        sub.add_child(Simple('comp5'))
-        sub.add_child(Simple('comp6'))
-        
-        sub.create_passthru('comp1.a', 'a1')
-        sub.create_passthru('comp3.a', 'a3')
-        sub.create_passthru('comp2.b', 'b2')
-        sub.create_passthru('comp4.b', 'b4')
-        sub.create_passthru('comp6.b', 'b6')
-        sub.create_passthru('comp2.c', 'c2')
-        sub.create_passthru('comp4.c', 'c4')
-        sub.create_passthru('comp1.d', 'd1')
-        sub.create_passthru('comp3.d', 'd3')
-        sub.create_passthru('comp5.d', 'd5')
-        
-        sub.connect('comp1.c', 'comp4.a')
-        sub.connect('comp5.c', 'comp1.b')
-        sub.connect('comp2.d', 'comp5.b')
-        sub.connect('comp3.c', 'comp5.a')
-        sub.connect('comp4.d', 'comp6.a')
-        
+     
     def test_data_passing(self):
         comp1 = self.asm.get('comp1')
         comp2 = self.asm.get('comp2')
