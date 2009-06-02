@@ -8,14 +8,14 @@ import shutil
 import subprocess
 import unittest
 
-from openmdao.examples.engine_design.engine_optimization import Engine_Optimization
+from openmdao.examples.engine_design.engine_optimization import EngineOptimization
 
 
 class EngineOptimizationTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
-        self.model = Engine_Optimization("test_vehicle")
+        self.model = EngineOptimization("test_vehicle")
 
     def tearDown(self):
         if self.model is not None:

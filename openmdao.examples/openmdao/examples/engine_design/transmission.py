@@ -7,6 +7,8 @@ from openmdao.main import Component, Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 
 class Transmission(Component):
+    ''' A simple transmission model.'''
+    
     def __init__(self, name, parent=None, doc=None, directory=''):
         ''' Creates a new Transmission object
         
@@ -68,8 +70,8 @@ class Transmission(Component):
         
         gear = self.current_gear
         
-        self.RPM = (ratios[gear]*self.final_drive_ratio*5280.0*12.0*self.velocity
-                    )/(60.0*self.tire_circ)
+        self.RPM = (ratios[gear]*self.final_drive_ratio*5280.0*12.0 \
+                    *self.velocity)/(60.0*self.tire_circ)
         self.torque_ratio = ratios[gear]*self.final_drive_ratio
             
         # At low speeds, hold engine speed at 1000 RPM and feather the clutch

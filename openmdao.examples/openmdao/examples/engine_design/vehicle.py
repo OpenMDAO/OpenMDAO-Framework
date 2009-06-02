@@ -13,8 +13,7 @@ from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.interfaces import IComponent
 
 from openmdao.examples.engine_design.transmission import Transmission
-from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
-
+from openmdao.examples.engine_design.vehicle_dynamics import VehicleDynamics
 try:
     from openmdao.examples.engine_design.engine_wrap_c import Engine
 except:
@@ -38,7 +37,7 @@ class Vehicle(Assembly):
             conrod = 115.0             # Connecting Rod (mm)
             comp_ratio = 9.3           # Compression Ratio
             spark_angle = -37.0        # Spark Angle ref TDC (degree)
-            nCyl = 6                   # Number of Cylinders
+            n_cyl = 6                  # Number of Cylinders
             IVO = 11.0                 # Intake Valve Open before TDC (degree BTDC)
             IVC = 53.0                 # Intake Valve Close after BDC (degree ABDC)
             L_v = 8.0                  # Maximum Valve Lift (mm)
@@ -78,7 +77,7 @@ class Vehicle(Assembly):
         
         Transmission('transmission', parent=self)
         Engine('engine', parent=self)
-        Vehicle_Dynamics('v_dyn', parent=self)
+        VehicleDynamics('v_dyn', parent=self)
 
         # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
@@ -90,7 +89,7 @@ class Vehicle(Assembly):
         self.create_passthru('engine.conrod')
         self.create_passthru('engine.comp_ratio')
         self.create_passthru('engine.spark_angle')
-        self.create_passthru('engine.nCyl')
+        self.create_passthru('engine.n_cyl')
         self.create_passthru('engine.IVO')
         self.create_passthru('engine.IVC')
         self.create_passthru('engine.L_v')
@@ -111,7 +110,7 @@ class Vehicle(Assembly):
         self.create_passthru('transmission.current_gear')
         self.create_passthru('transmission.velocity')
 
-        # Promoted From Vehicle_Dynamics
+        # Promoted From VehicleDynamics
         self.create_passthru('v_dyn.mass_vehicle')
         self.create_passthru('v_dyn.Cf')
         self.create_passthru('v_dyn.Cd')
@@ -144,6 +143,7 @@ if __name__ == "__main__":
     print z.get('acceleration')
     
     def prz(zz):
+        ''' Printing the results'''
         print "Accel = ", zz.acceleration
         print "Fuelburn = ", zz.fuel_burn
         print "(power, torque) ", zz.power, zz.torque

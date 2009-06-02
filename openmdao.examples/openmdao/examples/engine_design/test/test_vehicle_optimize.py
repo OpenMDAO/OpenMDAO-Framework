@@ -1,17 +1,17 @@
 #
-# Test for Engine_Optimization.py undergoing optimization with CONMIN
+# Test for EngineOptimization.py undergoing optimization with CONMIN
 #
 
 import unittest
 
-from openmdao.examples.engine_design.engine_optimization import Engine_Optimization
+from openmdao.examples.engine_design.engine_optimization import EngineOptimization
 
 
 class EngineOptimizationTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
-        self.model = Engine_Optimization("test_vehicle")
+        self.model = EngineOptimization("test_vehicle")
 
     def tearDown(self):
         self.model.pre_delete()
@@ -19,7 +19,7 @@ class EngineOptimizationTestCase(unittest.TestCase):
         
     def test_runvehicle(self):
         
-        # We are just testing the mechanics of the Engine_Optimization component, so
+        # We are just testing the mechanics of the EngineOptimization component, so
         # set the design variables at the global minimum.
         
         self.model.vehicle_sim.set('bore', 95)

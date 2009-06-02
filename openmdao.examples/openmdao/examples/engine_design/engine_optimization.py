@@ -2,23 +2,22 @@
 #
 # Optimize an engine disign using the sim_vehicle component.
 
-from openmdao.main.interfaces import IComponent
-from openmdao.main import Assembly, Float, Int
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main import Assembly
 
-from openmdao.examples.engine_design.sim_vehicle import Sim_Vehicle
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-class Engine_Optimization(Assembly):
-    """ Engine_Optimization model. """
+from openmdao.examples.engine_design.sim_vehicle import SimVehicle
+
+class EngineOptimization(Assembly):
+    """ Top level assembly for optimizing a vehicle. """
     
     def __init__(self, name, parent=None, directory=''):
-        ''' Creates a new Assembly containing a Sim_Vehicle and an optimizer'''
+        ''' Creates a new Assembly containing a SimVehicle and an optimizer'''
         
-        super(Engine_Optimization, self).__init__(name, parent, directory)
+        super(EngineOptimization, self).__init__(name, parent, directory)
 
-        # Create Sim_Vehicle component instances
-        Sim_Vehicle('vehicle_sim', parent=self)
+        # Create SimVehicle component instances
+        SimVehicle('vehicle_sim', parent=self)
 
         # Create CONMIN Optimizer instance
         CONMINdriver('driver', self)
@@ -40,9 +39,11 @@ class Engine_Optimization(Assembly):
     
 if __name__ == "__main__":
 
-    def prz(Title):
+    def prz(title):
+        ''' Print before and after'''
+        
         print '---------------------------------'
-        print Title
+        print title
         print '---------------------------------'
         print 'Engine: Bore = ', z.vehicle_sim.get('bore')
         print 'Engine: Spark Angle = ', z.vehicle_sim.get('spark_angle')
@@ -54,9 +55,9 @@ if __name__ == "__main__":
     
 
     import time
-    import profile
+    #import profile
     
-    z = Engine_Optimization("Top")
+    z = EngineOptimization("Top")
     
     z.vehicle_sim.run()
     prz('Old Design')
