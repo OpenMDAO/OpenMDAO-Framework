@@ -51,6 +51,7 @@ class Variable(HierarchyMember):
         self.iostatus = iostatus
         self._constraints = []
         self._passthru = None
+	self._source = None  # if not None, this Variable is a destination
         
         # by default, name of the variable is the same as the obj it refers to
         if ref_name is None:
@@ -265,6 +266,12 @@ class Variable(HierarchyMember):
         """Assign this Variable to another Variable, which generally just
         means to assign our value to the value of var. Some Variables will
         override _convert to handle things like unit conversion."""
+	if self._source is not None and self._source != var:
+	    self.raise_exception(
+		("this Variable is already a destination (source is '%s') "+
+		"so setting by '%s' is not allowed") %
+		(self._source.get_pathname(), var.get_pathname()), 
+		RuntimeError)
         if name is None: # they're setting this Variable
             if self._passthru is not var:
                 self.validate_var(var)
@@ -278,6 +285,12 @@ class Variable(HierarchyMember):
         is assumed to be a value and not a Variable object. Assignment to
         'value' will force a check against any constraints registered with
         this Variable."""
+	if self._source is not None:
+	    self.raise_exception(
+		("this Variable is already a destination (source is '%s') "+
+		"so direct setting of its value is not allowed") %
+		self._source.get_pathname(), RuntimeError)
+	    
         if name is None or name == 'value': # they're setting this Variable
             if index is None:
                 self.set_value(value)

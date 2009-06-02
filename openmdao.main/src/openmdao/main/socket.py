@@ -36,5 +36,6 @@ class Socket(object):
                     instance.raise_exception(
                         "Socket '%s' requires interface '%s'" % \
                         (self.name, self.iface.__name__), ValueError)
+            
             instance._sockets[self.name] = (self, plugin)
     
