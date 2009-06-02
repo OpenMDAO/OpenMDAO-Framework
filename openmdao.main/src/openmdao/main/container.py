@@ -607,9 +607,13 @@ eggs =
                                                fixup_modules))
                         self.raise_exception("Can't find module for '%s'" %
                                              classname, RuntimeError)
-                obj.__class__ = fixup_classes[classname][1]
-                obj.__module__ = obj.__class__.__module__
-                fixup_objects.append(obj)
+                try:
+                    obj.__class__ = fixup_classes[classname][1]
+                except KeyError, exc:
+                    self.exception("obj %s classname '%s'" % (obj, classname))
+                else:
+                    obj.__module__ = obj.__class__.__module__
+                    fixup_objects.append(obj)
 
         return (fixup_objects, fixup_classes, fixup_modules)
 

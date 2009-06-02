@@ -350,9 +350,14 @@ class NPSScomponent(Component):
             if self.parent is not None:
                 connections = self.parent.list_connections()
                 for src, dst in connections:
-                    dst_comp, dst_attr = dst.split('.', 1)
-                    if dst_comp == self.name:
-                        saved_inputs.append((dst_attr, self.get(dst_attr)))
+                    try:
+                        dst_comp, dst_attr = dst.split('.', 1)
+                    except ValueError:
+                        pass
+                    else:
+                        if dst_comp == self.name:
+                            saved_inputs.append((dst_attr, self.get(dst_attr)))
+                  
             # Remove model input files from external_files list.
             paths = self._top.inputFileList
             cwd = self.get_directory()+os.sep
@@ -486,11 +491,11 @@ class NPSScomponent(Component):
         """ Perform operations associated with running the component. """
         if self.reload_model:
             self.info('External reload request.')
-            try:
-                self.reload()
-            except Exception, exc:
-                self.raise_exception('Exception during reload: %s' % exc,
-                                     RuntimeError)
+#            try:
+            self.reload()
+#            except Exception, exc:
+#                self.raise_exception('Exception during reload: %s' % exc,
+#                                     RuntimeError)
         elif self.reload_flag:
             try:
                 reload_req = getattr(self._top, self.reload_flag)
