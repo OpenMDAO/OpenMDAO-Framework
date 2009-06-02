@@ -140,7 +140,32 @@ class DepGraphTestCase(unittest.TestCase):
         for comp,vals in zip(allcomps,outs):
             self.assertEqual((comp,vals[0],vals[1]), 
                              (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
-    
+
+    def test_set_already_connected(self):
+        try:
+            self.top.set('sub.comp2.b', 4)
+        except RuntimeError, err:
+            self.assertEqual(str(err), 
+                "top.sub.comp2.b: this Variable is already a destination (source is 'top.sub.b2') so direct setting of its value is not allowed")
+        else:
+            self.fail('RuntimeError expected')
+        try:
+            self.top.set('sub.comp2.b.value', 4)
+        except RuntimeError, err:
+            self.assertEqual(str(err), 
+                "top.sub.comp2.b: this Variable is already a destination (source is 'top.sub.b2') so direct setting of its value is not allowed")
+        else:
+            self.fail('RuntimeError expected')
+        try:
+            self.top.setvar('sub.comp2.b',self.top.getvar('sub.comp3.c'))
+        except RuntimeError, err:
+            self.assertEqual(str(err), 
+                "top.sub.comp2.b: this Variable is already a destination (source is 'top.sub.b2') so setting by 'top.sub.comp3.c' is not allowed")
+        else:
+            self.fail('RuntimeError expected')
+            
+            
+        
 if __name__ == "__main__":
     
     #import cProfile
