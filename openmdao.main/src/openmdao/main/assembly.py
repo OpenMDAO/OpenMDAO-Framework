@@ -44,11 +44,12 @@ class MetaAssembly(type):
                 obj.name = name
                 socks[name] = obj
         cls._class_sockets = socks
+
         
 class Assembly (Component):
     """This is a container of Components. It understands how
-    to connect their inputs and outputs and how to handle
-    Sockets.
+    to connect inputs and outputs between its children 
+    and how to handle Sockets.
     """
 
     __metaclass__ = MetaAssembly

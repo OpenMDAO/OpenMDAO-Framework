@@ -15,9 +15,11 @@ class Adder(Component):
         Float('x1', self, INPUT, default=0.0)
         Float('x2', self, INPUT, default=0.0)
         Float('sum', self, OUTPUT, default=0.0)
+        self.runcount = 0
         
     def execute(self):
         self.sum = self.x1 + self.x2
+        self.runcount += 1
         
 class ExprComp(Component):
     """Evaluates an expression based on the input x and assigns it to f_x"""
@@ -26,10 +28,12 @@ class ExprComp(Component):
         Float('x', self, INPUT, default=0.0)
         Float('f_x', self, OUTPUT, default = 0.0)
         String('expr', self, INPUT, default = expr)
+        self.runcount = 0
         
     def execute(self):
         x = self.x
         self.f_x = eval(self.expr)
+        self.runcount += 1
     
 class ExprComp2(Component):
     """Evaluates an expression based on the inputs x & y and assigns it to f_xy"""
@@ -39,11 +43,13 @@ class ExprComp2(Component):
         Float('y', self, INPUT, default=0.0)
         Float('f_xy', self, OUTPUT, default = 0.0)
         String('expr', self, INPUT, default = expr)
+        self.runcount = 0
         
     def execute(self):
         x = self.x
         y = self.y
         self.f_xy = eval(self.expr)
+        self.runcount += 1
     
         
 class MultiDriverTestCase(unittest.TestCase):
@@ -102,6 +108,12 @@ class MultiDriverTestCase(unittest.TestCase):
                                self.top.comp3.x, places=2)
         self.assertAlmostEqual(self.opt_design_vars[3], 
                                self.top.comp4.x, places=1)
+        runcount = self.top.adder3.runcount
+        
+        # verify that driver will run if any of its referenced variables are invalid
+        self.top.set('comp1.x', 99)
+        self.top.run()
+        self.assertTrue(runcount+2 <= self.top.adder3.runcount)
         
     def test_2_drivers(self):
         ExprComp('comp1a',self.top, expr='x**2')

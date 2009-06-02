@@ -98,8 +98,18 @@ class RefVariable(Variable):
         pathnames of Variables referenced in our reference string. 
         """
         return set([x.split('.')[0] for x in self.get_referenced_varpaths()])
-        
+    
+    def refs_invalid(self):
+        if self.parent:
+            parpar = self.parent.parent
+            
+        if parpar:
+            for varname in self.get_referenced_varpaths():
+                if parpar.getvar(varname).valid is False:
+                    return True
+        return False
 
+    
 class RefVariableArray(Variable):
     """A Variable that contains an array of pathnames that reference other 
     Variables in the framework.
@@ -220,4 +230,13 @@ class RefVariableArray(Variable):
         """
         return set([x.split('.')[0] for x in self.get_referenced_varpaths()])
         
+    def refs_invalid(self):
+        if self.parent:
+            parpar = self.parent.parent
+            
+        if parpar:
+            for varname in self.get_referenced_varpaths():
+                if parpar.getvar(varname).valid is False:
+                    return True
+        return False
     
