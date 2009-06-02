@@ -30,16 +30,27 @@ class Driver(Assembly):
         """Call base class _pre_execute after determining if we have any invalid
         ref variables, which will cause us to have to regenerate our ref dependency graph.
         """
-        invalid_refs = [v for v in self.get_inputs(valid=False) 
-                            if isinstance(v,RefVariable) or
-                               isinstance(v,RefVariableArray)]
+        exec_needed = False
+        refs = [v for v in self.get_inputs() if isinstance(v,RefVariable) or
+                                                isinstance(v,RefVariableArray)]
+        invalid_refs = [v for v in refs if v.valid is False]
         if len(invalid_refs) > 0:
+            exec_needed = True
             self._ref_graph = None  # force regeneration of ref graph
             self._ref_graph_noinputs = None
         
         self._sorted_comps = None
         
         super(Driver, self)._pre_execute()
+        
+        # force execution of the driver if any of its RefVariables reference
+        # invalid Variables
+        for rv in refs:
+            if rv.refs_invalid():
+                exec_needed = True
+                break
+        
+        self._execute_needed |= exec_needed
                 
     def execute(self):
         """ Iterate over a collection of Components until some condition
