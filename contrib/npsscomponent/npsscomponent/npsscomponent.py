@@ -491,11 +491,11 @@ class NPSScomponent(Component):
         """ Perform operations associated with running the component. """
         if self.reload_model:
             self.info('External reload request.')
-#            try:
-            self.reload()
-#            except Exception, exc:
-#                self.raise_exception('Exception during reload: %s' % exc,
-#                                     RuntimeError)
+            try:
+                self.reload()
+            except Exception, exc:
+                self.raise_exception('Exception during reload: %s' % exc,
+                                     RuntimeError)
         elif self.reload_flag:
             try:
                 reload_req = getattr(self._top, self.reload_flag)
