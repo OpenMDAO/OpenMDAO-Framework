@@ -42,6 +42,7 @@ setup(name='openmdao.main',
           'zope.component',
           'zope.schema',
           'ScientificPython',
+          'networkx',
       ],
       entry_points="""
       # -*- Entry points: -*-

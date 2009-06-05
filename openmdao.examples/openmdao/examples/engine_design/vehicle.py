@@ -12,10 +12,14 @@ from openmdao.main import Float, Int
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.interfaces import IComponent
 
-from openmdao.examples.engine_design.engine_wrap_c import Engine
 from openmdao.examples.engine_design.transmission import Transmission
-from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
+from openmdao.examples.engine_design.vehicle_dynamics import VehicleDynamics
+try:
+    from openmdao.examples.engine_design.engine_wrap_c import Engine
+except:
+    from openmdao.examples.engine_design.engine import Engine
 
+    
 class IVehicle(Interface):
     """Vehicle Model interface"""
     
@@ -31,126 +35,119 @@ class Vehicle(Assembly):
             stroke = 78.8              # Stroke (mm)
             bore = 82.0                # Bore (mm)
             conrod = 115.0             # Connecting Rod (mm)
-            compRatio = 9.3            # Compression Ratio
-            sparkAngle = -37.0         # Spark Angle ref TDC (degree)
-            nCyl = 6                   # Number of Cylinders
+            comp_ratio = 9.3           # Compression Ratio
+            spark_angle = -37.0        # Spark Angle ref TDC (degree)
+            n_cyl = 6                  # Number of Cylinders
             IVO = 11.0                 # Intake Valve Open before TDC (degree BTDC)
             IVC = 53.0                 # Intake Valve Close after BDC (degree ABDC)
-            Liv = 8.0                  # Maximum Valve Lift (mm)
-            Div = 41.2                 # Inlet Valve Dia (mm)
+            L_v = 8.0                  # Maximum Valve Lift (mm)
+            D_v = 41.2                 # Inlet Valve Dia (mm)
             
             # Design parameters from Transmission
-            Ratio1                     # Gear Ratio in First Gear
-            Ratio2                     # Gear Ratio in Second Gear
-            Ratio3                     # Gear Ratio in Third Gear
-            Ratio4                     # Gear Ratio in Fourth Gear
-            Ratio5                     # Gear Ratio in Fifth Gear
-            FinalDriveRatio            # Final Drive Ratio
-            TireCircumference          # Circumference of tire (inches)
+            ratio1                     # Gear ratio in First Gear
+            ratio2                     # Gear ratio in Second Gear
+            ratio3                     # Gear ratio in Third Gear
+            ratio4                     # Gear ratio in Fourth Gear
+            ratio5                     # Gear ratio in Fifth Gear
+            final_drive_ratio          # Final Drive Ratio
+            tire_circumference         # Circumference of tire (inches)
             
             # Design parameters from Vehicle Dynamics
-            Mass_Vehicle               # Vehicle Mass (kg)
+            mass_vehicle               # Vehicle Mass (kg)
             Cf                         # Friction coef (proportional to V)
             Cd                         # Drag coef (proportional to V**2)
-            Area                       # Frontal area (for drag calc) (sq m)
+            area                       # Frontal area (for drag calc) (sq m)
             
             # Simulation Inputs
-            CurrentGear                # Gear Position
+            current_gear               # Gear Position
             throttle                   # Throttle Position
-            Velocity                   # Vehicle velocity needed to determine
+            velocity                   # Vehicle velocity needed to determine
                                          engine RPM (m/s)
             
             # Outputs
-            Power                      # Power at engine output (KW)
-            Torque                     # Torque at engine output (N*m)
-            FuelBurn                   # Fuel burn rate (liters/sec)
-            Acceleration               # Calculated vehicle acceleration (m/s^2)
+            power                      # Power at engine output (KW)
+            torque                     # Torque at engine output (N*m)
+            fuel_burn                  # Fuel burn rate (liters/sec)
+            acceleration               # Calculated vehicle acceleration (m/s^2)
             '''
         
         super(Vehicle, self).__init__(name, parent, directory)
 
         # Create component instances
         
-        # FIXME: uncomment add_socket after sockets work with pickle
-        #self.add_socket('Transmission', IComponent, required=True)
-        Transmission('Transmission', parent=self)
-        
-        # FIXME: uncomment add_socket after sockets work with pickle
-        #self.add_socket('Engine', IComponent, required=True)
-        Engine('Engine', parent=self)
-
-        # FIXME: uncomment add_socket after sockets work with pickle
-        #self.add_socket('VDyn', IComponent, required=True)
-        Vehicle_Dynamics('VDyn', parent=self)
+        Transmission('transmission', parent=self)
+        Engine('engine', parent=self)
+        VehicleDynamics('v_dyn', parent=self)
 
         # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
         # "Instance of <class> has no <attr> member"        
         
         # Promoted From Engine
-        self.create_passthru('Engine.stroke')
-        self.create_passthru('Engine.bore')
-        self.create_passthru('Engine.conrod')
-        self.create_passthru('Engine.compRatio')
-        self.create_passthru('Engine.sparkAngle')
-        self.create_passthru('Engine.nCyl')
-        self.create_passthru('Engine.IVO')
-        self.create_passthru('Engine.IVC')
-        self.create_passthru('Engine.Liv')
-        self.create_passthru('Engine.Div')
-        self.create_passthru('Engine.Throttle')
-        self.create_passthru('Engine.Power')
-        self.create_passthru('Engine.Torque')
-        self.create_passthru('Engine.FuelBurn')
+        self.create_passthru('engine.stroke')
+        self.create_passthru('engine.bore')
+        self.create_passthru('engine.conrod')
+        self.create_passthru('engine.comp_ratio')
+        self.create_passthru('engine.spark_angle')
+        self.create_passthru('engine.n_cyl')
+        self.create_passthru('engine.IVO')
+        self.create_passthru('engine.IVC')
+        self.create_passthru('engine.L_v')
+        self.create_passthru('engine.D_v')
+        self.create_passthru('engine.throttle')
+        self.create_passthru('engine.power')
+        self.create_passthru('engine.torque')
+        self.create_passthru('engine.fuel_burn')
 
         # Promoted From Transmission
-        self.create_passthru('Transmission.Ratio1')
-        self.create_passthru('Transmission.Ratio2')
-        self.create_passthru('Transmission.Ratio3')
-        self.create_passthru('Transmission.Ratio4')
-        self.create_passthru('Transmission.Ratio5')
-        self.create_passthru('Transmission.FinalDriveRatio')
-        self.create_passthru('Transmission.TireCirc')
-        self.create_passthru('Transmission.CurrentGear')
-        self.create_passthru('Transmission.Velocity')
+        self.create_passthru('transmission.ratio1')
+        self.create_passthru('transmission.ratio2')
+        self.create_passthru('transmission.ratio3')
+        self.create_passthru('transmission.ratio4')
+        self.create_passthru('transmission.ratio5')
+        self.create_passthru('transmission.final_drive_ratio')
+        self.create_passthru('transmission.tire_circ')
+        self.create_passthru('transmission.current_gear')
+        self.create_passthru('transmission.velocity')
 
-        # Promoted From Vehicle_Dynamics
-        self.create_passthru('VDyn.Mass_Vehicle')
-        self.create_passthru('VDyn.Cf')
-        self.create_passthru('VDyn.Cd')
-        self.create_passthru('VDyn.Area')
-        #self.create_passthru('VDyn.Velocity')
-        self.connect('Velocity', 'VDyn.Velocity')
-        self.connect('TireCirc', 'VDyn.TireCirc')
-        self.create_passthru('VDyn.Acceleration')
+        # Promoted From VehicleDynamics
+        self.create_passthru('v_dyn.mass_vehicle')
+        self.create_passthru('v_dyn.Cf')
+        self.create_passthru('v_dyn.Cd')
+        self.create_passthru('v_dyn.area')
+        #self.create_passthru('v_dyn.elocity')
+        self.connect('velocity', 'v_dyn.velocity')
+        self.connect('tire_circ', 'v_dyn.tire_circ')
+        self.create_passthru('v_dyn.acceleration')
         # NOTE: Tire Circumference also needed by Transmission.
 
         # Hook it all up
         
-        self.connect('Transmission.RPM','Engine.RPM')
-        self.connect('Transmission.TorqueRatio','VDyn.Torque_Ratio')
-        self.connect('Engine.Torque','VDyn.Engine_Torque')
-        self.connect('Engine.EngineWeight','VDyn.Mass_Engine')
+        self.connect('transmission.RPM','engine.RPM')
+        self.connect('transmission.torque_ratio','v_dyn.torque_ratio')
+        self.connect('engine.torque','v_dyn.engine_torque')
+        self.connect('engine.engine_weight','v_dyn.mass_engine')
 
 
         
 if __name__ == "__main__": 
     top = Assembly('top')
     z = Vehicle("Testing", parent=top)        
-    z.set('CurrentGear', 1)
-    z.set('Velocity', 20.0*(26.8224/60.0))
-    #z.Throttle = .2
+    z.set('current_gear', 1)
+    z.set('velocity', 20.0*(26.8224/60.0))
+    #z.throttle = .2
 #    for throttle in xrange(1,101,1):
-#        z.set('Throttle', throttle/100.0)
-    z.set('Throttle', 1.0)
+#        z.set('throttle', throttle/100.0)
+    z.set('throttle', 1.0)
     z.run()
-    print z.get('Acceleration')
+    print z.get('acceleration')
     
     def prz(zz):
-        print "Accel = ", zz.Acceleration
-        print "Fuelburn = ", zz.FuelBurn
-        print "(Power, Torque) ", zz.Power, zz.Torque
-        print "RPM = ", zz.Engine.RPM
+        ''' Printing the results'''
+        print "Accel = ", zz.acceleration
+        print "Fuelburn = ", zz.fuel_burn
+        print "(power, torque) ", zz.power, zz.torque
+        print "RPM = ", zz.engine.RPM
         
 #    prz(z)
 

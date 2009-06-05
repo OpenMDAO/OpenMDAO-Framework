@@ -2,8 +2,7 @@
 import unittest
 
 from openmdao.main import Container,Float,Variable
-from openmdao.main.wrapper import Wrapper
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.variable import Variable, INPUT, OUTPUT
 
 import random
 
@@ -34,7 +33,7 @@ class test_Variable_as_Wrapper(unittest.TestCase):
     def setUp(self):
         self.hobj = Container('h1', None)
         self.hobj.Justin = Person('Justin',.5)
-        self.Justin = Wrapper('Justin',self.hobj,INPUT)
+        self.Justin = Variable('Justin',self.hobj,INPUT)
     def tearDown(self):
         pass
         
@@ -51,7 +50,7 @@ class test_Variable_as_Wrapper(unittest.TestCase):
     def test_validation(self):
         x = Float('x',self.hobj,INPUT,default = 2.5)
         Scott = Person('Scott',1.0)
-        y = Wrapper('y',self.hobj,OUTPUT,default=Person('Bret',.2))
+        y = Variable('y',self.hobj,OUTPUT,default=Person('Bret',.2))
         z = Variable('z',self.hobj,INPUT,default=Person('Bret',.2))
         
         
@@ -64,14 +63,8 @@ class test_Variable_as_Wrapper(unittest.TestCase):
         try: 
             self.hobj.setvar('Justin',x)
         except TypeError,err: 
-            self.assertEqual(str(err),"h1.Justin contains an object of type: <class 'test_wrapperVariable.Person'> which is incompatible with the type contained in h1.x: <type 'float'>")
+            self.assertEqual(str(err),
+                "h1.Justin: assignment to incompatible variable 'h1.x' of type '<class 'openmdao.main.float.Float'>'")
         else: 
             self.fail("Expecting TypeError")
         
-        """ #test which shows why regular Variable class can't be used
-        try: 
-            self.hobj.setvar('z',x)
-        except TypeError,err: 
-            self.assertEqual(str(err),"h1.Justin contains an object of type: <class 'test_wrapperVariable.Person'> which is incompatible with the type contained in h1.x: <type 'float'>")
-        else: 
-            self.fail("Expecting TypeError")      """  

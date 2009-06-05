@@ -10,6 +10,7 @@ __version__ = "0.1"
 #from __future__ import division
 
 import weakref
+import math
 
 from pyparsing import Word, ZeroOrMore, OneOrMore, Literal, CaselessLiteral
 from pyparsing import oneOf, alphas, nums, alphanums, Optional, Combine
@@ -20,7 +21,9 @@ def _trans_unary(strng, loc, tok):
     return tok
 
     
-def _trans_lhs(strng, loc, tok, scope, validate, exprobj):
+def _trans_lhs(strng, loc, tok, exprobj):
+    scope = exprobj._scope()
+    lazy_check = exprobj.lazy_check
     if scope.contains(tok[0]):
         scname = 'scope'
     else:
@@ -29,7 +32,7 @@ def _trans_lhs(strng, loc, tok, scope, validate, exprobj):
             scope.warning("attribute '"+tok[0]+"' is private"+
                           " so a public value in the parent is"+
                           " being used instead (if found)")
-        if validate is True and not scope.parent.contains(tok[0]):
+        if lazy_check is False and not scope.parent.contains(tok[0]):
             raise RuntimeError("cannot find variable '"+tok[0]+"'")
         
         exprobj._register_output(tok[0])
@@ -69,10 +72,13 @@ def _trans_arglist(strng, loc, tok):
         full += ','+tok[index]
     return [full+")"]
 
-def _trans_fancyname(strng, loc, tok, scope, validate, exprobj):
+def _trans_fancyname(strng, loc, tok, exprobj):
     # if we find the named object in the current scope, then we don't need to 
     # do any translation.  The scope object is assumed to have a contains() 
     # function.
+    scope = exprobj._scope()
+    lazy_check = exprobj.lazy_check
+    
     if scope.contains(tok[0]):
         scname = 'scope'
         if hasattr(scope, tok[0]):
@@ -85,7 +91,7 @@ def _trans_fancyname(strng, loc, tok, scope, validate, exprobj):
             scope.warning("attribute '%s' is private" % tok[0]+
                           " so a public value in the parent is"+
                           " being used instead (if found)")
-        if validate is True and (scope.parent is None or 
+        if lazy_check is False and (scope.parent is None or 
                                  not scope.parent.contains(tok[0])):
             raise RuntimeError("cannot find variable '"+tok[0]+"'")
     
@@ -110,7 +116,7 @@ def translate_expr(text, exprobj, single_name=False):
     becomes invoke('a.b.c',1,2,3).
     """
     scope = exprobj._scope()
-    validate = exprobj.validate
+    lazy_check = exprobj.lazy_check
     
     ee = CaselessLiteral('E')
     comma    = Literal( "," )    
@@ -159,7 +165,7 @@ def translate_expr(text, exprobj, single_name=False):
     # with extra arguments to specify the scope used for the translation,
     # the validation flag, and the ExprEvaluator object.
     fancyname.setParseAction(
-        lambda s,loc,tok: _trans_fancyname(s,loc,tok,scope, validate, exprobj))
+        lambda s,loc,tok: _trans_fancyname(s,loc,tok,exprobj))
 
     addop  = plus | minus
     multop = mult | div
@@ -173,7 +179,7 @@ def translate_expr(text, exprobj, single_name=False):
     
     lhs_fancyname = pathname + ZeroOrMore(arrayindex)
     lhs = lhs_fancyname + assignop
-    lhs.setParseAction(lambda s,loc,tok: _trans_lhs(s,loc,tok,scope,validate,exprobj))
+    lhs.setParseAction(lambda s,loc,tok: _trans_lhs(s,loc,tok,exprobj))
     equation = Optional(lhs) + Combine(expr) + StringEnd()
     equation.setParseAction(lambda s,loc,tok: _trans_assign(s,loc,tok, exprobj))
     
@@ -201,20 +207,20 @@ class ExprEvaluator(object):
     would translate to 
     "a+b[2]-self.parent.invoke('comp.y',self.parent.get('x'))".
     
-    If validate is True, any objects referenced in the expression must exist
+    If lazy_check is False, any objects referenced in the expression must exist
     at creation time (or any time later that text is set to a different value)
-    or a RuntimeError will be raised.  If validate is False, error reporting will
+    or a RuntimeError will be raised.  If lazy_check is True, error reporting will
     be delayed until the expression is evaluated.
     
     If single_name is True, the expression can only be the name one object, with
     optional array indexing, but general expressions are not allowed.
     """
     
-    def __init__(self, text, scope, single_name=False, validate=True):
+    def __init__(self, text, scope, single_name=False, lazy_check=False):
         self._scope = weakref.ref(scope)
         self.input_names = set()
         self.output_names = set()
-        self.validate = validate
+        self.lazy_check = lazy_check
         self.single_name = single_name
         self.text = text  # this calls _set_text
         self.rhs = ''
@@ -245,16 +251,16 @@ class ExprEvaluator(object):
                                           single_name=self.single_name)
         self._code = compile(self.scoped_text, '<string>','eval')
         if self.single_name: # set up a compiled assignment statement
-            old_validate = self.validate
+            old_lazy_check = self.lazy_check
             try:
-                self.validate = False
+                self.lazy_check = True
                 self.scoped_assignment_text = translate_expr(
                                             '%s = _local_setter' % self.text, 
                                             self)
                 self._assignment_code = compile(self.scoped_assignment_text, 
                                                 '<string>','exec')
             finally:
-                self.validate = old_validate
+                self.lazy_check = old_lazy_check
         
     def _get_text(self):
         return self._text
@@ -291,8 +297,7 @@ class ExprEvaluator(object):
             # of the form  'somevar = _local_setter', so we set _local_setter here
             # and the exec call will pull it out of locals()
             _local_setter = val 
-            exec(self._assignment_code, scope.__dict__, locals())
-            
+            exec(self._assignment_code, scope.__dict__, locals())            
         else: # self.single_name is False
             raise ValueError('trying to set an input expression')
         

@@ -40,3 +40,5 @@ contrib/npsscomponent/npsscomponent/examples/Geiselhart/NPSS_*
 contrib/npsscomponent/npsscomponent/test/openmdao_log.txt
 docs/srcdocs/packages/npsscomponent.rst
 openmdao.util.rst
+docs/srcdocs/modules/dumpeggmeta.py.rst
+docs/srcdocs/modules/repo.py.rst

@@ -17,6 +17,8 @@ framework architecture is done by writing Python code. While the tutorial proble
 user to utilize the framework via all available interfaces, it is difficult to construct a tutorial that
 achieves the same level of interactivity for a scripting interface as for a graphical one. 
 
+In order to use this tutorial, it is assumed that the user has already created a local copy of the code repository. Please see the OpenMDAO Developers Guide for details on how to do this.
+
 Problem Overview
 ----------------
 
@@ -81,7 +83,7 @@ There are two tasks that the transmission model must perform:
 The transmission modeled here is a 5-speed manual. Shifting is assumed to occur instantaneously when the
 simulation input CurrentGear is given a new value. When the clutch is engaged, there is a direct linkage
 between the wheel rotation and the engine rotation via the current gear ratio and the differential ratio,
-so the Engine RPM can be calculated given the velocity. However, this direct linkage would cause the
+so the engine RPM can be calculated given the velocity. However, this direct linkage would cause the
 engine RPM to go to zero as the vehicle stops, so the transmission model assumes that the clutch is
 partially disengaged for low speed operation (i.e., where the engine speed would drop below 1000 RPM) and
 sets the engine speed to 1000 RPM. This only occurs when the transmission is in first gear.
@@ -89,23 +91,23 @@ sets the engine speed to 1000 RPM. This only occurs when the transmission is in 
 
 **Transmission - Design Variables:**
 
-=================  ===========================================  ======
-**Variable**	 	  **Description**			**Units**
------------------  -------------------------------------------  ------
-Ratio1		   Gear ratio in first gear			
------------------  -------------------------------------------  ------
-Ratio2		   Gear ratio in second gear			
------------------  -------------------------------------------  ------
-Ratio3		   Gear ratio in third gear			
------------------  -------------------------------------------  ------
-Ratio4		   Gear ratio in fourth gear			
------------------  -------------------------------------------  ------
-Ratio5		   Gear ratio in fifth gear			
------------------  -------------------------------------------  ------
-FinalDriveRatio    Gear ratio for vehicle's differential	
------------------  -------------------------------------------  ------
-TireCircumference  Circumference of the tire			inch
-=================  ===========================================  ======
+==================  ===========================================  ======
+**Variable**	 	  **Description**			 **Units**
+------------------  -------------------------------------------  ------
+ratio1		    Gear ratio in first gear			
+------------------  -------------------------------------------  ------
+ratio2		    Gear ratio in second gear			
+------------------  -------------------------------------------  ------
+ratio3		    Gear ratio in third gear			
+------------------  -------------------------------------------  ------
+ratio4		    Gear ratio in fourth gear			
+------------------  -------------------------------------------  ------
+ratio5		    Gear ratio in fifth gear			
+------------------  -------------------------------------------  ------
+final_drive_ratio   Gear ratio for vehicle's differential	
+------------------  -------------------------------------------  ------
+tire_circumference  Circumference of the tire			 inch
+==================  ===========================================  ======
 
 |
 
@@ -114,9 +116,9 @@ TireCircumference  Circumference of the tire			inch
 =================     ===========================================  ======
 **Variable**	 	  **Description**			   **Units**
 -----------------     -------------------------------------------  ------
-CurrentGear           Current gear position
+current_gear          Current gear position
 -----------------     -------------------------------------------  ------
-Velocity	      Current vehicle velocity			   m/s
+velocity	      Current vehicle velocity			   m/s
 =================     ===========================================  ======
 
 |
@@ -126,10 +128,10 @@ Velocity	      Current vehicle velocity			   m/s
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
 -----------------  -------------------------------------------  ------
-TorqueRatio	   Ratio of transmission output power to power 
+torque_ratio	   Ratio of transmission output power to power 
                    at the wheel
 -----------------  -------------------------------------------  ------
-EngineRPM	   Engine rotational speed			rev/s
+RPM    		   Engine rotational speed			rev/s
 =================  ===========================================  ======
 
   
@@ -189,19 +191,19 @@ bore		   Bore (cylinder diameter)			mm
 -----------------  -------------------------------------------  ------
 conrod		   Connecting rod length			mm
 -----------------  -------------------------------------------  ------
-compRatio	   Volumetric ratio of compression			
+comp_ratio	   Volumetric ratio of compression			
 -----------------  -------------------------------------------  ------
-sparkAngle	   Spark angle with respect to top dead center	deg		
+spark_angle	   Spark angle with respect to top dead center	deg		
 -----------------  -------------------------------------------  ------
-nCyl    	   Number of Cylinders	
+n_cyl    	   Number of Cylinders	
 -----------------  -------------------------------------------  ------
 IVO  		   Intake valve open before top dead center     deg
 -----------------  -------------------------------------------  ------
 IVC  		   Intake valve close after bottom dead center  deg
 -----------------  -------------------------------------------  ------
-Liv  		   Maximum valve lift                           mm
+L_v  		   Maximum valve lift                           mm
 -----------------  -------------------------------------------  ------
-Div  		   Intake valve diameter                        mm
+D_v  		   Intake valve diameter                        mm
 =================  ===========================================  ======
 
 |
@@ -223,13 +225,13 @@ throttle	   Throttle position
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
 -----------------  -------------------------------------------  ------
-Power		   Power produced by engine			kW
+power		   Power produced by engine			kW
 -----------------  -------------------------------------------  ------
-Torque		   Torque produced by engine			N*m
+torque		   Torque produced by engine			N*m
 -----------------  -------------------------------------------  ------
-FuelBurn	   Fuel burn rate				li/sec
+fuel_burn	   Fuel burn rate				li/sec
 -----------------  -------------------------------------------  ------
-EngineWieght	   Engine weight estimate			kg
+engine_weight	   Engine weight estimate			kg
 =================  ===========================================  ======
 
 
@@ -257,31 +259,31 @@ associated with the tires and the vehicle drag which is proportional to the squa
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
 -----------------  -------------------------------------------  ------
-Mass_Vehicle       Vehicle mass					kg
+mass_vehicle       Vehicle mass					kg
 -----------------  -------------------------------------------  ------
 Cf		   Rolling friction coefficient			
 -----------------  -------------------------------------------  ------
 Cd		   Drag coefficient			
 -----------------  -------------------------------------------  ------
-Area		   Front profile area				m*m
+area		   Front profile area				m*m
 =================  ===========================================  ======
 
 |
 
 **Vehicle Dynamics - Simulation Inputs:**
 
-=================  ===========================================  ======
-**Variable**	 	  **Description**			**Units**
------------------  -------------------------------------------  ------
-Mass_Engine	   Engine mass estimate				kg
------------------  -------------------------------------------  ------
-Velocity	   Current vehicle velocity			m/s
------------------  -------------------------------------------  ------
-TorqueRatio	   Ratio of transmission output power to power 
-                   at the wheel
------------------  -------------------------------------------  ------
-TireCircumference  Circumference of the tire			m
-=================  ===========================================  ======
+==================  ===========================================  ======
+**Variable**	 	  **Description**			 **Units**
+------------------  -------------------------------------------  ------
+mass_engine	    Engine mass estimate			 kg
+------------------  -------------------------------------------  ------
+velocity	    Current vehicle velocity			 m/s
+------------------  -------------------------------------------  ------
+torque_ratio	    Ratio of transmission output power to power 
+                    at the wheel
+------------------  -------------------------------------------  ------
+tire_circumference  Circumference of the tire			 m
+==================  ===========================================  ======
 
 |
 
@@ -290,7 +292,7 @@ TireCircumference  Circumference of the tire			m
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
 -----------------  -------------------------------------------  ------
-Acceleration	   Vehicle instantaneous acceleration		m/(s*s)
+acceleration	   Vehicle instantaneous acceleration		m/(s*s)
 =================  ===========================================  ======
 
 |
@@ -395,7 +397,9 @@ the base class Component. A very simple component is shown here:
 	from openmdao.main import Component
 
 	class Transmission(Component):
-	    def __init__(self, name, parent=None, doc=None, directory=''):
+    	''' A simple transmission model.'''
+	
+    	    def __init__(self, name, parent=None, doc=None, directory=''):
         	''' Creates a new Transmission object
 	            '''
         	super(Transmission, self).__init__(name, parent, doc, directory)        
@@ -421,35 +425,37 @@ The next step is to add the inputs and outputs that are defined in our model des
 	from openmdao.main.variable import INPUT, OUTPUT
 
 	class Transmission(Component):
+    	''' A simple transmission model.'''
+	
 	    def __init__(self, name, parent=None, doc=None, directory=''):
 	        ''' Creates a new Transmission object
         	'''
         
 	        super(Transmission, self).__init__(name, parent, doc, directory)        
         
-	        Float('Ratio1', self, INPUT, units=None, default=3.54,
+	        Float('ratio1', self, INPUT, units=None, default=3.54,
         	      doc='Gear Ratio in First Gear')
-	        Float('Ratio2', self, INPUT, units=None, default=2.13,
+	        Float('ratio2', self, INPUT, units=None, default=2.13,
         	      doc='Gear Ratio in Second Gear')
-	        Float('Ratio3', self, INPUT, units=None, default=1.36,
+	        Float('ratio3', self, INPUT, units=None, default=1.36,
         	      doc='Gear Ratio in Third Gear')
-	        Float('Ratio4', self, INPUT, units=None, default=1.03,
+	        Float('ratio4', self, INPUT, units=None, default=1.03,
         	      doc='Gear Ratio in Fourth Gear')
-	        Float('Ratio5', self, INPUT, units=None, default=0.72,
+	        Float('ratio5', self, INPUT, units=None, default=0.72,
         	      doc='Gear Ratio in Fifth Gear')
-	        Float('FinalDriveRatio', self, INPUT, units=None, default=2.80,
+	        Float('final_drive_ratio', self, INPUT, units=None, default=2.80,
         	      doc='Final Drive Ratio')
-	        Float('TireCirc', self, INPUT, units='inch', default=75.0,
+	        Float('tire_circ', self, INPUT, units='inch', default=75.0,
         	      doc='Circumference of tire (inches)')
 	
-	        Int('CurrentGear', self, INPUT, default=0,
+	        Int('current_gear', self, INPUT, default=0,
         	      doc='Current Gear')
-	        Float('Velocity', self, INPUT, units='mi/h', default=0.0,
+	        Float('velocity', self, INPUT, units='mi/h', default=0.0,
         	      doc='Current Velocity of Vehicle')
 
         	Float('RPM', self, OUTPUT, units='1/min', default=1000.0, 
 	              doc='Engine RPM')        
-        	Float('TorqueRatio', self, OUTPUT, units=None, default=0.0, 
+        	Float('torque_ratio', self, OUTPUT, units=None, default=0.0, 
 	              doc='Ratio of output torque to engine torque')   
 
 Note that the addition of inputs and outputs for this component requires several more imports in the first
@@ -466,7 +472,7 @@ be specified.
 The first parameter gives the variable a name. This name needs to follow Python's standard for variable
 names, so it must begin with a letter or underscore and should consist of only alphanumeric characters and
 the underscore. Keep in mind that a leading underscore is generally used for private data or functions. Also,
-spaces cannot be used in a variable name.
+spaces cannot be used in a variable name. Generally, we've tried to follow the PEP-8 standard for component instance names as well as Python variable names, which proscribes the use of lower case names with words separated by underscores.
 
 The second parameter specifies the parent, which in this case should be "self," which just means that these
 variables are all owned by the Transmission component. The third parameter marks this variable as either an
@@ -506,18 +512,18 @@ the input and output variables to perform a calculation.
         ''' The 5-speed manual transmission is simulated by determining the
             torque output and engine RPM via the gear ratios.
             '''
-        Ratios = [0.0, self.Ratio1, self.Ratio2, self.Ratio3, self.Ratio4,
-                  self.Ratio5]
+        ratios = [0.0, self.ratio1, self.ratio2, self.ratio3, self.ratio4,
+                  self.ratio5]
         
-        Gear = self.CurrentGear
+        gear = self.current_gear
         
-        self.RPM = (Ratios[Gear]*self.FinalDriveRatio*5280.0*12.0*self.Velocity
-                    )/(60.0*self.TireCirc)
-        self.TorqueRatio = Ratios[Gear]*self.FinalDriveRatio
+        self.RPM = (ratios[gear]*self.final_drive_ratio*5280.0*12.0 \
+                    *self.velocity)/(60.0*self.tire_circ)
+        self.torque_ratio = ratios[gear]*self.final_drive_ratio
             
         # At low speeds, hold engine speed at 1000 RPM and feather the clutch
-        if self.RPM < 1000.0 and Gear == 1 :
-            self.RPM = 1000.0
+        if self.RPM < 1000.0 and self.current_gear == 1 :
+            self.RPM = 1000.0	    
 	    
 Inputs and Outputs are objects in our component, so they are accessed using self.variablename, where the variablename is the name given to the variable's constructor. Note that the units checking is bypassed when accessing the variable's value directly. This is fine for calculation inside of the components; units checking is intended to be used more at a higher level, where component inputs and outputs are being connected.
 
@@ -540,18 +546,128 @@ but it is still a good way to demonstrate these components.
 An instance of the class Engine can be created by typing the following:
 
 	>>> from openmdao.examples.engine_design.engine import Engine
-	>>> MyEngine = Engine("New Engine")
+	>>> my_engine = Engine("new_engine")
 
-The object MyEngine is an engine created with default values for all of its inputs.
+The object MyEngine is an engine created with default values for all of its inputs. We can interact with the input and output variables by using the get and set functions.
+
+	>>> my_engine.get("bore")
+	82.0
+	>>> my_engine.get("stroke")
+	78.799999999999997
+	
+Let's change the engine speed from it's default value (1000 RPM) to 2500 RPM.
+
+	>>> my_engine.set("RPM",2500)
+	>>> my_engine.get("RPM")
+	2500
+
+Now, let's try setting the engine speed to a value that exceeds the maximum, which is 6000 RPM.
+
+	>>> my_engine.set("RPM",7500)
+	Traceback (most recent call last):
+	.
+	.
+	.
+	ConstraintError: new_engine.RPM: constraint '7500 <= 6000' has been violated
+
+The variable raises and exception indicating that its maximum value has been violated. This exception can be handled to provide some logical response to this condition; this will be seen in the acceleration simulation. Now, run the engine and examine the power and torque at 2500 RPM.
+
+	>>> my_engine.run()
+	>>> my_engine.get("torque")
+	203.9632284998996
+	>>> my_engine.get("power")
+	53.397448354811743
+	
+The component is executed by calling the run function, which runs the _pre_execute (which determines if the component needs to be executed), execute (which is the function we created in the Engine class above), and _post_execute (which validates the outputs.) These _pre_execute and _post_execute functions are private functions, as denoted by the leading underscore, and are not intended for users to redefine in their components. The thing to remember is that a component is always executed by calling run().
+
+Assemblies
+----------
+
+Now that python components representing the three vehicle subsystems have been created, they need to be connected so that they can be executed in sequence. In OpenMDAO, a component that contains a collection of other components is called an assembly. The assembly allows a set of components to be linked together by connecting their inputs and outputs. The data connections define an execution order based on the principle of lazy evaluation, where a component is triggered to run by an invalidation (i.e., a change) in any of its inputs.
+In addition, an assembly can also contain a driver, such as an optimizer or a design study. When an assembly does not explicitly contain a driver, the assembly executes the components based on the data connection.
+
+For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission, Engine, and Vehicle_Dynamics components.
+
+.. _Code5: 
+
+::
+
+	from openmdao.main import Assembly
+	from openmdao.main import Float, Int
+	from openmdao.main.variable import INPUT, OUTPUT
+
+	from openmdao.examples.engine_design.engine import Engine
+	from openmdao.examples.engine_design.transmission import Transmission
+	from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
+	
+	class Vehicle(Assembly):
+	    ''' Vehicle assembly. '''
+    
+	    def __init__(self, name, parent=None, directory=''):
+	        ''' Creates a new Vehicle Assembly object '''
+
+	        super(Vehicle, self).__init__(name, parent, directory)
+
+	        # Create component instances
+        
+	        Transmission('transmission', parent=self)
+	        Engine('engine', parent=self)
+	        VehicleDynamics('v_dyn', parent=self)
+
+The Engine, Transmission, and VehicleDynamics components are imported the same way as they were in the Python shell, using openmdao.examples.engine_design name-space. In creating a new class, the main difference between a component and an assembly is that an assembly inherits from the Assembly class instead of the Component class. This gives it the ability to contain other components, and to manage their data flow.
+
+Notice here that an instance of the Transmission, Engine, and Vehicle_Dynamics are created, with the parent set to "self", which in this context is Vehicle. This way, these components are created as part of the assembly, and are acessible through Vehicle.Transmission, etc.
+
+Now that the components are instantiated in the assembly, they need to be hooked up:
+
+.. _Code6: 
+
+::
+
+	self.connect('transmission.RPM','engine.RPM')
+        self.connect('transmission.torque_ratio','v_dyn.torque_ratio')
+        self.connect('engine.torque','v_dyn.engine_torque')
+        self.connect('engine.engine_weight','v_dyn.mass_engine')
+	
+The first argument in the call to self.connect is the output variable, and the second argument is the input variable. In order for a connection to be valid, the units of the output and input must be of the same class (i.e., length, speed, etc.) If they differ within the same class (e.g., meters vs. inches), then the unit is converted to the correct unit before being sent from the output component to the input component.
+
+The Vehicle assembly behaves like any other component when interacting with the external world. It has inputs and outputs, it can be hoooked up to other components and included in other assemblies, and it can be run. In order for the Vehicle block to be connected to other components and used in a simulation or design study, the inputs and outputs have to be assigned. We essentially just want to promote the design and simulation variables from the Engine, Transmission, and Vehicle_Dyanmics components to the input and output of the Vehicle component. This can be done by creating passthroughs in the Vehicle assembly.
+
+.. _Code7: 
+
+::
+
+	self.create_passthru('engine.stroke')
+	self.create_passthru('engine.bore')
+	# ...
+	# ...
+	self.create_passthru('transmission.ratio1')
+	self.create_passthru('transmission.ratio2')
+	# ...
+	# ...
+	self.create_passthru('v_dyn.mass_vehicle')
+	self.create_passthru('v_dyn.Cf')
+		
+Now, the Vehicle assembly has its own inputs and outputs, and can be accessed just like in any other component.
 
 
-Models and Assemblies
----------------------
+Executing the Vehicle Assembly
+------------------------------
 
+The vehicle assembly can be manipulated in the Python shell in the same manner as the engine component above. As inputs, the Vehicle takes a commanded Velocity, Throttle Position, a Gear Shift position, and a set of vehicle design parameters, and returns the vehicles instantaneous acceleration and rate of fuel burn. 
 
-Executing a Model
------------------
+	>>> from openmdao.examples.engine_design.vehicle import Vehicle
+	>>> my_car = Vehicle("new_car")
+	>>> my_car.set("velocity",25)
+	>>> my_car.set("currentGear",3)
+	>>> my_car.set("throttle",.5)
+	>>> my_car.run()
+	>>> my_car.get("acceleration")
+	1.1086409681485778
+	>>> my_car.get("fuel_burn")
+	0.0027991856504909715
 
+When the Vehicle is run, we are essentially performing a simple multidisciplinary analysis via the OpenMDAO framework. Try setting the simulation variables to other values, including ones that should trigger an exception. (One way to do this is to command a high velocity in first gear, which should violate the maximum RPM that the engine allows.) Note that the design variables are also manipulated the same way using the set and get functions.
 
 Wrapping an External Module using f2py
 --------------------------------------
@@ -559,13 +675,48 @@ Wrapping an External Module using f2py
 As the most computationally intensive component, the engine model in engine.py is the main performance
 bottleneck during repeated execution. As an interpreted language, Python is not the ideal choice for the
 implementation of a numerical algorithm, particularly where performance is important. Much can be gained by
-implementing the engine model in a compiled language like C or Fortran.
+implementing the engine model in a compiled language like C or FORTRAN.
 
+One of the most important characteristics of Python is that it was designed to be smoothly integrated with other languages, in particular C (in which Python was written) and related languages (FORTRAN and C++). This is particularly important for a scripting language, where code execution is generally slower, and it is often necessary to use a compiled language like C for implementing computationally intensive functions. On top of this native integration ability, the community has developed some excellent tools, such as F2PY (http://cens.ioc.ee/projects/f2py2e/) (FORTRAN to Python) and SWIG (Simplified Wrapper and Interface Generator), that simplify the process of building the wrapper for a code. As the name implies, F2PY is a python utility that takes a FORTRAN source code file and compiles and generates a wrapped object callable from Python. F2PY is actually part of the numerical computing package NumPy. Another tool with broader application is the Simplified Wrapper and Interface Generator (SWIG), which can be used to generate wrappers for C and C++ functions for execution in a variety of different target languages, including Python. For the most general case, Python has the built-in capability to wrap any shared object or dynamically loadable library (DLL) written in any language. This ctypes package is a foreign function interface, and it allows an object to be wrapped without recompiling the library. Care has to be taken when using ctypes to wrap a function that passes data types not native to C. 
+
+The main algorithm in engine.py was rewritten in C as engine.C. A wrapped shared object of engine.C was created using F2Py; this tool can also be used to generate wrappers for C code provided that the signature file engine.pyf is manually created. This file engine.pyf defines the interface for the functions found in engine.C, and can be viewed in openmdao.examples/openmdao/examples/engine_design. The C code has been placed in a function called RunEngineCycle that takes the design and simulation variables as inputs. 
+
+The C function containing the engine simulation algorithm is called RunEngineCycle. A new python component named engine_wrap_c.py was created to replace engine.py. This component contains the same inputs and outputs as engine.py, but replaces the engine internal calculations with a call to the C function RunEngineCycle. The function can be imported and used just like any python function:
+
+.. _Code8: 
+
+::
+
+	from openmdao.examples.engine_design.engineC import RunEngineCycle
+	
+        # Call the C model and pass it what it needs.
+        
+        power, torque, fuel_burn, engine_weight = RunEngineCycle(
+                    stroke, bore, conrod, comp_ratio, spark_angle,
+                    n_cyl, IVO, IVC, L_v, D_v, k,
+                    R, Ru, Hu, Tw, AFR, P_exth,
+                    T_amb, P_amb, air_density, mw_air, mw_fuel,
+                    RPM, throttle, thetastep, fuel_density)
+
+        
+        # Interogate results of engine simulation and store.
+        
+        self.power = power[0]
+        self.torque = torque[0]
+        self.fuelBurn = fuelBurn[0]
+        self.engineWeight = engineWeight[0]
+
+Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first element (element zero.) This is not typically needed for return values from FORTRAN codes compiled with f2py, but it seemes to be needed for C codes for which the signature file is manually created. This is something that might be fixable, and will be investigated.
 
 
 Sockets and Interfaces
 ----------------------
 
+Now that we have a functional (and reasonably quick) vehicle component, we need to complete the problem by providing a way to simulate the acceleration and the EPA fuel economy estimates. The acceleration test requires an integration in time with the vehicle component being executed at each time step to produce the instantaneous acceleration. The EPA fuel economy tests are a bit more tricky, requiring an integration in time, but the vehicle component must be executed while varying the throttle and gear position inputs to match a desired acceleration for the integration segment. Both of these solution procedures were implemented in a component called Sim_Vehicle, which requires a Vehicle component to perform simulation.
+
+At this point, there are a couple of ways to implement this kind of problem in OpenMDAO. One way is to implement the solution procedure as a driver (or two drivers if prefered.) So far, drivers have only been mentioned as an attribute of assemblies, and they will be more thoroughly treated in the next section. Implementing the vehicle simulation as a driver might be a bit confusing for one's first exposure to drivers, particularly since it involves nesting the simulation driver with an optimizer, so the vehicle simulations were implemented as a Component instead. However, this leads to the introduction to the concept of "Sockets", which requires the implementation to be an Assembly instead of a Component.
+
+In order to investigate designs, a Vehicle class was defined. This class has a set of specific inputs and outputs that include the design variables for the engine, transmission, and dynamics, and the simulation variables velocity, gear position and throttle position. These inputs and outputs comprise an interface for the Vehicle class.
 
 Solving an Optimization Problem
 -------------------------------

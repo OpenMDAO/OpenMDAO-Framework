@@ -15,9 +15,11 @@ class Adder(Component):
         Float('x1', self, INPUT, default=0.0)
         Float('x2', self, INPUT, default=0.0)
         Float('sum', self, OUTPUT, default=0.0)
+        self.runcount = 0
         
     def execute(self):
         self.sum = self.x1 + self.x2
+        self.runcount += 1
         
 class ExprComp(Component):
     """Evaluates an expression based on the input x and assigns it to f_x"""
@@ -26,10 +28,28 @@ class ExprComp(Component):
         Float('x', self, INPUT, default=0.0)
         Float('f_x', self, OUTPUT, default = 0.0)
         String('expr', self, INPUT, default = expr)
+        self.runcount = 0
         
     def execute(self):
         x = self.x
         self.f_x = eval(self.expr)
+        self.runcount += 1
+    
+class ExprComp2(Component):
+    """Evaluates an expression based on the inputs x & y and assigns it to f_xy"""
+    def __init__(self, name, parent, expr='x'):
+        super(ExprComp2, self).__init__(name, parent)
+        Float('x', self, INPUT, default=0.0)
+        Float('y', self, INPUT, default=0.0)
+        Float('f_xy', self, OUTPUT, default = 0.0)
+        String('expr', self, INPUT, default = expr)
+        self.runcount = 0
+        
+    def execute(self):
+        x = self.x
+        y = self.y
+        self.f_xy = eval(self.expr)
+        self.runcount += 1
     
         
 class MultiDriverTestCase(unittest.TestCase):
@@ -88,6 +108,12 @@ class MultiDriverTestCase(unittest.TestCase):
                                self.top.comp3.x, places=2)
         self.assertAlmostEqual(self.opt_design_vars[3], 
                                self.top.comp4.x, places=1)
+        runcount = self.top.adder3.runcount
+        
+        # verify that driver will run if any of its referenced variables are invalid
+        self.top.set('comp1.x', 99)
+        self.top.run()
+        self.assertTrue(runcount+2 <= self.top.adder3.runcount)
         
     def test_2_drivers(self):
         ExprComp('comp1a',self.top, expr='x**2')
@@ -115,7 +141,56 @@ class MultiDriverTestCase(unittest.TestCase):
                                self.top.driver1a.objective.refvalue, places=5)
         self.assertAlmostEqual(2.4860514783551508, 
                                self.top.comp1a.x, places=5)
-    
+
+        
+    #def test_2_nested_drivers(self):
+        ##
+        ## Solve (x-3)^2 + xy + (y+4)^2 = 3
+        ## using two optimizers nested. The inner loop optimizes y
+        ## the outer loop takes care of x
+        ## Enough components created to assure that the optimizers don't "touch"
+        ## 
+        ## Optimal solution: x = 6.6667; y = -7.3333
+        
+        #ExprComp('comp1',self.top, expr='x-3')
+        #ExprComp('comp2',self.top, expr='-3')
+        #ExprComp2('comp3',self.top, expr='x*x + (x+3)*y + (y+4)**2')
+        #ExprComp2('comp4',self.top, expr='x+y')
+        #self.top.comp1.set('x', 50)
+        #self.top.comp3.set('y', 50)
+        
+        ## Get rid of junk we don't need
+        #self.top.remove_child('adder1')
+        #self.top.remove_child('adder2')
+        #self.top.remove_child('adder3')
+
+        ## Hook stuff up
+        #self.top.connect('comp1.f_x', 'comp3.x')
+        #self.top.connect('comp3.f_xy', 'comp4.y')
+        #self.top.connect('comp2.f_x', 'comp4.x')
+
+        ## create the inner driver
+        #drv1 = CONMINdriver('driver1',self.top)
+        #drv1.maxiters = 30
+        #drv1.objective.value = 'comp3.f_xy'
+        #drv1.design_vars.value = ['comp3.y']
+        #drv1.lower_bounds = [-50]
+        #drv1.upper_bounds = [50]
+        
+        ## create the outer driver
+        #drv2 = CONMINdriver('driver2',self.top)
+        #drv2.maxiters = 30
+        #drv2.objective.value = 'comp4.f_xy'
+        #drv2.design_vars.value = ['comp1.x']
+        #drv2.lower_bounds = [-50]
+        #drv2.upper_bounds = [50]
+        
+        #self.top.run()
+
+        #self.assertAlmostEqual(self.top.comp1.x, 6.6667, places=4)
+        #self.assertAlmostEqual(self.top.comp3.y, -7.3333, places=4)
+        
+        
 if __name__ == "__main__":
     
     #import cProfile

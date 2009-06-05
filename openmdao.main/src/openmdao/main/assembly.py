@@ -7,7 +7,7 @@ __version__ = "0.1"
 import os
 import os.path
 import copy
-from collections import deque
+import inspect
 
 from zope.interface import implements
 import networkx as nx
@@ -17,6 +17,7 @@ from openmdao.main.interfaces import IAssembly, IComponent, IDriver, IVariable
 from openmdao.main import Container, String
 from openmdao.main.component import Component, STATE_IDLE
 from openmdao.main.dataflow import Dataflow
+from openmdao.main.socket import Socket
 from openmdao.main.variable import Variable, INPUT, OUTPUT
 from openmdao.main.refvariable import RefVariable, RefVariableArray
 from openmdao.main.constants import SAVE_PICKLE
@@ -24,26 +25,46 @@ from openmdao.main.exceptions import CircularDependencyError
 from openmdao.main.filevar import FileVariable
 from openmdao.main.util import filexfer
 
+class MetaAssembly(type):
+    """Metaclass for Assembly that makes Socket declaration a little nicer
+    by telling the Socket objects what their names are.
+    """
+    def __init__ ( cls, class_name, bases, class_dict ):
+        super(MetaAssembly, cls).__init__(class_name, bases, class_dict)
+        socks = {}
+        
+        # get Sockets from base classes
+        for base in bases[::-1]:
+            if hasattr(base, '_class_sockets'):
+                for name,obj in base._class_sockets.items():
+                    socks[name] = obj
+                    
+        for name, obj in class_dict.items():
+            if isinstance(obj, Socket):
+                obj.name = name
+                socks[name] = obj
+        cls._class_sockets = socks
 
+        
 class Assembly (Component):
     """This is a container of Components. It understands how
-    to connect their inputs and outputs and how to handle
-    Sockets.
+    to connect inputs and outputs between its children 
+    and how to handle Sockets.
     """
 
+    __metaclass__ = MetaAssembly
+    
     implements(IAssembly)
     
     def __init__(self, name, parent=None, doc=None, directory=''):
-        super(Assembly, self).__init__(name, parent, doc=doc,
-                                       directory=directory)
         
         self.state = STATE_IDLE
         self._stop = False
         self._dir_stack = []
-        self._sockets = {}
+        self._sockets = dict([(s.name, (s, None)) 
+                              for s in self.__class__._class_sockets.values()])
         self._child_io_graphs = {}
         self._need_child_io_update = True
-        self._drivers = []
         
         # A hybrid graph of Variable names (local path) and component names, 
         # with connections between Variables/Components as directed edges.  
@@ -67,8 +88,11 @@ class Assembly (Component):
         #
         self._var_graph = nx.LabeledDiGraph()
         
+        super(Assembly, self).__init__(name, parent, doc=doc,
+                                       directory=directory)
+        
         # add any Variables we may have inherited from our base classes
-        # to our graph, since our version of add_child wasn't active 
+        # to our graph, since our version of make_public wasn't active 
         # when they were added.
         for missing in [v for v in self.values() if isinstance(v, Variable)
                                                  and v.name not in self._var_graph]:
@@ -83,56 +107,23 @@ class Assembly (Component):
     def get_component_graph(self):
         return self._dataflow.get_graph()
     
-    def _get_socket_plugin(self, name):
-        """Return plugin for the named socket"""
-        try:
-            plugin = self._sockets[name][1]
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-        else:
-            if plugin is None:
-                self.raise_exception("socket '%s' is empty" % name,
-                                     RuntimeError)
-            return plugin
-
-    def _set_socket_plugin(self, name, plugin):
-        """Set plugin for the named socket"""
-        try:
-            iface, current, required, doc = self._sockets[name]
-        except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
-        else:
-            if plugin is not None and iface is not None:
-                if not iface.providedBy(plugin):
-                    self.raise_exception("plugin does not support '%s'" % \
-                                         iface.__name__, ValueError)
-            self._sockets[name] = (iface, plugin, required, doc)
-
-    def add_socket (self, name, iface, doc='', required=True):
-        """Specify a named placeholder for a component with the given
-        interface or prototype.
-        """
-        assert isinstance(name, basestring)
-        self._sockets[name] = (iface, None, required, doc)
-        setattr(self.__class__, name,
-                property(lambda self : self._get_socket_plugin(name),
-                         lambda self, plugin : self._set_socket_plugin(name, plugin),
-                         None, doc))
-
     def socket_filled (self, name):
-        """Return True if socket is filled"""
+        """Return True if socket is filled."""
         try:
             return self._sockets[name][1] is not None
         except KeyError:
-            self.raise_exception("no such socket '%s'" % name, AttributeError)
+            self.raise_exception("no Socket named '%s'" % name, AttributeError)
+            
+    def list_sockets(self):
+        """Return a list of names of Sockets for this Assembly."""
+        return self._sockets.keys()
+    
+    def get_socket(self, name):
+        """Return the Socket object with the given name."""
+        return self._sockets[name][0]
 
-    def remove_socket (self, name):
-        """Remove an existing Socket"""
-        # TODO: what about the property we've installed in the class?
-        del self._sockets[name]
-
-    def add_child(self, obj, private=False):
-        """Update dependency graph and call base class add_child"""
+    def add_child(self, obj):
+        """Update dependency graph and call base class add_child."""
         super(Assembly, self).add_child(obj)
         if IComponent.providedBy(obj):
             # This is too early to get accurate Variable info from 
@@ -143,10 +134,20 @@ class Assembly (Component):
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
             self._dataflow.add_node(obj.name)
-        if IDriver.providedBy(obj):
-            self._drivers.append(obj)
         return obj
-    
+
+    def make_public(self, obj_info, iostatus=INPUT):
+        """Update the variable graph with any new variables added to
+        the public area.
+        """
+        pubs = super(Assembly, self).make_public(obj_info, iostatus)
+        
+        for obj in pubs:
+            if IVariable.providedBy(obj):
+                self._var_graph.add_node(obj.name, data=obj)
+
+        return pubs
+        
     def get_var_graph(self):
         """Returns the Variable dependency graph, after updating it with child
         info if necessary.
@@ -183,16 +184,10 @@ class Assembly (Component):
                 if childgraph is not None:
                     self._var_graph.remove_nodes_from(childgraph)
                 del self._child_io_graphs[name]
-        if IDriver.providedBy(obj):
-            self._drivers.remove(obj)
             
         if name in self._sockets:
-            setattr(self, name, None)
-            # set delete to False, otherwise delattr will fail because
-            # named object is a property
-            super(Assembly, self).remove_child(name, delete=False)
-        else:
-            super(Assembly, self).remove_child(name)
+            self._sockets[name][1] = None
+        super(Assembly, self).remove_child(name)
 
     def create_passthru(self, varname, alias=None):
         """Create a Variable that's a copy of var, make it a public member of self,
@@ -222,7 +217,6 @@ class Assembly (Component):
         var = comp.getvar(vname)
         newvar = var.create_passthru(self, name=name)
         self.make_public(newvar)
-        self._var_graph.add_node(newvar.name, data=newvar)
         
         # create the passthru connection 
         if var.iostatus == INPUT:
@@ -306,7 +300,8 @@ class Assembly (Component):
         else:
             destvar.valid = False
             self.invalidate_deps([destvar])
-            
+        
+        destvar._source = srcvar
         self._io_graph = None
 
     def disconnect(self, varpath, varpath2=None):
@@ -317,27 +312,42 @@ class Assembly (Component):
         var = vargraph.label[varpath]
         if varpath2 is not None:
             if varpath2 not in vargraph[varpath]:
-                self.raise_exception('%s is not connected' % varpath)
-            vargraph.remove_edge(varpath, varpath2)
+                self.raise_exception('%s is not connected to %s' % 
+                                     (varpath, varpath2), RuntimeError)
             var2 = vargraph.label[varpath2]
+            if var2._source == var:
+                var2._source = None
+            elif var._source == var2:
+                var._source = None
+            else:
+                self.raise_exception('%s and %s are not connected' %
+                                     (varpath, varpath2), RuntimeError) 
+            vargraph.remove_edge(varpath, varpath2)
             if var.parent is not self and var2.parent is not self:
-                self._dataflow.disconnect(var.parent.name, var2.parent.name)
+                self._dataflow.disconnect(var.parent.name, 
+                                          var2.parent.name)
         else:  # remove all connections from the Variable
             if len(vargraph.pred[varpath]) == 0:
-                self.raise_exception('%s is not connected' % varpath, RuntimeError)
-            vargraph.remove_node(varpath)
-            vargraph.add_node(varpath, data=var)
-            if var.parent is not self:
-                # remove outgoing edges
-                for u,v in vargraph[varpath]:
-                    var2 = vargraph.label[v]
-                    if var2.parent is not self and isinstance(var2, Variable):
-                        self._dataflow.disconnect(var.parent.name, var2.parent.name)
-                # remove incoming edges
-                for u,v in vargraph.in_edges_iter(varpath):
-                    var2 = vargraph.label[u]
-                    if var2.parent is not self and isinstance(var2, Variable):
-                        self._dataflow.disconnect(var2.parent.name, var.parent.name)
+                self.raise_exception('%s is not connected' % 
+                                     varpath, RuntimeError)
+            # remove outgoing edges
+            to_remove = []
+            for u,v in vargraph.edges_iter(varpath):
+                var2 = vargraph.label[v]
+                if isinstance(var2, Variable):
+                    to_remove.append((u,v))
+                    if var2.parent is not self and var.parent is not self:
+                        self._dataflow.disconnect(var.parent.name, 
+                                                  var2.parent.name)
+            # remove incoming edges
+            for u,v in vargraph.in_edges_iter(varpath):
+                var2 = vargraph.label[u]
+                if isinstance(var2, Variable):
+                    to_remove.append((u,v))
+                    if var2.parent is not self and var.parent is not self:
+                        self._dataflow.disconnect(var2.parent.name, 
+                                                  var.parent.name)
+            vargraph.remove_edges_from(to_remove)
                 
         self._io_graph = None  # the io graph has changed, so have to remake it
 
@@ -401,9 +411,7 @@ class Assembly (Component):
                             if parent and isinstance(parent, Assembly):
                                 parent.update_inputs(['.'.join([self.name, srcvar.name])])
                             else:
-                                self.raise_exception(
-                                    'invalid source Variable found (%s), with no way to update it' 
-                                    % srcname, RuntimeError)
+                                srcvar.valid = True
                         else: # a non-boundary var
                             srcvar.parent.update_outputs([srcvar.name])
                     incomp = var.parent
@@ -443,11 +451,11 @@ class Assembly (Component):
         if any children are added or removed, or if self._need_check_config is True.
         """
         super(Assembly, self).check_config()
-        for name,sock in self._sockets.items():
-            iface, current, required, doc = sock
-            if current is None and required is True:
+        for name, tup in self._sockets.items():
+            sock, current = tup
+            if sock.required and current is None:
                 self.raise_exception("required plugin '%s' is not present" % name,
-                                     ValueError)
+                                     ValueError)                
         
     def invalidate_deps(self, vars, notify_parent=False):
         """Mark all Variables invalid that depend on vars.

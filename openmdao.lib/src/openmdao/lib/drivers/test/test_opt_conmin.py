@@ -134,10 +134,11 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.assertEqual(str(err), "top.driver.objective: reference is undefined")
         else:
             self.fail('RuntimeError expected')
-        self.top.comp.result = 99.
+            
+        self.top.comp.result = 88.
         self.top.driver.objective.value = 'comp.result'
-        val = self.top.driver.objective.refvalue
-        self.assertEqual(val, 99.)
+        self.assertEqual(self.top.driver.objective.refvalue, 88.)
+        
     
     def test_bad_design_vars(self):
         try:

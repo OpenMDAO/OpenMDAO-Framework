@@ -9,6 +9,7 @@ from openmdao.main import Driver, Bool, Int
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, IComponent
 from openmdao.main.variable import INPUT
+from openmdao.main.socket import Socket
 from openmdao.main.util import filexfer
 
 
@@ -35,6 +36,10 @@ class CaseIteratorDriver(Driver):
 
     """
 
+    iterator = Socket(ICaseIterator, 'Cases to evaluate.', required=True)
+    outerator = Socket(None, 'Something to append() to.', required=True)
+    model = Socket(IComponent, 'Model to be executed.', required=True)
+    
     def __init__(self, *args, **kwargs):
         super(CaseIteratorDriver, self).__init__(*args, **kwargs)
 
@@ -46,10 +51,6 @@ class CaseIteratorDriver(Driver):
 
         Int('max_retries', self, INPUT, default=1, min_limit=0,
             doc='Number of times to retry a case.')
-
-        self.add_socket('iterator', ICaseIterator, 'Cases to evaluate.', required=True)
-        self.add_socket('outerator', None, 'Something to append() to.', required=True)
-        self.add_socket('model', IComponent, 'Model to be executed.', required=True)
 
         self._iter = None
         self._n_servers = 0

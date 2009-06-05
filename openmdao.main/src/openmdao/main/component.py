@@ -214,19 +214,13 @@ class Component (Container):
                      format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
 
-            name defaults to the name of the component.
-
-            version defaults to the component's module __version__.
-
-            If force_relative is True, all paths are relative to src_dir.
-
-            src_dir defaults to the component's directory.
-
-            src_files should be a set, and defaults to component's external files.
-
-            dst_dir is the directory to write the egg in.
-
-            tmp_dir is the directory to use for temporary files.
+        - `name` defaults to the name of the component.
+        - `version` defaults to the component's module __version__.
+        - If `force_relative` is True, all paths are relative to `src_dir`.
+        - `src_dir` defaults to the component's directory.
+        - `src_files` should be a set, and defaults to component's external files.
+        - `dst_dir` is the directory to write the egg in.
+        - `tmp_dir` is the directory to use for temporary files.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
@@ -296,8 +290,9 @@ class Component (Container):
 #                                self.debug('        path now %s', path)
                         else:
                             self.raise_exception(
-                                "Can't save, %s file '%s' doesn't start with '%s'." \
-                                % (comp.get_pathname(), path, src_dir), ValueError)
+                                "Can't save, %s file '%s' doesn't start with '%s'."
+                                % (comp.get_pathname(), path, src_dir),
+                                ValueError)
                     else:
                         save_path = path
 #                    self.debug('        adding %s', save_path)
@@ -307,6 +302,8 @@ class Component (Container):
             for fvar in comp.get_file_vars():
                 path = fvar.get_value()
 #                self.debug('    fvar %s path %s', fvar.name, path)
+                if not path:
+                    continue
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
                 path = os.path.normpath(path)
@@ -347,11 +344,14 @@ class Component (Container):
     def get_file_vars (self):
         """Return list of FileVariables owned by this component."""
 
-        def _recurse_get_file_vars (container, file_vars):
+        def _recurse_get_file_vars (container, file_vars, visited):
             """Scan both normal __dict__ and _pub."""
             objs = container.__dict__.values()
             objs.extend(container._pub.values())
             for obj in objs:
+                if id(obj) in visited:
+                    continue
+                visited.append(id(obj))
                 if isinstance(obj, FileVariable):
                     file_vars.add(obj)
                 elif isinstance(obj, Component):
@@ -359,10 +359,11 @@ class Component (Container):
                 elif isinstance(obj, Variable):
                     continue
                 elif isinstance(obj, Container):
-                    _recurse_get_file_vars(obj, file_vars)
+                    _recurse_get_file_vars(obj, file_vars, visited)
 
         file_vars = set()
-        _recurse_get_file_vars(self, file_vars)
+        visited = []
+        _recurse_get_file_vars(self, file_vars, visited)
         return file_vars
 
     def _relpath (self, path1, path2):
@@ -389,7 +390,7 @@ class Component (Container):
             relpath = os.path.join('..', relpath)
             start = os.path.dirname(start)
 
-        self.raise_exception("'%s' has no common prefix with '%s'" \
+        self.raise_exception("'%s' has no common prefix with '%s'"
                              % (path1, path2), ValueError)
 
     @staticmethod
