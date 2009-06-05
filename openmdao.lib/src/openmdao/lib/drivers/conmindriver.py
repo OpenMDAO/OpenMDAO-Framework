@@ -5,10 +5,9 @@ __all__ = ['CONMINdriver']
 
 __version__ = "0.1"
 
-import conmin.conmin as conmin
 import numpy.numarray as numarray
 from copy import copy
-
+import conmin.conmin as conmin
 
 from openmdao.main import Driver, ArrayVariable, String, StringList, \
                           RefVariable, RefVariableArray

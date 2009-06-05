@@ -1,17 +1,17 @@
 #
-# Test for Engine_Optimization.py undergoing optimization with CONMIN
+# Test for EngineOptimization.py undergoing optimization with CONMIN
 #
 
 import unittest
 
-from openmdao.examples.engine_design.engine_optimization import Engine_Optimization
+from openmdao.examples.engine_design.engine_optimization import EngineOptimization
 
 
 class EngineOptimizationTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
-        self.model = Engine_Optimization("Test_Vehicle")
+        self.model = EngineOptimization("test_vehicle")
 
     def tearDown(self):
         self.model.pre_delete()
@@ -19,21 +19,21 @@ class EngineOptimizationTestCase(unittest.TestCase):
         
     def test_runvehicle(self):
         
-        # We are just testing the mechanics of the Engine_Optimization component, so
+        # We are just testing the mechanics of the EngineOptimization component, so
         # set the design variables at the global minimum.
         
         self.model.vehicle_sim.set('bore', 95)
-        self.model.vehicle_sim.set('sparkAngle', -35.368341874)
+        self.model.vehicle_sim.set('spark_angle', -35.368341874)
 
         self.model.driver.maxiters = 1
         
         self.model.run()
         
-        self.assertAlmostEqual(self.model.vehicle_sim.AccelTime, 
+        self.assertAlmostEqual(self.model.vehicle_sim.accel_time, 
                                5.5999999999999961, places=6)
-        self.assertAlmostEqual(self.model.vehicle_sim.EPACity, 
+        self.assertAlmostEqual(self.model.vehicle_sim.EPA_city, 
                                25.15551809930237, places=4)
-        self.assertAlmostEqual(self.model.vehicle_sim.EPAHighway, 
+        self.assertAlmostEqual(self.model.vehicle_sim.EPA_highway, 
                                32.800993976480768, places=4)
 
 if __name__ == "__main__":
