@@ -14,6 +14,7 @@ from openmdao.main import Int, String, Case, ListCaseIterator
 from openmdao.main.variable import INPUT
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
+
 class DOE(CaseIteratorDriver):
     """ M4 Design Of Experiments driver. """
 
@@ -32,14 +33,14 @@ class DOE(CaseIteratorDriver):
         Int('lhs', self, INPUT, default=2, min_limit=1,
             doc='???, used by LHS and Rand_LHS.')
 
-    def execute(self):
-        """ Generate cases and run them. """
+    def _pre_execute(self):
+        """ Generate cases. """
         cases = self.generate_cases()
         if cases is None:
             self.raise_exception('No cases generated', RuntimeError)
         self.iterator = ListCaseIterator(cases)
         self.outerator = []
-        super(DOE, self).execute()
+        super(DOE, self)._pre_execute()
 
 
 # pylint: disable-msg=E1101

@@ -5,18 +5,20 @@ __all__ = ['Component', 'SimulationRoot']
 __version__ = "0.1"
 
 import glob
-import os
 import os.path
-import copy
+import shutil
+import subprocess
+import sys
+import time
 
 from zope.interface import implements
 
-from openmdao.main.interfaces import IContainer, IComponent, IAssembly, IVariable, IDriver
+from openmdao.main.interfaces import IComponent
 from openmdao.main import Container, String, Variable
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
+from openmdao.main.constants import SAVE_CPICKLE
 from openmdao.main.filevar import FileVariable
-from openmdao.main.util import filexfer
+from openmdao.main.log import LOG_DEBUG
 
 # Execution states.
 STATE_UNKNOWN = -1
@@ -60,8 +62,9 @@ class Component (Container):
 
     implements(IComponent)
     
-    def __init__(self, name, parent=None, doc=None, directory='', add_to_parent=True):
-        super(Component, self).__init__(name, parent, doc, add_to_parent=add_to_parent)
+    def __init__(self, name, parent=None, doc=None, directory='',
+                 add_to_parent=True):
+        super(Component, self).__init__(name, parent, doc, add_to_parent)
         
         self.state = STATE_IDLE
         self._stop = False
@@ -81,7 +84,7 @@ class Component (Container):
         if dirpath:
             if not SimulationRoot.legal_path(dirpath):
                 self.raise_exception(
-                    "Illegal execution directory '%s', not a decendant of '%s'." \
+                    "Illegal execution directory '%s', not a decendant of '%s'."
                     % (dirpath, SimulationRoot.get_root()),
                     ValueError)
             if not os.path.exists(dirpath):
@@ -89,12 +92,12 @@ class Component (Container):
                     os.makedirs(dirpath)
                 except OSError, exc:
                     self.raise_exception(
-                        "Can't create execution directory '%s': %s" \
+                        "Can't create execution directory '%s': %s"
                         % (dirpath, exc.strerror), OSError)
             else:
                 if not os.path.isdir(dirpath):
                     self.raise_exception(
-                        "Execution directory path '%s' is not a directory." \
+                        "Execution directory path '%s' is not a directory."
                         % dirpath, ValueError)
 # pylint: enable-msg=E1101
 
@@ -209,9 +212,9 @@ class Component (Container):
         """
         self.load(instream)
 
-    def save_to_egg (self, name=None, version=None, force_relative=True,
-                     src_dir=None, src_files=None, dst_dir=None,
-                     format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
+    def save_to_egg(self, name=None, version=None, force_relative=True,
+                    src_dir=None, src_files=None, dst_dir=None,
+                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
         """Save state and other files to an egg.
 
         - `name` defaults to the name of the component.
@@ -262,7 +265,7 @@ class Component (Container):
 #                        self.debug("        directory now '%s'", comp.directory)
                 else:
                     self.raise_exception(
-                        "Can't save, %s directory '%s' doesn't start with '%s'." \
+                        "Can't save, %s directory '%s' doesn't start with '%s'."
                         % (comp.get_pathname(), comp_dir, src_dir), ValueError)
 
             # Process external files.
@@ -320,7 +323,7 @@ class Component (Container):
 #                            self.debug('        path now %s', path)
                     else:
                         self.raise_exception(
-                            "Can't save, %s path '%s' doesn't start with '%s'." \
+                            "Can't save, %s path '%s' doesn't start with '%s'."
                             % (fvar.get_pathname(), path, src_dir), ValueError)
                 else:
                     save_path = path
@@ -341,7 +344,7 @@ class Component (Container):
             for fvar, path in fixup_fvar:
                 fvar.set_value(path)
 
-    def get_file_vars (self):
+    def get_file_vars(self):
         """Return list of FileVariables owned by this component."""
 
         def _recurse_get_file_vars (container, file_vars, visited):
@@ -366,7 +369,7 @@ class Component (Container):
         _recurse_get_file_vars(self, file_vars, visited)
         return file_vars
 
-    def _relpath (self, path1, path2):
+    def _relpath(self, path1, path2):
         """Return path for path1 relative to path2."""
         assert os.path.isabs(path1)
         assert os.path.isabs(path2)
@@ -392,6 +395,47 @@ class Component (Container):
 
         self.raise_exception("'%s' has no common prefix with '%s'"
                              % (path1, path2), ValueError)
+
+    def check_save_load(self, test_dir='test_dir', cleanup=True,
+                        format=SAVE_CPICKLE):
+        """Convenience routine to check that saving & reloading work."""
+        old_level = self.log_level
+        self.log_level = LOG_DEBUG
+        start = time.time()
+        egg_name = self.save_to_egg(format=format)
+        elapsed = time.time() - start
+        size = os.path.getsize(egg_name)
+        print '\nSaved %d bytes in %.2f seconds (%.2f bytes/sec)' % \
+              (size, elapsed, size/elapsed)
+
+        if sys.platform == 'win32':
+            print '\nUnpacking check not supported on win32'
+            return -1
+
+        orig_dir = os.getcwd()
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+        os.mkdir(test_dir)
+        os.chdir(test_dir)
+        egg_path = os.path.join('..', egg_name)
+        try:
+            print '\nUnpacking in subprocess...'
+            env = os.environ
+            env['OPENMDAO_INSTALL'] = '0'
+            retcode = subprocess.call(['sh', egg_path], env=env)
+            print '    retcode', retcode
+            if retcode == 0:
+                print '\nRunning in subprocess...'
+                retcode = subprocess.call(['python', self.name+'_loader.py'])
+                print '    retcode', retcode
+        finally:
+            os.chdir(orig_dir)
+            self.log_level = old_level
+            if cleanup:
+                os.remove(egg_name)
+                shutil.rmtree(test_dir)
+
+        return retcode
 
     @staticmethod
     def load (instream, format=SAVE_CPICKLE, do_post_load=True):

@@ -87,6 +87,31 @@ class Variable(HierarchyMember):
         # will have to do it again if it has constraints
         self.set_default(default)
 
+    def __getstate__(self):
+        """Return dict representing this variable's state."""
+        state = super(Variable, self).__getstate__()
+        typs = []  # Have problems pickling old-style class types.
+        for typ in self.val_types:
+            if repr(typ) == "<type 'instance'>":
+                typs.append(None)
+            else:
+                typs.append(typ)
+        state['val_types'] = typs
+        return state
+
+    def __setstate__(self, state):
+        """ Restore this variable's state. """
+        super(Variable, self).__setstate__(state)
+        typs = []
+        for typ in self.val_types:
+            if typ is None:
+                # TODO: find a way to recreate old-style class type.
+                self.warning("Reference to old-style type clobbered")
+                typs.append(typ)
+            else:
+                typs.append(typ)
+        self.val_types = tuple(typs)
+
     def _set_val_types(self, val_types, default):
         """Set self.val_types to what was provided, or guess based on default
         value or referenced value.
@@ -224,9 +249,15 @@ class Variable(HierarchyMember):
         Returns the validated value.
         """
         if type(val) not in self.val_types:        
-            self.raise_exception('incompatible type %s is not one of %s' %
-                                 (str(type(val)),
-                                  str([x.__name__ for x in self.val_types])) , ValueError)
+            # After reload of old-style class type, we think val_type is None
+            # (see __getstate__/__setstate__). So we'll allow any old-style
+            # type assignment in that situation.
+            if (None not in self.val_types) or \
+               (len(val.__class__.__bases__) > 0):
+                self.raise_exception('incompatible type %s is not one of %s' %
+                                     (type(val),
+                                      [x.__name__ for x in self.val_types]),
+                                     ValueError)
         
         # test against any constraints placed on this variable
         try:

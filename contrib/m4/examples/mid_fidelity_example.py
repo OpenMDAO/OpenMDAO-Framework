@@ -20,12 +20,12 @@ class MyModel(Assembly):
     def __init__(self, name='M4_VarFi', *args, **kwargs):
         super(MyModel, self).__init__(name, *args, **kwargs)
 
-        # The model is an M4 variable fidelity component.
-        var_fi = VarFi(parent=self)
-
         # Specify DOE.
         doe = DOE(parent=self)
-        self.driver = doe
+
+        # The model is an M4 variable fidelity component.
+        var_fi = VarFi(parent=self)
+        doe.model = var_fi
 
         doe.design_variables = [
             (var_fi.name+'.x', 0., 5.),
@@ -83,7 +83,7 @@ def main():
     """ Run model and print results. """
     model = MyModel()
     model.run()
-    for i, case in enumerate(model.driver.outerator):
+    for i, case in enumerate(model.M4_DOE.outerator):
         print 'CASE %d:' % (i+1)
         for name, index, value in case.inputs:
             print '    input:', name, index, value
