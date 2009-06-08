@@ -20,15 +20,18 @@ class IMHolder(object):
     def __init__(self, obj):
         self.name = obj.__name__
         self.im_self = obj.im_self
-        if obj.im_self:
+        if obj.im_self is not None:
             self.im_class = None  # Avoid possible __main__ issues.
         else:
             # TODO: handle __main__ for im_class.__module__.
+            if obj.im_class.__module__ == '__main__':
+                raise RuntimeError('IMHolder: %r with module __main__ (%s)'
+                                   % (obj, obj.im_self))
             self.im_class = obj.im_class
 
     def method(self):
         """Return instancemethod corresponding to saved state."""
-        if self.im_self:
+        if self.im_self is not None:
             return getattr(self.im_self, self.name)
         else:
             return getattr(self.im_class, self.name)
@@ -102,20 +105,6 @@ class HierarchyMember(object):
         if state['_parent'] is not None:
             # remove weakref to parent because it won't pickle
             state['_parent'] = self._parent() 
-
-        # Put instancemethod objects in a pickleable form (only one level deep).
-        for key, val in state.items():
-            if val.__class__.__name__ == 'instancemethod':
-                state[key] = IMHolder(val)
-            elif isinstance(val, dict):
-                for key2, obj in val.items():
-                    if obj.__class__.__name__ == 'instancemethod':
-                        state[key][key2] = IMHolder(obj)
-            else:
-                if isinstance(val, list) or isinstance(val, set):
-                    for i, obj in enumerate(val):
-                        if obj.__class__.__name__ == 'instancemethod':
-                            state[key][i] = IMHolder(obj)
         return state
     
     def __setstate__(self, state):
@@ -123,20 +112,6 @@ class HierarchyMember(object):
         self.__dict__ = state
         if self._parent is not None:
             self._parent = weakref.ref(self._parent)
-
-        # Restore instancemethod objects (only one level deep).
-        for key, val in self.__dict__.items():
-            if isinstance(val, IMHolder):
-                self.__dict__[key] = val.method()
-            elif isinstance(val, dict):
-                for key2, obj in val.items():
-                    if isinstance(obj, IMHolder):
-                        self.__dict__[key][key2] = obj.method()
-            else:
-                if isinstance(val, list) or isinstance(val, set):
-                    for i, obj in enumerate(val):
-                        if isinstance(obj, IMHolder):
-                            self.__dict__[key][i] = obj.method()
 
     # error reporting stuff
     def _get_log_level(self):

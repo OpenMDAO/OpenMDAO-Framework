@@ -17,6 +17,7 @@ except ImportError:
     _libyaml = False
 
 import datetime
+import inspect
 import modulefinder
 import os
 import pkg_resources
@@ -51,6 +52,8 @@ from openmdao.main.log import logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.main.constants import SAVE_YAML, SAVE_LIBYAML
 from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
+
+from openmdao.main.hierarchy import IMHolder
 
 EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
 
@@ -428,6 +431,8 @@ class Container(HierarchyMember):
 
         tmp_dir = None
 
+        Container._fix_instancemethods(self, self.parent)
+
         # Get a list of all objects we'll be saving.
         objs = self._get_objects()
         objs.append(self)
@@ -435,25 +440,45 @@ class Container(HierarchyMember):
         # Check that each object can be pickled.
         errors = 0
         for obj in objs:
-            if obj.__class__.__name__ == 'function':
-                self.error("Can't save, can't pickle function %s.%s",
-                           obj.__module__, obj.__name__)
-                errors += 1
-            # Hopefully all instancemethods are handled by HierarchyMember.
-#            elif obj.__class__.__name__ == 'instancemethod':
-#                self.error("Can't save, can't pickle instancemethod %s.%s.%s",
-#                           obj.im_class.__module__,
-#                           obj.im_class.__name__,
-#                           obj.__name__)
+            try:
+                cls = obj.__class__
+            except AttributeError:
+                pass
+            else:
+                classname = cls.__name__
+                if classname == 'function':
+                    self.error("Can't save, can't pickle function %s.%s",
+                               obj.__module__, obj.__name__)
+                    self.error("    %r", obj)
+                    errors += 1
+                # Hopefully all instancemethods are handled by HierarchyMember.
+                elif classname == 'instancemethod':
+                    self.error("Can't save, can't pickle instancemethod %s.%s.%s",
+                               obj.im_class.__module__,
+                               obj.im_class.__name__,
+                               obj.__name__)
+                    errors += 1
+#            # (Debug) actually try to pickle.
+#            if isinstance(obj, HierarchyMember):
+#                parent = obj.parent
+#                obj.parent = None
+#            if isinstance(obj, Variable):
+#                _refparent = obj._refparent
+#                obj._refparent = None
+#            try:
+#                cPickle.dumps(obj)
+#            except Exception, exc:
+#                self.error("Can't pickle obj %r %s:",
+#                           obj, obj.__class__.__name__)
+#                self.error('    %s', exc)
 #                errors += 1
-#            else: # (Debug) actually try to pickle.
-#                try:
-#                    cPickle.dumps(obj)
-#                except Exception, exc:
-#                    self.error("Can't pickle obj %r %s",
-#                               obj, obj.__class__.__name__)
-#                errors += 1
+#            finally:
+#                if isinstance(obj, HierarchyMember):
+#                    obj.parent = parent
+#                if isinstance(obj, Variable):
+#                    obj._refparent = _refparent
         if errors:
+            self._restore_instancemethods(self, self.parent)
             self.raise_exception("Can't save, %d objects cannot be pickled."
                                  % errors, RuntimeError)
 
@@ -559,8 +584,91 @@ eggs =
             if tmp_dir:
                 shutil.rmtree(tmp_dir)
             self._restore_objects(fixup)
+            self._restore_instancemethods(self, self.parent)
 
         return egg_name
+
+    @staticmethod
+    def _fix_instancemethods(obj, previsited=None):
+        """Replace references to instancemethods with IMHolders."""
+
+        def _fix_im_recurse(obj, visited):
+            """Replace recursively."""
+            for key, val in obj.__dict__.items():
+                if val is None or id(val) in visited:
+                    continue
+                visited.append(id(val))
+                if inspect.ismethod(val):
+                    obj.__dict__[key] = IMHolder(val)
+                elif isinstance(val, dict):
+                    for key2, obj2 in val.items():
+                        if obj2 is None or id(obj2) in visited:
+                            continue
+                        visited.append(id(obj2))
+                        if inspect.ismethod(obj2):
+                            val[key2] = IMHolder(obj2)
+                        elif hasattr(obj2, '__dict__'):
+                            _fix_im_recurse(obj2, visited)
+                elif isinstance(val, list) or isinstance(val, set):
+                    for i, obj2 in enumerate(val):
+                        if obj2 is None or id(obj2) in visited:
+                            continue
+                        visited.append(id(obj2))
+                        if inspect.ismethod(obj2):
+                            val[i] = IMHolder(obj2)
+                        elif hasattr(obj2, '__dict__'):
+                            _fix_im_recurse(obj2, visited)
+                elif hasattr(val, '__dict__'):
+                    _fix_im_recurse(val, visited)
+
+        if previsited is None:
+            visited = []
+        elif isinstance(previsited, list):
+            visited = [id(obj2) for obj2 in previsited]
+        else:
+            visited = [id(previsited)]
+        _fix_im_recurse(obj, visited)
+
+    @staticmethod
+    def _restore_instancemethods(obj, previsited=None):
+        """Restore references to instancemethods."""
+
+        def _restore_im_recurse(obj, visited):
+            """Restore recursively."""
+            for key, val in obj.__dict__.items():
+                if val is None or id(val) in visited:
+                    continue
+                visited.append(id(val))
+                if isinstance(val, IMHolder):
+                    obj.__dict__[key] = val.method()
+                elif isinstance(val, dict):
+                    for key2, obj2 in val.items():
+                        if obj2 is None or id(obj2) in visited:
+                            continue
+                        visited.append(id(obj2))
+                        if isinstance(obj2, IMHolder):
+                            val[key2] = obj2.method()
+                        elif hasattr(obj2, '__dict__'):
+                            _restore_im_recurse(obj2, visited)
+                elif isinstance(val, list) or isinstance(val, set):
+                    for i, obj2 in enumerate(val):
+                        if obj2 is None or id(obj2) in visited:
+                            continue
+                        visited.append(id(obj2))
+                        if isinstance(obj2, IMHolder):
+                            val[i] = obj2.method()
+                        elif hasattr(obj2, '__dict__'):
+                            _restore_im_recurse(obj2, visited)
+                elif hasattr(val, '__dict__'):
+                    _restore_im_recurse(val, visited)
+
+        if previsited is None:
+            visited = []
+        elif isinstance(previsited, list):
+            visited = [id(obj2) for obj2 in previsited]
+        else:
+            visited = [id(previsited)]
+        _restore_im_recurse(obj, visited)
 
     def _get_objects(self):
         """Get objects to be saved."""
@@ -593,10 +701,11 @@ eggs =
                     continue
                 visited.append(id(obj))
                 objs.append(obj)
-                _recurse_get_objects(obj, objs, visited)
+                if not inspect.isclass(obj):
+                    _recurse_get_objects(obj, objs, visited)
 
         objs = []
-        visited = [id(self._parent)]  # Don't include our parent.
+        visited = [id(self.parent)]  # Don't include our parent.
         _recurse_get_objects(self, objs, visited)
         return objs
 
@@ -607,21 +716,24 @@ eggs =
         fixup_modules = set()
 
         for obj in objs:
-            classname = obj.__class__.__name__
+            if inspect.isclass(obj):
+                cls = obj
+            else:
+                cls = obj.__class__
+            classname = cls.__name__
             if classname == 'instancemethod':
                 obj = obj.im_self
             try:
                 mod = obj.__module__
             except AttributeError:
-                continue
+                continue  # No module entry to fix.
 
             if mod == '__main__':
                 if classname in ('function', 'type'):
                     self.raise_exception("Can't save: reference to %s defined "
                                          "in main module %r" % (classname, obj),
                                          RuntimeError)
-
-                mod = obj.__class__.__module__
+                mod = cls.__module__
                 if mod == '__main__' and \
                    (classname not in fixup_classes.keys()):
                     # Need to determine 'real' module name.
@@ -635,7 +747,7 @@ eggs =
                             except ImportError:
                                 pass
                             else:
-                                old = obj.__class__
+                                old = cls
                                 new = getattr(module, classname)
                                 fixup_classes[classname] = (old, new)
                                 fixup_modules.add(mod)
@@ -646,13 +758,17 @@ eggs =
                         self.raise_exception("Can't find module for '%s'" %
                                              classname, RuntimeError)
 
-                try:
-                    obj.__class__ = fixup_classes[classname][1]
-                except KeyError:
-                    self.raise_exception("Can't fix %r, classname %s, module %s"
-                                         % (obj, classname, mod), RuntimeError)
+                if inspect.isclass(obj):
+                    obj.__module__ = mod
+                else:
+                    try:
+                        obj.__class__ = fixup_classes[classname][1]
+                    except KeyError:
+                        self.raise_exception("Can't fix %r, classname %s, module %s"
+                                             % (obj, classname, mod),
+                                             RuntimeError)
                     
-                obj.__module__ = obj.__class__.__module__
+                    obj.__module__ = obj.__class__.__module__
                 fixup_objects.append(obj)
 
         return (fixup_objects, fixup_classes, fixup_modules)
@@ -663,8 +779,9 @@ eggs =
 
         for obj in fixup_objects:
             obj.__module__ = '__main__'
-            classname = obj.__class__.__name__
-            obj.__class__ = fixup_classes[classname][0]
+            if not inspect.isclass(obj):
+                classname = obj.__class__.__name__
+                obj.__class__ = fixup_classes[classname][0]
 
         for classname in fixup_classes.keys():
             new = fixup_classes[classname][1]
@@ -1153,6 +1270,7 @@ setuptools.setup(
         else:
             raise RuntimeError('cannot load object using format %s' % format)
 
+        Container._restore_instancemethods(top)
         if do_post_load:
             top.post_load()
         return top
