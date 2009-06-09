@@ -714,13 +714,107 @@ Sockets and Interfaces
 
 Now that we have a functional (and reasonably quick) vehicle component, we need to complete the problem by providing a way to simulate the acceleration and the EPA fuel economy estimates. The acceleration test requires an integration in time with the vehicle component being executed at each time step to produce the instantaneous acceleration. The EPA fuel economy tests are a bit more tricky, requiring an integration in time, but the vehicle component must be executed while varying the throttle and gear position inputs to match a desired acceleration for the integration segment. Both of these solution procedures were implemented in a component called Sim_Vehicle, which requires a Vehicle component to perform simulation.
 
-At this point, there are a couple of ways to implement this kind of problem in OpenMDAO. One way is to implement the solution procedure as a driver (or two drivers if prefered.) So far, drivers have only been mentioned as an attribute of assemblies, and they will be more thoroughly treated in the next section. Implementing the vehicle simulation as a driver might be a bit confusing for one's first exposure to drivers, particularly since it involves nesting the simulation driver with an optimizer, so the vehicle simulations were implemented as a Component instead. However, this leads to the introduction to the concept of "Sockets", which requires the implementation to be an Assembly instead of a Component.
+At this point, there are a couple of ways to implement this kind of problem in OpenMDAO. One way is to implement the solution procedure as a driver (or two drivers if prefered.) So far, drivers have only been mentioned as an attribute of assemblies, and they will be more thoroughly treated in the next section. Implementing the vehicle simulation as a driver might be a bit confusing for one's first exposure to drivers, particularly since it involves nesting the simulation driver with an optimizer, so the vehicle simulations were implemented as a Component instead. However, this leads to the introduction to the concept of "Sockets", which requires the implementation of the vehicle simulation to be an Assembly instead of a Component.
 
-In order to investigate designs, a Vehicle class was defined. This class has a set of specific inputs and outputs that include the design variables for the engine, transmission, and dynamics, and the simulation variables velocity, gear position and throttle position. These inputs and outputs comprise an interface for the Vehicle class.
+In order to investigate designs, a Vehicle class was defined as an assembly in OpenMDAO. This class has a set of specific inputs and outputs that include the design variables for the engine, transmission, and dynamics, and the simulation variables velocity, gear position and throttle position. These inputs and outputs comprise an interface for the Vehicle class. In the future, the user might want to replace the current vehicle model with a new model. This new model will be compatible provided that it has the same interface as the current vehicle model. The interface checking is facilitated by the creation of a Socket in the vehicle simulation assembly.
+
+[???? - Need to add the socket stuff to the sim_vehicle.py]
+
+**SimVehicle - Outputs:**
+
+=================  ===========================================  ======
+**Variable**	 	  **Description**			**Units**
+-----------------  -------------------------------------------  ------
+accel_time	   Time for vehicle to accelerate to 60 mph 	s
+		   from a stop.
+-----------------  -------------------------------------------  ------
+EPA_city    	   Fuel economy estimate based on EPA city	mi/galUS
+		   driving profile
+-----------------  -------------------------------------------  ------
+EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
+		   driving profile
+=================  ===========================================  ======
+
 
 Solving an Optimization Problem
 -------------------------------
 
+The final step is the creation of a top level assembly which defines the problem using Sim_Vehicle and the vehicle assembly. The first problem we would like to solve is a single objective optimization problem where we adjust some subset of the design variables to minimize the 0-60 acceleration time. The chosen design variables are the bore and spark angle; the optimal value of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second variable cannot be optimized by mere inspection. 
+
+The optimization will be handled by CONMIN, which is a gradient based algorithm written in FORTRAN, and developed at NASA in the 1970s. The source code is in the public domain, and a Python wrapped CONMIN component has been included in the OpenMDAO standard library.
+
+In openMDAO, the top level assembly is always derived from Assembly. In engine_optimization.py, the class EngineOptimization was created and a SimVehicle and CONMINdriver were instantiated:
+
+.. _Code9: 
+
+::
+
+	from openmdao.main import Assembly
+
+	from openmdao.lib.drivers.conmindriver import CONMINdriver
+
+	from openmdao.examples.engine_design.sim_vehicle import SimVehicle
+
+	class EngineOptimization(Assembly):
+	    """ Top level assembly for optimizing a vehicle. """
+    
+	    def __init__(self, name, parent=None, directory=''):
+        	''' Creates a new Assembly containing a SimVehicle and an optimizer'''
+        
+	        super(EngineOptimization, self).__init__(name, parent, directory)
+
+	        # Create SimVehicle component instances
+        	SimVehicle('vehicle_sim', parent=self)
+
+	        # Create CONMIN Optimizer instance
+        	CONMINdriver('driver', parent=self)
+
+Note that the syntax for instantiated the CONMIN driver is the same as for any other component or subassembly. The CONMIN driver requires some initialization and connecting before it can be used:
+
+        
+.. _Code10: 
+
+::
+
+	        # CONMIN Flags
+        	self.driver.iprint = 0
+	        self.driver.maxiters = 30
+        
+	        # CONMIN Objective 
+        	self.driver.objective.value = 'vehicle_sim.accel_time'
+        
+	        # CONMIN Design Variables 
+        	self.driver.design_vars.value = ['vehicle_sim.spark_angle', 
+                                         'vehicle_sim.bore' ]
+	        
+        	self.driver.lower_bounds = [-50, 65]
+	        self.driver.upper_bounds = [10, 100]
+
+In self.driver.iprint, driver refers to the title that the CONMIN driver is given when it is created above. The iprint flag enables or disables the printing of diagnostics internal to CONMIN, while the maxiters parameter specifies the maximum number of iterations for the optimization loop. Both of these have a default value (maxiters is 40), so setting them here is not required.
+
+The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which were chosen as bore and spark angle. Both the objective and the design variables are assigned using a type of variable called a RefVariable. Instead of containing a variable value, the RefVariable contains a string that gives the OpenMDAO path pointing to the variable that the RefVariable references. This path is always relative to the driver's parent, so here we use "vehicle_sim.accel_time" instead of "self.vehicle_sim.accel_time". RefVariables are primarily used to connect the inputs and outputs of drivers (e.g., optimizers, solvers, etc.) CONMIN is a single objective optimizer, so there can only be one objetive. However, there can be multiple design variables, and these are stored in a list. The upper and lower bounds for all the design variables are set using lower_bounds and upper_bounds respectively.
+
+[???? - Note: the RefVariable API is currently undergoing some changes.]
+
+The CONMIN driver can actually handle more sophisticated objective expressions that are functions of multiple simulation variables using the RefVariable. For example, if the user wants to maximize accel_time instead of minimizing it, this can be done by negating the expression:
+
+.. _Code11: 
+
+::
+
+	        # CONMIN Objective = Maximize accel_time 
+        	self.driver.objective.value = '-vehicle_sim.accel_time'
+		
+Expressions can be built up from any number of OpenMDAO variables using Python's mathematical syntax:
+
+.. _Code12: 
+
+::
+
+	        # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
+        	self.driver.objective.value = '-(.93*vehicle_sim.EPA_city + 1.07*vehicle_sim.EPA_highway)'
+
+Here, a weighted sum of the EPA city and highway fuel economy estimates is used as the objective in a maximization problem.
 
 Multiobjective Optimization 
 ---------------------------
