@@ -12,7 +12,7 @@ from openmdao.main.interfaces import IDriver, IComponent, IAssembly
 from openmdao.main.component import Component, STATE_WAITING, STATE_IDLE
 from openmdao.main import Assembly, RefVariable, RefVariableArray
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.drivertree import DriverSorter, create_labeled_graph
+from openmdao.main.drivertree import DriverForest, create_labeled_graph
 
 class Driver(Assembly):
     """ A Driver iterates over a collection of Components until some condition
@@ -87,9 +87,36 @@ class Driver(Assembly):
         pass
         
     def run_iteration(self):
-        """Run a single iteration over a group of Components. This is
-        overridden in derived classes."""
-        pass
+        """Runs the full set of components, in dataflow order, 
+        that are part of our iteration loop, including any nested drivers.
+        """
+        if self.parent:
+            drivers = self.parent.drivers
+            if len(drivers) > 1:
+                dtree = self._get_driver_tree()  # determine driver nesting hierarchy
+                if len(dtree.children) > 0:  # we have nested drivers
+                    graph = self.parent.get_component_graph().copy()
+                    for drv in dtree.drivers_iter():
+                        graph.add_edges_from(drv.get_ref_graph().edges_iter())
+                    strongs = strongly_connected_components(graph)
+                    for strong in strongs:
+                        if self.name in strong:
+                            subgraph = create_labeled_graph(graph.subgraph(nbunch=strong))
+                            for nested in dtree.children: # collapse immediate children
+                                nested.collapse_graph(subgraph)
+                            subgraph.remove_edges_from(
+                                self.get_ref_graph(iostatus=INPUT).edges_iter())
+                            sorted = nx.topological_sort(subgraph)
+                            for comp in sorted:
+                                if comp != self.name:
+                                    getattr(self.parent, comp).run()
+                else:  # no nested drivers
+                    self._run_simple_iteration()
+            else:  # single driver case
+                self._run_simple_iteration()
+        else:
+            self.raise_exception('Driver cannot run referenced components without a parent',
+                                 RuntimeError)
 
     def post_iteration(self):
         """Called after each iteration."""
@@ -180,43 +207,8 @@ class Driver(Assembly):
         """Returns the DriverTree object corresponding to this Driver from the 
         DriverTree hierarchy in the parent Assembly."""
         if not self._driver_tree:
-            self._driver_tree = DriverSorter(self.parent.drivers, 
-                                             self.parent.get_component_graph()
-                                             ).locate(self)
-        return self._driver_tree
-    
-    def run_iterated_comps(self):
-        """Runs the full set of components, in dataflow order, that are part of our iteration
-        loop, including any nested drivers.
-        """
-        if self.parent:
-            drivers = self.parent.drivers
-            if len(drivers) > 1:
-                dtree = self._get_driver_tree()  # determine driver nesting hierarchy
-                if len(dtree.children) > 0:  # we have nested drivers
-                    graph = self.parent.get_component_graph().copy()
-                    for drv in dtree.drivers_iter():
-                        graph.add_edges_from(drv.get_ref_graph().edges_iter())
-                    strongs = strongly_connected_components(graph)
-                    for strong in strongs:
-                        if self.name in strong:
-                            subgraph = create_labeled_graph(graph.subgraph(nbunch=strong))
-                            for nested in dtree.children: # collapse immediate children
-                                nested.collapse_graph(subgraph)
-                            subgraph.remove_edges_from(
-                                self.get_ref_graph(iostatus=INPUT).edges_iter())
-                            sorted = nx.topological_sort(subgraph)
-                            for comp in sorted:
-                                if comp != self.name:
-                                    getattr(self.parent, comp).run()
-                else:  # no nested drivers
-                    self._run_simple_iteration()
-            else:  # single driver case
-                self._run_simple_iteration()
-        else:
-            self.raise_exception('Driver cannot run referenced components without a parent',
-                                 RuntimeError)
-
+            self._driver_tree = DriverForest(self.parent.drivers).locate(self)
+        return self._driver_tree    
             
     def _run_simple_iteration(self):
         """There are no nested drivers. Just run our subgraph with our 

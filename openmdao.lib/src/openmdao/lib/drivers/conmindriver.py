@@ -221,7 +221,7 @@ class CONMINdriver(Driver):
         self._first = True
         
         # perform an initial run for self-consistency
-        self.run_iterated_comps()
+        self.run_iteration()
 
         # get the initial values of the design variables
         for i, val in enumerate(self.design_vars.refvalue):
@@ -264,7 +264,7 @@ class CONMINdriver(Driver):
             self.design_vars.refvalue = [float(val) for val in self.design_vals[:-2]]
             
             # update the model
-            self.run_iterated_comps()
+            self.run_iteration()
             
             # calculate constraints
             if self.cnmn1.info == 1:

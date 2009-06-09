@@ -121,7 +121,7 @@ class pyevolvedriver(Driver):
 
     def evaluate(self,genome):
         self.decoder(genome)
-        self.run_iterated_comps()
+        self.run_iteration()
         return self.objective.refvalue
 
     def verify(self):

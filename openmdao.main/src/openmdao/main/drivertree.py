@@ -9,33 +9,31 @@ def create_labeled_graph(parent_graph):
     return graph
 
 
-class DriverSorter(object):
+class DriverForest(object):
     """Inserting drivers into this object will result in the drivers
     being arranged in a forrest structure indicating which drivers are 
     nested within others.  
     """
-    def __init__(self, drivers, graph):
+    def __init__(self, drivers):
         self.trees = []
         for drv in drivers:
-            self.insert(drv, graph)
+            self.insert(drv)
 
-    def insert(self, driver, graph):
+    def insert(self, driver):
         if len(self.trees) == 0:
             self.trees.append(DriverTree(driver))
         else:
             dtree = DriverTree(driver)
-            for tree in self.trees:
-                if tree.insert(dtree, graph):
+            for i,tree in enumerate(self.trees):
+                val = tree.insert(dtree)
+                if val > 0:
                     return
-            # couldn't insert in an existing tree.
-            # check if any existing trees fit in new tree
-            new_trees = []
-            for tree in self.trees:
-                if not dtree.insert(tree, graph):
-                    new_trees.append(tree)
-            new_trees.append(dtree)
-            self.trees = new_trees
-                
+                elif val < 0:
+                    dtree.insert(tree)
+                    self.trees[i] = dtree
+                    return
+            self.trees.append(dtree)
+            
     def drivers_iter(self, top_only=True):
         if top_only:
             for tree in self.trees:
@@ -55,7 +53,7 @@ class DriverSorter(object):
         """
         graph = create_labeled_graph(parent_graph)
         if len(self.trees) > 1:
-            raise RuntimeError('no single root node in DriverSorter')
+            raise RuntimeError('no single root node in DriverForest')
         
         for tree in self.trees:
             tree.collapse_graph(graph)
@@ -82,7 +80,7 @@ class DriverTree(object):
             if tree: return tree
         return None
     
-    def insert(self, dtree, graph):
+    def insert(self, dtree):
         """If the given driver is nested within one of the drivers in
         this tree, insert it in the tree in the appropriate place.
         Otherwise, do nothing. The heuristic used to determine nesting is
@@ -93,13 +91,42 @@ class DriverTree(object):
         Returns True if the driver was inserted in the tree.
         """
         newset = dtree.data.simple_iteration_set()
-        if newset < self.data.simple_iteration_set() and len(newset) > 0:
-            for child in self.children:
-                if child.insert(dtree, graph):
-                    return True
-            self.children.append(dtree)
-            return True            
-        return False
+        newlen = len(newset)
+        if newlen == 0: return 0
+        myset = self.data.simple_iteration_set()
+        mylen = len(myset)
+        if mylen == 0: return 0
+        interset = newset.intersection(myset)
+        interlen = len(interset)
+        
+        if interlen == newlen:
+            if newlen < mylen:  # new driver's iteration set is a strict subset of ours
+                for i,child in enumerate(self.children):
+                    val = child.insert(dtree)
+                    if val > 0:
+                        return 1
+                    elif val < 0:
+                        dtree.insert(child)
+                        self.children[i] = dtree
+                        return 1
+                self.children.append(dtree)
+                return 1 
+            elif newlen == mylen:
+                raise RuntimeError(('Drivers %s and %s iterate over the same '+
+                                    'set of components (%s), so their order cannot be '+
+                                    'determined') % (self.data.get_pathname(),
+                                                     dtree.data.get_pathname(),
+                                                     list(myset)))
+        elif interlen == mylen:  # our iter set is a strict subset of the new driver
+            return -1
+        elif interlen > 0:  # iteration sets overlap
+                raise RuntimeError(('Drivers %s and %s have overlap (%s) in their '+
+                                    'iteration sets, so their order cannot be determined')
+                                   % (self.data.get_pathname(),
+                                      dtree.data.get_pathname(),
+                                      list(interset)))
+        
+        return 0
         
     def collapse_graph(self, graph):
         """Take the given graph, and collapse driver loops into single driver

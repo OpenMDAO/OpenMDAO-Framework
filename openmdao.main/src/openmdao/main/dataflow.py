@@ -8,7 +8,7 @@ from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_co
 from openmdao.main.interfaces import IAssembly, IComponent, IDriver, IWorkflow
 from openmdao.main.workflow import Workflow
 from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.drivertree import DriverSorter, create_labeled_graph
+from openmdao.main.drivertree import DriverForest, create_labeled_graph
 
 __all__ = ['Dataflow']
 
@@ -152,7 +152,7 @@ class Dataflow(Workflow):
             yield drivers[0]
         else:   # nested drivers
             subgraph = self._no_ref_graph.subgraph(nbunch=loopcomps) # this has no RefVariable edges
-            self._drvsorter = DriverSorter(drivers, subgraph)
+            self._drvsorter = DriverForest(drivers)
             if len(self._drvsorter.trees) > 1:
                 self.raise_exception('drivers %s have overlap in their iteration sets' %
                                      [d.name for d in drivers], RuntimeError)
