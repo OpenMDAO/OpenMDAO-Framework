@@ -13,7 +13,7 @@ class VehicleTestCase(unittest.TestCase):
 
     def setUp(self):
         self.model = Assembly('top')
-        Vehicle("Test_Vehicle", parent=self.model)
+        Vehicle("test_vehicle", parent=self.model)
 
     def tearDown(self):
         self.model.pre_delete()
@@ -21,19 +21,19 @@ class VehicleTestCase(unittest.TestCase):
         
     def test_runvehicle(self):
         
-        self.model.set('Test_Vehicle.CurrentGear', 3)
-        self.model.set('Test_Vehicle.Velocity', 60.0)
-        self.model.set('Test_Vehicle.Throttle', .2)
-        self.model.set('Test_Vehicle.Cf', .01)
+        self.model.set('test_vehicle.current_gear', 3)
+        self.model.set('test_vehicle.velocity', 60.0)
+        self.model.set('test_vehicle.throttle', .2)
+        self.model.set('test_vehicle.Cf', .01)
         self.model.run()
         
-        self.assertAlmostEqual(self.model.get('Test_Vehicle.Acceleration'), 
+        self.assertAlmostEqual(self.model.get('test_vehicle.acceleration'), 
                                0.450554819193, places=5)
-        self.assertAlmostEqual(self.model.get('Test_Vehicle.FuelBurn'), 
+        self.assertAlmostEqual(self.model.get('test_vehicle.fuel_burn'), 
                                0.00236333261766, places=5)        
-        self.assertAlmostEqual(self.model.get('Test_Vehicle.Engine.Torque'), 
+        self.assertAlmostEqual(self.model.get('test_vehicle.engine.torque'), 
                                81.7322022986, places=5)        
-        self.assertAlmostEqual(self.model.get('Test_Vehicle.Engine.RPM'), 
+        self.assertAlmostEqual(self.model.get('test_vehicle.engine.RPM'), 
                                3216.9984, places=5)        
 
         

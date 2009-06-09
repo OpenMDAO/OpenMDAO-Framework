@@ -10,19 +10,20 @@ __version__ = '0.1'
 
 import mool.Optimization.MidFiModel
 
-from openmdao.main import Component, ArrayVariable, Float, Int, String
+from openmdao.main import Assembly, ArrayVariable, Float, Int, String
 from openmdao.main.interfaces import IComponent
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.socket import Socket
 
 import wrapper
 
-class MidFidelity(Component):
+
+class MidFidelity(Assembly):
     """ Wrapper for M4 variable fidelity capability. """
 
     # Sockets.
-    lofi_model = Socket(IComponent, 'Low fidelity model')
-    hifi_model = Socket(IComponent, 'High fidelity model')
+    lofi_model = Socket(IComponent, 'Low fidelity model', required=True)
+    hifi_model = Socket(IComponent, 'High fidelity model', required=True)
 
     def __init__(self, name='M4_MidFi', *args, **kwargs):
         super(MidFidelity, self).__init__(name, *args, **kwargs)

@@ -151,7 +151,7 @@ def get_metadata(path):
 
     dists = [x for x in find_distributions(path,only=True)]
     if len(dists) == 0:
-        raise RuntimeError('%s is not a zipped egg or an installed distribution'%self.path)
+        raise RuntimeError('%s is not a zipped egg or an installed distribution'%path)
 
     dist = dists[0]
 
@@ -186,7 +186,9 @@ def get_metadata(path):
 if __name__ == '__main__':
     if len(sys.argv) > 2:
         print get_metadata(sys.argv[1])[sys.argv[2]]
+    elif len(sys.argv) > 1:
+        pprint.pprint(get_metadata(sys.argv[1]))
     else:
-        print pprint.pprint(get_metadata(sys.argv[1]))
-        
+        print 'usage: python dumpeggmeta.py egg-or-distribution [metadata-item]'
+
 

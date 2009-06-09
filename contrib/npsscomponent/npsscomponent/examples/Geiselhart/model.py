@@ -525,34 +525,7 @@ class Model(Assembly):
                      'PropulsionData.FLOPS.thrso')
 
 
-def test_save_load():
-    """ Save model and then reload & run. """
-    import shutil
-    import subprocess
-    from openmdao.main.component import SimulationRoot
-
-    model = Model()
-    egg_name = model.save_to_egg()
-
-    if os.path.exists('test_dir'):
-        shutil.rmtree('test_dir')
-    os.mkdir('test_dir')
-    SimulationRoot.chdir('test_dir')
-    egg_path = os.path.join('..', egg_name)
-    try:
-        print '\nUnpacking in subprocess...'
-        os.environ['OPENMDAO_INSTALL'] = '0'
-        retcode = subprocess.call(['sh', egg_path])
-        print '    retcode', retcode
-        if retcode == 0:
-            print '\nRunning in subprocess...'
-            retcode = subprocess.call(['python', model.name+'_loader.py'])
-            print '    retcode', retcode
-    finally:
-        SimulationRoot.chdir('..')
-
-
 if __name__ == '__main__':
 #    Model().run()
-    test_save_load()
+    Model().check_save_load()
 
