@@ -14,29 +14,6 @@ from openmdao.main.log import Logger, LOG_DEBUG
 _namecheck_rgx = re.compile('([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
 
 
-class IMHolder(object):
-    """Holds an instancemethod object in a pickleable form."""
-
-    def __init__(self, obj):
-        self.name = obj.__name__
-        self.im_self = obj.im_self
-        if obj.im_self is not None:
-            self.im_class = None  # Avoid possible __main__ issues.
-        else:
-            # TODO: handle __main__ for im_class.__module__.
-            if obj.im_class.__module__ == '__main__':
-                raise RuntimeError('IMHolder: %r with module __main__ (%s)'
-                                   % (obj, obj.im_self))
-            self.im_class = obj.im_class
-
-    def method(self):
-        """Return instancemethod corresponding to saved state."""
-        if self.im_self is not None:
-            return getattr(self.im_self, self.name)
-        else:
-            return getattr(self.im_class, self.name)
-
-
 class HierarchyMember(object):
     """Base class for all objects living in the framework accessible
     hierarchy of named objects.
