@@ -12,7 +12,7 @@ from openmdao.main.interfaces import IDriver, IComponent, IAssembly
 from openmdao.main.component import Component, STATE_WAITING, STATE_IDLE
 from openmdao.main import Assembly, RefVariable, RefVariableArray
 from openmdao.main.variable import INPUT, OUTPUT
-
+from openmdao.main.drivertree import DriverSorter, create_labeled_graph
 
 class Driver(Assembly):
     """ A Driver iterates over a collection of Components until some condition
@@ -22,9 +22,15 @@ class Driver(Assembly):
 
     def __init__(self, name, parent=None, doc=None):
         super(Driver, self).__init__(name, parent, doc=doc)
-        self._ref_graph = None
-        self._ref_graph_noinputs = None
-        self._sorted_comps = None
+        self._ref_graph = { None: None, INPUT: None, OUTPUT: None }
+        self._ref_comps = { None: None, INPUT: None, OUTPUT: None }
+        self.force_graph_regen()
+    
+    def force_graph_regen(self):
+        self._iteration_comps = None
+        self._simple_iteration_subgraph = None
+        self._simple_iteration_set = None    
+        self._driver_tree = None
         
     def _pre_execute (self):
         """Call base class _pre_execute after determining if we have any invalid
@@ -36,11 +42,10 @@ class Driver(Assembly):
         invalid_refs = [v for v in refs if v.valid is False]
         if len(invalid_refs) > 0:
             exec_needed = True
-            self._ref_graph = None  # force regeneration of ref graph
-            self._ref_graph_noinputs = None
-        
-        self._sorted_comps = None
-        
+            # force regeneration of _ref_graph, _ref_comps, _iteration_comps
+            self._ref_graph = { None: None, INPUT: None, OUTPUT: None } 
+            self._ref_comps = { None: None, INPUT: None, OUTPUT: None }
+            self.force_graph_regen()
         super(Driver, self)._pre_execute()
         
         # force execution of the driver if any of its RefVariables reference
@@ -96,69 +101,131 @@ class Driver(Assembly):
         supplied, return only component names that are referenced by ref
         variables with matching iostatus.
         """
-        comps = set()
+        if self._ref_comps[iostatus] is None:
+            comps = set()
+        else:
+            return self._ref_comps[iostatus]
+        
         if iostatus is None:
             for refin in [v for v in self._pub.values() if (isinstance(v,RefVariable) or 
-                                                   isinstance(v,RefVariableArray))]:
+                                                            isinstance(v,RefVariableArray))]:
                 comps.update(refin.get_referenced_compnames())
         else:
             for refin in [v for v in self._pub.values() if (isinstance(v,RefVariable) or 
-                                                   isinstance(v,RefVariableArray))
-                                               and v.iostatus==iostatus]:
+                                                            isinstance(v,RefVariableArray))
+                          and v.iostatus==iostatus]:
                 comps.update(refin.get_referenced_compnames())
+                
+        self._ref_comps[iostatus] = comps
         return comps
         
-    def get_ref_graph(self, skip_inputs=False):
+    def get_ref_graph(self, iostatus=None):
         """Returns the dependency graph for this Driver based on
         RefVariables and RefVariableArrays.
         """
-        if skip_inputs:
-            if self._ref_graph_noinputs is None:
-                self._ref_graph_noinputs = nx.DiGraph()
-                graph = self._ref_graph_noinputs
-                for refout in self.get_referenced_comps(iostatus=OUTPUT):
-                    graph.add_edge(self.name, refout)
-            return self._ref_graph_noinputs
-        else:  # don't skip inputs
-            if self._ref_graph is None:
-                self._ref_graph = nx.DiGraph()
-                graph = self._ref_graph
-                for refout in self.get_referenced_comps(iostatus=OUTPUT):
-                    graph.add_edge(self.name, refout)
-                for refin in self.get_referenced_comps(iostatus=INPUT):
-                    graph.add_edge(refin, self.name)
-
-            return self._ref_graph
+        if self._ref_graph[iostatus] is not None:
+            return self._ref_graph[iostatus]
+        
+        self._ref_graph[iostatus] = nx.DiGraph()
+        name = self.name
+        
+        if iostatus is OUTPUT or iostatus is None:
+            self._ref_graph[iostatus].add_edges_from([(name,rv) 
+                                  for rv in self.get_referenced_comps(iostatus=OUTPUT)])
+            
+        if iostatus is INPUT or iostatus is None:
+            self._ref_graph[iostatus].add_edges_from([(rv, name) 
+                                  for rv in self.get_referenced_comps(iostatus=INPUT)])
+        return self._ref_graph[iostatus]
     
-    def sorted_components(self):
-        """Return the names of our referenced components, 
-        sorted in dataflow order.
+    def _get_simple_iteration_subgraph(self):
+        """Return a graph of our iteration loop (ourself plus all components we
+        iterate over). This does not include nested drivers, unless they are
+        explicitly referenced by us through a ReferenceVariable or they are
+        explicitly connected to another component in our set of iteration
+        components via a non-ReferenceVariable connection.
         """
-        if self._sorted_comps is None:
-            if self.parent and isinstance(self.parent, Assembly):
-                graph = self.parent.get_component_graph().subgraph(
-                                           nbunch=self.get_referenced_comps())
-                graph.add_edges_from(self.get_ref_graph(skip_inputs=True).edges_iter())
-                self._sorted_comps = nx.topological_sort(graph) 
-                if self._sorted_comps is None:  # _sorted_comps is None if not a DAG
-                    for strcon in strongly_connected_components(graph):
-                        if len(strcon) > 1:
-                            self.raise_exception('subgraph for driver %s has a cycle (%s)' %
-                                         (self.get_pathname(), str(strcon)), RuntimeError)
-                if self.name in self._sorted_comps:
-                    self._sorted_comps.remove(self.name)
+        if self._simple_iteration_subgraph is None:
+            graph = self.parent.get_component_graph().copy()
+            # add all of our RefVariable edges and find any strongly connected
+            # components (SCCs) that are created as a result
+            graph.add_edges_from(self.get_ref_graph().edges_iter())
+            strcons = strongly_connected_components(graph)
+            # No cycles are allowed other than the one we possibly just
+            # created, so our cycle must be the first SCC in the list. If there
+            # is no cycle, then this driver may not be in the first SCC since
+            # they are sorted by size and they will all have size 1.
+            if len(strcons[0]) > 1:
+                self._simple_iteration_subgraph = graph.subgraph(nbunch=strcons[0])
             else:
-                self.raise_exception('Driver requires an Assembly parent to determine dataflow', 
-                                     RuntimeError)
-        return self._sorted_comps
+                # no cycle, so just return a graph with the driver and any components
+                # it references
+                self._simple_iteration_subgraph = graph.subgraph(nbunch=[self.name]+
+                                                                 list(self.get_referenced_comps()))
+            self._simple_iteration_set = None
+        
+        return self._simple_iteration_subgraph
     
-    def run_referenced_comps(self):
-        """Runs the set of components that we reference via our reference variables."""
+    def simple_iteration_set(self):
+        """Return the set of components iterated over by this driver, not including
+        other drivers that may be nested within this driver.
+        """
+        if self._simple_iteration_set is None:
+            iterset = set(self._get_simple_iteration_subgraph().nodes_iter())
+            iterset.remove(self.name)
+            self._simple_iteration_set = iterset
+        return self._simple_iteration_set
+        
+    def _get_driver_tree(self):
+        """Returns the DriverTree object corresponding to this Driver from the 
+        DriverTree hierarchy in the parent Assembly."""
+        if not self._driver_tree:
+            self._driver_tree = DriverSorter(self.parent.drivers, 
+                                             self.parent.get_component_graph()
+                                             ).locate(self)
+        return self._driver_tree
+    
+    def run_iterated_comps(self):
+        """Runs the full set of components, in dataflow order, that are part of our iteration
+        loop, including any nested drivers.
+        """
         if self.parent:
-            for compname in self.sorted_components():
-                getattr(self.parent, compname).run()
+            drivers = self.parent.drivers
+            if len(drivers) > 1:
+                dtree = self._get_driver_tree()  # determine driver nesting hierarchy
+                if len(dtree.children) > 0:  # we have nested drivers
+                    graph = self.parent.get_component_graph().copy()
+                    for drv in dtree.drivers_iter():
+                        graph.add_edges_from(drv.get_ref_graph().edges_iter())
+                    strongs = strongly_connected_components(graph)
+                    for strong in strongs:
+                        if self.name in strong:
+                            subgraph = create_labeled_graph(graph.subgraph(nbunch=strong))
+                            for nested in dtree.children: # collapse immediate children
+                                nested.collapse_graph(subgraph)
+                            subgraph.remove_edges_from(
+                                self.get_ref_graph(iostatus=INPUT).edges_iter())
+                            sorted = nx.topological_sort(subgraph)
+                            for comp in sorted:
+                                if comp != self.name:
+                                    getattr(self.parent, comp).run()
+                else:  # no nested drivers
+                    self._run_simple_iteration()
+            else:  # single driver case
+                self._run_simple_iteration()
         else:
             self.raise_exception('Driver cannot run referenced components without a parent',
                                  RuntimeError)
 
             
+    def _run_simple_iteration(self):
+        """There are no nested drivers. Just run our subgraph with our 
+        input edges removed.
+        """
+        graph = self._get_simple_iteration_subgraph()
+        graph.remove_edges_from(self.get_ref_graph(iostatus=INPUT).edges_iter())
+        itercomps = nx.topological_sort(graph)
+        for comp in itercomps:
+            if comp != self.name:
+                getattr(self.parent, comp).run()
+        
