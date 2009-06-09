@@ -236,7 +236,16 @@ class RefVariableArray(Variable):
             
         if parpar:
             for varname in self.get_referenced_varpaths():
-                if parpar.getvar(varname).valid is False:
-                    return True
+                try:
+                    var = parpar.getvar(varname)
+                    return var.valid is False
+                except NameError:
+                    parts = varname.split('.')
+                    if len(parts) > 2:
+                        var = parpar.getvar('.'.join(parts[:-1]))
+                        return var.valid is False
+                    else:
+                        self.raise_exception("invalid referenced varpath '%s'" %
+                                             varname, NameError)
         return False
     

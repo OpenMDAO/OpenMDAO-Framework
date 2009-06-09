@@ -65,6 +65,7 @@ class Assembly (Component):
                               for s in self.__class__._class_sockets.values()])
         self._child_io_graphs = {}
         self._need_child_io_update = True
+        self.drivers = []
         
         # A hybrid graph of Variable names (local path) and component names, 
         # with connections between Variables/Components as directed edges.  
@@ -97,7 +98,6 @@ class Assembly (Component):
         for missing in [v for v in self.values() if isinstance(v, Variable)
                                                  and v.name not in self._var_graph]:
             self._var_graph.add_node(missing.name, data=missing)
-        
         
         self._dataflow = Dataflow('dataflow', self)
 
@@ -134,6 +134,8 @@ class Assembly (Component):
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
             self._dataflow.add_node(obj.name)
+        if IDriver.providedBy(obj):
+            self.drivers.append(obj)
         return obj
 
     def make_public(self, obj_info, iostatus=INPUT):
@@ -184,10 +186,16 @@ class Assembly (Component):
                 if childgraph is not None:
                     self._var_graph.remove_nodes_from(childgraph)
                 del self._child_io_graphs[name]
+        
+        if IDriver.providedBy(obj):
+            self.drivers.remove(obj)
             
         if name in self._sockets:
             self._sockets[name][1] = None
         super(Assembly, self).remove_child(name)
+        
+        for drv in self.drivers:
+            drv.force_graph_regen()
 
     def create_passthru(self, varname, alias=None):
         """Create a Variable that's a copy of var, make it a public member of self,
@@ -304,6 +312,9 @@ class Assembly (Component):
         destvar._source = srcvar
         self._io_graph = None
 
+        for drv in self.drivers:
+            drv.force_graph_regen()
+
     def disconnect(self, varpath, varpath2=None):
         """Remove all connections to/from a given variable in the current scope. 
         This does not remove connections to boundary Variables from the parent scope.
@@ -350,6 +361,9 @@ class Assembly (Component):
             vargraph.remove_edges_from(to_remove)
                 
         self._io_graph = None  # the io graph has changed, so have to remake it
+        for drv in self.drivers:
+            drv.force_graph_regen()
+
 
     def is_destination(self, varpath):
         """Return True if the Variable specified by varname is a destination according
