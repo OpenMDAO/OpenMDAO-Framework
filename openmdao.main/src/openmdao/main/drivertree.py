@@ -34,14 +34,10 @@ class DriverForest(object):
                     return
             self.trees.append(dtree)
             
-    def drivers_iter(self, top_only=True):
-        if top_only:
-            for tree in self.trees:
-                yield tree.data
-        else:
-            for tree in self.trees:
-                for drv in tree.drivers_iter():
-                    yield drv
+    def drivers_iter(self):
+        for tree in self.trees:
+            for drv in tree.drivers_iter():
+                yield drv
 
     def collapse_graph(self, parent_graph):
         """Take the given graph, and collapse driver loops into single driver
