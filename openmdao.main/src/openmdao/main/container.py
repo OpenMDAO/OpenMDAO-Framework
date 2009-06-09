@@ -405,8 +405,8 @@ class Container(HierarchyMember):
         parent = self.parent
         self.parent = None
         try:
-            return openmdao.util.save_load.save(self, outstream, format, proto,
-                                                self._logger)
+            openmdao.util.save_load.save(self, outstream, format, proto,
+                                         self._logger)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:

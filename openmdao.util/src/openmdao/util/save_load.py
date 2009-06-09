@@ -14,8 +14,6 @@ Also note that YAML format doesn't handle more than one layer of back-pointers,
 so it's only suitable for very flat object networks.
 """
 
-__version__ = '0.1'
-
 import pickle
 import cPickle
 import yaml
@@ -40,6 +38,12 @@ import sys
 import tempfile
 import zc.buildout.easy_install
 import zipfile
+
+__all__ = ('save', 'save_to_egg', 'load', 'load_from_egg',
+           'SAVE_YAML', 'SAVE_LIBYAML', 'SAVE_PICKLE', 'SAVE_CPICKLE',
+           'EGG_SERVER_URL')
+
+__version__ = '0.1'
 
 # Save formats.
 SAVE_YAML    = 1
@@ -387,7 +391,6 @@ def _check_objects(objs, logger):
 #            logger.error('    %s', exc)
 #            errors += 1
     if errors:
-        _restore_instancemethods(root)
         raise RuntimeError("Can't save, %d objects cannot be pickled." % errors)
 
 
