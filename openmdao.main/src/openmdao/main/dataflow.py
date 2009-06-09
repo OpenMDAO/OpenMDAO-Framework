@@ -153,9 +153,6 @@ class Dataflow(Workflow):
         else:   # nested drivers
             subgraph = self._no_ref_graph.subgraph(nbunch=loopcomps) # this has no RefVariable edges
             self._drvsorter = DriverForest(drivers)
-            if len(self._drvsorter.trees) > 1:
-                self.raise_exception('drivers %s have overlap in their iteration sets' %
-                                     [d.name for d in drivers], RuntimeError)
             collapsed_graph = self._drvsorter.collapse_graph(subgraph)
             for compname in nx.topological_sort(collapsed_graph):
                 yield getattr(self.parent, compname)

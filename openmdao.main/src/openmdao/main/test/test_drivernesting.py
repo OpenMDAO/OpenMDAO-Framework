@@ -9,6 +9,8 @@ from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.refvariable import RefVariable
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
+exec_order = []
+
 class Summer(Driver):
     """Sums the objective over some number of iterations, feeding
     its current sum back into the specified design variable."""
@@ -22,19 +24,22 @@ class Summer(Driver):
         self.itercount = 0
     
     def continue_iteration(self):
-        return self.itercount <= self.max_iterations
+        return self.itercount < self.max_iterations
     
     def start_iteration(self):
         self.itercount = 0
         self.sum = 0.
         
     def pre_iteration(self):
-        self.design.refvalue = self.sum
+        self.design.refvalue = 1
     
     def post_iteration(self):
         self.sum += self.objective.refvalue
+        self.itercount += 1
     
     def execute(self):
+        global exec_order
+        exec_order.append(self.name)
         super(Summer, self).execute()
         self.runcount += 1
         
@@ -48,71 +53,310 @@ class ExprComp(Component):
         self.runcount = 0
         
     def execute(self):
+        global exec_order
+        exec_order.append(self.name)
         x = self.x
         self.f_x = eval(self.expr)
         self.runcount += 1
     
+class ExprComp2(Component):
+    """Evaluates an expression based on the inputs x & y and assigns it to f_xy"""
+    def __init__(self, name, parent, expr='x'):
+        super(ExprComp2, self).__init__(name, parent)
+        Float('x', self, INPUT, default=0.0)
+        Float('y', self, INPUT, default=0.0)
+        Float('f_xy', self, OUTPUT, default = 0.0)
+        String('expr', self, INPUT, default = expr)
+        self.runcount = 0
+
+    def execute(self):
+        global exec_order
+        exec_order.append(self.name)
+        x = self.x
+        y = self.y
+        self.f_xy = eval(self.expr)
+        self.runcount += 1
         
 class NestedDriverTestCase(unittest.TestCase):
 
     def test_2drivers_same_iterset(self):
+        #
+        #  D1--->
+        #  |    |
+        #  |<---C1----->
+        #       |      |
+        #       |<-----D2
+        #
         top = Assembly('top', None)
-        ExprComp('comp1', top, expr='x+1')
-        Summer('driver1', top)
-        top.driver1.objective.value = 'comp1.f_x'
-        top.driver1.design.value = 'comp1.x'
-        Summer('driver2', top)
-        top.driver2.objective.value = 'comp1.f_x'
-        top.driver2.design.value = 'comp1.x'
+        ExprComp('C1', top, expr='x+1')
+        Summer('D1', top)
+        top.D1.objective.value = 'C1.f_x'
+        top.D1.design.value = 'C1.x'
+        Summer('D2', top)
+        top.D2.objective.value = 'C1.f_x'
+        top.D2.design.value = 'C1.x'
         try:
             top.run()
         except RuntimeError, err:
             self.assertEqual(str(err), 
-                "Drivers top.driver1 and top.driver2 iterate over"+
-                " the same set of components (['comp1']), so their order"+
+                "Drivers top.D1 and top.D2 iterate over"+
+                " the same set of components (['C1']), so their order"+
+                " cannot be determined")
+        else:
+            self.fail('RuntimeError expected')
+            
+    def test_2drivers_discon_same_iterset(self):
+        #
+        #  D1--->
+        #  |    |
+        #  |    C1--------->|
+        #  |                |
+        #  |<----------C2   |
+        #              |    |
+        #              |<---D2
+        #
+        top = Assembly('top', None)
+        ExprComp('C1', top, expr='x+1')
+        ExprComp('C2', top, expr='x+1')
+        Summer('D1', top)
+        top.D1.objective.value = 'C2.f_x'
+        top.D1.design.value = 'C1.x'
+        Summer('D2', top)
+        top.D2.objective.value = 'C1.f_x'
+        top.D2.design.value = 'C2.x'
+        try:
+            top.run()
+        except RuntimeError, err:
+            self.assertEqual(str(err), 
+                "Drivers top.D1 and top.D2 iterate over"+
+                " the same set of components (['C1', 'C2']), so their order"+
                 " cannot be determined")
         else:
             self.fail('RuntimeError expected')
             
     def test_2drivers_overlapping_iterset(self):
+        #
+        #  D2---------->|
+        #  |            |
+        #  |   C1------>|
+        #  |   |        |
+        #  |   |<---D1  |
+        #  |        |   |
+        #  |        |<--C2-->
+        #  |                |
+        #  |<---------------C3
         top = Assembly('top', None)
-        ExprComp('comp1', top, expr='x+1')
-        ExprComp('comp2', top, expr='x+1')
-        ExprComp('comp3', top, expr='x+1')
-        top.connect('comp1.f_x', 'comp2.x')
-        top.connect('comp2.f_x', 'comp3.x')
-        Summer('driver1', top)
-        top.driver1.objective.value = 'comp2.f_x'
-        top.driver1.design.value = 'comp1.x'
-        Summer('driver2', top)
-        top.driver2.design.value = 'comp2.x'
-        top.driver2.objective.value = 'comp3.f_x'
+        ExprComp('C1', top, expr='x+1')
+        ExprComp('C2', top, expr='x+1')
+        ExprComp('C3', top, expr='x+1')
+        top.connect('C1.f_x', 'C2.x')
+        top.connect('C2.f_x', 'C3.x')
+        Summer('D1', top)
+        top.D1.objective.value = 'C2.f_x'
+        top.D1.design.value = 'C1.x'
+        Summer('D2', top)
+        top.D2.design.value = 'C2.x'
+        top.D2.objective.value = 'C3.f_x'
         try:
             top.run()
         except RuntimeError, err:
             self.assertEqual(str(err), 
-                "Drivers top.driver2 and top.driver1 have overlap"+
-                " (['comp2']) in their iteration sets, so their order"+
+                "Drivers top.D2 and top.D1 have overlap"+
+                " (['C2']) in their iteration sets, so their order"+
                 " cannot be determined")
         else:
             self.fail('RuntimeError expected')
             
+    def test_2nested_drivers(self):
+        #
+        #  D2-->
+        #  |   |
+        #  |   C1--> 
+        #  |       |
+        #  |       D1-->
+        #  |       |   |
+        #  |       |<--C2-->
+        #  |               |
+        #  |<--------------C3
         
-if __name__ == "__main__":
-    
-    #import cProfile
-    #cProfile.run('unittest.main()', 'profout')
-    
-    #import pstats
-    #p = pstats.Stats('profout')
-    #p.strip_dirs()
-    #p.sort_stats('time')
-    #p.print_stats()
-    #print '\n\n---------------------\n\n'
-    #p.print_callers()
-    #print '\n\n---------------------\n\n'
-    #p.print_callees()
+        global exec_order
+        exec_order = []
         
+        top = Assembly('top', None)
+        ExprComp('C1', top, expr='x+1')
+        ExprComp2('C2', top, expr='x+y')
+        ExprComp('C3', top, expr='x+1')
+        top.connect('C1.f_x', 'C2.x')
+        top.connect('C2.f_xy', 'C3.x')
+        Summer('D1', top)
+        top.D1.objective.value = 'C2.f_xy'
+        top.D1.design.value = 'C2.y'
+        top.D1.max_iterations = 2
+        Summer('D2', top)
+        top.D2.design.value = 'C1.x'
+        top.D2.objective.value = 'C3.f_x'
+        top.D2.max_iterations = 3
+        top.run()
+        self.assertEqual(top.D2.runcount, 1)
+        self.assertEqual(top.D1.runcount, top.D2.max_iterations)
+        self.assertEqual(top.C1.runcount, top.D2.max_iterations)
+        self.assertEqual(top.C2.runcount, 
+                         top.D2.max_iterations*top.D1.max_iterations)
+        self.assertEqual(exec_order,
+                         ['D2', 'C1', 'D1', 'C2', 'C2', 'C3', 
+                                     'C1', 'D1', 'C2', 'C2', 'C3', 
+                                     'C1', 'D1', 'C2', 'C2', 'C3'])
+        self.assertEqual(top.D1.sum, 3.*top.D1.max_iterations)
+        self.assertEqual(top.D2.sum, 4.*top.D2.max_iterations)
+        
+        top.C1.runcount = 0
+        top.C2.runcount = 0
+        top.D1.runcount = 0
+        top.D2.runcount = 0
+        top.D1.set('max_iterations', 5)
+        top.D2.set('max_iterations', 4)
+        exec_order = []
+        top.run()
+        self.assertEqual(top.D2.runcount, 1)
+        self.assertEqual(top.D1.runcount, top.D2.max_iterations)
+        self.assertEqual(top.C1.runcount, top.D2.max_iterations)
+        self.assertEqual(top.C2.runcount, 
+                         top.D2.max_iterations*top.D1.max_iterations)
+        self.assertEqual(exec_order,
+            ['D2', 'C1', 'D1', 'C2', 'C2', 'C2', 'C2', 'C2', 'C3', 
+                        'C1', 'D1', 'C2', 'C2', 'C2', 'C2', 'C2', 'C3', 
+                        'C1', 'D1', 'C2', 'C2', 'C2', 'C2', 'C2', 'C3', 
+                        'C1', 'D1', 'C2', 'C2', 'C2', 'C2', 'C2', 'C3'])
+        self.assertEqual(top.D1.sum, 3.*top.D1.max_iterations)
+        self.assertEqual(top.D2.sum, 4.*top.D2.max_iterations)
+        
+        
+    def test_2peer_drivers(self):
+        #
+        #  D1-->
+        #  |   |
+        #  |<--C1------>|
+        #               |
+        #          D2-->|
+        #          |    |
+        #          |<---C2
+        
+        global exec_order
+        exec_order = []
+        
+        top = Assembly('top', None)
+        ExprComp2('C1', top, expr='x+1')
+        ExprComp2('C2', top, expr='x+y')
+        top.connect('C1.f_xy', 'C2.x')
+        Summer('D1', top)
+        top.D1.objective.value = 'C1.f_xy'
+        top.D1.design.value = 'C1.y'
+        top.D1.max_iterations = 2
+        Summer('D2', top)
+        top.D2.objective.value = 'C2.f_xy'
+        top.D2.design.value = 'C2.y'
+        top.D2.max_iterations = 3
+        top.run()
+        self.assertEqual(top.D2.runcount, 1)
+        self.assertEqual(top.D1.runcount, 1)
+        self.assertEqual(top.C1.runcount, top.D1.max_iterations)
+        self.assertEqual(top.C2.runcount, top.D2.max_iterations)
+        self.assertEqual(exec_order,
+                         ['D1', 'C1', 'C1', 
+                          'D2', 'C2', 'C2', 'C2'])
+        
+        top.C1.runcount = 0
+        top.C2.runcount = 0
+        top.D1.runcount = 0
+        top.D2.runcount = 0
+        top.D1.set('max_iterations', 5)
+        top.D2.set('max_iterations', 4)
+        exec_order = []
+        top.run()
+        self.assertEqual(top.D2.runcount, 1)
+        self.assertEqual(top.D1.runcount, 1)
+        self.assertEqual(top.C1.runcount, top.D1.max_iterations)
+        self.assertEqual(top.C2.runcount, top.D2.max_iterations)
+        self.assertEqual(exec_order,
+                         ['D1', 'C1', 'C1', 'C1', 'C1', 'C1', 
+                          'D2', 'C2', 'C2', 'C2', 'C2'])
+        
+    def test_3nested_drivers(self):
+        #
+        #  D3-->
+        #  |   |
+        #  |   C1--> 
+        #  |       |
+        #  |       D2-->
+        #  |       |   |
+        #  |       |   C2-->
+        #  |       |       |
+        #  |       |       D1--->
+        #  |       |        |   |
+        #  |       |        |<--C3-->
+        #  |       |                |
+        #  |       |<---------------C4-->
+        #  |                            |
+        #  |<---------------------------C5
+        
+        global exec_order
+        exec_order = []
+        
+        top = Assembly('top', None)
+        ExprComp('C1', top, expr='x+1')
+        ExprComp2('C2', top, expr='x+y')
+        ExprComp2('C3', top, expr='x+1')
+        ExprComp('C4', top, expr='x+1')
+        ExprComp('C5', top, expr='x+1')
+        top.connect('C1.f_x', 'C2.x')
+        top.connect('C2.f_xy', 'C3.x')
+        top.connect('C3.f_xy', 'C4.x')
+        top.connect('C4.f_x', 'C5.x')
+        Summer('D1', top)
+        top.D1.objective.value = 'C3.f_xy'
+        top.D1.design.value = 'C3.y'
+        top.D1.max_iterations = 2
+        Summer('D2', top)
+        top.D2.objective.value = 'C4.f_x'
+        top.D2.design.value = 'C2.y'
+        top.D2.max_iterations = 3
+        Summer('D3', top)
+        top.D3.objective.value = 'C5.f_x'
+        top.D3.design.value = 'C1.x'
+        top.D3.max_iterations = 2
+        top.run()
+        self.assertEqual(top.D3.runcount, 1)
+        self.assertEqual(top.D2.runcount, top.D3.max_iterations)
+        self.assertEqual(top.D1.runcount, top.D3.max_iterations*top.D2.max_iterations)
+        self.assertEqual(top.C3.runcount, 
+                         top.D3.max_iterations*top.D2.max_iterations*top.D1.max_iterations)
+        self.assertEqual(exec_order,
+                         ['D3', 'C1', 'D2', 'C2', 'D1', 'C3', 'C3', 'C4', 
+                                            'C2', 'D1', 'C3', 'C3', 'C4', 
+                                            'C2', 'D1', 'C3', 'C3', 'C4', 'C5', 
+                                'C1', 'D2', 'C2', 'D1', 'C3', 'C3', 'C4', 
+                                            'C2', 'D1', 'C3', 'C3', 'C4', 
+                                            'C2', 'D1', 'C3', 'C3', 'C4', 'C5'])
+        
+        top.C3.runcount = 0
+        top.D1.runcount = 0
+        top.D2.runcount = 0
+        top.D3.runcount = 0
+        top.D1.set('max_iterations', 3)
+        top.D2.set('max_iterations', 2)
+        top.D3.set('max_iterations', 1)
+        exec_order = []
+        top.run()
+        self.assertEqual(top.D3.runcount, 1)
+        self.assertEqual(top.D2.runcount, top.D3.max_iterations)
+        self.assertEqual(top.D1.runcount, top.D3.max_iterations*top.D2.max_iterations)
+        self.assertEqual(top.C3.runcount, 
+                         top.D3.max_iterations*top.D2.max_iterations*top.D1.max_iterations)
+        self.assertEqual(exec_order,
+                         ['D3', 'C1', 'D2', 'C2', 'D1', 'C3', 'C3', 'C3', 'C4', 
+                                            'C2', 'D1', 'C3', 'C3', 'C3', 'C4', 'C5'])
+        
+if __name__ == "__main__":    
     unittest.main()
 
 

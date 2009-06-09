@@ -79,12 +79,14 @@ class DriverTree(object):
     def insert(self, dtree):
         """If the given driver is nested within one of the drivers in
         this tree, insert it in the tree in the appropriate place.
-        Otherwise, do nothing. The heuristic used to determine nesting is
+        The heuristic used to determine nesting is
         that a driver is nested within another if its set of iteration 
         components is a strict subset of the other driver's set of iteration
         components.
         
-        Returns True if the driver was inserted in the tree.
+        Returns 1 if the driver was inserted in the tree, or -1 if this
+        driver is nested within the new driver, or 0 if neither driver is
+        nested within the other.
         """
         newset = dtree.data.simple_iteration_set()
         newlen = len(newset)
@@ -112,7 +114,7 @@ class DriverTree(object):
                                     'set of components (%s), so their order cannot be '+
                                     'determined') % (self.data.get_pathname(),
                                                      dtree.data.get_pathname(),
-                                                     list(myset)))
+                                                     sorted(list(myset))))
         elif interlen == mylen:  # our iter set is a strict subset of the new driver
             return -1
         elif interlen > 0:  # iteration sets overlap
@@ -120,7 +122,7 @@ class DriverTree(object):
                                     'iteration sets, so their order cannot be determined')
                                    % (self.data.get_pathname(),
                                       dtree.data.get_pathname(),
-                                      list(interset)))
+                                      sorted(list(interset))))
         
         return 0
         
