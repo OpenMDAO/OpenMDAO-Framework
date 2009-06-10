@@ -1,4 +1,49 @@
 #!/usr/bin/env python
+"""
+If run as main, dumpeggmeta.py will print out either a pretty-printed dict full
+of the metadata found in the specified distribution, or just the value of a single
+piece of metadata if metadata-item is specified on the command line.
+
+usage: dumpeggmeta.py egg-or-distribution [metadata-item]
+
+Example output: 
+
+::
+
+    $ dumpeggmeta.py pyparsing-1.5.1-py2.5.egg
+    {'SOURCES': ['README',
+                 'pyparsing.py',
+                 'setup.py',
+                 'pyparsing.egg-info/PKG-INFO',
+                 'pyparsing.egg-info/SOURCES.txt',
+                 'pyparsing.egg-info/dependency_links.txt',
+                 'pyparsing.egg-info/top_level.txt'],
+     'author': 'Paul McGuire',
+     'author-email': 'ptmcg@users.sourceforge.net',
+     'classifier': 'Programming Language :: Python',
+     'dependency_links': [],
+     'description': 'UNKNOWN',
+     'download-url': 'http://sourceforge.net/project/showfiles.php?group_id=97203',
+     'entry_points': {},
+     'home-page': 'http://pyparsing.wikispaces.com/',
+     'license': 'MIT License',
+     'metadata-version': '1.0',
+     'name': 'pyparsing',
+     'platform': None,
+     'py_version': '2.5',
+     'summary': 'Python parsing module',
+     'top_level': ['pyparsing'],
+     'version': '1.5.1',
+     'zip-safe': False}
+
+Example output: 
+
+::
+
+    $ dumpeggmeta.py pyparsing-1.5.1-py2.5.egg license
+    MIT License
+
+"""
 
 import sys
 import os
@@ -142,6 +187,7 @@ def get_metadata(path):
     path can be an installed egg, a zipped egg file, or a 
     zipped or unzipped tar file of a python distutils or setuptools
     source distribution.
+    
     Returns a dict.
     """
 
