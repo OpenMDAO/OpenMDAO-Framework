@@ -186,6 +186,7 @@ def get_metadata(path):
     path can be an installed egg, a zipped egg file, or a 
     zipped or unzipped tar file of a python distutils or setuptools
     source distribution.
+    
     Returns a dict.
     """
 
