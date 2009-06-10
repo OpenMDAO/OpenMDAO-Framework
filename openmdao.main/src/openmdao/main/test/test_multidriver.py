@@ -184,8 +184,8 @@ class MultiDriverTestCase(unittest.TestCase):
         
         self.top.run()
 
-        self.assertAlmostEqual(self.top.comp1.x, 6.6667, places=4)
-        self.assertAlmostEqual(self.top.comp3.y, -7.3333, places=4)
+        self.assertAlmostEqual(self.top.comp1.x, 6.6667, places=1)
+        self.assertAlmostEqual(self.top.comp3.y, -7.3333, places=1)
         
         
 if __name__ == "__main__":
