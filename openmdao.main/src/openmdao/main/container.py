@@ -392,8 +392,15 @@ class Container(HierarchyMember):
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
+
+        NOTE: References to types defined in module __main__ can't be saved.
+              Also, references to old-style class types can't be restored
+              correctly.  These issues are typically related to the Variable
+              var_types attribute.
         """
         orig_dir = os.getcwd()
+        if src_dir and not os.path.isabs(src_dir):
+            src_dir = os.path.abspath(src_dir)
 
         if name is None:
             name = self.name
@@ -425,11 +432,37 @@ class Container(HierarchyMember):
         objs = self._get_objects()
         objs.append(self)
 
+        # Check that each object can be pickled.
+        errors = 0
+        for obj in objs:
+            if obj.__class__.__name__ == 'function':
+                self.error("Can't save, can't pickle function %s.%s",
+                           obj.__module__, obj.__name__)
+                errors += 1
+            # Hopefully all instancemethods are handled by HierarchyMember.
+#            elif obj.__class__.__name__ == 'instancemethod':
+#                self.error("Can't save, can't pickle instancemethod %s.%s.%s",
+#                           obj.im_class.__module__,
+#                           obj.im_class.__name__,
+#                           obj.__name__)
+#                errors += 1
+#            else: # (Debug) actually try to pickle.
+#                try:
+#                    cPickle.dumps(obj)
+#                except Exception, exc:
+#                    self.error("Can't pickle obj %r %s",
+#                               obj, obj.__class__.__name__)
+#                errors += 1
+        if errors:
+            self.raise_exception("Can't save, %d objects cannot be pickled."
+                                 % errors, RuntimeError)
+
         # Fixup objects, classes, & sys.modules for __main__ imports.
         fixup = self._fix_objects(objs)
         try:
-            # Determine distributions required.
-            required_distributions = self._get_distributions(objs)
+            # Determine distributions and local modules required.
+            required_distributions, local_modules = \
+                self._get_distributions(objs)
 
             # Move to scratch area.
             tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
@@ -444,6 +477,13 @@ class Container(HierarchyMember):
                     os.symlink(src_dir, name)
             else:
                 os.mkdir(name)
+
+            # If orig_dir isn't src_dir, copy local modules from orig_dir.
+            if orig_dir != src_dir:
+                for path in local_modules:
+                    path = orig_dir+os.sep+path
+#                    self.debug('    copy %s -> %s', path, name)
+                    shutil.copy(path, name)
 
             # Save state of object hierarchy.
             if format is SAVE_CPICKLE or format is SAVE_PICKLE:
@@ -567,12 +607,20 @@ eggs =
         fixup_modules = set()
 
         for obj in objs:
+            classname = obj.__class__.__name__
+            if classname == 'instancemethod':
+                obj = obj.im_self
             try:
                 mod = obj.__module__
             except AttributeError:
                 continue
+
             if mod == '__main__':
-                classname = obj.__class__.__name__
+                if classname in ('function', 'type'):
+                    self.raise_exception("Can't save: reference to %s defined "
+                                         "in main module %r" % (classname, obj),
+                                         RuntimeError)
+
                 mod = obj.__class__.__module__
                 if mod == '__main__' and \
                    (classname not in fixup_classes.keys()):
@@ -597,7 +645,13 @@ eggs =
                                                fixup_modules))
                         self.raise_exception("Can't find module for '%s'" %
                                              classname, RuntimeError)
-                obj.__class__ = fixup_classes[classname][1]
+
+                try:
+                    obj.__class__ = fixup_classes[classname][1]
+                except KeyError:
+                    self.raise_exception("Can't fix %r, classname %s, module %s"
+                                         % (obj, classname, mod), RuntimeError)
+                    
                 obj.__module__ = obj.__class__.__module__
                 fixup_objects.append(obj)
 
@@ -620,17 +674,17 @@ eggs =
             del sys.modules[mod]
 
     def _get_distributions(self, objs):
-        """Return distributions used by objs."""
-        working_set = pkg_resources.WorkingSet()
+        """Return (distributions, local_modules) used by objs."""
+#        working_set = pkg_resources.WorkingSet()
 #        for dist in working_set:
 #            self.debug('    %s %s', dist.project_name, dist.version)
 #            self.debug('        %s', dist.location)
         distributions = set()
+        local_modules = set()
         modules = ['__builtin__']
         prefixes = []
         site_lib = os.path.dirname(site.__file__)
         site_pkg = site_lib+os.sep+'site-packages'
-        py_version = 'python%d.%d' % (sys.version_info[0], sys.version_info[1])
 
         # For each object found...
         for obj in objs:
@@ -649,64 +703,132 @@ eggs =
             if path.startswith(site_lib) and not path.startswith(site_pkg):
 #                self.debug("    skipping(1) '%s'", path)
                 continue
+            found = False
             for prefix in prefixes:
                 if path.startswith(prefix):
+                    found = True
 #                    self.debug("    skipping(2) '%s'", path)
                     break
+            if found:
+                continue
+
+            egg = path.find('.egg')
+            if egg > 0:
+                # We'll assume the egg has accurate dependencies.
+                path = path[:egg+4]
+                self._process_egg(path, distributions, prefixes)
             else:
-                # Use module finder to get modules that object requires.
+                # Use module finder to get the modules this object requires.
                 if path.endswith('.pyc') or path.endswith('.pyo'):
                     path = path[:-1]
-#                self.debug("    analyzing '%s'...", path)
+                if not os.path.exists(path):
+                    self.warning("    module path '%s' does not exist", path)
+                    continue
+                self.debug("    analyzing '%s'...", path)
                 finder = modulefinder.ModuleFinder()
-                finder.run_script(path)
-
-                # For each found module...
-                for name, module in sorted(finder.modules.items(),
-                                           key=lambda item: item[0]):
-#                    self.debug('    found %s', name)
-                    if name in modules:
-#                        self.debug('        already known')
-                        continue
-                    if name != '__main__':
-                        modules.append(name)
-                    try:
-                        path = module.__file__
-                    except AttributeError:
-#                        self.debug('        no __file__')
-                        continue
-                    if not path:
-#                        self.debug('        null __file__')
-                        continue
-                    if path.startswith(site_lib) and \
-                       not path.startswith(site_pkg):
-#                        self.debug("        skipping '%s'", path)
-                        continue
-
-                    # Record distribution.
-                    for dist in working_set:
-                        loc = dist.location
-                        # Protect against a 'bare' location.
-                        if loc.endswith('site-packages') or \
-                           loc.endswith(py_version):
-                            loc += os.sep+dist.project_name
-                        if path.startswith(loc):
-                            distributions.add(dist)
-                            if loc.endswith('.egg'):
-                                prefixes.append(loc)
-#                            self.debug('        adding %s %s',
-#                                       dist.project_name, dist.version)
-                            break
-                    else:
-                        self.warning("        no distribution found for '%s'",
-                                     path)
+                try:
+                    finder.run_script(path)
+                except Exception:
+                    self.exception("ModuleFinder for '%s'" % path)
+                else:
+                    self._process_found_modules(finder, modules,
+                                                distributions,
+                                                prefixes, local_modules)
 
         distributions = sorted(distributions,
                                key=lambda dist: dist.project_name)
         self.debug('    required distributions:')
         for dist in distributions:
             self.debug('        %s %s', dist.project_name, dist.version)
-        return distributions
+        return (distributions, local_modules)
+
+    def _process_egg(self, path, distributions, prefixes):
+        """Update distributions and prefixes based on egg data."""
+        self.debug("    processing '%s'", path)
+        dist = pkg_resources.Distribution.from_filename(path)
+        distributions.add(dist)
+        prefixes.append(path)
+
+        for req in dist.requires():
+            self.debug("    requires '%s'", req)
+            dep = pkg_resources.get_distribution(req)
+            distributions.add(dep)
+            loc = dep.location
+            if loc.endswith('.egg') and loc not in prefixes:
+                prefixes.append(loc)
+
+    def _process_found_modules(self, finder, modules, distributions, prefixes,
+                               local_modules):
+        """Use ModuleFinder data to update distributions and local_modules."""
+        working_set = pkg_resources.WorkingSet()
+        site_lib = os.path.dirname(site.__file__)
+        site_pkg = site_lib+os.sep+'site-packages'
+        py_version = 'python%d.%d' % (sys.version_info[0], sys.version_info[1])
+        cwd = os.getcwd()
+        not_found = set()
+
+        for name, module in sorted(finder.modules.items(),
+                                   key=lambda item: item[0]):
+#            self.debug('    found %s', name)
+            if name in modules:
+#                self.debug('        already known')
+                continue
+            if name != '__main__':
+                modules.append(name)
+            try:
+                path = module.__file__
+            except AttributeError:
+#                self.debug('        no __file__')
+                continue
+            if not path:
+#                self.debug('        null __file__')
+                continue
+
+            # Skip modules in distributions we already know about.
+            if path.startswith(site_lib) and not path.startswith(site_pkg):
+#                self.debug("        skipping(1) '%s'", path)
+                continue
+            found = False
+            for prefix in prefixes:
+                if path.startswith(prefix):
+                    found = True
+#                    self.log_debug("    skipping(2) '%s'", path)
+                    break
+            if found:
+                continue
+
+            # Record distribution.
+            for dist in working_set:
+                loc = dist.location
+                # Protect against a 'bare' location.
+                if loc.endswith('site-packages') or loc.endswith(py_version):
+                    loc += os.sep+dist.project_name
+                if path.startswith(loc):
+                    distributions.add(dist)
+                    if loc.endswith('.egg'):
+                        prefixes.append(loc)
+#                    self.debug('        adding %s %s',
+#                               dist.project_name, dist.version)
+                    break
+            else:
+                if not os.path.isabs(path):
+                    # No distribution expected.
+                    if os.path.dirname(path) == '.':
+                        # May need to be copied later.
+                        local_modules.add(path)
+                elif path.startswith(cwd):
+                    # No distribution expected.
+                    if os.path.dirname(path) == cwd:
+                        # May need to be copied later.
+                        local_modules.add(path)
+                else:
+                    dirpath = os.path.dirname(path)
+                    if dirpath not in not_found:
+                        if not dirpath.endswith('site-packages'):
+                            not_found.add(dirpath)
+                            path = dirpath
+                        self.warning('        no distribution found for %s',
+                                     path)
 
     def _write_loader_script(self, path, state_name):
         """Write script used for loading object(s)."""
@@ -787,6 +909,10 @@ if __name__ == '__main__':
             out.write("    '%s == %s',\n" % (dist.project_name, dist.version))
         out.write(']\n')
 
+        if self.__doc__ is None:
+            doc = ''
+        else:
+            doc = self.__doc__.strip()
         out.write("""
 entry_points = {
     'openmdao.top' : [
@@ -810,8 +936,7 @@ setuptools.setup(
     install_requires=requirements,
     entry_points=entry_points,
 )
-""" % {'name':name, 'loader':loader,
-       'doc':self.__doc__.strip(), 'version':version})
+""" % {'name':name, 'loader':loader, 'doc':doc, 'version':version})
 
         out.close()
 
@@ -824,16 +949,18 @@ setuptools.setup(
                                 stderr=subprocess.STDOUT)
         output = []
         while proc.returncode is None:
-            line = proc.stdout.readline().rstrip()
-            self.debug('    '+line)
-            output.append(line)
+            line = proc.stdout.readline()
+            if line:
+                line = line.rstrip()
+                self.debug('    '+line)
+                output.append(line)
             proc.poll()
-        for line in proc.stdout:
-            if not line:
-                break
+        line = proc.stdout.readline()
+        while line:
             line = line.rstrip()
             self.debug('    '+line)
             output.append(line)
+            line = proc.stdout.readline()
 
         if proc.returncode != 0:
             if self.log_level > LOG_DEBUG:
@@ -876,7 +1003,7 @@ setuptools.setup(
                                  RuntimeError)
     
     @staticmethod
-    def load_from_egg (filename, install=True):
+    def load_from_egg(filename, install=True):
         """Load state and other files from an egg, returns top object."""
         logger.debug('Loading from %s in %s...', filename, os.getcwd())
         if not os.path.exists(filename):
@@ -977,6 +1104,7 @@ setuptools.setup(
 
     @staticmethod
     def _check_requirements(dist, visited, level=1):
+        """Display requirements and note conflicts."""
         visited.append(dist)
         indent  = '    ' * level
         indent2 = '    ' * (level + 1)

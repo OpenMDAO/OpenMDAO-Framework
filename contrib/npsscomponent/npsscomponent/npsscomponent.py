@@ -350,9 +350,14 @@ class NPSScomponent(Component):
             if self.parent is not None:
                 connections = self.parent.list_connections()
                 for src, dst in connections:
-                    dst_comp, dst_attr = dst.split('.', 1)
-                    if dst_comp == self.name:
-                        saved_inputs.append((dst_attr, self.get(dst_attr)))
+                    try:
+                        dst_comp, dst_attr = dst.split('.', 1)
+                    except ValueError:
+                        pass
+                    else:
+                        if dst_comp == self.name:
+                            saved_inputs.append((dst_attr, self.get(dst_attr)))
+                  
             # Remove model input files from external_files list.
             paths = self._top.inputFileList
             cwd = self.get_directory()+os.sep

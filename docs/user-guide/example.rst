@@ -40,20 +40,20 @@ mathematical model for the engine came from open literature.
 The simulation of the desired performance metrics primarily requires a model of the vehicle's power-train,
 including the engine, the transmission, and the rear differential. In addition, the equation of motion for
 the vehicle is needed. A logical way to compartmentalize the vehicle model is to break it into component
-models matching each of these subsystems: engine, transmission, and vehicle dynamics (which includes the
+models matching each of these subsystems: engine, transmission, and chasis (which includes the
 rear differential ratio). In a typical problem, each of these component models will be a completely
 separate implementation, possibly with different authors or vendors. Each of these component models also
 requires a set of design variables which are detailed below.
 
-So a vehicle contains an engine, a transmission, and a vehicle dynamics component. In addition to the
+So a vehicle contains an engine, a transmission, and a chasis component. In addition to the
 design variables, there are three simulation variables: throttle position, gear, and velocity. These
 variables, which are independent of any design, are used during simulation, where the vehicle model is
 essentially being "driven" in order to determine the desired test metrics. There are also a couple of
-other simulation inputs, such as RPM and Power, that are required by the engine and vehicle dynamics
+other simulation inputs, such as RPM and Power, that are required by the engine and chasis
 models. These are provided by other components in the vehicle. For example, the engine needs an RPM to
 calculate its power. This RPM is output by the transmission component, which determines it from the
 vehicle's velocity and gear position. These inter-dependencies define the connection order for vehicle
-components in terms of the Data Flow: Transmission -> Engine -> Vehicle Dynamics. 
+components in terms of the Data Flow: Transmission -> Engine -> Chasis. 
 
 The full process model is shown below.
 
@@ -65,8 +65,7 @@ The full process model is shown below.
    Process Model for Tutorial Problem
 
 
-The process model includes a vehicle simulation component (not to be confused with the vehicle dynamics
-model in the vehicle), which actually performs the simulations and calculates the performance metrics. A
+The process model includes a driving simulation component, which actually performs the simulations and calculates the performance metrics. A
 typical optimization problem would be to close the loop around the metrics and the design variables,
 driving some subset of them to minimize the 0-60 acceleration time and maximizing the EPA city and highway
 mileage.
@@ -244,17 +243,17 @@ _`2`. Shikida, Takasuke, Yoshikatsu Nakamura, Tamio Nakakubo, and Hiroyuki Kawas
 Speed 2ZZ-GE Engine," SAE World Congress, March 6-9 2000, SAE 2000-01-0671.
 
   
-*The Vehicle Dynamics Model*
+*The Chasis Model*
 ____________________________
 
-The vehicle dynamics model must simply provide the vehicle acceleration given the torque produced by
+The chasis model must simply provide the vehicle acceleration given the torque produced by
 the engine and scaled by the transmission. The equation used for the model comes from summing the
 forces acting on the vehicle in the forward direction. These forces include both the rolling friction
 associated with the tires and the vehicle drag which is proportional to the square of velocity.
 
 
 
-**Vehicle Dynamics - Design Variables:**
+**Chasis - Design Variables:**
 
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
@@ -270,7 +269,7 @@ area		   Front profile area				m*m
 
 |
 
-**Vehicle Dynamics - Simulation Inputs:**
+**Chasis - Simulation Inputs:**
 
 ==================  ===========================================  ======
 **Variable**	 	  **Description**			 **Units**
@@ -287,7 +286,7 @@ tire_circumference  Circumference of the tire			 m
 
 |
 
-**Vehicle Dynamics - Outputs:**
+**Chasis - Outputs:**
 
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
@@ -379,7 +378,7 @@ contains the pieces needed for the model:
 
 	``openmdao.examples/openmdao/examples/engine_design``
 
-The three engine models have been implemented in transmission.py, engine.py, and vehicle_dynamics.py. It will
+The three engine models have been implemented in transmission.py, engine.py, and chasis.py. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
 
 **Building a Python Component**
@@ -531,7 +530,7 @@ Inputs and Outputs are objects in our component, so they are accessed using self
 Executing a Component in the Python Shell
 -----------------------------------------
 
-The Python implementations of the three component models (engine.py, transmission.py, vehicle_dynamics.py) should all make sense now. This next section will demonstrate how to instantiate and use these components in the Python shell. From the top level directory in your OpenMDAO source tree, go to the ``buildout`` directory. From here, the Python shell can be launched by typing the following at the Unix prompt:
+The Python implementations of the three component models (engine.py, transmission.py, chasis.py) should all make sense now. This next section will demonstrate how to instantiate and use these components in the Python shell. From the top level directory in your OpenMDAO source tree, go to the ``buildout`` directory. From here, the Python shell can be launched by typing the following at the Unix prompt:
 
 .. _Prompt1: 
 
@@ -586,7 +585,7 @@ Assemblies
 Now that python components representing the three vehicle subsystems have been created, they need to be connected so that they can be executed in sequence. In OpenMDAO, a component that contains a collection of other components is called an assembly. The assembly allows a set of components to be linked together by connecting their inputs and outputs. The data connections define an execution order based on the principle of lazy evaluation, where a component is triggered to run by an invalidation (i.e., a change) in any of its inputs.
 In addition, an assembly can also contain a driver, such as an optimizer or a design study. When an assembly does not explicitly contain a driver, the assembly executes the components based on the data connection.
 
-For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission, Engine, and Vehicle_Dynamics components.
+For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission, Engine, and Chasis components.
 
 .. _Code5: 
 
@@ -598,7 +597,7 @@ For the vehicle simulation, a Vehicle assembly is needed that can sequentially e
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission
-	from openmdao.examples.engine_design.vehicle_dynamics import Vehicle_Dynamics
+	from openmdao.examples.engine_design.chasis import Chasis
 	
 	class Vehicle(Assembly):
 	    ''' Vehicle assembly. '''
@@ -612,11 +611,11 @@ For the vehicle simulation, a Vehicle assembly is needed that can sequentially e
         
 	        Transmission('transmission', parent=self)
 	        Engine('engine', parent=self)
-	        VehicleDynamics('v_dyn', parent=self)
+	        Chasis('chasis', parent=self)
 
-The Engine, Transmission, and VehicleDynamics components are imported the same way as they were in the Python shell, using openmdao.examples.engine_design name-space. In creating a new class, the main difference between a component and an assembly is that an assembly inherits from the Assembly class instead of the Component class. This gives it the ability to contain other components, and to manage their data flow.
+The Engine, Transmission, and Chasis components are imported the same way as they were in the Python shell, using openmdao.examples.engine_design name-space. In creating a new class, the main difference between a component and an assembly is that an assembly inherits from the Assembly class instead of the Component class. This gives it the ability to contain other components, and to manage their data flow.
 
-Notice here that an instance of the Transmission, Engine, and Vehicle_Dynamics are created, with the parent set to "self", which in this context is Vehicle. This way, these components are created as part of the assembly, and are acessible through Vehicle.Transmission, etc.
+Notice here that an instance of the Transmission, Engine, and Chasis are created, with the parent set to "self", which in this context is Vehicle. This way, these components are created as part of the assembly, and are acessible through Vehicle.Transmission, etc.
 
 Now that the components are instantiated in the assembly, they need to be hooked up:
 
@@ -625,13 +624,13 @@ Now that the components are instantiated in the assembly, they need to be hooked
 ::
 
 	self.connect('transmission.RPM','engine.RPM')
-        self.connect('transmission.torque_ratio','v_dyn.torque_ratio')
-        self.connect('engine.torque','v_dyn.engine_torque')
-        self.connect('engine.engine_weight','v_dyn.mass_engine')
+        self.connect('transmission.torque_ratio','chasis.torque_ratio')
+        self.connect('engine.torque','chasis.engine_torque')
+        self.connect('engine.engine_weight','chasis.mass_engine')
 	
 The first argument in the call to self.connect is the output variable, and the second argument is the input variable. In order for a connection to be valid, the units of the output and input must be of the same class (i.e., length, speed, etc.) If they differ within the same class (e.g., meters vs. inches), then the unit is converted to the correct unit before being sent from the output component to the input component.
 
-The Vehicle assembly behaves like any other component when interacting with the external world. It has inputs and outputs, it can be hoooked up to other components and included in other assemblies, and it can be run. In order for the Vehicle block to be connected to other components and used in a simulation or design study, the inputs and outputs have to be assigned. We essentially just want to promote the design and simulation variables from the Engine, Transmission, and Vehicle_Dyanmics components to the input and output of the Vehicle component. This can be done by creating passthroughs in the Vehicle assembly.
+The Vehicle assembly behaves like any other component when interacting with the external world. It has inputs and outputs, it can be hoooked up to other components and included in other assemblies, and it can be run. In order for the Vehicle block to be connected to other components and used in a simulation or design study, the inputs and outputs have to be assigned. We essentially just want to promote the design and simulation variables from the Engine, Transmission, and Chasis components to the input and output of the Vehicle component. This can be done by creating passthroughs in the Vehicle assembly.
 
 .. _Code7: 
 
@@ -645,8 +644,8 @@ The Vehicle assembly behaves like any other component when interacting with the 
 	self.create_passthru('transmission.ratio2')
 	# ...
 	# ...
-	self.create_passthru('v_dyn.mass_vehicle')
-	self.create_passthru('v_dyn.Cf')
+	self.create_passthru('chasis.mass_vehicle')
+	self.create_passthru('chasis.Cf')
 		
 Now, the Vehicle assembly has its own inputs and outputs, and can be accessed just like in any other component.
 
@@ -736,10 +735,10 @@ EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 =================  ===========================================  ======
 
 
-Solving an Optimization Problem
--------------------------------
+Setting up an Optimization Problem
+----------------------------------
 
-The final step is the creation of a top level assembly which defines the problem using Sim_Vehicle and the vehicle assembly. The first problem we would like to solve is a single objective optimization problem where we adjust some subset of the design variables to minimize the 0-60 acceleration time. The chosen design variables are the bore and spark angle; the optimal value of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second variable cannot be optimized by mere inspection. 
+The final step is the creation of a top level assembly which defines the problem using DrivingSim and the vehicle assembly. The first problem we would like to solve is a single objective optimization problem where we adjust some subset of the design variables to minimize the 0-60 acceleration time. The chosen design variables are the bore and spark angle; the optimal value of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second variable cannot be optimized by mere inspection. 
 
 The optimization will be handled by CONMIN, which is a gradient based algorithm written in FORTRAN, and developed at NASA in the 1970s. The source code is in the public domain, and a Python wrapped CONMIN component has been included in the OpenMDAO standard library.
 
@@ -753,7 +752,7 @@ In openMDAO, the top level assembly is always derived from Assembly. In engine_o
 
 	from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-	from openmdao.examples.engine_design.sim_vehicle import SimVehicle
+	from openmdao.examples.engine_design.driving_sim import Driving_Sim
 
 	class EngineOptimization(Assembly):
 	    """ Top level assembly for optimizing a vehicle. """
@@ -764,7 +763,7 @@ In openMDAO, the top level assembly is always derived from Assembly. In engine_o
 	        super(EngineOptimization, self).__init__(name, parent, directory)
 
 	        # Create SimVehicle component instances
-        	SimVehicle('vehicle_sim', parent=self)
+        	Driving_Sim('driving_sim', parent=self)
 
 	        # Create CONMIN Optimizer instance
         	CONMINdriver('driver', parent=self)
@@ -781,18 +780,18 @@ Note that the syntax for instantiated the CONMIN driver is the same as for any o
 	        self.driver.maxiters = 30
         
 	        # CONMIN Objective 
-        	self.driver.objective.value = 'vehicle_sim.accel_time'
+        	self.driver.objective.value = 'driving_sim.accel_time'
         
 	        # CONMIN Design Variables 
-        	self.driver.design_vars.value = ['vehicle_sim.spark_angle', 
-                                         'vehicle_sim.bore' ]
+        	self.driver.design_vars.value = ['driving_sim.spark_angle', 
+                                         'driving_sim.bore' ]
 	        
         	self.driver.lower_bounds = [-50, 65]
 	        self.driver.upper_bounds = [10, 100]
 
 In self.driver.iprint, driver refers to the title that the CONMIN driver is given when it is created above. The iprint flag enables or disables the printing of diagnostics internal to CONMIN, while the maxiters parameter specifies the maximum number of iterations for the optimization loop. Both of these have a default value (maxiters is 40), so setting them here is not required.
 
-The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which were chosen as bore and spark angle. Both the objective and the design variables are assigned using a type of variable called a RefVariable. Instead of containing a variable value, the RefVariable contains a string that gives the OpenMDAO path pointing to the variable that the RefVariable references. This path is always relative to the driver's parent, so here we use "vehicle_sim.accel_time" instead of "self.vehicle_sim.accel_time". RefVariables are primarily used to connect the inputs and outputs of drivers (e.g., optimizers, solvers, etc.) CONMIN is a single objective optimizer, so there can only be one objetive. However, there can be multiple design variables, and these are stored in a list. The upper and lower bounds for all the design variables are set using lower_bounds and upper_bounds respectively.
+The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which were chosen as bore and spark angle. Both the objective and the design variables are assigned using a type of variable called a RefVariable. Instead of containing a variable value, the RefVariable contains a string that gives the OpenMDAO path pointing to the variable that the RefVariable references. This path is always relative to the driver's parent, so here we use "driving_sim.accel_time" instead of "self.driving_sim.accel_time". RefVariables are primarily used to connect the inputs and outputs of drivers (e.g., optimizers, solvers, etc.) CONMIN is a single objective optimizer, so there can only be one objetive. However, there can be multiple design variables, and these are stored in a list. The upper and lower bounds for all the design variables are set using lower_bounds and upper_bounds respectively.
 
 [???? - Note: the RefVariable API is currently undergoing some changes.]
 
@@ -803,7 +802,7 @@ The CONMIN driver can actually handle more sophisticated objective expressions t
 ::
 
 	        # CONMIN Objective = Maximize accel_time 
-        	self.driver.objective.value = '-vehicle_sim.accel_time'
+        	self.driver.objective.value = '-driving_sim.accel_time'
 		
 Expressions can be built up from any number of OpenMDAO variables using Python's mathematical syntax:
 
@@ -812,9 +811,12 @@ Expressions can be built up from any number of OpenMDAO variables using Python's
 ::
 
 	        # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-        	self.driver.objective.value = '-(.93*vehicle_sim.EPA_city + 1.07*vehicle_sim.EPA_highway)'
+        	self.driver.objective.value = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
 
 Here, a weighted sum of the EPA city and highway fuel economy estimates is used as the objective in a maximization problem.
+
+Solving an Optimization Problem
+-------------------------------
 
 Multiobjective Optimization 
 ---------------------------

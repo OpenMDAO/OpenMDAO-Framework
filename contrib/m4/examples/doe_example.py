@@ -17,12 +17,11 @@ class MyModel(Assembly):
     def __init__(self, name='M4_DOE_example', *args, **kwargs):
         super(MyModel, self).__init__(name, *args, **kwargs)
 
-        # The model is just an M4 test component.
-        m4.dummy_components.Model_A2d(parent=self)
-
-        # Specify DOE.
+        # Specify DOE driver.
         doe = m4.doe.DOE(parent=self)
-        self.driver = doe
+
+        # The model is just an M4 test component.
+        doe.model = m4.dummy_components.Model_A2d(parent=self)
 
         doe.design_variables = [
             ('Model_A2d.x', 0., 5.),
@@ -43,7 +42,7 @@ def main():
     """ Run model and print results. """
     model = MyModel()
     model.run()
-    for i, case in enumerate(model.driver.outerator):
+    for i, case in enumerate(model.M4_DOE.outerator):
         print 'CASE %d:' % (i+1)
         for name, index, value in case.inputs:
             print '    input:', name, index, value

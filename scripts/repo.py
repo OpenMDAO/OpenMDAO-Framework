@@ -6,8 +6,8 @@ Useful to keep multiple developers from stepping on each other,
 but requires some discipline :-(
 """
 
+import glob
 import optparse
-import os
 import os.path
 import pwd
 import stat
@@ -50,6 +50,9 @@ def main():
 
     this_user = pwd.getpwuid(os.getuid()).pw_name
     path = find_repository(repository, this_user)
+    if not path:
+        print 'Cannot find repository!'
+        sys.exit(2)
     if options.verbose:
         print 'Repository root:', path
 
@@ -60,7 +63,7 @@ def main():
     elif operation == 'unlock':
         do_unlock(path, options)
     elif operation == 'set':
-        do_set(path, this_user, options)
+        do_set(path, this_user)
     elif operation == 'fix':
         do_fix(path, options)
     else:
@@ -100,14 +103,12 @@ def do_unlock(path, options):
         print 'Repository locked by', user, 'at', mtime
         sys.exit(1)
 
-def do_set(path, user, options):
+def do_set(path, user):
     """ Perform 'set' operation. """
     if find_repository(os.getcwd(), user) != path:
-        if options.verbose:
-            print 'Moving to repository root.'
+        print 'Moving to', path
         os.chdir(path)
-
-    os.environ['OPENMDAO_REPO'] = find_repository(os.getcwd(), user)
+    os.environ['OPENMDAO_REPO'] = path
     sys.exit(subprocess.call(os.environ['SHELL']))
 
 def do_fix(path, options):
@@ -196,14 +197,23 @@ def find_repository(repository, user):
     """ Return repository's root directory path, or None. """
     path = find_bzr(repository)
     if not path:
-        path = os.path.join(os.sep, 'OpenMDAO', 'dev', user, repository)
+        base = os.path.join(os.sep, 'OpenMDAO', 'dev', user)
+        if not repository:
+            # Use default if this user only has one.
+            paths = glob.glob(os.path.join(base, '*'))
+            if len(paths) == 1:
+                path = paths[0]
+            else:
+                print 'Default repository is ambiguous:'
+                for path in paths:
+                    print '   ', path
+                sys.exit(1)
+        else:
+            path = os.path.join(base, repository)
         path = find_bzr(path)
     if not path:
         path = os.path.join(os.sep, 'OpenMDAO', 'dev', 'shared', repository)
         path = find_bzr(path)
-    if not path:
-        print 'Cannot find repository!'
-        sys.exit(2)
     return path
 
 def find_bzr(path):
