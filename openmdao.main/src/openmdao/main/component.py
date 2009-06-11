@@ -426,6 +426,7 @@ class Component (Container):
             print '    retcode', retcode
             if retcode == 0:
                 print '\nRunning in subprocess...'
+                os.chdir(self.name)
                 retcode = subprocess.call(['python', self.name+'_loader.py'])
                 print '    retcode', retcode
         finally:
@@ -458,8 +459,9 @@ class Component (Container):
         return top
 
     def step (self):
-        """For Components that run other components (e.g., Assembly or Drivers), this will run
-        one Component and return. For simple components, it is the same as run().
+        """For Components that run other components (e.g., Assembly or Drivers),
+        this will run one Component and return. For simple components, it is
+        the same as run().
         """
         self.run()
 

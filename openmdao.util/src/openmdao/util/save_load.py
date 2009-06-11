@@ -437,8 +437,8 @@ def _fix_objects(objs):
                 else:
                     _restore_objects((fixup_objects, fixup_classes,
                                       fixup_modules))
-                    raise RuntimeError("Can't find module for '%s'"
-                                       % classname)
+                    raise RuntimeError("Can't find module for '%s'" % classname)
+
             if inspect.isclass(obj):
                 obj.__module__ = mod
             else:
@@ -842,7 +842,11 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
     
 
 def load_from_egg(filename, install=True, logger=None):
-    """ Load state and other files from an egg, returns top object. """
+    """
+    Extract files in egg to a subdirectory matching the saved object name,
+    optionally install distributions the egg depends on, and then load object
+    graph state.  Returns the top object.
+    """
     if logger is None:
         logger = NullLogger()
     logger.debug('Loading from %s in %s...', filename, os.getcwd())
@@ -851,8 +855,7 @@ def load_from_egg(filename, install=True, logger=None):
 
     # Check for a distribution.
     distributions = \
-        [dist for dist in pkg_resources.find_distributions(filename,
-                                                           only=True)]
+        [dist for dist in pkg_resources.find_distributions(filename, only=True)]
     if not distributions:
         raise RuntimeError("No distributions found in '%s'." % filename)
 
@@ -886,12 +889,10 @@ def load_from_egg(filename, install=True, logger=None):
         logger.debug("    extracting '%s' (%d bytes)...",
                      info.filename, info.file_size)
         dirname = os.path.dirname(info.filename)
-        dirname = dirname[len(name)+1:]
         if dirname and not os.path.exists(dirname):
             os.makedirs(dirname)
-        path = info.filename[len(name)+1:]
         # TODO: use 2.6 ability to extract to filename.
-        out = open(path, 'w')
+        out = open(info.filename, 'w')
         out.write(archive.read(info.filename))
         out.close()
 
@@ -925,22 +926,26 @@ def load_from_egg(filename, install=True, logger=None):
         del sys.modules[info.module_name]
     if not '.' in sys.path:
         sys.path.append('.')
+    orig_dir = os.getcwd()
+    os.chdir(name)
     try:
         loader = dist.load_entry_point('openmdao.top', 'top')
         return loader()
     except pkg_resources.DistributionNotFound, exc:
         logger.error('Distribution not found: %s', exc)
         visited = []
-        _check_requirements(dist, visited)
+        _check_requirements(dist, visited, logger)
         raise exc
     except pkg_resources.VersionConflict, exc:
         logger.error('Version conflict: %s', exc)
         visited = []
-        _check_requirements(dist, visited)
+        _check_requirements(dist, visited, logger)
         raise exc
     except Exception, exc:
         logger.exception('Loader exception:')
         raise exc
+    finally:
+        os.chdir(orig_dir)
 
 
 def _check_requirements(dist, visited, logger, level=1):
@@ -969,8 +974,7 @@ def _check_requirements(dist, visited, logger, level=1):
 
 
 def load(instream, format=SAVE_CPICKLE, logger=None):
-    """Load object(s) from the input stream.  The format can be supplied in
-    case something other than cPickle is needed."""
+    """ Load object(s) from the input stream. """
     if logger is None:
         logger = NullLogger()
 
