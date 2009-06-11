@@ -1,9 +1,10 @@
 """
 Save/load utilities.
 
-Note that Pickle format can't save references to functions, and there doesn't
-appear to be a viable workaround.  Normally pickle won't handle instance
-methods either, but there is code in place to work around that.
+Note that Pickle format can't save references to functions that aren't defined
+at the top level of a module, and there doesn't appear to be a viable
+workaround.  Normally pickle won't handle instance methods either, but there is
+code in place to work around that.
 
 When saving to an egg, the module named __main__ changes when reloading. This
 requires finding the real module name and munging references to __main__.
@@ -58,6 +59,12 @@ class IMHolder(object):
     """ Holds an instancemethod object in a pickleable form. """
 
     def __init__(self, obj):
+        # The inspect module notes 'class object that *asked* for this method'.
+        # This obscure note and Pickle's reluctance to work on instancemethods
+        # prompts the verification here...
+        if not hasattr(obj.im_class, obj.__name__):
+            raise RuntimeError('IMHolder: %r not a member of class (%s)'
+                               % (obj, obj.im_class))
         self.name = obj.__name__
         self.im_self = obj.im_self
         if obj.im_self is not None:
@@ -377,10 +384,11 @@ def _check_objects(objs, logger):
             pass
         else:
             classname = cls.__name__
-            if classname == 'function':
-                logger.error("Can't save, can't pickle function %s.%s",
-                             obj.__module__, obj.__name__)
-                logger.error("    %r", obj)
+            if classname == 'function' and \
+               not hasattr(sys.modules[obj.__module__], obj.__name__):
+                logger.error(
+                    "Can't save, can't pickle non-toplevel function %s:%s",
+                    obj.__module__, obj.__name__)
                 errors += 1
 #        # (Debug) actually try to pickle.
 #        try:
@@ -420,27 +428,17 @@ def _fix_objects(objs):
             mod = cls.__module__
             if mod == '__main__' and \
                (classname not in fixup_classes.keys()):
-                # Need to determine 'real' module name.
-                if '.' not in sys.path:
-                    sys.path.append('.')
-                for arg in sys.argv:
-                    if arg.endswith('.py'):
-                        mod = os.path.basename(arg)[:-3]
-                        try:
-                            module = __import__(mod, fromlist=[classname])
-                        except ImportError:
-                            pass
-                        else:
-                            old = cls
-                            new = getattr(module, classname)
-                            fixup_classes[classname] = (old, new)
-                            fixup_modules.add(mod)
-                            break
+                mod, module = _find_module(classname)
+                if mod:
+                    old = cls
+                    new = getattr(module, classname)
+                    fixup_classes[classname] = (old, new)
+                    fixup_modules.add(mod)
                 else:
                     _restore_objects((fixup_objects, fixup_classes,
                                       fixup_modules))
-                    raise RuntimeError("Can't find module for '%s'" % classname)
-
+                    raise RuntimeError("Can't find module for '%s'"
+                                       % classname)
             if inspect.isclass(obj):
                 obj.__module__ = mod
             else:
@@ -449,11 +447,26 @@ def _fix_objects(objs):
                 except KeyError:
                     raise RuntimeError("Can't fix %r, classname %s, module %s"
                                        % (obj, classname, mod))
-                
                 obj.__module__ = obj.__class__.__module__
             fixup_objects.append(obj)
 
     return (fixup_objects, fixup_classes, fixup_modules)
+
+
+def _find_module(attr):
+    """ Try to determine 'real' module name for attribute in __main__. """
+    if '.' not in sys.path:
+        sys.path.append('.')
+    for arg in sys.argv:
+        if arg.endswith('.py'):
+            mod = os.path.basename(arg)[:-3]
+            try:
+                module = __import__(mod, fromlist=[attr])
+            except ImportError:
+                pass
+            else:
+                return (mod, module)
+    return (None, None)
 
 
 def _restore_objects(fixup):
@@ -464,7 +477,8 @@ def _restore_objects(fixup):
         obj.__module__ = '__main__'
         if not inspect.isclass(obj):
             classname = obj.__class__.__name__
-            obj.__class__ = fixup_classes[classname][0]
+            if classname != 'function':
+                obj.__class__ = fixup_classes[classname][0]
 
     for classname in fixup_classes.keys():
         new = fixup_classes[classname][1]
@@ -955,10 +969,8 @@ def _check_requirements(dist, visited, logger, level=1):
 
 
 def load(instream, format=SAVE_CPICKLE, logger=None):
-    """Load object(s) from the input stream. Pure python 
-    classes generally won't need to override this, but extensions will. 
-    The format can be supplied in case something other than cPickle is 
-    needed."""
+    """Load object(s) from the input stream.  The format can be supplied in
+    case something other than cPickle is needed."""
     if logger is None:
         logger = NullLogger()
 
