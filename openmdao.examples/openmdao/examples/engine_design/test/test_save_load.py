@@ -26,8 +26,8 @@ class EngineOptimizationTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
-        self.model.vehicle_sim.set('bore', 100)
-        self.model.vehicle_sim.set('spark_angle', -35.368341874)
+        self.model.driving_sim.set('bore', 100)
+        self.model.driving_sim.set('spark_angle', -35.368341874)
         self.model.driver.maxiters = 1
 
         egg_name = self.model.save_to_egg()
@@ -75,11 +75,11 @@ class TestCase(unittest.TestCase):
         loader = __import__('%s_loader')
         model = loader.load()
         model.run()
-        self.assertAlmostEqual(model.vehicle_sim.accel_time, 
+        self.assertAlmostEqual(model.driving_sim.accel_time, 
                                5.5999999999999961, places=6)
-        self.assertAlmostEqual(model.vehicle_sim.EPA_city, 
+        self.assertAlmostEqual(model.driving_sim.EPA_city, 
                                25.15551809930237, places=4)
-        self.assertAlmostEqual(model.vehicle_sim.EPA_highway, 
+        self.assertAlmostEqual(model.driving_sim.EPA_highway, 
                                32.800993976480768, places=4)
 if __name__ == '__main__':
     unittest.main()

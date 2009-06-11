@@ -1,6 +1,6 @@
 # Vehicle.py
 #
-# Assembly that contains an engine, a transmission, and a vehicle_dynamics
+# Assembly that contains an engine, a transmission, and a chasis
 # component. Together, these output the acceleration for a set of input
 # the velocity and commanded throttle/gear positions given a set of design.
 # parameters.
@@ -13,7 +13,7 @@ from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.interfaces import IComponent
 
 from openmdao.examples.engine_design.transmission import Transmission
-from openmdao.examples.engine_design.vehicle_dynamics import VehicleDynamics
+from openmdao.examples.engine_design.chasis import Chasis
 try:
     from openmdao.examples.engine_design.engine_wrap_c import Engine
 except:
@@ -77,7 +77,7 @@ class Vehicle(Assembly):
         
         Transmission('transmission', parent=self)
         Engine('engine', parent=self)
-        VehicleDynamics('v_dyn', parent=self)
+        Chasis('chasis', parent=self)
 
         # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
@@ -110,23 +110,23 @@ class Vehicle(Assembly):
         self.create_passthru('transmission.current_gear')
         self.create_passthru('transmission.velocity')
 
-        # Promoted From VehicleDynamics
-        self.create_passthru('v_dyn.mass_vehicle')
-        self.create_passthru('v_dyn.Cf')
-        self.create_passthru('v_dyn.Cd')
-        self.create_passthru('v_dyn.area')
-        #self.create_passthru('v_dyn.elocity')
-        self.connect('velocity', 'v_dyn.velocity')
-        self.connect('tire_circ', 'v_dyn.tire_circ')
-        self.create_passthru('v_dyn.acceleration')
+        # Promoted From Chasis
+        self.create_passthru('chasis.mass_vehicle')
+        self.create_passthru('chasis.Cf')
+        self.create_passthru('chasis.Cd')
+        self.create_passthru('chasis.area')
+        #self.create_passthru('chasis.elocity')
+        self.connect('velocity', 'chasis.velocity')
+        self.connect('tire_circ', 'chasis.tire_circ')
+        self.create_passthru('chasis.acceleration')
         # NOTE: Tire Circumference also needed by Transmission.
 
         # Hook it all up
         
         self.connect('transmission.RPM','engine.RPM')
-        self.connect('transmission.torque_ratio','v_dyn.torque_ratio')
-        self.connect('engine.torque','v_dyn.engine_torque')
-        self.connect('engine.engine_weight','v_dyn.mass_engine')
+        self.connect('transmission.torque_ratio','chasis.torque_ratio')
+        self.connect('engine.torque','chasis.engine_torque')
+        self.connect('engine.engine_weight','chasis.mass_engine')
 
 
         

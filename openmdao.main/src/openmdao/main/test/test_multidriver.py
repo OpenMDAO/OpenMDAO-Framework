@@ -159,7 +159,7 @@ class MultiDriverTestCase(unittest.TestCase):
         ExprComp2('comp3',self.top, expr='x*x + (x+3)*y + (y+4)**2')
         ExprComp2('comp4',self.top, expr='x+y')
         self.top.comp1.set('x', 50)
-        self.top.comp3.set('y', 50)
+        self.top.comp3.set('y', -50)
         
         # Hook stuff up
         self.top.connect('comp1.f_x', 'comp3.x')

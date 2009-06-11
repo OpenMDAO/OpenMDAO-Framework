@@ -6,8 +6,7 @@ Glossary
 
 
 .. glossary::
-      :sorted:
-
+      
       **API**
 	    Application Programming Interface. A set of functions that can be called from
 	    an application program to access features of another program.
@@ -18,12 +17,10 @@ Glossary
 	    systems aspect of this architecture. Each Assembly has a Workflow and a 
 	    Driver, and acts as a container for Components. An Assembly is also a
 	    Component, so hierarchical structures of Assemblies can be created.
-
       
-      .. _`branch`:
-      
+       
       **branch**
-        An ordered series of revisions (see `revision`_ below) that describes the history of a set of
+        An ordered series of revisions (see :term:`revision` below) that describes the history of a set of
         files. 	
 
       
@@ -44,8 +41,6 @@ Glossary
         To record a change. A change is committed to a developer's local
         repository.
 	
-
-      .. _`Component`: 
       
       **Component**
         A Container that is *runnable*; it also supports several other framework
@@ -53,7 +48,7 @@ Glossary
 
 
       **Components**
-      	See `Component`_ above.
+      	See :term:`Component` above.
 	
 	
       **CAD**
@@ -81,7 +76,11 @@ Glossary
         A container of Variables and other Containers.
         The base class of all objects within the framework that 
         support user access to input and output Variables. 
+	
 
+      **DLL**
+        Dynamically Loadable Library 
+	
 
       **Driver**
         A Driver's function is to iterate over a Workflow until some
@@ -89,9 +88,7 @@ Glossary
         Other Drivers, such as Optimizers or ParameterStudies, would execute
         the Workflow a variable number of times based on their inputs.  
 
-
-      .. _`egg`:
-      
+       
       **egg**
         A zip file with a specified internal directory structure that
         contains a python package or module. It is similar to a jar file in java. For
@@ -101,9 +98,13 @@ Glossary
 
 
       **eggs**
-        See `egg`_ above. 
+        See :term:`egg` above. 
 
+      
+      **F2PY**
+      	FORTRAN to Python interface generator.
 
+     
       **Factory**
         An object that knows how to create objects of specific types.  
 
@@ -151,6 +152,11 @@ Glossary
         Administration (NASA) releases some software under this license.
       
       
+      **NumPy**
+        NumPy is the fundamental package needed for scientific computing with Python. See
+	http://numpy.scipy.org/ 
+	
+      
       **ObjServer**
         A process that allows remote connections to a Component or Container
         object.  An ObjServer can represent an entire model if its top-level object
@@ -192,7 +198,7 @@ Glossary
 
 
       **repository**
-        A store of revisions. See `revision`_.
+        A store of revisions. See :term:`revision`.
 	
 
       **ResourceAllocator**
@@ -211,8 +217,7 @@ Glossary
       **ResourceDescription**
         An object containing information defining system attributes required to
         select a  viable place to run a code.
-
-      .. _`revision`:
+     
 
       **revision**
         A snapshot of the state of files and directories, including their
@@ -224,10 +229,19 @@ Glossary
       **Socket**
         A placeholder for a plug-in within a :term:`Component`.
 
-
+      
       **SocketList**
         A list that holds only objects that provide a particular interface.
 
+
+      **Sockets**
+        See :term:`Socket`.
+	
+	
+      **SWIG**
+	Simplified Wrapper and Interface Generator. A software development tool that connects
+	programs written in C and C++ with a variety of high-level programming languages. Go to 
+	http://www.swig.org/index.php for more information.
 
       **ticket**
         A ticket is a file contained within an issue (or bug) tracking system
@@ -238,7 +252,7 @@ Glossary
         locate, add to, or communicate the status of the submitter's issue or
         request. Once OpenMDAO's bug-tracking tool is in place, all changes to
         the software will require a ticket, and the ticket number will identify
-        the software `branch`_ where the change is being made.
+        the software :term:`branch` where the change is being made.
 
 
       **Variable**
