@@ -64,6 +64,7 @@ Component.load_from_egg('%s', install=False)
             logging.debug('Load state and run test in subprocess...')
             logging.debug('    python %s' % python)
 
+            os.chdir(self.model.name)
             out = open('test.py', 'w')
             out.write("""\
 import sys

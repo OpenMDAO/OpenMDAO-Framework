@@ -245,7 +245,7 @@ class EggTestCase(unittest.TestCase):
             self.model = Component.load_from_egg(os.path.join('..',
                                                               self.egg_name),
                                                  install=False)
-            self.model.directory = os.getcwd()
+            self.model.directory = os.path.join(os.getcwd(), self.model.name)
 
             # Verify initial state.
             self.assertEqual(source_init, False)
