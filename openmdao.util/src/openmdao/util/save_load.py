@@ -125,6 +125,8 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
     orig_dir = os.getcwd()
     if src_dir and not os.path.isabs(src_dir):
         src_dir = os.path.abspath(src_dir)
+    if src_files is None:
+        src_files = set()
 
     if version is None:
         now = datetime.datetime.now()  # Could consider using utcnow().
@@ -161,7 +163,7 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
         fixup = _fix_objects(objs)
         try:
             # Determine distributions and local modules required.
-            required_distributions, local_modules = \
+            required_distributions, local_modules, missing_modules = \
                 _get_distributions(objs, logger)
 
             # Move to scratch area.
@@ -181,8 +183,16 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
             if orig_dir != src_dir:
                 for path in local_modules:
                     path = orig_dir+os.sep+path
-#                    logger.debug('    copy %s -> %s', path, name)
                     shutil.copy(path, name)
+
+            # If any distributions couldn't be found, record them in a file.
+            if missing_modules:
+                missing_name = '%s.missing' % name
+                out = open(os.path.join(name, missing_name), 'w')
+                for mod, path in missing_modules:
+                    out.write(mod+'\n')
+                out.close()
+                src_files.add(missing_name)
 
             # Save state of object hierarchy.
             if format is SAVE_CPICKLE or format is SAVE_PICKLE:
@@ -198,10 +208,6 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
                 if os.path.exists(state_path):
                     os.remove(state_path)
                 raise type(exc)("Can't save to '%s': %s" % (state_path, exc))
-
-            # Add state file to set of files to save.
-            if src_files is None:
-                src_files = set()
             src_files.add(state_name)
 
             # Create buildout.cfg
@@ -489,40 +495,32 @@ def _restore_objects(fixup):
 
 
 def _get_distributions(objs, logger):
-    """ Return (distributions, local_modules) used by objs. """
-#    working_set = pkg_resources.WorkingSet()
-#    for dist in working_set:
-#        logger.debug('    %s %s', dist.project_name, dist.version)
-#        logger.debug('        %s', dist.location)
+    """ Return (distributions, local_modules, missing) used by objs. """
     distributions = set()
     local_modules = set()
+    missing = set()
     modules = ['__builtin__']
     prefixes = []
     site_lib = os.path.dirname(site.__file__)
     site_pkg = site_lib+os.sep+'site-packages'
 
-    # For each object found...
     for obj in objs:
         try:
             name = obj.__module__
         except AttributeError:
             continue
-#        logger.debug('    obj module %s', name)
         if name in modules:
-#            logger.debug('        already known')
             continue
         modules.append(name)
 
         # Skip modules in distributions we already know about.
         path = sys.modules[name].__file__
         if path.startswith(site_lib) and not path.startswith(site_pkg):
-#            logger.debug("    skipping(1) '%s'", path)
             continue
         found = False
         for prefix in prefixes:
             if path.startswith(prefix):
                 found = True
-#                logger.debug("    skipping(2) '%s'", path)
                 break
         if found:
             continue
@@ -546,15 +544,15 @@ def _get_distributions(objs, logger):
             except Exception:
                 logger.exception("ModuleFinder for '%s'" % path)
             else:
-                _process_found_modules(finder, modules, distributions,
-                                       prefixes, local_modules, logger)
+                _process_found_modules(finder, modules, distributions, prefixes,
+                                       local_modules, missing, logger)
 
     distributions = sorted(distributions,
                            key=lambda dist: dist.project_name)
     logger.debug('    required distributions:')
     for dist in distributions:
         logger.debug('        %s %s', dist.project_name, dist.version)
-    return (distributions, local_modules)
+    return (distributions, local_modules, missing)
 
 
 def _process_egg(path, distributions, prefixes, logger):
@@ -574,7 +572,7 @@ def _process_egg(path, distributions, prefixes, logger):
 
 
 def _process_found_modules(finder, modules, distributions, prefixes,
-                           local_modules, logger):
+                           local_modules, missing, logger):
     """ Use ModuleFinder data to update distributions and local_modules. """
     working_set = pkg_resources.WorkingSet()
     site_lib = os.path.dirname(site.__file__)
@@ -585,30 +583,24 @@ def _process_found_modules(finder, modules, distributions, prefixes,
 
     for name, module in sorted(finder.modules.items(),
                                key=lambda item: item[0]):
-#        logger.debug('    found %s', name)
         if name in modules:
-#            logger.debug('        already known')
             continue
         if name != '__main__':
             modules.append(name)
         try:
             path = module.__file__
         except AttributeError:
-#            logger.debug('        no __file__')
             continue
         if not path:
-#            logger.debug('        null __file__')
             continue
 
         # Skip modules in distributions we already know about.
         if path.startswith(site_lib) and not path.startswith(site_pkg):
-#            logger.debug("        skipping(1) '%s'", path)
             continue
         found = False
         for prefix in prefixes:
             if path.startswith(prefix):
                 found = True
-#                logger.debug("    skipping(2) '%s'", path)
                 break
         if found:
             continue
@@ -623,8 +615,6 @@ def _process_found_modules(finder, modules, distributions, prefixes,
                 distributions.add(dist)
                 if loc.endswith('.egg'):
                     prefixes.append(loc)
-#                logger.debug('        adding %s %s',
-#                             dist.project_name, dist.version)
                 break
         else:
             if not os.path.isabs(path):
@@ -644,6 +634,7 @@ def _process_found_modules(finder, modules, distributions, prefixes,
                         not_found.add(dirpath)
                         path = dirpath
                     logger.warning('        no distribution found for %s', path)
+                    missing.add((name, path))
 
 
 def _create_buildout(name, server_url, distributions, path):
@@ -898,7 +889,6 @@ def load_from_egg(filename, install=True, logger=None):
 
     if install:
         # Locate the installation (eggs) directory.
-# TODO: fix this hack!
         install_dir = \
             os.path.dirname(
                 os.path.dirname(
@@ -915,6 +905,24 @@ def load_from_egg(filename, install=True, logger=None):
                 )
         except Exception, exc:
             raise RuntimeError("Install failed: '%s'" % exc)
+
+    # If any module didn't have a distribution, check that we can import it.
+    missing = os.path.join(name, '%s.missing' % name)
+    if os.path.exists(missing):
+        inp = open(missing, 'r')
+        errors = 0
+        for mod in inp.readlines():
+            mod = mod.strip()
+            logger.debug("    checking for 'missing' module: %s", mod)
+            try:
+                __import__(mod)
+            except ImportError:
+                logger.error("Can't import %s, which didn't have a known"
+                             " distribution when the egg was written.", mod)
+                errors += 1
+        inp.close()
+        if errors:
+            raise RuntimeError("Couldn't import %d 'missing' modules." % errors)
 
     # Invoke the top object's loader.
     info = dist.get_entry_info('openmdao.top', 'top')
