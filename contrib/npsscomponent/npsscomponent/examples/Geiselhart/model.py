@@ -532,6 +532,6 @@ class Model(Assembly):
 
 if __name__ == '__main__':
 #    Model().run()
-#    Model().check_save_load()
-    Model().save_to_egg()
+    Model().check_save_load()
+#    Model().save_to_egg()
 
