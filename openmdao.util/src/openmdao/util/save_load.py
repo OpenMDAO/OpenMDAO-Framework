@@ -34,11 +34,12 @@ import pkg_resources
 import platform
 import shutil
 import site
-import subprocess
 import sys
 import tempfile
 import zc.buildout.easy_install
 import zipfile
+
+from openmdao.util import eggwriter
 
 __all__ = ('save', 'save_to_egg', 'load', 'load_from_egg',
            'SAVE_YAML', 'SAVE_LIBYAML', 'SAVE_PICKLE', 'SAVE_CPICKLE',
@@ -143,12 +144,6 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
     egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
     logger.debug('Saving to %s in %s...', egg_name, orig_dir)
 
-    buildout = 'buildout.cfg'
-    buildout_path = os.path.join(name, buildout)
-    buildout_orig = buildout_path+'-orig'
-
-    tmp_dir = None
-
     # Put instance methods into pickleable form.
     # (do this now, rather than in save(), so fix_objects() can fix __main__)
     _fix_instancemethods(root)
@@ -161,6 +156,7 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
 
         # Fixup objects, classes, & sys.modules for __main__ imports.
         fixup = _fix_objects(objs)
+        tmp_dir = None
         try:
             # Determine distributions and local modules required.
             required_distributions, local_modules, missing_modules = \
@@ -169,84 +165,95 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
             # Move to scratch area.
             tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
             os.chdir(tmp_dir)
-            if src_dir:
-                if sys.platform == 'win32':
-                    # Copy original directory to object name.
-                    shutil.copytree(src_dir, name)
-                else:
-                    # Just link original directory to object name.
-                    os.symlink(src_dir, name)
-            else:
-                os.mkdir(name)
+            cleanup_files = []
 
-            # If orig_dir isn't src_dir, copy local modules from orig_dir.
-            if orig_dir != src_dir:
-                for path in local_modules:
-                    path = orig_dir+os.sep+path
-                    shutil.copy(path, name)
-
-            # If any distributions couldn't be found, record them in a file.
-            if missing_modules:
-                missing_name = '%s.missing' % name
-                out = open(os.path.join(name, missing_name), 'w')
-                for mod, path in missing_modules:
-                    out.write(mod+'\n')
-                out.close()
-                src_files.add(missing_name)
-
-            # Save state of object hierarchy.
-            if format is SAVE_CPICKLE or format is SAVE_PICKLE:
-                state_name = name+'.pickle'
-            elif format is SAVE_LIBYAML or format is SAVE_YAML:
-                state_name = name+'.yaml'
-            else:
-                raise RuntimeError("Unknown format '%s'." % format)
-            state_path = os.path.join(name, state_name)
+            buildout_name = 'buildout.cfg'
+            buildout_path = os.path.join(name, buildout_name)
+            buildout_orig = buildout_path+'-orig'
             try:
-                save(root, state_path, format, proto, logger, fix_im=False)
-            except Exception, exc:
-                if os.path.exists(state_path):
-                    os.remove(state_path)
-                raise type(exc)("Can't save to '%s': %s" % (state_path, exc))
-            src_files.add(state_name)
+                if src_dir:
+                    if sys.platform == 'win32':
+                        # Copy original directory to object name.
+                        shutil.copytree(src_dir, name)
+                    else:
+                        # Just link original directory to object name.
+                        os.symlink(src_dir, name)
+                else:
+                    os.mkdir(name)
 
-            # Create buildout.cfg
-            if os.path.exists(buildout_path):
-                os.rename(buildout_path, buildout_orig)
-            _create_buildout(name, EGG_SERVER_URL, required_distributions,
-                             buildout_path)
-            src_files.add(buildout)
+                # If orig_dir isn't src_dir, copy local modules from orig_dir.
+                if orig_dir != src_dir:
+                    for path in local_modules:
+                        shutil.copy(orig_dir+os.sep+path, name)
 
-            # If needed, make an empty __init__.py
-            init_path = os.path.join(name, '__init__.py')
-            if not os.path.exists(init_path):
-                remove_init = True
-                out = open(init_path, 'w')
-                out.close()
-            else:
-                remove_init = False
+                # If any distributions couldn't be found, record them in a file.
+                if missing_modules:
+                    missing_name = '%s.missing' % name
+                    missing_path = os.path.join(name, missing_name)
+                    cleanup_files.append(missing_path)
+                    out = open(missing_path, 'w')
+                    for mod, path in sorted(missing_modules,
+                                            key=lambda item: item[0]):
+                        out.write(mod+'\n')
+                    out.close()
+                    src_files.add(missing_name)
 
-            # Create loader script.
-            loader = '%s_loader' % name
-            loader_path = os.path.join(name, loader+'.py')
-            _write_loader_script(loader_path, state_name)
+                # Save state of object hierarchy.
+                if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+                    state_name = name+'.pickle'
+                elif format is SAVE_LIBYAML or format is SAVE_YAML:
+                    state_name = name+'.yaml'
+                else:
+                    raise RuntimeError("Unknown format '%s'." % format)
+                state_path = os.path.join(name, state_name)
+                cleanup_files.append(state_path)
+                try:
+                    save(root, state_path, format, proto, logger, fix_im=False)
+                except Exception, exc:
+                    raise type(exc)("Can't save to '%s': %s" 
+                                    % (state_path, exc))
+                src_files.add(state_name)
 
-            # Save everything to an egg via setuptools.
-            doc = root.__doc__
-            if doc is None:
-                doc = ''
-            _write_egg_via_setuptools(name, doc, version, loader, src_files,
-                                      required_distributions, dst_dir, logger)
-            os.remove(state_path)
-            os.remove(loader_path)
-            if remove_init:
-                os.remove(init_path)
+                # Create buildout.cfg
+                if os.path.exists(buildout_path):
+                    os.rename(buildout_path, buildout_orig)
+                _create_buildout(name, EGG_SERVER_URL, required_distributions,
+                                 buildout_path)
+                src_files.add(buildout_name)
+
+                # If needed, make an empty __init__.py
+                init_path = os.path.join(name, '__init__.py')
+                if not os.path.exists(init_path):
+                    cleanup_files.append(init_path)
+                    out = open(init_path, 'w')
+                    out.close()
+
+                # Create loader script.
+                loader = '%s_loader' % name
+                loader_path = os.path.join(name, loader+'.py')
+                cleanup_files.append(loader_path)
+                _write_loader_script(loader_path, state_name)
+
+                # Save everything to an egg.
+                doc = root.__doc__
+                if doc is None:
+                    doc = ''
+                eggwriter.write(name, doc, version, loader,
+                                src_files, required_distributions,
+                                dst_dir, logger)
+#                eggwriter.write_via_setuptools(name, doc, version, loader,
+#                                             src_files, required_distributions,
+#                                               dst_dir, logger)
+            finally:
+                for path in cleanup_files:
+                    if os.path.exists(path):
+                        os.remove(path)
+                if os.path.exists(buildout_orig):
+                    os.rename(buildout_orig, buildout_path)
+                elif os.path.exists(buildout_path):
+                    os.remove(buildout_path)
 
         finally:
-            if os.path.exists(buildout_orig):
-                os.rename(buildout_orig, buildout_path)
-            elif os.path.exists(buildout_path):
-                os.remove(buildout_path)
             os.chdir(orig_dir)
             if tmp_dir:
                 shutil.rmtree(tmp_dir)
@@ -715,83 +722,6 @@ if __name__ == '__main__':
     out.close()
 
 
-def _write_egg_via_setuptools(name, doc, version, loader, src_files,
-                              distributions, dst_dir, logger):
-    """ Save everything to an egg via setuptools. """
-    out = open('setup.py', 'w')
-
-    out.write('import setuptools\n')
-
-    out.write('\npackage_files = [\n')
-    for filename in sorted(src_files):
-        path = os.path.join(name, filename)
-        if not os.path.exists(path):
-            raise ValueError("Can't save, '%s' does not exist" % path)
-        out.write("    '%s',\n" % filename)
-    out.write(']\n')
-
-    out.write('\nrequirements = [\n')
-    for dist in distributions:
-        out.write("    '%s == %s',\n" % (dist.project_name, dist.version))
-    out.write(']\n')
-
-    out.write("""
-entry_points = {
-    'openmdao.top' : [
-        'top = %(loader)s:load',
-    ],
-    'openmdao.components' : [
-        '%(name)s = %(loader)s:load',
-    ],
-    'setuptools.installation' : [
-        'eggsecutable = %(name)s.%(loader)s:eggsecutable',
-    ],
-}
-
-setuptools.setup(
-    name='%(name)s',
-    description='''%(doc)s''',
-    version='%(version)s',
-    packages=setuptools.find_packages(),
-    package_data={'%(name)s' : package_files},
-    zip_safe=False,
-    install_requires=requirements,
-    entry_points=entry_points,
-)
-""" % {'name':name, 'loader':loader, 'doc':doc.strip(), 'version':version})
-
-    out.close()
-
-    # Use environment since 'python' might not recognize '-u'.
-    env = os.environ
-    env['PYTHONUNBUFFERED'] = '1'
-    proc = subprocess.Popen(['python', 'setup.py', 'bdist_egg',
-                             '-d', dst_dir], env=env,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT)
-    output = []
-    while proc.returncode is None:
-        line = proc.stdout.readline()
-        if line:
-            line = line.rstrip()
-            logger.debug('    '+line)
-            output.append(line)
-        proc.poll()
-    line = proc.stdout.readline()
-    while line:
-        line = line.rstrip()
-        logger.debug('    '+line)
-        output.append(line)
-        line = proc.stdout.readline()
-
-    if proc.returncode != 0:
-        for line in output:
-            logger.error('    '+line)
-        logger.error('save_to_egg failed due to setup.py error %d:',
-                     proc.returncode)
-        raise RuntimeError('setup.py failed, check log for info.')
-
-
 def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
          fix_im=True):
     """
@@ -871,8 +801,9 @@ def load_from_egg(filename, install=True, logger=None):
     logger.debug("    name '%s'", name)
 
     for info in archive.infolist():
-        if not info.filename.startswith(name):
-            continue  # EGG-INFO
+        if not info.filename.startswith(name) and \
+           not info.filename.startswith('EGG-INFO'):
+            continue
         if info.filename.endswith('.pyc') or \
            info.filename.endswith('.pyo'):
             continue  # Don't assume compiled OK for this platform.
@@ -880,10 +811,16 @@ def load_from_egg(filename, install=True, logger=None):
         logger.debug("    extracting '%s' (%d bytes)...",
                      info.filename, info.file_size)
         dirname = os.path.dirname(info.filename)
+        if dirname == 'EGG-INFO':
+            # Extract EGG-INFO as subdirectory.
+            dirname = os.path.join(name, dirname)
+            path = os.path.join(name, info.filename)
+        else:
+            path = info.filename
         if dirname and not os.path.exists(dirname):
             os.makedirs(dirname)
         # TODO: use 2.6 ability to extract to filename.
-        out = open(info.filename, 'w')
+        out = open(path, 'w')
         out.write(archive.read(info.filename))
         out.close()
 
