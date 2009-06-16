@@ -125,6 +125,9 @@ The current package layout of the project is as follows:
     Classes and utilities that are specific to testing various aspects
     of OpenMDAO
 
+**openmdao.examples**
+    The OpenMDAO tutorial problem and other examples
+
 .. _zope: http://wiki.zope.org/zope3/Zope3Wiki
 
 .. _zc.buildout: http://pypi.python.org/pypi/zc.buildout

@@ -95,8 +95,8 @@ class MultiDriverTestCase(unittest.TestCase):
         
 
     def test_one_driver(self):
-        self.assertEqual(['comp2', 'comp3', 'comp1', 'comp4', 'adder3'], 
-                         self.top.driver1.sorted_components())
+        self.assertEqual(set(['comp4', 'comp1', 'comp3', 'comp2', 'adder1', 'adder2','adder3']), 
+                         self.top.driver1.simple_iteration_set())
         self.top.run()
         self.assertAlmostEqual(self.opt_objective, 
                                self.top.driver1.objective.refvalue, places=2)
@@ -143,52 +143,49 @@ class MultiDriverTestCase(unittest.TestCase):
                                self.top.comp1a.x, places=5)
 
         
-    #def test_2_nested_drivers(self):
-        ##
-        ## Solve (x-3)^2 + xy + (y+4)^2 = 3
-        ## using two optimizers nested. The inner loop optimizes y
-        ## the outer loop takes care of x
-        ## Enough components created to assure that the optimizers don't "touch"
-        ## 
-        ## Optimal solution: x = 6.6667; y = -7.3333
+    def test_2_nested_drivers(self):
+        #
+        # Solve (x-3)^2 + xy + (y+4)^2 = 3
+        # using two optimizers nested. The inner loop optimizes y
+        # the outer loop takes care of x
+        # Enough components created to assure that the optimizers don't "touch"
+        # 
+        # Optimal solution: x = 6.6667; y = -7.3333
         
-        #ExprComp('comp1',self.top, expr='x-3')
-        #ExprComp('comp2',self.top, expr='-3')
-        #ExprComp2('comp3',self.top, expr='x*x + (x+3)*y + (y+4)**2')
-        #ExprComp2('comp4',self.top, expr='x+y')
-        #self.top.comp1.set('x', 50)
-        #self.top.comp3.set('y', 50)
+        self.top.debug('***** test_2_nested_drivers')
+        self.top = Assembly('top', None)
+        ExprComp('comp1',self.top, expr='x-3')
+        ExprComp('comp2',self.top, expr='-3')
+        ExprComp2('comp3',self.top, expr='x*x + (x+3)*y + (y+4)**2')
+        ExprComp2('comp4',self.top, expr='x+y')
+        self.top.comp1.set('x', 50)
+        self.top.comp3.set('y', -50)
         
-        ## Get rid of junk we don't need
-        #self.top.remove_child('adder1')
-        #self.top.remove_child('adder2')
-        #self.top.remove_child('adder3')
+        # Hook stuff up
+        self.top.connect('comp1.f_x', 'comp3.x')
+        self.top.connect('comp3.f_xy', 'comp4.y')
+        self.top.connect('comp2.f_x', 'comp4.x')
 
-        ## Hook stuff up
-        #self.top.connect('comp1.f_x', 'comp3.x')
-        #self.top.connect('comp3.f_xy', 'comp4.y')
-        #self.top.connect('comp2.f_x', 'comp4.x')
-
-        ## create the inner driver
-        #drv1 = CONMINdriver('driver1',self.top)
-        #drv1.maxiters = 30
-        #drv1.objective.value = 'comp3.f_xy'
-        #drv1.design_vars.value = ['comp3.y']
-        #drv1.lower_bounds = [-50]
-        #drv1.upper_bounds = [50]
+        # create the inner driver
+        drv1 = CONMINdriver('driver1',self.top)
+        drv1.maxiters = 30
+        drv1.objective.value = 'comp3.f_xy'
+        drv1.design_vars.value = ['comp3.y']
+        drv1.lower_bounds = [-50]
+        drv1.upper_bounds = [50]
         
-        ## create the outer driver
-        #drv2 = CONMINdriver('driver2',self.top)
-        #drv2.maxiters = 30
-        #drv2.objective.value = 'comp4.f_xy'
-        #drv2.design_vars.value = ['comp1.x']
-        #drv2.lower_bounds = [-50]
-        #drv2.upper_bounds = [50]
+        # create the outer driver
+        drv2 = CONMINdriver('driver2',self.top)
+        drv2.maxiters = 100
+        drv2.objective.value = 'comp4.f_xy'
+        drv2.design_vars.value = ['comp1.x']
+        drv2.lower_bounds = [-50]
+        drv2.upper_bounds = [50]
         
-        #self.top.run()
+        self.top.run()
 
-        #self.assertAlmostEqual(self.top.comp1.x, 6.6667, places=4)
-        #self.assertAlmostEqual(self.top.comp3.y, -7.3333, places=4)
+        self.assertAlmostEqual(self.top.comp1.x, 6.6667, places=1)
+        self.assertAlmostEqual(self.top.comp3.y, -7.3333, places=1)
         
         
 if __name__ == "__main__":

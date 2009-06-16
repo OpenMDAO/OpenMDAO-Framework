@@ -4,12 +4,18 @@ __version__ = "0.1"
 
 import random
 
-from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
-from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
-from pyevolve import GenomeBase
+from pyevolve import G1DList, G1DBinaryString, G2DList, GAllele, GenomeBase
+from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
+try:
+    from pyevolve import DBAdapters
+except ImportError:
+    # Apparently the egg doesn't record it's dependencies.
+    import logging
+    logging.warning('No pyevolve.DBAdaptors available.')
 
 from openmdao.main.variable import Variable, INPUT, OUTPUT
 from openmdao.main import Driver, Int, Float, Bool, String, RefVariable
+
 
 def G1DListCrossOverRealHypersphere(genome, **args):
     """ A genome reproduction algorithm, developed by Tristan Hearn at 
@@ -23,11 +29,12 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     sister = gMom.clone()
     brother = gDad.clone()
     
-    bounds = (genome.getParam("rangemin",0),genome.getParam("rangemax",100))
+    bounds = (genome.getParam("rangemin",0), genome.getParam("rangemax",100))
     dim = len(genome)
     numparents = 2.0
         
-    # find the center of mass (average value) between the two parents for each dimension
+    # find the center of mass (average value) between the two parents
+    # for each dimension
     cmass = [(gm+gd)/2.0 for gm,gd in zip(gMom,gDad)]
     
     radius = max(sum([(cm-gM)**2 for cm,gM in zip(cmass,gMom)]),
@@ -37,13 +44,15 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     #generate a random unit vectors in the hyperspace
     seed_sister = [random.uniform(-1,1) for i in range(0,dim)]
     magnitude = sum([x**2 for x in seed_sister])**.5
-    while magnitude > 1: #checksum to enforce a circular distribution of random numbers
+    #checksum to enforce a circular distribution of random numbers
+    while magnitude > 1:
         seed_sister = [random.uniform(-1,1) for i in range(0,dim)]
         magnitude = sum([x**2 for x in seed_sister])**.5        
     
     seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
     magnitude = sum([x**2 for x in seed_brother])**.5
-    while magnitude > 1: #checksum to enforce a circular distribution of random numbers
+    #checksum to enforce a circular distribution of random numbers
+    while magnitude > 1:
         seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
         magnitude = sum([x**2 for x in seed_brother])**.5    
     
@@ -54,7 +63,8 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     sister.genomeList = [cm+radius*sd for cm,sd in zip(cmass,seed_sister)]
     brother.genomeList = [cm+radius*sd for cm,sd in zip(cmass,seed_brother)]
     
-    if type(gMom.genomeList[0]) == int: #preserve the integer type of the genome if necessary
+    #preserve the integer type of the genome if necessary
+    if type(gMom.genomeList[0]) == int:
         sister.genomeList = [int(round(x)) for x in sister.genomeList]   
         brother.genomeList = [int(round(x)) for x in brother.genomeList]  
     
@@ -78,26 +88,28 @@ class pyevolvedriver(Driver):
     TODO: Implement function-slots as sockets
     """
 
-    def __init__(self,name,parent=None,doc=None): 
-        super(pyevolvedriver,self).__init__(name,parent,doc)
+    def __init__(self, name, parent=None, doc=None): 
+        super(pyevolvedriver, self).__init__(name, parent, doc)
 
         self.genome = GenomeBase.GenomeBase() #TODO: Mandatory Socket
         self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin
 
         #inputs - value of None means use default
         RefVariable('objective', self, INPUT,
-                          doc= 'A string containing the objective function expression.')
-        Int('freq_stats',self,INPUT,default = 0)
-        Float('seed',self,INPUT,default = 0)
-        Float('population_size',self,INPUT,default = Consts.CDefGAPopulationSize)
-        
-        Bool('sort_type',self,INPUT,doc='use Consts.sortType["raw"],Consts.sortType["scaled"] ',default = Consts.sortType["scaled"]) # can accept
-        Float('mutation_rate',self,INPUT,default = Consts.CDefGAMutationRate)
-        Float('crossover_rate',self,INPUT,default = Consts.CDefGACrossoverRate)
-        Int('generations',self,INPUT,default = Consts.CDefGAGenerations)
-        Bool('mini_max',self,INPUT,default = Consts.minimaxType["minimize"],
-             doc = 'use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
-        Bool('elitism',self,INPUT,doc='True of False',default = True)
+                    doc='String containing the objective function expression.')
+        Int('freq_stats', self, INPUT, default=0)
+        Float('seed', self, INPUT, default=0)
+        Float('population_size', self, INPUT,
+              default=Consts.CDefGAPopulationSize)
+        Bool('sort_type', self, INPUT,
+             doc='use Consts.sortType["raw"],Consts.sortType["scaled"]',
+             default=Consts.sortType["scaled"]) # can accept
+        Float('mutation_rate', self, INPUT, default=Consts.CDefGAMutationRate)
+        Float('crossover_rate', self, INPUT, default=Consts.CDefGACrossoverRate)
+        Int('generations', self, INPUT, default=Consts.CDefGAGenerations)
+        Bool('mini_max', self, INPUT, default=Consts.minimaxType["minimize"],
+             doc='use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
+        Bool('elitism', self, INPUT, doc='True of False', default=True)
         
         self.decoder = None #TODO: mandatory socket       
         self.selector = None #TODO: optional socket
@@ -106,41 +118,44 @@ class pyevolvedriver(Driver):
         self.DBAdapter = None #TODO: optional socket
 
         #outputs
-        Variable('best_individual',self,OUTPUT,default = self.genome)
+        Variable('best_individual', self, OUTPUT, default=self.genome)
 
 
-    def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
-        if funcList == None: return
+    def _set_GA_FunctionSlot(self, slot, funcList, RandomApply=False):
+        if funcList == None:
+            return
         slot.clear()
-        if not isinstance(funcList,list): funcList = [funcList]
+        if not isinstance(funcList, list):
+            funcList = [funcList]
         for func in funcList: 
             if slot.isEmpty(): 
                 slot.set(func)
-            else: slot.add(func)
+            else:
+                slot.add(func)
         slot.setRandomApply(RandomApply)
 
-    def evaluate(self,genome):
+    def evaluate(self, genome):
         self.decoder(genome)
-        self.run_referenced_comps()
+        self.run_iteration()
         return self.objective.refvalue
 
     def verify(self):
         #genome verify
-        if not isinstance(self.genome,GenomeBase.GenomeBase):
-            self.raise_exception(
-                "genome provided is not valid. Does not inherit from pyevolve.GenomeBase.GenomeBase",
+        if not isinstance(self.genome, GenomeBase.GenomeBase):
+            self.raise_exception("genome provided is not valid."
+                " Does not inherit from pyevolve.GenomeBase.GenomeBase",
                 TypeError)
 
         #decoder verify
         if self.decoder == None: # check if None first
-            self.raise_exception("decoder specified as 'None'. A valid decoder must be present",
-                                 TypeError)
+            self.raise_exception("decoder specified as 'None'."
+                                 " A valid decoder must be present", TypeError)
         try: # won't work if decoder is None
             self.decoder(self.genome)
         except TypeError:
             self.raise_exception(
-                "decoder specified as does not have the right signature. Must take only 1 argument",
-                TypeError)
+                "decoder specified as does not have the right signature."
+                " Must take only 1 argument", TypeError)
 
     def execute(self):
         """ Perform the optimization"""
@@ -161,10 +176,11 @@ class pyevolvedriver(Driver):
 
         #self.GA.setDBAdapter(self.DBAdapter) #
         
-        self._set_GA_FunctionSlot(self.GA.selector,self.selector)
-        self._set_GA_FunctionSlot(self.GA.stepCallback,self.stepCallback)
-        self._set_GA_FunctionSlot(self.GA.terminationCriteria,self.terminationCriteria)
+        self._set_GA_FunctionSlot(self.GA.selector, self.selector)
+        self._set_GA_FunctionSlot(self.GA.stepCallback, self.stepCallback)
+        self._set_GA_FunctionSlot(self.GA.terminationCriteria,
+                                  self.terminationCriteria)
         
-        self.GA.evolve(freq_stats = self.freq_stats)
+        self.GA.evolve(freq_stats=self.freq_stats)
         self.best_individual = self.GA.bestIndividual()
 

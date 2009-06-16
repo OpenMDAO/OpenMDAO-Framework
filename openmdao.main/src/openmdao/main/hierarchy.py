@@ -13,6 +13,7 @@ from openmdao.main.log import Logger, LOG_DEBUG
 # npsscomponent uses it...
 _namecheck_rgx = re.compile('([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
 
+
 class HierarchyMember(object):
     """Base class for all objects living in the framework accessible
     hierarchy of named objects.
@@ -88,7 +89,7 @@ class HierarchyMember(object):
         self.__dict__ = state
         if self._parent is not None:
             self._parent = weakref.ref(self._parent)
-    
+
     # error reporting stuff
     def _get_log_level(self):
         """Return logging message level."""

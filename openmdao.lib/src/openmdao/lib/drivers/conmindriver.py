@@ -6,6 +6,7 @@ __all__ = ['CONMINdriver']
 __version__ = "0.1"
 
 import numpy.numarray as numarray
+import numpy
 from copy import copy
 import conmin.conmin as conmin
 
@@ -15,11 +16,120 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.variable import INPUT, OUTPUT, VariableChangedEvent
 
 
-class _datastructure(object):
+class _cnmn1(object):
     """Just a primitive data structure for storing common block data"""
-    pass
-
-
+    def __init__(self):
+        self.clear()
+        
+    def clear(self):
+        self.ndv = 0
+        self.ncon = 0
+        self.nside = 0
+        self.nacmx1 = 0
+        self.infog = 0
+        self.info = 0
+        self.nfdg = 0
+        self.icndir = 0
+        self.nscal = 0
+        self.fdch = 0.0
+        self.fdchm = 0.0
+        self.ct = 0.
+        self.ctmin = 0.
+        self.ctlmin = 0.
+        self.theta = 0.
+        self.phi = 0.
+        self.delfun = 0.
+        self.dabfun = 1.e-8
+        self.linobj = 0
+        self.itrm = 0
+        self.alphax = 0.
+        self.abobj1 = 0.
+        self.ctl = 0.
+        self.igoto = 0
+        self.nac = 0
+        self.iter = 0
+        self.iprint = 0
+        self.itmax = 0
+ 
+class _consav(object):
+    def __init__(self):
+        self.clear()
+    
+    def clear(self):
+        self.dm1 = 0.0
+        self.dm2 = 0.0
+        self.dm3 = 0.0
+        self.dm4 = 0.0
+        self.dm5 = 0.0
+        self.dm6 = 0.0
+        self.dm7 = 0.0
+        self.dm8 = 0.0
+        self.dm9 = 0.0
+        self.dm10 = 0.0
+        self.dm11 = 0.0
+        self.dm12 = 0.0
+        self.dct = 0.0
+        self.dctl = 0.0
+        self.phi = 0.0
+        self.abobj = 0.0
+        self.cta = 0.0
+        self.ctam = 0.0
+        self.ctbm = 0.0
+        self.obj1 = 0.0
+        self.slope = 0.0
+        self.dx = 0.0
+        self.dx1 = 0.0
+        self.fi = 0.0
+        self.xi = 0.0
+        self.dftdf1 = 0.0
+        self.alp = 0.0
+        self.fff = 0.0
+        self.a1 = 0.0
+        self.a2 = 0.0
+        self.a3 = 0.0
+        self.a4 = 0.0
+        self.f1 = 0.0
+        self.f2 = 0.0
+        self.f3 = 0.0
+        self.f4 = 0.0
+        self.cv1 = 0.0
+        self.cv2 = 0.0
+        self.cv3 = 0.0
+        self.cv4 = 0.0
+        self.app = 0.0
+        self.alpca = 0.0
+        self.alpfes = 0.0
+        self.alpln = 0.0
+        self.alpmin = 0.0
+        self.alpnc = 0.0
+        self.alpsav = 0.0
+        self.alpsid = 0.0
+        self.alptot = 0.0
+        self.rspace = 0.0
+        self.idm1 = 0
+        self.idm2 = 0
+        self.idm3 = 0
+        self.jdir = 0
+        self.iobj = 0
+        self.kobj = 0
+        self.kcount = 0
+        self.ncal = [0, 0]
+        self.nfeas = 0
+        self.mscal = 0
+        self.ncobj = 0
+        self.nvc = 0
+        self.kount = 0
+        self.icount = 0
+        self.igood1 = 0
+        self.igood2 = 0
+        self.igood3 = 0
+        self.igood4 = 0
+        self.ibest = 0
+        self.iii = 0
+        self.nlnc = 0
+        self.jgoto = 0
+        self.ispace = [0, 0]
+        
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 
     
@@ -38,9 +148,8 @@ class CONMINdriver(Driver):
         super(CONMINdriver, self).__init__(name, parent, doc)
         
         # Save data from common blocks into our CONMINdriver object
-        self.cnmn1 = _datastructure()
-        self.consav = _datastructure()
-        self._save_common_blocks()
+        self.cnmn1 = _cnmn1()
+        self.consav = _consav()
         
         self._first = True
         self.design_vals = numarray.zeros(0,'d')
@@ -90,17 +199,17 @@ class CONMINdriver(Driver):
         
         self.make_public(['iprint', 'maxiters'])
         
-    def __getstate__(self):
-        """Return dict representing this container's state."""
-        state = super(CONMINdriver, self).__getstate__()
-        state['cnmn1'] = None
-        return state
+    #def __getstate__(self):
+        #"""Return dict representing this container's state."""
+        #state = super(CONMINdriver, self).__getstate__()
+        #state['cnmn1'] = None
+        #return state
 
-    def __setstate__(self, state):
-        """Restore this component's state."""
-        super(CONMINdriver, self).__setstate__(state)
-        self.cnmn1 = conmin.cnmn1
-        self._first = True
+    #def __setstate__(self, state):
+        #"""Restore this component's state."""
+        #super(CONMINdriver, self).__setstate__(state)
+        #self.cnmn1 = conmin.cnmn1
+        #self._first = True
         
     def execute(self):
         """Perform the optimization."""
@@ -111,7 +220,7 @@ class CONMINdriver(Driver):
         self._first = True
         
         # perform an initial run for self-consistency
-        self.run_referenced_comps()
+        self.run_iteration()
 
         # get the initial values of the design variables
         for i, val in enumerate(self.design_vars.refvalue):
@@ -126,6 +235,8 @@ class CONMINdriver(Driver):
                         
             # calculate objective
             self.cnmn1.obj = numarray.array(self.objective.refvalue)
+            self.debug('design vars = %s' % self.design_vars.refvalue)
+            self.debug('objective = %s' % self.objective.refvalue)
             
 # TODO: 'step around' ill-behaved cases.
             
@@ -152,7 +263,7 @@ class CONMINdriver(Driver):
             self.design_vars.refvalue = [float(val) for val in self.design_vals[:-2]]
             
             # update the model
-            self.run_referenced_comps()
+            self.run_iteration()
             
             # calculate constraints
             if self.cnmn1.info == 1:
@@ -170,9 +281,11 @@ class CONMINdriver(Driver):
         """Set up arrays for the FORTRAN conmin routine, and perform some
         validation and make sure that array sizes are consistent.
         """
+        self.cnmn1.clear()
+        self.consav.clear()
+        
         # size arrays based on number of design variables
         num_dvs = len(self.design_vars)
-        self.cnmn1.ndv = num_dvs
         self.design_vals = numarray.zeros(num_dvs+2, 'd')
         
         if num_dvs < 1:
@@ -221,6 +334,7 @@ class CONMINdriver(Driver):
         # not essential is is for efficiency only.
         self.cons_is_linear = numarray.zeros(length, 'i') 
         
+        self.cnmn1.ndv = num_dvs
         self.cnmn1.ncon = len(self.constraints)
         
         if not self._lower_bounds.size == 0 or not self._upper_bounds.size == 0:
@@ -229,7 +343,7 @@ class CONMINdriver(Driver):
             self.cnmn1.nside = 0
 
         self.cnmn1.nacmx1 = max(num_dvs,
-                                len(self.constraints.value)+conmin.cnmn1.nside)+1
+                                len(self.constraints.value)+self.cnmn1.nside)+1
         n1 = num_dvs+2
         n3 = self.cnmn1.nacmx1
         n4 = max(n3, num_dvs)
@@ -245,130 +359,36 @@ class CONMINdriver(Driver):
         # temp storage
         self._ms1 = numarray.zeros(n5, 'i')
 
-        self.cnmn1.infog = 0
-        self.cnmn1.info = 0
-        self.cnmn1.nfdg = 0
-        self.cnmn1.icndir = 0
-        self.cnmn1.nscal = 0
-        self.cnmn1.fdch = 0.0
-        self.cnmn1.fdchm = 0.0
-        self.cnmn1.ct = 0.
-        self.cnmn1.ctmin = 0.
-        self.cnmn1.ctlmin = 0.
-        self.cnmn1.theta = 0.
-        self.cnmn1.phi = 0.
-        self.cnmn1.delfun = 0.
-        self.cnmn1.dabfun = 1.e-8
-        self.cnmn1.linobj = 0
-        self.cnmn1.itrm = 0
-        self.cnmn1.alphax = 0.
-        self.cnmn1.abobj1 = 0.
-        self.cnmn1.ctl = 0.
-        self.cnmn1.igoto = 0
-        self.cnmn1.nac = 0
-        self.cnmn1.iter = 0
-
         self.cnmn1.iprint = self.iprint
         self.cnmn1.itmax = self.maxiters
         
-        # The CONSAV common block, which contains temp variables that allow the
-        # optimization to be stepped externally, needs to be initialzed to an
-        # empty state before executing.
-
-        self.consav.dm1 = 0.0
-        self.consav.dm2 = 0.0
-        self.consav.dm3 = 0.0
-        self.consav.dm4 = 0.0
-        self.consav.dm5 = 0.0
-        self.consav.dm6 = 0.0
-        self.consav.dm7 = 0.0
-        self.consav.dm8 = 0.0
-        self.consav.dm9 = 0.0
-        self.consav.dm10 = 0.0
-        self.consav.dm11 = 0.0
-        self.consav.dm12 = 0.0
-        self.consav.dct = 0.0
-        self.consav.dctl = 0.0
-        self.consav.phi = 0.0
-        self.consav.abobj = 0.0
-        self.consav.cta = 0.0
-        self.consav.ctam = 0.0
-        self.consav.ctbm = 0.0
-        self.consav.obj1 = 0.0
-        self.consav.slope = 0.0
-        self.consav.dx = 0.0
-        self.consav.dx1 = 0.0
-        self.consav.fi = 0.0
-        self.consav.xi = 0.0
-        self.consav.dftdf1 = 0.0
-        self.consav.alp = 0.0
-        self.consav.fff = 0.0
-        self.consav.a1 = 0.0
-        self.consav.a2 = 0.0
-        self.consav.a3 = 0.0
-        self.consav.a4 = 0.0
-        self.consav.f1 = 0.0
-        self.consav.f2 = 0.0
-        self.consav.f3 = 0.0
-        self.consav.f4 = 0.0
-        self.consav.cv1 = 0.0
-        self.consav.cv2 = 0.0
-        self.consav.cv3 = 0.0
-        self.consav.cv4 = 0.0
-        self.consav.app = 0.0
-        self.consav.alpca = 0.0
-        self.consav.alpfes = 0.0
-        self.consav.alpln = 0.0
-        self.consav.alpmin = 0.0
-        self.consav.alpnc = 0.0
-        self.consav.alpsav = 0.0
-        self.consav.alpsid = 0.0
-        self.consav.alptot = 0.0
-        self.consav.rspace = 0.0
-        self.consav.idm1 = 0
-        self.consav.idm2 = 0
-        self.consav.idm3 = 0
-        self.consav.jdir = 0
-        self.consav.iobj = 0
-        self.consav.kobj = 0
-        self.consav.kcount = 0
-        self.consav.ncal = [0, 0]
-        self.consav.nfeas = 0
-        self.consav.mscal = 0
-        self.consav.ncobj = 0
-        self.consav.nvc = 0
-        self.consav.kount = 0
-        self.consav.icount = 0
-        self.consav.igood1 = 0
-        self.consav.igood2 = 0
-        self.consav.igood3 = 0
-        self.consav.igood4 = 0
-        self.consav.ibest = 0
-        self.consav.iii = 0
-        self.consav.nlnc = 0
-        self.consav.jgoto = 0
-        self.consav.ispace = [0, 0]
-        
 
     def _load_common_blocks(self):
-        ''' Reloads the common blocks using the intermediate info saved in the class. '''
+        """ Reloads the common blocks using the intermediate info saved in the class. """
         
         for name, value in self.cnmn1.__dict__.items():
             setattr( conmin.cnmn1, name, value )
         
         for name, value in self.consav.__dict__.items():
-            setattr( conmin.consav, name, value)
+            setattr( conmin.consav, name, value  )
         
         
     def _save_common_blocks(self):
-        ''' Saves the common block data to the class to prevent trampling by
-            other instances of CONMIN
-            '''
+        """" Saves the common block data to the class to prevent trampling by
+        other instances of CONMIN.
+        """
+        common = self.cnmn1
+        for name, value in common.__dict__.items():
+            if isinstance(value, numpy.ndarray):
+                setattr(common, name, getattr(conmin.cnmn1, name).copy())
+            else:
+                setattr(common, name, type(value)(getattr(conmin.cnmn1, name)))
         
-        for name, value in conmin.cnmn1.__dict__.items():
-            setattr( self.cnmn1, name, value)
-        
-        for name, value in conmin.consav.__dict__.items():
-            setattr( self.consav, name, value)
+        consav = self.consav
+        for name, value in consav.__dict__.items():
+            if isinstance(value, numpy.ndarray):
+                setattr(consav, name, getattr(conmin.consav, name).copy())
+            else:
+                setattr(consav, name, type(value)(getattr(conmin.consav, name)))
         
         

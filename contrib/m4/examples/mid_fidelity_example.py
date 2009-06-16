@@ -20,12 +20,12 @@ class MyModel(Assembly):
     def __init__(self, name='M4_VarFi', *args, **kwargs):
         super(MyModel, self).__init__(name, *args, **kwargs)
 
-        # The model is an M4 variable fidelity component.
-        var_fi = VarFi(parent=self)
-
         # Specify DOE.
         doe = DOE(parent=self)
-        self.driver = doe
+
+        # The model is an M4 variable fidelity component.
+        var_fi = VarFi(parent=self)
+        doe.model = var_fi
 
         doe.design_variables = [
             (var_fi.name+'.x', 0., 5.),
@@ -37,6 +37,19 @@ class MyModel(Assembly):
         ]
         doe.type = 'rand_lhs'
         doe.n_samples = 200
+
+    def execute(self):
+        """ Run model and print results. """
+        super(MyModel, self).execute()
+        for i, case in enumerate(self.M4_DOE.outerator):
+            print 'CASE %d:' % (i+1)
+            for name, index, value in case.inputs:
+                print '    input:', name, index, value
+            if case.msg:
+                print '    FAILED: %s' % case.msg
+            else:
+                for name, index, value in case.outputs:
+                    print '    output:', name, index, value
 
 
 class VarFi(MidFidelity):
@@ -76,24 +89,7 @@ class VarFi(MidFidelity):
         self.add_output_mapping('z2', 'z', 'z2')
 
 
-# pylint: disable-msg=E1101
-# "Instance of <class> has no <attr> member"
-
-def main():
-    """ Run model and print results. """
-    model = MyModel()
-    model.run()
-    for i, case in enumerate(model.driver.outerator):
-        print 'CASE %d:' % (i+1)
-        for name, index, value in case.inputs:
-            print '    input:', name, index, value
-        if case.msg:
-            print '    FAILED: %s' % case.msg
-        else:
-            for name, index, value in case.outputs:
-                print '    output:', name, index, value
-
-
 if __name__ == '__main__':
-    main()
+#    MyModel().run()
+    MyModel().check_save_load()
 
