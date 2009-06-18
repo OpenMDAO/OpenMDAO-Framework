@@ -9,8 +9,9 @@ import shutil
 import unittest
 
 from openmdao.main import Assembly, Component, Container, \
-                          ArrayVariable, FileVariable, StringList, Bool
+                          ArrayVariable, Int, FileVariable, StringList, Bool
 from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
+from openmdao.main.socket import Socket
 from openmdao.main.variable import INPUT, OUTPUT
 
 # pylint: disable-msg=E1101,E1103
@@ -22,6 +23,8 @@ EXTERNAL_FILES = ('xyzzy', '../sub/data2', 'hello', '../sub/data4')
 
 source_init = False
 sink_init = False
+
+MODULE_NAME = __name__
 
 
 class Source(Assembly):
@@ -143,6 +146,9 @@ class Sink(Component):
         out.close()
         self.pop_dir()
 
+        Int('executions', self, INPUT, default=0,
+            doc='Count of Oddball instance_method() calls.')
+
     def execute(self):
         """ Read test data from files. """
         inp = open(self.text_file, 'r')
@@ -154,11 +160,52 @@ class Sink(Component):
         inp.close()
 
 
-class Oddball(Component):
+class Oddball(Assembly):
     """ Just a component that needs a separate directory to be created. """
+
+    function_to_call = Socket(None, 'Just something to call.', False)
+    method_to_call = Socket(None, 'Just something to call.', False)
 
     def __init__(self, name='Oddball', *args, **kwargs):
         super(Oddball, self).__init__(name, *args, **kwargs)
+        Int('executions', self, OUTPUT, default=0,
+            doc='Counts instance_method() calls.')
+        self.thing_to_call = self.instance_method
+        self.function_to_call = os.getpid
+        self.method_to_call = self.instance_method
+        self.peer_class = Source  # Check that class in __main__ is handled.
+
+    def execute(self):
+        """ Call stuff. Empty sockets are clumsy. """
+        if self.thing_to_call:
+            self.debug('thing_to_call returned %s', self.thing_to_call())
+
+        try:
+            self.debug('function_to_call returned %s', self.function_to_call())
+        except RuntimeError, exc:
+            if not str(exc).find('empty'):
+                raise exc
+
+        try:
+            self.debug('method_to_call returned %s', self.method_to_call())
+        except RuntimeError, exc:
+            if not str(exc).find('empty'):
+                raise exc
+
+    def instance_method(self):
+        """ Called by execute(). """
+        self.executions += 1
+        return self.executions
+
+    @staticmethod
+    def static_method():
+        """ This won't pickle. """
+        return None
+
+
+def main_function():
+    """ Can't pickle references to functions defined in __main__. """
+    return None
 
 
 class Model(Assembly):
@@ -174,6 +221,8 @@ class Model(Assembly):
         self.connect('Source.text_file', 'Sink.text_file')
         #self.connect('Source.sub.binary_file', 'Sink.binary_file')
         self.connect('Source.binary_file', 'Sink.binary_file')
+
+        self.connect('Oddball.executions', 'Sink.executions')
 
         self.Source.text_data = 'oiuyoiuyoiuy'
         self.Source.sub.binary_data = [3.14159, 2.781828, 42]
@@ -216,6 +265,8 @@ class EggTestCase(unittest.TestCase):
         for i in range(3):
             self.assertEqual(self.model.Source.obj_list[i].data, i)
 
+        self.assertEqual(self.model.Sink.executions, 0)
+
         # Save to egg.
         self.egg_name = self.model.save_to_egg(format=format)
 
@@ -227,6 +278,8 @@ class EggTestCase(unittest.TestCase):
                          self.model.Source.sub.binary_data)
         self.assertEqual(
             self.model.Sink.getvar('binary_file').metadata['binary'], True)
+
+        self.assertEqual(self.model.Sink.executions, 2)
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -264,6 +317,8 @@ class EggTestCase(unittest.TestCase):
             for i in range(3):
                 self.assertEqual(self.model.Source.obj_list[i].data, i)
 
+            self.assertEqual(self.model.Oddball.executions, 0)
+
             # Run and verify correct operation.
             self.model.run()
             self.assertEqual(self.model.Sink.text_data,
@@ -272,6 +327,8 @@ class EggTestCase(unittest.TestCase):
                              self.model.Source.sub.binary_data)
             self.assertEqual(
                 self.model.Sink.getvar('binary_file').metadata['binary'], True)
+
+            self.assertEqual(self.model.Oddball.executions, 2)
 
         finally:
             os.chdir(orig_dir)
@@ -347,6 +404,31 @@ class EggTestCase(unittest.TestCase):
         except RuntimeError, exc:
             self.assertEqual(str(exc),
                              "Egg_TestModel: Unknown format 'unknown'.")
+        else:
+            self.fail('Expected RuntimeError')
+
+    def test_save_bad_function(self):
+        logging.debug('')
+        logging.debug('test_save_bad_function')
+        self.model.Oddball.function_to_call = main_function
+        try:
+            self.model.save_to_egg()
+        except RuntimeError, exc:
+            msg = "Egg_TestModel: Can't save: reference to function defined in main module"
+            self.assertEqual(str(exc).startswith(msg), True)
+        else:
+            if MODULE_NAME == '__main__':
+                self.fail('Expected RuntimeError')
+
+    def test_save_bad_method(self):
+        logging.debug('')
+        logging.debug('test_save_bad_method')
+        self.model.Oddball.method_to_call = self.model.Oddball.static_method
+        try:
+            self.model.save_to_egg()
+        except RuntimeError, exc:
+            self.assertEqual(str(exc),
+                "Egg_TestModel: Can't save, 1 object cannot be pickled.")
         else:
             self.fail('Expected RuntimeError')
 
