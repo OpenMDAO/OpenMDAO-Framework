@@ -5,6 +5,7 @@ __all__ = ['Component', 'SimulationRoot']
 __version__ = "0.1"
 
 import glob
+import logging
 import os.path
 import shutil
 import subprocess
@@ -354,7 +355,7 @@ class Component (Container):
             for obj in objs:
                 if id(obj) in visited:
                     continue
-                visited.append(id(obj))
+                visited.add(id(obj))
                 if isinstance(obj, FileVariable):
                     file_vars.add(obj)
                 elif isinstance(obj, Component):
@@ -365,7 +366,7 @@ class Component (Container):
                     _recurse_get_file_vars(obj, file_vars, visited)
 
         file_vars = set()
-        visited = []
+        visited = set()
         _recurse_get_file_vars(self, file_vars, visited)
         return file_vars
 
@@ -532,4 +533,20 @@ class Component (Container):
              #"""
         #return None
     
-    
+
+def eggsecutable():
+    """Unpack egg. Not in loader to avoid 2GB problems with zipimport."""
+    install = os.environ.get('OPENMDAO_INSTALL', '1')
+    if install:
+        install = int(install)
+    debug = os.environ.get('OPENMDAO_INSTALL_DEBUG', '1')
+    if debug:
+        debug = int(debug)
+    if debug:
+        logging.getLogger().setLevel(logging.DEBUG)
+    try:
+        Component.load_from_egg(sys.path[0], install=install)
+    except Exception, exc:
+        print str(exc)
+        sys.exit(1)
+
