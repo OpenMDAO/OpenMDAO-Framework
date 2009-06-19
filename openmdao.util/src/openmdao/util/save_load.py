@@ -829,8 +829,8 @@ def load_from_egg(filename, install=True, logger=None):
     maps = dist.get_entry_map()
     for group in maps.keys():
         logger.debug('        group %s:' % group)
-        for entry in maps[group]:
-            logger.debug('            %s', entry)
+        for entry_pt in maps[group].values():
+            logger.debug('            %s', entry_pt)
 
     if install:
         # Locate the installation (eggs) directory.

@@ -4,9 +4,11 @@ __all__ = ['Component', 'SimulationRoot']
 
 __version__ = "0.1"
 
+import fnmatch
 import glob
 import logging
 import os.path
+import pkg_resources
 import shutil
 import subprocess
 import sys
@@ -427,7 +429,7 @@ class Component (Container):
         return retcode
 
     @staticmethod
-    def load (instream, format=SAVE_CPICKLE, do_post_load=True):
+    def load(instream, format=SAVE_CPICKLE, do_post_load=True):
         """Load object(s) from instream."""
 # This doesn't work:
 #    AttributeError: 'super' object has no attribute 'load'
@@ -437,14 +439,50 @@ class Component (Container):
         if IComponent.providedBy(top):
             top.directory = os.getcwd()
             for component in [c for c in top.values(pub=False, recurse=True)
-                                                if IComponent.providedBy(c)]:
+                                    if IComponent.providedBy(c)]:
                 directory = component.get_directory()
                 if not os.path.exists(directory):
                     os.makedirs(directory)
 
+            # If necessary, copy files from installed egg.
+            if isinstance(instream, basestring) and \
+               not os.path.exists(instream) and not os.path.isabs(instream):
+                # If we got this far, then the stuff below "can't" fail.
+                dot = instream.rfind('.')
+                module = instream[:dot]
+                top._restore_files(module, '.')
+
         if do_post_load:
             top.post_load()
         return top
+
+    def _restore_files(self, module, relpath):
+        """Restore external files from installed egg."""
+        self.push_dir(self.get_directory())
+        try:
+            self.debug("Restoring files in %s", os.getcwd())
+            pkg_files = pkg_resources.resource_listdir(module, relpath)
+            for metadata in self.external_files:
+                pattern = metadata['path']
+                found = False
+                for filename in pkg_files:
+                    if fnmatch.fnmatch(filename, pattern):
+                        self.debug("    '%s'", filename)
+                        src = pkg_resources.resource_stream(module, filename)
+                        dst = open(filename, 'w')
+                        dst.write(src.read())
+                        dst.close()
+                        found = True
+                if not found:
+                    self.error("No files found for '%s'", pattern)
+
+            if self.directory:
+                relpath += '/'+self.directory  # Must use '/' for resources.
+            for component in [c for c in self.values(pub=False, recurse=True)
+                                    if IComponent.providedBy(c)]:
+                component._restore_files(module, relpath)
+        finally:
+            self.pop_dir()
 
     def step (self):
         """For Components that run other components (e.g., Assembly or Drivers),
