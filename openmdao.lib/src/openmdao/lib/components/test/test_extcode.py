@@ -68,7 +68,6 @@ class TestCase(unittest.TestCase):
         try:
             externp.run()
         except ValueError, exc:
-            msg = 'ExternalCode: return_code = 127'
             self.assertEqual(str(exc), 'ExternalCode: Null command line')
         else:
             self.fail('Expected ValueError')

@@ -21,8 +21,8 @@ __version__ = '1.2.3'  # Used in forming egg name.
 
 EXTERNAL_FILES = ('xyzzy', '../sub/data2', 'hello', '../sub/data4')
 
-source_init = False
-sink_init = False
+SOURCE_INIT = False
+SINK_INIT = False
 
 MODULE_NAME = __name__
 
@@ -34,8 +34,8 @@ class Source(Assembly):
         super(Source, self).__init__(name, *args, **kwargs)
         self.directory = self.get_directory()  # Force absolute.
 
-        global source_init
-        source_init = True
+        global SOURCE_INIT
+        SOURCE_INIT = True
 
         Bool('write_files', self, INPUT, default=True)
         StringList('text_data', self, INPUT, default=[])
@@ -125,8 +125,8 @@ class Sink(Component):
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
 
-        global sink_init
-        sink_init = True
+        global SINK_INIT
+        SINK_INIT = True
 
         StringList('text_data', self, OUTPUT, default=[])
         ArrayVariable('binary_data', self, OUTPUT, float, default=[])
@@ -246,11 +246,11 @@ class EggTestCase(unittest.TestCase):
             shutil.rmtree('Egg')
 
     def save_load(self, format):
-        global source_init, sink_init
+        global SOURCE_INIT, SINK_INIT
 
         # Verify initial state.
-        self.assertEqual(source_init, True)
-        self.assertEqual(sink_init, True)
+        self.assertEqual(SOURCE_INIT, True)
+        self.assertEqual(SINK_INIT, True)
         self.assertNotEqual(self.model.Sink.text_data,
                             self.model.Source.text_data)
         self.assertNotEqual(self.model.Sink.binary_data,
@@ -290,8 +290,8 @@ class EggTestCase(unittest.TestCase):
         os.chdir(test_dir)
         try:
             # Clear flags to detect if loading calls __init__.
-            source_init = False
-            sink_init = False
+            SOURCE_INIT = False
+            SINK_INIT = False
 
             # Load from saved initial state in egg.
             self.model.pre_delete()
@@ -301,8 +301,8 @@ class EggTestCase(unittest.TestCase):
             self.model.directory = os.path.join(os.getcwd(), self.model.name)
 
             # Verify initial state.
-            self.assertEqual(source_init, False)
-            self.assertEqual(sink_init, False)
+            self.assertEqual(SOURCE_INIT, False)
+            self.assertEqual(SINK_INIT, False)
             self.assertNotEqual(self.model.Sink.text_data,
                                 self.model.Source.text_data)
             self.assertNotEqual(self.model.Sink.binary_data,
