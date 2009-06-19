@@ -107,7 +107,7 @@ Platform: UNKNOWN
     # Entry points -> EGG-INFO/entry_points.txt
     entry_points = """\
 [openmdao.components]
-%(name)s = %(loader)s:load
+%(name)s = %(name)s.%(loader)s:load
 
 [openmdao.top]
 top = %(loader)s:load
@@ -245,7 +245,7 @@ entry_points = {
         'top = %(loader)s:load',
     ],
     'openmdao.components' : [
-        '%(name)s = %(loader)s:load',
+        '%(name)s = %(name)s.%(loader)s:load',
     ],
     'setuptools.installation' : [
         'eggsecutable = openmdao.main.component:eggsecutable',
