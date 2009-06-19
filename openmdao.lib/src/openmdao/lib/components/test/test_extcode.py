@@ -61,7 +61,22 @@ class TestCase(unittest.TestCase):
             if os.path.exists(externp.stdout):
                 os.remove(externp.stdout)
 
+    def test_nullcmd(self):
+        externp = ExternalCode()
+        externp.stdout = 'nullcmd.out'
+        externp.stderr = ExternalCode.STDOUT
+        try:
+            externp.run()
+        except ValueError, exc:
+            msg = 'ExternalCode: return_code = 127'
+            self.assertEqual(str(exc), 'ExternalCode: Null command line')
+        else:
+            self.fail('Expected ValueError')
+        finally:
+            if os.path.exists(externp.stdout):
+                os.remove(externp.stdout)
     
+
 if __name__ == "__main__":
     unittest.main()
 

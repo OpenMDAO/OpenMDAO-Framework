@@ -19,7 +19,7 @@ SERVER_COMPLETE = 3
 SERVER_ERROR    = 4
 
 class ServerError(Exception):
-    """ Raised when a server therad has problems. """
+    """ Raised when a server thread has problems. """
     pass
 
 

@@ -1,3 +1,5 @@
+import inspect
+
 #public symbols
 __all__ = ['Socket']
 __version__ = "0.1"
@@ -37,5 +39,9 @@ class Socket(object):
                         "Socket '%s' requires interface '%s'" % \
                         (self.name, self.iface.__name__), ValueError)
             
-            instance._sockets[self.name] = (self, plugin)
+            if inspect.ismethod(plugin):
+                # Can't save/pickle instancemethod within tuple.
+                instance._sockets[self.name] = [self, plugin]
+            else:
+                instance._sockets[self.name] = (self, plugin)
     

@@ -106,16 +106,15 @@ class EggBundler(object):
         tailored to build from a download-cache.
         """ 
         bodir = os.path.join(self.bundledir, 'buildout')  
-        shutil.copy(os.path.join(self.bodir, 'isolated_bootstrap.py'),
-                    os.path.join(bodir))
+        shutil.copy(os.path.join(self.bodir, 'isolated_bootstrap.py'), bodir)
         
         # now create the buildout.cfg file
         bo = self.buildout
         
-        boexcludes = set(['recipe','bin-directory','executable','eggs-directory',
-                          'develop-eggs-directory','_e','_d','_b',
-                          '__buildout_signature__','index'])
-        f = open(os.path.join(bodir,'buildout.cfg'),'w')
+        boexcludes = set(['recipe', 'bin-directory', 'executable',
+                          'eggs-directory', 'develop-eggs-directory',
+                          '_e', '_d', '_b', '__buildout_signature__', 'index'])
+        f = open(os.path.join(bodir, 'buildout.cfg'), 'w')
         for sect,opts in bo.items():
             if sect == 'buildout':
                 versions = self.buildout['buildout'].get('versions') or \
@@ -182,7 +181,9 @@ class EggBundler(object):
         distribs = set()
         ws = WorkingSet()
         startdir = os.getcwd()
-        
+        if os.path.exists(self.bundledir):
+            shutil.rmtree(self.bundledir)
+
         if not os.path.isdir(self.bundle_cache):
             os.makedirs(self.bundle_cache)
         
@@ -242,7 +243,6 @@ class EggBundler(object):
             
         # Copy all of the dependent distribs into the cache directory.
         # The eggs made from the develop eggs are already there.
-        self.logger.info('copying eggs')
         for dist in distribs:
             if self.downloads is not None: # look first in download cache
                 cached = os.path.join(self.downloads,
@@ -260,7 +260,6 @@ class EggBundler(object):
                 if fetched is None:
                     self.logger.debug('could not find %s' % dist.project_name)
         
-        self.logger.info('creating buildout config')
         self._create_buildout_dir()                                  
         
         out = open(os.path.join(self.bundledir, 'README.txt'), 'w')

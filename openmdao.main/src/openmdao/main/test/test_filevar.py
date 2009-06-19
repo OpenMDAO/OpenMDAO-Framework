@@ -3,6 +3,7 @@ Test of FileVariables.
 """
 
 import cPickle
+import logging
 import os
 import shutil
 import unittest
@@ -91,6 +92,9 @@ class FileTestCase(unittest.TestCase):
         self.model = None
 
     def test_connectivity(self):
+        logging.debug('')
+        logging.debug('test_connectivity')
+
         self.assertNotEqual(self.model.Sink.text_data,
                             self.model.Source.text_data)
         self.assertNotEqual(self.model.Sink.binary_data,
@@ -108,6 +112,9 @@ class FileTestCase(unittest.TestCase):
             self.model.Sink.getvar('binary_file').metadata['binary'], True)
 
     def test_src_failure(self):
+        logging.debug('')
+        logging.debug('test_src_failure')
+
         self.model.Source.write_files = False
         try:
             self.model.run()
@@ -118,6 +125,9 @@ class FileTestCase(unittest.TestCase):
             self.fail('IOError expected')
 
     def test_bad_directory(self):
+        logging.debug('')
+        logging.debug('test_bad_directory')
+
         try:
             Source(directory='/illegal')
         except ValueError, exc:
@@ -128,6 +138,9 @@ class FileTestCase(unittest.TestCase):
             self.fail('Expected ValueError')
 
     def test_not_directory(self):
+        logging.debug('')
+        logging.debug('test_not_directory')
+
         directory = 'plain_file'
         out = open(directory, 'w')
         out.write('Hello world!\n')
@@ -146,6 +159,9 @@ class FileTestCase(unittest.TestCase):
             os.remove(directory)
 
     def test_bad_new_directory(self):
+        logging.debug('')
+        logging.debug('test_bad_new_directory')
+
         self.model.Source.directory = '/illegal'
         try:
             self.model.run()
