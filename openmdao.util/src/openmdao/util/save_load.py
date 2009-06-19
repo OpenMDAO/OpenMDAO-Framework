@@ -54,6 +54,9 @@ SAVE_CPICKLE = 4
 
 EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
 
+# Saved modulefinder results, keyed by module path.
+_SAVED_FINDINGS = {}
+
 
 class IMHolder(object):
     """ Holds an instancemethod object in a pickleable form. """
@@ -556,18 +559,27 @@ def _get_distributions(objs, logger):
             if not os.path.exists(path):
                 logger.warning("    module path '%s' does not exist", path)
                 continue
-            logger.debug("    analyzing '%s'...", path)
-            finder = modulefinder.ModuleFinder()
-            try:
-                finder.run_script(path)
-            except Exception:
-                logger.exception("ModuleFinder for '%s'" % path)
-            else:
-                _process_found_modules(finder, modules, distributions, prefixes,
-                                       local_modules, missing, logger)
 
-    distributions = sorted(distributions,
-                           key=lambda dist: dist.project_name)
+            finder_items = None
+            if path in _SAVED_FINDINGS.keys():
+                logger.debug("    reusing analysis of '%s'", path)
+                finder_items = _SAVED_FINDINGS[path]
+            else:
+                logger.debug("    analyzing '%s'...", path)
+                finder = modulefinder.ModuleFinder()
+                try:
+                    finder.run_script(path)
+                except Exception:
+                    logger.exception("ModuleFinder for '%s'" % path)
+                else:
+                    finder_items = finder.modules.items()
+                    _SAVED_FINDINGS[path] = finder_items
+
+            if finder_items is not None:
+                _process_found_modules(finder_items, modules, distributions,
+                                       prefixes, local_modules, missing, logger)
+
+    distributions = sorted(distributions, key=lambda dist: dist.project_name)
     logger.debug('    required distributions:')
     for dist in distributions:
         logger.debug('        %s %s', dist.project_name, dist.version)
@@ -590,7 +602,7 @@ def _process_egg(path, distributions, prefixes, logger):
             prefixes.append(loc)
 
 
-def _process_found_modules(finder, modules, distributions, prefixes,
+def _process_found_modules(finder_items, modules, distributions, prefixes,
                            local_modules, missing, logger):
     """ Use ModuleFinder data to update distributions and local_modules. """
     working_set = pkg_resources.WorkingSet()
@@ -600,8 +612,7 @@ def _process_found_modules(finder, modules, distributions, prefixes,
     cwd = os.getcwd()
     not_found = set()
 
-    for name, module in sorted(finder.modules.items(),
-                               key=lambda item: item[0]):
+    for name, module in sorted(finder_items, key=lambda item: item[0]):
         if name in modules:
             continue
         if name != '__main__':

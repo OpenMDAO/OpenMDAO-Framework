@@ -248,22 +248,18 @@ class Component (Container):
                                 if isinstance(c, Component)])
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
-#            self.debug('Saving %s', comp.get_pathname())
 
             # Process execution directory.
             comp_dir = comp.get_directory()
-#            self.debug("    directory '%s'", comp.directory)
             if force_relative:
                 if comp_dir.startswith(src_dir):
                     if comp_dir == src_dir and comp.directory:
                         fixup_dirs.append((comp, comp.directory))
                         comp.directory = ''
-#                        self.debug("        directory now '%s'", comp.directory)
                     elif os.path.isabs(comp.directory):
                         parent_dir = comp.parent.get_directory()
                         fixup_dirs.append((comp, comp.directory))
                         comp.directory = self._relpath(comp_dir, parent_dir)
-#                        self.debug("        directory now '%s'", comp.directory)
                 else:
                     self.raise_exception(
                         "Can't save, %s directory '%s' doesn't start with '%s'."
@@ -272,17 +268,14 @@ class Component (Container):
             # Process external files.
             for metadata in comp.external_files:
                 path = metadata['path']
-#                self.debug('    external path %s', path)
                 path = os.path.expanduser(path)
                 path = os.path.expandvars(path)
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
                 paths = glob.glob(path)
                 for path in paths:
-#                    self.debug('    expanded path %s', path)
                     path = os.path.normpath(path)
                     if not os.path.exists(path):
-#                        self.debug("        '%s' does not exist" % path)
                         continue
                     if force_relative:
                         if path.startswith(src_dir):
@@ -291,7 +284,6 @@ class Component (Container):
                                 path = self._relpath(path, comp_dir)
                                 fixup_meta.append((metadata, metadata['path']))
                                 metadata['path'] = path
-#                                self.debug('        path now %s', path)
                         else:
                             self.raise_exception(
                                 "Can't save, %s file '%s' doesn't start with '%s'."
@@ -299,20 +291,17 @@ class Component (Container):
                                 ValueError)
                     else:
                         save_path = path
-#                    self.debug('        adding %s', save_path)
                     src_files.add(save_path)
 
             # Process FileVariables for this component only.
             for fvar in comp.get_file_vars():
                 path = fvar.get_value()
-#                self.debug('    fvar %s path %s', fvar.name, path)
                 if not path:
                     continue
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
                 path = os.path.normpath(path)
                 if not os.path.exists(path):
-#                    self.debug("        '%s' does not exist" % path)
                     continue
                 if force_relative:
                     if path.startswith(src_dir):
@@ -321,14 +310,12 @@ class Component (Container):
                             path = self._relpath(path, comp_dir)
                             fixup_fvar.append((fvar, fvar.get_value()))
                             fvar.set_value(path)
-#                            self.debug('        path now %s', path)
                     else:
                         self.raise_exception(
                             "Can't save, %s path '%s' doesn't start with '%s'."
                             % (fvar.get_pathname(), path, src_dir), ValueError)
                 else:
                     save_path = path
-#                self.debug('        adding %s', save_path)
                 src_files.add(save_path)
         try:
             return super(Component, self).save_to_egg(name, version,
