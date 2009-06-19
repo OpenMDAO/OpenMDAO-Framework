@@ -1,9 +1,9 @@
 
-from zope.interface import implements
+from enthought.traits.api import implements
 
 from openmdao.main.component import Component, STATE_RUNNING, STATE_WAITING
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.interfaces import IWorkflow, IComponent, IDriver
+from openmdao.main.interfaces import IWorkflow, IComponent
 
 __all__ = ['Workflow']
 
@@ -28,7 +28,7 @@ class Workflow(Component):
 
     def add_node(self, node):
         """ Add a new node to the end of the flow. """
-        if IComponent.providedBy(node) and not IDriver.providedBy(node):
+        if IComponent.providedBy(node):
             self.nodes.append(node)
         else:
             self.raise_exception('%s is either a Driver or is not a Component' % node.get_pathname(),

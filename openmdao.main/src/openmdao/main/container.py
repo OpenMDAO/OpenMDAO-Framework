@@ -28,6 +28,8 @@ import sys
 import tempfile
 import zc.buildout.easy_install
 import zipfile
+import traceback
+import re
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -40,114 +42,130 @@ copy._deepcopy_dispatch[weakref.ref] = copy._deepcopy_atomic
 copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint: enable-msg=W0212
 
-from zope.interface import implements
 import networkx as nx
+from enthought.traits.api import HasTraits, implements, Str, Missing, TraitError,\
+                                 BaseStr
 
-from openmdao.main.interfaces import IContainer, IVariable
-from openmdao.main import HierarchyMember
-from openmdao.main.variable import Variable, INPUT, OUTPUT
-from openmdao.main.vartypemap import make_variable_wrapper
-from openmdao.main.log import logger, LOG_DEBUG
+from openmdao.main.log import Logger, LOG_DEBUG
+from openmdao.main.interfaces import IContainer
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.main.constants import SAVE_YAML, SAVE_LIBYAML
 from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
 
+# FIXME - shouldn't have a hard wired URL in the code
 EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
 
+# regex to check for valid names.  Added '.' as allowed because
+# npsscomponent uses it...
+_namecheck_rgx = re.compile('([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
 
-class Container(HierarchyMember):
-    """ Base class for all objects having Variables that are visible 
+class IMHolder(object):
+    """Holds an instancemethod object in a pickleable form."""
+
+    def __init__(self, obj):
+        self.name = obj.__name__
+        self.im_self = obj.im_self
+        if obj.im_self:
+            self.im_class = None  # Avoid possible __main__ issues.
+        else:
+            # TODO: handle __main__ for im_class.__module__.
+            self.im_class = obj.im_class
+
+    def method(self):
+        """Return instancemethod corresponding to saved state."""
+        if self.im_self:
+            return getattr(self.im_self, self.name)
+        else:
+            return getattr(self.im_class, self.name)
+
+
+def _array_set(obj, name, value, index):
+    arr = getattr(obj, name)
+    length = len(index)
+    if length == 1:
+        arr[index[0]] = value
+    elif length == 2:
+        arr[index[0]][index[1]] = value
+    elif length == 3:
+        arr[index[0]][index[1]][index[2]] = value
+    else:
+        for idx in index[:-1]:
+            arr = arr[idx]
+        arr[index[length-1]] = value
+        
+def _array_get(obj, name, index):
+    arr = getattr(obj, name)
+    length = len(index)
+    if length == 1:
+        return arr[index[0]]
+    elif length == 2:
+        return arr[index[0]][index[1]]
+    elif length == 3:
+        return arr[index[0]][index[1]][index[2]]
+    else:
+        for idx in index:
+            arr = arr[idx]
+        return arr
+        
+        
+class ContainerName(BaseStr):
+    """A string that must match the allowed regex for the name of a 
+    Container.  This was necessary because the String class allowed 
+    names with spaces when using the same regex.
+    """
+    
+    def __init__(self, **metadata):
+        super(ContainerName, self).__init__(**metadata)
+
+    def validate(self, object, name, value):
+        if value == '' or value == None:
+            return value
+        
+        s = super(ContainerName, self).validate(object, name, value) # normal string validation
+        m = _namecheck_rgx.search(s)
+        if m is None or m.group() != s:
+            raise TraitError("name '%s' contains illegal characters" % s)
+        return s
+    
+class Container(HasTraits):
+    """ Base class for all objects having Traits that are visible 
     to the framework"""
    
     implements(IContainer)
     
-    def __init__(self, name, parent=None, doc=None, add_to_parent=True):
-        super(Container, self).__init__(name, parent, doc)            
-        self._pub = {}  # A container for framework accessible objects.
+    name = ContainerName()
+    
+    def __init__(self, name='', parent=None, doc=None, add_to_parent=True):
+        super(Container, self).__init__() # don't forget to init HasTraits
+                                          # or @on_trait_change decorator won't work!
+        self.parent = parent
+        self.name = name
+        
+        if doc is not None:
+            self.__doc__ = doc
+
+        # Replace pathname to keep loggers from interfering with each other.
+        self._logger = Logger(self.get_pathname().replace('.', ','))
+        self.log_level = LOG_DEBUG
+
         self._io_graph = None
-        if parent is not None and \
+        if parent is not None and name != '' and \
            isinstance(parent, Container) and add_to_parent:
             parent.add_child(self)
-
-    def items(self, pub=True, recurse=False):
-        """Return an iterator that returns a list of tuples of the form 
-        (rel_pathname, obj) for each
-        child of this Container. If pub is True, only iterate through the public
-        dict of any Container. If recurse is True, also iterate through all
-        child Containers of each Container found based on the value of pub.
-        """
-        if pub:
-            return self._get_pub_items(recurse)
-        else:
-            return self._get_all_items(set(), recurse)
-    
-    def keys(self, pub=True, recurse=False):
-        """Return an iterator that will return the relative pathnames of
-        children of this Container. If pub is True, only children from
-        the pub dict will be included. If recurse is True, child Containers
-        will also be iterated over.
-        """
-        for entry in self.items(pub, recurse):
-            yield entry[0]
-        
-    def values(self, pub=True, recurse=False):
-        """Return an iterator that will return the
-        children of this Container. If pub is True, only children from
-        the pub dict will be included. If recurse is True, child Containers
-        will also be iterated over.
-        """
-        for entry in self.items(pub, recurse):
-            yield entry[1]
-    
-    def has_invalid_inputs(self):
-        """Return True if this object has any invalid input Variables."""
-        return len(self.get_inputs(valid=False)) > 0
-    
-    def get_inputs(self, valid=None):
-        """Return a list of input Variables. If valid is True or False, 
-        return only inputs with a matching .valid attribute.
-        If valid is None, return inputs regardless of validity.
-        """
-        if valid is None:
-            return [x for x in self._pub.values() if isinstance(x, Variable) 
-                                                     and x.iostatus == INPUT]
-        else:
-            return [x for x in self._pub.values() if isinstance(x, Variable) 
-                                                     and x.iostatus == INPUT 
-                                                     and x.valid == valid]
-        
-    def has_invalid_outputs(self):
-        """Return True if this object has any invalid output Variables."""
-        return len(self.get_outputs(valid=False)) > 0
-    
-    def get_outputs(self, valid=None):
-        """Return a list of output Variables. If valid is True or False, 
-        return only outputs with a matching .valid attribute.
-        If valid is None, return outputs regardless of validity.
-        """
-        if valid is None:
-            return [x for x in self._pub.values() if isinstance(x, Variable)
-                                                     and x.iostatus == OUTPUT]
-        else:
-            return [x for x in self._pub.values() if isinstance(x, Variable) 
-                                                     and x.iostatus == OUTPUT 
-                                                     and x.valid == valid]
-    
+            
     def add_child(self, obj):
-        """Add an object (must provide IContainer interface) to this
-        Container, and make it a member of this Container's public
-        interface.
+        """Add a Container object to this Container, and make it a member of 
+        this Container's public interface.
         """
         if obj == self:
             self.raise_exception('cannot make an object a child of itself',
                                  RuntimeError)
-        if IContainer.providedBy(obj):
+        if isinstance(obj, Container):
             # if an old child with that name exists, remove it
             if self.contains(obj.name):
                 self.remove_child(obj.name)
             setattr(self, obj.name, obj)
             obj.parent = self
-            self.make_public(obj)
         else:
             self.raise_exception("'"+str(type(obj))+
                     "' object has does not provide the IContainer interface",
@@ -158,101 +176,83 @@ class Container(HierarchyMember):
         """Remove the specified child from this container and remove any
         public Variable objects that reference that child. Notify any
         observers."""
-        dels = []
-        for key, val in self._pub.items():
-            if IVariable.providedBy(val) and val.ref_name == name:
-                dels.append(key)
-        for dname in dels:
-            del self._pub[dname]
-        # TODO: notify observers
-        
-        if delete:
-            delattr(self, name)
-        
-    def make_public(self, obj_info, iostatus=INPUT):
-        """Adds the given object(s) as framework-accessible data object(s) of
-        this Container. obj_info can be an object, the name of an object, a list
-        of names of objects in this container instance, or a list of tuples of
-        the form (name, alias, iostatus), where name is the name of an object
-        within this container instance. If either type of tuple is supplied,
-        this function attempts to locate an object with an IVariable interface 
-        that can wrap each object named in the tuple.
-        
-        Returns a list of objects added to the public area.
-        """            
-# pylint: disable-msg=R0912
-        pubs = []
-        if isinstance(obj_info, list):
-            lst = obj_info
+        trait = self.trait(name)
+        if trait is not None:
+            self.remove_trait(name)
         else:
-            lst = [obj_info]
-        
-        for entry in lst:
-            need_wrapper = True
-            ref_name = None
-            iostat = iostatus
-            dobj = None
-
-            if isinstance(entry, basestring):
-                name = entry
-                typ = type(getattr(self, name))
-                    
-            elif isinstance(entry, tuple):
-                name = entry[0]  # wrapper name
-                ref_name = entry[1]  # internal name
-                if not ref_name:
-                    ref_name = name
-                if len(entry) > 2:
-                    iostat = entry[2] # optional iostatus
-                typ = type(getattr(self, ref_name))
-                
-            else:
-                dobj = entry
-                if hasattr(dobj, 'name'):
-                    name = dobj.name
-                    typ = type(dobj)
-                    if IContainer.providedBy(dobj):
-                        need_wrapper = False
-                else:
-                    self.raise_exception(
-                     'cannot make %s a public framework object' % \
-                      str(entry), TypeError)
-                    
-            if need_wrapper and not IVariable.providedBy(dobj):
-                dobj = make_variable_wrapper(typ, name, self, iostatus=iostat, 
-                                      ref_name=ref_name)
-            
-            if IContainer.providedBy(dobj):
-                dobj.parent = self
-                self._pub[dobj.name] = dobj
-                pubs.append(dobj)
-            else:
-                self.raise_exception(
-                    'no IVariable interface available for the object named '+
-                    str(name), TypeError)
-        return pubs
-
-    def make_private(self, name):
-        """Remove the named object from the _pub container, which will make it
-        no longer accessible to the framework. 
-        
-        Returns None.
+            delattr(self, name)
+    
+    def items(self, recurse=False, **metadata):
+        """Return an iterator that returns a list of tuples of the form 
+        (rel_pathname, obj) for each trait of this Container that matches
+        the given metadata. If recurse is True, also iterate through all
+        child Containers of each Container found.
         """
-        del self._pub[name]
-
+        for name,obj in self._items(set(), recurse, **metadata):
+            yield(name, obj)
+        
+    def keys(self, recurse=False, **metadata):
+        """Return an iterator that will return the relative pathnames of
+        children of this Container that match the given metadata. If recurse is 
+        True, child Containers will also be iterated over.
+        """
+        for name,obj in self._items(set(), recurse, **metadata):
+            yield name
+        
+    def values(self, recurse=False, **metadata):
+        """Return an iterator that will return the
+        children of this Container that have matching trait metadata. 
+        If recurse is True, child Containers will also be iterated over.
+        """
+        for name,obj in self._items(set(), recurse, **metadata):
+            yield obj
+            
+    def _items(self, visited, recurse=False, **metadata):
+        """Return an iterator that returns a list of tuples of the form 
+        (rel_pathname, obj) for each trait of this Container that matches
+        the given metadata. If recurse is True, also iterate through all
+        child Containers of each Container found.
+        """
+        for name, trait in self.traits(**metadata).items():
+            obj = getattr(self, name)
+            if isinstance(obj, Container) or trait.iostatus != None:
+                yield (name, obj)
+            if recurse:
+                if isinstance(obj, Container):
+                    for chname, child in obj._items(visited, recurse, **metadata):
+                        yield ('.'.join([name, chname]), child)                   
+    
+    
+    def get_pathname(self, rel_to_scope=None):
+        """ Return full path name to this container, relative to scope
+        rel_to_scope. If rel_to_scope is None, return the full pathname.
+        """
+        path = []
+        obj = self
+        while obj is not None and obj != rel_to_scope and obj.name:
+            path.append(obj.name)
+            obj = obj.parent
+        if len(path) > 0:
+            return '.'.join(path[::-1])
+        else:
+            return ''
+    
     def contains(self, path):
         """Return True if the child specified by the given dotted path
         name is publicly accessibly and is contained in this Container. 
         """
-        try:
-            base, name = path.split('.', 1)
-        except ValueError:
-            return path in self._pub
-        obj = self._pub.get(base)
-        if obj is not None:
-            return obj.contains(name)
+        tup = path.split('.', 1)
+        if len(tup) == 1:
+            return getattr(self, path, Missing) is not Missing
+        
+        obj = getattr(self, tup[0], Missing)
+        if obj is not Missing:
+            if isinstance(obj, Container):
+                return obj.contains(tup[1])
+            else:
+                return getattr(obj, tup[1], Missing) is not Missing
         return False
-            
+    
     def create(self, type_name, name, version=None, server=None, 
                res_desc=None):
         """Create a new object of the specified type inside of this
@@ -261,7 +261,7 @@ class Container(HierarchyMember):
         Returns the new object.        
         """
         obj = fmcreate(type_name, name, version, server, res_desc)
-        self.add_child(obj)
+        obj.parent = self
         return obj
 
     def get(self, path, index=None):
@@ -278,48 +278,46 @@ class Container(HierarchyMember):
             if index is None:
                 return self
             else:
-                self.raise_exception('%s is not a Variable. Cannot retrieve index %s'%
-                                     (self.get_pathname(),str(index)), AttributeError)
-        
-        try:
-            base, name = path.split('.', 1)
-        except ValueError:
-            try:
-                if index is None:
-                    return self._pub[path].get(None)
+                if hasattr(self, '__getitem__'):
+                    return _array_get(self, index)
                 else:
-                    return self._pub[path].get_entry(index)
-            except KeyError:
+                    self.raise_exception(
+                        '%s has no __getitem__ function. Cannot retrieve index %s'%
+                        (self.get_pathname(),str(index)), AttributeError)
+        
+        tup = path.split('.', 1)
+        if len(tup) == 1:
+            obj = getattr(self, path, Missing)
+            if obj is Missing:
                 self.raise_exception("object has no attribute '%s'" % path, 
                                      AttributeError)
-
-        return self._pub[base].get(name, index)
-
-    
-    def getvar(self, path):
-        """Return the public Variable specified by the given 
-        path, which may contain '.' characters.  
-        
-        Returns the specified Variable object.
-        """
-        assert(isinstance(path, basestring))
-        try:
-            base, name = path.split('.', 1)
-        except ValueError:
-            try:
-                return self._pub[path]
-            except KeyError:
-                self.raise_exception("object has no attribute '"+path+"'", 
+            if index is None:
+                return obj
+            else:
+                return _array_get(obj, index)
+        else:
+            base, name = tup
+            obj = getattr(self, base, Missing)
+            if obj is Missing:
+                self.raise_exception("object has no attribute '%s'" % base, 
                                      AttributeError)
-        try:
-            return self._pub[base].getvar(name)
-        except KeyError:
-            try:
-                return self._pub[path]
-            except KeyError:
-                self.raise_exception("object has no attribute '"+path+"'", 
-                                     AttributeError)
-                
+            if isinstance(obj, Container):
+                return obj.get(name, index)
+            elif index is None:
+                return getattr(obj, name)
+            else:
+                return _array_get(getattr(obj, name), index)
+
+     
+    def _check_trait_settable(self, name):
+        trait = self.trait(name)
+        if not trait:
+            self.raise_exception("object has no attribute '%s'" % name,
+                                 TraitError)
+        if trait.iostatus != 'in':
+            self.raise_exception("'%s' is not an input trait and cannot be set" %
+                                 name, TraitError)
+                    
     def set(self, path, value, index=None):
         """Set the value of the data object specified by the  given path, which
         may contain '.' characters.  If path specifies a Variable, then its
@@ -329,47 +327,36 @@ class Container(HierarchyMember):
         
         """ 
         assert(isinstance(path, basestring))
-        try:
-            base, name = path.split('.', 1)
-        except ValueError:
-            base = path
-            name = None
-           
-        try:
-            obj = self._pub[base]
-        except KeyError:
-            self.raise_exception("object has no attribute '"+base+"'", 
-                                 AttributeError)
-        except TypeError:
-            self.raise_exception("object has no attribute '"+str(base)+
-                                 "'", AttributeError)
-            
-        obj.set(name, value, index)        
-
-
-    def setvar(self, path, variable):
-        """Set the value of a Variable in this Container with another Variable.
-        This differs from setting to a simple value, because the destination
-        Variable can use info from the source Variable to perform conversions
-        if necessary, as in the case of Float Variables with differing units.
-        """
-        assert(isinstance(path, basestring))
-        try:
-            base, name = path.split('.', 1)
-        except ValueError:
-            base = path
-            name = None
-
-        try:
-            obj = self._pub[base]
-        except KeyError:
-            self.raise_exception("object has no attribute '"+
-                                 base+"'", AttributeError)
-        except TypeError:
-            self.raise_exception("object has no attribute '"+
-                                 str(base)+"'", AttributeError)
-        obj.setvar(name, variable)        
-
+        
+        if path is None:
+            if index is None:
+                # should never get down this far
+                self.raise_exception('this object cannot replace itself')
+            else:
+                if hasattr(self, '__setitem__'):
+                    return _array_set(self, value, index)
+                else:
+                    self.raise_exception(
+                        '%s has no __setitem__ function. Cannot set value at index %s'%
+                        (self.get_pathname(),str(index)), AttributeError)
+                    
+        tup = path.split('.', 1)
+        if len(tup) == 1:
+            self._check_trait_settable(path)
+            if index is None:
+                setattr(self, path, value)
+            else:
+                _array_set(self, path, value, index)
+        else:
+            base, name = tup
+            obj = getattr(self, base, Missing)
+            if obj is Missing:
+                self.raise_exception("object has no attribute '"+base+"'", 
+                                     AttributeError)
+            elif isinstance(obj, Container):
+                obj.set(name, value, index)
+            else:
+                _array_set(getattr(obj, name), value, index)
 
     def config_from_obj(self, obj):
         """This is intended to allow a newer version of a component to
@@ -841,7 +828,7 @@ if not '.' in sys.path:
     sys.path.append('.')
 
 try:
-    from openmdao.main import Component
+    from openmdao.main.api import Component
     from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
     from openmdao.main.log import enable_console
 except ImportError:
@@ -1167,25 +1154,6 @@ setuptools.setup(
         [x.pre_delete() for x in self.values(pub=False) 
                                           if isinstance(x,Container)]
 
-    def _get_pub_items(self, recurse=False):
-        """Generate a list of tuples of the form (rel_pathname, obj) for each
-        child of this Container. Only iterate through the public
-        dict of any Container. If recurse is True, also iterate through all
-        public child Containers of each Container found.
-        """
-        for name, obj in self._pub.items():
-            yield (name, obj)
-            if recurse:
-                cont = None
-                if hasattr(obj, 'get_value') and \
-                   isinstance(obj.get_value(), Container):
-                    cont = obj.get_value()
-                elif isinstance(obj, Container):
-                    cont = obj
-                if cont:
-                    for chname, child in cont._get_pub_items(recurse):
-                        yield ('.'.join([name, chname]), child)
-                   
     def _get_all_items(self, visited, recurse=False):
         """Generate a list of tuples of the form (rel_pathname, obj) for each
         child of this Container.  If recurse is True, also iterate through all
@@ -1206,22 +1174,63 @@ setuptools.setup(
         the Container, and all output variables are successors to the Container.
         """
         if self._io_graph is None:
-            self._io_graph = nx.LabeledDiGraph()
+            self._io_graph = nx.DiGraph()
             io_graph = self._io_graph
-            varlist = [x for x in self._pub.values() if isinstance(x, Variable)]
-            ins = ['.'.join([self.name, x.name]) for x in varlist if x.iostatus == INPUT]
-            outs = ['.'.join([self.name, x.name]) for x in varlist if x.iostatus == OUTPUT]
+            name = self.name
+            ins = ['.'.join([name, v]) for v in self.keys(iostatus='in')]
+            outs = ['.'.join([name, v]) for v in self.keys(iostatus='out')]
             
             # add a node for the component
-            io_graph.add_node(self.name, data=self)
+            io_graph.add_node(name)
             
             # add nodes for all of the variables
-            for var in varlist:
-                io_graph.add_node('%s.%s' % (self.name, var.name), data=var)
+            for var in ins:
+                io_graph.add_node(var)
+            for var in outs:
+                io_graph.add_node(var)
             
             # specify edges, with all inputs as predecessors to the component node,
             # and all outputs as successors to the component node
-            io_graph.add_edges_from([(i, self.name) for i in ins])
-            io_graph.add_edges_from([(self.name, o) for o in outs])
+            io_graph.add_edges_from([(i, name) for i in ins])
+            io_graph.add_edges_from([(name, o) for o in outs])
         return self._io_graph
     
+    # error reporting stuff
+    def _get_log_level(self):
+        """Return logging message level."""
+        return self._logger.level
+
+    def _set_log_level(self, level):
+        """Set logging message level."""
+        self._logger.level = level
+
+    log_level = property(_get_log_level, _set_log_level,
+                         doc='Logging message level.')
+
+    def raise_exception(self, msg, exception_class=Exception):
+        """Raise an exception."""
+        full_msg = '%s: %s' % (self.get_pathname(), msg)
+#        self._logger.error(msg)
+        raise exception_class(full_msg)
+    
+    def exception(self, msg, *args, **kwargs):
+        """Log traceback from within exception handler."""
+        self._logger.critical(msg, *args, **kwargs)
+        self._logger.critical(traceback.format_exc())
+
+    def error(self, msg, *args, **kwargs):
+        """Record an error message."""
+        self._logger.error(msg, *args, **kwargs)
+        
+    def warning(self, msg, *args, **kwargs):
+        """Record a warning message."""
+        self._logger.warning(msg, *args, **kwargs)
+        
+    def info(self, msg, *args, **kwargs):
+        """Record an informational message."""
+        self._logger.info(msg, *args, **kwargs)
+        
+    def debug(self, msg, *args, **kwargs):
+        """Record a debug message."""
+        self._logger.debug(msg, *args, **kwargs)
+

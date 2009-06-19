@@ -5,8 +5,9 @@
 
 from math import pi, sin, cos, exp
 
-from openmdao.main import Component, Float, Int
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float, Int
+
+from openmdao.main.api import Component
 
 class Engine(Component):
     ''' Model of a piston engine - Python Implementation.'''
@@ -57,41 +58,41 @@ class Engine(Component):
         # set up interface to the framework  
         # pylint: disable-msg=E1101
         # "Instance of <class> has no <attr> member"        
-        Float('stroke', self, INPUT, units='mm', default=78.8,
-              doc='Cylinder Stroke')
-        Float('bore', self, INPUT, units='mm', default=82.0, 
-              doc='Cylinder Bore')
-        Float('conrod', self, INPUT, units='mm', default=115.0, 
-              doc='Connecting Rod Length')
-        Float('comp_ratio', self, INPUT, units=None, default=9.3, 
-              doc='Compression Ratio')
-        Float('spark_angle', self, INPUT, units='deg', default=-37.0,
+        Float('stroke', self, iostatus='in', units='mm', default=78.8,
+              desc='Cylinder Stroke')
+        Float('bore', self, iostatus='in', units='mm', default=82.0, 
+              desc='Cylinder Bore')
+        Float('conrod', self, iostatus='in', units='mm', default=115.0, 
+              desc='Connecting Rod Length')
+        Float('comp_ratio', self, iostatus='in', units=None, default=9.3, 
+              desc='Compression Ratio')
+        Float('spark_angle', self, iostatus='in', units='deg', default=-37.0,
               doc = 'Spark Angle with respect to TDC (Top Dead Center)')
-        Int('ncyl', self, INPUT, default=6,
+        Int('ncyl', self, iostatus='in', default=6,
             doc = 'Number of Cylinders')
-        Float('IVO', self, INPUT, units='deg', default=11.0,
+        Float('IVO', self, iostatus='in', units='deg', default=11.0,
               doc = 'Intake Valve Open before TDC (Top Dead Center)')
-        Float('IVC', self, INPUT, units='deg', default=53.0,
+        Float('IVC', self, iostatus='in', units='deg', default=53.0,
               doc = 'Intake Valve Open after BDC (Bottom Dead Center)')
-        Float('L_v', self, INPUT, units='mm', default=8.0, 
-              doc='Maximum Valve Lift')
-        Float('D_v', self, INPUT, units='mm', default=41.2, 
-              doc='Inlet Valve Diameter')
+        Float('L_v', self, iostatus='in', units='mm', default=8.0, 
+              desc='Maximum Valve Lift')
+        Float('D_v', self, iostatus='in', units='mm', default=41.2, 
+              desc='Inlet Valve Diameter')
 
-        Float('RPM', self, INPUT, units='1/min', default=1000.0, min_limit=1000,
-              max_limit=6000, doc='Engine RPM')
-        Float('throttle', self, INPUT, units=None, default=1.0, min_limit=0.01,
-              max_limit=1.0, doc='Throttle position (from low idle to wide \
+        Float('RPM', self, iostatus='in', units='1/min', default=1000.0, min_limit=1000,
+              max_limit=6000, desc='Engine RPM')
+        Float('throttle', self, iostatus='in', units=None, default=1.0, min_limit=0.01,
+              max_limit=1.0, desc='Throttle position (from low idle to wide \
               open)')
 
-        Float('power', self, OUTPUT, units='kW', default=0.0,
-              doc='Power at engine output')
-        Float('torque', self, OUTPUT, units='N*m', default=0.0,
-              doc='Torque at engine output')
-        Float('fuel_burn', self, OUTPUT, units='l/s', default=0.0,
-              doc='Fuel Burn Rate')
-        Float('engine_weight', self, OUTPUT, units='kg', default=0.0,
-              doc='Engine weight estimation')
+        Float('power', self, iostatus='out', units='kW', default=0.0,
+              desc='Power at engine output')
+        Float('torque', self, iostatus='out', units='N*m', default=0.0,
+              desc='Torque at engine output')
+        Float('fuel_burn', self, iostatus='out', units='l/s', default=0.0,
+              desc='Fuel Burn Rate')
+        Float('engine_weight', self, iostatus='out', units='kg', default=0.0,
+              desc='Engine weight estimation')
 
 
     def execute(self):

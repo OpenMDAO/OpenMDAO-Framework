@@ -13,7 +13,7 @@ import unittest
 from numpy import ndarray
 from numpy.testing import assert_equal
 
-from openmdao.main import Bool, FileVariable
+from openmdao.main.api import Bool, FileVariable
 from openmdao.main.constants import SAVE_LIBYAML
 from openmdao.main.variable import OUTPUT
 from openmdao.main.component import SimulationRoot
@@ -72,8 +72,8 @@ class NPSSTestCase(unittest.TestCase):
         logging.debug('test_load_save')
 
         saved_values = {}
-        for name, var in self.npss._pub.items():
-            saved_values[name] = var.get('value')
+        for name, var in self.npss.items():
+            saved_values[name] = var
 
         self.egg_name = self.npss.save_to_egg()
         self.npss.pre_delete()
@@ -96,7 +96,7 @@ class NPSSTestCase(unittest.TestCase):
                 if isinstance(val, ndarray):
                     assert_equal(getattr(self.npss, name), val)
                 else:
-                    if isinstance(self.npss._pub[name], FileVariable):
+                    if isinstance(self.npss.trait(name), FileVariable):
                         obj = getattr(self.npss, name)
                         self.assertEqual(getattr(obj, 'filename'), val)
                     else:

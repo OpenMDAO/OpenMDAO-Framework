@@ -54,7 +54,7 @@ class EngineOptimizationTestCase(unittest.TestCase):
             logging.debug('    python %s' % python)
             out = open('unpack.py', 'w')
             out.write("""\
-from openmdao.main import Component
+from openmdao.main.api import Component
 Component.load_from_egg('%s', install=False)
 """ % egg_path)
             out.close()

@@ -3,11 +3,17 @@
 import unittest
 import logging
 
-from openmdao.main import Assembly, Component, Int
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Int
+
+from openmdao.main.api import Assembly, Component
 
         
 class Simple(Component):
+    a = Int(iostatus='in')
+    b = Int(iostatus='in')
+    c = Int(iostatus='out')
+    d = Int(iostatus='out')
+    
     def __init__(self, name):
         super(Simple, self).__init__(name)
         self.a = 1
@@ -15,10 +21,6 @@ class Simple(Component):
         self.c = 3
         self.d = -1
         self.run_count = 0
-        Int('a', self, INPUT)
-        Int('b', self, INPUT)
-        Int('c', self, OUTPUT)
-        Int('d', self, OUTPUT)
 
     def execute(self):
         self.run_count += 1
@@ -41,16 +43,16 @@ class DepGraphTestCase(unittest.TestCase):
     def setUp(self):
         top = Assembly('top', None)
         self.top = top
-        sub = top.add_child(Assembly('sub'))
+        top.add_child(Assembly('sub'))
+        sub = top.sub
+        top.add_child(Simple('comp7'))
+        top.add_child(Simple('comp8'))
         sub.add_child(Simple('comp1'))
         sub.add_child(Simple('comp2'))
         sub.add_child(Simple('comp3'))
         sub.add_child(Simple('comp4'))
         sub.add_child(Simple('comp5'))
         sub.add_child(Simple('comp6'))
-
-        top.add_child(Simple('comp7'))
-        top.add_child(Simple('comp8'))
 
         sub.create_passthru('comp1.a', 'a1')
         sub.create_passthru('comp3.a', 'a3')
@@ -75,13 +77,40 @@ class DepGraphTestCase(unittest.TestCase):
         
         self.top.run()        
 
+    def test_simple(self):
+        top = Assembly('top', None)
+        top.add_child(Simple('comp1'))
+        self.assertEqual(top.comp1.run_count, 0)
+        valids = top.get_valid(['comp1.a','comp1.b','comp1.c','comp1.d'])
+        self.assertEqual(valids, [False, False, False, False])
+        top.run()
+        self.assertEqual(top.comp1.run_count, 1)
+        self.assertEqual(top.comp1.c, 3)
+        self.assertEqual(top.comp1.d, -1)
+        valids = top.get_valid(['comp1.a','comp1.b','comp1.c','comp1.d'])
+        self.assertEqual(valids, [True, True, True, True])
+        
+        top.set('comp1.a', 5)
+        valids = top.get_valid(['comp1.a','comp1.b','comp1.c','comp1.d'])
+        self.assertEqual(valids, [False, True, False, False])
+        top.run()
+        self.assertEqual(top.comp1.run_count, 2)
+        self.assertEqual(top.comp1.c, 7)
+        self.assertEqual(top.comp1.d, 3)
+        top.run()
+        self.assertEqual(top.comp1.run_count, 2) # run_count shouldn't change
+        valids = top.get_valid(['comp1.a','comp1.b','comp1.c','comp1.d'])
+        self.assertEqual(valids, [True, True, True, True])
+        
     def test_lazy1(self):
-        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], 
-                         [self.top.get(x).run_count for x in allcomps])
+        run_counts = [self.top.get(x).run_count for x in allcomps]
+        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_counts)
         outs = [(5,-3),(3,-1),(5,1),(7,3),(4,6),(5,1),(3,-1),(8,6)]
-        for comp,vals in zip(allcomps,outs):
-            self.assertEqual((comp,vals[0],vals[1]), 
-                             (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
+        newouts = []
+        for comp in allcomps:
+            newouts.append((self.top.get(comp+'.c'),self.top.get(comp+'.d')))
+        self.assertEqual(outs, newouts)
+#        self.assertEqual((comp,vals[0],vals[1]), (comp,c,d))
         self.top.run()  
         # run_count should stay at 1 for all comps
         self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], 

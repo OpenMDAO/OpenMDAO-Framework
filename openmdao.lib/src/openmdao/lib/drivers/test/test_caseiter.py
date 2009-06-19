@@ -6,9 +6,9 @@ import unittest
 
 import numpy.random
 
-from openmdao.main import Assembly, Component, Case, ListCaseIterator, \
-                          ArrayVariable, Float
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float, Array
+
+from openmdao.main.api import Assembly, Component, Case, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
 def rosen_suzuki(x):
@@ -22,10 +22,10 @@ class DrivenComponent(Component):
 
     def __init__(self, *args, **kwargs):
         super(DrivenComponent, self).__init__(*args, **kwargs)
-        ArrayVariable('x', self, INPUT, default=[1., 1., 1., 1.])
-        ArrayVariable('y', self, INPUT, default=[1., 1., 1., 1.])
-        Float('rosen_suzuki', self, OUTPUT, default=0.)
-        Float('sum_y', self, OUTPUT, default=0.)
+        Array('x', self, iostatus='in', default=[1., 1., 1., 1.])
+        Array('y', self, iostatus='in', default=[1., 1., 1., 1.])
+        Float('rosen_suzuki', self, iostatus='out', default=0.)
+        Float('sum_y', self, iostatus='out', default=0.)
 
     def execute(self):
         """ Compute results from input vector. """

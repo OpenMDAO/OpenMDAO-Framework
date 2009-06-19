@@ -5,15 +5,15 @@ __all__ = ['CONMINdriver']
 
 __version__ = "0.1"
 
+from copy import copy
 import numpy.numarray as numarray
 import numpy
-from copy import copy
+
+from enthought.traits.api import Int, Array, List
 import conmin.conmin as conmin
 
-from openmdao.main import Driver, ArrayVariable, String, StringList, \
-                          RefVariable, RefVariableArray
+from openmdao.main.api import Driver, StringRef, StringRefArray
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.variable import INPUT, OUTPUT, VariableChangedEvent
 
 
 class _cnmn1(object):
@@ -144,6 +144,29 @@ class CONMINdriver(Driver):
             
     """
     
+    #design_vars = List(StringRef(iostatus='out'),
+    #   desc='An array of design variable names. These names can include array indexing.')
+    design_vars = StringRefArray(iostatus='out',
+       desc='An array of design variable names. These names can include array indexing.')
+    
+    #constraints = List(StringRef(iostatus='in'),
+    constraints = StringRefArray(iostatus='in',
+            desc= 'An array of expression strings indicating constraints.'+
+            ' A value of < 0 for the expression indicates that the constraint '+
+            'is violated.')
+    
+    objective = StringRef(iostatus='in',
+                      desc= 'A string containing the objective function expression.')
+    
+    upper_bounds = Array(iostatus='in', dtype=numpy.float,
+        desc='Array of constraints on the maximum value of each design variable.')
+    
+    lower_bounds = Array(iostatus='in', dtype=numpy.float,
+        desc='Array of constraints on the minimum value of each design variable.')
+        
+    iprint = Int(0)
+    maxiters = Int(40)
+        
     def __init__(self, name, parent=None, doc=None):
         super(CONMINdriver, self).__init__(name, parent, doc)
         
@@ -156,8 +179,6 @@ class CONMINdriver(Driver):
         self.lower_bounds = numarray.zeros(0,'d')
         self.upper_bounds = numarray.zeros(0,'d')
         self.cons_active_or_violated  = numarray.zeros(0, 'i')
-        self.iprint = 0
-        self.maxiters = 40
         self.gradients = None
         
         # vector of scaling parameters
@@ -180,24 +201,6 @@ class CONMINdriver(Driver):
         self.g2 = numarray.zeros(0,'d')
         self.cons_is_linear = numarray.zeros(0, 'i') 
                 
-        RefVariableArray('design_vars', self, OUTPUT, default=[],
-                doc='An array of design variable names. These names can include array indexing.')
-        
-        RefVariableArray('constraints', self, INPUT, default=[],
-                doc= 'An array of expression strings indicating constraints.'+
-                ' A value of < 0 for the expression indicates that the constraint '+
-                'is violated.')
-        
-        RefVariable('objective', self, INPUT,
-                          doc= 'A string containing the objective function expression.')
-        
-        av = ArrayVariable('upper_bounds', self, INPUT,
-            doc='Array of constraints on the maximum value of each design variable.')
-        
-        av = ArrayVariable('lower_bounds', self, INPUT,
-            doc='Array of constraints on the minimum value of each design variable.')
-        
-        self.make_public(['iprint', 'maxiters'])
         
     #def __getstate__(self):
         #"""Return dict representing this container's state."""
@@ -223,8 +226,8 @@ class CONMINdriver(Driver):
         self.run_iteration()
 
         # get the initial values of the design variables
-        for i, val in enumerate(self.design_vars.refvalue):
-            self.design_vals[i] = val
+        for i, val in enumerate(self.design_vars):
+            self.design_vals[i] = val.evaluate()
 
         # loop until optimized
         while self.cnmn1.igoto or self._first is True:
@@ -234,33 +237,37 @@ class CONMINdriver(Driver):
             self._first = False            
                         
             # calculate objective
-            self.cnmn1.obj = numarray.array(self.objective.refvalue)
-            self.debug('design vars = %s' % self.design_vars.refvalue)
-            self.debug('objective = %s' % self.objective.refvalue)
+            self.cnmn1.obj = numarray.array(self.objective.evaluate())
             
 # TODO: 'step around' ill-behaved cases.
             
             self._load_common_blocks()
             
-            (self.design_vals,
-             self.scal, self.gradients, self.s,
-             self.g1, self.g2, self._b, self._c,
-             self.cons_is_linear,
-             self.cons_active_or_violated, self._ms1) = \
-                 conmin.conmin(self.design_vals,
-                               self._lower_bounds, self._upper_bounds,
-                               self.constraint_vals,
-                               self.scal, self.df,
-                               self.gradients,
-                               self.s, self.g1, self.g2, self._b, self._c,
-                               self.cons_is_linear,
-                               self.cons_active_or_violated, self._ms1)
+            try:
+                (self.design_vals,
+                 self.scal, self.gradients, self.s,
+                 self.g1, self.g2, self._b, self._c,
+                 self.cons_is_linear,
+                 self.cons_active_or_violated, self._ms1) = \
+                     conmin.conmin(self.design_vals,
+                                   self._lower_bounds, self._upper_bounds,
+                                   self.constraint_vals,
+                                   self.scal, self.df,
+                                   self.gradients,
+                                   self.s, self.g1, self.g2, self._b, self._c,
+                                   self.cons_is_linear,
+                                   self.cons_active_or_violated, self._ms1)
+            except Exception, err:
+                self.error(str(err))
+                raise
             
             # common blocks are saved before, and loaded after execution
             self._save_common_blocks()
             
             # update the design variables in the model
-            self.design_vars.refvalue = [float(val) for val in self.design_vals[:-2]]
+            dvals = [float(val) for val in self.design_vals[:-2]]
+            for var,val in zip(self.design_vars, dvals):
+                var.set(val)
             
             # update the model
             self.run_iteration()
@@ -268,8 +275,8 @@ class CONMINdriver(Driver):
             # calculate constraints
             if self.cnmn1.info == 1:
                 # update constraint value array
-                for i, con in enumerate(self.constraints.refvalue):
-                    self.constraint_vals[i] = con
+                for i,v in enumerate(self.constraints):
+                    self.constraint_vals[i] = v.evaluate()
                     
             # calculate gradients
             elif self.cnmn1.info == 2:
@@ -291,7 +298,7 @@ class CONMINdriver(Driver):
         if num_dvs < 1:
             self.raise_exception('no design variables specified', RuntimeError)
             
-        if self.objective.value is None:
+        if self.objective is None:
             self.raise_exception('no objective specified', RuntimeError)
          
         # create lower_bounds numarray
@@ -323,7 +330,7 @@ class CONMINdriver(Driver):
         self.s = numarray.zeros(num_dvs+2, 'd')
         
         # size constraint related arrays
-        length = len(self.constraints.value)+2*num_dvs
+        length = len(self.constraints)+2*num_dvs
         self.constraint_vals = numarray.zeros(length, 'd')
         # temp storage of constraint and des vals
         self.g1 = numarray.zeros(length, 'd') 
@@ -343,7 +350,7 @@ class CONMINdriver(Driver):
             self.cnmn1.nside = 0
 
         self.cnmn1.nacmx1 = max(num_dvs,
-                                len(self.constraints.value)+self.cnmn1.nside)+1
+                                len(self.constraints)+self.cnmn1.nside)+1
         n1 = num_dvs+2
         n3 = self.cnmn1.nacmx1
         n4 = max(n3, num_dvs)

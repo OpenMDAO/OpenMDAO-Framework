@@ -7,8 +7,9 @@ import os
 import pkg_resources
 import unittest
 
-from openmdao.main import Assembly, Component, Bool, Float, String
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float, Bool, Str
+
+from openmdao.main.api import Assembly, Component
 from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
@@ -21,11 +22,11 @@ class Source(Component):
 
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
-        Bool('rerun', self, INPUT, default=False)
-        Bool('npss_reload', self, OUTPUT, default=False,
-             doc='Test input to NPSS')
-        Float('npss_in', self, OUTPUT, default=0.,
-              doc='Test input to NPSS')
+        Bool('rerun', self, iostatus='in', default=False)
+        Bool('npss_reload', self, iostatus='out', default=False,
+             desc='Test input to NPSS')
+        Float('npss_in', self, iostatus='out', default=0.,
+              desc='Test input to NPSS')
 
 
 class Sink(Component):
@@ -33,8 +34,8 @@ class Sink(Component):
 
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
-        Float('npss_out', self, INPUT, default=0.,
-              doc='Test output from NPSS')
+        Float('npss_out', self, iostatus='in', default=0.,
+              desc='Test output from NPSS')
 
 
 # pylint: disable-msg=E1101
@@ -45,7 +46,7 @@ class MyModel(Assembly):
 
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
-        Bool('rerun_flag', self, INPUT, default=False)
+        Bool('rerun_flag', self, iostatus='in', default=False)
 
         Source(parent=self)
         self.Source.npss_in = 9
@@ -53,9 +54,9 @@ class MyModel(Assembly):
         NPSScomponent(parent=self, arglist='-trace reload.mdl',
                       output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
-        Float('xyzzy_in',  self.NPSS, INPUT, doc='Test input')
-        Float('xyzzy_out', self.NPSS, OUTPUT, doc='Test output')
-        String('s', self.NPSS, INPUT, doc='Unconnected input')
+        Float('xyzzy_in',  self.NPSS, iostatus='in', desc='Test input')
+        Float('xyzzy_out', self.NPSS, iostatus='out', desc='Test output')
+        String('s', self.NPSS, iostatus='in', desc='Unconnected input')
 
         Sink(parent=self)
 

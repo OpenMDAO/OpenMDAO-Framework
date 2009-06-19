@@ -11,13 +11,11 @@ import subprocess
 import sys
 import time
 
-from zope.interface import implements
+from enthought.traits.api import implements, on_trait_change, Str, Missing
 
 from openmdao.main.interfaces import IComponent
-from openmdao.main import Container, String, Variable
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.container import Container
 from openmdao.main.constants import SAVE_CPICKLE
-from openmdao.main.filevar import FileVariable
 from openmdao.main.log import LOG_DEBUG
 
 # Execution states.
@@ -56,13 +54,15 @@ class SimulationRoot (object):
 
 
 class Component (Container):
-    """This is the base class for all objects containing Variables that are 
+    """This is the base class for all objects containing Traits that are 
        accessible to the OpenMDAO framework and are 'runnable'.
     """
 
     implements(IComponent)
     
-    def __init__(self, name, parent=None, doc=None, directory='',
+    directory = Str('',desc='If non-blank, the directory to execute in.', iostatus='in')
+    
+    def __init__(self, name=None, parent=None, doc=None, directory='',
                  add_to_parent=True):
         super(Component, self).__init__(name, parent, doc, add_to_parent)
         
@@ -70,14 +70,14 @@ class Component (Container):
         self._stop = False
         self._need_check_config = True
         self._execute_needed = True
+        self.directory = directory
+        self._valid_dict = {}  # contains validity flag for each io Trait
         
         self._dir_stack = []
         
         # List of meta-data dictionaries.
         self.external_files = []
 
-        String('directory', self, INPUT, default=directory,
-               doc='If non-null, the directory to execute in.')
 
 # pylint: disable-msg=E1101
         dirpath = self.get_directory()
@@ -101,6 +101,49 @@ class Component (Container):
                         % dirpath, ValueError)
 # pylint: enable-msg=E1101
 
+    # call this if any trait having 'iostatus' metadata is changed    
+    @on_trait_change('+iostatus') 
+    def _io_trait_changed(self, obj, name, old, new):
+        if self.trait(name).iostatus == 'in':
+            self._execute_needed = True
+            if self.get_valid(name):  # if var was not already invalid
+                self.set_valid(name, False)
+                self.invalidate_deps([name], notify_parent=True)
+
+    def get_valid(self, name):
+        def _valid(self, name):
+            tup = name.split('.',1)
+            if len(tup) > 1:
+                return _valid(getattr(self, tup[0]), tup[1])
+            else:
+                valid = self._valid_dict.get(name, Missing)
+                if valid is Missing:
+                    if self.trait(name) and self.trait(name).iostatus:
+                        self._valid_dict[name] = False
+                    else:
+                        self.raise_exception("cannot set valid flag of '%s' because it's not an io trait."%
+                                             name, RuntimeError)
+                    return False
+                else:
+                    return valid
+            
+        if isinstance(name, basestring): 
+            return _valid(self, name)
+        else:
+            return [_valid(self,v) for v in name]
+                
+        
+    
+    def set_valid(self, name, valid):
+        if name in self._valid_dict:
+            self._valid_dict[name] = valid
+        else:
+            if self.trait(name) and self.trait(name).iostatus:
+                self._valid_dict[name] = valid
+            else:
+                self.raise_exception("cannot set valid flag of '%s' because it's not an io trait."%
+                                     name, RuntimeError)
+    
     def check_config (self):
         """Verify that the configuration of this component is correct. This function is
         called once prior to the first execution of this component, and may be called
@@ -109,8 +152,8 @@ class Component (Container):
         pass         
     
     def _pre_execute (self):
-        """Make preparations for execution. Overrides of this function are not
-        recommended, but if unavoidable they should still call this version.
+        """Make preparations for execution. Overrides of this function must
+        call this version.
         """
         if self._need_check_config:
             self.check_config()
@@ -120,14 +163,7 @@ class Component (Container):
                                 # so Variable validity doesn't apply. Just execute.
             self._execute_needed = True
         else:
-            if hasattr(self.parent, 'update_inputs'):
-                invalid_ins = self.get_inputs(valid=False)
-                if len(invalid_ins) > 0:
-                    self.parent.update_inputs(
-                            ['.'.join([self.name,x.name]) for x in invalid_ins])
-                    self._execute_needed = True
-            if self._execute_needed is False and self.has_invalid_outputs():
-                self._execute_needed = True
+            self._execute_needed |= self.parent.update_inputs(self.name)
     
                             
     def execute (self):
@@ -138,12 +174,11 @@ class Component (Container):
     
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
-        Overrides of this function are not recommended, but if unavoidable 
-        they should still call this version.
+        Overrides of this function must call this version.
         """
         # make our Variables valid again
-        for var in self.get_outputs(valid=False):
-            var.valid = True
+        for name in self._valid_dict.keys():
+            self._valid_dict[name] = True
         self._execute_needed = False
         
     def run (self, force=False):
@@ -164,7 +199,7 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._execute_needed or force:
-                if __debug__: self._logger.debug('execute %s' % self.get_pathname())
+                #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
                 self.execute()
             self._post_execute()
         finally:
@@ -172,6 +207,26 @@ class Component (Container):
             if self.directory:
                 self.pop_dir()
 
+    def list_inputs(self, valid=None):
+        """Return a list of names of input values. If valid is not None,
+        the the list will contain names of inputs with matching validity.
+        """
+        if valid is None:
+            return self.trait_names(iostatus='in')
+        else:
+            return [n for n in self.trait_names(iostatus='in') 
+                         if self.get_valid(n)==valid]
+        
+    def list_outputs(self, valid=None):
+        """Return a list of names of output values. If valid is not None,
+        the the list will contain names of outputs with matching validity.
+        """
+        if valid is None:
+            return self.trait_names(iostatus='out')
+        else:
+            return [n for n in self.trait_names(iostatus='out') 
+                         if self.get_valid(n)==valid]
+        
     def get_directory (self):
         """Return absolute path of execution directory."""
         path = self.directory
@@ -348,9 +403,7 @@ class Component (Container):
         """Return list of FileVariables owned by this component."""
 
         def _recurse_get_file_vars (container, file_vars, visited):
-            """Scan both normal __dict__ and _pub."""
             objs = container.__dict__.values()
-            objs.extend(container._pub.values())
             for obj in objs:
                 if id(obj) in visited:
                     continue
@@ -468,16 +521,17 @@ class Component (Container):
         self._stop = True
 
     def invalidate_deps(self, vars, notify_parent=False):
-        """Invalidate all of our outputs."""
-        outs = [x for x in self._pub.values() if isinstance(x, Variable) and 
-                                                 x.iostatus==OUTPUT and x.valid==True]
-        for out in outs:
-            #if __debug__: self._logger.debug('(component.invalidate_deps) invalidating %s' % out.get_pathname())
-            out.valid = False
+        """Invalidate all of our valid outputs."""
+        valid_outs = self.list_outputs(valid=True)
+        
+        for out in valid_outs:
+            self._valid_dict[out] = False
             
-        if notify_parent and self.parent and len(outs) > 0:
-            self.parent.invalidate_deps(outs, True)
-        return outs    
+        # TODO: can probably just use Traits notifiers for this stuff too...
+        if notify_parent and self.parent and len(valid_outs) > 0:
+            self.parent.invalidate_deps(valid_outs, notify_parent)
+            
+        return valid_outs    
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.

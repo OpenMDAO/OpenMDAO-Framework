@@ -4,11 +4,11 @@ __all__ = ['Variable', 'UNDEFINED',
 __version__ = "0.1"
 
 import copy
-from zope.interface import implements
+from enthought.traits.api import implements
 
 from openmdao.main.interfaces import IContainer, IVariable
 from openmdao.main.exceptions import ConstraintError
-from openmdao.main import HierarchyMember
+#from openmdao.main.api import HierarchyMember
 
 
 INPUT = 1

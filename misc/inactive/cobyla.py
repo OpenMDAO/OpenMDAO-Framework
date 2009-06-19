@@ -7,14 +7,8 @@ __version__ = "0.1"
 
 from scipy.optimize.cobyla import fmin_cobyla
 
-from openmdao.main import Driver
+from openmdao.main.api import Driver
 from openmdao.main.component import STATE_WAITING
-from openmdao.main import Float
-from openmdao.main import String
-from openmdao.main import StringList
-from openmdao.main import Int
-from openmdao.main.variable import INPUT
-from openmdao.main.expreval import translate_expr
 
 # if our globals dict doesn't contain __builtins__, python will 
 # copy current global dict into it
@@ -41,18 +35,18 @@ class COBYLA(Driver):
         self.xmin = []
         self.iprint = 0
         
-        Float('rhobeg', self, INPUT,
+        Float('rhobeg', self, iostatus='in',
               desc='reasonable initial changes to the variables')
-        Float('rhoend', self, INPUT,
+        Float('rhoend', self, iostatus='in',
               desc='final accuracy (not precisely guaranteed)')
-        Int('maxiters', self, INPUT,
+        Int('maxiters', self, iostatus='in',
             desc='maximum number of function iterations')
-        Int('iprint', self, INPUT,
+        Int('iprint', self, iostatus='in',
             desc='print frequency: 0 (no output),1,2,3')
-        String('min_expr', self, INPUT, desc='expression to minimize')
-        StringList('constraint_exprs', self, INPUT,
+        String('min_expr', self, iostatus='in', desc='expression to minimize')
+        StringList('constraint_exprs', self, iostatus='in',
                    desc='constraint expressions (must be >=0)')
-        StringList('design_vars', self, INPUT,
+        StringList('design_vars', self, iostatus='in',
                    desc='list of design variable names')
         
     def _get_funct(self):

@@ -4,7 +4,7 @@ Test for Dict variables.
 
 import unittest
 
-from openmdao.main import Container, Dict, Int
+from openmdao.main.api import Container, Dict, Int
 from openmdao.main.variable import INPUT, OUTPUT
 
 class DictTestCase(unittest.TestCase):

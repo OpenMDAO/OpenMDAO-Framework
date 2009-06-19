@@ -2,7 +2,7 @@
 #
 # Optimize an engine disign using the sim_vehicle component.
 
-from openmdao.main import Assembly
+from openmdao.main.api import Assembly
 
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 

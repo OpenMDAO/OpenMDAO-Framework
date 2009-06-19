@@ -8,11 +8,12 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('MidFidelity',)
 __version__ = '0.1'
 
+from enthought.traits.api import Float, Array, Int, Str
+
 import mool.Optimization.MidFiModel
 
-from openmdao.main import Assembly, ArrayVariable, Float, Int, String
+from openmdao.main.api import Assembly
 from openmdao.main.interfaces import IComponent
-from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.socket import Socket
 
 import wrapper
@@ -32,32 +33,32 @@ class MidFidelity(Assembly):
         # Inputs.
         # No 'Option' variables yet.
 
-        String('doe_type', self, INPUT, default='lhs',
-               doc='Type of DOE used to generate response surface.')
+        String('doe_type', self, iostatus='in', default='lhs',
+               desc='Type of DOE used to generate response surface.')
 
-        String('rs_type', self, INPUT, default='quadratic',
-               doc='Type of response surface.')
+        String('rs_type', self, iostatus='in', default='quadratic',
+               desc='Type of response surface.')
 
-        Int('n_samples', self, INPUT, default=1, min_limit=1,
-            doc='Number of samples.')
+        Int('n_samples', self, iostatus='in', default=1, min_limit=1,
+            desc='Number of samples.')
 
-        Float('tolerance', self, INPUT, default=1.0e10,
-              doc='?')
+        Float('tolerance', self, iostatus='in', default=1.0e10,
+              desc='?')
 
-        Int('correction_function', self, INPUT, default=1,
-            doc='Type of correction function.')
+        Int('correction_function', self, iostatus='in', default=1,
+            desc='Type of correction function.')
 
-        Float('w_h', self, INPUT, default=0.5,
-              doc='?')
+        Float('w_h', self, iostatus='in', default=0.5,
+              desc='?')
 
-        Int('accuracy_test_type', self, INPUT, default=2,
-            doc='Method for testing accuracy of response.')
+        Int('accuracy_test_type', self, iostatus='in', default=2,
+            desc='Method for testing accuracy of response.')
 
-        Int('n_samples_test', self, INPUT, default=10, min_limit=1,
-            doc='Number of additional samples for additional-points test.')
+        Int('n_samples_test', self, iostatus='in', default=10, min_limit=1,
+            desc='Number of additional samples for additional-points test.')
 
-        Int('ntheta', self, INPUT, default=3,
-            doc='For Kriging method, nthets=1(SA),2(Cobyla),3(BFGS)')
+        Int('ntheta', self, iostatus='in', default=3,
+            desc='For Kriging method, nthets=1(SA),2(Cobyla),3(BFGS)')
 
         self.input_mappings = []
         self.output_mappings = []
@@ -67,16 +68,16 @@ class MidFidelity(Assembly):
 
         self._midfi_model = mool.Optimization.MidFiModel.Mid_Fi_Model()
 
-        ArrayVariable('sample_points', self, OUTPUT, default=[],
-                      doc='Points used to make response',
+        Array('sample_points', self, iostatus='out', 
+                      desc='Points used to make response',
                       ref_name='sample_points', ref_parent=self._midfi_model)
 
-        ArrayVariable('lofi_results', self, OUTPUT, default=[],
-                      doc='Points used to make response',
+        Array('lofi_results', self, iostatus='out', 
+                      desc='Points used to make response',
                       ref_name='lofi_results', ref_parent=self._midfi_model)
 
-        ArrayVariable('hifi_results', self, OUTPUT, default=[],
-                      doc='Points used to make response',
+        Array('hifi_results', self, iostatus='out', 
+                      desc='Points used to make response',
                       ref_name='hifi_results', ref_parent=self._midfi_model)
 
 # pylint: disable-msg=E1101

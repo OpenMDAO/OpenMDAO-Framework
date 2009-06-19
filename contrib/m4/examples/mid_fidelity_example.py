@@ -7,8 +7,9 @@ on the first execution, then on subsequent executions the corrected result
 is directly calculated.
 """
 
-from openmdao.main import Assembly, Float
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float
+
+from openmdao.main.api import Assembly
 
 from m4.doe import DOE
 from m4.mid_fidelity import MidFidelity 
@@ -58,21 +59,21 @@ class VarFi(MidFidelity):
         self.set_lofi_model(Model_B2d())
 
         # Input mappings (mid, lo, hi).
-        Float('x', self, INPUT, default=0., min_limit=0., max_limit=5.,
-              doc='X input value.')
+        Float('x', self, iostatus='in', default=0., min_limit=0., max_limit=5.,
+              desc='X input value.')
         self.add_input_mapping('x', 'x', 'x')
 
-        Float('y', self, INPUT, default=0., min_limit=0., max_limit=5.,
-              doc='Y input value.')
+        Float('y', self, iostatus='in', default=0., min_limit=0., max_limit=5.,
+              desc='Y input value.')
         self.add_input_mapping('y', 'y', 'y')
 
         # Output mappings (mid, lo, hi).
-        Float('z1', self, OUTPUT, default=0.,
-              doc='exp(x) + exp(y)')
+        Float('z1', self, iostatus='out', default=0.,
+              desc='exp(x) + exp(y)')
         self.add_output_mapping('z1', 'z', 'z1')
 
-        Float('z2', self, OUTPUT, default=0.,
-              doc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
+        Float('z2', self, iostatus='out', default=0.,
+              desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
         self.add_output_mapping('z2', 'z', 'z2')
 
 

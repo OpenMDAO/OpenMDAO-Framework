@@ -4,9 +4,8 @@ __version__ = '0.1'
 
 import os
 
-from openmdao.main import Component, ArrayVariable, Bool, Dict, Float, \
-                          FileVariable, Int, String, StringList
-from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
+from enthought.traits.api import Array, Bool, Float, Dict, Int, String, ListStr
+from openmdao.main.api import Component, FileVariable
 
 import npss
 npss.isolateContexts(True)
@@ -51,78 +50,78 @@ class NPSScomponent(Component):
         self._topstr = top
 
         # Model options.
-        String('model_filename', self, INPUT, default='',
-               doc='Filename for NPSS model.')
+        String('model_filename', self, iostatus='in', default='',
+               desc='Filename for NPSS model.')
 
-        StringList('include_dirs', self, INPUT, default=[],
-                   doc='Model include directories.')
+        StringList('include_dirs', self, iostatus='in', default=[],
+                   desc='Model include directories.')
 
-        Bool('use_default_paths', self, INPUT, default=True,
-             doc='Use default NPSS directories.')
+        Bool('use_default_paths', self, iostatus='in', default=True,
+             desc='Use default NPSS directories.')
 
-        Dict('preprocessor_vars', self, INPUT, default={},
-             doc='Preprocessor variable definitions')
+        Dict('preprocessor_vars', self, iostatus='in', default={},
+             desc='Preprocessor variable definitions')
 
         # Execution options.
-        String('run_command', self, INPUT, default='',
-               doc='String to parse to run model.')
+        String('run_command', self, iostatus='in', default='',
+               desc='String to parse to run model.')
 
-        String('reload_flag', self, INPUT, default='',
-               doc='Path to flag to internally request a model reload.')
+        String('reload_flag', self, iostatus='in', default='',
+               desc='Path to flag to internally request a model reload.')
 
-        StringList('preloaded_dlms', self, INPUT, default=[],
-                   doc='Preloaded DLMs.')
+        StringList('preloaded_dlms', self, iostatus='in', default=[],
+                   desc='Preloaded DLMs.')
 
-        Bool('iclod_first', self, INPUT, default=False,
-             doc='Search ICLOD before DCLOD.')
+        Bool('iclod_first', self, iostatus='in', default=False,
+             desc='Search ICLOD before DCLOD.')
 
-        Bool('no_dclod', self, INPUT, default=False,
-             doc='Do not search DCLOD.')
+        Bool('no_dclod', self, iostatus='in', default=False,
+             desc='Do not search DCLOD.')
 
-        Bool('no_iclod', self, INPUT, default=False,
-             doc='Do not search ICLOD.')
+        Bool('no_iclod', self, iostatus='in', default=False,
+             desc='Do not search ICLOD.')
 
-        Bool('use_corba', self, INPUT, default=False,
-             doc='Enable distributed simulation via CORBA.')
+        Bool('use_corba', self, iostatus='in', default=False,
+             desc='Enable distributed simulation via CORBA.')
 
         # Output options.
-        String('output_filename', self, INPUT, default=output_filename,
-               doc='Filename for standard streams in all new sessions.')
+        String('output_filename', self, iostatus='in', default=output_filename,
+               desc='Filename for standard streams in all new sessions.')
 
-        Bool('trace_execution', self, INPUT, default=False,
-             doc='Trace interpreted statement execution.')
+        Bool('trace_execution', self, iostatus='in', default=False,
+             desc='Trace interpreted statement execution.')
 
         # Advanced options.
-        String('assembly_type', self, INPUT, default='',
-               doc='Type for top object.')
+        String('assembly_type', self, iostatus='in', default='',
+               desc='Type for top object.')
 
-        String('executive_type', self, INPUT, default='',
-               doc='Top-level executive.')
+        String('executive_type', self, iostatus='in', default='',
+               desc='Top-level executive.')
 
-        StringList('preloaded_objs', self, INPUT, default=[],
-                   doc='Preloaded Objects.')
+        StringList('preloaded_objs', self, iostatus='in', default=[],
+                   desc='Preloaded Objects.')
 
-        Bool('use_solver', self, INPUT, default=True,
-             doc='Use default solver.')
+        Bool('use_solver', self, iostatus='in', default=True,
+             desc='Use default solver.')
 
-        Bool('use_constants', self, INPUT, default=True,
-             doc='Use default constants.')
+        Bool('use_constants', self, iostatus='in', default=True,
+             desc='Use default constants.')
 
-        String('access', self, INPUT, default='',
-               doc='Default access type.')
+        String('access', self, iostatus='in', default='',
+               desc='Default access type.')
 
-        Bool('autodoc', self, INPUT, default=False,
-             doc='Allow abstract creation.')
+        Bool('autodoc', self, iostatus='in', default=False,
+             desc='Allow abstract creation.')
 
-        String('ns_ior', self, INPUT, default='',
-               doc='IOR of NamingService.')
+        String('ns_ior', self, iostatus='in', default='',
+               desc='IOR of NamingService.')
 
-        String('other_opts', self, INPUT, default='',
-               doc='Other options.')
+        String('other_opts', self, iostatus='in', default='',
+               desc='Other options.')
 
         # Wrapper stuff.
-        Bool('reload_model', self, INPUT, default=False,
-             doc='Flag to externally request a model reload.')
+        Bool('reload_model', self, iostatus='in', default=False,
+             desc='Flag to externally request a model reload.')
 
         if arglist is not None:
             self._parse_arglist(arglist)
@@ -520,7 +519,7 @@ class NPSScomponent(Component):
             self.raise_exception('Exception during run: %s' % exc,
                                  RuntimeError)
 
-    def make_public(self, obj_info, iostatus=INPUT):
+    def make_public(self, obj_info, iostatus='in'):
         """
         Overload make_public() so that we can do the following
         on-the-fly rather than having to manually define variables:
@@ -568,7 +567,7 @@ class NPSScomponent(Component):
                         iostat = INPUT
                     elif typ == 'OutFileStream':
                         typ = 'Stream'
-                        iostat = OUTPUT
+                        iostat = 'out'
                         metadata['content_type'] = \
                             getattr(self, ref_name+'.contentType')
                         metadata['binary'] = \
@@ -612,22 +611,22 @@ class NPSScomponent(Component):
             elif typ == 'string':
                 dobj = String(name, self, iostat, doc=doc, ref_name=ref_name)
             elif typ == 'real[]':
-                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
+                dobj = Array(name, self, iostat, float, doc=doc,
                                      num_dims=1, ref_name=ref_name)
             elif typ == 'int[]':
-                dobj = ArrayVariable(name, self, iostat, int, doc=doc,
+                dobj = Array(name, self, iostat, int, doc=doc,
                                      num_dims=1, ref_name=ref_name)
             elif typ == 'string[]':
                 dobj = StringList(name, self, iostat, doc=doc,
                                   ref_name=ref_name)
             elif typ == 'real[][]':
-                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
+                dobj = Array(name, self, iostat, float, doc=doc,
                                      num_dims=2, ref_name=ref_name)
             elif typ == 'int[][]':
-                dobj = ArrayVariable(name, self, iostat, int, doc=doc,
+                dobj = Array(name, self, iostat, int, doc=doc,
                                      num_dims=2, ref_name=ref_name)
             elif typ == 'real[][][]':
-                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
+                dobj = Array(name, self, iostat, float, doc=doc,
                                      num_dims=3, ref_name=ref_name)
             elif typ == 'Stream':
                 dobj = FileVariable(name, self, iostat, doc=doc,

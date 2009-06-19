@@ -7,9 +7,9 @@ import os
 import shutil
 import unittest
 
-from openmdao.main import Assembly, Component, \
-                          ArrayVariable, FileVariable, StringList, Bool
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Bool, Array, ListStr
+
+from openmdao.main.api import Assembly, Component, FileVariable
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -20,11 +20,11 @@ class Source(Component):
 
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
-        Bool('write_files', self, INPUT, default=True)
-        StringList('text_data', self, INPUT, default=[])
-        ArrayVariable('binary_data', self, INPUT, float, default=[])
-        FileVariable('text_file', self, OUTPUT, default='source.txt')
-        FileVariable('binary_file', self, OUTPUT, default='source.bin',
+        Bool('write_files', self, iostatus='in', default=True)
+        StringList('text_data', self, iostatus='in', default=[])
+        Array('binary_data', self, iostatus='in', float, default=[])
+        FileVariable('text_file', self, iostatus='out', default='source.txt')
+        FileVariable('binary_file', self, iostatus='out', default='source.bin',
                      metadata={'binary':True})
 
     def execute(self):
@@ -44,10 +44,10 @@ class Sink(Component):
 
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
-        StringList('text_data', self, OUTPUT, default=[])
-        ArrayVariable('binary_data', self, OUTPUT, float, default=[])
-        FileVariable('text_file', self, INPUT, default='sink.txt')
-        FileVariable('binary_file', self, INPUT, default='sink.bin')
+        StringList('text_data', self, iostatus='out', default=[])
+        Array('binary_data', self, iostatus='out', float, default=[])
+        FileVariable('text_file', self, iostatus='in', default='sink.txt')
+        FileVariable('binary_file', self, iostatus='in', default='sink.bin')
 
     def execute(self):
         """ Read test data from files. """

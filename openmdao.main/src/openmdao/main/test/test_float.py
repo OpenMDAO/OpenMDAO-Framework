@@ -2,9 +2,10 @@
 
 import unittest
 
+from enthought.traits.api import Float
+
 from openmdao.main.exceptions import ConstraintError
-from openmdao.main import Container, Float
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.api import Container
 
 class FloatTestCase(unittest.TestCase):
 
@@ -14,12 +15,12 @@ class FloatTestCase(unittest.TestCase):
         self.hobj.internal_float1 = 3.1415926
         self.hobj.internal_float2 = 42.
         self.hobj.internal_float3 = 1.1
-        self.float1 = Float('float1', self.hobj, INPUT, 
+        self.float1 = Float('float1', self.hobj, iostatus='in', 
                        ref_name='internal_float1', default=98.9,
                        min_limit=0., max_limit=99., units='ft')
-        self.float2 = Float('float2', self.hobj, OUTPUT, default=13.2, 
+        self.float2 = Float('float2', self.hobj, iostatus='out', default=13.2, 
                        ref_name='internal_float2', units='inch')
-        self.float3 = Float('float3', self.hobj, INPUT, 
+        self.float3 = Float('float3', self.hobj, iostatus='in', 
                        ref_name='internal_float3',
                        min_limit=0., max_limit=99., units='kg')
                        

@@ -10,8 +10,9 @@
 from pkg_resources import resource_stream
 from csv import reader
 
-from openmdao.main import Assembly, Float
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float
+
+from openmdao.main.api import Assembly
 from openmdao.main.exceptions import ConstraintError
 
 from openmdao.examples.engine_design.vehicle import Vehicle
@@ -75,18 +76,18 @@ class SimVehicle(Assembly):
         self.create_passthru('vehicle.area')
 
         # Simulation Parameters
-        Float('end_speed', self, INPUT, units='m/h', default=60.0,
-              doc='Simulation final speed')
-        Float('timestep', self, INPUT, units='s', default=0.1,
-              doc='Simulation final speed')
+        Float('end_speed', self, iostatus='in', units='m/h', default=60.0,
+              desc='Simulation final speed')
+        Float('timestep', self, iostatus='in', units='s', default=0.1,
+              desc='Simulation final speed')
         
         # Outputs
-        Float('accel_time', self, OUTPUT, units='s', default=0.0, 
-              doc='Time to reach Endspeed starting from rest')
-        Float('EPA_city', self, OUTPUT, units='mi/galUS', default=0.0, 
-              doc='EPA Fuel economy - City')
-        Float('EPA_highway', self, OUTPUT, units='mi/galUS', default=0.0, 
-              doc='EPA Fuel economy - Highway')
+        Float('accel_time', self, iostatus='out', units='s', default=0.0, 
+              desc='Time to reach Endspeed starting from rest')
+        Float('EPA_city', self, iostatus='out', units='mi/galUS', default=0.0, 
+              desc='EPA Fuel economy - City')
+        Float('EPA_highway', self, iostatus='out', units='mi/galUS', default=0.0, 
+              desc='EPA Fuel economy - Highway')
         
         
     def execute(self):

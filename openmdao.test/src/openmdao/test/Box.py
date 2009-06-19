@@ -1,29 +1,21 @@
+from enthought.traits.api import Float
 
-from openmdao.main import Component, Float
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.api import Component
 
 class Box(Component):
+    # set up interface to the framework
+    width = Float(1., iostatus='in', units='cm')
+    height = Float(1., iostatus='in', units='cm')
+    depth = Float(1., iostatus='in', units='cm')
+    thickness = Float(0.05, iostatus='in', units='cm')
+    density = Float(0.01, iostatus='in', units='g/cm**3')
+    
+    mass = Float(0., iostatus='out', units='g')
+    volume = Float(0., iostatus='out', units='cm**3')
+    surface_area = Float(0., iostatus='out', units='cm**2')
+        
     def __init__(self, name, parent=None, doc=None, directory=''):
         super(Box, self).__init__(name, parent, doc, directory)
-        self.width = 1
-        self.height = 1
-        self.depth = 1
-        self.thickness = 0.05
-        self.density = .01
-        self.mass = 0.
-        self.volume = 0.
-        self.surface_area = 0.
-        
-        # set up interface to the framework
-        Float('width', self, INPUT, units='cm')
-        Float('height', self, INPUT, units='cm')
-        Float('depth', self, INPUT, units='cm')
-        Float('thickness', self, INPUT, units='cm')
-        Float('density', self, INPUT, units='g/cm**3')
-        
-        Float('mass', self, OUTPUT, units='g')
-        Float('volume', self, OUTPUT, units='cm**3')
-        Float('surface_area', self, OUTPUT, units='cm**2')
         
     def execute(self):
         self.surface_area = (self.width*(self.height+self.depth)+

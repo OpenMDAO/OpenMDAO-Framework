@@ -13,7 +13,7 @@ __all__ = ['IContainer', 'IComponent', 'IAssembly', 'IDriver', 'IFactory',
 __version__ = "0.1"
 
 
-from zope.interface import Interface, Attribute
+from enthought.traits.api import Interface, Str, This
 
 
 class IContainer (Interface):
@@ -21,9 +21,9 @@ class IContainer (Interface):
     attributes through the framework. This interface is provided by the
     Container class."""
 
-    name = Attribute('the name of the Container')
+    name = Str(desc='the name of the Container')
 
-    parent = Attribute('the IContainer object containing this object, or None')
+    parent = This(desc='the IContainer object containing this object, or None')
 
     def create (type_name, name, version=None, factory=None):
         """Create an object with the given type and the given name within
@@ -98,13 +98,13 @@ class IComponent (IContainer):
     """A runnable Container. This interface is provided by the Component
     class"""
 
-    state =  Attribute('the current state of this object '+
-                       '(UNKNOWN,IDLE,RUNNING,WAITING)')
+    #state =  Attribute('the current state of this object '+
+    #                   '(UNKNOWN,IDLE,RUNNING,WAITING)')
 
-    resource_desc = Attribute('a dict containing key-value pairs that are used'+
-                              'to select a ResourceAllocator')
+    #resource_desc = Attribute('a dict containing key-value pairs that are used'+
+    #                          'to select a ResourceAllocator')
 
-    directory = Attribute('If non-null, the directory to execute in.')
+    directory = Str(desc='If non-null, the directory to execute in.')
 
     def post_config ():
         """Perform any final initialization and verification after configuration 
@@ -226,8 +226,8 @@ class IGeomQueryObject (Interface):
     
     """
 
-    modelID = Attribute("Identifies the model. "+
-                        "This can either be a part or an assembly of parts")
+    #modelID = Attribute("Identifies the model. "+
+    #                    "This can either be a part or an assembly of parts")
 
 
 
@@ -256,33 +256,6 @@ class IResourceAllocator (Interface):
         """Return a list of tuples (hostname, pid, component_name) for each
         Component currently allocated by this allocator."""
 
-
-
-
-class IVariable (Interface):
-    """ An object representing data to be passed between Components within
-    the framework. It will perform validation when assigned to another
-    IVariable. It can notify other objects when its value is modified.
-    """
-
-    value = Attribute('the value')
-
-    default = Attribute('the default value')
-
-    current = Attribute('if False, the value is not current')
-
-    def revert ():
-        """ Return this Variable to its default value."""
-
-    def validate (variable):
-        """ Raise an exception if the assigned variable is not compatible"""
-
-    def add_observer (obs_funct, *args, **metadata):
-        """ Add a function to be called when this variable is modified"""
-
-    def notify_observers ():
-        """Call data_changed(self,args,metadata) on all of this object's
-        observers."""
 
 class IWorkflow(Interface):
     """An object that executes its nodes in a specified order.

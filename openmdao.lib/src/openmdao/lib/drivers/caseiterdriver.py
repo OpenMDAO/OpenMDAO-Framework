@@ -5,11 +5,9 @@ import Queue
 import threading
 import time
 
-from openmdao.main import Driver, Bool, Int
+from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, IComponent
-from openmdao.main.variable import INPUT
-from openmdao.main.socket import Socket
 from openmdao.main.util import filexfer
 
 
@@ -43,14 +41,14 @@ class CaseIteratorDriver(Driver):
     def __init__(self, *args, **kwargs):
         super(CaseIteratorDriver, self).__init__(*args, **kwargs)
 
-        Bool('sequential', self, INPUT, default=True,
-             doc='Evaluate cases sequentially.')
+        Bool('sequential', self, iostatus='in', default=True,
+             desc='Evaluate cases sequentially.')
 
-        Bool('reload_model', self, INPUT, default=True,
-             doc='Reload model between executions.')
+        Bool('reload_model', self, iostatus='in', default=True,
+             desc='Reload model between executions.')
 
-        Int('max_retries', self, INPUT, default=1, min_limit=0,
-            doc='Number of times to retry a case.')
+        Int('max_retries', self, iostatus='in', default=1, min_limit=0,
+            desc='Number of times to retry a case.')
 
         self._iter = None
         self._n_servers = 0

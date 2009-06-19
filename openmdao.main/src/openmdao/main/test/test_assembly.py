@@ -2,25 +2,32 @@
 
 import unittest
 
-from openmdao.main import Assembly, Component, Float, String
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float, Str, Instance
+from openmdao.main.api import Assembly, Component
 
 class Multiplier(Component):
+    rval_in = Float(iostatus='in')
+    rval_out = Float(iostatus='out')
+    mult = Float(iostatus='in')
+    
     def __init__(self, name):
         super(Multiplier, self).__init__(name)
         self.rval_in = 4.
         self.rval_out = 7.
         self.mult = 1.5
         self.run_count = 0
-        Float('rval_in', self, INPUT, units='cm')
-        Float('rval_out', self, OUTPUT, units='cm')
-        Float('mult', self, INPUT)
 
     def execute(self):
         self.run_count += 1
         self.rval_out = self.rval_in * self.mult
         
 class Simple(Component):
+    
+    a = Float(iostatus='in')
+    b = Float(iostatus='in')
+    c = Float(iostatus='out')
+    d = Float(iostatus='out')
+    
     def __init__(self, name, parent=None):
         super(Simple, self).__init__(name, parent)
         self.a = 4.
@@ -28,10 +35,6 @@ class Simple(Component):
         self.c = 7.
         self.d = 1.5
         self.run_count = 0
-        Float('a', self, INPUT, units='cm')
-        Float('b', self, INPUT, units='m')
-        Float('c', self, OUTPUT, units='cm')
-        Float('d', self, OUTPUT, units='mm')
 
     def execute(self):
         self.run_count += 1
@@ -39,6 +42,17 @@ class Simple(Component):
         self.d = self.a - self.b
 
 class DummyComp(Component):
+    
+    r = Float(iostatus='in')
+    r2 = Float(iostatus='in')
+    s = Str(iostatus='in')
+    rout = Float(iostatus='out')
+    r2out = Float(iostatus='out')
+    sout = Str(iostatus='out')
+    
+    dummy_in = Instance(Component, iostatus='in')
+    dummy_out = Instance(Component, iostatus='out')
+    
     def __init__(self, name, parent=None):
         super(DummyComp, self).__init__(name, parent)
         self.r = 1.0
@@ -48,18 +62,10 @@ class DummyComp(Component):
         self.s = 'a string'
         self.sout = ''
         
-        Float('r', self, INPUT, units='cm')
-        Float('r2', self, INPUT, units='cm/s')
-        String('s', self, INPUT)
-        
-        Float('rout', self, OUTPUT, units='cm')
-        Float('r2out', self, OUTPUT, units='cm/s')
-        String('sout', self, OUTPUT)
-        
         # make a nested container with input and output ContainerVars
         self.add_child(Multiplier('dummy'))
-        self.make_public([('dummy_in','dummy'), 
-                          ('dummy_out','dummy',OUTPUT)])
+        self.dummy_in = self.dummy
+        self.dummy_out = self.dummy
                 
     def execute(self):
         self.rout = self.r * 1.5

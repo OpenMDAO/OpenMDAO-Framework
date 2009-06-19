@@ -4,8 +4,9 @@ import unittest
 
 import numpy
 
-from openmdao.main import Container, ArrayVariable, Float
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float
+
+from openmdao.main.api import Container, ArrayVariable
 
 class ArrayVarTestCase(unittest.TestCase):
 
@@ -15,11 +16,11 @@ class ArrayVarTestCase(unittest.TestCase):
         self.hobj.internal_arr1 = numpy.array([1.2, 3.4, 5.6])
         self.hobj.internal_arr2 = numpy.array([[1.2, 3.4, 5.6],
                                                [7.8,9.10,11.12]])
-        self.array1 = ArrayVariable('array1', self.hobj, INPUT, float,
+        self.array1 = ArrayVariable('array1', self.hobj, iostatus='in', float,
                                ref_name='internal_arr1')
         self.array1out = ArrayVariable('array1out', self.hobj, OUTPUT, float,
                                ref_name='internal_arr1')
-        self.array2 = ArrayVariable('array2', self.hobj, INPUT, float, 
+        self.array2 = ArrayVariable('array2', self.hobj, iostatus='in', float, 
                                     fixed_size=(2,3),
                                     ref_name='internal_arr2')
         

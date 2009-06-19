@@ -8,10 +8,10 @@ import os
 import shutil
 import unittest
 
-from openmdao.main import Assembly, Component, Container, \
-                          ArrayVariable, FileVariable, StringList, Bool
+from enthought.traits.api import Bool, ListStr, Array
+
+from openmdao.main.api import Assembly, Component, Container, FileVariable
 from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
-from openmdao.main.variable import INPUT, OUTPUT
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
@@ -34,9 +34,9 @@ class Source(Assembly):
         global source_init
         source_init = True
 
-        Bool('write_files', self, INPUT, default=True)
-        StringList('text_data', self, INPUT, default=[])
-        FileVariable('text_file', self, OUTPUT, default='source.txt')
+        Bool('write_files', self, iostatus='in', default=True)
+        StringList('text_data', self, iostatus='in', default=[])
+        FileVariable('text_file', self, iostatus='out', default='source.txt')
 
         Subcontainer('sub', parent=self)
         self.create_passthru('sub.binary_file')
@@ -103,8 +103,8 @@ class Subcontainer(Container):
     def __init__(self, name='Subcontainer', parent=None):
         super(Subcontainer, self).__init__(name, parent)
 
-        ArrayVariable('binary_data', self, INPUT, float, default=[])
-        FileVariable('binary_file', self, OUTPUT,
+        Array('binary_data', self, iostatus='in', float, default=[])
+        FileVariable('binary_file', self, iostatus='out',
                      default=os.path.join('..', 'sub', 'source.bin'),
                      metadata={'binary':True})
 
@@ -125,18 +125,18 @@ class Sink(Component):
         global sink_init
         sink_init = True
 
-        StringList('text_data', self, OUTPUT, default=[])
-        ArrayVariable('binary_data', self, OUTPUT, float, default=[])
+        StringList('text_data', self, iostatus='out', default=[])
+        Array('binary_data', self, iostatus='out', float, default=[])
 
         # Absolute FileVariable that exists at time of save.
-        FileVariable('text_file', self, INPUT,
+        FileVariable('text_file', self, iostatus='in',
                      default=os.path.join(self.get_directory(), 'sink.txt'))
         out = open(self.text_file, 'w')
         out.write('Absolute FileVariable that exists at time of save.\n')
         out.close()
 
         # Relative FileVariable that exists at time of save.
-        FileVariable('binary_file', self, INPUT, default='sink.bin')
+        FileVariable('binary_file', self, iostatus='in', default='sink.bin')
         self.push_dir(self.get_directory())
         out = open(self.binary_file, 'w')
         out.write('Relative FileVariable that exists at time of save.\n')

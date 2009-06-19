@@ -15,9 +15,8 @@ Known problems:
 """
 import os.path
 
-from openmdao.main import Assembly, Component, Container, Float, \
-                          ArrayVariable, FileVariable
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Array, Float
+from openmdao.main.api import Assembly, Component, Container, FileVariable
 
 from npsscomponent import NPSScomponent
 
@@ -33,18 +32,18 @@ class Design(Component):
     def __init__(self, name='Design', parent=None):
         super(Design, self).__init__(name, parent)
 
-        Float('FanPRdes',        self, OUTPUT, default=3.615)
-        Float('TOCThrust',       self, OUTPUT, default=7000)
-        Float('MN',              self, OUTPUT, default=1.8)
-        Float('alt',             self, OUTPUT, default=53700)
-        Float('Knoz',            self, OUTPUT, default=0.88)
-        Float('extractionRatio', self, OUTPUT, default=1.05)
-        Float('HpcPRdes',        self, OUTPUT, default=6.51937)
-        Float('Cfg',             self, OUTPUT, default=0.985)
-        Float('maxDiamFact',     self, OUTPUT, default=1.17)
-        Float('I_externalFact',  self, OUTPUT, default=0.48)
-        Float('I_divergFact',    self, OUTPUT, default=0.5)
-        Float('cowl_angle',      self, OUTPUT, default=6)
+        Float('FanPRdes',        self, iostatus='out', default=3.615)
+        Float('TOCThrust',       self, iostatus='out', default=7000)
+        Float('MN',              self, iostatus='out', default=1.8)
+        Float('alt',             self, iostatus='out', default=53700)
+        Float('Knoz',            self, iostatus='out', default=0.88)
+        Float('extractionRatio', self, iostatus='out', default=1.05)
+        Float('HpcPRdes',        self, iostatus='out', default=6.51937)
+        Float('Cfg',             self, iostatus='out', default=0.985)
+        Float('maxDiamFact',     self, iostatus='out', default=1.17)
+        Float('I_externalFact',  self, iostatus='out', default=0.48)
+        Float('I_divergFact',    self, iostatus='out', default=0.5)
+        Float('cowl_angle',      self, iostatus='out', default=6)
 
     def execute(self):
         """ Just to trace execution. """
@@ -59,14 +58,14 @@ class PropulsionData(Component):
     def __init__(self, name='PropulsionData', parent=None):
         super(PropulsionData, self).__init__(name, parent)
 
-        Float('link_bladeTipRadius', self, INPUT, default=0.)
-        Float('link_contRingRadialThickness', self, INPUT, default=0.)
-        Float('link_maxDiamFact', self, INPUT, default=0.)
-        Float('link_Acapture', self, INPUT, default=0.)
-        Float('link_inletLength', self, INPUT, default=0.)
-        Float('link_length', self, INPUT, default=0.)
+        Float('link_bladeTipRadius', self, iostatus='in', default=0.)
+        Float('link_contRingRadialThickness', self, iostatus='in', default=0.)
+        Float('link_maxDiamFact', self, iostatus='in', default=0.)
+        Float('link_Acapture', self, iostatus='in', default=0.)
+        Float('link_inletLength', self, iostatus='in', default=0.)
+        Float('link_length', self, iostatus='in', default=0.)
 
-        Float('Acapture', self, OUTPUT, default=0.)
+        Float('Acapture', self, iostatus='out', default=0.)
 
         FLOPSdata(parent=self)
         PlumeData(parent=self)
@@ -107,11 +106,11 @@ class FLOPSdata(Container):
     def __init__(self, name='FLOPS', parent=None):
         super(FLOPSdata, self).__init__(name, parent)
 
-        FileVariable('engdeck', self, INPUT, default='engdeck')
-        Float('thrso', self, INPUT, default=0.)
-        Float('weng',  self, INPUT, default=0.)
-        Float('xnac',  self, INPUT, default=0.)
-        Float('dnac',  self, INPUT, default=0.)
+        FileVariable('engdeck', self, iostatus='in', default='engdeck')
+        Float('thrso', self, iostatus='in', default=0.)
+        Float('weng',  self, iostatus='in', default=0.)
+        Float('xnac',  self, iostatus='in', default=0.)
+        Float('dnac',  self, iostatus='in', default=0.)
 
 
 class PlumeData(Container):
@@ -119,15 +118,15 @@ class PlumeData(Container):
     def __init__(self, name='Plume', parent=None):
         super(PlumeData, self).__init__(name, parent)
 
-        Float('m_dot',      self, INPUT, default=0.)
-        Float('Ptj',        self, INPUT, default=0.)
-        Float('Ttj',        self, INPUT, default=0.)
-        Float('far',        self, INPUT, default=0.)
-        Float('Astar',      self, INPUT, default=0.)
-        Float('Ae',         self, INPUT, default=0.)
-        Float('Amax',       self, INPUT, default=0.)
-        Float('I_diverg',   self, INPUT, default=0.)
-        Float('I_external', self, INPUT, default=0.)
+        Float('m_dot',      self, iostatus='in', default=0.)
+        Float('Ptj',        self, iostatus='in', default=0.)
+        Float('Ttj',        self, iostatus='in', default=0.)
+        Float('far',        self, iostatus='in', default=0.)
+        Float('Astar',      self, iostatus='in', default=0.)
+        Float('Ae',         self, iostatus='in', default=0.)
+        Float('Amax',       self, iostatus='in', default=0.)
+        Float('I_diverg',   self, iostatus='in', default=0.)
+        Float('I_external', self, iostatus='in', default=0.)
 
 
 class USM3Ddata(Container):
@@ -135,12 +134,12 @@ class USM3Ddata(Container):
     def __init__(self, name='USM3D', parent=None):
         super(USM3Ddata, self).__init__(name, parent)
 
-        Float('fuel',   self, INPUT, default=0.)
-        Float('gammaj', self, INPUT, default=0.)
-        Float('pjet',   self, INPUT, default=0.)
-        Float('p0jet',  self, INPUT, default=0.)
-        Float('Rratio', self, INPUT, default=0.)
-        Float('T0jet',  self, INPUT, default=0.)
+        Float('fuel',   self, iostatus='in', default=0.)
+        Float('gammaj', self, iostatus='in', default=0.)
+        Float('pjet',   self, iostatus='in', default=0.)
+        Float('p0jet',  self, iostatus='in', default=0.)
+        Float('Rratio', self, iostatus='in', default=0.)
+        Float('T0jet',  self, iostatus='in', default=0.)
 
         USM3Dinputs(parent=self)
 
@@ -161,14 +160,14 @@ class USM3Dfreestream(Container):
     def __init__(self, name='Freestream', parent=None):
         super(USM3Dfreestream, self).__init__(name, parent)
 
-        Float('a',     self, INPUT, default=0.)
-        Float('gamma', self, INPUT, default=0.)
-        Float('rho',   self, INPUT, default=0.)
-        Float('R',     self, INPUT, default=0.)
-        Float('Ps',    self, INPUT, default=0.)
-        Float('Pt',    self, INPUT, default=0.)
-        Float('Ts',    self, INPUT, default=0.)
-        Float('Tt',    self, INPUT, default=0.)
+        Float('a',     self, iostatus='in', default=0.)
+        Float('gamma', self, iostatus='in', default=0.)
+        Float('rho',   self, iostatus='in', default=0.)
+        Float('R',     self, iostatus='in', default=0.)
+        Float('Ps',    self, iostatus='in', default=0.)
+        Float('Pt',    self, iostatus='in', default=0.)
+        Float('Ts',    self, iostatus='in', default=0.)
+        Float('Tt',    self, iostatus='in', default=0.)
 
 
 class USM3Dplenum(Container):
@@ -176,14 +175,14 @@ class USM3Dplenum(Container):
     def __init__(self, name='Plenum', parent=None):
         super(USM3Dplenum, self).__init__(name, parent)
 
-        Float('gamma_s', self, INPUT, default=0.)
-        Float('gamma_t', self, INPUT, default=0.)
-        Float('Rs',      self, INPUT, default=0.)
-        Float('Rt',      self, INPUT, default=0.)
-        Float('Ps',      self, INPUT, default=0.)
-        Float('Pt',      self, INPUT, default=0.)
-        Float('Ts',      self, INPUT, default=0.)
-        Float('Tt',      self, INPUT, default=0.)
+        Float('gamma_s', self, iostatus='in', default=0.)
+        Float('gamma_t', self, iostatus='in', default=0.)
+        Float('Rs',      self, iostatus='in', default=0.)
+        Float('Rt',      self, iostatus='in', default=0.)
+        Float('Ps',      self, iostatus='in', default=0.)
+        Float('Pt',      self, iostatus='in', default=0.)
+        Float('Ts',      self, iostatus='in', default=0.)
+        Float('Tt',      self, iostatus='in', default=0.)
 
 
 class USM3Dthroat(Container):
@@ -191,14 +190,14 @@ class USM3Dthroat(Container):
     def __init__(self, name='Throat', parent=None):
         super(USM3Dthroat, self).__init__(name, parent)
 
-        Float('gamma_s', self, INPUT, default=0.)
-        Float('gamma_t', self, INPUT, default=0.)
-        Float('Rs',      self, INPUT, default=0.)
-        Float('Rt',      self, INPUT, default=0.)
-        Float('Ps',      self, INPUT, default=0.)
-        Float('Pt',      self, INPUT, default=0.)
-        Float('Ts',      self, INPUT, default=0.)
-        Float('Tt',      self, INPUT, default=0.)
+        Float('gamma_s', self, iostatus='in', default=0.)
+        Float('gamma_t', self, iostatus='in', default=0.)
+        Float('Rs',      self, iostatus='in', default=0.)
+        Float('Rt',      self, iostatus='in', default=0.)
+        Float('Ps',      self, iostatus='in', default=0.)
+        Float('Pt',      self, iostatus='in', default=0.)
+        Float('Ts',      self, iostatus='in', default=0.)
+        Float('Tt',      self, iostatus='in', default=0.)
 
 
 class USM3Dexit(Container):
@@ -206,14 +205,14 @@ class USM3Dexit(Container):
     def __init__(self, name='Exit', parent=None):
         super(USM3Dexit, self).__init__(name, parent)
 
-        Float('gamma_s', self, INPUT, default=0.)
-        Float('gamma_t', self, INPUT, default=0.)
-        Float('Rs',      self, INPUT, default=0.)
-        Float('Rt',      self, INPUT, default=0.)
-        Float('Ps',      self, INPUT, default=0.)
-        Float('Pt',      self, INPUT, default=0.)
-        Float('Ts',      self, INPUT, default=0.)
-        Float('Tt',      self, INPUT, default=0.)
+        Float('gamma_s', self, iostatus='in', default=0.)
+        Float('gamma_t', self, iostatus='in', default=0.)
+        Float('Rs',      self, iostatus='in', default=0.)
+        Float('Rt',      self, iostatus='in', default=0.)
+        Float('Ps',      self, iostatus='in', default=0.)
+        Float('Pt',      self, iostatus='in', default=0.)
+        Float('Ts',      self, iostatus='in', default=0.)
+        Float('Tt',      self, iostatus='in', default=0.)
 
 
 class NacelleData(Container):
@@ -221,8 +220,8 @@ class NacelleData(Container):
     def __init__(self, name='Nacelle', parent=None):
         super(NacelleData, self).__init__(name, parent)
 
-        ArrayVariable('X', self, INPUT, float, default=[])
-        ArrayVariable('Y', self, INPUT, float, default=[])
+        Array('X', self, iostatus='in', float, default=[])
+        Array('Y', self, iostatus='in', float, default=[])
 
 
 class ANOPPdata(Container):
@@ -248,12 +247,12 @@ class Model(Assembly):
         comp, rest = src_path.split('.', 1)
         src_comp = getattr(self, comp)
         if rest.find('.') > 0:
-            src_path = self.hoist(src_comp, rest, OUTPUT)
+            src_path = self.hoist(src_comp, rest, 'out')
         else:
             try:
                 src_comp.getvar(rest)
             except AttributeError:
-                src_comp.make_public((rest, '', OUTPUT))
+                src_comp.make_public((rest, '', 'out'))
                 self._var_graph.add_node(src_path, data=src_comp.getvar(rest))
 
         comp, rest = dst_path.split('.', 1)

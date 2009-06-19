@@ -4,7 +4,7 @@
 
 import unittest
 
-from openmdao.main import Assembly
+from openmdao.main.api import Assembly
 from openmdao.examples.engine_design.vehicle import Vehicle
 
 

@@ -2,9 +2,25 @@
 __all__ = ['FileVariable']
 __version__ = "0.1"
 
-from openmdao.main.variable import Variable, UNDEFINED
+from enthought.traits.api import Str, Missing
+from enthought.traits.trait_handlers import NoDefaultSpecified
 
-class FileVariable(Variable):
+class FileValue(str):
+    def __new__(cls, text, parent):
+        s = super(FileValue, cls).__new__(FileValue, text)
+        s.parent = weakref.ref(parent)
+
+        s.metadata = {
+            'content_type' : '',
+            'content_encoding' : '',
+            'binary' : False,
+            'big_endian' : False,
+            'single_precision' : False,
+            'unformatted' : False,
+            'recordmark_8' : False, }
+        return s
+    
+class FileVariable(Str):
     """ A Variable wrapper for a file path attribute. Metadata for the file
     is available in the 'metadata' attribute of the variable.  Standard
     metadata includes:
@@ -24,22 +40,11 @@ class FileVariable(Variable):
             default False
     """
     
-    def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
-                 default=UNDEFINED, doc=None, metadata=None):
-        super(FileVariable, self).__init__(name, parent, iostatus, 
-                                           val_types=(basestring,str,unicode), 
-                                           ref_name=ref_name,
-                                           ref_parent=ref_parent,
-                                           default=default, doc=doc)
-        self.metadata = {
-            'content_type' : '',
-            'content_encoding' : '',
-            'binary' : False,
-            'big_endian' : False,
-            'single_precision' : False,
-            'unformatted' : False,
-            'recordmark_8' : False, }
+    def __init__(self, default_value=NoDefaultSpecified, **metadata):
+        super(FileVariable, self).__init__(default_value, **metadata)
+        self.iostatus = metadata.get('iostatus', 'in')
 
-        if metadata is not None:
-            self.metadata.update(metadata)
-
+    def validate(self, object, name, value):
+        s = super(FileVariable, self).validate(object, name, value) # normal string validation
+        return FileValue(s, object)
+    

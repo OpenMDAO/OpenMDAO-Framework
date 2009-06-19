@@ -1,13 +1,12 @@
 
 import logging
 
-from zope.interface import implements
+from enthought.traits.api import implements
 import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
 
-from openmdao.main.interfaces import IAssembly, IComponent, IDriver, IWorkflow
+from openmdao.main.interfaces import IAssembly, IComponent
 from openmdao.main.workflow import Workflow
-from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.drivertree import DriverForest, create_labeled_graph
 
 __all__ = ['Dataflow']
@@ -19,8 +18,6 @@ class Dataflow(Workflow):
     data flow order.
     """
 
-    implements(IWorkflow)
-    
     def __init__(self, name, parent=None):
         """ Create an empty flow. """
         super(Dataflow, self).__init__(name, parent, add_to_parent=False)
@@ -31,6 +28,9 @@ class Dataflow(Workflow):
             super(Dataflow, self).execute()
         finally:
             self._drvsorter = None
+            
+    def has_node(self, name):
+        return name in self._no_ref_graph
         
     def add_node(self, name):
         self._no_ref_graph.add_node(name)
@@ -79,12 +79,8 @@ class Dataflow(Workflow):
             
     def _find_drivers(self, names):
         """Returns a list of Drivers found in the given list of names."""
-        objs = []
-        for name in names:
-            obj = getattr(self.parent, name)
-            if IDriver.providedBy(obj):
-                objs.append(obj)
-        return objs
+        driverset = set([obj.name for obj in self.parent.drivers])
+        return [getattr(self.parent, n) for n in names if n in driverset]
         
     def nodes_iter(self):
         """Iterate through the nodes in dataflow order, allowing for multiple Driver
@@ -96,9 +92,9 @@ class Dataflow(Workflow):
         if len(drivers) == 0:  # no driver, so just sort and go
             for n in nx.topological_sort(self._no_ref_graph):
                 yield getattr(self.parent, n)
-        elif len(drivers) == 1:  # one driver, so add its OUTPUT ref edges, sort and go
+        elif len(drivers) == 1:  # one driver, so add its output ref edges, sort and go
             graph = self._no_ref_graph.copy()
-            graph.add_edges_from(drivers[0].get_ref_graph(iostatus=OUTPUT).edges_iter())
+            graph.add_edges_from(drivers[0].get_ref_graph(iostatus='out').edges_iter())
             for n in nx.topological_sort(graph):
                 yield getattr(self.parent, n)
             return
@@ -151,7 +147,7 @@ class Dataflow(Workflow):
                                # and it will run everything else
             yield drivers[0]
         else:   # nested drivers
-            subgraph = self._no_ref_graph.subgraph(nbunch=loopcomps) # this has no RefVariable edges
+            subgraph = self._no_ref_graph.subgraph(nbunch=loopcomps) # this has no StringRef edges
             self._drvsorter = DriverForest(drivers)
             collapsed_graph = self._drvsorter.collapse_graph(subgraph)
             for compname in nx.topological_sort(collapsed_graph):

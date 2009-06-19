@@ -8,10 +8,11 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('DOE',)
 __version__ = '0.1'
 
+from enthought.traits.api import Int, Str
+
 import mool.Optimization.DOE
 
-from openmdao.main import Int, String, Case, ListCaseIterator
-from openmdao.main.variable import INPUT
+from openmdao.main.api import Case, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
 
@@ -24,14 +25,14 @@ class DOE(CaseIteratorDriver):
         self.response_variables = []  # List of names.
 
         # No 'Option' variables yet.
-        String('type', self, INPUT, default='ccd',
-               doc='Type of experiment design.')
+        String('type', self, iostatus='in', default='ccd',
+               desc='Type of experiment design.')
 
-        Int('n_samples', self, INPUT, default=1, min_limit=1,
-            doc='Number of samples.')
+        Int('n_samples', self, iostatus='in', default=1, min_limit=1,
+            desc='Number of samples.')
 
-        Int('lhs', self, INPUT, default=2, min_limit=1,
-            doc='???, used by LHS and Rand_LHS.')
+        Int('lhs', self, iostatus='in', default=2, min_limit=1,
+            desc='???, used by LHS and Rand_LHS.')
 
     def _pre_execute(self):
         """ Generate cases. """

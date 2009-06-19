@@ -5,11 +5,9 @@
 # the velocity and commanded throttle/gear positions given a set of design.
 # parameters.
 
-from zope.interface import implements, Interface
+from enthought.traits.api import implements, Interface, Float, Int
 
-from openmdao.main import Assembly
-from openmdao.main import Float, Int
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.api import Assembly
 from openmdao.main.interfaces import IComponent
 
 from openmdao.examples.engine_design.transmission import Transmission

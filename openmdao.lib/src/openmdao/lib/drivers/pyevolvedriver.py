@@ -4,12 +4,12 @@ __version__ = "0.1"
 
 import random
 
+from enthought.traits.api import Int, Float, Bool, Str
 from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
 from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
 from pyevolve import GenomeBase
 
-from openmdao.main.variable import Variable, INPUT, OUTPUT
-from openmdao.main import Driver, Int, Float, Bool, String, RefVariable
+from openmdao.main.api import Driver, StringRef
 
 def G1DListCrossOverRealHypersphere(genome, **args):
     """ A genome reproduction algorithm, developed by Tristan Hearn at 
@@ -85,19 +85,19 @@ class pyevolvedriver(Driver):
         self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin
 
         #inputs - value of None means use default
-        RefVariable('objective', self, INPUT,
-                          doc= 'A string containing the objective function expression.')
-        Int('freq_stats',self,INPUT,default = 0)
-        Float('seed',self,INPUT,default = 0)
-        Float('population_size',self,INPUT,default = Consts.CDefGAPopulationSize)
+        StringRef('objective', self, iostatus='in',
+                          desc= 'A string containing the objective function expression.')
+        Int('freq_stats',self,iostatus='in',default = 0)
+        Float('seed',self,iostatus='in',default = 0)
+        Float('population_size',self,iostatus='in',default = Consts.CDefGAPopulationSize)
         
-        Bool('sort_type',self,INPUT,doc='use Consts.sortType["raw"],Consts.sortType["scaled"] ',default = Consts.sortType["scaled"]) # can accept
-        Float('mutation_rate',self,INPUT,default = Consts.CDefGAMutationRate)
-        Float('crossover_rate',self,INPUT,default = Consts.CDefGACrossoverRate)
-        Int('generations',self,INPUT,default = Consts.CDefGAGenerations)
-        Bool('mini_max',self,INPUT,default = Consts.minimaxType["minimize"],
+        Bool('sort_type',self,iostatus='in',desc='use Consts.sortType["raw"],Consts.sortType["scaled"] ',default = Consts.sortType["scaled"]) # can accept
+        Float('mutation_rate',self,iostatus='in',default = Consts.CDefGAMutationRate)
+        Float('crossover_rate',self,iostatus='in',default = Consts.CDefGACrossoverRate)
+        Int('generations',self,iostatus='in',default = Consts.CDefGAGenerations)
+        Bool('mini_max',self,iostatus='in',default = Consts.minimaxType["minimize"],
              doc = 'use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
-        Bool('elitism',self,INPUT,doc='True of False',default = True)
+        Bool('elitism',self,iostatus='in',desc='True of False',default = True)
         
         self.decoder = None #TODO: mandatory socket       
         self.selector = None #TODO: optional socket
@@ -106,7 +106,7 @@ class pyevolvedriver(Driver):
         self.DBAdapter = None #TODO: optional socket
 
         #outputs
-        Variable('best_individual',self,OUTPUT,default = self.genome)
+        Variable('best_individual',self,iostatus='out',default = self.genome)
 
 
     def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
@@ -122,7 +122,7 @@ class pyevolvedriver(Driver):
     def evaluate(self,genome):
         self.decoder(genome)
         self.run_iteration()
-        return self.objective.refvalue
+        return self.objective.evaluate()
 
     def verify(self):
         #genome verify

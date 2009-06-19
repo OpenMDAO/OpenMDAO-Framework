@@ -4,8 +4,9 @@ Test for Bool variables.
 
 import unittest
 
-from openmdao.main import Container, Bool, Int
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Bool, Int
+
+from openmdao.main.api import Container, Bool, Int
 
 class BoolTestCase(unittest.TestCase):
 
@@ -15,7 +16,7 @@ class BoolTestCase(unittest.TestCase):
         self.hobj.internal_bool1 = True
         self.hobj.internal_bool2 = False
         self.hobj.internal_int = 42
-        self.bool1 = Bool('bool1', self.hobj, INPUT, 
+        self.bool1 = Bool('bool1', self.hobj, iostatus='in', 
                           ref_name='internal_bool1', default=True)
         self.bool2 = Bool('bool2', self.hobj, OUTPUT,
                           ref_name='internal_bool2', default=False)

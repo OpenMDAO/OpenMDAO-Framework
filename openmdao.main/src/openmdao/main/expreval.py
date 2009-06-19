@@ -35,7 +35,7 @@ def _trans_lhs(strng, loc, tok, exprobj):
         if lazy_check is False and not scope.parent.contains(tok[0]):
             raise RuntimeError("cannot find variable '"+tok[0]+"'")
         
-        exprobj._register_output(tok[0])
+        exprobj.var_names.add(tok[0])
         
     full = scname + ".set('" + tok[0] + "',_@RHS@_"
     if len(tok) > 1 and tok[1] != '=':
@@ -95,7 +95,7 @@ def _trans_fancyname(strng, loc, tok, exprobj):
                                  not scope.parent.contains(tok[0])):
             raise RuntimeError("cannot find variable '"+tok[0]+"'")
     
-        exprobj._register_input(tok[0])
+        exprobj.var_names.add(tok[0])
         
     if len(tok) == 1 or (len(tok) > 1 and tok[1].startswith('[')):
         full = scname + ".get('" + tok[0] + "'"
@@ -193,7 +193,7 @@ def translate_expr(text, exprobj, single_name=False):
         raise RuntimeError(str(err)+' - '+err.markInputline())
 
     
-class ExprEvaluator(object):
+class ExprEvaluator(str):
     """A class that translates an expression string into a new string containing
     any necessary framework access functions, e.g., set, get. The compiled
     bytecode is stored within the object so that it doesn't have to be reparsed
@@ -216,16 +216,17 @@ class ExprEvaluator(object):
     optional array indexing, but general expressions are not allowed.
     """
     
-    def __init__(self, text, scope, single_name=False, lazy_check=False):
-        self._scope = weakref.ref(scope)
-        self.input_names = set()
-        self.output_names = set()
-        self.lazy_check = lazy_check
-        self.single_name = single_name
-        self.text = text  # this calls _set_text
-        self.rhs = ''
-        self.lhs = ''
-    
+    def __new__(cls, text, scope, single_name=False, lazy_check=False):
+        s = super(ExprEvaluator, cls).__new__(ExprEvaluator, text)
+        s._scope = weakref.ref(scope)
+        s.lazy_check = lazy_check
+        s.single_name = single_name
+        s.rhs = ''
+        s.lhs = ''
+        s._text = None  # used to detect change in str
+        s._parse()
+        return s
+        
     def __getstate__(self):
         """Return dict representing this container's state."""
         state = self.__dict__.copy()
@@ -243,11 +244,10 @@ class ExprEvaluator(object):
         if self.scoped_text:
             self._code = compile(self.scoped_text, '<string>', 'eval')
 
-    def _set_text(self, text):
-        self._text = text
-        self.input_names = set()
-        self.output_names = set()
-        self.scoped_text = translate_expr(text, self, 
+    def _parse(self):
+        self._text = str(self)
+        self.var_names = set()
+        self.scoped_text = translate_expr(str(self), self, 
                                           single_name=self.single_name)
         self._code = compile(self.scoped_text, '<string>','eval')
         if self.single_name: # set up a compiled assignment statement
@@ -255,19 +255,13 @@ class ExprEvaluator(object):
             try:
                 self.lazy_check = True
                 self.scoped_assignment_text = translate_expr(
-                                            '%s = _local_setter' % self.text, 
+                                            '%s = _local_setter' % str(self), 
                                             self)
                 self._assignment_code = compile(self.scoped_assignment_text, 
                                                 '<string>','exec')
             finally:
                 self.lazy_check = old_lazy_check
-        
-    def _get_text(self):
-        return self._text
-    
-    text = property(_get_text, _set_text, None,
-                    'The untranslated text of the expression')
-        
+                
     def evaluate(self):
         """Return the value of the scoped string, evaluated 
         using the eval() function.
@@ -279,10 +273,12 @@ class ExprEvaluator(object):
             raise RuntimeError(
                     'ExprEvaluator cannot evaluate expression without scope.')
         try:
+            if self._text != self:  # text has changed
+                self._parse()
             return eval(self._code, scope.__dict__, locals())
         except Exception, err:
             raise type(err)("ExprEvaluator failed evaluating expression "+
-                            "'%s'. Caught message is: %s" %(self._text,str(err)))
+                            "'%s'. Caught message is: %s" %(self,str(err)))
 
     def set(self, val):
         """Set the value of the referenced object to the specified value."""
@@ -297,18 +293,33 @@ class ExprEvaluator(object):
             # of the form  'somevar = _local_setter', so we set _local_setter here
             # and the exec call will pull it out of locals()
             _local_setter = val 
+            if self._text != self:  # text has changed
+                self._parse()
             exec(self._assignment_code, scope.__dict__, locals())            
         else: # self.single_name is False
-            raise ValueError('trying to set an input expression')
+            raise ValueError("trying to set input expression '%s'" % str(self))
         
-    def _register_input(self, name):
-        """Adds a Variable name to the input set. 
-        Called during expression parsing.
-        """
-        self.input_names.add(name)
+    refvalue = property(evaluate, set)
     
-    def _register_output(self, name):
-        """Adds a Variable name to the output set. 
-        Called during expression parsing.
+    def get_referenced_varpaths(self):
+        """Return a set of source or dest Variable pathnames relative to
+        self.parent and based on the names of Variables referenced in our 
+        reference string. 
         """
-        self.output_names.add(name)
+        return self.var_names
+
+    def get_referenced_compnames(self):
+        """Return a set of source or dest Component names based on the 
+        pathnames of Variables referenced in our reference string. 
+        """
+        return set([x.split('.')[0] for x in self.var_names])
+    
+    def refs_valid(self):
+        """Return True if all attributes referenced by our expression
+        are valid.
+        """
+        scope = self._scope()
+        if scope and scope.parent:
+            return all(scope.parent.get_valid(self.var_names))
+        return True
+

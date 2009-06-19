@@ -5,7 +5,7 @@ __all__ = ["ImportFactory"]
 __version__ = "0.1"
 
 
-from openmdao.main import Factory
+from openmdao.main.factory import Factory
 from openmdao.main.log import logger
    
 class ImportFactory(Factory):
@@ -19,7 +19,7 @@ class ImportFactory(Factory):
         super(ImportFactory, self).__init__()
         self._ctors = {}
 
-    def create(self, typ, name=None, version=None, server=None, 
+    def create(self, typ, name='', version=None, server=None, 
                res_desc=None):
         """Tries to import the given named module and return a factory 
         function from it. The factory function or constructor must have the same

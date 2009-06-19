@@ -3,12 +3,11 @@
 import unittest
 import StringIO
 
+from enthought.traits.api import Float, TraitError
 
 import openmdao.main.constants as constants
-from openmdao.main import Container, Float
+from openmdao.main.container import Container
 from openmdao.main.interfaces import IContainer
-from openmdao.main.variable import INPUT
-
 
 
 class ContainerTestCase(unittest.TestCase):
@@ -28,25 +27,18 @@ class ContainerTestCase(unittest.TestCase):
         """
         
         self.root = Container('root', None)
-        c1 = Container('c1', None)
-        c2 = Container('c2', None)
-        self.root.add_child(c1)
-        self.root.add_child(c2)        
-        c21 = Container('c21', None)
-        c22 = Container('c22', None)
-        c2.add_child(c21)
-        c2.add_child(c22)
-        c221 = Container('c221', None)
-        c221.number = 3.14
-        c22.add_child(c221)
-        ff = Float('number', c221, INPUT)
-        ff.units = "ft/s"
+        c1 = Container('c1', self.root)
+        c2 = Container('c2', self.root)
+        c21 = Container('c21', c2)
+        c22 = Container('c22', c2)
+        c221 = Container('c221', c22)
+        c221.add_trait('number', Float(3.14, iostatus='in'))
 
     def tearDown(self):
         """this teardown function will be called after each test"""
         self.root = None
 
-    def test_add_child(self):
+    def test_add_bad_child(self):
         foo = Container('foo', None)
         non_container = 'some string'
         try:
@@ -62,26 +54,23 @@ class ContainerTestCase(unittest.TestCase):
         self.root.add_child(foo)
         self.assertEqual(foo.get_pathname(), 'root.foo')
 
-
     def test_get(self):
         obj = self.root.get('c2.c21')
         self.assertEqual(obj.get_pathname(), 'root.c2.c21')
         num = self.root.get('c2.c22.c221.number')
         self.assertEqual(num, 3.14)
-        num = self.root.get('c2.c22.c221.number.value')
-        self.assertEqual(num, 3.14)
 
     def test_get_attribute(self):
-        units = self.root.get('c2.c22.c221.number.units')
-        self.assertEqual(units, "ft/s")
+        self.assertEqual(self.root.get('c2.c22.c221.number.iostatus'), 
+                         'in')
 
     def test_keys(self):
-        lst = [x for x in self.root.keys(recurse=True)]
+        lst = [x for x in self.root.keys(recurse=True, iostatus='in')]
         self.assertEqual(lst, 
             ['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
         
     def test_pub_items(self):
-        lst = map(lambda x: x[0], self.root.items(recurse=True))
+        lst = map(lambda x: x[0], self.root.items(recurse=True, iostatus=lambda x: True))
         self.assertEqual(lst, 
             ['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
         
@@ -108,31 +97,23 @@ class ContainerTestCase(unittest.TestCase):
         
     def test_bad_get(self):
         try:
-            self.root.get('bogus')
+            x = self.root.bogus
         except AttributeError, err:
-            self.assertEqual(str(err),"root: object has no attribute 'bogus'")
+            self.assertEqual(str(err),"'Container' object has no attribute 'bogus'")
         else:
             self.fail('AttributeError expected')
 
     def test_bad_set(self):
         try:
             self.root.set('bogus', 99)
-        except AttributeError, err:
-            self.assertEqual(str(err),"root: object has no attribute 'bogus'")
+        except TraitError, err:
+            self.assertEqual(str(err),"root: 'bogus' is not an input trait and cannot be set")
         else:
-            self.fail('AttributeError expected')
-
-    def test_bad_getvar(self):
-        try:
-            self.root.getvar('bogus')
-        except AttributeError, err:
-            self.assertEqual(str(err),"root: object has no attribute 'bogus'")
-        else:
-            self.fail('AttributeError expected')
+            self.fail('TraitError expected')
 
     def test_bad_setvar(self):
         try:
-            self.root.setvar('bogus', 99)
+            self.root.bogus = 99
         except AttributeError, err:
             self.assertEqual(str(err),"root: object has no attribute 'bogus'")
         else:

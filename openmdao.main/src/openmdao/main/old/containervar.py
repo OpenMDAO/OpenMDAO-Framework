@@ -4,8 +4,8 @@ __version__ = "0.1"
 
 import copy
 
-from openmdao.main import Variable
-from openmdao.main import Container
+from openmdao.main.api import Variable
+from openmdao.main.api import Container
 from openmdao.main.vartypemap import add_var_type_map
 
 

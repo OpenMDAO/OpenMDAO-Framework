@@ -17,20 +17,23 @@ x is an float variable
 import numpy
 import logging
 
+from enthought.traits.api import Float, Array
+
 from openmdao.main.expreval import translate_expr, ExprEvaluator
-from openmdao.main import Container, Component
-from openmdao.main import ArrayVariable, Float
-from openmdao.main.variable import INPUT
+from openmdao.main.api import Assembly, Container, Component
 
+class A(Container):
+    b = Array(iostatus='in')
 
-top = Container('top', None)
-top.a = Container('a', top)
+    
+class Comp(Component):
+    x = Float(iostatus='in')
+    
+top = Assembly('top', None)
+A('a', top)
 top.a.b = numpy.array([1., 2, 3, 4, 5, 6])
-b = ArrayVariable('b', top.a, INPUT)
-top.comp = Component('comp', top)
+Comp('comp', top)
 top.comp.x = 3.14
-x = Float('x', top.comp, INPUT)
-top.make_public(['a', 'comp'])
 
 # each test is a tuple of the form (input, expected output)
 tests = [

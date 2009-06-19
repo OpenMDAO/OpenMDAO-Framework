@@ -4,17 +4,20 @@ import unittest
 import logging
 from math import sqrt
 
-from openmdao.main import Assembly, Component, Float, String
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float, Str
+
+from openmdao.main.api import Assembly, Component
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 class Adder(Component):
     """Outputs the sum of its two inputs."""
+    
+    x1 = Float(iostatus='in')
+    x2 = Float(iostatus='in')
+    sum = Float(iostatus='out')
+    
     def __init__(self, name, parent):
         super(Adder, self).__init__(name, parent)
-        Float('x1', self, INPUT, default=0.0)
-        Float('x2', self, INPUT, default=0.0)
-        Float('sum', self, OUTPUT, default=0.0)
         self.runcount = 0
         
     def execute(self):
@@ -23,11 +26,14 @@ class Adder(Component):
         
 class ExprComp(Component):
     """Evaluates an expression based on the input x and assigns it to f_x"""
+    
+    x = Float(iostatus='in')
+    f_x = Float(iostatus='out')
+    expr = Str(iostatus='in')
+    
     def __init__(self, name, parent, expr='x'):
         super(ExprComp, self).__init__(name, parent)
-        Float('x', self, INPUT, default=0.0)
-        Float('f_x', self, OUTPUT, default = 0.0)
-        String('expr', self, INPUT, default = expr)
+        self.expr = expr
         self.runcount = 0
         
     def execute(self):
@@ -37,12 +43,15 @@ class ExprComp(Component):
     
 class ExprComp2(Component):
     """Evaluates an expression based on the inputs x & y and assigns it to f_xy"""
+    
+    x = Float(iostatus='in')
+    y = Float(iostatus='in')
+    f_xy = Float(iostatus='out')
+    expr = Str(iostatus='in')
+    
     def __init__(self, name, parent, expr='x'):
         super(ExprComp2, self).__init__(name, parent)
-        Float('x', self, INPUT, default=0.0)
-        Float('y', self, INPUT, default=0.0)
-        Float('f_xy', self, OUTPUT, default = 0.0)
-        String('expr', self, INPUT, default = expr)
+        self.expr = expr
         self.runcount = 0
         
     def execute(self):
@@ -80,11 +89,11 @@ class MultiDriverTestCase(unittest.TestCase):
         # create the first driver
         drv = CONMINdriver('driver1',top)
         drv.maxiters = 30
-        drv.objective.value = 'adder3.sum+50.'
-        drv.design_vars.value = ['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']
+        drv.objective = 'adder3.sum+50.'
+        drv.design_vars = ['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']
         drv.lower_bounds = [-10, -10, -10, -10]
         drv.upper_bounds = [99, 99, 99, 99]
-        drv.constraints.value = [
+        drv.constraints = [
             'comp1.x**2 + comp2.x**2 + comp3.x**2 + comp4.x**2 + comp1.x-comp2.x+comp3.x-comp4.x-8.0',
             'comp1.x**2 + 2.*comp2.x**2 + comp3.x**2 + 2.*comp4.x**2 - comp1.x - comp4.x -10.',
             '2.0*comp1.x**2 + comp2.x**2 + comp3.x**2 + 2.0*comp1.x - comp2.x - comp4.x -5.0',
@@ -121,11 +130,11 @@ class MultiDriverTestCase(unittest.TestCase):
         self.top.connect('comp1a.f_x', 'comp2a.x')
         drv = CONMINdriver('driver1a',self.top)
         drv.maxiters = 40
-        drv.objective.value = 'comp2a.f_x'
-        drv.design_vars.value = ['comp1a.x']
+        drv.objective = 'comp2a.f_x'
+        drv.design_vars = ['comp1a.x']
         drv.lower_bounds = [0]
         drv.upper_bounds = [99]
-        drv.constraints.value = ['driver1.objective.refvalue'] # this just forces driver1 to run first
+        drv.constraints = ['driver1.objective.refvalue'] # this just forces driver1 to run first
         self.top.run()
         self.assertAlmostEqual(self.opt_objective, 
                                self.top.driver1.objective.refvalue, places=2)
@@ -169,16 +178,16 @@ class MultiDriverTestCase(unittest.TestCase):
         # create the inner driver
         drv1 = CONMINdriver('driver1',self.top)
         drv1.maxiters = 30
-        drv1.objective.value = 'comp3.f_xy'
-        drv1.design_vars.value = ['comp3.y']
+        drv1.objective = 'comp3.f_xy'
+        drv1.design_vars = ['comp3.y']
         drv1.lower_bounds = [-50]
         drv1.upper_bounds = [50]
         
         # create the outer driver
         drv2 = CONMINdriver('driver2',self.top)
         drv2.maxiters = 100
-        drv2.objective.value = 'comp4.f_xy'
-        drv2.design_vars.value = ['comp1.x']
+        drv2.objective = 'comp4.f_xy'
+        drv2.design_vars = ['comp1.x']
         drv2.lower_bounds = [-50]
         drv2.upper_bounds = [50]
         

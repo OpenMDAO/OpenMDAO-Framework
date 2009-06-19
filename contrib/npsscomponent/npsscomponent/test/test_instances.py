@@ -12,9 +12,9 @@ import unittest
 
 from numpy.testing import assert_equal
 
-from openmdao.main import Assembly, Component, Container, ArrayVariable, Bool, \
-                          FileVariable, Float, Int, String, StringList
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float, Int, Str, ListStr, Bool, Array
+
+from openmdao.main.api import Assembly, Component, Container, FileVariable
 from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
@@ -31,26 +31,26 @@ class Source(Component):
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
 
-        Bool('b', self, OUTPUT, default=False)
-        Float('f', self, OUTPUT, default=0.)
-        ArrayVariable('f1d', self, OUTPUT, entry_type=float, num_dims=1,
+        Bool('b', self, iostatus='out', default=False)
+        Float('f', self, iostatus='out', default=0.)
+        Array('f1d', self, iostatus='out', entry_type=float, num_dims=1,
                       default=[])
-        ArrayVariable('f2d', self, OUTPUT, entry_type=float, num_dims=2,
+        Array('f2d', self, iostatus='out', entry_type=float, num_dims=2,
                       default=[[]])
-        ArrayVariable('f3d', self, OUTPUT, entry_type=float, num_dims=3,
+        Array('f3d', self, iostatus='out', entry_type=float, num_dims=3,
                       default=[[[]]])
-        Int('i', self, OUTPUT, default=0)
-        ArrayVariable('i1d', self, OUTPUT, entry_type=int, num_dims=1,
+        Int('i', self, iostatus='out', default=0)
+        Array('i1d', self, iostatus='out', entry_type=int, num_dims=1,
                       default=[])
-        ArrayVariable('i2d', self, OUTPUT, entry_type=int, num_dims=2,
+        Array('i2d', self, iostatus='out', entry_type=int, num_dims=2,
                       default=[[]])
-        String('s', self, OUTPUT, default='')
-        StringList('s1d', self, OUTPUT, default=[])
+        String('s', self, iostatus='out', default='')
+        StringList('s1d', self, iostatus='out', default=[])
 
-        StringList('text_data', self, INPUT, default=[])
-        ArrayVariable('binary_data', self, INPUT, float, default=[])
-        FileVariable('text_file', self, OUTPUT, default='source.txt')
-        FileVariable('binary_file', self, OUTPUT, default='source.bin',
+        StringList('text_data', self, iostatus='in', default=[])
+        Array('binary_data', self, iostatus='in', float, default=[])
+        FileVariable('text_file', self, iostatus='out', default='source.txt')
+        FileVariable('binary_file', self, iostatus='out', default='source.bin',
                      metadata={'binary':True})
 
         SourceData(name='sub', parent=self)
@@ -71,21 +71,21 @@ class SourceData(Container):
 
     def __init__(self, name='SourceData', *args, **kwargs):
         super(SourceData, self).__init__(name, *args, **kwargs)
-        Bool('b', self, OUTPUT, default=False)
-        Float('f', self, OUTPUT, default=0.)
-        ArrayVariable('f1d', self, OUTPUT, entry_type=float, num_dims=1,
+        Bool('b', self, iostatus='out', default=False)
+        Float('f', self, iostatus='out', default=0.)
+        Array('f1d', self, iostatus='out', entry_type=float, num_dims=1,
                       default=[])
-        ArrayVariable('f2d', self, OUTPUT, entry_type=float, num_dims=2,
+        Array('f2d', self, iostatus='out', entry_type=float, num_dims=2,
                       default=[[]])
-        ArrayVariable('f3d', self, OUTPUT, entry_type=float, num_dims=3,
+        Array('f3d', self, iostatus='out', entry_type=float, num_dims=3,
                       default=[[[]]])
-        Int('i', self, OUTPUT, default=0)
-        ArrayVariable('i1d', self, OUTPUT, entry_type=int, num_dims=1,
+        Int('i', self, iostatus='out', default=0)
+        Array('i1d', self, iostatus='out', entry_type=int, num_dims=1,
                       default=[])
-        ArrayVariable('i2d', self, OUTPUT, entry_type=int, num_dims=2,
+        Array('i2d', self, iostatus='out', entry_type=int, num_dims=2,
                       default=[[]])
-        String('s', self, OUTPUT, default='')
-        StringList('s1d', self, OUTPUT, default=[])
+        String('s', self, iostatus='out', default='')
+        StringList('s1d', self, iostatus='out', default=[])
 
 
 class Passthrough(NPSScomponent):
@@ -99,17 +99,17 @@ class Passthrough(NPSScomponent):
 
         # Manual interface variable creation.
         # (skip 'f_in' to exercise connect().)
-        Bool('b_in', self, INPUT)
-        ArrayVariable('f1d_in', self, INPUT, entry_type=float, num_dims=1)
-        ArrayVariable('f2d_in', self, INPUT, entry_type=float, num_dims=2)
-        ArrayVariable('f3d_in', self, INPUT, entry_type=float, num_dims=3)
-        Int('i_in', self, INPUT, default=0)
-        ArrayVariable('i1d_in', self, INPUT, entry_type=int, num_dims=1)
-        ArrayVariable('i2d_in', self, INPUT, entry_type=int, num_dims=2)
-        String('s_in', self, INPUT)
-        StringList('s1d_in', self, INPUT)
-        FileVariable('text_in', self, INPUT, ref_name='text_in.filename')
-        FileVariable('binary_in', self, INPUT, ref_name='binary_in.filename')
+        Bool('b_in', self, iostatus='in')
+        Array('f1d_in', self, iostatus='in', entry_type=float, num_dims=1)
+        Array('f2d_in', self, iostatus='in', entry_type=float, num_dims=2)
+        Array('f3d_in', self, iostatus='in', entry_type=float, num_dims=3)
+        Int('i_in', self, iostatus='in', default=0)
+        Array('i1d_in', self, iostatus='in', entry_type=int, num_dims=1)
+        Array('i2d_in', self, iostatus='in', entry_type=int, num_dims=2)
+        String('s_in', self, iostatus='in')
+        StringList('s1d_in', self, iostatus='in')
+        FileVariable('text_in', self, iostatus='in', ref_name='text_in.filename')
+        FileVariable('binary_in', self, iostatus='in', ref_name='binary_in.filename')
 
         # Automagic interface variable creation (not for Bool though).
         # (skip 'f_out' to exercise connect().)
@@ -127,7 +127,7 @@ class Passthrough(NPSScomponent):
             ('binary_out', '', OUTPUT)])
 
         # Sub-container needs Bools explicitly declared.
-        Bool('sub.b_in', self, INPUT)
+        Bool('sub.b_in', self, iostatus='in')
         Bool('sub.b_out', self, OUTPUT)
 
 
@@ -137,26 +137,26 @@ class Sink(Component):
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
 
-        Bool('b', self, INPUT, default=False)
-        Float('f', self, INPUT, default=0.)
-        ArrayVariable('f1d', self, INPUT, entry_type=float, num_dims=1,
+        Bool('b', self, iostatus='in', default=False)
+        Float('f', self, iostatus='in', default=0.)
+        Array('f1d', self, iostatus='in', entry_type=float, num_dims=1,
                       default=[])
-        ArrayVariable('f2d', self, INPUT, entry_type=float, num_dims=2,
+        Array('f2d', self, iostatus='in', entry_type=float, num_dims=2,
                       default=[[]])
-        ArrayVariable('f3d', self, INPUT, entry_type=float, num_dims=3,
+        Array('f3d', self, iostatus='in', entry_type=float, num_dims=3,
                       default=[[[]]])
-        Int('i', self, INPUT, default=0)
-        ArrayVariable('i1d', self, INPUT, entry_type=int, num_dims=1,
+        Int('i', self, iostatus='in', default=0)
+        Array('i1d', self, iostatus='in', entry_type=int, num_dims=1,
                       default=[])
-        ArrayVariable('i2d', self, INPUT, entry_type=int, num_dims=2,
+        Array('i2d', self, iostatus='in', entry_type=int, num_dims=2,
                       default=[[]])
-        String('s', self, INPUT, default='')
-        StringList('s1d', self, INPUT, default=[])
+        String('s', self, iostatus='in', default='')
+        StringList('s1d', self, iostatus='in', default=[])
 
-        StringList('text_data', self, OUTPUT, default=[])
-        ArrayVariable('binary_data', self, OUTPUT, float, default=[])
-        FileVariable('text_file', self, INPUT, default='sink.txt')
-        FileVariable('binary_file', self, INPUT, default='sink.bin')
+        StringList('text_data', self, iostatus='out', default=[])
+        Array('binary_data', self, iostatus='out', float, default=[])
+        FileVariable('text_file', self, iostatus='in', default='sink.txt')
+        FileVariable('binary_file', self, iostatus='in', default='sink.bin')
 
         SinkData(name='sub', parent=self)
 
@@ -176,21 +176,21 @@ class SinkData(Container):
 
     def __init__(self, name='SinkData', *args, **kwargs):
         super(SinkData, self).__init__(name, *args, **kwargs)
-        Bool('b', self, INPUT, default=False)
-        Float('f', self, INPUT, default=0.)
-        ArrayVariable('f1d', self, INPUT, entry_type=float, num_dims=1,
+        Bool('b', self, iostatus='in', default=False)
+        Float('f', self, iostatus='in', default=0.)
+        Array('f1d', self, iostatus='in', entry_type=float, num_dims=1,
                       default=[])
-        ArrayVariable('f2d', self, INPUT, entry_type=float, num_dims=2,
+        Array('f2d', self, iostatus='in', entry_type=float, num_dims=2,
                       default=[[]])
-        ArrayVariable('f3d', self, INPUT, entry_type=float, num_dims=3,
+        Array('f3d', self, iostatus='in', entry_type=float, num_dims=3,
                       default=[[[]]])
-        Int('i', self, INPUT, default=0)
-        ArrayVariable('i1d', self, INPUT, entry_type=int, num_dims=1,
+        Int('i', self, iostatus='in', default=0)
+        Array('i1d', self, iostatus='in', entry_type=int, num_dims=1,
                       default=[])
-        ArrayVariable('i2d', self, INPUT, entry_type=int, num_dims=2,
+        Array('i2d', self, iostatus='in', entry_type=int, num_dims=2,
                       default=[[]])
-        String('s', self, INPUT, default='')
-        StringList('s1d', self, INPUT, default=[])
+        String('s', self, iostatus='in', default='')
+        StringList('s1d', self, iostatus='in', default=[])
 
 
 class Model(Assembly):
@@ -212,7 +212,7 @@ class Model(Assembly):
         comp, rest = dst_path.split('.', 1)
         dst_comp = getattr(self, comp)
         if rest.find('.') > 0:
-            dst_path = self.hoist(dst_comp, rest, INPUT)
+            dst_path = self.hoist(dst_comp, rest, iostatus='in')
         else:
             try:
                 dst_comp.getvar(rest)
