@@ -128,11 +128,10 @@ class NPSSTestCase(unittest.TestCase):
         badfile = os.path.join(directory, 'test_load_save.py')
         try:
             self.npss = NPSScomponent.load_from_egg(badfile)
-        except RuntimeError, exc:
-            self.assertEqual(str(exc).startswith('No distributions found in'),
-                                                 True)
+        except ValueError, exc:
+            self.assertEqual(str(exc).endswith('is not an egg/zipfile.'), True)
         else:
-            self.fail('Expected RuntimeError')
+            self.fail('Expected ValueError')
 
     def test_nomodel(self):
         logging.debug('')

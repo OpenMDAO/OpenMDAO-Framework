@@ -31,7 +31,6 @@ import inspect
 import modulefinder
 import os
 import pkg_resources
-import platform
 import shutil
 import site
 import sys
@@ -54,6 +53,9 @@ SAVE_PICKLE  = 3
 SAVE_CPICKLE = 4
 
 EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
+
+# Saved modulefinder results, keyed by module path.
+_SAVED_FINDINGS = {}
 
 
 class IMHolder(object):
@@ -139,9 +141,7 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
     if not os.access(dst_dir, os.W_OK):
         raise IOError("Can't save to '%s', no write permission" % dst_dir)
 
-    py_version = platform.python_version_tuple()
-    py_version = '%s.%s' % (py_version[0], py_version[1])
-    egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
+    egg_name = eggwriter.egg_filename(name, version)
     logger.debug('Saving to %s in %s...', egg_name, orig_dir)
 
     # Put instance methods into pickleable form.
@@ -184,7 +184,9 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
                 # If orig_dir isn't src_dir, copy local modules from orig_dir.
                 if orig_dir != src_dir:
                     for path in local_modules:
-                        shutil.copy(orig_dir+os.sep+path, name)
+                        if not os.path.isabs(path):
+                            path = os.path.join(orig_dir, path)
+                        shutil.copy(path, name)
 
                 # If any distributions couldn't be found, record them in a file.
                 if missing_modules:
@@ -270,39 +272,44 @@ def _fix_instancemethods(root, previsited=None):
 
     def _fix_im_recurse(obj, visited):
         """ Replace recursively. """
-        for key, val in obj.__dict__.items():
-            if val is None or id(val) in visited:
-                continue
-            visited.append(id(val))
-            if inspect.ismethod(val):
-                obj.__dict__[key] = IMHolder(val)
-            elif isinstance(val, dict):
-                for key2, obj2 in val.items():
-                    if obj2 is None or id(obj2) in visited:
-                        continue
-                    visited.append(id(obj2))
-                    if inspect.ismethod(obj2):
-                        val[key2] = IMHolder(obj2)
-                    elif hasattr(obj2, '__dict__'):
-                        _fix_im_recurse(obj2, visited)
-            elif isinstance(val, list) or isinstance(val, set):
-                for i, obj2 in enumerate(val):
-                    if obj2 is None or id(obj2) in visited:
-                        continue
-                    visited.append(id(obj2))
-                    if inspect.ismethod(obj2):
-                        val[i] = IMHolder(obj2)
-                    elif hasattr(obj2, '__dict__'):
-                        _fix_im_recurse(obj2, visited)
-            elif hasattr(val, '__dict__'):
-                _fix_im_recurse(val, visited)
+        visited.add(id(obj))
+        if isinstance(obj, dict):
+            for key2, obj2 in obj.items():
+                if obj2 is None or id(obj2) in visited:
+                    continue
+                if inspect.ismethod(obj2):
+                    obj[key2] = IMHolder(obj2)
+                else:
+                    _fix_im_recurse(obj2, visited)
+        elif isinstance(obj, list) or isinstance(obj, set):
+            for i, obj2 in enumerate(obj):
+                if obj2 is None or id(obj2) in visited:
+                    continue
+                if inspect.ismethod(obj2):
+                    obj[i] = IMHolder(obj2)
+                else:
+                    _fix_im_recurse(obj2, visited)
+        elif isinstance(obj, tuple):
+            for obj2 in obj:
+                if obj2 is None or id(obj2) in visited:
+                    continue
+                if inspect.ismethod(obj2):
+                    raise RuntimeError('_fix_im_recurse: tuple %r contains'
+                                       ' reference to instance method %r'
+                                       % (obj, obj2))
+                else:
+                    _fix_im_recurse(obj2, visited)
+        elif hasattr(obj, '__dict__'):
+            _fix_im_recurse(obj.__dict__, visited)
 
+    visited = set()
     if previsited is None:
-        visited = []
+        pass
     elif isinstance(previsited, list):
-        visited = [id(obj) for obj in previsited]
+        for obj in previsited:
+            visited.add(id(obj))
     else:
-        visited = [id(previsited)]
+        visited.add(id(previsited))
     _fix_im_recurse(root, visited)
 
 
@@ -311,39 +318,44 @@ def _restore_instancemethods(root, previsited=None):
 
     def _restore_im_recurse(obj, visited):
         """ Restore recursively. """
-        for key, val in obj.__dict__.items():
-            if val is None or id(val) in visited:
-                continue
-            visited.append(id(val))
-            if isinstance(val, IMHolder):
-                obj.__dict__[key] = val.method()
-            elif isinstance(val, dict):
-                for key2, obj2 in val.items():
-                    if obj2 is None or id(obj2) in visited:
-                        continue
-                    visited.append(id(obj2))
-                    if isinstance(obj2, IMHolder):
-                        val[key2] = obj2.method()
-                    elif hasattr(obj2, '__dict__'):
-                        _restore_im_recurse(obj2, visited)
-            elif isinstance(val, list) or isinstance(val, set):
-                for i, obj2 in enumerate(val):
-                    if obj2 is None or id(obj2) in visited:
-                        continue
-                    visited.append(id(obj2))
-                    if isinstance(obj2, IMHolder):
-                        val[i] = obj2.method()
-                    elif hasattr(obj2, '__dict__'):
-                        _restore_im_recurse(obj2, visited)
-            elif hasattr(val, '__dict__'):
-                _restore_im_recurse(val, visited)
+        visited.add(id(obj))
+        if isinstance(obj, dict):
+            for key2, obj2 in obj.items():
+                if obj2 is None or id(obj2) in visited:
+                    continue
+                if isinstance(obj2, IMHolder):
+                    obj[key2] = obj2.method()
+                else:
+                    _restore_im_recurse(obj2, visited)
+        elif isinstance(obj, list) or isinstance(obj, set):
+            for i, obj2 in enumerate(obj):
+                if obj2 is None or id(obj2) in visited:
+                    continue
+                if isinstance(obj2, IMHolder):
+                    obj[i] = obj2.method()
+                else:
+                    _restore_im_recurse(obj2, visited)
+        elif isinstance(obj, tuple):
+            for obj2 in obj:
+                if obj2 is None or id(obj2) in visited:
+                    continue
+                if isinstance(obj2, IMHolder):
+                    raise RuntimeError('_restore_im_recurse: tuple %r contains'
+                                       ' reference to IMHolder %r'
+                                       % (obj, obj2))
+                else:
+                    _restore_im_recurse(obj2, visited)
+        elif hasattr(obj, '__dict__'):
+            _restore_im_recurse(obj.__dict__, visited)
 
+    visited = set()
     if previsited is None:
-        visited = []
+        pass
     elif isinstance(previsited, list):
-        visited = [id(obj) for obj in previsited]
+        for obj in previsited:
+            visited.add(id(obj))
     else:
-        visited = [id(previsited)]
+        visited.add(id(previsited))
     _restore_im_recurse(root, visited)
 
 
@@ -376,13 +388,14 @@ def _get_objects(root, logger):
         for obj in state:
             if id(obj) in visited:
                 continue
-            visited.append(id(obj))
+            visited.add(id(obj))
             objs.append(obj)
             if not inspect.isclass(obj):
                 _recurse_get_objects(obj, objs, visited, logger)
 
     objs = [root]
-    visited = [id(root)]
+    visited = set()
+    visited.add(id(root))
     _recurse_get_objects(root, objs, visited, logger)
     return objs
 
@@ -412,7 +425,9 @@ def _check_objects(objs, logger):
 #            logger.error('    %s', exc)
 #            errors += 1
     if errors:
-        raise RuntimeError("Can't save, %d objects cannot be pickled." % errors)
+        plural = 's' if errors > 1 else ''
+        raise RuntimeError("Can't save, %d object%s cannot be pickled."
+                           % (errors, plural))
 
 
 def _fix_objects(objs):
@@ -544,18 +559,27 @@ def _get_distributions(objs, logger):
             if not os.path.exists(path):
                 logger.warning("    module path '%s' does not exist", path)
                 continue
-            logger.debug("    analyzing '%s'...", path)
-            finder = modulefinder.ModuleFinder()
-            try:
-                finder.run_script(path)
-            except Exception:
-                logger.exception("ModuleFinder for '%s'" % path)
-            else:
-                _process_found_modules(finder, modules, distributions, prefixes,
-                                       local_modules, missing, logger)
 
-    distributions = sorted(distributions,
-                           key=lambda dist: dist.project_name)
+            finder_items = None
+            if path in _SAVED_FINDINGS.keys():
+                logger.debug("    reusing analysis of '%s'", path)
+                finder_items = _SAVED_FINDINGS[path]
+            else:
+                logger.debug("    analyzing '%s'...", path)
+                finder = modulefinder.ModuleFinder()
+                try:
+                    finder.run_script(path)
+                except Exception:
+                    logger.exception("ModuleFinder for '%s'" % path)
+                else:
+                    finder_items = finder.modules.items()
+                    _SAVED_FINDINGS[path] = finder_items
+
+            if finder_items is not None:
+                _process_found_modules(finder_items, modules, distributions,
+                                       prefixes, local_modules, missing, logger)
+
+    distributions = sorted(distributions, key=lambda dist: dist.project_name)
     logger.debug('    required distributions:')
     for dist in distributions:
         logger.debug('        %s %s', dist.project_name, dist.version)
@@ -578,18 +602,17 @@ def _process_egg(path, distributions, prefixes, logger):
             prefixes.append(loc)
 
 
-def _process_found_modules(finder, modules, distributions, prefixes,
+def _process_found_modules(finder_items, modules, distributions, prefixes,
                            local_modules, missing, logger):
     """ Use ModuleFinder data to update distributions and local_modules. """
     working_set = pkg_resources.WorkingSet()
     site_lib = os.path.dirname(site.__file__)
     site_pkg = site_lib+os.sep+'site-packages'
-    py_version = 'python%d.%d' % (sys.version_info[0], sys.version_info[1])
+    py_version = 'python%s' % sys.version[:3]
     cwd = os.getcwd()
     not_found = set()
 
-    for name, module in sorted(finder.modules.items(),
-                               key=lambda item: item[0]):
+    for name, module in sorted(finder_items, key=lambda item: item[0]):
         if name in modules:
             continue
         if name != '__main__':
@@ -640,7 +663,7 @@ def _process_found_modules(finder, modules, distributions, prefixes,
                     if not dirpath.endswith('site-packages'):
                         not_found.add(dirpath)
                         path = dirpath
-                    logger.warning('        no distribution found for %s', path)
+                    logger.warning('No distribution found for %s', path)
                     missing.add((name, path))
 
 
@@ -667,7 +690,6 @@ def _write_loader_script(path, state_name):
     """ Write script used for loading object(s). """
     out = open(path, 'w')
     out.write("""\
-import logging
 import os
 import sys
 if not '.' in sys.path:
@@ -693,23 +715,6 @@ def load():
         return Component.load(state_name, SAVE_LIBYAML)
     raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
                        state_name)
-
-def eggsecutable():
-    '''Unpack egg.'''
-    install = os.environ.get('OPENMDAO_INSTALL', '1')
-    if install:
-        install = int(install)
-    debug = os.environ.get('OPENMDAO_INSTALL_DEBUG', '1')
-    if debug:
-        debug = int(debug)
-    if debug:
-        enable_console()
-        logging.getLogger().setLevel(logging.DEBUG)
-    try:
-        Component.load_from_egg(sys.path[0], install=install)
-    except Exception, exc:
-        print str(exc)
-        sys.exit(1)
 
 def main():
     '''Load state and run.'''
@@ -773,30 +778,11 @@ def load_from_egg(filename, install=True, logger=None):
     logger.debug('Loading from %s in %s...', filename, os.getcwd())
     if not os.path.exists(filename):
         raise ValueError("'%s' not found." % filename)
-
-    # Check for a distribution.
-    distributions = \
-        [dist for dist in pkg_resources.find_distributions(filename, only=True)]
-    if not distributions:
-        raise RuntimeError("No distributions found in '%s'." % filename)
-
-    dist = distributions[0]
-    logger.debug('    project_name: %s', dist.project_name)
-    logger.debug('    version: %s', dist.version)
-    logger.debug('    py_version: %s', dist.py_version)
-    logger.debug('    platform: %s', dist.platform)
-    logger.debug('    requires:')
-    for req in dist.requires():
-        logger.debug('        %s', req)
-    logger.debug('    entry points:')
-    maps = dist.get_entry_map()
-    for group in maps.keys():
-        logger.debug('        group %s:' % group)
-        for name in maps[group]:
-            logger.debug('            %s', name)
+    if not zipfile.is_zipfile(filename):
+        raise ValueError("'%s' is not an egg/zipfile." % filename)
 
     # Extract files.
-    archive = zipfile.ZipFile(filename, 'r')
+    archive = zipfile.ZipFile(filename, 'r', allowZip64=True)
     name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
     logger.debug("    name '%s'", name)
 
@@ -823,6 +809,28 @@ def load_from_egg(filename, install=True, logger=None):
         out = open(path, 'w')
         out.write(archive.read(info.filename))
         out.close()
+
+    # Create distribution from extracted files.
+    location = os.getcwd()
+    egg_info = os.path.join(location, name, 'EGG-INFO')
+    provider = pkg_resources.PathMetadata(location, egg_info)
+    dist = pkg_resources.Distribution.from_location(location,
+                                                    os.path.basename(filename),
+                                                    provider)
+
+    logger.debug('    project_name: %s', dist.project_name)
+    logger.debug('    version: %s', dist.version)
+    logger.debug('    py_version: %s', dist.py_version)
+    logger.debug('    platform: %s', dist.platform)
+    logger.debug('    requires:')
+    for req in dist.requires():
+        logger.debug('        %s', req)
+    logger.debug('    entry points:')
+    maps = dist.get_entry_map()
+    for group in maps.keys():
+        logger.debug('        group %s:' % group)
+        for entry_pt in maps[group].values():
+            logger.debug('            %s', entry_pt)
 
     if install:
         # Locate the installation (eggs) directory.
@@ -859,7 +867,9 @@ def load_from_egg(filename, install=True, logger=None):
                 errors += 1
         inp.close()
         if errors:
-            raise RuntimeError("Couldn't import %d 'missing' modules." % errors)
+            plural = 's' if errors > 1 else ''
+            raise RuntimeError("Couldn't import %d 'missing' module%s."
+                               % (errors, plural))
 
     # Invoke the top object's loader.
     info = dist.get_entry_info('openmdao.top', 'top')
@@ -878,12 +888,12 @@ def load_from_egg(filename, install=True, logger=None):
         return loader()
     except pkg_resources.DistributionNotFound, exc:
         logger.error('Distribution not found: %s', exc)
-        visited = []
+        visited = set()
         _check_requirements(dist, visited, logger)
         raise exc
     except pkg_resources.VersionConflict, exc:
         logger.error('Version conflict: %s', exc)
-        visited = []
+        visited = set()
         _check_requirements(dist, visited, logger)
         raise exc
     except Exception, exc:
@@ -895,7 +905,7 @@ def load_from_egg(filename, install=True, logger=None):
 
 def _check_requirements(dist, visited, logger, level=1):
     """ Display requirements and note conflicts. """
-    visited.append(dist)
+    visited.add(dist)
     indent  = '    ' * level
     indent2 = '    ' * (level + 1)
     working_set = pkg_resources.WorkingSet()
@@ -924,6 +934,22 @@ def load(instream, format=SAVE_CPICKLE, logger=None):
         logger = NullLogger()
 
     if isinstance(instream, basestring):
+        if not os.path.exists(instream) and not os.path.isabs(instream):
+            # Try to locate via pkg_resources.
+            dot = instream.rfind('.')
+            if dot < 0:
+                raise ValueError("Bad state filename '%s'." % instream)
+            module = instream[:dot]
+            path = pkg_resources.resource_filename(module, instream)
+            if not os.path.exists(path):
+                raise IOError("State file '%s' not found." % instream)
+            instream = path
+
+            # The state file assumes a sys.path.
+            module_dir = os.path.dirname(path)
+            if not module_dir in sys.path:
+                sys.path.append(module_dir)
+
         if format is SAVE_CPICKLE or format is SAVE_PICKLE:
             mode = 'rb'
         else:
