@@ -28,7 +28,7 @@ def _trans_lhs(strng, loc, tok, exprobj):
         scname = 'scope'
     else:
         scname = 'scope.parent'
-        if hasattr(scope, tok[0]):
+        if scope.trait(tok[0]) is not None:
             scope.warning("attribute '"+tok[0]+"' is private"+
                           " so a public value in the parent is"+
                           " being used instead (if found)")
@@ -81,13 +81,13 @@ def _trans_fancyname(strng, loc, tok, exprobj):
     
     if scope.contains(tok[0]):
         scname = 'scope'
-        if hasattr(scope, tok[0]):
+        if scope.trait(tok[0]) is not None:
             return tok  # use name unmodified for faster local access
     elif tok[0] == '_local_setter': # used in assigment statements
         return tok
     else:
         scname = 'scope.parent'
-        if hasattr(scope, tok[0]):
+        if scope.trait(tok[0]) is not None:
             scope.warning("attribute '%s' is private" % tok[0]+
                           " so a public value in the parent is"+
                           " being used instead (if found)")

@@ -44,7 +44,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 import networkx as nx
 from enthought.traits.api import HasTraits, implements, Str, Missing, TraitError,\
-                                 BaseStr
+                                 BaseStr, Undefined, push_exception_handler, on_trait_change
 
 from openmdao.main.log import Logger, LOG_DEBUG
 from openmdao.main.interfaces import IContainer
@@ -58,6 +58,13 @@ EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
 # regex to check for valid names.  Added '.' as allowed because
 # npsscomponent uses it...
 _namecheck_rgx = re.compile('([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
+
+# this causes any exceptions occurring in trait handlers to be re-raised. Without
+# this, the default behavior is for the exception to be logged and not re-raised.
+push_exception_handler(handler = lambda o,t,ov,nv: None,
+                       reraise_exceptions = True,
+                       main = True,
+                       locked = True )
 
 class IMHolder(object):
     """Holds an instancemethod object in a pickleable form."""
@@ -140,6 +147,8 @@ class Container(HasTraits):
                                           # or @on_trait_change decorator won't work!
         self.parent = parent
         self.name = name
+        self._valid_dict = {}  # contains validity flag for each io Trait
+        self._dests = {}
         
         if doc is not None:
             self.__doc__ = doc
@@ -153,6 +162,56 @@ class Container(HasTraits):
            isinstance(parent, Container) and add_to_parent:
             parent.add_child(self)
             
+    # call this if any trait having 'iostatus' metadata is changed    
+    @on_trait_change('+iostatus') 
+    def _io_trait_changed(self, obj, name, old, new):
+        # setting old to Undefined is a kludge to bypass the destination check
+        # when we call this directly from Assembly as part of setting this attribute
+        # from an existing connection.
+        if self.trait(name).iostatus == 'in':
+            if old is not Undefined and name in self._dests:
+                self.raise_exception(
+                    "'%s' is already connected to source '%s' and cannot be directly set"%
+                    (name, self._dests[name]), TraitError)
+            self._execute_needed = True
+            if self.get_valid(name):  # if var is not already invalid
+                self.invalidate_deps([name], notify_parent=True)
+
+    def get_valid(self, name):
+        def _valid(self, name):
+            tup = name.split('.',1)
+            if len(tup) > 1:
+                return _valid(getattr(self, tup[0]), tup[1])
+            else:
+                valid = self._valid_dict.get(name, Missing)
+                if valid is Missing:
+                    if self.trait(name) and self.trait(name).iostatus:
+                        self._valid_dict[name] = False
+                        return False
+                    else:
+                        self.raise_exception("cannot set valid flag of '%s' because it's not an io trait."%
+                                             name, RuntimeError)
+                else:
+                    return valid
+            
+        if isinstance(name, basestring): 
+            return _valid(self, name)
+        else:
+            return [_valid(self,v) for v in name]
+                
+        
+    
+    def set_valid(self, name, valid):
+        if name in self._valid_dict:
+            self._valid_dict[name] = valid
+        else:
+            trait = self.trait(name)
+            if trait and trait.iostatus:
+                self._valid_dict[name] = valid
+            else:
+                self.raise_exception("cannot set valid flag of '%s' because it's not an io trait."%
+                                     name, RuntimeError)
+
     def add_child(self, obj):
         """Add a Container object to this Container, and make it a member of 
         this Container's public interface.
@@ -215,12 +274,11 @@ class Container(HasTraits):
         """
         for name, trait in self.traits(**metadata).items():
             obj = getattr(self, name)
-            if isinstance(obj, Container) or trait.iostatus != None:
+            if trait.iostatus is not None or isinstance(obj, Container):
                 yield (name, obj)
-            if recurse:
-                if isinstance(obj, Container):
-                    for chname, child in obj._items(visited, recurse, **metadata):
-                        yield ('.'.join([name, chname]), child)                   
+            if recurse and isinstance(obj, Container):
+                for chname, child in obj._items(visited, recurse, **metadata):
+                    yield ('.'.join([name, chname]), child)                   
     
     
     def get_pathname(self, rel_to_scope=None):
@@ -309,16 +367,34 @@ class Container(HasTraits):
                 return _array_get(getattr(obj, name), index)
 
      
-    def _check_trait_settable(self, name):
+    def add_destination(self, name, source):
+        """Mark an io trait as a destination, which will prevent it from being
+        set directly or connected to another source."""
+        self.info('adding destination %s', name)
+        if name in self._dests:
+            self.raise_exception("%s is already connected to a source" % 
+                                 name, TraitError)
+        self._dests[name] = source   
+            
+    def remove_destination(self, name):
+        del self._dests[name]    
+            
+    def _check_trait_settable(self, name, source=None):
+        src = self._dests.get(name, None)
         trait = self.trait(name)
         if not trait:
             self.raise_exception("object has no attribute '%s'" % name,
                                  TraitError)
-        if trait.iostatus != 'in':
+        if trait.iostatus != 'in' and src is not None and src != source:
             self.raise_exception("'%s' is not an input trait and cannot be set" %
                                  name, TraitError)
+            
+        if src is not None and src != source:
+            self.raise_exception(
+                "'%s' is connected to source '%s' and cannot be set by source '%s'"%
+                (name,src,source), TraitError)
                     
-    def set(self, path, value, index=None):
+    def set(self, path, value, index=None, source=None):
         """Set the value of the data object specified by the  given path, which
         may contain '.' characters.  If path specifies a Variable, then its
         value attribute will be set to the given value, subject to validation
@@ -342,9 +418,14 @@ class Container(HasTraits):
                     
         tup = path.split('.', 1)
         if len(tup) == 1:
-            self._check_trait_settable(path)
+            self._check_trait_settable(path, source)
             if index is None:
-                setattr(self, path, value)
+                # bypass the callback here and call it manually after 
+                # with a flag to tell it not to check if its a destination
+                newval = self.trait(path).validate(self, path, value)
+                self.__dict__[path] = newval
+                self._io_trait_changed(self, path, Undefined, newval)
+                #setattr(self, path, value)
             else:
                 _array_set(self, path, value, index)
         else:
@@ -1171,7 +1252,7 @@ setuptools.setup(
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output variables.
         In the case of a simple Container, all input variables are predecessors to
-        the Container, and all output variables are successors to the Container.
+        all output variables.
         """
         if self._io_graph is None:
             self._io_graph = nx.DiGraph()
@@ -1180,19 +1261,13 @@ setuptools.setup(
             ins = ['.'.join([name, v]) for v in self.keys(iostatus='in')]
             outs = ['.'.join([name, v]) for v in self.keys(iostatus='out')]
             
-            # add a node for the component
-            io_graph.add_node(name)
-            
             # add nodes for all of the variables
-            for var in ins:
-                io_graph.add_node(var)
-            for var in outs:
-                io_graph.add_node(var)
+            io_graph.add_nodes_from(ins)
+            io_graph.add_nodes_from(outs)
             
-            # specify edges, with all inputs as predecessors to the component node,
-            # and all outputs as successors to the component node
-            io_graph.add_edges_from([(i, name) for i in ins])
-            io_graph.add_edges_from([(name, o) for o in outs])
+            # specify edges, with all inputs as predecessors to all outputs
+            for invar in ins:
+                io_graph.add_edges_from([(invar, o) for o in outs])
         return self._io_graph
     
     # error reporting stuff
@@ -1210,7 +1285,7 @@ setuptools.setup(
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)
-#        self._logger.error(msg)
+        self._logger.error(msg)
         raise exception_class(full_msg)
     
     def exception(self, msg, *args, **kwargs):

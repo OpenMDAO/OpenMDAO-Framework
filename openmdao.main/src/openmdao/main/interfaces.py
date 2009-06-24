@@ -198,7 +198,7 @@ class IAssembly (IComponent):
         outvarpath and invarpath are pathnames relative to enclosing scope.
         """
     
-    def update_inputs(varnames):
+    def update_inputs(compname, varnames):
         """Update the inputs named in varnames."""
 
     

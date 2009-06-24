@@ -207,7 +207,7 @@ class Model(Assembly):
                 src_comp.getvar(rest)
             except AttributeError:
                 src_comp.make_public((rest, '', OUTPUT))
-                self._var_graph.add_node(src_path, data=src_comp.getvar(rest))
+                self._var_graph.add_node(src_path)
 
         comp, rest = dst_path.split('.', 1)
         dst_comp = getattr(self, comp)
@@ -218,7 +218,7 @@ class Model(Assembly):
                 dst_comp.getvar(rest)
             except AttributeError:
                 dst_comp.make_public(rest)
-                self._var_graph.add_node(dst_path, data=dst_comp.getvar(rest))
+                self._var_graph.add_node(dst_path)
 
         super(Model, self).connect(src_path, dst_path)
 

@@ -253,7 +253,7 @@ class Model(Assembly):
                 src_comp.getvar(rest)
             except AttributeError:
                 src_comp.make_public((rest, '', 'out'))
-                self._var_graph.add_node(src_path, data=src_comp.getvar(rest))
+                self._var_graph.add_node(src_path)
 
         comp, rest = dst_path.split('.', 1)
         dst_comp = getattr(self, comp)
@@ -264,7 +264,7 @@ class Model(Assembly):
                 dst_comp.getvar(rest)
             except AttributeError:
                 dst_comp.make_public(rest)
-                self._var_graph.add_node(dst_path, data=dst_comp.getvar(rest))
+                self._var_graph.add_node(dst_path)
 
         super(Model, self).connect(src_path, dst_path)
 
@@ -278,10 +278,10 @@ class Model(Assembly):
             var = comp.getvar(name)
 
         newpath = comp.name+'.'+name
-        if newpath not in self._var_graph.nodes():
+        if newpath not in self._var_graph:
             passthru = var.create_passthru(comp, name)
             comp.make_public(passthru)
-            self._var_graph.add_node(newpath, data=passthru)
+            self._var_graph.add_node(newpath)
         return newpath
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):

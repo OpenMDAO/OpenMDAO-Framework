@@ -11,7 +11,7 @@ import subprocess
 import sys
 import time
 
-from enthought.traits.api import implements, on_trait_change, Str, Missing
+from enthought.traits.api import implements, on_trait_change, Str, Missing, Undefined, TraitError
 
 from openmdao.main.interfaces import IComponent
 from openmdao.main.container import Container
@@ -71,7 +71,6 @@ class Component (Container):
         self._need_check_config = True
         self._execute_needed = True
         self.directory = directory
-        self._valid_dict = {}  # contains validity flag for each io Trait
         
         self._dir_stack = []
         
@@ -101,53 +100,10 @@ class Component (Container):
                         % dirpath, ValueError)
 # pylint: enable-msg=E1101
 
-    # call this if any trait having 'iostatus' metadata is changed    
-    @on_trait_change('+iostatus') 
-    def _io_trait_changed(self, obj, name, old, new):
-        if self.trait(name).iostatus == 'in':
-            self._execute_needed = True
-            if self.get_valid(name):  # if var was not already invalid
-                self.set_valid(name, False)
-                self.invalidate_deps([name], notify_parent=True)
-
-    def get_valid(self, name):
-        def _valid(self, name):
-            tup = name.split('.',1)
-            if len(tup) > 1:
-                return _valid(getattr(self, tup[0]), tup[1])
-            else:
-                valid = self._valid_dict.get(name, Missing)
-                if valid is Missing:
-                    if self.trait(name) and self.trait(name).iostatus:
-                        self._valid_dict[name] = False
-                    else:
-                        self.raise_exception("cannot set valid flag of '%s' because it's not an io trait."%
-                                             name, RuntimeError)
-                    return False
-                else:
-                    return valid
-            
-        if isinstance(name, basestring): 
-            return _valid(self, name)
-        else:
-            return [_valid(self,v) for v in name]
-                
-        
-    
-    def set_valid(self, name, valid):
-        if name in self._valid_dict:
-            self._valid_dict[name] = valid
-        else:
-            if self.trait(name) and self.trait(name).iostatus:
-                self._valid_dict[name] = valid
-            else:
-                self.raise_exception("cannot set valid flag of '%s' because it's not an io trait."%
-                                     name, RuntimeError)
-    
     def check_config (self):
         """Verify that the configuration of this component is correct. This function is
         called once prior to the first execution of this component, and may be called
-        explicitly at other times if desired.
+        explicitly at other times if desired. 
         """
         pass         
     
@@ -163,7 +119,11 @@ class Component (Container):
                                 # so Variable validity doesn't apply. Just execute.
             self._execute_needed = True
         else:
-            self._execute_needed |= self.parent.update_inputs(self.name)
+            invalid_ins = self.list_inputs(valid=False)
+            if len(invalid_ins) > 0:
+                self.info('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
+                self._execute_needed |= self.parent.update_inputs(self.name,
+                                    ['.'.join([self.name, n]) for n in invalid_ins])
     
                             
     def execute (self):
@@ -177,8 +137,10 @@ class Component (Container):
         Overrides of this function must call this version.
         """
         # make our Variables valid again
-        for name in self._valid_dict.keys():
-            self._valid_dict[name] = True
+        for name in self.keys(iostatus='in'): # inputs
+            self.set_valid(name, True)
+        for name in self.keys(iostatus='out'): # outputs
+            self.set_valid(name, True)
         self._execute_needed = False
         
     def run (self, force=False):
@@ -199,9 +161,9 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._execute_needed or force:
-                #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
+                if __debug__: self._logger.info('execute %s' % self.get_pathname())
                 self.execute()
-            self._post_execute()
+                self._post_execute()
         finally:
             self.state = STATE_IDLE
             if self.directory:
@@ -522,6 +484,9 @@ class Component (Container):
 
     def invalidate_deps(self, vars, notify_parent=False):
         """Invalidate all of our valid outputs."""
+        for var in vars:
+            self.set_valid(var, False)
+            
         valid_outs = self.list_outputs(valid=True)
         
         for out in valid_outs:
@@ -529,7 +494,8 @@ class Component (Container):
             
         # TODO: can probably just use Traits notifiers for this stuff too...
         if notify_parent and self.parent and len(valid_outs) > 0:
-            self.parent.invalidate_deps(valid_outs, notify_parent)
+            self.parent.invalidate_deps(['.'.join([self.name,n]) for n in valid_outs], 
+                                        notify_parent)
             
         return valid_outs    
 
