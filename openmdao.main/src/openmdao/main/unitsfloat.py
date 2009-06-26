@@ -11,29 +11,29 @@ from Scientific.Physics.PhysicalQuantities import PhysicalQuantity
 class UnitsFloat(BaseFloat):
     """A Variable wrapper for floats with units"""
     
-    def __init__(self, default_value = None, units=None, **metadata):
+    def __init__(self, default_value = None, **metadata):
         if isinstance(default_value, PhysicalQuantity):
             default_value = PhysicalQuantity(default_value.value, 
                                              defalut_value.units)
         else:
-            if units is None:
+            if 'units' not in metadata:
                 raise TypeError('UnitsFloat must have units defined')
             if default_value is None:
-                defalut_value = 0.0
-            default_value = PhysicalQuantity(float(default_value), units)
+                default_value = 0.0
+            default_value = PhysicalQuantity(float(default_value), 
+                                             metadata['units'])
         super(UnitsFloat, self).__init__(default_value, **metadata)
 
     def validate(self, object, name, value):
         pq = getattr(object,name)
         if isinstance(value, PhysicalQuantity):
             try:
-                return value.inUnitsOf(pq.units)
+                return value.inUnitsOf(pq.getUnitName())
             except TypeError, err:
                 raise TraitError(str(err))
-        else:
-            pq.value = super(UnitsFloat, self).validate(object, name, val) # normal float validation
-            return pq
-        return s
+            
+        pq.value = super(UnitsFloat, self).validate(object, name, value) # normal float validation
+        return pq
     
     #def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
                  #default=UNDEFINED, doc=None, units=UNDEFINED, 

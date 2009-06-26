@@ -207,7 +207,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.create_passthru('comp1.dummy_out','dummy_out_passthru')
         self.asm.run()
         self.assertEqual(self.asm.get('dummy_out_passthru.rval_out'), 75.4*1.5)
-        
+
 #    def test_discon_reconnect_passthru(self):
 #        self.fail('unfinished test')
         
@@ -215,14 +215,14 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('top: top.comp2.rout must be an INPUT variable',
+            self.assertEqual('top: top.comp2.rout must be an input variable',
                              str(err))
         else:
             self.fail('exception expected')
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('top: top.comp1.r must be an OUTPUT variable',
+            self.assertEqual('top: top.comp1.r must be an output variable',
                              str(err))
         else:
             self.fail('exception expected')
@@ -264,7 +264,6 @@ class AssemblyTestCase(unittest.TestCase):
                              " connecting comp2.rout to comp1.r", str(err))
         else:
             self.fail('exception expected')
-
             
     def test_disconnect(self):
         # first, run connected
@@ -272,12 +271,12 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.run()
         self.assertEqual(comp2.r, 1.5)
-        self.asm.set('comp1.r', 3.0)
+        self.asm.comp1.r = 3.0
         self.asm.run()
         self.assertEqual(comp2.r, 4.5)
         
         # now disconnect
-        self.asm.set('comp1.r', 6.0)
+        self.asm.comp1.r = 6.0
         self.asm.disconnect('comp2.r')
         self.asm.run()
         self.assertEqual(comp2.r, 4.5)
@@ -292,17 +291,17 @@ class AssemblyTestCase(unittest.TestCase):
         nest = Assembly('nested', asm)
         Simple('comp1', nest)
         Simple('comp2', nest)
-        nest.create_passthru('comp1.a') # comp1.a has cm units
-        nest.connect('a', 'comp2.b')  # comp2.b has m units
-        self.assertEqual(nest.get('comp1.a'), 4.)
-        self.assertEqual(nest.get('comp2.b'), 5.)
-        nest.set('a', 0.5)
-        self.assertEqual(nest.get('comp1.a'), 0.5)
-        self.assertEqual(nest.get('comp2.b'), 5.)
-        self.assertEqual(nest.getvar('comp2.b').valid, False)
+        nest.create_passthru('comp1.a') 
+        nest.connect('a', 'comp2.b') 
+        self.assertEqual(nest.comp1.a, 4.)
+        self.assertEqual(nest.comp2.b, 5.)
+        nest.a = 0.5
+        self.assertEqual(nest.comp1.a, 0.5)
+        self.assertEqual(nest.comp2.b, 5.)
+        self.assertEqual(nest.comp2.get_valid('b'), False)
         asm.run()
-        self.assertEqual(nest.get('comp1.a'), 0.5)
-        self.assertEqual(nest.get('comp2.b'), 0.005) # check unit conversion
+        self.assertEqual(nest.comp1.a, 0.5)
+        self.assertEqual(nest.comp2.b, 0.5)
         
     def test_connect_2_outs_to_passthru(self):
         asm = Assembly('top')
@@ -320,30 +319,11 @@ class AssemblyTestCase(unittest.TestCase):
  
     def test_discon_not_connected(self):
         self.asm.connect('comp1.rout','comp2.r')
-        try:
-            self.asm.disconnect('comp2.s')
-        except RuntimeError, err:
-            self.assertEqual('top: comp2.s is not connected', str(err))
-        else:
-            self.fail('exception expected')
+        
+        # disconnecting something that isn't connected is ok and shouldn't
+        # raise an exception
+        self.asm.disconnect('comp2.s')
 
-    def test_discon_with_deleted_objs(self):
-        self.asm.add_child(DummyComp('comp3'))
-        self.asm.add_child(DummyComp('comp4'))
-        self.asm.connect('comp1.rout', 'comp2.r')
-        self.asm.connect('comp2.rout', 'comp3.r')
-        self.asm.connect('comp3.rout', 'comp4.r')
-        
-        # this also removes the connection to comp4.r
-        self.asm.remove_child('comp3') 
-        try:
-            self.asm.disconnect('comp4.r')
-        except RuntimeError, err:
-            self.assertEqual(str(err), 'top: comp4.r is not connected')
-        else:            
-            self.fail('exception expected')
-        
-        
     def test_listcon_with_deleted_objs(self):
         self.asm.add_child(DummyComp('comp3'))
         self.asm.connect('comp1.rout', 'comp2.r')

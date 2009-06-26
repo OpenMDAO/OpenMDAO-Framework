@@ -12,9 +12,9 @@ from openmdao.lib.drivers.conmindriver import CONMINdriver
 class Adder(Component):
     """Outputs the sum of its two inputs."""
     
-    x1 = Float(iostatus='in')
-    x2 = Float(iostatus='in')
-    sum = Float(iostatus='out')
+    x1 = Float(0., iostatus='in')
+    x2 = Float(0., iostatus='in')
+    sum = Float(0., iostatus='out')
     
     def __init__(self, name, parent):
         super(Adder, self).__init__(name, parent)
@@ -23,13 +23,14 @@ class Adder(Component):
     def execute(self):
         self.sum = self.x1 + self.x2
         self.runcount += 1
+        self.debug('x1,x2,sum = %s'%[self.x1, self.x2, self.sum])
         
 class ExprComp(Component):
     """Evaluates an expression based on the input x and assigns it to f_x"""
     
-    x = Float(iostatus='in')
-    f_x = Float(iostatus='out')
-    expr = Str(iostatus='in')
+    x = Float(0., iostatus='in')
+    f_x = Float(0., iostatus='out')
+    expr = Str('', iostatus='in')
     
     def __init__(self, name, parent, expr='x'):
         super(ExprComp, self).__init__(name, parent)
@@ -40,14 +41,15 @@ class ExprComp(Component):
         x = self.x
         self.f_x = eval(self.expr)
         self.runcount += 1
+        self.debug('x,f_x = %s'%[self.x, self.f_x])
     
 class ExprComp2(Component):
     """Evaluates an expression based on the inputs x & y and assigns it to f_xy"""
     
-    x = Float(iostatus='in')
-    y = Float(iostatus='in')
-    f_xy = Float(iostatus='out')
-    expr = Str(iostatus='in')
+    x = Float(0., iostatus='in')
+    y = Float(0., iostatus='in')
+    f_xy = Float(0., iostatus='out')
+    expr = Str('', iostatus='in')
     
     def __init__(self, name, parent, expr='x'):
         super(ExprComp2, self).__init__(name, parent)
@@ -59,6 +61,7 @@ class ExprComp2(Component):
         y = self.y
         self.f_xy = eval(self.expr)
         self.runcount += 1
+        self.debug('x,y,f_xy = %s'%[self.x, self.y, self.f_xy])
     
         
 class MultiDriverTestCase(unittest.TestCase):
@@ -104,11 +107,12 @@ class MultiDriverTestCase(unittest.TestCase):
         
 
     def test_one_driver(self):
+        self.top.debug('***** test_one_driver *****')
         self.assertEqual(set(['comp4', 'comp1', 'comp3', 'comp2', 'adder1', 'adder2','adder3']), 
                          self.top.driver1.simple_iteration_set())
         self.top.run()
         self.assertAlmostEqual(self.opt_objective, 
-                               self.top.driver1.objective.refvalue, places=2)
+                               self.top.driver1.objective.evaluate(), places=2)
         self.assertAlmostEqual(self.opt_design_vars[0], 
                                self.top.comp1.x, places=1)
         self.assertAlmostEqual(self.opt_design_vars[1], 
@@ -120,36 +124,40 @@ class MultiDriverTestCase(unittest.TestCase):
         runcount = self.top.adder3.runcount
         
         # verify that driver will run if any of its referenced variables are invalid
-        self.top.set('comp1.x', 99)
+        self.top.comp1.x = 99
         self.top.run()
         self.assertTrue(runcount+2 <= self.top.adder3.runcount)
         
     def test_2_drivers(self):
-        ExprComp('comp1a',self.top, expr='x**2')
-        ExprComp('comp2a',self.top, expr='x-5.0*sqrt(x)')
-        self.top.connect('comp1a.f_x', 'comp2a.x')
-        drv = CONMINdriver('driver1a',self.top)
-        drv.maxiters = 40
-        drv.objective = 'comp2a.f_x'
-        drv.design_vars = ['comp1a.x']
-        drv.lower_bounds = [0]
-        drv.upper_bounds = [99]
-        drv.constraints = ['driver1.objective.refvalue'] # this just forces driver1 to run first
-        self.top.run()
-        self.assertAlmostEqual(self.opt_objective, 
-                               self.top.driver1.objective.refvalue, places=2)
-        self.assertAlmostEqual(self.opt_design_vars[0], 
-                               self.top.comp1.x, places=1)
-        self.assertAlmostEqual(self.opt_design_vars[1], 
-                               self.top.comp2.x, places=2)
-        self.assertAlmostEqual(self.opt_design_vars[2], 
-                               self.top.comp3.x, places=2)
-        self.assertAlmostEqual(self.opt_design_vars[3], 
-                               self.top.comp4.x, places=1)
-        self.assertAlmostEqual(-6.2498054387439232, 
-                               self.top.driver1a.objective.refvalue, places=5)
-        self.assertAlmostEqual(2.4860514783551508, 
-                               self.top.comp1a.x, places=5)
+        self.top.debug('***** test_2_drivers')
+        try:
+            ExprComp('comp1a',self.top, expr='x**2')
+            ExprComp('comp2a',self.top, expr='x-5.0*sqrt(x)')
+            self.top.connect('comp1a.f_x', 'comp2a.x')
+            drv = CONMINdriver('driver1a',self.top)
+            drv.maxiters = 40
+            drv.objective = 'comp2a.f_x'
+            drv.design_vars = ['comp1a.x']
+            drv.lower_bounds = [0]
+            drv.upper_bounds = [99]
+            drv.constraints = ['driver1.objective.evaluate()'] # this just forces driver1 to run first
+            self.top.run()
+            self.assertAlmostEqual(self.opt_objective, 
+                                   self.top.driver1.objective.evaluate(), places=2)
+            self.assertAlmostEqual(self.opt_design_vars[0], 
+                                   self.top.comp1.x, places=1)
+            self.assertAlmostEqual(self.opt_design_vars[1], 
+                                   self.top.comp2.x, places=2)
+            self.assertAlmostEqual(self.opt_design_vars[2], 
+                                   self.top.comp3.x, places=2)
+            self.assertAlmostEqual(self.opt_design_vars[3], 
+                                   self.top.comp4.x, places=1)
+            self.assertAlmostEqual(-6.2498054387439232, 
+                                   self.top.driver1a.objective.evaluate(), places=5)
+            self.assertAlmostEqual(2.4860514783551508, 
+                                   self.top.comp1a.x, places=5)
+        finally:
+            self.top.debug('****** END test_2_drivers ****')
 
         
     def test_2_nested_drivers(self):

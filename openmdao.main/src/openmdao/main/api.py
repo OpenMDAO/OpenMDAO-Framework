@@ -27,6 +27,7 @@ from openmdao.main.stringref import StringRef, StringRefArray
 
 from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 
+from openmdao.main.unitsfloat import UnitsFloat
 
 __all__ = ['Container',
            'Component',

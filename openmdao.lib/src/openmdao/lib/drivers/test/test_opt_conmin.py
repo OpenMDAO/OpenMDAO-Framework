@@ -4,9 +4,8 @@ Test the CONMIN optimizer component
 
 import unittest
 import numpy
-import logging
 
-from enthought.traits.api import Float, Array
+from enthought.traits.api import Float, Array, TraitError
 
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component
@@ -86,7 +85,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.run()
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.objective.refvalue, places=2)
+                               self.top.driver.objective.evaluate(), places=2)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[0], 
                                self.top.comp.x[0], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
@@ -100,10 +99,11 @@ class CONMINdriverTestCase(unittest.TestCase):
     def test_bad_objective(self):
         try:
             self.top.driver.objective = 'comp.missing'
-        except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver.objective: cannot find variable 'comp.missing'")
+        except TraitError, err:
+            self.assertEqual(str(err), 
+                "invalid input ref variable value 'comp.missing'")
         else:
-            self.fail('RuntimeError expected')
+            self.fail('TraitError expected')
 
 
     def test_no_design_vars(self):
@@ -111,7 +111,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         try:
             self.top.run()
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver: no design variables specified")
+            self.assertEqual(str(err), 
+                "top.driver: no design variables specified")
         else:
             self.fail('RuntimeError expected')
     
@@ -120,45 +121,45 @@ class CONMINdriverTestCase(unittest.TestCase):
                                              'comp.x[2]', 'comp.x[3]']
         try:
             self.top.run()
-        except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver.objective: reference is undefined")
+        except TraitError, err:
+            self.assertEqual(str(err), "StringRef: string reference is undefined")
         else:
-            self.fail('RuntimeError expected')
+            self.fail('TraitError expected')
             
     def test_get_objective(self):
         self.top.driver.objective = 'comp.result'
-        self.assertEqual('comp.result', self.top.driver.objective.value)
+        self.assertEqual('comp.result', self.top.driver.objective)
     
     def test_update_objective(self):
         try:
-            val = self.top.driver.objective.refvalue
-        except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver.objective: reference is undefined")
+            val = self.top.driver.objective.evaluate()
+        except TraitError, err:
+            self.assertEqual(str(err), "StringRef: string reference is undefined")
         else:
-            self.fail('RuntimeError expected')
+            self.fail('TraitError expected')
             
         self.top.comp.result = 88.
         self.top.driver.objective = 'comp.result'
-        self.assertEqual(self.top.driver.objective.refvalue, 88.)
+        self.assertEqual(self.top.driver.objective.evaluate(), 88.)
         
     
     def test_bad_design_vars(self):
         try:
             self.top.driver.design_vars = ['comp_bogus.x[0]', 'comp.x[1]']
-        except RuntimeError, err:
+        except TraitError, err:
             self.assertEqual(str(err), 
-                    "top.driver.design_vars: cannot find variable 'comp_bogus.x'")
+                "invalid output ref variable value 'comp_bogus.x[0]'")
         else:
-            self.fail('RuntimeError expected')
+            self.fail('TraitError expected')
     
     def test_bad_constraint(self):
         try:
             self.top.driver.constraints = ['bogus.flimflam']
-        except RuntimeError, err:
+        except TraitError, err:
             self.assertEqual(str(err), 
-                 "top.driver.constraints: cannot find variable 'bogus.flimflam'")
+                "invalid input ref variable value 'bogus.flimflam'")
         else:
-            self.fail('RuntimeError expected')
+            self.fail('TraitError expected')
             
     def test_lower_bounds_mismatch(self):
         self.top.driver.objective = 'comp.result'

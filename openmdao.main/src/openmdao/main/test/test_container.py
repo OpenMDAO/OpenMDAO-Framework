@@ -61,7 +61,7 @@ class ContainerTestCase(unittest.TestCase):
         self.assertEqual(num, 3.14)
 
     def test_get_attribute(self):
-        self.assertEqual(self.root.get('c2.c22.c221.number.iostatus'), 
+        self.assertEqual(self.root.get('c2.c22.c221').trait('number').iostatus, 
                          'in')
 
     def test_keys(self):
@@ -70,12 +70,12 @@ class ContainerTestCase(unittest.TestCase):
             ['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
         
     def test_pub_items(self):
-        lst = map(lambda x: x[0], self.root.items(recurse=True, iostatus=lambda x: True))
+        lst = map(lambda x: x[0], self.root.items(recurse=True, iostatus=lambda x: x is not None))
         self.assertEqual(lst, 
             ['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
         
     def test_full_items(self):
-        lst = map(lambda x: x[0], self.root.items(pub=False,recurse=True))
+        lst = map(lambda x: x[0], self.root.items(recurse=True))
         self.assertEqual(lst, ['name', 'c2', 'c2.c22', 'c2.c22.name', 
                                'c2.c22.c221', 'c2.c22.c221.name', 'c2.c22.c221.number', 
                                'c2.c21', 'c2.c21.name',
@@ -103,22 +103,6 @@ class ContainerTestCase(unittest.TestCase):
         else:
             self.fail('AttributeError expected')
 
-    def test_bad_set(self):
-        try:
-            self.root.set('bogus', 99)
-        except TraitError, err:
-            self.assertEqual(str(err),"root: 'bogus' is not an input trait and cannot be set")
-        else:
-            self.fail('TraitError expected')
-
-    def test_bad_setvar(self):
-        try:
-            self.root.bogus = 99
-        except AttributeError, err:
-            self.assertEqual(str(err),"root: object has no attribute 'bogus'")
-        else:
-            self.fail('AttributeError expected')
-
     def test_iteration(self):
         names = [x.get_pathname() for x in self.root.values(pub=False,recurse=True)
                                          if IContainer.providedBy(x)]
@@ -141,7 +125,6 @@ class ContainerTestCase(unittest.TestCase):
     def test_create(self):
         new_obj = self.root.create('openmdao.main.component.Component','mycomp')
         self.assertEqual(new_obj.__class__.__name__, 'Component')
-        new_obj.run()
  
     # TODO: all of these save/load test functions need to do more checking
     #       to verify that the loaded thing is equivalent to the saved thing

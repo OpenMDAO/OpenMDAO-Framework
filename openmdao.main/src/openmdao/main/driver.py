@@ -202,7 +202,7 @@ class Driver(Assembly):
                 # no cycle, so just return a graph with the driver and any components
                 # it references
                 self._simple_iteration_subgraph = graph.subgraph(nbunch=[self.name]+
-                                                                 list(self.get_referenced_comps()))
+                                                    list(self.get_referenced_comps()))
             self._simple_iteration_set = None
         
         return self._simple_iteration_subgraph
@@ -228,10 +228,9 @@ class Driver(Assembly):
         """There are no nested drivers. Just run our subgraph with our 
         input edges removed.
         """
-        graph = self._get_simple_iteration_subgraph()
-        graph.remove_edges_from(self.get_ref_graph(iostatus='in').edges_iter())
+        graph = self._get_simple_iteration_subgraph().copy()
+        graph.remove_node(self.name)
         itercomps = nx.topological_sort(graph)
         for comp in itercomps:
-            if comp != self.name:
                 getattr(self.parent, comp).run()
         

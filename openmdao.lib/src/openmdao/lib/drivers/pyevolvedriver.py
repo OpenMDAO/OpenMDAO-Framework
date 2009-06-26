@@ -4,7 +4,8 @@ __version__ = "0.1"
 
 import random
 
-from enthought.traits.api import Int, Float, Bool, Str
+from enthought.traits.api import Int, Float, CBool, Str, Any
+
 from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
 from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
 from pyevolve import GenomeBase
@@ -78,36 +79,37 @@ class pyevolvedriver(Driver):
     TODO: Implement function-slots as sockets
     """
 
+    # inputs
+    objective = StringRef(iostatus='in',
+                          desc= 'A string containing the objective function expression.')
+    freq_stats = Int(0, iostatus='in')
+    seed = Float(0., iostatus='in')
+    population_size = Float(Consts.CDefGAPopulationSize, iostatus='in')
+    
+    sort_type = CBool(Consts.sortType["scaled"], iostatus='in',
+                     desc='use Consts.sortType["raw"],Consts.sortType["scaled"] ') # can accept
+    mutation_rate = Float(Consts.CDefGAMutationRate, iostatus='in')
+    crossover_rate = Float(Consts.CDefGACrossoverRate, iostatus='in')
+    generations = Int(Consts.CDefGAGenerations, iostatus='in')
+    mini_max = CBool(Consts.minimaxType["minimize"], iostatus='in',
+                    desc = 'use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
+    elitism = CBool(True, iostatus='in',desc='True of False')
+    
+    #outputs
+    best_individual = Any(GenomeBase.GenomeBase(), iostatus='out')
+        
     def __init__(self,name,parent=None,doc=None): 
         super(pyevolvedriver,self).__init__(name,parent,doc)
 
         self.genome = GenomeBase.GenomeBase() #TODO: Mandatory Socket
         self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin
 
-        #inputs - value of None means use default
-        StringRef('objective', self, iostatus='in',
-                          desc= 'A string containing the objective function expression.')
-        Int('freq_stats',self,iostatus='in',default = 0)
-        Float('seed',self,iostatus='in',default = 0)
-        Float('population_size',self,iostatus='in',default = Consts.CDefGAPopulationSize)
-        
-        Bool('sort_type',self,iostatus='in',desc='use Consts.sortType["raw"],Consts.sortType["scaled"] ',default = Consts.sortType["scaled"]) # can accept
-        Float('mutation_rate',self,iostatus='in',default = Consts.CDefGAMutationRate)
-        Float('crossover_rate',self,iostatus='in',default = Consts.CDefGACrossoverRate)
-        Int('generations',self,iostatus='in',default = Consts.CDefGAGenerations)
-        Bool('mini_max',self,iostatus='in',default = Consts.minimaxType["minimize"],
-             doc = 'use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
-        Bool('elitism',self,iostatus='in',desc='True of False',default = True)
-        
+        # value of None means use default
         self.decoder = None #TODO: mandatory socket       
         self.selector = None #TODO: optional socket
         self.stepCallback = None #TODO: optional socket
         self.terminationCriteria = None #TODO: optional socket
         self.DBAdapter = None #TODO: optional socket
-
-        #outputs
-        Variable('best_individual',self,iostatus='out',default = self.genome)
-
 
     def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
         if funcList == None: return

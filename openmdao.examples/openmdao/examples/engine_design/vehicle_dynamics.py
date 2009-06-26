@@ -3,13 +3,37 @@
 # This openMDAO component determines the vehicle acceleration based on the
 # power output of the engine, modified by the transmission torque ratio.
 
-from openmdao.main.api import Component, Float
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float
+
+from openmdao.main.api import Component, UnitsFloat
 from math import pi
 
 class VehicleDynamics(Component):
     ''' A vehicle dynamics component - calculates acceleration.'''
     
+    # set up interface to the framework  
+    # Pylint: disable-msg=E1101
+    mass_vehicle = UnitsFloat(1200.0, iostatus='in', units='kg', 
+                              desc='Vehicle Mass')
+    Cf = Float(0.035, iostatus='in', #units=None,
+                    desc='Friction Coefficient (proportional to W)')
+    Cd = Float(0.3, iostatus='in', #units=None, 
+               desc='Drag Coefficient (proportional to V**2)')
+    area = UnitsFloat(2.164, iostatus='in', units='m**2', 
+                      desc='Frontal area')
+    engine_torque = UnitsFloat(200.0, iostatus='in', units='N*m', 
+                               desc='Torque at engine output')
+    mass_engine = UnitsFloat(200.0, iostatus='in', units='kg',
+                             desc='Engine weight estimation')
+    velocity = UnitsFloat(0., iostatus='in', units='m/s', 
+                          desc='Current Velocity of Vehicle')
+    torque_ratio = Float(0., iostatus='in', #units=None, 
+                              desc='Ratio of output torque to engine torque')        
+    tire_circ = UnitsFloat(1.905, iostatus='in', units='m', 
+                           desc='Circumference of tire')
+    acceleration = UnitsFloat(0., iostatus='out', units='m/(s*s)', 
+                              desc='Calculated vehicle acceleration ')    
+        
     def __init__(self, name, parent=None, doc=None, directory=''):
         ''' Creates a new VehicleDynamics object
         
@@ -34,30 +58,6 @@ class VehicleDynamics(Component):
         super(VehicleDynamics, self).__init__(name, parent, doc, 
                                                directory)        
         
-        # set up interface to the framework  
-        # Pylint: disable-msg=E1101
-        Float('mass_vehicle', self, iostatus='in', units='kg', default=1200.0,
-              desc='Vehicle Mass')
-        Float('Cf', self, iostatus='in', units=None, default=0.035,
-              desc='Friction Coefficient (proportional to W)')
-        Float('Cd', self, iostatus='in', units=None, default=0.3,
-              desc='Drag Coefficient (proportional to V**2)')
-        Float('area', self, iostatus='in', units='m**2', default=2.164,
-              desc='Frontal area')
-
-        Float('engine_torque', self, iostatus='in', units='N*m', default=200.0,
-              desc='Torque at engine output')
-        Float('mass_engine', self, iostatus='in', units='kg', default=200.0,
-              desc='Engine weight estimation')
-        Float('velocity', self, iostatus='in', units='m/s', default=0.0,
-              desc='Current Velocity of Vehicle')
-        Float('torque_ratio', self, iostatus='in', units=None, default=0.0, 
-              desc='Ratio of output torque to engine torque')        
-        Float('tire_circ', self, iostatus='in', units='m', default=1.905,
-              desc='Circumference of tire')
-        
-        Float('acceleration', self, iostatus='out', units='m/(s*s)', default=0.0, 
-              desc='Calculated vehicle acceleration ')        
         
     def execute(self):
         ''' Calculates the instantaneous acceleration for the vehicle.       

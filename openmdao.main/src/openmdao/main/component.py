@@ -121,7 +121,7 @@ class Component (Container):
         else:
             invalid_ins = self.list_inputs(valid=False)
             if len(invalid_ins) > 0:
-                self.info('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
+                #self.debug('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
                 self._execute_needed |= self.parent.update_inputs(self.name,
                                     ['.'.join([self.name, n]) for n in invalid_ins])
     
@@ -161,7 +161,7 @@ class Component (Container):
         try:
             self._pre_execute()
             if self._execute_needed or force:
-                if __debug__: self._logger.info('execute %s' % self.get_pathname())
+                if __debug__: self._logger.debug('execute %s' % self.get_pathname())
                 self.execute()
                 self._post_execute()
         finally:
@@ -489,13 +489,11 @@ class Component (Container):
             
         valid_outs = self.list_outputs(valid=True)
         
-        for out in valid_outs:
-            self._valid_dict[out] = False
-            
-        # TODO: can probably just use Traits notifiers for this stuff too...
         if notify_parent and self.parent and len(valid_outs) > 0:
             self.parent.invalidate_deps(['.'.join([self.name,n]) for n in valid_outs], 
                                         notify_parent)
+        for out in valid_outs:
+            self._valid_dict[out] = False
             
         return valid_outs    
 

@@ -144,12 +144,9 @@ class CONMINdriver(Driver):
             
     """
     
-    #design_vars = List(StringRef(iostatus='out'),
-    #   desc='An array of design variable names. These names can include array indexing.')
     design_vars = StringRefArray(iostatus='out',
        desc='An array of design variable names. These names can include array indexing.')
     
-    #constraints = List(StringRef(iostatus='in'),
     constraints = StringRefArray(iostatus='in',
             desc= 'An array of expression strings indicating constraints.'+
             ' A value of < 0 for the expression indicates that the constraint '+
@@ -174,7 +171,7 @@ class CONMINdriver(Driver):
         self.cnmn1 = _cnmn1()
         self.consav = _consav()
         
-        self._first = True
+        self.iter_count = True
         self.design_vals = numarray.zeros(0,'d')
         self.lower_bounds = numarray.zeros(0,'d')
         self.upper_bounds = numarray.zeros(0,'d')
@@ -212,15 +209,13 @@ class CONMINdriver(Driver):
         #"""Restore this component's state."""
         #super(CONMINdriver, self).__setstate__(state)
         #self.cnmn1 = conmin.cnmn1
-        #self._first = True
         
     def execute(self):
         """Perform the optimization."""
         # set conmin array sizes and such
-        #if self._first is True:
         self._config_conmin()
         self.cnmn1.igoto = 0
-        self._first = True
+        self.iter_count = 0
         
         # perform an initial run for self-consistency
         self.run_iteration()
@@ -229,15 +224,25 @@ class CONMINdriver(Driver):
         for i, val in enumerate(self.design_vars):
             self.design_vals[i] = val.evaluate()
 
+        # update constraint value array
+        for i,v in enumerate(self.constraints):
+            self.constraint_vals[i] = v.evaluate()
+        self.debug('%s: new iteration' % self.get_pathname())
+        self.debug('objective = %s' % self.objective)
+        self.debug('design vars = %s' % self.design_vars)
+        
         # loop until optimized
-        while self.cnmn1.igoto or self._first is True:
+        while self.cnmn1.igoto or self.iter_count == 0:
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
 
-            self._first = False            
+            self.iter_count += 1 
                         
             # calculate objective
             self.cnmn1.obj = numarray.array(self.objective.evaluate())
+            self.debug('iter_count = %d' % self.iter_count)
+            self.debug('objective = %f' % self.cnmn1.obj)
+            self.debug('design vals = %s' % self.design_vals[:-2])
             
 # TODO: 'step around' ill-behaved cases.
             
@@ -277,6 +282,7 @@ class CONMINdriver(Driver):
                 # update constraint value array
                 for i,v in enumerate(self.constraints):
                     self.constraint_vals[i] = v.evaluate()
+                self.debug('constraints = %s'%self.constraint_vals)
                     
             # calculate gradients
             elif self.cnmn1.info == 2:

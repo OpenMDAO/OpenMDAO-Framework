@@ -10,9 +10,7 @@
 from pkg_resources import resource_stream
 from csv import reader
 
-from enthought.traits.api import Float
-
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, UnitsFloat
 from openmdao.main.exceptions import ConstraintError
 
 from openmdao.examples.engine_design.vehicle import Vehicle
@@ -28,6 +26,20 @@ MAX_ERROR = .01
 class SimVehicle(Assembly):
     ''' Simulation of vehicle performance.'''
     
+    # Simulation Parameters
+    end_speed = UnitsFloat(60.0, iostatus='in', units='m/h',
+                           desc='Simulation final speed')
+    timestep = UnitsFloat(0.1, iostatus='in', units='s', 
+                          desc='Simulation final speed')
+    
+    # Outputs
+    accel_time = UnitsFloat(0., iostatus='out', units='s', 
+                            desc='Time to reach Endspeed starting from rest')
+    EPA_city = UnitsFloat(0., iostatus='out', units='mi/galUS', 
+                          desc='EPA Fuel economy - City')
+    EPA_highway = UnitsFloat(0., iostatus='out', units='mi/galUS', 
+                             desc='EPA Fuel economy - Highway')
+        
     def __init__(self, name, parent=None, doc=None, directory=''):
         ''' Creates a new SimVehicle object
         
@@ -75,20 +87,6 @@ class SimVehicle(Assembly):
         self.create_passthru('vehicle.Cd')
         self.create_passthru('vehicle.area')
 
-        # Simulation Parameters
-        Float('end_speed', self, iostatus='in', units='m/h', default=60.0,
-              desc='Simulation final speed')
-        Float('timestep', self, iostatus='in', units='s', default=0.1,
-              desc='Simulation final speed')
-        
-        # Outputs
-        Float('accel_time', self, iostatus='out', units='s', default=0.0, 
-              desc='Time to reach Endspeed starting from rest')
-        Float('EPA_city', self, iostatus='out', units='mi/galUS', default=0.0, 
-              desc='EPA Fuel economy - City')
-        Float('EPA_highway', self, iostatus='out', units='mi/galUS', default=0.0, 
-              desc='EPA Fuel economy - Highway')
-        
         
     def execute(self):
         ''' Simulate the vehicle model at full throttle.'''
@@ -100,9 +98,9 @@ class SimVehicle(Assembly):
         time = 0.0
         
         # Set throttle and gear
-        self.vehicle.set('current_gear', 1)
-        self.vehicle.set('throttle', 1.0)
-        self.vehicle.set('velocity', 0.0)
+        self.vehicle.current_gear = 1
+        self.vehicle.throttle = 1.0
+        self.vehicle.velocity = 0.0
                    
         while velocity < self.end_speed:
             
@@ -125,11 +123,11 @@ class SimVehicle(Assembly):
             acceleration = self.vehicle.get('acceleration')*2.23693629
             
             if acceleration <= 0.0:
-                self.raise_exception("Vehicle could not reach maximum speed \
-                in Acceleration test.", RuntimeError)
+                self.raise_exception("Vehicle could not reach maximum speed "+\
+                                     "in Acceleration test.", RuntimeError)
                 
             velocity += acceleration*self.timestep
-            self.vehicle.set('velocity', velocity)
+            self.vehicle.velocity = velocity
         
             time += self.timestep
             #print time, self.vehicle.current_gear, velocity, 

@@ -19,20 +19,17 @@ from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 class DOE(CaseIteratorDriver):
     """ M4 Design Of Experiments driver. """
 
+    # No 'Option' variables yet.
+    type = Str('ccd', iostatus='in', desc='Type of experiment design.')
+
+    n_samples = Int(1, iostatus='in', min_limit=1, desc='Number of samples.')
+
+    lhs = Int(2, iostatus='in', min_limit=1, desc='???, used by LHS and Rand_LHS.')
+
     def __init__(self, name='M4_DOE', *args, **kwargs):
         super(DOE, self).__init__(name, *args, **kwargs)
         self.design_variables = []    # List of (name, min, max) tuples.
         self.response_variables = []  # List of names.
-
-        # No 'Option' variables yet.
-        String('type', self, iostatus='in', default='ccd',
-               desc='Type of experiment design.')
-
-        Int('n_samples', self, iostatus='in', default=1, min_limit=1,
-            desc='Number of samples.')
-
-        Int('lhs', self, iostatus='in', default=2, min_limit=1,
-            desc='???, used by LHS and Rand_LHS.')
 
     def _pre_execute(self):
         """ Generate cases. """

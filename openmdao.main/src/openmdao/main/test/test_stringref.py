@@ -2,7 +2,7 @@
 
 import unittest
 
-from enthought.traits.api import Float, TraitError
+from enthought.traits.api import Float, Array, TraitError
 
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Assembly, Component, StringRef, StringRefArray
@@ -18,6 +18,7 @@ class SimpleComp(Component):
     y = Float(99.9, iostatus='in')
     d1 = Float(42., iostatus='in')
     d1out = Float(11., iostatus='out')
+    array = Array(value=[1., 2., 3.], iostatus='in')
         
 class StringRefTestCase(unittest.TestCase):
 
@@ -32,19 +33,42 @@ class StringRefTestCase(unittest.TestCase):
     def test_assignment(self):
         self.comp1.objective = 'comp2.x'
         self.comp1.desvar = 'comp2.y'
-        rval = self.comp1.objective.refvalue
+        rval = self.comp1.objective.evaluate()
         self.assertEqual(rval, 99.9)
-        self.comp1.desvar.refvalue = 3.14
+        self.comp1.desvar.set(3.14)
         self.assertEqual(self.comp2.y, 3.14)
+        
+    def test_change_ref(self):
+        self.comp1.objective = 'comp2.x'
+        self.assertEqual(self.comp1.objective.evaluate(), 99.9)
+        self.comp1.objective = 'comp2.d1'
+        self.assertEqual(self.comp1.objective.evaluate(), 42.)
+        
+        self.comp1.desvars = ['comp2.y', 'comp2.d1', 'comp2.d1out']
+        self.assertEqual([v.evaluate() for v in self.comp1.desvars],
+                         [99.9,42.,11.])
+        
 
     def test_array_assignment(self):
         self.comp1.desvars = ['comp2.y', 'comp2.d1', 'comp3.d1']
         for dv,val in zip(self.comp1.desvars, [3.14, -3.14, -.01]):
-            dv.refvalue = val
+            dv.set(val)
         self.assertEqual(self.comp2.y, 3.14)
         self.assertEqual(self.comp2.d1, -3.14)
         self.assertEqual(self.comp3.d1, -0.01)
-
+        
+    def test_array_access(self):
+        self.comp1.objective = 'comp2.array[1]'
+        self.assertEqual(2., self.comp1.objective.evaluate())
+        self.comp1.desvars = ['comp2.array[0]', 'comp2.array[2]']
+        self.assertEqual([1.,3.], 
+                         [self.comp1.desvars[0].evaluate(),
+                          self.comp1.desvars[1].evaluate()])
+        self.comp1.desvars[0].set('-22.')
+        self.comp1.desvars[1].set('-777.')
+        self.assertEqual(-22., self.comp2.array[0])
+        self.assertEqual(-777., self.comp2.array[2])
+        
     def test_ref_comps(self):
         self.comp1.objective = 'comp2.x+3*comp1.z'
         comps = self.comp1.objective.get_referenced_compnames()
@@ -68,7 +92,7 @@ class StringRefTestCase(unittest.TestCase):
     def test_bad_type(self):
         try:
             self.comp1.desvar = 'comp2.y'
-            self.comp1.desvar.refvalue = None
+            self.comp1.desvar.set(None)
         except TraitError, err:
             self.assertEqual(str(err), 
                 "The 'y' trait of a SimpleComp instance must be a float, but a value of None <type 'NoneType'> was specified.")
@@ -78,7 +102,7 @@ class StringRefTestCase(unittest.TestCase):
     def test_bad_direction(self):
         try:
             self.comp1.objective = 'comp2.x'
-            self.comp1.objective.refvalue = 3.2
+            self.comp1.objective.set(3.2)
         except ValueError, err:
             self.assertEqual(str(err), "trying to set input expression 'comp2.x'")
         else:
@@ -88,7 +112,7 @@ class StringRefTestCase(unittest.TestCase):
         asm = Assembly('top')
         asm.add_trait('ref', StringRef(iostatus='in'))
         asm.ref = '1+2'
-        self.assertEqual(asm.ref.refvalue, 3)
+        self.assertEqual(asm.ref.evaluate(), 3)
         
         asm.add_trait('refout', StringRef(iostatus='out'))
         try:

@@ -6,21 +6,19 @@ Test the pyevolve optimizer driver
 import unittest
 import numpy
 
-from enthought.traits.api import Float, Array
+from enthought.traits.api import Float, Array, TraitError
 
 from openmdao.main.api import Assembly, Component
 from openmdao.lib.drivers import pyevolvedriver
 
 
 class SphereFunction(Component):
+    total = Float(0., iostatus='out')
+    points = Array(value=[], iostatus='in')
+    
     def __init__(self, name, parent=None, desc=None):
         super(SphereFunction, self).__init__(name, parent, desc)
-        self.points = []
-        self.total = 0
-        
-        Float('total',self,iostatus='out')
-        Array('points', self, iostatus='in')
-    
+            
     def execute(self):
         """ calculate the sume of the squares for the list of numbers """
         self.total = sum([x**2 for x in self.points])
@@ -34,19 +32,19 @@ class pyevolvedriverTestCase(unittest.TestCase):
     #   evaluation 
     def decoder(self,genome):
         sphere = self.top.comp
-        sphere.set('points', [x for x in genome])
+        sphere.points = [x for x in genome]
     
     def setUp(self):
         self.top = Assembly('top',None)
-        self.top.add_child(SphereFunction('comp',self.top))
-        self.top.add_child(pyevolvedriver.pyevolvedriver('driver'))
+        SphereFunction('comp',self.top)
+        pyevolvedriver.pyevolvedriver('driver',self.top)
 
     def tearDown(self):
         self.top = None
     
-    def test_weirdVariableNameProblem(self):
-        x = Float("PopulationSize",self.top.driver,iostatus='in',default=80)
-        self.assertEqual(x.get_value(),80)
+    #def test_weirdVariableNameProblem(self):
+        #x = Float("PopulationSize",self.top.driver,iostatus='in',default=80)
+        #self.assertEqual(x.get_value(),80)
     
     #basic test to make sure optmizer is working 
     def test_optimizeSphere(self):
@@ -177,26 +175,29 @@ class pyevolvedriverTestCase(unittest.TestCase):
         
         try:
             self.top.run()
-        except RuntimeError, err: 
-            self.assertEqual(str(err),"top.driver.objective: reference is undefined" )
+        except TraitError, err: 
+            self.assertEqual(str(err),
+                "StringRef: string reference is undefined")
         else: 
-            self.fail("expecting RuntimeError")
+            self.fail("expecting TraitError")
         
     def test_invalidObjective(self):
         try:
             self.top.driver.objective = "comp.badojbjective"        
-        except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver.objective: cannot find variable 'comp.badojbjective'")
+        except TraitError, err:
+            self.assertEqual(str(err), 
+                "invalid input ref variable value 'comp.badojbjective'")
         else: 
-            self.fail("RuntimeError expected")
+            self.fail("TraitError expected")
     
     def test_noComp(self):
         try: 
             self.top.driver.objective = None
-        except TypeError, err:
-            self.assertEqual(str(err), "top.driver.objective: reference must be a string")
+        except TraitError, err:
+            self.assertEqual(str(err), 
+                "The 'objective' trait of a pyevolvedriver instance must be a string, but a value of None <type 'NoneType'> was specified.")
         else:
-            self.fail("RuntimeError expected")
+            self.fail("TraitError expected")
     
     #should throw an error because no decode function is provided
     def test_noDecoder(self):

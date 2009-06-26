@@ -192,7 +192,7 @@ def translate_expr(text, exprobj, single_name=False):
     except ParseException, err:
         raise RuntimeError(str(err)+' - '+err.markInputline())
 
-    
+
 class ExprEvaluator(str):
     """A class that translates an expression string into a new string containing
     any necessary framework access functions, e.g., set, get. The compiled
@@ -299,7 +299,7 @@ class ExprEvaluator(str):
         else: # self.single_name is False
             raise ValueError("trying to set input expression '%s'" % str(self))
         
-    refvalue = property(evaluate, set)
+    #refvalue = property(evaluate, set)
     
     def get_referenced_varpaths(self):
         """Return a set of source or dest Variable pathnames relative to
@@ -322,4 +322,3 @@ class ExprEvaluator(str):
         if scope and scope.parent:
             return all(scope.parent.get_valid(self.var_names))
         return True
-

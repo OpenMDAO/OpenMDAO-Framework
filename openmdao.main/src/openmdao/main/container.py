@@ -86,33 +86,6 @@ class IMHolder(object):
             return getattr(self.im_class, self.name)
 
 
-def _array_set(obj, name, value, index):
-    arr = getattr(obj, name)
-    length = len(index)
-    if length == 1:
-        arr[index[0]] = value
-    elif length == 2:
-        arr[index[0]][index[1]] = value
-    elif length == 3:
-        arr[index[0]][index[1]][index[2]] = value
-    else:
-        for idx in index[:-1]:
-            arr = arr[idx]
-        arr[index[length-1]] = value
-        
-def _array_get(obj, name, index):
-    arr = getattr(obj, name)
-    length = len(index)
-    if length == 1:
-        return arr[index[0]]
-    elif length == 2:
-        return arr[index[0]][index[1]]
-    elif length == 3:
-        return arr[index[0]][index[1]][index[2]]
-    else:
-        for idx in index:
-            arr = arr[idx]
-        return arr
         
         
 class ContainerName(BaseStr):
@@ -132,7 +105,7 @@ class ContainerName(BaseStr):
         m = _namecheck_rgx.search(s)
         if m is None or m.group() != s:
             raise TraitError("name '%s' contains illegal characters" % s)
-        return s
+        return s            
     
 class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
@@ -174,8 +147,8 @@ class Container(HasTraits):
                     "'%s' is already connected to source '%s' and cannot be directly set"%
                     (name, self._dests[name]), TraitError)
             self._execute_needed = True
-            if self.get_valid(name):  # if var is not already invalid
-                self.invalidate_deps([name], notify_parent=True)
+        if self.get_valid(name):  # if var is not already invalid
+            self.invalidate_deps([name], notify_parent=True)
 
     def get_valid(self, name):
         def _valid(self, name):
@@ -239,32 +212,39 @@ class Container(HasTraits):
         if trait is not None:
             self.remove_trait(name)
         else:
-            delattr(self, name)
+            self.raise_exception("cannot remove child '%s': not found"%
+                                 name, TraitError)
     
     def items(self, recurse=False, **metadata):
-        """Return an iterator that returns a list of tuples of the form 
-        (rel_pathname, obj) for each trait of this Container that matches
+        """Return a list of tuples of the form (rel_pathname, obj) 
+        for each trait of this Container that matches
         the given metadata. If recurse is True, also iterate through all
         child Containers of each Container found.
         """
-        for name,obj in self._items(set(), recurse, **metadata):
-            yield(name, obj)
+        if recurse:
+            return self._items(set(), recurse, **metadata)
+        else:
+            return [(n,getattr(self,n)) for n in self.trait_names(**metadata)]
         
     def keys(self, recurse=False, **metadata):
-        """Return an iterator that will return the relative pathnames of
+        """Return a list of the relative pathnames of
         children of this Container that match the given metadata. If recurse is 
         True, child Containers will also be iterated over.
         """
-        for name,obj in self._items(set(), recurse, **metadata):
-            yield name
+        if recurse:
+            return [tup[0] for tup in self._items(set(), recurse, **metadata)]
+        else:
+            return self.trait_names(**metadata)
         
     def values(self, recurse=False, **metadata):
-        """Return an iterator that will return the
-        children of this Container that have matching trait metadata. 
-        If recurse is True, child Containers will also be iterated over.
+        """Return a list of children of this Container that have matching 
+        trait metadata. If recurse is True, child Containers will also be 
+        iterated over.
         """
-        for name,obj in self._items(set(), recurse, **metadata):
-            yield obj
+        if recurse:
+            return [tup[1] for tup in self._items(set(), recurse, **metadata)]
+        else:
+            return [getattr(self,n) for n in self.trait_names(**metadata)]
             
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form 
@@ -272,13 +252,22 @@ class Container(HasTraits):
         the given metadata. If recurse is True, also iterate through all
         child Containers of each Container found.
         """
-        for name, trait in self.traits(**metadata).items():
-            obj = getattr(self, name)
-            if trait.iostatus is not None or isinstance(obj, Container):
-                yield (name, obj)
-            if recurse and isinstance(obj, Container):
-                for chname, child in obj._items(visited, recurse, **metadata):
-                    yield ('.'.join([name, chname]), child)                   
+        if id(self) not in visited:
+            visited.add(id(self))
+            mdata = { 'type': lambda x: x != 'event' }
+            mdata.update(metadata)
+            traits = self.traits(**metadata)
+            traits2 = self.traits(**mdata)
+            for name, trait in self.traits(**mdata).items():
+                obj = getattr(self, name)
+                if obj is not self.parent:
+                    if isinstance(obj, Container):
+                        yield (name, obj)
+                        if recurse:
+                            for chname, child in obj._items(visited, recurse, **mdata):
+                                yield ('.'.join([name, chname]), child)                   
+                    elif trait.iostatus is not None:
+                        yield (name, obj)
     
     
     def get_pathname(self, rel_to_scope=None):
@@ -294,6 +283,9 @@ class Container(HasTraits):
             return '.'.join(path[::-1])
         else:
             return ''
+        
+    def get_trait_pathname(self, traitname, rel_to_scope=None):
+        return '.'.join([self.get_pathname(rel_to_scope=rel_to_scope),traitname])
     
     def contains(self, path):
         """Return True if the child specified by the given dotted path
@@ -322,6 +314,24 @@ class Container(HasTraits):
         obj.parent = self
         return obj
 
+    def invoke(self, path, *args, **kwargs):
+        if path is None:
+            return self.__call__(*args, **kwargs)
+        else:
+            tup = path.split('.')
+            if len(tup) == 1:
+                return getattr(self, path)(*args, **kwargs)
+            else:
+                obj = getattr(self, tup[0], Missing)
+                if obj is Missing:
+                    self.raise_exception("object has no attribute '%s'" % tup[0], 
+                                         AttributeError)
+                if len(tup) == 2:
+                    return getattr(obj, tup[1])(*args, **kwargs)
+                else:
+                    return obj.invoke('.'.join(tup[1:]), *args, **kwargs)
+        
+        
     def get(self, path, index=None):
         """Return any public object specified by the given 
         path, which may contain '.' characters.  
@@ -336,44 +346,42 @@ class Container(HasTraits):
             if index is None:
                 return self
             else:
-                if hasattr(self, '__getitem__'):
-                    return _array_get(self, index)
-                else:
-                    self.raise_exception(
-                        '%s has no __getitem__ function. Cannot retrieve index %s'%
-                        (self.get_pathname(),str(index)), AttributeError)
+                self.raise_exception(
+                    'Cannot retrieve items from Container %s using array notation.'%
+                    self.get_pathname(), AttributeError)
         
-        tup = path.split('.', 1)
+        tup = path.split('.')
         if len(tup) == 1:
-            obj = getattr(self, path, Missing)
-            if obj is Missing:
-                self.raise_exception("object has no attribute '%s'" % path, 
-                                     AttributeError)
             if index is None:
+                obj = getattr(self, path, Missing)
+                if obj is Missing:
+                    self.raise_exception("object has no attribute '%s'" % path, 
+                                         AttributeError)
                 return obj
             else:
-                return _array_get(obj, index)
+                return self._array_get(path, index)
         else:
-            base, name = tup
-            obj = getattr(self, base, Missing)
+            obj = getattr(self, tup[0], Missing)
             if obj is Missing:
-                self.raise_exception("object has no attribute '%s'" % base, 
+                self.raise_exception("object has no attribute '%s'" % tup[0], 
                                      AttributeError)
+            if len(tup) == 2 and index is None:
+                return getattr(obj, tup[1])
+            
             if isinstance(obj, Container):
-                return obj.get(name, index)
+                return obj.get('.'.join(tup[1:]), index)
             elif index is None:
-                return getattr(obj, name)
+                return getattr(obj, '.'.join(tup[1:]))
             else:
-                return _array_get(getattr(obj, name), index)
+                return obj._array_get('.'.join(tup[1:]), index)
 
      
     def add_destination(self, name, source):
         """Mark an io trait as a destination, which will prevent it from being
         set directly or connected to another source."""
-        self.info('adding destination %s', name)
         if name in self._dests:
-            self.raise_exception("%s is already connected to a source" % 
-                                 name, TraitError)
+            self.raise_exception("'%s' is already connected to source '%s'" % 
+                                 (name, self._dests[name]), TraitError)
         self._dests[name] = source   
             
     def remove_destination(self, name):
@@ -409,36 +417,80 @@ class Container(HasTraits):
                 # should never get down this far
                 self.raise_exception('this object cannot replace itself')
             else:
-                if hasattr(self, '__setitem__'):
-                    return _array_set(self, value, index)
-                else:
-                    self.raise_exception(
-                        '%s has no __setitem__ function. Cannot set value at index %s'%
-                        (self.get_pathname(),str(index)), AttributeError)
+                self.raise_exception(
+                    'Cannot set value at index %s'%
+                    str(index), AttributeError)
                     
-        tup = path.split('.', 1)
+        tup = path.split('.')
         if len(tup) == 1:
             self._check_trait_settable(path, source)
             if index is None:
+                if self.trait(path) is None:
+                    self.raise_exception("object has no attribute '%s'" %
+                                         path, TraitError)
                 # bypass the callback here and call it manually after 
                 # with a flag to tell it not to check if its a destination
-                newval = self.trait(path).validate(self, path, value)
-                self.__dict__[path] = newval
-                self._io_trait_changed(self, path, Undefined, newval)
-                #setattr(self, path, value)
+                self._trait_change_notify(False)
+                try:
+                    setattr(self, path, value)
+                finally:
+                    self._trait_change_notify(True)
+                # now manually call the notifier with old set to Undefined
+                # to avoid the destination check
+                self._io_trait_changed(self, path, Undefined, getattr(self, path))
             else:
-                _array_set(self, path, value, index)
+                self._array_set(path, value, index)
         else:
-            base, name = tup
-            obj = getattr(self, base, Missing)
+            obj = getattr(self, tup[0], Missing)
             if obj is Missing:
-                self.raise_exception("object has no attribute '"+base+"'", 
-                                     AttributeError)
-            elif isinstance(obj, Container):
-                obj.set(name, value, index)
+                self.raise_exception("object has no attribute '%s'" % tup[0], 
+                                     TraitError)
+            if isinstance(obj, Container):
+                if len(tup) == 2:
+                    obj.set(tup[1], value, index, source)
+                else:
+                    obj.set('.'.join(tup[1:]), value, index)
             else:
-                _array_set(getattr(obj, name), value, index)
+                obj._array_set('.'.join(tup[1:]), value, index)
 
+    def _array_set(self, name, value, index):
+        arr = getattr(self, name)
+        
+        length = len(index)
+        if length == 1:
+            old = arr[index[0]]
+            arr[index[0]] = value
+        elif length == 2:
+            old = arr[index[0]][index[1]]
+            arr[index[0]][index[1]] = value
+        elif length == 3:
+            old = arr[index[0]][index[1]][index[2]]
+            arr[index[0]][index[1]][index[2]] = value
+        else:
+            for idx in index[:-1]:
+                arr = arr[idx]
+            old = arr[index[length-1]]
+            arr[index[length-1]] = value
+                
+        # setting of individual Array values doesn't seem to trigger
+        # _io_trait_changed, so do it manually
+        if old != value:
+            self._io_trait_changed(self, name, arr, arr)
+            
+    def _array_get(self, name, index):
+        arr = getattr(self, name)
+        length = len(index)
+        if length == 1:
+            return arr[index[0]]
+        elif length == 2:
+            return arr[index[0]][index[1]]
+        elif length == 3:
+            return arr[index[0]][index[1]][index[2]]
+        else:
+            for idx in index:
+                arr = arr[idx]
+            return arr
+    
     def config_from_obj(self, obj):
         """This is intended to allow a newer version of a component to
         configure itself based on an older version. By default, values
@@ -1254,6 +1306,9 @@ setuptools.setup(
         In the case of a simple Container, all input variables are predecessors to
         all output variables.
         """
+        # NOTE: if the _io_graph changes, this function must return a NEW graph
+        # object instead of modifying the old one, because object identity
+        # is used in the parent assembly to determine of the graph has changed
         if self._io_graph is None:
             self._io_graph = nx.DiGraph()
             io_graph = self._io_graph

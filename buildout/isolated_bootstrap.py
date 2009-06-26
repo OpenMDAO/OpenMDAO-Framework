@@ -1,26 +1,13 @@
-##############################################################################
-#
-# Copyright (c) 2006 Zope Corporation and Contributors.
-# All Rights Reserved.
-#
-# This software is subject to the provisions of the Zope Public License,
-# Version 2.1 (ZPL).  A copy of the ZPL should accompany this distribution.
-# THIS SOFTWARE IS PROVIDED "AS IS" AND ANY AND ALL EXPRESS OR IMPLIED
-# WARRANTIES ARE DISCLAIMED, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
-# WARRANTIES OF TITLE, MERCHANTABILITY, AGAINST INFRINGEMENT, AND FITNESS
-# FOR A PARTICULAR PURPOSE.
-#
-##############################################################################
 """Bootstrap a buildout-based project
+
+This is a modified version of the bootstrap.py file (Copyright (c) 2006 
+Zope Corporation and Contributors) that is
+part of zc.buildout.  This version creates a bin/buildout script that is 
+isolated from the system level installed packages. -BAN 6/25/09
 
 Simply run this script in a directory containing a buildout.cfg.
 The script accepts buildout command-line options, so you can
 use the -c option to specify an alternate configuration file.
-
-This is a modified version of the bootstrap.py file from Zope Corp.
-It creates a bin/buildout script that is isolated from the system level
-installed packages. -BAN
-
 
 $Id$
 """

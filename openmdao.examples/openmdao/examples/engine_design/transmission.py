@@ -4,11 +4,37 @@
 # Transmission is a 5-speed manual.
 
 from enthought.traits.api import Float, Int
-from openmdao.main.api import Component
+from openmdao.main.api import Component, UnitsFloat
 
 class Transmission(Component):
     ''' A simple transmission model.'''
     
+    # set up interface to the framework  
+    # Pylint: disable-msg=E1101
+    ratio1 = Float(3.54, iostatus='in', 
+                   desc='Gear ratio in First Gear')
+    ratio2 = Float(2.13, iostatus='in', 
+                   desc='Gear ratio in Second Gear')
+    ratio3 = Float(1.36, iostatus='in', 
+                   desc='Gear ratio in Third Gear')
+    ratio4 = Float(1.03, iostatus='in', 
+                   desc='Gear ratio in Fourth Gear')
+    ratio5 = Float(0.72, iostatus='in', 
+                   desc='Gear ratio in Fifth Gear')
+    final_drive_ratio = Float(2.8, iostatus='in', 
+                              desc='Final Drive Ratio')
+    tire_circ = UnitsFloat(75.0, iostatus='in', units='inch', 
+                           desc='Circumference of tire (inches)')
+
+    current_gear = Int(0, iostatus='in', desc='Current Gear')
+    velocity = UnitsFloat(0., iostatus='in', units='mi/h',
+                     desc='Current Velocity of Vehicle')
+
+    RPM = UnitsFloat(1000., iostatus='out', units='1/min',
+                     desc='Engine RPM')        
+    torque_ratio = Float(0., iostatus='out',
+                         desc='Ratio of output torque to engine torque')        
+
     def __init__(self, name, parent=None, doc=None, directory=''):
         ''' Creates a new Transmission object
         
@@ -33,32 +59,6 @@ class Transmission(Component):
         
         super(Transmission, self).__init__(name, parent, doc, directory)        
         
-        # set up interface to the framework  
-        # Pylint: disable-msg=E1101
-        Float('ratio1', self, INPUT, units=None, default=3.54,
-              desc='Gear ratio in First Gear')
-        Float('ratio2', self, iostatus='in', units=None, default=2.13,
-              desc='Gear ratio in Second Gear')
-        Float('ratio3', self, iostatus='in', units=None, default=1.36,
-              desc='Gear ratio in Third Gear')
-        Float('ratio4', self, iostatus='in', units=None, default=1.03,
-              desc='Gear ratio in Fourth Gear')
-        Float('ratio5', self, iostatus='in', units=None, default=0.72,
-              desc='Gear ratio in Fifth Gear')
-        Float('final_drive_ratio', self, iostatus='in', units=None, default=2.80,
-              desc='Final Drive Ratio')
-        Float('tire_circ', self, iostatus='in', units='inch', default=75.0,
-              desc='Circumference of tire (inches)')
-
-        Int('current_gear', self, iostatus='in', default=0,
-              desc='Current Gear')
-        Float('velocity', self, iostatus='in', units='mi/h', default=0.0,
-              desc='Current Velocity of Vehicle')
-
-        Float('RPM', self, iostatus='out', units='1/min', default=1000.0, 
-              desc='Engine RPM')        
-        Float('torque_ratio', self, iostatus='out', units=None, default=0.0, 
-              desc='Ratio of output torque to engine torque')        
         
     def execute(self):
         ''' The 5-speed manual transmission is simulated by determining the

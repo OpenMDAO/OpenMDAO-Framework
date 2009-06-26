@@ -37,7 +37,7 @@ class Summer(Driver):
         self.design.set(1)
     
     def post_iteration(self):
-        self.sum += self.objective.refvalue
+        self.sum += self.objective.evaluate()
         self.itercount += 1
     
     def execute(self):
