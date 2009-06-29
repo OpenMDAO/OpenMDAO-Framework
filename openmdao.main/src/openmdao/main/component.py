@@ -217,7 +217,8 @@ class Component (Container):
 
     def save_to_egg(self, name=None, version=None, force_relative=True,
                     src_dir=None, src_files=None, dst_dir=None,
-                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
+                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None,
+                    use_setuptools=False):
         """Save state and other files to an egg.
 
         - `name` defaults to the name of the component.
@@ -324,7 +325,7 @@ class Component (Container):
                                                       force_relative,
                                                       src_dir, src_files,
                                                       dst_dir, format, proto,
-                                                      tmp_dir)
+                                                      tmp_dir, use_setuptools)
         finally:
             # If any component config has been modified, restore it.
             for comp, path in fixup_dirs:
@@ -387,7 +388,7 @@ class Component (Container):
                              % (path1, path2), ValueError)
 
     def check_save_load(self, test_dir='test_dir', cleanup=True,
-                        format=SAVE_CPICKLE):
+                        format=SAVE_CPICKLE, logfile=None):
         """Convenience routine to check that saving & reloading work."""
         old_level = self.log_level
         self.log_level = LOG_DEBUG
@@ -412,13 +413,23 @@ class Component (Container):
             print '\nUnpacking in subprocess...'
             env = os.environ
             env['OPENMDAO_INSTALL'] = '0'
-            retcode = subprocess.call(['sh', egg_path], env=env)
+            if logfile:
+                stdout = open(logfile, 'w')
+                stderr = subprocess.STDOUT
+            else:
+                stdout = None
+                stderr = None
+            retcode = subprocess.call(['sh', egg_path], env=env,
+                                      stdout=stdout, stderr=stderr)
             print '    retcode', retcode
             if retcode == 0:
                 print '\nRunning in subprocess...'
                 os.chdir(self.name)
-                retcode = subprocess.call(['python', self.name+'_loader.py'])
+                retcode = subprocess.call(['python', self.name+'_loader.py'],
+                                          stdout=stdout, stderr=stderr)
                 print '    retcode', retcode
+            if logfile:
+                stdout.close()
         finally:
             os.chdir(orig_dir)
             self.log_level = old_level
@@ -458,31 +469,61 @@ class Component (Container):
 
     def _restore_files(self, module, relpath):
         """Restore external files from installed egg."""
-        self.push_dir(self.get_directory())
+        if self.directory:
+            self.push_dir(self.get_directory())
         try:
-            self.debug("Restoring files in %s", os.getcwd())
-            pkg_files = pkg_resources.resource_listdir(module, relpath)
+            if self.external_files:
+                self.info("Restoring files in %s", os.getcwd())
+                pkg_files = pkg_resources.resource_listdir(module, relpath)
             for metadata in self.external_files:
                 pattern = metadata['path']
-                found = False
-                for filename in pkg_files:
-                    if fnmatch.fnmatch(filename, pattern):
-                        self.debug("    '%s'", filename)
-                        src = pkg_resources.resource_stream(module, filename)
-                        dst = open(filename, 'w')
-                        dst.write(src.read())
-                        dst.close()
-                        found = True
-                if not found:
-                    self.error("No files found for '%s'", pattern)
-
-            if self.directory:
-                relpath += '/'+self.directory  # Must use '/' for resources.
-            for component in [c for c in self.values(pub=False, recurse=True)
+                is_input = metadata.get('input', False)
+                dirname = os.path.dirname(pattern)
+                pattern = os.path.basename(pattern)
+                if dirname:
+                    if not os.path.exists(dirname):
+                        os.makedirs(dirname)
+                    path = relpath+'/'+dirname
+                    package_files = pkg_resources.resource_listdir(module,
+                                                                   path)
+                    self._copy_files(pattern, package_files, module, path,
+                                     is_input, dirname)
+                else:
+                    self._copy_files(pattern, pkg_files, module, relpath,
+                                     is_input)
+            for component in [c for c in self.values(pub=False, recurse=False)
                                     if IComponent.providedBy(c)]:
+                path = relpath
+                if component.directory:
+                    # Must use '/' for resources.
+                    path += '/'+component.directory
                 component._restore_files(module, relpath)
         finally:
-            self.pop_dir()
+            if self.directory:
+                self.pop_dir()
+
+    def _copy_files(self, pattern, pkg_files, module, relpath, is_input,
+                    directory=None):
+        """Copy files from installed egg matching pattern."""
+        if directory:
+            self.push_dir(directory)
+        try:
+            found = False
+            for filename in pkg_files:
+                if fnmatch.fnmatch(filename, pattern):
+                    # Must use '/' for resources.
+                    src_name = relpath+'/'+filename
+                    self.debug("    '%s'", src_name)
+                    src = pkg_resources.resource_stream(module, src_name)
+                    dst = open(filename, 'w')
+                    dst.write(src.read())
+                    dst.close()
+                    found = True
+            if not found and is_input:
+                self.warning("No files found for '%s'", pattern)
+        finally:
+            if directory:
+                self.pop_dir()
 
     def step (self):
         """For Components that run other components (e.g., Assembly or Drivers),
