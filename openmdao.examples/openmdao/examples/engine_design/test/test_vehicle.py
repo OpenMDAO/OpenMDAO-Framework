@@ -27,13 +27,13 @@ class VehicleTestCase(unittest.TestCase):
         self.model.set('test_vehicle.Cf', .01)
         self.model.run()
         
-        self.assertAlmostEqual(self.model.get('test_vehicle.acceleration'), 
+        self.assertAlmostEqual(self.model.test_vehicle.acceleration, 
                                0.450554819193, places=5)
-        self.assertAlmostEqual(self.model.get('test_vehicle.fuel_burn'), 
+        self.assertAlmostEqual(self.model.test_vehicle.fuel_burn, 
                                0.00236333261766, places=5)        
-        self.assertAlmostEqual(self.model.get('test_vehicle.engine.torque'), 
+        self.assertAlmostEqual(self.model.test_vehicle.engine.torque, 
                                81.7322022986, places=5)        
-        self.assertAlmostEqual(self.model.get('test_vehicle.engine.RPM'), 
+        self.assertAlmostEqual(self.model.test_vehicle.engine.RPM, 
                                3216.9984, places=5)        
 
         

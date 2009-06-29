@@ -36,8 +36,8 @@ class MidFidelity(Assembly):
     rs_type = Str('quadratic', iostatus='in',
                      desc='Type of response surface.')
 
-    n_samples = Int(1, iostatus='in', min_limit=1,
-                    desc='Number of samples.')
+    n_samples = Range(value=1, low=1, iostatus='in', 
+                      desc='Number of samples.')
 
     tolerance = Float(1.0e10, iostatus='in', desc='?')
 
@@ -49,11 +49,11 @@ class MidFidelity(Assembly):
     accuracy_test_type = Int(2, iostatus='in', 
                              desc='Method for testing accuracy of response.')
 
-    n_samples_test = Int(10, iostatus='in', min_limit=1,
-                         desc='Number of additional samples for additional-points test.')
+    n_samples_test = Range(value=10, low=1, iostatus='in',
+                           desc='Number of additional samples for additional-points test.')
 
     ntheta = Int(3, iostatus='in', 
-                 desc='For Kriging method, nthets=1(SA),2(Cobyla),3(BFGS)')
+                 desc='For Kriging method, ntheta=1(SA),2(Cobyla),3(BFGS)')
     
     # TODO: change these to delegates or passthroughs
     
@@ -193,8 +193,8 @@ class MidFidelity(Assembly):
             xlb = []
             xub = []
             for mid, low, high in self.input_mappings:
-                xlb.append(self.get(mid+'.min_limit'))
-                xub.append(self.get(mid+'.max_limit'))
+                xlb.append(self.get(mid+'.low'))
+                xub.append(self.get(mid+'.high'))
 
             self._midfi_model.Set(
                 hifi=self._hifi_m4model,

@@ -2,27 +2,28 @@
 
 import unittest
 
-from enthought.traits.api import Float
+from enthought.traits.api import TraitError
 
 from openmdao.main.exceptions import ConstraintError
-from openmdao.main.api import Container
+from openmdao.main.api import Container, UnitsFloat
 
 class FloatTestCase(unittest.TestCase):
 
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.hobj = Container('h1', None)
-        self.hobj.internal_float1 = 3.1415926
-        self.hobj.internal_float2 = 42.
-        self.hobj.internal_float3 = 1.1
-        self.float1 = Float('float1', self.hobj, iostatus='in', 
-                       ref_name='internal_float1', default=98.9,
-                       min_limit=0., max_limit=99., units='ft')
-        self.float2 = Float('float2', self.hobj, iostatus='out', default=13.2, 
-                       ref_name='internal_float2', units='inch')
-        self.float3 = Float('float3', self.hobj, iostatus='in', 
-                       ref_name='internal_float3',
-                       min_limit=0., max_limit=99., units='kg')
+        self.hobj.add_trait('float1', 
+                            UnitsFloat(98.9, low=0., high=99.,
+                                  iostatus='in', units='ft'))
+        self.hobj.add_trait('float2', 
+                            UnitsFloat(13.2, iostatus='out', units='inch'))
+        self.hobj.add_trait('float3', 
+                            UnitsFloat(low=0., high=99.,
+                                       iostatus='in', units='kg'))
+        
+        self.hobj.float1 = 3.1415926
+        self.hobj.float2 = 42.
+        self.hobj.float3 = 1.1
                        
         
     def tearDown(self):
@@ -31,27 +32,29 @@ class FloatTestCase(unittest.TestCase):
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual(3.1415926, self.float1.get_value())
+        self.assertEqual(3.1415926, self.hobj.float1)
         # check default value
-        self.assertEqual(98.9, self.float1.default)
-        self.float1.set_value(self.float2.get_value())
-        self.assertEqual(42., self.float1.get_value())
+        self.assertEqual(98.9, self.hobj.trait('float1').default)
+        
+        # use tuple (value,units) to perform unit conversion
+        self.hobj.assign('float2', 'float1')
+        self.assertAlmostEqual(3.5, self.hobj.float1)
+        
         # make sure value gets transferred to internal variable
-        self.assertEqual(42., self.hobj.internal_float1)
-        self.float1.set_value(32.1)
-        self.assertEqual(32.1, self.float1.get_value())
-        self.assertEqual(32.1, self.hobj.internal_float1)
+        self.assertEqual(42., self.hobj.float1)
+        self.hobj.float1 = 32.1
+        self.assertEqual(32.1, self.hobj.float1)
 
     def test_unit_conversion(self):
-        self.hobj.internal_float2 = 12.  # inches
-        self.float1.setvar(None, self.float2)
-        self.assertEqual(self.hobj.internal_float1, 1.) # 12 inches = 1 ft
+        self.hobj.float2 = 12.  # inches
+        self.hobj.float1 = self.hobj.in_units_of(self.hobj.float2, self.hobj.trait('float2').units)
+        self.assertEqual(self.hobj.float1, 1.) # 12 inches = 1 ft
         
         # now set to a value that will violate constraint after conversion
-        self.hobj.internal_float2 = 1200.  # inches
+        self.hobj.float2 = 1200.  # inches
         try:
-            self.float1.setvar(None, self.float2)
-        except ConstraintError, err:
+            self.hobj.assign('float2', 'float1')
+        except TraitError, err:
             self.assertEqual(str(err), 
                              "h1.float1: constraint '100.0 <= 99.0' has been violated")
         else:
@@ -59,83 +62,66 @@ class FloatTestCase(unittest.TestCase):
         
     def test_bogus_units(self):
         try:
-            self.float1.units = 'bogus'
-        except ValueError, err:
+            uf = UnitsFloat(0., iostatus='in', units='bogus')
+        except TraitError, err:
             self.assertEqual(str(err), 
-                             "h1.float1: Units of 'bogus' are invalid")
+                             "Units of 'bogus' are invalid")
         else:
             self.fail('ValueError expected')
         
-    def test_units_None_to_None(self):
-        self.float1.units = None
-        self.float2.units = None
-        self.float1.setvar(None, self.float2)
-        self.assertEqual(42.0, self.float1.get_value())
-        
-    def test_units_Unit_to_None(self):
-        self.float1.units = 'ft'
-        self.float2.units = None
-        try:
-            self.float1._convert(self.float2)
-        except TypeError, err:
-            self.assertEqual(str(err), 
-                "h1.float2 units (None) are incompatible with units (ft) of h1.float1")
-        else:
-            self.fail("TypeError expected")
-        
     def test_get(self):
-        val = self.float1.get(None)
-        self.assertEqual(val, 3.1415926)
-        val = self.float1.get('value')
-        self.assertEqual(val, 3.1415926)
+        self.assertEqual(self.hobj.float1, 3.1415926)
+        self.assertEqual(self.hobj.get('float1'), 3.1415926)
         
-    def test_set_attribute(self):
-        self.float1.set("units", "ft**2")
-        self.assertEqual(self.float1.units, "ft**2")
-        try:
-            self.float1.set("units", "inch**2", [2])
-        except ValueError, err:
-            self.assertEqual(str(err), 
-                "h1.float1: array indexing of Variable attributes not supported")
-        else:
-            self.fail("ValueError expected")
+    #def test_set_attribute(self):
+        #self.hobj.float1.set("units", "ft**2")
+        #self.assertEqual(self.hobj.float1.units, "ft**2")
+        #try:
+            #self.hobj.float1.set("units", "inch**2", [2])
+        #except ValueError, err:
+            #self.assertEqual(str(err), 
+                #"h1.float1: array indexing of Variable attributes not supported")
+        #else:
+            #self.fail("ValueError expected")
         
     def test_array_assign(self):
         try:
-            self.float1.set(None, 1.3, [3])
-        except NotImplementedError, err:
-            self.assertEqual(str(err), "h1.float1: _pre_assign_entry")
+            self.hobj.float1[3] = 1.3
+        except Exception, err:
+            self.assertEqual(str(err), 
+                "'float' object does not support item assignment")
         else:
-            self.fail("NotImplementedError expected")
+            self.fail("Exception expected")
         
     def test_constraint_violations(self):
         try:
-            self.float1.set_value(124)
-        except ConstraintError, err:
+            self.hobj.float1 = 124
+        except TraitError, err:
             self.assertEqual(str(err), 
-                        "h1.float1: constraint '124 <= 99.0' has been violated")
+                "The 'float1' trait of a Container instance must be 0.0 <= a floating point number <= 99.0, but a value of 124 <type 'int'> was specified.")
         else:
-            self.fail(
-                'expected exception for max_limit violation did not happen')
+            self.fail('TraitError expected')
         try:
-            self.float1.set_value(-3)
-        except ConstraintError, err:
+            self.hobj.float1 = -3
+        except TraitError, err:
             self.assertEqual(str(err), 
-                        "h1.float1: constraint '-3 >= 0.0' has been violated")
+                "The 'float1' trait of a Container instance must be 0.0 <= a floating point number <= 99.0, but a value of -3 <type 'int'> was specified.")
         else:
-            self.fail('ConstraintError exception')
+            self.fail('TraitError exception')
 
     def test_bad_connection(self):
-        self.float1.validate_var(self.float2)
-        self.float1.units = 'lb/ft**2'
-        self.float2.units = 'kg'
+        self.hobj.trait('float1').validate_with_trait(self.hobj, 'float1', 
+                                                      self.hobj.float2,
+                                                      self.hobj.trait('float2'))
         try:
-            self.float1.validate_var(self.float2)
-        except TypeError, err:
-            self.assertEqual(str(err), 'h1.float2 units (kg) are incompatible'+
-                             ' with units (lb/ft**2) of h1.float1')
+            self.hobj.trait('float3').validate_with_trait(self.hobj, 'float3', 
+                                                          self.hobj.float2,
+                                                          self.hobj.trait('float2'))
+        except Exception, err:
+            self.assertEqual(str(err), 
+                "float3: units 'inch' are incompatible with assigning units of 'kg'")
         else:
-            self.fail('TypeError expected')
+            self.fail('Exception expected')
 
 if __name__ == "__main__":
     unittest.main()

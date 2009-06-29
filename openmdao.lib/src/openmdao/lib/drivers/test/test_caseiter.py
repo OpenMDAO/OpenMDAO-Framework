@@ -20,12 +20,13 @@ def rosen_suzuki(x):
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
+    x = Array('d', value=[1., 1., 1., 1.], iostatus='in')
+    y = Array('d', value=[1., 1., 1., 1.], iostatus='in')
+    rosen_suzuki = Float(0., iostatus='out')
+    sum_y = Float(0., iostatus='out')
+        
     def __init__(self, *args, **kwargs):
         super(DrivenComponent, self).__init__(*args, **kwargs)
-        Array('x', self, iostatus='in', default=[1., 1., 1., 1.])
-        Array('y', self, iostatus='in', default=[1., 1., 1., 1.])
-        Float('rosen_suzuki', self, iostatus='out', default=0.)
-        Float('sum_y', self, iostatus='out', default=0.)
 
     def execute(self):
         """ Compute results from input vector. """
@@ -119,19 +120,19 @@ class DriverTestCase(unittest.TestCase):
         self.model.driver.outerator = []
         try:
             self.model.run()
-        except ValueError, exc:
+        except TraitError, exc:
             self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'iterator' is not present")
         else:
-            self.fail('ValueError expected')
+            self.fail('TraitError expected')
 
     def test_noouterator(self):
         self.model.driver.iterator = ListCaseIterator([])
         try:
             self.model.run()
-        except ValueError, exc:
+        except TraitError, exc:
             self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'outerator' is not present")
         else:
-            self.fail('ValueError expected')
+            self.fail('TraitError expected')
 
 
 if __name__ == "__main__":

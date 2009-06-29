@@ -45,8 +45,8 @@ if __name__ == "__main__":
         print '---------------------------------'
         print title
         print '---------------------------------'
-        print 'Engine: Bore = ', z.vehicle_sim.get('bore')
-        print 'Engine: Spark Angle = ', z.vehicle_sim.get('spark_angle')
+        print 'Engine: Bore = ', z.vehicle_sim.bore
+        print 'Engine: Spark Angle = ', z.vehicle_sim.spark_angle
         print '---------------------------------'
         print '0-60 Accel Time = ', z.vehicle_sim.accel_time
         print 'EPA City MPG = ', z.vehicle_sim.EPA_city

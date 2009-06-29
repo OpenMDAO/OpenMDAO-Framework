@@ -5,6 +5,8 @@ import Queue
 import threading
 import time
 
+from enthought.traits.api import Range, Bool, Instance, Any
+
 from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, IComponent
@@ -34,21 +36,21 @@ class CaseIteratorDriver(Driver):
 
     """
 
-    iterator = Socket(ICaseIterator, 'Cases to evaluate.', required=True)
-    outerator = Socket(None, 'Something to append() to.', required=True)
-    model = Socket(IComponent, 'Model to be executed.', required=True)
+    iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
+    outerator = Instance(Any, desc='Something to append() to.', required=True)
+    model = Instance(IComponent, desc='Model to be executed.', required=True)
     
+    sequential = Bool(True, iostatus='in',
+                      desc='Evaluate cases sequentially.')
+
+    reload_model = Bool(True, iostatus='in',
+                        desc='Reload model between executions.')
+
+    max_retries = Range(value=1, low=0, iostatus='in',
+                        desc='Number of times to retry a case.')
+
     def __init__(self, *args, **kwargs):
         super(CaseIteratorDriver, self).__init__(*args, **kwargs)
-
-        Bool('sequential', self, iostatus='in', default=True,
-             desc='Evaluate cases sequentially.')
-
-        Bool('reload_model', self, iostatus='in', default=True,
-             desc='Reload model between executions.')
-
-        Int('max_retries', self, iostatus='in', default=1, min_limit=0,
-            desc='Number of times to retry a case.')
 
         self._iter = None
         self._n_servers = 0

@@ -215,6 +215,35 @@ class Container(HasTraits):
             self.raise_exception("cannot remove child '%s': not found"%
                                  name, TraitError)
     
+    def assign(self, srcname, destname):
+        """Assigns the value of a source attribute to a destination
+        attribute, using trait data if applicable.  For example, if
+        the source and destination traits have units, then a unit
+        conversion will be applied.
+        """
+        srctrait = self.trait(srcname)
+        desttrait = self.trait(destname)
+        srcattr = getattr(self, srcname)
+        if desttrait.validate_with_trait is None:
+            setattr(self, destname, srcattr)
+        else:
+            newval = desttrait.validate_with_trait(self, destname, srcattr,
+                                                   srctrait)
+            setattr(self, destname, newval)
+            
+    def in_units_of(self, name, units):
+        desttrait = self.trait(name)
+        if desttrait is None:
+            self.raise_exception("attribute '%s' not found"%name,
+                                 TraitError)
+        destunits = desttrait.units
+        if destunits is None:
+            raise self.raise_exception("'%s' has no units" % name,
+                                       TraitError)
+        else:
+            pq = PhysicalQuantity(getattr(self, name), destunits)
+            return pq.convertToUnit(units).value
+    
     def items(self, recurse=False, **metadata):
         """Return a list of tuples of the form (rel_pathname, obj) 
         for each trait of this Container that matches
@@ -387,28 +416,27 @@ class Container(HasTraits):
     def remove_destination(self, name):
         del self._dests[name]    
             
-    def _check_trait_settable(self, name, source=None):
+    def _check_trait_settable(self, name, srcname=None):
         src = self._dests.get(name, None)
         trait = self.trait(name)
         if not trait:
             self.raise_exception("object has no attribute '%s'" % name,
                                  TraitError)
-        if trait.iostatus != 'in' and src is not None and src != source:
+        if trait.iostatus != 'in' and src is not None and src != srcname:
             self.raise_exception("'%s' is not an input trait and cannot be set" %
                                  name, TraitError)
             
-        if src is not None and src != source:
+        if src is not None and src != srcname:
             self.raise_exception(
                 "'%s' is connected to source '%s' and cannot be set by source '%s'"%
-                (name,src,source), TraitError)
+                (name,src,srcname), TraitError)
                     
-    def set(self, path, value, index=None, source=None):
+    def set(self, path, value, index=None, srcname=None, srctrait=None):
         """Set the value of the data object specified by the  given path, which
         may contain '.' characters.  If path specifies a Variable, then its
         value attribute will be set to the given value, subject to validation
         and  constraints. index, if not None, should be a list of ints, at
-        most one for each array dimension of the target value.
-        
+        most one for each array dimension of the target value.       
         """ 
         assert(isinstance(path, basestring))
         
@@ -423,16 +451,22 @@ class Container(HasTraits):
                     
         tup = path.split('.')
         if len(tup) == 1:
-            self._check_trait_settable(path, source)
+            self._check_trait_settable(path, srcname)
             if index is None:
                 if self.trait(path) is None:
                     self.raise_exception("object has no attribute '%s'" %
                                          path, TraitError)
                 # bypass the callback here and call it manually after 
-                # with a flag to tell it not to check if its a destination
+                # with a flag to tell it not to check if it's a destination
                 self._trait_change_notify(False)
                 try:
-                    setattr(self, path, value)
+                    if srctrait is None:
+                        setattr(self, path, value)
+                    else:
+                        val = self.trait(path).validate_with_trait(self, 
+                                                                   path, value,
+                                                                   srctrait)
+                        self.__dict__[path] = val # avoid repeat validation
                 finally:
                     self._trait_change_notify(True)
                 # now manually call the notifier with old set to Undefined
@@ -447,9 +481,11 @@ class Container(HasTraits):
                                      TraitError)
             if isinstance(obj, Container):
                 if len(tup) == 2:
-                    obj.set(tup[1], value, index, source)
+                    obj.set(tup[1], value, index, 
+                            srcname=srcname, srctrait=srctrait)
                 else:
-                    obj.set('.'.join(tup[1:]), value, index)
+                    obj.set('.'.join(tup[1:]), value, index, 
+                            srctrait=srctrait)
             else:
                 obj._array_set('.'.join(tup[1:]), value, index)
 

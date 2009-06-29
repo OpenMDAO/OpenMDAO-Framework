@@ -46,7 +46,7 @@ class MulticastTrait(TraitType):
     def post_setattr(self, object, name, value):
         if value is not Undefined:
             for vname in self.names:
-                object.set(vname, value, source=name)
+                object.set(vname, value, srcname=name)
         
 class Assembly (Component):
     """This is a container of Components. It understands how
@@ -443,6 +443,8 @@ class Assembly (Component):
                 else:
                     srccomp.update_outputs([srcvarname])
 
+            # TODO: get rid of this special check for FileVariables. Add metadata to
+            # the trait so that enough is known to handle the file transfer
             if isinstance(desttrait, FileVariable):
                 if comp.directory:
                     comp.pop_dir()
@@ -458,8 +460,12 @@ class Assembly (Component):
                         comp.push_dir(comp.get_directory())
             else:
                 try:
-                    destcomp.set(destvarname, getattr(srccomp, srcvarname), 
-                                 source=srcname)
+                    if srctrait.validate_with_trait is not None:
+                        destcomp.set(destvarname, getattr(srccomp, srcvarname),
+                                     srcname=srcname, srctrait=srctrait)
+                    else:
+                        destcomp.set(destvarname, getattr(srccomp, srcvarname), 
+                                     srcname=srcname)
                 except Exception, exc:
                     msg = "cannot set '%s' from '%s': %s" % \
                         (vname, srcname, exc)

@@ -8,7 +8,7 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('DOE',)
 __version__ = '0.1'
 
-from enthought.traits.api import Int, Str
+from enthought.traits.api import Int, Str, Range
 
 import mool.Optimization.DOE
 
@@ -21,10 +21,8 @@ class DOE(CaseIteratorDriver):
 
     # No 'Option' variables yet.
     type = Str('ccd', iostatus='in', desc='Type of experiment design.')
-
-    n_samples = Int(1, iostatus='in', min_limit=1, desc='Number of samples.')
-
-    lhs = Int(2, iostatus='in', min_limit=1, desc='???, used by LHS and Rand_LHS.')
+    n_samples = Range(value=1, low=1, iostatus='in', desc='Number of samples.')
+    lhs = Range(value=2, low=1, iostatus='in', desc='???, used by LHS and Rand_LHS.')
 
     def __init__(self, name='M4_DOE', *args, **kwargs):
         super(DOE, self).__init__(name, *args, **kwargs)

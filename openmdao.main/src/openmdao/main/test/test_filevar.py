@@ -7,7 +7,7 @@ import os
 import shutil
 import unittest
 
-from enthought.traits.api import Bool, Array, ListStr
+from enthought.traits.api import Bool, Array, List, Str
 
 from openmdao.main.api import Assembly, Component, FileVariable
 
@@ -18,14 +18,15 @@ from openmdao.main.api import Assembly, Component, FileVariable
 class Source(Component):
     """ Produces files. """
 
+    write_files = Bool(True, iostatus='in')
+    text_data = List(Str, iostatus='in')
+    binary_data = Array('d', iostatus='in')
+    text_file = FileVariable('source.txt', iostatus='out')
+    binary_file = FileVariable('source.bin', iostatus='out'
+                               binary=True)
+        
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
-        Bool('write_files', self, iostatus='in', default=True)
-        StringList('text_data', self, iostatus='in', default=[])
-        Array('binary_data', self, iostatus='in', float, default=[])
-        FileVariable('text_file', self, iostatus='out', default='source.txt')
-        FileVariable('binary_file', self, iostatus='out', default='source.bin',
-                     metadata={'binary':True})
 
     def execute(self):
         """ Write test data to files. """
@@ -42,12 +43,13 @@ class Source(Component):
 class Sink(Component):
     """ Consumes files. """
 
+    text_data = List(Str, iostatus='out')
+    binary_data = Array('d', iostatus='out')
+    text_file = FileVariable('sink.txt', iostatus='in')
+    binary_file = FileVariable('sink.bin', iostatus='in')
+        
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
-        StringList('text_data', self, iostatus='out', default=[])
-        Array('binary_data', self, iostatus='out', float, default=[])
-        FileVariable('text_file', self, iostatus='in', default='sink.txt')
-        FileVariable('binary_file', self, iostatus='in', default='sink.bin')
 
     def execute(self):
         """ Read test data from files. """

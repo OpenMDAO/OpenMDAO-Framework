@@ -5,14 +5,48 @@
 
 from math import pi, sin, cos, exp
 
-from enthought.traits.api import Float, Int
+from enthought.traits.api import Float, Int, Range
 
-from openmdao.main.api import Component
+from openmdao.main.api import Component, UnitsFloat
 
 class Engine(Component):
     ''' Model of a piston engine - Python Implementation.'''
     
-    def __init__(self, name, parent=None, doc=None, directory=''):
+    # set up interface to the framework  
+    # pylint: disable-msg=E1101
+    # "Instance of <class> has no <attr> member"        
+    stroke = UnitsFloat(78.8, iostatus='in', units='mm', desc='Cylinder Stroke')
+    bore = UnitsFloat(82.0, iostatus='in', units='mm',  desc='Cylinder Bore')
+    conrod = UnitsFloat(115.0, iostatus='in', units='mm',
+                   desc='Connecting Rod Length')
+    comp_ratio = Float(9.3, iostatus='in', desc='Compression Ratio')
+    spark_angle = UnitsFloat(-37.0, iostatus='in', units='deg',
+                             desc = 'Spark Angle with respect to TDC (Top Dead Center)')
+    ncyl = Int(6, iostatus='in', desc = 'Number of Cylinders')
+    IVO = UnitsFloat(11.0, iostatus='in', units='deg',
+                     desc = 'Intake Valve Open before TDC (Top Dead Center)')
+    IVC = UnitsFloat(53.0, iostatus='in', units='deg', 
+                     desc = 'Intake Valve Open after BDC (Bottom Dead Center)')
+    L_v = UnitsFloat(8.0, iostatus='in', units='mm',
+                     desc='Maximum Valve Lift')
+    D_v = UnitsFloat(41.2, iostatus='in', units='mm',
+                     desc='Inlet Valve Diameter')
+
+    RPM = UnitsFloat(1000.0, low=1000., high=6000., iostatus='in', 
+                     units='1/min',  desc='Engine RPM')
+    throttle = Range(low=0.01, high=1.0, value=1.0, iostatus='in', 
+                     desc='Throttle position (from low idle to wide open)')
+
+    power = UnitsFloat(0.0, iostatus='out', units='kW', 
+                       desc='Power at engine output')
+    torque = UnitsFloat(0.0, iostatus='out', units='N*m', 
+                        desc='Torque at engine output')
+    fuel_burn = UnitsFloat(0.0, iostatus='out', units='l/s', 
+                           desc='Fuel Burn Rate')
+    engine_weight = UnitsFloat(0.0, iostatus='out', units='kg', 
+                               desc='Engine weight estimation')
+        
+    def __init__(self, name, parent=None, desc=None, directory=''):
         ''' Creates a new Engine object
 
             # Design parameters
@@ -53,46 +87,8 @@ class Engine(Component):
             engine_weight              # Engine weight estimation (kg)
             '''
 
-        super(Engine, self).__init__(name, parent, doc, directory)        
+        super(Engine, self).__init__(name, parent, desc, directory)        
 
-        # set up interface to the framework  
-        # pylint: disable-msg=E1101
-        # "Instance of <class> has no <attr> member"        
-        Float('stroke', self, iostatus='in', units='mm', default=78.8,
-              desc='Cylinder Stroke')
-        Float('bore', self, iostatus='in', units='mm', default=82.0, 
-              desc='Cylinder Bore')
-        Float('conrod', self, iostatus='in', units='mm', default=115.0, 
-              desc='Connecting Rod Length')
-        Float('comp_ratio', self, iostatus='in', units=None, default=9.3, 
-              desc='Compression Ratio')
-        Float('spark_angle', self, iostatus='in', units='deg', default=-37.0,
-              doc = 'Spark Angle with respect to TDC (Top Dead Center)')
-        Int('ncyl', self, iostatus='in', default=6,
-            doc = 'Number of Cylinders')
-        Float('IVO', self, iostatus='in', units='deg', default=11.0,
-              doc = 'Intake Valve Open before TDC (Top Dead Center)')
-        Float('IVC', self, iostatus='in', units='deg', default=53.0,
-              doc = 'Intake Valve Open after BDC (Bottom Dead Center)')
-        Float('L_v', self, iostatus='in', units='mm', default=8.0, 
-              desc='Maximum Valve Lift')
-        Float('D_v', self, iostatus='in', units='mm', default=41.2, 
-              desc='Inlet Valve Diameter')
-
-        Float('RPM', self, iostatus='in', units='1/min', default=1000.0, min_limit=1000,
-              max_limit=6000, desc='Engine RPM')
-        Float('throttle', self, iostatus='in', units=None, default=1.0, min_limit=0.01,
-              max_limit=1.0, desc='Throttle position (from low idle to wide \
-              open)')
-
-        Float('power', self, iostatus='out', units='kW', default=0.0,
-              desc='Power at engine output')
-        Float('torque', self, iostatus='out', units='N*m', default=0.0,
-              desc='Torque at engine output')
-        Float('fuel_burn', self, iostatus='out', units='l/s', default=0.0,
-              desc='Fuel Burn Rate')
-        Float('engine_weight', self, iostatus='out', units='kg', default=0.0,
-              desc='Engine weight estimation')
 
 
     def execute(self):

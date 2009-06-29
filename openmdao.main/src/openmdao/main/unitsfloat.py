@@ -4,155 +4,69 @@ __all__ = ["UnitsFloat"]
 
 __version__ = "0.1"
 
-from enthought.traits.api import BaseFloat, BaseRange
+from enthought.traits.api import BaseFloat, Range, TraitError
 
 from Scientific.Physics.PhysicalQuantities import PhysicalQuantity
     
 class UnitsFloat(BaseFloat):
-    """A Variable wrapper for floats with units"""
+    """A Variable wrapper for floats with units and an allowed range of
+    values.
+    """
     
-    def __init__(self, default_value = None, **metadata):
-        if isinstance(default_value, PhysicalQuantity):
-            default_value = PhysicalQuantity(default_value.value, 
-                                             defalut_value.units)
+    def __init__(self, default_value = None, low=None, high=None,
+                 exclude_low=False, exclude_high=False, **metadata):
+        if default_value is None:
+            default_value = 0.0
+            
+        if low is None and high is None:
+            self._validator = None
         else:
-            if 'units' not in metadata:
-                raise TypeError('UnitsFloat must have units defined')
-            if default_value is None:
-                default_value = 0.0
-            default_value = PhysicalQuantity(float(default_value), 
-                                             metadata['units'])
-        super(UnitsFloat, self).__init__(default_value, **metadata)
+            if low is None:
+                low = -1.e99
+            if high is None:
+                high = 1.e99
+            value = default_value
+            self._validator = Range(low=low, high=high, value=value,
+                                          exclude_low=exclude_low,
+                                          exclude_high=exclude_high,
+                                          **metadata)
+        if 'units' not in metadata:
+            raise TraitError('UnitsFloat must have units defined')
+        else:
+            try:
+                pq = PhysicalQuantity(0., metadata['units'])
+            except:
+                raise TraitError("Units of '%s' are invalid" %
+                                 metadata['units'])
+        metadata['validate_with_trait'] = self._validate_with_trait
+        super(UnitsFloat, self).__init__(default_value=default_value,
+                                         **metadata)
 
     def validate(self, object, name, value):
-        pq = getattr(object,name)
-        if isinstance(value, PhysicalQuantity):
-            try:
-                return value.inUnitsOf(pq.getUnitName())
-            except TypeError, err:
-                raise TraitError(str(err))
+        if self._validator:
+            return self._validator.validate(object, name, value)
+        else:
+            return super(UnitsFloat, self).validate(object, name, value)
+
+    def _validate_with_trait(self, object, name, value, trait):
+        """Perform validation and unit conversion using the source
+        trait units value.
+        """
+        try:
+            pq = PhysicalQuantity(value, trait.units)
+        except NameError:
+            raise TraitError("undefined unit '%s'" % trait.units)
+
+        try:
+            pq.convertToUnit(object.trait(name).units)
+        except NameError:
+            raise TraitError("undefined unit '%s'" % trait.units)
+        except TypeError, err:
+            raise TraitError("%s: units '%s' are incompatible with assigning units of '%s'" % 
+                             (name, pq.getUnitName(),
+                              object.trait(name).units))
             
-        pq.value = super(UnitsFloat, self).validate(object, name, value) # normal float validation
-        return pq
-    
-    #def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
-                 #default=UNDEFINED, doc=None, units=UNDEFINED, 
-                 #min_limit=None, max_limit=None):
-        #self.units = units
-        #super(Float, self).__init__(name, parent, iostatus, 
-                                    #val_types=(float,int,long,numpy.float64), 
-                                    #ref_name=ref_name, ref_parent=ref_parent,
-                                    #default=default, doc=doc)
-        #self._min_limit = None
-        #self._max_limit = None
-        #self.min_limit = min_limit
-        #self.max_limit = max_limit
-            
-        ## test default value against constraints
-        #self.set_default(default)
-    
-    #def _get_min_limit(self):
-        #if self._min_limit is None:
-            #return None
-        #else:
-            #return self._min_limit.min
+        object.debug('%s (%s) converted to %s (%s)' % 
+                     (value,trait.units,pq.value,object.trait(name).units))
+        return self.validate(object, name, pq.value)
         
-    #def _set_min_limit(self, value):
-        #if self._min_limit is None:
-            #if value is not None:
-                #self._min_limit = MinConstraint(value)
-                #self.add_constraint(self._min_limit)
-        #else:
-            #if value is None:
-                #self.remove_constraint(self._min_limit)
-                #self._min_limit = None
-            #else:
-                #self._min_limit.min = value
-    
-    #min_limit = property(_get_min_limit, _set_min_limit, None,
-                         #'Sets a lower limit on the value of this Variable.')
-    
-    #def _get_max_limit(self):
-        #if self._max_limit is None:
-            #return None
-        #else:
-            #return self._max_limit.max
-        
-    #def _set_max_limit(self, value):
-        #if self._max_limit is None:
-            #if value is not None:
-                #self._max_limit = MaxConstraint(value)
-                #self.add_constraint(self._max_limit)
-        #else:
-            #if value is None:
-                #self.remove_constraint(self._max_limit)
-                #self._max_limit = None
-            #else:
-                #self._max_limit.max = value
-    
-    #max_limit = property(_get_max_limit, _set_max_limit, None,
-                         #'Sets an upper limit on the value of this Variable.')
-
-    #def _get_units(self):
-        #return self._units
-    
-    #def _set_units(self, units):
-        #if units and units != UNDEFINED:
-            ## this will raise an exception if units are bad
-            #try:
-                #mypq = PhysicalQuantity(1., units)
-            #except NameError:
-                #msg = "Units of '"+str(units)+"' are invalid"
-                #if '^' in units:
-                    #msg += ". Exponentiation is indicated by '**', not '^'."
-                #self.raise_exception(msg, ValueError)
-        #self._units = units      
-        
-    #units = property(_get_units, _set_units, None,
-                     #'Sets the units string for this Variable.')
-    
-    #def _incompatible_units(self, variable, units):
-        #raise TypeError(variable.get_pathname()+' units ('+
-                        #str(units) +') are '+
-                        #'incompatible with units ('+ str(self.units) +') of '+ 
-                        #self.get_pathname())
-        
-    #def validate_var(self, var):
-        #"""Raise a TypeError if the connecting Variable is incompatible. This
-        #is called on the iostatus='in' side of a connection."""
-        #super(Float, self).validate_var(var)
-        
-        ## allow assignment if either Variable has unassigned units
-        #if self.units == UNDEFINED or var.units == UNDEFINED:
-            #pass
-        #elif self.units is None and var.units is None:
-            #pass
-        #elif self.units is None or var.units is None:
-            #self._incompatible_units(var, var.units)
-        #else:
-            ## if units are defined, force compatibility
-            #mypq = PhysicalQuantity(1., self.units)
-            #if not mypq.isCompatible(var.units):
-                #self._incompatible_units(var, var.units)
-                
-            ## allow value without units to be assigned to val with units
-
-     
-    #def _convert(self, var):
-        #"""Perform unit conversion here. Validation is not necessary because 
-        #it's already been done in validate_var.
-        #"""
-        #if self.units == UNDEFINED or var.units == UNDEFINED:
-            #return var.get_value()
-        #elif self.units is None and var.units is None:
-            #return var.get_value()
-        #elif self.units is None or var.units is None:
-            #self._incompatible_units(var, var.units)
-        #else:
-            #pq = PhysicalQuantity(var.get_value(), var.units)
-            #pq.convertToUnit(self.units)
-            #return pq.value
-    
-    
-#add_var_type_map(Float, float)
-

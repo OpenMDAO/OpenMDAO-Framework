@@ -7,7 +7,7 @@ on the first execution, then on subsequent executions the corrected result
 is directly calculated.
 """
 
-from enthought.traits.api import Float
+from enthought.traits.api import Float, Range
 
 from openmdao.main.api import Assembly
 
@@ -43,6 +43,19 @@ class MyModel(Assembly):
 class VarFi(MidFidelity):
     """ Example variable fidelity component. """
 
+    # Input mappings (mid, lo, hi).
+    x = Range(value=0., low=0., high=5., iostatus='in', 
+              desc='X input value.')
+
+    y = Float(value=0., low=0., high=5., iostatus='in',
+              desc='Y input value.')
+
+    # Output mappings (mid, lo, hi).
+    z1 = Float(0., iostatus='out' desc='exp(x) + exp(y)')
+
+    z2 = Float(0., iostatus='out',
+               desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
+        
     def __init__(self, name='VarFi', *args, **kwargs):
         super(VarFi, self).__init__(name, *args, **kwargs)
 
@@ -58,22 +71,9 @@ class VarFi(MidFidelity):
         self.set_hifi_model(Model_A2d())
         self.set_lofi_model(Model_B2d())
 
-        # Input mappings (mid, lo, hi).
-        Float('x', self, iostatus='in', default=0., min_limit=0., max_limit=5.,
-              desc='X input value.')
         self.add_input_mapping('x', 'x', 'x')
-
-        Float('y', self, iostatus='in', default=0., min_limit=0., max_limit=5.,
-              desc='Y input value.')
         self.add_input_mapping('y', 'y', 'y')
-
-        # Output mappings (mid, lo, hi).
-        Float('z1', self, iostatus='out', default=0.,
-              desc='exp(x) + exp(y)')
         self.add_output_mapping('z1', 'z', 'z1')
-
-        Float('z2', self, iostatus='out', default=0.,
-              desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
         self.add_output_mapping('z2', 'z', 'z2')
 
 

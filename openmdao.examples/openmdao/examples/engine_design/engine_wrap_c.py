@@ -7,7 +7,7 @@
 
 from math import pi
 
-from enthought.traits.api import Float, Int
+from enthought.traits.api import Float, Int, Range
 
 from openmdao.main.api import Component, UnitsFloat
 
@@ -39,11 +39,10 @@ class Engine(Component):
     D_v = UnitsFloat(41.2, iostatus='in', units='mm', 
                      desc='Inlet Valve Diameter')
 
-    RPM = UnitsFloat(1000.0, iostatus='in', units='1/min', 
-                     min_limit=1000, max_limit=6000, 
+    RPM = UnitsFloat(1000.0, low=1000., high=6000., 
+                     iostatus='in', units='1/min', 
                      desc='Engine RPM')
-    throttle = Float(1.0, iostatus='in', min_limit=0.01,
-                     max_limit=1.0, 
+    throttle = Range(low=0.01, high=1.0, value=1.0, iostatus='in', 
                      desc='Throttle position (from low idle to wide open)')
 
     power = UnitsFloat(0., iostatus='out', units='kW', 
@@ -145,10 +144,10 @@ class Engine(Component):
         
         power, torque, fuel_burn, engine_weight = RunEngineCycle(
                     stroke, bore, conrod, comp_ratio, spark_angle,
-                    n_cyl, IVO.value, IVC, L_v, D_v, k,
+                    n_cyl, IVO, IVC, L_v, D_v, k,
                     R, Ru, Hu, Tw, AFR, P_exth,
                     T_amb, P_amb, air_density, mw_air, mw_fuel,
-                    RPM.value, throttle, thetastep, fuel_density)
+                    RPM, throttle, thetastep, fuel_density)
 
         
         # Interogate results of engine simulation and store.

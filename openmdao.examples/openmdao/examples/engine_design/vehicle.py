@@ -138,7 +138,7 @@ if __name__ == "__main__":
 #        z.set('throttle', throttle/100.0)
     z.set('throttle', 1.0)
     z.run()
-    print z.get('acceleration')
+    print z.acceleration
     
     def prz(zz):
         ''' Printing the results'''
