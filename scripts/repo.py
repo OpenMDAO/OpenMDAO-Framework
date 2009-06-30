@@ -47,9 +47,6 @@ def main():
         else:
             parser.print_help()
             sys.exit(1)
-    elif operation != 'set':
-        print 'You must specify a repository'
-        sys.exit(1)
 
     this_user = pwd.getpwuid(os.getuid()).pw_name
     path = find_repository(repository, this_user)
@@ -202,17 +199,19 @@ def find_repository(repository, user):
     shared_base = os.path.join(os.sep, 'OpenMDAO', 'dev', 'shared')
 
     if not repository:
-        # Use default if this user only has one.
-        paths = glob.glob(os.path.join(user_base, '*'))
-        if len(paths) == 1:
-            repository = paths[0]
-        elif len(paths) == 0:
-            repository = 'working_main'  # Default shared if no user repo.
-        else:
-            print 'Default repository is ambiguous:'
-            for path in paths:
-                print '   ', path
-                sys.exit(1)
+        path = find_bzr('.')
+        if not path:
+            # Use default if this user only has one.
+            paths = glob.glob(os.path.join(user_base, '*'))
+            if len(paths) == 1:
+                repository = paths[0]
+            elif len(paths) == 0:
+                repository = 'working_main'  # Default shared if no user repo.
+            else:
+                print 'Default repository is ambiguous:'
+                for path in paths:
+                    print '   ', path
+                    sys.exit(1)
     path = find_bzr(repository)
     if not path:
         path = os.path.join(user_base, repository)
