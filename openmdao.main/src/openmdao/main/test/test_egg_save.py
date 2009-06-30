@@ -6,6 +6,7 @@ import cPickle
 import logging
 import os
 import shutil
+import sys
 import unittest
 
 from openmdao.main import Assembly, Component, Container, \
@@ -511,8 +512,9 @@ class EggTestCase(unittest.TestCase):
         # This requires the correct pythonV.R command in PATH.
         logging.debug('')
         logging.debug('test_check_save_load')
-        retcode = self.model.check_save_load()
-        self.assertEqual(retcode, 0)
+        if sys.platform != 'win32':
+            retcode = self.model.check_save_load()
+            self.assertEqual(retcode, 0)
 
 
 if __name__ == '__main__':
