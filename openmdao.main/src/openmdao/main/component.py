@@ -191,6 +191,8 @@ class Component (Container):
         if not directory:
             directory = '.'
         cwd = os.getcwd()
+        if not os.path.isabs(directory):
+            directory = os.path.join(self.get_directory(), directory)
         if not SimulationRoot.legal_path(directory):
             self.raise_exception(
                 "Illegal directory '%s', not a decendant of '%s'." % \
@@ -473,7 +475,7 @@ class Component (Container):
             self.push_dir(self.get_directory())
         try:
             if self.external_files:
-                self.info("Restoring files in %s", os.getcwd())
+                self.info('Restoring files in %s', os.getcwd())
                 pkg_files = pkg_resources.resource_listdir(module, relpath)
             for metadata in self.external_files:
                 pattern = metadata['path']
@@ -497,7 +499,7 @@ class Component (Container):
                 if component.directory:
                     # Must use '/' for resources.
                     path += '/'+component.directory
-                component._restore_files(module, relpath)
+                component._restore_files(module, path)
         finally:
             if self.directory:
                 self.pop_dir()
