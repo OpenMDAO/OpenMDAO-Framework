@@ -45,6 +45,8 @@ def _swap_templates(script, py_script):
     return (old_script, old_py_script)
 
 
+import shutil
+
 class IsolatedEgg(zc.recipe.egg.Scripts):
     """A recipe that modifies the zc.buildout.easy_install module script
     templates in order to isolate the buildout.  It changes the default
@@ -63,6 +65,16 @@ class IsolatedEgg(zc.recipe.egg.Scripts):
         finally:
             _swap_templates(old, old_py)
                 
+        # Sometimes we need the explicit version command (eggsecutables).
+        bin = self.buildout['buildout']['bin-directory']
+        python = os.path.join(bin, 'python')
+        pythonVR = os.path.join(bin, 'python'+sys.version[:3])
+        shutil.copyfile(python, pythonVR)
+        try:
+            os.chmod(pythonVR, 0775)
+        except (AttributeError, os.error):
+            pass
+        ret.append(pythonVR)
         return ret
 
     update = install

@@ -17,6 +17,11 @@ def run_openmdao_suite():
     
     tlist = ['openmdao', 'npsscomponent']
     
+    # In case --with-coverage is used, default these options in.
+    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-package=npsscomponent')
+    sys.argv.append('--cover-erase')
+
     if '--all' in sys.argv:
         sys.argv.remove('--all')
         nose.run_exit(argv=sys.argv+tlist)

@@ -108,7 +108,7 @@ class NullLogger(object):
 
 def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
                 dst_dir=None, format=SAVE_CPICKLE, proto=-1, tmp_dir=None,
-                logger=None):
+                logger=None, use_setuptools=False):
     """
     Save state and other files to an egg.
 
@@ -156,11 +156,12 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
 
         # Fixup objects, classes, & sys.modules for __main__ imports.
         fixup = _fix_objects(objs)
+        _verify_objects(root, logger)
         tmp_dir = None
         try:
             # Determine distributions and local modules required.
             required_distributions, local_modules, missing_modules = \
-                _get_distributions(objs, logger)
+                _get_distributions(root, objs, logger)
 
             # Move to scratch area.
             tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
@@ -184,9 +185,11 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
                 # If orig_dir isn't src_dir, copy local modules from orig_dir.
                 if orig_dir != src_dir:
                     for path in local_modules:
-                        if not os.path.isabs(path):
-                            path = os.path.join(orig_dir, path)
-                        shutil.copy(path, name)
+                        if not os.path.exists(
+                                   os.path.join(name, os.path.basename(path))):
+                            if not os.path.isabs(path):
+                                path = os.path.join(orig_dir, path)
+                            shutil.copy(path, name)
 
                 # If any distributions couldn't be found, record them in a file.
                 if missing_modules:
@@ -240,12 +243,15 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
                 doc = root.__doc__
                 if doc is None:
                     doc = ''
-                eggwriter.write(name, doc, version, loader,
-                                src_files, required_distributions,
-                                dst_dir, logger)
-#                eggwriter.write_via_setuptools(name, doc, version, loader,
-#                                             src_files, required_distributions,
-#                                               dst_dir, logger)
+                if use_setuptools:
+                    eggwriter.write_via_setuptools(name, doc, version, loader,
+                                                   src_files,
+                                                   required_distributions,
+                                                   dst_dir, logger)
+                else:
+                    eggwriter.write(name, doc, version, loader,
+                                    src_files, required_distributions,
+                                    dst_dir, logger)
             finally:
                 for path in cleanup_files:
                     if os.path.exists(path):
@@ -370,30 +376,39 @@ def _get_objects(root, logger):
             try:
                 state = obj.__dict__
             except AttributeError:
-                if isinstance(obj, dict) or \
-                   isinstance(obj, list) or \
-                   isinstance(obj, set)  or \
-                   isinstance(obj, tuple):
+                if isinstance(obj, dict) or isinstance(obj, list) or \
+                   isinstance(obj, set)  or isinstance(obj, tuple):
                     state = obj
                 else:
                     return  # Some non-container primitive.
+            container = state
         except Exception, exc:
             logger.error("During save_to_egg, _get_objects error %s: %s",
                          type(obj), exc)
             return
+        else:
+            # If possible, get the original container.
+            # (__getstate__ often returns a (modified) copy)
+            try:
+                container = obj.__dict__
+            except AttributeError:
+                container = None
 
         if isinstance(state, dict):
+            indices = state.keys()
             state = state.values()
+        else:
+            indices = range(len(state))
 
-        for obj in state:
+        for obj, index in zip(state, indices):
             if id(obj) in visited:
                 continue
             visited.add(id(obj))
-            objs.append(obj)
+            objs.append((obj, container, index))
             if not inspect.isclass(obj):
                 _recurse_get_objects(obj, objs, visited, logger)
 
-    objs = [root]
+    objs = [(root, None, None)]
     visited = set()
     visited.add(id(root))
     _recurse_get_objects(root, objs, visited, logger)
@@ -403,7 +418,7 @@ def _get_objects(root, logger):
 def _check_objects(objs, logger):
     """ Check that each object can be pickled. """
     errors = 0
-    for obj in objs:
+    for obj, container, index in objs:
         try:
             cls = obj.__class__
         except AttributeError:
@@ -430,13 +445,28 @@ def _check_objects(objs, logger):
                            % (errors, plural))
 
 
+def _verify_objects(root, logger):
+    """ Verify no references to __main__ exist. """
+    objs = _get_objects(root, logger)
+    for obj, container, index in objs:
+        try:
+            mod = obj.__module__
+        except AttributeError:
+            continue
+
+        if mod == '__main__':
+            raise RuntimeError("Can't save, unable to patch __main__"
+                               " module reference in obj %r, container %r"
+                               " index %s", obj, container, index)
+
+
 def _fix_objects(objs):
     """ Fixup objects, classes, & sys.modules for __main__ imports. """
     fixup_objects = []
     fixup_classes = {}
     fixup_modules = set()
 
-    for obj in objs:
+    for obj, container, index in objs:
         if inspect.isclass(obj):
             cls = obj
         else:
@@ -454,8 +484,7 @@ def _fix_objects(objs):
                 raise RuntimeError("Can't save: reference to %s defined "
                                    "in main module %r" % (classname, obj))
             mod = cls.__module__
-            if mod == '__main__' and \
-               (classname not in fixup_classes.keys()):
+            if mod == '__main__' and (classname not in fixup_classes.keys()):
                 mod, module = _find_module(classname)
                 if mod:
                     old = cls
@@ -468,7 +497,12 @@ def _fix_objects(objs):
                     raise RuntimeError("Can't find module for '%s'" % classname)
 
             if inspect.isclass(obj):
-                obj.__module__ = mod
+                if isinstance(container, tuple):
+                    raise RuntimeError("Can't save: reference to class %s"
+                                       " defined in main module is contained in"
+                                       " a tuple." % classname)
+                else:
+                    container[index] = fixup_classes[classname][1]
             else:
                 try:
                     obj.__class__ = fixup_classes[classname][1]
@@ -476,7 +510,7 @@ def _fix_objects(objs):
                     raise RuntimeError("Can't fix %r, classname %s, module %s"
                                        % (obj, classname, mod))
                 obj.__module__ = obj.__class__.__module__
-            fixup_objects.append(obj)
+            fixup_objects.append((obj, container, index))
 
     return (fixup_objects, fixup_classes, fixup_modules)
 
@@ -501,9 +535,12 @@ def _restore_objects(fixup):
     """ Restore objects, classes, & sys.modules for __main__ imports. """
     fixup_objects, fixup_classes, fixup_modules = fixup
 
-    for obj in fixup_objects:
+    for obj, container, index in fixup_objects:
         obj.__module__ = '__main__'
-        if not inspect.isclass(obj):
+        if inspect.isclass(obj):
+            classname = obj.__name__
+            container[index] = fixup_classes[classname][0]
+        else:
             classname = obj.__class__.__name__
             if classname != 'function':
                 obj.__class__ = fixup_classes[classname][0]
@@ -516,7 +553,7 @@ def _restore_objects(fixup):
         del sys.modules[mod]
 
 
-def _get_distributions(objs, logger):
+def _get_distributions(root, objs, logger):
     """ Return (distributions, local_modules, missing) used by objs. """
     distributions = set()
     local_modules = set()
@@ -526,7 +563,7 @@ def _get_distributions(objs, logger):
     site_lib = os.path.dirname(site.__file__)
     site_pkg = site_lib+os.sep+'site-packages'
 
-    for obj in objs:
+    for obj, container, index in objs:
         try:
             name = obj.__module__
         except AttributeError:
@@ -560,6 +597,9 @@ def _get_distributions(objs, logger):
                 logger.warning("    module path '%s' does not exist", path)
                 continue
 
+            if not os.path.isabs(path):
+                path = os.path.join(os.getcwd(), path)
+
             finder_items = None
             if path in _SAVED_FINDINGS.keys():
                 logger.debug("    reusing analysis of '%s'", path)
@@ -576,8 +616,9 @@ def _get_distributions(objs, logger):
                     _SAVED_FINDINGS[path] = finder_items
 
             if finder_items is not None:
-                _process_found_modules(finder_items, modules, distributions,
-                                       prefixes, local_modules, missing, logger)
+                _process_found_modules(root, finder_items, modules,
+                                       distributions, prefixes, local_modules,
+                                       missing, logger)
 
     distributions = sorted(distributions, key=lambda dist: dist.project_name)
     logger.debug('    required distributions:')
@@ -602,12 +643,13 @@ def _process_egg(path, distributions, prefixes, logger):
             prefixes.append(loc)
 
 
-def _process_found_modules(finder_items, modules, distributions, prefixes,
+def _process_found_modules(root, finder_items, modules, distributions, prefixes,
                            local_modules, missing, logger):
     """ Use ModuleFinder data to update distributions and local_modules. """
     working_set = pkg_resources.WorkingSet()
     site_lib = os.path.dirname(site.__file__)
     site_pkg = site_lib+os.sep+'site-packages'
+    root_dir = os.path.dirname(sys.modules[root.__module__].__file__)
     py_version = 'python%s' % sys.version[:3]
     cwd = os.getcwd()
     not_found = set()
@@ -622,6 +664,12 @@ def _process_found_modules(finder_items, modules, distributions, prefixes,
         except AttributeError:
             continue
         if not path:
+            continue
+
+        dirpath = os.path.dirname(path)
+        if dirpath == '.' or dirpath == cwd or dirpath.startswith(root_dir):
+            # May need to be copied later.
+            local_modules.add(path)
             continue
 
         # Skip modules in distributions we already know about.
@@ -647,24 +695,12 @@ def _process_found_modules(finder_items, modules, distributions, prefixes,
                     prefixes.append(loc)
                 break
         else:
-            if not os.path.isabs(path):
-                # No distribution expected.
-                if os.path.dirname(path) == '.':
-                    # May need to be copied later.
-                    local_modules.add(path)
-            elif path.startswith(cwd):
-                # No distribution expected.
-                if os.path.dirname(path) == cwd:
-                    # May need to be copied later.
-                    local_modules.add(path)
-            else:
-                dirpath = os.path.dirname(path)
-                if dirpath not in not_found:
-                    if not dirpath.endswith('site-packages'):
-                        not_found.add(dirpath)
-                        path = dirpath
-                    logger.warning('No distribution found for %s', path)
-                    missing.add((name, path))
+            if dirpath not in not_found:
+                if not dirpath.endswith('site-packages'):
+                    not_found.add(dirpath)
+                    path = dirpath
+                logger.warning('No distribution found for %s', path)
+                missing.add((name, path))
 
 
 def _create_buildout(name, server_url, distributions, path):
@@ -787,27 +823,25 @@ def load_from_egg(filename, install=True, logger=None):
     logger.debug("    name '%s'", name)
 
     for info in archive.infolist():
-        if not info.filename.startswith(name) and \
-           not info.filename.startswith('EGG-INFO'):
+        fname = info.filename
+        if not fname.startswith(name) and not fname.startswith('EGG-INFO'):
             continue
-        if info.filename.endswith('.pyc') or \
-           info.filename.endswith('.pyo'):
+        if fname.endswith('.pyc') or fname.endswith('.pyo'):
             continue  # Don't assume compiled OK for this platform.
 
-        logger.debug("    extracting '%s' (%d bytes)...",
-                     info.filename, info.file_size)
-        dirname = os.path.dirname(info.filename)
+        logger.debug("    extracting '%s' (%d bytes)...", fname, info.file_size)
+        dirname = os.path.dirname(fname)
         if dirname == 'EGG-INFO':
             # Extract EGG-INFO as subdirectory.
             dirname = os.path.join(name, dirname)
-            path = os.path.join(name, info.filename)
+            path = os.path.join(name, fname)
         else:
-            path = info.filename
+            path = fname
         if dirname and not os.path.exists(dirname):
             os.makedirs(dirname)
         # TODO: use 2.6 ability to extract to filename.
         out = open(path, 'w')
-        out.write(archive.read(info.filename))
+        out.write(archive.read(fname))
         out.close()
 
     # Create distribution from extracted files.
@@ -834,11 +868,10 @@ def load_from_egg(filename, install=True, logger=None):
 
     if install:
         # Locate the installation (eggs) directory.
-        install_dir = \
-            os.path.dirname(
-                os.path.dirname(
-                    os.path.dirname(
-                        os.path.dirname(zc.buildout.__file__))))
+        install_dir = os.path.dirname(
+                          os.path.dirname(
+                              os.path.dirname(
+                                  os.path.dirname(zc.buildout.__file__))))
         logger.debug('    installing in %s', install_dir)
 
         # Grab any distributions we depend on.

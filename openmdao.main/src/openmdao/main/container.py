@@ -359,7 +359,8 @@ class Container(HierarchyMember):
 
     def save_to_egg(self, name=None, version=None, force_relative=True,
                     src_dir=None, src_files=None, dst_dir=None,
-                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
+                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None,
+                    use_setuptools=False):
         """Save state and other files to an egg.
 
         - `name` defaults to the name of the container.
@@ -390,7 +391,8 @@ class Container(HierarchyMember):
             return openmdao.util.save_load.save_to_egg(self, name, version,
                                                        src_dir, src_files,
                                                        dst_dir, format, proto,
-                                                       tmp_dir, self._logger)
+                                                       tmp_dir, self._logger,
+                                                       use_setuptools)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
