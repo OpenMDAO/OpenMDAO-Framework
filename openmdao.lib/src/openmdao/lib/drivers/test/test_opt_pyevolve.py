@@ -3,9 +3,9 @@ Test the pyevolve optimizer driver
 """
 
 import logging
-import unittest
 import pkg_resources
 import sys
+import unittest
 
 from openmdao.main import Assembly, Component, Float, ArrayVariable
 from openmdao.main.variable import INPUT, OUTPUT
@@ -323,3 +323,4 @@ if __name__ == '__main__':
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()
+
