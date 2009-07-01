@@ -44,9 +44,13 @@ class Sink(Component):
 class MyModel(Assembly):
     """ Exercises NPSS auto-reload capability. """ 
 
+    rerun_flag = Bool(False, iostatus='in')
+    xyzzy_in = Float(self.NPSS, iostatus='in', desc='Test input')
+    xyzzy_out = Float(self.NPSS, iostatus='out', desc='Test output')
+    s = String(self.NPSS, iostatus='in', desc='Unconnected input')
+        
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
-        Bool('rerun_flag', self, iostatus='in', default=False)
 
         Source(parent=self)
         self.Source.npss_in = 9
@@ -54,9 +58,6 @@ class MyModel(Assembly):
         NPSScomponent(parent=self, arglist='-trace reload.mdl',
                       output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
-        Float('xyzzy_in',  self.NPSS, iostatus='in', desc='Test input')
-        Float('xyzzy_out', self.NPSS, iostatus='out', desc='Test output')
-        String('s', self.NPSS, iostatus='in', desc='Unconnected input')
 
         Sink(parent=self)
 

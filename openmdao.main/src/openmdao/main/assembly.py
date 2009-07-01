@@ -31,15 +31,14 @@ class MulticastTrait(TraitType):
     
     def init(self):
         self.names = self._metadata.get('names',[])
-        self.trait = self._metadata.get('trait',None)
+        self.trait = self._metadata.get('trait',None)            
 
     def validate(self, object, name, value):
         if self.trait:
             val = self.trait.validate(object, name, value)
         else:
-            msg = ("No validating trait has been specified. When creating "+
-                  "a Multicast trait, pass a 'trait=<some_trait>' argument"+
-                  " to its constructor.")
+            msg = ("No validating trait has been specified when creating "+
+                  "Multicast trait '%s'" % name)
             raise TraitError(msg)
         return val
     
@@ -163,18 +162,18 @@ class Assembly (Component):
         for drv in self.drivers:
             drv.graph_regen_needed()
 
-    def create_passthru(self, varname, alias=None):
-        """Create a Variable that's a copy of var, make it a public member of self,
+    def create_passthru(self, traitname, alias=None):
+        """Create a trait that's a copy of the named trait, add it to self,
         and create a passthru connection between it and var.  If alias is not None,
-        the name of the 'promoted' Variable will be the alias.
+        the name of the 'promoted' trait will be the alias.
         """
         # check to see if var is already connected
-        if self.is_destination(varname):
+        if self.is_destination(traitname):
             self.raise_exception('%s is already connected' % 
-                                 varname, RuntimeError) 
+                                 traitname, RuntimeError) 
 
-        # varname must have two parts
-        compname, vname = varname.split('.')
+        # traitname must have two parts
+        compname, vname = traitname.split('.')
         comp = getattr(self, compname)
         name = alias or vname
         
@@ -183,8 +182,8 @@ class Assembly (Component):
             self.raise_exception('%s must be a simple name, not a dotted path' %
                                  name)
             
-        # check to see if a public Variable already exists with the given varname
-        if self.trait(name) is not None:
+        # check to see if a trait already exists with the given traitname
+        if name in self.__dict__:
             self.raise_exception('%s is already a public Variable' % name, 
                                  RuntimeError) 
         
@@ -194,13 +193,13 @@ class Assembly (Component):
         if iostatus == 'in':
             self.add_trait(name, MulticastTrait(default_value=comptrait.default,
                                                 trait=comptrait,
-                                                names=[varname],
+                                                names=[traitname],
                                                 iostatus=iostatus))
             setattr(self, name, getattr(comp, vname))
-            self.connect(name, varname)
+            self.connect(name, traitname)
         elif iostatus == 'out':
             self.add_trait(name, comptrait)
-            self.connect(varname, name)
+            self.connect(traitname, name)
         else:
             self.raise_exception('unknown iostatus %s' % iostatus)
         setattr(self, name, getattr(comp, vname))
@@ -460,9 +459,10 @@ class Assembly (Component):
                         comp.push_dir(comp.get_directory())
             else:
                 try:
-                    if srctrait.validate_with_trait is not None:
+                    if srctrait.validation_metadata is not None:
                         destcomp.set(destvarname, getattr(srccomp, srcvarname),
-                                     srcname=srcname, srctrait=srctrait)
+                                     srcname=srcname, 
+                                     srcmeta=srctrait.validation_metadata())
                     else:
                         destcomp.set(destvarname, getattr(srccomp, srcvarname), 
                                      srcname=srcname)
@@ -486,11 +486,10 @@ class Assembly (Component):
         if any children are added or removed, or if self._need_check_config is True.
         """
         super(Assembly, self).check_config()
-        #for name, tup in self._sockets.items():
-            #sock, current = tup
-            #if sock.required and current is None:
-                #self.raise_exception("required plugin '%s' is not present" % name,
-                                     #ValueError)                
+        for name, value in self.traits(required=True).items():
+            if value.is_trait_type(Instance) and getattr(self, name) is None:
+                self.raise_exception("required plugin '%s' is not present" % name,
+                                     TraitError)                
         
     def invalidate_deps(self, varnames, notify_parent=False):
         """Mark all Variables invalid that depend on vars.
@@ -533,12 +532,12 @@ class Assembly (Component):
         return outs
 
     @staticmethod
-    def xfer_file(src_comp, src_var, dst_comp, dst_var):
+    def xfer_file(src_comp, src_varname, dst_comp, dst_varname):
         """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """
-        src_path = os.path.join(src_comp.get_directory(), src_var.get_value())
-        dst_path = os.path.join(dst_comp.get_directory(), dst_var.get_value())
+        src_path = os.path.join(src_comp.get_directory(), getattr(src_comp, src_varname))
+        dst_path = os.path.join(dst_comp.get_directory(), getattr(dst_comp, dst_varname))
         if src_path != dst_path:
-            if src_var.metadata['binary']:
+            if src_comp.trait(src_varname).binary is True:
                 mode = 'b'
             else:
                 mode = ''

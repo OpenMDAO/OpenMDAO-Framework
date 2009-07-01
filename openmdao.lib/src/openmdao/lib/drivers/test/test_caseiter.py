@@ -6,7 +6,7 @@ import unittest
 
 import numpy.random
 
-from enthought.traits.api import Float, Array
+from enthought.traits.api import Float, Array, TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
@@ -114,7 +114,7 @@ class DriverTestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         for i, case in enumerate(cases):
             self.assertEqual(results[i].msg,
-                             "CID_TestModel.driver: Exception getting 'dc.sum_z': CID_TestModel.dc: object has no attribute 'sum_z'")
+                "CID_TestModel.driver: Exception getting 'dc.sum_z': 'DrivenComponent' object has no attribute 'sum_z'")
 
     def test_noiterator(self):
         self.model.driver.outerator = []

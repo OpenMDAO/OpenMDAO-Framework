@@ -27,10 +27,10 @@ class EngineOptimization(Assembly):
         self.driver.maxiters = 30
         
         # CONMIN Objective 
-        self.driver.objective.value = 'vehicle_sim.accel_time'
+        self.driver.objective = 'vehicle_sim.accel_time'
         
         # CONMIN Design Variables 
-        self.driver.design_vars.value = ['vehicle_sim.spark_angle', 
+        self.driver.design_vars = ['vehicle_sim.spark_angle', 
                                          'vehicle_sim.bore' ]
         
         self.driver.lower_bounds = [-50, 65]

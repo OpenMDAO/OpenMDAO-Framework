@@ -36,27 +36,25 @@ class FloatTestCase(unittest.TestCase):
         # check default value
         self.assertEqual(98.9, self.hobj.trait('float1').default)
         
-        # use tuple (value,units) to perform unit conversion
-        self.hobj.assign('float2', 'float1')
-        self.assertAlmostEqual(3.5, self.hobj.float1)
-        
-        # make sure value gets transferred to internal variable
-        self.assertEqual(42., self.hobj.float1)
-        self.hobj.float1 = 32.1
-        self.assertEqual(32.1, self.hobj.float1)
+        # use unit_convert to perform unit conversion
+        self.hobj.float1 = 3.
+        self.hobj.float2 = self.hobj.unit_convert('float1', 'inch')
+        self.assertEqual(36., self.hobj.float2)
 
     def test_unit_conversion(self):
         self.hobj.float2 = 12.  # inches
-        self.hobj.float1 = self.hobj.in_units_of(self.hobj.float2, self.hobj.trait('float2').units)
+        self.hobj.float1 = self.hobj.unit_convert('float2', 'ft')
         self.assertEqual(self.hobj.float1, 1.) # 12 inches = 1 ft
         
         # now set to a value that will violate constraint after conversion
         self.hobj.float2 = 1200.  # inches
         try:
-            self.hobj.assign('float2', 'float1')
+            self.hobj.set('float1', self.hobj.float2, 
+                          srcmeta=self.hobj.trait('float2').validation_metadata())
+            #float1 = self.hobj.unit_convert('float2', 'ft')
         except TraitError, err:
             self.assertEqual(str(err), 
-                             "h1.float1: constraint '100.0 <= 99.0' has been violated")
+                "h1: Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 100.0")
         else:
             self.fail('ConstraintError expected')
         
@@ -98,25 +96,26 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float1 = 124
         except TraitError, err:
             self.assertEqual(str(err), 
-                "The 'float1' trait of a Container instance must be 0.0 <= a floating point number <= 99.0, but a value of 124 <type 'int'> was specified.")
+                "h1: Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 124")
         else:
             self.fail('TraitError expected')
         try:
             self.hobj.float1 = -3
         except TraitError, err:
-            self.assertEqual(str(err), 
-                "The 'float1' trait of a Container instance must be 0.0 <= a floating point number <= 99.0, but a value of -3 <type 'int'> was specified.")
+            self.assertEqual(str(err),
+                "h1: Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is -3")
         else:
             self.fail('TraitError exception')
 
     def test_bad_connection(self):
-        self.hobj.trait('float1').validate_with_trait(self.hobj, 'float1', 
-                                                      self.hobj.float2,
-                                                      self.hobj.trait('float2'))
+        srcmeta = self.hobj.trait('float2').validation_metadata()
+        self.hobj.trait('float1').validate_with_metadata(self.hobj, 'float1', 
+                                                         self.hobj.float2,
+                                                         srcmeta)
         try:
-            self.hobj.trait('float3').validate_with_trait(self.hobj, 'float3', 
+            self.hobj.trait('float3').validate_with_metadata(self.hobj, 'float3', 
                                                           self.hobj.float2,
-                                                          self.hobj.trait('float2'))
+                                                          srcmeta)
         except Exception, err:
             self.assertEqual(str(err), 
                 "float3: units 'inch' are incompatible with assigning units of 'kg'")
@@ -125,6 +124,4 @@ class FloatTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-    #suite = unittest.TestLoader().loadTestsFromTestCase(ContainerTestCase)
-    #unittest.TextTestRunner(verbosity=2).run(suite)    
 

@@ -37,7 +37,7 @@ class CaseIteratorDriver(Driver):
     """
 
     iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
-    outerator = Instance(Any, desc='Something to append() to.', required=True)
+    outerator = Instance(object, desc='Something to append() to.', required=True)
     model = Instance(IComponent, desc='Model to be executed.', required=True)
     
     sequential = Bool(True, iostatus='in',

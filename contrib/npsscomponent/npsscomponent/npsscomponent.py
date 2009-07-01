@@ -564,7 +564,7 @@ class NPSScomponent(Component):
                 else:
                     if typ == 'InFileStream':
                         typ = 'Stream'
-                        iostat = INPUT
+                        iostat = 'in'
                     elif typ == 'OutFileStream':
                         typ = 'Stream'
                         iostat = 'out'
@@ -604,7 +604,7 @@ class NPSScomponent(Component):
 
             # Primitive method to create correct type.
             if typ == 'real':
-                dobj = Float(name, self, iostat, doc=doc, units=mdao_units,
+                self.add_trait(name, UnitsFloat(iostatus=iostat, desc=doc, units=mdao_units,
                              ref_name=ref_name)
             elif typ == 'int':
                 dobj = Int(name, self, iostat, doc=doc, ref_name=ref_name)

@@ -249,9 +249,7 @@ class Model(Assembly):
         if rest.find('.') > 0:
             src_path = self.hoist(src_comp, rest, 'out')
         else:
-            try:
-                src_comp.getvar(rest)
-            except AttributeError:
+            if src_comp.trait(rest) is None:
                 src_comp.make_public((rest, '', 'out'))
                 self._var_graph.add_node(src_path)
 
@@ -260,9 +258,7 @@ class Model(Assembly):
         if rest.find('.') > 0:
             dst_path = self.hoist(dst_comp, rest, INPUT)
         else:
-            try:
-                dst_comp.getvar(rest)
-            except AttributeError:
+            if dst_comp.trait(rest) is None:
                 dst_comp.make_public(rest)
                 self._var_graph.add_node(dst_path)
 
@@ -271,17 +267,17 @@ class Model(Assembly):
     def hoist(self, comp, path, io_status):
         """ Hoist a variable so that it may be connected. """
         name = '_'+path.replace('.', '_')
-        try:
-            var = comp.getvar(path)
-        except AttributeError:
+        trait = comp.trait(path)
+        if trait is None:
             comp.make_public((name, path, io_status))
-            var = comp.getvar(name)
+            trait = comp.trait(name)
 
-        newpath = comp.name+'.'+name
+        newpath = '.'.join([comp.name,name])
         if newpath not in self._var_graph:
-            passthru = var.create_passthru(comp, name)
-            comp.make_public(passthru)
-            self._var_graph.add_node(newpath)
+            self.create_passthru(newpath)
+            #passthru = var.create_passthru(comp, name)
+            #comp.make_public(passthru)
+            #self._var_graph.add_node(newpath)
         return newpath
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):

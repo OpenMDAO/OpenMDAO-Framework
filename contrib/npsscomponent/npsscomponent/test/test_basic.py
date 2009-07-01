@@ -486,7 +486,7 @@ class NPSSTestCase(unittest.TestCase):
 
     def test_makepublic(self):
         self.npss.make_public('cpuTime')
-        self.assertEqual(self.npss.getvar('cpuTime').units, 's')
+        self.assertEqual(self.npss.trait('cpuTime').units, 's')
 
         try:
             self.npss.make_public('sample')
@@ -504,7 +504,7 @@ class NPSSTestCase(unittest.TestCase):
 
         self.npss.make_public(('solver.converged', '', OUTPUT))
         self.assertEqual(self.npss.get('solver.converged'), 0)
-        self.assertEqual(self.npss.getvar('solver.converged').get_value(), 0)
+        self.assertEqual(self.npss.solver.converged, 0)
 
         self.npss.make_public('cin')
 

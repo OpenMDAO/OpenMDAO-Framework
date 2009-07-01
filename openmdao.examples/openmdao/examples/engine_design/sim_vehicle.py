@@ -6,9 +6,10 @@
 # - EPA fuel economy estimate for highway driving
 #
 # Includes a socket for a Vehicle assembly.
+from csv import reader
 
 from pkg_resources import resource_stream
-from csv import reader
+from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, UnitsFloat
 from openmdao.main.exceptions import ConstraintError

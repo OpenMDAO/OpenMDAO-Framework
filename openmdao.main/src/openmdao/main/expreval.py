@@ -22,20 +22,22 @@ def _trans_unary(strng, loc, tok):
 
     
 def _trans_lhs(strng, loc, tok, exprobj):
-    scope = exprobj._scope()
-    lazy_check = exprobj.lazy_check
-    if scope.contains(tok[0]):
-        scname = 'scope'
-    else:
-        scname = 'scope.parent'
-        if scope.trait(tok[0]) is not None:
-            scope.warning("attribute '"+tok[0]+"' is private"+
-                          " so a public value in the parent is"+
-                          " being used instead (if found)")
-        if lazy_check is False and not scope.parent.contains(tok[0]):
-            raise RuntimeError("cannot find variable '"+tok[0]+"'")
-        
+    if exprobj._scope:
+        scope = exprobj._scope()
+        lazy_check = exprobj.lazy_check
+        if scope.contains(tok[0]):
+            scname = 'scope'
+        else:
+            scname = 'scope.parent'
+            if scope.trait(tok[0]) is not None:
+                scope.warning("attribute '"+tok[0]+"' is private"+
+                              " so a public value in the parent is"+
+                              " being used instead (if found)")
+            if lazy_check is False and not scope.parent.contains(tok[0]):
+                raise RuntimeError("cannot find variable '"+tok[0]+"'")
         exprobj.var_names.add(tok[0])
+    else:
+        raise RuntimeError("cannot find variable '"+tok[0]+"'")
         
     full = scname + ".set('" + tok[0] + "',_@RHS@_"
     if len(tok) > 1 and tok[1] != '=':
@@ -76,6 +78,9 @@ def _trans_fancyname(strng, loc, tok, exprobj):
     # if we find the named object in the current scope, then we don't need to 
     # do any translation.  The scope object is assumed to have a contains() 
     # function.
+    if exprobj._scope is None:
+        raise RuntimeError("cannot find variable '"+tok[0]+"'")
+    
     scope = exprobj._scope()
     lazy_check = exprobj.lazy_check
     
@@ -115,7 +120,7 @@ def translate_expr(text, exprobj, single_name=False):
     names in the framework, e.g., 'a.b.c' becomes get('a.b.c') or 'a.b.c(1,2,3)'
     becomes invoke('a.b.c',1,2,3).
     """
-    scope = exprobj._scope()
+    #scope = exprobj._scope()
     lazy_check = exprobj.lazy_check
     
     ee = CaselessLiteral('E')
@@ -216,9 +221,12 @@ class ExprEvaluator(str):
     optional array indexing, but general expressions are not allowed.
     """
     
-    def __new__(cls, text, scope, single_name=False, lazy_check=False):
+    def __new__(cls, text, scope=None, single_name=False, lazy_check=False):
         s = super(ExprEvaluator, cls).__new__(ExprEvaluator, text)
-        s._scope = weakref.ref(scope)
+        if scope is None:
+            s._scope = None
+        else:
+            s._scope = weakref.ref(scope)
         s.lazy_check = lazy_check
         s.single_name = single_name
         s.rhs = ''
@@ -266,23 +274,28 @@ class ExprEvaluator(str):
         """Return the value of the scoped string, evaluated 
         using the eval() function.
         """
-        scope = self._scope()
-        
-        # object referred to by weakref may no longer exist
-        if scope is None:
-            raise RuntimeError(
-                    'ExprEvaluator cannot evaluate expression without scope.')
+        if self._scope is not None:
+            scope = self._scope()
+            
+            if scope is None:
+                raise RuntimeError(
+                        'ExprEvaluator scoping object has been deleted.')
+        else:
+            scope = None
         try:
             if self._text != self:  # text has changed
                 self._parse()
-            return eval(self._code, scope.__dict__, locals())
+            if scope:
+                return eval(self._code, scope.__dict__, locals())
+            else:
+                return eval(self._code, {}, locals())
         except Exception, err:
             raise type(err)("ExprEvaluator failed evaluating expression "+
                             "'%s'. Caught message is: %s" %(self,str(err)))
 
     def set(self, val):
         """Set the value of the referenced object to the specified value."""
-        if self.single_name:
+        if self.single_name and self._scope:
             scope = self._scope()
             # object referred to by weakref may no longer exist
             if scope is None:
@@ -299,8 +312,6 @@ class ExprEvaluator(str):
         else: # self.single_name is False
             raise ValueError("trying to set input expression '%s'" % str(self))
         
-    #refvalue = property(evaluate, set)
-    
     def get_referenced_varpaths(self):
         """Return a set of source or dest Variable pathnames relative to
         self.parent and based on the names of Variables referenced in our 
@@ -318,7 +329,8 @@ class ExprEvaluator(str):
         """Return True if all attributes referenced by our expression
         are valid.
         """
-        scope = self._scope()
-        if scope and scope.parent:
-            return all(scope.parent.get_valid(self.var_names))
+        if self._scope:
+            scope = self._scope()
+            if scope and scope.parent:
+                return all(scope.parent.get_valid(self.var_names))
         return True

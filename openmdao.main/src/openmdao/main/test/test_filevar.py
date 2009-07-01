@@ -9,7 +9,8 @@ import unittest
 
 from enthought.traits.api import Bool, Array, List, Str
 
-from openmdao.main.api import Assembly, Component, FileVariable
+from openmdao.main.api import Assembly, Component
+from openmdao.main.filevar import FileVariable
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -19,10 +20,10 @@ class Source(Component):
     """ Produces files. """
 
     write_files = Bool(True, iostatus='in')
-    text_data = List(Str, iostatus='in')
+    text_data = Str(iostatus='in')
     binary_data = Array('d', iostatus='in')
     text_file = FileVariable('source.txt', iostatus='out')
-    binary_file = FileVariable('source.bin', iostatus='out'
+    binary_file = FileVariable('source.bin', iostatus='out',
                                binary=True)
         
     def __init__(self, name='Source', *args, **kwargs):
@@ -43,7 +44,7 @@ class Source(Component):
 class Sink(Component):
     """ Consumes files. """
 
-    text_data = List(Str, iostatus='out')
+    text_data = Str(iostatus='out')
     binary_data = Array('d', iostatus='out')
     text_file = FileVariable('sink.txt', iostatus='in')
     binary_file = FileVariable('sink.bin', iostatus='in')
@@ -98,7 +99,7 @@ class FileTestCase(unittest.TestCase):
         self.assertNotEqual(self.model.Sink.binary_data,
                             self.model.Source.binary_data)
         self.assertNotEqual(
-            self.model.Sink.getvar('binary_file').metadata['binary'], True)
+            self.model.Sink.trait('binary_file').binary, True)
 
         self.model.run()
 
@@ -107,7 +108,7 @@ class FileTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.binary_data,
                          self.model.Source.binary_data)
         self.assertEqual(
-            self.model.Sink.getvar('binary_file').metadata['binary'], True)
+            self.model.Sink.trait('binary_file').binary, True)
 
     def test_src_failure(self):
         self.model.Source.write_files = False

@@ -28,7 +28,7 @@ class Workflow(Component):
 
     def add_node(self, node):
         """ Add a new node to the end of the flow. """
-        if IComponent.providedBy(node):
+        if isinstance(node, Component):
             self.nodes.append(node)
         else:
             self.raise_exception('%s is either a Driver or is not a Component' % node.get_pathname(),

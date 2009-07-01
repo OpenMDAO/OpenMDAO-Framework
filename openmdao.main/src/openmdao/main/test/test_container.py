@@ -65,35 +65,28 @@ class ContainerTestCase(unittest.TestCase):
                          'in')
 
     def test_keys(self):
+        lst = [x for x in self.root.keys(recurse=True)]
+        self.assertEqual(lst, 
+            ['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
         lst = [x for x in self.root.keys(recurse=True, iostatus='in')]
-        self.assertEqual(lst, 
-            ['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
-        
-    def test_pub_items(self):
-        lst = map(lambda x: x[0], self.root.items(recurse=True, iostatus=lambda x: x is not None))
-        self.assertEqual(lst, 
-            ['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
+        self.assertEqual(lst, ['c2.c22.c221.number'])
         
     def test_full_items(self):
         lst = map(lambda x: x[0], self.root.items(recurse=True))
-        self.assertEqual(lst, ['name', 'c2', 'c2.c22', 'c2.c22.name', 
-                               'c2.c22.c221', 'c2.c22.c221.name', 'c2.c22.c221.number', 
-                               'c2.c21', 'c2.c21.name',
-                               'c2.name', 'c1', 'c1.name'])
+        self.assertEqual(lst,
+            ['c2', 'c2.c22', 'c2.c22.c221', 'c2.c22.c221.number', 'c2.c21', 'c1'])
         
         items = [(x[0],isinstance(x[1],Container) or str(x[1])) 
-                    for x in self.root.items(pub=False,recurse=True)]
+                    for x in self.root.items(recurse=True)]
         
         # values of True in the list below just indicate that the value
         # is a Container
-        self.assertEqual(items, [('name', 'root'), ('c2', True), 
-                                 ('c2.c22', True), ('c2.c22.name', 'c22'),
+        self.assertEqual(items, [('c2', True), 
+                                 ('c2.c22', True), 
                                  ('c2.c22.c221', True), 
-                                 ('c2.c22.c221.name', 'c221'), 
                                  ('c2.c22.c221.number', '3.14'), 
                                  ('c2.c21', True), 
-                                 ('c2.c21.name', 'c21'), ('c2.name', 'c2'), 
-                                 ('c1', True), ('c1.name', 'c1')])
+                                 ('c1', True)])
         
     def test_bad_get(self):
         try:
@@ -104,22 +97,22 @@ class ContainerTestCase(unittest.TestCase):
             self.fail('AttributeError expected')
 
     def test_iteration(self):
-        names = [x.get_pathname() for x in self.root.values(pub=False,recurse=True)
-                                         if IContainer.providedBy(x)]
+        names = [x.get_pathname() for x in self.root.values(recurse=True)
+                                         if isinstance(x, Container)]
         self.assertEqual(sorted(names),
                          ['root.c1', 'root.c2', 'root.c2.c21', 
                           'root.c2.c22', 'root.c2.c22.c221'])
         
-        names = [x.get_pathname() for x in self.root.values(pub=False)
-                                         if IContainer.providedBy(x)]
+        names = [x.get_pathname() for x in self.root.values()
+                                         if isinstance(x, Container)]
         self.assertEqual(sorted(names), ['root.c1', 'root.c2'])
         
-        names = [x.get_pathname() for x in self.root.values(pub=False,recurse=True)
-                                 if IContainer.providedBy(x) and x.parent==self.root]
+        names = [x.get_pathname() for x in self.root.values(recurse=True)
+                                 if isinstance(x, Container) and x.parent==self.root]
         self.assertEqual(sorted(names), ['root.c1', 'root.c2'])        
 
-        names = [x.get_pathname() for x in self.root.values(pub=False,recurse=True)
-                                 if IContainer.providedBy(x) and x.parent==self.root.c2]
+        names = [x.get_pathname() for x in self.root.values(recurse=True)
+                                 if isinstance(x, Container) and x.parent==self.root.c2]
         self.assertEqual(sorted(names), ['root.c2.c21', 'root.c2.c22'])        
 
     def test_create(self):

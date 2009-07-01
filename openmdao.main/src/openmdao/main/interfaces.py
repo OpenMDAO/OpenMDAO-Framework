@@ -33,25 +33,22 @@ class IContainer (Interface):
         """Remove the named object from this container and notify any
         observers"""
 
-    def items(self, pub=True, recurse=False):
+    def items(self, recurse=False):
         """Return an iterator that returns a list of tuples of the form 
         (rel_pathname, obj) for each
-        child of this Container. If pub is True, only iterate through the public
-        dict of any Container. If recurse is True, also iterate through all
-        child Containers of each Container found based on the value of pub.
+        child of this Container. If recurse is True, also iterate through all
+        child Containers of each Container found.
         """
         
-    def keys(self, pub=True, recurse=False):
+    def keys(self, recurse=False):
         """Return an iterator that will return the relative pathnames of
-        children of this Container. If pub is True, only children from
-        the pub dict will be included. If recurse is True, child Containers
+        children of this Container. If recurse is True, child Containers
         will also be iterated over.
         """
         
-    def values(self, pub=True, recurse=False):
+    def values(self, recurse=False):
         """Return an iterator that will return the
-        children of this Container. If pub is True, only children from
-        the pub dict will be included. If recurse is True, child Containers
+        children of this Container. If recurse is True, child Containers
         will also be iterated over.
         """
         
@@ -62,17 +59,9 @@ class IContainer (Interface):
     def get (name):
         """Return the value of a public Variable."""
 
-    def getvar (name):
-        """return the public Variable specified by name."""
-
     def set (name, value):
         """Set the value of a public variable."""
         
-    def setvar(name, var):
-        """Set the value of the named public Variable with the value of
-        the Variable specified by var.
-        """
-
     def save_state (outstream, format='cPickle'):
         """Save the state of this object and its children to the given
         output stream. Pure python classes generally won't need to

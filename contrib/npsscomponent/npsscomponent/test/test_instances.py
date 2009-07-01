@@ -203,9 +203,7 @@ class Model(Assembly):
         if rest.find('.') > 0:
             src_path = self.hoist(src_comp, rest, OUTPUT)
         else:
-            try:
-                src_comp.getvar(rest)
-            except AttributeError:
+            if src_comp.trait(rest) is None:
                 src_comp.make_public((rest, '', OUTPUT))
                 self._var_graph.add_node(src_path)
 
@@ -214,9 +212,7 @@ class Model(Assembly):
         if rest.find('.') > 0:
             dst_path = self.hoist(dst_comp, rest, iostatus='in')
         else:
-            try:
-                dst_comp.getvar(rest)
-            except AttributeError:
+            if dst_comp.trait(rest) is None:
                 dst_comp.make_public(rest)
                 self._var_graph.add_node(dst_path)
 
@@ -225,11 +221,10 @@ class Model(Assembly):
     def hoist(self, comp, path, io_status):
         """ Hoist a variable so that it may be connected. """
         name = '_'+path.replace('.', '_')
-        try:
-            var = comp.getvar(path)
-        except AttributeError:
+        trait = comp.trait(path)
+        if trait is None:
             comp.make_public((name, path, io_status))
-            var = comp.getvar(name)
+            trait = comp.trait(name)
 
         newpath = comp.name+'.'+name
         if newpath not in self._var_graph.nodes():
@@ -397,7 +392,7 @@ class NPSSTestCase(unittest.TestCase):
         self.assertNotEqual(self.model.Sink.binary_data,
                             self.model.Source.binary_data)
         self.assertNotEqual(
-            self.model.Sink.getvar('binary_file').metadata['binary'], True)
+            self.model.Sink.trait('binary_file').binary, True)
 
         self.assertNotEqual(self.model.Sink.sub.b,   self.model.Source.sub.b)
         self.assertNotEqual(self.model.Sink.sub.f,   self.model.Source.sub.f)
@@ -428,7 +423,7 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.binary_data,
                          self.model.Source.binary_data)
         self.assertEqual(
-            self.model.Sink.getvar('binary_file').metadata['binary'], True)
+            self.model.Sink.trait('binary_file').binary, True)
 
         self.assertEqual(self.model.Sink.sub.b,   self.model.Source.sub.b)
         self.assertEqual(self.model.Sink.sub.f,   self.model.Source.sub.f)

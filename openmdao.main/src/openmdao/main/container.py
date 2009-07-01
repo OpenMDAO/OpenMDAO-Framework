@@ -44,13 +44,16 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 
 import networkx as nx
 from enthought.traits.api import HasTraits, implements, Str, Missing, TraitError,\
-                                 BaseStr, Undefined, push_exception_handler, on_trait_change
+                                 BaseStr, Undefined, push_exception_handler,\
+                                 on_trait_change, WeakRef
+from enthought.traits.has_traits import _SimpleTest, FunctionType
 
-from openmdao.main.log import Logger, LOG_DEBUG
+from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.interfaces import IContainer
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.main.constants import SAVE_YAML, SAVE_LIBYAML
 from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
+from openmdao.main.unitsfloat import convert_units
 
 # FIXME - shouldn't have a hard wired URL in the code
 EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
@@ -114,14 +117,17 @@ class Container(HasTraits):
     implements(IContainer)
     
     name = ContainerName()
+    #parent = WeakRef(IContainer, allow_none=True, adapt='no')
     
     def __init__(self, name='', parent=None, doc=None, add_to_parent=True):
+        self._valid_dict = {}  # contains validity flag for each io Trait
+        self._dests = {}  # for checking that destination traits cannot be 
+                          # set by other objects
+                          
         super(Container, self).__init__() # don't forget to init HasTraits
                                           # or @on_trait_change decorator won't work!
         self.parent = parent
         self.name = name
-        self._valid_dict = {}  # contains validity flag for each io Trait
-        self._dests = {}
         
         if doc is not None:
             self.__doc__ = doc
@@ -135,6 +141,43 @@ class Container(HasTraits):
            isinstance(parent, Container) and add_to_parent:
             parent.add_child(self)
             
+    #def _get_parent(self):
+        #if self._parent is None:
+            #return None
+        #else:
+            #return self._parent() # need parens since self.parent is a weakref
+
+    #def _set_parent(self, parent):
+        #if parent is None:
+            #self._parent = None
+        #else:
+            #self._parent = weakref.ref(parent)
+
+    #parent = property(_get_parent, _set_parent)
+    
+    #def __getstate__(self):
+        #"""Return dict representing this container's state."""
+        #state = super(Container, self).__getstate__()
+        
+        #if state.has_key('_parent'):
+            #if state['_parent'] is not None:
+                ## remove weakref to parent because it won't pickle
+                #state['_parent'] = self._parent()
+        #return state
+
+    def __setstate__(self, state):
+        """Restore this component's state."""
+        self._trait_change_notify(False)
+        try:
+            #if state.has_key('_parent'):
+                #par = state['_parent']
+                #if par is not None:
+                    #state['_parent'] = weakref.ref(par)
+            super(Container, self).__setstate__(state)
+        finally:
+            self._trait_change_notify(True)
+
+    
     # call this if any trait having 'iostatus' metadata is changed    
     @on_trait_change('+iostatus') 
     def _io_trait_changed(self, obj, name, old, new):
@@ -171,8 +214,6 @@ class Container(HasTraits):
             return _valid(self, name)
         else:
             return [_valid(self,v) for v in name]
-                
-        
     
     def set_valid(self, name, valid):
         if name in self._valid_dict:
@@ -215,23 +256,7 @@ class Container(HasTraits):
             self.raise_exception("cannot remove child '%s': not found"%
                                  name, TraitError)
     
-    def assign(self, srcname, destname):
-        """Assigns the value of a source attribute to a destination
-        attribute, using trait data if applicable.  For example, if
-        the source and destination traits have units, then a unit
-        conversion will be applied.
-        """
-        srctrait = self.trait(srcname)
-        desttrait = self.trait(destname)
-        srcattr = getattr(self, srcname)
-        if desttrait.validate_with_trait is None:
-            setattr(self, destname, srcattr)
-        else:
-            newval = desttrait.validate_with_trait(self, destname, srcattr,
-                                                   srctrait)
-            setattr(self, destname, newval)
-            
-    def in_units_of(self, name, units):
+    def unit_convert(self, name, units):
         desttrait = self.trait(name)
         if desttrait is None:
             self.raise_exception("attribute '%s' not found"%name,
@@ -241,8 +266,7 @@ class Container(HasTraits):
             raise self.raise_exception("'%s' has no units" % name,
                                        TraitError)
         else:
-            pq = PhysicalQuantity(getattr(self, name), destunits)
-            return pq.convertToUnit(units).value
+            return convert_units(getattr(self, name), destunits, units)
     
     def items(self, recurse=False, **metadata):
         """Return a list of tuples of the form (rel_pathname, obj) 
@@ -250,31 +274,72 @@ class Container(HasTraits):
         the given metadata. If recurse is True, also iterate through all
         child Containers of each Container found.
         """
-        if recurse:
-            return self._items(set(), recurse, **metadata)
-        else:
-            return [(n,getattr(self,n)) for n in self.trait_names(**metadata)]
+        mdata = { 'type': lambda x: x != 'event' } # exclude event traits, which are write-only
+        mdata.update(metadata)
+        return self._items(set([id(self.parent)]), recurse, **mdata)
         
     def keys(self, recurse=False, **metadata):
         """Return a list of the relative pathnames of
         children of this Container that match the given metadata. If recurse is 
         True, child Containers will also be iterated over.
         """
-        if recurse:
-            return [tup[0] for tup in self._items(set(), recurse, **metadata)]
-        else:
-            return self.trait_names(**metadata)
+        mdata = { 'type': lambda x: x != 'event' } # exclude event traits, which are write-only
+        mdata.update(metadata)
+        return [tup[0] for tup in self._items(set([id(self.parent)]), 
+                                              recurse, **mdata)]
         
     def values(self, recurse=False, **metadata):
         """Return a list of children of this Container that have matching 
         trait metadata. If recurse is True, child Containers will also be 
         iterated over.
         """
-        if recurse:
-            return [tup[1] for tup in self._items(set(), recurse, **metadata)]
-        else:
-            return [getattr(self,n) for n in self.trait_names(**metadata)]
+        mdata = { 'type': lambda x: x != 'event' } # exclude event traits, which are write-only
+        mdata.update(metadata)
+        return [tup[1] for tup in self._items(set([id(self.parent)]), 
+                                              recurse, **mdata)]
+
+    def get_all_traits(self):
+        """Returns a dict containing all traits for this object, including
+        instance traits. This function was written because property traits
+        (TraitTypes with set/get defined) didn't seem to show up using
+        the normal traits() function.
+        """
+        traits = self.__base_traits__.copy()
+        baseset = set(traits)
+        instset = set(self.__dict__)
+        instset = set(self._instance_traits()).union(instset)
+        
+        for name in instset-baseset:
+            trait = self.trait( name )
+            if trait is not None:
+                traits[ name ] = trait
+        return traits
+    
+    def _traits_meta_filter(self, traits=None, **metadata):
+        """This returns a dict that contains all entries in the traits dict
+        that match the given metadata.
+        """
+        if traits is None:
+            traits = self.get_all_traits()
             
+        if len( metadata ) == 0:
+            return traits
+
+        for meta_name, meta_eval in metadata.items():
+            if type( meta_eval ) is not FunctionType:
+                metadata[ meta_name ] = _SimpleTest( meta_eval )
+
+        result = {}
+        for name, trait in traits.items():
+            for meta_name, meta_eval in metadata.items():
+                if not meta_eval( getattr( trait, meta_name ) ):
+                    break
+            else:
+                result[ name ] = trait
+
+        return result
+        
+        
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form 
         (rel_pathname, obj) for each trait of this Container that matches
@@ -283,21 +348,25 @@ class Container(HasTraits):
         """
         if id(self) not in visited:
             visited.add(id(self))
-            mdata = { 'type': lambda x: x != 'event' }
-            mdata.update(metadata)
-            traits = self.traits(**metadata)
-            traits2 = self.traits(**mdata)
-            for name, trait in self.traits(**mdata).items():
+            match_dict = self._traits_meta_filter(**metadata)
+            
+            if recurse:
+                for name, obj in self.__dict__.items():
+                    if isinstance(obj, Container) and id(obj) not in visited:
+                        if name in match_dict:
+                            yield(name, obj)
+                        for chname, child in obj._items(visited, recurse, **metadata):
+                            yield ('.'.join([name, chname]), child)
+                            
+            for name, trait in match_dict.items():
                 obj = getattr(self, name)
-                if obj is not self.parent:
+                if id(obj) not in visited:
                     if isinstance(obj, Container):
-                        yield (name, obj)
-                        if recurse:
-                            for chname, child in obj._items(visited, recurse, **mdata):
-                                yield ('.'.join([name, chname]), child)                   
+                        if not recurse:
+                            yield (name, obj)
                     elif trait.iostatus is not None:
                         yield (name, obj)
-    
+
     
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
@@ -431,7 +500,7 @@ class Container(HasTraits):
                 "'%s' is connected to source '%s' and cannot be set by source '%s'"%
                 (name,src,srcname), TraitError)
                     
-    def set(self, path, value, index=None, srcname=None, srctrait=None):
+    def set(self, path, value, index=None, srcname=None, srcmeta=None):
         """Set the value of the data object specified by the  given path, which
         may contain '.' characters.  If path specifies a Variable, then its
         value attribute will be set to the given value, subject to validation
@@ -460,12 +529,12 @@ class Container(HasTraits):
                 # with a flag to tell it not to check if it's a destination
                 self._trait_change_notify(False)
                 try:
-                    if srctrait is None:
+                    if srcmeta is None or len(srcmeta) == 0:
                         setattr(self, path, value)
                     else:
-                        val = self.trait(path).validate_with_trait(self, 
-                                                                   path, value,
-                                                                   srctrait)
+                        val = self.trait(path).validate_with_metadata(self, 
+                                                                      path, value,
+                                                                      srcmeta)
                         self.__dict__[path] = val # avoid repeat validation
                 finally:
                     self._trait_change_notify(True)
@@ -482,10 +551,10 @@ class Container(HasTraits):
             if isinstance(obj, Container):
                 if len(tup) == 2:
                     obj.set(tup[1], value, index, 
-                            srcname=srcname, srctrait=srctrait)
+                            srcname=srcname, srcmeta=srcmeta)
                 else:
                     obj.set('.'.join(tup[1:]), value, index, 
-                            srctrait=srctrait)
+                            srcmeta=srcmeta)
             else:
                 obj._array_set('.'.join(tup[1:]), value, index)
 
@@ -563,7 +632,7 @@ class Container(HasTraits):
         if version is None:
             try:
                 version = sys.modules[self.__module__].__version__
-            except AttributeError:
+            except (AttributeError, KeyError):
                 now = datetime.datetime.now()  # Could consider using utcnow().
                 version = '%d.%02d.%02d.%02d.%02d' % \
                           (now.year, now.month, now.day, now.hour, now.minute)
@@ -752,7 +821,8 @@ eggs =
                 _recurse_get_objects(obj, objs, visited)
 
         objs = []
-        visited = [id(self._parent)]  # Don't include our parent.
+#        visited = [id(self._parent)]  # Don't include our parent.
+        visited = [id(self.parent)]  # Don't include our parent.
         _recurse_get_objects(self, objs, visited)
         return objs
 
@@ -846,6 +916,8 @@ eggs =
         for obj in objs:
             try:
                 name = obj.__module__
+                if name is None:
+                    continue
             except AttributeError:
                 continue
 #            self.debug('    obj module %s', name)
@@ -1315,12 +1387,12 @@ setuptools.setup(
 
     def post_load(self):
         """Perform any required operations after model has been loaded."""
-        [x.post_load() for x in self.values(pub=False) 
+        [x.post_load() for x in self.values() 
                                           if isinstance(x,Container)]
 
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
-        [x.pre_delete() for x in self.values(pub=False) 
+        [x.pre_delete() for x in self.values() 
                                           if isinstance(x,Container)]
 
     def _get_all_items(self, visited, recurse=False):

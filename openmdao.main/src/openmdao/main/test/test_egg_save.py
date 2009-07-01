@@ -8,9 +8,10 @@ import os
 import shutil
 import unittest
 
-from enthought.traits.api import Bool, ListStr, Array
+from enthought.traits.api import Bool, List, Str, Array, TraitError
 
-from openmdao.main.api import Assembly, Component, Container, FileVariable
+from openmdao.main.api import Assembly, Component, Container
+from openmdao.main.filevar import FileVariable
 from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
 
 # pylint: disable-msg=E1101,E1103
@@ -27,16 +28,16 @@ sink_init = False
 class Source(Assembly):
     """ Produces files. """
 
+    write_files = Bool(True, iostatus='in')
+    text_data = Str(iostatus='in')
+    text_file = FileVariable('source.txt', iostatus='out')
+
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
         self.directory = self.get_directory()  # Force absolute.
 
         global source_init
         source_init = True
-
-        Bool('write_files', self, iostatus='in', default=True)
-        StringList('text_data', self, iostatus='in', default=[])
-        FileVariable('text_file', self, iostatus='out', default='source.txt')
 
         Subcontainer('sub', parent=self)
         self.create_passthru('sub.binary_file')
@@ -100,13 +101,13 @@ class Source(Assembly):
 class Subcontainer(Container):
     """ Just a subcontainer for Source. """
 
+    binary_data = Array('d', value=[], iostatus='in')
+    binary_file = FileVariable(os.path.join('..', 'sub', 'source.bin'),
+                               iostatus='out', binary=True)
+        
     def __init__(self, name='Subcontainer', parent=None):
         super(Subcontainer, self).__init__(name, parent)
 
-        Array('binary_data', self, iostatus='in', float, default=[])
-        FileVariable('binary_file', self, iostatus='out',
-                     default=os.path.join('..', 'sub', 'source.bin'),
-                     metadata={'binary':True})
 
 
 class DataObj(object):
@@ -119,24 +120,27 @@ class DataObj(object):
 class Sink(Component):
     """ Consumes files. """
 
+    text_data = List(Str, iostatus='out')
+    binary_data = Array('d', value=[], iostatus='out')
+
+    # Absolute FileVariable that exists at time of save.
+    text_file = FileVariable(iostatus='in')
+    
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
 
         global sink_init
         sink_init = True
+        
+        self.text_file = os.path.join(self.get_directory(), 'sink.txt')
 
-        StringList('text_data', self, iostatus='out', default=[])
-        Array('binary_data', self, iostatus='out', float, default=[])
-
-        # Absolute FileVariable that exists at time of save.
-        FileVariable('text_file', self, iostatus='in',
-                     default=os.path.join(self.get_directory(), 'sink.txt'))
         out = open(self.text_file, 'w')
         out.write('Absolute FileVariable that exists at time of save.\n')
         out.close()
 
         # Relative FileVariable that exists at time of save.
-        FileVariable('binary_file', self, iostatus='in', default='sink.bin')
+        self.add_trait('binary_file',
+                       FileVariable('sink.bin', iostatus='in'))
         self.push_dir(self.get_directory())
         out = open(self.binary_file, 'w')
         out.write('Relative FileVariable that exists at time of save.\n')
@@ -207,7 +211,7 @@ class EggTestCase(unittest.TestCase):
         self.assertNotEqual(self.model.Sink.binary_data,
                             self.model.Source.sub.binary_data)
         self.assertNotEqual(
-            self.model.Sink.getvar('binary_file').metadata['binary'], True)
+            self.model.Sink.trait('binary_file').binary, True)
 
         for path in EXTERNAL_FILES:
             path = os.path.join(self.model.Source.get_directory(), path)
@@ -226,7 +230,7 @@ class EggTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.binary_data,
                          self.model.Source.sub.binary_data)
         self.assertEqual(
-            self.model.Sink.getvar('binary_file').metadata['binary'], True)
+            self.model.Sink.trait('binary_file').binary, True)
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -255,7 +259,7 @@ class EggTestCase(unittest.TestCase):
             self.assertNotEqual(self.model.Sink.binary_data,
                                 self.model.Source.sub.binary_data)
             self.assertNotEqual(
-                self.model.Sink.getvar('binary_file').metadata['binary'], True)
+                self.model.Sink.trait('binary_file').binary, True)
 
             for path in EXTERNAL_FILES:
                 path = os.path.join(self.model.Source.get_directory(), path)
@@ -271,7 +275,7 @@ class EggTestCase(unittest.TestCase):
             self.assertEqual(self.model.Sink.binary_data,
                              self.model.Source.sub.binary_data)
             self.assertEqual(
-                self.model.Sink.getvar('binary_file').metadata['binary'], True)
+                self.model.Sink.trait('binary_file').binary, True)
 
         finally:
             os.chdir(orig_dir)
@@ -296,11 +300,11 @@ class EggTestCase(unittest.TestCase):
         self.model.Oddball.directory = os.getcwd()
         try:
             self.model.save_to_egg()
-        except ValueError, exc:
+        except Exception, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
-            self.fail('Expected ValueError')
+            self.fail('Expected Exception')
 
     def test_save_bad_external(self):
         logging.debug('')
@@ -313,11 +317,11 @@ class EggTestCase(unittest.TestCase):
         metadata['path'] = path
         try:
             self.model.save_to_egg()
-        except ValueError, exc:
+        except Exception, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source file"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
-            self.fail('Expected ValueError')
+            self.fail('Expected Exception')
         finally:
             os.remove(path)
 
@@ -331,11 +335,11 @@ class EggTestCase(unittest.TestCase):
         self.model.Source.text_file = path
         try:
             self.model.save_to_egg()
-        except ValueError, exc:
+        except Exception, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
-            self.fail('Expected ValueError')
+            self.fail('Expected Exception')
         finally:
             os.remove(path)
 
@@ -367,7 +371,7 @@ class EggTestCase(unittest.TestCase):
         try:
             sub = Container.load_from_egg(os.path.join('..', self.egg_name),
                                           install=False)
-            self.assertEqual(sub.binary_data, self.model.Source.sub.binary_data)
+            self.assertTrue(all(sub.binary_data == self.model.Source.sub.binary_data))
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)

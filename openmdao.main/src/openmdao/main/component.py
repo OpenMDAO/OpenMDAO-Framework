@@ -15,6 +15,7 @@ from enthought.traits.api import implements, on_trait_change, Str, Missing, Unde
 
 from openmdao.main.interfaces import IComponent
 from openmdao.main.container import Container
+from openmdao.main.filevar import FileVariable
 from openmdao.main.constants import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
 
@@ -260,7 +261,7 @@ class Component (Container):
         # We have to check relative paths like '../somedir' and if
         # we do that after adjusting a parent, things can go bad.
         components = [self]
-        components.extend([c for c in self.values(pub=False, recurse=True)
+        components.extend([c for c in self.values(recurse=True)
                                 if isinstance(c, Component)])
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
@@ -319,11 +320,11 @@ class Component (Container):
                     src_files.add(save_path)
 
             # Process FileVariables for this component only.
-            for fvar in comp.get_file_vars():
-                path = fvar.get_value()
+            for fvar, fvarvalue in comp.get_file_vars():
 #                self.debug('    fvar %s path %s', fvar.name, path)
-                if not path:
+                if not fvarvalue:
                     continue
+                path = fvarvalue
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
                 path = os.path.normpath(path)
@@ -333,15 +334,16 @@ class Component (Container):
                 if force_relative:
                     if path.startswith(src_dir):
                         save_path = self._relpath(path, src_dir)
-                        if os.path.isabs(fvar.get_value()):
+                        if os.path.isabs(fvarvalue):
                             path = self._relpath(path, comp_dir)
-                            fixup_fvar.append((fvar, fvar.get_value()))
-                            fvar.set_value(path)
+                            fixup_fvar.append((fvar, fvarvalue))
+                            comp.set(fvar, path)
 #                            self.debug('        path now %s', path)
                     else:
                         self.raise_exception(
                             "Can't save, %s path '%s' doesn't start with '%s'."
-                            % (fvar.get_pathname(), path, src_dir), ValueError)
+                            % ('.'.join([comp.get_pathname(),
+                                         fvar]), path, src_dir), ValueError)
                 else:
                     save_path = path
 #                self.debug('        adding %s', save_path)
@@ -354,34 +356,37 @@ class Component (Container):
                                                       tmp_dir)
         finally:
             # If any component config has been modified, restore it.
-            for comp, path in fixup_dirs:
-                comp.directory = path
+            for ccomp, path in fixup_dirs:
+                ccomp.directory = path
             for meta, path in fixup_meta:
                 meta['path'] = path
             for fvar, path in fixup_fvar:
-                fvar.set_value(path)
+                comp.set(fvar, path)
 
     def get_file_vars(self):
-        """Return list of FileVariables owned by this component."""
-
-        def _recurse_get_file_vars (container, file_vars, visited):
-            objs = container.__dict__.values()
-            for obj in objs:
+        """Return list of (filevarname,filevarvalue) owned by this component."""
+        meta = { 'type': lambda x: x != 'event' }
+        def _recurse_get_file_vars (container, file_vars, visited, scope):
+            for name, trait in container.traits(**meta).items():
+                obj = getattr(container, name)
                 if id(obj) in visited:
                     continue
                 visited.append(id(obj))
-                if isinstance(obj, FileVariable):
-                    file_vars.add(obj)
-                elif isinstance(obj, Component):
-                    continue
-                elif isinstance(obj, Variable):
-                    continue
-                elif isinstance(obj, Container):
-                    _recurse_get_file_vars(obj, file_vars, visited)
+                if trait.is_trait_type(FileVariable):
+                    if self is scope:
+                        file_vars.add((name, obj))
+                    else:
+                        file_vars.add(('.'.join(
+                                      [container.get_pathname(rel_to_scope=scope),name]), 
+                                       obj))
+                # TODO: find out why we're recursing into child Containers,
+                # but not into child Components
+                elif isinstance(obj, Container) and not isinstance(obj, Component):
+                    _recurse_get_file_vars(obj, file_vars, visited, scope)
 
         file_vars = set()
         visited = []
-        _recurse_get_file_vars(self, file_vars, visited)
+        _recurse_get_file_vars(self, file_vars, visited, self)
         return file_vars
 
     def _relpath(self, path1, path2):
@@ -460,10 +465,10 @@ class Component (Container):
 #        top = super(Component).load(instream, format)
         top = Container.load(instream, format, False)
 
-        if IComponent.providedBy(top):
+        if isinstance(top, Component):
             top.directory = os.getcwd()
-            for component in [c for c in top.values(pub=False, recurse=True)
-                                                if IComponent.providedBy(c)]:
+            for component in [c for c in top.values(recurse=True)
+                                                if isinstance(c, Component)]:
                 directory = component.get_directory()
                 if not os.path.exists(directory):
                     os.makedirs(directory)
