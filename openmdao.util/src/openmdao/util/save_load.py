@@ -8,8 +8,7 @@ code in place to work around that.
 
 When saving to an egg, the module named __main__ changes when reloading. This
 requires finding the real module name and munging references to __main__.
-References to types defined in module __main__ can't be saved.  Also,
-references to old-style class types can't be restored correctly.
+References to old-style class types can't be restored correctly.
 
 Also note that YAML format doesn't handle more than one layer of back-pointers, 
 so it's only suitable for very flat object networks.
@@ -106,15 +105,16 @@ class NullLogger(object):
         pass
 
 
-def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
-                dst_dir=None, format=SAVE_CPICKLE, proto=-1, tmp_dir=None,
-                logger=None, use_setuptools=False):
+def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
+                src_files=None, dst_dir=None, format=SAVE_CPICKLE, proto=-1,
+                tmp_dir=None, logger=None, use_setuptools=False):
     """
     Save state and other files to an egg.
 
     - `root` is the root of the object graph to be saved.
     - `name` is the name of the package.
     - `version` defaults to a timestamp.
+    - `py_dir` defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
     - `dst_dir` is the directory to write the egg in.
     - `tmp_dir` is the directory to use for temporary files.
@@ -126,6 +126,12 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
         logger = NullLogger()
 
     orig_dir = os.getcwd()
+
+    if py_dir is None:
+        py_dir = orig_dir
+    elif not os.path.isabs(py_dir):
+        py_dir = os.path.abspath(py_dir)
+
     if src_dir and not os.path.isabs(src_dir):
         src_dir = os.path.abspath(src_dir)
     if src_files is None:
@@ -161,7 +167,16 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
         try:
             # Determine distributions and local modules required.
             required_distributions, local_modules, missing_modules = \
-                _get_distributions(root, objs, logger)
+                _get_distributions(objs, py_dir, logger)
+
+            logger.debug('    py_dir: %s', py_dir)
+            logger.debug('    src_dir: %s', src_dir)
+            logger.debug('    local_modules:')
+            for module in sorted(local_modules):
+                mod = module
+                if mod.startswith(py_dir):
+                    mod = mod[len(py_dir)+1:]
+                logger.debug('        %s', mod)
 
             # Move to scratch area.
             tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
@@ -173,7 +188,7 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
             buildout_orig = buildout_path+'-orig'
             try:
                 if src_dir:
-                    if sys.platform == 'win32':
+                    if py_dir != src_dir or sys.platform == 'win32':
                         # Copy original directory to object name.
                         shutil.copytree(src_dir, name)
                     else:
@@ -182,13 +197,13 @@ def save_to_egg(root, name, version=None, src_dir=None, src_files=None,
                 else:
                     os.mkdir(name)
 
-                # If orig_dir isn't src_dir, copy local modules from orig_dir.
-                if orig_dir != src_dir:
+                # If py_dir isn't src_dir, copy local modules from py_dir.
+                if py_dir != src_dir:
                     for path in local_modules:
                         if not os.path.exists(
                                    os.path.join(name, os.path.basename(path))):
                             if not os.path.isabs(path):
-                                path = os.path.join(orig_dir, path)
+                                path = os.path.join(py_dir, path)
                             shutil.copy(path, name)
 
                 # If any distributions couldn't be found, record them in a file.
@@ -553,7 +568,7 @@ def _restore_objects(fixup):
         del sys.modules[mod]
 
 
-def _get_distributions(root, objs, logger):
+def _get_distributions(objs, py_dir, logger):
     """ Return (distributions, local_modules, missing) used by objs. """
     distributions = set()
     local_modules = set()
@@ -616,7 +631,7 @@ def _get_distributions(root, objs, logger):
                     _SAVED_FINDINGS[path] = finder_items
 
             if finder_items is not None:
-                _process_found_modules(root, finder_items, modules,
+                _process_found_modules(py_dir, finder_items, modules,
                                        distributions, prefixes, local_modules,
                                        missing, logger)
 
@@ -643,15 +658,13 @@ def _process_egg(path, distributions, prefixes, logger):
             prefixes.append(loc)
 
 
-def _process_found_modules(root, finder_items, modules, distributions, prefixes,
-                           local_modules, missing, logger):
+def _process_found_modules(py_dir, finder_items, modules, distributions,
+                           prefixes, local_modules, missing, logger):
     """ Use ModuleFinder data to update distributions and local_modules. """
     working_set = pkg_resources.WorkingSet()
     site_lib = os.path.dirname(site.__file__)
     site_pkg = site_lib+os.sep+'site-packages'
-    root_dir = os.path.dirname(sys.modules[root.__module__].__file__)
     py_version = 'python%s' % sys.version[:3]
-    cwd = os.getcwd()
     not_found = set()
 
     for name, module in sorted(finder_items, key=lambda item: item[0]):
@@ -667,7 +680,7 @@ def _process_found_modules(root, finder_items, modules, distributions, prefixes,
             continue
 
         dirpath = os.path.dirname(path)
-        if dirpath == '.' or dirpath == cwd or dirpath.startswith(root_dir):
+        if dirpath == '.' or dirpath.startswith(py_dir):
             # May need to be copied later.
             local_modules.add(path)
             continue

@@ -2,6 +2,9 @@
 Test CaseIteratorDriver.
 """
 
+import logging
+import pkg_resources
+import sys
 import unittest
 
 import numpy.random
@@ -10,6 +13,9 @@ from openmdao.main import Assembly, Component, Case, ListCaseIterator, \
                           ArrayVariable, Float
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
+
+# pylint: disable-msg=E1101
+
 
 def rosen_suzuki(x):
     """ Evaluate polynomial from CONMIN manual. """
@@ -53,6 +59,9 @@ class DriverTestCase(unittest.TestCase):
         self.model = None
 
     def test_normal(self):
+        logging.debug('')
+        logging.debug('test_normal')
+
         cases = []
         for i in range(10):
             inputs = [('dc.x', None, numpy.random.normal(size=4)),
@@ -75,7 +84,33 @@ class DriverTestCase(unittest.TestCase):
             self.assertEqual(results[i].outputs[1][2],
                              sum(case.inputs[1][2]))
 
+    def test_save_load(self):
+        logging.debug('')
+        logging.debug('test_save_load')
+
+        cases = []
+        for i in range(10):
+            inputs = [('dc.x', None, numpy.random.normal(size=4)),
+                      ('dc.y', None, numpy.random.normal(size=10))]
+            outputs = [('dc.rosen_suzuki', None, None),
+                       ('dc.sum_y', None, None)]
+            cases.append(Case(inputs, outputs))
+
+        self.model.driver.iterator = ListCaseIterator(cases)
+        results = []
+        self.model.driver.outerator = results
+
+        if sys.platform != 'win32':
+            # Set local dir in case we're running in a different directory.
+            py_dir = pkg_resources.resource_filename('openmdao.lib.drivers',
+                                                     'test')
+            retcode = self.model.check_save_load(py_dir=py_dir)
+            self.assertEqual(retcode, 0)
+
     def test_noinput(self):
+        logging.debug('')
+        logging.debug('test_noinput')
+
         cases = []
         for i in range(2):
             inputs = [('dc.x', None, numpy.random.normal(size=4)),
@@ -91,11 +126,15 @@ class DriverTestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
+        msg = "CID_TestModel.driver: Exception setting 'dc.z':" \
+              " CID_TestModel.dc: object has no attribute 'z'"
         for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg,
-                "CID_TestModel.driver: Exception setting 'dc.z': CID_TestModel.dc: object has no attribute 'z'")
+            self.assertEqual(results[i].msg, msg)
 
     def test_nooutput(self):
+        logging.debug('')
+        logging.debug('test_nooutput')
+
         cases = []
         for i in range(2):
             inputs = [('dc.x', None, numpy.random.normal(size=4)),
@@ -111,29 +150,43 @@ class DriverTestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
+        msg = "CID_TestModel.driver: Exception getting 'dc.sum_z':" \
+              " CID_TestModel.dc: object has no attribute 'sum_z'"
         for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg,
-                             "CID_TestModel.driver: Exception getting 'dc.sum_z': CID_TestModel.dc: object has no attribute 'sum_z'")
+            self.assertEqual(results[i].msg, msg)
 
     def test_noiterator(self):
+        logging.debug('')
+        logging.debug('test_noiterator')
+
         self.model.driver.outerator = []
         try:
             self.model.run()
         except ValueError, exc:
-            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'iterator' is not present")
+            msg = "CID_TestModel.driver: required plugin 'iterator' is not" \
+                  " present"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('ValueError expected')
 
     def test_noouterator(self):
+        logging.debug('')
+        logging.debug('test_noouterator')
+
         self.model.driver.iterator = ListCaseIterator([])
         try:
             self.model.run()
         except ValueError, exc:
-            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'outerator' is not present")
+            msg = "CID_TestModel.driver: required plugin 'outerator' is not" \
+                  " present"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('ValueError expected')
 
 
 if __name__ == "__main__":
-    unittest.main()
+    import nose
+    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()
 
