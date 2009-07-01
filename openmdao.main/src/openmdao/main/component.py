@@ -217,14 +217,15 @@ class Component (Container):
         """
         self.load(instream)
 
-    def save_to_egg(self, name=None, version=None, force_relative=True,
-                    src_dir=None, src_files=None, dst_dir=None,
-                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None,
+    def save_to_egg(self, name=None, version=None, py_dir=None,
+                    force_relative=True, src_dir=None, src_files=None,
+                    dst_dir=None, format=SAVE_CPICKLE, proto=-1, tmp_dir=None,
                     use_setuptools=False):
         """Save state and other files to an egg.
 
         - `name` defaults to the name of the component.
         - `version` defaults to the component's module __version__.
+        - `py_dir` defaults to the current directory.
         - If `force_relative` is True, all paths are relative to `src_dir`.
         - `src_dir` defaults to the component's directory.
         - `src_files` should be a set, and defaults to component's external files.
@@ -323,7 +324,7 @@ class Component (Container):
                     save_path = path
                 src_files.add(save_path)
         try:
-            return super(Component, self).save_to_egg(name, version,
+            return super(Component, self).save_to_egg(name, version, py_dir,
                                                       force_relative,
                                                       src_dir, src_files,
                                                       dst_dir, format, proto,
@@ -389,13 +390,13 @@ class Component (Container):
         self.raise_exception("'%s' has no common prefix with '%s'"
                              % (path1, path2), ValueError)
 
-    def check_save_load(self, test_dir='test_dir', cleanup=True,
+    def check_save_load(self, py_dir=None, test_dir='test_dir', cleanup=True,
                         format=SAVE_CPICKLE, logfile=None):
         """Convenience routine to check that saving & reloading work."""
         old_level = self.log_level
         self.log_level = LOG_DEBUG
         start = time.time()
-        egg_name = self.save_to_egg(format=format)
+        egg_name = self.save_to_egg(py_dir=py_dir, format=format)
         elapsed = time.time() - start
         size = os.path.getsize(egg_name)
         print '\nSaved %d bytes in %.2f seconds (%.2f bytes/sec)' % \

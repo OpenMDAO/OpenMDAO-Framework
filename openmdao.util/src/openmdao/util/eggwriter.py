@@ -53,7 +53,7 @@ def write(name, doc, version, loader, src_files, distributions,
         for path in filenames:
             if path.endswith('.py'):
                 path = os.path.join(dirpath, path)
-                files.append(path)
+                files.append(path[2:])  # Skip leading './'
                 bytes += os.path.getsize(path)
                 sources.append(path+'\n')
 

@@ -5,6 +5,7 @@ Test saving and loading of simulations as eggs.
 import cPickle
 import logging
 import os
+import pkg_resources
 import shutil
 import subprocess
 import sys
@@ -27,6 +28,9 @@ SOURCE_INIT = False
 SINK_INIT = False
 
 MODULE_NAME = __name__
+
+# Set local dir in case we're running in a different directory.
+PY_DIR = pkg_resources.resource_filename('openmdao.main', 'test')
 
 
 class Source(Assembly):
@@ -269,7 +273,7 @@ class EggTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.executions, 0)
 
         # Save to egg.
-        self.egg_name = self.model.save_to_egg(format=format,
+        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR, format=format,
                                                use_setuptools=use_setuptools)
 
         # Run and verify correct operation.
@@ -363,7 +367,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('test_save_bad_directory')
         self.model.Oddball.directory = os.getcwd()
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -374,7 +378,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_bad_destination')
         try:
-            self.model.save_to_egg(dst_dir='/')
+            self.model.save_to_egg(py_dir=PY_DIR, dst_dir='/')
         except IOError, exc:
             msg = "Egg_TestModel: Can't save to '/', no write permission"
             self.assertEqual(str(exc), msg)
@@ -391,7 +395,7 @@ class EggTestCase(unittest.TestCase):
         metadata = self.model.Source.external_files[0]
         metadata['path'] = path
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source file"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -409,7 +413,7 @@ class EggTestCase(unittest.TestCase):
         out.close()
         self.model.Source.text_file = path
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -422,7 +426,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_bad_format')
         try:
-            self.model.save_to_egg(format='unknown')
+            self.model.save_to_egg(py_dir=PY_DIR, format='unknown')
         except RuntimeError, exc:
             self.assertEqual(str(exc),
                              "Egg_TestModel: Unknown format 'unknown'.")
@@ -434,7 +438,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('test_save_bad_function')
         self.model.Oddball.function_socket = main_function
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except RuntimeError, exc:
             msg = "Egg_TestModel: Can't save: reference to function defined in main module"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -447,7 +451,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('test_save_bad_method')
         self.model.Oddball.method_socket = self.model.Oddball.static_method
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except RuntimeError, exc:
             self.assertEqual(str(exc),
                 "Egg_TestModel: Can't save, 1 object cannot be pickled.")
@@ -459,7 +463,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('test_save_bad_tuple')
         self.model.Oddball.scratch_tuple = (self.model.Oddball.instance_method,)
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except RuntimeError, exc:
             msg = 'Egg_TestModel: _fix_im_recurse: tuple'
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -471,7 +475,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('test_save_load_container')
 
         # Save to egg.
-        self.egg_name = self.model.Source.sub.save_to_egg()
+        self.egg_name = self.model.Source.sub.save_to_egg(py_dir=PY_DIR)
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -513,7 +517,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_check_save_load')
         if sys.platform != 'win32':
-            retcode = self.model.check_save_load()
+            retcode = self.model.check_save_load(py_dir=PY_DIR)
             self.assertEqual(retcode, 0)
 
     def test_install_load(self):
@@ -533,7 +537,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('Using python: %s' % python)
 
         # Write to egg.
-        self.egg_name = self.model.save_to_egg()
+        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR)
 
         install_dir = os.path.join(os.getcwd(), 'install_dir')
         if os.path.exists(install_dir):

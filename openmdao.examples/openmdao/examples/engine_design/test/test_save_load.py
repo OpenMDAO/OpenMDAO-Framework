@@ -4,6 +4,7 @@
 
 import logging
 import os
+import pkg_resources
 import shutil
 import subprocess
 import unittest
@@ -30,7 +31,10 @@ class EngineOptimizationTestCase(unittest.TestCase):
         self.model.driving_sim.set('spark_angle', -35.368341874)
         self.model.driver.maxiters = 1
 
-        egg_name = self.model.save_to_egg()
+        # Set local dir in case we're running in a different directory.
+        py_dir = pkg_resources.resource_filename('openmdao.examples.engine_design',
+                                                 'test')
+        egg_name = self.model.save_to_egg(py_dir=py_dir)
 
         orig_dir = os.getcwd()
         test_dir = 'EggTest'

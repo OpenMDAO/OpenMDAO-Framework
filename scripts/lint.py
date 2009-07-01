@@ -17,12 +17,11 @@ def main():
                       help='start in local directory only')
     parser.add_option('--recurse', '-r', action='store_true',
                       help='recurse down directory tree')
+    parser.add_option('--specific', '-s', action='store_true',
+                      help='process specific files')
     parser.add_option('--update', '-u', action='store_true',
                       help='update saved pylint results')
     options, arguments = parser.parse_args()
-    if arguments:
-        parser.print_help()
-        sys.exit(1)
 
     # Find location of OpenMDAO root.
     root = os.path.abspath(os.path.dirname(
@@ -30,6 +29,16 @@ def main():
                                    os.path.dirname(__file__))))
     python = os.path.join(root, 'buildout', 'bin', 'python')
     pylint = os.path.join(root, 'scripts', 'pylint.py')
+
+    # If specific files requested, just process those and exit.
+    if options.specific:
+        for filename in arguments:
+            process(python, pylint, '.', filename, options.update)
+        sys.exit(0)
+
+    if arguments:
+        parser.print_help()
+        sys.exit(1)
 
     if options.local:
         roots = (os.getcwd(),)

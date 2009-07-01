@@ -357,14 +357,15 @@ class Container(HierarchyMember):
         new one."""
         raise NotImplementedError("config_from_obj")
 
-    def save_to_egg(self, name=None, version=None, force_relative=True,
-                    src_dir=None, src_files=None, dst_dir=None,
-                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None,
+    def save_to_egg(self, name=None, version=None, py_dir=None,
+                    force_relative=True, src_dir=None, src_files=None,
+                    dst_dir=None, format=SAVE_CPICKLE, proto=-1, tmp_dir=None,
                     use_setuptools=False):
         """Save state and other files to an egg.
 
         - `name` defaults to the name of the container.
         - `version` defaults to the container's module __version__.
+        - `py_dir` defaults to the current directory.
         - If `force_relative` is True, all paths are relative to `src_dir`.
         - `src_dir` is the root of all (relative) `src_files`.
         - `dst_dir` is the directory to write the egg in.
@@ -373,10 +374,8 @@ class Container(HierarchyMember):
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
 
-        NOTE: References to types defined in module __main__ can't be saved.
-              Also, references to old-style class types can't be restored
-              correctly.  These issues are typically related to the Variable
-              var_types attribute.
+        NOTE: References to old-style class types can't be restored correctly.
+              This is typically related to the Variable var_types attribute.
         """
         if name is None:
             name = self.name
@@ -389,6 +388,7 @@ class Container(HierarchyMember):
         self.parent = None
         try:
             return openmdao.util.save_load.save_to_egg(self, name, version,
+                                                       py_dir,
                                                        src_dir, src_files,
                                                        dst_dir, format, proto,
                                                        tmp_dir, self._logger,
