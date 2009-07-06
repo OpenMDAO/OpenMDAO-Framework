@@ -66,15 +66,17 @@ class IsolatedEgg(zc.recipe.egg.Scripts):
             _swap_templates(old, old_py)
                 
         # Sometimes we need the explicit version command (eggsecutables).
-        bin = self.buildout['buildout']['bin-directory']
-        python = os.path.join(bin, 'python')
-        pythonVR = os.path.join(bin, 'python'+sys.version[:3])
-        shutil.copyfile(python, pythonVR)
-        try:
-            os.chmod(pythonVR, 0775)
-        except (AttributeError, os.error):
-            pass
-        ret.append(pythonVR)
+        if sys.platform != 'win32':
+            bin = self.buildout['buildout']['bin-directory']
+            python = os.path.join(bin, 'python')
+            pythonVR = os.path.join(bin, 'python'+sys.version[:3])
+            shutil.copyfile(python, pythonVR)
+            try:
+                os.chmod(pythonVR, 0775)
+            except (AttributeError, os.error):
+                pass
+            ret.append(pythonVR)
+
         return ret
 
     update = install
