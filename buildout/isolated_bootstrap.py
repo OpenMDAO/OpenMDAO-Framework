@@ -31,8 +31,6 @@ import os.path
 
 bodir = os.getcwd()
 setupdir = os.path.join(bodir,'setup')
-#tmpeggs = tempfile.mkdtemp()
-tmpeggs = setupdir
 
 stoolsname = boutname = None
 
@@ -82,13 +80,13 @@ ws  = pkg_resources.working_set
 assert os.spawnle(
     os.P_WAIT, sys.executable, quote (sys.executable),
     '-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
-    quote (tmpeggs), 'zc.buildout',
+    quote (setupdir), 'zc.buildout',
     dict(os.environ,
          PYTHONPATH=setupdir
          ),
     ) == 0
 
-ws.add_entry(tmpeggs)
+ws.add_entry(setupdir)
 
 ws.require('zc.buildout')
 import zc.buildout.buildout
