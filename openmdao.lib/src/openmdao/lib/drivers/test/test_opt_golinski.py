@@ -3,22 +3,18 @@ Test the CONMIN optimizer component
      used Golinski's speed reducer problem
 """
 
+import pkg_resources
+import sys
 import unittest
 import numpy
 
-# pylint: disable-msg=F0401,E0611
+# pylint: disable-msg=F0401,E0611,E1101
 from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
 from openmdao.main.arrayvar import ArrayVariable
-from openmdao.main.variable import INPUT,OUTPUT
+from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.main.float import Float
 from openmdao.lib.drivers.conmindriver import CONMINdriver
-
-# we need to add the ImportFactory to the factorymanager to be 
-# able to find plugin modules
-import openmdao.main.factorymanager as factorymanager
-from openmdao.main.importfactory import ImportFactory
-factorymanager.register_factory(ImportFactory())
 
 
 class OptGolinskiComponent(Component):
@@ -128,12 +124,13 @@ class OptGolinskiComponent(Component):
     # pylint: disable-msg=C0103
     def __init__(self, name, parent=None, desc=None):
         super(OptGolinskiComponent, self).__init__(name, parent, desc)
-        self.x = numpy.array([3.3,0.70,25.0,7.9,7.5999999,3.0,5.09999999],dtype=float)
+        self.x = numpy.array([3.3,0.70,25.0,7.9,7.5999999,3.0,5.09999999],
+                             dtype=float)
         # self.x = numpy.array([3.3,0.589999970,25.0,7.9,7.5999999,3.0,5.09999999],dtype=float)
         # self.x = numpy.array([3.5,0.700,17.0,7.3,7.7153201,3.50215,5.2866545],dtype=float)
         self.result = 0.
-        ArrayVariable('x',self,iostatus=INPUT,entry_type=float)
-        Float('result',self,iostatus=OUTPUT)
+        ArrayVariable('x', self, iostatus=INPUT, entry_type=float)
+        Float('result', self, iostatus=OUTPUT)
         
         self.opt_objective = 0.29851384e+04
         self.opt_design_vars = [3.3,0.7,17.0,7.3,7.3,3.35020,5.2865]
@@ -154,7 +151,7 @@ class GolinskiTestCase(unittest.TestCase):
 
     
     def setUp(self):
-        self.top = Assembly('top',None)
+        self.top = Assembly('top', None)
         OptGolinskiComponent('comp', self.top)
         CONMINdriver('driver', self.top)
         self.top.driver.iprint = 0
@@ -166,7 +163,7 @@ class GolinskiTestCase(unittest.TestCase):
         
 
 #   optimize  x[0] ..............
-    def getx0(self,g11,g12):
+    def getx0(self, g11, g12):
         x00 = self.top.comp.x[0] = max(27.0 /(g11 * g11 * g12) ,
                                      397.5 /(g11*g11 * g12*g12) ,
                                      5.0 * g11 ,
@@ -175,7 +172,7 @@ class GolinskiTestCase(unittest.TestCase):
 
 
 #   optimize  x[5] ..............
-    def getx5(self,g11,g12,g13):
+    def getx5(self, g11, g12, g13):
         A1 = (((745.0 * g13) /(g11*g12))**2 + 0.169*1.0e08)**0.5
         g21 = (A1 / (1100.0*0.1) )**(1.0/3.0)
         g22 = (1.93 * g13 * g13 * g13 / (g11 * g12))**0.25
@@ -186,12 +183,12 @@ class GolinskiTestCase(unittest.TestCase):
 
 
 #   optimize  x[6] ..............
-    def getx6(self,g11,g12,g14):
+    def getx6(self, g11, g12, g14):
         A2 = (((745.0 * g14) /(g11*g12))**2 + 0.1575*1.0e09)**0.5
         g31 = (A2 /(850.0*0.1))**(1.0/3.0)
         g32 = (1.93*g14*g14*g14 /(g11 * g12))**0.25
         g33 = 5.0
-        x06 = max(g31,g32,g33) 
+        x06 = max(g31, g32, g33) 
         return x06
 
     def test_opt1(self):
@@ -200,8 +197,8 @@ class GolinskiTestCase(unittest.TestCase):
         #                                
         #  maximize x[0] value
         iter  = 1
-        self.top.driver.design_vars.value = ['comp.x[1]','comp.x[2]',
-                                             'comp.x[3]','comp.x[4]']
+        self.top.driver.design_vars.value = ['comp.x[1]', 'comp.x[2]',
+                                             'comp.x[3]', 'comp.x[4]']
         self.top.driver.lower_bounds = [0.70, 17.0, 7.300, 7.300]
         self.top.driver.upper_bounds = [0.80, 28.0, 8.300, 8.300]
         #  25 CONSTRAINTS  defined in the problem
@@ -218,9 +215,9 @@ class GolinskiTestCase(unittest.TestCase):
             g16 = self.top.comp.x[6]
             # print 'starting initial design variables ****** x0 to x6'
             # print  g00, g11, g12, g13, g14, g15, g16
-            self.top.comp.set('x', self.getx0(g11,g12), [0])
-            self.top.comp.set('x', self.getx5(g11,g12,g13), [5])
-            self.top.comp.set('x', self.getx6(g11,g12,g14), [6])
+            self.top.comp.set('x', self.getx0(g11, g12), [0])
+            self.top.comp.set('x', self.getx5(g11, g12, g13), [5])
+            self.top.comp.set('x', self.getx6(g11, g12, g14), [6])
             # print ' *********************************'
             # print ' *********************************'
             # pylint: disable-msg=C0301
@@ -262,11 +259,33 @@ class GolinskiTestCase(unittest.TestCase):
                                self.top.comp.x[4], places=1)
 
         
+# check_save_load requires correct pythonV.R
+#    def test_save_load(self):
+#        self.top.driver.objective.value = 'comp.result'
+#        #                                
+#        #  maximize x[0] value
+#        iter  = 1
+#        self.top.driver.design_vars.value = ['comp.x[1]', 'comp.x[2]',
+#                                             'comp.x[3]', 'comp.x[4]']
+#        self.top.driver.lower_bounds = [0.70, 17.0, 7.300, 7.300]
+#        self.top.driver.upper_bounds = [0.80, 28.0, 8.300, 8.300]
+#        #  25 CONSTRAINTS  defined in the problem
+#        #  reduced to 1 constraint
+#        self.top.driver.constraints.value = ['1.0 - 40.0/(comp.x[2] * comp.x[3])']
+#        if sys.platform != 'win32':
+#            # Set local dir in case we're running in a different directory.
+#            py_dir = pkg_resources.resource_filename('openmdao.lib.drivers',
+#                                                     'test')
+#            retcode = self.top.check_save_load(py_dir=py_dir)
+#            self.assertEqual(retcode, 0)
+
+
     def test_bad_objective(self):
         try:
             self.top.driver.objective.value = 'comp.missing'
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver.objective: cannot find variable 'comp.missing'")
+            msg = "top.driver.objective: cannot find variable 'comp.missing'"
+            self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
 
@@ -275,17 +294,19 @@ class GolinskiTestCase(unittest.TestCase):
         try:
             self.top.run()
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver.objective: reference is undefined")
+            msg = "top.driver.objective: reference is undefined"
+            self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
     
     def test_no_objective(self):
-        self.top.driver.design_vars.value = ['comp.x[1]','comp.x[2]',
-                                             'comp.x[3]','comp.x[4]']
+        self.top.driver.design_vars.value = ['comp.x[1]', 'comp.x[2]',
+                                             'comp.x[3]', 'comp.x[4]']
         try:
             self.top.run()
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver.objective: reference is undefined")
+            msg = "top.driver.objective: reference is undefined"
+            self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
             
@@ -297,22 +318,24 @@ class GolinskiTestCase(unittest.TestCase):
         try:
             x = self.top.driver.objective.refvalue
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver.objective: reference is undefined")
+            msg = "top.driver.objective: reference is undefined"
+            self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
         self.top.driver.objective.value = 'comp.result'
-        self.top.comp.x = numpy.array([0,0,0,0,0,0,0],dtype=float)
-        self.top.driver.design_vars.value = ['comp.x[1]','comp.x[2]',
-                                             'comp.x[3]','comp.x[4]']
+        self.top.comp.x = numpy.array([0,0,0,0,0,0,0], dtype=float)
+        self.top.driver.design_vars.value = ['comp.x[1]', 'comp.x[2]',
+                                             'comp.x[3]', 'comp.x[4]']
         self.top.driver.design_vars.refvalue = [0, 0, 0, 0]
         self.assertEqual(self.top.driver.objective.refvalue, 0.)
         
     
     def test_bad_design_vars(self):
         try:
-            self.top.driver.design_vars.value = ['comp_bogus.x[0]','comp.x[1]']
+            self.top.driver.design_vars.value = ['comp_bogus.x[0]', 'comp.x[1]']
         except RuntimeError, err:
-            self.assertEqual(str(err), "top.driver.design_vars: cannot find variable 'comp_bogus.x'")
+            msg = "top.driver.design_vars: cannot find variable 'comp_bogus.x'"
+            self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
     
@@ -320,14 +343,14 @@ class GolinskiTestCase(unittest.TestCase):
         try:
             self.top.driver.constraints.value = ['bogus.flimflam']
         except RuntimeError, err:
-            self.assertEqual(str(err), 
-                "top.driver.constraints: cannot find variable 'bogus.flimflam'")
+            msg = "top.driver.constraints: cannot find variable 'bogus.flimflam'"
+            self.assertEqual(str(err), msg)
         else:
             self.fail('RuntimeError expected')
             
     def test_lower_bounds_mismatch(self):
         self.top.driver.objective.value = 'comp.result'
-        self.top.driver.design_vars.value = ['comp.x[1]','comp.x[2]']
+        self.top.driver.design_vars.value = ['comp.x[1]', 'comp.x[2]']
         try:
             self.top.driver.lower_bounds = [0, 0, 0, 0]
             self.top.run()
@@ -340,25 +363,22 @@ class GolinskiTestCase(unittest.TestCase):
             
     def test_upper_bounds_mismatch(self):
         self.top.driver.objective.value = 'comp.result'
-        self.top.driver.design_vars.value = ['comp.x[1]','comp.x[2]']
+        self.top.driver.design_vars.value = ['comp.x[1]', 'comp.x[2]']
         try:
             self.top.driver.upper_bounds = [99]
             self.top.run()
         except ValueError, err:
-            self.assertEqual(str(err),"top.driver: size of new upper bound array"+
-                             " (1) does not match number of design vars (2)")
+            msg = "top.driver: size of new upper bound array" \
+                  " (1) does not match number of design vars (2)"
+            self.assertEqual(str(err), msg)
         else:
             self.fail('ValueError expected')
     
  
 
 if __name__ == "__main__":
-    unittest.main()
-    #suite = unittest.TestLoader().loadTestsFromTestCase(ContainerTestCase)
-    #unittest.TextTestRunner(verbosity=2).run(suite)    
+    import nose
+    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()
 
-
-
-
-    
-    
