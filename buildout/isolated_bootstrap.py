@@ -25,19 +25,47 @@ installed packages. -BAN
 $Id$
 """
 
-import os, shutil, sys, tempfile, urllib2
+import os, shutil, sys, tempfile #, urllib2
+import os.path
 
-tmpeggs = tempfile.mkdtemp()
 
-try:
-    import pkg_resources
-except ImportError:
-    ez = {}
-    exec urllib2.urlopen('http://peak.telecommunity.com/dist/ez_setup.py'
-                         ).read() in ez
-    ez['use_setuptools'](to_dir=tmpeggs, download_delay=0)
+bodir = os.getcwd()
+setupdir = os.path.join(bodir,'setup')
+#tmpeggs = tempfile.mkdtemp()
+tmpeggs = setupdir
 
-    import pkg_resources
+stoolsname = boutname = None
+
+for f in os.listdir(setupdir):
+    if f.startswith('setuptools'):
+        stoolsname = f
+    elif f.startswith('zc.buildout'):
+        boutname = f
+        
+if stoolsname is None or boutname is None:
+    sys.stderr.write('Missing setuptools or zc.buildout eggs for this distrib')
+    sys.exit(-1)
+
+if os.path.basename(bodir) != 'buildout':
+    sys.stderr.write('You must run this script from the buildout directory\n')
+    sys.exit(-1)
+
+sys.path = [os.path.join(bodir, 'setup', stoolsname)]
+
+# add paths for builtin python stuff (but no site-packages)                   
+if sys.platform == 'win32':
+    prefx = os.path.join(sys.prefix,'Lib')
+    sys.path += [  prefx, os.path.join(sys.prefix,'DLLs') ]
+else:
+    prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
+    sys.path += [  prefx+'.zip',
+                     prefx,
+                     os.path.join(prefx,'lib-dynload'),
+                     os.path.join(prefx,'plat-'+sys.platform),
+                  ]
+
+
+import pkg_resources
 
 if sys.platform == 'win32':
     def quote(c):
@@ -53,19 +81,19 @@ cmd = 'from setuptools.command.easy_install import main; main()'
 ws  = pkg_resources.working_set
 assert os.spawnle(
     os.P_WAIT, sys.executable, quote (sys.executable),
-    '-c', quote (cmd), '-mqNxd', quote (tmpeggs), 'zc.buildout',
+    '-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
+    quote (tmpeggs), 'zc.buildout',
     dict(os.environ,
-         PYTHONPATH=
-         ws.find(pkg_resources.Requirement.parse('setuptools')).location
+         PYTHONPATH=setupdir
          ),
     ) == 0
 
 ws.add_entry(tmpeggs)
+
 ws.require('zc.buildout')
 import zc.buildout.buildout
 
 zc.buildout.buildout.main(sys.argv[1:] + ['bootstrap'])
-shutil.rmtree(tmpeggs)
 
 # now modify the bin/buildout script to isolate it
 
