@@ -155,10 +155,10 @@ class CONMINdriver(Driver):
     objective = StringRef(iostatus='in',
                       desc= 'A string containing the objective function expression.')
     
-    upper_bounds = Array(iostatus='in', dtype=numpy.float,
+    upper_bounds = Array(dtype=numpy.float, iostatus='in',
         desc='Array of constraints on the maximum value of each design variable.')
     
-    lower_bounds = Array(iostatus='in', dtype=numpy.float,
+    lower_bounds = Array(dtype=numpy.float, iostatus='in', 
         desc='Array of constraints on the minimum value of each design variable.')
         
     iprint = Int(0)

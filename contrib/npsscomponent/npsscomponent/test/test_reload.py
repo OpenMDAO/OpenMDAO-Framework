@@ -20,22 +20,24 @@ ORIG_DIR = os.getcwd()
 class Source(Component):
     """ Just something to connect NPSS inputs to. """
 
+    rerun = Bool(False, iostatus='in')
+    npss_reload = Bool(False, iostatus='out',
+                       desc='Test input to NPSS')
+    npss_in = Float(0., iostatus='out', 
+                    desc='Test input to NPSS')
+        
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
-        Bool('rerun', self, iostatus='in', default=False)
-        Bool('npss_reload', self, iostatus='out', default=False,
-             desc='Test input to NPSS')
-        Float('npss_in', self, iostatus='out', default=0.,
-              desc='Test input to NPSS')
 
 
 class Sink(Component):
     """ Just something to connect NPSS outputs to. """
 
+    v = Float(0., iostatus='in', default=0.,
+              desc='Test output from NPSS')
+        
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
-        Float('npss_out', self, iostatus='in', default=0.,
-              desc='Test output from NPSS')
 
 
 # pylint: disable-msg=E1101

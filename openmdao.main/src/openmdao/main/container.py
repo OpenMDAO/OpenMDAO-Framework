@@ -816,13 +816,13 @@ eggs =
             for obj in state:
                 if id(obj) in visited:
                     continue
-                visited.append(id(obj))
+                visited.add(id(obj))
                 objs.append(obj)
                 _recurse_get_objects(obj, objs, visited)
 
         objs = []
 #        visited = [id(self._parent)]  # Don't include our parent.
-        visited = [id(self.parent)]  # Don't include our parent.
+        visited = set([id(self.parent)])  # Don't include our parent.
         _recurse_get_objects(self, objs, visited)
         return objs
 

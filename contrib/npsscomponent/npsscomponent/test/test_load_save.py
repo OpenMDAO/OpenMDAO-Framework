@@ -13,9 +13,10 @@ import unittest
 from numpy import ndarray
 from numpy.testing import assert_equal
 
-from openmdao.main.api import Bool, FileVariable
+from enthought.traits.api import Bool
+
+from openmdao.main.api import FileVariable
 from openmdao.main.constants import SAVE_LIBYAML
-from openmdao.main.variable import OUTPUT
 from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
@@ -30,20 +31,20 @@ class Passthrough(NPSScomponent):
         super(Passthrough, self).__init__('NPSS', arglist='passthrough.mdl')
 
         # Automagic interface variable creation (not for Bool though).
-        Bool('b_out', self, OUTPUT)
+        self.add_trait('b_out', Bool(iostatus='out'))
         self.make_public([
-            ('f_out',      '', OUTPUT),
-            ('f1d_out',    '', OUTPUT),
-            ('f2d_out',    '', OUTPUT),
-            ('f3d_out',    '', OUTPUT),
-            ('i_out',      '', OUTPUT),
-            ('i1d_out',    '', OUTPUT),
-            ('i2d_out',    '', OUTPUT),
-            ('s_out',      '', OUTPUT),
-            ('s1d_out',    '', OUTPUT),
-            ('text_out',   '', OUTPUT),
-            ('binary_out', '', OUTPUT)])
-
+            ('f_out',      '', 'out'),
+            ('f1d_out',    '', 'out'),
+            ('f2d_out',    '', 'out'),
+            ('f3d_out',    '', 'out'),
+            ('i_out',      '', 'out'),
+            ('i1d_out',    '', 'out'),
+            ('i2d_out',    '', 'out'),
+            ('s_out',      '', 'out'),
+            ('s1d_out',    '', 'out'),
+            ('text_out',   '', 'out'),
+            ('binary_out', '', 'out')])
+        
 
 class NPSSTestCase(unittest.TestCase):
 
@@ -184,7 +185,7 @@ class NPSSTestCase(unittest.TestCase):
         # This currently fails, not sure why.
         try:
             self.egg_name = self.npss.save_to_egg(format=SAVE_LIBYAML)
-        except TypeError, exc:
+        except Exception, exc:
             self.assertEqual(str(exc),
                 "NPSS: Can't save to 'NPSS/NPSS.yaml': data type not understood")
         else:

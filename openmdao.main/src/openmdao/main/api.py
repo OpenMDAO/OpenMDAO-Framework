@@ -2,11 +2,6 @@
 openmdao.main API.
 """
 
-# NOTE: Order here is important!
-#       Odd import errors could be the result of importing from a module
-#       before importing from those modules it imports from.
-
-
 from openmdao.main.log import logger
 from openmdao.main.expreval import ExprEvaluator
 
@@ -24,22 +19,29 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.exceptions import ConstraintError
 
 from openmdao.main.stringref import StringRef, StringRefArray
+from openmdao.main.filevar import FileVariable
 
 from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 
 from openmdao.main.unitsfloat import UnitsFloat
 
-__all__ = ['Container',
-           'Component',
-           'Assembly',
-           'Driver',
-           'Workflow',
-           'ConstraintError',
-           'Factory',
-           'ImportFactory',
-           'PkgResourcesFactory',
-           'ExprEvaluator',
+__all__ = ['Assembly',
            'Case',
+           'Component',
+           'ConstraintError',
+           'Container',
+           'Dataflow',
+           'Driver',
+           'ExprEvaluator',
+           'Factory',
            'FileCaseIterator',
-           'ListCaseIterator',]
+           'FileVariable',
+           'ImportFactory',
+           'ListCaseIterator',
+           'PkgResourcesFactory',
+           'StringRef',
+           'StringRefArray',
+           'UnitsFloat',
+           'Workflow',
+           ]
 

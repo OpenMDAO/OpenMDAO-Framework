@@ -15,13 +15,13 @@ __all__ = (
 
 __version__ = '0.1'
 
-from openmdao.main.variable import UNDEFINED
+from enthought.traits.api import Undefined
 
 def have_translation(npss_units):
     """ Return True if we can translate npss_units. """
     try:
         units = get_translation(npss_units)
-        return units is not UNDEFINED
+        return units is not Undefined
     except KeyError:
         return False
 
@@ -37,10 +37,10 @@ def set_translation(npss_units, mdao_units):
 
 
 # NPSS unit strings taken from /NPSS/dev/Executive/src/Common/UnitNames.ncp
-# UNDEFINED => not specified.
+# Undefined => not specified.
 # None      => unitless.
 UNITS_MAP = {
-   '' : UNDEFINED,
+   '' : Undefined,
 
    'atm' : 'atm',
 
@@ -73,7 +73,7 @@ UNITS_MAP = {
    'cm5' : 'cm**5',
 
    'daN' : 'daN',
-   'day' : UNDEFINED,
+   'day' : Undefined,
    'dC' : 'degC',
    'deg' : 'deg',
    'dF' : 'degF',
@@ -82,15 +82,15 @@ UNITS_MAP = {
 
    'F' : 'degF',
    'ft' : 'ft',
-   'ft*lbf' : UNDEFINED,
-   'ft*lbf*in3/(lbm*rad*rad)' : UNDEFINED,
-   'ft*lbf/Btu' : UNDEFINED,
-   'ft*lbf/(R*lbm)' : UNDEFINED,
-   'ft*lbf/(R*lbmol)' : UNDEFINED,
-   'ft*lbf/rad' : UNDEFINED,
-   'ft*lbf/(rad*sec)' : UNDEFINED,
-   'ft*lbf/sec' : UNDEFINED,
-   'ft*lbm/(lbf*sec2)' : UNDEFINED,
+   'ft*lbf' : Undefined,
+   'ft*lbf*in3/(lbm*rad*rad)' : Undefined,
+   'ft*lbf/Btu' : Undefined,
+   'ft*lbf/(R*lbm)' : Undefined,
+   'ft*lbf/(R*lbmol)' : Undefined,
+   'ft*lbf/rad' : Undefined,
+   'ft*lbf/(rad*sec)' : Undefined,
+   'ft*lbf/sec' : Undefined,
+   'ft*lbm/(lbf*sec2)' : Undefined,
    'ft/sec' : 'ft/s',
    'ft/sec2' : 'ft/s**2',
    'ft2' : 'ft**2',
@@ -101,9 +101,9 @@ UNITS_MAP = {
    'ft3/lbm' : 'ft**3/lb',
 
    'gal' : 'galUS',
-   'gal*in/(min*SQRT_lbf)' : UNDEFINED,
-   'grains' : UNDEFINED,
-   'g/sec' : UNDEFINED,
+   'gal*in/(min*SQRT_lbf)' : Undefined,
+   'grains' : Undefined,
+   'g/sec' : Undefined,
 
    'hbar' : 'hbar',
    'Hz' : 'Hz',
@@ -113,17 +113,17 @@ UNITS_MAP = {
    'hp*hr' : 'hp*h',
 
    'in' : 'inch',
-   'in*lbf*sec2/lbm' : UNDEFINED,
+   'in*lbf*sec2/lbm' : Undefined,
    'in/sec' : 'inch/s',
    'in2' : 'inch**2',
-   'in2/lbf' : UNDEFINED,
+   'in2/lbf' : Undefined,
    'in3' : 'inch**3',
    'in3*sec/rad' : 'inch**3*s/rad',
    'in4' : 'inch**4',
    'in4*sec2/(lbm*ft)' : 'in**4*sec**2/(lb*ft)',
    'in5' : 'inch**5',
-   'inH2O' : UNDEFINED,
-   'inHg' : UNDEFINED,
+   'inH2O' : Undefined,
+   'inHg' : Undefined,
 
    'J/kg' : 'J/kg',
    'J/(kg*K)' : 'J/(kg*K)',
@@ -141,18 +141,18 @@ UNITS_MAP = {
    'kJ/(kg*K)' : 'kJ/(kg*K)',
    'km' : 'km',
    'kN' : 'kN',
-   'knot' : UNDEFINED,
+   'knot' : Undefined,
    'kPa' : 'kPa',
    'kW' : 'kW',
 
-   'lbf' : UNDEFINED,
-   'lbf*in*sec2/lbm' : UNDEFINED,
-   'lbf*in2' : UNDEFINED,
-   'lbf*in4*sec2/lbm' : UNDEFINED,
-   'lbf/ft2' : UNDEFINED,
-   'lbf*sec/(lbm*in2)' : UNDEFINED,
-   'lbf*sec2/(lbm*in5)' : UNDEFINED,
-   'lbf*sec2/(lbm*in2)' : UNDEFINED,
+   'lbf' : Undefined,
+   'lbf*in*sec2/lbm' : Undefined,
+   'lbf*in2' : Undefined,
+   'lbf*in4*sec2/lbm' : Undefined,
+   'lbf/ft2' : Undefined,
+   'lbf*sec/(lbm*in2)' : Undefined,
+   'lbf*sec2/(lbm*in5)' : Undefined,
+   'lbf*sec2/(lbm*in2)' : Undefined,
    'lbm' : 'lb',
    'lbm*in2' : 'lb*inch**2',
    'lbm/(ft*sec)' : 'lb/(ft*s)',
@@ -161,22 +161,22 @@ UNITS_MAP = {
    'lbm/(ft3*sec)' : 'lb/(ft**3*s)',
    'lbm/hr' : 'lb/h',
    'lbm/(hr*hp)' : 'lb/(h*hp)',
-   'lbm/(hr*lbf)' : UNDEFINED,
+   'lbm/(hr*lbf)' : Undefined,
    'lbm/(in*sec)' : 'lb/(inch*s)',
    'lbm/in2' : 'lb/inch**2',
    'lbm/in3' : 'lb/inch**3',
    'lbm/(in3*sec)' : 'lb/(inch**3*s)',
-   'lbm/lbm' : UNDEFINED,
+   'lbm/lbm' : Undefined,
    'lbm/mol' : 'lb/mol',
    'lbm/sec' : 'lb/s',
    'lbm/(sec*ft2)' : 'lb/(s*ft**2)', 
    'lbm/(sec*in2)' : 'lb/(s*inch**2)', 
    'lbm/sec2' : 'lb/s**2',
    'lbm*R/sec' : 'lb*degR/s',
-   'lbm*SQRT_R/psia' : UNDEFINED,
-   'lbm*lbm*in2/(lbf*sec2)' : UNDEFINED,
+   'lbm*SQRT_R/psia' : Undefined,
+   'lbm*lbm*in2/(lbf*sec2)' : Undefined,
    'lbm*lbm/sec2' : 'lb**2/s**2',
-   'lbmol' : UNDEFINED,
+   'lbmol' : Undefined,
    'liter' : 'l',
 
    'm' : 'm',
@@ -188,7 +188,7 @@ UNITS_MAP = {
    'MPa' : 'MPa', 
    'mg/J' : 'mg/J',
    'mg/(N*sec)' : 'mg/(N*s)',
-   'mil' : UNDEFINED,
+   'mil' : Undefined,
    'min' : 'min',
    'mm' : 'mm',
    'mm2' : 'mm**2',
@@ -204,28 +204,28 @@ UNITS_MAP = {
    'none' : None,
  
    'Pa' : 'Pa',
-   '1/rpm' : UNDEFINED,
-   '1/sec' : UNDEFINED,
+   '1/rpm' : Undefined,
+   '1/sec' : Undefined,
    'psia' : 'psi',
    'psia/sec' : 'psi/s',
    'R/sec' : 'degR/s',
    'rad' : 'rad',
    'rad/sec' : 'rad/s',
    'R' : 'degR',
-   'rev' : UNDEFINED,
-   'rev/sec' : UNDEFINED,
+   'rev' : Undefined,
+   'rev/sec' : Undefined,
    'rpm' : '1/min',
-   'rpm/sec' : UNDEFINED,
-   'rpm/SQRT_R' : UNDEFINED,
+   'rpm/sec' : Undefined,
+   'rpm/SQRT_R' : Undefined,
 
    'sec' : 's',
    'sec2' : 's**2',
-   'slug' : UNDEFINED,
-   'slug*ft2' : UNDEFINED,
-   'slug/ft3' : UNDEFINED,
-   'SQRT_lbf' : UNDEFINED,
-   'SQRT_N' : UNDEFINED,
-   'SQRT_R' : UNDEFINED,
+   'slug' : Undefined,
+   'slug*ft2' : Undefined,
+   'slug/ft3' : Undefined,
+   'SQRT_lbf' : Undefined,
+   'SQRT_N' : Undefined,
+   'SQRT_R' : Undefined,
 
    'W' : 'W',
    'W/(m*K)' : 'W/(m*K)',

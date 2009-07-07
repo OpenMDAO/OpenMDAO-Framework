@@ -8,7 +8,7 @@ Interfaces for the OpenMDAO project.
 #public symbols
 __all__ = ['IContainer', 'IComponent', 'IAssembly', 'IDriver', 'IFactory',
            'IGeomQueryObject', 'IGeomModifier', 'IResourceAllocator',
-           'IVariable', 'IWorkflow', 'ICaseIterator']
+           'IWorkflow', 'ICaseIterator']
 
 __version__ = "0.1"
 

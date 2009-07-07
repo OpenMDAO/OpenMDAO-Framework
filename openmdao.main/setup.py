@@ -40,6 +40,7 @@ setup(name='openmdao.main',
           'PyYAML',
           'ScientificPython',
           'networkx',
+          'Traits>=3.0',
       ],
       entry_points="""
       # -*- Entry points: -*-
