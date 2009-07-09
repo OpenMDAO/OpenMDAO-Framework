@@ -50,5 +50,5 @@ class MyModel(Assembly):
 
 if __name__ == '__main__':
 #    MyModel().run()
-    MyModel().check_save_load()
+    MyModel().check_save_load()  # Note: requires correct pythonV.R
 
