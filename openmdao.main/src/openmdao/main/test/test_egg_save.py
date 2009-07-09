@@ -17,6 +17,8 @@ from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE, SAVE_LIBYAML
 from openmdao.main.socket import Socket
 from openmdao.main.variable import INPUT, OUTPUT
 
+import openmdao.util.testutil
+
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
@@ -560,27 +562,18 @@ class EggTestCase(unittest.TestCase):
             self.fail('Expected pkg_resources.DistributionNotFound')
 
     def test_check_save_load(self):
-        # This requires the correct pythonV.R command in PATH.
         logging.debug('')
         logging.debug('test_check_save_load')
-        if sys.platform != 'win32':
-            retcode = self.model.check_save_load(py_dir=PY_DIR)
-            self.assertEqual(retcode, 0)
+
+        python = openmdao.util.testutil.find_python('openmdao.main')
+        retcode = self.model.check_save_load(py_dir=PY_DIR, python=python)
+        self.assertEqual(retcode, 0)
 
     def test_install_load(self):
         logging.debug('')
         logging.debug('test_install_load')
 
-        # Find what is hopefully the correct 'python' command.
-        orig_dir = os.getcwd()
-        python = 'python'
-        if orig_dir.endswith('buildout'):
-            python = os.path.join(orig_dir, 'bin', python)
-        else:
-            index = orig_dir.find('openmdao.main')
-            if index > 0:
-                python = os.path.join(orig_dir[:index],
-                                      'buildout', 'bin', python)
+        python = openmdao.util.testutil.find_python('openmdao.main')
         logging.debug('    Using python: %s' % python)
 
         # Write to egg.

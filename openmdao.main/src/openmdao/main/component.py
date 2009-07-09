@@ -408,6 +408,9 @@ class Component (Container):
     def check_save_load(self, py_dir=None, test_dir='test_dir', cleanup=True,
                         format=SAVE_CPICKLE, logfile=None, python=None):
         """Convenience routine to check that saving & reloading work."""
+        if sys.platform == 'win32':
+            print '\ncheck_save_load() unsupported on win32 at this time.'
+            return 0  # Enable once openmdao.util.testutil.find_python works.
         old_level = self.log_level
         self.log_level = LOG_DEBUG
         start = time.time()
