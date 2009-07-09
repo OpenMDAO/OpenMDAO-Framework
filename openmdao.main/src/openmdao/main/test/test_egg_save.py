@@ -4,7 +4,7 @@ Test saving and loading of simulations as eggs.
 
 import cPickle
 import logging
-import os
+import os.path
 import pkg_resources
 import shutil
 import subprocess
@@ -273,7 +273,11 @@ class EggTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.executions, 0)
 
         # Save to egg.
+        entry_pts=[(self.model.Source,  'Source'),
+                   (self.model.Sink,    'Sink'),
+                   (self.model.Oddball, 'Oddball')]
         self.egg_name = self.model.save_to_egg(py_dir=PY_DIR, format=format,
+                                               entry_pts=entry_pts,
                                                use_setuptools=use_setuptools)
 
         # Run and verify correct operation.
@@ -301,9 +305,8 @@ class EggTestCase(unittest.TestCase):
 
             # Load from saved initial state in egg.
             self.model.pre_delete()
-            self.model = Component.load_from_egg(os.path.join('..',
-                                                              self.egg_name),
-                                                 install=False)
+            egg_path = os.path.join('..', self.egg_name)
+            self.model = Component.load_from_eggfile(egg_path, install=False)
             self.model.directory = os.path.join(os.getcwd(), self.model.name)
 
             # Verify initial state.
@@ -470,6 +473,40 @@ class EggTestCase(unittest.TestCase):
         else:
             self.fail('Expected RuntimeError')
 
+    def test_save_bad_pickle(self):
+        logging.debug('')
+        logging.debug('test_save_bad_pickle')
+
+        # Code objects don't pickle.
+        self.model.code = compile('3 + 4', '<string>', 'eval')
+
+        # Problem was deletion of existing buildout.cfg.
+        if os.path.exists('buildout.cfg'):
+            buildout_size = os.path.getsize('buildout.cfg')
+            remove_buildout = False
+        else:
+            out = open('buildout.cfg', 'w')
+            out.close
+            buildout_size = 0
+            remove_buildout = True
+
+        try:
+            try:
+                self.model.save_to_egg(py_dir=PY_DIR)
+            except cPickle.PicklingError, exc:
+                msg = "Egg_TestModel: Can't save to" \
+                      " 'Egg_TestModel/Egg_TestModel.pickle': Can't pickle" \
+                      " <type 'code'>: attribute lookup __builtin__.code failed"
+                self.assertEqual(str(exc), msg)
+            else:
+                self.fail('Expected cPickle.PicklingError')
+
+            self.assertTrue(os.path.exists('buildout.cfg'))
+            self.assertEqual(os.path.getsize('buildout.cfg'), buildout_size)
+        finally:
+            if remove_buildout:
+                os.remove('buildout.cfg')
+
     def test_save_load_container(self):
         logging.debug('')
         logging.debug('test_save_load_container')
@@ -485,8 +522,8 @@ class EggTestCase(unittest.TestCase):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
-            sub = Container.load_from_egg(os.path.join('..', self.egg_name),
-                                          install=False)
+            egg_path = os.path.join('..', self.egg_name)
+            sub = Container.load_from_eggfile(egg_path, install=False)
             self.assertEqual(sub.binary_data, self.model.Source.sub.binary_data)
         finally:
             os.chdir(orig_dir)
@@ -496,7 +533,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_load_badfile')
         try:
-            Component.load_from_egg('.')
+            Component.load_from_eggfile('.')
         except ValueError, exc:
             self.assertEqual(str(exc), "'.' is not an egg/zipfile.")
         else:
@@ -506,11 +543,21 @@ class EggTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_load_nofile')
         try:
-            Component.load_from_egg('no-such-egg')
+            Component.load_from_eggfile('no-such-egg')
         except ValueError, exc:
             self.assertEqual(str(exc), "'no-such-egg' not found.")
         else:
             self.fail('Expected ValueError')
+
+    def test_load_nopackage(self):
+        logging.debug('')
+        logging.debug('test_load_nopackage')
+        try:
+            Component.load_from_eggpkg('no-such-egg')
+        except pkg_resources.DistributionNotFound, exc:
+            self.assertEqual(str(exc), 'no-such-egg')
+        else:
+            self.fail('Expected pkg_resources.DistributionNotFound')
 
     def test_check_save_load(self):
         # This requires the correct pythonV.R command in PATH.
@@ -534,10 +581,14 @@ class EggTestCase(unittest.TestCase):
             if index > 0:
                 python = os.path.join(orig_dir[:index],
                                       'buildout', 'bin', python)
-        logging.debug('Using python: %s' % python)
+        logging.debug('    Using python: %s' % python)
 
         # Write to egg.
-        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR)
+        entry_pts=[(self.model.Source,  'Source'),
+                   (self.model.Sink,    'Sink'),
+                   (self.model.Oddball, 'Oddball')]
+        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
+                                               entry_pts=entry_pts)
 
         install_dir = os.path.join(os.getcwd(), 'install_dir')
         if os.path.exists(install_dir):
@@ -580,76 +631,60 @@ sys.exit(
             stdout.close()
             self.assertEqual(retcode, 0)
 
-            test_dir = 'EggTest'
-            if os.path.exists(test_dir):
-                shutil.rmtree(test_dir)
-            os.mkdir(test_dir)
-            os.chdir(test_dir)
-            try:
-                # Create load-n-run script.
-                out = open('load-n-run.py', 'w')
-                out.write("""\
-import logging
-import sys
-sys.path.append('%(egg)s')
-import pkg_resources
+            # Load full model and run.
+            package_name = self.model.name
+            entry_name = ''
+            retcode = self.load_n_run(python, install_dir,
+                                      package_name, entry_name)
+            self.assertEqual(retcode, 0)
 
-logging.getLogger().setLevel(logging.DEBUG)
-
-name = '%(name)s'
-
-try:
-    dist = pkg_resources.get_distribution(name)
-except pkg_resources.DistributionNotFound, exc:
-    print 'No distribution found for', exc
-    for path in sys.path:
-        print '   ', path
-    sys.exit(1)
-
-print 'Distribution found.'
-entry_map = dist.get_entry_map()
-for group in entry_map.keys():
-    print '    %%s entry points:' %% group
-    for entry_pt in entry_map[group].values():
-        print '       ', entry_pt
-
-try:
-    loader = dist.load_entry_point('openmdao.components', name)
-except ImportError, exc:
-    print exc
-    sys.exit(2)
-
-print 'Loader found.'
-try:
-    comp = loader()
-except Exception, exc:
-    print exc
-    sys.exit(3)
-
-print 'Running component...'
-comp.run()
-""" % {'egg':os.path.join(install_dir, self.egg_name), 'name':self.model.name})
-                out.close()
-
-                # Load & run in subprocess.
-                logging.debug('Load and run in subprocess...')
-                cmdline = '%s load-n-run.py' % python
-                stdout = open('load-n-run.out', 'w')
-                retcode = subprocess.call(cmdline, env=env, shell=True,
-                                          stdout=stdout,
-                                          stderr=subprocess.STDOUT)
-                stdout.close()
-                stdout = open('load-n-run.out', 'r')
-                for line in stdout:
-                    logging.debug('    %s', line.rstrip())
-                stdout.close()
-                self.assertEqual(retcode, 0)
-
-            finally:
-                os.chdir(orig_dir)
+            # Load just the Oddball component and run.
+            entry_name = 'Oddball'
+            retcode = self.load_n_run(python, install_dir,
+                                      package_name, entry_name)
+            self.assertEqual(retcode, 0)
 
         finally:
             shutil.rmtree(install_dir)
+
+    def load_n_run(self, python, install_dir, package_name, entry_name):
+        """ Load component from installed egg and run it. """
+        orig_dir = os.getcwd()
+        test_dir = 'EggTest'
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+        os.mkdir(test_dir)
+        os.chdir(test_dir)
+        try:
+            # Create load-n-run script.
+            out = open('load-n-run.py', 'w')
+            out.write("""\
+import sys
+sys.path.append('%(egg)s')
+import openmdao.main.log
+openmdao.main.log.enable_console()
+comp = openmdao.main.Component.load_from_eggpkg('%(package)s', '%(entry)s')
+comp.run()
+""" % {'egg':os.path.join(install_dir, self.egg_name),
+       'package':package_name, 'entry':entry_name})
+            out.close()
+
+            # Load & run in subprocess.
+            logging.debug('Load and run %s in subprocess...', entry_name)
+            cmdline = '%s load-n-run.py' % python
+            stdout = open('load-n-run.out', 'w')
+            retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
+                                      stderr=subprocess.STDOUT)
+            stdout.close()
+            stdout = open('load-n-run.out', 'r')
+            for line in stdout:
+                logging.debug('    %s', line.rstrip())
+            stdout.close()
+            return retcode
+
+        finally:
+            os.chdir(orig_dir)
+            shutil.rmtree(test_dir)
 
 
 if __name__ == '__main__':

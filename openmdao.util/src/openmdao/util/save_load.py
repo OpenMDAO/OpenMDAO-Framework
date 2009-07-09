@@ -39,7 +39,8 @@ import zipfile
 
 from openmdao.util import eggwriter
 
-__all__ = ('save', 'save_to_egg', 'load', 'load_from_egg',
+__all__ = ('save', 'save_to_egg',
+           'load', 'load_from_eggfile', 'load_from_eggpkg',
            'SAVE_YAML', 'SAVE_LIBYAML', 'SAVE_PICKLE', 'SAVE_CPICKLE',
            'EGG_SERVER_URL')
 
@@ -89,25 +90,26 @@ class IMHolder(object):
 class NullLogger(object):
     """ Used when the supplied logger is None. """
 
-    def debug(self, msg):
+    def debug(self, msg, *args, **kwargs):
         pass
 
-    def error(self, msg):
+    def error(self, msg, *args, **kwargs):
         pass
 
-    def exception(self, msg):
+    def exception(self, msg, *args, **kwargs):
         pass
 
-    def info(self, msg):
+    def info(self, msg, *args, **kwargs):
         pass
 
-    def warning(self, msg):
+    def warning(self, msg, *args, **kwargs):
         pass
 
 
 def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
-                src_files=None, dst_dir=None, format=SAVE_CPICKLE, proto=-1,
-                tmp_dir=None, logger=None, use_setuptools=False):
+                src_files=None, entry_pts=None, dst_dir=None,
+                format=SAVE_CPICKLE, proto=-1, logger=None,
+                use_setuptools=False):
     """
     Save state and other files to an egg.
 
@@ -116,8 +118,8 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
     - `version` defaults to a timestamp.
     - `py_dir` defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
+    - 'entry_pts' is a list of (obj, obj_name) tuples for additional entries.
     - `dst_dir` is the directory to write the egg in.
-    - `tmp_dir` is the directory to use for temporary files.
 
     The resulting egg can be unpacked on UNIX via 'sh egg-file'.
     Returns the egg's filename.
@@ -131,6 +133,8 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
         py_dir = orig_dir
     elif not os.path.isabs(py_dir):
         py_dir = os.path.abspath(py_dir)
+    else:
+        py_dir = os.path.realpath(py_dir)  # In case it's a symlink.
 
     if src_dir and not os.path.isabs(src_dir):
         src_dir = os.path.abspath(src_dir)
@@ -146,6 +150,9 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
         dst_dir = orig_dir
     if not os.access(dst_dir, os.W_OK):
         raise IOError("Can't save to '%s', no write permission" % dst_dir)
+
+    if entry_pts is None:
+        entry_pts = []
 
     egg_name = eggwriter.egg_filename(name, version)
     logger.debug('Saving to %s in %s...', egg_name, orig_dir)
@@ -218,21 +225,27 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                     out.close()
                     src_files.add(missing_name)
 
-                # Save state of object hierarchy.
-                if format is SAVE_CPICKLE or format is SAVE_PICKLE:
-                    state_name = name+'.pickle'
-                elif format is SAVE_LIBYAML or format is SAVE_YAML:
-                    state_name = name+'.yaml'
-                else:
-                    raise RuntimeError("Unknown format '%s'." % format)
-                state_path = os.path.join(name, state_name)
-                cleanup_files.append(state_path)
-                try:
-                    save(root, state_path, format, proto, logger, fix_im=False)
-                except Exception, exc:
-                    raise type(exc)("Can't save to '%s': %s" 
-                                    % (state_path, exc))
-                src_files.add(state_name)
+                all_entries = [(root, name)]
+                all_entries.extend(entry_pts)
+                entry_info = []
+                for obj_info in all_entries:
+                    obj, obj_name = obj_info
+
+                    # Save state of object hierarchy.
+                    state_name, state_path = \
+                        _write_state_file(name, obj, obj_name, format, proto,
+                                          logger)
+                    src_files.add(state_name)
+                    cleanup_files.append(state_path)
+
+                    # Create loader script.
+                    loader = '%s_loader' % obj_name
+                    loader_path = os.path.join(name, loader+'.py')
+                    cleanup_files.append(loader_path)
+                    _write_loader_script(loader_path, state_name, name,
+                                         obj is root)
+
+                    entry_info.append((obj_name, loader))
 
                 # Create buildout.cfg
                 if os.path.exists(buildout_path):
@@ -248,25 +261,21 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                     out = open(init_path, 'w')
                     out.close()
 
-                # Create loader script.
-                loader = '%s_loader' % name
-                loader_path = os.path.join(name, loader+'.py')
-                cleanup_files.append(loader_path)
-                _write_loader_script(loader_path, state_name)
-
                 # Save everything to an egg.
                 doc = root.__doc__
                 if doc is None:
                     doc = ''
+                loader = entry_info[0][1]
                 if use_setuptools:
                     eggwriter.write_via_setuptools(name, doc, version, loader,
                                                    src_files,
                                                    required_distributions,
-                                                   dst_dir, logger)
+                                                   dst_dir, logger,
+                                                   entry_info[1:])
                 else:
                     eggwriter.write(name, doc, version, loader,
                                     src_files, required_distributions,
-                                    dst_dir, logger)
+                                    dst_dir, logger, entry_info[1:])
             finally:
                 for path in cleanup_files:
                     if os.path.exists(path):
@@ -735,8 +744,35 @@ eggs =
     out.close()
 
 
-def _write_loader_script(path, state_name):
+def _write_state_file(dst_dir, root, name, format, proto, logger):
+    """ Write state of `root` and its children. Returns (filename, path). """
+    if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+        state_name = name+'.pickle'
+    elif format is SAVE_LIBYAML or format is SAVE_YAML:
+        state_name = name+'.yaml'
+    else:
+        raise RuntimeError("Unknown format '%s'." % format)
+    state_path = os.path.join(dst_dir, state_name)
+    try:
+        save(root, state_path, format, proto, logger, fix_im=False)
+    except Exception, exc:
+        raise type(exc)("Can't save to '%s': %s" % (state_path, exc))
+
+    return (state_name, state_path)
+
+
+def _write_loader_script(path, state_name, package, top):
     """ Write script used for loading object(s). """
+    if state_name.startswith(package):
+        pkg_arg = ''
+    else:
+        pkg_arg = ", package='%s'" % package
+
+    if top:
+        top_arg = ''
+    else:
+        top_arg = ', top_obj=False'
+
     out = open(path, 'w')
     out.write("""\
 import os
@@ -757,11 +793,11 @@ except ImportError:
 
 def load():
     '''Create object(s) from state file.'''
-    state_name = '%s'
+    state_name = '%(name)s'
     if state_name.endswith('.pickle'):
-        return Component.load(state_name, SAVE_CPICKLE)
+        return Component.load(state_name, SAVE_CPICKLE%(pkg)s%(top)s)
     elif state_name.endswith('.yaml'):
-        return Component.load(state_name, SAVE_LIBYAML)
+        return Component.load(state_name, SAVE_LIBYAML%(pkg)s%(top)s)
     raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
                        state_name)
 
@@ -772,7 +808,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-""" % state_name)
+""" % {'name':state_name, 'pkg':pkg_arg, 'top':top_arg})
     out.close()
 
 
@@ -816,7 +852,8 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
             _restore_instancemethods(root)
     
 
-def load_from_egg(filename, install=True, logger=None):
+def load_from_eggfile(filename, entry_group, entry_name, install=True,
+                      logger=None):
     """
     Extract files in egg to a subdirectory matching the saved object name,
     optionally install distributions the egg depends on, and then load object
@@ -824,9 +861,74 @@ def load_from_egg(filename, install=True, logger=None):
     """
     if logger is None:
         logger = NullLogger()
-    logger.debug('Loading from %s in %s...', filename, os.getcwd())
+    logger.debug('Loading %s from %s in %s...',
+                 entry_name, filename, os.getcwd())
+
+    egg_dir, dist = _dist_from_eggfile(filename, install, logger)
+
+    if not '.' in sys.path:
+        sys.path.append('.')
+    if egg_dir:
+        orig_dir = os.getcwd()
+        os.chdir(egg_dir)
+    try:
+        return _load_from_distribution(dist, entry_group, entry_name, logger)
+    finally:
+        if egg_dir:
+            os.chdir(orig_dir)
+
+
+def load_from_eggpkg(package, entry_group, entry_name, logger=None):
+    """ Load specified object graph state.  Returns the top object. """
+    if logger is None:
+        logger = NullLogger()
+    logger.debug('Loading %s from %s in %s...',
+                 entry_name, package, os.getcwd())
+    dist = pkg_resources.get_distribution(package)
+    return _load_from_distribution(dist, entry_group, entry_name, logger)
+
+
+def _load_from_distribution(dist, entry_group, entry_name, logger):
+    """ Invoke entry point in distribution and return result. """
+    logger.debug('    entry points:')
+    maps = dist.get_entry_map()
+    for group in maps.keys():
+        logger.debug('        group %s:' % group)
+        for entry_pt in maps[group].values():
+            logger.debug('            %s', entry_pt)
+
+    info = dist.get_entry_info(entry_group, entry_name)
+    if info is None:
+        raise RuntimeError("No '%s' '%s' entry point."
+                           % (entry_group, entry_name))
+    if info.module_name in sys.modules.keys():
+        logger.debug("    removing existing '%s' in sys.modules",
+                     info.module_name)
+        del sys.modules[info.module_name]
+
+    try:
+        loader = dist.load_entry_point(entry_group, entry_name)
+        return loader()
+    except pkg_resources.DistributionNotFound, exc:
+        logger.error('Distribution not found: %s', exc)
+        visited = set()
+        _check_requirements(dist, visited, logger)
+        raise exc
+    except pkg_resources.VersionConflict, exc:
+        logger.error('Version conflict: %s', exc)
+        visited = set()
+        _check_requirements(dist, visited, logger)
+        raise exc
+    except Exception, exc:
+        logger.exception('Loader exception:')
+        raise exc
+
+
+def _dist_from_eggfile(filename, install, logger):
+    """ Create distribution by unpacking egg file. """
     if not os.path.exists(filename):
         raise ValueError("'%s' not found." % filename)
+
     if not zipfile.is_zipfile(filename):
         raise ValueError("'%s' is not an egg/zipfile." % filename)
 
@@ -872,12 +974,6 @@ def load_from_egg(filename, install=True, logger=None):
     logger.debug('    requires:')
     for req in dist.requires():
         logger.debug('        %s', req)
-    logger.debug('    entry points:')
-    maps = dist.get_entry_map()
-    for group in maps.keys():
-        logger.debug('        group %s:' % group)
-        for entry_pt in maps[group].values():
-            logger.debug('            %s', entry_pt)
 
     if install:
         # Locate the installation (eggs) directory.
@@ -891,9 +987,7 @@ def load_from_egg(filename, install=True, logger=None):
         try:
             zc.buildout.easy_install.install(
                 [str(req) for req in dist.requires()], install_dir,
-                index=EGG_SERVER_URL,
-                always_unzip=True
-                )
+                index=EGG_SERVER_URL, always_unzip=True)
         except Exception, exc:
             raise RuntimeError("Install failed: '%s'" % exc)
 
@@ -916,37 +1010,7 @@ def load_from_egg(filename, install=True, logger=None):
             plural = 's' if errors > 1 else ''
             raise RuntimeError("Couldn't import %d 'missing' module%s."
                                % (errors, plural))
-
-    # Invoke the top object's loader.
-    info = dist.get_entry_info('openmdao.top', 'top')
-    if info is None:
-        raise RuntimeError("No openmdao.top 'top' entry point.")
-    if info.module_name in sys.modules.keys():
-        logger.debug("    removing existing '%s' in sys.modules",
-                     info.module_name)
-        del sys.modules[info.module_name]
-    if not '.' in sys.path:
-        sys.path.append('.')
-    orig_dir = os.getcwd()
-    os.chdir(name)
-    try:
-        loader = dist.load_entry_point('openmdao.top', 'top')
-        return loader()
-    except pkg_resources.DistributionNotFound, exc:
-        logger.error('Distribution not found: %s', exc)
-        visited = set()
-        _check_requirements(dist, visited, logger)
-        raise exc
-    except pkg_resources.VersionConflict, exc:
-        logger.error('Version conflict: %s', exc)
-        visited = set()
-        _check_requirements(dist, visited, logger)
-        raise exc
-    except Exception, exc:
-        logger.exception('Loader exception:')
-        raise exc
-    finally:
-        os.chdir(orig_dir)
+    return (name, dist)
 
 
 def _check_requirements(dist, visited, logger, level=1):
@@ -974,27 +1038,29 @@ def _check_requirements(dist, visited, logger, level=1):
                     _check_requirements(dist, visited, logger, level+1)
 
 
-def load(instream, format=SAVE_CPICKLE, logger=None):
-    """ Load object(s) from the input stream. """
+def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
+    """ Load object(s) from the input stream (or filename). """
     if logger is None:
         logger = NullLogger()
 
     if isinstance(instream, basestring):
         if not os.path.exists(instream) and not os.path.isabs(instream):
             # Try to locate via pkg_resources.
-            dot = instream.rfind('.')
-            if dot < 0:
-                raise ValueError("Bad state filename '%s'." % instream)
-            module = instream[:dot]
-            path = pkg_resources.resource_filename(module, instream)
+            logger.debug("Trying to locate '%s' in '%s'", instream, package)
+            if not package:
+                dot = instream.rfind('.')
+                if dot < 0:
+                    raise ValueError("Bad state filename '%s'." % instream)
+                package = instream[:dot]
+            path = pkg_resources.resource_filename(package, instream)
             if not os.path.exists(path):
                 raise IOError("State file '%s' not found." % instream)
             instream = path
 
             # The state file assumes a sys.path.
-            module_dir = os.path.dirname(path)
-            if not module_dir in sys.path:
-                sys.path.append(module_dir)
+            package_dir = os.path.dirname(path)
+            if not package_dir in sys.path:
+                sys.path.append(package_dir)
 
         if format is SAVE_CPICKLE or format is SAVE_PICKLE:
             mode = 'rb'

@@ -179,7 +179,7 @@ class Component (Container):
         """Return absolute path of execution directory."""
         path = self.directory
         if not os.path.isabs(path):
-            if self.parent is not None and isinstance(self.parent, Component):
+            if self.parent is not None and IComponent.providedBy(self.parent):
                 parent_dir = self.parent.get_directory()
             else:
                 parent_dir = SimulationRoot.get_root()
@@ -219,8 +219,8 @@ class Component (Container):
 
     def save_to_egg(self, name=None, version=None, py_dir=None,
                     force_relative=True, src_dir=None, src_files=None,
-                    dst_dir=None, format=SAVE_CPICKLE, proto=-1, tmp_dir=None,
-                    use_setuptools=False):
+                    entry_pts=None, dst_dir=None, format=SAVE_CPICKLE,
+                    proto=-1, use_setuptools=False):
         """Save state and other files to an egg.
 
         - `name` defaults to the name of the component.
@@ -229,8 +229,8 @@ class Component (Container):
         - If `force_relative` is True, all paths are relative to `src_dir`.
         - `src_dir` defaults to the component's directory.
         - `src_files` should be a set, and defaults to component's external files.
+        - 'entry_pts' is a list of (obj, obj_name) tuples for additional entries.
         - `dst_dir` is the directory to write the egg in.
-        - `tmp_dir` is the directory to use for temporary files.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
@@ -323,12 +323,27 @@ class Component (Container):
                 else:
                     save_path = path
                 src_files.add(save_path)
+
+        # Save relative directory for any entry points. Some oddness with
+        # parent weakrefs seems to prevent reconstruction in load().
+        if entry_pts is not None:
+            for entry_obj, entry_name in entry_pts:
+                if not IComponent.providedBy(entry_obj):
+                    continue
+                relpath = entry_obj.directory
+                obj = entry_obj.parent
+                if obj is None:
+                    raise RuntimeError('Entry point object has no parent!')
+                while obj.parent is not None and \
+                      IComponent.providedBy(obj.parent):
+                    relpath = os.path.join(obj.directory, relpath)
+                    obj = obj.parent
+                entry_obj._rel_dir_path = relpath
+
         try:
-            return super(Component, self).save_to_egg(name, version, py_dir,
-                                                      force_relative,
-                                                      src_dir, src_files,
-                                                      dst_dir, format, proto,
-                                                      tmp_dir, use_setuptools)
+            return super(Component, self).save_to_egg(
+                       name, version, py_dir, src_dir, src_files,
+                       entry_pts, dst_dir, format, proto, use_setuptools)
         finally:
             # If any component config has been modified, restore it.
             for comp, path in fixup_dirs:
@@ -391,7 +406,7 @@ class Component (Container):
                              % (path1, path2), ValueError)
 
     def check_save_load(self, py_dir=None, test_dir='test_dir', cleanup=True,
-                        format=SAVE_CPICKLE, logfile=None):
+                        format=SAVE_CPICKLE, logfile=None, python=None):
         """Convenience routine to check that saving & reloading work."""
         old_level = self.log_level
         self.log_level = LOG_DEBUG
@@ -402,16 +417,13 @@ class Component (Container):
         print '\nSaved %d bytes in %.2f seconds (%.2f bytes/sec)' % \
               (size, elapsed, size/elapsed)
 
-        if sys.platform == 'win32':
-            print '\nUnpacking check not supported on win32'
-            return -1
-
         orig_dir = os.getcwd()
         if os.path.exists(test_dir):
             shutil.rmtree(test_dir)
         os.mkdir(test_dir)
         os.chdir(test_dir)
         egg_path = os.path.join('..', egg_name)
+        unpacker = None
         try:
             print '\nUnpacking in subprocess...'
             env = os.environ
@@ -422,18 +434,38 @@ class Component (Container):
             else:
                 stdout = None
                 stderr = None
-            retcode = subprocess.call(['sh', egg_path], env=env,
+
+            if sys.platform == 'win32' or python:
+                if not python:
+                    python = 'python'
+                print '    python:', python
+                unpacker = 'unpack.py'
+                out = open(unpacker, 'w')
+                out.write("""\
+from openmdao.main import Component
+Component.load_from_eggfile('%s', install=False)
+""" % egg_path)
+                out.close()
+                args = [python, unpacker]
+            else:
+                args = ['sh', egg_path]
+
+            retcode = subprocess.call(args, env=env,
                                       stdout=stdout, stderr=stderr)
             print '    retcode', retcode
             if retcode == 0:
                 print '\nRunning in subprocess...'
                 os.chdir(self.name)
-                retcode = subprocess.call(['python', self.name+'_loader.py'],
+                if not python:
+                    python = 'python'
+                retcode = subprocess.call([python, self.name+'_loader.py'],
                                           stdout=stdout, stderr=stderr)
                 print '    retcode', retcode
             if logfile:
                 stdout.close()
         finally:
+            if unpacker and os.path.exists(unpacker):
+                os.remove(unpacker)
             os.chdir(orig_dir)
             self.log_level = old_level
             if cleanup:
@@ -443,14 +475,33 @@ class Component (Container):
         return retcode
 
     @staticmethod
-    def load(instream, format=SAVE_CPICKLE, do_post_load=True):
+    def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True,
+             top_obj=True):
         """Load object(s) from instream."""
 # This doesn't work:
 #    AttributeError: 'super' object has no attribute 'load'
-#        top = super(Component).load(instream, format)
-        top = Container.load(instream, format, False)
-
+#        top = super(Component).load(instream, format, package, False)
+        top = Container.load(instream, format, package, False)
         if IComponent.providedBy(top):
+            # Get path relative to real top before we clobber directory attr.
+            if top_obj:
+                relpath = '.'
+            else:
+                if top.parent is not None:
+                    relpath = top.directory
+                    obj = top.parent
+                    while obj.parent is not None and \
+                          IComponent.providedBy(obj.parent):
+                        relpath = os.path.join(obj.directory, relpath)
+                        obj = obj.parent
+                elif hasattr(top, '_rel_dir_path'):
+                    top.warning('No parent, using saved relative directory')
+                    relpath = top._rel_dir_path  # Set during save_to_egg().
+                else:
+                    top.warning('No parent, using null relative directory')
+                    relpath = ''
+
+            # Set root directory and create any subdirectories.
             top.directory = os.getcwd()
             for component in [c for c in top.values(pub=False, recurse=True)
                                     if IComponent.providedBy(c)]:
@@ -462,22 +513,24 @@ class Component (Container):
             if isinstance(instream, basestring) and \
                not os.path.exists(instream) and not os.path.isabs(instream):
                 # If we got this far, then the stuff below "can't" fail.
-                dot = instream.rfind('.')
-                module = instream[:dot]
-                top._restore_files(module, '.')
+                if not package:
+                    dot = instream.rfind('.')
+                    package = instream[:dot]
+                top._restore_files(package, relpath)
 
         if do_post_load:
+            top.parent = None
             top.post_load()
         return top
 
-    def _restore_files(self, module, relpath):
+    def _restore_files(self, package, relpath):
         """Restore external files from installed egg."""
         if self.directory:
             self.push_dir(self.get_directory())
         try:
             if self.external_files:
                 self.info('Restoring files in %s', os.getcwd())
-                pkg_files = pkg_resources.resource_listdir(module, relpath)
+                pkg_files = pkg_resources.resource_listdir(package, relpath)
             for metadata in self.external_files:
                 pattern = metadata['path']
                 is_input = metadata.get('input', False)
@@ -487,12 +540,12 @@ class Component (Container):
                     if not os.path.exists(dirname):
                         os.makedirs(dirname)
                     path = relpath+'/'+dirname
-                    package_files = pkg_resources.resource_listdir(module,
+                    package_files = pkg_resources.resource_listdir(package,
                                                                    path)
-                    self._copy_files(pattern, package_files, module, path,
+                    self._copy_files(pattern, package_files, package, path,
                                      is_input, dirname)
                 else:
-                    self._copy_files(pattern, pkg_files, module, relpath,
+                    self._copy_files(pattern, pkg_files, package, relpath,
                                      is_input)
             for component in [c for c in self.values(pub=False, recurse=False)
                                     if IComponent.providedBy(c)]:
@@ -500,12 +553,12 @@ class Component (Container):
                 if component.directory:
                     # Must use '/' for resources.
                     path += '/'+component.directory
-                component._restore_files(module, path)
+                component._restore_files(package, path)
         finally:
             if self.directory:
                 self.pop_dir()
 
-    def _copy_files(self, pattern, pkg_files, module, relpath, is_input,
+    def _copy_files(self, pattern, pkg_files, package, relpath, is_input,
                     directory=None):
         """Copy files from installed egg matching pattern."""
         if directory:
@@ -517,7 +570,7 @@ class Component (Container):
                     # Must use '/' for resources.
                     src_name = relpath+'/'+filename
                     self.debug("    '%s'", src_name)
-                    src = pkg_resources.resource_stream(module, src_name)
+                    src = pkg_resources.resource_stream(package, src_name)
                     dst = open(filename, 'w')
                     dst.write(src.read())
                     dst.close()
@@ -614,7 +667,7 @@ def eggsecutable():
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
     try:
-        Component.load_from_egg(sys.path[0], install=install)
+        Component.load_from_eggfile(sys.path[0], install=install)
     except Exception, exc:
         print str(exc)
         sys.exit(1)

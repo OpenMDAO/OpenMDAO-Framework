@@ -59,7 +59,7 @@ class EngineOptimizationTestCase(unittest.TestCase):
             out = open('unpack.py', 'w')
             out.write("""\
 from openmdao.main import Component
-Component.load_from_egg('%s', install=False)
+Component.load_from_eggfile('%s', install=False)
 """ % egg_path)
             out.close()
             retcode = subprocess.call([python, 'unpack.py'])
