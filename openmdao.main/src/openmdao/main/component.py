@@ -537,6 +537,7 @@ Component.load_from_eggfile('%s', install=False)
             for metadata in self.external_files:
                 pattern = metadata['path']
                 is_input = metadata.get('input', False)
+                const = metadata.get('constant', False)
                 dirname = os.path.dirname(pattern)
                 pattern = os.path.basename(pattern)
                 if dirname:
@@ -546,10 +547,10 @@ Component.load_from_eggfile('%s', install=False)
                     package_files = pkg_resources.resource_listdir(package,
                                                                    path)
                     self._copy_files(pattern, package_files, package, path,
-                                     is_input, dirname)
+                                     is_input, const, dirname)
                 else:
                     self._copy_files(pattern, pkg_files, package, relpath,
-                                     is_input)
+                                     is_input, const)
             for component in [c for c in self.values(pub=False, recurse=False)
                                     if IComponent.providedBy(c)]:
                 path = relpath
@@ -562,8 +563,9 @@ Component.load_from_eggfile('%s', install=False)
                 self.pop_dir()
 
     def _copy_files(self, pattern, pkg_files, package, relpath, is_input,
-                    directory=None):
+                    const, directory=None):
         """Copy files from installed egg matching pattern."""
+        symlink = const and sys.platform != 'win32'
         if directory:
             self.push_dir(directory)
         try:
@@ -573,10 +575,15 @@ Component.load_from_eggfile('%s', install=False)
                     # Must use '/' for resources.
                     src_name = relpath+'/'+filename
                     self.debug("    '%s'", src_name)
-                    src = pkg_resources.resource_stream(package, src_name)
-                    dst = open(filename, 'w')
-                    dst.write(src.read())
-                    dst.close()
+                    if symlink:
+                        src = pkg_resources.resource_filename(package, src_name)
+                        dst = filename
+                        os.symlink(src, dst)
+                    else:
+                        src = pkg_resources.resource_stream(package, src_name)
+                        dst = open(filename, 'w')
+                        dst.write(src.read())
+                        dst.close()
                     found = True
             if not found and is_input:
                 self.warning("No files found for '%s'", pattern)

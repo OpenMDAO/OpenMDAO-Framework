@@ -1046,12 +1046,12 @@ def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
     if isinstance(instream, basestring):
         if not os.path.exists(instream) and not os.path.isabs(instream):
             # Try to locate via pkg_resources.
-            logger.debug("Trying to locate '%s' in '%s'", instream, package)
             if not package:
                 dot = instream.rfind('.')
                 if dot < 0:
                     raise ValueError("Bad state filename '%s'." % instream)
                 package = instream[:dot]
+            logger.debug("Looking for '%s' in package '%s'", instream, package)
             path = pkg_resources.resource_filename(package, instream)
             if not os.path.exists(path):
                 raise IOError("State file '%s' not found." % instream)
