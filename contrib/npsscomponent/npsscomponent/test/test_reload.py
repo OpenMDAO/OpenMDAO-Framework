@@ -21,10 +21,8 @@ class Source(Component):
     """ Just something to connect NPSS inputs to. """
 
     rerun = Bool(False, iostatus='in')
-    npss_reload = Bool(False, iostatus='out',
-                       desc='Test input to NPSS')
-    npss_in = Float(0., iostatus='out', 
-                    desc='Test input to NPSS')
+    npss_reload = Bool(False, iostatus='out', desc='Test input to NPSS')
+    npss_in = Float(0., iostatus='out', desc='Test input to NPSS')
         
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
@@ -33,8 +31,7 @@ class Source(Component):
 class Sink(Component):
     """ Just something to connect NPSS outputs to. """
 
-    v = Float(0., iostatus='in', default=0.,
-              desc='Test output from NPSS')
+    v = Float(0., iostatus='in', desc='Test output from NPSS')
         
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
@@ -47,9 +44,6 @@ class MyModel(Assembly):
     """ Exercises NPSS auto-reload capability. """ 
 
     rerun_flag = Bool(False, iostatus='in')
-    xyzzy_in = Float(self.NPSS, iostatus='in', desc='Test input')
-    xyzzy_out = Float(self.NPSS, iostatus='out', desc='Test output')
-    s = String(self.NPSS, iostatus='in', desc='Unconnected input')
         
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
@@ -57,10 +51,17 @@ class MyModel(Assembly):
         Source(parent=self)
         self.Source.npss_in = 9
 
-        NPSScomponent(parent=self, arglist='-trace reload.mdl',
-                      output_filename='reload.out')
+        self.NPSS = NPSScomponent(parent=self, arglist='-trace reload.mdl',
+                                  output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
 
+        self.create_passthru('NPSS.xyzzy_in')
+        self.create_passthru('NPSS.xyzzy_out')
+        #xyzzy_in = Float(self.NPSS, iostatus='in', desc='Test input')
+        #xyzzy_out = Float(self.NPSS, iostatus='out', desc='Test output')
+        self.create_passthru('NPSS.s')
+        #s = Str(self.NPSS, iostatus='in', desc='Unconnected input')
+        
         Sink(parent=self)
 
         self.connect('Source.npss_reload', 'NPSS.reload_model')

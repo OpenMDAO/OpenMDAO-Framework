@@ -12,10 +12,11 @@ import sys
 import time
 
 from enthought.traits.api import implements, on_trait_change, Str, Missing, Undefined, TraitError
+from enthought.traits.trait_base import not_event
 
 from openmdao.main.interfaces import IComponent
-from openmdao.main.container import Container
-from openmdao.main.filevar import FileVariable
+from openmdao.main.container import Container, _io_side_effects
+from openmdao.main.filevar import FileValue
 from openmdao.main.constants import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
 
@@ -175,9 +176,9 @@ class Component (Container):
         the the list will contain names of inputs with matching validity.
         """
         if valid is None:
-            return self.trait_names(iostatus='in')
+            return self.keys(iostatus='in')
         else:
-            return [n for n in self.trait_names(iostatus='in') 
+            return [n for n in self.keys(iostatus='in') 
                          if self.get_valid(n)==valid]
         
     def list_outputs(self, valid=None):
@@ -185,9 +186,9 @@ class Component (Container):
         the the list will contain names of outputs with matching validity.
         """
         if valid is None:
-            return self.trait_names(iostatus='out')
+            return self.keys(iostatus='out')
         else:
-            return [n for n in self.trait_names(iostatus='out') 
+            return [n for n in self.keys(iostatus='out') 
                          if self.get_valid(n)==valid]
         
     def get_directory (self):
@@ -265,22 +266,22 @@ class Component (Container):
                                 if isinstance(c, Component)])
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
-#            self.debug('Saving %s', comp.get_pathname())
+            self.debug('Saving %s', comp.get_pathname())
 
             # Process execution directory.
             comp_dir = comp.get_directory()
-#            self.debug("    directory '%s'", comp.directory)
+            self.debug("    directory '%s'", comp.directory)
             if force_relative:
                 if comp_dir.startswith(src_dir):
                     if comp_dir == src_dir and comp.directory:
                         fixup_dirs.append((comp, comp.directory))
                         comp.directory = ''
-#                        self.debug("        directory now '%s'", comp.directory)
+                        self.debug("        directory now '%s'", comp.directory)
                     elif os.path.isabs(comp.directory):
                         parent_dir = comp.parent.get_directory()
                         fixup_dirs.append((comp, comp.directory))
                         comp.directory = self._relpath(comp_dir, parent_dir)
-#                        self.debug("        directory now '%s'", comp.directory)
+                        self.debug("        directory now '%s'", comp.directory)
                 else:
                     self.raise_exception(
                         "Can't save, %s directory '%s' doesn't start with '%s'."
@@ -289,17 +290,17 @@ class Component (Container):
             # Process external files.
             for metadata in comp.external_files:
                 path = metadata['path']
-#                self.debug('    external path %s', path)
+                self.debug('    external path %s', path)
                 path = os.path.expanduser(path)
                 path = os.path.expandvars(path)
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
                 paths = glob.glob(path)
                 for path in paths:
-#                    self.debug('    expanded path %s', path)
+                    self.debug('    expanded path %s', path)
                     path = os.path.normpath(path)
                     if not os.path.exists(path):
-#                        self.debug("        '%s' does not exist" % path)
+                        self.debug("        '%s' does not exist" % path)
                         continue
                     if force_relative:
                         if path.startswith(src_dir):
@@ -308,7 +309,7 @@ class Component (Container):
                                 path = self._relpath(path, comp_dir)
                                 fixup_meta.append((metadata, metadata['path']))
                                 metadata['path'] = path
-#                                self.debug('        path now %s', path)
+                                self.debug('        path now %s', path)
                         else:
                             self.raise_exception(
                                 "Can't save, %s file '%s' doesn't start with '%s'."
@@ -316,29 +317,29 @@ class Component (Container):
                                 ValueError)
                     else:
                         save_path = path
-#                    self.debug('        adding %s', save_path)
+                    self.debug('        adding %s', save_path)
                     src_files.add(save_path)
 
-            # Process FileVariables for this component only.
+            # Process FileTraits for this component only.
             for fvar, fvarvalue in comp.get_file_vars():
-#                self.debug('    fvar %s path %s', fvar.name, path)
+                self.debug('    fvar %s path %s', fvar, fvarvalue.filename)
                 if not fvarvalue:
                     continue
-                path = fvarvalue
+                path = fvarvalue.filename
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
                 path = os.path.normpath(path)
                 if not os.path.exists(path):
-#                    self.debug("        '%s' does not exist" % path)
+                    self.debug("        '%s' does not exist" % path)
                     continue
                 if force_relative:
                     if path.startswith(src_dir):
                         save_path = self._relpath(path, src_dir)
-                        if os.path.isabs(fvarvalue):
+                        if os.path.isabs(fvarvalue.filename):
                             path = self._relpath(path, comp_dir)
-                            fixup_fvar.append((fvar, fvarvalue))
-                            comp.set(fvar, path)
-#                            self.debug('        path now %s', path)
+                            fixup_fvar.append((comp, fvar, fvarvalue))
+                            comp.set(fvar+'.filename', path, force=True)
+                            self.debug('        path now %s', path)
                     else:
                         self.raise_exception(
                             "Can't save, %s path '%s' doesn't start with '%s'."
@@ -346,7 +347,7 @@ class Component (Container):
                                          fvar]), path, src_dir), ValueError)
                 else:
                     save_path = path
-#                self.debug('        adding %s', save_path)
+                self.debug('        adding %s', save_path)
                 src_files.add(save_path)
         try:
             return super(Component, self).save_to_egg(name, version,
@@ -360,19 +361,18 @@ class Component (Container):
                 ccomp.directory = path
             for meta, path in fixup_meta:
                 meta['path'] = path
-            for fvar, path in fixup_fvar:
-                comp.set(fvar, path)
+            for comp, name, fvar in fixup_fvar:
+                comp.set(name+'.filename', fvar.filename, force=True)
 
     def get_file_vars(self):
         """Return list of (filevarname,filevarvalue) owned by this component."""
-        meta = { 'type': lambda x: x != 'event' }
         def _recurse_get_file_vars (container, file_vars, visited, scope):
-            for name, trait in container.traits(**meta).items():
-                obj = getattr(container, name)
+            for name, obj in container.items(type=not_event):
+                #obj = getattr(container, name)
                 if id(obj) in visited:
                     continue
                 visited.append(id(obj))
-                if trait.is_trait_type(FileVariable):
+                if isinstance(obj, FileValue):
                     if self is scope:
                         file_vars.add((name, obj))
                     else:
@@ -465,16 +465,21 @@ class Component (Container):
 #        top = super(Component).load(instream, format)
         top = Container.load(instream, format, False)
 
-        if isinstance(top, Component):
-            top.directory = os.getcwd()
-            for component in [c for c in top.values(recurse=True)
-                                                if isinstance(c, Component)]:
-                directory = component.get_directory()
-                if not os.path.exists(directory):
-                    os.makedirs(directory)
-
-        if do_post_load:
-            top.post_load()
+        _io_side_effects = False
+        try:
+            if isinstance(top, Component):
+                top.directory = os.getcwd()
+                for component in [c for c in top.values(recurse=True)
+                                                    if isinstance(c, Component)]:
+                    directory = component.get_directory()
+                    if not os.path.exists(directory):
+                        os.makedirs(directory)
+    
+            if do_post_load:
+                top.post_load()
+        finally:
+            _io_side_effects = True
+            
         return top
 
     def step (self):

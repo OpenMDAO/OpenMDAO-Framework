@@ -9,7 +9,7 @@ from enthought.traits.api import TraitType, Array, Bool, Float, Dict, Int, \
                                  Str, List, Undefined, TraitError
 from enthought.traits.trait_handlers import NoDefaultSpecified
 
-from openmdao.main.api import Component, FileVariable, UnitsFloat
+from openmdao.main.api import Component, FileTrait, UnitsFloat
 
 import npss
 npss.isolateContexts(True)
@@ -23,12 +23,12 @@ def _augment_dict(srcdict, destdict):
 _iodict = { 'INPUT': 'in',
             'OUTPUT': 'out' }
 
-class NPSSTrait(TraitType):
+class NPSSProperty(TraitType):
     def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
         trait = metadata.get('trait', None)
         if trait is not None:
             _augment_dict(trait._metadata, metadata)
-        super(NPSSTrait, self).__init__(default_value, **metadata)
+        super(NPSSProperty, self).__init__(default_value, **metadata)
 
     def get(self, object, name):
         if self.trait is None:  # set up connection to NPSS variable
@@ -172,10 +172,10 @@ class NPSScomponent(Component):
         state['_top'] = None  # pyNPSS is unpickleable.
         return state
 
-    #def __setstate__(self, state):
-        #""" Restore this Component's state. """
-        #super(NPSScomponent, self).__setstate__(state)
-        ## _top will be set during post_load via reload().
+    def __setstate__(self, state):
+        """ Restore this Component's state. """
+        super(NPSScomponent, self).__setstate__(state)
+        # _top will be set during post_load via reload().
 
     def post_load(self):
         """ Perform any required operations after model has been loaded. """
@@ -500,7 +500,7 @@ class NPSScomponent(Component):
             #except AttributeError:
                 #raise AttributeError(self.get_pathname()+' '+str(err))
 
-    def set(self, path, value, index=None):
+    def set(self, path, value, index=None, srcname=None, srcmeta=None, force=False):
         """ Set attribute value. """
         if index is None:
             setattr(self, path, value)
@@ -651,7 +651,7 @@ class NPSScomponent(Component):
             trait = Array(dtype=numpy.float, shape=(None,None,None),
                          iostatus=iostat, desc=doc)
         elif typ == 'Stream':
-            trait = FileVariable(iostatus=iostat, desc=doc, **metadata)
+            trait = FileTrait(iostatus=iostat, desc=doc, **metadata)
             ref_name = ref_name+'.filename'
         else:
             self.raise_exception("'%s' is an unsupported NPSS type: '%s'" % 
@@ -668,7 +668,7 @@ class NPSScomponent(Component):
         1. Get the correct array type (default is float).
         2. Set the units from translated NPSS units.
         3. Set the doc string from the description attribute.
-        4. Create FileVariables for stream objects.
+        4. Create FileTraits for stream objects.
         """
         if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
             lst = [obj_info]
@@ -694,13 +694,13 @@ class NPSScomponent(Component):
                 
             trait, ref_name = self._trait_mapping_info(name, iostat, ref_name)
             
-            self.add_trait(name, NPSSTrait(iostatus=iostat, trait=trait,
+            self.add_trait(name, NPSSProperty(iostatus=iostat, trait=trait,
                                            ref_name = ref_name))
         
 
     def add_trait(self, name, *trait):
         """Overrides HasTraits definition of add_trait in order to
-        wrap the given trait in an NPSSTrait (provides both get() and set())
+        wrap the given trait in an NPSSProperty (provides both get() and set())
         """
         if len( trait ) == 0:
             raise ValueError, 'No trait definition was specified.'
@@ -710,9 +710,9 @@ class NPSScomponent(Component):
             trait = trait[0]
         
         if trait.ref_name is None:
-            wrapped_trait = NPSSTrait(trait=trait, ref_name=name)
+            wrapped_trait = NPSSProperty(trait=trait, ref_name=name)
         else:
-            wrapped_trait = NPSSTrait(trait=trait)
+            wrapped_trait = NPSSProperty(trait=trait)
             
             
         super(NPSScomponent, self).add_trait(name, wrapped_trait)

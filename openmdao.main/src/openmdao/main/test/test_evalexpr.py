@@ -99,7 +99,7 @@ else:
 
 # now try some bogus expressions
 try:
-    ex = ExprEvaluator('abcd.efg', top)
+    ex = ExprEvaluator('abcd.efg', top, lazy_check=False)
 except RuntimeError, err:
     expected = "cannot find variable 'abcd.efg'"
     if str(err) != expected:

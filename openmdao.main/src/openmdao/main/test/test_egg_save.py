@@ -11,7 +11,7 @@ import unittest
 from enthought.traits.api import Bool, List, Str, Array, TraitError
 
 from openmdao.main.api import Assembly, Component, Container
-from openmdao.main.filevar import FileVariable
+from openmdao.main.filevar import FileTrait
 from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
 
 # pylint: disable-msg=E1101,E1103
@@ -30,7 +30,7 @@ class Source(Assembly):
 
     write_files = Bool(True, iostatus='in')
     text_data = Str(iostatus='in')
-    text_file = FileVariable('source.txt', iostatus='out')
+    text_file = FileTrait(filename='source.txt', iostatus='out')
 
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
@@ -89,11 +89,11 @@ class Source(Assembly):
     def execute(self):
         """ Write test data to files. """
         if self.write_files:
-            out = open(self.text_file, 'w')
+            out = open(self.text_file.filename, 'w')
             out.write(self.text_data)
             out.close()
 
-            out = open(self.sub.binary_file, 'wb')
+            out = open(self.sub.binary_file.filename, 'wb')
             cPickle.dump(self.sub.binary_data, out, 2)
             out.close()
 
@@ -102,7 +102,7 @@ class Subcontainer(Container):
     """ Just a subcontainer for Source. """
 
     binary_data = Array('d', value=[], iostatus='in')
-    binary_file = FileVariable(os.path.join('..', 'sub', 'source.bin'),
+    binary_file = FileTrait(filename=os.path.join('..', 'sub', 'source.bin'),
                                iostatus='out', binary=True)
         
     def __init__(self, name='Subcontainer', parent=None):
@@ -120,11 +120,11 @@ class DataObj(object):
 class Sink(Component):
     """ Consumes files. """
 
-    text_data = List(Str, iostatus='out')
+    text_data = Str(iostatus='out')
     binary_data = Array('d', value=[], iostatus='out')
 
-    # Absolute FileVariable that exists at time of save.
-    text_file = FileVariable(iostatus='in')
+    # Absolute FileTrait that exists at time of save.
+    text_file = FileTrait(iostatus='in')
     
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
@@ -132,28 +132,29 @@ class Sink(Component):
         global sink_init
         sink_init = True
         
-        self.text_file = os.path.join(self.get_directory(), 'sink.txt')
+        self.text_file.filename = os.path.join(self.get_directory(), 'sink.txt')
 
-        out = open(self.text_file, 'w')
-        out.write('Absolute FileVariable that exists at time of save.\n')
+        out = open(self.text_file.filename, 'w')
+        out.write('Absolute FileTrait that exists at time of save.\n')
         out.close()
 
-        # Relative FileVariable that exists at time of save.
+        # Relative FileTrait that exists at time of save.
         self.add_trait('binary_file',
-                       FileVariable('sink.bin', iostatus='in'))
+                       FileTrait(filename='sink.bin', iostatus='in'))
         self.push_dir(self.get_directory())
-        out = open(self.binary_file, 'w')
-        out.write('Relative FileVariable that exists at time of save.\n')
+        out = open(self.binary_file.filename, 'w')
+        out.write('Relative FileTrait that exists at time of save.\n')
         out.close()
         self.pop_dir()
 
     def execute(self):
         """ Read test data from files. """
-        inp = open(self.text_file, 'r')
+        inp = open(self.text_file.filename, 'r')
         self.text_data = inp.read()
         inp.close()
 
-        inp = open(self.binary_file, 'rb')
+        inp = open(self.binary_file.filename, 'rb')
+        curdir = os.getcwd()
         self.binary_data = cPickle.load(inp)
         inp.close()
 
@@ -211,7 +212,7 @@ class EggTestCase(unittest.TestCase):
         self.assertNotEqual(self.model.Sink.binary_data,
                             self.model.Source.sub.binary_data)
         self.assertNotEqual(
-            self.model.Sink.trait('binary_file').binary, True)
+            self.model.Sink.binary_file.binary, True)
 
         for path in EXTERNAL_FILES:
             path = os.path.join(self.model.Source.get_directory(), path)
@@ -227,10 +228,9 @@ class EggTestCase(unittest.TestCase):
         self.model.run()
         self.assertEqual(self.model.Sink.text_data,
                          self.model.Source.text_data)
-        self.assertEqual(self.model.Sink.binary_data,
-                         self.model.Source.sub.binary_data)
-        self.assertEqual(
-            self.model.Sink.trait('binary_file').binary, True)
+        self.assertEqual(True,
+            all(self.model.Sink.binary_data==self.model.Source.sub.binary_data))
+        self.assertEqual(self.model.Sink.binary_file.binary, True)
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -259,7 +259,7 @@ class EggTestCase(unittest.TestCase):
             self.assertNotEqual(self.model.Sink.binary_data,
                                 self.model.Source.sub.binary_data)
             self.assertNotEqual(
-                self.model.Sink.trait('binary_file').binary, True)
+                self.model.Sink.binary_file.binary, True)
 
             for path in EXTERNAL_FILES:
                 path = os.path.join(self.model.Source.get_directory(), path)
@@ -272,10 +272,10 @@ class EggTestCase(unittest.TestCase):
             self.model.run()
             self.assertEqual(self.model.Sink.text_data,
                              self.model.Source.text_data)
-            self.assertEqual(self.model.Sink.binary_data,
-                             self.model.Source.sub.binary_data)
+            self.assertEqual(all(self.model.Sink.binary_data==
+                             self.model.Source.sub.binary_data), True)
             self.assertEqual(
-                self.model.Sink.trait('binary_file').binary, True)
+                self.model.Sink.binary_file.binary, True)
 
         finally:
             os.chdir(orig_dir)
@@ -332,7 +332,7 @@ class EggTestCase(unittest.TestCase):
         path = os.path.join(os.getcwd(), 'bad-file-variable')
         out = open(path, 'w')
         out.close()
-        self.model.Source.text_file = path
+        self.model.Source.text_file.filename = path
         try:
             self.model.save_to_egg()
         except Exception, exc:

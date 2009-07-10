@@ -59,7 +59,7 @@ class IContainer (Interface):
     def get (name):
         """Return the value of a public Variable."""
 
-    def set (name, value):
+    def set (path, value, index=None, srcname=None, srcmeta=None, force=False):
         """Set the value of a public variable."""
         
     def save_state (outstream, format='cPickle'):

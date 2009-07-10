@@ -203,7 +203,7 @@ class ExprEvaluator(str):
     any necessary framework access functions, e.g., set, get. The compiled
     bytecode is stored within the object so that it doesn't have to be reparsed
     during later evaluations.  A scoping object is required at construction time
-    and that object determines the form of the  translated expression. 
+    and that object determines the form of the  translated expression based on scope. 
     Variables that are local to the scoping object do not need to be translated,
     whereas variables from other objects must  be accessed using the appropriate
     set() or get() call.  Array entry access and function invocation are also
@@ -221,7 +221,7 @@ class ExprEvaluator(str):
     optional array indexing, but general expressions are not allowed.
     """
     
-    def __new__(cls, text, scope=None, single_name=False, lazy_check=False):
+    def __new__(cls, text, scope=None, single_name=False, lazy_check=True):
         s = super(ExprEvaluator, cls).__new__(ExprEvaluator, text)
         if scope is None:
             s._scope = None
@@ -242,15 +242,21 @@ class ExprEvaluator(str):
             # remove weakref to scope because it won't pickle
             state['_scope'] = self._scope()
         state['_code'] = None  # <type 'code'> won't pickle either.
+        if state.get('_assignment_code'):
+            state['_assignment_code'] = None # more unpicklable <type 'code'>
         return state
 
     def __setstate__(self, state):
         """Restore this component's state."""
-        self.__dict__ = state
+        self.__dict__.update(state)
         if self._scope is not None:
             self._scope = weakref.ref(self._scope)
         if self.scoped_text:
             self._code = compile(self.scoped_text, '<string>', 'eval')
+        satxt = state.get('scoped_assignment_text')
+        if satxt:
+            self._assignment_code = compile(self.scoped_assignment_text, 
+                                            '<string>', 'exec')
 
     def _parse(self):
         self._text = str(self)

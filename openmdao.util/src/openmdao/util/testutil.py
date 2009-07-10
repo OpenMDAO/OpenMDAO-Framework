@@ -1,10 +1,9 @@
-def assertRaisesError(testCaseInstance,code,errType,errMsg):
-    testFailed = False
+def assertRaisesError(testCaseInstance, code, errType, errMsg):
     try:
         eval(code)
-        testFailed = True
     except errType,err:
-        testCaseInstance.assertEqual(str(err),errMsg)
-    except:
-        testCaseInstance.fail("Expecting %s"%errType)
-    if testfailed: testCaseInstance.fail("Expecting %s"%errType)
+        testCaseInstance.assertEqual(str(err), errMsg)
+    except Exception:
+        testCaseInstance.fail("Expecting %s" % errType)
+    else:
+        testCaseInstance.fail("Expecting %s" % errType)

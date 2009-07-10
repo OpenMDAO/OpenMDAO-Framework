@@ -15,7 +15,7 @@ from numpy.testing import assert_equal
 
 from enthought.traits.api import Bool
 
-from openmdao.main.api import FileVariable
+from openmdao.main.api import FileTrait
 from openmdao.main.constants import SAVE_LIBYAML
 from openmdao.main.component import SimulationRoot
 
@@ -97,7 +97,7 @@ class NPSSTestCase(unittest.TestCase):
                 if isinstance(val, ndarray):
                     assert_equal(getattr(self.npss, name), val)
                 else:
-                    if isinstance(self.npss.trait(name), FileVariable):
+                    if self.npss.trait(name).is_trait_type(FileTrait):
                         obj = getattr(self.npss, name)
                         self.assertEqual(getattr(obj, 'filename'), val)
                     else:

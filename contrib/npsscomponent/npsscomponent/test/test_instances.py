@@ -15,7 +15,7 @@ from numpy.testing import assert_equal
 
 from enthought.traits.api import Float, Int, Str, List, Bool, Array
 
-from openmdao.main.api import Assembly, Component, Container, FileVariable
+from openmdao.main.api import Assembly, Component, Container, FileTrait
 from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
@@ -47,8 +47,8 @@ class Source(Component):
 
     text_data = Str(iostatus='in')
     binary_data = Array(dtype=numpy.float, shape=(None,), iostatus='in')
-    text_file = FileVariable('source.txt', iostatus='out')
-    binary_file = FileVariable('source.bin', iostatus='out', binary=True)
+    text_file = FileTrait(filename='source.txt', iostatus='out')
+    binary_file = FileTrait(filename='source.bin', iostatus='out', binary=True)
         
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
@@ -112,9 +112,9 @@ class Passthrough(NPSScomponent):
         self.add_trait('s1d_in', List(str, iostatus='in'))
         
         self.add_trait('text_in', 
-                       FileVariable(iostatus='in', ref_name='text_in.filename'))
+                       FileTrait(iostatus='in', ref_name='text_in.filename'))
         self.add_trait('binary_in',
-                       FileVariable(iostatus='in', ref_name='binary_in.filename'))
+                       FileTrait(iostatus='in', ref_name='binary_in.filename'))
         
         # Automagic interface variable creation (not for Bool though).
         # (skip 'f_out' to exercise connect().)
@@ -131,9 +131,9 @@ class Passthrough(NPSScomponent):
             ('text_out',   '', 'out'),
             ('binary_out', '', 'out')])
 
-        # Sub-container needs Bools explicitly declared.
-        Bool('sub.b_in', self, iostatus='in')
-        Bool('sub.b_out', self, iostatus='out')
+        ## Sub-container needs Bools explicitly declared.
+        #Bool('sub.b_in', self, iostatus='in')
+        #Bool('sub.b_out', self, iostatus='out')
 
 
 class Sink(Component):
@@ -158,8 +158,8 @@ class Sink(Component):
     text_data = List(str, iostatus='out')
     binary_data = Array(dtype=numpy.float, shape=(None,),
                         iostatus='out')
-    text_file = FileVariable('sink.txt', iostatus='in')
-    binary_file = FileVariable('sink.bin', iostatus='in')
+    text_file = FileTrait(filename='sink.txt', iostatus='in')
+    binary_file = FileTrait(filename='sink.bin', iostatus='in')
         
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
@@ -207,10 +207,10 @@ class Model(Assembly):
         comp, rest = src_path.split('.', 1)
         src_comp = getattr(self, comp)
         if rest.find('.') > 0:
-            src_path = self.hoist(src_comp, rest, OUTPUT)
+            src_path = self.hoist(src_comp, rest, 'out')
         else:
             if src_comp.trait(rest) is None:
-                src_comp.make_public((rest, '', OUTPUT))
+                src_comp.make_public((rest, '', 'out'))
                 self._var_graph.add_node(src_path)
 
         comp, rest = dst_path.split('.', 1)
@@ -232,13 +232,12 @@ class Model(Assembly):
             comp.make_public((name, path, io_status))
             trait = comp.trait(name)
 
-        newpath = comp.name+'.'+name
-        if newpath not in self._var_graph.nodes():
-            passthru = var.create_passthru(comp, name)
-            comp.make_public(passthru)
-            self._var_graph.add_node(newpath, data=passthru)
+        newpath = '.'.join([comp.name,name])
+        if newpath not in self._var_graph:
+            self.create_passthru(newpath)
         return newpath
-
+    
+    
     def __init__(self, name='TestModel', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
 
@@ -398,7 +397,7 @@ class NPSSTestCase(unittest.TestCase):
         self.assertNotEqual(self.model.Sink.binary_data,
                             self.model.Source.binary_data)
         self.assertNotEqual(
-            self.model.Sink.trait('binary_file').binary, True)
+            self.model.Sink.binary_file.metadata['binary'], True)
 
         self.assertNotEqual(self.model.Sink.sub.b,   self.model.Source.sub.b)
         self.assertNotEqual(self.model.Sink.sub.f,   self.model.Source.sub.f)
@@ -429,7 +428,7 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.binary_data,
                          self.model.Source.binary_data)
         self.assertEqual(
-            self.model.Sink.trait('binary_file').binary, True)
+            self.model.Sink.binary_file.metadata['binary'], True)
 
         self.assertEqual(self.model.Sink.sub.b,   self.model.Source.sub.b)
         self.assertEqual(self.model.Sink.sub.f,   self.model.Source.sub.f)

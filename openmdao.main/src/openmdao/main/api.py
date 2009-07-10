@@ -19,7 +19,7 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.exceptions import ConstraintError
 
 from openmdao.main.stringref import StringRef, StringRefArray
-from openmdao.main.filevar import FileVariable
+from openmdao.main.filevar import FileTrait
 
 from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 
@@ -35,7 +35,7 @@ __all__ = ['Assembly',
            'ExprEvaluator',
            'Factory',
            'FileCaseIterator',
-           'FileVariable',
+           'FileTrait',
            'ImportFactory',
            'ListCaseIterator',
            'PkgResourcesFactory',

@@ -21,7 +21,7 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.constants import SAVE_PICKLE
 from openmdao.main.exceptions import CircularDependencyError
 from openmdao.main.util import filexfer
-from openmdao.main.filevar import FileVariable
+from openmdao.main.filevar import FileTrait
 
 class MulticastTrait(TraitType):
     """A trait with a list of destination attributes (with names evaluated in
@@ -188,6 +188,15 @@ class Assembly (Component):
                                  RuntimeError) 
         
         comptrait = comp.trait(vname, copy=True)
+        if not comptrait:
+            try:
+                comp.make_public(vname)
+                comptrait = comp.trait(vname, copy=True)
+            except:
+                pass
+            if not comptrait:
+                self.raise_exception("cannot find trait named '%s' in component '%s'" %
+                                     (vname, compname), TraitError)
         iostatus = comptrait.iostatus
         # create the passthru connection 
         if iostatus == 'in':
@@ -442,14 +451,13 @@ class Assembly (Component):
                 else:
                     srccomp.update_outputs([srcvarname])
 
-            # TODO: get rid of this special check for FileVariables. Add metadata to
-            # the trait so that enough is known to handle the file transfer
-            if isinstance(desttrait, FileVariable):
+            if desttrait.is_trait_type(FileTrait):
                 if comp.directory:
                     comp.pop_dir()
                 try:
+                    destcomp.set(destvarname, getattr(srccomp, srcvarname), 
+                                 srcname=srcname)
                     self.xfer_file(srccomp, srcvarname, comp, destvarname)
-                    #var.metadata = srcvar.metadata.copy()
                 except Exception, exc:
                     msg = "cannot transfer file from '%s' to '%s': %s" % \
                           (srcname, vname, exc)
@@ -486,7 +494,7 @@ class Assembly (Component):
         if any children are added or removed, or if self._need_check_config is True.
         """
         super(Assembly, self).check_config()
-        for name, value in self.traits(required=True).items():
+        for name, value in self._traits_meta_filter(required=True).items():
             if value.is_trait_type(Instance) and getattr(self, name) is None:
                 self.raise_exception("required plugin '%s' is not present" % name,
                                      TraitError)                
@@ -534,8 +542,8 @@ class Assembly (Component):
     @staticmethod
     def xfer_file(src_comp, src_varname, dst_comp, dst_varname):
         """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """
-        src_path = os.path.join(src_comp.get_directory(), getattr(src_comp, src_varname))
-        dst_path = os.path.join(dst_comp.get_directory(), getattr(dst_comp, dst_varname))
+        src_path = os.path.join(src_comp.get_directory(), src_comp.get(src_varname+'.filename'))
+        dst_path = os.path.join(dst_comp.get_directory(), dst_comp.get(dst_varname+'.filename'))
         if src_path != dst_path:
             if src_comp.trait(src_varname).binary is True:
                 mode = 'b'

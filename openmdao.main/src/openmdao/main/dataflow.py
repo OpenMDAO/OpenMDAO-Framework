@@ -22,7 +22,7 @@ class Dataflow(Workflow):
         """ Create an empty flow. """
         super(Dataflow, self).__init__(name, parent, add_to_parent=False)
         self._no_ref_graph = nx.DiGraph()
-
+        
     def execute(self):
         try:
             super(Dataflow, self).execute()

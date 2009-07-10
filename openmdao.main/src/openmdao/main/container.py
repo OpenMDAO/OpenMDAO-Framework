@@ -45,8 +45,10 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import networkx as nx
 from enthought.traits.api import HasTraits, implements, Str, Missing, TraitError,\
                                  BaseStr, Undefined, push_exception_handler,\
-                                 on_trait_change, WeakRef
+                                 on_trait_change, WeakRef, TraitType
+from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import _SimpleTest, FunctionType
+from enthought.traits.trait_base import not_event
 
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.interfaces import IContainer
@@ -69,6 +71,9 @@ push_exception_handler(handler = lambda o,t,ov,nv: None,
                        main = True,
                        locked = True )
 
+# _io_trait_changed won't do anything unless this is True
+_io_side_effects = True
+
 class IMHolder(object):
     """Holds an instancemethod object in a pickleable form."""
 
@@ -89,7 +94,27 @@ class IMHolder(object):
             return getattr(self.im_class, self.name)
 
 
+class ContainerProperty(TraitType):
+    """A trait that allows attributes in child Containers to be referenced
+    using an alias in a parent scope.
+    """
+    def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
+        if not metadata.get('ref_name'):
+            raise TraitError("ContainerProperty constructor requires a 'ref_name' argument.")
+        super(ContainerProperty, self).__init__(default_value, **metadata)
+
+    def get(self, object, name):
+        return object.get(self.ref_name)
+
+    def set(self, object, name, value):
+        if self.iostatus == 'out':
+            raise TraitError('%s is an output trait and cannot be set' % name)
         
+        if self.trait is not None:
+            self.trait.validate(object, name, value)
+            
+        object.set(self.ref_name, value)        
+
         
 class ContainerName(BaseStr):
     """A string that must match the allowed regex for the name of a 
@@ -120,12 +145,13 @@ class Container(HasTraits):
     #parent = WeakRef(IContainer, allow_none=True, adapt='no')
     
     def __init__(self, name='', parent=None, doc=None, add_to_parent=True):
+        super(Container, self).__init__() # don't forget to init HasTraits
+                                          # or @on_trait_change decorator won't work!
         self._valid_dict = {}  # contains validity flag for each io Trait
         self._dests = {}  # for checking that destination traits cannot be 
                           # set by other objects
+        self._added_traits = {}  # for keeping track of dynamically added traits for serialization
                           
-        super(Container, self).__init__() # don't forget to init HasTraits
-                                          # or @on_trait_change decorator won't work!
         self.parent = parent
         self.name = name
         
@@ -155,43 +181,78 @@ class Container(HasTraits):
 
     #parent = property(_get_parent, _set_parent)
     
-    #def __getstate__(self):
-        #"""Return dict representing this container's state."""
-        #state = super(Container, self).__getstate__()
-        
-        #if state.has_key('_parent'):
-            #if state['_parent'] is not None:
-                ## remove weakref to parent because it won't pickle
-                #state['_parent'] = self._parent()
-        #return state
+
+    #
+    #  HasTraits overrides
+    #
+    
+    def __getstate__(self):
+        """Return dict representing this container's state."""
+        state = super(Container, self).__getstate__()
+        dct = {}
+        for name,trait in state['_added_traits'].items():
+            if trait.transient is not True:
+                dct[name] = trait
+        state['_added_traits'] = dct
+        return state
 
     def __setstate__(self, state):
         """Restore this component's state."""
-        self._trait_change_notify(False)
-        try:
-            #if state.has_key('_parent'):
-                #par = state['_parent']
-                #if par is not None:
-                    #state['_parent'] = weakref.ref(par)
-            super(Container, self).__setstate__(state)
-        finally:
-            self._trait_change_notify(True)
+        super(Container, self).__setstate__({})
+        self.__dict__.update(state)
+        for name,trait in self._added_traits.items():
+            self.add_trait(name, trait)
 
-    
+    def add_trait(self, name, *trait):
+        """Overrides HasTraits definition of add_trait in order to
+        keep track of dynamically added traits for serialization.
+        """
+        if len( trait ) == 0:
+            raise ValueError, 'No trait definition was specified.'
+        elif len(trait) > 1:
+            trait = Trait(*trait)
+        else:
+            trait = trait[0]
+            
+        self._added_traits[name] = trait
+        super(Container, self).add_trait(name, trait)
+        
+    def remove_trait(self, name):
+        """Overrides HasTraits definition of remove_trait in order to
+        keep track of dynamically added traits for serialization.
+        """
+        del self._added_traits[name]
+        super(Container, self).remove_trait(name)
+            
+    def trait_get(self, *names, **metadata):
+        """Override the HasTraits version of this because if we don't,
+        HasTraits.__getstate__ won't return our instance traits.
+        """
+        if len(names) == 0:
+            if 'transient' in metadata:
+                meta = metadata
+            else:
+                meta = metadata.copy()
+                meta.setdefault('type', not_event)
+            names = self._traits_meta_filter(None, **meta).keys()
+        return super(Container, self).trait_get(*names, **metadata)
+        
+        
     # call this if any trait having 'iostatus' metadata is changed    
     @on_trait_change('+iostatus') 
     def _io_trait_changed(self, obj, name, old, new):
-        # setting old to Undefined is a kludge to bypass the destination check
-        # when we call this directly from Assembly as part of setting this attribute
-        # from an existing connection.
-        if self.trait(name).iostatus == 'in':
-            if old is not Undefined and name in self._dests:
-                self.raise_exception(
-                    "'%s' is already connected to source '%s' and cannot be directly set"%
-                    (name, self._dests[name]), TraitError)
-            self._execute_needed = True
-        if self.get_valid(name):  # if var is not already invalid
-            self.invalidate_deps([name], notify_parent=True)
+        if _io_side_effects:
+            # setting old to Undefined is a kludge to bypass the destination check
+            # when we call this directly from Assembly as part of setting this attribute
+            # from an existing connection.
+            if self.trait(name).iostatus == 'in':
+                if old is not Undefined and name in self._dests:
+                    self.raise_exception(
+                        "'%s' is already connected to source '%s' and cannot be directly set"%
+                        (name, self._dests[name]), TraitError)
+                self._execute_needed = True
+            if self.get_valid(name):  # if var is not already invalid
+                self.invalidate_deps([name], notify_parent=True)
 
     def get_valid(self, name):
         def _valid(self, name):
@@ -274,7 +335,7 @@ class Container(HasTraits):
         the given metadata. If recurse is True, also iterate through all
         child Containers of each Container found.
         """
-        mdata = { 'type': lambda x: x != 'event' } # exclude event traits, which are write-only
+        mdata = { 'type': not_event } # exclude event traits, which are write-only
         mdata.update(metadata)
         return self._items(set([id(self.parent)]), recurse, **mdata)
         
@@ -283,7 +344,7 @@ class Container(HasTraits):
         children of this Container that match the given metadata. If recurse is 
         True, child Containers will also be iterated over.
         """
-        mdata = { 'type': lambda x: x != 'event' } # exclude event traits, which are write-only
+        mdata = { 'type': not_event } # exclude event traits, which are write-only
         mdata.update(metadata)
         return [tup[0] for tup in self._items(set([id(self.parent)]), 
                                               recurse, **mdata)]
@@ -293,7 +354,7 @@ class Container(HasTraits):
         trait metadata. If recurse is True, child Containers will also be 
         iterated over.
         """
-        mdata = { 'type': lambda x: x != 'event' } # exclude event traits, which are write-only
+        mdata = { 'type': not_event } # exclude event traits, which are write-only
         mdata.update(metadata)
         return [tup[1] for tup in self._items(set([id(self.parent)]), 
                                               recurse, **mdata)]
@@ -485,8 +546,11 @@ class Container(HasTraits):
     def remove_destination(self, name):
         del self._dests[name]    
             
-    def _check_trait_settable(self, name, srcname=None):
-        src = self._dests.get(name, None)
+    def _check_trait_settable(self, name, srcname=None, force=False):
+        if force:
+            src = None
+        else:
+            src = self._dests.get(name)
         trait = self.trait(name)
         if not trait:
             self.raise_exception("object has no attribute '%s'" % name,
@@ -500,7 +564,7 @@ class Container(HasTraits):
                 "'%s' is connected to source '%s' and cannot be set by source '%s'"%
                 (name,src,srcname), TraitError)
                     
-    def set(self, path, value, index=None, srcname=None, srcmeta=None):
+    def set(self, path, value, index=None, srcname=None, srcmeta=None, force=False):
         """Set the value of the data object specified by the  given path, which
         may contain '.' characters.  If path specifies a Variable, then its
         value attribute will be set to the given value, subject to validation
@@ -520,7 +584,7 @@ class Container(HasTraits):
                     
         tup = path.split('.')
         if len(tup) == 1:
-            self._check_trait_settable(path, srcname)
+            self._check_trait_settable(path, srcname, force)
             if index is None:
                 if self.trait(path) is None:
                     self.raise_exception("object has no attribute '%s'" %
@@ -548,15 +612,20 @@ class Container(HasTraits):
             if obj is Missing:
                 self.raise_exception("object has no attribute '%s'" % tup[0], 
                                      TraitError)
-            if isinstance(obj, Container):
-                if len(tup) == 2:
+            if len(tup) == 2:
+                if isinstance(obj, Container):
                     obj.set(tup[1], value, index, 
-                            srcname=srcname, srcmeta=srcmeta)
+                            srcname=srcname, srcmeta=srcmeta, force=force)
+                elif index is None:
+                    setattr(obj, tup[1], value)
                 else:
-                    obj.set('.'.join(tup[1:]), value, index, 
-                            srcmeta=srcmeta)
+                    obj._array_set(tup[1], value, index)
             else:
-                obj._array_set('.'.join(tup[1:]), value, index)
+                if isinstance(obj, Container):
+                    obj.set('.'.join(tup[1:]), value, index, 
+                            srcmeta=srcmeta, force=force)
+                else:
+                    obj._array_set('.'.join(tup[1:]), value, index)
 
     def _array_set(self, name, value, index):
         arr = getattr(self, name)
@@ -631,7 +700,7 @@ class Container(HasTraits):
             name = self.name
         if version is None:
             try:
-                version = sys.modules[self.__module__].__version__
+                version = sys.modules[self.__class__.__module__].__version__
             except (AttributeError, KeyError):
                 now = datetime.datetime.now()  # Could consider using utcnow().
                 version = '%d.%02d.%02d.%02d.%02d' % \
@@ -736,6 +805,7 @@ class Container(HasTraits):
             # Create buildout.cfg
             if os.path.exists(buildout_path):
                 os.rename(buildout_path, buildout_orig)
+            self.debug('writing file %s...' % buildout_path)
             out = open(buildout_path, 'w')
             out.write("""\
 [buildout]
@@ -770,18 +840,22 @@ eggs =
             # Save everything to an egg via setuptools.
             self._write_egg_via_setuptools(name, version, loader, src_files,
                                            required_distributions, dst_dir)
+            self.debug('removing %s and %s' % (state_path,loader_path))
             os.remove(state_path)
             os.remove(loader_path)
             if remove_init:
+                self.debug('removing %s' % init_path)
                 os.remove(init_path)
 
         finally:
             if os.path.exists(buildout_orig):
                 os.rename(buildout_orig, buildout_path)
             elif os.path.exists(buildout_path):
+                self.debug('removing %s' % buildout_path)
                 os.remove(buildout_path)
             os.chdir(orig_dir)
             if tmp_dir:
+                self.debug('removing %s' % tmp_dir)
                 shutil.rmtree(tmp_dir)
             self._restore_objects(fixup)
 
@@ -1368,21 +1442,26 @@ setuptools.setup(
                 mode = 'r'
             instream = open(instream, mode)
 
-        if format is SAVE_CPICKLE:
-            top = cPickle.load(instream)
-        elif format is SAVE_PICKLE:
-            top = pickle.load(instream)
-        elif format is SAVE_YAML:
-            top = yaml.load(instream)
-        elif format is SAVE_LIBYAML:
-            if _libyaml is False:
-                logger.warn('libyaml not available, using yaml instead')
-            top = yaml.load(instream, Loader=Loader)
-        else:
-            raise RuntimeError('cannot load object using format %s' % format)
-
-        if do_post_load:
-            top.post_load()
+        _io_side_effects = False
+        try:
+            if format is SAVE_CPICKLE:
+                top = cPickle.load(instream)
+            elif format is SAVE_PICKLE:
+                top = pickle.load(instream)
+            elif format is SAVE_YAML:
+                top = yaml.load(instream)
+            elif format is SAVE_LIBYAML:
+                if _libyaml is False:
+                    logger.warn('libyaml not available, using yaml instead')
+                top = yaml.load(instream, Loader=Loader)
+            else:
+                raise RuntimeError('cannot load object using format %s' % format)
+    
+            if do_post_load:
+                top.post_load()
+        finally:
+            _io_side_effects = True
+            
         return top
 
     def post_load(self):
@@ -1395,18 +1474,18 @@ setuptools.setup(
         [x.pre_delete() for x in self.values() 
                                           if isinstance(x,Container)]
 
-    def _get_all_items(self, visited, recurse=False):
-        """Generate a list of tuples of the form (rel_pathname, obj) for each
-        child of this Container.  If recurse is True, also iterate through all
-        child Containers of each Container found.
-        """
-        for name, obj in self.__dict__.items():
-            if not name.startswith('_') and id(obj) not in visited:
-                visited.add(id(obj))
-                yield (name, obj)
-                if recurse and isinstance(obj, Container):
-                    for chname, child in obj._get_all_items(visited, recurse):
-                        yield ('.'.join([name, chname]), child)
+    #def _get_all_items(self, visited, recurse=False):
+        #"""Generate a list of tuples of the form (rel_pathname, obj) for each
+        #child of this Container.  If recurse is True, also iterate through all
+        #child Containers of each Container found.
+        #"""
+        #for name, obj in self.__dict__.items():
+            #if not name.startswith('_') and id(obj) not in visited:
+                #visited.add(id(obj))
+                #yield (name, obj)
+                #if recurse and isinstance(obj, Container):
+                    #for chname, child in obj._get_all_items(visited, recurse):
+                        #yield ('.'.join([name, chname]), child)
                    
 
     def get_io_graph(self):

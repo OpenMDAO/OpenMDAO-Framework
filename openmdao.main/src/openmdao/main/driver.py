@@ -5,6 +5,7 @@ __version__ = "0.1"
 
 
 from enthought.traits.api import implements, List
+from enthought.traits.trait_base import not_none
 import networkx as nx
 from networkx.algorithms.traversal import strongly_connected_components
 
@@ -130,13 +131,13 @@ class Driver(Assembly):
 
     def get_refvar_names(self, iostatus=None):
         if iostatus is None:
-            checker = lambda x: True
+            checker = not_none
         else:
             checker = iostatus
         
-        return [n for n,v in self.traits(iostatus=checker).items() 
-                    if isinstance(v.trait_type,StringRef) or 
-                       isinstance(v.trait_type, StringRefArray)]
+        return [n for n,v in self._traits_meta_filter(iostatus=checker).items() 
+                    if v.is_trait_type(StringRef) or 
+                       v.is_trait_type(StringRefArray)]
         
     def get_referenced_comps(self, iostatus=None):
         """Return a set of names of Components that we reference based on the 
