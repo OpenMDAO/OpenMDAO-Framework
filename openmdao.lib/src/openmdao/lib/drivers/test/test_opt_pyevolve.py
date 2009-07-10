@@ -186,7 +186,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
             self.top.driver.objective = "comp.badojbjective"        
         except TraitError, err:
             self.assertEqual(str(err), 
-                "invalid input ref variable value 'comp.badojbjective'")
+                "top.driver: invalid value 'comp.badojbjective' for input ref variable 'objective': top.comp: cannot set valid flag of 'badojbjective' because it's not an io trait.")
         else: 
             self.fail("TraitError expected")
     

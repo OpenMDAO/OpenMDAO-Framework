@@ -9,7 +9,7 @@ from copy import copy
 import numpy.numarray as numarray
 import numpy
 
-from enthought.traits.api import Int, Array, List
+from enthought.traits.api import Int, Array, List, on_trait_change, TraitError
 import conmin.conmin as conmin
 
 from openmdao.main.api import Driver, StringRef, StringRefArray
@@ -197,7 +197,6 @@ class CONMINdriver(Driver):
         self.g1 = numarray.zeros(0,'d')
         self.g2 = numarray.zeros(0,'d')
         self.cons_is_linear = numarray.zeros(0, 'i') 
-                
         
     #def __getstate__(self):
         #"""Return dict representing this container's state."""
@@ -376,6 +375,25 @@ class CONMINdriver(Driver):
         self.cnmn1.itmax = self.maxiters
         
 
+    @on_trait_change('objective') 
+    def _refvar_changed(self, obj, name, old, new):
+        expr = getattr(obj, name)
+        try:
+            expr.refs_valid()  # force checking for existence of vars referenced in expression
+        except (AttributeError, RuntimeError), err:
+            self.raise_exception("invalid value '%s' for input ref variable '%s': %s" % 
+                                 (str(expr),name,err), TraitError)
+        
+    @on_trait_change('constraints, design_vars') 
+    def _refvar_array_changed(self, obj, name, old, new):
+        exprevals = getattr(obj, name)
+        for i,expr in enumerate(exprevals):
+            try:
+                expr.refs_valid()  # force checking for existence of vars referenced in expression
+            except (AttributeError, RuntimeError), err:
+                self.raise_exception("invalid value '%s' for input ref variable '%s[%d]': %s" % 
+                                     (str(expr),name,i,err), TraitError)
+        
     def _load_common_blocks(self):
         """ Reloads the common blocks using the intermediate info saved in the class. """
         

@@ -4,7 +4,7 @@ __version__ = "0.1"
 
 import random
 
-from enthought.traits.api import Int, Float, CBool, Str, Any
+from enthought.traits.api import Int, Float, CBool, Str, Any, on_trait_change, TraitError
 
 from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
 from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
@@ -121,6 +121,15 @@ class pyevolvedriver(Driver):
             else: slot.add(func)
         slot.setRandomApply(RandomApply)
 
+    @on_trait_change('objective') 
+    def _refvar_changed(self, obj, name, old, new):
+        expr = getattr(obj, name)
+        try:
+            expr.refs_valid()  # force checking for existence of vars referenced in expression
+        except (AttributeError, RuntimeError), err:
+            self.raise_exception("invalid value '%s' for input ref variable '%s': %s" % 
+                                 (str(expr),name,err), TraitError)
+            
     def evaluate(self,genome):
         self.decoder(genome)
         self.run_iteration()

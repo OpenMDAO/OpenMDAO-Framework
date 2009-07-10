@@ -7,6 +7,10 @@ from enthought.traits.trait_handlers import NoDefaultSpecified
 
 from openmdao.main.api import ExprEvaluator
 
+class DumbDefault(object):
+    def __getattr__(self, name):
+        raise TraitError('StringRef: string reference is undefined')
+            
 class StringRef(BaseStr):
     """A trait that references, via a pathname, another trait in the
     framework. If it has iostatus of 'out', then the string may only be the pathname of
@@ -17,9 +21,10 @@ class StringRef(BaseStr):
     
     def __init__(self, default_value=NoDefaultSpecified, **metadata):
         if default_value is NoDefaultSpecified:
-            default_value = ExprEvaluator('0')
+            default_value = DumbDefault()
+#            default_value = ExprEvaluator('0')
         super(StringRef, self).__init__(default_value, **metadata)
-        self.iostatus = metadata.get('iostatus', 'in')
+        #self.iostatus = metadata.get('iostatus', 'in')
 
     def validate(self, object, name, value):
         s = super(StringRef, self).validate(object, name, value) # normal string validation
