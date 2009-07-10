@@ -158,6 +158,9 @@ class NPSSTestCase(unittest.TestCase):
                 "NPSS: Can't save to 'NPSS/NPSS.yaml': data type not understood")
         else:
             self.fail('Expected TypeError')
+        finally:
+            if os.path.exists('NPSS.yaml'):
+                os.remove('NPSS.yaml')
 
 
 if __name__ == '__main__':
