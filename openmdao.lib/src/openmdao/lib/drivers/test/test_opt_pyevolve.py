@@ -11,6 +11,8 @@ from openmdao.main import Assembly, Component, Float, ArrayVariable
 from openmdao.main.variable import INPUT, OUTPUT
 from openmdao.lib.drivers import pyevolvedriver
 
+import openmdao.util.testutil
+
 # pylint: disable-msg=E1101
 
 
@@ -86,44 +88,42 @@ class pyevolvedriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(x0, 0.0063, places=4)
         self.assertAlmostEqual(x1, .3897, places=4)
         
-# check_save_load reuires correct pythonV.R
-#    def test_save_load(self):
-#        logging.debug('')
-#        logging.debug('test_save_load')
-#
-#        # Using config from test_optimize_sphere.
-#        self.top.driver.objective.value = "comp.total" 
-#        #configure the genome
-#        #TODO: genome should be plugged into a socket
-#        self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
-#        self.top.driver.genome.setParams(rangemin=-5.12, rangemax=5.13)
-#        self.top.driver.genome.initializator.set(
-#            pyevolvedriver.Initializators.G1DListInitializatorReal)
-#        self.top.driver.genome.mutator.set(
-#            pyevolvedriver.Mutators.G1DListMutatorRealGaussian)
-#        
-#        #configure the GAengine 
-#        self.top.driver.decoder = self.decoder  
-#        self.top.driver.freq_stats = 0
-#        self.top.driver.seed = 123
-#        
-#        self.top.driver.mutation_rate = .02
-#        self.top.driver.generations = 1
-#        self.top.driver.mini_max = pyevolvedriver.Consts.minimaxType["minimize"]
-#        
-#        #self.top.driver.DBAdapter = None #TODO: Implement this
-#        self.top.driver.selector = None
-#        #this is a default, just for testing
-#        self.top.driver.selector = [pyevolvedriver.Consts.CDefGASelector]
-#        self.top.driver.stepCallback = None
-#        self.top.driver.terminationCriteria = None
-#        
-#        if sys.platform != 'win32':
-#            # Set local dir in case we're running in a different directory.
-#            py_dir = pkg_resources.resource_filename('openmdao.lib.drivers',
-#                                                     'test')
-#            retcode = self.top.check_save_load(py_dir=py_dir)
-#            self.assertEqual(retcode, 0)
+    def test_save_load(self):
+        logging.debug('')
+        logging.debug('test_save_load')
+
+        # Using config from test_optimize_sphere.
+        self.top.driver.objective.value = "comp.total" 
+        #configure the genome
+        #TODO: genome should be plugged into a socket
+        self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
+        self.top.driver.genome.setParams(rangemin=-5.12, rangemax=5.13)
+        self.top.driver.genome.initializator.set(
+            pyevolvedriver.Initializators.G1DListInitializatorReal)
+        self.top.driver.genome.mutator.set(
+            pyevolvedriver.Mutators.G1DListMutatorRealGaussian)
+        
+        #configure the GAengine 
+        self.top.driver.decoder = self.decoder  
+        self.top.driver.freq_stats = 0
+        self.top.driver.seed = 123
+        
+        self.top.driver.mutation_rate = .02
+        self.top.driver.generations = 1
+        self.top.driver.mini_max = pyevolvedriver.Consts.minimaxType["minimize"]
+        
+        #self.top.driver.DBAdapter = None #TODO: Implement this
+        self.top.driver.selector = None
+        #this is a default, just for testing
+        self.top.driver.selector = [pyevolvedriver.Consts.CDefGASelector]
+        self.top.driver.stepCallback = None
+        self.top.driver.terminationCriteria = None
+        
+        # Set local dir in case we're running in a different directory.
+        py_dir = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
+        python = openmdao.util.testutil.find_python('openmdao.lib')
+        retcode = self.top.check_save_load(py_dir=py_dir, python=python)
+        self.assertEqual(retcode, 0)
 
     def test_hypersphere_crossover_real(self):
         self.top.driver.objective.value = "comp.total" 
