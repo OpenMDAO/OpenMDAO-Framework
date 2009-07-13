@@ -112,16 +112,15 @@ class SimVehicle(Assembly):
                 self.vehicle.run()
             except TraitError:
                 if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
-                    self.vehicle.set('current_gear', 
-                                     self.vehicle.current_gear + 1)
+                    self.vehicle.current_gear += 1
                 else:
                     raise
                 try:
                     self.vehicle.run()
                 except TraitError:
                     if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
-                        self.raise_exception("Gearing problem in Acceleration \
-                        test.", RuntimeError)
+                        self.raise_exception("Gearing problem in Acceleration test.", 
+                                             RuntimeError)
                     else:
                         raise
 
@@ -132,7 +131,7 @@ class SimVehicle(Assembly):
                 self.raise_exception("Vehicle could not reach maximum speed "+\
                                      "in Acceleration test.", RuntimeError)
                 
-            velocity += acceleration*self.timestep
+            velocity += (acceleration*self.timestep)
             self.vehicle.velocity = velocity
         
             time += self.timestep
@@ -147,8 +146,8 @@ class SimVehicle(Assembly):
         
         profilenames = [ "EPA-city.csv", "EPA-highway.csv" ]
         
-        self.vehicle.set('current_gear', 1)
-        self.vehicle.set('velocity', 0.0)
+        self.vehicle.current_gear = 1
+        self.vehicle.velocity = 0.0
         
         fuel_economy = []
         
@@ -196,7 +195,7 @@ class SimVehicle(Assembly):
                 velocity2 = float(row[1])
                 CONVERGED = 0
                 
-                self.vehicle.set('velocity', velocity1)
+                self.vehicle.velocity = velocity1
                 command_accel = (velocity2-velocity1)/(time2-time1)
                 
                 #------------------------------------------------------------
@@ -212,7 +211,7 @@ class SimVehicle(Assembly):
                     
                 # Find out min and max accel in current gear.
                 
-                self.vehicle.set('throttle', THROTTLE_MIN)
+                self.vehicle.throttle = THROTTLE_MIN
                 findgear()                    
                 accel_min = self.vehicle.acceleration*2.23693629
                 
@@ -225,12 +224,11 @@ class SimVehicle(Assembly):
                    self.vehicle.current_gear < 5 and \
                    velocity1 > SHIFTPOINT1:
                     
-                    self.vehicle.set('current_gear', 
-                                     self.vehicle.current_gear + 1)
+                    self.vehicle.current_gear += 1
                     findgear()
                     accel_min = self.vehicle.acceleration*2.23693629
                 
-                self.vehicle.set('throttle', THROTTLE_MAX)
+                self.vehicle.throttle = THROTTLE_MAX
                 self.vehicle.run()
                 accel_max = self.vehicle.acceleration*2.23693629
                 
@@ -238,8 +236,7 @@ class SimVehicle(Assembly):
                 while command_accel > accel_max and \
                       self.vehicle.current_gear> 1:
                     
-                    self.vehicle.set('current_gear', 
-                                     self.vehicle.current_gear - 1)
+                    self.vehicle.current_gear -= 1
                     findgear()
                     accel_max = self.vehicle.acceleration*2.23693629
                 
@@ -256,10 +253,10 @@ class SimVehicle(Assembly):
 
                 # Deceleration at closed throttle
                 if command_accel < accel_min:
-                    self.vehicle.set('throttle', THROTTLE_MIN)
+                    self.vehicle.throttle = THROTTLE_MIN
                     self.vehicle.run()                   
                 else:
-                    self.vehicle.set('throttle', THROTTLE_MIN)
+                    self.vehicle.throttle = THROTTLE_MIN
                     self.vehicle.run()
                     
                     min_acc = self.vehicle.acceleration*2.23693629
@@ -271,7 +268,7 @@ class SimVehicle(Assembly):
                     # Numerical solution to find throttle that matches accel
                     while not CONVERGED:
                     
-                        self.vehicle.set('throttle', new_throttle)
+                        self.vehicle.throttle = new_throttle
                         self.vehicle.run()
                         new_acc = self.vehicle.acceleration*2.23693629
                         

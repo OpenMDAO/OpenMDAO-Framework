@@ -266,7 +266,7 @@ class GolinskiTestCase(unittest.TestCase):
             self.top.driver.objective = 'comp.missing'
         except TraitError, err:
             self.assertEqual(str(err), 
-                    "invalid input ref variable value 'comp.missing'")
+                "top.driver: invalid value 'comp.missing' for input ref variable 'objective': top.comp: cannot set valid flag of 'missing' because it's not an io trait.")
         else:
             self.fail('TraitError expected')
 
@@ -316,8 +316,8 @@ class GolinskiTestCase(unittest.TestCase):
         try:
             self.top.driver.design_vars = ['comp_bogus.x[0]','comp.x[1]']
         except TraitError, err:
-            self.assertEqual(str(err),
-                "invalid output ref variable value 'comp_bogus.x[0]'")
+            self.assertEqual(str(err), 
+                "top.driver: invalid value 'comp_bogus.x[0]' for input ref variable 'design_vars[0]': 'Assembly' object has no attribute 'comp_bogus'")
         else:
             self.fail('TraitError expected')
     
@@ -326,7 +326,7 @@ class GolinskiTestCase(unittest.TestCase):
             self.top.driver.constraints = ['bogus.flimflam']
         except TraitError, err:
             self.assertEqual(str(err), 
-                "invalid input ref variable value 'bogus.flimflam'")
+                "top.driver: invalid value 'bogus.flimflam' for input ref variable 'constraints[0]': 'Assembly' object has no attribute 'bogus'")
         else:
             self.fail('TraitError expected')
             

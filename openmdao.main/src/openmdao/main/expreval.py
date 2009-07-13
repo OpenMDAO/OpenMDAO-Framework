@@ -100,12 +100,12 @@ def _trans_fancyname(strng, loc, tok, exprobj):
                                  not scope.parent.contains(tok[0])):
             raise RuntimeError("cannot find variable '"+tok[0]+"'")
     
-        exprobj.var_names.add(tok[0])
         
     if len(tok) == 1 or (len(tok) > 1 and tok[1].startswith('[')):
         full = scname + ".get('" + tok[0] + "'"
         if len(tok) > 1:
             full += ","+tok[1]
+        exprobj.var_names.add(tok[0])
     else:
         full = scname + ".invoke('" + tok[0] + "'"
         if len(tok[1]) > 2:

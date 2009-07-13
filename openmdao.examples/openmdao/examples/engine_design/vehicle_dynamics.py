@@ -34,29 +34,29 @@ class VehicleDynamics(Component):
     acceleration = UnitsFloat(0., iostatus='out', units='m/(s*s)', 
                               desc='Calculated vehicle acceleration ')    
         
-    def __init__(self, name, parent=None, doc=None, directory=''):
-        ''' Creates a new VehicleDynamics object
+    #def __init__(self, name, parent=None, doc=None, directory=''):
+        #''' Creates a new VehicleDynamics object
         
-            # Design parameters
-            mass_vehicle        # Vehicle Mass (kg)
-            Cf                  # Friction coef (proportional to V)
-            Cd                  # Drag coef (proportional to V**2)
-            area                # Frontal area (for drag calc) (sq m)
+            ## Design parameters
+            #mass_vehicle        # Vehicle Mass (kg)
+            #Cf                  # Friction coef (proportional to V)
+            #Cd                  # Drag coef (proportional to V**2)
+            #area                # Frontal area (for drag calc) (sq m)
             
-            # Simulation inputs
-            mass_engine         # Engine Mass (kg)
-            velocity            # Vehicle velocity (m/s)
-            engine_torque       # Engine Torque (Nm)
-            torque_ratio        # Torque ratio due to Transmission
-            tire_circ           # Circumference of tire (m)
+            ## Simulation inputs
+            #mass_engine         # Engine Mass (kg)
+            #velocity            # Vehicle velocity (m/s)
+            #engine_torque       # Engine Torque (Nm)
+            #torque_ratio        # Torque ratio due to Transmission
+            #tire_circ           # Circumference of tire (m)
             
-            # Outputs
-            acceleration        # Calculated vehicle acceleration (m/s^2)
+            ## Outputs
+            #acceleration        # Calculated vehicle acceleration (m/s^2)
             
-            '''
+            #'''
         
-        super(VehicleDynamics, self).__init__(name, parent, doc, 
-                                               directory)        
+        #super(VehicleDynamics, self).__init__(name, parent, doc, 
+                                               #directory)        
         
         
     def execute(self):

@@ -55,7 +55,7 @@ from openmdao.main.interfaces import IContainer
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.main.constants import SAVE_YAML, SAVE_LIBYAML
 from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
-from openmdao.main.unitsfloat import convert_units
+from openmdao.main.unitsfloat import convert_units, UnitsFloat
 
 # FIXME - shouldn't have a hard wired URL in the code
 EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
@@ -94,26 +94,26 @@ class IMHolder(object):
             return getattr(self.im_class, self.name)
 
 
-class ContainerProperty(TraitType):
-    """A trait that allows attributes in child Containers to be referenced
-    using an alias in a parent scope.
-    """
-    def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
-        if not metadata.get('ref_name'):
-            raise TraitError("ContainerProperty constructor requires a 'ref_name' argument.")
-        super(ContainerProperty, self).__init__(default_value, **metadata)
+#class ContainerProperty(TraitType):
+    #"""A trait that allows attributes in child Containers to be referenced
+    #using an alias in a parent scope.
+    #"""
+    #def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
+        #if not metadata.get('ref_name'):
+            #raise TraitError("ContainerProperty constructor requires a 'ref_name' argument.")
+        #super(ContainerProperty, self).__init__(default_value, **metadata)
 
-    def get(self, object, name):
-        return object.get(self.ref_name)
+    #def get(self, object, name):
+        #return object.get(self.ref_name)
 
-    def set(self, object, name, value):
-        if self.iostatus == 'out':
-            raise TraitError('%s is an output trait and cannot be set' % name)
+    #def set(self, object, name, value):
+        #if self.iostatus == 'out':
+            #raise TraitError('%s is an output trait and cannot be set' % name)
         
-        if self.trait is not None:
-            self.trait.validate(object, name, value)
+        #if self.trait is not None:
+            #self.trait.validate(object, name, value)
             
-        object.set(self.ref_name, value)        
+        #object.set(self.ref_name, value)        
 
         
 class ContainerName(BaseStr):
@@ -135,6 +135,7 @@ class ContainerName(BaseStr):
             raise TraitError("name '%s' contains illegal characters" % s)
         return s            
     
+
 class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
@@ -167,21 +168,6 @@ class Container(HasTraits):
            isinstance(parent, Container) and add_to_parent:
             parent.add_child(self)
             
-    #def _get_parent(self):
-        #if self._parent is None:
-            #return None
-        #else:
-            #return self._parent() # need parens since self.parent is a weakref
-
-    #def _set_parent(self, parent):
-        #if parent is None:
-            #self._parent = None
-        #else:
-            #self._parent = weakref.ref(parent)
-
-    #parent = property(_get_parent, _set_parent)
-    
-
     #
     #  HasTraits overrides
     #
@@ -366,11 +352,10 @@ class Container(HasTraits):
         the normal traits() function.
         """
         traits = self.__base_traits__.copy()
-        baseset = set(traits)
-        instset = set(self.__dict__)
-        instset = set(self._instance_traits()).union(instset)
+        instset = set(self.__dict__).union(self._instance_traits())
         
-        for name in instset-baseset:
+        # base traits are already included, so exclude them from loop
+        for name in instset.difference(traits):  
             trait = self.trait( name )
             if trait is not None:
                 traits[ name ] = trait
@@ -596,9 +581,10 @@ class Container(HasTraits):
                     if srcmeta is None or len(srcmeta) == 0:
                         setattr(self, path, value)
                     else:
-                        val = self.trait(path).validate_with_metadata(self, 
-                                                                      path, value,
-                                                                      srcmeta)
+                        val = getattr(self.trait(path).trait_type,
+                                      'validate_with_metadata')(self, 
+                                                                path, value,
+                                                                srcmeta)
                         self.__dict__[path] = val # avoid repeat validation
                 finally:
                     self._trait_change_notify(True)
@@ -734,19 +720,19 @@ class Container(HasTraits):
                            obj.__module__, obj.__name__)
                 errors += 1
             # Hopefully all instancemethods are handled by HierarchyMember.
-#            elif obj.__class__.__name__ == 'instancemethod':
-#                self.error("Can't save, can't pickle instancemethod %s.%s.%s",
-#                           obj.im_class.__module__,
-#                           obj.im_class.__name__,
-#                           obj.__name__)
-#                errors += 1
-#            else: # (Debug) actually try to pickle.
-#                try:
-#                    cPickle.dumps(obj)
-#                except Exception, exc:
-#                    self.error("Can't pickle obj %r %s",
-#                               obj, obj.__class__.__name__)
-#                errors += 1
+            elif obj.__class__.__name__ == 'instancemethod':
+                self.error("Can't save, can't pickle instancemethod %s.%s.%s",
+                           obj.im_class.__module__,
+                           obj.im_class.__name__,
+                           obj.__name__)
+                errors += 1
+            #else: # (Debug) actually try to pickle.
+                #try:
+                    #cPickle.dumps(obj)
+                #except Exception, exc:
+                    #self.error("Can't pickle obj %r %s",
+                               #obj, obj.__class__.__name__)
+                #errors += 1
         if errors:
             self.raise_exception("Can't save, %d objects cannot be pickled."
                                  % errors, RuntimeError)
@@ -864,30 +850,35 @@ eggs =
     def _get_objects(self):
         """Get objects to be saved."""
 
-        def _recurse_get_objects(obj, objs, visited):
+        def _recurse_get_objects(parent_obj, objs, visited):
             """Use __getstate__(), or scan __dict__, or scan container."""
             try:
-                state = obj.__getstate__()
+                state = parent_obj.__getstate__()
             except AttributeError:
                 try:
-                    state = obj.__dict__
+                    state = parent_obj.__dict__
                 except AttributeError:
-                    if isinstance(obj, dict) or \
-                       isinstance(obj, list) or \
-                       isinstance(obj, set)  or \
-                       isinstance(obj, tuple):
-                        state = obj
+                    if isinstance(parent_obj, dict) or \
+                       isinstance(parent_obj, list) or \
+                       isinstance(parent_obj, set)  or \
+                       isinstance(parent_obj, tuple):
+                        state = parent_obj
                     else:
                         return  # Some non-container primitive.
             except Exception, exc:
                 self.error("During save_to_egg, _get_objects error %s: %s",
-                           type(obj), exc)
+                           type(parent_obj), exc)
                 return
 
             if isinstance(state, dict):
                 state = state.values()
 
             for obj in state:
+                if obj.__class__.__name__ == 'instancemethod':
+                    self.error("Can't save, can't pickle instancemethod %s.%s.%s",
+                               obj.im_class.__module__,
+                               obj.im_class.__name__,
+                               obj.__name__)
                 if id(obj) in visited:
                     continue
                 visited.add(id(obj))
@@ -1473,20 +1464,6 @@ setuptools.setup(
         """Perform any required operations before the model is deleted."""
         [x.pre_delete() for x in self.values() 
                                           if isinstance(x,Container)]
-
-    #def _get_all_items(self, visited, recurse=False):
-        #"""Generate a list of tuples of the form (rel_pathname, obj) for each
-        #child of this Container.  If recurse is True, also iterate through all
-        #child Containers of each Container found.
-        #"""
-        #for name, obj in self.__dict__.items():
-            #if not name.startswith('_') and id(obj) not in visited:
-                #visited.add(id(obj))
-                #yield (name, obj)
-                #if recurse and isinstance(obj, Container):
-                    #for chname, child in obj._get_all_items(visited, recurse):
-                        #yield ('.'.join([name, chname]), child)
-                   
 
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output variables.

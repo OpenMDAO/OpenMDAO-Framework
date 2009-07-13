@@ -50,7 +50,8 @@ class FloatTestCase(unittest.TestCase):
         self.hobj.float2 = 1200.  # inches
         try:
             self.hobj.set('float1', self.hobj.float2, 
-                          srcmeta=self.hobj.trait('float2').validation_metadata())
+                          srcmeta=getattr(self.hobj.trait('float2').trait_type,
+                                          'validation_metadata')())
             #float1 = self.hobj.unit_convert('float2', 'ft')
         except TraitError, err:
             self.assertEqual(str(err), 
@@ -108,14 +109,13 @@ class FloatTestCase(unittest.TestCase):
             self.fail('TraitError exception')
 
     def test_bad_connection(self):
-        srcmeta = self.hobj.trait('float2').validation_metadata()
-        self.hobj.trait('float1').validate_with_metadata(self.hobj, 'float1', 
-                                                         self.hobj.float2,
-                                                         srcmeta)
+        srcmeta = getattr(self.hobj.trait('float2').trait_type,
+                          'validation_metadata')()
+        getattr(self.hobj.trait('float1').trait_type,'validate_with_metadata')(
+                                         self.hobj, 'float1', self.hobj.float2, srcmeta)
         try:
-            self.hobj.trait('float3').validate_with_metadata(self.hobj, 'float3', 
-                                                          self.hobj.float2,
-                                                          srcmeta)
+            getattr(self.hobj.trait('float3').trait_type,'validate_with_metadata')(
+                self.hobj, 'float3', self.hobj.float2, srcmeta)
         except Exception, err:
             self.assertEqual(str(err), 
                 "float3: units 'inch' are incompatible with assigning units of 'kg'")

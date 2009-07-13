@@ -20,6 +20,7 @@ except:
     
 class IVehicle(Interface):
     """Vehicle Model interface"""
+    pass
     
 class Vehicle(Assembly):
     """ Vehicle assembly. """
@@ -131,12 +132,12 @@ class Vehicle(Assembly):
 if __name__ == "__main__": 
     top = Assembly('top')
     z = Vehicle("Testing", parent=top)        
-    z.set('current_gear', 1)
-    z.set('velocity', 20.0*(26.8224/60.0))
+    z.current_gear = 1
+    z.velocity = 20.0*(26.8224/60.0)
     #z.throttle = .2
 #    for throttle in xrange(1,101,1):
-#        z.set('throttle', throttle/100.0)
-    z.set('throttle', 1.0)
+#        z.throttle = throttle/100.0
+    z.throttle = 1.0
     z.run()
     print z.acceleration
     

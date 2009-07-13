@@ -21,10 +21,10 @@ class VehicleTestCase(unittest.TestCase):
         
     def test_runvehicle(self):
         
-        self.model.set('test_vehicle.current_gear', 3)
-        self.model.set('test_vehicle.velocity', 60.0)
-        self.model.set('test_vehicle.throttle', .2)
-        self.model.set('test_vehicle.Cf', .01)
+        self.model.test_vehicle.current_gear = 3
+        self.model.test_vehicle.velocity = 60.0
+        self.model.test_vehicle.throttle = .2
+        self.model.test_vehicle.Cf = .01
         self.model.run()
         
         self.assertAlmostEqual(self.model.test_vehicle.acceleration, 

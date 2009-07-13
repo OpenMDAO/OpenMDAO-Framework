@@ -10,7 +10,10 @@ import copy
 import inspect
 
 from enthought.traits.api import implements, Str, List, Instance, TraitError
-from enthought.traits.api import TraitType, Undefined
+from enthought.traits.api import TraitType, Undefined, CTrait
+from enthought.traits.trait_handlers import NoDefaultSpecified
+from enthought.traits.has_traits import _check_trait
+
 import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
 
@@ -31,11 +34,11 @@ class MulticastTrait(TraitType):
     
     def init(self):
         self.names = self._metadata.get('names',[])
-        self.trait = self._metadata.get('trait',None)            
+        self.val_trait = self._metadata.get('val_trait',None)            
 
     def validate(self, object, name, value):
-        if self.trait:
-            val = self.trait.validate(object, name, value)
+        if self.val_trait:
+            val = self.val_trait.validate(object, name, value)
         else:
             msg = ("No validating trait has been specified when creating "+
                   "Multicast trait '%s'" % name)
@@ -45,7 +48,41 @@ class MulticastTrait(TraitType):
     def post_setattr(self, object, name, value):
         if value is not Undefined:
             for vname in self.names:
-                object.set(vname, value, srcname=name)
+                #object.set(vname, value, srcname=name)
+                try:
+                    srcvm = getattr(self.val_trait.trait_type,
+                                    'validation_metadata')
+                    if srcvm is not None:
+                        object.set(vname, value, srcname=name, 
+                                   srcmeta=srcvm())
+                    else:
+                        object.set(vname, value, srcname=name)
+                except Exception, exc:
+                    msg = "cannot set '%s' from '%s': %s" % \
+                        (vname, name, exc)
+                    object.raise_exception(msg, type(exc))
+                
+    #def __getstate__(self):
+        #"""Return dict representing this container's state."""
+        #state = self.__dict__.copy()
+        #if isinstance(self.val_trait, CTrait):
+            #obj = state['val_trait'].trait_type
+            #state['val_trait'] = obj.__getstate__()
+            #state['_metadata']['val_trait'] = state['val_trait']
+            #state['val_trait_klass'] = obj.__class__
+            #state['val_trait_bases'] = obj.__class__.__bases__
+        #return state
+    
+    #def __setstate__(self, state):
+        #"""Restore this component's state."""
+        #self.__dict__.update(state)
+        #tmp = type(state['val_trait_klass'],
+                   #state['val_trait_bases'])
+        #tmp.__setstate__(state['val_trait'])
+        #self.val_trait = _check_trait(tmp)
+        #del self.__dict__['val_trait_klass']
+        #del self.__dict__['val_trait_bases']
+                
         
 class Assembly (Component):
     """This is a container of Components. It understands how
@@ -201,7 +238,7 @@ class Assembly (Component):
         # create the passthru connection 
         if iostatus == 'in':
             self.add_trait(name, MulticastTrait(default_value=comptrait.default,
-                                                trait=comptrait,
+                                                val_trait=comptrait,
                                                 names=[traitname],
                                                 iostatus=iostatus))
             setattr(self, name, getattr(comp, vname))
@@ -467,10 +504,11 @@ class Assembly (Component):
                         comp.push_dir(comp.get_directory())
             else:
                 try:
-                    if srctrait.validation_metadata is not None:
+                    srcvm = getattr(srctrait.trait_type,
+                                    'validation_metadata')
+                    if srcvm is not None:
                         destcomp.set(destvarname, getattr(srccomp, srcvarname),
-                                     srcname=srcname, 
-                                     srcmeta=srctrait.validation_metadata())
+                                     srcname=srcname, srcmeta=srcvm())
                     else:
                         destcomp.set(destvarname, getattr(srccomp, srcvarname), 
                                      srcname=srcname)

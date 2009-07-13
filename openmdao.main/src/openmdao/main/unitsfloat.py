@@ -4,7 +4,7 @@ __all__ = ["UnitsFloat", "unit_convert"]
 
 __version__ = "0.1"
 
-from enthought.traits.api import BaseFloat, Range, TraitError
+from enthought.traits.api import TraitType, Float, Range, TraitError
 
 from Scientific.Physics.PhysicalQuantities import PhysicalQuantity
 
@@ -17,7 +17,7 @@ def convert_units(value, units, convunits):
     pq.convertToUnit(convunits)
     return pq.value
     
-class UnitsFloat(BaseFloat):
+class UnitsFloat(TraitType):
     """A Variable wrapper for floats with units and an allowed range of
     values.
     """
@@ -30,7 +30,7 @@ class UnitsFloat(BaseFloat):
         self.high = None
         self.low = None
         if low is None and high is None:
-            self._validator = None
+            self._validator = Float(default_value, **metadata)
         else:
             if low is None:
                 low = -1.e99
@@ -55,17 +55,12 @@ class UnitsFloat(BaseFloat):
             except:
                 raise TraitError("Units of '%s' are invalid" %
                                  metadata['units'])
-        metadata['validate_with_metadata'] = self._validate_with_metadata
-        metadata['validation_metadata'] = self._validation_metadata
         super(UnitsFloat, self).__init__(default_value=default_value,
                                          **metadata)
 
     def validate(self, object, name, value):
         try:
-            if self._validator:
-                return self._validator.validate(object, name, value)
-            else:
-                return super(UnitsFloat, self).validate(object, name, value)
+            return self._validator.validate(object, name, value)
         except TraitError:
             self.error(object, name, value)
 
@@ -89,15 +84,15 @@ class UnitsFloat(BaseFloat):
         object.raise_exception("Trait '%s' must be %s but attempted value is %s" %
                                (name, info, value), TraitError)
         
-    def _validation_metadata(self):
+    def validation_metadata(self):
         """Returns a dict containing names and values of any metadata 
         deemed necessary for validation by a destination trait. For
         example, UnitFloat includes 'units' in its metadata so that
         unit conversions can be performed at the destination.
         """
         return { 'units': self.units }
-
-    def _validate_with_metadata(self, object, name, value, srcmeta):
+    
+    def validate_with_metadata(self, object, name, value, srcmeta):
         """Perform validation and unit conversion using metadata from
         the source trait.
         """
@@ -109,7 +104,7 @@ class UnitsFloat(BaseFloat):
         except NameError:
             raise TraitError("while setting value of %s: undefined unit '%s'" % 
                              srcmeta['units'])
-
+    
         try:
             pq.convertToUnit(object.trait(name).units)
         except NameError:
@@ -123,4 +118,3 @@ class UnitsFloat(BaseFloat):
         #object.debug('%s (%s) converted to %s (%s)' % 
         #             (value,trait.units,pq.value,object.trait(name).units))
         return self.validate(object, name, pq.value)
-        

@@ -148,10 +148,10 @@ class pyevolvedriver(Driver):
                                  TypeError)
         try: # won't work if decoder is None
             self.decoder(self.genome)
-        except TypeError:
+        except TypeError, err:
             self.raise_exception(
-                "decoder specified as does not have the right signature. Must take only 1 argument",
-                TypeError)
+                "decoder as specified does not have the right signature. Must take only 1 argument: %s"%
+                err, TypeError)
 
     def execute(self):
         """ Perform the optimization"""

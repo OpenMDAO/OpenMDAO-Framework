@@ -219,7 +219,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         try:
             self.top.driver.run()
         except TypeError, err:
-            self.assertEqual(str(err), "top.driver: decoder specified as does not have the right signature. Must take only 1 argument")
+            self.assertEqual(str(err), "top.driver: decoder as specified does not have the right signature. Must take only 1 argument")
         else: 
             self.fail("TypeError expected")
 
