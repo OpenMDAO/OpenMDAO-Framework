@@ -1,10 +1,10 @@
 """
 Save/load utilities.
 
-Note that Pickle format can't save references to functions that aren't defined
-at the top level of a module, and there doesn't appear to be a viable
-workaround.  Normally pickle won't handle instance methods either, but there is
-code in place to work around that.
+Note that Pickle can't save references to functions that aren't defined at the
+top level of a module, and there doesn't appear to be a viable workaround.
+Normally pickle won't handle instance methods either, but there is code in
+place to work around that.
 
 When saving to an egg, the module named __main__ changes when reloading. This
 requires finding the real module name and munging references to __main__.
@@ -112,11 +112,15 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                 use_setuptools=False):
     """
     Save state and other files to an egg.
+    Analyzes the objects saved for distribution dependencies.
+    Modules not found in any distribution are recorded in a '`name`.missing' file.
+    Also creates and saves loader scripts for each entry point.
 
     - `root` is the root of the object graph to be saved.
     - `name` is the name of the package.
-    - `version` defaults to a timestamp.
-    - `py_dir` defaults to the current directory.
+    - `version` defaults to a timestamp of the form 'YYYY.MM.DD.HH.mm'.
+    - `py_dir` is the (root) directory for local Python files. \
+      It defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
     - 'entry_pts' is a list of (obj, obj_name) tuples for additional entries.
     - `dst_dir` is the directory to write the egg in.
@@ -857,7 +861,7 @@ def load_from_eggfile(filename, entry_group, entry_name, install=True,
     """
     Extract files in egg to a subdirectory matching the saved object name,
     optionally install distributions the egg depends on, and then load object
-    graph state.  Returns the top object.
+    graph state by invoking the given entry point.  Returns the root object.
     """
     if logger is None:
         logger = NullLogger()
@@ -868,18 +872,19 @@ def load_from_eggfile(filename, entry_group, entry_name, install=True,
 
     if not '.' in sys.path:
         sys.path.append('.')
-    if egg_dir:
-        orig_dir = os.getcwd()
-        os.chdir(egg_dir)
+    orig_dir = os.getcwd()
+    os.chdir(egg_dir)
     try:
         return _load_from_distribution(dist, entry_group, entry_name, logger)
     finally:
-        if egg_dir:
-            os.chdir(orig_dir)
+        os.chdir(orig_dir)
 
 
 def load_from_eggpkg(package, entry_group, entry_name, logger=None):
-    """ Load specified object graph state.  Returns the top object. """
+    """
+    Load object graph state by invoking the given package entry point.
+    Returns the root object.
+    """
     if logger is None:
         logger = NullLogger()
     logger.debug('Loading %s from %s in %s...',
@@ -1039,7 +1044,12 @@ def _check_requirements(dist, visited, logger, level=1):
 
 
 def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
-    """ Load object(s) from the input stream (or filename). """
+    """
+    Load object(s) from the input stream (or filename).
+    If `instream` is a string that is not an existing filename or
+    absolute path, then it is searched for using pkg_resources.
+    Returns the root object.
+    """
     if logger is None:
         logger = NullLogger()
 

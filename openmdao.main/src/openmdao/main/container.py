@@ -362,12 +362,18 @@ class Container(HierarchyMember):
                     dst_dir=None, format=SAVE_CPICKLE, proto=-1,
                     use_setuptools=False):
         """Save state and other files to an egg.
+        Analyzes the objects saved for distribution dependencies.
+        Modules not found in any distribution are recorded in a '`name`.missing'
+        file.  Also creates and saves loader scripts for each entry point.
 
         - `name` defaults to the name of the container.
-        - `version` defaults to the container's module __version__.
-        - `py_dir` defaults to the current directory.
+        - `version` defaults to the container's module __version__, or \
+          a timestamp if no __version__ exists.
+        - `py_dir` is the (root) directory for local Python files. \
+           It defaults to the current directory.
         - `src_dir` is the root of all (relative) `src_files`.
-        - 'entry_pts' is a list of (obj, obj_name) tuples for additional entries.
+        - 'entry_pts' is a list of (obj, obj_name) tuples for additional \
+          entries.
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
@@ -413,7 +419,9 @@ class Container(HierarchyMember):
     
     @staticmethod
     def load_from_eggfile(filename, install=True):
-        """Load state and other files from an egg, returns top object."""
+        """Extract files in egg to a subdirectory matching the saved object
+        name, optionally install distributions the egg depends on, and then
+        load object graph state.  Returns the root object."""
         # Load from file gets everything.
         entry_group = 'openmdao.top'
         entry_name = 'top'
@@ -422,7 +430,8 @@ class Container(HierarchyMember):
                                                          logger)
     @staticmethod
     def load_from_eggpkg(package, entry_name=None):
-        """Load state and other files from an egg, returns selected object."""
+        """Load object graph state by invoking the given package entry point.
+        Returns the root object."""
         entry_group = 'openmdao.components'
         if not entry_name:
             entry_name = package  # Default component is top.
