@@ -23,7 +23,7 @@ from openmdao.main.filevar import FileTrait
 
 from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 
-from openmdao.main.unitsfloat import UnitsFloat
+from openmdao.main.unitsfloat import UnitsFloat, convert_units
 
 __all__ = ['Assembly',
            'Case',

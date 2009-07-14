@@ -27,7 +27,7 @@ class Engine(Component):
                         desc='Connecting Rod Length')
     comp_ratio = Float(9.3, iostatus='in', units=None, 
                        desc='Compression Ratio')
-    spark_angle = UnitsFloat(37.0, iostatus='in', units='deg', 
+    spark_angle = UnitsFloat(-37.0, iostatus='in', units='deg', 
                              desc = 'Spark Angle with respect to TDC (Top Dead Center)')
     n_cyl = Int(6, iostatus='in', desc = 'Number of Cylinders')
     IVO = UnitsFloat(11.0, iostatus='in', units='deg', 

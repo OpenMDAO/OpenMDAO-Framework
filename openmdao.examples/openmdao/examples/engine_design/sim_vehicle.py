@@ -11,7 +11,7 @@ from csv import reader
 from pkg_resources import resource_stream
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Assembly, UnitsFloat
+from openmdao.main.api import Assembly, UnitsFloat, convert_units
 from openmdao.main.exceptions import ConstraintError
 
 from openmdao.examples.engine_design.vehicle import Vehicle
@@ -80,7 +80,7 @@ class SimVehicle(Assembly):
         self.create_passthru('vehicle.ratio4')
         self.create_passthru('vehicle.ratio5')
         self.create_passthru('vehicle.final_drive_ratio')
-        self.create_passthru('vehicle.tire_circ')
+        self.create_passthru('vehicle.tire_circumference')
 
         # Promoted From Vehicle -> VehicleDynamics
         self.create_passthru('vehicle.mass_vehicle')
@@ -160,8 +160,8 @@ class SimVehicle(Assembly):
             # Note, shifts gear if RPM is too low or too high
             try:
                 self.vehicle.run()
-            except TraitError:
-                if self.vehicle.engine.RPM > self.vehicle.transmission.RPM:
+            except TraitError, err:
+                if self.vehicle.engine.RPM < self.vehicle.transmission.RPM:
                     
                     self.vehicle.current_gear += 1
                     
@@ -169,7 +169,7 @@ class SimVehicle(Assembly):
                         self.raise_exception("Transmission gearing cannot \
                         achieve maximum speed in EPA test.", RuntimeError)
                     
-                elif self.vehicle.engine.RPM < self.vehicle.transmission.RPM:
+                elif self.vehicle.engine.RPM > self.vehicle.transmission.RPM:
                     self.vehicle.current_gear -= 1
                     
                 else:
