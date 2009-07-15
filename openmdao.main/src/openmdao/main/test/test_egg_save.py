@@ -4,15 +4,20 @@ Test saving and loading of simulations as eggs.
 
 import cPickle
 import logging
-import os
+import os.path
+import pkg_resources
 import shutil
+import subprocess
+import sys
 import unittest
 
 from openmdao.main import Assembly, Component, Container, \
                           ArrayVariable, Int, FileVariable, StringList, Bool
-from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
+from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE, SAVE_LIBYAML
 from openmdao.main.socket import Socket
 from openmdao.main.variable import INPUT, OUTPUT
+
+import openmdao.util.testutil
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
@@ -21,10 +26,13 @@ __version__ = '1.2.3'  # Used in forming egg name.
 
 EXTERNAL_FILES = ('xyzzy', '../sub/data2', 'hello', '../sub/data4')
 
-source_init = False
-sink_init = False
+SOURCE_INIT = False
+SINK_INIT = False
 
 MODULE_NAME = __name__
+
+# Set local dir in case we're running in a different directory.
+PY_DIR = pkg_resources.resource_filename('openmdao.main', 'test')
 
 
 class Source(Assembly):
@@ -34,8 +42,8 @@ class Source(Assembly):
         super(Source, self).__init__(name, *args, **kwargs)
         self.directory = self.get_directory()  # Force absolute.
 
-        global source_init
-        source_init = True
+        global SOURCE_INIT
+        SOURCE_INIT = True
 
         Bool('write_files', self, INPUT, default=True)
         StringList('text_data', self, INPUT, default=[])
@@ -44,7 +52,7 @@ class Source(Assembly):
         Subcontainer('sub', parent=self)
         self.create_passthru('sub.binary_file')
 
-        # Some objects that must be restored.
+        # Some custom objects that must be restored.
         self.obj_list = [DataObj(i) for i in range(3)]
 
         # Absolute external file that exists at time of save.
@@ -125,8 +133,8 @@ class Sink(Component):
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
 
-        global sink_init
-        sink_init = True
+        global SINK_INIT
+        SINK_INIT = True
 
         StringList('text_data', self, OUTPUT, default=[])
         ArrayVariable('binary_data', self, OUTPUT, float, default=[])
@@ -163,17 +171,18 @@ class Sink(Component):
 class Oddball(Assembly):
     """ Just a component that needs a separate directory to be created. """
 
-    function_to_call = Socket(None, 'Just something to call.', False)
-    method_to_call = Socket(None, 'Just something to call.', False)
+    function_socket = Socket(None, 'Just something to call.', False)
+    method_socket = Socket(None, 'Just something to call.', False)
 
     def __init__(self, name='Oddball', *args, **kwargs):
         super(Oddball, self).__init__(name, *args, **kwargs)
         Int('executions', self, OUTPUT, default=0,
             doc='Counts instance_method() calls.')
         self.thing_to_call = self.instance_method
-        self.function_to_call = os.getpid
-        self.method_to_call = self.instance_method
+        self.function_socket = os.getpid
+        self.method_socket = self.instance_method
         self.peer_class = Source  # Check that class in __main__ is handled.
+        self.scratch_tuple = (1, 2)
 
     def execute(self):
         """ Call stuff. Empty sockets are clumsy. """
@@ -181,13 +190,12 @@ class Oddball(Assembly):
             self.debug('thing_to_call returned %s', self.thing_to_call())
 
         try:
-            self.debug('function_to_call returned %s', self.function_to_call())
+            self.debug('function_socket returned %s', self.function_socket())
         except RuntimeError, exc:
             if not str(exc).find('empty'):
                 raise exc
-
         try:
-            self.debug('method_to_call returned %s', self.method_to_call())
+            self.debug('method_socket returned %s', self.method_socket())
         except RuntimeError, exc:
             if not str(exc).find('empty'):
                 raise exc
@@ -219,7 +227,6 @@ class Model(Assembly):
         Sink(parent=self, directory='Sink')
 
         self.connect('Source.text_file', 'Sink.text_file')
-        #self.connect('Source.sub.binary_file', 'Sink.binary_file')
         self.connect('Source.binary_file', 'Sink.binary_file')
 
         self.connect('Oddball.executions', 'Sink.executions')
@@ -240,17 +247,17 @@ class EggTestCase(unittest.TestCase):
         """ Called after each test in this class. """
         self.model.pre_delete()
         self.model = None
-        if self.egg_name:
+        if self.egg_name and os.path.exists(self.egg_name):
             os.remove(self.egg_name)
         if os.path.exists('Egg'):
             shutil.rmtree('Egg')
 
-    def save_load(self, format):
-        global source_init, sink_init
+    def save_load(self, format, use_setuptools=False):
+        global SOURCE_INIT, SINK_INIT
 
         # Verify initial state.
-        self.assertEqual(source_init, True)
-        self.assertEqual(sink_init, True)
+        self.assertEqual(SOURCE_INIT, True)
+        self.assertEqual(SINK_INIT, True)
         self.assertNotEqual(self.model.Sink.text_data,
                             self.model.Source.text_data)
         self.assertNotEqual(self.model.Sink.binary_data,
@@ -268,7 +275,12 @@ class EggTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.executions, 0)
 
         # Save to egg.
-        self.egg_name = self.model.save_to_egg(format=format)
+        entry_pts=[(self.model.Source,  'Source'),
+                   (self.model.Sink,    'Sink'),
+                   (self.model.Oddball, 'Oddball')]
+        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR, format=format,
+                                               entry_pts=entry_pts,
+                                               use_setuptools=use_setuptools)
 
         # Run and verify correct operation.
         self.model.run()
@@ -290,19 +302,18 @@ class EggTestCase(unittest.TestCase):
         os.chdir(test_dir)
         try:
             # Clear flags to detect if loading calls __init__.
-            source_init = False
-            sink_init = False
+            SOURCE_INIT = False
+            SINK_INIT = False
 
             # Load from saved initial state in egg.
             self.model.pre_delete()
-            self.model = Component.load_from_egg(os.path.join('..',
-                                                              self.egg_name),
-                                                 install=False)
+            egg_path = os.path.join('..', self.egg_name)
+            self.model = Component.load_from_eggfile(egg_path, install=False)
             self.model.directory = os.path.join(os.getcwd(), self.model.name)
 
             # Verify initial state.
-            self.assertEqual(source_init, False)
-            self.assertEqual(sink_init, False)
+            self.assertEqual(SOURCE_INIT, False)
+            self.assertEqual(SINK_INIT, False)
             self.assertNotEqual(self.model.Sink.text_data,
                                 self.model.Source.text_data)
             self.assertNotEqual(self.model.Sink.binary_data,
@@ -334,10 +345,15 @@ class EggTestCase(unittest.TestCase):
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)
 
+    def test_save_load_cpickle(self):
+        logging.debug('')
+        logging.debug('test_save_load_cpickle')
+        self.save_load(SAVE_CPICKLE)
+
     def test_save_load_pickle(self):
         logging.debug('')
         logging.debug('test_save_load_pickle')
-        self.save_load(SAVE_CPICKLE)
+        self.save_load(SAVE_PICKLE)
 
 # Fails to load. It appears you can't have more than one level of
 # back-pointers when loading YAML. (A component works, but an assembly doesn't)
@@ -346,18 +362,33 @@ class EggTestCase(unittest.TestCase):
 #        logging.debug('test_save_load_yaml')
 #        self.save_load(SAVE_LIBYAML)
 
+    def test_save_with_setuptools(self):
+        logging.debug('')
+        logging.debug('test_save_with_setuptools')
+        self.save_load(SAVE_CPICKLE, use_setuptools=True)
+
     def test_save_bad_directory(self):
         logging.debug('')
         logging.debug('test_save_bad_directory')
-
         self.model.Oddball.directory = os.getcwd()
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
+
+    def test_save_bad_destination(self):
+        logging.debug('')
+        logging.debug('test_save_bad_destination')
+        try:
+            self.model.save_to_egg(py_dir=PY_DIR, dst_dir='/')
+        except IOError, exc:
+            msg = "Egg_TestModel: Can't save to '/', no write permission"
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected IOError')
 
     def test_save_bad_external(self):
         logging.debug('')
@@ -369,7 +400,7 @@ class EggTestCase(unittest.TestCase):
         metadata = self.model.Source.external_files[0]
         metadata['path'] = path
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source file"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -387,7 +418,7 @@ class EggTestCase(unittest.TestCase):
         out.close()
         self.model.Source.text_file = path
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -400,7 +431,7 @@ class EggTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_bad_format')
         try:
-            self.model.save_to_egg(format='unknown')
+            self.model.save_to_egg(py_dir=PY_DIR, format='unknown')
         except RuntimeError, exc:
             self.assertEqual(str(exc),
                              "Egg_TestModel: Unknown format 'unknown'.")
@@ -410,12 +441,12 @@ class EggTestCase(unittest.TestCase):
     def test_save_bad_function(self):
         logging.debug('')
         logging.debug('test_save_bad_function')
-        self.model.Oddball.function_to_call = main_function
+        self.model.Oddball.function_socket = main_function
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except RuntimeError, exc:
             msg = "Egg_TestModel: Can't save: reference to function defined in main module"
-            self.assertEqual(str(exc).startswith(msg), True)
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             if MODULE_NAME == '__main__':
                 self.fail('Expected RuntimeError')
@@ -423,21 +454,67 @@ class EggTestCase(unittest.TestCase):
     def test_save_bad_method(self):
         logging.debug('')
         logging.debug('test_save_bad_method')
-        self.model.Oddball.method_to_call = self.model.Oddball.static_method
+        self.model.Oddball.method_socket = self.model.Oddball.static_method
         try:
-            self.model.save_to_egg()
+            self.model.save_to_egg(py_dir=PY_DIR)
         except RuntimeError, exc:
             self.assertEqual(str(exc),
                 "Egg_TestModel: Can't save, 1 object cannot be pickled.")
         else:
             self.fail('Expected RuntimeError')
 
+    def test_save_bad_tuple(self):
+        logging.debug('')
+        logging.debug('test_save_bad_tuple')
+        self.model.Oddball.scratch_tuple = (self.model.Oddball.instance_method,)
+        try:
+            self.model.save_to_egg(py_dir=PY_DIR)
+        except RuntimeError, exc:
+            msg = 'Egg_TestModel: _fix_im_recurse: tuple'
+            self.assertEqual(str(exc)[:len(msg)], msg)
+        else:
+            self.fail('Expected RuntimeError')
+
+    def test_save_bad_pickle(self):
+        logging.debug('')
+        logging.debug('test_save_bad_pickle')
+
+        # Code objects don't pickle.
+        self.model.code = compile('3 + 4', '<string>', 'eval')
+
+        # Problem was deletion of existing buildout.cfg.
+        if os.path.exists('buildout.cfg'):
+            buildout_size = os.path.getsize('buildout.cfg')
+            remove_buildout = False
+        else:
+            out = open('buildout.cfg', 'w')
+            out.close
+            buildout_size = 0
+            remove_buildout = True
+
+        try:
+            try:
+                self.model.save_to_egg(py_dir=PY_DIR)
+            except cPickle.PicklingError, exc:
+                msg = "Egg_TestModel: Can't save to" \
+                      " 'Egg_TestModel/Egg_TestModel.pickle': Can't pickle" \
+                      " <type 'code'>: attribute lookup __builtin__.code failed"
+                self.assertEqual(str(exc), msg)
+            else:
+                self.fail('Expected cPickle.PicklingError')
+
+            self.assertTrue(os.path.exists('buildout.cfg'))
+            self.assertEqual(os.path.getsize('buildout.cfg'), buildout_size)
+        finally:
+            if remove_buildout:
+                os.remove('buildout.cfg')
+
     def test_save_load_container(self):
         logging.debug('')
         logging.debug('test_save_load_container')
 
         # Save to egg.
-        self.egg_name = self.model.Source.sub.save_to_egg()
+        self.egg_name = self.model.Source.sub.save_to_egg(py_dir=PY_DIR)
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -447,25 +524,165 @@ class EggTestCase(unittest.TestCase):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
-            sub = Container.load_from_egg(os.path.join('..', self.egg_name),
-                                          install=False)
+            egg_path = os.path.join('..', self.egg_name)
+            sub = Container.load_from_eggfile(egg_path, install=False)
             self.assertEqual(sub.binary_data, self.model.Source.sub.binary_data)
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)
 
+    def test_load_badfile(self):
+        logging.debug('')
+        logging.debug('test_load_badfile')
+        try:
+            Component.load_from_eggfile('.')
+        except ValueError, exc:
+            self.assertEqual(str(exc), "'.' is not an egg/zipfile.")
+        else:
+            self.fail('Expected ValueError')
+
     def test_load_nofile(self):
         logging.debug('')
         logging.debug('test_load_nofile')
-
         try:
-            Component.load_from_egg('no-such-egg')
+            Component.load_from_eggfile('no-such-egg')
         except ValueError, exc:
             self.assertEqual(str(exc), "'no-such-egg' not found.")
         else:
             self.fail('Expected ValueError')
 
+    def test_load_nopackage(self):
+        logging.debug('')
+        logging.debug('test_load_nopackage')
+        try:
+            Component.load_from_eggpkg('no-such-egg')
+        except pkg_resources.DistributionNotFound, exc:
+            self.assertEqual(str(exc), 'no-such-egg')
+        else:
+            self.fail('Expected pkg_resources.DistributionNotFound')
+
+    def test_check_save_load(self):
+        logging.debug('')
+        logging.debug('test_check_save_load')
+
+        python = openmdao.util.testutil.find_python('openmdao.main')
+        retcode = self.model.check_save_load(py_dir=PY_DIR, python=python)
+        self.assertEqual(retcode, 0)
+
+    def test_install_load(self):
+        logging.debug('')
+        logging.debug('test_install_load')
+
+        python = openmdao.util.testutil.find_python('openmdao.main')
+        logging.debug('    Using python: %s' % python)
+
+        # Write to egg.
+        entry_pts=[(self.model.Source,  'Source'),
+                   (self.model.Sink,    'Sink'),
+                   (self.model.Oddball, 'Oddball')]
+        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
+                                               entry_pts=entry_pts)
+
+        install_dir = os.path.join(os.getcwd(), 'install_dir')
+        if os.path.exists(install_dir):
+            shutil.rmtree(install_dir)
+        os.mkdir(install_dir)
+        try:
+            # Create special installer script.
+            installer = os.path.join(install_dir, 'installer.py')
+            out = open(installer, 'w')
+            out.write("""\
+# EASY-INSTALL-ENTRY-SCRIPT: 'setuptools>=0.6c8','console_scripts','easy_install'
+__requires__ = 'setuptools>=0.6c8'
+import sys
+from pkg_resources import load_entry_point
+
+sys.exit(
+   load_entry_point('setuptools>=0.6c8', 'console_scripts', 'easy_install')()
+)
+""")
+            out.close()
+            os.chmod(installer, 0755)
+
+            # Install via subprocess with PYTHONPATH set (for easy_install).
+            logging.debug('Installing via subprocess...')
+            env = os.environ
+            path = env.get('PYTHONPATH', '')
+            if path:
+                path += os.pathsep
+            path += install_dir
+            env['PYTHONPATH'] = path
+            cmdline = '%s %s -d %s %s' % \
+                      (python, installer, install_dir, self.egg_name)
+            stdout = open(os.path.join(install_dir, 'installer.out'), 'w')
+            retcode = subprocess.call(cmdline, env=env, shell=True,
+                                      stdout=stdout, stderr=subprocess.STDOUT)
+            stdout.close()
+            stdout = open(os.path.join(install_dir, 'installer.out'), 'r')
+            for line in stdout:
+                logging.debug('    %s', line.rstrip())
+            stdout.close()
+            self.assertEqual(retcode, 0)
+
+            # Load full model and run.
+            package_name = self.model.name
+            entry_name = ''
+            retcode = self.load_n_run(python, install_dir,
+                                      package_name, entry_name)
+            self.assertEqual(retcode, 0)
+
+            # Load just the Oddball component and run.
+            entry_name = 'Oddball'
+            retcode = self.load_n_run(python, install_dir,
+                                      package_name, entry_name)
+            self.assertEqual(retcode, 0)
+
+        finally:
+            shutil.rmtree(install_dir)
+
+    def load_n_run(self, python, install_dir, package_name, entry_name):
+        """ Load component from installed egg and run it. """
+        orig_dir = os.getcwd()
+        test_dir = 'EggTest'
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+        os.mkdir(test_dir)
+        os.chdir(test_dir)
+        try:
+            # Create load-n-run script.
+            out = open('load-n-run.py', 'w')
+            out.write("""\
+import sys
+sys.path.append('%(egg)s')
+import openmdao.main.log
+openmdao.main.log.enable_console()
+comp = openmdao.main.Component.load_from_eggpkg('%(package)s', '%(entry)s')
+comp.run()
+""" % {'egg':os.path.join(install_dir, self.egg_name),
+       'package':package_name, 'entry':entry_name})
+            out.close()
+
+            # Load & run in subprocess.
+            logging.debug('Load and run %s in subprocess...', entry_name)
+            cmdline = '%s load-n-run.py' % python
+            stdout = open('load-n-run.out', 'w')
+            retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
+                                      stderr=subprocess.STDOUT)
+            stdout.close()
+            stdout = open('load-n-run.out', 'r')
+            for line in stdout:
+                logging.debug('    %s', line.rstrip())
+            stdout.close()
+            return retcode
+
+        finally:
+            os.chdir(orig_dir)
+            shutil.rmtree(test_dir)
+
 
 if __name__ == '__main__':
-    unittest.main()
+    import nose
+    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()
 

@@ -19,7 +19,7 @@ def egg_filename(name, version):
 
 
 def write(name, doc, version, loader, src_files, distributions,
-          dst_dir, logger, compress=True):
+          dst_dir, logger, entry_pts=None, compress=True):
     """
     Write egg in manner of setuptools, with some differences:
 
@@ -28,11 +28,15 @@ def write(name, doc, version, loader, src_files, distributions,
 
     Returns egg filename.
     """
+    if entry_pts is None:
+        entry_pts = []
+
     egg_name = egg_filename(name, version)
     egg_path = os.path.join(dst_dir, egg_name)
 
     # Determine approximate (uncompressed) size.  Used to set allowZip64 flag
     # and potentially also useful for a progress display.
+
     sources = []
     files = []
     bytes = 0
@@ -53,7 +57,7 @@ def write(name, doc, version, loader, src_files, distributions,
         for path in filenames:
             if path.endswith('.py'):
                 path = os.path.join(dirpath, path)
-                files.append(path)
+                files.append(path[2:])  # Skip leading './'
                 bytes += os.path.getsize(path)
                 sources.append(path+'\n')
 
@@ -73,8 +77,8 @@ def write(name, doc, version, loader, src_files, distributions,
     # Eggsecutable support.
     sh_prefix = """\
 #!/bin/sh
-if [ `basename $0` = "%(egg_name)s" ]
-then exec python%(py_version)s -c "import sys, os; sys.path.insert(0, os.path.abspath('$0')); from openmdao.main.component import eggsecutable; sys.exit(eggsecutable())" "$@"
+if [ `basename $0` = "%(egg_name)s" ] ; then
+  exec python%(py_version)s -c "import sys, os; sys.path.insert(0, os.path.abspath('$0')); from openmdao.main.component import eggsecutable; sys.exit(eggsecutable())" "$@"
 else
   echo $0 is not the correct name for this egg file.
   echo Please rename it back to %(egg_name)s and try again.
@@ -106,18 +110,25 @@ Platform: UNKNOWN
 
     # Entry points -> EGG-INFO/entry_points.txt
     entry_points = """\
-[openmdao.components]
-%(name)s = %(loader)s:load
-
 [openmdao.top]
 top = %(loader)s:load
 
+[openmdao.components]
+%(name)s = %(name)s.%(loader)s:load
+""" % {'name':name, 'loader':loader}
+
+    for entry_name, entry_loader in entry_pts:
+        entry_points += """\
+%(name)s = %(pkg_name)s.%(loader)s:load
+""" % {'name':entry_name, 'pkg_name':name, 'loader':entry_loader}
+
+    entry_points += """
 [setuptools.installation]
 eggsecutable = openmdao.main.component:eggsecutable
 
-""" % {'name':name, 'loader':loader}
+"""
     sources.append(name+'.egg-info/entry_points.txt\n')
-    bytes += len(dependency_links)
+    bytes += len(entry_points)
 
     # Unsafe -> EGG-INFO/not-zip-safe
     not_zip_safe = '\n'
@@ -183,9 +194,10 @@ def _write_file(egg, path, logger):
 
 
 def write_via_setuptools(name, doc, version, loader, src_files, distributions,
-                         dst_dir, logger):
+                         dst_dir, logger, entry_pts=None):
     """ Write an egg via setuptools. Returns egg filename. """ 
-    _write_setup_py(name, doc, version, loader, src_files, distributions)
+    _write_setup_py(name, doc, version, loader, src_files, distributions,
+                    entry_pts)
 
     # Use environment since 'python' might not recognize '-u'.
     env = os.environ
@@ -220,8 +232,12 @@ def write_via_setuptools(name, doc, version, loader, src_files, distributions,
     return egg_filename(name, version)
 
 
-def _write_setup_py(name, doc, version, loader, src_files, distributions):
+def _write_setup_py(name, doc, version, loader, src_files, distributions,
+                    entry_pts=None):
     """ Write setup.py file for installation later. """
+    if entry_pts is None:
+        entry_pts = []
+
     out = open('setup.py', 'w')
     
     out.write('import setuptools\n')
@@ -245,7 +261,16 @@ entry_points = {
         'top = %(loader)s:load',
     ],
     'openmdao.components' : [
-        '%(name)s = %(loader)s:load',
+        '%(name)s = %(name)s.%(loader)s:load',
+""" % {'name':name, 'loader':loader})
+
+    for entry_info in entry_pts:
+        entry_name, entry_loader = entry_info
+        out.write("""\
+        '%(name)s = %(pkg_name)s.%(loader)s:load',
+""" % {'name':entry_name, 'pkg_name':name, 'loader':entry_loader})
+
+    out.write("""\
     ],
     'setuptools.installation' : [
         'eggsecutable = openmdao.main.component:eggsecutable',
@@ -262,7 +287,7 @@ setuptools.setup(
     install_requires=requirements,
     entry_points=entry_points,
 )
-""" % {'name':name, 'loader':loader, 'doc':doc.strip(), 'version':version})
+""" % {'name':name, 'doc':doc.strip(), 'version':version})
 
     out.close()
 
