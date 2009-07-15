@@ -1,6 +1,6 @@
 
 #public symbols
-__all__ = ["UnitsFloat", "unit_convert"]
+__all__ = ["UnitsFloat", "convert_units"]
 
 __version__ = "0.1"
 
@@ -97,14 +97,6 @@ class UnitsFloat(TraitType):
         """
         return TraitValMetaWrapper(units=self.units)
             
-    #def validation_metadata(self):
-        #"""Returns a dict containing names and values of any metadata 
-        #deemed necessary for validation by a destination trait. For
-        #example, UnitFloat includes 'units' in its metadata so that
-        #unit conversions can be performed at the destination.
-        #"""
-        #return { 'units': self.units }
-    
     def validate_with_metadata(self, object, name, value, srcmeta):
         """Perform validation and unit conversion using metadata from
         the source trait.
