@@ -30,7 +30,7 @@ class Source(Assembly):
 
     write_files = Bool(True, iostatus='in')
     text_data = Str(iostatus='in')
-    text_file = FileTrait(filename='source.txt', iostatus='out')
+    text_file = FileTrait(iostatus='out')
 
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
@@ -44,6 +44,8 @@ class Source(Assembly):
 
         # Some objects that must be restored.
         self.obj_list = [DataObj(i) for i in range(3)]
+        
+        self.text_file.filename = 'source.txt'
 
         # Absolute external file that exists at time of save.
         path = os.path.join(self.directory, EXTERNAL_FILES[0])
@@ -102,11 +104,11 @@ class Subcontainer(Container):
     """ Just a subcontainer for Source. """
 
     binary_data = Array('d', value=[], iostatus='in')
-    binary_file = FileTrait(filename=os.path.join('..', 'sub', 'source.bin'),
-                               iostatus='out', binary=True)
+    binary_file = FileTrait(iostatus='out', binary=True)
         
     def __init__(self, name='Subcontainer', parent=None):
         super(Subcontainer, self).__init__(name, parent)
+        self.binary_file.filename = os.path.join('..', 'sub', 'source.bin')
 
 
 
@@ -139,8 +141,8 @@ class Sink(Component):
         out.close()
 
         # Relative FileTrait that exists at time of save.
-        self.add_trait('binary_file',
-                       FileTrait(filename='sink.bin', iostatus='in'))
+        self.add_trait('binary_file', FileTrait(iostatus='in'))
+        self.binary_file.filename = 'sink.bin'
         self.push_dir(self.get_directory())
         out = open(self.binary_file.filename, 'w')
         out.write('Relative FileTrait that exists at time of save.\n')

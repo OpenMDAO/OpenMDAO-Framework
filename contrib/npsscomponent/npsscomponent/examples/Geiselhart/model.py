@@ -103,7 +103,7 @@ class PropulsionData(Component):
 
 class FLOPSdata(Container):
 
-    engdeck = FileTrait(filename='engdeck', iostatus='in')
+    engdeck = FileTrait(iostatus='in')
     thrso = Float(0., iostatus='in')
     weng = Float(0., iostatus='in')
     xnac = Float(0., iostatus='in')
@@ -111,6 +111,7 @@ class FLOPSdata(Container):
         
     def __init__(self, name='FLOPS', parent=None):
         super(FLOPSdata, self).__init__(name, parent)
+        self.engdeck.filename = 'engdeck'
 
 
 

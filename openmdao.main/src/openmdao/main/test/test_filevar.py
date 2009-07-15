@@ -22,12 +22,13 @@ class Source(Component):
     write_files = Bool(True, iostatus='in')
     text_data = Str(iostatus='in')
     binary_data = Array('d', iostatus='in')
-    text_file = FileTrait(filename='source.txt', iostatus='out')
-    binary_file = FileTrait(filename='source.bin', iostatus='out',
-                               binary=True)
+    text_file = FileTrait(iostatus='out')
+    binary_file = FileTrait(iostatus='out', binary=True)
         
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
+        self.text_file.filename = 'source.txt'
+        self.binary_file.filename = 'source.bin'
 
     def execute(self):
         """ Write test data to files. """
@@ -46,11 +47,13 @@ class Sink(Component):
 
     text_data = Str(iostatus='out')
     binary_data = Array('d', iostatus='out')
-    text_file = FileTrait(filename='sink.txt', iostatus='in')
-    binary_file = FileTrait(filename='sink.bin', iostatus='in')
+    text_file = FileTrait(iostatus='in')
+    binary_file = FileTrait(iostatus='in')
         
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
+        self.text_file.filename = 'sink.txt'
+        self.binary_file.filename = 'sink.bin'
 
     def execute(self):
         """ Read test data from files. """

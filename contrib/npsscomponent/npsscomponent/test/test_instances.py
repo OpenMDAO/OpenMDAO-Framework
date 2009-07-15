@@ -47,11 +47,13 @@ class Source(Component):
 
     text_data = Str(iostatus='in')
     binary_data = Array(dtype=numpy.float, shape=(None,), iostatus='in')
-    text_file = FileTrait(filename='source.txt', iostatus='out')
-    binary_file = FileTrait(filename='source.bin', iostatus='out', binary=True)
+    text_file = FileTrait(iostatus='out')
+    binary_file = FileTrait(iostatus='out', binary=True)
         
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
+        self.text_file.filename = 'sink.txt'
+        self.binary_file.filename = 'sink.bin'
 
         SourceData(name='sub', parent=self)
 
@@ -158,11 +160,13 @@ class Sink(Component):
     text_data = List(str, iostatus='out')
     binary_data = Array(dtype=numpy.float, shape=(None,),
                         iostatus='out')
-    text_file = FileTrait(filename='sink.txt', iostatus='in')
-    binary_file = FileTrait(filename='sink.bin', iostatus='in')
+    text_file = FileTrait(iostatus='in')
+    binary_file = FileTrait(iostatus='in')
         
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
+        self.text_file.filename = 'sink.txt'
+        self.binary_file.filename = 'sink.bin'
 
         SinkData(name='sub', parent=self)
 
