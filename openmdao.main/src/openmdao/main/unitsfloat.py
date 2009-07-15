@@ -8,6 +8,8 @@ from enthought.traits.api import TraitType, Float, Range, TraitError
 
 from Scientific.Physics.PhysicalQuantities import PhysicalQuantity
 
+from openmdao.main.tvalwrapper import TraitValMetaWrapper
+
 
 def convert_units(value, units, convunits):
     """Return the given value (given in units) converted 
@@ -59,10 +61,15 @@ class UnitsFloat(TraitType):
                                          **metadata)
 
     def validate(self, object, name, value):
-        try:
-            return self._validator.validate(object, name, value)
-        except TraitError:
-            self.error(object, name, value)
+        if isinstance(value, TraitValMetaWrapper):
+            return self.validate_with_metadata(object, name, 
+                                               value.value, 
+                                               value.metadata)
+        else:    
+            try:
+                return self._validator.validate(object, name, value)
+            except TraitError:
+                self.error(object, name, value)
 
     def error(self, object, name, value):
         """Returns a string describing the type handled by UnitsFloat."""
@@ -83,14 +90,20 @@ class UnitsFloat(TraitType):
             info = "a float with a value < %s"% self.high
         object.raise_exception("Trait '%s' must be %s but attempted value is %s" %
                                (name, info, value), TraitError)
-        
-    def validation_metadata(self):
-        """Returns a dict containing names and values of any metadata 
-        deemed necessary for validation by a destination trait. For
-        example, UnitFloat includes 'units' in its metadata so that
-        unit conversions can be performed at the destination.
+
+    def get_val_meta_wrapper(self):
+        """Return a TraitValMetaWrapper object.  Its value attribute
+        will be filled in by the caller.
         """
-        return { 'units': self.units }
+        return TraitValMetaWrapper(units=self.units)
+            
+    #def validation_metadata(self):
+        #"""Returns a dict containing names and values of any metadata 
+        #deemed necessary for validation by a destination trait. For
+        #example, UnitFloat includes 'units' in its metadata so that
+        #unit conversions can be performed at the destination.
+        #"""
+        #return { 'units': self.units }
     
     def validate_with_metadata(self, object, name, value, srcmeta):
         """Perform validation and unit conversion using metadata from
@@ -103,8 +116,7 @@ class UnitsFloat(TraitType):
                              name)
         except NameError:
             raise TraitError("while setting value of %s: undefined unit '%s'" % 
-                             srcmeta['units'])
-    
+                             srcmeta['units'])    
         try:
             pq.convertToUnit(object.trait(name).units)
         except NameError:
@@ -113,8 +125,8 @@ class UnitsFloat(TraitType):
         except TypeError, err:
             raise TraitError("%s: units '%s' are incompatible with assigning units of '%s'" % 
                              (name, pq.getUnitName(),
-                              object.trait(name).units))
-            
-        #object.debug('%s (%s) converted to %s (%s)' % 
-        #             (value,trait.units,pq.value,object.trait(name).units))
-        return self.validate(object, name, pq.value)
+                              object.trait(name).units))            
+        try:
+            return self._validator.validate(object, name, pq.value)
+        except TraitError:
+            self.error(object, name, pq.value)

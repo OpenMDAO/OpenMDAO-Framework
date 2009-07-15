@@ -168,6 +168,11 @@ class Container(HasTraits):
            isinstance(parent, Container) and add_to_parent:
             parent.add_child(self)
             
+        # Call _io_trait_changed if any trait having 'iostatus' metadata is changed.  
+        # We originally used the decorator @on_trait_change for this, but it
+        # failed to be activated properly when our objects were unpickled.
+        self.on_trait_change(self._io_trait_changed, '+iostatus')
+            
     #
     #  HasTraits overrides
     #
@@ -180,12 +185,20 @@ class Container(HasTraits):
             if trait.transient is not True:
                 dct[name] = trait
         state['_added_traits'] = dct
+        
+        # remove call to _io_trait_changed if any trait having 'iostatus' metadata is changed    
+        self.on_trait_change(self._io_trait_changed, '+iostatus', remove=True)
+        
         return state
 
     def __setstate__(self, state):
         """Restore this component's state."""
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
+        
+        # restore call to _io_trait_changed if any trait having 'iostatus' metadata is changed    
+        self.on_trait_change(self._io_trait_changed, '+iostatus')
+        
         for name,trait in self._added_traits.items():
             self.add_trait(name, trait)
 
@@ -225,7 +238,7 @@ class Container(HasTraits):
         
         
     # call this if any trait having 'iostatus' metadata is changed    
-    @on_trait_change('+iostatus') 
+    #@on_trait_change('+iostatus') 
     def _io_trait_changed(self, obj, name, old, new):
         if _io_side_effects:
             # setting old to Undefined is a kludge to bypass the destination check
@@ -240,6 +253,31 @@ class Container(HasTraits):
             if self.get_valid(name):  # if var is not already invalid
                 self.invalidate_deps([name], notify_parent=True)
 
+    def get_wrapped_attr(self, name):
+        """If the named trait can return a TraitValMetaWrapper, then this
+        function will return that, with the value set to the current
+        value of the named attribute. Otherwise, it functions like
+        getattr, just returning the named attribute. Raises an exception
+        if the named trait cannot be found.
+        """
+        trait = self.trait(name)
+        if trait is None:
+            self.raise_exception("trait '%s' does not exist" %
+                                 name, TraitError)
+            
+        # trait itself is most likely a CTrait, which doesn't have
+        # access to member functions on the original trait, aside
+        # from validate and one or two others, so we need to get access 
+        # to the original trait which is held in the 'trait_type' attribute.
+        ttype = trait.trait_type
+        getwrapper = getattr(ttype, 'get_val_meta_wrapper', None)
+        if getwrapper is not None:
+            wrapper = getwrapper()
+            wrapper.value = getattr(self, name)
+            return wrapper
+        
+        return getattr(self, name)
+        
     def get_valid(self, name):
         def _valid(self, name):
             tup = name.split('.',1)
@@ -549,7 +587,7 @@ class Container(HasTraits):
                 "'%s' is connected to source '%s' and cannot be set by source '%s'"%
                 (name,src,srcname), TraitError)
                     
-    def set(self, path, value, index=None, srcname=None, srcmeta=None, force=False):
+    def set(self, path, value, index=None, srcname=None, force=False):
         """Set the value of the data object specified by the  given path, which
         may contain '.' characters.  If path specifies a Variable, then its
         value attribute will be set to the given value, subject to validation
@@ -578,14 +616,7 @@ class Container(HasTraits):
                 # with a flag to tell it not to check if it's a destination
                 self._trait_change_notify(False)
                 try:
-                    if srcmeta is None or len(srcmeta) == 0:
-                        setattr(self, path, value)
-                    else:
-                        val = getattr(self.trait(path).trait_type,
-                                      'validate_with_metadata')(self, 
-                                                                path, value,
-                                                                srcmeta)
-                        self.__dict__[path] = val # avoid repeat validation
+                    setattr(self, path, value)
                 finally:
                     self._trait_change_notify(True)
                 # now manually call the notifier with old set to Undefined
@@ -600,16 +631,14 @@ class Container(HasTraits):
                                      TraitError)
             if len(tup) == 2:
                 if isinstance(obj, Container):
-                    obj.set(tup[1], value, index, 
-                            srcname=srcname, srcmeta=srcmeta, force=force)
+                    obj.set(tup[1], value, index, srcname=srcname, force=force)
                 elif index is None:
                     setattr(obj, tup[1], value)
                 else:
                     obj._array_set(tup[1], value, index)
             else:
                 if isinstance(obj, Container):
-                    obj.set('.'.join(tup[1:]), value, index, 
-                            srcmeta=srcmeta, force=force)
+                    obj.set('.'.join(tup[1:]), value, index, force=force)
                 else:
                     obj._array_set('.'.join(tup[1:]), value, index)
 

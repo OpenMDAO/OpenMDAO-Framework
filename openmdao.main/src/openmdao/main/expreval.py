@@ -17,6 +17,9 @@ from pyparsing import oneOf, alphas, nums, alphanums, Optional, Combine
 from pyparsing import Forward, StringEnd
 from pyparsing import ParseException
 
+def _cannot_find(name):
+    raise RuntimeError("ExprEvaluator: cannot find variable '%s'" % name)
+
 def _trans_unary(strng, loc, tok):
     return tok
 
@@ -34,10 +37,10 @@ def _trans_lhs(strng, loc, tok, exprobj):
                               " so a public value in the parent is"+
                               " being used instead (if found)")
             if lazy_check is False and not scope.parent.contains(tok[0]):
-                raise RuntimeError("cannot find variable '"+tok[0]+"'")
+                _cannot_find(tok[0])
         exprobj.var_names.add(tok[0])
     else:
-        raise RuntimeError("cannot find variable '"+tok[0]+"'")
+        _cannot_find(tok[0])
         
     full = scname + ".set('" + tok[0] + "',_@RHS@_"
     if len(tok) > 1 and tok[1] != '=':
@@ -47,11 +50,11 @@ def _trans_lhs(strng, loc, tok, exprobj):
     
 def _trans_assign(strng, loc, tok, exprobj):
     if tok[0] == '=':
-        exprobj.lhs = tok[1].replace('_@RHS@_', '', 1)
-        exprobj.rhs = tok[2]
+        #exprobj.lhs = tok[1].replace('_@RHS@_', '', 1)
+        #exprobj.rhs = tok[2]
         return [tok[1].replace('_@RHS@_', tok[2], 1)]
     else:
-        exprobj.lhs = ''.join(tok)
+        #exprobj.lhs = ''.join(tok)
         return tok
     
 def _trans_arrayindex(strng, loc, tok):
@@ -79,7 +82,7 @@ def _trans_fancyname(strng, loc, tok, exprobj):
     # do any translation.  The scope object is assumed to have a contains() 
     # function.
     if exprobj._scope is None:
-        raise RuntimeError("cannot find variable '"+tok[0]+"'")
+        _cannot_find(tok[0])
     
     scope = exprobj._scope()
     lazy_check = exprobj.lazy_check
@@ -98,7 +101,7 @@ def _trans_fancyname(strng, loc, tok, exprobj):
                           " being used instead (if found)")
         if lazy_check is False and (scope.parent is None or 
                                  not scope.parent.contains(tok[0])):
-            raise RuntimeError("cannot find variable '"+tok[0]+"'")
+            _cannot_find(tok[0])
     
         
     if len(tok) == 1 or (len(tok) > 1 and tok[1].startswith('[')):
@@ -229,10 +232,13 @@ class ExprEvaluator(str):
             s._scope = weakref.ref(scope)
         s.lazy_check = lazy_check
         s.single_name = single_name
-        s.rhs = ''
-        s.lhs = ''
+        #s.rhs = ''
+        #s.lhs = ''
         s._text = None  # used to detect change in str
-        s._parse()
+        s.var_names = set()
+        s.scoped_text = None
+        if lazy_check is False:
+            s._parse()
         return s
         
     def __getstate__(self):
@@ -301,13 +307,16 @@ class ExprEvaluator(str):
 
     def set(self, val):
         """Set the value of the referenced object to the specified value."""
-        if self.single_name and self._scope:
+        if self._scope:
             scope = self._scope()
-            # object referred to by weakref may no longer exist
-            if scope is None:
-                raise RuntimeError(
-                    'ExprEvaluator cannot evaluate expression without scope.')
-            
+        else:
+            scope = None
+        # object referred to by weakref may no longer exist
+        if scope is None:
+            raise RuntimeError(
+                'ExprEvaluator cannot evaluate expression without scope.')
+        
+        if self.single_name:           
             # self.assignment_code is a compiled version of an assignment statement
             # of the form  'somevar = _local_setter', so we set _local_setter here
             # and the exec call will pull it out of locals()
@@ -323,12 +332,16 @@ class ExprEvaluator(str):
         self.parent and based on the names of Variables referenced in our 
         reference string. 
         """
+        if self._text != self:  # text has changed
+            self._parse()
         return self.var_names
 
     def get_referenced_compnames(self):
         """Return a set of source or dest Component names based on the 
         pathnames of Variables referenced in our reference string. 
         """
+        if self._text != self:  # text has changed
+            self._parse()
         return set([x.split('.')[0] for x in self.var_names])
     
     def refs_valid(self):
@@ -338,5 +351,7 @@ class ExprEvaluator(str):
         if self._scope:
             scope = self._scope()
             if scope and scope.parent:
+                if self._text != self:  # text has changed
+                    self._parse()
                 return all(scope.parent.get_valid(self.var_names))
         return True

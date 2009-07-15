@@ -226,9 +226,9 @@ class CONMINdriver(Driver):
         # update constraint value array
         for i,v in enumerate(self.constraints):
             self.constraint_vals[i] = v.evaluate()
-        self.debug('%s: new iteration' % self.get_pathname())
-        self.debug('objective = %s' % self.objective)
-        self.debug('design vars = %s' % self.design_vars)
+        #self.debug('%s: new iteration' % self.get_pathname())
+        #self.debug('objective = %s' % self.objective)
+        #self.debug('design vars = %s' % self.design_vars)
         
         # loop until optimized
         while self.cnmn1.igoto or self.iter_count == 0:
@@ -239,9 +239,9 @@ class CONMINdriver(Driver):
                         
             # calculate objective
             self.cnmn1.obj = numarray.array(self.objective.evaluate())
-            self.debug('iter_count = %d' % self.iter_count)
-            self.debug('objective = %f' % self.cnmn1.obj)
-            self.debug('design vals = %s' % self.design_vals[:-2])
+            #self.debug('iter_count = %d' % self.iter_count)
+            #self.debug('objective = %f' % self.cnmn1.obj)
+            #self.debug('design vals = %s' % self.design_vals[:-2])
             
 # TODO: 'step around' ill-behaved cases.
             
@@ -281,7 +281,7 @@ class CONMINdriver(Driver):
                 # update constraint value array
                 for i,v in enumerate(self.constraints):
                     self.constraint_vals[i] = v.evaluate()
-                self.debug('constraints = %s'%self.constraint_vals)
+                #self.debug('constraints = %s'%self.constraint_vals)
                     
             # calculate gradients
             elif self.cnmn1.info == 2:

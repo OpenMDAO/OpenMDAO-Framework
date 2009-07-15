@@ -504,14 +504,8 @@ class Assembly (Component):
                         comp.push_dir(comp.get_directory())
             else:
                 try:
-                    srcvm = getattr(srctrait.trait_type,
-                                    'validation_metadata')
-                    if srcvm is not None:
-                        destcomp.set(destvarname, getattr(srccomp, srcvarname),
-                                     srcname=srcname, srcmeta=srcvm())
-                    else:
-                        destcomp.set(destvarname, getattr(srccomp, srcvarname), 
-                                     srcname=srcname)
+                    destcomp.set(destvarname, srccomp.get_wrapped_attr(srcvarname), 
+                                 srcname=srcname)
                 except Exception, exc:
                     msg = "cannot set '%s' from '%s': %s" % \
                         (vname, srcname, exc)

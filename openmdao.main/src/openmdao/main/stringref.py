@@ -22,9 +22,7 @@ class StringRef(BaseStr):
     def __init__(self, default_value=NoDefaultSpecified, **metadata):
         if default_value is NoDefaultSpecified:
             default_value = DumbDefault()
-#            default_value = ExprEvaluator('0')
         super(StringRef, self).__init__(default_value, **metadata)
-        #self.iostatus = metadata.get('iostatus', 'in')
 
     def validate(self, object, name, value):
         s = super(StringRef, self).validate(object, name, value) # normal string validation
@@ -33,6 +31,7 @@ class StringRef(BaseStr):
                 s = ExprEvaluator(s, object, single_name=True)
             else:
                 s = ExprEvaluator(s, object)
+            s._parse()
         except RuntimeError:
             raise TraitError("invalid %sput ref variable value '%s'"%(self.iostatus,
                                                                         str(value)))

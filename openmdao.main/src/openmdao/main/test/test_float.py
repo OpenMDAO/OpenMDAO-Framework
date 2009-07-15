@@ -49,10 +49,7 @@ class FloatTestCase(unittest.TestCase):
         # now set to a value that will violate constraint after conversion
         self.hobj.float2 = 1200.  # inches
         try:
-            self.hobj.set('float1', self.hobj.float2, 
-                          srcmeta=getattr(self.hobj.trait('float2').trait_type,
-                                          'validation_metadata')())
-            #float1 = self.hobj.unit_convert('float2', 'ft')
+            self.hobj.float1 = self.hobj.get_wrapped_attr('float2')
         except TraitError, err:
             self.assertEqual(str(err), 
                 "h1: Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 100.0")
@@ -109,13 +106,10 @@ class FloatTestCase(unittest.TestCase):
             self.fail('TraitError exception')
 
     def test_bad_connection(self):
-        srcmeta = getattr(self.hobj.trait('float2').trait_type,
-                          'validation_metadata')()
-        getattr(self.hobj.trait('float1').trait_type,'validate_with_metadata')(
-                                         self.hobj, 'float1', self.hobj.float2, srcmeta)
+        srcwrapper = self.hobj.get_wrapped_attr('float2')
+        self.hobj.float1 = srcwrapper
         try:
-            getattr(self.hobj.trait('float3').trait_type,'validate_with_metadata')(
-                self.hobj, 'float3', self.hobj.float2, srcmeta)
+            self.hobj.float3 = srcwrapper
         except Exception, err:
             self.assertEqual(str(err), 
                 "float3: units 'inch' are incompatible with assigning units of 'kg'")
