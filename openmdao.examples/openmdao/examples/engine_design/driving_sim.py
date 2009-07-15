@@ -309,9 +309,10 @@ def test_it():
     import time
     tt = time.time()
     
-    z = DrivingSim("New")  
+    z = DrivingSim("new")  
     z.vehicle = Vehicle("test_vehicle")
     z.run()
+    
     print "Time (0-60): ", z.accel_time
     print "City MPG: ", z.EPA_city
     print "Highway MPG: ", z.EPA_highway

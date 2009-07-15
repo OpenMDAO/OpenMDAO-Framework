@@ -358,18 +358,17 @@ class Container(HierarchyMember):
         raise NotImplementedError("config_from_obj")
 
     def save_to_egg(self, name=None, version=None, py_dir=None,
-                    force_relative=True, src_dir=None, src_files=None,
-                    dst_dir=None, format=SAVE_CPICKLE, proto=-1, tmp_dir=None,
+                    src_dir=None, src_files=None, entry_pts=None,
+                    dst_dir=None, format=SAVE_CPICKLE, proto=-1,
                     use_setuptools=False):
         """Save state and other files to an egg.
 
         - `name` defaults to the name of the container.
         - `version` defaults to the container's module __version__.
         - `py_dir` defaults to the current directory.
-        - If `force_relative` is True, all paths are relative to `src_dir`.
         - `src_dir` is the root of all (relative) `src_files`.
+        - 'entry_pts' is a list of (obj, obj_name) tuples for additional entries.
         - `dst_dir` is the directory to write the egg in.
-        - `tmp_dir` is the directory to use for temporary files.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
@@ -385,14 +384,12 @@ class Container(HierarchyMember):
             except AttributeError:
                 pass
         parent = self.parent
-        self.parent = None
+        self.parent = None  # Don't want to save stuff above us.
         try:
-            return openmdao.util.save_load.save_to_egg(self, name, version,
-                                                       py_dir,
-                                                       src_dir, src_files,
-                                                       dst_dir, format, proto,
-                                                       tmp_dir, self._logger,
-                                                       use_setuptools)
+            return openmdao.util.save_load.save_to_egg(
+                       self, name, version, py_dir, src_dir, src_files,
+                       entry_pts, dst_dir, format, proto, self._logger,
+                       use_setuptools)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
@@ -405,7 +402,7 @@ class Container(HierarchyMember):
         Python extension classes will have to override. The format
         can be supplied in case something other than cPickle is needed."""
         parent = self.parent
-        self.parent = None
+        self.parent = None  # Don't want to save stuff above us.
         try:
             openmdao.util.save_load.save(self, outstream, format, proto,
                                          self._logger)
@@ -415,18 +412,32 @@ class Container(HierarchyMember):
             self.parent = parent
     
     @staticmethod
-    def load_from_egg(filename, install=True):
+    def load_from_eggfile(filename, install=True):
         """Load state and other files from an egg, returns top object."""
-        return openmdao.util.save_load.load_from_egg(filename, install, logger)
+        # Load from file gets everything.
+        entry_group = 'openmdao.top'
+        entry_name = 'top'
+        return openmdao.util.save_load.load_from_eggfile(filename, entry_group,
+                                                         entry_name, install,
+                                                         logger)
+    @staticmethod
+    def load_from_eggpkg(package, entry_name=None):
+        """Load state and other files from an egg, returns selected object."""
+        entry_group = 'openmdao.components'
+        if not entry_name:
+            entry_name = package  # Default component is top.
+        return openmdao.util.save_load.load_from_eggpkg(package, entry_group,
+                                                        entry_name, logger)
 
     @staticmethod
-    def load(instream, format=SAVE_CPICKLE, do_post_load=True):
+    def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True):
         """Load object(s) from the input stream. Pure python 
         classes generally won't need to override this, but extensions will. 
         The format can be supplied in case something other than cPickle is 
         needed."""
-        top = openmdao.util.save_load.load(instream, format, logger)
+        top = openmdao.util.save_load.load(instream, format, package, logger)
         if do_post_load:
+            top.parent = None  # Clear-out parent from saved state.
             top.post_load()
         return top
 

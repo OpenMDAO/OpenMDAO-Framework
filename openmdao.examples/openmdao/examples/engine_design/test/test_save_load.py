@@ -11,6 +11,8 @@ import unittest
 
 from openmdao.examples.engine_design.engine_optimization import EngineOptimization
 
+import openmdao.util.testutil
+
 
 class EngineOptimizationTestCase(unittest.TestCase):
     """ Test Vehicle """
@@ -34,6 +36,7 @@ class EngineOptimizationTestCase(unittest.TestCase):
         # Set local dir in case we're running in a different directory.
         py_dir = pkg_resources.resource_filename('openmdao.examples.engine_design',
                                                  'test')
+        python = openmdao.util.testutil.find_python('openmdao.examples')
         egg_name = self.model.save_to_egg(py_dir=py_dir)
 
         orig_dir = os.getcwd()
@@ -44,22 +47,12 @@ class EngineOptimizationTestCase(unittest.TestCase):
         os.chdir(test_dir)
         egg_path = os.path.join('..', egg_name)
         try:
-            # Find what is hopefully the correct 'python' command.
-            python = 'python'
-            if orig_dir.endswith('buildout'):
-                python = os.path.join(orig_dir, 'bin', python)
-            else:
-                index = orig_dir.find('openmdao.examples')
-                if index > 0:
-                    python = os.path.join(orig_dir[:index],
-                                          'buildout', 'bin', python)
-
             logging.debug('Unpacking in subprocess...')
-            logging.debug('    python %s' % python)
+            logging.debug('    python %s', python)
             out = open('unpack.py', 'w')
             out.write("""\
 from openmdao.main import Component
-Component.load_from_egg('%s', install=False)
+Component.load_from_eggfile('%s', install=False)
 """ % egg_path)
             out.close()
             retcode = subprocess.call([python, 'unpack.py'])

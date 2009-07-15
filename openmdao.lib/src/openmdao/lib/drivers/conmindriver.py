@@ -158,6 +158,7 @@ class CONMINdriver(Driver):
         self.cons_active_or_violated  = numarray.zeros(0, 'i')
         self.iprint = 0
         self.maxiters = 40
+        self.iter = 0
         self.gradients = None
         
         # vector of scaling parameters
@@ -239,7 +240,8 @@ class CONMINdriver(Driver):
             self.debug('objective = %s' % self.objective.refvalue)
             
 # TODO: 'step around' ill-behaved cases.
-            
+
+            # load common blocks
             self._load_common_blocks()
             
             (self.design_vals,
@@ -258,6 +260,7 @@ class CONMINdriver(Driver):
             
             # common blocks are saved before, and loaded after execution
             self._save_common_blocks()
+            self.iter = self.cnmn1.iter
             
             # update the design variables in the model
             self.design_vars.refvalue = [float(val) for val in self.design_vals[:-2]]
