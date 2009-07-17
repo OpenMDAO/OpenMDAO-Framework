@@ -353,5 +353,5 @@ class ExprEvaluator(str):
             if scope and scope.parent:
                 if self._text != self:  # text has changed
                     self._parse()
-                return all(scope.parent.get_valid(self.var_names))
+                return all(scope.parent.get_valids(self.var_names))
         return True

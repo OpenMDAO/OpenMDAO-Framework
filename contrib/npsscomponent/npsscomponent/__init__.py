@@ -1,3 +1,3 @@
 
-from npsscomponent import NPSScomponent
+from npsscomponent import NPSScomponent, NPSSProperty
 

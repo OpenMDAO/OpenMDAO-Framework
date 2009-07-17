@@ -31,7 +31,7 @@ class Source(Component):
 class Sink(Component):
     """ Just something to connect NPSS outputs to. """
 
-    v = Float(0., iostatus='in', desc='Test output from NPSS')
+    npss_out = Float(0., iostatus='in', desc='Test output from NPSS')
         
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
@@ -65,8 +65,10 @@ class MyModel(Assembly):
         Sink(parent=self)
 
         self.connect('Source.npss_reload', 'NPSS.reload_model')
-        self.connect('Source.npss_in', 'NPSS.xyzzy_in')
-        self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
+#        self.connect('Source.npss_in', 'NPSS.xyzzy_in')
+        self.connect('Source.npss_in', 'xyzzy_in')
+#        self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
+        self.connect('xyzzy_out', 'Sink.npss_out')
 
     def rerun(self):
         self.debug('rerun()')

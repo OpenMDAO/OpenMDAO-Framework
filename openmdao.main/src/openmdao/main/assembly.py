@@ -48,15 +48,8 @@ class MulticastTrait(TraitType):
     def post_setattr(self, object, name, value):
         if value is not Undefined:
             for vname in self.names:
-                #object.set(vname, value, srcname=name)
                 try:
-                    srcvm = getattr(self.val_trait.trait_type,
-                                    'validation_metadata')
-                    if srcvm is not None:
-                        object.set(vname, value, srcname=name, 
-                                   srcmeta=srcvm())
-                    else:
-                        object.set(vname, value, srcname=name)
+                    object.set(vname, value, srcname=name)
                 except Exception, exc:
                     msg = "cannot set '%s' from '%s': %s" % \
                         (vname, name, exc)
@@ -251,7 +244,7 @@ class Assembly (Component):
         setattr(self, name, getattr(comp, vname))
         self.set_valid(name, comp.get_valid(vname))
         
-    def split_varpath(self, path):
+    def split_varpath(self, path, iostat):
         """Return a tuple of compname,component,varname,trait given a path
         name of the form 'compname.varname'. If the name is of the form 'varname'
         then compname will be None and comp is self.
@@ -261,18 +254,25 @@ class Assembly (Component):
         except ValueError:
             return (None, self, path, self.trait(path))
         
-        if '.' in varname:
-            self.raise_exception('%s must be a simple name, not a dotted path' %
-                                 varname, NameError)
-        comp = getattr(self, compname)
+        comp = getattr(self, compname)       
+        trait = comp.trait(varname)
+        
+        if trait is None:
+            try:
+                # check to see if component has the ability to create traits on-the-fly
+                comp.hoist(varname, iostat)
+            except AttributeError:
+                self.raise_exception("Cannot locate trait named '%s'" %
+                                     varname, NameError)
+                
         return (compname, comp, varname, comp.trait(varname))
     
     def connect(self, srcpath, destpath):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection (output to input) or a passthru connection."""
 
-        srccompname, srccomp, srcvarname, srctrait = self.split_varpath(srcpath)
-        destcompname, destcomp, destvarname, desttrait = self.split_varpath(destpath)
+        srccompname, srccomp, srcvarname, srctrait = self.split_varpath(srcpath, 'out')
+        destcompname, destcomp, destvarname, desttrait = self.split_varpath(destpath, 'in')
         
         if srccompname == destcompname:
             self.raise_exception('Cannot connect %s to %s. Both are on same component.' %
@@ -298,7 +298,7 @@ class Assembly (Component):
         desttrait.validate(destcomp, destvarname, getattr(srccomp, srcvarname))
         
         if destcomp is not self:
-            destcomp.add_destination(destvarname, srcpath)
+            destcomp.set_source(destvarname, srcpath)
             if srccomp is not self: # neither var is on boundary
                 self._dataflow.connect(srccompname, destcompname, srcvarname, destvarname)
         
@@ -371,7 +371,7 @@ class Assembly (Component):
         for u,v in self._filter_internal_edges(to_remove):
             vtup = v.split('.',1)
             if len(vtup)>1:
-                getattr(self, vtup[0]).remove_destination(vtup[1])
+                getattr(self, vtup[0]).remove_source(vtup[1])
                 # if its a connection between two children (no boundary connections)
                 # then remove a connection between two components in the component
                 # graph
@@ -475,8 +475,8 @@ class Assembly (Component):
                 
             updated = True
             srcname = preds.keys()[0]
-            srccompname,srccomp,srcvarname,srctrait = self.split_varpath(srcname)
-            destcompname,destcomp,destvarname,desttrait = self.split_varpath(vname)
+            srccompname,srccomp,srcvarname,srctrait = self.split_varpath(srcname, 'out')
+            destcompname,destcomp,destvarname,desttrait = self.split_varpath(vname, 'in')
             
             if srccomp.get_valid(srcvarname) is False:  # source is invalid 
                 # need to backtrack to get a valid source value
@@ -531,6 +531,27 @@ class Assembly (Component):
                 self.raise_exception("required plugin '%s' is not present" % name,
                                      TraitError)                
         
+    def get_valids(self, names):
+        """Returns a list of boolean values indicating whether the
+        named attributes are valid (True) or invalid (False). Entries
+        in names may specify either direct traits of self or those
+        of direct children of self, but no deeper in the hierarchy than 
+        that.
+        """
+        valids = []
+        for name in names:
+            if self.trait(name):
+                valids.append(self.get_valid(name))
+            else:
+                tup = name.split('.', 1)
+                if len(tup) > 1:
+                    comp = getattr(self, tup[0])
+                    valids.append(comp.get_valid(tup[1]))
+                else:
+                    self.raise_exception("get_valids: unknown variable '%s'" % name,
+                                         RuntimeError)
+        return valids
+
     def invalidate_deps(self, varnames, notify_parent=False):
         """Mark all Variables invalid that depend on vars.
         Returns a list of our newly invalidated boundary outputs.

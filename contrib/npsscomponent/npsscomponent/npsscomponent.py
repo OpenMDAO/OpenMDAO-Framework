@@ -1,57 +1,56 @@
 
-__all__ = ('NPSScomponent',)
+__all__ = ('NPSScomponent','NPSSProperty')
 __version__ = '0.1'
 
 import os
 
 import numpy
 from enthought.traits.api import TraitType, Array, Bool, Float, Dict, Int, \
-                                 Str, List, Undefined, TraitError
+                                 Str, List, Undefined, TraitError, Disallow
 from enthought.traits.trait_handlers import NoDefaultSpecified
 
-from openmdao.main.api import Component, FileTrait, UnitsFloat
+from openmdao.main.api import Component, FileTrait, FileValue, UnitsFloat
 
 import npss
 npss.isolateContexts(True)
 
 import units
 
-def _augment_dict(srcdict, destdict):
-    for name,val in srcdict.items():
-        destdict.setdefault(name, val)
-
 _iodict = { 'INPUT': 'in',
             'OUTPUT': 'out' }
+
+_excludes = set(['type'])
 
 class NPSSProperty(TraitType):
     def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
         trait = metadata.get('trait', None)
         if trait is not None:
-            _augment_dict(trait._metadata, metadata)
+            for name,val in trait._metadata.items():
+                if name not in _excludes:
+                    metadata.setdefault(name, val)
         super(NPSSProperty, self).__init__(default_value, **metadata)
 
     def get(self, object, name):
-        if self.trait is None:  # set up connection to NPSS variable
-            trait, ref_name = object._trait_mapping_info(name, iostatus=None)
-            self._metadata['trait'] = trait
-            self._metadata['ref_name'] = ref_name
-            _augment_dict(trait._metadata, self._metadata)
-        
-        return object._top._get(self.ref_name)
+        # FIXME: pull the file stuff out of here and fix it up
+        trait = self.trait
+        if trait and isinstance(trait, FileTrait):
+            meta = self.trait._metadata.copy()
+            meta.pop('iostatus')
+            meta['filename'] = object._top._get(self.ref_name+'.filename')
+            return FileValue(**meta)
+        else:
+            return object._top._get(self.ref_name or name)
 
     def set(self, object, name, value):
-        if self.trait is None:  # set up connection to NPSS variable
-            trait, ref_name = object._trait_mapping_info(name, iostatus=None)
-            self._metadata['trait'] = trait
-            self._metadata['ref_name'] = ref_name
-            _augment_dict(trait._metadata, self._metadata)
-            
         if self.iostatus == 'out':
             raise TraitError('%s is an output trait and cannot be set' % name)
         
-        if self.trait is not None:
-            self.trait.validate(object, name, value)
-            
+        if self.trait:
+            value = self.trait.validate(object, name, value)
+            # FIXME: pull the file stuff out of here and fix it up
+            if isinstance(value, FileValue):
+                object._top._set(self.ref_name+'.filename', value.filename)
+                return
         object._top._set(self.ref_name, value)
 
         
@@ -475,55 +474,52 @@ class NPSScomponent(Component):
             self.raise_exception('Indexing not supported yet',
                                  NotImplementedError)
 
-    #def __getattr__(self, name):
-        #"""
-        #Return value for attribute.
-        #Note that this is not __getattribute__.
-        #This gets called only when the normal methods fail.
-        #"""
-        #if name.startswith('_'):
-            #return super(NPSScomponent, self).__getattribute__(name)
+    def __getattr__(self, name):
+        """
+        Return value for attribute.
+        Note that this is not __getattribute__.
+        This gets called only when the normal methods fail.
+        """
+        try:
+            return super(NPSScomponent, self).__getattribute__(name)
+        except AttributeError:
+            # look inside of npss object for the attribute
+            top = None
+            try:
+                top = super(NPSScomponent, self).__getattribute__('_top')
+            finally:
+                if top is not None:
+                    return getattr(top, name)
+        # if we get this far, we've failed. Just call base class version
+        # for error handling
+        return super(NPSScomponent, self).__getattribute__(name)    
 
-        #try:
-            #top = super(NPSScomponent, self).__getattribute__('_top')
-        #except AttributeError:
-            #return super(NPSScomponent, self).__getattribute__(name)
-        #if top is None:
-            #return super(NPSScomponent, self).__getattribute__(name)
-
-        #try:
-            #return getattr(top, name)
-        #except AttributeError, err:
-            ## Possibly a wrapper attribute.
-            #try:
-                #return super(NPSScomponent, self).__getattribute__(name)
-            #except AttributeError:
-                #raise AttributeError(self.get_pathname()+' '+str(err))
-
-    def set(self, path, value, index=None, srcname=None, srcmeta=None, force=False):
+    def set(self, path, value, index=None, srcname=None, force=False):
         """ Set attribute value. """
         if index is None:
-            setattr(self, path, value)
+            super(NPSScomponent, self).set(path, value, index=index,
+                                           srcname=srcname, force=force)
         else:
             self.raise_exception('Indexing not supported yet',
                                  NotImplementedError)
 
-    #def __setattr__(self, name, value):
-        #""" Set attribute value. """
-        #if name.startswith('_'):
-            #return super(NPSScomponent, self).__setattr__(name, value)
-
-        #try:
-            #top = super(NPSScomponent, self).__getattribute__('_top')
-        #except AttributeError:
-            #return super(NPSScomponent, self).__setattr__(name, value)
-        #if top is None:
-            #return super(NPSScomponent, self).__setattr__(name, value)
-
-        #try:
-            #setattr(top, name, value)
-        #except AttributeError:
-            #return super(NPSScomponent, self).__setattr__(name, value)
+    def __setattr__(self, name, value):
+        """ Set attribute value. """
+        try:
+            return super(NPSScomponent, self).__setattr__(name, value)
+        except AttributeError:
+            top = None
+            try:
+                top = super(NPSScomponent, self).__getattribute__('_top')
+            finally:
+                if top is None:
+                    return super(NPSScomponent, self).__setattr__(name, value)
+                else:
+                    setattr(top, name, value)
+            #try:
+                #setattr(top, name, value)
+            #except AttributeError:
+                #return super(NPSScomponent, self).__setattr__(name, value)
 
     def execute(self):
         """ Perform operations associated with running the component. """
@@ -561,106 +557,7 @@ class NPSScomponent(Component):
     def parseString(self, txt):
         return self._top.parseString(txt)
     
-    def _trait_mapping_info(self, name, iostatus, ref_name=None):
-        """Returns a tuple of (validation_trait, ref_name)."""
-        
-        if ref_name is None:
-            ref_name = name
-            
-        doc = None
-        try:
-            doc = getattr(self._top, ref_name+'.description')
-        except AttributeError:
-            pass
-                
-        if iostatus is None:
-            try:
-                iostat = _iodict[getattr(self._top, ref_name+'.iostatus')]
-            except (AttributeError, KeyError):
-                self.raise_exception("cannot determine iostatus for '%s'" %
-                                     ref_name, TraitError)
-        else:
-            iostat = iostatus
-            
-        try:
-            typ = self._top.evalExpr(ref_name+'.getDataType()')
-        except RuntimeError:
-            metadata = {}
-            try:
-                typ = self._top.evalExpr(ref_name+'.isA()')
-            except RuntimeError:
-                self.raise_exception("cannot determine type of NPSS variable '%s'"%
-                                     ref_name, RuntimeError)
-            if typ == 'InFileStream':
-                iostat = 'in'
-                typ = 'Stream'
-            elif typ == 'OutFileStream':
-                iostat = 'out'
-                typ = 'Stream'
-                metadata['content_type'] = \
-                    getattr(self._top, ref_name+'.contentType')
-                metadata['binary'] = \
-                    getattr(self._top, ref_name+'.binary') != 0
-                metadata['single_precision'] = \
-                    getattr(self._top, ref_name+'.singlePrecision') != 0
-                metadata['unformatted'] = \
-                    getattr(self._top, ref_name+'.unformatted') != 0
-            #else:
-                #self.raise_exception("cannot bind trait to NPSS variable '%s'" %
-                                     #ref_name, TraitError)
-            
-        # Primitive method to create correct type.
-        if typ == 'real':
-            try:
-                npss_units = getattr(self._top, ref_name+'.units')
-            except AttributeError:
-                mdao_units = Undefined
-            else:
-                if npss_units:
-                    if self.have_units_translation(npss_units):
-                        mdao_units = self.get_units_translation(npss_units)
-                    else:
-                        self.warning("No units translation for '%s'" % npss_units)
-                        mdao_units = Undefined
-                else:
-                    mdao_units = Undefined
-            if mdao_units is Undefined:
-                trait = Float(iostatus=iostat, desc=doc)
-            else:
-                trait = UnitsFloat(iostatus=iostat, 
-                                  desc=doc, units=mdao_units)
-        elif typ == 'int':
-            trait = Int(iostatus=iostat, desc=doc)
-        elif typ == 'string':
-            trait = Str(iostatus=iostat, doc=doc, ref_name=ref_name)
-        elif typ == 'real[]':
-            trait = Array(dtype=numpy.float, shape=(None,), 
-                         iostatus=iostat, desc=doc)
-        elif typ == 'int[]':
-            trait = Array(dtype=numpy.int, shape=(None,), 
-                         iostatus=iostat, desc=doc)
-        elif typ == 'string[]':
-            trait = List(str,iostatus=iostat, desc=doc)
-        elif typ == 'real[][]':
-            trait = Array(dtype=numpy.float, shape=(None,None),
-                         iostatus=iostat, desc=doc)
-        elif typ == 'int[][]':
-            trait = Array(dtype=numpy.int, shape=(None,None), 
-                         iostatus=iostat, desc=doc)
-        elif typ == 'real[][][]':
-            trait = Array(dtype=numpy.float, shape=(None,None,None),
-                         iostatus=iostat, desc=doc)
-        elif typ == 'Stream':
-            trait = FileTrait(iostatus=iostat, desc=doc, **metadata)
-            ref_name = ref_name+'.filename'
-        else:
-            self.raise_exception("'%s' is an unsupported NPSS type: '%s'" % 
-                                 (ref_name,typ), NotImplementedError)
-        
-        return (trait, ref_name)
-            
-    
-    def make_public(self, obj_info, iostatus='in'):
+    def _build_trait(self, ref_name, iostatus=None, trait=None):
         """
         Do the following on-the-fly rather than having to 
         manually define variables:
@@ -670,53 +567,101 @@ class NPSScomponent(Component):
         3. Set the doc string from the description attribute.
         4. Create FileTraits for stream objects.
         """
-        if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
-            lst = [obj_info]
-        else:
-            lst = obj_info
-
-        for entry in lst:
-            iostat = iostatus
-
-            if isinstance(entry, basestring):
-                name = entry
-                ref_name = name
-            elif isinstance(entry, tuple):
-                name = entry[0]  # wrapper name
-                ref_name = entry[1]  # internal name
-                if not ref_name:
-                    ref_name = name
-                if len(entry) > 2:
-                    iostat = entry[2] # optional iostatus
-            else:
-                self.raise_exception('make_public cannot add trait %s' % entry,
-                                     TraitError)
+        
+        doc = None
+        try:
+            doc = getattr(self._top, ref_name+'.description')
+        except AttributeError:
+            pass
                 
-            trait, ref_name = self._trait_mapping_info(name, iostat, ref_name)
-            
-            self.add_trait(name, NPSSProperty(iostatus=iostat, trait=trait,
-                                           ref_name = ref_name))
-        
-
-    def add_trait(self, name, *trait):
-        """Overrides HasTraits definition of add_trait in order to
-        wrap the given trait in an NPSSProperty (provides both get() and set())
-        """
-        if len( trait ) == 0:
-            raise ValueError, 'No trait definition was specified.'
-        elif len(trait) > 1:
-            trait = Trait(*trait)
+        if iostatus is None:
+            try:
+                iostat = _iodict[self._top._get(ref_name+'.IOstatus')]
+            except (AttributeError, KeyError):
+                self.raise_exception("cannot determine iostatus for '%s'" %
+                                     ref_name, TraitError)
         else:
-            trait = trait[0]
+            iostat = iostatus
+            
+        if trait is None:
+            try:
+                typ = self._top.evalExpr(ref_name+'.getDataType()')
+            except RuntimeError:
+                metadata = {}
+                try:
+                    typ = self._top.evalExpr(ref_name+'.isA()')
+                except RuntimeError:
+                    self.raise_exception("cannot determine type of NPSS variable '%s'"%
+                                         ref_name, RuntimeError)
+                if typ == 'InFileStream':
+                    iostat = 'in'
+                    typ = 'Stream'
+                elif typ == 'OutFileStream':
+                    iostat = 'out'
+                    typ = 'Stream'
+                    metadata['content_type'] = \
+                        getattr(self._top, ref_name+'.contentType')
+                    metadata['binary'] = \
+                        getattr(self._top, ref_name+'.binary') != 0
+                    metadata['single_precision'] = \
+                        getattr(self._top, ref_name+'.singlePrecision') != 0
+                    metadata['unformatted'] = \
+                        getattr(self._top, ref_name+'.unformatted') != 0
+                #else:
+                    #self.raise_exception("cannot bind trait to NPSS variable '%s'" %
+                                         #ref_name, TraitError)
+            
+        # Primitive method to create correct type.
+            if typ == 'real':
+                try:
+                    npss_units = getattr(self._top, ref_name+'.units')
+                except AttributeError:
+                    mdao_units = Undefined
+                else:
+                    if npss_units:
+                        if self.have_units_translation(npss_units):
+                            mdao_units = self.get_units_translation(npss_units)
+                        else:
+                            self.warning("No units translation for '%s'" % npss_units)
+                            mdao_units = Undefined
+                    else:
+                        mdao_units = Undefined
+                if mdao_units is Undefined:
+                    trait = Float(iostatus=iostat, desc=doc)
+                else:
+                    trait = UnitsFloat(iostatus=iostat, 
+                                      desc=doc, units=mdao_units)
+            elif typ == 'int':
+                trait = Int(iostatus=iostat, desc=doc)
+            elif typ == 'string':
+                trait = Str(iostatus=iostat, desc=doc)
+            elif typ == 'real[]':
+                trait = Array(dtype=numpy.float, shape=(None,), 
+                             iostatus=iostat, desc=doc)
+            elif typ == 'int[]':
+                trait = Array(dtype=numpy.int, shape=(None,), 
+                             iostatus=iostat, desc=doc)
+            elif typ == 'string[]':
+                trait = List(str,iostatus=iostat, desc=doc)
+            elif typ == 'real[][]':
+                trait = Array(dtype=numpy.float, shape=(None,None),
+                             iostatus=iostat, desc=doc)
+            elif typ == 'int[][]':
+                trait = Array(dtype=numpy.int, shape=(None,None), 
+                             iostatus=iostat, desc=doc)
+            elif typ == 'real[][][]':
+                trait = Array(dtype=numpy.float, shape=(None,None,None),
+                             iostatus=iostat, desc=doc)
+            elif typ == 'Stream':
+                trait = FileTrait(iostatus=iostat, desc=doc, 
+                                  #ref_name=ref_name+'.filename',
+                                  **metadata)
+            else:
+                self.raise_exception("'%s' is an unsupported NPSS type: '%s'" % 
+                                     (ref_name,typ), NotImplementedError)
         
-        if trait.ref_name is None:
-            wrapped_trait = NPSSProperty(trait=trait, ref_name=name)
-        else:
-            wrapped_trait = NPSSProperty(trait=trait)
-            
-            
-        super(NPSScomponent, self).add_trait(name, wrapped_trait)
-            
+        return NPSSProperty(trait=trait, ref_name=trait.ref_name or ref_name)
+    
     @staticmethod
     def have_units_translation(npss_units):
         """ Return True if we can translate npss_units. """

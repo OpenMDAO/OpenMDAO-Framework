@@ -15,11 +15,11 @@ from numpy.testing import assert_equal
 
 from enthought.traits.api import Bool
 
-from openmdao.main.api import FileTrait
+from openmdao.main.api import FileTrait, FileValue
 from openmdao.main.constants import SAVE_LIBYAML
 from openmdao.main.component import SimulationRoot
 
-from npsscomponent import NPSScomponent
+from npsscomponent import NPSScomponent, NPSSProperty
 
 ORIG_DIR = os.getcwd()
 
@@ -97,9 +97,9 @@ class NPSSTestCase(unittest.TestCase):
                 if isinstance(val, ndarray):
                     assert_equal(getattr(self.npss, name), val)
                 else:
-                    if self.npss.trait(name).is_trait_type(FileTrait):
+                    if isinstance(val, FileValue):
                         obj = getattr(self.npss, name)
-                        self.assertEqual(getattr(obj, 'filename'), val)
+                        self.assertEqual(getattr(obj, 'filename'), val.filename)
                     else:
                         self.assertEqual(getattr(self.npss, name), val)
         finally:

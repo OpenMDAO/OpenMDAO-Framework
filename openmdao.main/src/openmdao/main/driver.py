@@ -40,7 +40,7 @@ class Driver(Assembly):
         exec_needed = False
         refnames = self.get_refvar_names(iostatus='in')
         
-        if not all(self.get_valid(refnames)):
+        if not all(self.get_valids(refnames)):
             exec_needed = True
             # force regeneration of _ref_graph, _ref_comps, _iteration_comps
             self._ref_graph = { None: None, 'in': None, 'out': None } 

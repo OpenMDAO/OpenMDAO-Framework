@@ -30,6 +30,7 @@ import zc.buildout.easy_install
 import zipfile
 import traceback
 import re
+import pprint
 
 import weakref
 # the following is a monkey-patch to correct a problem with
@@ -48,7 +49,7 @@ from enthought.traits.api import HasTraits, implements, Str, Missing, TraitError
                                  on_trait_change, WeakRef, TraitType
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import _SimpleTest, FunctionType
-from enthought.traits.trait_base import not_event
+from enthought.traits.trait_base import not_event, not_none
 
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.interfaces import IContainer
@@ -93,27 +94,52 @@ class IMHolder(object):
         else:
             return getattr(self.im_class, self.name)
 
+class _DumbTmp(object):
+    pass
 
-#class ContainerProperty(TraitType):
-    #"""A trait that allows attributes in child Containers to be referenced
-    #using an alias in a parent scope.
-    #"""
-    #def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
-        #if not metadata.get('ref_name'):
-            #raise TraitError("ContainerProperty constructor requires a 'ref_name' argument.")
-        #super(ContainerProperty, self).__init__(default_value, **metadata)
+class PathProperty(TraitType):
+    """A trait that allows attributes in child objects to be referenced
+    using an alias in a parent scope.
+    """
+    def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
+        ref_name = metadata.get('ref_name')
+        if not ref_name:
+            raise TraitError("PathProperty constructor requires a 'ref_name' argument.")
+        self._names = ref_name.split('.')
+        if len(self._names) < 2:
+            raise TraitError("PathProperty ref_name must have at least two entries in the path."+
+                             " The given ref_name was '%s'" % ref_name)        
+        self._ref = weakref.ref(_DumbTmp()) # make weakref to a transient object to force
+                                            # a re-resolve later without an extra check of 
+                                            # self._ref is None
+        super(PathProperty, self).__init__(default_value, **metadata)
 
-    #def get(self, object, name):
-        #return object.get(self.ref_name)
-
-    #def set(self, object, name, value):
-        #if self.iostatus == 'out':
-            #raise TraitError('%s is an output trait and cannot be set' % name)
-        
-        #if self.trait is not None:
-            #self.trait.validate(object, name, value)
+    def _resolve(self, object):
+        """Try to resolve down to the last containing object in the path and
+        store a weakref to that object.
+        """
+        obj = object
+        try:
+            for name in self._names[:-1]:
+                obj = getattr(obj, name)
+        except AttributeError:
+            raise TraitError("PathProperty cannot resolve path '%s'" % 
+                             '.'.join(self._names))
+        self._last_name = self._names[len(self._names)-1]
+        self._ref = weakref.ref(obj)
+        return obj
             
-        #object.set(self.ref_name, value)        
+    def get(self, object, name):
+        return getattr(self._ref() or self._resolve(object), self._last_name)
+
+    def set(self, object, name, value):
+        if self.iostatus is 'out':
+            raise TraitError('%s is an output trait and cannot be set' % name)
+        
+        if self.trait:
+            value = self.trait.validate(object, name, value)
+        
+        setattr(self._ref() or self._resolve(object), self._last_name, value)
 
         
 class ContainerName(BaseStr):
@@ -149,7 +175,7 @@ class Container(HasTraits):
         super(Container, self).__init__() # don't forget to init HasTraits
                                           # or @on_trait_change decorator won't work!
         self._valid_dict = {}  # contains validity flag for each io Trait
-        self._dests = {}  # for checking that destination traits cannot be 
+        self._sources = {}  # for checking that destination traits cannot be 
                           # set by other objects
         self._added_traits = {}  # for keeping track of dynamically added traits for serialization
                           
@@ -202,7 +228,7 @@ class Container(HasTraits):
         for name,trait in self._added_traits.items():
             self.add_trait(name, trait)
 
-    def add_trait(self, name, *trait):
+    def add_trait(self, name, *trait): #, **kwargs):
         """Overrides HasTraits definition of add_trait in order to
         keep track of dynamically added traits for serialization.
         """
@@ -245,10 +271,10 @@ class Container(HasTraits):
             # when we call this directly from Assembly as part of setting this attribute
             # from an existing connection.
             if self.trait(name).iostatus == 'in':
-                if old is not Undefined and name in self._dests:
+                if old is not Undefined and name in self._sources:
                     self.raise_exception(
                         "'%s' is already connected to source '%s' and cannot be directly set"%
-                        (name, self._dests[name]), TraitError)
+                        (name, self._sources[name]), TraitError)
                 self._execute_needed = True
             if self.get_valid(name):  # if var is not already invalid
                 self.invalidate_deps([name], notify_parent=True)
@@ -279,27 +305,20 @@ class Container(HasTraits):
         return getattr(self, name)
         
     def get_valid(self, name):
-        def _valid(self, name):
-            tup = name.split('.',1)
-            if len(tup) > 1:
-                return _valid(getattr(self, tup[0]), tup[1])
+        valid = self._valid_dict.get(name, Missing)
+        if valid is Missing:
+            trait = self.trait(name)
+            if trait and trait.iostatus:
+                self._valid_dict[name] = False
+                return False
             else:
-                valid = self._valid_dict.get(name, Missing)
-                if valid is Missing:
-                    if self.trait(name) and self.trait(name).iostatus:
-                        self._valid_dict[name] = False
-                        return False
-                    else:
-                        self.raise_exception("cannot set valid flag of '%s' because it's not an io trait."%
-                                             name, RuntimeError)
-                else:
-                    return valid
-            
-        if isinstance(name, basestring): 
-            return _valid(self, name)
-        else:
-            return [_valid(self,v) for v in name]
+                self.raise_exception("cannot set valid flag of '%s' because it's not an io trait."%
+                                     name, RuntimeError)
+        return valid
     
+    def get_valids(self, names):
+        return [self.get_valid(v) for v in names]
+
     def set_valid(self, name, valid):
         if name in self._valid_dict:
             self._valid_dict[name] = valid
@@ -352,6 +371,13 @@ class Container(HasTraits):
                                        TraitError)
         else:
             return convert_units(getattr(self, name), destunits, units)
+
+    def dump(self, recurse=False, stream=None):
+        """Return all items having iostatus metadata and
+        their corresponding values in a dict.
+        """
+        pprint.pprint(dict([(n,v) for n,v in self.items(recurse, iostatus=not_none)]),
+                      stream)
     
     def items(self, recurse=False, **metadata):
         """Return a list of tuples of the form (rel_pathname, obj) 
@@ -558,22 +584,24 @@ class Container(HasTraits):
                 return obj._array_get('.'.join(tup[1:]), index)
 
      
-    def add_destination(self, name, source):
-        """Mark an io trait as a destination, which will prevent it from being
-        set directly or connected to another source."""
-        if name in self._dests:
+    def set_source(self, name, source):
+        """Mark the named io trait as a destination by registering a source
+        for it, which will prevent it from being set directly or connected 
+        to another source.
+        """
+        if name in self._sources:
             self.raise_exception("'%s' is already connected to source '%s'" % 
-                                 (name, self._dests[name]), TraitError)
-        self._dests[name] = source   
+                                 (name, self._sources[name]), TraitError)
+        self._sources[name] = source   
             
-    def remove_destination(self, name):
-        del self._dests[name]    
+    def remove_source(self, name):
+        del self._sources[name]    
             
     def _check_trait_settable(self, name, srcname=None, force=False):
         if force:
             src = None
         else:
-            src = self._dests.get(name)
+            src = self._sources.get(name)
         trait = self.trait(name)
         if not trait:
             self.raise_exception("object has no attribute '%s'" % name,
@@ -1517,6 +1545,64 @@ setuptools.setup(
             for invar in ins:
                 io_graph.add_edges_from([(invar, o) for o in outs])
         return self._io_graph
+    
+    def _build_trait(self, ref_name, iostatus=None, trait=None):
+        names = ref_name.split('.')
+        obj = self
+        for name in names:
+            obj = getattr(obj, name)
+        # if we make it to here, object specified by ref_name exists
+        return PathProperty(ref_name=ref_name, iostatus=iostatus, trait=trait)
+
+    def make_public(self, obj_info, iostatus='in'):
+        if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
+            lst = [obj_info]
+        else:
+            lst = obj_info
+
+        for entry in lst:
+            iostat = iostatus
+            trait = None
+            
+            if isinstance(entry, basestring):
+                name = entry
+                ref_name = name
+            elif isinstance(entry, tuple):
+                name = entry[0]  # wrapper name
+                ref_name = entry[1]  # internal name
+                if not ref_name:
+                    ref_name = name
+                if len(entry) > 2:
+                    iostat = entry[2] # optional iostatus
+                if len(entry) > 3:
+                    trait = entry[3] # optional validation trait
+            else:
+                self.raise_exception('make_public cannot add trait %s' % entry,
+                                     TraitError)
+                
+            trait = self._build_trait(ref_name, iostat, trait)
+            
+            self.add_trait(name, trait)
+        
+
+    def hoist(self, path, io_status=None, trait=None):
+        """Create a trait that maps to some internal variable
+        designated by a dotted path.  If a trait is supplied as
+        an argument, use that trait as a validator for the hoisted
+        value.  The resulting trait will have the dotted path as
+        its name.
+        """
+        oldtrait = self.trait(path)
+        if oldtrait is None:
+            if trait is None:
+                self.make_public((path, path, io_status))
+            else:
+                self.make_public((path, path, io_status, trait))                
+        else:
+            self.raise_exception("'%s' has already been hoisted." % path, 
+                                 RuntimeError)
+        return path
+    
     
     # error reporting stuff
     def _get_log_level(self):

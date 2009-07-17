@@ -245,43 +245,43 @@ class TracingNPSS(NPSScomponent):
 class Model(Assembly):
     """ SBJ propulsion model. """
 
-    def connect(self, src_path, dst_path):
-        """ Overriding default to dynamically publicise/hoist variables. """
-        comp, rest = src_path.split('.', 1)
-        src_comp = getattr(self, comp)
-        if rest.find('.') > 0:
-            src_path = self.hoist(src_comp, rest, 'out')
-        else:
-            if src_comp.trait(rest) is None:
-                src_comp.make_public((rest, '', 'out'))
-                self._var_graph.add_node(src_path)
+    #def connect(self, src_path, dst_path):
+        #""" Overriding default to dynamically publicise/hoist variables. """
+        #comp, rest = src_path.split('.', 1)
+        #src_comp = getattr(self, comp)
+        #if rest.find('.') > 0:
+            #src_path = self.hoist(src_comp, rest, 'out')
+        #else:
+            #if src_comp.trait(rest) is None:
+                #src_comp.make_public((rest, '', 'out'))
+                ##self._var_graph.add_node(src_path)
 
-        comp, rest = dst_path.split('.', 1)
-        dst_comp = getattr(self, comp)
-        if rest.find('.') > 0:
-            dst_path = self.hoist(dst_comp, rest, 'in')
-        else:
-            if dst_comp.trait(rest) is None:
-                dst_comp.make_public(rest)
-                self._var_graph.add_node(dst_path)
+        #comp, rest = dst_path.split('.', 1)
+        #dst_comp = getattr(self, comp)
+        #if rest.find('.') > 0:
+            #dst_path = self.hoist(dst_comp, rest, 'in')
+        #else:
+            #if dst_comp.trait(rest) is None:
+                #dst_comp.make_public(rest)
+                ##self._var_graph.add_node(dst_path)
 
-        super(Model, self).connect(src_path, dst_path)
+        #super(Model, self).connect(src_path, dst_path)
 
-    def hoist(self, comp, path, io_status):
-        """ Hoist a variable so that it may be connected. """
-        name = '_'+path.replace('.', '_')
-        trait = comp.trait(path)
-        if trait is None:
-            comp.make_public((name, path, io_status))
-            trait = comp.trait(name)
+    #def hoist(self, comp, path, io_status):
+        #""" Hoist a variable so that it may be connected. """
+        #name = '_'+path.replace('.', '_')
+        #trait = comp.trait(path)
+        #if trait is None:
+            #comp.make_public((name, path, io_status))
+            #trait = comp.trait(name)
 
-        newpath = '.'.join([comp.name,name])
-        if newpath not in self._var_graph:
-            self.create_passthru(newpath)
-            #passthru = var.create_passthru(comp, name)
-            #comp.make_public(passthru)
-            #self._var_graph.add_node(newpath)
-        return newpath
+        #newpath = '.'.join([comp.name,name])
+        #if newpath not in self._var_graph:
+            #self.create_passthru(newpath)
+            ##passthru = var.create_passthru(comp, name)
+            ##comp.make_public(passthru)
+            ##self._var_graph.add_node(newpath)
+        #return newpath
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
