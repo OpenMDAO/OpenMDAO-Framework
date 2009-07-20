@@ -601,7 +601,7 @@ class Container(HasTraits):
         if force:
             src = None
         else:
-            src = self._sources.get(name)
+            src = self._sources.get(name, None)
         trait = self.trait(name)
         if not trait:
             self.raise_exception("object has no attribute '%s'" % name,

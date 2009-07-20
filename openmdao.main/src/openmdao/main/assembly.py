@@ -187,7 +187,8 @@ class Assembly (Component):
             if obj in self.drivers:
                 self.drivers.remove(obj)
         else:
-            self.raise_exception('attribute %s is not a Component',RuntimeError)
+            self.raise_exception('attribute %s is not a Component' % name,
+                                 RuntimeError)
             
         for drv in self.drivers:
             drv.graph_regen_needed()
