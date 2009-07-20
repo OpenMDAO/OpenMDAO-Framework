@@ -26,8 +26,15 @@ def kill_proc(proc, sig):
 
 
 class ExternalCode(Component):
-    """ Run an external code as a component. """
+    """
+    Run an external code as a component.
 
+    - `command` is the command to be executed.
+    - `timeout` is the maximum time to wait for command completion (seconds). \
+      A value <= zero implies an infinite wait.
+    - `return_code` is the value returned by the command.
+    - `timed_out` is set True if the command timed-out.
+    """
     PIPE   = subprocess.PIPE
     STDOUT = subprocess.STDOUT
 

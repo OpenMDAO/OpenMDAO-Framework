@@ -17,6 +17,8 @@ from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE, SAVE_LIBYAML
 from openmdao.main.socket import Socket
 from openmdao.main.variable import INPUT, OUTPUT
 
+from openmdao.main.pkg_res_factory import PkgResourcesFactory
+
 import openmdao.util.testutil
 
 # pylint: disable-msg=E1101,E1103
@@ -241,6 +243,7 @@ class EggTestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test in this class. """
         self.model = Model(directory='Egg')
+        self.child_objs=[self.model.Source, self.model.Sink, self.model.Oddball]
         self.egg_name = None
 
     def tearDown(self):
@@ -275,11 +278,8 @@ class EggTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.executions, 0)
 
         # Save to egg.
-        entry_pts=[(self.model.Source,  'Source'),
-                   (self.model.Sink,    'Sink'),
-                   (self.model.Oddball, 'Oddball')]
         self.egg_name = self.model.save_to_egg(py_dir=PY_DIR, format=format,
-                                               entry_pts=entry_pts,
+                                               child_objs=self.child_objs,
                                                use_setuptools=use_setuptools)
 
         # Run and verify correct operation.
@@ -577,11 +577,8 @@ class EggTestCase(unittest.TestCase):
         logging.debug('    Using python: %s' % python)
 
         # Write to egg.
-        entry_pts=[(self.model.Source,  'Source'),
-                   (self.model.Sink,    'Sink'),
-                   (self.model.Oddball, 'Oddball')]
         self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
-                                               entry_pts=entry_pts)
+                                               child_objs=self.child_objs)
 
         install_dir = os.path.join(os.getcwd(), 'install_dir')
         if os.path.exists(install_dir):
@@ -632,7 +629,7 @@ sys.exit(
             self.assertEqual(retcode, 0)
 
             # Load just the Oddball component and run.
-            entry_name = 'Oddball'
+            entry_name = self.model.Oddball.get_pathname()
             retcode = self.load_n_run(python, install_dir,
                                       package_name, entry_name)
             self.assertEqual(retcode, 0)
@@ -675,6 +672,53 @@ comp.run()
             stdout.close()
             return retcode
 
+        finally:
+            os.chdir(orig_dir)
+            shutil.rmtree(test_dir)
+
+
+    def test_pkg_resources_factory(self):
+        logging.debug('')
+        logging.debug('test_pkg_resources_factory')
+
+        # Write to egg.
+        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
+                                               child_objs=self.child_objs)
+        # Create factory.
+        factory = PkgResourcesFactory([os.getcwd()], ['openmdao.components'])
+        logging.debug('    loaders:')
+        for key, value in factory._loaders.items():
+            logging.debug('        %s:', key)
+            for val in value:
+                logging.debug('                name: %s', val.name)
+                logging.debug('               group: %s', val.group)
+                logging.debug('                dist: %s', val.dist)
+                logging.debug('            entry_pt: %s', val.entry_pt)
+                logging.debug('                ctor: %s', val.ctor)
+                logging.debug('')
+
+        orig_dir = os.getcwd()
+        test_dir = 'EggTest'
+        if os.path.exists(test_dir):
+            shutil.rmtree(test_dir)
+        os.mkdir(test_dir)
+        os.chdir(test_dir)
+        try:
+            # Create a complete model.
+            model = factory.create('Egg_TestModel', 'test_model')
+            if model is None:
+                self.fail('Create of test_model failed.')
+            self.assertEqual(model.Oddball.executions, 0)
+            model.run()
+            self.assertEqual(model.Oddball.executions, 2)
+
+            # Create a component.
+            comp = factory.create('Egg_TestModel.Oddball', 'test_comp')
+            if comp is None:
+                self.fail('Create of test_comp failed.')
+            self.assertEqual(comp.executions, 0)
+            comp.run()
+            self.assertEqual(comp.executions, 2)
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)

@@ -28,6 +28,14 @@ class CaseIteratorDriver(Driver):
     Run a set of cases provided by an ICaseIterator in a manner similar
     to the ROSE framework.
 
+    - The `iterator` socket provides the cases to be evaluated.
+    - The `model` socket provides the model to be executed.
+    - The `outerator` socket is used to record results.
+    - If `sequential` is True, then the cases are evaluated sequentially. \
+      (currently non-sequential evaluation is not supported)
+    - If `reload_model` is True, the model is reloaded between executions.
+    - `max_retries` sets the number of times to retry a failed case.
+
     .. parsed-literal::
 
         TODO: define interface for 'outerator'.

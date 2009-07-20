@@ -15,8 +15,8 @@ setup(
     install_requires = ['foo==1.0'],
     entry_points='''
     [openmdao.dumbplugins]
-    comp1 = bar:Comp1Plugin
-    comp2 = bar:Comp2Plugin
+    bar.Comp1Plugin = bar:Comp1Plugin
+    bar.Comp2Plugin = bar:Comp2Plugin
     '''
 )
 
