@@ -237,7 +237,7 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                     clean_name = obj_name
                     if clean_name.startswith(name+'.'):
                         clean_name = clean_name[len(name)+1:]
-                    clean_name.replace('.', '_')
+                    clean_name = clean_name.replace('.', '_')
 
                     # Save state of object hierarchy.
                     state_name, state_path = \
