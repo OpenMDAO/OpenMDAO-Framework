@@ -234,16 +234,20 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                 entry_info = []
                 for obj_info in all_entries:
                     obj, obj_name = obj_info
+                    clean_name = obj_name
+                    if clean_name.startswith(name+'.'):
+                        clean_name = clean_name[len(name)+1:]
+                    clean_name.replace('.', '_')
 
                     # Save state of object hierarchy.
                     state_name, state_path = \
-                        _write_state_file(name, obj, obj_name, format, proto,
+                        _write_state_file(name, obj, clean_name, format, proto,
                                           logger)
                     src_files.add(state_name)
                     cleanup_files.append(state_path)
 
                     # Create loader script.
-                    loader = '%s_loader' % obj_name
+                    loader = '%s_loader' % clean_name
                     loader_path = os.path.join(name, loader+'.py')
                     cleanup_files.append(loader_path)
                     _write_loader_script(loader_path, state_name, name,
@@ -795,13 +799,15 @@ except ImportError:
         print 'To get OpenMDAO, please visit openmdao.org'
     sys.exit(1)
 
-def load():
+def load(name=None):
     '''Create object(s) from state file.'''
     state_name = '%(name)s'
     if state_name.endswith('.pickle'):
-        return Component.load(state_name, SAVE_CPICKLE%(pkg)s%(top)s)
+        return Component.load(state_name,
+                              SAVE_CPICKLE%(pkg)s%(top)s, name=name)
     elif state_name.endswith('.yaml'):
-        return Component.load(state_name, SAVE_LIBYAML%(pkg)s%(top)s)
+        return Component.load(state_name,
+                              SAVE_LIBYAML%(pkg)s%(top)s, name=name)
     raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
                        state_name)
 

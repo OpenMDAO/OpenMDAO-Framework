@@ -31,8 +31,6 @@ from openmdao.main.constants import SAVE_CPICKLE
 
 import openmdao.util.save_load
 
-EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
-
 
 class Container(HierarchyMember):
     """ Base class for all objects having Variables that are visible 
@@ -45,7 +43,7 @@ class Container(HierarchyMember):
         self._pub = {}  # A container for framework accessible objects.
         self._io_graph = None
         if parent is not None and \
-           isinstance(parent, Container) and add_to_parent:
+           IContainer.providedBy(parent) and add_to_parent:
             parent.add_child(self)
 
     def items(self, pub=True, recurse=False):
@@ -358,7 +356,7 @@ class Container(HierarchyMember):
         raise NotImplementedError("config_from_obj")
 
     def save_to_egg(self, name=None, version=None, py_dir=None,
-                    src_dir=None, src_files=None, entry_pts=None,
+                    src_dir=None, src_files=None, child_objs=None,
                     dst_dir=None, format=SAVE_CPICKLE, proto=-1,
                     use_setuptools=False):
         """Save state and other files to an egg.
@@ -372,8 +370,7 @@ class Container(HierarchyMember):
         - `py_dir` is the (root) directory for local Python files. \
            It defaults to the current directory.
         - `src_dir` is the root of all (relative) `src_files`.
-        - 'entry_pts' is a list of (obj, obj_name) tuples for additional \
-          entries.
+        - `child_objs` is a list child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
@@ -389,6 +386,22 @@ class Container(HierarchyMember):
                 version = sys.modules[self.__module__].__version__
             except AttributeError:
                 pass
+
+        # Entry point names are the pathname, starting at self.
+        entry_pts = []
+        if child_objs is not None:
+            root_pathname = self.get_pathname()
+            root_start = root_pathname.rfind('.')
+            root_start = root_start+1 if root_start >= 0 else 0
+            root_pathname += '.'
+            for child in child_objs:
+                pathname = child.get_pathname()
+                if not pathname.startswith(root_pathname):
+                    self.raise_exception('%s is not a child of %s'
+                                         % (pathname, root_pathname),
+                                         RuntimeError)
+                entry_pts.append((child, pathname[root_start:]))
+
         parent = self.parent
         self.parent = None  # Don't want to save stuff above us.
         try:
@@ -439,12 +452,15 @@ class Container(HierarchyMember):
                                                         entry_name, logger)
 
     @staticmethod
-    def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True):
+    def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True,
+             name=None):
         """Load object(s) from the input stream. Pure python 
         classes generally won't need to override this, but extensions will. 
         The format can be supplied in case something other than cPickle is 
         needed."""
         top = openmdao.util.save_load.load(instream, format, package, logger)
+        if name:
+            top.name = name
         if do_post_load:
             top.parent = None  # Clear-out parent from saved state.
             top.post_load()
