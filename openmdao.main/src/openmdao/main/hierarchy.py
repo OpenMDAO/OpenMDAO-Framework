@@ -13,6 +13,13 @@ from openmdao.main.log import Logger, LOG_DEBUG
 # npsscomponent uses it...
 _namecheck_rgx = re.compile('([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
 
+def _legal_name(name):
+    """Check if name is legal."""
+    m = _namecheck_rgx.search(name)
+    if m is None or m.group() != name:
+        return False
+    return True
+
 
 class HierarchyMember(object):
     """Base class for all objects living in the framework accessible
@@ -34,11 +41,20 @@ class HierarchyMember(object):
         self.log_level = LOG_DEBUG
 
         if name is not None:
-            m = _namecheck_rgx.search(name)
-            if m is None or m.group() != name:
+            if not _legal_name(name):
                 self.raise_exception("name '%s' contains illegal characters" %
                                      name, NameError)
             
+    def rename(self, name):
+        """Change name of self and associated logger."""
+        if not name:
+            self.raise_exception('name must be non-null', NameError)
+        if not _legal_name(name):
+            self.raise_exception("name '%s' contains illegal characters" %
+                                 name, NameError)
+        self.name = name
+        self._logger.rename(self.get_pathname().replace('.', ','))
+
     def get(self, path, index=None):
         """Get a child object using a dotted path name. 
         (not implemented)
@@ -73,6 +89,7 @@ class HierarchyMember(object):
             self._parent = None
         else:
             self._parent = weakref.ref(parent)
+        self._logger.rename(self.get_pathname().replace('.', ','))
            
     parent = property(_get_parent, _set_parent)
     

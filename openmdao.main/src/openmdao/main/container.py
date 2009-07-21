@@ -460,14 +460,18 @@ class Container(HierarchyMember):
         needed."""
         top = openmdao.util.save_load.load(instream, format, package, logger)
         if name:
-            top.name = name
+            top.rename(name)
         if do_post_load:
             top.parent = None  # Clear-out parent from saved state.
-            top.post_load()
+            top.post_load(name)
         return top
 
-    def post_load(self):
+    def post_load(self, name=None):
         """Perform any required operations after model has been loaded."""
+        if name:  # Fix loggers
+            [x.rename(x.name) for x in self.values(pub=False) 
+                                    if isinstance(x, Container)]
+
         [x.post_load() for x in self.values(pub=False) 
                                           if isinstance(x,Container)]
 
