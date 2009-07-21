@@ -55,20 +55,24 @@ class MyModel(Assembly):
                                   output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
 
-        self.create_passthru('NPSS.xyzzy_in')
-        self.create_passthru('NPSS.xyzzy_out')
+        self.NPSS.make_public([
+              ('xyzzy_in','','in'),
+              ('xyzzy_out','','out'),
+            ])
+        #self.create_passthru('NPSS.xyzzy_in')
+        #self.create_passthru('NPSS.xyzzy_out')
         #xyzzy_in = Float(self.NPSS, iostatus='in', desc='Test input')
         #xyzzy_out = Float(self.NPSS, iostatus='out', desc='Test output')
-        self.create_passthru('NPSS.s')
+        #self.create_passthru('NPSS.s')
         #s = Str(self.NPSS, iostatus='in', desc='Unconnected input')
         
         Sink(parent=self)
 
         self.connect('Source.npss_reload', 'NPSS.reload_model')
-#        self.connect('Source.npss_in', 'NPSS.xyzzy_in')
-        self.connect('Source.npss_in', 'xyzzy_in')
-#        self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
-        self.connect('xyzzy_out', 'Sink.npss_out')
+        self.connect('Source.npss_in', 'NPSS.xyzzy_in')
+        #self.connect('Source.npss_in', 'xyzzy_in')
+        self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
+        #self.connect('xyzzy_out', 'Sink.npss_out')
 
     def rerun(self):
         self.debug('rerun()')

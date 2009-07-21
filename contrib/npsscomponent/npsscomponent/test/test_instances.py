@@ -102,7 +102,7 @@ class Passthrough(NPSScomponent):
                                           arglist, 'passthrough.out')
 
         # Manual interface variable creation.
-        # BAN - manual interface variable creation should be avoided, because
+        # BAN - manual interface variable creation is error prone, because
         #       you can easily create traits that don't talk to the underlying
         #       NPSS model if you're not careful.  All traits talking to NPSS
         #       need to be wrapped in a NPSSProperty trait, which _build_trait()
@@ -111,7 +111,7 @@ class Passthrough(NPSScomponent):
         #  the following add_trait call is incorrect and will not talk to NPSS
         #      self.add_trait('b_out', CBool(iostatus='out'))
         
-        #  this call to add_trait is ok, but as you can see is pretty verbose
+        #  this call to add_trait is ok, if a bit verbose
         self.add_trait('b_out', NPSSProperty(trait=CBool(iostatus='out')))
                 
         self.make_public([
@@ -125,13 +125,9 @@ class Passthrough(NPSScomponent):
              ('i2d_in', '', 'in'),#, Array(dtype=numpy.int, shape=(None,None), iostatus='in')),
              ('s_in',   '', 'in'),#, Str(iostatus='in')),
              ('s1d_in', '', 'in'),#, List(str, iostatus='in'))
+             ('text_in','', 'in'),
+             ('binary_in','','in'),
         ])
-        
-        # FIXME: file stuff needs work...
-        self.add_trait('text_in', 
-                       FileTrait(iostatus='in', ref_name='text_in.filename'))
-        self.add_trait('binary_in',
-                       FileTrait(iostatus='in', ref_name='binary_in.filename'))
         
         # Automagic interface variable creation (not for Bool though).
         self.make_public([
@@ -150,8 +146,6 @@ class Passthrough(NPSScomponent):
         # (skip 'f_out' to test dynamic trait creation during connect().)
         
         ## Sub-container needs Bools explicitly declared.
-        # ???: NPSS doesn't support bools, so why are we trying
-        # to use Bool traits to validate them?
         self.hoist('sub.b_in', 'in')#, trait=Bool(iostatus='in'))
         self.hoist('sub.b_out', 'out')#, trait=Bool(iostatus='out'))
 

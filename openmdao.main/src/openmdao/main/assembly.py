@@ -24,7 +24,7 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.constants import SAVE_PICKLE
 from openmdao.main.exceptions import CircularDependencyError
 from openmdao.main.util import filexfer
-from openmdao.main.filevar import FileTrait
+from openmdao.main.filevar import FileTrait, FileValue
 
 class MulticastTrait(TraitType):
     """A trait with a list of destination attributes (with names evaluated in
@@ -54,27 +54,6 @@ class MulticastTrait(TraitType):
                     msg = "cannot set '%s' from '%s': %s" % \
                         (vname, name, exc)
                     object.raise_exception(msg, type(exc))
-                
-    #def __getstate__(self):
-        #"""Return dict representing this container's state."""
-        #state = self.__dict__.copy()
-        #if isinstance(self.val_trait, CTrait):
-            #obj = state['val_trait'].trait_type
-            #state['val_trait'] = obj.__getstate__()
-            #state['_metadata']['val_trait'] = state['val_trait']
-            #state['val_trait_klass'] = obj.__class__
-            #state['val_trait_bases'] = obj.__class__.__bases__
-        #return state
-    
-    #def __setstate__(self, state):
-        #"""Restore this component's state."""
-        #self.__dict__.update(state)
-        #tmp = type(state['val_trait_klass'],
-                   #state['val_trait_bases'])
-        #tmp.__setstate__(state['val_trait'])
-        #self.val_trait = _check_trait(tmp)
-        #del self.__dict__['val_trait_klass']
-        #del self.__dict__['val_trait_bases']
                 
         
 class Assembly (Component):
@@ -245,35 +224,26 @@ class Assembly (Component):
         setattr(self, name, getattr(comp, vname))
         self.set_valid(name, comp.get_valid(vname))
         
-    def split_varpath(self, path, iostat):
-        """Return a tuple of compname,component,varname,trait given a path
+    def split_varpath(self, path):
+        """Return a tuple of compname,component,varname given a path
         name of the form 'compname.varname'. If the name is of the form 'varname'
-        then compname will be None and comp is self.
+        then compname will be None and comp is self. 
         """
         try:
             compname, varname = path.split('.', 1)
         except ValueError:
-            return (None, self, path, self.trait(path))
+            return (None, self, path)
         
-        comp = getattr(self, compname)       
-        trait = comp.trait(varname)
-        
-        if trait is None:
-            try:
-                # check to see if component has the ability to create traits on-the-fly
-                comp.hoist(varname, iostat)
-            except AttributeError:
-                self.raise_exception("Cannot locate trait named '%s'" %
-                                     varname, NameError)
-                
-        return (compname, comp, varname, comp.trait(varname))
-    
+        return (compname, getattr(self, compname), varname)
+
     def connect(self, srcpath, destpath):
         """Connect one src Variable to one destination Variable. This could be
         a normal connection (output to input) or a passthru connection."""
 
-        srccompname, srccomp, srcvarname, srctrait = self.split_varpath(srcpath, 'out')
-        destcompname, destcomp, destvarname, desttrait = self.split_varpath(destpath, 'in')
+        srccompname, srccomp, srcvarname = self.split_varpath(srcpath)
+        srctrait = srccomp.get_dyn_trait(srcvarname, 'out')
+        destcompname, destcomp, destvarname = self.split_varpath(destpath)
+        desttrait = destcomp.get_dyn_trait(destvarname, 'in')
         
         if srccompname == destcompname:
             self.raise_exception('Cannot connect %s to %s. Both are on same component.' %
@@ -476,8 +446,8 @@ class Assembly (Component):
                 
             updated = True
             srcname = preds.keys()[0]
-            srccompname,srccomp,srcvarname,srctrait = self.split_varpath(srcname, 'out')
-            destcompname,destcomp,destvarname,desttrait = self.split_varpath(vname, 'in')
+            srccompname,srccomp,srcvarname = self.split_varpath(srcname)
+            destcompname,destcomp,destvarname = self.split_varpath(vname)
             
             if srccomp.get_valid(srcvarname) is False:  # source is invalid 
                 # need to backtrack to get a valid source value
@@ -489,12 +459,17 @@ class Assembly (Component):
                 else:
                     srccomp.update_outputs([srcvarname])
 
-            if desttrait.is_trait_type(FileTrait):
+            try:
+                srcval = srccomp.get_wrapped_attr(srcvarname)
+            except Exception, err:
+                self.raise_exception("cannot retrieve value of source attribute '%s'" %
+                                     srcname, type(err))
+            
+            if isinstance(srcval, FileValue):
                 if comp.directory:
                     comp.pop_dir()
                 try:
-                    destcomp.set(destvarname, getattr(srccomp, srcvarname), 
-                                 srcname=srcname)
+                    destcomp.set(destvarname, srcval, srcname=srcname)
                     self.xfer_file(srccomp, srcvarname, comp, destvarname)
                 except Exception, exc:
                     msg = "cannot transfer file from '%s' to '%s': %s" % \
@@ -505,8 +480,7 @@ class Assembly (Component):
                         comp.push_dir(comp.get_directory())
             else:
                 try:
-                    destcomp.set(destvarname, srccomp.get_wrapped_attr(srcvarname), 
-                                 srcname=srcname)
+                    destcomp.set(destvarname, srcval, srcname=srcname)
                 except Exception, exc:
                     msg = "cannot set '%s' from '%s': %s" % \
                         (vname, srcname, exc)

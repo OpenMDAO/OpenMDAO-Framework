@@ -61,9 +61,6 @@ from openmdao.main.unitsfloat import convert_units, UnitsFloat
 # FIXME - shouldn't have a hard wired URL in the code
 EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
 
-# regex to check for valid names.  Added '.' as allowed because
-# npsscomponent uses it...
-_namecheck_rgx = re.compile('([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
 
 # this causes any exceptions occurring in trait handlers to be re-raised. Without
 # this, the default behavior is for the exception to be logged and not re-raised.
@@ -148,6 +145,10 @@ class ContainerName(BaseStr):
     names with spaces when using the same regex.
     """
     
+    # regex to check for valid names.  Added '.' as allowed because
+    # npsscomponent uses it...
+    _namecheck_rgx = re.compile('([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
+
     def __init__(self, **metadata):
         super(ContainerName, self).__init__(**metadata)
 
@@ -156,7 +157,7 @@ class ContainerName(BaseStr):
             return value
         
         s = super(ContainerName, self).validate(object, name, value) # normal string validation
-        m = _namecheck_rgx.search(s)
+        m = self._namecheck_rgx.search(s)
         if m is None or m.group() != s:
             raise TraitError("name '%s' contains illegal characters" % s)
         return s            
@@ -603,18 +604,20 @@ class Container(HasTraits):
         else:
             src = self._sources.get(name, None)
         trait = self.trait(name)
-        if not trait:
+        if trait:
+            if trait.iostatus != 'in' and src is not None and src != srcname:
+                self.raise_exception("'%s' is not an input trait and cannot be set" %
+                                     name, TraitError)
+                
+            if src is not None and src != srcname:
+                self.raise_exception(
+                    "'%s' is connected to source '%s' and cannot be set by source '%s'"%
+                    (name,src,srcname), TraitError)
+        else:
             self.raise_exception("object has no attribute '%s'" % name,
                                  TraitError)
-        if trait.iostatus != 'in' and src is not None and src != srcname:
-            self.raise_exception("'%s' is not an input trait and cannot be set" %
-                                 name, TraitError)
-            
-        if src is not None and src != srcname:
-            self.raise_exception(
-                "'%s' is connected to source '%s' and cannot be set by source '%s'"%
-                (name,src,srcname), TraitError)
-                    
+        return trait
+
     def set(self, path, value, index=None, srcname=None, force=False):
         """Set the value of the data object specified by the  given path, which
         may contain '.' characters.  If path specifies a Variable, then its
@@ -635,9 +638,9 @@ class Container(HasTraits):
                     
         tup = path.split('.')
         if len(tup) == 1:
-            self._check_trait_settable(path, srcname, force)
+            trait = self._check_trait_settable(path, srcname, force)
             if index is None:
-                if self.trait(path) is None:
+                if trait is None:
                     self.raise_exception("object has no attribute '%s'" %
                                          path, TraitError)
                 # bypass the callback here and call it manually after 
@@ -667,8 +670,11 @@ class Container(HasTraits):
             else:
                 if isinstance(obj, Container):
                     obj.set('.'.join(tup[1:]), value, index, force=force)
-                else:
+                elif index is not None:
                     obj._array_set('.'.join(tup[1:]), value, index)
+                else:
+                    self.raise_exception("object has no attribute '%s'" % path,
+                                         TraitError)
 
     def _array_set(self, name, value, index):
         arr = getattr(self, name)
@@ -1547,6 +1553,10 @@ setuptools.setup(
         return self._io_graph
     
     def _build_trait(self, ref_name, iostatus=None, trait=None):
+        """Asks the component to dynamically create a trait for the 
+        attribute given by ref_name, based on whatever knowledge the
+        component has of that attribute.
+        """
         names = ref_name.split('.')
         obj = self
         for name in names:
@@ -1585,6 +1595,21 @@ setuptools.setup(
             self.add_trait(name, trait)
         
 
+    def get_dyn_trait(self, name, iostat):
+        """Retrieves the named trait, creating it on-the-fly if necessary."""
+        trait = self.trait(name)
+        
+        if trait is None:
+            try:
+                # check to see if component has the ability to create traits on-the-fly
+                self.hoist(name, iostat)
+            except AttributeError:
+                self.raise_exception("Cannot locate trait named '%s'" %
+                                     name, NameError)
+            return self.trait(name)
+        return trait
+
+    
     def hoist(self, path, io_status=None, trait=None):
         """Create a trait that maps to some internal variable
         designated by a dotted path.  If a trait is supplied as

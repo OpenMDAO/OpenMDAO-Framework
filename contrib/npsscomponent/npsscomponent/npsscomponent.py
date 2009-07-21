@@ -6,7 +6,7 @@ import os
 
 import numpy
 from enthought.traits.api import TraitType, Array, Bool, Float, Dict, Int, \
-                                 Str, List, Undefined, TraitError, Disallow
+                                 Str, List, Undefined, TraitError, Instance, Python
 from enthought.traits.trait_handlers import NoDefaultSpecified
 
 from openmdao.main.api import Component, FileTrait, FileValue, UnitsFloat
@@ -17,10 +17,12 @@ npss.isolateContexts(True)
 import units
 
 _iodict = { 'INPUT': 'in',
-            'OUTPUT': 'out' }
+            'OUTPUT': 'out',
+            'unset': 'in' }
 
 _excludes = set(['type'])
 
+    
 class NPSSProperty(TraitType):
     def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
         trait = metadata.get('trait', None)
@@ -53,7 +55,6 @@ class NPSSProperty(TraitType):
                 return
         object._top._set(self.ref_name, value)
 
-        
 class NPSScomponent(Component):
     """
     An NPSS wrapper component.  Supports reload requests either internally
@@ -163,8 +164,14 @@ class NPSScomponent(Component):
         if arglist is not None:
             self._parse_arglist(arglist)
         self._top = None
+        
+        self.on_trait_change(self.added_trait, 'trait_added')
+        
         self.reload()
 
+    def added_trait(self, obj, name, old, new):
+        x = 1
+        
     def __getstate__(self):
         """ Return dict representing this Component's state. """
         state = super(NPSScomponent, self).__getstate__()
@@ -383,16 +390,10 @@ class NPSScomponent(Component):
         if self._top is not None:
             is_reload = True
             # Save current input values.
-            if self.parent is not None:
-                connections = self.parent.list_connections()
-                for src, dst in connections:
-                    try:
-                        dst_comp, dst_attr = dst.split('.', 1)
-                    except ValueError:
-                        pass
-                    else:
-                        if dst_comp == self.name:
-                            saved_inputs.append((dst_attr, self.get(dst_attr)))
+            # TODO: currently this only saves input values for inputs
+            #       that are connected to a source
+            for name in self._sources.keys():
+                saved_inputs.append((name, self.get(name)))
                   
             # Remove model input files from external_files list.
             paths = self._top.inputFileList
@@ -457,7 +458,7 @@ class NPSScomponent(Component):
             if is_reload:
                 # Need to restore input values.
                 for name, value in saved_inputs:
-                    self.set(name, value)
+                    self.set(name, value, force=True)
         finally:
             self.pop_dir()
 
@@ -468,12 +469,13 @@ class NPSScomponent(Component):
     def get(self, path, index=None):
         """ Return value for attribute. """
         if index is None:
-            return self._top._get(path)
+            return super(NPSScomponent, self).get(path, index)
+            #return self._top._get(path)
             #return getattr(self, path)
         else:
             self.raise_exception('Indexing not supported yet',
                                  NotImplementedError)
-
+            
     def __getattr__(self, name):
         """
         Return value for attribute.
@@ -503,6 +505,14 @@ class NPSScomponent(Component):
             self.raise_exception('Indexing not supported yet',
                                  NotImplementedError)
 
+    def _check_trait_settable(self, name, srcname=None, force=False):
+        trait = self.trait(name)
+        if not trait:  # try to create a trait on-the-fly to map to an NPSS variable
+            trait = self._build_trait(name)
+            self.add_trait(name, trait)
+        
+        return super(NPSScomponent, self)._check_trait_settable(name, srcname, force)
+        
     def __setattr__(self, name, value):
         """ Set attribute value. """
         try:

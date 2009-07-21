@@ -494,11 +494,11 @@ class Component (Container):
 
     def invalidate_deps(self, vars, notify_parent=False):
         """Invalidate all of our valid outputs."""
+        valid_outs = self.list_outputs(valid=True)
+        
         for var in vars:
             self.set_valid(var, False)
             
-        valid_outs = self.list_outputs(valid=True)
-        
         if notify_parent and self.parent and len(valid_outs) > 0:
             self.parent.invalidate_deps(['.'.join([self.name,n]) for n in valid_outs], 
                                         notify_parent)

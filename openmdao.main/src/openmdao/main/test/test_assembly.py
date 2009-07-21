@@ -241,7 +241,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.units','comp2.s')
         except NameError, err:
             self.assertEqual(str(err), 
-                    "top: Cannot locate trait named 'rout.units'")
+                    "top.comp1: Cannot locate trait named 'rout.units'")
         else:
             self.fail('NameError expected')
         
@@ -250,7 +250,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.value','comp2.r2')
         except NameError, err:
             self.assertEqual(str(err), 
-                    "top: Cannot locate trait named 'rout.value'")
+                    "top.comp1: Cannot locate trait named 'rout.value'")
         else:
             self.fail('NameError expected')
         
