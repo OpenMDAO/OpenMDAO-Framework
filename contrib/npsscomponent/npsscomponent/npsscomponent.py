@@ -607,7 +607,7 @@ class NPSScomponent(Component):
                             mdao_units = Undefined
                     else:
                         mdao_units = Undefined
-                if mdao_units is Undefined:
+                if mdao_units is Undefined or mdao_units is None:
                     trait = Float(iostatus=iostat, desc=doc)
                 else:
                     trait = UnitsFloat(iostatus=iostat, 

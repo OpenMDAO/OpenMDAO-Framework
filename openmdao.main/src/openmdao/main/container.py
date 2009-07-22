@@ -111,6 +111,18 @@ class PathProperty(TraitType):
                                             # self._ref is None
         super(PathProperty, self).__init__(default_value, **metadata)
 
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['_ref'] = self._ref()
+        return state
+    
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        if self._ref is None:
+            self._ref = weakref.ref(_DumbTmp())
+        else:
+            self._ref = weakref.ref(self._ref)
+    
     def _resolve(self, object):
         """Try to resolve down to the last containing object in the path and
         store a weakref to that object.
@@ -1569,6 +1581,10 @@ setuptools.setup(
         return PathProperty(ref_name=ref_name, iostatus=iostatus, trait=trait)
 
     def make_public(self, obj_info, iostatus='in'):
+        """Create trait(s) specified by the contents of obj_info.  Calls
+        _build_trait(), which can be overridden by subclasses, to create each
+        trait.
+        """
         if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
             lst = [obj_info]
         else:

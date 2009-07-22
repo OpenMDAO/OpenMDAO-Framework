@@ -29,21 +29,21 @@ __version__ = '0.1'
 class Design(Component):
     """ Design variables. """
 
+    FanPRdes = Float(3.615, iostatus='out')
+    TOCThrust = Float(7000., iostatus='out')
+    MN = Float(1.8, iostatus='out')
+    alt = Float(53700., iostatus='out')
+    Knoz = Float(0.88, iostatus='out')
+    extractionRatio = Float(1.05, iostatus='out')
+    HpcPRdes = Float(6.51937, iostatus='out')
+    Cfg = Float(0.985, iostatus='out')
+    maxDiamFact = Float(1.17, iostatus='out')
+    I_externalFact = Float(0.48, iostatus='out')
+    I_divergFact = Float(0.5, iostatus='out')
+    cowl_angle = Float(6., iostatus='out')
+        
     def __init__(self, name='Design', parent=None):
         super(Design, self).__init__(name, parent)
-
-        Float('FanPRdes',        self, iostatus='out', default=3.615)
-        Float('TOCThrust',       self, iostatus='out', default=7000)
-        Float('MN',              self, iostatus='out', default=1.8)
-        Float('alt',             self, iostatus='out', default=53700)
-        Float('Knoz',            self, iostatus='out', default=0.88)
-        Float('extractionRatio', self, iostatus='out', default=1.05)
-        Float('HpcPRdes',        self, iostatus='out', default=6.51937)
-        Float('Cfg',             self, iostatus='out', default=0.985)
-        Float('maxDiamFact',     self, iostatus='out', default=1.17)
-        Float('I_externalFact',  self, iostatus='out', default=0.48)
-        Float('I_divergFact',    self, iostatus='out', default=0.5)
-        Float('cowl_angle',      self, iostatus='out', default=6)
 
     def execute(self):
         """ Just to trace execution. """
@@ -55,17 +55,17 @@ class Design(Component):
 class PropulsionData(Component):
     """ Computed propulsion data. """
 
+    link_bladeTipRadius = Float(0., iostatus='in')
+    link_contRingRadialThickness = Float(0., iostatus='in')
+    link_maxDiamFact = Float(0., iostatus='in')
+    link_Acapture = Float(0., iostatus='in')
+    link_inletLength = Float(0., iostatus='in')
+    link_length = Float(0., iostatus='in')
+
+    Acapture = Float(0., iostatus='out')
+
     def __init__(self, name='PropulsionData', parent=None):
         super(PropulsionData, self).__init__(name, parent)
-
-        Float('link_bladeTipRadius', self, iostatus='in', default=0.)
-        Float('link_contRingRadialThickness', self, iostatus='in', default=0.)
-        Float('link_maxDiamFact', self, iostatus='in', default=0.)
-        Float('link_Acapture', self, iostatus='in', default=0.)
-        Float('link_inletLength', self, iostatus='in', default=0.)
-        Float('link_length', self, iostatus='in', default=0.)
-
-        Float('Acapture', self, iostatus='out', default=0.)
 
         FLOPSdata(parent=self)
         PlumeData(parent=self)
@@ -244,44 +244,6 @@ class TracingNPSS(NPSScomponent):
 
 class Model(Assembly):
     """ SBJ propulsion model. """
-
-    #def connect(self, src_path, dst_path):
-        #""" Overriding default to dynamically publicise/hoist variables. """
-        #comp, rest = src_path.split('.', 1)
-        #src_comp = getattr(self, comp)
-        #if rest.find('.') > 0:
-            #src_path = self.hoist(src_comp, rest, 'out')
-        #else:
-            #if src_comp.trait(rest) is None:
-                #src_comp.make_public((rest, '', 'out'))
-                ##self._var_graph.add_node(src_path)
-
-        #comp, rest = dst_path.split('.', 1)
-        #dst_comp = getattr(self, comp)
-        #if rest.find('.') > 0:
-            #dst_path = self.hoist(dst_comp, rest, 'in')
-        #else:
-            #if dst_comp.trait(rest) is None:
-                #dst_comp.make_public(rest)
-                ##self._var_graph.add_node(dst_path)
-
-        #super(Model, self).connect(src_path, dst_path)
-
-    #def hoist(self, comp, path, io_status):
-        #""" Hoist a variable so that it may be connected. """
-        #name = '_'+path.replace('.', '_')
-        #trait = comp.trait(path)
-        #if trait is None:
-            #comp.make_public((name, path, io_status))
-            #trait = comp.trait(name)
-
-        #newpath = '.'.join([comp.name,name])
-        #if newpath not in self._var_graph:
-            #self.create_passthru(newpath)
-            ##passthru = var.create_passthru(comp, name)
-            ##comp.make_public(passthru)
-            ##self._var_graph.add_node(newpath)
-        #return newpath
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
