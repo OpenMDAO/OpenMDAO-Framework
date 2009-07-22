@@ -30,20 +30,21 @@ class Passthrough(NPSScomponent):
     def __init__(self):
         super(Passthrough, self).__init__('NPSS', arglist='passthrough.mdl')
 
-        # Automagic interface variable creation (not for Bool though).
-        self.add_trait('b_out', Bool(iostatus='out'))
+        # Automagic interface variable creation
         self.make_public([
-            ('f_out',      '', 'out'),
-            ('f1d_out',    '', 'out'),
-            ('f2d_out',    '', 'out'),
-            ('f3d_out',    '', 'out'),
-            ('i_out',      '', 'out'),
-            ('i1d_out',    '', 'out'),
-            ('i2d_out',    '', 'out'),
-            ('s_out',      '', 'out'),
-            ('s1d_out',    '', 'out'),
-            ('text_out',   '', 'out'),
-            ('binary_out', '', 'out')])
+            'f_out',
+            'f1d_out',
+            'f2d_out',
+            'f3d_out',
+            'i_out',
+            'i1d_out',
+            'i2d_out',
+            's_out',
+            's1d_out', 
+            'text_out',
+            'binary_out',
+            ('b_out','','out',Bool(iostatus='out')), # for bools, we need to supply a trait
+        ], iostatus='out')
         
 
 class NPSSTestCase(unittest.TestCase):

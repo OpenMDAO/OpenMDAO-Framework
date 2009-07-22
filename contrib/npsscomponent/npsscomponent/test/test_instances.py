@@ -105,48 +105,48 @@ class Passthrough(NPSScomponent):
         #       you can easily create traits that don't talk to the underlying
         #       NPSS model if you're not careful.  All traits talking to NPSS
         #       need to be wrapped in a NPSSProperty trait, which _build_trait()
-        #       does for you automatically.  make_public() uses _build_trait().
+        #       and make_public() do for you automatically.
         
-        #  the following add_trait call is incorrect and will not talk to NPSS
+        #  the following add_trait call adds a trait that will not talk to NPSS
         #      self.add_trait('b_out', CBool(iostatus='out'))
         
-        #  this call to add_trait is ok, if a bit verbose
+        #  this call to add_trait will have the 'b_out' attribute talk to NPSS
         self.add_trait('b_out', NPSSProperty(trait=CBool(iostatus='out')))
                 
         self.make_public([
-             ('b_in',   '', 'in'),#, CBool(iostatus='in')),
-             ('f1d_in', '', 'in'),#, Array(dtype=numpy.float, shape=(None,), iostatus='in')),
-             ('f2d_in', '', 'in'),#, Array(dtype=numpy.float, shape=(None,None), iostatus='in')),
-             ('f3d_in', '', 'in'),#, Array(dtype=numpy.float, shape=(None,None,None), 
-                                  #      iostatus='in')),
-             ('i_in',   '', 'in'),#, Int(0, iostatus='in')),
-             ('i1d_in', '', 'in'),#, Array(dtype=numpy.int, shape=(None,), iostatus='in')),
-             ('i2d_in', '', 'in'),#, Array(dtype=numpy.int, shape=(None,None), iostatus='in')),
-             ('s_in',   '', 'in'),#, Str(iostatus='in')),
-             ('s1d_in', '', 'in'),#, List(str, iostatus='in'))
-             ('text_in','', 'in'),
-             ('binary_in','','in'),
-        ])
+             'b_in',
+             'f1d_in',
+             'f2d_in',
+             'f3d_in',
+             'i_in',
+             'i1d_in',
+             'i2d_in',
+             's_in',
+             's1d_in',
+             'text_in',
+             'binary_in',
+        ], iostatus='in')
         
         # Automagic interface variable creation (not for Bool though).
         self.make_public([
-            ('f1d_out',    '', 'out'),
-            ('f2d_out',    '', 'out'),
-            ('f3d_out',    '', 'out'),
-            ('i_out',      '', 'out'),
-            ('i1d_out',    '', 'out'),
-            ('i2d_out',    '', 'out'),
-            ('s_out',      '', 'out'),
-            ('s1d_out',    '', 'out'),
-            ('text_out',   '', 'out'),
-            ('binary_out', '', 'out')])
+            'f1d_out',
+            'f2d_out',
+            'f3d_out',
+            'i_out',
+            'i1d_out',
+            'i2d_out',
+            's_out', 
+            's1d_out',
+            'text_out',
+            'binary_out',
+        ], iostatus='out')
 
         # (skip 'f_in' to test dynamic trait creation during connect().)
         # (skip 'f_out' to test dynamic trait creation during connect().)
         
-        ## Sub-container needs Bools explicitly declared.
-        self.hoist('sub.b_in', 'in')#, trait=Bool(iostatus='in'))
-        self.hoist('sub.b_out', 'out')#, trait=Bool(iostatus='out'))
+        # Sub-container needs Bools explicitly declared.
+        self.hoist('sub.b_in', 'in', trait=CBool(iostatus='in'))
+        self.hoist('sub.b_out', 'out', trait=CBool(iostatus='out'))
 
 
 class Sink(Component):

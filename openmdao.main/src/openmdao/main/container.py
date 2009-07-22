@@ -1583,13 +1583,12 @@ setuptools.setup(
                 ref_name = name
             elif isinstance(entry, tuple):
                 name = entry[0]  # wrapper name
-                ref_name = entry[1]  # internal name
-                if not ref_name:
-                    ref_name = name
-                if len(entry) > 2:
+                ref_name = entry[1] or name # internal name
+                try:
                     iostat = entry[2] # optional iostatus
-                if len(entry) > 3:
-                    trait = entry[3] # optional validation trait
+                    trait = entry[3]  # optional validation trait
+                except IndexError:
+                    pass
             else:
                 self.raise_exception('make_public cannot add trait %s' % entry,
                                      TraitError)

@@ -40,7 +40,7 @@ class NPSSProperty(TraitType):
         if trait and isinstance(trait, FileTrait):
             meta = self.trait._metadata.copy()
             meta.pop('iostatus')
-            meta['filename'] = object._top._get(self.ref_name+'.filename')
+            meta['filename'] = getattr(object._top, self.ref_name+'.filename')
             return FileValue(**meta)
         else:
             return getattr(object._top, self.ref_name or name)
@@ -53,9 +53,9 @@ class NPSSProperty(TraitType):
             value = self.trait.validate(object, name, value)
             # FIXME: pull the file stuff out of here and fix it up
             if isinstance(value, FileValue):
-                object._top._set(self.ref_name+'.filename', value.filename)
+                setattr(object._top, self.ref_name+'.filename', value.filename)
                 return
-        object._top._set(self.ref_name, value)
+        setattr(object._top, self.ref_name or name, value)
 
         
         
