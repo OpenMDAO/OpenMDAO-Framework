@@ -243,7 +243,8 @@ class EggTestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test in this class. """
         self.model = Model(directory='Egg')
-        self.child_objs=[self.model.Source, self.model.Sink, self.model.Oddball]
+        self.child_objs = [self.model.Source, self.model.Sink,
+                           self.model.Oddball]
         self.egg_name = None
 
     def tearDown(self):
@@ -709,8 +710,33 @@ comp.run()
             if model is None:
                 self.fail('Create of test_model failed.')
             self.assertEqual(model.Oddball.get_pathname(), 'test_model.Oddball')
+
+            # Verify initial state.
+            self.assertNotEqual(model.Sink.text_data,
+                                model.Source.text_data)
+            self.assertNotEqual(model.Sink.binary_data,
+                                model.Source.sub.binary_data)
+            self.assertNotEqual(
+                model.Sink.getvar('binary_file').metadata['binary'], True)
+
+            for path in EXTERNAL_FILES:
+                path = os.path.join(model.Source.get_directory(), path)
+                self.assertEqual(os.path.exists(path), True)
+
+            for i in range(3):
+                self.assertEqual(model.Source.obj_list[i].data, i)
+
             self.assertEqual(model.Oddball.executions, 0)
+
+            # Run and verify correct operation.
             model.run()
+            self.assertEqual(model.Sink.text_data,
+                             model.Source.text_data)
+            self.assertEqual(model.Sink.binary_data,
+                             model.Source.sub.binary_data)
+            self.assertEqual(
+                model.Sink.getvar('binary_file').metadata['binary'], True)
+
             self.assertEqual(model.Oddball.executions, 2)
 
             # Create a component.
@@ -721,6 +747,7 @@ comp.run()
             self.assertEqual(comp.executions, 0)
             comp.run()
             self.assertEqual(comp.executions, 2)
+
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)

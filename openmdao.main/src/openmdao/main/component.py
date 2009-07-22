@@ -597,6 +597,7 @@ Component.load_from_eggfile('%s', install=False)
             # Must use '/' for resources.
             relpath = relpath+'/'+directory
 
+        relpath = os.path.normpath(relpath)
         pkg_files = pkg_resources.resource_listdir(package, relpath)
 
         if directory:
