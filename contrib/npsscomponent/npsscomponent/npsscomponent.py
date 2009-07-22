@@ -22,8 +22,10 @@ _iodict = { 'INPUT': 'in',
 
 _excludes = set(['type'])
 
-    
+
 class NPSSProperty(TraitType):
+    """A Trait that sets/gets values within an NPSS model.
+    """
     def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
         trait = metadata.get('trait', None)
         if trait is not None:
@@ -33,15 +35,15 @@ class NPSSProperty(TraitType):
         super(NPSSProperty, self).__init__(default_value, **metadata)
 
     def get(self, object, name):
-        # FIXME: pull the file stuff out of here and fix it up
         trait = self.trait
+        # FIXME: pull the file stuff out of here and fix it up
         if trait and isinstance(trait, FileTrait):
             meta = self.trait._metadata.copy()
             meta.pop('iostatus')
             meta['filename'] = object._top._get(self.ref_name+'.filename')
             return FileValue(**meta)
         else:
-            return object._top._get(self.ref_name or name)
+            return getattr(object._top, self.ref_name or name)
 
     def set(self, object, name, value):
         if self.iostatus == 'out':
@@ -55,6 +57,8 @@ class NPSSProperty(TraitType):
                 return
         object._top._set(self.ref_name, value)
 
+        
+        
 class NPSScomponent(Component):
     """
     An NPSS wrapper component.  Supports reload requests either internally
@@ -150,6 +154,10 @@ class NPSScomponent(Component):
     reload_model = Bool(False, iostatus='in', 
          desc='Flag to externally request a model reload.')
     
+    __ = Python
+    
+    _ = NPSSProperty(scope='_top')
+    
     # 1st session gets bad context for some reason...
     dummy = npss.npss()
 
@@ -165,12 +173,7 @@ class NPSScomponent(Component):
             self._parse_arglist(arglist)
         self._top = None
         
-        self.on_trait_change(self.added_trait, 'trait_added')
-        
         self.reload()
-
-    def added_trait(self, obj, name, old, new):
-        x = 1
         
     def __getstate__(self):
         """ Return dict representing this Component's state. """
@@ -386,15 +389,17 @@ class NPSScomponent(Component):
     def reload(self):
         """ (Re)load model. """
         is_reload = False
-        saved_inputs = []
+        saved_inputs = {}
+        removed_traits = []
         if self._top is not None:
             is_reload = True
-            # Save current input values.
-            # TODO: currently this only saves input values for inputs
-            #       that are connected to a source
+            # Save current values and trait info for attributes that are 
+            # connected to a source
             for name in self._sources.keys():
-                saved_inputs.append((name, self.get(name)))
-                  
+                saved_inputs[name] = (self.get(name), 
+                                      self.trait(name).ref_name or '', 
+                                      self.trait(name).iostatus)
+                
             # Remove model input files from external_files list.
             paths = self._top.inputFileList
             cwd = self.get_directory()+os.sep
@@ -407,6 +412,11 @@ class NPSScomponent(Component):
                         break
             self._top.closeSession()
             self._top = None
+            
+            # remove all of the old dynamically added traits
+            for name, value in self._added_traits.items():
+                removed_traits.append((name, value.ref_name or '', value.iostatus))
+                self.remove_trait(name)
 
         # Default session directory is set during initialization.
         directory = self.get_directory()
@@ -456,9 +466,13 @@ class NPSScomponent(Component):
                         self.external_files.append({'path':path, 'input':True})
 
             if is_reload:
+                for name, ref_name, iostat in removed_traits:
+                    if not self.trait(name):
+                        self.make_public((name, ref_name, iostat))
                 # Need to restore input values.
-                for name, value in saved_inputs:
-                    self.set(name, value, force=True)
+                for name, value in saved_inputs.items():
+                    self.set(name, value[0], force=True)
+
         finally:
             self.pop_dir()
 
@@ -470,32 +484,10 @@ class NPSScomponent(Component):
         """ Return value for attribute. """
         if index is None:
             return super(NPSScomponent, self).get(path, index)
-            #return self._top._get(path)
-            #return getattr(self, path)
         else:
             self.raise_exception('Indexing not supported yet',
                                  NotImplementedError)
             
-    def __getattr__(self, name):
-        """
-        Return value for attribute.
-        Note that this is not __getattribute__.
-        This gets called only when the normal methods fail.
-        """
-        try:
-            return super(NPSScomponent, self).__getattribute__(name)
-        except AttributeError:
-            # look inside of npss object for the attribute
-            top = None
-            try:
-                top = super(NPSScomponent, self).__getattribute__('_top')
-            finally:
-                if top is not None:
-                    return getattr(top, name)
-        # if we get this far, we've failed. Just call base class version
-        # for error handling
-        return super(NPSScomponent, self).__getattribute__(name)    
-
     def set(self, path, value, index=None, srcname=None, force=False):
         """ Set attribute value. """
         if index is None:
@@ -513,24 +505,6 @@ class NPSScomponent(Component):
         
         return super(NPSScomponent, self)._check_trait_settable(name, srcname, force)
         
-    def __setattr__(self, name, value):
-        """ Set attribute value. """
-        try:
-            return super(NPSScomponent, self).__setattr__(name, value)
-        except AttributeError:
-            top = None
-            try:
-                top = super(NPSScomponent, self).__getattribute__('_top')
-            finally:
-                if top is None:
-                    return super(NPSScomponent, self).__setattr__(name, value)
-                else:
-                    setattr(top, name, value)
-            #try:
-                #setattr(top, name, value)
-            #except AttributeError:
-                #return super(NPSScomponent, self).__setattr__(name, value)
-
     def execute(self):
         """ Perform operations associated with running the component. """
         if self.reload_model:
@@ -617,9 +591,6 @@ class NPSScomponent(Component):
                         getattr(self._top, ref_name+'.singlePrecision') != 0
                     metadata['unformatted'] = \
                         getattr(self._top, ref_name+'.unformatted') != 0
-                #else:
-                    #self.raise_exception("cannot bind trait to NPSS variable '%s'" %
-                                         #ref_name, TraitError)
             
         # Primitive method to create correct type.
             if typ == 'real':
@@ -664,7 +635,6 @@ class NPSScomponent(Component):
                              iostatus=iostat, desc=doc)
             elif typ == 'Stream':
                 trait = FileTrait(iostatus=iostat, desc=doc, 
-                                  #ref_name=ref_name+'.filename',
                                   **metadata)
             else:
                 self.raise_exception("'%s' is an unsupported NPSS type: '%s'" % 

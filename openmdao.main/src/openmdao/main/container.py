@@ -46,7 +46,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import networkx as nx
 from enthought.traits.api import HasTraits, implements, Str, Missing, TraitError,\
                                  BaseStr, Undefined, push_exception_handler,\
-                                 on_trait_change, WeakRef, TraitType
+                                 on_trait_change, WeakRef, Python, TraitType
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import _SimpleTest, FunctionType
 from enthought.traits.trait_base import not_event, not_none
@@ -170,7 +170,11 @@ class Container(HasTraits):
     implements(IContainer)
     
     name = ContainerName()
-    #parent = WeakRef(IContainer, allow_none=True, adapt='no')
+    #parent = WeakRef(IContainer, allow_none=True, adapt='no', transient=True)
+    parent = Python
+    
+    log_level = Python
+    __ = Python
     
     def __init__(self, name='', parent=None, doc=None, add_to_parent=True):
         super(Container, self).__init__() # don't forget to init HasTraits

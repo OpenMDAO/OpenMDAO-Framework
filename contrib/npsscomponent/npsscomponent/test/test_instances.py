@@ -96,8 +96,7 @@ class Passthrough(NPSScomponent):
 
     def __init__(self, name, parent=None, doc=None, directory=''):
         arglist = ['-D', 'XYZZY=twisty narrow passages', '-D', 'FLAG',
-                   '-I', '.', os.path.join('..', 'passthrough.mdl')]
-#                   '-I', '.', '-trace', os.path.join('..', 'passthrough.mdl')]
+                   '-I', '.', '-trace', os.path.join('..', 'passthrough.mdl')]
         super(Passthrough, self).__init__(name, parent, doc, directory,
                                           arglist, 'passthrough.out')
 

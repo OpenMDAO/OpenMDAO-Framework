@@ -11,7 +11,8 @@ import subprocess
 import sys
 import time
 
-from enthought.traits.api import implements, on_trait_change, Str, Missing, Undefined, TraitError
+from enthought.traits.api import implements, on_trait_change, Str, Missing, \
+                                 Undefined, Python, TraitError
 from enthought.traits.trait_base import not_event
 
 from openmdao.main.interfaces import IComponent
@@ -63,7 +64,9 @@ class Component (Container):
     implements(IComponent)
     
     directory = Str('',desc='If non-blank, the directory to execute in.', iostatus='in')
-    
+    state = Python
+    external_files = Python
+        
     def __init__(self, name=None, parent=None, doc=None, directory='',
                  add_to_parent=True):
         super(Component, self).__init__(name, parent, doc, add_to_parent)
