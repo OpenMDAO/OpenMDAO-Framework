@@ -462,16 +462,22 @@ class Container(HierarchyMember):
         if name:
             top.rename(name)
         if do_post_load:
-            top.parent = None  # Clear-out parent from saved state.
-            top.post_load(name)
+            top._post_load(name)
         return top
 
-    def post_load(self, name=None):
-        """Perform any required operations after model has been loaded."""
-        if name:  # Fix loggers
+    def _post_load(self, name):
+        """Called above or in Component before post_load() to fix parent
+        and loggers.  Maintains a simpler public post_load() interface."""
+        parent = self.parent
+        if parent:
+            self.parent = None
+        if parent or name:
             [x.rename(x.name) for x in self.values(pub=False) 
-                                    if isinstance(x, Container)]
+                                    if isinstance(x, HierarchyMember)]
+        self.post_load()
 
+    def post_load(self):
+        """Perform any required operations after model has been loaded."""
         [x.post_load() for x in self.values(pub=False) 
                                           if isinstance(x,Container)]
 

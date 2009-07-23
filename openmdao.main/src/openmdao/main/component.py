@@ -545,8 +545,7 @@ Component.load_from_eggfile('%s', install=False)
                 top._restore_files(package, relpath)
 
         if do_post_load:
-            top.parent = None
-            top.post_load(name)
+            top._post_load(name)
         return top
 
     def _restore_files(self, package, relpath):

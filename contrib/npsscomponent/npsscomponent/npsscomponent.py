@@ -140,9 +140,9 @@ class NPSScomponent(Component):
         super(NPSScomponent, self).__setstate__(state)
         # _top will be set during post_load via reload().
 
-    def post_load(self, name=None):
+    def post_load(self):
         """ Perform any required operations after model has been loaded. """
-        super(NPSScomponent, self).post_load(name)
+        super(NPSScomponent, self).post_load()
         try:
             self.reload()
         except Exception, exc:
