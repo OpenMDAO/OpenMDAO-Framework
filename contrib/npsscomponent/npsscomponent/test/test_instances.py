@@ -4,7 +4,6 @@ Test of multiple NPSS instances.
 
 import cPickle
 import logging
-import os
 import os.path
 import pkg_resources
 import shutil
@@ -433,5 +432,9 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.NPSS_A.flag_val, 1)
 
 if __name__ == '__main__':
-    unittest.main()
+    import nose
+    import sys
+    sys.argv.append('--cover-package=npsscomponent')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()
 

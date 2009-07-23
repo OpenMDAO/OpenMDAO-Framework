@@ -25,6 +25,9 @@ from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 
 from openmdao.main.unitsfloat import UnitsFloat, convert_units
 
+from openmdao.util.save_load import SAVE_YAML, SAVE_LIBYAML, \
+                                    SAVE_PICKLE, SAVE_CPICKLE
+
 __all__ = ['Assembly',
            'Case',
            'Component',
@@ -40,6 +43,10 @@ __all__ = ['Assembly',
            'ImportFactory',
            'ListCaseIterator',
            'PkgResourcesFactory',
+           'SAVE_CPICKLE',
+           'SAVE_LIBYAML',
+           'SAVE_PICKLE', 
+           'SAVE_YAML', 
            'StringRef',
            'StringRefArray',
            'UnitsFloat',

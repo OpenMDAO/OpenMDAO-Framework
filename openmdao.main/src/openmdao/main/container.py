@@ -5,25 +5,6 @@ __all__ = ["Container"]
 __version__ = "0.1"
 
 import copy
-import pickle
-import cPickle
-import yaml
-try:
-    from yaml import CLoader as Loader
-    from yaml import CDumper as Dumper
-    _libyaml = True
-except ImportError:
-    from yaml import Loader, Dumper
-    _libyaml = False
-
-import datetime
-import modulefinder
-import os
-import pkg_resources
-import platform
-import shutil
-import site
-import subprocess
 import sys
 import tempfile
 import zc.buildout.easy_install
@@ -54,12 +35,10 @@ from enthought.traits.trait_base import not_event, not_none
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.interfaces import IContainer
 from openmdao.main.factorymanager import create as fmcreate
-from openmdao.main.constants import SAVE_YAML, SAVE_LIBYAML
-from openmdao.main.constants import SAVE_PICKLE, SAVE_CPICKLE
+from openmdao.util.save_load import SAVE_CPICKLE
 from openmdao.main.unitsfloat import convert_units, UnitsFloat
 
-# FIXME - shouldn't have a hard wired URL in the code
-EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
+import openmdao.util.save_load
 
 
 # this causes any exceptions occurring in trait handlers to be re-raised. Without
@@ -322,6 +301,7 @@ class Container(HasTraits):
         return getattr(self, name)
         
     def get_valid(self, name):
+        """Get the value of the validity flag for the io trait with the given name."""
         valid = self._valid_dict.get(name, Missing)
         if valid is Missing:
             trait = self.trait(name)
@@ -334,9 +314,11 @@ class Container(HasTraits):
         return valid
     
     def get_valids(self, names):
+        """Get a list of validity flags for the io traits with the given names."""
         return [self.get_valid(v) for v in names]
 
     def set_valid(self, name, valid):
+        """Mark the io trait with the given name as valid or invalid."""
         if name in self._valid_dict:
             self._valid_dict[name] = valid
         else:
@@ -348,8 +330,7 @@ class Container(HasTraits):
                                      name, RuntimeError)
 
     def add_child(self, obj):
-        """Add a Container object to this Container, and make it a member of 
-        this Container's public interface.
+        """Add a Container object to this Container.
         """
         if obj == self:
             self.raise_exception('cannot make an object a child of itself',
@@ -378,6 +359,7 @@ class Container(HasTraits):
                                  name, TraitError)
     
     def unit_convert(self, name, units):
+        """Return the value of the named io trait converted to the given units."""
         desttrait = self.trait(name)
         if desttrait is None:
             self.raise_exception("attribute '%s' not found"%name,
@@ -390,8 +372,9 @@ class Container(HasTraits):
             return convert_units(getattr(self, name), destunits, units)
 
     def dump(self, recurse=False, stream=None):
-        """Return all items having iostatus metadata and
-        their corresponding values in a dict.
+        """Print all items having iostatus metadata and
+        their corresponding values to the given stream. If the stream
+        is not supplied, it defaults to sys.stdout.
         """
         pprint.pprint(dict([(n,v) for n,v in self.items(recurse, iostatus=not_none)]),
                       stream)
@@ -509,9 +492,6 @@ class Container(HasTraits):
         else:
             return ''
         
-    def get_trait_pathname(self, traitname, rel_to_scope=None):
-        return '.'.join([self.get_pathname(rel_to_scope=rel_to_scope),traitname])
-    
     def contains(self, path):
         """Return True if the child specified by the given dotted path
         name is publicly accessibly and is contained in this Container. 
@@ -536,10 +516,15 @@ class Container(HasTraits):
         Returns the new object.        
         """
         obj = fmcreate(type_name, name, version, server, res_desc)
-        obj.parent = self
+        #obj.parent = self
+        self.add_child(obj)
         return obj
 
     def invoke(self, path, *args, **kwargs):
+        """Call the callable specified by **path**, which may be a simple
+        name or a dotted path, passing the given arguments to it, and 
+        return the result.
+        """
         if path is None:
             return self.__call__(*args, **kwargs)
         else:
@@ -611,8 +596,12 @@ class Container(HasTraits):
                                  (name, self._sources[name]), TraitError)
         self._sources[name] = source   
             
-    def remove_source(self, name):
-        del self._sources[name]    
+    def remove_source(self, destination):
+        """Remove the source from the given destination io trait. This will
+        allow the destination to later be connected to a different source or
+        to have its value directly set.
+        """
+        del self._sources[destionation]    
             
     def _check_trait_settable(self, name, srcname=None, force=False):
         if force:
@@ -737,801 +726,114 @@ class Container(HasTraits):
         new one."""
         raise NotImplementedError("config_from_obj")
 
-    def save_to_egg(self, name=None, version=None, force_relative=True,
-                    src_dir=None, src_files=None, dst_dir=None,
-                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
+    def save_to_egg(self, name=None, version=None, py_dir=None,
+                    src_dir=None, src_files=None, child_objs=None,
+                    dst_dir=None, format=SAVE_CPICKLE, proto=-1,
+                    use_setuptools=False):
         """Save state and other files to an egg.
+        Analyzes the objects saved for distribution dependencies.
+        Modules not found in any distribution are recorded in a '`name`.missing'
+        file.  Also creates and saves loader scripts for each entry point.
 
         - `name` defaults to the name of the container.
-        - `version` defaults to the container's module __version__.
-        - If `force_relative` is True, all paths are relative to `src_dir`.
+        - `version` defaults to the container's module __version__, or \
+          a timestamp if no __version__ exists.
+        - `py_dir` is the (root) directory for local Python files. \
+           It defaults to the current directory.
         - `src_dir` is the root of all (relative) `src_files`.
+        - `child_objs` is a list child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
-        - `tmp_dir` is the directory to use for temporary files.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
 
-        NOTE: References to types defined in module __main__ can't be saved.
-              Also, references to old-style class types can't be restored
-              correctly.  These issues are typically related to the Variable
-              var_types attribute.
+        NOTE: References to old-style class types can't be restored correctly.
+              This is typically related to the Variable var_types attribute.
         """
-        orig_dir = os.getcwd()
-        if src_dir and not os.path.isabs(src_dir):
-            src_dir = os.path.abspath(src_dir)
-
         if name is None:
             name = self.name
         if version is None:
             try:
-                version = sys.modules[self.__class__.__module__].__version__
-            except (AttributeError, KeyError):
-                now = datetime.datetime.now()  # Could consider using utcnow().
-                version = '%d.%02d.%02d.%02d.%02d' % \
-                          (now.year, now.month, now.day, now.hour, now.minute)
-        if dst_dir is None:
-            dst_dir = orig_dir
-        if not os.access(dst_dir, os.W_OK):
-            self.raise_exception("Can't save to '%s', no write permission" %
-                                 dst_dir, IOError)
-
-        py_version = platform.python_version_tuple()
-        py_version = '%s.%s' % (py_version[0], py_version[1])
-        egg_name = '%s-%s-py%s.egg' % (name, version, py_version)
-        self.debug('Saving to %s in %s...', egg_name, orig_dir)
-
-        buildout = 'buildout.cfg'
-        buildout_path = os.path.join(name, buildout)
-        buildout_orig = buildout_path+'-orig'
-
-        tmp_dir = None
-
-        # Get a list of all objects we'll be saving.
-        objs = self._get_objects()
-        objs.append(self)
-
-        # Check that each object can be pickled.
-        errors = 0
-        for obj in objs:
-            if obj.__class__.__name__ == 'function':
-                self.error("Can't save, can't pickle function %s.%s",
-                           obj.__module__, obj.__name__)
-                errors += 1
-            # Hopefully all instancemethods are handled by HierarchyMember.
-            elif obj.__class__.__name__ == 'instancemethod':
-                self.error("Can't save, can't pickle instancemethod %s.%s.%s",
-                           obj.im_class.__module__,
-                           obj.im_class.__name__,
-                           obj.__name__)
-                errors += 1
-            #else: # (Debug) actually try to pickle.
-                #try:
-                    #cPickle.dumps(obj)
-                #except Exception, exc:
-                    #self.error("Can't pickle obj %r %s",
-                               #obj, obj.__class__.__name__)
-                #errors += 1
-        if errors:
-            self.raise_exception("Can't save, %d objects cannot be pickled."
-                                 % errors, RuntimeError)
-
-        # Fixup objects, classes, & sys.modules for __main__ imports.
-        fixup = self._fix_objects(objs)
-        try:
-            # Determine distributions and local modules required.
-            required_distributions, local_modules = \
-                self._get_distributions(objs)
-
-            # Move to scratch area.
-            tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
-            os.chdir(tmp_dir)
-
-            if src_dir:
-                if sys.platform == 'win32':
-                    # Copy original directory to object name.
-                    shutil.copytree(src_dir, name)
-                else:
-                    # Just link original directory to object name.
-                    os.symlink(src_dir, name)
-            else:
-                os.mkdir(name)
-
-            # If orig_dir isn't src_dir, copy local modules from orig_dir.
-            if orig_dir != src_dir:
-                for path in local_modules:
-                    path = orig_dir+os.sep+path
-#                    self.debug('    copy %s -> %s', path, name)
-                    shutil.copy(path, name)
-
-            # Save state of object hierarchy.
-            if format is SAVE_CPICKLE or format is SAVE_PICKLE:
-                state_name = name+'.pickle'
-            elif format is SAVE_LIBYAML or format is SAVE_YAML:
-                state_name = name+'.yaml'
-            else:
-                self.raise_exception("Unknown format '%s'." % format,
-                                     RuntimeError)
-
-            state_path = os.path.join(name, state_name)
-            try:
-                self.save(state_path, format, proto)
-            except Exception, exc:
-                if os.path.exists(state_path):
-                    os.remove(state_path)
-                self.raise_exception("Can't save to '%s': %s" %
-                                     (state_path, exc), type(exc))
-
-            # Add state file to set of files to save.
-            if src_files is None:
-                src_files = set()
-            src_files.add(state_name)
-
-            # Create buildout.cfg
-            if os.path.exists(buildout_path):
-                os.rename(buildout_path, buildout_orig)
-            self.debug('writing file %s...' % buildout_path)
-            out = open(buildout_path, 'w')
-            out.write("""\
-[buildout]
-parts = %(name)s
-index = %(server)s
-unzip = true
-
-[%(name)s]
-recipe = zc.recipe.egg:scripts
-interpreter = python
-eggs =
-""" % {'name':name, 'server':EGG_SERVER_URL})
-            for dist in required_distributions:
-                out.write("    %s == %s\n" % (dist.project_name, dist.version))
-            out.close()
-            src_files.add(buildout)
-
-            # If needed, make an empty __init__.py
-            init_path = os.path.join(name, '__init__.py')
-            if not os.path.exists(init_path):
-                remove_init = True
-                out = open(init_path, 'w')
-                out.close()
-            else:
-                remove_init = False
-
-            # Create loader script.
-            loader = '%s_loader' % name
-            loader_path = os.path.join(name, loader+'.py')
-            self._write_loader_script(loader_path, state_name)
-
-            # Save everything to an egg via setuptools.
-            self._write_egg_via_setuptools(name, version, loader, src_files,
-                                           required_distributions, dst_dir)
-            self.debug('removing %s and %s' % (state_path,loader_path))
-            os.remove(state_path)
-            os.remove(loader_path)
-            if remove_init:
-                self.debug('removing %s' % init_path)
-                os.remove(init_path)
-
-        finally:
-            if os.path.exists(buildout_orig):
-                os.rename(buildout_orig, buildout_path)
-            elif os.path.exists(buildout_path):
-                self.debug('removing %s' % buildout_path)
-                os.remove(buildout_path)
-            os.chdir(orig_dir)
-            if tmp_dir:
-                self.debug('removing %s' % tmp_dir)
-                shutil.rmtree(tmp_dir)
-            self._restore_objects(fixup)
-
-        return egg_name
-
-    def _get_objects(self):
-        """Get objects to be saved."""
-
-        def _recurse_get_objects(parent_obj, objs, visited):
-            """Use __getstate__(), or scan __dict__, or scan container."""
-            try:
-                state = parent_obj.__getstate__()
+                version = sys.modules[self.__module__].__version__
             except AttributeError:
-                try:
-                    state = parent_obj.__dict__
-                except AttributeError:
-                    if isinstance(parent_obj, dict) or \
-                       isinstance(parent_obj, list) or \
-                       isinstance(parent_obj, set)  or \
-                       isinstance(parent_obj, tuple):
-                        state = parent_obj
-                    else:
-                        return  # Some non-container primitive.
-            except Exception, exc:
-                self.error("During save_to_egg, _get_objects error %s: %s",
-                           type(parent_obj), exc)
-                return
-
-            if isinstance(state, dict):
-                state = state.values()
-
-            for obj in state:
-                if obj.__class__.__name__ == 'instancemethod':
-                    self.error("Can't save, can't pickle instancemethod %s.%s.%s",
-                               obj.im_class.__module__,
-                               obj.im_class.__name__,
-                               obj.__name__)
-                if id(obj) in visited:
-                    continue
-                visited.add(id(obj))
-                objs.append(obj)
-                _recurse_get_objects(obj, objs, visited)
-
-        objs = []
-#        visited = [id(self._parent)]  # Don't include our parent.
-        visited = set([id(self.parent)])  # Don't include our parent.
-        _recurse_get_objects(self, objs, visited)
-        return objs
-
-    def _fix_objects(self, objs):
-        """Fixup objects, classes, & sys.modules for __main__ imports."""
-        fixup_objects = []
-        fixup_classes = {}
-        fixup_modules = set()
-
-        for obj in objs:
-            classname = obj.__class__.__name__
-            if classname == 'instancemethod':
-                obj = obj.im_self
-            try:
-                mod = obj.__module__
-            except AttributeError:
-                continue
-
-            if mod == '__main__':
-                if classname in ('function', 'type'):
-                    self.raise_exception("Can't save: reference to %s defined "
-                                         "in main module %r" % (classname, obj),
-                                         RuntimeError)
-
-                mod = obj.__class__.__module__
-                if mod == '__main__' and \
-                   (classname not in fixup_classes.keys()):
-                    # Need to determine 'real' module name.
-                    if '.' not in sys.path:
-                        sys.path.append('.')
-                    for arg in sys.argv:
-                        if arg.endswith('.py'):
-                            mod = os.path.basename(arg)[:-3]
-                            try:
-                                module = __import__(mod, fromlist=[classname])
-                            except ImportError:
                                 pass
-                            else:
-                                old = obj.__class__
-                                new = getattr(module, classname)
-                                fixup_classes[classname] = (old, new)
-                                fixup_modules.add(mod)
-                                break
-                    else:
-                        self._restore_objects((fixup_objects, fixup_classes,
-                                               fixup_modules))
-                        self.raise_exception("Can't find module for '%s'" %
-                                             classname, RuntimeError)
+        # Entry point names are the pathname, starting at self.
+        entry_pts = []
+        if child_objs is not None:
+            root_pathname = self.get_pathname()
+            root_start = root_pathname.rfind('.')
+            root_start = root_start+1 if root_start >= 0 else 0
+            root_pathname += '.'
+            for child in child_objs:
+                pathname = child.get_pathname()
+                if not pathname.startswith(root_pathname):
+                    self.raise_exception('%s is not a child of %s'
+                                         % (pathname, root_pathname),
+                                         RuntimeError)
+                entry_pts.append((child, pathname[root_start:]))
 
-                try:
-                    obj.__class__ = fixup_classes[classname][1]
-                except KeyError:
-                    self.raise_exception("Can't fix %r, classname %s, module %s"
-                                         % (obj, classname, mod), RuntimeError)
-                    
-                obj.__module__ = obj.__class__.__module__
-                fixup_objects.append(obj)
+        parent = self.parent
+        self.parent = None  # Don't want to save stuff above us.
+        try:
+            return openmdao.util.save_load.save_to_egg(
+                       self, name, version, py_dir, src_dir, src_files,
+                       entry_pts, dst_dir, format, proto, self._logger,
+                       use_setuptools)
+        except Exception, exc:
+            self.raise_exception(str(exc), type(exc))
+        finally:
+            self.parent = parent
 
-        return (fixup_objects, fixup_classes, fixup_modules)
-
-    def _restore_objects(self, fixup):
-        """Restore objects, classes, & sys.modules for __main__ imports."""
-        fixup_objects, fixup_classes, fixup_modules = fixup
-
-        for obj in fixup_objects:
-            obj.__module__ = '__main__'
-            classname = obj.__class__.__name__
-            obj.__class__ = fixup_classes[classname][0]
-
-        for classname in fixup_classes.keys():
-            new = fixup_classes[classname][1]
-            del new
-
-        for mod in fixup_modules:
-            del sys.modules[mod]
-
-    def _get_distributions(self, objs):
-        """Return (distributions, local_modules) used by objs."""
-#        working_set = pkg_resources.WorkingSet()
-#        for dist in working_set:
-#            self.debug('    %s %s', dist.project_name, dist.version)
-#            self.debug('        %s', dist.location)
-        distributions = set()
-        local_modules = set()
-        modules = ['__builtin__']
-        prefixes = []
-        site_lib = os.path.dirname(site.__file__)
-        site_pkg = site_lib+os.sep+'site-packages'
-
-        # For each object found...
-        for obj in objs:
-            try:
-                name = obj.__module__
-                if name is None:
-                    continue
-            except AttributeError:
-                continue
-#            self.debug('    obj module %s', name)
-            if name in modules:
-#                self.debug('        already known')
-                continue
-            modules.append(name)
-
-            # Skip modules in distributions we already know about.
-            path = sys.modules[name].__file__
-            if path.startswith(site_lib) and not path.startswith(site_pkg):
-#                self.debug("    skipping(1) '%s'", path)
-                continue
-            found = False
-            for prefix in prefixes:
-                if path.startswith(prefix):
-                    found = True
-#                    self.debug("    skipping(2) '%s'", path)
-                    break
-            if found:
-                continue
-
-            egg = path.find('.egg')
-            if egg > 0:
-                # We'll assume the egg has accurate dependencies.
-                path = path[:egg+4]
-                self._process_egg(path, distributions, prefixes)
-            else:
-                # Use module finder to get the modules this object requires.
-                if path.endswith('.pyc') or path.endswith('.pyo'):
-                    path = path[:-1]
-                if not os.path.exists(path):
-                    self.warning("    module path '%s' does not exist", path)
-                    continue
-                self.debug("    analyzing '%s'...", path)
-                finder = modulefinder.ModuleFinder()
-                try:
-                    finder.run_script(path)
-                except Exception:
-                    self.exception("ModuleFinder for '%s'" % path)
-                else:
-                    self._process_found_modules(finder, modules,
-                                                distributions,
-                                                prefixes, local_modules)
-
-        distributions = sorted(distributions,
-                               key=lambda dist: dist.project_name)
-        self.debug('    required distributions:')
-        for dist in distributions:
-            self.debug('        %s %s', dist.project_name, dist.version)
-        return (distributions, local_modules)
-
-    def _process_egg(self, path, distributions, prefixes):
-        """Update distributions and prefixes based on egg data."""
-        self.debug("    processing '%s'", path)
-        dist = pkg_resources.Distribution.from_filename(path)
-        distributions.add(dist)
-        prefixes.append(path)
-
-        for req in dist.requires():
-            self.debug("    requires '%s'", req)
-            dep = pkg_resources.get_distribution(req)
-            distributions.add(dep)
-            loc = dep.location
-            if loc.endswith('.egg') and loc not in prefixes:
-                prefixes.append(loc)
-
-    def _process_found_modules(self, finder, modules, distributions, prefixes,
-                               local_modules):
-        """Use ModuleFinder data to update distributions and local_modules."""
-        working_set = pkg_resources.WorkingSet()
-        site_lib = os.path.dirname(site.__file__)
-        site_pkg = site_lib+os.sep+'site-packages'
-        py_version = 'python%d.%d' % (sys.version_info[0], sys.version_info[1])
-        cwd = os.getcwd()
-        not_found = set()
-
-        for name, module in sorted(finder.modules.items(),
-                                   key=lambda item: item[0]):
-#            self.debug('    found %s', name)
-            if name in modules:
-#                self.debug('        already known')
-                continue
-            if name != '__main__':
-                modules.append(name)
-            try:
-                path = module.__file__
-            except AttributeError:
-#                self.debug('        no __file__')
-                continue
-            if not path:
-#                self.debug('        null __file__')
-                continue
-
-            # Skip modules in distributions we already know about.
-            if path.startswith(site_lib) and not path.startswith(site_pkg):
-#                self.debug("        skipping(1) '%s'", path)
-                continue
-            found = False
-            for prefix in prefixes:
-                if path.startswith(prefix):
-                    found = True
-#                    self.log_debug("    skipping(2) '%s'", path)
-                    break
-            if found:
-                continue
-
-            # Record distribution.
-            for dist in working_set:
-                loc = dist.location
-                # Protect against a 'bare' location.
-                if loc.endswith('site-packages') or loc.endswith(py_version):
-                    loc += os.sep+dist.project_name
-                if path.startswith(loc):
-                    distributions.add(dist)
-                    if loc.endswith('.egg'):
-                        prefixes.append(loc)
-#                    self.debug('        adding %s %s',
-#                               dist.project_name, dist.version)
-                    break
-            else:
-                if not os.path.isabs(path):
-                    # No distribution expected.
-                    if os.path.dirname(path) == '.':
-                        # May need to be copied later.
-                        local_modules.add(path)
-                elif path.startswith(cwd):
-                    # No distribution expected.
-                    if os.path.dirname(path) == cwd:
-                        # May need to be copied later.
-                        local_modules.add(path)
-                else:
-                    dirpath = os.path.dirname(path)
-                    if dirpath not in not_found:
-                        if not dirpath.endswith('site-packages'):
-                            not_found.add(dirpath)
-                            path = dirpath
-                        self.warning('        no distribution found for %s',
-                                     path)
-
-    def _write_loader_script(self, path, state_name):
-        """Write script used for loading object(s)."""
-        out = open(path, 'w')
-        out.write("""\
-import logging
-import os
-import sys
-if not '.' in sys.path:
-    sys.path.append('.')
-
-try:
-    from openmdao.main.api import Component
-    from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
-    from openmdao.main.log import enable_console
-except ImportError:
-    print 'No OpenMDAO distribution available.'
-    if __name__ != '__main__':
-        print 'You can unzip the egg to access the enclosed files.'
-        print 'To get OpenMDAO, please visit openmdao.org'
-    sys.exit(1)
-
-def load():
-    '''Create object(s) from state file.'''
-    state_name = '%s'
-    if state_name.endswith('.pickle'):
-        return Component.load(state_name, SAVE_CPICKLE)
-    elif state_name.endswith('.yaml'):
-        return Component.load(state_name, SAVE_LIBYAML)
-    raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
-                       state_name)
-
-def eggsecutable():
-    '''Unpack egg.'''
-    install = os.environ.get('OPENMDAO_INSTALL', '1')
-    if install:
-        install = int(install)
-    debug = os.environ.get('OPENMDAO_INSTALL_DEBUG', '1')
-    if debug:
-        debug = int(debug)
-    if debug:
-        enable_console()
-        logging.getLogger().setLevel(logging.DEBUG)
-    try:
-        Component.load_from_egg(sys.path[0], install=install)
-    except Exception, exc:
-        print str(exc)
-        sys.exit(1)
-
-def main():
-    '''Load state and run.'''
-    model = load()
-    model.run()
-
-if __name__ == '__main__':
-    main()
-""" % state_name)
-        out.close()
-
-    def _write_egg_via_setuptools(self, name, version, loader, src_files,
-                                  distributions, dst_dir):
-        """Save everything to an egg via setuptools."""
-        out = open('setup.py', 'w')
-
-        out.write('import setuptools\n')
-
-        out.write('\npackage_files = [\n')
-        for filename in sorted(src_files):
-            path = os.path.join(name, filename)
-            if not os.path.exists(path):
-                self.raise_exception("Can't save, '%s' does not exist" %
-                                     path, ValueError)
-            out.write("    '%s',\n" % filename)
-        out.write(']\n')
-
-        out.write('\nrequirements = [\n')
-        for dist in distributions:
-            out.write("    '%s == %s',\n" % (dist.project_name, dist.version))
-        out.write(']\n')
-
-        if self.__doc__ is None:
-            doc = ''
-        else:
-            doc = self.__doc__.strip()
-        out.write("""
-entry_points = {
-    'openmdao.top' : [
-        'top = %(loader)s:load',
-    ],
-    'openmdao.components' : [
-        '%(name)s = %(loader)s:load',
-    ],
-    'setuptools.installation' : [
-        'eggsecutable = %(name)s.%(loader)s:eggsecutable',
-    ],
-}
-
-setuptools.setup(
-    name='%(name)s',
-    description='''%(doc)s''',
-    version='%(version)s',
-    packages=setuptools.find_packages(),
-    package_data={'%(name)s' : package_files},
-    zip_safe=False,
-    install_requires=requirements,
-    entry_points=entry_points,
-)
-""" % {'name':name, 'loader':loader, 'doc':doc, 'version':version})
-
-        out.close()
-
-        # Use environment since 'python' might not recognize '-u'.
-        env = os.environ
-        env['PYTHONUNBUFFERED'] = '1'
-        proc = subprocess.Popen(['python', 'setup.py', 'bdist_egg',
-                                 '-d', dst_dir], env=env,
-                                stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
-        output = []
-        while proc.returncode is None:
-            line = proc.stdout.readline()
-            if line:
-                line = line.rstrip()
-                self.debug('    '+line)
-                output.append(line)
-            proc.poll()
-        line = proc.stdout.readline()
-        while line:
-            line = line.rstrip()
-            self.debug('    '+line)
-            output.append(line)
-            line = proc.stdout.readline()
-
-        if proc.returncode != 0:
-            if self.log_level > LOG_DEBUG:
-                for line in output:
-                    self.error('    '+line)
-            self.error('save_to_egg failed due to setup.py error %d:',
-                       proc.returncode)
-            self.raise_exception('setup.py failed, check log for info.',
-                                 RuntimeError)
-
-    def save (self, outstream, format=SAVE_CPICKLE, proto=-1):
+    def save(self, outstream, format=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
         output stream. Pure Python classes generally won't need to
         override this because the base class version will suffice, but
         Python extension classes will have to override. The format
         can be supplied in case something other than cPickle is needed."""
-        if isinstance(outstream, basestring):
-            if format is SAVE_CPICKLE or format is SAVE_PICKLE:
-                mode = 'wb'
-            else:
-                mode = 'w'
-            try:
-                outstream = open(outstream, mode)
-            except IOError, exc:
-                self.raise_exception("Can't save to '%s': %s" % \
-                                     (outstream, exc.strerror), type(exc))
-
-        if format is SAVE_CPICKLE:
-            cPickle.dump(self, outstream, proto) # -1 means use highest protocol
-        elif format is SAVE_PICKLE:
-            pickle.dump(self, outstream, proto)
-        elif format is SAVE_YAML:
-            yaml.dump(self, outstream)
-        elif format is SAVE_LIBYAML:
-            if _libyaml is False:
-                self.warning('libyaml not available, using yaml instead')
-            yaml.dump(self, outstream, Dumper=Dumper)
-        else:
-            self.raise_exception('cannot save object using format '+str(format),
-                                 RuntimeError)
-    
-    @staticmethod
-    def load_from_egg(filename, install=True):
-        """Load state and other files from an egg, returns top object."""
-        logger.debug('Loading from %s in %s...', filename, os.getcwd())
-        if not os.path.exists(filename):
-            raise ValueError("'%s' not found." % filename)
-
-        # Check for a distribution.
-        distributions = \
-            [dist for dist in pkg_resources.find_distributions(filename,
-                                                               only=True)]
-        if not distributions:
-            raise RuntimeError("No distributions found in '%s'." % filename)
-
-        dist = distributions[0]
-        logger.debug('    project_name: %s', dist.project_name)
-        logger.debug('    version: %s', dist.version)
-        logger.debug('    py_version: %s', dist.py_version)
-        logger.debug('    platform: %s', dist.platform)
-        logger.debug('    requires:')
-        for req in dist.requires():
-            logger.debug('        %s', req)
-        logger.debug('    entry points:')
-        maps = dist.get_entry_map()
-        for group in maps.keys():
-            logger.debug('        group %s:' % group)
-            for name in maps[group]:
-                logger.debug('            %s', name)
-
-        # Extract files.
-        archive = zipfile.ZipFile(filename, 'r')
-        name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
-        logger.debug("    name '%s'", name)
-
-        for info in archive.infolist():
-            if not info.filename.startswith(name):
-                continue  # EGG-INFO
-            if info.filename.endswith('.pyc') or \
-               info.filename.endswith('.pyo'):
-                continue  # Don't assume compiled OK for this platform.
-
-            logger.debug("    extracting '%s' (%d bytes)...",
-                         info.filename, info.file_size)
-            dirname = os.path.dirname(info.filename)
-            dirname = dirname[len(name)+1:]
-            if dirname and not os.path.exists(dirname):
-                os.makedirs(dirname)
-            path = info.filename[len(name)+1:]
-            # TODO: use 2.6 ability to extract to filename.
-            out = open(path, 'w')
-            out.write(archive.read(info.filename))
-            out.close()
-
-        if install:
-            # Locate the installation (eggs) directory.
-# TODO: fix this hack!
-            install_dir = \
-                os.path.dirname(
-                    os.path.dirname(
-                        os.path.dirname(
-                            os.path.dirname(zc.buildout.__file__))))
-            logger.debug('    installing in %s', install_dir)
-
-            # Grab any distributions we depend on.
-            try:
-                zc.buildout.easy_install.install(
-                    [str(req) for req in dist.requires()], install_dir,
-                    index=EGG_SERVER_URL,
-                    always_unzip=True
-                    )
-            except Exception, exc:
-                raise RuntimeError("Install failed: '%s'" % exc)
-
-        # Invoke the top object's loader.
-        info = dist.get_entry_info('openmdao.top', 'top')
-        if info is None:
-            raise RuntimeError("No openmdao.top 'top' entry point.")
-        if info.module_name in sys.modules.keys():
-            logger.debug("    removing existing '%s' in sys.modules",
-                         info.module_name)
-            del sys.modules[info.module_name]
-        if not '.' in sys.path:
-            sys.path.append('.')
+        parent = self.parent
+        self.parent = None  # Don't want to save stuff above us.
         try:
-            loader = dist.load_entry_point('openmdao.top', 'top')
-            return loader()
-        except pkg_resources.DistributionNotFound, exc:
-            logger.error('Distribution not found: %s', exc)
-            visited = []
-            Container._check_requirements(dist, visited)
-            raise exc
-        except pkg_resources.VersionConflict, exc:
-            logger.error('Version conflict: %s', exc)
-            visited = []
-            Container._check_requirements(dist, visited)
-            raise exc
+            openmdao.util.save_load.save(self, outstream, format, proto,
+                                         self._logger)
         except Exception, exc:
-            logger.exception('Loader exception:')
-            raise exc
+            self.raise_exception(str(exc), type(exc))
+        finally:
+            self.parent = parent
 
     @staticmethod
-    def _check_requirements(dist, visited, level=1):
-        """Display requirements and note conflicts."""
-        visited.append(dist)
-        indent  = '    ' * level
-        indent2 = '    ' * (level + 1)
-        working_set = pkg_resources.WorkingSet()
-        for req in dist.requires():
-            logger.debug('%schecking %s', indent, req)
-            dist = None
-            try:
-                dist = working_set.find(req)
-            except pkg_resources.VersionConflict:
-                dist = working_set.by_key[req.key]
-                logger.debug('%sconflicts with %s %s', indent2,
-                             dist.project_name, dist.version)
-            else:
-                if dist is None:
-                    logger.debug('%sno distribution found', indent2)
-                else: 
-                    logger.debug('%s%s %s', indent2,
-                                 dist.project_name, dist.version)
-                    if not dist in visited:
-                        Container._check_requirements(dist, visited, level+1)
+    def load_from_eggfile(filename, install=True):
+        """Extract files in egg to a subdirectory matching the saved object
+        name, optionally install distributions the egg depends on, and then
+        load object graph state.  Returns the root object."""
+        # Load from file gets everything.
+        entry_group = 'openmdao.top'
+        entry_name = 'top'
+        return openmdao.util.save_load.load_from_eggfile(filename, entry_group,
+                                                         entry_name, install,
+                                                         logger)
+    @staticmethod
+    def load_from_eggpkg(package, entry_name=None):
+        """Load object graph state by invoking the given package entry point.
+        Returns the root object."""
+        entry_group = 'openmdao.components'
+        if not entry_name:
+            entry_name = package  # Default component is top.
+        return openmdao.util.save_load.load_from_eggpkg(package, entry_group,
+                                                        entry_name, logger)
 
     @staticmethod
-    def load (instream, format=SAVE_CPICKLE, do_post_load=True):
+    def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True,
+             name=None):
         """Load object(s) from the input stream. Pure python 
         classes generally won't need to override this, but extensions will. 
         The format can be supplied in case something other than cPickle is 
         needed."""
-        if isinstance(instream, basestring):
-            if format is SAVE_CPICKLE or format is SAVE_PICKLE:
-                mode = 'rb'
-            else:
-                mode = 'r'
-            instream = open(instream, mode)
-
-        _io_side_effects = False
-        try:
-            if format is SAVE_CPICKLE:
-                top = cPickle.load(instream)
-            elif format is SAVE_PICKLE:
-                top = pickle.load(instream)
-            elif format is SAVE_YAML:
-                top = yaml.load(instream)
-            elif format is SAVE_LIBYAML:
-                if _libyaml is False:
-                    logger.warn('libyaml not available, using yaml instead')
-                top = yaml.load(instream, Loader=Loader)
-            else:
-                raise RuntimeError('cannot load object using format %s' % format)
-    
+        top = openmdao.util.save_load.load(instream, format, package, logger)
+        if name:
+            top.name = name
             if do_post_load:
-                top.post_load()
-        finally:
-            _io_side_effects = True
-            
+                top.parent = None  # Clear-out parent from saved state.
+                top.post_load()            
         return top
 
     def post_load(self):
@@ -1615,7 +917,9 @@ setuptools.setup(
         
 
     def get_dyn_trait(self, name, iostat):
-        """Retrieves the named trait, creating it on-the-fly if necessary."""
+        """Retrieves the named trait, attempting to create it on-the-fly if
+        it doesn't already exist.
+        """
         trait = self.trait(name)
         
         if trait is None:

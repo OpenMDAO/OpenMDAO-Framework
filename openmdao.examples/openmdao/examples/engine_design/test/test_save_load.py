@@ -4,11 +4,13 @@
 
 import logging
 import os
+import pkg_resources
 import shutil
 import subprocess
 import unittest
 
 from openmdao.examples.engine_design.engine_optimization import EngineOptimization
+import openmdao.util.testutil
 
 
 class EngineOptimizationTestCase(unittest.TestCase):
@@ -26,11 +28,15 @@ class EngineOptimizationTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
-        self.model.vehicle_sim.bore = 95.
-        self.model.vehicle_sim.spark_angle = -35.368341874
+        self.model.driving_sim.bore = 95.
+        self.model.driving_sim.spark_angle = -35.368341874
         self.model.driver.maxiters = 1
 
-        egg_name = self.model.save_to_egg()
+        # Set local dir in case we're running in a different directory.
+        py_dir = pkg_resources.resource_filename('openmdao.examples.engine_design',
+                                                 'test')
+        python = openmdao.util.testutil.find_python('openmdao.examples')
+        egg_name = self.model.save_to_egg(py_dir=py_dir)
 
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
@@ -40,22 +46,12 @@ class EngineOptimizationTestCase(unittest.TestCase):
         os.chdir(test_dir)
         egg_path = os.path.join('..', egg_name)
         try:
-            # Find what is hopefully the correct 'python' command.
-            python = 'python'
-            if orig_dir.endswith('buildout'):
-                python = os.path.join(orig_dir, 'bin', python)
-            else:
-                index = orig_dir.find('openmdao.examples')
-                if index > 0:
-                    python = os.path.join(orig_dir[:index],
-                                          'buildout', 'bin', python)
-
             logging.debug('Unpacking in subprocess...')
             logging.debug('    python %s' % python)
             out = open('unpack.py', 'w')
             out.write("""\
 from openmdao.main.api import Component
-Component.load_from_egg('%s', install=False)
+Component.load_from_eggfile('%s', install=False)
 """ % egg_path)
             out.close()
             retcode = subprocess.call([python, 'unpack.py'])
@@ -64,6 +60,7 @@ Component.load_from_egg('%s', install=False)
             logging.debug('Load state and run test in subprocess...')
             logging.debug('    python %s' % python)
 
+            os.chdir(self.model.name)
             out = open('test.py', 'w')
             out.write("""\
 import sys
@@ -75,13 +72,13 @@ class TestCase(unittest.TestCase):
         loader = __import__('%s_loader')
         model = loader.load()
         model.run()
-        self.assertAlmostEqual(model.vehicle_sim.accel_time, 
+        self.assertAlmostEqual(model.driving_sim.accel_time, 
                                5.5999999999999961, places=6)
-        self.assertAlmostEqual(model.vehicle_sim.EPA_city, 
+        self.assertAlmostEqual(model.driving_sim.EPA_city, 
                                25.15551809930237, places=4)
-        self.assertAlmostEqual(model.vehicle_sim.EPA_highway, 
+        self.assertAlmostEqual(model.driving_sim.EPA_highway, 
                                32.800993976480768, places=4)
-                               
+                              
 if __name__ == '__main__':
     unittest.main()
 """ % self.model.name)

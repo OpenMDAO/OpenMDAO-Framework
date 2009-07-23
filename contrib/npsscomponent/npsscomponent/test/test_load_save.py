@@ -15,8 +15,7 @@ from numpy.testing import assert_equal
 
 from enthought.traits.api import Bool
 
-from openmdao.main.api import FileTrait, FileValue
-from openmdao.main.constants import SAVE_LIBYAML
+from openmdao.main.api import FileTrait, FileValue, SAVE_LIBYAML
 from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent, NPSSProperty
@@ -88,9 +87,8 @@ class NPSSTestCase(unittest.TestCase):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
-            self.npss = \
-                NPSScomponent.load_from_egg(os.path.join('..', self.egg_name),
-                                            install=False)
+            egg_path = os.path.join('..', self.egg_name)
+            self.npss = NPSScomponent.load_from_eggfile(egg_path, install=False)
 
             for name, val in saved_values.items():
                 if name == 'directory':
@@ -106,35 +104,6 @@ class NPSSTestCase(unittest.TestCase):
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)
-
-    def test_nofile(self):
-        logging.debug('')
-        logging.debug('test_nofile')
-
-        self.npss.pre_delete()
-        self.npss = None
-        try:
-            NPSScomponent.load_from_egg('no-such-egg')
-        except ValueError, exc:
-            self.assertEqual(str(exc), "'no-such-egg' not found.")
-        else:
-            self.fail('Expected ValueError')
-
-    def test_badfile(self):
-        logging.debug('')
-        logging.debug('test_badfile')
-
-        self.npss.pre_delete()
-        self.npss = None
-        directory = pkg_resources.resource_filename('npsscomponent', 'test')
-        badfile = os.path.join(directory, 'test_load_save.py')
-        try:
-            self.npss = NPSScomponent.load_from_egg(badfile)
-        except RuntimeError, exc:
-            self.assertEqual(str(exc).startswith('No distributions found in'),
-                                                 True)
-        else:
-            self.fail('Expected RuntimeError')
 
     def test_nomodel(self):
         logging.debug('')
@@ -153,10 +122,9 @@ class NPSSTestCase(unittest.TestCase):
         os.chdir(test_dir)
         try:
             try:
-                self.npss = \
-                    NPSScomponent.load_from_egg(os.path.join('..',
-                                                             self.egg_name),
-                                                             install=False)
+                egg_path = os.path.join('..', self.egg_name)
+                self.npss = NPSScomponent.load_from_eggfile(egg_path,
+                                                            install=False)
             except RuntimeError, exc:
                 self.assertEqual(str(exc).startswith(
                     "NPSS: Reload caught exception: Model file 'xyzzy.mdl' not found while reloading in"),
@@ -191,8 +159,15 @@ class NPSSTestCase(unittest.TestCase):
                 "NPSS: Can't save to 'NPSS/NPSS.yaml': data type not understood")
         else:
             self.fail('Expected TypeError')
+        finally:
+            if os.path.exists('NPSS.yaml'):
+                os.remove('NPSS.yaml')
 
 
 if __name__ == '__main__':
-    unittest.main()
+    import nose
+    import sys
+    sys.argv.append('--cover-package=npsscomponent')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()
 

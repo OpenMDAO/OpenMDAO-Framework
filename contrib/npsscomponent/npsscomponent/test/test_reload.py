@@ -220,5 +220,9 @@ class NPSSTestCase(unittest.TestCase):
 
 
 if __name__ == '__main__':
-    unittest.main()
+    import nose
+    import sys
+    sys.argv.append('--cover-package=npsscomponent')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()
 

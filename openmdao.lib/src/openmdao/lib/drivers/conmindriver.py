@@ -198,16 +198,6 @@ class CONMINdriver(Driver):
         self.g2 = numarray.zeros(0,'d')
         self.cons_is_linear = numarray.zeros(0, 'i') 
         
-    #def __getstate__(self):
-        #"""Return dict representing this container's state."""
-        #state = super(CONMINdriver, self).__getstate__()
-        #state['cnmn1'] = None
-        #return state
-
-    #def __setstate__(self, state):
-        #"""Restore this component's state."""
-        #super(CONMINdriver, self).__setstate__(state)
-        #self.cnmn1 = conmin.cnmn1
         
     def execute(self):
         """Perform the optimization."""

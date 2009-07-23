@@ -4,8 +4,11 @@ __all__ = ['Component', 'SimulationRoot']
 
 __version__ = "0.1"
 
+import fnmatch
 import glob
+import logging
 import os.path
+import pkg_resources
 import shutil
 import subprocess
 import sys
@@ -18,7 +21,7 @@ from enthought.traits.trait_base import not_event
 from openmdao.main.interfaces import IComponent
 from openmdao.main.container import Container, _io_side_effects
 from openmdao.main.filevar import FileValue
-from openmdao.main.constants import SAVE_CPICKLE
+from openmdao.util.save_load import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
 
 # Execution states.
@@ -59,6 +62,12 @@ class SimulationRoot (object):
 class Component (Container):
     """This is the base class for all objects containing Traits that are 
        accessible to the OpenMDAO framework and are 'runnable'.
+
+    - `directory` is a string specifying the directory to execute in. \
+       If it is a relative path, it is relative to its parent's directory.
+    - `external_files` is a list of meta-data dictionaries for external \
+      files used by the component.  The 'path' meta-data attribute can be \
+      a glob-style pattern.
     """
 
     implements(IComponent)
@@ -108,7 +117,7 @@ class Component (Container):
     def check_config (self):
         """Verify that the configuration of this component is correct. This function is
         called once prior to the first execution of this component, and may be called
-        explicitly at other times if desired. 
+        explicitly at other times if desired.
         """
         pass         
     
@@ -210,6 +219,8 @@ class Component (Container):
         if not directory:
             directory = '.'
         cwd = os.getcwd()
+        if not os.path.isabs(directory):
+            directory = os.path.join(self.get_directory(), directory)
         if not SimulationRoot.legal_path(directory):
             self.raise_exception(
                 "Illegal directory '%s', not a decendant of '%s'." % \
@@ -234,18 +245,27 @@ class Component (Container):
         """
         self.load(instream)
 
-    def save_to_egg(self, name=None, version=None, force_relative=True,
-                    src_dir=None, src_files=None, dst_dir=None,
-                    format=SAVE_CPICKLE, proto=-1, tmp_dir=None):
-        """Save state and other files to an egg.
+    def save_to_egg(self, name=None, version=None, py_dir=None,
+                    force_relative=True, src_dir=None, src_files=None,
+                    child_objs=None, dst_dir=None, format=SAVE_CPICKLE,
+                    proto=-1, use_setuptools=False):
+        """Save state and other files to an egg.  Typically used to copy all or
+        part of a simulation to another user or machine.  By specifying child
+        components in `child_objs`, it will be possible to create instances of
+        just those components from the installed egg.
 
         - `name` defaults to the name of the component.
-        - `version` defaults to the component's module __version__.
-        - If `force_relative` is True, all paths are relative to `src_dir`.
-        - `src_dir` defaults to the component's directory.
-        - `src_files` should be a set, and defaults to component's external files.
+        - `version` defaults to the container's module __version__, or \
+          a timestamp if no __version__ exists.
+        - `py_dir` is the (root) directory for local Python files. \
+          It defaults to the current directory.
+        - If `force_relative` is True, all paths are made relative to `src_dir`.
+        - `src_dir` is the root of all (relative) `src_files`. \
+          It defaults to the component's directory.
+        - `src_files` should be a set. Component external files will be added \
+          to this set.
+        - `child_objs` is a list of child objects for additional entries.
         - `dst_dir` is the directory to write the egg in.
-        - `tmp_dir` is the directory to use for temporary files.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
@@ -269,22 +289,18 @@ class Component (Container):
                                 if isinstance(c, Component)])
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
-            self.debug('Saving %s', comp.get_pathname())
 
             # Process execution directory.
             comp_dir = comp.get_directory()
-            self.debug("    directory '%s'", comp.directory)
             if force_relative:
                 if comp_dir.startswith(src_dir):
                     if comp_dir == src_dir and comp.directory:
                         fixup_dirs.append((comp, comp.directory))
                         comp.directory = ''
-                        self.debug("        directory now '%s'", comp.directory)
                     elif os.path.isabs(comp.directory):
                         parent_dir = comp.parent.get_directory()
                         fixup_dirs.append((comp, comp.directory))
                         comp.directory = self._relpath(comp_dir, parent_dir)
-                        self.debug("        directory now '%s'", comp.directory)
                 else:
                     self.raise_exception(
                         "Can't save, %s directory '%s' doesn't start with '%s'."
@@ -293,17 +309,14 @@ class Component (Container):
             # Process external files.
             for metadata in comp.external_files:
                 path = metadata['path']
-                self.debug('    external path %s', path)
                 path = os.path.expanduser(path)
                 path = os.path.expandvars(path)
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
                 paths = glob.glob(path)
                 for path in paths:
-                    self.debug('    expanded path %s', path)
                     path = os.path.normpath(path)
                     if not os.path.exists(path):
-                        self.debug("        '%s' does not exist" % path)
                         continue
                     if force_relative:
                         if path.startswith(src_dir):
@@ -312,7 +325,6 @@ class Component (Container):
                                 path = self._relpath(path, comp_dir)
                                 fixup_meta.append((metadata, metadata['path']))
                                 metadata['path'] = path
-                                self.debug('        path now %s', path)
                         else:
                             self.raise_exception(
                                 "Can't save, %s file '%s' doesn't start with '%s'."
@@ -320,12 +332,10 @@ class Component (Container):
                                 ValueError)
                     else:
                         save_path = path
-                    self.debug('        adding %s', save_path)
                     src_files.add(save_path)
 
             # Process FileTraits for this component only.
             for fvar, fvarvalue in comp.get_file_vars():
-                self.debug('    fvar %s path %s', fvar, fvarvalue.filename)
                 if not fvarvalue:
                     continue
                 path = fvarvalue.filename
@@ -333,7 +343,6 @@ class Component (Container):
                     path = os.path.join(comp_dir, path)
                 path = os.path.normpath(path)
                 if not os.path.exists(path):
-                    self.debug("        '%s' does not exist" % path)
                     continue
                 if force_relative:
                     if path.startswith(src_dir):
@@ -342,7 +351,6 @@ class Component (Container):
                             path = self._relpath(path, comp_dir)
                             fixup_fvar.append((comp, fvar, fvarvalue))
                             comp.set(fvar+'.filename', path, force=True)
-                            self.debug('        path now %s', path)
                     else:
                         self.raise_exception(
                             "Can't save, %s path '%s' doesn't start with '%s'."
@@ -350,14 +358,27 @@ class Component (Container):
                                          fvar]), path, src_dir), ValueError)
                 else:
                     save_path = path
-                self.debug('        adding %s', save_path)
                 src_files.add(save_path)
+        # Save relative directory for any entry points. Some oddness with
+        # parent weakrefs seems to prevent reconstruction in load().
+        if child_objs is not None:
+            for child in child_objs:
+                if not isinstance(child, Component):
+                    continue
+                relpath = child.directory
+                obj = child.parent
+                if obj is None:
+                    raise RuntimeError('Entry point object has no parent!')
+                while obj.parent is not None and \
+                      isinstance(obj.parent, Component):
+                    relpath = os.path.join(obj.directory, relpath)
+                    obj = obj.parent
+                child._rel_dir_path = relpath
+
         try:
-            return super(Component, self).save_to_egg(name, version,
-                                                      force_relative,
-                                                      src_dir, src_files,
-                                                      dst_dir, format, proto,
-                                                      tmp_dir)
+            return super(Component, self).save_to_egg(
+                       name, version, py_dir, src_dir, src_files,
+                       child_objs, dst_dir, format, proto, use_setuptools)
         finally:
             # If any component config has been modified, restore it.
             for ccomp, path in fixup_dirs:
@@ -374,7 +395,7 @@ class Component (Container):
                 #obj = getattr(container, name)
                 if id(obj) in visited:
                     continue
-                visited.append(id(obj))
+                visited.add(id(obj))
                 if isinstance(obj, FileValue):
                     if self is scope:
                         file_vars.add((name, obj))
@@ -382,14 +403,11 @@ class Component (Container):
                         file_vars.add(('.'.join(
                                       [container.get_pathname(rel_to_scope=scope),name]), 
                                        obj))
-                # TODO: find out why we're recursing into child Containers,
-                # but not into child Components
                 elif isinstance(obj, Container) and not isinstance(obj, Component):
                     _recurse_get_file_vars(obj, file_vars, visited, scope)
 
         file_vars = set()
-        visited = []
-        _recurse_get_file_vars(self, file_vars, visited, self)
+        _recurse_get_file_vars(self, file_vars, set(), self)
         return file_vars
 
     def _relpath(self, path1, path2):
@@ -419,21 +437,25 @@ class Component (Container):
         self.raise_exception("'%s' has no common prefix with '%s'"
                              % (path1, path2), ValueError)
 
-    def check_save_load(self, test_dir='test_dir', cleanup=True,
-                        format=SAVE_CPICKLE):
-        """Convenience routine to check that saving & reloading work."""
+    def check_save_load(self, py_dir=None, test_dir='test_dir', cleanup=True,
+                        format=SAVE_CPICKLE, logfile=None, python=None):
+        """Convenience routine to check that saving & reloading work.
+        It will create an egg in the current directory, unpack it in `test_dir`
+        via a separate process, and then load and run the component in
+        another subprocess.  Returns first non-zero subprocess exit code,
+        or zero if everything succeeded.
+        """
+        if sys.platform == 'win32':
+            print '\ncheck_save_load() unsupported on win32 at this time.'
+            return 0  # Enable once openmdao.util.testutil.find_python works.
         old_level = self.log_level
         self.log_level = LOG_DEBUG
         start = time.time()
-        egg_name = self.save_to_egg(format=format)
+        egg_name = self.save_to_egg(py_dir=py_dir, format=format)
         elapsed = time.time() - start
         size = os.path.getsize(egg_name)
         print '\nSaved %d bytes in %.2f seconds (%.2f bytes/sec)' % \
               (size, elapsed, size/elapsed)
-
-        if sys.platform == 'win32':
-            print '\nUnpacking check not supported on win32'
-            return -1
 
         orig_dir = os.getcwd()
         if os.path.exists(test_dir):
@@ -441,17 +463,49 @@ class Component (Container):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         egg_path = os.path.join('..', egg_name)
+        unpacker = None
         try:
             print '\nUnpacking in subprocess...'
             env = os.environ
             env['OPENMDAO_INSTALL'] = '0'
-            retcode = subprocess.call(['sh', egg_path], env=env)
+            if logfile:
+                stdout = open(logfile, 'w')
+                stderr = subprocess.STDOUT
+            else:
+                stdout = None
+                stderr = None
+
+            if sys.platform == 'win32' or python:
+                if not python:
+                    python = 'python'
+                print '    python:', python
+                unpacker = 'unpack.py'
+                out = open(unpacker, 'w')
+                out.write("""\
+from openmdao.main.api import Component
+Component.load_from_eggfile('%s', install=False)
+""" % egg_path)
+                out.close()
+                args = [python, unpacker]
+            else:
+                args = ['sh', egg_path]
+
+            retcode = subprocess.call(args, env=env,
+                                      stdout=stdout, stderr=stderr)
             print '    retcode', retcode
             if retcode == 0:
                 print '\nRunning in subprocess...'
-                retcode = subprocess.call(['python', self.name+'_loader.py'])
+                os.chdir(self.name)
+                if not python:
+                    python = 'python'
+                retcode = subprocess.call([python, self.name+'_loader.py'],
+                                          stdout=stdout, stderr=stderr)
                 print '    retcode', retcode
+            if logfile:
+                stdout.close()
         finally:
+            if unpacker and os.path.exists(unpacker):
+                os.remove(unpacker)
             os.chdir(orig_dir)
             self.log_level = old_level
             if cleanup:
@@ -461,33 +515,144 @@ class Component (Container):
         return retcode
 
     @staticmethod
-    def load (instream, format=SAVE_CPICKLE, do_post_load=True):
-        """Load object(s) from instream."""
-# This doesn't work:
-#    AttributeError: 'super' object has no attribute 'load'
-#        top = super(Component).load(instream, format)
-        top = Container.load(instream, format, False)
+    def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True,
+             top_obj=True, name=None):
+        """Load object(s) from `instream`.  If `instream` is an installed
+        package name, then any external files referenced in the object(s)
+        are copied from the package installation to appropriate directories.
+        If an external file has metadata attribute 'constant' == True and
+        the machine supports it, a symlink is used rather than a file copy.
+        The `package` and `top_obj` arguments are normally used by a loader
+        script (generated by save_to_egg()) to load a sub-component from the egg.
+        """
+        top = Container.load(instream, format, package, False, name)
+        if isinstance(top, Component):
+            # Get path relative to real top before we clobber directory attr.
+            if top_obj:
+                relpath = '.'
+            else:
+                if top.parent is not None:
+                    relpath = top.directory
+                    obj = top.parent
+                    while obj.parent is not None and \
+                          isinstance(obj.parent, Component):
+                        relpath = os.path.join(obj.directory, relpath)
+                        obj = obj.parent
+                elif hasattr(top, '_rel_dir_path'):
+                    top.warning('No parent, using saved relative directory')
+                    relpath = top._rel_dir_path  # Set during save_to_egg().
+                else:
+                    top.warning('No parent, using null relative directory')
+                    relpath = ''
 
-        _io_side_effects = False
-        try:
-            if isinstance(top, Component):
+
+            _io_side_effects = False
+
+            try:
+                # Set root directory and create any subdirectories.
                 top.directory = os.getcwd()
                 for component in [c for c in top.values(recurse=True)
-                                                    if isinstance(c, Component)]:
+                                                if isinstance(c, Component)]:
                     directory = component.get_directory()
                     if not os.path.exists(directory):
                         os.makedirs(directory)
     
-            if do_post_load:
-                top.post_load()
-        finally:
-            _io_side_effects = True
+                # If necessary, copy files from installed egg.
+                if isinstance(instream, basestring) and \
+                   not os.path.exists(instream) and not os.path.isabs(instream):
+                    # If we got this far, then the stuff below "can't" fail.
+                    if not package:
+                        dot = instream.rfind('.')
+                        package = instream[:dot]
+                    top._restore_files(package, relpath)
+
+                if do_post_load:
+                    top.parent = None
+                    top.post_load()
+            finally:
+                _io_side_effects = True
             
         return top
 
+    def _restore_files(self, package, relpath):
+        """Restore external files from installed egg."""
+        if self.directory:
+            self.push_dir(self.get_directory())
+        try:
+            fvars = self.get_file_vars()
+            if self.external_files or fvars:
+                self.info('Restoring files in %s', os.getcwd())
+
+            for metadata in self.external_files:
+                pattern = metadata['path']
+                if not pattern:
+                    continue
+                is_input = metadata.get('input', False)
+                const = metadata.get('constant', False)
+                self._copy_files(pattern, package, relpath, is_input, const)
+
+            for fvar in fvars:
+                pattern = fvar.get_value()
+                if not pattern:
+                    continue
+                is_input = fvar.iostatus == INPUT
+                const = False
+                self._copy_files(pattern, package, relpath, is_input, const)
+
+            for component in [c for c in self.values(pub=False, recurse=False)
+                                    if isinstance(c, Component)]:
+                path = relpath
+                if component.directory:
+                    # Must use '/' for resources.
+                    path += '/'+component.directory
+                component._restore_files(package, path)
+        finally:
+            if self.directory:
+                self.pop_dir()
+
+    def _copy_files(self, pattern, package, relpath, is_input, const):
+        """Copy files from installed egg matching pattern."""
+        symlink = const and sys.platform != 'win32'
+
+        directory = os.path.dirname(pattern)
+        pattern = os.path.basename(pattern)
+        if directory:
+            if not os.path.exists(directory):
+                os.makedirs(directory)
+            # Must use '/' for resources.
+            relpath = relpath+'/'+directory
+
+        pkg_files = pkg_resources.resource_listdir(package, relpath)
+
+        if directory:
+            self.push_dir(directory)
+        try:
+            found = False
+            for filename in pkg_files:
+                if fnmatch.fnmatch(filename, pattern):
+                    # Must use '/' for resources.
+                    src_name = relpath+'/'+filename
+                    self.debug("    '%s'", src_name)
+                    if symlink:
+                        src = pkg_resources.resource_filename(package, src_name)
+                        dst = filename
+                        os.symlink(src, dst)
+                    else:
+                        src = pkg_resources.resource_stream(package, src_name)
+                        dst = open(filename, 'w')
+                        dst.write(src.read())
+                        dst.close()
+                    found = True
+            if not found and is_input:
+                self.warning("No files found for '%s'", pattern)
+        finally:
+            if directory:
+                self.pop_dir()
+
     def step (self):
-        """For Components that run other components (e.g., Assembly or Drivers), this will run
-        one Component and return. For simple components, it is the same as run().
+        """For Components that run other components (e.g., Assembly or Drivers),
+        this will run one Component and return. For simple components, it is
+        the same as run().
         """
         self.run()
 

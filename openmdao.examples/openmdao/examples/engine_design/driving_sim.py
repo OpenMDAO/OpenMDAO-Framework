@@ -1,4 +1,4 @@
-# sim_vehicle.py
+# driving_sim.py
 #
 # Simulates a vehicle to obatain the following:
 # - 0-60mph acceleration time
@@ -24,7 +24,7 @@ SHIFTPOINT1 = 10.0
 MAX_ERROR = .01
 
 
-class SimVehicle(Assembly):
+class DrivingSim(Assembly):
     ''' Simulation of vehicle performance.'''
     
     # Simulation Parameters
@@ -42,7 +42,7 @@ class SimVehicle(Assembly):
                              desc='EPA Fuel economy - Highway')
         
     def __init__(self, name, parent=None, doc=None, directory=''):
-        ''' Creates a new SimVehicle object
+        ''' Creates a new DrivingSim object
         
             # Simulation inputs
             end_speed          # Simulation ending speed in mph.
@@ -54,7 +54,7 @@ class SimVehicle(Assembly):
             EPA_highway       # Fuel economy for highway driving
             '''
         
-        super(SimVehicle, self).__init__(name, parent, doc, directory)    
+        super(DrivingSim, self).__init__(name, parent, doc, directory)    
 
         # set up interface to the framework  
         # Pylint: disable-msg=E1101
@@ -82,7 +82,7 @@ class SimVehicle(Assembly):
         self.create_passthru('vehicle.final_drive_ratio')
         self.create_passthru('vehicle.tire_circumference')
 
-        # Promoted From Vehicle -> VehicleDynamics
+        # Promoted From Vehicle -> Chasis
         self.create_passthru('vehicle.mass_vehicle')
         self.create_passthru('vehicle.Cf')
         self.create_passthru('vehicle.Cd')
@@ -311,9 +311,10 @@ def test_it():
     import time
     tt = time.time()
     
-    z = SimVehicle("New")  
+    z = DrivingSim("new")  
     z.vehicle = Vehicle("test_vehicle")
     z.run()
+    
     print "Time (0-60): ", z.accel_time
     print "City MPG: ", z.EPA_city
     print "Highway MPG: ", z.EPA_highway
@@ -323,4 +324,4 @@ def test_it():
 if __name__ == "__main__": 
     test_it()
 
-# End sim_vehicle.py        
+# End driving_sim.py        

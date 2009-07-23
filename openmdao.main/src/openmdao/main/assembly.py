@@ -21,7 +21,7 @@ from openmdao.main.interfaces import IAssembly, IComponent, IDriver, IWorkflow
 from openmdao.main.container import Container
 from openmdao.main.component import Component, STATE_IDLE
 from openmdao.main.dataflow import Dataflow
-from openmdao.main.constants import SAVE_PICKLE
+from openmdao.util.save_load import SAVE_PICKLE
 from openmdao.main.exceptions import CircularDependencyError
 from openmdao.main.util import filexfer
 from openmdao.main.filevar import FileTrait, FileValue
@@ -100,6 +100,7 @@ class Assembly (Component):
         self.external_files = []
 
     def get_component_graph(self):
+        """Retrieve the dataflow graph of child components."""
         return self._dataflow.get_graph()
     
     def get_var_graph(self):
@@ -120,15 +121,15 @@ class Assembly (Component):
             self._need_child_io_update = False
         return self._var_graph
         
-    def get_io_graph(self):
-        """For now, just return our base class version of get_io_graph."""
-        # TODO: make this return an actual graph of inputs to outputs based on 
-        #       the contents of this Assembly instead of a graph where all outputs
-        #       depend on all inputs
-        # NOTE: if the io_graph changes, this function must return a NEW graph
-        # object instead of modifying the old one, because object identity
-        # is used in the parent assembly to determine of the graph has changed
-        return super(Assembly, self).get_io_graph()
+    #def get_io_graph(self):
+        #"""For now, just return our base class version of get_io_graph."""
+        ## TODO: make this return an actual graph of inputs to outputs based on 
+        ##       the contents of this Assembly instead of a graph where all outputs
+        ##       depend on all inputs
+        ## NOTE: if the io_graph changes, this function must return a NEW graph
+        ## object instead of modifying the old one, because object identity
+        ## is used in the parent assembly to determine of the graph has changed
+        #return super(Assembly, self).get_io_graph()
     
     def add_child(self, obj):
         """Update dependency graph and call base class add_child."""
@@ -254,13 +255,13 @@ class Assembly (Component):
                                       (srcvarname, destvarname), RuntimeError)
         else: # it's not a passthru connection so must connect output to input
             if srctrait.iostatus != 'out':
-                self.raise_exception(srccomp.get_trait_pathname(srcvarname)+
+                self.raise_exception('.'.join([srccomp.get_pathname(),srcvarname])+
                                      ' must be an output variable',
                                      RuntimeError)
             if desttrait.iostatus != 'in':
-                self.raise_exception(destcomp.get_trait_pathname(destvarname)+
+                self.raise_exception('.'.join([destcomp.get_pathname(),destvarname])+
                                      ' must be an input variable',
-                                     RuntimeError)        
+                                     RuntimeError)
         if self.is_destination(destpath):
             self.raise_exception(destpath+' is already connected',
                                  RuntimeError)             
@@ -405,20 +406,6 @@ class Assembly (Component):
                 conns.append((outname, inname))
         return self._filter_internal_edges(conns)
 
-    def parent_of(self, name):
-        splt = name.split('.',1)
-        if len(splt) > 1:
-            return getattr(self, splt[0])
-        else:
-            return this
-        
-    def parent_name_of(self, name):
-        splt = name.split('.',1)
-        if len(splt) > 1:
-            return splt[0]
-        else:
-            return None
-        
     def update_inputs(self, compname, varnames):
         """Transfer input data to input variables on the specified component.
         If varnames is not None, only the variables in the list will be updated.

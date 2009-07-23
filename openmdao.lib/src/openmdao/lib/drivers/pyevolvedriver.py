@@ -9,6 +9,12 @@ from enthought.traits.api import Int, Float, CBool, Str, Any, on_trait_change, T
 from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
 from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
 from pyevolve import GenomeBase
+try:
+    from pyevolve import DBAdapters
+except ImportError:
+    # Apparently the egg doesn't record it's dependencies.
+    import logging
+    logging.warning('No pyevolve.DBAdaptors available.')
 
 from openmdao.main.api import Driver, StringRef
 
@@ -28,7 +34,8 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     dim = len(genome)
     numparents = 2.0
         
-    # find the center of mass (average value) between the two parents for each dimension
+    # find the center of mass (average value) between the two parents
+    # for each dimension
     cmass = [(gm+gd)/2.0 for gm,gd in zip(gMom,gDad)]
     
     radius = max(sum([(cm-gM)**2 for cm,gM in zip(cmass,gMom)]),
@@ -38,15 +45,17 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     #generate a random unit vectors in the hyperspace
     seed_sister = [random.uniform(-1,1) for i in range(0,dim)]
     magnitude = sum([x**2 for x in seed_sister])**.5
-    while magnitude > 1: #checksum to enforce a circular distribution of random numbers
+    #checksum to enforce a circular distribution of random numbers
+    while magnitude > 1:
         seed_sister = [random.uniform(-1,1) for i in range(0,dim)]
         magnitude = sum([x**2 for x in seed_sister])**.5        
     
     seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
     magnitude = sum([x**2 for x in seed_brother])**.5
-    while magnitude > 1: #checksum to enforce a circular distribution of random numbers
-        seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
-        magnitude = sum([x**2 for x in seed_brother])**.5    
+    #checksum to enforce a circular distribution of random numbers
+    while magnitude > 1:
+       seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
+       magnitude = sum([x**2 for x in seed_brother])**.5    
     
     #create a children
     sister.resetStats()
@@ -55,7 +64,8 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     sister.genomeList = [cm+radius*sd for cm,sd in zip(cmass,seed_sister)]
     brother.genomeList = [cm+radius*sd for cm,sd in zip(cmass,seed_brother)]
     
-    if type(gMom.genomeList[0]) == int: #preserve the integer type of the genome if necessary
+    #preserve the integer type of the genome if necessary
+    if type(gMom.genomeList[0]) == int:
         sister.genomeList = [int(round(x)) for x in sister.genomeList]   
         brother.genomeList = [int(round(x)) for x in brother.genomeList]  
     
@@ -112,13 +122,16 @@ class pyevolvedriver(Driver):
         self.DBAdapter = None #TODO: optional socket
 
     def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
-        if funcList == None: return
+        if funcList == None: 
+            return
         slot.clear()
-        if not isinstance(funcList,list): funcList = [funcList]
+        if not isinstance(funcList, list):
+            funcList = [funcList]
         for func in funcList: 
             if slot.isEmpty(): 
                 slot.set(func)
-            else: slot.add(func)
+            else:
+                slot.add(func)
         slot.setRandomApply(RandomApply)
 
     @on_trait_change('objective') 
@@ -137,15 +150,15 @@ class pyevolvedriver(Driver):
 
     def verify(self):
         #genome verify
-        if not isinstance(self.genome,GenomeBase.GenomeBase):
-            self.raise_exception(
-                "genome provided is not valid. Does not inherit from pyevolve.GenomeBase.GenomeBase",
+        if not isinstance(self.genome, GenomeBase.GenomeBase):
+            self.raise_exception("genome provided is not valid."
+                " Does not inherit from pyevolve.GenomeBase.GenomeBase",
                 TypeError)
 
         #decoder verify
         if self.decoder == None: # check if None first
-            self.raise_exception("decoder specified as 'None'. A valid decoder must be present",
-                                 TypeError)
+            self.raise_exception("decoder specified as 'None'."
+                                 " A valid decoder must be present", TypeError)
         try: # won't work if decoder is None
             self.decoder(self.genome)
         except TypeError, err:
@@ -172,10 +185,11 @@ class pyevolvedriver(Driver):
 
         #self.GA.setDBAdapter(self.DBAdapter) #
         
-        self._set_GA_FunctionSlot(self.GA.selector,self.selector)
-        self._set_GA_FunctionSlot(self.GA.stepCallback,self.stepCallback)
-        self._set_GA_FunctionSlot(self.GA.terminationCriteria,self.terminationCriteria)
+        self._set_GA_FunctionSlot(self.GA.selector, self.selector)
+        self._set_GA_FunctionSlot(self.GA.stepCallback, self.stepCallback)
+        self._set_GA_FunctionSlot(self.GA.terminationCriteria,
+                                  self.terminationCriteria)
         
-        self.GA.evolve(freq_stats = self.freq_stats)
+        self.GA.evolve(freq_stats=self.freq_stats)
         self.best_individual = self.GA.bestIndividual()
 

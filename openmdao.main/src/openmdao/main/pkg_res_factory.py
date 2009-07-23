@@ -111,20 +111,21 @@ class PkgResourcesFactory(Factory):
         for name in pkg_env:
             # pkg_env[name] gives us a list of distribs for that package name
             for dist in pkg_env[name]:
-                entry_dict = get_entry_map(dist, group=groupname)
+                try:
+                    entry_dict = get_entry_map(dist, group=groupname)
+                except IOError:
+                    continue  # Probably due to removal of egg (tests, etc.)
+
                 for nm, entry_pt in entry_dict.items():
                     if len(entry_pt.attrs) > 0:
-                        ename = '.'.join([entry_pt.module_name]+
-                                         list(entry_pt.attrs))
+                        if nm not in self._loaders:
+                            self._loaders[nm] = []
+                        self._loaders[nm].append(
+                            EntryPtLoader(name=nm, group=groupname,
+                                          dist=dist, entry_pt=entry_pt))
                     else:
-                        raise NameError('entry point in setup.py file'+
+                        raise NameError('entry point '+nm+' in setup.py file'+
                                  ' must specify an object within the module')
-                    if ename not in self._loaders:
-                        self._loaders[ename] = []
-                    self._loaders[ename].append(EntryPtLoader(name=ename, 
-                                                            group=groupname,
-                                                            dist=dist, 
-                                                            entry_pt=entry_pt))
                 
 
     def get_loaders(self, group, active=True):

@@ -1,4 +1,4 @@
-# VehicleDynamics.py
+# chasis.py
 #
 # This openMDAO component determines the vehicle acceleration based on the
 # power output of the engine, modified by the transmission torque ratio.
@@ -8,7 +8,7 @@ from enthought.traits.api import Float
 from openmdao.main.api import Component, UnitsFloat
 from math import pi
 
-class VehicleDynamics(Component):
+class Chasis(Component):
     ''' A vehicle dynamics component - calculates acceleration.'''
     
     # set up interface to the framework  
@@ -34,9 +34,6 @@ class VehicleDynamics(Component):
     acceleration = UnitsFloat(0., iostatus='out', units='m/(s*s)', 
                               desc='Calculated vehicle acceleration ')    
         
-    #def __init__(self, name, parent=None, doc=None, directory=''):
-        #''' Creates a new VehicleDynamics object
-        
             ## Design parameters
             #mass_vehicle        # Vehicle Mass (kg)
             #Cf                  # Friction coef (proportional to V)
@@ -52,17 +49,12 @@ class VehicleDynamics(Component):
             
             ## Outputs
             #acceleration        # Calculated vehicle acceleration (m/s^2)
-            
-            #'''
         
-        #super(VehicleDynamics, self).__init__(name, parent, doc, 
-                                               #directory)        
         
         
     def execute(self):
         ''' Calculates the instantaneous acceleration for the vehicle.       
             '''        
-        #print '%s.execute()' % self.get_pathname()
         torque = self.engine_torque*self.torque_ratio
         tire_radius = self.tire_circ/(2.0*pi)
         
@@ -73,4 +65,4 @@ class VehicleDynamics(Component):
         
         self.acceleration = (torque/tire_radius - friction - drag)/mass
         
-# End VehicleDynamics.py
+# End Chasis.py

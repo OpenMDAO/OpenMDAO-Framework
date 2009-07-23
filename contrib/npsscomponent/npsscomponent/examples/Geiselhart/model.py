@@ -9,9 +9,6 @@ information written to it in addition to what's shown on screen.
 Known problems:
     - The components run, but since the port is only partial,
       the results are quite wrong.
-    - 'Design' variables are set as OUTPUTS and 'PropulsionData'
-      variables are set as INPUTS.  This looks odd, but is neccessary
-      until some more issues in the framework are ironed-out.
 """
 import os.path
 
@@ -275,7 +272,8 @@ class Model(Assembly):
         self.NPSS_ADP.reload_flag = 'mcReload'
 
         self.connect('Design.alt',       'NPSS_ADP.engine.alt')
-        self.connect('Design.extractionRatio', 'NPSS_ADP.engine.extractionRatio')
+        self.connect('Design.extractionRatio',
+                     'NPSS_ADP.engine.extractionRatio')
         self.connect('Design.FanPRdes',  'NPSS_ADP.engine.FanPRdes')
         self.connect('Design.HpcPRdes',  'NPSS_ADP.engine.HpcPRdes')
         self.connect('Design.Knoz',      'NPSS_ADP.engine.Knoz')
@@ -295,7 +293,8 @@ class Model(Assembly):
         self.NPSS_SLS.reload_flag = 'mcReload'
 
         self.connect('Design.alt',       'NPSS_SLS.engine.alt')
-        self.connect('Design.extractionRatio', 'NPSS_SLS.engine.extractionRatio')
+        self.connect('Design.extractionRatio',
+                     'NPSS_SLS.engine.extractionRatio')
         self.connect('Design.FanPRdes',  'NPSS_SLS.engine.FanPRdes')
         self.connect('Design.HpcPRdes',  'NPSS_SLS.engine.HpcPRdes')
         self.connect('Design.Knoz',      'NPSS_SLS.engine.Knoz')
@@ -324,7 +323,8 @@ class Model(Assembly):
 
         self.connect('Design.alt',       'NPSS_WATE.engine.ambient.Zalt')
         self.connect('Design.MN',        'NPSS_WATE.engine.ambient.ZMN')
-        self.connect('Design.extractionRatio', 'NPSS_WATE.engine.extractionRatio')
+        self.connect('Design.extractionRatio',
+                     'NPSS_WATE.engine.extractionRatio')
         self.connect('Design.FanPRdes',  'NPSS_WATE.engine.FanPRdes')
         self.connect('Design.HpcPRdes',  'NPSS_WATE.engine.HpcPRdes')
         self.connect('Design.Cfg',       'NPSS_WATE.engine.nozzle.Cfg')
@@ -342,7 +342,8 @@ class Model(Assembly):
         self.NPSS_FLOPS.reload_flag = 'mcReload'
 
         self.connect('Design.alt',       'NPSS_FLOPS.engine.alt')
-        self.connect('Design.extractionRatio', 'NPSS_FLOPS.engine.extractionRatio')
+        self.connect('Design.extractionRatio',
+                     'NPSS_FLOPS.engine.extractionRatio')
         self.connect('Design.FanPRdes',  'NPSS_FLOPS.engine.FanPRdes')
         self.connect('Design.HpcPRdes',  'NPSS_FLOPS.engine.HpcPRdes')
         self.connect('Design.Knoz',      'NPSS_FLOPS.engine.Knoz')
@@ -362,7 +363,8 @@ class Model(Assembly):
         self.NPSS_ANOPP.reload_flag = 'mcReload'
 
         self.connect('Design.alt',       'NPSS_ANOPP.engine.alt')
-        self.connect('Design.extractionRatio', 'NPSS_ANOPP.engine.extractionRatio')
+        self.connect('Design.extractionRatio',
+                     'NPSS_ANOPP.engine.extractionRatio')
         self.connect('Design.FanPRdes',  'NPSS_ANOPP.engine.FanPRdes')
         self.connect('Design.HpcPRdes',  'NPSS_ANOPP.engine.HpcPRdes')
         self.connect('Design.Knoz',      'NPSS_ANOPP.engine.Knoz')

@@ -44,6 +44,7 @@ Example output:
     MIT License
 
 """
+
 import sys
 import os
 import os.path

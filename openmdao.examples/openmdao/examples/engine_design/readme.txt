@@ -4,9 +4,9 @@ This is a simple design example that simulates the 0-60 acceleration time for a 
 
 ../../../../buildout/bin/python engine_optimization.py
 
-This file contains an Openmdao model containing a sim_vehicle component and a simple sequential execution driver. Inputs to this component include a number of design parameters, and the output is the 0-60 mph acceleration time that results from simulation.
+This file contains an Openmdao model containing a driving_sim component and a simple sequential execution driver. Inputs to this component include a number of design parameters, and the output is the 0-60 mph acceleration time that results from simulation.
 
-sim_vehicle has a "socket" which accepts a vehicle component. Sockets are not yet implemented, so the interface to the vehicle is temporary.
+driving_sim has a "socket" which accepts a vehicle component. Sockets are not yet implemented, so the interface to the vehicle is temporary.
 
 The vehicle component is an assembly that includes three components: Transmission, Engine, and Vehicle Dynamics. See Example_Problem_Process_Diagram.pn g for a process diagram of the whole model.
 

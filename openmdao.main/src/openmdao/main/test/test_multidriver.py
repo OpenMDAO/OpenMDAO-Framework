@@ -167,13 +167,21 @@ class MultiDriverTestCase(unittest.TestCase):
         ExprComp2('comp3',self.top, expr='x*x + (x+3)*y + (y+4)**2')
         ExprComp2('comp4',self.top, expr='x+y')
         self.top.comp1.set('x', 50)
-        self.top.comp3.set('y', 50)
+        self.top.comp3.set('y', -50)
         
         # Hook stuff up
         self.top.connect('comp1.f_x', 'comp3.x')
         self.top.connect('comp3.f_xy', 'comp4.y')
         self.top.connect('comp2.f_x', 'comp4.x')
 
+        ## create one driver for testing
+        #drv1 = CONMINdriver('driver1',self.top)
+        #drv1.maxiters = 30
+        #drv1.objective.value = 'comp4.f_xy'
+        #drv1.design_vars.value = ['comp1.x', 'comp3.y']
+        #drv1.lower_bounds = [-50, -50]
+        #drv1.upper_bounds = [50, 50]
+        
         # create the inner driver
         drv1 = CONMINdriver('driver1',self.top)
         drv1.maxiters = 30
@@ -192,6 +200,9 @@ class MultiDriverTestCase(unittest.TestCase):
         
         self.top.run()
 
+        # Notes: CONMIN does not quite reach the anlytical minimum
+        # In fact, it only gets to about 2 places of accuracy.
+        # This is also the case for a single 2-var problem.
         self.assertAlmostEqual(self.top.comp1.x, 6.6667, places=1)
         self.assertAlmostEqual(self.top.comp3.y, -7.3333, places=1)
         
