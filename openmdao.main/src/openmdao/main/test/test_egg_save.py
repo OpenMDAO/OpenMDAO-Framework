@@ -705,39 +705,9 @@ comp.run()
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
-            # Create a complete model.
-            model = factory.create('Egg_TestModel', 'test_model')
-            if model is None:
-                self.fail('Create of test_model failed.')
-            self.assertEqual(model.Oddball.get_pathname(), 'test_model.Oddball')
-
-            # Verify initial state.
-            self.assertNotEqual(model.Sink.text_data,
-                                model.Source.text_data)
-            self.assertNotEqual(model.Sink.binary_data,
-                                model.Source.sub.binary_data)
-            self.assertNotEqual(
-                model.Sink.getvar('binary_file').metadata['binary'], True)
-
-            for path in EXTERNAL_FILES:
-                path = os.path.join(model.Source.get_directory(), path)
-                self.assertEqual(os.path.exists(path), True)
-
-            for i in range(3):
-                self.assertEqual(model.Source.obj_list[i].data, i)
-
-            self.assertEqual(model.Oddball.executions, 0)
-
-            # Run and verify correct operation.
-            model.run()
-            self.assertEqual(model.Sink.text_data,
-                             model.Source.text_data)
-            self.assertEqual(model.Sink.binary_data,
-                             model.Source.sub.binary_data)
-            self.assertEqual(
-                model.Sink.getvar('binary_file').metadata['binary'], True)
-
-            self.assertEqual(model.Oddball.executions, 2)
+            # Check multiple model instances.
+            self.create_and_check_model(factory, 'test_model_1')
+            self.create_and_check_model(factory, 'test_model_2')
 
             # Create a component.
             comp = factory.create('Egg_TestModel.Oddball', 'test_comp')
@@ -751,6 +721,42 @@ comp.run()
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)
+
+    def create_and_check_model(self, factory, name):
+        """ Create a complete model instance and check it's operation. """
+        model = factory.create('Egg_TestModel', name)
+        if model is None:
+            self.fail("Create of '%s' failed." % name)
+        self.assertEqual(model.directory, os.path.join(os.getcwd(), name))
+        self.assertEqual(model.Oddball.get_pathname(), name+'.Oddball')
+
+        # Verify initial state.
+        self.assertNotEqual(model.Sink.text_data,
+                            model.Source.text_data)
+        self.assertNotEqual(model.Sink.binary_data,
+                            model.Source.sub.binary_data)
+        self.assertNotEqual(
+            model.Sink.getvar('binary_file').metadata['binary'], True)
+
+        for path in EXTERNAL_FILES:
+            path = os.path.join(model.Source.get_directory(), path)
+            self.assertEqual(os.path.exists(path), True)
+
+        for i in range(3):
+            self.assertEqual(model.Source.obj_list[i].data, i)
+
+        self.assertEqual(model.Oddball.executions, 0)
+
+        # Run and verify correct operation.
+        model.run()
+        self.assertEqual(model.Sink.text_data,
+                         model.Source.text_data)
+        self.assertEqual(model.Sink.binary_data,
+                         model.Source.sub.binary_data)
+        self.assertEqual(
+            model.Sink.getvar('binary_file').metadata['binary'], True)
+
+        self.assertEqual(model.Oddball.executions, 2)
 
 
 if __name__ == '__main__':
