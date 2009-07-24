@@ -881,12 +881,14 @@ def load_from_eggfile(filename, entry_group, entry_name, install=True,
     orig_dir = os.getcwd()
     os.chdir(egg_dir)
     try:
-        return _load_from_distribution(dist, entry_group, entry_name, logger)
+        return _load_from_distribution(dist, entry_group, entry_name, None,
+                                       logger)
     finally:
         os.chdir(orig_dir)
 
 
-def load_from_eggpkg(package, entry_group, entry_name, logger=None):
+def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
+                     logger=None):
     """
     Load object graph state by invoking the given package entry point.
     Returns the root object.
@@ -896,10 +898,12 @@ def load_from_eggpkg(package, entry_group, entry_name, logger=None):
     logger.debug('Loading %s from %s in %s...',
                  entry_name, package, os.getcwd())
     dist = pkg_resources.get_distribution(package)
-    return _load_from_distribution(dist, entry_group, entry_name, logger)
+    return _load_from_distribution(dist, entry_group, entry_name, instance_name,
+                                   logger)
 
 
-def _load_from_distribution(dist, entry_group, entry_name, logger):
+def _load_from_distribution(dist, entry_group, entry_name, instance_name,
+                            logger):
     """ Invoke entry point in distribution and return result. """
     logger.debug('    entry points:')
     maps = dist.get_entry_map()
@@ -919,7 +923,7 @@ def _load_from_distribution(dist, entry_group, entry_name, logger):
 
     try:
         loader = dist.load_entry_point(entry_group, entry_name)
-        return loader()
+        return loader(instance_name)
     except pkg_resources.DistributionNotFound, exc:
         logger.error('Distribution not found: %s', exc)
         visited = set()

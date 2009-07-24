@@ -442,14 +442,16 @@ class Container(HierarchyMember):
                                                          entry_name, install,
                                                          logger)
     @staticmethod
-    def load_from_eggpkg(package, entry_name=None):
+    def load_from_eggpkg(package, entry_name=None, instance_name=None):
         """Load object graph state by invoking the given package entry point.
+        If specified, the root object is renamed to `instance_name`.
         Returns the root object."""
         entry_group = 'openmdao.components'
         if not entry_name:
             entry_name = package  # Default component is top.
         return openmdao.util.save_load.load_from_eggpkg(package, entry_group,
-                                                        entry_name, logger)
+                                                        entry_name,
+                                                        instance_name, logger)
 
     @staticmethod
     def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True,
