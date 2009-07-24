@@ -50,7 +50,6 @@ class Source(Assembly):
         global SOURCE_INIT
         SOURCE_INIT = True
 
-
         Subcontainer('sub', parent=self)
         self.create_passthru('sub.binary_file')
 
@@ -103,10 +102,15 @@ class Source(Assembly):
     def execute(self):
         """ Write test data to files. """
         if self.write_files:
+            cwd = os.getcwd()
+            self.debug("opening file '%s' in %s" % 
+                       (self.text_file.filename,cwd))
             out = open(self.text_file.filename, 'w')
             out.write(self.text_data)
             out.close()
 
+            self.debug("opening file '%s' in %s" % 
+                       (self.sub.binary_file.filename,cwd))
             out = open(self.sub.binary_file.filename, 'wb')
             cPickle.dump(self.sub.binary_data, out, 2)
             out.close()
@@ -381,7 +385,7 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg(py_dir=PY_DIR)
         except Exception, exc:
-            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball directory"
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.dataflow directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected Exception')
@@ -587,7 +591,7 @@ class EggTestCase(unittest.TestCase):
         # Write to egg.
         self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
                                                child_objs=self.child_objs)
-
+        logging.debug('    finished saving to egg %s' % self.egg_name)
         install_dir = os.path.join(os.getcwd(), 'install_dir')
         if os.path.exists(install_dir):
             shutil.rmtree(install_dir)
@@ -659,16 +663,26 @@ sys.exit(
             out.write("""\
 import sys
 sys.path.append('%(egg)s')
+from openmdao.main.api import Component
 import openmdao.main.log
 openmdao.main.log.enable_console()
-comp = openmdao.main.Component.load_from_eggpkg('%(package)s', '%(entry)s')
-comp.run()
+try:
+    comp = Component.load_from_eggpkg('%(package)s', '%(entry)s')
+    comp.run()
+except Exception, err:
+    openmdao.main.log.logger.exception(str(err))
+    raise
+    
 """ % {'egg':os.path.join(install_dir, self.egg_name),
        'package':package_name, 'entry':entry_name})
+            
             out.close()
 
             # Load & run in subprocess.
-            logging.debug('Load and run %s in subprocess...', entry_name)
+            logging.debug("Load and run '%s' in subprocess...", entry_name)
+            out = open('load-n-run.py','r')
+            logging.debug("  script is:\n%s" % out.read())
+            out.close()
             cmdline = '%s load-n-run.py' % python
             stdout = open('load-n-run.out', 'w')
             retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
@@ -676,7 +690,7 @@ comp.run()
             stdout.close()
             stdout = open('load-n-run.out', 'r')
             for line in stdout:
-                logging.debug('    %s', line.rstrip())
+                logging.debug('    %s'% line.rstrip())
             stdout.close()
             return retcode
 
@@ -714,8 +728,10 @@ comp.run()
         try:
             # Create a complete model.
             model = factory.create('Egg_TestModel', 'test_model')
+            logging.debug('model = %s' % model)
             if model is None:
                 self.fail('Create of test_model failed.')
+            
             self.assertEqual(model.Oddball.executions, 0)
             model.run()
             self.assertEqual(model.Oddball.executions, 2)

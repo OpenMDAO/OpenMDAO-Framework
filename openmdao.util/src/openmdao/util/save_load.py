@@ -36,6 +36,7 @@ import sys
 import tempfile
 import zc.buildout.easy_install
 import zipfile
+import StringIO
 
 from openmdao.util import eggwriter
 
@@ -1006,6 +1007,7 @@ def _dist_from_eggfile(filename, install, logger):
     if os.path.exists(missing):
         inp = open(missing, 'r')
         errors = 0
+        missing_names = []
         for mod in inp.readlines():
             mod = mod.strip()
             logger.debug("    checking for 'missing' module: %s", mod)
@@ -1014,12 +1016,13 @@ def _dist_from_eggfile(filename, install, logger):
             except ImportError:
                 logger.error("Can't import %s, which didn't have a known"
                              " distribution when the egg was written.", mod)
+                missing_names.append(mod)
                 errors += 1
         inp.close()
         if errors:
             plural = 's' if errors > 1 else ''
-            raise RuntimeError("Couldn't import %d 'missing' module%s."
-                               % (errors, plural))
+            raise RuntimeError("Couldn't import %d 'missing' module%s: %s."
+                               % (errors, plural, missing_names))
     return (name, dist)
 
 

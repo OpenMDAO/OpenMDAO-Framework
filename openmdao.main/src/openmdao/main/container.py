@@ -6,9 +6,6 @@ __version__ = "0.1"
 
 import copy
 import sys
-import tempfile
-import zc.buildout.easy_install
-import zipfile
 import traceback
 import re
 import pprint
@@ -27,7 +24,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import networkx as nx
 from enthought.traits.api import HasTraits, implements, Str, Missing, TraitError,\
                                  BaseStr, Undefined, push_exception_handler,\
-                                 on_trait_change, WeakRef, Python, TraitType
+                                 on_trait_change, WeakRef, Python, Instance, TraitType
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import _SimpleTest, FunctionType
 from enthought.traits.trait_base import not_event, not_none
@@ -47,9 +44,6 @@ push_exception_handler(handler = lambda o,t,ov,nv: None,
                        reraise_exceptions = True,
                        main = True,
                        locked = True )
-
-# _io_trait_changed won't do anything unless this is True
-_io_side_effects = True
 
 class IMHolder(object):
     """Holds an instancemethod object in a pickleable form."""
@@ -129,7 +123,7 @@ class PathProperty(TraitType):
         
         setattr(self._ref() or self._resolve(object), self._last_name, value)
 
-        
+    
 class ContainerName(BaseStr):
     """A string that must match the allowed regex for the name of a 
     Container.  This was necessary because the String class allowed 
@@ -158,6 +152,8 @@ class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
+    # to check if an interface is provided, you can call validate_implements(value,klass)
+    # from enthought.traits.trait_types
     implements(IContainer)
     
     name = ContainerName()
@@ -223,6 +219,14 @@ class Container(HasTraits):
         
         for name,trait in self._added_traits.items():
             self.add_trait(name, trait)
+         
+        # after unpickling, implicitly defined traits disappear, so we have
+        # to recreate them by assigning them to themselves.
+        # TODO: I'm probably missing something. There has to be a better way to
+        #       do this...
+        for name, val in self.__dict__.items():
+            if not self.trait(name) and not name.startswith('__'):
+                setattr(self, name, val) # force def of implicit trait
 
     def add_trait(self, name, *trait): #, **kwargs):
         """Overrides HasTraits definition of add_trait in order to
@@ -262,18 +266,17 @@ class Container(HasTraits):
     # call this if any trait having 'iostatus' metadata is changed    
     #@on_trait_change('+iostatus') 
     def _io_trait_changed(self, obj, name, old, new):
-        if _io_side_effects:
-            # setting old to Undefined is a kludge to bypass the destination check
-            # when we call this directly from Assembly as part of setting this attribute
-            # from an existing connection.
-            if self.trait(name).iostatus == 'in':
-                if old is not Undefined and name in self._sources:
-                    self.raise_exception(
-                        "'%s' is already connected to source '%s' and cannot be directly set"%
-                        (name, self._sources[name]), TraitError)
-                self._execute_needed = True
-            if self.get_valid(name):  # if var is not already invalid
-                self.invalidate_deps([name], notify_parent=True)
+        # setting old to Undefined is a kludge to bypass the destination check
+        # when we call this directly from Assembly as part of setting this attribute
+        # from an existing connection.
+        if self.trait(name).iostatus == 'in':
+            if old is not Undefined and name in self._sources:
+                self.raise_exception(
+                    "'%s' is already connected to source '%s' and cannot be directly set"%
+                    (name, self._sources[name]), TraitError)
+            self._execute_needed = True
+        if self.get_valid(name):  # if var is not already invalid
+            self.invalidate_deps([name], notify_parent=True)
 
     def get_wrapped_attr(self, name):
         """If the named trait can return a TraitValMetaWrapper, then this
@@ -343,7 +346,7 @@ class Container(HasTraits):
             obj.parent = self
         else:
             self.raise_exception("'"+str(type(obj))+
-                    "' object has does not provide the IContainer interface",
+                    "' object is not an instance of Container.",
                     TypeError)
         return obj
         
@@ -376,7 +379,8 @@ class Container(HasTraits):
         their corresponding values to the given stream. If the stream
         is not supplied, it defaults to sys.stdout.
         """
-        pprint.pprint(dict([(n,v) for n,v in self.items(recurse, iostatus=not_none)]),
+        pprint.pprint(dict([(n,str(v)) for n,v in self.items(recurse=recurse, 
+                                                             iostatus=not_none)]),
                       stream)
     
     def items(self, recurse=False, **metadata):
@@ -516,7 +520,6 @@ class Container(HasTraits):
         Returns the new object.        
         """
         obj = fmcreate(type_name, name, version, server, res_desc)
-        #obj.parent = self
         self.add_child(obj)
         return obj
 
@@ -601,7 +604,7 @@ class Container(HasTraits):
         allow the destination to later be connected to a different source or
         to have its value directly set.
         """
-        del self._sources[destionation]    
+        del self._sources[destination]    
             
     def _check_trait_settable(self, name, srcname=None, force=False):
         if force:
@@ -754,9 +757,9 @@ class Container(HasTraits):
             name = self.name
         if version is None:
             try:
-                version = sys.modules[self.__module__].__version__
+                version = sys.modules[self.__class__.__module__].__version__
             except AttributeError:
-                                pass
+                pass
         # Entry point names are the pathname, starting at self.
         entry_pts = []
         if child_objs is not None:
@@ -833,7 +836,7 @@ class Container(HasTraits):
             top.name = name
             if do_post_load:
                 top.parent = None  # Clear-out parent from saved state.
-                top.post_load()            
+                top.post_load()
         return top
 
     def post_load(self):

@@ -153,7 +153,7 @@ class DriverTestCase(unittest.TestCase):
 
         self.assertEqual(len(results), len(cases))
         msg = "CID_TestModel.driver: Exception getting 'dc.sum_z':" \
-              " CID_TestModel.dc: object has no attribute 'sum_z'"
+              " 'DrivenComponent' object has no attribute 'sum_z'"
         for i, case in enumerate(cases):
             self.assertEqual(results[i].msg, msg)
 

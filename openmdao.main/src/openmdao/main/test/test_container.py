@@ -45,7 +45,7 @@ class ContainerTestCase(unittest.TestCase):
             foo.add_child(non_container)
         except TypeError, err:
             self.assertEqual(str(err), "foo: '<type 'str'>' "+
-                "object has does not provide the IContainer interface")
+                "object is not an instance of Container.")
         else:
             self.fail('TypeError expected')
         

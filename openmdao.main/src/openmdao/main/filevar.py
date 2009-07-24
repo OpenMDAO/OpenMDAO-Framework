@@ -25,6 +25,9 @@ class FileValue(object):
         super(FileValue, self).__init__()
         self.__dict__.update(_filemeta)
         self.__dict__.update(metadata)
+        
+    def __str__(self):
+        return str(self.__dict__)
     
     
 class FileTrait(TraitType):

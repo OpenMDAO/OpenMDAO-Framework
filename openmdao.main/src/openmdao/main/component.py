@@ -13,13 +13,15 @@ import shutil
 import subprocess
 import sys
 import time
+import StringIO
 
 from enthought.traits.api import implements, on_trait_change, Str, Missing, \
                                  Undefined, Python, TraitError
 from enthought.traits.trait_base import not_event
 
 from openmdao.main.interfaces import IComponent
-from openmdao.main.container import Container, _io_side_effects
+from openmdao.main.container import Container
+import openmdao.main.container as container
 from openmdao.main.filevar import FileValue
 from openmdao.util.save_load import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
@@ -335,10 +337,10 @@ class Component (Container):
                     src_files.add(save_path)
 
             # Process FileTraits for this component only.
-            for fvar, fvarvalue in comp.get_file_vars():
-                if not fvarvalue:
+            for fvarname, fvar, ftrait in comp.get_file_vars():
+                path = fvar.filename
+                if not path:
                     continue
-                path = fvarvalue.filename
                 if not os.path.isabs(path):
                     path = os.path.join(comp_dir, path)
                 path = os.path.normpath(path)
@@ -347,15 +349,15 @@ class Component (Container):
                 if force_relative:
                     if path.startswith(src_dir):
                         save_path = self._relpath(path, src_dir)
-                        if os.path.isabs(fvarvalue.filename):
+                        if os.path.isabs(fvar.filename):
                             path = self._relpath(path, comp_dir)
-                            fixup_fvar.append((comp, fvar, fvarvalue))
-                            comp.set(fvar+'.filename', path, force=True)
+                            fixup_fvar.append((comp, fvarname, fvar))
+                            comp.set(fvarname+'.filename', path, force=True)
                     else:
                         self.raise_exception(
                             "Can't save, %s path '%s' doesn't start with '%s'."
                             % ('.'.join([comp.get_pathname(),
-                                         fvar]), path, src_dir), ValueError)
+                                         fvarname]), path, src_dir), ValueError)
                 else:
                     save_path = path
                 src_files.add(save_path)
@@ -389,24 +391,24 @@ class Component (Container):
                 comp.set(name+'.filename', fvar.filename, force=True)
 
     def get_file_vars(self):
-        """Return list of (filevarname,filevarvalue) owned by this component."""
+        """Return list of (filevarname,filevarvalue,filetrait) owned by this component."""
         def _recurse_get_file_vars (container, file_vars, visited, scope):
             for name, obj in container.items(type=not_event):
-                #obj = getattr(container, name)
                 if id(obj) in visited:
                     continue
                 visited.add(id(obj))
                 if isinstance(obj, FileValue):
+                    ftrait = container.trait(name)
                     if self is scope:
-                        file_vars.add((name, obj))
+                        file_vars.append((name, obj, ftrait))
                     else:
-                        file_vars.add(('.'.join(
-                                      [container.get_pathname(rel_to_scope=scope),name]), 
-                                       obj))
+                        file_vars.append(('.'.join(
+                                           [container.get_pathname(rel_to_scope=scope),name]), 
+                                            obj, ftrait))
                 elif isinstance(obj, Container) and not isinstance(obj, Component):
                     _recurse_get_file_vars(obj, file_vars, visited, scope)
 
-        file_vars = set()
+        file_vars = []
         _recurse_get_file_vars(self, file_vars, set(), self)
         return file_vars
 
@@ -503,6 +505,9 @@ Component.load_from_eggfile('%s', install=False)
                 print '    retcode', retcode
             if logfile:
                 stdout.close()
+        except:
+            cleanup = False
+            raise
         finally:
             if unpacker and os.path.exists(unpacker):
                 os.remove(unpacker)
@@ -546,32 +551,26 @@ Component.load_from_eggfile('%s', install=False)
                     relpath = ''
 
 
-            _io_side_effects = False
+            # Set root directory and create any subdirectories.
+            top.directory = os.getcwd()
+            for component in [c for c in top.values(recurse=True)
+                                            if isinstance(c, Component)]:
+                directory = component.get_directory()
+                if not os.path.exists(directory):
+                    os.makedirs(directory)
 
-            try:
-                # Set root directory and create any subdirectories.
-                top.directory = os.getcwd()
-                for component in [c for c in top.values(recurse=True)
-                                                if isinstance(c, Component)]:
-                    directory = component.get_directory()
-                    if not os.path.exists(directory):
-                        os.makedirs(directory)
-    
-                # If necessary, copy files from installed egg.
-                if isinstance(instream, basestring) and \
-                   not os.path.exists(instream) and not os.path.isabs(instream):
-                    # If we got this far, then the stuff below "can't" fail.
-                    if not package:
-                        dot = instream.rfind('.')
-                        package = instream[:dot]
-                    top._restore_files(package, relpath)
+            # If necessary, copy files from installed egg.
+            if isinstance(instream, basestring) and \
+               not os.path.exists(instream) and not os.path.isabs(instream):
+                # If we got this far, then the stuff below "can't" fail.
+                if not package:
+                    dot = instream.rfind('.')
+                    package = instream[:dot]
+                top._restore_files(package, relpath)
 
-                if do_post_load:
-                    top.parent = None
-                    top.post_load()
-            finally:
-                _io_side_effects = True
-            
+            if do_post_load:
+                top.parent = None
+                top.post_load()
         return top
 
     def _restore_files(self, package, relpath):
@@ -591,15 +590,15 @@ Component.load_from_eggfile('%s', install=False)
                 const = metadata.get('constant', False)
                 self._copy_files(pattern, package, relpath, is_input, const)
 
-            for fvar in fvars:
-                pattern = fvar.get_value()
+            for fvarname,fvar,ftrait in fvars:
+                pattern = fvar.filename
                 if not pattern:
                     continue
-                is_input = fvar.iostatus == INPUT
+                is_input = ftrait.iostatus == 'in'
                 const = False
                 self._copy_files(pattern, package, relpath, is_input, const)
 
-            for component in [c for c in self.values(pub=False, recurse=False)
+            for component in [c for c in self.values(recurse=False)
                                     if isinstance(c, Component)]:
                 path = relpath
                 if component.directory:
