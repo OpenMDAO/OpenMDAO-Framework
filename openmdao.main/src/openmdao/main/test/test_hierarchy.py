@@ -31,11 +31,31 @@ class HierarchyTestCase(unittest.TestCase):
             except NameError, err:
                 self.assertEqual(str(err), 
                                  "%s: name '%s' contains illegal characters" % 
-                                 (name,name))
+                                 (name, name))
             else:
                 self.fail("NameError expected for '%s'" % name)
     
-        
+    def test_rename(self):
+        obj = HierarchyMember('valid')
+        self.assertEqual(obj.name, 'valid')
+        obj.rename('valid2')
+        self.assertEqual(obj.name, 'valid2')
+
+        try:
+            obj.rename('')
+        except NameError, err:
+            self.assertEqual(str(err), 'valid2: name must be non-null')
+        else:
+            self.fail('Expected NameError')
+
+        try:
+            obj.rename('8foobar')
+        except NameError, err:
+            msg = "valid2: name '8foobar' contains illegal characters"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('Expected NameError')
+
     def test_error_handling(self):
         try:
             self.h121.raise_exception("bad value", ValueError)
@@ -52,3 +72,4 @@ class HierarchyTestCase(unittest.TestCase):
     
 if __name__ == "__main__":
     unittest.main()
+

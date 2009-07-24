@@ -897,7 +897,11 @@ def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
         logger = NullLogger()
     logger.debug('Loading %s from %s in %s...',
                  entry_name, package, os.getcwd())
-    dist = pkg_resources.get_distribution(package)
+    try:
+        dist = pkg_resources.get_distribution(package)
+    except pkg_resources.DistributionNotFound, exc:
+        logger.error('Distribution not found: %s', exc)
+        raise exc
     return _load_from_distribution(dist, entry_group, entry_name, instance_name,
                                    logger)
 
@@ -914,8 +918,10 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
 
     info = dist.get_entry_info(entry_group, entry_name)
     if info is None:
-        raise RuntimeError("No '%s' '%s' entry point."
-                           % (entry_group, entry_name))
+        msg = "No '%s' '%s' entry point." % (entry_group, entry_name)
+        logger.error(msg)
+        raise RuntimeError(msg)
+
     if info.module_name in sys.modules.keys():
         logger.debug("    removing existing '%s' in sys.modules",
                      info.module_name)

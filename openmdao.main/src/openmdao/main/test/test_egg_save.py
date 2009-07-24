@@ -62,7 +62,7 @@ class Source(Assembly):
         out = open(path, 'w')
         out.write('Twisty narrow passages.\n')
         out.close()
-        self.external_files.append({'path':path})
+        self.external_files.append({'path':path, 'input':True, 'constant':True})
 
         # Absolute external file that exists at time of save, in separate tree.
         path = os.path.join(self.directory, EXTERNAL_FILES[1])
@@ -178,6 +178,8 @@ class Oddball(Assembly):
 
     def __init__(self, name='Oddball', *args, **kwargs):
         super(Oddball, self).__init__(name, *args, **kwargs)
+        OddballComponent('oddcomp', parent=self)
+        OddballContainer('oddcont', parent=self)
         Int('executions', self, OUTPUT, default=0,
             doc='Counts instance_method() calls.')
         self.thing_to_call = self.instance_method
@@ -213,6 +215,24 @@ class Oddball(Assembly):
         return None
 
 
+class OddballComponent(Component):
+    """ Just a subcomponent for Oddball to test nested entry points. """
+
+    def __init__(self, name='OddballComponent', parent=None):
+        super(OddballComponent, self).__init__(name, parent)
+        # Some custom objects that must be restored.
+        self.obj_list = [DataObj(i) for i in range(3)]
+
+
+class OddballContainer(Container):
+    """ Just a subcontainer for Oddball to test nested entry points. """
+
+    def __init__(self, name='OddballContainer', parent=None):
+        super(OddballContainer, self).__init__(name, parent)
+        # Some custom objects that must be restored.
+        self.obj_list = [DataObj(i) for i in range(3)]
+
+
 def main_function():
     """ Can't pickle references to functions defined in __main__. """
     return None
@@ -244,7 +264,8 @@ class EggTestCase(unittest.TestCase):
         """ Called before each test in this class. """
         self.model = Model(directory='Egg')
         self.child_objs = [self.model.Source, self.model.Sink,
-                           self.model.Oddball]
+                           self.model.Oddball, self.model.Oddball.oddcomp,
+                           self.model.Oddball.oddcont]
         self.egg_name = None
 
     def tearDown(self):
@@ -375,7 +396,8 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg(py_dir=PY_DIR)
         except ValueError, exc:
-            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball directory"
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp" \
+                  " directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
@@ -510,6 +532,28 @@ class EggTestCase(unittest.TestCase):
             if remove_buildout:
                 os.remove('buildout.cfg')
 
+    def test_save_bad_child(self):
+        logging.debug('')
+        logging.debug('test_save_bad_child')
+
+        orphan = Component('orphan')
+        try:
+            self.model.save_to_egg(py_dir=PY_DIR, child_objs=[orphan])
+        except RuntimeError, exc:
+            self.assertEqual(str(exc), 'Entry point object has no parent!')
+        else:
+            self.fail('Expected RuntimeError')
+
+        badboy = Component('badboy', orphan)
+        try:
+            self.model.save_to_egg(py_dir=PY_DIR, child_objs=[badboy])
+        except RuntimeError, exc:
+            msg = 'Egg_TestModel: orphan.badboy is not a child of' \
+                  ' Egg_TestModel.'
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected RuntimeError')
+
     def test_save_load_container(self):
         logging.debug('')
         logging.debug('test_save_load_container')
@@ -635,6 +679,30 @@ sys.exit(
                                       package_name, entry_name)
             self.assertEqual(retcode, 0)
 
+            # Try a non-existent package.
+            try:
+                obj = Component.load_from_eggpkg('no-such-pkg', 'no-such-entry')
+            except pkg_resources.DistributionNotFound, exc:
+                self.assertEqual(str(exc), 'no-such-pkg')
+            else:
+                self.fail('Expected DistributionNotFound')
+            
+            # Try a non-existent entry point.
+            egg_path = os.path.join(install_dir, self.egg_name)
+            sys.path.append(egg_path)
+            orig_ws = pkg_resources.working_set
+            pkg_resources.working_set = pkg_resources.WorkingSet()
+            try:
+                obj = Component.load_from_eggpkg(package_name, 'no-such-entry')
+            except RuntimeError, exc:
+                msg = "No 'openmdao.components' 'no-such-entry' entry point."
+                self.assertEqual(str(exc), msg)
+            else:
+                self.fail('Expected RuntimeError')
+            finally:
+                sys.path.pop()
+                pkg_resources.working_set = orig_ws
+
         finally:
             shutil.rmtree(install_dir)
 
@@ -706,8 +774,18 @@ comp.run()
         os.chdir(test_dir)
         try:
             # Check multiple model instances.
-            self.create_and_check_model(factory, 'test_model_1')
-            self.create_and_check_model(factory, 'test_model_2')
+            self.create_and_check_model(factory, 'test_model_1',
+                                        'Hello world!\n')
+            self.create_and_check_model(factory, 'test_model_2',
+                                        'Hello world!\n')
+
+            # Check that reloading doesn't clobber existing files.
+            file_data = 'New and interesting stuff\n'
+            path = os.path.join('test_model_2', 'Source', EXTERNAL_FILES[2])
+            out = open(path, 'w')
+            out.write(file_data)
+            out.close()
+            self.create_and_check_model(factory, 'test_model_2', file_data)
 
             # Create a component.
             comp = factory.create('Egg_TestModel.Oddball', 'test_comp')
@@ -718,11 +796,27 @@ comp.run()
             comp.run()
             self.assertEqual(comp.executions, 2)
 
+            # Create a (sub)component.
+            sub = factory.create('Egg_TestModel.Oddball.oddcomp', 'test_sub')
+            if sub is None:
+                self.fail('Create of test_sub failed.')
+            self.assertEqual(sub.get_pathname(), 'test_sub')
+
+            # Create a (sub)container.
+            sub = factory.create('Egg_TestModel.Oddball.oddcont', 'test_sub')
+            if sub is None:
+                self.fail('Create of test_sub failed.')
+            self.assertEqual(sub.get_pathname(), 'test_sub')
+
+            # Try a non-existent entry point.
+            obj = factory.create('no-such-entry', 'xyzzy')
+            self.assertEqual(obj, None)
+
         finally:
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)
 
-    def create_and_check_model(self, factory, name):
+    def create_and_check_model(self, factory, name, file_data):
         """ Create a complete model instance and check it's operation. """
         model = factory.create('Egg_TestModel', name)
         if model is None:
@@ -738,9 +832,18 @@ comp.run()
         self.assertNotEqual(
             model.Sink.getvar('binary_file').metadata['binary'], True)
 
-        for path in EXTERNAL_FILES:
-            path = os.path.join(model.Source.get_directory(), path)
-            self.assertEqual(os.path.exists(path), True)
+        orig_dir = os.getcwd()
+        os.chdir(model.Source.get_directory())
+        try:
+            for path in EXTERNAL_FILES:
+                self.assertEqual(os.path.exists(path), True)
+
+            inp = open(EXTERNAL_FILES[2])
+            data = inp.read()
+            inp.close()
+            self.assertEqual(data, file_data)
+        finally:
+            os.chdir(orig_dir)
 
         for i in range(3):
             self.assertEqual(model.Source.obj_list[i].data, i)
