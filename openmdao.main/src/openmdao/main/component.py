@@ -230,7 +230,8 @@ class Component (Container):
         """Save state and other files to an egg.  Typically used to copy all or
         part of a simulation to another user or machine.  By specifying child
         components in `child_objs`, it will be possible to create instances of
-        just those components from the installed egg.
+        just those components from the installed egg.  Child component names
+        should be specified relative to this component.
 
         - `name` defaults to the name of the component.
         - `version` defaults to the container's module __version__, or \

@@ -370,7 +370,7 @@ class Container(HierarchyMember):
         - `py_dir` is the (root) directory for local Python files. \
            It defaults to the current directory.
         - `src_dir` is the root of all (relative) `src_files`.
-        - `child_objs` is a list child objects for additional entry points.
+        - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
