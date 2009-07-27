@@ -131,21 +131,34 @@ class FileTestCase(unittest.TestCase):
         try:
             Source(directory='/illegal')
         except ValueError, exc:
-            self.assertEqual(str(exc).startswith(
-                "Source: Illegal execution directory '/illegal', not a decendant of"),
-                True)
+            msg = "Source: Illegal execution directory '/illegal'," \
+                  " not a decendant of"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
 
-    def test_not_directory(self):
-        logging.debug('')
-        logging.debug('test_not_directory')
+        directory = 'protected'
+        if os.path.exists(directory):
+            os.rmdir(directory)
+        os.mkdir(directory)
+        os.chmod(directory, 0)
+        exe_dir = os.path.join(directory, 'xyzzy')
+        try:
+            Source(directory=exe_dir)
+        except OSError, exc:
+            msg = "Source: Can't create execution directory"
+            self.assertEqual(str(exc)[:len(msg)], msg)
+        else:
+            self.fail('Expected OSError')
+        finally:
+            os.rmdir(directory)
 
         directory = 'plain_file'
+        if os.path.exists(directory):
+            os.remove(directory)
         out = open(directory, 'w')
         out.write('Hello world!\n')
         out.close()
-
         try:
             self.source = Source(directory=directory)
         except ValueError, exc:
@@ -166,13 +179,26 @@ class FileTestCase(unittest.TestCase):
         try:
             self.model.run()
         except ValueError, exc:
-            self.assertEqual(str(exc).startswith(
-                "FileVar_TestModel.Source: Illegal directory '/illegal', not a decendant of"),
-                True)
+            msg = "FileVar_TestModel.Source: Illegal directory '/illegal'," \
+                  " not a decendant of"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
 
+        self.model.Source.directory = 'no-such-dir'
+        try:
+            self.model.run()
+        except RuntimeError, exc:
+            msg = "FileVar_TestModel.Source: Could not move to execution" \
+                  " directory"
+            self.assertEqual(str(exc)[:len(msg)], msg)
+        else:
+            self.fail('Expected RuntimeError')
+
 
 if __name__ == '__main__':
-    unittest.main()
+    import nose
+    import sys
+    sys.argv.append('--cover-package=openmdao.main')
+    nose.runmodule()
 
