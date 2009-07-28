@@ -250,6 +250,9 @@ class Container(HasTraits):
         """Overrides HasTraits definition of remove_trait in order to
         keep track of dynamically added traits for serialization.
         """
+        # this just forces the regeneration (lazily) of the lists of inputs,outputs, 
+        # and containers
+        self._trait_added_changed(name)
         del self._added_traits[name]
         super(Container, self).remove_trait(name)
             
@@ -444,7 +447,7 @@ class Container(HasTraits):
         that match the given metadata.
         """
         if traits is None:
-            traits = self.traits()
+            traits = self.traits()  # don't pass **metadata here
             traits.update(self._instance_traits())
             
         result = {}
@@ -474,12 +477,12 @@ class Container(HasTraits):
             match_dict = self._traits_meta_filter(**metadata)
             
             if recurse:
-                for name, obj in self.__dict__.items():
-                    if isinstance(obj, Container):
-                        if name in match_dict and id(obj) not in visited:
-                            yield(name, obj)
-                        for chname, child in obj._items(visited, recurse, **metadata):
-                            yield ('.'.join([name, chname]), child)
+                for name in self.list_containers():
+                    obj = getattr(self, name)
+                    if name in match_dict and id(obj) not in visited:
+                        yield(name, obj)
+                    for chname, child in obj._items(visited, recurse, **metadata):
+                        yield ('.'.join([name, chname]), child)
                             
             for name, trait in match_dict.items():
                 obj = getattr(self, name)
