@@ -280,6 +280,18 @@ class Container(HasTraits):
         if self.get_valid(name):  # if var is not already invalid
             self.invalidate_deps([name], notify_parent=True)
 
+
+    def rename(self, name):
+        """Change name of self and associated logger."""
+        if not name:
+            self.raise_exception('name must be non-null', NameError)
+        try:
+            self.name = name
+        except TraitError, err:
+            self.raise_exception(str(err), NameError)
+        self._logger.rename(self.get_pathname().replace('.', ','))
+
+
     def get_wrapped_attr(self, name):
         """If the named trait can return a TraitValMetaWrapper, then this
         function will return that, with the value set to the current
@@ -756,7 +768,7 @@ class Container(HasTraits):
         - `py_dir` is the (root) directory for local Python files. \
            It defaults to the current directory.
         - `src_dir` is the root of all (relative) `src_files`.
-        - `child_objs` is a list child objects for additional entry points.
+        - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
@@ -827,14 +839,16 @@ class Container(HasTraits):
                                                          entry_name, install,
                                                          logger)
     @staticmethod
-    def load_from_eggpkg(package, entry_name=None):
+    def load_from_eggpkg(package, entry_name=None, instance_name=None):
         """Load object graph state by invoking the given package entry point.
+        If specified, the root object is renamed to `instance_name`.
         Returns the root object."""
         entry_group = 'openmdao.components'
         if not entry_name:
             entry_name = package  # Default component is top.
         return openmdao.util.save_load.load_from_eggpkg(package, entry_group,
-                                                        entry_name, logger)
+                                                        entry_name,
+                                                        instance_name, logger)
 
     @staticmethod
     def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True,
@@ -845,11 +859,21 @@ class Container(HasTraits):
         needed."""
         top = openmdao.util.save_load.load(instream, format, package, logger)
         if name:
-            top.name = name
+            top.rename(name)
             if do_post_load:
-                top.parent = None  # Clear-out parent from saved state.
-                top.post_load()
+                top._post_load(name)
         return top
+
+    def _post_load(self, name):
+        """Called above or in Component before post_load() to fix parent
+        and loggers.  Maintains a simpler public post_load() interface."""
+        parent = self.parent
+        if parent:
+            self.parent = None
+        if parent or name:
+            [x.rename(x.name) for x in self.values(pub=False) 
+                                    if isinstance(x, HierarchyMember)]
+        self.post_load()
 
     def post_load(self):
         """Perform any required operations after model has been loaded."""

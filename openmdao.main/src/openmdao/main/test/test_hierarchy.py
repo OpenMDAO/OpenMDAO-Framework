@@ -37,6 +37,26 @@ class HierarchyTestCase(unittest.TestCase):
             else:
                 self.fail("TraitError expected for '%s'" % name)
     
+    def test_rename(self):
+        obj = Container('valid', None)
+        self.assertEqual(obj.name, 'valid')
+        obj.rename('valid2')
+        self.assertEqual(obj.name, 'valid2')
+
+        try:
+            obj.rename('')
+        except NameError, err:
+            self.assertEqual(str(err), 'valid2: name must be non-null')
+        else:
+            self.fail('Expected NameError')
+
+        try:
+            obj.rename('8foobar')
+        except NameError, err:
+            msg = "valid2: name '8foobar' contains illegal characters"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('Expected NameError')
         
     def test_error_handling(self):
         try:
