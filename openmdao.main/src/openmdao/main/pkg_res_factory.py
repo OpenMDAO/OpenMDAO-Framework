@@ -9,7 +9,7 @@ __version__ = "0.1"
 from pkg_resources import working_set, get_entry_map, get_distribution
 from pkg_resources import Environment, Requirement, DistributionNotFound
     
-from openmdao.main import Factory
+from openmdao.main.factory import Factory
 from openmdao.main.log import logger
 
 
@@ -81,7 +81,7 @@ class PkgResourcesFactory(Factory):
                 self._get_plugin_info(self.env, group)
         
         
-    def create(self, typ, name=None, version=None, server=None, 
+    def create(self, typ, name='', version=None, server=None, 
                res_desc=None):
         """Create and return an object of the given type, with
         optional name, version, server id, and resource description.

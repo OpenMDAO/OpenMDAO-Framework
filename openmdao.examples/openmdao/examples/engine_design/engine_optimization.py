@@ -2,7 +2,7 @@
 #
 # Optimize an engine disign using the driving_sim component.
 
-from openmdao.main import Assembly
+from openmdao.main.api import Assembly
 
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
@@ -27,10 +27,10 @@ class EngineOptimization(Assembly):
         self.driver.maxiters = 30
         
         # CONMIN Objective 
-        self.driver.objective.value = 'driving_sim.accel_time'
+        self.driver.objective = 'driving_sim.accel_time'
         
         # CONMIN Design Variables 
-        self.driver.design_vars.value = ['driving_sim.spark_angle', 
+        self.driver.design_vars = ['driving_sim.spark_angle', 
                                          'driving_sim.bore' ]
         
         self.driver.lower_bounds = [-50, 65]
@@ -45,8 +45,8 @@ if __name__ == "__main__":
         print '---------------------------------'
         print title
         print '---------------------------------'
-        print 'Engine: Bore = ', z.driving_sim.get('bore')
-        print 'Engine: Spark Angle = ', z.driving_sim.get('spark_angle')
+        print 'Engine: Bore = ', z.driving_sim.bore
+        print 'Engine: Spark Angle = ', z.driving_sim.spark_angle
         print '---------------------------------'
         print '0-60 Accel Time = ', z.driving_sim.accel_time
         print 'EPA City MPG = ', z.driving_sim.EPA_city
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     z.run()
     #profile.run('z.run()')
     prz('New Design')
-    print "CONMIN Iterations: ", z.driver.iter
+    print "CONMIN Iterations: ", z.driver.iter_count
     print ""
     print "Elapsed time: ", time.time()-tt
     

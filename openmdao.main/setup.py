@@ -38,11 +38,9 @@ setup(name='openmdao.main',
           'pyparsing',
           'numpy',
           'PyYAML',
-          'zope.interface',
-          'zope.component',
-          'zope.schema',
           'ScientificPython',
           'networkx',
+          'Traits>=3.0',
       ],
       entry_points="""
       # -*- Entry points: -*-

@@ -3,10 +3,10 @@
 
 __version__ = "0.1"
 
-from zope.interface import implements
+from enthought.traits.api import implements
 
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.main import ExprEvaluator
+from openmdao.main.api import ExprEvaluator
 
 
 class Case(object):

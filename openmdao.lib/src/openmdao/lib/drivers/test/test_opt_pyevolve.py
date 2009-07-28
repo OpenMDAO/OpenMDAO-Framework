@@ -2,13 +2,16 @@
 Test the pyevolve optimizer driver
 """
 
+
 import logging
 import pkg_resources
 import sys
 import unittest
+import numpy
 
-from openmdao.main import Assembly, Component, Float, ArrayVariable
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float, Array, TraitError
+
+from openmdao.main.api import Assembly, Component
 from openmdao.lib.drivers import pyevolvedriver
 
 import openmdao.util.testutil
@@ -17,14 +20,12 @@ import openmdao.util.testutil
 
 
 class SphereFunction(Component):
+    total = Float(0., iostatus='out')
+    points = Array(value=[], iostatus='in')
+    
     def __init__(self, name, parent=None, desc=None):
         super(SphereFunction, self).__init__(name, parent, desc)
-        self.points = []
-        self.total = 0
-        
-        Float('total', self, iostatus=OUTPUT)
-        ArrayVariable('points', self, iostatus=INPUT)
-    
+            
     def execute(self):
         """ calculate the sume of the squares for the list of numbers """
         self.total = sum([x**2 for x in self.points])
@@ -38,23 +39,23 @@ class pyevolvedriverTestCase(unittest.TestCase):
     #   evaluation 
     def decoder(self, genome):
         sphere = self.top.comp
-        sphere.set('points', [x for x in genome])
+        sphere.points = [x for x in genome]
     
     def setUp(self):
-        self.top = Assembly('top', None)
-        self.top.add_child(SphereFunction('comp', self.top))
-        self.top.add_child(pyevolvedriver.pyevolvedriver('driver'))
+        self.top = Assembly('top',None)
+        SphereFunction('comp',self.top)
+        pyevolvedriver.pyevolvedriver('driver',self.top)
 
     def tearDown(self):
         self.top = None
     
-    def test_weird_variable_name_problem(self):
-        x = Float("PopulationSize", self.top.driver, INPUT, default=80)
-        self.assertEqual(x.get_value(), 80)
+    #def test_weirdVariableNameProblem(self):
+        #x = Float("PopulationSize",self.top.driver,iostatus='in',default=80)
+        #self.assertEqual(x.get_value(),80)
     
     #basic test to make sure optmizer is working 
-    def test_optimize_sphere(self):
-        self.top.driver.objective.value = "comp.total" 
+    def test_optimizeSphere(self):
+        self.top.driver.objective = "comp.total" 
         #configure the genome
         #TODO: genome should be plugged into a socket
         self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
@@ -76,24 +77,24 @@ class pyevolvedriverTestCase(unittest.TestCase):
         #self.top.driver.DBAdapter = None #TODO: Implement this
         self.top.driver.selector = None
         #this is a default, just for testing
-        self.top.driver.selector = [pyevolvedriver.Consts.CDefGASelector]
+        self.top.driver.selector = [pyevolvedriver.Consts.CDefGASelector] #this is a default, just for testing
         self.top.driver.stepCallback = None
         self.top.driver.terminationCriteria = None
         
         self.top.run()
         
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               0.1519, places=4)
-        x0, x1 = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x0, 0.0063, places=4)
-        self.assertAlmostEqual(x1, .3897, places=4)
-        
+                               0.1519,places = 4)
+        x0,x1 = [x for x in self.top.driver.best_individual] 
+        self.assertAlmostEqual(x0, 0.0063, places = 4)
+        self.assertAlmostEqual(x1, .3897, places = 4)
+
     def test_save_load(self):
         logging.debug('')
         logging.debug('test_save_load')
 
         # Using config from test_optimize_sphere.
-        self.top.driver.objective.value = "comp.total" 
+        self.top.driver.objective = "comp.total" 
         #configure the genome
         #TODO: genome should be plugged into a socket
         self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
@@ -124,9 +125,9 @@ class pyevolvedriverTestCase(unittest.TestCase):
         python = openmdao.util.testutil.find_python('openmdao.lib')
         retcode = self.top.check_save_load(py_dir=py_dir, python=python)
         self.assertEqual(retcode, 0)
-
-    def test_hypersphere_crossover_real(self):
-        self.top.driver.objective.value = "comp.total" 
+        
+    def test_hypersphereCrossover_real(self):
+        self.top.driver.objective = "comp.total" 
         #configure the genome
         #TODO: genome should be plugged into a socket
         self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
@@ -135,8 +136,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
             pyevolvedriver.Initializators.G1DListInitializatorReal)
         self.top.driver.genome.mutator.set(
             pyevolvedriver.Mutators.G1DListMutatorRealGaussian)
-        self.top.driver.genome.crossover.set(
-            pyevolvedriver.G1DListCrossOverRealHypersphere)
+        self.top.driver.genome.crossover.set(pyevolvedriver.G1DListCrossOverRealHypersphere)
 
         #configure the GAengine 
         self.top.driver.decoder = self.decoder  
@@ -149,36 +149,29 @@ class pyevolvedriverTestCase(unittest.TestCase):
         
         #self.top.driver.DBAdapter = None #TODO: Implement this
         self.top.driver.selector = None
-        #this is a default, just for testing
-        self.top.driver.selector = [pyevolvedriver.Consts.CDefGASelector]
+        self.top.driver.selector = [pyevolvedriver.Consts.CDefGASelector] #this is a default, just for testing
         self.top.driver.stepCallback = None
         self.top.driver.terminationCriteria = None
         
         self.top.run()
         
-        self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               0.0058, places=4)
-        x0, x1 = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x0, -0.0130, places=4)
-        self.assertAlmostEqual(x1, -0.0753, places=4)
+        self.assertAlmostEqual(self.top.driver.best_individual.score,0.0058,places = 4)
+        x0,x1 = [x for x in self.top.driver.best_individual] 
+        self.assertAlmostEqual(x0, -0.0130,places = 4)
+        self.assertAlmostEqual(x1,-0.0753,places = 4)
 
-    #for some reason this test changes the answers of the other two optimizer
-    # tests above
-    # may have to do with random number generation...
-    # if you remove this test, the previous two will fail
-    def test_hypersphere_crossover_int(self): 
+    #for some reason this test changes the answers of the other two optimzier tests above
+    # may have to do with random number generation... if you remove this test, the previous two will fail
+    def test_hypersphereCrossover_int(self): 
     
-        self.top.driver.objective.value = "comp.total" 
+        self.top.driver.objective = "comp.total" 
         #configure the genome
         #TODO: genome should be plugged into a socket
         self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
         self.top.driver.genome.setParams(rangemin=-5, rangemax=6)
-        self.top.driver.genome.initializator.set(
-            pyevolvedriver.Initializators.G1DListInitializatorInteger)
-        self.top.driver.genome.mutator.set(
-            pyevolvedriver.Mutators.G1DListMutatorIntegerGaussian)
-        self.top.driver.genome.crossover.set(
-            pyevolvedriver.G1DListCrossOverRealHypersphere)
+        self.top.driver.genome.initializator.set(pyevolvedriver.Initializators.G1DListInitializatorInteger)
+        self.top.driver.genome.mutator.set(pyevolvedriver.Mutators.G1DListMutatorIntegerGaussian)
+        self.top.driver.genome.crossover.set(pyevolvedriver.G1DListCrossOverRealHypersphere)
 
         #configure the GAengine 
         self.top.driver.decoder = self.decoder  
@@ -191,21 +184,19 @@ class pyevolvedriverTestCase(unittest.TestCase):
         
         #self.top.driver.DBAdapter = None #TODO: Implement this
         self.top.driver.selector = None
-        #this is a default, just for testing
-        self.top.driver.selector = [pyevolvedriver.Consts.CDefGASelector]
+        self.top.driver.selector = [pyevolvedriver.Consts.CDefGASelector] #this is a default, just for testing
         self.top.driver.stepCallback = None
         self.top.driver.terminationCriteria = None
         
         self.top.run()
         
-        self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               0.0, places=4)
-        x0, x1 = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x0, 0, places=4)
-        self.assertAlmostEqual(x1, 0, places=4)   
+        self.assertAlmostEqual(self.top.driver.best_individual.score,0.0,places = 4)
+        x0,x1 = [x for x in self.top.driver.best_individual] 
+        self.assertAlmostEqual(x0,0,places = 4)
+        self.assertAlmostEqual(x1,0,places = 4)   
     
-    def test_no_objective_set(self):
-        #self.top.driver.objective.value = "comp.total" 
+    def test_noObjectiveSet(self):
+        #self.top.driver.objective = "comp.total" 
         self.top.driver.genome = pyevolvedriver.G1DList.G1DList(2)
         self.top.driver.genome.setParams(rangemin=-5.12, rangemax=5.13)
         self.top.driver.genome.initializator.set(
@@ -237,34 +228,33 @@ class pyevolvedriverTestCase(unittest.TestCase):
         
         try:
             self.top.run()
-        except RuntimeError, err: 
-            msg = "top.driver.objective: reference is undefined"
-            self.assertEqual(str(err), msg)
+        except TraitError, err: 
+            self.assertEqual(str(err),
+                "StringRef: string reference is undefined")
         else: 
-            self.fail("expecting RuntimeError")
+            self.fail("expecting TraitError")
         
-    def test_invalid_objective(self):
+    def test_invalidObjective(self):
         try:
-            self.top.driver.objective.value = "comp.badojbjective"        
-        except RuntimeError, err:
-            msg = "top.driver.objective: cannot find variable" \
-                  " 'comp.badojbjective'"
-            self.assertEqual(str(err), msg)
+            self.top.driver.objective = "comp.badojbjective"        
+        except TraitError, err:
+            self.assertEqual(str(err), 
+                "top.driver: invalid value 'comp.badojbjective' for input ref variable 'objective': top.comp: cannot set valid flag of 'badojbjective' because it's not an io trait.")
         else: 
-            self.fail("RuntimeError expected")
+            self.fail("TraitError expected")
     
     def test_no_comp(self):
         try: 
-            self.top.driver.objective.value = None
-        except TypeError, err:
-            msg = "top.driver.objective: reference must be a string"
-            self.assertEqual(str(err), msg)
+            self.top.driver.objective = None
+        except TraitError, err:
+            self.assertEqual(str(err), 
+                "The 'objective' trait of a pyevolvedriver instance must be a string, but a value of None <type 'NoneType'> was specified.")
         else:
-            self.fail("RuntimeError expected")
+            self.fail("TraitError expected")
     
     #should throw an error because no decode function is provided
-    def test_no_decoder(self):
-        self.top.driver.objective.value = "comp.total" 
+    def test_noDecoder(self):
+        self.top.driver.objective = "comp.total" 
         self.top.driver.decoder = None
         try:
             self.top.driver.run()
@@ -276,24 +266,25 @@ class pyevolvedriverTestCase(unittest.TestCase):
             self.fail("TypeError expected")
 
     
-    def test_wrong_decoder_signature(self):
-        self.top.driver.objective.value = "comp.total" 
-        def decode_bad(genome, second_argument):
+    def test_wrongDecoderSignature(self):
+        self.top.driver.objective = "comp.total" 
+        def decodeBad(genome,secondArgument):
             pass
-        self.top.driver.decoder = decode_bad
+        self.top.driver.decoder = decodeBad
         try:
             self.top.driver.run()
         except TypeError, err:
-            msg = "top.driver: decoder specified as does not have the right" \
-                  " signature. Must take only 1 argument"
+            msg = "top.driver: decoder as specified does not have the right" \
+                  " signature. Must take only 1 argument: decodeBad()" \
+                  " takes exactly 2 arguments (1 given)"
             self.assertEqual(str(err), msg)
         else: 
             self.fail("TypeError expected")
 
     
     #should throw and error about the lack of a genome
-    def test_no_genome(self): 
-        self.top.driver.objective.value = "comp.total" 
+    def test_noGenomeTest(self): 
+        self.top.driver.objective = "comp.total" 
         self.top.driver.genome = None
         try:
             self.top.driver.run()
@@ -306,9 +297,9 @@ class pyevolvedriverTestCase(unittest.TestCase):
   
     
     #should throw an error becuase genome does not inherit from GenomeBase
-    def test_genome_not_genome(self):
-        self.top.driver.objective.value = "comp.total" 
-        self.top.driver.genome = [1, 2]
+    def test_GenomeNotGenomeTest(self):
+        self.top.driver.objective = "comp.total" 
+        self.top.driver.genome = [1,2]
         try:
             self.top.driver.run()
         except TypeError, err:

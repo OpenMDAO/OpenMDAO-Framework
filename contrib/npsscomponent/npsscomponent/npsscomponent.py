@@ -1,18 +1,64 @@
 
-__all__ = ('NPSScomponent',)
+__all__ = ('NPSScomponent','NPSSProperty')
 __version__ = '0.1'
 
 import os
 
-from openmdao.main import Component, ArrayVariable, Bool, Dict, Float, \
-                          FileVariable, Int, String, StringList
-from openmdao.main.variable import INPUT, OUTPUT, UNDEFINED
+import numpy
+from enthought.traits.api import TraitType, Array, Bool, Float, Dict, Int, \
+                                 Str, List, Undefined, TraitError, Instance, Python
+from enthought.traits.trait_handlers import NoDefaultSpecified
+
+from openmdao.main.api import Component, FileTrait, FileValue, UnitsFloat
 
 import npss
 npss.isolateContexts(True)
 
 import units
 
+_iodict = { 'INPUT': 'in',
+            'OUTPUT': 'out',
+            'unset': 'in' }
+
+_excludes = set(['type'])
+
+
+class NPSSProperty(TraitType):
+    """A Trait that sets/gets values within an NPSS model.
+    """
+    def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
+        trait = metadata.get('trait', None)
+        if trait is not None:
+            for name,val in trait._metadata.items():
+                if name not in _excludes:
+                    metadata.setdefault(name, val)
+        super(NPSSProperty, self).__init__(default_value, **metadata)
+
+    def get(self, object, name):
+        trait = self.trait
+        # FIXME: pull the file stuff out of here and fix it up
+        if trait and isinstance(trait, FileTrait):
+            meta = self.trait._metadata.copy()
+            meta.pop('iostatus')
+            meta['filename'] = getattr(object._top, self.ref_name+'.filename')
+            return FileValue(**meta)
+        else:
+            return getattr(object._top, self.ref_name or name)
+
+    def set(self, object, name, value):
+        if self.iostatus == 'out':
+            raise TraitError('%s is an output trait and cannot be set' % name)
+        
+        if self.trait:
+            value = self.trait.validate(object, name, value)
+            # FIXME: pull the file stuff out of here and fix it up
+            if isinstance(value, FileValue):
+                setattr(object._top, self.ref_name+'.filename', value.filename)
+                return
+        setattr(object._top, self.ref_name or name, value)
+
+        
+        
 class NPSScomponent(Component):
     """
     An NPSS wrapper component.  Supports reload requests either internally
@@ -39,7 +85,79 @@ class NPSScomponent(Component):
         TODO: function/table attribute support.
 
     """
+    
+    # Model options.
+    model_filename = Str(iostatus='in',
+                         desc='Filename for NPSS model.')
 
+    include_dirs = List(str, iostatus='in',
+                        desc='Model include directories.')
+
+    use_default_paths = Bool(True, iostatus='in',
+                             desc='Use default NPSS directories.')
+
+    preprocessor_vars = Dict(str, str, iostatus='in',
+                             desc='Preprocessor variable definitions')
+
+    # Execution options.
+    run_command = Str(iostatus='in',
+                      desc='String to parse to run model.')
+
+    reload_flag = Str(iostatus='in', 
+                      desc='Path to flag to internally request a model reload.')
+
+    preloaded_dlms = List(str, iostatus='in',
+                          desc='Preloaded DLMs.')
+
+    iclod_first = Bool(False, iostatus='in',
+                       desc='Search ICLOD before DCLOD.')
+
+    no_dclod = Bool(False, iostatus='in', 
+                    desc='Do not search DCLOD.')
+
+    no_iclod = Bool(False, iostatus='in',
+                    desc='Do not search ICLOD.')
+
+    use_corba = Bool(False, iostatus='in',
+                     desc='Enable distributed simulation via CORBA.')
+
+    # Output options.
+    output_filename = Str(iostatus='in',
+           desc='Filename for standard streams in all new sessions.')
+
+    trace_execution = Bool(False, iostatus='in',
+                           desc='Trace interpreted statement execution.')
+
+    # Advanced options.
+    assembly_type = Str(iostatus='in', desc='Type for top object.')
+
+    executive_type = Str(iostatus='in', desc='Top-level executive.')
+
+    preloaded_objs = List(str, iostatus='in', desc='Preloaded Objects.')
+
+    use_solver = Bool(True, iostatus='in', desc='Use default solver.')
+
+    use_constants = Bool(True, iostatus='in',
+                         desc='Use default constants.')
+
+    access = Str(iostatus='in', desc='Default access type.')
+
+    autodoc = Bool(False, iostatus='in', 
+                   desc='Allow abstract creation.')
+
+    ns_ior = Str(iostatus='in', 
+                    desc='IOR of NamingService.')
+
+    other_opts = Str(iostatus='in', desc='Other options.')
+
+    # Wrapper stuff.
+    reload_model = Bool(False, iostatus='in', 
+         desc='Flag to externally request a model reload.')
+    
+    __ = Python
+    
+    _ = NPSSProperty(scope='_top')
+    
     # 1st session gets bad context for some reason...
     dummy = npss.npss()
 
@@ -49,86 +167,14 @@ class NPSScomponent(Component):
         if not isinstance(top, basestring):
             self.raise_exception('top must be a string', TypeError)
         self._topstr = top
-
-        # Model options.
-        String('model_filename', self, INPUT, default='',
-               doc='Filename for NPSS model.')
-
-        StringList('include_dirs', self, INPUT, default=[],
-                   doc='Model include directories.')
-
-        Bool('use_default_paths', self, INPUT, default=True,
-             doc='Use default NPSS directories.')
-
-        Dict('preprocessor_vars', self, INPUT, default={},
-             doc='Preprocessor variable definitions')
-
-        # Execution options.
-        String('run_command', self, INPUT, default='',
-               doc='String to parse to run model.')
-
-        String('reload_flag', self, INPUT, default='',
-               doc='Path to flag to internally request a model reload.')
-
-        StringList('preloaded_dlms', self, INPUT, default=[],
-                   doc='Preloaded DLMs.')
-
-        Bool('iclod_first', self, INPUT, default=False,
-             doc='Search ICLOD before DCLOD.')
-
-        Bool('no_dclod', self, INPUT, default=False,
-             doc='Do not search DCLOD.')
-
-        Bool('no_iclod', self, INPUT, default=False,
-             doc='Do not search ICLOD.')
-
-        Bool('use_corba', self, INPUT, default=False,
-             doc='Enable distributed simulation via CORBA.')
-
-        # Output options.
-        String('output_filename', self, INPUT, default=output_filename,
-               doc='Filename for standard streams in all new sessions.')
-
-        Bool('trace_execution', self, INPUT, default=False,
-             doc='Trace interpreted statement execution.')
-
-        # Advanced options.
-        String('assembly_type', self, INPUT, default='',
-               doc='Type for top object.')
-
-        String('executive_type', self, INPUT, default='',
-               doc='Top-level executive.')
-
-        StringList('preloaded_objs', self, INPUT, default=[],
-                   doc='Preloaded Objects.')
-
-        Bool('use_solver', self, INPUT, default=True,
-             doc='Use default solver.')
-
-        Bool('use_constants', self, INPUT, default=True,
-             doc='Use default constants.')
-
-        String('access', self, INPUT, default='',
-               doc='Default access type.')
-
-        Bool('autodoc', self, INPUT, default=False,
-             doc='Allow abstract creation.')
-
-        String('ns_ior', self, INPUT, default='',
-               doc='IOR of NamingService.')
-
-        String('other_opts', self, INPUT, default='',
-               doc='Other options.')
-
-        # Wrapper stuff.
-        Bool('reload_model', self, INPUT, default=False,
-             doc='Flag to externally request a model reload.')
+        self.output_filename = output_filename
 
         if arglist is not None:
             self._parse_arglist(arglist)
         self._top = None
+        
         self.reload()
-
+        
     def __getstate__(self):
         """ Return dict representing this Component's state. """
         state = super(NPSScomponent, self).__getstate__()
@@ -343,21 +389,17 @@ class NPSScomponent(Component):
     def reload(self):
         """ (Re)load model. """
         is_reload = False
-        saved_inputs = []
+        saved_inputs = {}
+        removed_traits = []
         if self._top is not None:
             is_reload = True
-            # Save current input values.
-            if self.parent is not None:
-                connections = self.parent.list_connections()
-                for src, dst in connections:
-                    try:
-                        dst_comp, dst_attr = dst.split('.', 1)
-                    except ValueError:
-                        pass
-                    else:
-                        if dst_comp == self.name:
-                            saved_inputs.append((dst_attr, self.get(dst_attr)))
-                  
+            # Save current values and trait info for attributes that are 
+            # connected to a source
+            for name in self._sources.keys():
+                saved_inputs[name] = (self.get(name), 
+                                      self.trait(name).ref_name or '', 
+                                      self.trait(name).iostatus)
+                
             # Remove model input files from external_files list.
             paths = self._top.inputFileList
             cwd = self.get_directory()+os.sep
@@ -370,6 +412,11 @@ class NPSScomponent(Component):
                         break
             self._top.closeSession()
             self._top = None
+            
+            # remove all of the old dynamically added traits
+            for name, value in self._added_traits.items():
+                removed_traits.append((name, value.ref_name or '', value.iostatus))
+                self.remove_trait(name)
 
         # Default session directory is set during initialization.
         directory = self.get_directory()
@@ -419,9 +466,13 @@ class NPSScomponent(Component):
                         self.external_files.append({'path':path, 'input':True})
 
             if is_reload:
+                for name, ref_name, iostat in removed_traits:
+                    if not self.trait(name):
+                        self.make_public((name, ref_name, iostat))
                 # Need to restore input values.
-                for name, value in saved_inputs:
-                    self.set(name, value)
+                for name, value in saved_inputs.items():
+                    self.set(name, value[0], force=True)
+
         finally:
             self.pop_dir()
 
@@ -432,61 +483,28 @@ class NPSScomponent(Component):
     def get(self, path, index=None):
         """ Return value for attribute. """
         if index is None:
-            return getattr(self, path)
+            return super(NPSScomponent, self).get(path, index)
         else:
             self.raise_exception('Indexing not supported yet',
                                  NotImplementedError)
-
-    def __getattr__(self, name):
-        """
-        Return value for attribute.
-        Note that this is not __getattribute__.
-        This gets called only when the normal methods fail.
-        """
-        if name.startswith('_'):
-            return object.__getattribute__(self, name)
-
-        try:
-            top = object.__getattribute__(self, '_top')
-        except AttributeError:
-            return super(NPSScomponent, self).__getattribute__(name)
-        if top is None:
-            return super(NPSScomponent, self).__getattribute__(name)
-
-        try:
-            return getattr(top, name)
-        except AttributeError, err:
-            # Possibly a wrapper attribute.
-            try:
-                return super(NPSScomponent, self).__getattribute__(name)
-            except AttributeError:
-                raise AttributeError(self.get_pathname()+' '+str(err))
-
-    def set(self, path, value, index=None):
+            
+    def set(self, path, value, index=None, srcname=None, force=False):
         """ Set attribute value. """
         if index is None:
-            setattr(self, path, value)
+            super(NPSScomponent, self).set(path, value, index=index,
+                                           srcname=srcname, force=force)
         else:
             self.raise_exception('Indexing not supported yet',
                                  NotImplementedError)
 
-    def __setattr__(self, name, value):
-        """ Set attribute value. """
-        if name.startswith('_'):
-            return object.__setattr__(self, name, value)
-
-        try:
-            top = object.__getattribute__(self, '_top')
-        except AttributeError:
-            return super(NPSScomponent, self).__setattr__(name, value)
-        if top is None:
-            return super(NPSScomponent, self).__setattr__(name, value)
-
-        try:
-            setattr(top, name, value)
-        except AttributeError:
-            return super(NPSScomponent, self).__setattr__(name, value)
-
+    def _check_trait_settable(self, name, srcname=None, force=False):
+        trait = self.trait(name)
+        if not trait:  # try to create a trait on-the-fly to map to an NPSS variable
+            trait = self._build_trait(name)
+            self.add_trait(name, trait)
+        
+        return super(NPSScomponent, self)._check_trait_settable(name, srcname, force)
+        
     def execute(self):
         """ Perform operations associated with running the component. """
         if self.reload_model:
@@ -520,127 +538,110 @@ class NPSScomponent(Component):
             self.raise_exception('Exception during run: %s' % exc,
                                  RuntimeError)
 
-    def make_public(self, obj_info, iostatus=INPUT):
+    def parseString(self, txt):
+        return self._top.parseString(txt)
+    
+    def _build_trait(self, ref_name, iostatus=None, trait=None):
         """
-        Overload make_public() so that we can do the following
-        on-the-fly rather than having to manually define variables:
+        Do the following on-the-fly rather than having to 
+        manually define variables:
 
         1. Get the correct array type (default is float).
         2. Set the units from translated NPSS units.
         3. Set the doc string from the description attribute.
-        4. Create FileVariables for stream objects.
+        4. Create FileTraits for stream objects.
         """
-        if isinstance(obj_info, list):
-            lst = obj_info
+        
+        doc = None
+        try:
+            doc = getattr(self._top, ref_name+'.description')
+        except AttributeError:
+            pass
+                
+        if iostatus is None:
+            try:
+                iostat = _iodict[self._top._get(ref_name+'.IOstatus')]
+            except (AttributeError, KeyError):
+                self.raise_exception("cannot determine iostatus for '%s'" %
+                                     ref_name, TraitError)
         else:
-            lst = [obj_info]
-
-        new_info = []
-        for entry in lst:
             iostat = iostatus
-            metadata = {}
-
-            if isinstance(entry, basestring):
-                name = entry
-                ref_name = name
-            elif isinstance(entry, tuple):
-                name = entry[0]  # wrapper name
-                ref_name = entry[1]  # internal name
-                if not ref_name:
-                    ref_name = name
-                if len(entry) > 2:
-                    iostat = entry[2] # optional iostatus
-            else:
-                new_info.append(entry)
-                continue
-
+            
+        if trait is None:
             try:
-                typ = self.evalExpr(ref_name+'.getDataType()')
+                typ = self._top.evalExpr(ref_name+'.getDataType()')
             except RuntimeError:
+                metadata = {}
                 try:
-                    typ = self.evalExpr(ref_name+'.isA()')
+                    typ = self._top.evalExpr(ref_name+'.isA()')
                 except RuntimeError:
-                    new_info.append(entry)
-                    continue
-                else:
-                    if typ == 'InFileStream':
-                        typ = 'Stream'
-                        iostat = INPUT
-                    elif typ == 'OutFileStream':
-                        typ = 'Stream'
-                        iostat = OUTPUT
-                        metadata['content_type'] = \
-                            getattr(self, ref_name+'.contentType')
-                        metadata['binary'] = \
-                            getattr(self, ref_name+'.binary') != 0
-                        metadata['single_precision'] = \
-                            getattr(self, ref_name+'.singlePrecision') != 0
-                        metadata['unformatted'] = \
-                            getattr(self, ref_name+'.unformatted') != 0
-                    else:
-                        new_info.append(entry)
-                        continue
-
-            try:
-                npss_units = getattr(self, ref_name+'.units')
-            except AttributeError:
-                mdao_units = UNDEFINED
-            else:
-                if npss_units:
-                    if self.have_units_translation(npss_units):
-                        mdao_units = self.get_units_translation(npss_units)
-                    else:
-                        self.warning("No units translation for '%s'" % npss_units)
-                        mdao_units = UNDEFINED
-                else:
-                    mdao_units = UNDEFINED
-
-            try:
-                doc = getattr(self, ref_name+'.description')
-            except AttributeError:
-                doc = None
-            else:
-                if not doc:
-                    doc = None
-
-            # Primitive method to create correct type.
+                    self.raise_exception("cannot determine type of NPSS variable '%s'"%
+                                         ref_name, RuntimeError)
+                if typ == 'InFileStream':
+                    iostat = 'in'
+                    typ = 'Stream'
+                elif typ == 'OutFileStream':
+                    iostat = 'out'
+                    typ = 'Stream'
+                    metadata['content_type'] = \
+                        getattr(self._top, ref_name+'.contentType')
+                    metadata['binary'] = \
+                        getattr(self._top, ref_name+'.binary') != 0
+                    metadata['single_precision'] = \
+                        getattr(self._top, ref_name+'.singlePrecision') != 0
+                    metadata['unformatted'] = \
+                        getattr(self._top, ref_name+'.unformatted') != 0
+            
+        # Primitive method to create correct type.
             if typ == 'real':
-                dobj = Float(name, self, iostat, doc=doc, units=mdao_units,
-                             ref_name=ref_name)
+                try:
+                    npss_units = getattr(self._top, ref_name+'.units')
+                except AttributeError:
+                    mdao_units = Undefined
+                else:
+                    if npss_units:
+                        if self.have_units_translation(npss_units):
+                            mdao_units = self.get_units_translation(npss_units)
+                        else:
+                            self.warning("No units translation for '%s'" % npss_units)
+                            mdao_units = Undefined
+                    else:
+                        mdao_units = Undefined
+                if mdao_units is Undefined or mdao_units is None:
+                    trait = Float(iostatus=iostat, desc=doc)
+                else:
+                    trait = UnitsFloat(iostatus=iostat, 
+                                      desc=doc, units=mdao_units)
             elif typ == 'int':
-                dobj = Int(name, self, iostat, doc=doc, ref_name=ref_name)
+                trait = Int(iostatus=iostat, desc=doc)
             elif typ == 'string':
-                dobj = String(name, self, iostat, doc=doc, ref_name=ref_name)
+                trait = Str(iostatus=iostat, desc=doc)
             elif typ == 'real[]':
-                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
-                                     num_dims=1, ref_name=ref_name)
+                trait = Array(dtype=numpy.float, shape=(None,), 
+                             iostatus=iostat, desc=doc)
             elif typ == 'int[]':
-                dobj = ArrayVariable(name, self, iostat, int, doc=doc,
-                                     num_dims=1, ref_name=ref_name)
+                trait = Array(dtype=numpy.int, shape=(None,), 
+                             iostatus=iostat, desc=doc)
             elif typ == 'string[]':
-                dobj = StringList(name, self, iostat, doc=doc,
-                                  ref_name=ref_name)
+                trait = List(str,iostatus=iostat, desc=doc)
             elif typ == 'real[][]':
-                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
-                                     num_dims=2, ref_name=ref_name)
+                trait = Array(dtype=numpy.float, shape=(None,None),
+                             iostatus=iostat, desc=doc)
             elif typ == 'int[][]':
-                dobj = ArrayVariable(name, self, iostat, int, doc=doc,
-                                     num_dims=2, ref_name=ref_name)
+                trait = Array(dtype=numpy.int, shape=(None,None), 
+                             iostatus=iostat, desc=doc)
             elif typ == 'real[][][]':
-                dobj = ArrayVariable(name, self, iostat, float, doc=doc,
-                                     num_dims=3, ref_name=ref_name)
+                trait = Array(dtype=numpy.float, shape=(None,None,None),
+                             iostatus=iostat, desc=doc)
             elif typ == 'Stream':
-                dobj = FileVariable(name, self, iostat, doc=doc,
-                                    ref_name=ref_name+'.filename',
-                                    metadata=metadata)
+                trait = FileTrait(iostatus=iostat, desc=doc, 
+                                  **metadata)
             else:
-                self.raise_exception('Unsupported NPSS type: %s' % typ,
-                                     NotImplementedError)
-
-            new_info.append(dobj)
-
-        return super(NPSScomponent, self).make_public(new_info)
-
+                self.raise_exception("'%s' is an unsupported NPSS type: '%s'" % 
+                                     (ref_name,typ), NotImplementedError)
+        
+        return NPSSProperty(trait=trait, ref_name=trait.ref_name or ref_name)
+    
     @staticmethod
     def have_units_translation(npss_units):
         """ Return True if we can translate npss_units. """

@@ -1,18 +1,17 @@
 
 import unittest
 
-from openmdao.main import Assembly, Component, ListCaseIterator, Case, Int
-from openmdao.main.interfaces import ICaseIterator, IAssembly
-from openmdao.main.variable import OUTPUT
-from openmdao.main.socket import Socket
+from enthought.traits.api import Int, Instance, TraitError
 
+from openmdao.main.api import Assembly, Component, ListCaseIterator, Case
+from openmdao.main.interfaces import ICaseIterator, IAssembly
 
 class SocketComp(Assembly):
-    iterator = Socket(ICaseIterator, 'cases to evaluate')
+    iterator = Instance(ICaseIterator, allow_none=False, desc='cases to evaluate')
+    num_cases = Int(0, iostatus='out')
     
     def __init__(self):
         super(SocketComp, self).__init__('SocketComp')
-        Int('num_cases', self, OUTPUT, default=0)
         
     def execute(self):
         self.num_cases = 0
@@ -20,13 +19,12 @@ class SocketComp(Assembly):
             self.num_cases += 1
 
 class SocketComp2(SocketComp):
-    somesocket = Socket(None, 'a dumb socket')
-    
+    somesocket = Instance(IAssembly)
     def __init__(self):
         super(SocketComp2, self).__init__()
         
 class SocketComp3(SocketComp2):
-    iterator = Socket(IAssembly, 'another dumb socket')
+    iterator = Instance(IAssembly, desc='another dumb socket')
     
     def __init__(self):
         super(SocketComp3, self).__init__()
@@ -59,53 +57,63 @@ class SocketTestCase(unittest.TestCase):
             self.fail('AttributeError expected')
 
     def test_no_plugin(self):
-        try:
-            plugin = self.sc.iterator
-        except RuntimeError, exc:
-            self.assertEqual("SocketComp: socket 'iterator' is empty", str(exc))
-        else:
-            self.fail('RuntimeError expected')
+        plugin = self.sc.iterator
+        self.assertEqual(plugin, None)
 
     def test_wrong_interface(self):
         try:
             self.sc.iterator = Component('dummy')
-        except ValueError, exc:
-            self.assertEqual(
-                "SocketComp: Socket 'iterator' requires interface 'ICaseIterator'",
-                str(exc))
+        except TraitError, exc:
+            self.assertTrue(str(exc).startswith(
+                "The 'iterator' trait of a SocketComp instance must be an ICaseIterator, but a value of"))
         else:
-            self.fail('ValueError expected')
+            self.fail('TraitError expected')
 
     def test_socket_filled(self):
-        self.assertEqual(self.sc.socket_filled('iterator'), False)
+        self.assertEqual(self.sc.iterator, None)
         self.sc.iterator = ListCaseIterator([Case(), Case(), Case()])
-        self.assertEqual(self.sc.socket_filled('iterator'), True)
+        self.assertNotEqual(self.sc.iterator, None)
 
         try:
-            self.sc.socket_filled('no_socket')
+            x = self.sc.no_socket
         except AttributeError, exc:
-            self.assertEqual("SocketComp: no Socket named 'no_socket'",
+            self.assertEqual("'SocketComp' object has no attribute 'no_socket'",
                              str(exc))
         else:
             self.fail('AttributeError expected')
             
     def test_inherit_sockets(self):
         sc2 = SocketComp2()
-        self.assertEqual(sc2.socket_filled('iterator'), False)
-        sc2.iterator = ListCaseIterator([Case(), Case(), Case()])
-        self.assertEqual(sc2.socket_filled('iterator'), True)
+        self.assertEqual(sc2.iterator, None)
+        lci = ListCaseIterator([Case(), Case(), Case()])
+        sc2.iterator = lci
+        self.assertEqual(sc2.iterator, lci)
 
-        self.assertEqual(sc2.socket_filled('somesocket'), False)
-        sc2.somesocket = Case()
-        self.assertEqual(sc2.socket_filled('somesocket'), True)
-        
-        self.assertEqual(['iterator', 'somesocket'], sorted(sc2.list_sockets()))
+        sc3 = SocketComp3()
+        self.assertEqual(sc3.somesocket, None)
+        asm = Assembly('x',None)
+        sc3.somesocket = asm
+        self.assertEqual(sc3.somesocket, asm)
         
     def test_socket_override(self):
-        sc3 = SocketComp3()
-        self.assertEqual(sc3.get_socket('iterator').iface, IAssembly)
+        sc2 = SocketComp2()
+        sc2.iterator = ListCaseIterator([Case(), Case(), Case()])
+        try:
+            sc2.iterator = Assembly('bad', None)
+        except TraitError:
+            pass
+        else:
+            self.fail('TraitError expected')
+            
         sc4 = SocketComp4()
-        self.assertEqual(sc4.get_socket('iterator').iface, IAssembly)
+        sc4.iterator = Assembly('foo', None)
+        try:
+            sc4.iterator = ListCaseIterator([Case(), Case(), Case()])
+        except TraitError:
+            pass
+        else:
+            self.fail('TraitError expected')
+        
 
 if __name__ == "__main__":
     unittest.main()

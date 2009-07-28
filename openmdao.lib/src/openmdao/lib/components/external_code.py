@@ -11,9 +11,10 @@ import time
 if sys.platform == 'win32':
     import win32api
 
-from openmdao.main import Component, Bool, Float, Int, String
+from enthought.traits.api import Float, Bool, Int, Str, Any
+
+from openmdao.main.api import Component, UnitsFloat
 from openmdao.main.exceptions import RunInterrupted, RunStopped
-from openmdao.main.variable import INPUT, OUTPUT
 
 
 # TODO: better process kill implementation (2.6 terminate, process tree).
@@ -38,21 +39,21 @@ class ExternalCode(Component):
     PIPE   = subprocess.PIPE
     STDOUT = subprocess.STDOUT
 
+    command = Str('', iostatus='in',
+                  desc='Command to be executed.')
+
+    timeout = UnitsFloat(0., low=0., iostatus='in', units='s',
+                    desc='Max time to wait for command completion.')
+
+    timed_out = Bool(False, iostatus='out',
+                     desc='True if command timed-out.')
+
+    return_code = Any(0, iostatus='out',
+                      desc='Return code from command.')
+
     def __init__(self, name='ExternalCode', parent=None, doc=None,
                  directory=''):
         super(ExternalCode, self).__init__(name, parent, doc, directory)
-
-        String('command', self, INPUT, default='',
-               doc='Command to be executed.')
-
-        Float('timeout', self, INPUT, default=0, min_limit=0, units='s',
-              doc='Max time to wait for command completion.')
-
-        Bool('timed_out', self, OUTPUT, default=False,
-             doc='True if command timed-out.')
-
-        Int('return_code', self, OUTPUT, default=0,
-            doc='Return code from command.')
 
         self.stdin   = None
         self.stdout  = None

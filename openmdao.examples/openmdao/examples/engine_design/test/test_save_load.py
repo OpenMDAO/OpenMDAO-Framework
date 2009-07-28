@@ -10,7 +10,6 @@ import subprocess
 import unittest
 
 from openmdao.examples.engine_design.engine_optimization import EngineOptimization
-
 import openmdao.util.testutil
 
 
@@ -29,8 +28,8 @@ class EngineOptimizationTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
-        self.model.driving_sim.set('bore', 100)
-        self.model.driving_sim.set('spark_angle', -35.368341874)
+        self.model.driving_sim.bore = 95.
+        self.model.driving_sim.spark_angle = -35.368341874
         self.model.driver.maxiters = 1
 
         # Set local dir in case we're running in a different directory.
@@ -48,10 +47,10 @@ class EngineOptimizationTestCase(unittest.TestCase):
         egg_path = os.path.join('..', egg_name)
         try:
             logging.debug('Unpacking in subprocess...')
-            logging.debug('    python %s', python)
+            logging.debug('    python %s' % python)
             out = open('unpack.py', 'w')
             out.write("""\
-from openmdao.main import Component
+from openmdao.main.api import Component
 Component.load_from_eggfile('%s', install=False)
 """ % egg_path)
             out.close()
@@ -79,6 +78,7 @@ class TestCase(unittest.TestCase):
                                25.15551809930237, places=4)
         self.assertAlmostEqual(model.driving_sim.EPA_highway, 
                                32.800993976480768, places=4)
+                              
 if __name__ == '__main__':
     unittest.main()
 """ % self.model.name)

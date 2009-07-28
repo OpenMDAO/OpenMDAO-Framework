@@ -6,7 +6,7 @@ and use it to set component inputs and get component outputs.
 The component in question just evaluates a simple expression.
 """
 
-from openmdao.main import Assembly
+from openmdao.main.api import Assembly
 
 import m4.doe
 import m4.dummy_components
