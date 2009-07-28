@@ -153,9 +153,9 @@ class Component (Container):
         Overrides of this function must call this version.
         """
         # make our Variables valid again
-        for name in self.keys(iostatus='in'): # inputs
+        for name in self.list_inputs():
             self.set_valid(name, True)
-        for name in self.keys(iostatus='out'): # outputs
+        for name in self.list_outputs():
             self.set_valid(name, True)
         self._execute_needed = False
         
@@ -185,26 +185,6 @@ class Component (Container):
             if self.directory:
                 self.pop_dir()
 
-    def list_inputs(self, valid=None):
-        """Return a list of names of input values. If valid is not None,
-        the the list will contain names of inputs with matching validity.
-        """
-        if valid is None:
-            return self.keys(iostatus='in')
-        else:
-            return [n for n in self.keys(iostatus='in') 
-                         if self.get_valid(n)==valid]
-        
-    def list_outputs(self, valid=None):
-        """Return a list of names of output values. If valid is not None,
-        the the list will contain names of outputs with matching validity.
-        """
-        if valid is None:
-            return self.keys(iostatus='out')
-        else:
-            return [n for n in self.keys(iostatus='out') 
-                         if self.get_valid(n)==valid]
-        
     def get_directory (self):
         """Return absolute path of execution directory."""
         path = self.directory

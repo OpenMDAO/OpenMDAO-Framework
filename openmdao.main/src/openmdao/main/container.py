@@ -174,6 +174,10 @@ class Container(HasTraits):
         self.parent = parent
         self.name = name
         
+        self._inputs = None
+        self._outputs = None
+        self._containers = None
+        
         if doc is not None:
             self.__doc__ = doc
 
@@ -254,12 +258,7 @@ class Container(HasTraits):
         HasTraits.__getstate__ won't return our instance traits.
         """
         if len(names) == 0:
-            if 'transient' in metadata:
-                meta = metadata
-            else:
-                meta = metadata.copy()
-                meta.setdefault('type', not_event)
-            names = self._traits_meta_filter(None, **meta).keys()
+            names = self._traits_meta_filter(None, **metadata).keys()
         return super(Container, self).trait_get(*names, **metadata)
         
         
@@ -389,64 +388,74 @@ class Container(HasTraits):
         the given metadata. If recurse is True, also iterate through all
         child Containers of each Container found.
         """
-        mdata = { 'type': not_event } # exclude event traits, which are write-only
-        mdata.update(metadata)
-        return self._items(set([id(self.parent)]), recurse, **mdata)
+        return self._items(set([id(self.parent)]), recurse, **metadata)
         
     def keys(self, recurse=False, **metadata):
         """Return a list of the relative pathnames of
         children of this Container that match the given metadata. If recurse is 
         True, child Containers will also be iterated over.
         """
-        mdata = { 'type': not_event } # exclude event traits, which are write-only
-        mdata.update(metadata)
         return [tup[0] for tup in self._items(set([id(self.parent)]), 
-                                              recurse, **mdata)]
+                                              recurse, **metadata)]
         
     def values(self, recurse=False, **metadata):
         """Return a list of children of this Container that have matching 
         trait metadata. If recurse is True, child Containers will also be 
         iterated over.
         """
-        mdata = { 'type': not_event } # exclude event traits, which are write-only
-        mdata.update(metadata)
         return [tup[1] for tup in self._items(set([id(self.parent)]), 
-                                              recurse, **mdata)]
+                                              recurse, **metadata)]
 
-    def get_all_traits(self):
-        """Returns a dict containing all traits for this object, including
-        instance traits. This function was written because property traits
-        (TraitTypes with set/get defined) didn't seem to show up using
-        the normal traits() function.
+    def list_inputs(self, valid=None):
+        """Return a list of names of input values. If valid is not None,
+        the the list will contain names of inputs with matching validity.
         """
-        traits = self.__base_traits__.copy()
-        instset = set(self.__dict__).union(self._instance_traits())
+        if self._inputs is None:
+            self._inputs = self.keys(iostatus='in')
+            
+        if valid is None:
+            return self._inputs
+        else:
+            fval = self.get_valid
+            return [n for n in self._inputs if fval(n)==valid]
         
-        # base traits are already included, so exclude them from loop
-        for name in instset.difference(traits):  
-            trait = self.trait( name )
-            if trait is not None:
-                traits[ name ] = trait
-        return traits
+    def list_outputs(self, valid=None):
+        """Return a list of names of output values. If valid is not None,
+        the the list will contain names of outputs with matching validity.
+        """
+        if self._outputs is None:
+            self._outputs = self.keys(iostatus='out')
+            
+        if valid is None:
+            return self._outputs
+        else:
+            fval = self.get_valid
+            return [n for n in self._outputs if fval(n)==valid]
+        
+    def list_containers(self):
+        """Return a list of names of child Containers."""
+        if self._containers is None:
+            dct = self.__dict__
+            self._containers = [n for n,v in dct.items() if isinstance(v,Container)]            
+        return self._containers
     
     def _traits_meta_filter(self, traits=None, **metadata):
         """This returns a dict that contains all entries in the traits dict
         that match the given metadata.
         """
         if traits is None:
-            traits = self.get_all_traits()
+            traits = self.traits()
+            traits.update(self._instance_traits())
             
-        if len( metadata ) == 0:
-            return traits
-
-        for meta_name, meta_eval in metadata.items():
-            if type( meta_eval ) is not FunctionType:
-                metadata[ meta_name ] = _SimpleTest( meta_eval )
-
         result = {}
         for name, trait in traits.items():
+            if trait.type is 'event':
+                continue
             for meta_name, meta_eval in metadata.items():
-                if not meta_eval( getattr( trait, meta_name ) ):
+                if type( meta_eval ) is FunctionType:
+                    if not meta_eval(getattr(trait,meta_name)):
+                        break
+                elif meta_eval != getattr(trait,meta_name):
                     break
             else:
                 result[ name ] = trait
@@ -466,8 +475,8 @@ class Container(HasTraits):
             
             if recurse:
                 for name, obj in self.__dict__.items():
-                    if isinstance(obj, Container) and id(obj) not in visited:
-                        if name in match_dict:
+                    if isinstance(obj, Container):
+                        if name in match_dict and id(obj) not in visited:
                             yield(name, obj)
                         for chname, child in obj._items(visited, recurse, **metadata):
                             yield ('.'.join([name, chname]), child)
@@ -954,6 +963,11 @@ class Container(HasTraits):
                                  RuntimeError)
         return path
     
+    def _trait_added_changed(self, name):
+        """Called any time a new trait is added to this container."""
+        self._inputs = None
+        self._outputs = None
+        self._containers = None
     
     # error reporting stuff
     def _get_log_level(self):

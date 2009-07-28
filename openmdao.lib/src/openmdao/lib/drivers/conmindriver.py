@@ -171,7 +171,7 @@ class CONMINdriver(Driver):
         self.cnmn1 = _cnmn1()
         self.consav = _consav()
         
-        self.iter_count = True
+        self.iter_count = 0
         self.design_vals = numarray.zeros(0,'d')
         self.lower_bounds = numarray.zeros(0,'d')
         self.upper_bounds = numarray.zeros(0,'d')

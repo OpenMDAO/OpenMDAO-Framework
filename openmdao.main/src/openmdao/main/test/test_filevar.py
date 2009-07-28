@@ -125,7 +125,7 @@ class FileTestCase(unittest.TestCase):
         try:
             self.model.run()
         except IOError, exc:
-            if str(exc).find('source.txt') < 0:
+            if 'source.txt' not in str(exc) and 'source.bin' not in str(exc):
                 self.fail("Wrong message '%s'" % exc)
         else:
             self.fail('IOError expected')

@@ -13,6 +13,7 @@ from enthought.traits.api import implements, Str, List, Instance, TraitError
 from enthought.traits.api import TraitType, Undefined, CTrait
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import _check_trait
+from enthought.traits.trait_base import not_event, not_none
 
 import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
@@ -85,7 +86,7 @@ class Assembly (Component):
         
         # add any Variables we may have inherited from our base classes
         # to our _var_graph..
-        for v in self.keys(iostatus=lambda x: x is not None):
+        for v in self.keys(iostatus=not_none):
             if v not in self._var_graph:
                 self._var_graph.add_node(v)
         

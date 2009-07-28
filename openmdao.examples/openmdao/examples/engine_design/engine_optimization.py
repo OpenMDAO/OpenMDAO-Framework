@@ -66,7 +66,7 @@ if __name__ == "__main__":
     z.run()
     #profile.run('z.run()')
     prz('New Design')
-    print "CONMIN Iterations: ", z.driver.iter
+    print "CONMIN Iterations: ", z.driver.iter_count
     print ""
     print "Elapsed time: ", time.time()-tt
     
