@@ -8,6 +8,7 @@ usage: dumpeggmeta.py egg-or-distribution [metadata-item]
 
 Example output: 
 
+
 ::
 
     $ dumpeggmeta.py pyparsing-1.5.1-py2.5.egg
