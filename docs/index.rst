@@ -3,6 +3,7 @@
 Welcome to OpenMDAO's Documentation. 
 ====================================
 
+Contents:
 
 .. toctree::
    :maxdepth: 2
