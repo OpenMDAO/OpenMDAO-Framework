@@ -29,34 +29,32 @@ a directory or an :term:`egg` file that is in the search path of the
 that is itself registered with the FactoryManager.   
 
 
-The primary types of plug-in interfaces available to extend the framework are
-listed below:
+The primary types of plug-in interfaces and classes available to extend 
+the framework are listed below:
 
 
-.. index:: pair: IComponent; plug-in interface 
-.. index:: pair: IContainer; plug-in interface
-.. index:: pair: IDriver; plug-in interface
-.. index:: pair: IVariable; plug-in interface
-.. index:: pair: IVariable; plug-in interface
+.. index:: pair: Component; plug-in base class 
+.. index:: pair: Driver; plug-in base class
+.. index:: pair: TraitType; plug-in base class
 .. index:: pair: IGeomQueryObject; plug-in interface
 .. index:: pair: IGeomModifier; plug-in interface
 .. index:: pair: IResourceAllocator; plug-in interface
 .. index:: pair: IFactory; plug-in interface
 
 
-:ref:`IContainer<IContainer>` - interface to an object that contains Variables that are visible to
-the framework.
+:ref:`Component<component.py>` - base class of an engineering tool or some 
+sort of calculation. It inherits from :ref:`Container<container.py>`.
 
-:ref:`IComponent<IComponent>` - interface to an engineering tool or some sort of calculation. It
-inherits from :ref:`IContainer<IContainer>`.
+:ref:`Driver<driver.py>` - base class for optimizers, solvers, 
+parameter studies, and other objects that iterate over a set of Components. 
+It inherits from :ref:`Component<component.py>`.
 
-:ref:`IDriver<IDriver>` - interface to optimizers, solvers, parameter studies, and other
-objects that iterate over a model. It inherits from :ref:`IComponent<IComponent>`.
+TraitType_ - base class used to validate and possibly convert data objects that are passed
+between linked Components. 
 
-:ref:`IVariable<IVariable>` - interface to data objects that are to be passed
-between linked components. These data objects have a validate() function to
-ensure that only  valid links are allowed. They can also translate values from
-other IVariables, e.g., perform unit conversion.
+
+.. _TraitType: http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_handlers.TraitType.html
+
 
 :ref:`IGeomQueryObject<IGeomQueryObject>` - interface to objects with geometry.
 Geometric properties of the object can be queried.
@@ -71,8 +69,6 @@ resource description.
 :ref:`IFactory<IFactory>` - interface to an object that creates other objects
 used by the framework. This creation may involve the creation of a remote
 instance of an object and a  proxy to represent it in the local process.
-
-.. seealso:: :ref:`Application-Programming-Interface-(API)` 
 
 .. index:: geometry
 .. index:: Component

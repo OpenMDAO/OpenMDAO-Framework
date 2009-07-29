@@ -9,7 +9,6 @@ Architecture Document
    intro.rst
    overview.rst
    concepts.rst
-   api.rst
    classes.rst
    processes.rst
    principles.rst
