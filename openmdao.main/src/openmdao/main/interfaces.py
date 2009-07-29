@@ -8,12 +8,12 @@ Interfaces for the OpenMDAO project.
 #public symbols
 __all__ = ['IContainer', 'IComponent', 'IAssembly', 'IDriver', 'IFactory',
            'IGeomQueryObject', 'IGeomModifier', 'IResourceAllocator',
-           'IVariable', 'IWorkflow', 'ICaseIterator']
+           'IWorkflow', 'ICaseIterator']
 
 __version__ = "0.1"
 
 
-from zope.interface import Interface, Attribute
+from enthought.traits.api import Interface, Str, This
 
 
 class IContainer (Interface):
@@ -21,9 +21,9 @@ class IContainer (Interface):
     attributes through the framework. This interface is provided by the
     Container class."""
 
-    name = Attribute('the name of the Container')
+    name = Str(desc='the name of the Container')
 
-    parent = Attribute('the IContainer object containing this object, or None')
+    parent = This(desc='the IContainer object containing this object, or None')
 
     def create (type_name, name, version=None, factory=None):
         """Create an object with the given type and the given name within
@@ -33,25 +33,22 @@ class IContainer (Interface):
         """Remove the named object from this container and notify any
         observers"""
 
-    def items(self, pub=True, recurse=False):
+    def items(self, recurse=False):
         """Return an iterator that returns a list of tuples of the form 
         (rel_pathname, obj) for each
-        child of this Container. If pub is True, only iterate through the public
-        dict of any Container. If recurse is True, also iterate through all
-        child Containers of each Container found based on the value of pub.
+        child of this Container. If recurse is True, also iterate through all
+        child Containers of each Container found.
         """
         
-    def keys(self, pub=True, recurse=False):
+    def keys(self, recurse=False):
         """Return an iterator that will return the relative pathnames of
-        children of this Container. If pub is True, only children from
-        the pub dict will be included. If recurse is True, child Containers
+        children of this Container. If recurse is True, child Containers
         will also be iterated over.
         """
         
-    def values(self, pub=True, recurse=False):
+    def values(self, recurse=False):
         """Return an iterator that will return the
-        children of this Container. If pub is True, only children from
-        the pub dict will be included. If recurse is True, child Containers
+        children of this Container. If recurse is True, child Containers
         will also be iterated over.
         """
         
@@ -62,17 +59,9 @@ class IContainer (Interface):
     def get (name):
         """Return the value of a public Variable."""
 
-    def getvar (name):
-        """return the public Variable specified by name."""
-
-    def set (name, value):
+    def set (path, value, index=None, srcname=None, srcmeta=None, force=False):
         """Set the value of a public variable."""
         
-    def setvar(name, var):
-        """Set the value of the named public Variable with the value of
-        the Variable specified by var.
-        """
-
     def save_state (outstream, format='cPickle'):
         """Save the state of this object and its children to the given
         output stream. Pure python classes generally won't need to
@@ -98,13 +87,13 @@ class IComponent (IContainer):
     """A runnable Container. This interface is provided by the Component
     class"""
 
-    state =  Attribute('the current state of this object '+
-                       '(UNKNOWN,IDLE,RUNNING,WAITING)')
+    #state =  Attribute('the current state of this object '+
+    #                   '(UNKNOWN,IDLE,RUNNING,WAITING)')
 
-    resource_desc = Attribute('a dict containing key-value pairs that are used'+
-                              'to select a ResourceAllocator')
+    #resource_desc = Attribute('a dict containing key-value pairs that are used'+
+    #                          'to select a ResourceAllocator')
 
-    directory = Attribute('If non-null, the directory to execute in.')
+    directory = Str(desc='If non-null, the directory to execute in.')
 
     def post_config ():
         """Perform any final initialization and verification after configuration 
@@ -198,7 +187,7 @@ class IAssembly (IComponent):
         outvarpath and invarpath are pathnames relative to enclosing scope.
         """
     
-    def update_inputs(varnames):
+    def update_inputs(compname, varnames):
         """Update the inputs named in varnames."""
 
     
@@ -226,8 +215,8 @@ class IGeomQueryObject (Interface):
     
     """
 
-    modelID = Attribute("Identifies the model. "+
-                        "This can either be a part or an assembly of parts")
+    #modelID = Attribute("Identifies the model. "+
+    #                    "This can either be a part or an assembly of parts")
 
 
 
@@ -256,33 +245,6 @@ class IResourceAllocator (Interface):
         """Return a list of tuples (hostname, pid, component_name) for each
         Component currently allocated by this allocator."""
 
-
-
-
-class IVariable (Interface):
-    """ An object representing data to be passed between Components within
-    the framework. It will perform validation when assigned to another
-    IVariable. It can notify other objects when its value is modified.
-    """
-
-    value = Attribute('the value')
-
-    default = Attribute('the default value')
-
-    current = Attribute('if False, the value is not current')
-
-    def revert ():
-        """ Return this Variable to its default value."""
-
-    def validate (variable):
-        """ Raise an exception if the assigned variable is not compatible"""
-
-    def add_observer (obs_funct, *args, **metadata):
-        """ Add a function to be called when this variable is modified"""
-
-    def notify_observers ():
-        """Call data_changed(self,args,metadata) on all of this object's
-        observers."""
 
 class IWorkflow(Interface):
     """An object that executes its nodes in a specified order.

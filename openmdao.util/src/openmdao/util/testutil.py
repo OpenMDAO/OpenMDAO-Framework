@@ -15,6 +15,7 @@ def assertRaisesError(test_case_instance, code, err_type, err_msg):
         test_case_instance.fail("Expecting %s" % err_type)
 
 
+
 def find_python(hint):
     """
     Return path to python in buildout/bin.  `hint` should be a peer directory
@@ -30,4 +31,3 @@ def find_python(hint):
         if index > 0:
             python = os.path.join(cwd[:index], 'buildout', 'bin', python)
     return python
-

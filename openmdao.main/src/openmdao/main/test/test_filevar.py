@@ -1,5 +1,5 @@
 """
-Test of FileVariables.
+Test of FileTraits.
 """
 
 import cPickle
@@ -8,9 +8,10 @@ import os
 import shutil
 import unittest
 
-from openmdao.main import Assembly, Component, \
-                          ArrayVariable, FileVariable, StringList, Bool
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Bool, Array, List, Str
+
+from openmdao.main.api import Assembly, Component
+from openmdao.main.filevar import FileTrait
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -19,23 +20,25 @@ from openmdao.main.variable import INPUT, OUTPUT
 class Source(Component):
     """ Produces files. """
 
+    write_files = Bool(True, iostatus='in')
+    text_data = Str(iostatus='in')
+    binary_data = Array('d', iostatus='in')
+    text_file = FileTrait(iostatus='out')
+    binary_file = FileTrait(iostatus='out', binary=True)
+        
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
-        Bool('write_files', self, INPUT, default=True)
-        StringList('text_data', self, INPUT, default=[])
-        ArrayVariable('binary_data', self, INPUT, float, default=[])
-        FileVariable('text_file', self, OUTPUT, default='source.txt')
-        FileVariable('binary_file', self, OUTPUT, default='source.bin',
-                     metadata={'binary':True})
+        self.text_file.filename = 'source.txt'
+        self.binary_file.filename = 'source.bin'
 
     def execute(self):
         """ Write test data to files. """
         if self.write_files:
-            out = open(self.text_file, 'w')
+            out = open(self.text_file.filename, 'w')
             out.write(self.text_data)
             out.close()
 
-            out = open(self.binary_file, 'wb')
+            out = open(self.binary_file.filename, 'wb')
             cPickle.dump(self.binary_data, out, 2)
             out.close()
 
@@ -43,20 +46,23 @@ class Source(Component):
 class Sink(Component):
     """ Consumes files. """
 
+    text_data = Str(iostatus='out')
+    binary_data = Array('d', iostatus='out')
+    text_file = FileTrait(iostatus='in')
+    binary_file = FileTrait(iostatus='in')
+        
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
-        StringList('text_data', self, OUTPUT, default=[])
-        ArrayVariable('binary_data', self, OUTPUT, float, default=[])
-        FileVariable('text_file', self, INPUT, default='sink.txt')
-        FileVariable('binary_file', self, INPUT, default='sink.bin')
+        self.text_file.filename = 'sink.txt'
+        self.binary_file.filename = 'sink.bin'
 
     def execute(self):
         """ Read test data from files. """
-        inp = open(self.text_file, 'r')
+        inp = open(self.text_file.filename, 'r')
         self.text_data = inp.read()
         inp.close()
 
-        inp = open(self.binary_file, 'rb')
+        inp = open(self.binary_file.filename, 'rb')
         self.binary_data = cPickle.load(inp)
         inp.close()
 
@@ -78,7 +84,7 @@ class MyModel(Assembly):
 
 
 class FileTestCase(unittest.TestCase):
-    """ Test of FileVariables. """
+    """ Test of FileTraits. """
 
     def setUp(self):
         """ Called before each test in this class. """
@@ -100,16 +106,16 @@ class FileTestCase(unittest.TestCase):
         self.assertNotEqual(self.model.Sink.binary_data,
                             self.model.Source.binary_data)
         self.assertNotEqual(
-            self.model.Sink.getvar('binary_file').metadata['binary'], True)
+            self.model.Sink.binary_file.binary, True)
 
         self.model.run()
 
         self.assertEqual(self.model.Sink.text_data,
                          self.model.Source.text_data)
-        self.assertEqual(self.model.Sink.binary_data,
-                         self.model.Source.binary_data)
+        self.assertEqual(all(self.model.Sink.binary_data==self.model.Source.binary_data),
+                         True)
         self.assertEqual(
-            self.model.Sink.getvar('binary_file').metadata['binary'], True)
+            self.model.Sink.binary_file.binary, True)
 
     def test_src_failure(self):
         logging.debug('')
@@ -119,7 +125,7 @@ class FileTestCase(unittest.TestCase):
         try:
             self.model.run()
         except IOError, exc:
-            if str(exc).find('source.txt') < 0:
+            if 'source.txt' not in str(exc) and 'source.bin' not in str(exc):
                 self.fail("Wrong message '%s'" % exc)
         else:
             self.fail('IOError expected')

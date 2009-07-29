@@ -4,14 +4,15 @@ __all__ = ["Driver"]
 __version__ = "0.1"
 
 
-from zope.interface import implements
+from enthought.traits.api import implements, List
+from enthought.traits.trait_base import not_none
 import networkx as nx
 from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.interfaces import IDriver, IComponent, IAssembly
 from openmdao.main.component import Component, STATE_WAITING, STATE_IDLE
-from openmdao.main import Assembly, RefVariable, RefVariableArray
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.api import Assembly
+from openmdao.main.stringref import StringRef, StringRefArray
 from openmdao.main.drivertree import DriverForest, create_labeled_graph
 
 class Driver(Assembly):
@@ -22,11 +23,11 @@ class Driver(Assembly):
 
     def __init__(self, name, parent=None, doc=None):
         super(Driver, self).__init__(name, parent, doc=doc)
-        self._ref_graph = { None: None, INPUT: None, OUTPUT: None }
-        self._ref_comps = { None: None, INPUT: None, OUTPUT: None }
-        self.force_graph_regen()
+        self._ref_graph = { None: None, 'in': None, 'out': None }
+        self._ref_comps = { None: None, 'in': None, 'out': None }
+        self.graph_regen_needed()
     
-    def force_graph_regen(self):
+    def graph_regen_needed(self):
         self._iteration_comps = None
         self._simple_iteration_subgraph = None
         self._simple_iteration_set = None    
@@ -37,23 +38,29 @@ class Driver(Assembly):
         ref variables, which will cause us to have to regenerate our ref dependency graph.
         """
         exec_needed = False
-        refs = [v for v in self.get_inputs() if isinstance(v,RefVariable) or
-                                                isinstance(v,RefVariableArray)]
-        invalid_refs = [v for v in refs if v.valid is False]
-        if len(invalid_refs) > 0:
+        refnames = self.get_refvar_names(iostatus='in')
+        
+        if not all(self.get_valids(refnames)):
             exec_needed = True
             # force regeneration of _ref_graph, _ref_comps, _iteration_comps
-            self._ref_graph = { None: None, INPUT: None, OUTPUT: None } 
-            self._ref_comps = { None: None, INPUT: None, OUTPUT: None }
-            self.force_graph_regen()
+            self._ref_graph = { None: None, 'in': None, 'out': None } 
+            self._ref_comps = { None: None, 'in': None, 'out': None }
+            self.graph_regen_needed()
         super(Driver, self)._pre_execute()
         
-        # force execution of the driver if any of its RefVariables reference
+        # force execution of the driver if any of its StringRefs reference
         # invalid Variables
-        for rv in refs:
-            if rv.refs_invalid():
-                exec_needed = True
-                break
+        for name in refnames:
+            rv = getattr(self, name)
+            if isinstance(rv, list):
+                for entry in rv:
+                    if not entry.refs_valid():
+                        exec_needed = True
+                        break
+            else:
+                if not rv.refs_valid():
+                    exec_needed = True
+                    break
         
         self._execute_needed |= exec_needed
                 
@@ -105,7 +112,7 @@ class Driver(Assembly):
                             for nested in dtree.children: # collapse immediate children
                                 nested.collapse_graph(subgraph)
                             subgraph.remove_edges_from(
-                                self.get_ref_graph(iostatus=INPUT).edges_iter())
+                                self.get_ref_graph(iostatus='in').edges_iter())
                             sorted = nx.topological_sort(subgraph)
                             for comp in sorted:
                                 if comp != self.name:
@@ -121,10 +128,20 @@ class Driver(Assembly):
     def post_iteration(self):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration
-            
+
+    def get_refvar_names(self, iostatus=None):
+        if iostatus is None:
+            checker = not_none
+        else:
+            checker = iostatus
+        
+        return [n for n,v in self._traits_meta_filter(iostatus=checker).items() 
+                    if v.is_trait_type(StringRef) or 
+                       v.is_trait_type(StringRefArray)]
+        
     def get_referenced_comps(self, iostatus=None):
         """Return a set of names of Components that we reference based on the 
-        contents of our RefVariables and RefVariableArrays.  If iostatus is
+        contents of our StringRefs and StringRefArrays.  If iostatus is
         supplied, return only component names that are referenced by ref
         variables with matching iostatus.
         """
@@ -132,23 +149,21 @@ class Driver(Assembly):
             comps = set()
         else:
             return self._ref_comps[iostatus]
-        
-        if iostatus is None:
-            for refin in [v for v in self._pub.values() if (isinstance(v,RefVariable) or 
-                                                            isinstance(v,RefVariableArray))]:
-                comps.update(refin.get_referenced_compnames())
-        else:
-            for refin in [v for v in self._pub.values() if (isinstance(v,RefVariable) or 
-                                                            isinstance(v,RefVariableArray))
-                          and v.iostatus==iostatus]:
-                comps.update(refin.get_referenced_compnames())
+    
+        for name in self.get_refvar_names(iostatus):
+            obj = getattr(self, name)
+            if isinstance(obj, list):
+                for entry in obj:
+                    comps.update(entry.get_referenced_compnames())
+            else:
+                comps.update(obj.get_referenced_compnames())
                 
         self._ref_comps[iostatus] = comps
         return comps
         
     def get_ref_graph(self, iostatus=None):
         """Returns the dependency graph for this Driver based on
-        RefVariables and RefVariableArrays.
+        StringRefs and StringRefArrays.
         """
         if self._ref_graph[iostatus] is not None:
             return self._ref_graph[iostatus]
@@ -156,13 +171,13 @@ class Driver(Assembly):
         self._ref_graph[iostatus] = nx.DiGraph()
         name = self.name
         
-        if iostatus is OUTPUT or iostatus is None:
+        if iostatus == 'out' or iostatus is None:
             self._ref_graph[iostatus].add_edges_from([(name,rv) 
-                                  for rv in self.get_referenced_comps(iostatus=OUTPUT)])
+                                  for rv in self.get_referenced_comps(iostatus='out')])
             
-        if iostatus is INPUT or iostatus is None:
+        if iostatus == 'in' or iostatus is None:
             self._ref_graph[iostatus].add_edges_from([(rv, name) 
-                                  for rv in self.get_referenced_comps(iostatus=INPUT)])
+                                  for rv in self.get_referenced_comps(iostatus='in')])
         return self._ref_graph[iostatus]
     
     def _get_simple_iteration_subgraph(self):
@@ -174,7 +189,7 @@ class Driver(Assembly):
         """
         if self._simple_iteration_subgraph is None:
             graph = self.parent.get_component_graph().copy()
-            # add all of our RefVariable edges and find any strongly connected
+            # add all of our StringRef edges and find any strongly connected
             # components (SCCs) that are created as a result
             graph.add_edges_from(self.get_ref_graph().edges_iter())
             strcons = strongly_connected_components(graph)
@@ -188,7 +203,7 @@ class Driver(Assembly):
                 # no cycle, so just return a graph with the driver and any components
                 # it references
                 self._simple_iteration_subgraph = graph.subgraph(nbunch=[self.name]+
-                                                                 list(self.get_referenced_comps()))
+                                                    list(self.get_referenced_comps()))
             self._simple_iteration_set = None
         
         return self._simple_iteration_subgraph
@@ -214,10 +229,9 @@ class Driver(Assembly):
         """There are no nested drivers. Just run our subgraph with our 
         input edges removed.
         """
-        graph = self._get_simple_iteration_subgraph()
-        graph.remove_edges_from(self.get_ref_graph(iostatus=INPUT).edges_iter())
+        graph = self._get_simple_iteration_subgraph().copy()
+        graph.remove_node(self.name)
         itercomps = nx.topological_sort(graph)
         for comp in itercomps:
-            if comp != self.name:
                 getattr(self.parent, comp).run()
         

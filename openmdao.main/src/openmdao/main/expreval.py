@@ -17,25 +17,30 @@ from pyparsing import oneOf, alphas, nums, alphanums, Optional, Combine
 from pyparsing import Forward, StringEnd
 from pyparsing import ParseException
 
+def _cannot_find(name):
+    raise RuntimeError("ExprEvaluator: cannot find variable '%s'" % name)
+
 def _trans_unary(strng, loc, tok):
     return tok
 
     
 def _trans_lhs(strng, loc, tok, exprobj):
-    scope = exprobj._scope()
-    lazy_check = exprobj.lazy_check
-    if scope.contains(tok[0]):
-        scname = 'scope'
+    if exprobj._scope:
+        scope = exprobj._scope()
+        lazy_check = exprobj.lazy_check
+        if scope.contains(tok[0]):
+            scname = 'scope'
+        else:
+            scname = 'scope.parent'
+            if scope.trait(tok[0]) is not None:
+                scope.warning("attribute '"+tok[0]+"' is private"+
+                              " so a public value in the parent is"+
+                              " being used instead (if found)")
+            if lazy_check is False and not scope.parent.contains(tok[0]):
+                _cannot_find(tok[0])
+        exprobj.var_names.add(tok[0])
     else:
-        scname = 'scope.parent'
-        if hasattr(scope, tok[0]):
-            scope.warning("attribute '"+tok[0]+"' is private"+
-                          " so a public value in the parent is"+
-                          " being used instead (if found)")
-        if lazy_check is False and not scope.parent.contains(tok[0]):
-            raise RuntimeError("cannot find variable '"+tok[0]+"'")
-        
-        exprobj._register_output(tok[0])
+        _cannot_find(tok[0])
         
     full = scname + ".set('" + tok[0] + "',_@RHS@_"
     if len(tok) > 1 and tok[1] != '=':
@@ -45,11 +50,11 @@ def _trans_lhs(strng, loc, tok, exprobj):
     
 def _trans_assign(strng, loc, tok, exprobj):
     if tok[0] == '=':
-        exprobj.lhs = tok[1].replace('_@RHS@_', '', 1)
-        exprobj.rhs = tok[2]
+        #exprobj.lhs = tok[1].replace('_@RHS@_', '', 1)
+        #exprobj.rhs = tok[2]
         return [tok[1].replace('_@RHS@_', tok[2], 1)]
     else:
-        exprobj.lhs = ''.join(tok)
+        #exprobj.lhs = ''.join(tok)
         return tok
     
 def _trans_arrayindex(strng, loc, tok):
@@ -76,31 +81,34 @@ def _trans_fancyname(strng, loc, tok, exprobj):
     # if we find the named object in the current scope, then we don't need to 
     # do any translation.  The scope object is assumed to have a contains() 
     # function.
+    if exprobj._scope is None:
+        _cannot_find(tok[0])
+    
     scope = exprobj._scope()
     lazy_check = exprobj.lazy_check
     
     if scope.contains(tok[0]):
         scname = 'scope'
-        if hasattr(scope, tok[0]):
+        if scope.trait(tok[0]) is not None:
             return tok  # use name unmodified for faster local access
     elif tok[0] == '_local_setter': # used in assigment statements
         return tok
     else:
         scname = 'scope.parent'
-        if hasattr(scope, tok[0]):
+        if scope.trait(tok[0]) is not None:
             scope.warning("attribute '%s' is private" % tok[0]+
                           " so a public value in the parent is"+
                           " being used instead (if found)")
         if lazy_check is False and (scope.parent is None or 
                                  not scope.parent.contains(tok[0])):
-            raise RuntimeError("cannot find variable '"+tok[0]+"'")
+            _cannot_find(tok[0])
     
-        exprobj._register_input(tok[0])
         
     if len(tok) == 1 or (len(tok) > 1 and tok[1].startswith('[')):
         full = scname + ".get('" + tok[0] + "'"
         if len(tok) > 1:
             full += ","+tok[1]
+        exprobj.var_names.add(tok[0])
     else:
         full = scname + ".invoke('" + tok[0] + "'"
         if len(tok[1]) > 2:
@@ -115,7 +123,7 @@ def translate_expr(text, exprobj, single_name=False):
     names in the framework, e.g., 'a.b.c' becomes get('a.b.c') or 'a.b.c(1,2,3)'
     becomes invoke('a.b.c',1,2,3).
     """
-    scope = exprobj._scope()
+    #scope = exprobj._scope()
     lazy_check = exprobj.lazy_check
     
     ee = CaselessLiteral('E')
@@ -192,13 +200,13 @@ def translate_expr(text, exprobj, single_name=False):
     except ParseException, err:
         raise RuntimeError(str(err)+' - '+err.markInputline())
 
-    
-class ExprEvaluator(object):
+
+class ExprEvaluator(str):
     """A class that translates an expression string into a new string containing
     any necessary framework access functions, e.g., set, get. The compiled
     bytecode is stored within the object so that it doesn't have to be reparsed
     during later evaluations.  A scoping object is required at construction time
-    and that object determines the form of the  translated expression. 
+    and that object determines the form of the  translated expression based on scope. 
     Variables that are local to the scoping object do not need to be translated,
     whereas variables from other objects must  be accessed using the appropriate
     set() or get() call.  Array entry access and function invocation are also
@@ -216,16 +224,23 @@ class ExprEvaluator(object):
     optional array indexing, but general expressions are not allowed.
     """
     
-    def __init__(self, text, scope, single_name=False, lazy_check=False):
-        self._scope = weakref.ref(scope)
-        self.input_names = set()
-        self.output_names = set()
-        self.lazy_check = lazy_check
-        self.single_name = single_name
-        self.text = text  # this calls _set_text
-        self.rhs = ''
-        self.lhs = ''
-    
+    def __new__(cls, text, scope=None, single_name=False, lazy_check=True):
+        s = super(ExprEvaluator, cls).__new__(ExprEvaluator, text)
+        if scope is None:
+            s._scope = None
+        else:
+            s._scope = weakref.ref(scope)
+        s.lazy_check = lazy_check
+        s.single_name = single_name
+        #s.rhs = ''
+        #s.lhs = ''
+        s._text = None  # used to detect change in str
+        s.var_names = set()
+        s.scoped_text = None
+        if lazy_check is False:
+            s._parse()
+        return s
+        
     def __getstate__(self):
         """Return dict representing this container's state."""
         state = self.__dict__.copy()
@@ -233,21 +248,26 @@ class ExprEvaluator(object):
             # remove weakref to scope because it won't pickle
             state['_scope'] = self._scope()
         state['_code'] = None  # <type 'code'> won't pickle either.
+        if state.get('_assignment_code'):
+            state['_assignment_code'] = None # more unpicklable <type 'code'>
         return state
 
     def __setstate__(self, state):
         """Restore this component's state."""
-        self.__dict__ = state
+        self.__dict__.update(state)
         if self._scope is not None:
             self._scope = weakref.ref(self._scope)
         if self.scoped_text:
             self._code = compile(self.scoped_text, '<string>', 'eval')
+        satxt = state.get('scoped_assignment_text')
+        if satxt:
+            self._assignment_code = compile(self.scoped_assignment_text, 
+                                            '<string>', 'exec')
 
-    def _set_text(self, text):
-        self._text = text
-        self.input_names = set()
-        self.output_names = set()
-        self.scoped_text = translate_expr(text, self, 
+    def _parse(self):
+        self._text = str(self)
+        self.var_names = set()
+        self.scoped_text = translate_expr(str(self), self, 
                                           single_name=self.single_name)
         self._code = compile(self.scoped_text, '<string>','eval')
         if self.single_name: # set up a compiled assignment statement
@@ -255,60 +275,83 @@ class ExprEvaluator(object):
             try:
                 self.lazy_check = True
                 self.scoped_assignment_text = translate_expr(
-                                            '%s = _local_setter' % self.text, 
+                                            '%s = _local_setter' % str(self), 
                                             self)
                 self._assignment_code = compile(self.scoped_assignment_text, 
                                                 '<string>','exec')
             finally:
                 self.lazy_check = old_lazy_check
-        
-    def _get_text(self):
-        return self._text
-    
-    text = property(_get_text, _set_text, None,
-                    'The untranslated text of the expression')
-        
+                
     def evaluate(self):
         """Return the value of the scoped string, evaluated 
         using the eval() function.
         """
-        scope = self._scope()
-        
-        # object referred to by weakref may no longer exist
-        if scope is None:
-            raise RuntimeError(
-                    'ExprEvaluator cannot evaluate expression without scope.')
+        if self._scope is not None:
+            scope = self._scope()
+            
+            if scope is None:
+                raise RuntimeError(
+                        'ExprEvaluator scoping object has been deleted.')
+        else:
+            scope = None
         try:
-            return eval(self._code, scope.__dict__, locals())
+            if self._text != self:  # text has changed
+                self._parse()
+            if scope:
+                return eval(self._code, scope.__dict__, locals())
+            else:
+                return eval(self._code, {}, locals())
         except Exception, err:
             raise type(err)("ExprEvaluator failed evaluating expression "+
-                            "'%s'. Caught message is: %s" %(self._text,str(err)))
+                            "'%s'. Caught message is: %s" %(self,str(err)))
 
     def set(self, val):
         """Set the value of the referenced object to the specified value."""
-        if self.single_name:
+        if self._scope:
             scope = self._scope()
-            # object referred to by weakref may no longer exist
-            if scope is None:
-                raise RuntimeError(
-                    'ExprEvaluator cannot evaluate expression without scope.')
-            
+        else:
+            scope = None
+        # object referred to by weakref may no longer exist
+        if scope is None:
+            raise RuntimeError(
+                'ExprEvaluator cannot evaluate expression without scope.')
+        
+        if self.single_name:           
             # self.assignment_code is a compiled version of an assignment statement
             # of the form  'somevar = _local_setter', so we set _local_setter here
             # and the exec call will pull it out of locals()
             _local_setter = val 
+            if self._text != self:  # text has changed
+                self._parse()
             exec(self._assignment_code, scope.__dict__, locals())            
         else: # self.single_name is False
-            raise ValueError('trying to set an input expression')
+            raise ValueError("trying to set input expression '%s'" % str(self))
         
-    def _register_input(self, name):
-        """Adds a Variable name to the input set. 
-        Called during expression parsing.
+    def get_referenced_varpaths(self):
+        """Return a set of source or dest Variable pathnames relative to
+        self.parent and based on the names of Variables referenced in our 
+        reference string. 
         """
-        self.input_names.add(name)
+        if self._text != self:  # text has changed
+            self._parse()
+        return self.var_names
+
+    def get_referenced_compnames(self):
+        """Return a set of source or dest Component names based on the 
+        pathnames of Variables referenced in our reference string. 
+        """
+        if self._text != self:  # text has changed
+            self._parse()
+        return set([x.split('.')[0] for x in self.var_names])
     
-    def _register_output(self, name):
-        """Adds a Variable name to the output set. 
-        Called during expression parsing.
+    def refs_valid(self):
+        """Return True if all attributes referenced by our expression
+        are valid.
         """
-        self.output_names.add(name)
+        if self._scope:
+            scope = self._scope()
+            if scope and scope.parent:
+                if self._text != self:  # text has changed
+                    self._parse()
+                return all(scope.parent.get_valids(self.var_names))
+        return True

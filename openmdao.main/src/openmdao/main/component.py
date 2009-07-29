@@ -13,14 +13,17 @@ import shutil
 import subprocess
 import sys
 import time
+import StringIO
 
-from zope.interface import implements
+from enthought.traits.api import implements, on_trait_change, Str, Missing, \
+                                 Undefined, Python, TraitError
+from enthought.traits.trait_base import not_event
 
 from openmdao.main.interfaces import IComponent
-from openmdao.main import Container, String, Variable
-from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.constants import SAVE_CPICKLE
-from openmdao.main.filevar import FileVariable
+from openmdao.main.container import Container
+import openmdao.main.container as container
+from openmdao.main.filevar import FileValue
+from openmdao.util.save_load import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
 
 # Execution states.
@@ -59,8 +62,8 @@ class SimulationRoot (object):
 
 
 class Component (Container):
-    """This is the base class for all objects containing Variables that are 
-    accessible to the OpenMDAO framework and are 'runnable'.
+    """This is the base class for all objects containing Traits that are 
+       accessible to the OpenMDAO framework and are 'runnable'.
 
     - `directory` is a string specifying the directory to execute in. \
        If it is a relative path, it is relative to its parent's directory.
@@ -71,7 +74,11 @@ class Component (Container):
 
     implements(IComponent)
     
-    def __init__(self, name, parent=None, doc=None, directory='',
+    directory = Str('',desc='If non-blank, the directory to execute in.', iostatus='in')
+    state = Python
+    external_files = Python
+        
+    def __init__(self, name=None, parent=None, doc=None, directory='',
                  add_to_parent=True):
         super(Component, self).__init__(name, parent, doc, add_to_parent)
         
@@ -79,14 +86,13 @@ class Component (Container):
         self._stop = False
         self._need_check_config = True
         self._execute_needed = True
+        self.directory = directory
         
         self._dir_stack = []
         
         # List of meta-data dictionaries.
         self.external_files = []
 
-        String('directory', self, INPUT, default=directory,
-               doc='If non-null, the directory to execute in.')
 
 # pylint: disable-msg=E1101
         dirpath = self.get_directory()
@@ -118,8 +124,8 @@ class Component (Container):
         pass         
     
     def _pre_execute (self):
-        """Make preparations for execution. Overrides of this function are not
-        recommended, but if unavoidable they should still call this version.
+        """Make preparations for execution. Overrides of this function must
+        call this version.
         """
         if self._need_check_config:
             self.check_config()
@@ -129,14 +135,11 @@ class Component (Container):
                                 # so Variable validity doesn't apply. Just execute.
             self._execute_needed = True
         else:
-            if hasattr(self.parent, 'update_inputs'):
-                invalid_ins = self.get_inputs(valid=False)
-                if len(invalid_ins) > 0:
-                    self.parent.update_inputs(
-                            ['.'.join([self.name,x.name]) for x in invalid_ins])
-                    self._execute_needed = True
-            if self._execute_needed is False and self.has_invalid_outputs():
-                self._execute_needed = True
+            invalid_ins = self.list_inputs(valid=False)
+            if len(invalid_ins) > 0:
+                #self.debug('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
+                self._execute_needed |= self.parent.update_inputs(self.name,
+                                    ['.'.join([self.name, n]) for n in invalid_ins])
     
                             
     def execute (self):
@@ -147,12 +150,13 @@ class Component (Container):
     
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
-        Overrides of this function are not recommended, but if unavoidable 
-        they should still call this version.
+        Overrides of this function must call this version.
         """
         # make our Variables valid again
-        for var in self.get_outputs(valid=False):
-            var.valid = True
+        for name in self.list_inputs():
+            self.set_valid(name, True)
+        for name in self.list_outputs():
+            self.set_valid(name, True)
         self._execute_needed = False
         
     def run (self, force=False):
@@ -175,7 +179,7 @@ class Component (Container):
             if self._execute_needed or force:
                 #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
                 self.execute()
-            self._post_execute()
+                self._post_execute()
         finally:
             self.state = STATE_IDLE
             if self.directory:
@@ -185,7 +189,7 @@ class Component (Container):
         """Return absolute path of execution directory."""
         path = self.directory
         if not os.path.isabs(path):
-            if self.parent is not None and IComponent.providedBy(self.parent):
+            if self.parent is not None and isinstance(self.parent, Component):
                 parent_dir = self.parent.get_directory()
             else:
                 parent_dir = SimulationRoot.get_root()
@@ -264,7 +268,7 @@ class Component (Container):
         # We have to check relative paths like '../somedir' and if
         # we do that after adjusting a parent, things can go bad.
         components = [self]
-        components.extend([c for c in self.values(pub=False, recurse=True)
+        components.extend([c for c in self.values(recurse=True)
                                 if isinstance(c, Component)])
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
@@ -313,9 +317,9 @@ class Component (Container):
                         save_path = path
                     src_files.add(save_path)
 
-            # Process FileVariables for this component only.
-            for fvar in comp.get_file_vars():
-                path = fvar.get_value()
+            # Process FileTraits for this component only.
+            for fvarname, fvar, ftrait in comp.get_file_vars():
+                path = fvar.filename
                 if not path:
                     continue
                 if not os.path.isabs(path):
@@ -326,30 +330,30 @@ class Component (Container):
                 if force_relative:
                     if path.startswith(src_dir):
                         save_path = self._relpath(path, src_dir)
-                        if os.path.isabs(fvar.get_value()):
+                        if os.path.isabs(fvar.filename):
                             path = self._relpath(path, comp_dir)
-                            fixup_fvar.append((fvar, fvar.get_value()))
-                            fvar.set_value(path)
+                            fixup_fvar.append((comp, fvarname, fvar))
+                            comp.set(fvarname+'.filename', path, force=True)
                     else:
                         self.raise_exception(
                             "Can't save, %s path '%s' doesn't start with '%s'."
-                            % (fvar.get_pathname(), path, src_dir), ValueError)
+                            % ('.'.join([comp.get_pathname(),
+                                         fvarname]), path, src_dir), ValueError)
                 else:
                     save_path = path
                 src_files.add(save_path)
-
         # Save relative directory for any entry points. Some oddness with
         # parent weakrefs seems to prevent reconstruction in load().
         if child_objs is not None:
             for child in child_objs:
-                if not IComponent.providedBy(child):
+                if not isinstance(child, Component):
                     continue
                 relpath = child.directory
                 obj = child.parent
                 if obj is None:
                     raise RuntimeError('Entry point object has no parent!')
                 while obj.parent is not None and \
-                      IComponent.providedBy(obj.parent):
+                      isinstance(obj.parent, Component):
                     relpath = os.path.join(obj.directory, relpath)
                     obj = obj.parent
                 child._rel_dir_path = relpath
@@ -360,36 +364,33 @@ class Component (Container):
                        child_objs, dst_dir, format, proto, use_setuptools)
         finally:
             # If any component config has been modified, restore it.
-            for comp, path in fixup_dirs:
-                comp.directory = path
+            for ccomp, path in fixup_dirs:
+                ccomp.directory = path
             for meta, path in fixup_meta:
                 meta['path'] = path
-            for fvar, path in fixup_fvar:
-                fvar.set_value(path)
+            for comp, name, fvar in fixup_fvar:
+                comp.set(name+'.filename', fvar.filename, force=True)
 
     def get_file_vars(self):
-        """Return list of FileVariables owned by this component."""
-
-        def _recurse_get_file_vars (container, file_vars, visited):
-            """Scan both normal __dict__ and _pub."""
-            objs = container.__dict__.values()
-            objs.extend(container._pub.values())
-            for obj in objs:
+        """Return list of (filevarname,filevarvalue,filetrait) owned by this component."""
+        def _recurse_get_file_vars (container, file_vars, visited, scope):
+            for name, obj in container.items(type=not_event):
                 if id(obj) in visited:
                     continue
                 visited.add(id(obj))
-                if isinstance(obj, FileVariable):
-                    file_vars.add(obj)
-                elif isinstance(obj, Component):
-                    continue
-                elif isinstance(obj, Variable):
-                    continue
-                elif isinstance(obj, Container):
-                    _recurse_get_file_vars(obj, file_vars, visited)
+                if isinstance(obj, FileValue):
+                    ftrait = container.trait(name)
+                    if self is scope:
+                        file_vars.append((name, obj, ftrait))
+                    else:
+                        file_vars.append(('.'.join(
+                                           [container.get_pathname(rel_to_scope=scope),name]), 
+                                            obj, ftrait))
+                elif isinstance(obj, Container) and not isinstance(obj, Component):
+                    _recurse_get_file_vars(obj, file_vars, visited, scope)
 
-        file_vars = set()
-        visited = set()
-        _recurse_get_file_vars(self, file_vars, visited)
+        file_vars = []
+        _recurse_get_file_vars(self, file_vars, set(), self)
         return file_vars
 
     def _relpath(self, path1, path2):
@@ -464,7 +465,7 @@ class Component (Container):
                 unpacker = 'unpack.py'
                 out = open(unpacker, 'w')
                 out.write("""\
-from openmdao.main import Component
+from openmdao.main.api import Component
 Component.load_from_eggfile('%s', install=False)
 """ % egg_path)
                 out.close()
@@ -512,7 +513,7 @@ Component.load_from_eggfile('%s', install=False)
         are not overwritten.
         """
         top = Container.load(instream, format, package, False, name)
-        if IComponent.providedBy(top):
+        if isinstance(top, Component):
             # Get path relative to real top before we clobber directory attr.
             if top_obj:
                 relpath = '.'
@@ -521,7 +522,7 @@ Component.load_from_eggfile('%s', install=False)
                     relpath = top.directory
                     obj = top.parent
                     while obj.parent is not None and \
-                          IComponent.providedBy(obj.parent):
+                          isinstance(obj.parent, Component):
                         relpath = os.path.join(obj.directory, relpath)
                         obj = obj.parent
                 elif hasattr(top, '_rel_dir_path'):
@@ -531,6 +532,7 @@ Component.load_from_eggfile('%s', install=False)
                     top.warning('No parent, using null relative directory')
                     relpath = ''
 
+
             # Set top directory.
             orig_dir = os.getcwd()
             if name:
@@ -539,11 +541,11 @@ Component.load_from_eggfile('%s', install=False)
                     os.mkdir(name)
                 os.chdir(name)
             top.directory = os.getcwd()
-
+            
             try:
                 # Create any missing subdirectories.
-                for component in [c for c in top.values(pub=False, recurse=True)
-                                          if IComponent.providedBy(c)]:
+                for component in [c for c in top.values(recurse=True)
+                                          if isinstance(c,Component)]:
                     directory = component.get_directory()
                     if not os.path.exists(directory):
                         os.makedirs(directory)
@@ -584,16 +586,16 @@ Component.load_from_eggfile('%s', install=False)
                 const = metadata.get('constant', False)
                 self._copy_files(pattern, package, relpath, is_input, const)
 
-            for fvar in fvars:
-                pattern = fvar.get_value()
+            for fvarname,fvar,ftrait in fvars:
+                pattern = fvar.filename
                 if not pattern:
                     continue
-                is_input = fvar.iostatus == INPUT
+                is_input = ftrait.iostatus == 'in'
                 const = False
                 self._copy_files(pattern, package, relpath, is_input, const)
 
-            for component in [c for c in self.values(pub=False, recurse=False)
-                                    if IComponent.providedBy(c)]:
+            for component in [c for c in self.values(recurse=False)
+                                    if isinstance(c, Component)]:
                 path = relpath
                 if component.directory:
                     # Must use '/' for resources.
@@ -659,16 +661,19 @@ Component.load_from_eggfile('%s', install=False)
         self._stop = True
 
     def invalidate_deps(self, vars, notify_parent=False):
-        """Invalidate all of our outputs."""
-        outs = [x for x in self._pub.values() if isinstance(x, Variable) and 
-                                                 x.iostatus==OUTPUT and x.valid==True]
-        for out in outs:
-            #if __debug__: self._logger.debug('(component.invalidate_deps) invalidating %s' % out.get_pathname())
-            out.valid = False
+        """Invalidate all of our valid outputs."""
+        valid_outs = self.list_outputs(valid=True)
+        
+        for var in vars:
+            self.set_valid(var, False)
             
-        if notify_parent and self.parent and len(outs) > 0:
-            self.parent.invalidate_deps(outs, True)
-        return outs    
+        if notify_parent and self.parent and len(valid_outs) > 0:
+            self.parent.invalidate_deps(['.'.join([self.name,n]) for n in valid_outs], 
+                                        notify_parent)
+        for out in valid_outs:
+            self._valid_dict[out] = False
+            
+        return valid_outs    
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.
@@ -721,7 +726,7 @@ Component.load_from_eggfile('%s', install=False)
              #"""
         #return None
     
-
+    
 def eggsecutable():
     """Unpack egg. Not in loader to avoid 2GB problems with zipimport."""
     install = os.environ.get('OPENMDAO_INSTALL', '1')

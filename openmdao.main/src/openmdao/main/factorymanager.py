@@ -10,13 +10,13 @@ __all__ = ["create", "get_factory_names", "register_factory"]
 __version__ = "0.1"
 
 
-from openmdao.main import ImportFactory
-from openmdao.main import PkgResourcesFactory
+from openmdao.main.importfactory import ImportFactory
+from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 _factories = []
 search_path = []
 
-def create(typname, name=None, version=None, server=None, res_desc=None):
+def create(typname, name='', version=None, server=None, res_desc=None):
     """Create and return an object specified by the given type, name,
     version, etc.
     """

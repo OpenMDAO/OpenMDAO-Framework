@@ -6,12 +6,12 @@
 # - EPA fuel economy estimate for highway driving
 #
 # Includes a socket for a Vehicle assembly.
-
-from pkg_resources import resource_stream
 from csv import reader
 
-from openmdao.main import Assembly, Float
-from openmdao.main.variable import INPUT, OUTPUT
+from pkg_resources import resource_stream
+from enthought.traits.api import TraitError
+
+from openmdao.main.api import Assembly, UnitsFloat, convert_units
 from openmdao.main.exceptions import ConstraintError
 
 from openmdao.examples.engine_design.vehicle import Vehicle
@@ -27,6 +27,20 @@ MAX_ERROR = .01
 class DrivingSim(Assembly):
     ''' Simulation of vehicle performance.'''
     
+    # Simulation Parameters
+    end_speed = UnitsFloat(60.0, iostatus='in', units='m/h',
+                           desc='Simulation final speed')
+    timestep = UnitsFloat(0.1, iostatus='in', units='s', 
+                          desc='Simulation final speed')
+    
+    # Outputs
+    accel_time = UnitsFloat(0., iostatus='out', units='s', 
+                            desc='Time to reach Endspeed starting from rest')
+    EPA_city = UnitsFloat(0., iostatus='out', units='mi/galUS', 
+                          desc='EPA Fuel economy - City')
+    EPA_highway = UnitsFloat(0., iostatus='out', units='mi/galUS', 
+                             desc='EPA Fuel economy - Highway')
+        
     def __init__(self, name, parent=None, doc=None, directory=''):
         ''' Creates a new DrivingSim object
         
@@ -66,7 +80,7 @@ class DrivingSim(Assembly):
         self.create_passthru('vehicle.ratio4')
         self.create_passthru('vehicle.ratio5')
         self.create_passthru('vehicle.final_drive_ratio')
-        self.create_passthru('vehicle.tire_circ')
+        self.create_passthru('vehicle.tire_circumference')
 
         # Promoted From Vehicle -> Chasis
         self.create_passthru('vehicle.mass_vehicle')
@@ -74,20 +88,6 @@ class DrivingSim(Assembly):
         self.create_passthru('vehicle.Cd')
         self.create_passthru('vehicle.area')
 
-        # Simulation Parameters
-        Float('end_speed', self, INPUT, units='m/h', default=60.0,
-              doc='Simulation final speed')
-        Float('timestep', self, INPUT, units='s', default=0.1,
-              doc='Simulation final speed')
-        
-        # Outputs
-        Float('accel_time', self, OUTPUT, units='s', default=0.0, 
-              doc='Time to reach Endspeed starting from rest')
-        Float('EPA_city', self, OUTPUT, units='mi/galUS', default=0.0, 
-              doc='EPA Fuel economy - City')
-        Float('EPA_highway', self, OUTPUT, units='mi/galUS', default=0.0, 
-              doc='EPA Fuel economy - Highway')
-        
         
     def execute(self):
         ''' Simulate the vehicle model at full throttle.'''
@@ -99,9 +99,9 @@ class DrivingSim(Assembly):
         time = 0.0
         
         # Set throttle and gear
-        self.vehicle.set('current_gear', 1)
-        self.vehicle.set('throttle', 1.0)
-        self.vehicle.set('velocity', 0.0)
+        self.vehicle.current_gear = 1
+        self.vehicle.throttle = 1.0
+        self.vehicle.velocity = 0.0
                    
         while velocity < self.end_speed:
             
@@ -110,25 +110,29 @@ class DrivingSim(Assembly):
             # (i.e.: shift at redline)
             try:
                 self.vehicle.run()
-            except ConstraintError:
-                self.vehicle.set('current_gear', 
-                                 self.vehicle.get('current_gear') + 1)
-                
+            except TraitError:
+                if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
+                    self.vehicle.current_gear += 1
+                else:
+                    raise
                 try:
                     self.vehicle.run()
-                except ConstraintError:
-                    self.raise_exception("Gearing problem in Acceleration \
-                    test.", RuntimeError)
+                except TraitError:
+                    if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
+                        self.raise_exception("Gearing problem in Acceleration test.", 
+                                             RuntimeError)
+                    else:
+                        raise
 
             # Accleration converted to mph/s
-            acceleration = self.vehicle.get('acceleration')*2.23693629
+            acceleration = self.vehicle.acceleration*2.23693629
             
             if acceleration <= 0.0:
-                self.raise_exception("Vehicle could not reach maximum speed \
-                in Acceleration test.", RuntimeError)
+                self.raise_exception("Vehicle could not reach maximum speed "+\
+                                     "in Acceleration test.", RuntimeError)
                 
-            velocity += acceleration*self.timestep
-            self.vehicle.set('velocity', velocity)
+            velocity += (acceleration*self.timestep)
+            self.vehicle.velocity = velocity
         
             time += self.timestep
             #print time, self.vehicle.current_gear, velocity, 
@@ -142,8 +146,8 @@ class DrivingSim(Assembly):
         
         profilenames = [ "EPA-city.csv", "EPA-highway.csv" ]
         
-        self.vehicle.set('current_gear', 1)
-        self.vehicle.set('velocity', 0.0)
+        self.vehicle.current_gear = 1
+        self.vehicle.velocity = 0.0
         
         fuel_economy = []
         
@@ -156,21 +160,21 @@ class DrivingSim(Assembly):
             # Note, shifts gear if RPM is too low or too high
             try:
                 self.vehicle.run()
-            except ConstraintError:
-                if self.vehicle.get('transmission.RPM') > \
-                   self.vehicle.get('engine.RPM'):
+            except TraitError, err:
+                if self.vehicle.engine.RPM < self.vehicle.transmission.RPM:
                     
-                    self.vehicle.set('current_gear', 
-                                     self.vehicle.get('current_gear') + 1)
+                    self.vehicle.current_gear += 1
                     
-                    if self.vehicle.get('current_gear') > 5:
+                    if self.vehicle.current_gear > 5:
                         self.raise_exception("Transmission gearing cannot \
                         achieve maximum speed in EPA test.", RuntimeError)
                     
-                else:
-                    self.vehicle.set('current_gear', 
-                                     self.vehicle.get('current_gear') - 1)
+                elif self.vehicle.engine.RPM > self.vehicle.transmission.RPM:
+                    self.vehicle.current_gear -= 1
                     
+                else:
+                    raise
+                
                 findgear()
                 
         
@@ -191,7 +195,7 @@ class DrivingSim(Assembly):
                 velocity2 = float(row[1])
                 CONVERGED = 0
                 
-                self.vehicle.set('velocity', velocity1)
+                self.vehicle.velocity = velocity1
                 command_accel = (velocity2-velocity1)/(time2-time1)
                 
                 #------------------------------------------------------------
@@ -203,13 +207,13 @@ class DrivingSim(Assembly):
                 # So, it's a hack for now.
                 
                 if velocity1 < SHIFTPOINT1:
-                    self.vehicle.set('current_gear', 1)
+                    self.vehicle.current_gear = 1
                     
                 # Find out min and max accel in current gear.
                 
-                self.vehicle.set('throttle', THROTTLE_MIN)
+                self.vehicle.throttle = THROTTLE_MIN
                 findgear()                    
-                accel_min = self.vehicle.get('acceleration')*2.23693629
+                accel_min = self.vehicle.acceleration*2.23693629
                 
                 # Upshift if commanded accel is less than closed-throttle accel
                 # The net effect of this will often be a shift to a higher gear
@@ -217,26 +221,24 @@ class DrivingSim(Assembly):
                 # Note, this isn't a While loop, because we don't want to shift
                 # to 5th every time we slow down.
                 if command_accel < accel_min and \
-                   self.vehicle.get('current_gear') < 5 and \
+                   self.vehicle.current_gear < 5 and \
                    velocity1 > SHIFTPOINT1:
                     
-                    self.vehicle.set('current_gear', 
-                                     self.vehicle.get('current_gear') + 1)
+                    self.vehicle.current_gear += 1
                     findgear()
-                    accel_min = self.vehicle.get('acceleration')*2.23693629
+                    accel_min = self.vehicle.acceleration*2.23693629
                 
-                self.vehicle.set('throttle', THROTTLE_MAX)
+                self.vehicle.throttle = THROTTLE_MAX
                 self.vehicle.run()
-                accel_max = self.vehicle.get('acceleration')*2.23693629
+                accel_max = self.vehicle.acceleration*2.23693629
                 
                 # Downshift if commanded accel > wide-open-throttle accel
                 while command_accel > accel_max and \
-                      self.vehicle.get('current_gear')> 1:
+                      self.vehicle.current_gear> 1:
                     
-                    self.vehicle.set('current_gear', 
-                                     self.vehicle.get('current_gear') - 1)
+                    self.vehicle.current_gear -= 1
                     findgear()
-                    accel_max = self.vehicle.get('acceleration')*2.23693629
+                    accel_max = self.vehicle.acceleration*2.23693629
                 
                 # If engine cannot accelerate quickly enough to match profile, 
                 # then raise exception    
@@ -251,13 +253,13 @@ class DrivingSim(Assembly):
 
                 # Deceleration at closed throttle
                 if command_accel < accel_min:
-                    self.vehicle.set('throttle', THROTTLE_MIN)
+                    self.vehicle.throttle = THROTTLE_MIN
                     self.vehicle.run()                   
                 else:
-                    self.vehicle.set('throttle', THROTTLE_MIN)
+                    self.vehicle.throttle = THROTTLE_MIN
                     self.vehicle.run()
                     
-                    min_acc = self.vehicle.get('acceleration')*2.23693629
+                    min_acc = self.vehicle.acceleration*2.23693629
                     max_acc = accel_max
                     min_throttle = THROTTLE_MIN
                     max_throttle = THROTTLE_MAX
@@ -266,9 +268,9 @@ class DrivingSim(Assembly):
                     # Numerical solution to find throttle that matches accel
                     while not CONVERGED:
                     
-                        self.vehicle.set('throttle', new_throttle)
+                        self.vehicle.throttle = new_throttle
                         self.vehicle.run()
-                        new_acc = self.vehicle.get('acceleration')*2.23693629
+                        new_acc = self.vehicle.acceleration*2.23693629
                         
                         if abs(command_accel-new_acc) < MAX_ERROR:
                             CONVERGED = 1
@@ -287,7 +289,7 @@ class DrivingSim(Assembly):
                                 max_acc = new_acc
                           
                 distance += .5*(velocity2+velocity1)*(time2-time1)
-                fuelburn += self.vehicle.get('fuel_burn')*(time2-time1)
+                fuelburn += self.vehicle.fuel_burn*(time2-time1)
                 
                 velocity1 = velocity2
                 time1 = time2

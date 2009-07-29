@@ -13,12 +13,12 @@ import unittest
 from numpy import ndarray
 from numpy.testing import assert_equal
 
-from openmdao.main import Bool, FileVariable
-from openmdao.main.constants import SAVE_LIBYAML
-from openmdao.main.variable import OUTPUT
+from enthought.traits.api import Bool
+
+from openmdao.main.api import FileTrait, FileValue, SAVE_LIBYAML
 from openmdao.main.component import SimulationRoot
 
-from npsscomponent import NPSScomponent
+from npsscomponent import NPSScomponent, NPSSProperty
 
 ORIG_DIR = os.getcwd()
 
@@ -29,21 +29,22 @@ class Passthrough(NPSScomponent):
     def __init__(self):
         super(Passthrough, self).__init__('NPSS', arglist='passthrough.mdl')
 
-        # Automagic interface variable creation (not for Bool though).
-        Bool('b_out', self, OUTPUT)
+        # Automagic interface variable creation
         self.make_public([
-            ('f_out',      '', OUTPUT),
-            ('f1d_out',    '', OUTPUT),
-            ('f2d_out',    '', OUTPUT),
-            ('f3d_out',    '', OUTPUT),
-            ('i_out',      '', OUTPUT),
-            ('i1d_out',    '', OUTPUT),
-            ('i2d_out',    '', OUTPUT),
-            ('s_out',      '', OUTPUT),
-            ('s1d_out',    '', OUTPUT),
-            ('text_out',   '', OUTPUT),
-            ('binary_out', '', OUTPUT)])
-
+            'f_out',
+            'f1d_out',
+            'f2d_out',
+            'f3d_out',
+            'i_out',
+            'i1d_out',
+            'i2d_out',
+            's_out',
+            's1d_out', 
+            'text_out',
+            'binary_out',
+            ('b_out','','out',Bool(iostatus='out')), # for bools, we need to supply a trait
+        ], iostatus='out')
+        
 
 class NPSSTestCase(unittest.TestCase):
 
@@ -72,8 +73,8 @@ class NPSSTestCase(unittest.TestCase):
         logging.debug('test_load_save')
 
         saved_values = {}
-        for name, var in self.npss._pub.items():
-            saved_values[name] = var.get('value')
+        for name, var in self.npss.items():
+            saved_values[name] = var
 
         self.egg_name = self.npss.save_to_egg()
         self.npss.pre_delete()
@@ -95,9 +96,9 @@ class NPSSTestCase(unittest.TestCase):
                 if isinstance(val, ndarray):
                     assert_equal(getattr(self.npss, name), val)
                 else:
-                    if isinstance(self.npss._pub[name], FileVariable):
+                    if isinstance(val, FileValue):
                         obj = getattr(self.npss, name)
-                        self.assertEqual(getattr(obj, 'filename'), val)
+                        self.assertEqual(getattr(obj, 'filename'), val.filename)
                     else:
                         self.assertEqual(getattr(self.npss, name), val)
         finally:
@@ -153,7 +154,7 @@ class NPSSTestCase(unittest.TestCase):
         # This currently fails, not sure why.
         try:
             self.egg_name = self.npss.save_to_egg(format=SAVE_LIBYAML)
-        except TypeError, exc:
+        except Exception, exc:
             self.assertEqual(str(exc),
                 "NPSS: Can't save to 'NPSS/NPSS.yaml': data type not understood")
         else:

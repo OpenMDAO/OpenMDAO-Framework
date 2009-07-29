@@ -1,45 +1,52 @@
 #public symbols
-__all__ = ['FileVariable']
+__all__ = ['FileTrait']
 __version__ = "0.1"
 
-from openmdao.main.variable import Variable, UNDEFINED
+import copy
 
-class FileVariable(Variable):
-    """ A Variable wrapper for a file path attribute. Metadata for the file
-    is available in the 'metadata' attribute of the variable.  Standard
-    metadata includes:
-        'content_type': string
-            default ''
-        'content_encoding': string
-            default ''
-        'binary': bool
-            default False
-        'big_endian': bool
-            default False
-        'single_precision': bool
-            default False
-        'unformatted': bool
-            default False
-        'recordmark_8': bool
-            default False
+from enthought.traits.api import TraitType
+
+_filemeta = { 'filename': '',
+              'content_type' : '',
+              'content_encoding' : '',
+              'binary' : False,
+              'big_endian' : False,
+              'single_precision' : False,
+              'unformatted' : False,
+              'recordmark_8' : False }
+
+_meta_exclude = set(['iostatus'])
+
+class FileValue(object):
+    """A string indicating a file path, with a number of additional
+    attributes indicating content type.
     """
+    def __init__(self, **metadata):
+        super(FileValue, self).__init__()
+        self.__dict__.update(_filemeta)
+        self.__dict__.update(metadata)
+        
+    def __str__(self):
+        return str(self.__dict__)
     
-    def __init__(self, name, parent, iostatus, ref_name=None, ref_parent=None,
-                 default=UNDEFINED, doc=None, metadata=None):
-        super(FileVariable, self).__init__(name, parent, iostatus, 
-                                           val_types=(basestring,str,unicode), 
-                                           ref_name=ref_name,
-                                           ref_parent=ref_parent,
-                                           default=default, doc=doc)
-        self.metadata = {
-            'content_type' : '',
-            'content_encoding' : '',
-            'binary' : False,
-            'big_endian' : False,
-            'single_precision' : False,
-            'unformatted' : False,
-            'recordmark_8' : False, }
+    
+class FileTrait(TraitType):
+    """ A trait wrapper for a FileValue attribute."""
+    
+    def __init__(self, default_value=None, **metadata):
+        if default_value is None:
+            meta = metadata.copy()
+            for name in _meta_exclude:
+                del meta[name]
+            default_value = FileValue(**meta)
+        super(FileTrait, self).__init__(default_value, **metadata)
 
-        if metadata is not None:
-            self.metadata.update(metadata)
 
+    def validate(self, object, name, value):
+        if isinstance(value, FileValue):
+            value = copy.copy(value)
+            value.filename = getattr(object, name).filename
+            return value
+        else:
+            self.error(object, name, value)
+    
