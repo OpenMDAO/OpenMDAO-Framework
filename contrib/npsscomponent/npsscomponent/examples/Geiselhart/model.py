@@ -12,9 +12,8 @@ Known problems:
 """
 import os.path
 
-from openmdao.main import Assembly, Component, Container, Float, \
-                          ArrayVariable, FileVariable
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Array, Float
+from openmdao.main.api import Assembly, Component, Container, FileTrait
 
 from npsscomponent import NPSScomponent
 
@@ -27,21 +26,21 @@ __version__ = '0.1'
 class Design(Component):
     """ Design variables. """
 
+    FanPRdes = Float(3.615, iostatus='out')
+    TOCThrust = Float(7000., iostatus='out')
+    MN = Float(1.8, iostatus='out')
+    alt = Float(53700., iostatus='out')
+    Knoz = Float(0.88, iostatus='out')
+    extractionRatio = Float(1.05, iostatus='out')
+    HpcPRdes = Float(6.51937, iostatus='out')
+    Cfg = Float(0.985, iostatus='out')
+    maxDiamFact = Float(1.17, iostatus='out')
+    I_externalFact = Float(0.48, iostatus='out')
+    I_divergFact = Float(0.5, iostatus='out')
+    cowl_angle = Float(6., iostatus='out')
+        
     def __init__(self, name='Design', parent=None):
         super(Design, self).__init__(name, parent)
-
-        Float('FanPRdes',        self, OUTPUT, default=3.615)
-        Float('TOCThrust',       self, OUTPUT, default=7000)
-        Float('MN',              self, OUTPUT, default=1.8)
-        Float('alt',             self, OUTPUT, default=53700)
-        Float('Knoz',            self, OUTPUT, default=0.88)
-        Float('extractionRatio', self, OUTPUT, default=1.05)
-        Float('HpcPRdes',        self, OUTPUT, default=6.51937)
-        Float('Cfg',             self, OUTPUT, default=0.985)
-        Float('maxDiamFact',     self, OUTPUT, default=1.17)
-        Float('I_externalFact',  self, OUTPUT, default=0.48)
-        Float('I_divergFact',    self, OUTPUT, default=0.5)
-        Float('cowl_angle',      self, OUTPUT, default=6)
 
     def execute(self):
         """ Just to trace execution. """
@@ -53,17 +52,17 @@ class Design(Component):
 class PropulsionData(Component):
     """ Computed propulsion data. """
 
+    link_bladeTipRadius = Float(0., iostatus='in')
+    link_contRingRadialThickness = Float(0., iostatus='in')
+    link_maxDiamFact = Float(0., iostatus='in')
+    link_Acapture = Float(0., iostatus='in')
+    link_inletLength = Float(0., iostatus='in')
+    link_length = Float(0., iostatus='in')
+
+    Acapture = Float(0., iostatus='out')
+
     def __init__(self, name='PropulsionData', parent=None):
         super(PropulsionData, self).__init__(name, parent)
-
-        Float('link_bladeTipRadius', self, INPUT, default=0.)
-        Float('link_contRingRadialThickness', self, INPUT, default=0.)
-        Float('link_maxDiamFact', self, INPUT, default=0.)
-        Float('link_Acapture', self, INPUT, default=0.)
-        Float('link_inletLength', self, INPUT, default=0.)
-        Float('link_length', self, INPUT, default=0.)
-
-        Float('Acapture', self, OUTPUT, default=0.)
 
         FLOPSdata(parent=self)
         PlumeData(parent=self)
@@ -101,43 +100,45 @@ class PropulsionData(Component):
 
 class FLOPSdata(Container):
 
+    engdeck = FileTrait(iostatus='in')
+    thrso = Float(0., iostatus='in')
+    weng = Float(0., iostatus='in')
+    xnac = Float(0., iostatus='in')
+    dnac = Float(0., iostatus='in')
+        
     def __init__(self, name='FLOPS', parent=None):
         super(FLOPSdata, self).__init__(name, parent)
+        self.engdeck.filename = 'engdeck'
 
-        FileVariable('engdeck', self, INPUT, default='engdeck')
-        Float('thrso', self, INPUT, default=0.)
-        Float('weng',  self, INPUT, default=0.)
-        Float('xnac',  self, INPUT, default=0.)
-        Float('dnac',  self, INPUT, default=0.)
 
 
 class PlumeData(Container):
 
+    m_dot = Float(0., iostatus='in')
+    Ptj = Float(0., iostatus='in')
+    Ttj = Float(0., iostatus='in')
+    far = Float(0., iostatus='in')
+    Astar = Float(0., iostatus='in')
+    Ae = Float(0., iostatus='in')
+    Amax = Float(0., iostatus='in')
+    I_diverg = Float(0., iostatus='in')
+    I_external = Float(0., iostatus='in')
+    
     def __init__(self, name='Plume', parent=None):
         super(PlumeData, self).__init__(name, parent)
-
-        Float('m_dot',      self, INPUT, default=0.)
-        Float('Ptj',        self, INPUT, default=0.)
-        Float('Ttj',        self, INPUT, default=0.)
-        Float('far',        self, INPUT, default=0.)
-        Float('Astar',      self, INPUT, default=0.)
-        Float('Ae',         self, INPUT, default=0.)
-        Float('Amax',       self, INPUT, default=0.)
-        Float('I_diverg',   self, INPUT, default=0.)
-        Float('I_external', self, INPUT, default=0.)
 
 
 class USM3Ddata(Container):
 
+    fuel = Float(0., iostatus='in')
+    gammaj = Float(0., iostatus='in')
+    pjet = Float(0., iostatus='in')
+    p0jet = Float(0., iostatus='in')
+    Rratio = Float(0., iostatus='in')
+    T0jet = Float(0., iostatus='in')
+    
     def __init__(self, name='USM3D', parent=None):
         super(USM3Ddata, self).__init__(name, parent)
-
-        Float('fuel',   self, INPUT, default=0.)
-        Float('gammaj', self, INPUT, default=0.)
-        Float('pjet',   self, INPUT, default=0.)
-        Float('p0jet',  self, INPUT, default=0.)
-        Float('Rratio', self, INPUT, default=0.)
-        Float('T0jet',  self, INPUT, default=0.)
 
         USM3Dinputs(parent=self)
 
@@ -155,71 +156,72 @@ class USM3Dinputs(Container):
 
 class USM3Dfreestream(Container):
 
+    a = Float(0., iostatus='in')
+    gamma = Float(0., iostatus='in')
+    rho = Float(0., iostatus='in')
+    R = Float(0., iostatus='in')
+    Ps = Float(0., iostatus='in')
+    Pt = Float(0., iostatus='in')
+    Ts = Float(0., iostatus='in')
+    Tt = Float(0., iostatus='in')
+    
     def __init__(self, name='Freestream', parent=None):
         super(USM3Dfreestream, self).__init__(name, parent)
-
-        Float('a',     self, INPUT, default=0.)
-        Float('gamma', self, INPUT, default=0.)
-        Float('rho',   self, INPUT, default=0.)
-        Float('R',     self, INPUT, default=0.)
-        Float('Ps',    self, INPUT, default=0.)
-        Float('Pt',    self, INPUT, default=0.)
-        Float('Ts',    self, INPUT, default=0.)
-        Float('Tt',    self, INPUT, default=0.)
 
 
 class USM3Dplenum(Container):
 
+    gamma_s = Float(0., iostatus='in')
+    gamma_t = Float(0., iostatus='in')
+    Rt = Float(0., iostatus='in')
+    Rs = Float(0., iostatus='in')
+    Ps = Float(0., iostatus='in')
+    Pt = Float(0., iostatus='in')
+    Ts = Float(0., iostatus='in')
+    Tt = Float(0., iostatus='in')
+    
     def __init__(self, name='Plenum', parent=None):
         super(USM3Dplenum, self).__init__(name, parent)
-
-        Float('gamma_s', self, INPUT, default=0.)
-        Float('gamma_t', self, INPUT, default=0.)
-        Float('Rs',      self, INPUT, default=0.)
-        Float('Rt',      self, INPUT, default=0.)
-        Float('Ps',      self, INPUT, default=0.)
-        Float('Pt',      self, INPUT, default=0.)
-        Float('Ts',      self, INPUT, default=0.)
-        Float('Tt',      self, INPUT, default=0.)
 
 
 class USM3Dthroat(Container):
 
+    gamma_s = Float(0., iostatus='in')
+    gamma_t = Float(0., iostatus='in')
+    Rt = Float(0., iostatus='in')
+    Rs = Float(0., iostatus='in')
+    Ps = Float(0., iostatus='in')
+    Pt = Float(0., iostatus='in')
+    Ts = Float(0., iostatus='in')
+    Tt = Float(0., iostatus='in')
+    
     def __init__(self, name='Throat', parent=None):
         super(USM3Dthroat, self).__init__(name, parent)
-
-        Float('gamma_s', self, INPUT, default=0.)
-        Float('gamma_t', self, INPUT, default=0.)
-        Float('Rs',      self, INPUT, default=0.)
-        Float('Rt',      self, INPUT, default=0.)
-        Float('Ps',      self, INPUT, default=0.)
-        Float('Pt',      self, INPUT, default=0.)
-        Float('Ts',      self, INPUT, default=0.)
-        Float('Tt',      self, INPUT, default=0.)
 
 
 class USM3Dexit(Container):
 
+    gamma_s = Float(0., iostatus='in')
+    gamma_t = Float(0., iostatus='in')
+    Rt = Float(0., iostatus='in')
+    Rs = Float(0., iostatus='in')
+    Ps = Float(0., iostatus='in')
+    Pt = Float(0., iostatus='in')
+    Ts = Float(0., iostatus='in')
+    Tt = Float(0., iostatus='in')
+    
     def __init__(self, name='Exit', parent=None):
         super(USM3Dexit, self).__init__(name, parent)
-
-        Float('gamma_s', self, INPUT, default=0.)
-        Float('gamma_t', self, INPUT, default=0.)
-        Float('Rs',      self, INPUT, default=0.)
-        Float('Rt',      self, INPUT, default=0.)
-        Float('Ps',      self, INPUT, default=0.)
-        Float('Pt',      self, INPUT, default=0.)
-        Float('Ts',      self, INPUT, default=0.)
-        Float('Tt',      self, INPUT, default=0.)
 
 
 class NacelleData(Container):
 
+    X = Array('d', shape=(None,), value=[], iostatus='in')
+    Y = Array('d', shape=(None,), value=[], iostatus='in')
+    
     def __init__(self, name='Nacelle', parent=None):
         super(NacelleData, self).__init__(name, parent)
 
-        ArrayVariable('X', self, INPUT, float, default=[])
-        ArrayVariable('Y', self, INPUT, float, default=[])
 
 
 class ANOPPdata(Container):
@@ -239,51 +241,6 @@ class TracingNPSS(NPSScomponent):
 
 class Model(Assembly):
     """ SBJ propulsion model. """
-
-    def connect(self, src_path, dst_path):
-        """ Overriding default to dynamically publicise/hoist variables. """
-        comp, rest = src_path.split('.', 1)
-        src_comp = getattr(self, comp)
-        if rest.find('.') > 0:
-            src_path = self.hoist(src_comp, rest, OUTPUT)
-        else:
-            try:
-                src_comp.getvar(rest)
-            except AttributeError:
-                src_comp.make_public((rest, '', OUTPUT))
-                self._var_graph.add_node(src_path, data=src_comp.getvar(rest))
-
-        comp, rest = dst_path.split('.', 1)
-        dst_comp = getattr(self, comp)
-        if rest.find('.') > 0:
-            dst_path = self.hoist(dst_comp, rest, INPUT)
-        else:
-            try:
-                dst_comp.getvar(rest)
-            except AttributeError:
-                dst_comp.make_public(rest)
-                self._var_graph.add_node(dst_path, data=dst_comp.getvar(rest))
-
-        super(Model, self).connect(src_path, dst_path)
-
-    def hoist(self, comp, path, io_status):
-        """ Hoist a variable so that it may be connected. """
-        name = '_'+path.replace('.', '_')
-        try:
-            var = comp.getvar(name)
-        except AttributeError:
-            try:
-                var = comp.getvar(path)
-            except AttributeError:
-                comp.make_public((name, path, io_status))
-                var = comp.getvar(name)
-
-        newpath = comp.name+'.'+name
-        if newpath not in self._var_graph.nodes():
-            passthru = var.create_passthru(comp, name)
-            comp.make_public(passthru)
-            self._var_graph.add_node(newpath, data=passthru)
-        return newpath
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
@@ -532,6 +489,5 @@ class Model(Assembly):
 
 if __name__ == '__main__':
 #    Model().run()
-    Model().check_save_load()  # Note: requires correct pythonV.R
-#    Model().save_to_egg()
+    Model().check_save_load()
 

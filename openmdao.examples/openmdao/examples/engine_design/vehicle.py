@@ -5,11 +5,9 @@
 # the velocity and commanded throttle/gear positions given a set of design.
 # parameters.
 
-from zope.interface import implements, Interface
+from enthought.traits.api import implements, Interface, Float, Int
 
-from openmdao.main import Assembly
-from openmdao.main import Float, Int
-from openmdao.main.variable import INPUT, OUTPUT
+from openmdao.main.api import Assembly, UnitsFloat
 from openmdao.main.interfaces import IComponent
 
 from openmdao.examples.engine_design.transmission import Transmission
@@ -27,6 +25,12 @@ class Vehicle(Assembly):
     """ Vehicle assembly. """
     
     implements(IVehicle)
+    
+    tire_circumference = UnitsFloat(75.0, iostatus='in', units='inch', 
+                                    desc='Circumference of tire (inches)')
+    
+    velocity = UnitsFloat(75.0, iostatus='in', units='mi/h', 
+                          desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
     def __init__(self, name, parent=None, directory=''):
         ''' Creates a new Vehicle Assembly object
@@ -62,7 +66,7 @@ class Vehicle(Assembly):
             current_gear               # Gear Position
             throttle                   # Throttle Position
             velocity                   # Vehicle velocity needed to determine
-                                         engine RPM (m/s)
+                                         engine RPM (mi/h)
             
             # Outputs
             power                      # Power at engine output (KW)
@@ -106,20 +110,19 @@ class Vehicle(Assembly):
         self.create_passthru('transmission.ratio4')
         self.create_passthru('transmission.ratio5')
         self.create_passthru('transmission.final_drive_ratio')
-        self.create_passthru('transmission.tire_circ')
         self.create_passthru('transmission.current_gear')
-        self.create_passthru('transmission.velocity')
 
         # Promoted From Chasis
         self.create_passthru('chasis.mass_vehicle')
         self.create_passthru('chasis.Cf')
         self.create_passthru('chasis.Cd')
         self.create_passthru('chasis.area')
-        #self.create_passthru('chasis.elocity')
+        
         self.connect('velocity', 'chasis.velocity')
-        self.connect('tire_circ', 'chasis.tire_circ')
+        self.connect('velocity', 'transmission.velocity')
+        self.connect('tire_circumference', 'chasis.tire_circ')
+        self.connect('tire_circumference', 'transmission.tire_circ')
         self.create_passthru('chasis.acceleration')
-        # NOTE: Tire Circumference also needed by Transmission.
 
         # Hook it all up
         
@@ -133,14 +136,14 @@ class Vehicle(Assembly):
 if __name__ == "__main__": 
     top = Assembly('top')
     z = Vehicle("Testing", parent=top)        
-    z.set('current_gear', 1)
-    z.set('velocity', 20.0*(26.8224/60.0))
+    z.current_gear = 1
+    z.velocity = 20.0*(26.8224/60.0)
     #z.throttle = .2
-#    for throttle in xrange(1,101,1):
-#        z.set('throttle', throttle/100.0)
-    z.set('throttle', 1.0)
+    #for throttle in xrange(1,101,1):
+    #    z.throttle = throttle/100.0
+    z.throttle = 1.0
     z.run()
-    print z.get('acceleration')
+    print z.acceleration
     
     def prz(zz):
         ''' Printing the results'''

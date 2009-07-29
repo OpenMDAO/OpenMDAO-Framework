@@ -2,25 +2,32 @@
 
 import unittest
 
-from openmdao.main import Assembly, Component, Float, String
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float, Str, Instance
+from openmdao.main.api import Assembly, Component
 
 class Multiplier(Component):
+    rval_in = Float(iostatus='in')
+    rval_out = Float(iostatus='out')
+    mult = Float(iostatus='in')
+    
     def __init__(self, name):
         super(Multiplier, self).__init__(name)
         self.rval_in = 4.
         self.rval_out = 7.
         self.mult = 1.5
         self.run_count = 0
-        Float('rval_in', self, INPUT, units='cm')
-        Float('rval_out', self, OUTPUT, units='cm')
-        Float('mult', self, INPUT)
 
     def execute(self):
         self.run_count += 1
         self.rval_out = self.rval_in * self.mult
         
 class Simple(Component):
+    
+    a = Float(iostatus='in')
+    b = Float(iostatus='in')
+    c = Float(iostatus='out')
+    d = Float(iostatus='out')
+    
     def __init__(self, name, parent=None):
         super(Simple, self).__init__(name, parent)
         self.a = 4.
@@ -28,10 +35,6 @@ class Simple(Component):
         self.c = 7.
         self.d = 1.5
         self.run_count = 0
-        Float('a', self, INPUT, units='cm')
-        Float('b', self, INPUT, units='m')
-        Float('c', self, OUTPUT, units='cm')
-        Float('d', self, OUTPUT, units='mm')
 
     def execute(self):
         self.run_count += 1
@@ -39,6 +42,17 @@ class Simple(Component):
         self.d = self.a - self.b
 
 class DummyComp(Component):
+    
+    r = Float(iostatus='in')
+    r2 = Float(iostatus='in')
+    s = Str(iostatus='in')
+    rout = Float(iostatus='out')
+    r2out = Float(iostatus='out')
+    sout = Str(iostatus='out')
+    
+    dummy_in = Instance(Component, iostatus='in')
+    dummy_out = Instance(Component, iostatus='out')
+    
     def __init__(self, name, parent=None):
         super(DummyComp, self).__init__(name, parent)
         self.r = 1.0
@@ -48,18 +62,10 @@ class DummyComp(Component):
         self.s = 'a string'
         self.sout = ''
         
-        Float('r', self, INPUT, units='cm')
-        Float('r2', self, INPUT, units='cm/s')
-        String('s', self, INPUT)
-        
-        Float('rout', self, OUTPUT, units='cm')
-        Float('r2out', self, OUTPUT, units='cm/s')
-        String('sout', self, OUTPUT)
-        
         # make a nested container with input and output ContainerVars
         self.add_child(Multiplier('dummy'))
-        self.make_public([('dummy_in','dummy'), 
-                          ('dummy_out','dummy',OUTPUT)])
+        self.dummy_in = self.dummy
+        self.dummy_out = self.dummy
                 
     def execute(self):
         self.rout = self.r * 1.5
@@ -201,7 +207,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.create_passthru('comp1.dummy_out','dummy_out_passthru')
         self.asm.run()
         self.assertEqual(self.asm.get('dummy_out_passthru.rval_out'), 75.4*1.5)
-        
+
 #    def test_discon_reconnect_passthru(self):
 #        self.fail('unfinished test')
         
@@ -209,14 +215,14 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('top: top.comp2.rout must be an INPUT variable',
+            self.assertEqual('top: top.comp2.rout must be an input variable',
                              str(err))
         else:
             self.fail('exception expected')
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('top: top.comp1.r must be an OUTPUT variable',
+            self.assertEqual('top: top.comp1.r must be an output variable',
                              str(err))
         else:
             self.fail('exception expected')
@@ -235,7 +241,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.units','comp2.s')
         except NameError, err:
             self.assertEqual(str(err), 
-                    "top: rout.units must be a simple name, not a dotted path")
+                    "top.comp1: Cannot locate trait named 'rout.units'")
         else:
             self.fail('NameError expected')
         
@@ -244,7 +250,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.value','comp2.r2')
         except NameError, err:
             self.assertEqual(str(err), 
-                        "top: rout.value must be a simple name, not a dotted path")
+                    "top.comp1: Cannot locate trait named 'rout.value'")
         else:
             self.fail('NameError expected')
         
@@ -258,7 +264,6 @@ class AssemblyTestCase(unittest.TestCase):
                              " connecting comp2.rout to comp1.r", str(err))
         else:
             self.fail('exception expected')
-
             
     def test_disconnect(self):
         # first, run connected
@@ -266,12 +271,12 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.run()
         self.assertEqual(comp2.r, 1.5)
-        self.asm.set('comp1.r', 3.0)
+        self.asm.comp1.r = 3.0
         self.asm.run()
         self.assertEqual(comp2.r, 4.5)
         
         # now disconnect
-        self.asm.set('comp1.r', 6.0)
+        self.asm.comp1.r = 6.0
         self.asm.disconnect('comp2.r')
         self.asm.run()
         self.assertEqual(comp2.r, 4.5)
@@ -286,17 +291,17 @@ class AssemblyTestCase(unittest.TestCase):
         nest = Assembly('nested', asm)
         Simple('comp1', nest)
         Simple('comp2', nest)
-        nest.create_passthru('comp1.a') # comp1.a has cm units
-        nest.connect('a', 'comp2.b')  # comp2.b has m units
-        self.assertEqual(nest.get('comp1.a'), 4.)
-        self.assertEqual(nest.get('comp2.b'), 5.)
-        nest.set('a', 0.5)
-        self.assertEqual(nest.get('comp1.a'), 0.5)
-        self.assertEqual(nest.get('comp2.b'), 5.)
-        self.assertEqual(nest.getvar('comp2.b').valid, False)
+        nest.create_passthru('comp1.a') 
+        nest.connect('a', 'comp2.b') 
+        self.assertEqual(nest.comp1.a, 4.)
+        self.assertEqual(nest.comp2.b, 5.)
+        nest.a = 0.5
+        self.assertEqual(nest.comp1.a, 0.5)
+        self.assertEqual(nest.comp2.b, 5.)
+        self.assertEqual(nest.comp2.get_valid('b'), False)
         asm.run()
-        self.assertEqual(nest.get('comp1.a'), 0.5)
-        self.assertEqual(nest.get('comp2.b'), 0.005) # check unit conversion
+        self.assertEqual(nest.comp1.a, 0.5)
+        self.assertEqual(nest.comp2.b, 0.5)
         
     def test_connect_2_outs_to_passthru(self):
         asm = Assembly('top')
@@ -314,30 +319,11 @@ class AssemblyTestCase(unittest.TestCase):
  
     def test_discon_not_connected(self):
         self.asm.connect('comp1.rout','comp2.r')
-        try:
-            self.asm.disconnect('comp2.s')
-        except RuntimeError, err:
-            self.assertEqual('top: comp2.s is not connected', str(err))
-        else:
-            self.fail('exception expected')
+        
+        # disconnecting something that isn't connected is ok and shouldn't
+        # raise an exception
+        self.asm.disconnect('comp2.s')
 
-    def test_discon_with_deleted_objs(self):
-        self.asm.add_child(DummyComp('comp3'))
-        self.asm.add_child(DummyComp('comp4'))
-        self.asm.connect('comp1.rout', 'comp2.r')
-        self.asm.connect('comp2.rout', 'comp3.r')
-        self.asm.connect('comp3.rout', 'comp4.r')
-        
-        # this also removes the connection to comp4.r
-        self.asm.remove_child('comp3') 
-        try:
-            self.asm.disconnect('comp4.r')
-        except RuntimeError, err:
-            self.assertEqual(str(err), 'top: comp4.r is not connected')
-        else:            
-            self.fail('exception expected')
-        
-        
     def test_listcon_with_deleted_objs(self):
         self.asm.add_child(DummyComp('comp3'))
         self.asm.connect('comp1.rout', 'comp2.r')

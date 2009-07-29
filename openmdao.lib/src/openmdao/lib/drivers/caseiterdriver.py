@@ -5,11 +5,11 @@ import Queue
 import threading
 import time
 
-from openmdao.main import Driver, Bool, Int
+from enthought.traits.api import Range, Bool, Instance, Any
+
+from openmdao.main.api import Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator, IComponent
-from openmdao.main.variable import INPUT
-from openmdao.main.socket import Socket
 from openmdao.main.util import filexfer
 
 
@@ -28,6 +28,14 @@ class CaseIteratorDriver(Driver):
     Run a set of cases provided by an ICaseIterator in a manner similar
     to the ROSE framework.
 
+    - The `iterator` socket provides the cases to be evaluated.
+    - The `model` socket provides the model to be executed.
+    - The `outerator` socket is used to record results.
+    - If `sequential` is True, then the cases are evaluated sequentially. \
+      (currently non-sequential evaluation is not supported)
+    - If `reload_model` is True, the model is reloaded between executions.
+    - `max_retries` sets the number of times to retry a failed case.
+
     .. parsed-literal::
 
         TODO: define interface for 'outerator'.
@@ -36,21 +44,21 @@ class CaseIteratorDriver(Driver):
 
     """
 
-    iterator = Socket(ICaseIterator, 'Cases to evaluate.', required=True)
-    outerator = Socket(None, 'Something to append() to.', required=True)
-    model = Socket(IComponent, 'Model to be executed.', required=True)
+    iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
+    outerator = Instance(object, desc='Something to append() to.', required=True)
+    model = Instance(IComponent, desc='Model to be executed.', required=True)
     
+    sequential = Bool(True, iostatus='in',
+                      desc='Evaluate cases sequentially.')
+
+    reload_model = Bool(True, iostatus='in',
+                        desc='Reload model between executions.')
+
+    max_retries = Range(value=1, low=0, iostatus='in',
+                        desc='Number of times to retry a case.')
+
     def __init__(self, *args, **kwargs):
         super(CaseIteratorDriver, self).__init__(*args, **kwargs)
-
-        Bool('sequential', self, INPUT, default=True,
-             doc='Evaluate cases sequentially.')
-
-        Bool('reload_model', self, INPUT, default=True,
-             doc='Reload model between executions.')
-
-        Int('max_retries', self, INPUT, default=1, min_limit=0,
-            doc='Number of times to retry a case.')
 
         self._iter = None
         self._n_servers = 0

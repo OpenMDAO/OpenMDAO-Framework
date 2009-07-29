@@ -135,6 +135,12 @@ class Logger(object):
 
     level = property(_get_level, _set_level, doc='Logging message level.')
 
+    def rename(self, name):
+        """ Change name reported in log. """
+        self._name = name
+        self._logger = logging.getLogger(name)
+        self._logger.setLevel(self._level)
+
     def debug(self, msg, *args, **kwargs):
         """ Log a debug message. """
         self._logger.debug(msg, *args, **kwargs)

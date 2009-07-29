@@ -64,40 +64,11 @@ _wing_header = """#!wing
 ##################################################################
 """
 
-_LINE_WIDTH = 68
-
-def _wingify(obj, left_margin=0):
-    """Take a dict, convert to a string, split it on commas. If any piece 
-    is longer than 80 chars, split it up into smaller chunks. Finally, recombine 
-    it all back into a string with each entry on a new line
-    """
-    flat = []
-    parts = str(obj).strip().split(',')
-    for idx, part in enumerate(parts):
-        if len(part) < _LINE_WIDTH and idx < len(parts)-1:
-            flat.append(part+',')
-        else:
-            part = part.strip()
-            just = _LINE_WIDTH-left_margin
-            numsubs = len(part)/just+1
-            for i in range(0, numsubs):
-                p = part[i*just:i*just+just]
-                if not p.startswith("'"):
-                    p = "'"+p
-                p = left_margin*" "+p+"'\\"
-                flat.append(p)
-            flat[len(flat)-1] = flat[len(flat)-1][:-2]
-    if " ')}" in flat[-1]:
-        flat[-1] = flat[-1].replace(" ')}"," )}")
-    return '\n'.join(flat)
-
-    
-
 class WingProj(object):
     """Create a Wing IDE project file with python path set properly to be able
     to find files within a buildout. The user's default.wpr file will be used if
     present as the basis of the new project file.  After the buildout is run, 
-    a file named wingproj.wpr will be created in the parent directory of the 
+    a file named wingproj.wpr will be created in the parts/wingproj directory of the 
     buildout.  This file will be updated during future buildouts only if the
     list of dependent eggs changes.
     """
@@ -196,9 +167,9 @@ class WingProj(object):
         if len(diff) > 0:    
                
             config.set('user attributes', 'proj.pypath', 
-                       _wingify(dict({None: ('custom',os.pathsep.join(newset))}), left_margin=18))
+                       dict({None: ('custom',os.pathsep.join(newset))}))
             config.set('user attributes', 'proj.pyexec', 
-                       _wingify(dict({None: ('custom', self.executable)}), left_margin=18))
+                       dict({None: ('custom', self.executable)}))
 
             if not config.has_option('project attributes', 'proj.directory-list'):
                 config.set('project attributes', 'proj.directory-list',

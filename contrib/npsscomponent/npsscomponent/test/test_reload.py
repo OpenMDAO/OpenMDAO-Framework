@@ -7,8 +7,9 @@ import os
 import pkg_resources
 import unittest
 
-from openmdao.main import Assembly, Component, Bool, Float, String
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float, Bool, Str
+
+from openmdao.main.api import Assembly, Component
 from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
@@ -19,22 +20,21 @@ ORIG_DIR = os.getcwd()
 class Source(Component):
     """ Just something to connect NPSS inputs to. """
 
+    rerun = Bool(False, iostatus='in')
+    npss_reload = Bool(False, iostatus='out', desc='Test input to NPSS')
+    npss_in = Float(0., iostatus='out', desc='Test input to NPSS')
+        
     def __init__(self, name='Source', *args, **kwargs):
         super(Source, self).__init__(name, *args, **kwargs)
-        Bool('rerun', self, INPUT, default=False)
-        Bool('npss_reload', self, OUTPUT, default=False,
-             doc='Test input to NPSS')
-        Float('npss_in', self, OUTPUT, default=0.,
-              doc='Test input to NPSS')
 
 
 class Sink(Component):
     """ Just something to connect NPSS outputs to. """
 
+    npss_out = Float(0., iostatus='in', desc='Test output from NPSS')
+        
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
-        Float('npss_out', self, INPUT, default=0.,
-              doc='Test output from NPSS')
 
 
 # pylint: disable-msg=E1101
@@ -43,25 +43,36 @@ class Sink(Component):
 class MyModel(Assembly):
     """ Exercises NPSS auto-reload capability. """ 
 
+    rerun_flag = Bool(False, iostatus='in')
+        
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
-        Bool('rerun_flag', self, INPUT, default=False)
 
         Source(parent=self)
         self.Source.npss_in = 9
 
-        NPSScomponent(parent=self, arglist='-trace reload.mdl',
-                      output_filename='reload.out')
+        self.NPSS = NPSScomponent(parent=self, arglist='-trace reload.mdl',
+                                  output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
-        Float('xyzzy_in',  self.NPSS, INPUT, doc='Test input')
-        Float('xyzzy_out', self.NPSS, OUTPUT, doc='Test output')
-        String('s', self.NPSS, INPUT, doc='Unconnected input')
 
+        self.NPSS.make_public([
+              ('xyzzy_in','','in'),
+              ('xyzzy_out','','out'),
+            ])
+        #self.create_passthru('NPSS.xyzzy_in')
+        #self.create_passthru('NPSS.xyzzy_out')
+        #xyzzy_in = Float(self.NPSS, iostatus='in', desc='Test input')
+        #xyzzy_out = Float(self.NPSS, iostatus='out', desc='Test output')
+        #self.create_passthru('NPSS.s')
+        #s = Str(self.NPSS, iostatus='in', desc='Unconnected input')
+        
         Sink(parent=self)
 
         self.connect('Source.npss_reload', 'NPSS.reload_model')
         self.connect('Source.npss_in', 'NPSS.xyzzy_in')
+        #self.connect('Source.npss_in', 'xyzzy_in')
         self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
+        #self.connect('xyzzy_out', 'Sink.npss_out')
 
     def rerun(self):
         self.debug('rerun()')

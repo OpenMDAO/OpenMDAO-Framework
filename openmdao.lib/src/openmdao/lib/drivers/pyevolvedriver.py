@@ -4,8 +4,11 @@ __version__ = "0.1"
 
 import random
 
-from pyevolve import G1DList, G1DBinaryString, G2DList, GAllele, GenomeBase
-from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
+from enthought.traits.api import Int, Float, CBool, Str, Any, on_trait_change, TraitError
+
+from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
+from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
+from pyevolve import GenomeBase
 try:
     from pyevolve import DBAdapters
 except ImportError:
@@ -13,9 +16,7 @@ except ImportError:
     import logging
     logging.warning('No pyevolve.DBAdaptors available.')
 
-from openmdao.main.variable import Variable, INPUT, OUTPUT
-from openmdao.main import Driver, Int, Float, Bool, String, RefVariable
-
+from openmdao.main.api import Driver, StringRef
 
 def G1DListCrossOverRealHypersphere(genome, **args):
     """ A genome reproduction algorithm, developed by Tristan Hearn at 
@@ -29,7 +30,7 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     sister = gMom.clone()
     brother = gDad.clone()
     
-    bounds = (genome.getParam("rangemin",0), genome.getParam("rangemax",100))
+    bounds = (genome.getParam("rangemin",0),genome.getParam("rangemax",100))
     dim = len(genome)
     numparents = 2.0
         
@@ -53,8 +54,8 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     magnitude = sum([x**2 for x in seed_brother])**.5
     #checksum to enforce a circular distribution of random numbers
     while magnitude > 1:
-        seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
-        magnitude = sum([x**2 for x in seed_brother])**.5    
+       seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
+       magnitude = sum([x**2 for x in seed_brother])**.5    
     
     #create a children
     sister.resetStats()
@@ -88,41 +89,40 @@ class pyevolvedriver(Driver):
     TODO: Implement function-slots as sockets
     """
 
-    def __init__(self, name, parent=None, doc=None): 
-        super(pyevolvedriver, self).__init__(name, parent, doc)
+    # inputs
+    objective = StringRef(iostatus='in',
+                          desc= 'A string containing the objective function expression.')
+    freq_stats = Int(0, iostatus='in')
+    seed = Float(0., iostatus='in')
+    population_size = Float(Consts.CDefGAPopulationSize, iostatus='in')
+    
+    sort_type = CBool(Consts.sortType["scaled"], iostatus='in',
+                     desc='use Consts.sortType["raw"],Consts.sortType["scaled"] ') # can accept
+    mutation_rate = Float(Consts.CDefGAMutationRate, iostatus='in')
+    crossover_rate = Float(Consts.CDefGACrossoverRate, iostatus='in')
+    generations = Int(Consts.CDefGAGenerations, iostatus='in')
+    mini_max = CBool(Consts.minimaxType["minimize"], iostatus='in',
+                    desc = 'use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
+    elitism = CBool(True, iostatus='in',desc='True of False')
+    
+    #outputs
+    best_individual = Any(GenomeBase.GenomeBase(), iostatus='out')
+        
+    def __init__(self,name,parent=None,doc=None): 
+        super(pyevolvedriver,self).__init__(name,parent,doc)
 
         self.genome = GenomeBase.GenomeBase() #TODO: Mandatory Socket
         self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin
 
-        #inputs - value of None means use default
-        RefVariable('objective', self, INPUT,
-                    doc='String containing the objective function expression.')
-        Int('freq_stats', self, INPUT, default=0)
-        Float('seed', self, INPUT, default=0)
-        Float('population_size', self, INPUT,
-              default=Consts.CDefGAPopulationSize)
-        Bool('sort_type', self, INPUT,
-             doc='use Consts.sortType["raw"],Consts.sortType["scaled"]',
-             default=Consts.sortType["scaled"]) # can accept
-        Float('mutation_rate', self, INPUT, default=Consts.CDefGAMutationRate)
-        Float('crossover_rate', self, INPUT, default=Consts.CDefGACrossoverRate)
-        Int('generations', self, INPUT, default=Consts.CDefGAGenerations)
-        Bool('mini_max', self, INPUT, default=Consts.minimaxType["minimize"],
-             doc='use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
-        Bool('elitism', self, INPUT, doc='True of False', default=True)
-        
+        # value of None means use default
         self.decoder = None #TODO: mandatory socket       
         self.selector = None #TODO: optional socket
         self.stepCallback = None #TODO: optional socket
         self.terminationCriteria = None #TODO: optional socket
         self.DBAdapter = None #TODO: optional socket
 
-        #outputs
-        Variable('best_individual', self, OUTPUT, default=self.genome)
-
-
-    def _set_GA_FunctionSlot(self, slot, funcList, RandomApply=False):
-        if funcList == None:
+    def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
+        if funcList == None: 
             return
         slot.clear()
         if not isinstance(funcList, list):
@@ -134,10 +134,19 @@ class pyevolvedriver(Driver):
                 slot.add(func)
         slot.setRandomApply(RandomApply)
 
-    def evaluate(self, genome):
+    @on_trait_change('objective') 
+    def _refvar_changed(self, obj, name, old, new):
+        expr = getattr(obj, name)
+        try:
+            expr.refs_valid()  # force checking for existence of vars referenced in expression
+        except (AttributeError, RuntimeError), err:
+            self.raise_exception("invalid value '%s' for input ref variable '%s': %s" % 
+                                 (str(expr),name,err), TraitError)
+            
+    def evaluate(self,genome):
         self.decoder(genome)
         self.run_iteration()
-        return self.objective.refvalue
+        return self.objective.evaluate()
 
     def verify(self):
         #genome verify
@@ -152,10 +161,10 @@ class pyevolvedriver(Driver):
                                  " A valid decoder must be present", TypeError)
         try: # won't work if decoder is None
             self.decoder(self.genome)
-        except TypeError:
+        except TypeError, err:
             self.raise_exception(
-                "decoder specified as does not have the right signature."
-                " Must take only 1 argument", TypeError)
+                "decoder as specified does not have the right signature. Must take only 1 argument: %s"%
+                err, TypeError)
 
     def execute(self):
         """ Perform the optimization"""

@@ -1,10 +1,10 @@
 """
 Save/load utilities.
 
-Note that Pickle format can't save references to functions that aren't defined
-at the top level of a module, and there doesn't appear to be a viable
-workaround.  Normally pickle won't handle instance methods either, but there is
-code in place to work around that.
+Note that Pickle can't save references to functions that aren't defined at the
+top level of a module, and there doesn't appear to be a viable workaround.
+Normally pickle won't handle instance methods either, but there is code in
+place to work around that.
 
 When saving to an egg, the module named __main__ changes when reloading. This
 requires finding the real module name and munging references to __main__.
@@ -36,6 +36,7 @@ import sys
 import tempfile
 import zc.buildout.easy_install
 import zipfile
+import StringIO
 
 from openmdao.util import eggwriter
 
@@ -112,11 +113,15 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                 use_setuptools=False):
     """
     Save state and other files to an egg.
+    Analyzes the objects saved for distribution dependencies.
+    Modules not found in any distribution are recorded in a '`name`.missing' file.
+    Also creates and saves loader scripts for each entry point.
 
     - `root` is the root of the object graph to be saved.
     - `name` is the name of the package.
-    - `version` defaults to a timestamp.
-    - `py_dir` defaults to the current directory.
+    - `version` defaults to a timestamp of the form 'YYYY.MM.DD.HH.mm'.
+    - `py_dir` is the (root) directory for local Python files. \
+      It defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
     - 'entry_pts' is a list of (obj, obj_name) tuples for additional entries.
     - `dst_dir` is the directory to write the egg in.
@@ -230,16 +235,20 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                 entry_info = []
                 for obj_info in all_entries:
                     obj, obj_name = obj_info
+                    clean_name = obj_name
+                    if clean_name.startswith(name+'.'):
+                        clean_name = clean_name[len(name)+1:]
+                    clean_name = clean_name.replace('.', '_')
 
                     # Save state of object hierarchy.
                     state_name, state_path = \
-                        _write_state_file(name, obj, obj_name, format, proto,
+                        _write_state_file(name, obj, clean_name, format, proto,
                                           logger)
                     src_files.add(state_name)
                     cleanup_files.append(state_path)
 
                     # Create loader script.
-                    loader = '%s_loader' % obj_name
+                    loader = '%s_loader' % clean_name
                     loader_path = os.path.join(name, loader+'.py')
                     cleanup_files.append(loader_path)
                     _write_loader_script(loader_path, state_name, name,
@@ -781,8 +790,7 @@ if not '.' in sys.path:
     sys.path.append('.')
 
 try:
-    from openmdao.main import Component
-    from openmdao.main.constants import SAVE_CPICKLE, SAVE_LIBYAML
+    from openmdao.main.api import Component, SAVE_CPICKLE, SAVE_LIBYAML
     from openmdao.main.log import enable_console
 except ImportError:
     print 'No OpenMDAO distribution available.'
@@ -791,13 +799,15 @@ except ImportError:
         print 'To get OpenMDAO, please visit openmdao.org'
     sys.exit(1)
 
-def load():
+def load(name=None):
     '''Create object(s) from state file.'''
     state_name = '%(name)s'
     if state_name.endswith('.pickle'):
-        return Component.load(state_name, SAVE_CPICKLE%(pkg)s%(top)s)
+        return Component.load(state_name,
+                              SAVE_CPICKLE%(pkg)s%(top)s, name=name)
     elif state_name.endswith('.yaml'):
-        return Component.load(state_name, SAVE_LIBYAML%(pkg)s%(top)s)
+        return Component.load(state_name,
+                              SAVE_LIBYAML%(pkg)s%(top)s, name=name)
     raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
                        state_name)
 
@@ -857,7 +867,7 @@ def load_from_eggfile(filename, entry_group, entry_name, install=True,
     """
     Extract files in egg to a subdirectory matching the saved object name,
     optionally install distributions the egg depends on, and then load object
-    graph state.  Returns the top object.
+    graph state by invoking the given entry point.  Returns the root object.
     """
     if logger is None:
         logger = NullLogger()
@@ -868,27 +878,36 @@ def load_from_eggfile(filename, entry_group, entry_name, install=True,
 
     if not '.' in sys.path:
         sys.path.append('.')
-    if egg_dir:
-        orig_dir = os.getcwd()
-        os.chdir(egg_dir)
+    orig_dir = os.getcwd()
+    os.chdir(egg_dir)
     try:
-        return _load_from_distribution(dist, entry_group, entry_name, logger)
+        return _load_from_distribution(dist, entry_group, entry_name, None,
+                                       logger)
     finally:
-        if egg_dir:
-            os.chdir(orig_dir)
+        os.chdir(orig_dir)
 
 
-def load_from_eggpkg(package, entry_group, entry_name, logger=None):
-    """ Load specified object graph state.  Returns the top object. """
+def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
+                     logger=None):
+    """
+    Load object graph state by invoking the given package entry point.
+    Returns the root object.
+    """
     if logger is None:
         logger = NullLogger()
     logger.debug('Loading %s from %s in %s...',
                  entry_name, package, os.getcwd())
-    dist = pkg_resources.get_distribution(package)
-    return _load_from_distribution(dist, entry_group, entry_name, logger)
+    try:
+        dist = pkg_resources.get_distribution(package)
+    except pkg_resources.DistributionNotFound, exc:
+        logger.error('Distribution not found: %s', exc)
+        raise exc
+    return _load_from_distribution(dist, entry_group, entry_name, instance_name,
+                                   logger)
 
 
-def _load_from_distribution(dist, entry_group, entry_name, logger):
+def _load_from_distribution(dist, entry_group, entry_name, instance_name,
+                            logger):
     """ Invoke entry point in distribution and return result. """
     logger.debug('    entry points:')
     maps = dist.get_entry_map()
@@ -899,8 +918,10 @@ def _load_from_distribution(dist, entry_group, entry_name, logger):
 
     info = dist.get_entry_info(entry_group, entry_name)
     if info is None:
-        raise RuntimeError("No '%s' '%s' entry point."
-                           % (entry_group, entry_name))
+        msg = "No '%s' '%s' entry point." % (entry_group, entry_name)
+        logger.error(msg)
+        raise RuntimeError(msg)
+
     if info.module_name in sys.modules.keys():
         logger.debug("    removing existing '%s' in sys.modules",
                      info.module_name)
@@ -908,7 +929,7 @@ def _load_from_distribution(dist, entry_group, entry_name, logger):
 
     try:
         loader = dist.load_entry_point(entry_group, entry_name)
-        return loader()
+        return loader(instance_name)
     except pkg_resources.DistributionNotFound, exc:
         logger.error('Distribution not found: %s', exc)
         visited = set()
@@ -996,6 +1017,7 @@ def _dist_from_eggfile(filename, install, logger):
     if os.path.exists(missing):
         inp = open(missing, 'r')
         errors = 0
+        missing_names = []
         for mod in inp.readlines():
             mod = mod.strip()
             logger.debug("    checking for 'missing' module: %s", mod)
@@ -1004,12 +1026,13 @@ def _dist_from_eggfile(filename, install, logger):
             except ImportError:
                 logger.error("Can't import %s, which didn't have a known"
                              " distribution when the egg was written.", mod)
+                missing_names.append(mod)
                 errors += 1
         inp.close()
         if errors:
             plural = 's' if errors > 1 else ''
-            raise RuntimeError("Couldn't import %d 'missing' module%s."
-                               % (errors, plural))
+            raise RuntimeError("Couldn't import %d 'missing' module%s: %s."
+                               % (errors, plural, missing_names))
     return (name, dist)
 
 
@@ -1039,7 +1062,12 @@ def _check_requirements(dist, visited, logger, level=1):
 
 
 def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
-    """ Load object(s) from the input stream (or filename). """
+    """
+    Load object(s) from the input stream (or filename).
+    If `instream` is a string that is not an existing filename or
+    absolute path, then it is searched for using pkg_resources.
+    Returns the root object.
+    """
     if logger is None:
         logger = NullLogger()
 

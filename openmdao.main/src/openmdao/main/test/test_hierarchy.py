@@ -2,16 +2,18 @@
 # pylint: disable-msg=C0111
 import unittest
 
-from openmdao.main import HierarchyMember
+from enthought.traits.api import TraitError
+
+from openmdao.main.api import Container
 
 class HierarchyTestCase(unittest.TestCase):
 
     def setUp(self):
-        self.h1 = HierarchyMember('h1', None, doc="a hierarchy member")
-        self.h11 = HierarchyMember('h11', self.h1)    
-        self.h12 = HierarchyMember('h12', self.h1)
-        self.h121 = HierarchyMember('h121', self.h12)
-        self.h122 = HierarchyMember('h122', self.h12)
+        self.h1 = Container('h1', None, doc="a hierarchy member")
+        self.h11 = Container('h11', self.h1)    
+        self.h12 = Container('h12', self.h1)
+        self.h121 = Container('h121', self.h12)
+        self.h122 = Container('h122', self.h12)
     
     def test_pathnames(self):
         self.assertEqual(self.h1.get_pathname(), 'h1')
@@ -27,14 +29,34 @@ class HierarchyTestCase(unittest.TestCase):
         for name in ['8foobar', 'abc def', 'abc*', 'abc!xx', 'a+b', '0', ' blah', 'blah '
                      '.', 'abc.', 'abc..xyz']:
             try:
-                h1 = HierarchyMember(name)
-            except NameError, err:
+                h1 = Container(name)
+            except TraitError, err:
                 self.assertEqual(str(err), 
-                                 "%s: name '%s' contains illegal characters" % 
-                                 (name,name))
+                                 "name '%s' contains illegal characters" %
+                                 name)
             else:
-                self.fail("NameError expected for '%s'" % name)
+                self.fail("TraitError expected for '%s'" % name)
     
+    def test_rename(self):
+        obj = Container('valid', None)
+        self.assertEqual(obj.name, 'valid')
+        obj.rename('valid2')
+        self.assertEqual(obj.name, 'valid2')
+
+        try:
+            obj.rename('')
+        except NameError, err:
+            self.assertEqual(str(err), 'valid2: name must be non-null')
+        else:
+            self.fail('Expected NameError')
+
+        try:
+            obj.rename('8foobar')
+        except NameError, err:
+            msg = "valid2: name '8foobar' contains illegal characters"
+            self.assertEqual(str(err), msg)
+        else:
+            self.fail('Expected NameError')
         
     def test_error_handling(self):
         try:

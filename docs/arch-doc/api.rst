@@ -26,6 +26,7 @@ they should give a good indication of our intent.
 
 ::
 
+
     class IContainer (Interface):
 	"""The interface to an object that allows set/get of its public attributes through the framework. 
 	This interface is provided by the Container class."""

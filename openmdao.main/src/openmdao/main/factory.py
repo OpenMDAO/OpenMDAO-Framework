@@ -13,7 +13,7 @@ class Factory(object):
     def __init__(self):
         pass
         
-    def create(self, typname, name=None, version=None, server=None, 
+    def create(self, typname, name='', version=None, server=None, 
                res_desc=None):
         """Return an object of type typename, using the specified
         package version, server location, and resource description.

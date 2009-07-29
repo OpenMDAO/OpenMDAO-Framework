@@ -14,8 +14,8 @@ setup(
     py_modules=['foo'],
     entry_points='''
     [openmdao.dumbplugins]
-    comp1 = foo:Comp1Plugin
-    comp2 = foo:Comp2Plugin
+    foo.Comp1Plugin = foo:Comp1Plugin
+    foo.Comp2Plugin = foo:Comp2Plugin
     '''
 )
 

@@ -1,6 +1,15 @@
 """
-Write Python egg file, either directly or via setuptools.
+Write Python egg files, either directly or via setuptools.
+Eggs contain a preamble that allows unpacking via 'sh' on UNIX systems.
 Supports what's needed for saving and loading components/simulations.
+
+- `doc` is used for the `Summary` entry in the egg's metadata.
+- `loader` is the module name containing the `load` entry point method.
+- `src_files` is a list of non-Python files to include.
+- `distributions` is a list of distributions this egg depends on.
+- `dst_dir` is the directory to write the egg to.
+- `logger` is the Logger object to use. 
+- `entry_pts` is a list of (name, loader) tuples for additional entry points.
 """
 
 import copy
@@ -21,10 +30,10 @@ def egg_filename(name, version):
 def write(name, doc, version, loader, src_files, distributions,
           dst_dir, logger, entry_pts=None, compress=True):
     """
-    Write egg in manner of setuptools, with some differences:
+    Write egg in the manner of setuptools, with some differences:
 
-    - Write directly to zip file, avoiding some intermediate copies.
-    - Don't compile any Python modules.
+    - Writes directly to the zip file, avoiding some intermediate copies.
+    - Doesn't compile any Python modules.
 
     Returns egg filename.
     """
@@ -202,9 +211,8 @@ def write_via_setuptools(name, doc, version, loader, src_files, distributions,
     # Use environment since 'python' might not recognize '-u'.
     env = os.environ
     env['PYTHONUNBUFFERED'] = '1'
-    proc = subprocess.Popen(['python', 'setup.py', 'bdist_egg',
-                             '-d', dst_dir], env=env,
-                            stdout=subprocess.PIPE,
+    proc = subprocess.Popen(['python', 'setup.py', 'bdist_egg', '-d', dst_dir],
+                            env=env, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT)
     output = []
     while proc.returncode is None:
@@ -239,7 +247,6 @@ def _write_setup_py(name, doc, version, loader, src_files, distributions,
         entry_pts = []
 
     out = open('setup.py', 'w')
-    
     out.write('import setuptools\n')
 
     out.write('\npackage_files = [\n')

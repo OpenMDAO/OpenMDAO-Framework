@@ -5,93 +5,90 @@
 
 from math import pi, sin, cos, exp
 
-from openmdao.main import Component, Float, Int
-from openmdao.main.variable import INPUT, OUTPUT
+from enthought.traits.api import Float, Int, Range
+
+from openmdao.main.api import Component, UnitsFloat
 
 class Engine(Component):
     ''' Model of a piston engine - Python Implementation.'''
     
-    def __init__(self, name, parent=None, doc=None, directory=''):
-        ''' Creates a new Engine object
+    # set up interface to the framework  
+    # pylint: disable-msg=E1101
+    # "Instance of <class> has no <attr> member"        
+    stroke = UnitsFloat(78.8, iostatus='in', units='mm', desc='Cylinder Stroke')
+    bore = UnitsFloat(82.0, iostatus='in', units='mm',  desc='Cylinder Bore')
+    conrod = UnitsFloat(115.0, iostatus='in', units='mm',
+                   desc='Connecting Rod Length')
+    comp_ratio = Float(9.3, iostatus='in', desc='Compression Ratio')
+    spark_angle = UnitsFloat(-37.0, iostatus='in', units='deg',
+                             desc = 'Spark Angle with respect to TDC (Top Dead Center)')
+    ncyl = Int(6, iostatus='in', desc = 'Number of Cylinders')
+    IVO = UnitsFloat(11.0, iostatus='in', units='deg',
+                     desc = 'Intake Valve Open before TDC (Top Dead Center)')
+    IVC = UnitsFloat(53.0, iostatus='in', units='deg', 
+                     desc = 'Intake Valve Open after BDC (Bottom Dead Center)')
+    L_v = UnitsFloat(8.0, iostatus='in', units='mm',
+                     desc='Maximum Valve Lift')
+    D_v = UnitsFloat(41.2, iostatus='in', units='mm',
+                     desc='Inlet Valve Diameter')
 
-            # Design parameters
-            stroke = 78.8              # Stroke (mm)
-            bore = 82.0                # Bore (mm)
-            conrod = 115.0             # Connecting Rod (mm)
-            comp_ratio = 9.3           # Compression Ratio
-            spark_angle = -37.0        # Spark Angle ref TDC (degree)
-            ncyl = 6                   # Number of Cylinders
-            IVO = 11.0                 # Intake Valve Open before TDC (degree BTDC)
-            IVC = 53.0                 # Intake Valve Close after BDC (degree ABDC)
-            L_v = 8.0                  # Maximum Valve Lift (mm)
-            D_v = 41.2                 # Inlet Valve Dia (mm)
+    RPM = UnitsFloat(1000.0, low=1000., high=6000., iostatus='in', 
+                     units='1/min',  desc='Engine RPM')
+    throttle = Range(low=0.01, high=1.0, value=1.0, iostatus='in', 
+                     desc='Throttle position (from low idle to wide open)')
 
-            # Constants
-            k = 1.3                    # k (Specific heat ratio for Air)
-            R = 287.0                  # R (Gas constant for Air - J/kg/degK)
-            Ru = 8.314                 # R (Gas constant for Air - J/mole/degK)
-            Hu = 44000.0               # Heating Value for gasoline (44000 kJ/kg)
-            Tw = 400.0                 # Tw (Combustion Wall Temperature 400 degrees K)
-            AFR = 14.6                 # Air Fuel Ratio for gasoline
-            P_exth = 152               # Exhaust gas pressure
-            P_amb = 101.325            # Ambient Pressure (kPa)
-            T_amb = 298                # Ambient Temperature (deg K)
-            air_density = 1.2          # Air Density (1.2 kg/m**2)
-            mw_air = 28.97             # Molecular Weight of Air (g/mol)
-            mw_fuel = 114              # Molecular Weight of Gasoline (g/mol)
+    power = UnitsFloat(0.0, iostatus='out', units='kW', 
+                       desc='Power at engine output')
+    torque = UnitsFloat(0.0, iostatus='out', units='N*m', 
+                        desc='Torque at engine output')
+    fuel_burn = UnitsFloat(0.0, iostatus='out', units='l/s', 
+                           desc='Fuel Burn Rate')
+    engine_weight = UnitsFloat(0.0, iostatus='out', units='kg', 
+                               desc='Engine weight estimation')
+        
+    #def __init__(self, name, parent=None, desc=None, directory=''):
+        #''' Creates a new Engine object
 
-            # Simulation inputs
-            RPM = 1000.0               # RPM
-            throttle = 1.0             # Throttle Position
-            thetastep = 1.0            # Simulation time stepsize (crank angle degrees)
+            ## Design parameters
+            #stroke = 78.8              # Stroke (mm)
+            #bore = 82.0                # Bore (mm)
+            #conrod = 115.0             # Connecting Rod (mm)
+            #comp_ratio = 9.3           # Compression Ratio
+            #spark_angle = -37.0        # Spark Angle ref TDC (degree)
+            #ncyl = 6                   # Number of Cylinders
+            #IVO = 11.0                 # Intake Valve Open before TDC (degree BTDC)
+            #IVC = 53.0                 # Intake Valve Close after BDC (degree ABDC)
+            #L_v = 8.0                  # Maximum Valve Lift (mm)
+            #D_v = 41.2                 # Inlet Valve Dia (mm)
 
-            # Outputs
-            power                      # Power at engine output (KW)
-            torque                     # Torque at engine output (N*m)
-            fuel_burn                  # Fuel burn rate (liters/sec)
-            engine_weight              # Engine weight estimation (kg)
-            '''
+            ## Constants
+            #k = 1.3                    # k (Specific heat ratio for Air)
+            #R = 287.0                  # R (Gas constant for Air - J/kg/degK)
+            #Ru = 8.314                 # R (Gas constant for Air - J/mole/degK)
+            #Hu = 44000.0               # Heating Value for gasoline (44000 kJ/kg)
+            #Tw = 400.0                 # Tw (Combustion Wall Temperature 400 degrees K)
+            #AFR = 14.6                 # Air Fuel Ratio for gasoline
+            #P_exth = 152               # Exhaust gas pressure
+            #P_amb = 101.325            # Ambient Pressure (kPa)
+            #T_amb = 298                # Ambient Temperature (deg K)
+            #air_density = 1.2          # Air Density (1.2 kg/m**2)
+            #mw_air = 28.97             # Molecular Weight of Air (g/mol)
+            #mw_fuel = 114              # Molecular Weight of Gasoline (g/mol)
 
-        super(Engine, self).__init__(name, parent, doc, directory)        
+            ## Simulation inputs
+            #RPM = 1000.0               # RPM
+            #throttle = 1.0             # Throttle Position
+            #thetastep = 1.0            # Simulation time stepsize (crank angle degrees)
 
-        # set up interface to the framework  
-        # pylint: disable-msg=E1101
-        # "Instance of <class> has no <attr> member"        
-        Float('stroke', self, INPUT, units='mm', default=78.8,
-              doc='Cylinder Stroke')
-        Float('bore', self, INPUT, units='mm', default=82.0, 
-              doc='Cylinder Bore')
-        Float('conrod', self, INPUT, units='mm', default=115.0, 
-              doc='Connecting Rod Length')
-        Float('comp_ratio', self, INPUT, units=None, default=9.3, 
-              doc='Compression Ratio')
-        Float('spark_angle', self, INPUT, units='deg', default=-37.0,
-              doc = 'Spark Angle with respect to TDC (Top Dead Center)')
-        Int('ncyl', self, INPUT, default=6,
-            doc = 'Number of Cylinders')
-        Float('IVO', self, INPUT, units='deg', default=11.0,
-              doc = 'Intake Valve Open before TDC (Top Dead Center)')
-        Float('IVC', self, INPUT, units='deg', default=53.0,
-              doc = 'Intake Valve Open after BDC (Bottom Dead Center)')
-        Float('L_v', self, INPUT, units='mm', default=8.0, 
-              doc='Maximum Valve Lift')
-        Float('D_v', self, INPUT, units='mm', default=41.2, 
-              doc='Inlet Valve Diameter')
+            ## Outputs
+            #power                      # Power at engine output (KW)
+            #torque                     # Torque at engine output (N*m)
+            #fuel_burn                  # Fuel burn rate (liters/sec)
+            #engine_weight              # Engine weight estimation (kg)
+            #'''
 
-        Float('RPM', self, INPUT, units='1/min', default=1000.0, min_limit=1000,
-              max_limit=6000, doc='Engine RPM')
-        Float('throttle', self, INPUT, units=None, default=1.0, min_limit=0.01,
-              max_limit=1.0, doc='Throttle position (from low idle to wide \
-              open)')
+        #super(Engine, self).__init__(name, parent, desc, directory)        
 
-        Float('power', self, OUTPUT, units='kW', default=0.0,
-              doc='Power at engine output')
-        Float('torque', self, OUTPUT, units='N*m', default=0.0,
-              doc='Torque at engine output')
-        Float('fuel_burn', self, OUTPUT, units='l/s', default=0.0,
-              doc='Fuel Burn Rate')
-        Float('engine_weight', self, OUTPUT, units='kg', default=0.0,
-              doc='Engine weight estimation')
 
 
     def execute(self):

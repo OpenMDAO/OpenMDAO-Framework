@@ -8,12 +8,12 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('MidFidelity',)
 __version__ = '0.1'
 
+from enthought.traits.api import Float, Array, Int, Str, Instance
+
 import mool.Optimization.MidFiModel
 
-from openmdao.main import Assembly, ArrayVariable, Float, Int, String
+from openmdao.main.api import Assembly
 from openmdao.main.interfaces import IComponent
-from openmdao.main.variable import INPUT, OUTPUT
-from openmdao.main.socket import Socket
 
 import wrapper
 
@@ -22,42 +22,56 @@ class MidFidelity(Assembly):
     """ Wrapper for M4 variable fidelity capability. """
 
     # Sockets.
-    lofi_model = Socket(IComponent, 'Low fidelity model', required=True)
-    hifi_model = Socket(IComponent, 'High fidelity model', required=True)
+    # TODO: make a Socket Trait that supports required/optional, or determine
+    # if existing traits class will work
+    lofi_model = Instance(IComponent, desc='Low fidelity model', required=True)
+    hifi_model = Instance(IComponent, desc='High fidelity model', required=True)
 
+    # Inputs.
+    # No 'Option' variables yet.
+
+    doe_type = Str('lhs', iostatus='in', 
+                   desc='Type of DOE used to generate response surface.')
+
+    rs_type = Str('quadratic', iostatus='in',
+                     desc='Type of response surface.')
+
+    n_samples = Range(value=1, low=1, iostatus='in', 
+                      desc='Number of samples.')
+
+    tolerance = Float(1.0e10, iostatus='in', desc='?')
+
+    correction_function = Int(1, iostatus='in',
+                              desc='Type of correction function.')
+
+    w_h = Float(0.5, iostatus='in', desc='?')
+
+    accuracy_test_type = Int(2, iostatus='in', 
+                             desc='Method for testing accuracy of response.')
+
+    n_samples_test = Range(value=10, low=1, iostatus='in',
+                           desc='Number of additional samples for additional-points test.')
+
+    ntheta = Int(3, iostatus='in', 
+                 desc='For Kriging method, ntheta=1(SA),2(Cobyla),3(BFGS)')
+    
+    # TODO: change these to delegates or passthroughs
+    
+    sample_points = Array(iostatus='out', 
+                          desc='Points used to make response',
+                          ref_name='sample_points', ref_parent='midfi_model')
+
+    lofi_results = Array(iostatus='out', 
+                         desc='Points used to make response',
+                         ref_name='lofi_results', ref_parent='midfi_model')
+
+    hifi_results = Array(iostatus='out', 
+                         desc='Points used to make response',
+                         ref_name='hifi_results', ref_parent='midfi_model')
+    
     def __init__(self, name='M4_MidFi', *args, **kwargs):
         super(MidFidelity, self).__init__(name, *args, **kwargs)
         self.need_updated_corrections = True
-
-        # Inputs.
-        # No 'Option' variables yet.
-
-        String('doe_type', self, INPUT, default='lhs',
-               doc='Type of DOE used to generate response surface.')
-
-        String('rs_type', self, INPUT, default='quadratic',
-               doc='Type of response surface.')
-
-        Int('n_samples', self, INPUT, default=1, min_limit=1,
-            doc='Number of samples.')
-
-        Float('tolerance', self, INPUT, default=1.0e10,
-              doc='?')
-
-        Int('correction_function', self, INPUT, default=1,
-            doc='Type of correction function.')
-
-        Float('w_h', self, INPUT, default=0.5,
-              doc='?')
-
-        Int('accuracy_test_type', self, INPUT, default=2,
-            doc='Method for testing accuracy of response.')
-
-        Int('n_samples_test', self, INPUT, default=10, min_limit=1,
-            doc='Number of additional samples for additional-points test.')
-
-        Int('ntheta', self, INPUT, default=3,
-            doc='For Kriging method, nthets=1(SA),2(Cobyla),3(BFGS)')
 
         self.input_mappings = []
         self.output_mappings = []
@@ -67,17 +81,6 @@ class MidFidelity(Assembly):
 
         self._midfi_model = mool.Optimization.MidFiModel.Mid_Fi_Model()
 
-        ArrayVariable('sample_points', self, OUTPUT, default=[],
-                      doc='Points used to make response',
-                      ref_name='sample_points', ref_parent=self._midfi_model)
-
-        ArrayVariable('lofi_results', self, OUTPUT, default=[],
-                      doc='Points used to make response',
-                      ref_name='lofi_results', ref_parent=self._midfi_model)
-
-        ArrayVariable('hifi_results', self, OUTPUT, default=[],
-                      doc='Points used to make response',
-                      ref_name='hifi_results', ref_parent=self._midfi_model)
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -190,8 +193,8 @@ class MidFidelity(Assembly):
             xlb = []
             xub = []
             for mid, low, high in self.input_mappings:
-                xlb.append(self.get(mid+'.min_limit'))
-                xub.append(self.get(mid+'.max_limit'))
+                xlb.append(self.get(mid+'.low'))
+                xub.append(self.get(mid+'.high'))
 
             self._midfi_model.Set(
                 hifi=self._hifi_m4model,

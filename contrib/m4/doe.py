@@ -8,30 +8,26 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('DOE',)
 __version__ = '0.1'
 
+from enthought.traits.api import Int, Str, Range
+
 import mool.Optimization.DOE
 
-from openmdao.main import Int, String, Case, ListCaseIterator
-from openmdao.main.variable import INPUT
+from openmdao.main.api import Case, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 
 
 class DOE(CaseIteratorDriver):
     """ M4 Design Of Experiments driver. """
 
+    # No 'Option' variables yet.
+    type = Str('ccd', iostatus='in', desc='Type of experiment design.')
+    n_samples = Range(value=1, low=1, iostatus='in', desc='Number of samples.')
+    lhs = Range(value=2, low=1, iostatus='in', desc='???, used by LHS and Rand_LHS.')
+
     def __init__(self, name='M4_DOE', *args, **kwargs):
         super(DOE, self).__init__(name, *args, **kwargs)
         self.design_variables = []    # List of (name, min, max) tuples.
         self.response_variables = []  # List of names.
-
-        # No 'Option' variables yet.
-        String('type', self, INPUT, default='ccd',
-               doc='Type of experiment design.')
-
-        Int('n_samples', self, INPUT, default=1, min_limit=1,
-            doc='Number of samples.')
-
-        Int('lhs', self, INPUT, default=2, min_limit=1,
-            doc='???, used by LHS and Rand_LHS.')
 
     def _pre_execute(self):
         """ Generate cases. """

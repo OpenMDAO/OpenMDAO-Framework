@@ -2,6 +2,7 @@
 pkg_res_factory test
 """
 
+import logging
 import os
 import unittest
 
@@ -38,6 +39,9 @@ class PkgResFactoryTestCase(unittest.TestCase):
         Verify that a plugin can be loaded successfully through a pkg_resources
         entry point.
         """
+        logging.debug('')
+        logging.debug('test_load')
+
         # make sure we're looking in the right spot for the plugins whether
         # we're in a develop egg or in the released version
         dist = working_set.find(Requirement.parse('openmdao.test'))
@@ -47,6 +51,17 @@ class PkgResFactoryTestCase(unittest.TestCase):
                                              ['openmdao.components'])
         
         comp = fact.create('testplugins.components.dumb.DumbComponent','foo')
+        logging.debug('    loaders:')
+        for key, value in fact._loaders.items():
+            logging.debug('        %s:', key)
+            for val in value:
+                logging.debug('                name: %s', val.name)
+                logging.debug('               group: %s', val.group)
+                logging.debug('                dist: %s', val.dist)
+                logging.debug('            entry_pt: %s', val.entry_pt)
+                logging.debug('                ctor: %s', val.ctor)
+                logging.debug('')
+
         self.assertEqual(comp.svar,'abcdefg')
         comp.run()
         self.assertEqual(comp.svar,'gfedcba')

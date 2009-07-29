@@ -1,19 +1,26 @@
 import os.path
 
-def assertRaisesError(testCaseInstance,code,errType,errMsg):
-    testFailed = False
+
+def assertRaisesError(test_case_instance, code, err_type, err_msg):
+    """ Determine that `code` raises `err_type` with `err_msg`. """
+    test_failed = False
     try:
         eval(code)
-        testFailed = True
-    except errType,err:
-        testCaseInstance.assertEqual(str(err),errMsg)
+        test_failed = True
+    except err_type, err:
+        test_case_instance.assertEqual(str(err), err_msg)
     except:
-        testCaseInstance.fail("Expecting %s"%errType)
-    if testfailed: testCaseInstance.fail("Expecting %s"%errType)
+        test_case_instance.fail("Expecting %s" % err_type)
+    if test_failed:
+        test_case_instance.fail("Expecting %s" % err_type)
+
 
 
 def find_python(hint):
-    """ Return path to python in buildout/bin. """
+    """
+    Return path to python in buildout/bin.  `hint` should be a peer directory
+    of 'buildout' found in the current directory path.
+    """
     # TODO: win32 support
     cwd = os.getcwd()
     python = 'python'
@@ -24,4 +31,3 @@ def find_python(hint):
         if index > 0:
             python = os.path.join(cwd[:index], 'buildout', 'bin', python)
     return python
-

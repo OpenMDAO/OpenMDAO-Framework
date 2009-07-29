@@ -1,7 +1,7 @@
 
 # pylint: disable-msg=C0111
 
-from openmdao.main import ImportFactory
+from openmdao.main.api import ImportFactory
 
 def test_import():
     ifactory = ImportFactory()
