@@ -1,3 +1,6 @@
+"""
+The Container class
+"""
 
 #public symbols
 __all__ = ["Container"]
@@ -22,24 +25,28 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint: enable-msg=W0212
 
 import networkx as nx
-from enthought.traits.api import HasTraits, implements, Str, Missing, TraitError,\
+from enthought.traits.api import HasTraits, implements, Missing, TraitError,\
                                  BaseStr, Undefined, push_exception_handler,\
-                                 on_trait_change, WeakRef, Python, Instance, TraitType
+                                 Python, TraitType, Property, Trait
 from enthought.traits.trait_handlers import NoDefaultSpecified
-from enthought.traits.has_traits import _SimpleTest, FunctionType
-from enthought.traits.trait_base import not_event, not_none
+from enthought.traits.has_traits import FunctionType
+from enthought.traits.trait_base import not_none
+
+# pylint apparently doesn't understand namespace packages...
+# pylint: disable-msg=E0611,F0401
 
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.interfaces import IContainer
 from openmdao.main.factorymanager import create as fmcreate
-from openmdao.util.save_load import SAVE_CPICKLE
-from openmdao.main.unitsfloat import convert_units, UnitsFloat
-
 import openmdao.util.save_load
+from openmdao.util.save_load import SAVE_CPICKLE
+from openmdao.main.unitsfloat import convert_units
 
 
-# this causes any exceptions occurring in trait handlers to be re-raised. Without
-# this, the default behavior is for the exception to be logged and not re-raised.
+
+# this causes any exceptions occurring in trait handlers to be re-raised.
+# Without this, the default behavior is for the exception to be logged and not
+# re-raised.
 push_exception_handler(handler = lambda o,t,ov,nv: None,
                        reraise_exceptions = True,
                        main = True,
@@ -74,14 +81,16 @@ class PathProperty(TraitType):
     def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
         ref_name = metadata.get('ref_name')
         if not ref_name:
-            raise TraitError("PathProperty constructor requires a 'ref_name' argument.")
+            raise TraitError("PathProperty constructor requires a"
+                             " 'ref_name' argument.")
         self._names = ref_name.split('.')
         if len(self._names) < 2:
-            raise TraitError("PathProperty ref_name must have at least two entries in the path."+
+            raise TraitError("PathProperty ref_name must have at least "
+                             "two entries in the path."
                              " The given ref_name was '%s'" % ref_name)        
-        self._ref = weakref.ref(_DumbTmp()) # make weakref to a transient object to force
-                                            # a re-resolve later without an extra check of 
-                                            # self._ref is None
+        #make weakref to a transient object to force a re-resolve later
+        #without an extra check of self._ref is None
+        self._ref = weakref.ref(_DumbTmp()) 
         super(PathProperty, self).__init__(default_value, **metadata)
 
     def __getstate__(self):
@@ -96,11 +105,10 @@ class PathProperty(TraitType):
         else:
             self._ref = weakref.ref(self._ref)
     
-    def _resolve(self, object):
+    def _resolve(self, obj):
         """Try to resolve down to the last containing object in the path and
         store a weakref to that object.
         """
-        obj = object
         try:
             for name in self._names[:-1]:
                 obj = getattr(obj, name)
@@ -111,17 +119,19 @@ class PathProperty(TraitType):
         self._ref = weakref.ref(obj)
         return obj
             
-    def get(self, object, name):
-        return getattr(self._ref() or self._resolve(object), self._last_name)
+    def get(self, obj, name):
+        """Return the value of the referenced attribute."""
+        return getattr(self._ref() or self._resolve(obj), self._last_name)
 
-    def set(self, object, name, value):
+    def set(self, obj, name, value):
+        """Set the value of the referenced attribute."""
         if self.iostatus is 'out':
             raise TraitError('%s is an output trait and cannot be set' % name)
         
         if self.trait:
-            value = self.trait.validate(object, name, value)
+            value = self.trait.validate(obj, name, value)
         
-        setattr(self._ref() or self._resolve(object), self._last_name, value)
+        setattr(self._ref() or self._resolve(obj), self._last_name, value)
 
     
 class ContainerName(BaseStr):
@@ -132,44 +142,51 @@ class ContainerName(BaseStr):
     
     # regex to check for valid names.  Added '.' as allowed because
     # npsscomponent uses it...
-    _namecheck_rgx = re.compile('([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
+    _namecheck_rgx = re.compile(
+        '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
 
     def __init__(self, **metadata):
         super(ContainerName, self).__init__(**metadata)
 
-    def validate(self, object, name, value):
+    def validate(self, obj, name, value):
+        """Make sure the given name follows Container naming rules.
+        Returns the validated name.
+        """
         if value == '' or value == None:
             return value
         
-        s = super(ContainerName, self).validate(object, name, value) # normal string validation
-        m = self._namecheck_rgx.search(s)
-        if m is None or m.group() != s:
-            raise TraitError("name '%s' contains illegal characters" % s)
-        return s            
+        # normal string validation
+        value = super(ContainerName, self).validate(obj, name, value) 
+        match = self._namecheck_rgx.search(value)
+        if match is None or match.group() != value:
+            raise TraitError("name '%s' contains illegal characters" % value)
+        return value          
     
 
 class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
-    # to check if an interface is provided, you can call validate_implements(value,klass)
-    # from enthought.traits.trait_types
+    # to check if an interface is provided, you can call
+    # validate_implements(value,klass) from enthought.traits.trait_types
     implements(IContainer)
     
     name = ContainerName()
     #parent = WeakRef(IContainer, allow_none=True, adapt='no', transient=True)
     parent = Python
     
-    log_level = Python
+    # this will automagically call _get_log_level and _set_log_level when needed
+    log_level = Property(desc='Logging message level')
+    
     __ = Python
     
     def __init__(self, name='', parent=None, doc=None, add_to_parent=True):
-        super(Container, self).__init__() # don't forget to init HasTraits
-                                          # or @on_trait_change decorator won't work!
+        super(Container, self).__init__() 
         self._valid_dict = {}  # contains validity flag for each io Trait
         self._sources = {}  # for checking that destination traits cannot be 
                           # set by other objects
-        self._added_traits = {}  # for keeping track of dynamically added traits for serialization
+        # for keeping track of dynamically added traits for serialization
+        self._added_traits = {}  
                           
         self.parent = parent
         self.name = name
@@ -190,9 +207,10 @@ class Container(HasTraits):
            isinstance(parent, Container) and add_to_parent:
             parent.add_child(self)
             
-        # Call _io_trait_changed if any trait having 'iostatus' metadata is changed.  
-        # We originally used the decorator @on_trait_change for this, but it
-        # failed to be activated properly when our objects were unpickled.
+        # Call _io_trait_changed if any trait having 'iostatus' metadata is
+        # changed. We originally used the decorator @on_trait_change for this,
+        # but it failed to be activated properly when our objects were
+        # unpickled.
         self.on_trait_change(self._io_trait_changed, '+iostatus')
             
     #
@@ -208,7 +226,8 @@ class Container(HasTraits):
                 dct[name] = trait
         state['_added_traits'] = dct
         
-        # remove call to _io_trait_changed if any trait having 'iostatus' metadata is changed    
+        # remove call to _io_trait_changed if any trait having 'iostatus'
+        # metadata is changed
         self.on_trait_change(self._io_trait_changed, '+iostatus', remove=True)
         
         return state
@@ -218,16 +237,19 @@ class Container(HasTraits):
         super(Container, self).__setstate__({})
         self.__dict__.update(state)
         
-        # restore call to _io_trait_changed if any trait having 'iostatus' metadata is changed    
+        # restore call to _io_trait_changed to catch changes to any trait
+        # having 'iostatus' metadata
         self.on_trait_change(self._io_trait_changed, '+iostatus')
         
+        # restore dynamically added traits, since they don't seem
+        # to get restored automatically
         for name,trait in self._added_traits.items():
             self.add_trait(name, trait)
          
-        # after unpickling, implicitly defined traits disappear, so we have
-        # to recreate them by assigning them to themselves.
-        # TODO: I'm probably missing something. There has to be a better way to
-        #       do this...
+        # after unpickling, implicitly defined traits disappear, so we have to
+        # recreate them by assigning them to themselves.       
+        #TODO: I'm probably missing something. There has to be a better way to
+        #      do this...
         for name, val in self.__dict__.items():
             if not self.trait(name) and not name.startswith('__'):
                 setattr(self, name, val) # force def of implicit trait
@@ -250,8 +272,8 @@ class Container(HasTraits):
         """Overrides HasTraits definition of remove_trait in order to
         keep track of dynamically added traits for serialization.
         """
-        # this just forces the regeneration (lazily) of the lists of inputs,outputs, 
-        # and containers
+        # this just forces the regeneration (lazily) of the lists of
+        # inputs,outputs, and containers
         self._trait_added_changed(name)
         del self._added_traits[name]
         super(Container, self).remove_trait(name)
@@ -269,17 +291,26 @@ class Container(HasTraits):
     #@on_trait_change('+iostatus') 
     def _io_trait_changed(self, obj, name, old, new):
         # setting old to Undefined is a kludge to bypass the destination check
-        # when we call this directly from Assembly as part of setting this attribute
-        # from an existing connection.
+        # when we call this directly from Assembly as part of setting this
+        # attribute from an existing connection.
         if self.trait(name).iostatus == 'in':
             if old is not Undefined and name in self._sources:
                 self.raise_exception(
-                    "'%s' is already connected to source '%s' and cannot be directly set"%
+                    "'%s' is already connected to source '%s' and "
+                    "cannot be directly set"%
                     (name, self._sources[name]), TraitError)
             self._execute_needed = True
         if self.get_valid(name):  # if var is not already invalid
             self.invalidate_deps([name], notify_parent=True)
 
+    # error reporting stuff
+    def _get_log_level(self):
+        """Return logging message level."""
+        return self._logger.level
+
+    def _set_log_level(self, level):
+        """Set logging message level."""
+        self._logger.level = level
 
     def rename(self, name):
         """Change name of self and associated logger."""
@@ -318,7 +349,9 @@ class Container(HasTraits):
         return getattr(self, name)
         
     def get_valid(self, name):
-        """Get the value of the validity flag for the io trait with the given name."""
+        """Get the value of the validity flag for the io trait with the given
+        name.
+        """
         valid = self._valid_dict.get(name, Missing)
         if valid is Missing:
             trait = self.trait(name)
@@ -326,12 +359,15 @@ class Container(HasTraits):
                 self._valid_dict[name] = False
                 return False
             else:
-                self.raise_exception("cannot set valid flag of '%s' because it's not an io trait."%
-                                     name, RuntimeError)
+                self.raise_exception(
+                    "cannot set valid flag of '%s' because it's not "
+                    "an io trait." % name, RuntimeError)
         return valid
     
     def get_valids(self, names):
-        """Get a list of validity flags for the io traits with the given names."""
+        """Get a list of validity flags for the io traits with the given
+        names.
+        """
         return [self.get_valid(v) for v in names]
 
     def set_valid(self, name, valid):
@@ -343,8 +379,9 @@ class Container(HasTraits):
             if trait and trait.iostatus:
                 self._valid_dict[name] = valid
             else:
-                self.raise_exception("cannot set valid flag of '%s' because it's not an io trait."%
-                                     name, RuntimeError)
+                self.raise_exception(
+                    "cannot set valid flag of '%s' because "
+                    "it's not an io trait." % name, RuntimeError)
 
     def add_child(self, obj):
         """Add a Container object to this Container.
@@ -364,7 +401,7 @@ class Container(HasTraits):
                     TypeError)
         return obj
         
-    def remove_child(self, name, delete=True):
+    def remove_child(self, name):
         """Remove the specified child from this container and remove any
         public Variable objects that reference that child. Notify any
         observers."""
@@ -376,7 +413,9 @@ class Container(HasTraits):
                                  name, TraitError)
     
     def unit_convert(self, name, units):
-        """Return the value of the named io trait converted to the given units."""
+        """Return the value of the named io trait converted to the given
+        units.
+        """
         desttrait = self.trait(name)
         if desttrait is None:
             self.raise_exception("attribute '%s' not found"%name,
@@ -393,22 +432,23 @@ class Container(HasTraits):
         their corresponding values to the given stream. If the stream
         is not supplied, it defaults to sys.stdout.
         """
-        pprint.pprint(dict([(n,str(v)) for n,v in self.items(recurse=recurse, 
-                                                             iostatus=not_none)]),
+        pprint.pprint(dict([(n,str(v)) 
+                        for n,v in self.items(recurse=recurse, 
+                                              iostatus=not_none)]),
                       stream)
     
     def items(self, recurse=False, **metadata):
-        """Return a list of tuples of the form (rel_pathname, obj) 
-        for each trait of this Container that matches
-        the given metadata. If recurse is True, also iterate through all
-        child Containers of each Container found.
+        """Return a list of tuples of the form (rel_pathname, obj) for each
+        trait of this Container that matches the given metadata. If recurse is
+        True, also iterate through all child Containers of each Container
+        found.
         """
         return self._items(set([id(self.parent)]), recurse, **metadata)
         
     def keys(self, recurse=False, **metadata):
-        """Return a list of the relative pathnames of
-        children of this Container that match the given metadata. If recurse is 
-        True, child Containers will also be iterated over.
+        """Return a list of the relative pathnames of children of this
+        Container that match the given metadata. If recurse is True, child
+        Containers will also be iterated over.
         """
         return [tup[0] for tup in self._items(set([id(self.parent)]), 
                                               recurse, **metadata)]
@@ -451,7 +491,8 @@ class Container(HasTraits):
         """Return a list of names of child Containers."""
         if self._containers is None:
             dct = self.__dict__
-            self._containers = [n for n,v in dct.items() if isinstance(v,Container)]            
+            self._containers = [n for n,v in dct.items() 
+                                  if isinstance(v,Container)]            
         return self._containers
     
     def _traits_meta_filter(self, traits=None, **metadata):
@@ -493,7 +534,8 @@ class Container(HasTraits):
                     obj = getattr(self, name)
                     if name in match_dict and id(obj) not in visited:
                         yield(name, obj)
-                    for chname, child in obj._items(visited, recurse, **metadata):
+                    for chname, child in obj._items(visited, recurse, 
+                                                    **metadata):
                         yield ('.'.join([name, chname]), child)
                             
             for name, trait in match_dict.items():
@@ -552,21 +594,22 @@ class Container(HasTraits):
         name or a dotted path, passing the given arguments to it, and 
         return the result.
         """
-        if path is None:
-            return self.__call__(*args, **kwargs)
-        else:
+        if path:
             tup = path.split('.')
             if len(tup) == 1:
                 return getattr(self, path)(*args, **kwargs)
             else:
                 obj = getattr(self, tup[0], Missing)
                 if obj is Missing:
-                    self.raise_exception("object has no attribute '%s'" % tup[0], 
-                                         AttributeError)
+                    self.raise_exception("object has no attribute '%s'" % 
+                                         tup[0], AttributeError)
                 if len(tup) == 2:
                     return getattr(obj, tup[1])(*args, **kwargs)
                 else:
                     return obj.invoke('.'.join(tup[1:]), *args, **kwargs)
+        else:
+            self.raise_exception("this object is not callable",
+                                 RuntimeError)
         
         
     def get(self, path, index=None):
@@ -584,24 +627,27 @@ class Container(HasTraits):
                 return self
             else:
                 self.raise_exception(
-                    'Cannot retrieve items from Container %s using array notation.'%
-                    self.get_pathname(), AttributeError)
+                    'Cannot retrieve items from Container %s using '
+                    'array notation.' % self.get_pathname(), 
+                    AttributeError)
         
         tup = path.split('.')
         if len(tup) == 1:
             if index is None:
                 obj = getattr(self, path, Missing)
                 if obj is Missing:
-                    self.raise_exception("object has no attribute '%s'" % path, 
-                                         AttributeError)
+                    self.raise_exception(
+                        "object has no attribute '%s'" % path, 
+                        AttributeError)
                 return obj
             else:
                 return self._array_get(path, index)
         else:
             obj = getattr(self, tup[0], Missing)
             if obj is Missing:
-                self.raise_exception("object has no attribute '%s'" % tup[0], 
-                                     AttributeError)
+                self.raise_exception(
+                    "object has no attribute '%s'" % tup[0], 
+                    AttributeError)
             if len(tup) == 2 and index is None:
                 return getattr(obj, tup[1])
             
@@ -619,8 +665,9 @@ class Container(HasTraits):
         to another source.
         """
         if name in self._sources:
-            self.raise_exception("'%s' is already connected to source '%s'" % 
-                                 (name, self._sources[name]), TraitError)
+            self.raise_exception(
+                "'%s' is already connected to source '%s'" % 
+                (name, self._sources[name]), TraitError)
         self._sources[name] = source   
             
     def remove_source(self, destination):
@@ -638,12 +685,14 @@ class Container(HasTraits):
         trait = self.trait(name)
         if trait:
             if trait.iostatus != 'in' and src is not None and src != srcname:
-                self.raise_exception("'%s' is not an input trait and cannot be set" %
-                                     name, TraitError)
+                self.raise_exception(
+                    "'%s' is not an input trait and cannot be set" %
+                    name, TraitError)
                 
             if src is not None and src != srcname:
                 self.raise_exception(
-                    "'%s' is connected to source '%s' and cannot be set by source '%s'"%
+                    "'%s' is connected to source '%s' and cannot be "
+                    "set by source '%s'" %
                     (name,src,srcname), TraitError)
         else:
             self.raise_exception("object has no attribute '%s'" % name,
@@ -651,11 +700,11 @@ class Container(HasTraits):
         return trait
 
     def set(self, path, value, index=None, srcname=None, force=False):
-        """Set the value of the data object specified by the  given path, which
-        may contain '.' characters.  If path specifies a Variable, then its
+        """Set the value of the data object specified by the given path, which
+        may contain '.' characters. If path specifies a Variable, then its
         value attribute will be set to the given value, subject to validation
-        and  constraints. index, if not None, should be a list of ints, at
-        most one for each array dimension of the target value.       
+        and constraints. index, if not None, should be a list of ints, at most
+        one for each array dimension of the target value.
         """ 
         assert(isinstance(path, basestring))
         
@@ -684,7 +733,8 @@ class Container(HasTraits):
                     self._trait_change_notify(True)
                 # now manually call the notifier with old set to Undefined
                 # to avoid the destination check
-                self._io_trait_changed(self, path, Undefined, getattr(self, path))
+                self._io_trait_changed(self, path, Undefined, 
+                                       getattr(self, path))
             else:
                 self._array_set(path, value, index)
         else:
@@ -694,7 +744,8 @@ class Container(HasTraits):
                                      TraitError)
             if len(tup) == 2:
                 if isinstance(obj, Container):
-                    obj.set(tup[1], value, index, srcname=srcname, force=force)
+                    obj.set(tup[1], value, index, srcname=srcname, 
+                            force=force)
                 elif index is None:
                     setattr(obj, tup[1], value)
                 else:
@@ -705,8 +756,8 @@ class Container(HasTraits):
                 elif index is not None:
                     obj._array_set('.'.join(tup[1:]), value, index)
                 else:
-                    self.raise_exception("object has no attribute '%s'" % path,
-                                         TraitError)
+                    self.raise_exception("object has no attribute '%s'" % 
+                                         path, TraitError)
 
     def _array_set(self, name, value, index):
         arr = getattr(self, name)
@@ -757,10 +808,10 @@ class Container(HasTraits):
                     src_dir=None, src_files=None, child_objs=None,
                     dst_dir=None, format=SAVE_CPICKLE, proto=-1,
                     use_setuptools=False):
-        """Save state and other files to an egg.
-        Analyzes the objects saved for distribution dependencies.
-        Modules not found in any distribution are recorded in a '`name`.missing'
-        file.  Also creates and saves loader scripts for each entry point.
+        """Save state and other files to an egg. Analyzes the objects saved
+        for distribution dependencies. Modules not found in any distribution
+        are recorded in a '`name`.missing' file. Also creates and saves loader
+        scripts for each entry point.
 
         - `name` defaults to the name of the container.
         - `version` defaults to the container's module __version__, or \
@@ -816,9 +867,11 @@ class Container(HasTraits):
         output stream. Pure Python classes generally won't need to
         override this because the base class version will suffice, but
         Python extension classes will have to override. The format
-        can be supplied in case something other than cPickle is needed."""
+        can be supplied in case something other than cPickle is needed.
+        """
         parent = self.parent
-        self.parent = None  # Don't want to save stuff above us.
+        # Don't want to save stuff above us.
+        self.parent = None  
         try:
             openmdao.util.save_load.save(self, outstream, format, proto,
                                          self._logger)
@@ -831,33 +884,40 @@ class Container(HasTraits):
     def load_from_eggfile(filename, install=True):
         """Extract files in egg to a subdirectory matching the saved object
         name, optionally install distributions the egg depends on, and then
-        load object graph state.  Returns the root object."""
+        load object graph state.  Returns the root object.
+        """
         # Load from file gets everything.
         entry_group = 'openmdao.top'
         entry_name = 'top'
-        return openmdao.util.save_load.load_from_eggfile(filename, entry_group,
-                                                         entry_name, install,
+        return openmdao.util.save_load.load_from_eggfile(filename, 
+                                                         entry_group,
+                                                         entry_name, 
+                                                         install,
                                                          logger)
     @staticmethod
     def load_from_eggpkg(package, entry_name=None, instance_name=None):
         """Load object graph state by invoking the given package entry point.
         If specified, the root object is renamed to `instance_name`.
-        Returns the root object."""
+        Returns the root object.
+        """
         entry_group = 'openmdao.components'
         if not entry_name:
             entry_name = package  # Default component is top.
-        return openmdao.util.save_load.load_from_eggpkg(package, entry_group,
+        return openmdao.util.save_load.load_from_eggpkg(package, 
+                                                        entry_group,
                                                         entry_name,
-                                                        instance_name, logger)
+                                                        instance_name, 
+                                                        logger)
 
     @staticmethod
-    def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True,
-             name=None):
-        """Load object(s) from the input stream. Pure python 
-        classes generally won't need to override this, but extensions will. 
-        The format can be supplied in case something other than cPickle is 
-        needed."""
-        top = openmdao.util.save_load.load(instream, format, package, logger)
+    def load(instream, format=SAVE_CPICKLE, package=None, 
+             do_post_load=True, name=None):
+        """Load object(s) from the input stream. Pure python classes generally
+        won't need to override this, but extensions will. The format can be
+        supplied in case something other than cPickle is needed.
+        """
+        top = openmdao.util.save_load.load(instream, format, 
+                                           package, logger)
         if name:
             top.rename(name)
             if do_post_load:
@@ -865,14 +925,15 @@ class Container(HasTraits):
         return top
 
     def _post_load(self, name):
-        """Called above or in Component before post_load() to fix parent
-        and loggers.  Maintains a simpler public post_load() interface."""
+        """Called above or in Component before post_load() to fix parent and
+        loggers. Maintains a simpler public post_load() interface.
+        """
         parent = self.parent
         if parent:
             self.parent = None
         if parent or name:
-            [x.rename(x.name) for x in self.values(pub=False) 
-                                    if isinstance(x, HierarchyMember)]
+            [x.rename(x.name) for x in self.values() 
+                                    if isinstance(x, Container)]
         self.post_load()
 
     def post_load(self):
@@ -886,13 +947,14 @@ class Container(HasTraits):
                                           if isinstance(x,Container)]
 
     def get_io_graph(self):
-        """Return a graph connecting our input variables to our output variables.
-        In the case of a simple Container, all input variables are predecessors to
-        all output variables.
+        """Return a graph connecting our input variables to our output
+        variables. In the case of a simple Container, all input variables are
+        predecessors to all output variables.
         """
-        # NOTE: if the _io_graph changes, this function must return a NEW graph
-        # object instead of modifying the old one, because object identity
-        # is used in the parent assembly to determine of the graph has changed
+        # NOTE: if the _io_graph changes, this function must return a NEW
+        # graph object instead of modifying the old one, because object
+        # identity is used in the parent assembly to determine of the graph
+        # has changed
         if self._io_graph is None:
             self._io_graph = nx.DiGraph()
             io_graph = self._io_graph
@@ -919,10 +981,11 @@ class Container(HasTraits):
         for name in names:
             obj = getattr(obj, name)
         # if we make it to here, object specified by ref_name exists
-        return PathProperty(ref_name=ref_name, iostatus=iostatus, trait=trait)
+        return PathProperty(ref_name=ref_name, iostatus=iostatus, 
+                            trait=trait)
 
     def make_public(self, obj_info, iostatus='in'):
-        """Create trait(s) specified by the contents of obj_info.  Calls
+        """Create trait(s) specified by the contents of obj_info. Calls
         _build_trait(), which can be overridden by subclasses, to create each
         trait.
         """
@@ -963,7 +1026,8 @@ class Container(HasTraits):
         
         if trait is None:
             try:
-                # check to see if component has the ability to create traits on-the-fly
+                # check to see if component has the ability to create traits
+                # on-the-fly
                 self.hoist(name, iostat)
             except AttributeError:
                 self.raise_exception("Cannot locate trait named '%s'" %
@@ -973,11 +1037,10 @@ class Container(HasTraits):
 
     
     def hoist(self, path, io_status=None, trait=None):
-        """Create a trait that maps to some internal variable
-        designated by a dotted path.  If a trait is supplied as
-        an argument, use that trait as a validator for the hoisted
-        value.  The resulting trait will have the dotted path as
-        its name.
+        """Create a trait that maps to some internal variable designated by a
+        dotted path. If a trait is supplied as an argument, use that trait as
+        a validator for the hoisted value. The resulting trait will have the
+        dotted path as its name.
         """
         oldtrait = self.trait(path)
         if oldtrait is None:
@@ -996,18 +1059,6 @@ class Container(HasTraits):
         self._outputs = None
         self._containers = None
     
-    # error reporting stuff
-    def _get_log_level(self):
-        """Return logging message level."""
-        return self._logger.level
-
-    def _set_log_level(self, level):
-        """Set logging message level."""
-        self._logger.level = level
-
-    log_level = property(_get_log_level, _set_log_level,
-                         doc='Logging message level.')
-
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)
