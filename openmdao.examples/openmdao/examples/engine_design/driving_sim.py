@@ -22,6 +22,7 @@ THROTTLE_MIN = .07
 THROTTLE_MAX = 1.0
 SHIFTPOINT1 = 10.0
 MAX_ERROR = .01
+CONVERT_TO_MPHPS = 2.23693629
 
 
 class DrivingSim(Assembly):
@@ -98,12 +99,14 @@ class DrivingSim(Assembly):
         velocity = 0.0
         time = 0.0
         
+        end_speed = self.end_speed
+        
         # Set throttle and gear
         self.vehicle.current_gear = 1
         self.vehicle.throttle = 1.0
         self.vehicle.velocity = 0.0
                    
-        while velocity < self.end_speed:
+        while velocity < end_speed:
             
             # Find acceleration.
             # If RPM goes over MAX RPM, shift gears
@@ -125,7 +128,7 @@ class DrivingSim(Assembly):
                         raise
 
             # Accleration converted to mph/s
-            acceleration = self.vehicle.acceleration*2.23693629
+            acceleration = self.vehicle.acceleration*CONVERT_TO_MPHPS
             
             if acceleration <= 0.0:
                 self.raise_exception("Vehicle could not reach maximum speed "+\
@@ -163,13 +166,18 @@ class DrivingSim(Assembly):
             except TraitError, err:
                 if self.vehicle.engine.RPM < self.vehicle.transmission.RPM:
                     
+                    if self.vehicle.current_gear > 4:
+                        self.raise_exception("Transmission gearing cannot \
+                        achieve acceleration and speed required by EPA \
+                        test.", RuntimeError)
+                    
                     self.vehicle.current_gear += 1
                     
-                    if self.vehicle.current_gear > 5:
-                        self.raise_exception("Transmission gearing cannot \
-                        achieve maximum speed in EPA test.", RuntimeError)
-                    
                 elif self.vehicle.engine.RPM > self.vehicle.transmission.RPM:
+
+                    # Note, no check needed for low gearing -- you cannot go \
+                    # too slow for first gear.
+                    
                     self.vehicle.current_gear -= 1
                     
                 else:
@@ -213,7 +221,7 @@ class DrivingSim(Assembly):
                 
                 self.vehicle.throttle = THROTTLE_MIN
                 findgear()                    
-                accel_min = self.vehicle.acceleration*2.23693629
+                accel_min = self.vehicle.acceleration*CONVERT_TO_MPHPS
                 
                 # Upshift if commanded accel is less than closed-throttle accel
                 # The net effect of this will often be a shift to a higher gear
@@ -226,11 +234,11 @@ class DrivingSim(Assembly):
                     
                     self.vehicle.current_gear += 1
                     findgear()
-                    accel_min = self.vehicle.acceleration*2.23693629
+                    accel_min = self.vehicle.acceleration*CONVERT_TO_MPHPS
                 
                 self.vehicle.throttle = THROTTLE_MAX
                 self.vehicle.run()
-                accel_max = self.vehicle.acceleration*2.23693629
+                accel_max = self.vehicle.acceleration*CONVERT_TO_MPHPS
                 
                 # Downshift if commanded accel > wide-open-throttle accel
                 while command_accel > accel_max and \
@@ -238,7 +246,7 @@ class DrivingSim(Assembly):
                     
                     self.vehicle.current_gear -= 1
                     findgear()
-                    accel_max = self.vehicle.acceleration*2.23693629
+                    accel_max = self.vehicle.acceleration*CONVERT_TO_MPHPS
                 
                 # If engine cannot accelerate quickly enough to match profile, 
                 # then raise exception    
@@ -259,7 +267,7 @@ class DrivingSim(Assembly):
                     self.vehicle.throttle = THROTTLE_MIN
                     self.vehicle.run()
                     
-                    min_acc = self.vehicle.acceleration*2.23693629
+                    min_acc = self.vehicle.acceleration*CONVERT_TO_MPHPS
                     max_acc = accel_max
                     min_throttle = THROTTLE_MIN
                     max_throttle = THROTTLE_MAX
@@ -270,7 +278,7 @@ class DrivingSim(Assembly):
                     
                         self.vehicle.throttle = new_throttle
                         self.vehicle.run()
-                        new_acc = self.vehicle.acceleration*2.23693629
+                        new_acc = self.vehicle.acceleration*CONVERT_TO_MPHPS
                         
                         if abs(command_accel-new_acc) < MAX_ERROR:
                             CONVERGED = 1

@@ -59,9 +59,10 @@ class Chasis(Component):
         tire_radius = self.tire_circ/(2.0*pi)
         
         mass = self.mass_vehicle + self.mass_engine
+        V = self.velocity
         
         friction = self.Cf*mass*9.8
-        drag = .5*(1.225)*self.Cd*self.area*self.velocity*self.velocity
+        drag = .5*(1.225)*self.Cd*self.area*V*V
         
         self.acceleration = (torque/tire_radius - friction - drag)/mass
         
