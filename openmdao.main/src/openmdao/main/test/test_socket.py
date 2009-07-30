@@ -4,7 +4,7 @@ import unittest
 from enthought.traits.api import Int, Instance, TraitError
 
 from openmdao.main.api import Assembly, Component, ListCaseIterator, Case
-from openmdao.main.interfaces import ICaseIterator, IAssembly
+from openmdao.main.interfaces import ICaseIterator
 
 class SocketComp(Assembly):
     iterator = Instance(ICaseIterator, allow_none=False, desc='cases to evaluate')
@@ -19,12 +19,12 @@ class SocketComp(Assembly):
             self.num_cases += 1
 
 class SocketComp2(SocketComp):
-    somesocket = Instance(IAssembly)
+    somesocket = Instance(Assembly)
     def __init__(self):
         super(SocketComp2, self).__init__()
         
 class SocketComp3(SocketComp2):
-    iterator = Instance(IAssembly, desc='another dumb socket')
+    iterator = Instance(Assembly, desc='another dumb socket')
     
     def __init__(self):
         super(SocketComp3, self).__init__()

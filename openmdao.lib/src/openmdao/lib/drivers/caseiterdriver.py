@@ -7,9 +7,9 @@ import time
 
 from enthought.traits.api import Range, Bool, Instance, Any
 
-from openmdao.main.api import Driver
+from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.interfaces import ICaseIterator, IComponent
+from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.util import filexfer
 
 
@@ -46,7 +46,7 @@ class CaseIteratorDriver(Driver):
 
     iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
     outerator = Instance(object, desc='Something to append() to.', required=True)
-    model = Instance(IComponent, desc='Model to be executed.', required=True)
+    model = Instance(Component, desc='Model to be executed.', required=True)
     
     sequential = Bool(True, iostatus='in',
                       desc='Evaluate cases sequentially.')

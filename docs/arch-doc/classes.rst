@@ -16,14 +16,16 @@ The following sections present Class Diagrams for Model Composition Classes
 Model Composition Classes
 ===========================
 
-The figure `Class Diagram of Core Classes`_ shows the classes that are the building
-blocks of a *model*. A model is a hierarchical structure with an :term:`Assembly`
-at its root. Within the :term:`Assembly` is a :term:`Driver` and some number of
-:term:`Components`. Also within the Assembly is a :term:`Workflow`, which controls the
-execution order of the Components. The Components have Variables, and these Variables
-can be linked to Variables on other Components. An Assembly is a Component, which means
-that it can be contained within another :term:`Assembly`. This allows for the creation
-of hierarchical models with many levels of nested Assemblies.
+The figure `Class Diagram of Core Classes`_ shows the classes that are the
+building blocks of a *model*. A model is a hierarchical structure with an
+:term:`Assembly` at its root. Within the :term:`Assembly` is some number of
+:term:`Components`, and a :term:`Workflow`, which controls the execution order
+of the Components. The Components have attributes that can be linked to
+attributes on other Components. An Assembly is a Component, which means that it
+can be contained within another :term:`Assembly`. This allows for the creation
+of hierarchical models with many levels of nested Assemblies. A :term:`Driver`
+is an Assembly that repeatedly executes its workflow until some condition is
+met.
 
 
 .. _`Class Diagram of Core Classes`:
@@ -38,22 +40,24 @@ of hierarchical models with many levels of nested Assemblies.
 .. index:: classes; built-in Variable 
 
 
-Types of Built-in Variable Classes
-==================================
+Classes for Validation and Conversion of Component Attributes
+=============================================================
 
-The built-in Variable classes (see `Class Diagram of Variable Classes`_ below) will be
-provided with the framework, but it will also be possible to add others as plug-ins. The
-plug-in Variables can have the same level of functionality of the built-in ones, i.e.,
-they can perform their own validation and can have custom graphical editors.
+Validation and conversion of Component attributes is done using the Traits_
+package.  There are a large number of built-in trait types to choose from, 
+including Int, Float, Str, Array, List, and many others.  You can also define
+your own custom traits by inheriting from TraitType and overriding the
+*validate()* function.  Traits also has built-in support for creation of
+graphical editors for each trait when running with a wxPython GUI, but it's not
+clear at this point whether this functionality will be useful in the context of
+a web GUI. The documentation claims that traits uses something called pyface,
+to provide a sort of generalized UI layer that can be tied to various GUI
+libraries on the back end. However, it appears that wxPython may be the only
+functioning back end at the moment.
 
-.. _`Class Diagram of Variable Classes`:
 
+.. _Traits: http://code.enthought.com/projects/traits/documentation.php
 
-.. figure:: ../generated_images/VariableClasses.png
-   :align: center
-
-   Class Diagram of Variable Classes
-   
    
 .. index:: pair: Factory; classes   
 

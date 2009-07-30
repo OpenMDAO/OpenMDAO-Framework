@@ -18,9 +18,10 @@ from enthought.traits.trait_base import not_event, not_none
 import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
 
-from openmdao.main.interfaces import IAssembly, IComponent, IDriver, IWorkflow
+from openmdao.main.interfaces import IDriver
 from openmdao.main.container import Container
 from openmdao.main.component import Component, STATE_IDLE
+from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.util.save_load import SAVE_PICKLE
 from openmdao.main.exceptions import CircularDependencyError
@@ -62,10 +63,8 @@ class Assembly (Component):
     to connect inputs and outputs between its children 
     and how to handle Sockets.
     """
-    implements(IAssembly)
-    
     drivers = List(IDriver)
-    workflow = Instance(IWorkflow)
+    workflow = Instance(Workflow)
     
     def __init__(self, name=None, parent=None, doc=None, directory='',
                        workflow=None):

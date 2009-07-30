@@ -36,7 +36,6 @@ from enthought.traits.trait_base import not_none
 # pylint: disable-msg=E0611,F0401
 
 from openmdao.main.log import Logger, logger, LOG_DEBUG
-from openmdao.main.interfaces import IContainer
 from openmdao.main.factorymanager import create as fmcreate
 import openmdao.util.save_load
 from openmdao.util.save_load import SAVE_CPICKLE
@@ -167,12 +166,8 @@ class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
-    # to check if an interface is provided, you can call
-    # validate_implements(value,klass) from enthought.traits.trait_types
-    implements(IContainer)
-    
     name = ContainerName()
-    #parent = WeakRef(IContainer, allow_none=True, adapt='no', transient=True)
+    #parent = WeakRef(Container, allow_none=True, adapt='no', transient=True)
     parent = Python
     
     # this will automagically call _get_log_level and _set_log_level when needed

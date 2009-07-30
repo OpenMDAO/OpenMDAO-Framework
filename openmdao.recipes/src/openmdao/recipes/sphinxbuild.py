@@ -29,7 +29,7 @@ bld_template = """\
 import sys
 from pkg_resources import load_entry_point
 bld = load_entry_point("Sphinx","console_scripts","sphinx-build")
-args = ['-P', '-b', 'html', '-d', '%s', '.', '%s']
+args = ['-P', '-b', 'html', '-d', '%s', '%s', '%s']
                 
 sys.exit(bld(argv=args))
 
@@ -251,6 +251,7 @@ class SphinxBuild(object):
         bld_script = open(bspath, 'w')
         bld_script.write(bld_template % (self.executable,
                                         os.path.join(self.builddir, "doctrees"),
+                                        self.docdir,
                                         os.path.join(self.builddir, "html")))
         bld_script.close()
         try:
