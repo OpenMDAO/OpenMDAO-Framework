@@ -179,7 +179,6 @@ class WingProj(object):
                                      "u'buildout',\n"+
                                      "u'plans',\n"+
                                      "u'openmdao.test/src/openmdao.test.egg-info',\n"+
-                                     "u'docs',\n"+
                                      "u'openmdao.lib/build',\n"+
                                      "u'eggsrc/conmin/conmin.egg-info',\n"+
                                      "u'openmdao.main/build',\n"+
@@ -189,7 +188,7 @@ class WingProj(object):
                                      "u'openmdao.main/src/openmdao.main.egg-info',\n"+
                                      "u'openmdao.util/src/openmdao.util.egg-info',\n"+
                                      "u'eggsrc/npsscomponent/build'],\n"+
-                            "  'filter': '*.py',\n"+
+                            "  'filter': '*.py; *.rst',\n"+
                             "  'include_hidden': 0,\n"+
                             "  'recursive': 1,\n"+
                             "  'watch_for_changes': 1}]")
