@@ -132,7 +132,7 @@ class Vehicle(Assembly):
 
 
         
-if __name__ == "__main__": 
+if __name__ == "__main__": # pragma: no cover    
     top = Assembly('top')
     z = Vehicle("Testing", parent=top)        
     z.current_gear = 1
