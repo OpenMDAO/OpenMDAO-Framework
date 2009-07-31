@@ -36,8 +36,8 @@ met.
    Class Diagram of Core Classes
 
 
-.. index:: built-in Variable classes
-.. index:: classes; built-in Variable 
+.. index:: built-in Trait classes
+.. index:: classes; built-in Trait 
 
 
 Classes for Validation and Conversion of Component Attributes
@@ -58,7 +58,12 @@ functioning back end at the moment.
 
 .. _Traits: http://code.enthought.com/projects/traits/documentation.php
 
-   
+.. figure:: ../generated_images/VariableClasses.png
+    :align: center
+    
+    Class Diagram of Built-in Traits
+    
+       
 .. index:: pair: Factory; classes   
 
 Factory Classes

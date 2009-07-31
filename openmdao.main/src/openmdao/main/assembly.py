@@ -267,12 +267,14 @@ class Assembly (Component):
                                  RuntimeError)             
             
         # test compatability (raises TraitError on failure)
-        desttrait.validate(destcomp, destvarname, getattr(srccomp, srcvarname))
+        desttrait.validate(destcomp, destvarname, 
+                           getattr(srccomp, srcvarname))
         
         if destcomp is not self:
             destcomp.set_source(destvarname, srcpath)
             if srccomp is not self: # neither var is on boundary
-                self._dataflow.connect(srccompname, destcompname, srcvarname, destvarname)
+                self._dataflow.connect(srccompname, destcompname, 
+                                       srcvarname, destvarname)
         
         vgraph = self.get_var_graph()
         vgraph.add_edge(srcpath, destpath)

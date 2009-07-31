@@ -186,13 +186,19 @@ remote serialized state so that it can be located later during a load operation.
 Execution
 =========
 
-When an :term:`Assembly` runs, it runs the :term:`Driver`, which iteratively runs the
-:term:`Workflow`. By default, the workflow will be sequential and will be ordered
-based on dataflow only, but other Workflows will be available, including
-conditional execution and concurrent execution. Both workflow and dataflow
-*views* will be available for each :term:`Assembly`. Both views will be kept in sync,
-and the user will not be permitted to create dataflow loops or process flows
-that invalidate the dataflow. 
+Each Component in the system has a *run()* function which handles updating of
+necessary inputs, executing the Component, and updating outputs.  An
+:term:`Assembly` is a Component that contains other Components within an object
+called a :term:`Workflow`. When an Assembly is run, it runs its
+:term:`Workflow`, which in turn runs all of the Components within it in the
+order specified by the :term:`Workflow` object.  A :term:`Driver` is an
+:term:`Assembly` that performs some kind of iteration over its :term:`Workflow`,
+iterating until some condition is met. A :term:`Driver` that is an optimizer,
+for example, would iterate over its :term:`Workflow` until it satisfies some
+convergence criteria or reaches its maximum allowed number of iterations.  A
+CaseIterDriver, which is a :term:`Driver` that runs input cases that come from a
+:term:`CaseIterator`, will iterate over its :term:`Workflow` until it uses up
+all of the cases in the CaseIterator.
 
 
 .. figure:: ../generated_images/RunInteraction.png
