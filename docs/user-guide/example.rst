@@ -456,7 +456,7 @@ Note that the addition of inputs and outputs for this component requires several
 two lines. It is important to import only those features that you need from the framework base classes
 instead of loading everything into the workspace. 
 
-A component's inputs and outputs are called :term:`Data Objects` (name subject to possible change) in OpenMDAO. An often-used
+A component's inputs and outputs are called `Data Objects` (name subject to possible change) in OpenMDAO. An often-used
 synonymn for this is *Variable*, though the more general term data object reflects the ability to pass more
 generalized objects such as data structures or geometries. A Data Object is wrapper for data passed between framework components,
 containing a value, a default value, optional min/max values, and units. Data Objects can also perform their own validation
