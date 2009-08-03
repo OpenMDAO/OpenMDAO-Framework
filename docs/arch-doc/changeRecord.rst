@@ -27,4 +27,7 @@ Changes to the Architecture Document
 	- Added "sort" and "seealso" directives; fixed bullets 
 	
 **Updates 07/30/09**
-        - The API section was removed; in its place are links to source.
+        - Updated a number of diagrams to better reflect current source
+        - Replaced Variable class diagram with TraitType class diagram
+	- Removed API section and instead point to classes and interfaces
+          in source code
