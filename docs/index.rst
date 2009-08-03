@@ -1,4 +1,4 @@
-
+  
 ====================================
 Welcome to OpenMDAO's Documentation. 
 ====================================
@@ -13,9 +13,7 @@ Contents:
    dev-guide/index
    srcdocs/index
    licenses/index
-   FAQ/index
-   feedback/index
-   
+      
 Glossary and Index
 ==================
 
@@ -24,5 +22,5 @@ Glossary and Index
 * :ref:`modindex`
 * :ref:`search`
    
-   
+  
 
