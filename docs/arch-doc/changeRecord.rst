@@ -10,11 +10,6 @@ Changes to the Architecture Document
 	- Added cross-references for figures and sections
 	- Rearranged text so it precedes some of the diagrams
 
-**Updates 12-12-08**
-	- Re-created the document using Sphinx documentation generator; made the
-	  Definitions Section into the Glossary; added glossary entries and an
-	  index, and removed the Use Cases Section. (Essentially doc release 1.0)
-
 **Updates 01-13-09**
 	- Added Architecture Document to new OpenMDAO Sphinx project
 	  documentation (one of several documents).
