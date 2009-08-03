@@ -1,5 +1,6 @@
+------------------------------------
 Changes to the Architecture Document
------------------------------------------
+------------------------------------
 
 **Updates 09-30-08**
 	- Initial release of document using ReStructured Text markup language to
