@@ -132,11 +132,7 @@ class _consav(object):
         
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 
-    
-    NOTE: This implementation does not support multiple instances of
-    CONMINdriver within the same process because the common block information
-    used by conmin is not copied and restored per instance at this time.
-    
+        
     .. parsed-literal::
     
        TODO: make CONMIN's handling of user calculated gradients 

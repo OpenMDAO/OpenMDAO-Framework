@@ -35,6 +35,7 @@ class NPSSProperty(TraitType):
         super(NPSSProperty, self).__init__(default_value, **metadata)
 
     def get(self, object, name):
+        """Return the NPSS value specified in the ref_name attribute."""
         trait = self.trait
         # FIXME: pull the file stuff out of here and fix it up
         if trait and isinstance(trait, FileTrait):
@@ -46,6 +47,7 @@ class NPSSProperty(TraitType):
             return getattr(object._top, self.ref_name or name)
 
     def set(self, object, name, value):
+        """Set the NPSS value specified in the ref_name attribute."""
         if self.iostatus == 'out':
             raise TraitError('%s is an output trait and cannot be set' % name)
         

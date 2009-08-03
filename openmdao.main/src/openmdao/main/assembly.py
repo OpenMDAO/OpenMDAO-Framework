@@ -61,7 +61,7 @@ class MulticastTrait(TraitType):
 class Assembly (Component):
     """This is a container of Components. It understands how
     to connect inputs and outputs between its children 
-    and how to handle Sockets.
+    and how to run a Workflow.
     """
     drivers = List(IDriver)
     workflow = Instance(Workflow)
@@ -89,19 +89,17 @@ class Assembly (Component):
             if v not in self._var_graph:
                 self._var_graph.add_node(v)
         
-        self._dataflow = Dataflow('dataflow', self)
-        
         if workflow is None:
-            workflow = self._dataflow
-
-        self.workflow = workflow
+            self.workflow = Dataflow('dataflow', self)
+        else:
+            self.workflow = workflow
 
         # List of meta-data dictionaries.
         self.external_files = []
 
     def get_component_graph(self):
         """Retrieve the dataflow graph of child components."""
-        return self._dataflow.get_graph()
+        return self.workflow.get_graph()
     
     def get_var_graph(self):
         """Returns the Variable dependency graph, after updating it with child
@@ -142,7 +140,7 @@ class Assembly (Component):
             # it in later
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
-            self._dataflow.add_node(obj.name)
+            self.workflow.add_node(obj.name)
         try:
             self.drivers.append(obj)  # will fail if it's not an IDriver
         except TraitError:
@@ -157,7 +155,7 @@ class Assembly (Component):
                                  name, ValueError)        
         obj = self.get(name)
         if isinstance(obj, Component):
-            self._dataflow.remove_node(obj.name)
+            self.workflow.remove_node(obj.name)
             if name in self._child_io_graphs:
                 childgraph = self._child_io_graphs[name]
                 if childgraph is not None:
@@ -273,8 +271,9 @@ class Assembly (Component):
         if destcomp is not self:
             destcomp.set_source(destvarname, srcpath)
             if srccomp is not self: # neither var is on boundary
-                self._dataflow.connect(srccompname, destcompname, 
-                                       srcvarname, destvarname)
+                if hasattr(self.workflow, 'connect'):
+                    self.workflow.connect(srccompname, destcompname, 
+                                           srcvarname, destvarname)
         
         vgraph = self.get_var_graph()
         vgraph.add_edge(srcpath, destpath)
@@ -350,8 +349,8 @@ class Assembly (Component):
                 # then remove a connection between two components in the component
                 # graph
                 utup = u.split('.',1)
-                if len(utup)>1: 
-                    self._dataflow.disconnect(utup[0], vtup[0])
+                if len(utup)>1 and hasattr(self.workflow, 'disconnect'):
+                    self.workflow.disconnect(utup[0], vtup[0])
                 
             vargraph.remove_edges_from(to_remove)
                 
@@ -378,9 +377,11 @@ class Assembly (Component):
 
     def execute (self):
         """By default, run child components in data flow order."""
-        self._dataflow.run()
+        self.workflow.run()
+        self._update_boundary_vars()
         
-        # now update our invalid boundary outputs
+    def _update_boundary_vars (self):
+        """Update output variables on our bounary."""
         invalid_outs = self.list_outputs(valid=False)
         vgraph = self.get_var_graph()
         for out in invalid_outs:
@@ -393,7 +394,7 @@ class Assembly (Component):
         
     def step(self):
         """Execute a single child component and return."""
-        self._dataflow.step()
+        self.workflow.step()
     
     def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).

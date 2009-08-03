@@ -29,6 +29,9 @@ class Driver(Assembly):
         self.graph_regen_needed()
     
     def graph_regen_needed(self):
+        """If called, reset internal graphs to that they will be
+        regenerated when they are requested next.
+        """
         self._iteration_comps = None
         self._simple_iteration_subgraph = None
         self._simple_iteration_set = None    
@@ -131,6 +134,9 @@ class Driver(Assembly):
         self._continue = False  # by default, stop after one iteration
 
     def get_refvar_names(self, iostatus=None):
+        """Return a list of names of all StringRef and StringRefArray traits
+        in this instance.
+        """
         if iostatus is None:
             checker = not_none
         else:

@@ -29,18 +29,27 @@ class Dataflow(Workflow):
             self._drvsorter = None
             
     def has_node(self, name):
+        """Return True if this Dataflow contains a Component with the
+        given name.
+        """
         return name in self._no_ref_graph
         
     def add_node(self, name):
+        """Add the name of a Component to this Dataflow."""
         self._no_ref_graph.add_node(name)
         
     def remove_node(self, name):
+        """Remove the name of a Component from this Dataflow."""
         self._no_ref_graph.remove_node(name)
         
     def get_graph(self):
+        """Return the Component graph for this Dataflow."""
         return self._no_ref_graph
         
     def connect(self, srccompname, destcompname, srcvarname, destvarname):
+        """Add an edge to our Component graph from *srccompname* to *destcompname*.
+        The *srcvarname* and *destvarname* args are for data reporting only.
+        """
         # if an edge already exists between the two components, just increment the ref count
         graph = self._no_ref_graph
         try:
