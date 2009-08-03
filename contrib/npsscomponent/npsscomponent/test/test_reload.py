@@ -7,7 +7,7 @@ import os
 import pkg_resources
 import unittest
 
-from enthought.traits.api import Float, Bool, Str
+from enthought.traits.api import Float, Bool
 
 from openmdao.main.api import Assembly, Component
 from openmdao.main.component import SimulationRoot
@@ -54,25 +54,16 @@ class MyModel(Assembly):
         self.NPSS = NPSScomponent(parent=self, arglist='-trace reload.mdl',
                                   output_filename='reload.out')
         self.NPSS.reload_flag = 'reload_requested'
-
         self.NPSS.make_public([
               ('xyzzy_in','','in'),
               ('xyzzy_out','','out'),
             ])
-        #self.create_passthru('NPSS.xyzzy_in')
-        #self.create_passthru('NPSS.xyzzy_out')
-        #xyzzy_in = Float(self.NPSS, iostatus='in', desc='Test input')
-        #xyzzy_out = Float(self.NPSS, iostatus='out', desc='Test output')
-        #self.create_passthru('NPSS.s')
-        #s = Str(self.NPSS, iostatus='in', desc='Unconnected input')
         
         Sink(parent=self)
 
         self.connect('Source.npss_reload', 'NPSS.reload_model')
         self.connect('Source.npss_in', 'NPSS.xyzzy_in')
-        #self.connect('Source.npss_in', 'xyzzy_in')
         self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
-        #self.connect('xyzzy_out', 'Sink.npss_out')
 
     def rerun(self):
         self.debug('rerun()')
@@ -136,9 +127,9 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.rerun()
         except RuntimeError, exc:
-            self.assertEqual(str(exc).startswith(
-                "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
-                True)
+            msg = "TestModel.NPSS: Exception during reload: Model file" \
+                  " 'no_such_model' not found while reloading in"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected RuntimeError')
 
@@ -146,7 +137,9 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.run()
         except RuntimeError, exc:
-            self.assertEqual(str(exc), "TestModel.NPSS: Exception getting 'no_such_variable': no_such_variable not found")
+            msg = "TestModel.NPSS: Exception getting 'no_such_variable':" \
+                  " no_such_variable not found"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected RuntimeError')
 
@@ -187,9 +180,9 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.rerun()
         except RuntimeError, exc:
-            self.assertEqual(str(exc).startswith(
-                "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
-                True)
+            msg = "TestModel.NPSS: Exception during reload: Model file" \
+                  " 'no_such_model' not found while reloading in"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected RuntimeError')
 

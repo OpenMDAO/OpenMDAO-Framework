@@ -36,7 +36,6 @@ import sys
 import tempfile
 import zc.buildout.easy_install
 import zipfile
-import StringIO
 
 from openmdao.util import eggwriter
 
@@ -511,6 +510,9 @@ def _fix_objects(objs):
             mod = obj.__module__
         except AttributeError:
             continue  # No module entry to fix.
+        if mod is None:
+            # Needed after switching to Traits for some reason.
+            mod = cls.__module__
 
         if mod == '__main__':
             if classname in ('function', 'type'):
@@ -601,7 +603,7 @@ def _get_distributions(objs, py_dir, logger):
             name = obj.__module__
         except AttributeError:
             continue
-        if name in modules:
+        if name is None or name in modules:
             continue
         modules.append(name)
 

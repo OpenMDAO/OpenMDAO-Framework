@@ -165,7 +165,9 @@ class DriverTestCase(unittest.TestCase):
         try:
             self.model.run()
         except TraitError, exc:
-            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'iterator' is not present")
+            msg = "CID_TestModel.driver: required plugin 'iterator' is not" \
+                  " present"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('TraitError expected')
 
@@ -177,7 +179,9 @@ class DriverTestCase(unittest.TestCase):
         try:
             self.model.run()
         except TraitError, exc:
-            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'outerator' is not present")
+            msg = "CID_TestModel.driver: required plugin 'outerator' is not" \
+                  " present"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('TraitError expected')
 

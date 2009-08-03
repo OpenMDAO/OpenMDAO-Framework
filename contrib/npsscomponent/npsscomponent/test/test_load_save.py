@@ -15,10 +15,10 @@ from numpy.testing import assert_equal
 
 from enthought.traits.api import Bool
 
-from openmdao.main.api import FileTrait, FileValue, SAVE_LIBYAML
+from openmdao.main.api import FileValue, SAVE_LIBYAML
 from openmdao.main.component import SimulationRoot
 
-from npsscomponent import NPSScomponent, NPSSProperty
+from npsscomponent import NPSScomponent
 
 ORIG_DIR = os.getcwd()
 
@@ -126,9 +126,9 @@ class NPSSTestCase(unittest.TestCase):
                 self.npss = NPSScomponent.load_from_eggfile(egg_path,
                                                             install=False)
             except RuntimeError, exc:
-                self.assertEqual(str(exc).startswith(
-                    "NPSS: Reload caught exception: Model file 'xyzzy.mdl' not found while reloading in"),
-                    True)
+                msg = "NPSS: Reload caught exception: Model file 'xyzzy.mdl'" \
+                      " not found while reloading in"
+                self.assertEqual(str(exc)[:len(msg)], msg)
             else:
                 self.fail('Expected RuntimeError')
         finally:
@@ -155,8 +155,9 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.egg_name = self.npss.save_to_egg(format=SAVE_LIBYAML)
         except Exception, exc:
-            self.assertEqual(str(exc),
-                "NPSS: Can't save to 'NPSS/NPSS.yaml': data type not understood")
+            msg = "NPSS: Can't save to 'NPSS/NPSS.yaml': data type not" \
+                  " understood"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected TypeError')
         finally:

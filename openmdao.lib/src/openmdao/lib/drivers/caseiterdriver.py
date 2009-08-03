@@ -286,8 +286,8 @@ class CaseIteratorDriver(Driver):
         """ Load model into server. """
         filexfer(None, self._model_file,
                  self._servers[server], self._model_file, 'b')
-        if not self._servers[server]._load_model(self._model_file):
-            self.error('server._load_model failed :-(')
+        if not self._servers[server].load_model(self._model_file):
+            self.error('server.load_model failed :-(')
             return False
         return True
 

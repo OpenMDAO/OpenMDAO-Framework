@@ -15,6 +15,7 @@ from m4.doe import DOE
 from m4.mid_fidelity import MidFidelity 
 from m4.dummy_components import Model_A2d, Model_B2d
 
+
 class MyModel(Assembly):
     """ Simple M4 variable fidelity example.  """
 
@@ -56,16 +57,12 @@ class MyModel(Assembly):
 class VarFi(MidFidelity):
     """ Example variable fidelity component. """
 
-    # Input mappings (mid, lo, hi).
-    x = Range(value=0., low=0., high=5., iostatus='in', 
-              desc='X input value.')
+    # Inputs.
+    x = Range(value=0., low=0., high=5., iostatus='in', desc='X input value.')
+    y = Range(value=0., low=0., high=5., iostatus='in', desc='Y input value.')
 
-    y = Float(value=0., low=0., high=5., iostatus='in',
-              desc='Y input value.')
-
-    # Output mappings (mid, lo, hi).
-    z1 = Float(0., iostatus='out' desc='exp(x) + exp(y)')
-
+    # Outputs.
+    z1 = Float(0., iostatus='out', desc='exp(x) + exp(y)')
     z2 = Float(0., iostatus='out',
                desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
         

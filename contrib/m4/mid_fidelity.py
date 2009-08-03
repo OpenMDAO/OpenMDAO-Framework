@@ -8,7 +8,7 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('MidFidelity',)
 __version__ = '0.1'
 
-from enthought.traits.api import Float, Array, Int, Str, Instance
+from enthought.traits.api import Float, Array, Int, Str, Instance, Range
 
 import mool.Optimization.MidFiModel
 
@@ -29,44 +29,30 @@ class MidFidelity(Assembly):
 
     # Inputs.
     # No 'Option' variables yet.
-
     doe_type = Str('lhs', iostatus='in', 
                    desc='Type of DOE used to generate response surface.')
-
-    rs_type = Str('quadratic', iostatus='in',
-                     desc='Type of response surface.')
-
-    n_samples = Range(value=1, low=1, iostatus='in', 
-                      desc='Number of samples.')
-
+    rs_type = Str('quadratic', iostatus='in', desc='Type of response surface.')
+    n_samples = Range(value=1, low=1, iostatus='in', desc='Number of samples.')
     tolerance = Float(1.0e10, iostatus='in', desc='?')
-
     correction_function = Int(1, iostatus='in',
                               desc='Type of correction function.')
-
     w_h = Float(0.5, iostatus='in', desc='?')
-
     accuracy_test_type = Int(2, iostatus='in', 
                              desc='Method for testing accuracy of response.')
-
     n_samples_test = Range(value=10, low=1, iostatus='in',
                            desc='Number of additional samples for additional-points test.')
-
     ntheta = Int(3, iostatus='in', 
                  desc='For Kriging method, ntheta=1(SA),2(Cobyla),3(BFGS)')
     
     # TODO: change these to delegates or passthroughs
     
-    sample_points = Array(iostatus='out', 
-                          desc='Points used to make response',
+    sample_points = Array(iostatus='out', desc='Points used to make response',
                           ref_name='sample_points', ref_parent='midfi_model')
 
-    lofi_results = Array(iostatus='out', 
-                         desc='Points used to make response',
+    lofi_results = Array(iostatus='out', desc='Points used to make response',
                          ref_name='lofi_results', ref_parent='midfi_model')
 
-    hifi_results = Array(iostatus='out', 
-                         desc='Points used to make response',
+    hifi_results = Array(iostatus='out', desc='Points used to make response',
                          ref_name='hifi_results', ref_parent='midfi_model')
     
     def __init__(self, name='M4_MidFi', *args, **kwargs):
@@ -193,8 +179,9 @@ class MidFidelity(Assembly):
             xlb = []
             xub = []
             for mid, low, high in self.input_mappings:
-                xlb.append(self.get(mid+'.low'))
-                xub.append(self.get(mid+'.high'))
+                # TODO: This assumes Range traits, should be more general.
+                xlb.append(self.trait(mid).handler._low)
+                xub.append(self.trait(mid).handler._high)
 
             self._midfi_model.Set(
                 hifi=self._hifi_m4model,

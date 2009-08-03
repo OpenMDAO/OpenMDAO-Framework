@@ -11,7 +11,7 @@ import time
 if sys.platform == 'win32':
     import win32api
 
-from enthought.traits.api import Float, Bool, Int, Str, Any
+from enthought.traits.api import Bool, Str, Any
 
 from openmdao.main.api import Component, UnitsFloat
 from openmdao.main.exceptions import RunInterrupted, RunStopped
@@ -43,7 +43,7 @@ class ExternalCode(Component):
                   desc='Command to be executed.')
 
     timeout = UnitsFloat(0., low=0., iostatus='in', units='s',
-                    desc='Max time to wait for command completion.')
+                         desc='Max time to wait for command completion.')
 
     timed_out = Bool(False, iostatus='out',
                      desc='True if command timed-out.')

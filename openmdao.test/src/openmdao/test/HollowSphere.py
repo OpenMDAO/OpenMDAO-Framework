@@ -16,10 +16,10 @@ class HollowSphere(Component):
         Float('radius', self, iostatus='in', units='cm')
         Float('thickness', self, iostatus='in', units='cm')
         
-        Float('inner_volume', self, 'out' units='cm**3')
-        Float('volume', self, 'out' units='cm**3')
-        Float('solid_volume', self, 'out' units='cm**3')
-        Float('surface_area', self, 'out' units='cm**2')
+        Float('inner_volume', self, 'out', units='cm**3')
+        Float('volume', self, 'out', units='cm**3')
+        Float('solid_volume', self, 'out', units='cm**3')
+        Float('surface_area', self, 'out', units='cm**2')
 
     def execute(self):
         self.surface_area = 4.0*pi*self.radius*self.radius

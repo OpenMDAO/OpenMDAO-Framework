@@ -22,18 +22,18 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint: enable-msg=W0212
 
 import networkx as nx
-from enthought.traits.api import HasTraits, implements, Str, Missing, TraitError,\
-                                 BaseStr, Undefined, push_exception_handler,\
-                                 on_trait_change, WeakRef, Python, Instance, TraitType
+from enthought.traits.api import HasTraits, implements, Missing, TraitError, \
+                                 BaseStr, Undefined, push_exception_handler, \
+                                 on_trait_change, WeakRef, Python, TraitType
 from enthought.traits.trait_handlers import NoDefaultSpecified
-from enthought.traits.has_traits import _SimpleTest, FunctionType
-from enthought.traits.trait_base import not_event, not_none
+from enthought.traits.has_traits import FunctionType
+from enthought.traits.trait_base import not_none
 
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.interfaces import IContainer
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.util.save_load import SAVE_CPICKLE
-from openmdao.main.unitsfloat import convert_units, UnitsFloat
+from openmdao.main.unitsfloat import convert_units
 
 import openmdao.util.save_load
 
@@ -44,25 +44,6 @@ push_exception_handler(handler = lambda o,t,ov,nv: None,
                        reraise_exceptions = True,
                        main = True,
                        locked = True )
-
-class IMHolder(object):
-    """Holds an instancemethod object in a pickleable form."""
-
-    def __init__(self, obj):
-        self.name = obj.__name__
-        self.im_self = obj.im_self
-        if obj.im_self:
-            self.im_class = None  # Avoid possible __main__ issues.
-        else:
-            # TODO: handle __main__ for im_class.__module__.
-            self.im_class = obj.im_class
-
-    def method(self):
-        """Return instancemethod corresponding to saved state."""
-        if self.im_self:
-            return getattr(self.im_self, self.name)
-        else:
-            return getattr(self.im_class, self.name)
 
 class _DumbTmp(object):
     pass
@@ -702,11 +683,10 @@ class Container(HasTraits):
             else:
                 if isinstance(obj, Container):
                     obj.set('.'.join(tup[1:]), value, index, force=force)
-                elif index is not None:
-                    obj._array_set('.'.join(tup[1:]), value, index)
+                elif index is None:
+                    setattr(obj, '.'.join(tup[1:]), value)
                 else:
-                    self.raise_exception("object has no attribute '%s'" % path,
-                                         TraitError)
+                    obj._array_set('.'.join(tup[1:]), value, index)
 
     def _array_set(self, name, value, index):
         arr = getattr(self, name)
@@ -773,9 +753,6 @@ class Container(HasTraits):
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns the egg's filename.
-
-        NOTE: References to old-style class types can't be restored correctly.
-              This is typically related to the Variable var_types attribute.
         """
         if name is None:
             name = self.name
@@ -784,6 +761,7 @@ class Container(HasTraits):
                 version = sys.modules[self.__class__.__module__].__version__
             except AttributeError:
                 pass
+
         # Entry point names are the pathname, starting at self.
         entry_pts = []
         if child_objs is not None:
@@ -872,18 +850,16 @@ class Container(HasTraits):
             self.parent = None
         if parent or name:
             [x.rename(x.name) for x in self.values(pub=False) 
-                                    if isinstance(x, HierarchyMember)]
+                                    if isinstance(x, Container)]
         self.post_load()
 
     def post_load(self):
         """Perform any required operations after model has been loaded."""
-        [x.post_load() for x in self.values() 
-                                          if isinstance(x,Container)]
+        [x.post_load() for x in self.values() if isinstance(x, Container)]
 
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
-        [x.pre_delete() for x in self.values() 
-                                          if isinstance(x,Container)]
+        [x.pre_delete() for x in self.values() if isinstance(x, Container)]
 
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output variables.
