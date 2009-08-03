@@ -18,9 +18,21 @@ def run_openmdao_suite():
     tlist = ['openmdao', 'npsscomponent']
     
     # In case --with-coverage is used, default these options in.
-    sys.argv.append('--cover-package=openmdao')
-    sys.argv.append('--cover-package=npsscomponent')
-    sys.argv.append('--cover-erase')
+    if '--with-coverage' in sys.argv:
+        sys.argv.append('--cover-erase')
+        for pkg in tlist:
+            opt = '--cover-package=%s' % pkg
+            if opt not in sys.argv:
+                sys.argv.append(opt)
+
+        # at the moment, html annotation doesn't work through nose when
+        # using version 3.0.1 of coverage...
+        if '--cover-html' in sys.argv:
+            for arg in sys.argv:
+                if arg.startswith('--cover-html-dir='):
+                    break
+            else:
+                sys.argv.append('--cover-html-dir=html_coverage')
 
     if '--all' in sys.argv:
         sys.argv.remove('--all')

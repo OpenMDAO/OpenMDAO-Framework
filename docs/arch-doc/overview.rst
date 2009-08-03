@@ -126,7 +126,7 @@ The current package layout of the project is as follows:
     of OpenMDAO
 
 **openmdao.examples**
-    The OpenMDAO tutorial problem and other examples
+    OpenMDAO tutorial problems and other examples
 
 .. _zope: http://wiki.zope.org/zope3/Zope3Wiki
 
@@ -176,7 +176,7 @@ solve some sort of problem. A complex OpenMDAO model may depend upon a large
 number of eggs.  Some of those eggs will be found in  the OpenMDAO standard
 library, but others will not. Downloading all of those eggs from a package index
 every time a new buildout is created could cause unwanted delays and waste
-spaces, so configuring the system to avoid unnecessary copying of distributions
+space, so configuring the system to avoid unnecessary copying of distributions
 is important. The easiest way to do this is for the user to set the
 **eggs-directory** attribute in his buildout default configuration file (in
 $HOME/.buildout/default.cfg).  After **eggs-directory** is set, all eggs needed

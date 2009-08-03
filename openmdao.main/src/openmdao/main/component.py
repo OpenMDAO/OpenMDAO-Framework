@@ -19,7 +19,6 @@ from enthought.traits.api import implements, on_trait_change, Str, Missing, \
                                  Undefined, Python, TraitError
 from enthought.traits.trait_base import not_event
 
-from openmdao.main.interfaces import IComponent
 from openmdao.main.container import Container
 import openmdao.main.container as container
 from openmdao.main.filevar import FileValue
@@ -72,8 +71,6 @@ class Component (Container):
       a glob-style pattern.
     """
 
-    implements(IComponent)
-    
     directory = Str('',desc='If non-blank, the directory to execute in.', iostatus='in')
     state = Python
     external_files = Python
