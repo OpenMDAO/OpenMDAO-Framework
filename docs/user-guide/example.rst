@@ -988,7 +988,7 @@ negating the expression:
 ::
 
 	        # CONMIN Objective = Maximize accel_time 
-        	self.driver.objective.value = '-driving_sim.accel_time'
+        	self.driver.objective = '-driving_sim.accel_time'
 		
 Expressions can be built up from any number of OpenMDAO variables using Python's mathematical syntax:
 
@@ -997,7 +997,7 @@ Expressions can be built up from any number of OpenMDAO variables using Python's
 ::
 
 	        # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-        	self.driver.objective.value = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+        	self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
 
 Here, a weighted sum of the EPA city and highway fuel economy estimates is used as the objective in a maximization problem.
 
