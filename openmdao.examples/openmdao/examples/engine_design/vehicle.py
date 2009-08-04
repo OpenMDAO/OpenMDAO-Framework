@@ -8,7 +8,6 @@
 from enthought.traits.api import implements, Interface, Float, Int
 
 from openmdao.main.api import Assembly, UnitsFloat
-from openmdao.main.interfaces import IComponent
 
 from openmdao.examples.engine_design.transmission import Transmission
 from openmdao.examples.engine_design.chasis import Chasis
@@ -133,7 +132,7 @@ class Vehicle(Assembly):
 
 
         
-if __name__ == "__main__": 
+if __name__ == "__main__": # pragma: no cover    
     top = Assembly('top')
     z = Vehicle("Testing", parent=top)        
     z.current_gear = 1

@@ -9,18 +9,19 @@ from enthought.traits.trait_base import not_none
 import networkx as nx
 from networkx.algorithms.traversal import strongly_connected_components
 
-from openmdao.main.interfaces import IDriver, IComponent, IAssembly
+from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component, STATE_WAITING, STATE_IDLE
 from openmdao.main.api import Assembly
 from openmdao.main.stringref import StringRef, StringRefArray
 from openmdao.main.drivertree import DriverForest, create_labeled_graph
 
+    
 class Driver(Assembly):
     """ A Driver iterates over a collection of Components until some condition
     is met. """
     
     implements(IDriver)
-
+    
     def __init__(self, name, parent=None, doc=None):
         super(Driver, self).__init__(name, parent, doc=doc)
         self._ref_graph = { None: None, 'in': None, 'out': None }

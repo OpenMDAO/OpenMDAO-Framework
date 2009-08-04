@@ -8,22 +8,41 @@ Glossary
 .. glossary::
       
       **API**
-	    Application Programming Interface. A set of functions that can be called from
-	    an application program to access features of another program.
+	Application Programming Interface. A set of functions that can be called from
+	an application program to access features of another program.
 
 
       **Assembly**
-	    The Assembly class is the primary building block of the system of 
-	    systems aspect of this architecture. Each Assembly has a Workflow and a 
-	    Driver, and acts as a container for Components. An Assembly is also a
-	    Component, so hierarchical structures of Assemblies can be created.
+	The Assembly class is the primary building block of the system of 
+	systems aspect of this architecture. Each Assembly has a Workflow and a 
+	Driver, and acts as a container for Components. An Assembly is also a
+	Component, so hierarchical structures of Assemblies can be created.
       
-       
+      
+      **Beaker** 
+        A Session and Caching library with :term:`WSGI` Middleware. 
+	      
+      
       **branch**
-        An ordered series of revisions (see :term:`revision` below) that describes the history of a set of
-        files. 	
+	An ordered series of revisions (see :term:`revision` below) that describes the
+	history of a set of files. 	
+
+
+      **CAD**
+        Computer-Aided Design. An automated system for the design, drafting, and
+        display of graphically oriented information. 
 
       
+      **CAE**
+        Computer-Aided Engineering. Using computers to design, analyze, and
+        manufacture products and processes.
+
+
+      **CAPRI**
+        Computational Analysis Programming Interface. CAPRI is a CAD vendor-neutral
+        programming interface that aids in acquiring geometry data directly from CAD
+        files.
+
       **Case**
         A collection of input names and values, and names of outputs to be stored
         along with the inputs after the process model runs.
@@ -33,6 +52,12 @@ Glossary
         An iterator that contains a number of Cases. This iterator could be tied
         to a simple file, a database, or some object that generates cases dynamically.
 
+
+      **CFD**
+        Computational Fluid Dynamics. A branch of fluid mechanics that uses numerical
+        methods and algorithms to solve and analyze problems that involve fluid flows. 
+
+      
       **CommandLineWrapper**
         A component that runs a separate executable program via a system call.
 
@@ -51,36 +76,37 @@ Glossary
       	See :term:`Component` above.
 	
 	
-      **CAD**
-        Computer-Aided Design. An automated system for the design, drafting, and
-        display of graphically oriented information. 
+      **CONMIN**
+	An interface to the NASTRAN/NASA CONMIN optimization program.
+      
+      
+      **Container**
+	A container of Variables and other Containers. The base class of all objects
+	within the framework that  support user access to input and output Variables. 
 
       
-      **CAE**
-        Computer-Aided Engineering. Using computers to design, analyze, and
-        manufacture products and processes.
-
-
-      **CAPRI**
-        Computational Analysis Programming Interface. CAPRI is a CAD vendor-neutral
-        programming interface that aids in acquiring geometry data directly from CAD
-        files.
-
-
-      **CFD**
-        Computational Fluid Dynamics. A branch of fluid mechanics that uses numerical
-        methods and algorithms to solve and analyze problems that involve fluid flows. 
-
-
-      **Container**
-        A container of Variables and other Containers.
-        The base class of all objects within the framework that 
-        support user access to input and output Variables. 
+      **Coverage**
+        A Python module that measures code coverage during test execution.
 	
 
+      **decorator**
+	A Python module that aims to simplify the usage of decorators for the average
+	programmer and to popularize decorators by showing various non-trivial examples. A
+	Python decorator is a specific change to the Python syntax that allows users to
+	more conveniently alter functions and methods.
+	
+
+      
       **DLL**
         Dynamically Loadable Library 
 	
+	
+      **docutils**
+	Docutils is a modular system for processing documentation into useful
+	formats, such as HTML, XML, and LaTeX. For input Docutils supports
+	reStructuredText, an easy-to-read, what-you-see-is-what-you-get plain text
+	markup syntax.
+
 
       **Driver**
         A Driver's function is to iterate over a Workflow until some
@@ -101,6 +127,13 @@ Glossary
         See :term:`egg` above. 
 
       
+      **Elixir**
+	A declarative layer on top of SQLAlchemy that provides the ability to create simple
+	Python classes that map directly to relational database tables. It provides many of
+	the benefits of traditional databases without losing the convenience of Python
+	objects.
+
+	
       **F2PY**
       	FORTRAN to Python interface generator.
 
@@ -110,12 +143,16 @@ Glossary
 
 
       **FactoryManager**
-	    All requests to create any type of Container must go through the
-	    FactoryManager object. Multiple Factory derived objects can be registered with
-	    the FactoryManager to allow creation of objects in various ways, e.g., locally
-	    via import and remotely via an ObjServer.
+	All requests to create any type of Container must go through the
+	FactoryManager object. Multiple Factory derived objects can be registered with
+	the FactoryManager to allow creation of objects in various ways, e.g., locally
+	via import and remotely via an ObjServer.
 
-	
+
+      **FormEncode**
+        An HTML form validation, generation, and conversion package.
+
+
       **GA**
       	Genetic algorithm
 	
@@ -123,6 +160,7 @@ Glossary
       **GUI**
         Graphical User Interface. A computer operating system that is based upon icons
         and visual relationships rather than text.
+    
     
       **IGeomQueryObject**
         An interface to an object having physical dimensions and shape, with
@@ -133,18 +171,44 @@ Glossary
         Interprocess communication
 
 
+      **Jinja**
+	A small but fast and easy-to-use stand-alone template engine written in pure
+        Python. 
+
+
+      **Jinja2**
+	Jinja2 is the new and improved version of Jinja with new features and a simpler and
+	faster runtime. 
+	
+
+      **JSON**
+	JSON, short for JavaScript Object Notation, is a lightweight computer data
+	interchange format. It is a text-based, human-readable format for representing
+	simple data structures and associative arrays (called objects).
+
+
       **LAN** 
         Local Area Network. An interconnection of computers that are in relatively
         close proximity to each other, such as within a building. 
 
 
-      **MDAO** 
+      **Mako**
+	A template library written in Python that provides a familiar, non-XML syntax which
+	compiles into Python modules for maximum performance.
+
+	
+      **MDAO**  
         Multi-disciplinary Analysis & Optimization
 
 
       **model**
         A hierarchical structure with an :term:`Assembly` at its root.
        
+       
+      **networkx**
+        A Python package for creating and manipulating graphs and networks.
+	
+	
       
       **NOSA**
         NASA Open Source Agreement. A software license approved by the Open
@@ -152,6 +216,11 @@ Glossary
         Administration (NASA) releases some software under this license.
       
       
+      **nose**
+	A unittest extension offering automatic test suite discovery and easy test
+        authoring.
+
+            
       **NumPy**
         NumPy is the fundamental package needed for scientific computing with Python. See
 	http://numpy.scipy.org/ 
@@ -189,13 +258,49 @@ Glossary
         among different users.
 
 
+      **Paste**
+        Tools for using a Web Server Gateway Interface stack.
+	
+      
+      **PasteDeploy**
+	A tool to load, configure, and compose :term:`WSGI` applications and servers.
+
+
+      **PasteScript**
+	A pluggable command-line frontend, including commands to setup package file layouts
+
+
       **plug-ins**
-	    Python objects that can be used to extend the functionality of the framework.
+	Python objects that can be used to extend the functionality of the framework.
 
            
       **PID**
         Process id
 
+
+      **PIL**
+        Python Imaging Library
+	
+      
+      **Pyevolve**
+        A complete Python genetic algorithm framework
+	
+	
+      **Pygments**
+        Pygments is a syntax highlighting package written in Python.
+	
+	
+      **Pylons**
+        A Web framework
+
+
+      **pyparsing**
+        A Python parsing module
+	
+	
+      **PyYAML**
+        A :term:`YAML` parser and emitter for Python.
+	
 
       **repository**
         A store of revisions. See :term:`revision`.
@@ -224,8 +329,43 @@ Glossary
         content. A revision also has some metadata associated with it, including
         who committed it, when it was committed, a commit message, and the
         parent revisions from which it was derived.
+     
+      
+      **roman**
+        A Python module for roman numerals.
+	
+	
+      **Routes**   
+	A Routing package for Python that matches URLs to dicts (dictionary network
+	protocols) and vice versa.
+	
+	
+      **SciPy**   
+	SciPy (pronounced "Sigh Pie") is open-source software for mathematics, science, and
+	engineering.
+
+	
+      **ScientificPython**
+        A collection of Python modules that are useful for scientific computing.
+	
+	
+      **setuptools**
+	Tools for downloading, building, installing, upgrading, and uninstalling
+	Python packages. 
 
       
+      **simplejson**
+        Simple, fast, extensible :term:`JSON` encoder/decoder for Python.
+	
+	
+      **Sphinx**
+        A Python documentation generator. It translates reStructuredText markup language into html.
+	
+	
+      **SQLAlchemy**
+        Database Abstraction Library
+	
+		
       **Socket**
         A placeholder for a plug-in within a :term:`Component`.
 
@@ -243,6 +383,11 @@ Glossary
 	programs written in C and C++ with a variety of high-level programming languages. Go to 
 	http://www.swig.org/index.php for more information.
 
+     
+      **Tempita**
+        Tempita is a small templating language for text substitution.
+     
+          
       **ticket**
         A ticket is a file contained within an issue (or bug) tracking system
         that contains information about a request, often by an end user, to
@@ -271,6 +416,27 @@ Glossary
         It provides highly interactive sketching of concepts with immediate visual
         feedback.
 
+    
+      **WebError**
+        A Python package for Web error handling and exception catching.
+              
+       
+      **WebHelpers**
+	A library of helper functions intended to make writing templates in Web applications
+	easier. It's the standard function library for Pylons and TurboGears 2. It also
+	contains a large number of functions not specific to the Web, including text
+	processing, number formatting, date calculations, container objects, etc.
+
+            
+      **WebOb**
+	:term:`WSGI` request and response object 
+	
+
+      **WebTest** 
+	Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
+	easy to send test requests to that application without starting up an HTTP
+	server. 
+	
 
       **Workflow**
         A Workflow controls the execution order of a group of Components. The Workflow
@@ -279,3 +445,71 @@ Glossary
         conditional execution, and looping of various types.
 
 
+      **WSGI**
+	Web Server Gateway Interface. WSGI is a standard interface for Python Web
+        applications to communicate with Web servers. 
+	
+
+      **YAML**
+	YAML is a data serialization format designed for human readability and interaction
+        with scripting languages. 
+      
+      
+      **zc.buildout** 
+	System for managing development buildouts.
+	
+      
+      **zc.recipe.egg**
+        Recipe for installing Python package distributions as eggs.
+	
+	
+      **Zope**
+	Zope is an open source application server for building content management
+	systems, intranets, portals, and custom applications. Zope is written in
+	Python, an object-oriented scripting language.
+	
+      
+      **zope.component**
+        Zope Component Architecture
+	
+	
+      **zope.deferredimport** 
+	The zope.deferredimport package provided facilities for defining names in modules
+	that will be imported from somewhere else when used.
+
+
+      **zope.deprecation** 
+	This package provides a simple function called "deprecated(names, reason)" to
+        deprecate Python objects.
+
+      
+      **zope.event**
+        A very basic event publishing system.
+	
+      
+      **zope.i18nmessageid**
+	This package provides facilities for delaring  messages (which carry a
+	translation source domain and possibly a default translation) within program
+	source text; translation of the messages is the responsiblitiy of the "zope.i18n"
+	package.
+	
+
+      **zope.interface**
+        A package that provides an implementation of object interfaces for Python. 
+
+
+      **zope.proxy**
+	Generic transparent proxies. Proxies are special objects which serve as
+	mostly transparent wrappers around another object, intervening in the apparent
+	behavior of the wrapped object only when necessary to apply the policy (e.g.,
+	access checking, location brokering, etc.) for which the proxy is responsible.
+
+	
+      **zope.schema**
+	zope.interface extension for defining data schemas
+	
+	
+      **ZopeSkel**
+	ZopeSkel provides a collection of skeletons for quickstarting Zope and Plone
+	projects.
+	

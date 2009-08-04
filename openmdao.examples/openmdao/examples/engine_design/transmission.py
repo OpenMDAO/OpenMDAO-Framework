@@ -69,12 +69,15 @@ class Transmission(Component):
                   self.ratio5]
         
         gear = self.current_gear
+        differential = self.final_drive_ratio
+        tire_circ = self.tire_circ
+        velocity = self.velocity
         
-        self.RPM = (ratios[gear]*self.final_drive_ratio*5280.0*12.0 \
-                    *self.velocity)/(60.0*self.tire_circ)
-        self.torque_ratio = ratios[gear]*self.final_drive_ratio
+        self.RPM = (ratios[gear]*differential*5280.0*12.0 \
+                    *velocity)/(60.0*tire_circ)
+        self.torque_ratio = ratios[gear]*differential
             
-        # At low speeds, hold engine speed at 1000 RPM and feather the clutch
+        # At low speeds, hold engine speed at 1000 RPM and partially engage the clutch
         if self.RPM < 1000.0 and self.current_gear == 1 :
             self.RPM = 1000.0
         

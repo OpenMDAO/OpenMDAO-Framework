@@ -12,8 +12,9 @@ from enthought.traits.trait_base import not_none
 
 import networkx as nx
 
-from openmdao.main.interfaces import IAssembly, IDriver, IWorkflow
+from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component, STATE_IDLE
+from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.util import filexfer
 from openmdao.main.filevar import FileValue
@@ -53,10 +54,8 @@ class Assembly (Component):
     to connect inputs and outputs between its children 
     and how to handle Sockets.
     """
-    implements(IAssembly)
-    
     drivers = List(IDriver)
-    workflow = Instance(IWorkflow)
+    workflow = Instance(Workflow)
     
     def __init__(self, name=None, parent=None, doc=None, directory='',
                        workflow=None):
@@ -285,12 +284,13 @@ class Assembly (Component):
                                  RuntimeError)             
             
         # test compatability (raises TraitError on failure)
-        desttrait.validate(destcomp, destvarname, getattr(srccomp, srcvarname))
+        desttrait.validate(destcomp, destvarname, 
+                           getattr(srccomp, srcvarname))
         
         if destcomp is not self:
             destcomp.set_source(destvarname, srcpath)
             if srccomp is not self: # neither var is on boundary
-                self._dataflow.connect(srccompname, destcompname,
+                self._dataflow.connect(srccompname, destcompname, 
                                        srcvarname, destvarname)
         
         vgraph = self.get_var_graph()

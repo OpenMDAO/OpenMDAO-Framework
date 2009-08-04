@@ -29,7 +29,7 @@ bld_template = """\
 import sys
 from pkg_resources import load_entry_point
 bld = load_entry_point("Sphinx","console_scripts","sphinx-build")
-args = ['-P', '-b', 'html', '-d', '%s', '.', '%s']
+args = ['-P', '-b', 'html', '-d', '%s', '%s', '%s']
                 
 sys.exit(bld(argv=args))
 
@@ -37,16 +37,22 @@ sys.exit(bld(argv=args))
 
 
 def _mod_sphinx_info(mod, outfile, show_undoc=False):
+    """Write out enough info for Sphinx to autodocument
+    a module.
+    """
     name = os.path.splitext(mod.replace('/', '.'))[0]
     short = os.path.basename(name)
+    modbase = short.split('.').pop()
     
-    print >> outfile, '%s.py' % short.split('.').pop()
-    print >> outfile, '_'*(3+len(short.split('.').pop()))+'\n'
-    print >> outfile, '.. automodule:: %s' % short
-    print >> outfile, '   :members:'
+    outfile.write('.. index:: _%s.py:\n\n'%modbase)
+    outfile.write('.. _%s.py:\n\n'%modbase)
+    outfile.write('%s.py\n' % modbase)
+    outfile.write('_'*(3+len(short.split('.').pop()))+'\n\n')
+    outfile.write('.. automodule:: %s\n' % short)
+    outfile.write('   :members:\n')
     if show_undoc:
-        print >> outfile, '   :undoc-members:'
-    print >> outfile, '   :show-inheritance:\n\n'
+        outfile.write('   :undoc-members:\n')
+    outfile.write('   :show-inheritance:\n\n\n')
 
 
 def _match(name, inlist):
@@ -245,6 +251,7 @@ class SphinxBuild(object):
         bld_script = open(bspath, 'w')
         bld_script.write(bld_template % (self.executable,
                                         os.path.join(self.builddir, "doctrees"),
+                                        self.docdir,
                                         os.path.join(self.builddir, "html")))
         bld_script.close()
         try:

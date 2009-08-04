@@ -27,10 +27,13 @@ class UnitsFloat(TraitType):
     def __init__(self, default_value = None, low=None, high=None,
                  exclude_low=False, exclude_high=False, **metadata):
         if default_value is None:
-            default_value = 0.0
+            if low is None and high is None:
+                default_value = 0.0
+            elif low is None:
+                default_value = high
+            else:
+                default_value = low
             
-        self.high = None
-        self.low = None
         if low is None and high is None:
             self._validator = Float(default_value, **metadata)
         else:
@@ -42,10 +45,7 @@ class UnitsFloat(TraitType):
                 high = 1.e99
             else:
                 self.high = high
-            value = default_value
-            self.exclude_low = exclude_low
-            self.exclude_high = exclude_high
-            self._validator = Range(low=low, high=high, value=value,
+            self._validator = Range(low=low, high=high, value=default_value,
                                           exclude_low=exclude_low,
                                           exclude_high=exclude_high,
                                           **metadata)

@@ -36,8 +36,8 @@ class EngineOptimization(Assembly):
         self.driver.lower_bounds = [-50, 65]
         self.driver.upper_bounds = [10, 100]
         
-    
-if __name__ == "__main__":
+
+if __name__ == "__main__": # pragma: no cover         
 
     def prz(title):
         ''' Print before and after'''

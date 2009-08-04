@@ -15,13 +15,11 @@ import sys
 import time
 import StringIO
 
-from enthought.traits.api import implements, on_trait_change, Str, Missing, \
-                                 Undefined, Python, TraitError
+from enthought.traits.api import on_trait_change, Str, Missing, Undefined, \
+                                 Python, TraitError
 from enthought.traits.trait_base import not_event
 
-from openmdao.main.interfaces import IComponent
 from openmdao.main.container import Container
-import openmdao.main.container as container
 from openmdao.main.filevar import FileValue
 from openmdao.util.save_load import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
@@ -66,15 +64,14 @@ class Component (Container):
        accessible to the OpenMDAO framework and are 'runnable'.
 
     - `directory` is a string specifying the directory to execute in. \
-       If it is a relative path, it is relative to its parent's directory.
+      If it is a relative path, it is relative to its parent's directory.
     - `external_files` is a list of meta-data dictionaries for external \
       files used by the component.  The 'path' meta-data attribute can be \
       a glob-style pattern.
     """
 
-    implements(IComponent)
-    
-    directory = Str('',desc='If non-blank, the directory to execute in.', iostatus='in')
+    directory = Str('', desc='If non-blank, the directory to execute in.',
+                    iostatus='in')
     state = Python
     external_files = Python
         
@@ -92,7 +89,6 @@ class Component (Container):
         
         # List of meta-data dictionaries.
         self.external_files = []
-
 
 # pylint: disable-msg=E1101
         dirpath = self.get_directory()
@@ -117,9 +113,9 @@ class Component (Container):
 # pylint: enable-msg=E1101
 
     def check_config (self):
-        """Verify that the configuration of this component is correct. This function is
-        called once prior to the first execution of this component, and may be called
-        explicitly at other times if desired.
+        """Verify that the configuration of this component is correct. This
+        function is called once prior to the first execution of this component,
+        and may be called explicitly at other times if desired.
         """
         pass         
     
@@ -269,7 +265,7 @@ class Component (Container):
         # we do that after adjusting a parent, things can go bad.
         components = [self]
         components.extend([c for c in self.values(recurse=True)
-                                if isinstance(c, Component)])
+                                   if isinstance(c, Component)])
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
 
@@ -342,6 +338,7 @@ class Component (Container):
                 else:
                     save_path = path
                 src_files.add(save_path)
+
         # Save relative directory for any entry points. Some oddness with
         # parent weakrefs seems to prevent reconstruction in load().
         if child_objs is not None:
@@ -372,8 +369,9 @@ class Component (Container):
                 comp.set(name+'.filename', fvar.filename, force=True)
 
     def get_file_vars(self):
-        """Return list of (filevarname,filevarvalue,filetrait) owned by this component."""
-        def _recurse_get_file_vars (container, file_vars, visited, scope):
+        """Return list of (filevarname,filevarvalue,filetrait) owned by this
+        component."""
+        def _recurse_get_file_vars(container, file_vars, visited, scope):
             for name, obj in container.items(type=not_event):
                 if id(obj) in visited:
                     continue
@@ -386,7 +384,8 @@ class Component (Container):
                         file_vars.append(('.'.join(
                                            [container.get_pathname(rel_to_scope=scope),name]), 
                                             obj, ftrait))
-                elif isinstance(obj, Container) and not isinstance(obj, Component):
+                elif isinstance(obj, Container) and \
+                     not isinstance(obj, Component):
                     _recurse_get_file_vars(obj, file_vars, visited, scope)
 
         file_vars = []
@@ -531,7 +530,6 @@ Component.load_from_eggfile('%s', install=False)
                 else:
                     top.warning('No parent, using null relative directory')
                     relpath = ''
-
 
             # Set top directory.
             orig_dir = os.getcwd()

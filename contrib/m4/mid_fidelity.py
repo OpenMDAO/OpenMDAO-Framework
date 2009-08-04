@@ -12,8 +12,7 @@ from enthought.traits.api import Float, Array, Int, Str, Instance, Range
 
 import mool.Optimization.MidFiModel
 
-from openmdao.main.api import Assembly
-from openmdao.main.interfaces import IComponent
+from openmdao.main.api import Assembly, Component
 
 import wrapper
 
@@ -24,8 +23,8 @@ class MidFidelity(Assembly):
     # Sockets.
     # TODO: make a Socket Trait that supports required/optional, or determine
     # if existing traits class will work
-    lofi_model = Instance(IComponent, desc='Low fidelity model', required=True)
-    hifi_model = Instance(IComponent, desc='High fidelity model', required=True)
+    lofi_model = Instance(Component, desc='Low fidelity model', required=True)
+    hifi_model = Instance(Component, desc='High fidelity model', required=True)
 
     # Inputs.
     # No 'Option' variables yet.

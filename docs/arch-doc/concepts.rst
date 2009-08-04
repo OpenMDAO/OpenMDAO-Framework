@@ -29,53 +29,56 @@ a directory or an :term:`egg` file that is in the search path of the
 that is itself registered with the FactoryManager.   
 
 
-The primary types of plug-in interfaces available to extend the framework are
-listed below:
+The primary types of plug-in base classes available to extend 
+the framework are listed below:
 
 
-.. index:: pair: IComponent; plug-in interface 
-.. index:: pair: IContainer; plug-in interface
-.. index:: pair: IDriver; plug-in interface
-.. index:: pair: IVariable; plug-in interface
-.. index:: pair: IVariable; plug-in interface
+.. index:: pair: Component; plug-in base class 
+.. index:: pair: Driver; plug-in base class
+.. index:: pair: TraitType; plug-in base class
+
+
+:ref:`Component<component.py>` - base class of an engineering tool or some 
+sort of calculation. It inherits from :ref:`Container<container.py>`.
+
+:ref:`Driver<driver.py>` - base class for optimizers, solvers, 
+parameter studies, and other objects that iterate over a set of Components. 
+It inherits from :ref:`Component<component.py>`.
+
+TraitType_ - base class used to validate and possibly convert data objects that are passed
+between linked Components. 
+
+
+.. _TraitType: http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_handlers.TraitType.html
+
+
+The plug-in interfaces available to extend the framework are listed below, and
+their source documentation can be found in :ref:`interfaces.py<interfaces.py>`.
+
+
 .. index:: pair: IGeomQueryObject; plug-in interface
 .. index:: pair: IGeomModifier; plug-in interface
 .. index:: pair: IResourceAllocator; plug-in interface
 .. index:: pair: IFactory; plug-in interface
 
 
-:ref:`IContainer<IContainer>` - interface to an object that contains Variables that are visible to
-the framework.
-
-:ref:`IComponent<IComponent>` - interface to an engineering tool or some sort of calculation. It
-inherits from :ref:`IContainer<IContainer>`.
-
-:ref:`IDriver<IDriver>` - interface to optimizers, solvers, parameter studies, and other
-objects that iterate over a model. It inherits from :ref:`IComponent<IComponent>`.
-
-:ref:`IVariable<IVariable>` - interface to data objects that are to be passed
-between linked components. These data objects have a validate() function to
-ensure that only  valid links are allowed. They can also translate values from
-other IVariables, e.g., perform unit conversion.
-
-:ref:`IGeomQueryObject<IGeomQueryObject>` - interface to objects with geometry.
+IGeomQueryObject - interface to objects with geometry.
 Geometric properties of the object can be queried.
 
-:ref:`IGeomModifier<IGeomModifier>` - interface to a geometry kernel that allows
+IGeomModifier - interface to a geometry kernel that allows
 creation of new geometry and modification of existing geometry.
 
-:ref:`IResourceAllocator<IResourceAllocator>` - interface to objects that
+IResourceAllocator - interface to objects that
 allocate memory and disk resources, sometimes on specific servers, based on a
 resource description.
 
-:ref:`IFactory<IFactory>` - interface to an object that creates other objects
+IFactory - interface to an object that creates other objects
 used by the framework. This creation may involve the creation of a remote
 instance of an object and a  proxy to represent it in the local process.
 
-.. seealso:: :ref:`Application-Programming-Interface-(API)` 
-
 .. index:: geometry
 .. index:: Component
+
 
 Geometry
 ========
@@ -183,15 +186,17 @@ framework more useful, one of our goals is to make the process of publishing a
 component for use by others as easy as possible. 
 
 Python has a popular distribution tool called *setuptools* which packages
-modules and any associated dependent files into a single file called an
-:term:`egg`. An egg in Python is similar to a jar file in java. Using
-setuptools, a user can install multiple versions of the same module in a given
-Python environment.  Eggs can be downloaded from an egg server using a simple
-HTML-based protocol. A developer can control the distribution of a component by
-choosing to  publish it in a particular egg server. For world-wide distribution,
-it can be placed on a  public server like the `Python Package Index`_. For more
-restricted distribution, it can be placed on  a secure egg server that requires
-a login id and password.
+modules and any associated data files and metadata into a single file
+called an :term:`egg`. The metadata found in an egg includes version
+information, dependencies, license info, platform info, entry points, as well as
+other information.
+
+Eggs can be downloaded from an egg server using a simple HTML-based protocol. A
+developer can control the distribution of a component by choosing to  publish it
+in a particular egg server. For world-wide distribution, it can be placed on a 
+public server like the `Python Package Index`_. For more restricted
+distribution, it can be placed on  a secure egg server that requires a login id
+and password.
 
 .. _`Python Package Index`: http://pypi.python.org/pypi
 
@@ -224,20 +229,20 @@ sides of the connection, these *incompatible* components can coexist within a
 model.
 
 In OpenMDAO, this will be done by setting up an :term:`ObjServerFactory` in a
-self contained Python environment that was created using zc.buildout and having
+self-contained Python environment that was created using zc.buildout and having
 each :term:`ObjServer` spawned from that factory use that factory's environment.
 Each buildout environment can run a different Python version and can also
 have its own set of modules installed.
 
 Users often want to update a model as its constituent components evolve. To
-facilitate this process, we have added a config_from_obj() function to the
-IComponent interface so that a newer component can configure itself using an
-existing older component. This will allow the user to drag a new version of a
-component onto an older version in a model, replacing the older version with
+facilitate this process, we will add a config_from_obj() function to the
+Component interface so that a newer Component can configure itself using an
+existing older Component. This will allow the user to drag a new version of a
+Component onto an older version in a model, replacing the older version with
 the new version configured as identically as possible to the old one. The
 degree to which this automatic replacement will work depends upon the nature of
 the differences between the two versions. If the differences are internal to
-the component and do not affect its public interface, then the replacement
+the Component and do not affect its public interface, then the replacement
 should just work. Because two versions of the same component cannot exist in
 the same process, the newer one will have to be a proxy to a component that is
 out of the process, as described above.
@@ -293,9 +298,9 @@ There are a number of visual representations of the system that the user will be
 able to interact with through the GUI. These visual representations are called
 *views.* All views are based on the same underlying data model, so changes in one
 view will typically result in changes to other views. For example, if a tool is
-added to the dataflow view, it will also appear in the workflow view. However,
+added to the dataflow view, it will also appear in the tree view. However,
 some objects will be visible only in a single view. For example, :term:`Workflow`
-objects will only be visible in the workflow view. The rest of this section
+objects will only be visible in a workflow view. The rest of this section
 describes the different views that will be available to a user of the GUI.
 
 .. index:: N squared form
@@ -366,7 +371,8 @@ concurrent execution, and sequential execution. (See the figure below showing
 .. figure:: ../generated_images/WorkflowView.png
    :align: center
 
-   Workflow View Showing a Simple Sequential Workflow
+   Workflow View Showing an Iterative Workflow with a Driver Iterating Over a
+   Sequence
 
 .. index:: pair: problem formulation; view
 

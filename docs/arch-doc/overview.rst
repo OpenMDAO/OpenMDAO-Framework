@@ -126,7 +126,7 @@ The current package layout of the project is as follows:
     of OpenMDAO
 
 **openmdao.examples**
-    The OpenMDAO tutorial problem and other examples
+    OpenMDAO tutorial problems and other examples
 
 .. _zope: http://wiki.zope.org/zope3/Zope3Wiki
 
@@ -152,7 +152,7 @@ steps are performed:
     1. bootstrap a buildout using the appropriate python version, e.g.,
          ``python2.5 bootstrap.py``
     2. obtain a buildout configuration file from the OpenMDAO website, e.g.,
-          ``wget http://openmdao.org/releases/1.0.3/buildout``
+          ``wget http://openmdao.org/releases/1.0.3/buildout.cfg``
     3. execute the buildout using that configuration file, e.g.,
           ``bin/buildout``
     
@@ -162,8 +162,9 @@ some other package index or from a local download cache. Once this process is
 completed, the user will have a complete version of the OpenMDAO framework.
 
 Another possibility is to bundle all of the necessary eggs into a large archive,
-either a tar file or a zip file, and the user can download the archive and run
-the buildout as mentioned above. 
+either a tar file or a zip file, and the user can obtain the archive and run
+the buildout as mentioned above. This option is attractive for those who have no
+network access.
 
 For Windows users, a self-extracting installer file will most likely be
 provided, and this installer will perform the needed buildout steps for the
@@ -174,10 +175,15 @@ some sort  of model, a configuration of plugin components that work together to
 solve some sort of problem. A complex OpenMDAO model may depend upon a large
 number of eggs.  Some of those eggs will be found in  the OpenMDAO standard
 library, but others will not. Downloading all of those eggs from a package index
-every time a new buildout is created could cause unwanted delays, so configuring
-the system to avoid unnecessary copying of distributions is important. One of
-the standard attributes available in a buildout configuration file is
-``download-cache``, and distributions needed by a buildout will be automatically
-copied there during download and automatically retrieved from there during later
-buildouts.
+every time a new buildout is created could cause unwanted delays and waste
+space, so configuring the system to avoid unnecessary copying of distributions
+is important. The easiest way to do this is for the user to set the
+**eggs-directory** attribute in his buildout default configuration file (in
+$HOME/.buildout/default.cfg).  After **eggs-directory** is set, all eggs needed
+by any buildout run by the user will be installed in that directory, and if
+a needed egg is found in that directory, it doesn't have to be downloaded.
+Multiple versions of the same egg can be present in the **eggs-directory**
+since all of their filenames will be unique.
+
+
 
