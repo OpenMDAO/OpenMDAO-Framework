@@ -487,7 +487,7 @@ each input and output on a component.
 The parameter "units" is used to specify the units for this Data Object. OpenMDAO utilizes the units capability
 which is part of the Scientific Python package. This allows for unit checking and conversion when connecting
 the outputs and inputs of components. The units are defined using the definitions given in Scientific Python,
-which can be found at http://www.astro.rug.nl/efidad/Scientific.Physics.PhysicalQuantities.html. If a
+which can be found at http://dsnra.jpl.nasa.gov/software/Python/python-modules/Scientific/. If a
 Data Object is dimensionless, the units should be set to "None."
 
 There are a couple more parameters of interest that can be seen by inspecting the __init__ function in
