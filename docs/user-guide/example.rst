@@ -364,6 +364,21 @@ required acceleration within a small tolerance. This solution method converges r
 when applied over a linear range of a torque curve. However, the EPA profiles are long, with many calculation
 points, so simulating these driving profiles consumes much more CPU time than the acceleration test.
 
+Using OpenMDAO
+--------------
+OpenMDAO provides two interfaces through which the user interacts to build build and execute models -- a 
+graphical user interface and a scripting/command line interface. The graphical interface is currently
+under developed and is not covered here. This tutorial covers describes how to build and run models using
+the scripting interface, or more specifically, writing python scripts to interact with the OpenMDAO
+framework and components.
+
+This tutorial will also introduce the user to using the Python shell for creating and interacting with
+components and models. The shell is a good environment for playing around with some of the concepts
+learned here without having to edit files and run models at the operating system's command prompt. It is, however,
+not the way that most users would ultimately run OpenMDAO to perform any real-world analysis. Most work
+will be done using the graphical interface or the scripting interface. 
+
+
 .. index:: Component
 
 Components
