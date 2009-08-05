@@ -394,26 +394,27 @@ the base class Component. A very simple component is shown here:
 
 ::
 
-	from openmdao.main import Component
+	from openmdao.main.api import Component
 
 	class Transmission(Component):
-    	''' A simple transmission model.'''
+	    ''' A simple transmission model.'''
 	
-    	    def __init__(self, name, parent=None, doc=None, directory=''):
-        	''' Creates a new Transmission object
-	            '''
-        	super(Transmission, self).__init__(name, parent, doc, directory)        
+	    def __init__(self, name, parent=None, doc=None, directory=''):
+                ''' Creates a new Transmission object '''
+	            
+	        super(Transmission, self).__init__(name, parent, doc, directory)        
         
-	    def execute(self):
-        	''' The 5-speed manual transmission is simulated by determining the
-        	    torque output and engine RPM via the gear ratios.
-	            '''
+	        def execute(self):
+	            ''' The 5-speed manual transmission is simulated by determining the
+	                torque output and engine RPM via the gear ratios.
+	                '''
 
 This new Transmission component does nothing yet. It does have the two functions that all components must have.
 The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
 constants. It is also where the inputs and outputs will be declared. The super call is always required so that the
 __init__ function of the base class is executed. Similarly, the execute function runs the model. There are some
-other functions defined in the Component API, but these two are the only ones needed in the tutorial.
+other functions defined in the Component API, but these two are the only ones needed for this part of the tutorial. Note
+that if your __init__ or execute function does nothing, it does not need to be declared in the component.
 
 The next step is to add the inputs and outputs that are defined in our model description above.
 
@@ -421,74 +422,73 @@ The next step is to add the inputs and outputs that are defined in our model des
 
 ::
 
-	from openmdao.main import Component, Float, Int
-	from openmdao.main.variable import INPUT, OUTPUT
+	from enthought.traits.api import Float, Int
+	from openmdao.main.api import Component, UnitsFloat
 
 	class Transmission(Component):
-    	''' A simple transmission model.'''
+	    ''' A simple transmission model.'''
 	
-	    def __init__(self, name, parent=None, doc=None, directory=''):
-	        ''' Creates a new Transmission object
-        	'''
-        
-	        super(Transmission, self).__init__(name, parent, doc, directory)        
-        
-	        Float('ratio1', self, INPUT, units=None, default=3.54,
-        	      doc='Gear Ratio in First Gear')
-	        Float('ratio2', self, INPUT, units=None, default=2.13,
-        	      doc='Gear Ratio in Second Gear')
-	        Float('ratio3', self, INPUT, units=None, default=1.36,
-        	      doc='Gear Ratio in Third Gear')
-	        Float('ratio4', self, INPUT, units=None, default=1.03,
-        	      doc='Gear Ratio in Fourth Gear')
-	        Float('ratio5', self, INPUT, units=None, default=0.72,
-        	      doc='Gear Ratio in Fifth Gear')
-	        Float('final_drive_ratio', self, INPUT, units=None, default=2.80,
-        	      doc='Final Drive Ratio')
-	        Float('tire_circ', self, INPUT, units='inch', default=75.0,
-        	      doc='Circumference of tire (inches)')
-	
-	        Int('current_gear', self, INPUT, default=0,
-        	      doc='Current Gear')
-	        Float('velocity', self, INPUT, units='mi/h', default=0.0,
-        	      doc='Current Velocity of Vehicle')
+	    ratio1 = Float(3.54, iostatus='in', 
+	             desc='Gear ratio in First Gear')
+	    ratio2 = Float(2.13, iostatus='in', 
+	             desc='Gear ratio in Second Gear')
+	    ratio3 = Float(1.36, iostatus='in', 
+	             desc='Gear ratio in Third Gear')
+	    ratio4 = Float(1.03, iostatus='in', 
+	             desc='Gear ratio in Fourth Gear')
+	    ratio5 = Float(0.72, iostatus='in', 
+	             desc='Gear ratio in Fifth Gear')
+	    final_drive_ratio = Float(2.8, iostatus='in', 
+	             desc='Final Drive Ratio')
+	    tire_circ = UnitsFloat(75.0, iostatus='in', units='inch', 
+	             desc='Circumference of tire (inches)')
 
-        	Float('RPM', self, OUTPUT, units='1/min', default=1000.0, 
-	              doc='Engine RPM')        
-        	Float('torque_ratio', self, OUTPUT, units=None, default=0.0, 
-	              doc='Ratio of output torque to engine torque')   
+	    current_gear = Int(0, iostatus='in', desc='Current Gear')
+	    velocity = UnitsFloat(0., iostatus='in', units='mi/h',
+	             desc='Current Velocity of Vehicle')
+
+	    RPM = UnitsFloat(1000., iostatus='out', units='1/min',
+	             desc='Engine RPM')        
+	    torque_ratio = Float(0., iostatus='out',
+	             desc='Ratio of output torque to engine torque')    
 
 Note that the addition of inputs and outputs for this component requires several more imports in the first
 two lines. It is important to import only those features that you need from the framework base classes
-instead of loading everything into the workspace. A component's inputs and outputs are called *Variables* in
-OpenMDAO. The :term:`Variable` is actually an object that resides in the component and has several member
-functions for interaction.
+instead of loading everything into the workspace. 
 
-The Float and Int constructors are used to create the input and output variables on a component for floating point
-and integer input respectively. String variables and arrays are also possible using the String and ArrayVariable
-constructors. The Variable constructor requires the first five inputs but also allows a few optional parameters to
+A component's inputs and outputs are called `Data Objects` (name subject to possible change) in OpenMDAO. An often-used
+synonymn for this is *Variable*, though the more general term data object reflects the ability to pass more
+generalized objects such as data structures or geometries. A Data Object is wrapper for data passed between framework components,
+containing a value, a default value, optional min/max values, and units. Data Objects can also perform their own validation
+when being assigned to another Data Object. OpenMDAO's Data Objects are implemented using Traits, an open-source extension to Python
+authored by Enthought, Inc. Traits provide a way to apply explicit typing to the normally untyped Python variables.
+
+The Float and Int constructors are used to create the inputs and outputs on a component for floating point
+and integer input respectively. String variables and arrays are also possible using the String and Array
+constructors. The Data Object constructors require the first two inputs but also allow several optional parameters to
 be specified.
 
 .. index:: PEP 8::
 
-The first parameter gives the variable a name. This name needs to follow Python's standard for variable names,
+The Data Object is given a name by assigning it to a Python variable (i.e. the left hand side argument when calling the 
+constructor.) As a Python variable, this name needs to follow Python's standard for variable names,
 so it must begin with a letter or underscore and should consist of only alphanumeric characters and the
 underscore. Keep in mind that a leading underscore is generally used for private data or functions. Also,
 spaces cannot be used in a variable name. Generally, we've tried to follow the PEP 8 standard for component
 instance names (http://www.python.org/dev/peps/pep-0008/) as well as Python variable names, which proscribes the use of lower case names with words
 separated by underscores. 
 
-The second parameter specifies the parent, which in this case should be "self," which just means that these
-variables are all owned by the Transmission component. The third parameter marks this variable as either an
-input or an output.
+The first parameter is the required default value for the data object.
 
-The fourth parameter is used to specify the units for this variable. OpenMDAO utilizes the units capability
+The parameter "iostatus" marks this Data Object as either an input (in) or an output (out) to the parent component. The parameter "desc"
+gives a documentation string describes this data object. This should be used to provide an adequate explanation for
+each input and output on a component.
+
+The parameter "units" is used to specify the units for this Data Object. OpenMDAO utilizes the units capability
 which is part of the Scientific Python package. This allows for unit checking and conversion when connecting
 the outputs and inputs of components. The units are defined using the definitions given in Scientific Python,
-which can be found at http://www.astro.rug.nl/efidad/Scientific.Physics.PhysicalQuantities.html. If a
-variable is dimensionless, the units should be set to "None."
-
-The fifth parameter is an optional default value. 
+which can be found at http://dsnra.jpl.nasa.gov/software/Python/python-modules/Scientific/. If a
+Data Object is dimensionless, the units should be set to "None."
 
 There are a couple more parameters of interest that can be seen by inspecting the __init__ function in
 engine.py.
@@ -497,11 +497,11 @@ engine.py.
 
 ::
 
-        	Float('RPM', self, INPUT, units='1/min', default=1000.0, min_limit=1000,
-	              max_limit=6000, doc='Engine RPM')
+        	RPM = UnitsFloat(1000.0, low=1000., high=6000., iostatus='in', 
+                     units='1/min',  desc='Engine RPM')		      
 
-Here, a minimum and maximum limit have been set for the engine input variable RPM. If the engine component is
-commanded to operate outside of the limits on this variable, a ConstraintError exception will be raised. This
+Here, a minimum and maximum limit have been set for the engine input RPM using the arguments "low" and "high". If the engine 
+component is commanded to operate outside of the limits on this input, a TraitError exception will be raised. This
 exception can be caught elsewhere so that some kind of recovery behavior can be defined (e.g., shifting the gear
 in the transmission component to lower the engine RPM.)
 
@@ -516,23 +516,31 @@ the input and output variables to perform a calculation.
         ''' The 5-speed manual transmission is simulated by determining the
             torque output and engine RPM via the gear ratios.
             '''
+	    
         ratios = [0.0, self.ratio1, self.ratio2, self.ratio3, self.ratio4,
                   self.ratio5]
         
         gear = self.current_gear
+        differential = self.final_drive_ratio
+        tire_circ = self.tire_circ
+        velocity = self.velocity
         
-        self.RPM = (ratios[gear]*self.final_drive_ratio*5280.0*12.0 \
-                    *self.velocity)/(60.0*self.tire_circ)
-        self.torque_ratio = ratios[gear]*self.final_drive_ratio
-            
-        # At low speeds, hold engine speed at 1000 RPM and feather the clutch
+        self.RPM = (ratios[gear]*differential*5280.0*12.0 \
+                    *velocity)/(60.0*tire_circ)
+        self.torque_ratio = ratios[gear]*differential
+        
+        # At low speeds, hold engine speed at 1000 RPM and partially engage the clutch
         if self.RPM < 1000.0 and self.current_gear == 1 :
-            self.RPM = 1000.0	    
+            self.RPM = 1000.0
 	    
 Inputs and Outputs are objects in our component, so they are accessed using ``self.variablename``, where the
-variablename is the name given to the variable's constructor. Note that units checking is bypassed when
-accessing the variable's value directly. This is fine for calculation inside of the components; units checking
-is intended to be used more at a higher level, where component inputs and outputs are being connected.
+variablename is the name given to the variable's constructor. Note that a local copy of some of the inputs is
+created here (e.g. gear Vs. self.current_gear.) Since we already know the data types and the units that are used in
+these calculations, we don't need the explicit typing or unit checking provided by the Data Objects, so we can bypass any overhead that is
+normally associated with them by assigning their values to an ordinary untyped Python variable. In general this
+should be more efficient, though for simple calculations like this the difference would not be noticeable. The
+type checking and unit checking are absolutely necessary outside of the component boundary, where components are
+connected to each other.
 
 
 Executing a Component in the Python Shell
@@ -556,12 +564,21 @@ An instance of the class Engine can be created by typing the following:
 	>>> my_engine = Engine("new_engine")
 
 The object MyEngine is an engine created with default values for all of its inputs. We can interact with the
-input and output variables by using the get and set functions.
+inputs and outputs by using the get and set functions.
 
 	>>> my_engine.get("bore")
 	82.0
 	>>> my_engine.get("stroke")
 	78.799999999999997
+	
+Note that we can also access the value of the input directly:
+
+	>>> my_engine.bore
+	82.0
+
+While this is perfectly valid, it should be noted that some things may be bypassed by not calling the get function.
+In particular, the direct access may not be able to find the value of the input if some objects are executing on
+remote servers. In such a case, the get() function will be able to find the input value.
 	
 Let's change the engine speed from its default value (1000 RPM) to 2500 RPM.
 
@@ -569,6 +586,22 @@ Let's change the engine speed from its default value (1000 RPM) to 2500 RPM.
 	>>> my_engine.get("RPM")
 	2500
 
+Similiarly, these values can also be set directly:
+
+	>>> my_engine.RPM = 2500
+	>>> my_engine.RPM
+	2500
+
+Note that directly setting the input's value bypasses the check that normally prevents linked inputs from being changed.
+Type and units checking all work fine:
+
+	>>> my_engine.RPM = "Hello"
+	Traceback (most recent call last):
+	.
+	.
+	.
+	TraitError: new_engine: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but attempted value is Hello
+	
 Now, let's try setting the engine speed to a value that exceeds the maximum, which is 6000 RPM.
 
 	>>> my_engine.set("RPM",7500)
@@ -576,9 +609,9 @@ Now, let's try setting the engine speed to a value that exceeds the maximum, whi
 	.
 	.
 	.
-	ConstraintError: new_engine.RPM: constraint '7500 <= 6000' has been violated
+	TraitError: new_engine: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but attempted value is 7500
 
-The variable raises an exception indicating that its maximum value has been violated. This exception can be
+The set function raises an exception indicating that the maximum value for RPM has been violated. This exception can be
 handled to provide some logical response to this condition; this will be seen in the acceleration simulation.
 Now, run the engine and examine the power and torque at 2500 RPM.
 
@@ -616,9 +649,10 @@ Engine, and Chasis components.
 
 ::
 
-	from openmdao.main import Assembly
-	from openmdao.main import Float, Int
-	from openmdao.main.variable import INPUT, OUTPUT
+	from enthought.traits.api import implements, Interface, Float, Int
+
+	from openmdao.main.api import Assembly, UnitsFloat
+	from openmdao.main.interfaces import IComponent
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission
@@ -626,6 +660,8 @@ Engine, and Chasis components.
 	
 	class Vehicle(Assembly):
 	    ''' Vehicle assembly. '''
+    
+	    implements(IVehicle)
     
 	    def __init__(self, name, parent=None, directory=''):
 	        ''' Creates a new Vehicle Assembly object '''
@@ -647,6 +683,9 @@ data flow.
 Notice here that an instance of the Transmission, Engine, and Chasis are created, with the
 parent set to "self," which in this context is Vehicle. This way, these components are created as part
 of the assembly, and are acessible through ``Vehicle.Transmission``, etc.
+
+The implements function defines an interface for this object. This will be explained in more detail in the
+section Sockets and Interfaces (??? needs section link).
 
 Now that the components are instantiated in the assembly, they need to be hooked up:
 
@@ -688,8 +727,42 @@ output of the Vehicle component. This can be done by creating passthroughs in th
 	self.create_passthru('chasis.Cf')
 		
 Now, the Vehicle assembly has its own inputs and outputs and can be accessed just like in any other
-component.
+component. As the name implies, these passthroughs purely pass data from the assembly input to the contained 
+component inputs. As such, there is no unit conversion as this would not be computationally efficient. The
+engine example problem actually contains components that expects inputs to be in English units (Engine and 
+Transmisson) as well as a component that expects inputs to be in metric (Chasis). There are two inputs that
+are required by components with units that differ from the assembly level -- velocity and tire_circumference. 
+Unit conversion must be performed on these, so they need to be handled by regular component connections. To
+accomplish this, the inputs must be declared in the class header:
 
+.. _Code7a: 
+
+::
+
+	class Vehicle(Assembly):
+	    """ Vehicle assembly. """
+    
+	    implements(IVehicle)
+    
+	    tire_circumference = UnitsFloat(75.0, iostatus='in', units='inch', 
+                                desc='Circumference of tire (inches)')
+    
+	    velocity = UnitsFloat(75.0, iostatus='in', units='mi/h', 
+                       desc='Vehicle velocity needed to determine engine RPM (mi/h)')
+
+Now these input are available to connect to the components.
+
+.. _Code7b: 
+
+::
+
+        self.connect('velocity', 'chasis.velocity')
+        self.connect('velocity', 'transmission.velocity')
+        self.connect('tire_circumference', 'chasis.tire_circ')
+        self.connect('tire_circumference', 'transmission.tire_circ')
+
+This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chasis and
+Transmission components.
 
 Executing the Vehicle Assembly
 ------------------------------
@@ -783,7 +856,7 @@ element (element zero.) This is not typically needed for return values from FORT
 F2PY, but it seemes to be needed for C codes for which the signature file is manually created. This is
 something that might be fixable and will be investigated.
 
-.. index:: Socket
+.. index:: Sockets and Interfaces
 .. index:: Interfaces
 
 Sockets and Interfaces
@@ -809,7 +882,9 @@ simulations were implemented as a Component instead. However, this leads to the 
 To investigate designs, a Vehicle class was defined as an assembly in OpenMDAO. This class has a set of specific inputs and outputs
 that include the design variables for the engine, transmission, and chasis, and the simulation
 variables velocity, gear position and throttle position. These inputs and outputs comprise an interface
-for the Vehicle class. In the future, the user might want to replace the current vehicle model with a new model. This new model will be compatible provided that it has the same interface as the current vehicle model. The interface checking is facilitated by the creation of a Socket in the vehicle simulation assembly.
+for the Vehicle class. In the future, the user might want to replace the current vehicle model with a new model. This new model
+will be compatible provided that it has the same interface as the current vehicle model. The interface checking is 
+facilitated by the creation of a Socket in the vehicle simulation assembly.
 
 [???? - Need to add the socket stuff to the driving_sim.py]
 
@@ -832,21 +907,28 @@ EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 Setting up an Optimization Problem
 ----------------------------------
 
-The final step is the creation of a top level assembly which defines the problem using DrivingSim and the vehicle assembly. The first problem we would like to solve is a single objective optimization problem where we adjust some subset of the design variables to minimize the 0-60 acceleration time. The chosen design variables are the bore and spark angle; the optimal value of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second variable cannot be optimized by mere inspection. 
+The final step is the creation of a top level assembly which defines the problem using DrivingSim and the vehicle assembly.
+The first problem we would like to solve is a single objective optimization problem where we adjust some subset of the design
+variables to minimize the 0-60 acceleration time. The chosen design variables are the bore and spark angle; the optimal value
+of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second variable cannot
+be optimized by mere inspection. 
 
-The optimization will be handled by CONMIN, which is a gradient based algorithm written in FORTRAN, and developed at NASA in the 1970s. The source code is in the public domain, and a Python wrapped CONMIN component has been included in the OpenMDAO standard library.
+The optimization will be handled by CONMIN, which is a gradient based algorithm written in FORTRAN, and developed at NASA in
+the 1970s. The source code is in the public domain, and a Python wrapped CONMIN component has been included in the OpenMDAO
+standard library.
 
-In openMDAO, the top level assembly is always derived from Assembly. In engine_optimization.py, the class EngineOptimization was created and a SimVehicle and CONMINdriver were instantiated:
+In openMDAO, the top level assembly is always derived from Assembly. In engine_optimization.py, the class EngineOptimization 
+was created and a SimVehicle and CONMINdriver were instantiated:
 
 .. _Code9: 
 
 ::
 
-	from openmdao.main import Assembly
+	from openmdao.main.api import Assembly
 
 	from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-	from openmdao.examples.engine_design.driving_sim import Driving_Sim
+	from openmdao.examples.engine_design.driving_sim import DrivingSim
 
 	class EngineOptimization(Assembly):
 	    """ Top level assembly for optimizing a vehicle. """
@@ -862,7 +944,8 @@ In openMDAO, the top level assembly is always derived from Assembly. In engine_o
 	        # Create CONMIN Optimizer instance
         	CONMINdriver('driver', parent=self)
 
-Note that the syntax for instantiated the CONMIN driver is the same as for any other component or subassembly. The CONMIN driver requires some initialization and connecting before it can be used:
+Note that the syntax for instantiated the CONMIN driver is the same as for any other component or subassembly. The CONMIN 
+driver requires some initialization and connecting before it can be used:
 
         
 .. _Code10: 
@@ -874,29 +957,38 @@ Note that the syntax for instantiated the CONMIN driver is the same as for any o
 	        self.driver.maxiters = 30
         
 	        # CONMIN Objective 
-        	self.driver.objective.value = 'driving_sim.accel_time'
+        	self.driver.objective = 'driving_sim.accel_time'
         
 	        # CONMIN Design Variables 
-        	self.driver.design_vars.value = ['driving_sim.spark_angle', 
+        	self.driver.design_vars = ['driving_sim.spark_angle', 
                                          'driving_sim.bore' ]
 	        
         	self.driver.lower_bounds = [-50, 65]
 	        self.driver.upper_bounds = [10, 100]
 
-In self.driver.iprint, driver refers to the title that the CONMIN driver is given when it is created above. The iprint flag enables or disables the printing of diagnostics internal to CONMIN, while the maxiters parameter specifies the maximum number of iterations for the optimization loop. Both of these have a default value (maxiters is 40), so setting them here is not required.
+In self.driver.iprint, driver refers to the title that the CONMIN driver is given when it is created above. The iprint flag
+enables or disables the printing of diagnostics internal to CONMIN, while the maxiters parameter specifies the maximum number
+of iterations for the optimization loop. Both of these have a default value (maxiters is 40), so setting them here is not required.
 
-The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which were chosen as bore and spark angle. Both the objective and the design variables are assigned using a type of variable called a RefVariable. Instead of containing a variable value, the RefVariable contains a string that gives the OpenMDAO path pointing to the variable that the RefVariable references. This path is always relative to the driver's parent, so here we use "driving_sim.accel_time" instead of "self.driving_sim.accel_time". RefVariables are primarily used to connect the inputs and outputs of drivers (e.g., optimizers, solvers, etc.) CONMIN is a single objective optimizer, so there can only be one objetive. However, there can be multiple design variables, and these are stored in a list. The upper and lower bounds for all the design variables are set using lower_bounds and upper_bounds respectively.
+The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which were chosen
+as bore and spark angle. Both the objective and the design variables are assigned using a type of Data Object called a StringRef.
+Instead of containing a variable value, the StringRef contains a string that gives the OpenMDAO path pointing to the variable
+that the StringRef references. This path is always relative to the driver's parent, so here we use "driving_sim.accel_time"
+instead of "self.driving_sim.accel_time". StringRefs are primarily used to connect the inputs and outputs of drivers (e.g., 
+optimizers, solvers, etc.) CONMIN is a single objective optimizer, so there can only be one objetive. However, there can be
+multiple design variables, and these are stored in a list. The upper and lower bounds for all the design variables are set 
+using lower_bounds and upper_bounds respectively.
 
-[???? - Note: the RefVariable API is currently undergoing some changes.]
-
-The CONMIN driver can actually handle more sophisticated objective expressions that are functions of multiple simulation variables using the RefVariable. For example, if the user wants to maximize accel_time instead of minimizing it, this can be done by negating the expression:
+The CONMIN driver can actually handle more sophisticated objective expressions that are functions of multiple simulation variables
+using the StringRef. For example, if the user wants to maximize accel_time instead of minimizing it, this can be done by
+negating the expression:
 
 .. _Code11: 
 
 ::
 
 	        # CONMIN Objective = Maximize accel_time 
-        	self.driver.objective.value = '-driving_sim.accel_time'
+        	self.driver.objective = '-driving_sim.accel_time'
 		
 Expressions can be built up from any number of OpenMDAO variables using Python's mathematical syntax:
 
@@ -905,7 +997,7 @@ Expressions can be built up from any number of OpenMDAO variables using Python's
 ::
 
 	        # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-        	self.driver.objective.value = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+        	self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
 
 Here, a weighted sum of the EPA city and highway fuel economy estimates is used as the objective in a maximization problem.
 

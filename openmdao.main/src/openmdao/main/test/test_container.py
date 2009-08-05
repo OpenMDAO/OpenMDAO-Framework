@@ -7,7 +7,6 @@ from enthought.traits.api import Float, TraitError
 
 import openmdao.util.save_load as constants
 from openmdao.main.container import Container
-from openmdao.main.interfaces import IContainer
 
 
 class ContainerTestCase(unittest.TestCase):

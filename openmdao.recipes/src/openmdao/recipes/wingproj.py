@@ -6,12 +6,18 @@ import stat
 import fnmatch
 import ConfigParser
 import logging
+import pprint
 
 import zc.buildout
 
 from pkg_resources import working_set, get_entry_map
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
 
+def find_files_and_dirs(pat, startdir):
+    for path, dirlist, filelist in os.walk(startdir):
+        for name in fnmatch.filter(filelist+dirlist, pat):
+            yield os.path.join(path, name)
+            
 script_template = """#!%(python)s
 
 import os
@@ -172,27 +178,29 @@ class WingProj(object):
                        dict({None: ('custom', self.executable)}))
 
             if not config.has_option('project attributes', 'proj.directory-list'):
+                
+                excludes = [u'buildout', u'plans', 
+                            u'docs/_build', u'docs/_static', u'docs/generated_images']
+                # find all dirs containing setup.py files
+                setupdirs = [os.path.dirname(p) for p in 
+                                   find_files_and_dirs('setup.py', self.branchdir)]
+                for sdir in setupdirs:
+                    sdir = sdir[len(self.branchdir):]
+                    bname = os.path.basename(sdir)
+                    excludes.append(unicode(os.path.join(sdir,
+                                            '.'.join([bname,'egg-info'])).lstrip('/\\')))
+                    excludes.append(unicode(os.path.join(sdir,'src',
+                                            '.'.join([bname,'egg-info'])).lstrip('/\\')))
+                    excludes.append(unicode(os.path.join(bname,'build').lstrip('/\\')))
+                    
                 config.set('project attributes', 'proj.directory-list',
-                            "[{'dirloc': loc('../../..'),\n"+
-                            "  'excludes': [u'openmdao.util/build',\n"+
-                                     "u'openmdao.lib/src/openmdao.lib.egg-info',\n"+
-                                     "u'buildout',\n"+
-                                     "u'plans',\n"+
-                                     "u'openmdao.test/src/openmdao.test.egg-info',\n"+
-                                     "u'docs',\n"+
-                                     "u'openmdao.lib/build',\n"+
-                                     "u'eggsrc/conmin/conmin.egg-info',\n"+
-                                     "u'openmdao.main/build',\n"+
-                                     "u'openmdao.recipes/build',\n"+
-                                     "u'openmdao.recipes/src/openmdao.recipes.egg-info',\n"+
-                                     "u'openmdao.test/build',\n"+
-                                     "u'openmdao.main/src/openmdao.main.egg-info',\n"+
-                                     "u'openmdao.util/src/openmdao.util.egg-info',\n"+
-                                     "u'eggsrc/npsscomponent/build'],\n"+
-                            "  'filter': '*.py',\n"+
-                            "  'include_hidden': 0,\n"+
-                            "  'recursive': 1,\n"+
-                            "  'watch_for_changes': 1}]")
+                           pprint.pformat([{'dirloc': None,
+                             'excludes': excludes,
+                             'filter': '*.py ; *.rst',
+                             'include_hidden': 0,
+                             'recursive': 1,
+                             'watch_for_changes': 1}]
+                              ).replace('None',"loc('../../..')"))
             try:
                 self.logger.info('egg set has changed - writing config to %s' %
                                   newfname)

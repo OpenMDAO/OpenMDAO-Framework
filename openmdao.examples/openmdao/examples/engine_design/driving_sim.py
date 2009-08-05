@@ -314,7 +314,7 @@ class DrivingSim(Assembly):
         self.EPA_city = fuel_economy[0]
         self.EPA_highway = fuel_economy[1]
     
-def test_it():
+def test_it(): # pragma: no cover    
     '''simple testing'''
     import time
     tt = time.time()
@@ -329,7 +329,7 @@ def test_it():
     
     print "\nElapsed time: ", time.time()-tt
     
-if __name__ == "__main__": 
+if __name__ == "__main__": # pragma: no cover    
     test_it()
 
 # End driving_sim.py        

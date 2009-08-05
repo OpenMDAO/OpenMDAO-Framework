@@ -3,7 +3,6 @@ from enthought.traits.api import implements
 
 from openmdao.main.component import Component, STATE_RUNNING, STATE_WAITING
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.interfaces import IWorkflow, IComponent
 
 __all__ = ['Workflow']
 
@@ -14,8 +13,6 @@ class Workflow(Component):
     some order.
     """
 
-    implements(IWorkflow)
-    
     def __init__(self, name, parent=None, add_to_parent=True):
         """ Create an empty flow. """
         super(Workflow, self).__init__(name, parent, add_to_parent=add_to_parent)

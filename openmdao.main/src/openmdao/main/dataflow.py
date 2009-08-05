@@ -5,7 +5,6 @@ from enthought.traits.api import implements
 import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
 
-from openmdao.main.interfaces import IAssembly, IComponent
 from openmdao.main.workflow import Workflow
 from openmdao.main.drivertree import DriverForest, create_labeled_graph
 
