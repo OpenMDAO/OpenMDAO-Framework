@@ -412,17 +412,17 @@ the base class Component. A very simple component is shown here:
 	from openmdao.main.api import Component
 
 	class Transmission(Component):
-	    ''' A simple transmission model.'''
+	    """ A simple transmission model."""
 	
 	    def __init__(self, name, parent=None, doc=None, directory=''):
-                ''' Creates a new Transmission object '''
+                """ Creates a new Transmission object """
 	            
 	        super(Transmission, self).__init__(name, parent, doc, directory)        
         
 	        def execute(self):
-	            ''' The 5-speed manual transmission is simulated by determining the
+	            """ The 5-speed manual transmission is simulated by determining the
 	                torque output and engine RPM via the gear ratios.
-	                '''
+	                """
 
 This new Transmission component does nothing yet. It does have the two functions that all components must have.
 The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
@@ -441,7 +441,7 @@ The next step is to add the inputs and outputs that are defined in our model des
 	from openmdao.main.api import Component, UnitsFloat
 
 	class Transmission(Component):
-	    ''' A simple transmission model.'''
+	    """ A simple transmission model."""
 	
 	    ratio1 = Float(3.54, iostatus='in', 
 	             desc='Gear ratio in First Gear')
@@ -528,9 +528,9 @@ the input and output variables to perform a calculation.
 ::
 
     def execute(self):
-        ''' The 5-speed manual transmission is simulated by determining the
+        """ The 5-speed manual transmission is simulated by determining the
             torque output and engine RPM via the gear ratios.
-            '''
+            """
 	    
         ratios = [0.0, self.ratio1, self.ratio2, self.ratio3, self.ratio4,
                   self.ratio5]
@@ -674,12 +674,12 @@ Engine, and Chasis components.
 	from openmdao.examples.engine_design.chasis import Chasis
 	
 	class Vehicle(Assembly):
-	    ''' Vehicle assembly. '''
+	    """ Vehicle assembly. """
     
 	    implements(IVehicle)
     
 	    def __init__(self, name, parent=None, directory=''):
-	        ''' Creates a new Vehicle Assembly object '''
+	        """ Creates a new Vehicle Assembly object """
 
 	        super(Vehicle, self).__init__(name, parent, directory)
 
@@ -949,7 +949,7 @@ was created and a SimVehicle and CONMINdriver were instantiated:
 	    """ Top level assembly for optimizing a vehicle. """
     
 	    def __init__(self, name, parent=None, directory=''):
-        	''' Creates a new Assembly containing a SimVehicle and an optimizer'''
+        	""" Creates a new Assembly containing a SimVehicle and an optimizer"""
         
 	        super(EngineOptimization, self).__init__(name, parent, directory)
 

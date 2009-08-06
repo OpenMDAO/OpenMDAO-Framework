@@ -1,18 +1,20 @@
-# driving_sim.py
-#
+"""
+    driving_sim.py - Driving Simulation for the vehicle example problem.
+"""
+
 # Simulates a vehicle to obatain the following:
 # - 0-60mph acceleration time
 # - EPA fuel economy estimate for city driving
 # - EPA fuel economy estimate for highway driving
 #
 # Includes a socket for a Vehicle assembly.
+
 from csv import reader
 
 from pkg_resources import resource_stream
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Assembly, UnitsFloat, convert_units
-from openmdao.main.exceptions import ConstraintError
+from openmdao.main.api import Assembly, UnitsFloat
 
 from openmdao.examples.engine_design.vehicle import Vehicle
 
@@ -26,7 +28,7 @@ CONVERT_TO_MPHPS = 2.23693629
 
 
 class DrivingSim(Assembly):
-    ''' Simulation of vehicle performance.'''
+    """ Simulation of vehicle performance."""
     
     # Simulation Parameters
     end_speed = UnitsFloat(60.0, iostatus='in', units='m/h',
@@ -43,7 +45,7 @@ class DrivingSim(Assembly):
                              desc='EPA Fuel economy - Highway')
         
     def __init__(self, name, parent=None, doc=None, directory=''):
-        ''' Creates a new DrivingSim object
+        """ Creates a new DrivingSim object
         
             # Simulation inputs
             end_speed          # Simulation ending speed in mph.
@@ -53,7 +55,7 @@ class DrivingSim(Assembly):
             accel_time        # Time to reach 60 mph from start
             EPA_city          # Fuel economy for city driving
             EPA_highway       # Fuel economy for highway driving
-            '''
+            """
         
         super(DrivingSim, self).__init__(name, parent, doc, directory)    
 
@@ -91,7 +93,7 @@ class DrivingSim(Assembly):
 
         
     def execute(self):
-        ''' Simulate the vehicle model at full throttle.'''
+        """ Simulate the vehicle model at full throttle."""
         #--------------------------------------------------------------------
         # Simulate acceleration time from 0 to end_speed
         #--------------------------------------------------------------------
@@ -122,7 +124,7 @@ class DrivingSim(Assembly):
                     self.vehicle.run()
                 except TraitError:
                     if self.vehicle.engine.RPM != self.vehicle.transmission.RPM:
-                        self.raise_exception("Gearing problem in Acceleration test.", 
+                        self.raise_exception("Gearing problem in Accel test.", 
                                              RuntimeError)
                     else:
                         raise
@@ -155,11 +157,11 @@ class DrivingSim(Assembly):
         fuel_economy = []
         
         def findgear():
-            '''
+            """
                Finds the nearest gear in the appropriate range for the
                currently commanded velocity. 
                This is intended to be called recursively.
-               '''
+               """
             # Note, shifts gear if RPM is too low or too high
             try:
                 self.vehicle.run()
@@ -242,7 +244,7 @@ class DrivingSim(Assembly):
                 
                 # Downshift if commanded accel > wide-open-throttle accel
                 while command_accel > accel_max and \
-                      self.vehicle.current_gear> 1:
+                      self.vehicle.current_gear > 1:
                     
                     self.vehicle.current_gear -= 1
                     findgear()
@@ -315,19 +317,19 @@ class DrivingSim(Assembly):
         self.EPA_highway = fuel_economy[1]
     
 def test_it(): # pragma: no cover    
-    '''simple testing'''
+    """simple testing"""
     import time
-    tt = time.time()
+    ttime = time.time()
     
-    z = DrivingSim("new")  
-    z.vehicle = Vehicle("test_vehicle")
-    z.run()
+    toplevel = DrivingSim("new")  
+    toplevel.vehicle = Vehicle("test_vehicle")
+    toplevel.run()
     
-    print "Time (0-60): ", z.accel_time
-    print "City MPG: ", z.EPA_city
-    print "Highway MPG: ", z.EPA_highway
+    print "Time (0-60): ", toplevel.accel_time
+    print "City MPG: ", toplevel.EPA_city
+    print "Highway MPG: ", toplevel.EPA_highway
     
-    print "\nElapsed time: ", time.time()-tt
+    print "\nElapsed time: ", time.time()-ttime
     
 if __name__ == "__main__": # pragma: no cover    
     test_it()
