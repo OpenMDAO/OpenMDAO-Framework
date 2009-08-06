@@ -122,7 +122,7 @@ class pyevolvedriver(Driver):
         self.DBAdapter = None #TODO: optional socket
 
     def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
-        if funcList == None: 
+        if funcList is None: 
             return
         slot.clear()
         if not isinstance(funcList, list):

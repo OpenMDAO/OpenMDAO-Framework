@@ -283,7 +283,7 @@ class GolinskiTestCase(unittest.TestCase):
             self.top.driver.objective = 'comp.missing'
         except TraitError, err:
             self.assertEqual(str(err), 
-                "top.driver: invalid value 'comp.missing' for input ref variable 'objective': top.comp: cannot set valid flag of 'missing' because it's not an io trait.")
+                "top.driver: invalid value 'comp.missing' for input ref variable 'objective': top.comp: cannot get valid flag of 'missing' because it's not an io trait.")
         else:
             self.fail('TraitError expected')
 

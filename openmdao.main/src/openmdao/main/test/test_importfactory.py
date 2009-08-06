@@ -11,24 +11,24 @@ def test_import():
 def test_bad_import():
     ifactory = ImportFactory()
     obj = ifactory.create('boguscompname')
-    assert obj == None
+    assert obj is None
 
 def test_version_import():
     ifactory = ImportFactory()
     obj = ifactory.create('openmdao.main.component.Component', version='1.2')
-    assert obj == None
+    assert obj is None
 
 def test_server_import():
     ifactory = ImportFactory()
     obj = ifactory.create('openmdao.main.component.Component', 
                           server='open_mdao_srv')
-    assert obj == None
+    assert obj is None
 
 def test_res_desc_import():
     ifactory = ImportFactory()
     obj = ifactory.create('openmdao.main.component.Component', 
                           res_desc={'my_attribute':4})
-    assert obj == None
+    assert obj is None
 
 
 if __name__ == '__main__':

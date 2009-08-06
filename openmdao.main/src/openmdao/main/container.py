@@ -5,8 +5,6 @@ The Container class
 #public symbols
 __all__ = ["Container"]
 
-__version__ = "0.1"
-
 import copy
 import sys
 import traceback
@@ -50,25 +48,6 @@ push_exception_handler(handler = lambda o,t,ov,nv: None,
                        reraise_exceptions = True,
                        main = True,
                        locked = True )
-
-class IMHolder(object):
-    """Holds an instancemethod object in a pickleable form."""
-
-    def __init__(self, obj):
-        self.name = obj.__name__
-        self.im_self = obj.im_self
-        if obj.im_self:
-            self.im_class = None  # Avoid possible __main__ issues.
-        else:
-            # TODO: handle __main__ for im_class.__module__.
-            self.im_class = obj.im_class
-
-    def method(self):
-        """Return instancemethod corresponding to saved state."""
-        if self.im_self:
-            return getattr(self.im_self, self.name)
-        else:
-            return getattr(self.im_class, self.name)
 
 class _DumbTmp(object):
     pass
@@ -124,7 +103,7 @@ class PathProperty(TraitType):
 
     def set(self, obj, name, value):
         """Set the value of the referenced attribute."""
-        if self.iostatus is 'out':
+        if self.iostatus == 'out':
             raise TraitError('%s is an output trait and cannot be set' % name)
         
         if self.trait:
@@ -151,7 +130,7 @@ class ContainerName(BaseStr):
         """Make sure the given name follows Container naming rules.
         Returns the validated name.
         """
-        if value == '' or value == None:
+        if value == '' or value is None:
             return value
         
         # normal string validation
@@ -355,7 +334,7 @@ class Container(HasTraits):
                 return False
             else:
                 self.raise_exception(
-                    "cannot set valid flag of '%s' because it's not "
+                    "cannot get valid flag of '%s' because it's not "
                     "an io trait." % name, RuntimeError)
         return valid
     
