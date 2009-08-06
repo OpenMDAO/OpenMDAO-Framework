@@ -1,7 +1,10 @@
-# chasis.py
-#
+"""
+    chasis.py - Chasis component for the vehicle example problem.
+"""
+
 # This openMDAO component determines the vehicle acceleration based on the
 # power output of the engine, modified by the transmission torque ratio.
+
 
 from enthought.traits.api import Float
 
@@ -9,7 +12,7 @@ from openmdao.main.api import Component, UnitsFloat
 from math import pi
 
 class Chasis(Component):
-    ''' A vehicle dynamics component - calculates acceleration.'''
+    """ A vehicle dynamics component - calculates acceleration."""
     
     # set up interface to the framework  
     # Pylint: disable-msg=E1101
@@ -28,7 +31,7 @@ class Chasis(Component):
     velocity = UnitsFloat(0., iostatus='in', units='m/s', 
                           desc='Current Velocity of Vehicle')
     torque_ratio = Float(0., iostatus='in', #units=None, 
-                              desc='Ratio of output torque to engine torque')        
+                         desc='Ratio of output torque to engine torque')        
     tire_circ = UnitsFloat(1.905, iostatus='in', units='m', 
                            desc='Circumference of tire')
     acceleration = UnitsFloat(0., iostatus='out', units='m/(s*s)', 
@@ -53,8 +56,8 @@ class Chasis(Component):
         
         
     def execute(self):
-        ''' Calculates the instantaneous acceleration for the vehicle.       
-            '''        
+        """ Calculates the instantaneous acceleration for the vehicle.       
+            """        
         torque = self.engine_torque*self.torque_ratio
         tire_radius = self.tire_circ/(2.0*pi)
         
