@@ -6,7 +6,7 @@ and was written by someone without much 'mool' knowledge.
 """
 
 __all__ = ('MidFidelity',)
-__version__ = '0.1'
+
 
 from enthought.traits.api import Float, Array, Int, Str, Instance
 

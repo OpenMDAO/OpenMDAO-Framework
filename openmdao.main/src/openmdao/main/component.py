@@ -2,7 +2,7 @@
 #public symbols
 __all__ = ['Component', 'SimulationRoot']
 
-__version__ = "0.1"
+
 
 import fnmatch
 import glob

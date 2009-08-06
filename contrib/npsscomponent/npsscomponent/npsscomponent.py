@@ -1,6 +1,6 @@
 
 __all__ = ('NPSScomponent','NPSSProperty')
-__version__ = '0.1'
+
 
 import os
 

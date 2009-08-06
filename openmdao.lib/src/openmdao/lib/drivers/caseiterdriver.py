@@ -1,5 +1,5 @@
 __all__ = ('CaseIteratorDriver','ServerError')
-__version__ = '0.1'
+
 
 import Queue
 import threading

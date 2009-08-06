@@ -2,7 +2,7 @@
 #public symbols
 __all__ = ["ImportFactory"]
 
-__version__ = "0.1"
+
 
 
 from openmdao.main.factory import Factory

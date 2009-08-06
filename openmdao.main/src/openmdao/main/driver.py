@@ -1,7 +1,7 @@
 #public symbols
 __all__ = ["Driver"]
 
-__version__ = "0.1"
+
 
 
 from enthought.traits.api import implements, List

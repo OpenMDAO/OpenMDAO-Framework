@@ -2,7 +2,7 @@
 #public symbols
 __all__ = ['Assembly']
 
-__version__ = "0.1"
+
 
 import os
 import os.path

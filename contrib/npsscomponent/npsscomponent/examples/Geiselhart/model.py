@@ -17,7 +17,7 @@ from openmdao.main.api import Assembly, Component, Container, FileTrait
 
 from npsscomponent import NPSScomponent
 
-__version__ = '0.1'
+
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"

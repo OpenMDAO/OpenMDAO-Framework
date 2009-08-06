@@ -2,7 +2,7 @@
 #public symbols
 __all__ = ["Factory"]
 
-__version__ = "0.1"
+
 
     
 class Factory(object):

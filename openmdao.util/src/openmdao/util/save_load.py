@@ -45,7 +45,7 @@ __all__ = ('save', 'save_to_egg',
            'SAVE_YAML', 'SAVE_LIBYAML', 'SAVE_PICKLE', 'SAVE_CPICKLE',
            'EGG_SERVER_URL')
 
-__version__ = '0.1'
+
 
 # Save formats.
 SAVE_YAML    = 1

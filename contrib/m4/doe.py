@@ -6,7 +6,7 @@ and was written by someone without much 'mool' knowledge.
 """
 
 __all__ = ('DOE',)
-__version__ = '0.1'
+
 
 from enthought.traits.api import Int, Str, Range
 

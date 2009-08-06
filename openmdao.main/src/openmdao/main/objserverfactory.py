@@ -1,7 +1,7 @@
 
 __all__ = ["ObjServerFactory"]
 
-__version__ = "0.1"
+
 
 
 from openmdao.main.api import Factory

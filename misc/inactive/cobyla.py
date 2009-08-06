@@ -2,7 +2,7 @@
 #public symbols
 __all__ = ["COBYLA"]
 
-__version__ = "0.1"
+
 
 
 from scipy.optimize.cobyla import fmin_cobyla

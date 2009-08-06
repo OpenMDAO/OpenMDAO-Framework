@@ -1,6 +1,6 @@
 
 __all__ = ('ExternalCode',)
-__version__ = '0.1'
+
 
 import os.path
 import signal

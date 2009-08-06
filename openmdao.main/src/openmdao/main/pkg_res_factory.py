@@ -2,7 +2,7 @@
 #public symbols
 __all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory']
 
-__version__ = "0.1"
+
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401

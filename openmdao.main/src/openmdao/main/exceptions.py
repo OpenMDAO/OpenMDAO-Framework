@@ -9,7 +9,7 @@ __all__ = [
     'RunInterrupted',
     'RunStopped']
 
-__version__ = "0.1"
+
 
 
 class ConstraintError(ValueError):

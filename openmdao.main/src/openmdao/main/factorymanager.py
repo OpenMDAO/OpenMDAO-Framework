@@ -7,7 +7,7 @@ Manages the creation of framework objects, either locally or remotely.
 #public symbols
 __all__ = ["create", "get_factory_names", "register_factory"]
 
-__version__ = "0.1"
+
 
 
 from openmdao.main.importfactory import ImportFactory

@@ -13,7 +13,7 @@ __all__ = (
     'set_translation',
 )
 
-__version__ = '0.1'
+
 
 from enthought.traits.api import Undefined
 

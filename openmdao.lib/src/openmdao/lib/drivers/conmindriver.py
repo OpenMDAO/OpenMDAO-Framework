@@ -3,7 +3,7 @@
 #public symbols
 __all__ = ['CONMINdriver']
 
-__version__ = "0.1"
+
 
 from copy import copy
 import numpy.numarray as numarray

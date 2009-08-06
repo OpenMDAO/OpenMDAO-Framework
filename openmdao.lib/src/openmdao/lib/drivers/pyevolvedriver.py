@@ -1,6 +1,6 @@
 """A pyevolve based driver for OpenMDAO"""
 
-__version__ = "0.1"
+
 
 import random
 
@@ -156,7 +156,7 @@ class pyevolvedriver(Driver):
                 TypeError)
 
         #decoder verify
-        if self.decoder == None: # check if None first
+        if self.decoder is None: # check if None first
             self.raise_exception("decoder specified as 'None'."
                                  " A valid decoder must be present", TypeError)
         try: # won't work if decoder is None

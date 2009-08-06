@@ -1,7 +1,7 @@
 #public symbols
 #__all__ = []
 
-__version__ = "0.1"
+
 
 from enthought.traits.api import implements
 
