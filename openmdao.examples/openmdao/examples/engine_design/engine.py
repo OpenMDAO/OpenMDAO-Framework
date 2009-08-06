@@ -10,7 +10,7 @@ from enthought.traits.api import Float, Int, Range
 from openmdao.main.api import Component, UnitsFloat
 
 class Engine(Component):
-    ''' Model of a piston engine - Python Implementation.'''
+    """ Model of a piston engine - Python Implementation."""
     
     # set up interface to the framework  
     # pylint: disable-msg=E1101
@@ -47,7 +47,7 @@ class Engine(Component):
                                desc='Engine weight estimation')
         
     #def __init__(self, name, parent=None, desc=None, directory=''):
-        #''' Creates a new Engine object
+        #""" Creates a new Engine object
 
             ## Design parameters
             #stroke = 78.8              # Stroke (mm)
@@ -85,16 +85,16 @@ class Engine(Component):
             #torque                     # Torque at engine output (N*m)
             #fuel_burn                  # Fuel burn rate (liters/sec)
             #engine_weight              # Engine weight estimation (kg)
-            #'''
+            #"""
 
         #super(Engine, self).__init__(name, parent, desc, directory)        
 
 
 
     def execute(self):
-        ''' Simulates the Otto cycle for an internal combustion engine.
+        """ Simulates the Otto cycle for an internal combustion engine.
             Power and Torque are returned at the engine output.
-            '''
+            """
 
         # These Constants are all hard-coded for Gasoline.
         # Eventually, we'll move them to the input so that they can be tweaked.

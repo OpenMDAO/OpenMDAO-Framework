@@ -12,7 +12,7 @@ class EngineOptimization(Assembly):
     """ Top level assembly for optimizing a vehicle. """
     
     def __init__(self, name, parent=None, directory=''):
-        ''' Creates a new Assembly containing a DrivingSim and an optimizer'''
+        """ Creates a new Assembly containing a DrivingSim and an optimizer"""
         
         super(EngineOptimization, self).__init__(name, parent, directory)
 
@@ -40,7 +40,7 @@ class EngineOptimization(Assembly):
 if __name__ == "__main__": # pragma: no cover         
 
     def prz(title):
-        ''' Print before and after'''
+        """ Print before and after"""
         
         print '---------------------------------'
         print title

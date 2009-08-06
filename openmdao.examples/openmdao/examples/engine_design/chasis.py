@@ -9,7 +9,7 @@ from openmdao.main.api import Component, UnitsFloat
 from math import pi
 
 class Chasis(Component):
-    ''' A vehicle dynamics component - calculates acceleration.'''
+    """ A vehicle dynamics component - calculates acceleration."""
     
     # set up interface to the framework  
     # Pylint: disable-msg=E1101
@@ -53,8 +53,8 @@ class Chasis(Component):
         
         
     def execute(self):
-        ''' Calculates the instantaneous acceleration for the vehicle.       
-            '''        
+        """ Calculates the instantaneous acceleration for the vehicle.       
+            """        
         torque = self.engine_torque*self.torque_ratio
         tire_radius = self.tire_circ/(2.0*pi)
         

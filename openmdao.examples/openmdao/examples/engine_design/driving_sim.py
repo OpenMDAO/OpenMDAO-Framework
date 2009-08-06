@@ -26,7 +26,7 @@ CONVERT_TO_MPHPS = 2.23693629
 
 
 class DrivingSim(Assembly):
-    ''' Simulation of vehicle performance.'''
+    """ Simulation of vehicle performance."""
     
     # Simulation Parameters
     end_speed = UnitsFloat(60.0, iostatus='in', units='m/h',
@@ -43,7 +43,7 @@ class DrivingSim(Assembly):
                              desc='EPA Fuel economy - Highway')
         
     def __init__(self, name, parent=None, doc=None, directory=''):
-        ''' Creates a new DrivingSim object
+        """ Creates a new DrivingSim object
         
             # Simulation inputs
             end_speed          # Simulation ending speed in mph.
@@ -53,7 +53,7 @@ class DrivingSim(Assembly):
             accel_time        # Time to reach 60 mph from start
             EPA_city          # Fuel economy for city driving
             EPA_highway       # Fuel economy for highway driving
-            '''
+            """
         
         super(DrivingSim, self).__init__(name, parent, doc, directory)    
 
@@ -91,7 +91,7 @@ class DrivingSim(Assembly):
 
         
     def execute(self):
-        ''' Simulate the vehicle model at full throttle.'''
+        """ Simulate the vehicle model at full throttle."""
         #--------------------------------------------------------------------
         # Simulate acceleration time from 0 to end_speed
         #--------------------------------------------------------------------
@@ -155,11 +155,11 @@ class DrivingSim(Assembly):
         fuel_economy = []
         
         def findgear():
-            '''
+            """
                Finds the nearest gear in the appropriate range for the
                currently commanded velocity. 
                This is intended to be called recursively.
-               '''
+               """
             # Note, shifts gear if RPM is too low or too high
             try:
                 self.vehicle.run()
@@ -315,7 +315,7 @@ class DrivingSim(Assembly):
         self.EPA_highway = fuel_economy[1]
     
 def test_it(): # pragma: no cover    
-    '''simple testing'''
+    """simple testing"""
     import time
     tt = time.time()
     

@@ -32,7 +32,7 @@ class Vehicle(Assembly):
                           desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
     def __init__(self, name, parent=None, directory=''):
-        ''' Creates a new Vehicle Assembly object
+        """ Creates a new Vehicle Assembly object
 
             # Design parameters promoted from Engine
             stroke = 78.8              # Stroke (mm)
@@ -72,7 +72,7 @@ class Vehicle(Assembly):
             torque                     # Torque at engine output (N*m)
             fuel_burn                  # Fuel burn rate (liters/sec)
             acceleration               # Calculated vehicle acceleration (m/s^2)
-            '''
+            """
         
         super(Vehicle, self).__init__(name, parent, directory)
 
@@ -145,7 +145,7 @@ if __name__ == "__main__": # pragma: no cover
     print z.acceleration
     
     def prz(zz):
-        ''' Printing the results'''
+        """ Printing the results"""
         print "Accel = ", zz.acceleration
         print "Fuelburn = ", zz.fuel_burn
         print "(power, torque) ", zz.power, zz.torque

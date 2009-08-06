@@ -12,10 +12,10 @@ setup(
     author=__author__,
     packages=[],
     py_modules=['foo'],
-    entry_points='''
+    entry_points="""
     [openmdao.dumbplugins]
     foo.Comp1Plugin = foo:Comp1Plugin
     foo.Comp2Plugin = foo:Comp2Plugin
-    '''
+    """
 )
 
