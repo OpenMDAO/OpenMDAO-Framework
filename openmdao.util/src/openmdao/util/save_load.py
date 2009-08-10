@@ -126,7 +126,7 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
     - `dst_dir` is the directory to write the egg in.
 
     The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-    Returns the egg's filename.
+    Returns (egg_filename, required_distributions, missing_modules).
     """
     if logger is None:
         logger = NullLogger()
@@ -302,7 +302,7 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
     finally:
         _restore_instancemethods(root)
 
-    return egg_name
+    return (egg_name, required_distributions, missing_modules)
 
 
 def _fix_instancemethods(root, previsited=None):

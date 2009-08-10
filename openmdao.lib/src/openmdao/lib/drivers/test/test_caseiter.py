@@ -55,6 +55,13 @@ class DriverTestCase(unittest.TestCase):
 
     def setUp(self):
         self.model = MyModel()
+        self.cases = []
+        for i in range(10):
+            inputs = [('dc.x', None, numpy.random.normal(size=4)),
+                      ('dc.y', None, numpy.random.normal(size=10))]
+            outputs = [('dc.rosen_suzuki', None, None),
+                       ('dc.sum_y', None, None)]
+            self.cases.append(Case(inputs, outputs))
 
     def tearDown(self):
         self.model.pre_delete()
@@ -64,41 +71,25 @@ class DriverTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_normal')
 
-        cases = []
-        for i in range(10):
-            inputs = [('dc.x', None, numpy.random.normal(size=4)),
-                      ('dc.y', None, numpy.random.normal(size=10))]
-            outputs = [('dc.rosen_suzuki', None, None),
-                       ('dc.sum_y', None, None)]
-            cases.append(Case(inputs, outputs))
-
-        self.model.driver.iterator = ListCaseIterator(cases)
+        self.model.driver.iterator = ListCaseIterator(self.cases)
         results = []
         self.model.driver.outerator = results
 
         self.model.run()
 
-        self.assertEqual(len(results), len(cases))
-        for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg, None)
-            self.assertEqual(results[i].outputs[0][2],
+        self.assertEqual(len(results), len(self.cases))
+        for case in results:
+            self.assertEqual(case.msg, None)
+            self.assertEqual(case.outputs[0][2],
                              rosen_suzuki(case.inputs[0][2]))
-            self.assertEqual(results[i].outputs[1][2],
+            self.assertEqual(case.outputs[1][2],
                              sum(case.inputs[1][2]))
 
     def test_save_load(self):
         logging.debug('')
         logging.debug('test_save_load')
 
-        cases = []
-        for i in range(10):
-            inputs = [('dc.x', None, numpy.random.normal(size=4)),
-                      ('dc.y', None, numpy.random.normal(size=10))]
-            outputs = [('dc.rosen_suzuki', None, None),
-                       ('dc.sum_y', None, None)]
-            cases.append(Case(inputs, outputs))
-
-        self.model.driver.iterator = ListCaseIterator(cases)
+        self.model.driver.iterator = ListCaseIterator(self.cases)
         results = []
         self.model.driver.outerator = results
 
@@ -130,8 +121,8 @@ class DriverTestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         msg = "CID_TestModel.driver: Exception setting 'dc.z':" \
               " CID_TestModel.dc: object has no attribute 'z'"
-        for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg, msg)
+        for case in results:
+            self.assertEqual(case.msg, msg)
 
     def test_nooutput(self):
         logging.debug('')
@@ -154,8 +145,8 @@ class DriverTestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         msg = "CID_TestModel.driver: Exception getting 'dc.sum_z':" \
               " 'DrivenComponent' object has no attribute 'sum_z'"
-        for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg, msg)
+        for case in results:
+            self.assertEqual(case.msg, msg)
 
     def test_noiterator(self):
         logging.debug('')

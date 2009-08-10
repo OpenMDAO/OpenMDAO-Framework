@@ -790,7 +790,7 @@ class Container(HasTraits):
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-        Returns the egg's filename.
+        Returns (egg_filename, required_distributions, missing_modules).
         """
         if name is None:
             name = self.name
@@ -979,7 +979,6 @@ class Container(HasTraits):
             trait = self._build_trait(ref_name, iostat, trait)
             
             self.add_trait(name, trait)
-        
 
     def get_dyn_trait(self, name, iostat):
         """Retrieves the named trait, attempting to create it on-the-fly if
@@ -998,7 +997,6 @@ class Container(HasTraits):
             return self.trait(name)
         return trait
 
-    
     def hoist(self, path, io_status=None, trait=None):
         """Create a trait that maps to some internal variable designated by a
         dotted path. If a trait is supplied as an argument, use that trait as

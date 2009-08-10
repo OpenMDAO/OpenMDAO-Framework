@@ -62,7 +62,10 @@ class CaseIteratorDriver(Driver):
 
         self._iter = None
         self._n_servers = 0
-        self._model_file = None
+        self._egg_file = None
+        self._egg_required_distributions = None
+        self._egg_missing_modules = None
+
         self._reply_queue = None
         self._server_lock = None
         self._servers = {}  # Server information, keyed by name.
@@ -76,12 +79,21 @@ class CaseIteratorDriver(Driver):
 
     def execute(self):
         """ Run each case in iterator and record results in outerator. """
+        self._start()
+        if self._stop:
+            self.raise_exception('Stop requested', RunStopped)
+
+    def _start(self, replicate=True):
+        """
+        Start evaluating cases. If `replicate`, then replicate the model
+        and save to an egg file first.
+        """
         self._rerun = []
         self._iter = self.iterator.__iter__()
 
         if self.sequential or self._n_servers < 1:
             self.info('Start sequential evaluation.')
-            while self._server_ready(None):
+            while self._server_ready(None, False):
                 pass
         else:
             self.info('Start concurrent evaluation, n_servers %d',
@@ -89,12 +101,15 @@ class CaseIteratorDriver(Driver):
             self.raise_exception('Concurrent evaluation is not supported yet.',
                                  NotImplementedError)
 
-            # Replicate model and save to file.
-            # Must do this before creating any locks or queues.
-            replicant = self.parent.replicate()
-            self._model_file = 'replicant.dam'
-            replicant.save(self._model_file)
-            del replicant
+            if replicate or self._egg_file is None:
+                # Replicate model and save to egg.
+                # Must do this before creating any locks or queues.
+                replicant = self.model.replicate()
+                egg_info = replicant.save_to_egg(version='0')
+                self._egg_file = egg_info[0]
+                self._egg_required_distributions = egg_info[1]
+                self._egg_missing_modules = egg_info[2]
+                del replicant
 
             # Start servers.
             self._server_lock = threading.Lock()
@@ -117,12 +132,12 @@ class CaseIteratorDriver(Driver):
 
             # Kick-off initial state.
             for name in self._servers.keys():
-                self._in_use[name] = self._server_ready(name)
+                self._in_use[name] = self._server_ready(name, True)
 
             # Continue until no servers are busy.
             while self._busy():
                 name, result = self._reply_queue.get()
-                self._in_use[name] = self._server_ready(name)
+                self._in_use[name] = self._server_ready(name, False)
 
             # Shut-down servers.
             for name in self._servers.keys():
@@ -137,16 +152,19 @@ class CaseIteratorDriver(Driver):
             self._queues = {}
             self._in_use = {}
 
-        if self._stop:
-            self.raise_exception('Stop requested', RunStopped)
+        return True
 
-    def _server_ready(self, server):
+    def _server_ready(self, server, begin):
         """
         Responds to asynchronous callbacks during execute() to run cases
         retrieved from Iterator.  Results are processed by Outerator.
         Returns True if there are more cases to run.
         """
-        server_state = self._server_states.get(server, SERVER_EMPTY)
+        if begin:
+            server_state = SERVER_EMPTY
+        else:
+            server_state = self._server_states.get(server, SERVER_EMPTY)
+
         if server_state == SERVER_EMPTY:
             try:
                 self._load_model(server)
@@ -183,6 +201,7 @@ class CaseIteratorDriver(Driver):
                 case = self._server_cases[server]
                 exc = self._model_status(server)
                 if exc is None:
+                    # Grab the data from the model.
                     for i, niv in enumerate(case.outputs):
                         try:
                             case.outputs[i] = (niv[0], niv[1],
@@ -192,6 +211,7 @@ class CaseIteratorDriver(Driver):
                             case.msg = '%s: %s' % (self.get_pathname(), msg)
                 else:
                     case.msg = str(exc)
+                # Record the data.
                 self.outerator.append(case)
 
                 if not case.msg:
@@ -205,7 +225,7 @@ class CaseIteratorDriver(Driver):
             except ServerError:
                 # Handle server error separately.
                 return True
-        
+
         elif server_state == SERVER_ERROR:
             try:
                 self._load_model(server)
@@ -246,9 +266,6 @@ class CaseIteratorDriver(Driver):
             self._reply_queue.put((name, False))
             return
 
-# TODO: external files should be part of saved state.
-        ram.walk(self.parent, server)
-
         request_queue = Queue.Queue()
 
         self._server_lock.acquire()
@@ -284,10 +301,11 @@ class CaseIteratorDriver(Driver):
 
     def _remote_load_model(self, server):
         """ Load model into server. """
-        filexfer(None, self._model_file,
-                 self._servers[server], self._model_file, 'b')
-        if not self._servers[server].load_model(self._model_file):
-            self.error('server.load_model failed :-(')
+        filexfer(None, self._egg_file,
+                 self._servers[server], self._egg_file, 'b')
+        if not self._servers[server].load_model(self._egg_file):
+            self.error("server.load_model of '%s' failed :-(",
+                       self._egg_file)
             return False
         return True
 

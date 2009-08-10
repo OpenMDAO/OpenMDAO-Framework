@@ -314,9 +314,10 @@ class EggTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.executions, 0)
 
         # Save to egg.
-        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR, format=format,
-                                               child_objs=self.child_objs,
-                                               use_setuptools=use_setuptools)
+        egg_info = self.model.save_to_egg(py_dir=PY_DIR, format=format,
+                                          child_objs=self.child_objs,
+                                          use_setuptools=use_setuptools)
+        self.egg_name = egg_info[0]
 
         # Run and verify correct operation.
         self.model.run()
@@ -573,7 +574,8 @@ class EggTestCase(unittest.TestCase):
         logging.debug('test_save_load_container')
 
         # Save to egg.
-        self.egg_name = self.model.Source.sub.save_to_egg(py_dir=PY_DIR)
+        egg_info = self.model.Source.sub.save_to_egg(py_dir=PY_DIR)
+        self.egg_name = egg_info[0]
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -636,8 +638,9 @@ class EggTestCase(unittest.TestCase):
         logging.debug('    Using python: %s' % python)
 
         # Write to egg.
-        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
-                                               child_objs=self.child_objs)
+        egg_info = self.model.save_to_egg(py_dir=PY_DIR,
+                                          child_objs=self.child_objs)
+        self.egg_name = egg_info[0]
 
         install_dir = os.path.join(os.getcwd(), 'install_dir')
         if os.path.exists(install_dir):
@@ -695,7 +698,7 @@ sys.exit(
 
             # Try a non-existent package.
             try:
-                obj = Component.load_from_eggpkg('no-such-pkg', 'no-such-entry')
+                Component.load_from_eggpkg('no-such-pkg', 'no-such-entry')
             except pkg_resources.DistributionNotFound, exc:
                 self.assertEqual(str(exc), 'no-such-pkg')
             else:
@@ -771,8 +774,10 @@ except Exception, err:
         logging.debug('test_pkg_resources_factory')
 
         # Write to egg.
-        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
-                                               child_objs=self.child_objs)
+        egg_info = self.model.save_to_egg(py_dir=PY_DIR,
+                                          child_objs=self.child_objs)
+        self.egg_name = egg_info[0]
+
         # Create factory.
         factory = PkgResourcesFactory([os.getcwd()], ['openmdao.components'])
         logging.debug('    loaders:')

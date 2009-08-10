@@ -76,7 +76,8 @@ class NPSSTestCase(unittest.TestCase):
         for name, var in self.npss.items():
             saved_values[name] = var
 
-        self.egg_name = self.npss.save_to_egg()
+        egg_info = self.npss.save_to_egg()
+        self.egg_name = egg_info[0]
         self.npss.pre_delete()
         self.npss = None
 
@@ -110,7 +111,8 @@ class NPSSTestCase(unittest.TestCase):
         logging.debug('test_nomodel')
 
         self.npss.model_filename = 'xyzzy.mdl'
-        self.egg_name = self.npss.save_to_egg(version='0.0')
+        egg_info = self.npss.save_to_egg(version='0.0')
+        self.egg_name = egg_info[0]
         self.npss.pre_delete()
         self.npss = None
 
@@ -153,7 +155,8 @@ class NPSSTestCase(unittest.TestCase):
 
         # This currently fails, not sure why.
         try:
-            self.egg_name = self.npss.save_to_egg(format=SAVE_LIBYAML)
+            egg_info = self.npss.save_to_egg(format=SAVE_LIBYAML)
+            self.egg_name = egg_info[0]
         except Exception, exc:
             msg = "NPSS: Can't save to 'NPSS/NPSS.yaml': data type not" \
                   " understood"
