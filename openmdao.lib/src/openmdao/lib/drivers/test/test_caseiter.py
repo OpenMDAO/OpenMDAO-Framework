@@ -2,8 +2,11 @@
 Test CaseIteratorDriver.
 """
 
+import glob
 import logging
+import os.path
 import pkg_resources
+import shutil
 import sys
 import unittest
 
@@ -14,6 +17,8 @@ from enthought.traits.api import Float, Array, TraitError
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 import openmdao.util.testutil
+
+ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
 
@@ -38,7 +43,12 @@ class DrivenComponent(Component):
     def execute(self):
         """ Compute results from input vector. """
         self.rosen_suzuki = rosen_suzuki(self.x)
-        self.sum_y = sum(self.y)
+# This gets "iter() returned non-iterator of type 'SyncNetProxy'"
+# (RPyC 2.6 doesn't know to 'box' Array objects)
+#        self.sum_y = sum(self.y)
+        self.sum_y = 0
+        for i in range(len(self.y)):
+            self.sum_y += self.y[i]
 
 
 class MyModel(Assembly):
@@ -53,58 +63,73 @@ class MyModel(Assembly):
 class DriverTestCase(unittest.TestCase):
     """ Test CaseIteratorDriver. """
 
+    directory = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
+
     def setUp(self):
+        os.chdir(self.directory)
         self.model = MyModel()
-
-    def tearDown(self):
-        self.model.pre_delete()
-        self.model = None
-
-    def test_normal(self):
-        logging.debug('')
-        logging.debug('test_normal')
-
-        cases = []
+        self.cases = []
         for i in range(10):
             inputs = [('dc.x', None, numpy.random.normal(size=4)),
                       ('dc.y', None, numpy.random.normal(size=10))]
             outputs = [('dc.rosen_suzuki', None, None),
                        ('dc.sum_y', None, None)]
-            cases.append(Case(inputs, outputs))
+            self.cases.append(Case(inputs, outputs))
 
-        self.model.driver.iterator = ListCaseIterator(cases)
+    def tearDown(self):
+        self.model.pre_delete()
+        self.model = None
+        for server_dir in glob.glob('LocalHost_*'):
+            shutil.rmtree(server_dir)
+        end_dir = os.getcwd()
+        os.chdir(ORIG_DIR)
+        if end_dir != self.directory:
+            self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
+
+    def test_sequential(self):
+        logging.debug('')
+        logging.debug('test_sequential')
+        self.run_cases(sequential=True)
+
+    def test_concurrent(self):
+        logging.debug('')
+        logging.debug('test_concurrent')
+        try:
+            self.run_cases(sequential=False, n_servers=5)
+        except NotImplementedError, exc:
+            msg = 'CID_TestModel.driver: Concurrent evaluation is not' \
+                  ' supported yet.'
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected NotImplementedError')
+
+    def run_cases(self, sequential, n_servers=0):
+        self.model.driver.sequential = sequential
+        self.model.driver._n_servers = n_servers
+        self.model.driver.iterator = ListCaseIterator(self.cases)
         results = []
         self.model.driver.outerator = results
 
         self.model.run()
 
-        self.assertEqual(len(results), len(cases))
-        for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg, None)
-            self.assertEqual(results[i].outputs[0][2],
+        self.assertEqual(len(results), len(self.cases))
+        for case in results:
+            self.assertEqual(case.msg, None)
+            self.assertEqual(case.outputs[0][2],
                              rosen_suzuki(case.inputs[0][2]))
-            self.assertEqual(results[i].outputs[1][2],
+            self.assertEqual(case.outputs[1][2],
                              sum(case.inputs[1][2]))
 
     def test_save_load(self):
         logging.debug('')
         logging.debug('test_save_load')
 
-        cases = []
-        for i in range(10):
-            inputs = [('dc.x', None, numpy.random.normal(size=4)),
-                      ('dc.y', None, numpy.random.normal(size=10))]
-            outputs = [('dc.rosen_suzuki', None, None),
-                       ('dc.sum_y', None, None)]
-            cases.append(Case(inputs, outputs))
-
-        self.model.driver.iterator = ListCaseIterator(cases)
+        self.model.driver.iterator = ListCaseIterator(self.cases)
         results = []
         self.model.driver.outerator = results
 
         # Set local dir in case we're running in a different directory.
-        py_dir = pkg_resources.resource_filename('openmdao.lib.drivers',
-                                                 'test')
+        py_dir = self.directory
         python = openmdao.util.testutil.find_python('openmdao.lib')
         retcode = self.model.check_save_load(py_dir=py_dir, python=python)
         self.assertEqual(retcode, 0)
@@ -130,8 +155,8 @@ class DriverTestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         msg = "CID_TestModel.driver: Exception setting 'dc.z':" \
               " CID_TestModel.dc: object has no attribute 'z'"
-        for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg, msg)
+        for case in results:
+            self.assertEqual(case.msg, msg)
 
     def test_nooutput(self):
         logging.debug('')
@@ -154,8 +179,8 @@ class DriverTestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         msg = "CID_TestModel.driver: Exception getting 'dc.sum_z':" \
               " 'DrivenComponent' object has no attribute 'sum_z'"
-        for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg, msg)
+        for case in results:
+            self.assertEqual(case.msg, msg)
 
     def test_noiterator(self):
         logging.debug('')
@@ -165,7 +190,9 @@ class DriverTestCase(unittest.TestCase):
         try:
             self.model.run()
         except TraitError, exc:
-            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'iterator' is not present")
+            msg = "CID_TestModel.driver: required plugin 'iterator' is not" \
+                  " present"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('TraitError expected')
 
@@ -177,7 +204,9 @@ class DriverTestCase(unittest.TestCase):
         try:
             self.model.run()
         except TraitError, exc:
-            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'outerator' is not present")
+            msg = "CID_TestModel.driver: required plugin 'outerator' is not" \
+                  " present"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('TraitError expected')
 

@@ -36,7 +36,8 @@ class EngineOptimizationTestCase(unittest.TestCase):
         py_dir = pkg_resources.resource_filename('openmdao.examples.engine_design',
                                                  'test')
         python = openmdao.util.testutil.find_python('openmdao.examples')
-        egg_name = self.model.save_to_egg(py_dir=py_dir)
+        egg_info = self.model.save_to_egg(py_dir=py_dir)
+        egg_name = egg_info[0]
 
         orig_dir = os.getcwd()
         test_dir = 'EggTest'

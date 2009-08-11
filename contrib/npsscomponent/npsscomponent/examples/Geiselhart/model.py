@@ -111,7 +111,6 @@ class FLOPSdata(Container):
         self.engdeck.filename = 'engdeck'
 
 
-
 class PlumeData(Container):
 
     m_dot = Float(0., iostatus='in')
@@ -223,7 +222,6 @@ class NacelleData(Container):
         super(NacelleData, self).__init__(name, parent)
 
 
-
 class ANOPPdata(Container):
 
     def __init__(self, name='ANOPP', parent=None):
@@ -244,7 +242,7 @@ class Model(Assembly):
 
     def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
-        self.external_files.append({'path':'README.txt'})
+        self.external_files.append({'path':'README.txt', 'constant':True})
 
         model_dir = os.path.join('..', 'Full_Model', 'Cycle', 'run')
         includes = [
