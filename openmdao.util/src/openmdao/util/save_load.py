@@ -41,7 +41,7 @@ import zc.buildout.easy_install
 
 from openmdao.util import eggwriter
 
-__all__ = ('save', 'save_to_egg',
+__all__ = ('save', 'save_to_egg', 'check_requirements',
            'load', 'load_from_eggfile', 'load_from_eggpkg',
            'SAVE_YAML', 'SAVE_LIBYAML', 'SAVE_PICKLE', 'SAVE_CPICKLE',
            'EGG_SERVER_URL')
@@ -133,8 +133,8 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
     The resulting egg can be unpacked on UNIX via 'sh egg-file'.
     Returns (egg_filename, required_distributions, missing_modules).
     """
-    if logger is None:
-        logger = NullLogger()
+    logger = logger or NullLogger()
+    entry_pts = entry_pts or []
 
     orig_dir = os.getcwd()
 
@@ -159,9 +159,6 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
         dst_dir = orig_dir
     if not os.access(dst_dir, os.W_OK):
         raise IOError("Can't save to '%s', no write permission" % dst_dir)
-
-    if entry_pts is None:
-        entry_pts = []
 
     egg_name = eggwriter.egg_filename(name, version)
     logger.debug('Saving to %s in %s...', egg_name, orig_dir)
@@ -310,7 +307,7 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
     return (egg_name, required_distributions, missing_modules)
 
 
-def _fix_instancemethods(root, previsited=None):
+def _fix_instancemethods(root):
     """ Replace references to instancemethods with IMHolders. """
 
     def _fix_im_recurse(obj, visited):
@@ -345,18 +342,10 @@ def _fix_instancemethods(root, previsited=None):
         elif hasattr(obj, '__dict__'):
             _fix_im_recurse(obj.__dict__, visited)
 
-    visited = set()
-    if previsited is None:
-        pass
-    elif isinstance(previsited, list):
-        for obj in previsited:
-            visited.add(id(obj))
-    else:
-        visited.add(id(previsited))
-    _fix_im_recurse(root, visited)
+    _fix_im_recurse(root, set())
 
 
-def _restore_instancemethods(root, previsited=None):
+def _restore_instancemethods(root):
     """ Restore references to instancemethods. """
 
     def _restore_im_recurse(obj, visited):
@@ -391,15 +380,7 @@ def _restore_instancemethods(root, previsited=None):
         elif hasattr(obj, '__dict__'):
             _restore_im_recurse(obj.__dict__, visited)
 
-    visited = set()
-    if previsited is None:
-        pass
-    elif isinstance(previsited, list):
-        for obj in previsited:
-            visited.add(id(obj))
-    else:
-        visited.add(id(previsited))
-    _restore_im_recurse(root, visited)
+    _restore_im_recurse(root, set())
 
 
 def _get_objects(root, logger):
@@ -846,8 +827,7 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
     The format can be supplied in case something other than cPickle is needed.
     Set `fix_im` False if no instancemethod objects need to be fixed.
     """
-    if logger is None:
-        logger = NullLogger()
+    logger = logger or NullLogger()
 
     if isinstance(outstream, basestring):
         if format is SAVE_CPICKLE or format is SAVE_PICKLE:
@@ -886,8 +866,7 @@ def load_from_eggfile(filename, entry_group, entry_name, install=True,
     optionally install distributions the egg depends on, and then load object
     graph state by invoking the given entry point.  Returns the root object.
     """
-    if logger is None:
-        logger = NullLogger()
+    logger = logger or NullLogger()
     logger.debug('Loading %s from %s in %s...',
                  entry_name, filename, os.getcwd())
 
@@ -910,8 +889,7 @@ def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
     Load object graph state by invoking the given package entry point.
     Returns the root object.
     """
-    if logger is None:
-        logger = NullLogger()
+    logger = logger or NullLogger()
     logger.debug('Loading %s from %s in %s...',
                  entry_name, package, os.getcwd())
     try:
@@ -949,13 +927,11 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
         return loader(instance_name)
     except pkg_resources.DistributionNotFound, exc:
         logger.error('Distribution not found: %s', exc)
-        visited = set()
-        _check_requirements(dist, visited, logger)
+        check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
     except pkg_resources.VersionConflict, exc:
         logger.error('Version conflict: %s', exc)
-        visited = set()
-        _check_requirements(dist, visited, logger)
+        check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
     except Exception, exc:
         logger.exception('Loader exception:')
@@ -1053,29 +1029,42 @@ def _dist_from_eggfile(filename, install, logger):
     return (name, dist)
 
 
-def _check_requirements(dist, visited, logger, level=1):
-    """ Display requirements and note conflicts. """
-    visited.add(dist)
-    indent  = '    ' * level
-    indent2 = '    ' * (level + 1)
-    working_set = pkg_resources.WorkingSet()
-    for req in dist.requires():
-        logger.debug('%schecking %s', indent, req)
-        dist = None
-        try:
-            dist = working_set.find(req)
-        except pkg_resources.VersionConflict:
-            dist = working_set.by_key[req.key]
-            logger.debug('%sconflicts with %s %s', indent2,
-                         dist.project_name, dist.version)
-        else:
-            if dist is None:
-                logger.debug('%sno distribution found', indent2)
-            else: 
-                logger.debug('%s%s %s', indent2,
+def check_requirements(required, logger=None, indent_level=0):
+    """
+    Display requirements (if logger debug level enabled) and note conflicts.
+    Returns list of unavailable requirements.
+    """
+    def _recursive_check(required, logger, level, visited, working_set,
+                         not_avail):
+        indent  = '    ' * level
+        indent2 = '    ' * (level + 1)
+        for req in required:
+            logger.debug('%schecking %s', indent, req)
+            dist = None
+            try:
+                dist = working_set.find(req)
+            except pkg_resources.VersionConflict:
+                dist = working_set.by_key[req.key]
+                logger.debug('%sconflicts with %s %s', indent2,
                              dist.project_name, dist.version)
-                if not dist in visited:
-                    _check_requirements(dist, visited, logger, level+1)
+                not_avail.append(req)
+            else:
+                if dist is None:
+                    logger.debug('%sno distribution found', indent2)
+                    not_avail.append(req)
+                else: 
+                    logger.debug('%s%s %s', indent2,
+                                 dist.project_name, dist.version)
+                    if not dist in visited:
+                        visited.add(dist)
+                        _recursive_check(dist.requires(), logger, level+1,
+                                         visited, working_set, not_avail)
+
+    logger = logger or NullLogger()
+    not_avail = []
+    _recursive_check(required, logger, indent_level, set(),
+                     pkg_resources.WorkingSet(), not_avail)
+    return not_avail
 
 
 def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
@@ -1085,8 +1074,7 @@ def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
     absolute path, then it is searched for using pkg_resources.
     Returns the root object.
     """
-    if logger is None:
-        logger = NullLogger()
+    logger = logger or NullLogger()
 
     if isinstance(instream, basestring):
         if not os.path.exists(instream) and not os.path.isabs(instream):
