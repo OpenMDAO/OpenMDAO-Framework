@@ -158,7 +158,8 @@ class NPSSTestCase(unittest.TestCase):
         """called before each test in this class"""
         self.npss = NPSScomponent('NPSS')
         self.npss.parse_string(NPSS_INPUT)
-        self.sample = self.npss.create_in_model('Sample', 'Sample', 'sample')
+        self.npss.create_in_model('Sample', 'Sample', 'sample')
+        self.sample = self.npss.sample
 
     def tearDown(self):
         """called after each test in this class"""
