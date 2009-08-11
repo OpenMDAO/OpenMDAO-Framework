@@ -1,5 +1,7 @@
-# transmission.py
-#
+"""
+    transmission.py - Transmission component for the vehicle example problem.
+"""
+
 # This openMDAO component contains a simple transmission model
 # Transmission is a 5-speed manual.
 
@@ -7,7 +9,7 @@ from enthought.traits.api import Float, Int
 from openmdao.main.api import Component, UnitsFloat
 
 class Transmission(Component):
-    ''' A simple transmission model.'''
+    """ A simple transmission model."""
     
     # set up interface to the framework  
     # Pylint: disable-msg=E1101
@@ -36,7 +38,7 @@ class Transmission(Component):
                          desc='Ratio of output torque to engine torque')        
 
     #def __init__(self, name, parent=None, doc=None, directory=''):
-        #''' Creates a new Transmission object
+        #""" Creates a new Transmission object
         
             ## Design parameters
             #ratio1              # Gear ratio in First Gear
@@ -55,15 +57,15 @@ class Transmission(Component):
             ## Outputs
             #torque_ratio        # Ratio of output torque to engine torque
             #RPM                 # RPM of the engine
-            #'''
+            #"""
         
         #super(Transmission, self).__init__(name, parent, doc, directory)        
         
         
     def execute(self):
-        ''' The 5-speed manual transmission is simulated by determining the
+        """ The 5-speed manual transmission is simulated by determining the
             torque output and engine RPM via the gear ratios.
-            '''
+            """
         #print '%s.execute()' % self.get_pathname()
         ratios = [0.0, self.ratio1, self.ratio2, self.ratio3, self.ratio4,
                   self.ratio5]
@@ -77,7 +79,8 @@ class Transmission(Component):
                     *velocity)/(60.0*tire_circ)
         self.torque_ratio = ratios[gear]*differential
             
-        # At low speeds, hold engine speed at 1000 RPM and partially engage the clutch
+        # At low speeds, hold engine speed at 1000 RPM and \
+        # partially engage clutch
         if self.RPM < 1000.0 and self.current_gear == 1 :
             self.RPM = 1000.0
         
