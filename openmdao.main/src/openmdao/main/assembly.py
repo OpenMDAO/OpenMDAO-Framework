@@ -202,9 +202,9 @@ class Assembly (Component):
         iostatus = currtrait.iostatus
         try:
             if iostatus == 'in':
-                prop = currtrait.handler.set
+                prop = currtrait.trait_type.set
             elif iostatus == 'out':
-                prop = currtrait.handler.get
+                prop = currtrait.trait_type.get
             else:
                 self.raise_exception('unknown iostatus %s' % iostatus)
         except AttributeError:
@@ -214,7 +214,7 @@ class Assembly (Component):
 
         # If property, make a corresponding plain trait, else just copy.
         if prop:
-            trait = currtrait.handler.trait
+            trait = currtrait.trait_type.trait
             try:
                 if isinstance(trait, Array):
                     comptrait = Array(trait.dtype, shape=trait.shape,

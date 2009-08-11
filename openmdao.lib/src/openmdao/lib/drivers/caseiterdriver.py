@@ -1,6 +1,7 @@
 __all__ = ('CaseIteratorDriver','ServerError')
 __version__ = '0.1'
 
+import os.path
 import Queue
 import threading
 import time
@@ -57,6 +58,8 @@ class CaseIteratorDriver(Driver):
     max_retries = Range(value=1, low=0, iostatus='in',
                         desc='Number of times to retry a case.')
 
+    _replicants = 0
+
     def __init__(self, *args, **kwargs):
         super(CaseIteratorDriver, self).__init__(*args, **kwargs)
 
@@ -68,9 +71,10 @@ class CaseIteratorDriver(Driver):
 
         self._reply_queue = None
         self._server_lock = None
-        self._servers = {}  # Server information, keyed by name.
-        self._queues = {}   # Request queues, keyed by server name.
-        self._in_use = {}   # In-use flags, keyed by server name.
+        self._servers = {}      # Server objects, keyed by name.
+        self._server_info = {}  # Server information, keyed by name.
+        self._queues = {}       # Request queues, keyed by server name.
+        self._in_use = {}       # In-use flags, keyed by server name.
 
         self._server_states = {}
         self._server_cases = {}
@@ -80,6 +84,7 @@ class CaseIteratorDriver(Driver):
     def execute(self):
         """ Run each case in iterator and record results in outerator. """
         self._start()
+        self._cleanup()
         if self._stop:
             self.raise_exception('Stop requested', RunStopped)
 
@@ -105,10 +110,12 @@ class CaseIteratorDriver(Driver):
                 # Replicate model and save to egg.
                 # Must do this before creating any locks or queues.
                 replicant = self.model.replicate()
-                egg_info = replicant.save_to_egg(version='0')
+                self._replicants += 1
+                version = 'replicant-%d' % (self._replicants)
+                egg_info = replicant.save_to_egg(version=version)
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
-                self._egg_missing_modules = egg_info[2]
+                self._egg_missing_modules = [name for name, path in egg_info[2]]
                 del replicant
 
             # Start servers.
@@ -116,8 +123,11 @@ class CaseIteratorDriver(Driver):
             self._reply_queue = Queue.Queue()
             for i in range(self._n_servers):
                 name = 'cid_%d' % (i+1)
+                resources = {
+                    'required_distributions':self._egg_required_distributions,
+                    'missing_modules':self._egg_missing_modules}
                 server_thread = threading.Thread(target=self._service_loop,
-                                                 args=(name,))
+                                                 args=(name, resources))
                 server_thread.setDaemon(True)
                 server_thread.start()
                 time.sleep(0.1)  # Pacing.
@@ -153,6 +163,12 @@ class CaseIteratorDriver(Driver):
             self._in_use = {}
 
         return True
+
+    def _cleanup(self):
+        """ Cleanup egg file if necessary. """
+        if self._egg_file and os.path.exists(self._egg_file):
+            os.remove(self._egg_file)
+            self._egg_file = None
 
     def _server_ready(self, server, begin):
         """
@@ -256,11 +272,11 @@ class CaseIteratorDriver(Driver):
                 case.msg = str(exc)
                 self.outerator.append(case)
 
-    def _service_loop(self, name):
+    def _service_loop(self, name, resource_desc=None):
         """ Each server has an associated thread executing this. """
-#        ram = da.Simulation.get_simulation().ram
+        resource_desc = resource_desc or {}
         ram = None
-        server, server_info = ram.allocate({}, transient=True)
+        server, server_info = ram.allocate(resources_desc, transient=True)
         if server is None:
             self.error('Server allocation for %s failed :-(', name)
             self._reply_queue.put((name, False))
@@ -270,6 +286,7 @@ class CaseIteratorDriver(Driver):
 
         self._server_lock.acquire()
         self._servers[name] = server
+        self._server_info[name] = server_info
         self._queues[name] = request_queue
         self._in_use[name] = False
         self._server_lock.release()
@@ -336,6 +353,7 @@ class CaseIteratorDriver(Driver):
                 self.model.run()
             except Exception, exc:
                 self._exceptions[server] = exc
+                self.exception('Caught exception: %s' % exc)
         else:
             self._queues[server].put((self._remote_model_execute, server))
 
@@ -345,6 +363,10 @@ class CaseIteratorDriver(Driver):
             self._servers[server].tla.run()
         except Exception, exc:
             self._exceptions[server] = exc
+            self.error('Caught exception from server %s, PID %d on %s: %s',
+                       self._server_info[server]['name'],
+                       self._server_info[server]['pid'],
+                       self._server_info[server]['host'], exc)
 
     def _model_status(self, server):
         """ Return execute status from model. """

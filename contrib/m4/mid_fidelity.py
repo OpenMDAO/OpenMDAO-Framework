@@ -8,11 +8,12 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('MidFidelity',)
 __version__ = '0.1'
 
-from enthought.traits.api import Float, Array, Int, Str, Instance, Range
+from enthought.traits.api import Float, Array, Int, Str, Instance, Range, \
+                                 TraitError
 
 import mool.Optimization.MidFiModel
 
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, UnitsFloat
 
 import wrapper
 
@@ -177,10 +178,19 @@ class MidFidelity(Assembly):
             # Collect upper and lower bounds.
             xlb = []
             xub = []
-            for mid, low, high in self.input_mappings:
-                # TODO: This assumes Range traits, should be more general.
-                xlb.append(self.trait(mid).handler._low)
-                xub.append(self.trait(mid).handler._high)
+            for i, mapping in enumerate(self.input_mappings):
+                trait = self.trait(mapping[0]).trait_type
+                if isinstance(trait, Range):
+                    low = trait._low
+                    high = trait._high
+                elif isinstance(trait, UnitsFloat):
+                    low = trait.low
+                    high = trait.high
+                else:
+                    msg = 'Unexpected input %d trait type %r' % (i, trait)
+                    self.raise_exception(msg, TraitError)
+                xlb.append(low)
+                xub.append(high)
 
             self._midfi_model.Set(
                 hifi=self._hifi_m4model,

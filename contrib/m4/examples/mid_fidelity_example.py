@@ -9,7 +9,7 @@ is directly calculated.
 
 from enthought.traits.api import Float, Range
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, UnitsFloat
 
 from m4.doe import DOE
 from m4.mid_fidelity import MidFidelity 
@@ -59,7 +59,8 @@ class VarFi(MidFidelity):
 
     # Inputs.
     x = Range(value=0., low=0., high=5., iostatus='in', desc='X input value.')
-    y = Range(value=0., low=0., high=5., iostatus='in', desc='Y input value.')
+    y = UnitsFloat(default_value=0., low=0., high=5., units='m', iostatus='in',
+                   desc='Y input value.')
 
     # Outputs.
     z1 = Float(0., iostatus='out', desc='exp(x) + exp(y)')
@@ -81,6 +82,7 @@ class VarFi(MidFidelity):
         self.set_hifi_model(Model_A2d())
         self.set_lofi_model(Model_B2d())
 
+        # Mappings are (mid, low, high).
         self.add_input_mapping('x', 'x', 'x')
         self.add_input_mapping('y', 'y', 'y')
         self.add_output_mapping('z1', 'z', 'z1')

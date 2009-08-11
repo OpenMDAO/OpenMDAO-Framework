@@ -742,6 +742,7 @@ def eggsecutable():
         if path.endswith('.egg'):
             try:
                 Component.load_from_eggfile(path, install=install)
+                return
             except Exception, exc:
                 print str(exc)
                 sys.exit(1)
