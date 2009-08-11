@@ -26,16 +26,18 @@ except ImportError:
     _libyaml = False
 
 import datetime
+import glob
 import inspect
 import modulefinder
-import os
+import os.path
 import pkg_resources
 import shutil
 import site
 import sys
 import tempfile
-import zc.buildout.easy_install
 import zipfile
+
+import zc.buildout.easy_install
 
 from openmdao.util import eggwriter
 
@@ -54,7 +56,10 @@ SAVE_CPICKLE = 4
 
 EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
 
-# Saved modulefinder results, keyed by module path.
+# Modules to exclude from ModuleFinder analysis.
+_EXCLUDES = None
+
+# Saved ModuleFinder results, keyed by module path.
 _SAVED_FINDINGS = {}
 
 
@@ -598,6 +603,12 @@ def _get_distributions(objs, py_dir, logger):
     site_lib = os.path.dirname(site.__file__)
     site_pkg = site_lib+os.sep+'site-packages'
 
+    global _EXCLUDES
+    if _EXCLUDES is None:
+        # Exclude Python stadard library from ModuleFinder analysis.
+        pattern = os.path.join(os.path.dirname(site.__file__), '*.py')
+        _EXCLUDES = [os.path.basename(path)[:-3] for path in glob.glob(pattern)]
+
     for obj, container, index in objs:
         try:
             name = obj.__module__
@@ -608,7 +619,11 @@ def _get_distributions(objs, py_dir, logger):
         modules.append(name)
 
         # Skip modules in distributions we already know about.
-        path = sys.modules[name].__file__
+        try:
+            path = sys.modules[name].__file__
+        except AttributeError:
+            logger.debug('    module %s has no __file__', name)
+            continue
         if path.startswith(site_lib) and not path.startswith(site_pkg):
             continue
         found = False
@@ -641,7 +656,7 @@ def _get_distributions(objs, py_dir, logger):
                 finder_items = _SAVED_FINDINGS[path]
             else:
                 logger.debug("    analyzing '%s'...", path)
-                finder = modulefinder.ModuleFinder()
+                finder = modulefinder.ModuleFinder(excludes=_EXCLUDES)
                 try:
                     finder.run_script(path)
                 except Exception:
