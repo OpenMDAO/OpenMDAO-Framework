@@ -6,7 +6,7 @@ import Queue
 import threading
 import time
 
-from enthought.traits.api import Range, Bool, Instance, Any
+from enthought.traits.api import Range, Bool, Instance
 
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
@@ -58,13 +58,13 @@ class CaseIteratorDriver(Driver):
     max_retries = Range(value=1, low=0, iostatus='in',
                         desc='Number of times to retry a case.')
 
-    _replicants = 0
-
     def __init__(self, *args, **kwargs):
         super(CaseIteratorDriver, self).__init__(*args, **kwargs)
 
         self._iter = None
         self._n_servers = 0
+        self._replicants = 0
+
         self._egg_file = None
         self._egg_required_distributions = None
         self._egg_missing_modules = None
@@ -103,13 +103,14 @@ class CaseIteratorDriver(Driver):
         else:
             self.info('Start concurrent evaluation, n_servers %d',
                       self._n_servers)
-            self.raise_exception('Concurrent evaluation is not supported yet.',
-                                 NotImplementedError)
 
             if replicate or self._egg_file is None:
                 # Replicate model and save to egg.
                 # Must do this before creating any locks or queues.
-                replicant = self.model.replicate()
+#                replicant = self.model.replicate()
+#               # Stopgap replicate(), not expected to handle real evaluation.
+                import copy
+                replicant = copy.deepcopy(self.model)
                 self._replicants += 1
                 version = 'replicant-%d' % (self._replicants)
                 egg_info = replicant.save_to_egg(version=version)
@@ -117,6 +118,9 @@ class CaseIteratorDriver(Driver):
                 self._egg_required_distributions = egg_info[1]
                 self._egg_missing_modules = [name for name, path in egg_info[2]]
                 del replicant
+
+            self.raise_exception('Concurrent evaluation is not supported yet.',
+                                 NotImplementedError)
 
             # Start servers.
             self._server_lock = threading.Lock()
@@ -276,7 +280,7 @@ class CaseIteratorDriver(Driver):
         """ Each server has an associated thread executing this. """
         resource_desc = resource_desc or {}
         ram = None
-        server, server_info = ram.allocate(resources_desc, transient=True)
+        server, server_info = ram.allocate(resource_desc, transient=True)
         if server is None:
             self.error('Server allocation for %s failed :-(', name)
             self._reply_queue.put((name, False))

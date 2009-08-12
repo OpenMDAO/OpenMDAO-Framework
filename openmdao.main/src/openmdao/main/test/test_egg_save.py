@@ -710,7 +710,7 @@ sys.exit(
             orig_ws = pkg_resources.working_set
             pkg_resources.working_set = pkg_resources.WorkingSet()
             try:
-                obj = Component.load_from_eggpkg(package_name, 'no-such-entry')
+                Component.load_from_eggpkg(package_name, 'no-such-entry')
             except RuntimeError, exc:
                 msg = "No 'openmdao.components' 'no-such-entry' entry point."
                 self.assertEqual(str(exc), msg)
@@ -779,7 +779,9 @@ except Exception, err:
         self.egg_name = egg_info[0]
 
         # Create factory.
-        factory = PkgResourcesFactory([os.getcwd()], ['openmdao.components'])
+        factory = PkgResourcesFactory([os.getcwd()],
+                                      ['openmdao.components',
+                                       'openmdao.containers'])
         logging.debug('    loaders:')
         for key, value in factory._loaders.items():
             logging.debug('        %s:', key)
