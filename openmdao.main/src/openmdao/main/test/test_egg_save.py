@@ -11,9 +11,10 @@ import subprocess
 import sys
 import unittest
 
-from enthought.traits.api import Bool, List, Str, Array, Int, Instance, Callable, TraitError
+from enthought.traits.api import Bool, Str, Array, Int, Instance, Callable
 
-from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, SAVE_CPICKLE, SAVE_LIBYAML
+from openmdao.main.api import Assembly, Component, Container, \
+                              SAVE_PICKLE, SAVE_CPICKLE, SAVE_LIBYAML
 from openmdao.main.filevar import FileTrait
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
@@ -144,7 +145,8 @@ class Sink(Component):
     # Absolute FileTrait that exists at time of save.
     text_file = FileTrait(iostatus='in')
 
-    executions = Int(0, iostatus='in', desc='Count of Oddball instance_method() calls.')
+    executions = Int(0, iostatus='in',
+                     desc='Count of Oddball instance_method() calls.')
     
     def __init__(self, name='Sink', *args, **kwargs):
         super(Sink, self).__init__(name, *args, **kwargs)
@@ -181,13 +183,13 @@ class Sink(Component):
 class Oddball(Assembly):
     """ Just a component that needs a separate directory to be created. """
 
-    # FIXME: I tried the built-in trait types of Callable, Method, and Function for
-    # these two sockets and couldn't get them to work.  We may have to create new
-    # TraitTypes for these...
-    #function_socket = Instance(Callable, none_allowed=True, desc='Just something to call.',
-    #                           required=False)
-    #method_socket = Instance(Callable, none_allowed=True, desc='Just something to call.',
-    #                         required=False)
+    # FIXME: I tried the built-in trait types of Callable, Method, and Function
+    # for these two sockets and couldn't get them to work.  We may have to
+    # create new TraitTypes for these...
+    #function_socket = Instance(Callable, none_allowed=True,
+    #                           desc='Just something to call.', required=False)
+    #method_socket = Instance(Callable, none_allowed=True,
+    #                         desc='Just something to call.', required=False)
     executions = Int(0, iostatus='out', desc='Counts instance_method() calls.')
 
     def __init__(self, name='Oddball', *args, **kwargs):
@@ -312,9 +314,10 @@ class EggTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.executions, 0)
 
         # Save to egg.
-        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR, format=format,
-                                               child_objs=self.child_objs,
-                                               use_setuptools=use_setuptools)
+        egg_info = self.model.save_to_egg(py_dir=PY_DIR, format=format,
+                                          child_objs=self.child_objs,
+                                          use_setuptools=use_setuptools)
+        self.egg_name = egg_info[0]
 
         # Run and verify correct operation.
         self.model.run()
@@ -407,7 +410,8 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg(py_dir=PY_DIR)
         except Exception, exc:
-            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp directory"
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp" \
+                  " directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected Exception')
@@ -453,7 +457,8 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg(py_dir=PY_DIR)
         except Exception, exc:
-            msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file path"
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file" \
+                  " path"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected Exception')
@@ -478,7 +483,8 @@ class EggTestCase(unittest.TestCase):
         try:
             self.model.save_to_egg(py_dir=PY_DIR)
         except RuntimeError, exc:
-            msg = "Egg_TestModel: Can't save: reference to function defined in main module"
+            msg = "Egg_TestModel: Can't save: reference to function defined" \
+                  " in main module"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             if MODULE_NAME == '__main__':
@@ -521,7 +527,7 @@ class EggTestCase(unittest.TestCase):
             remove_buildout = False
         else:
             out = open('buildout.cfg', 'w')
-            out.close
+            out.close()
             buildout_size = 0
             remove_buildout = True
 
@@ -568,7 +574,8 @@ class EggTestCase(unittest.TestCase):
         logging.debug('test_save_load_container')
 
         # Save to egg.
-        self.egg_name = self.model.Source.sub.save_to_egg(py_dir=PY_DIR)
+        egg_info = self.model.Source.sub.save_to_egg(py_dir=PY_DIR)
+        self.egg_name = egg_info[0]
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -631,8 +638,9 @@ class EggTestCase(unittest.TestCase):
         logging.debug('    Using python: %s' % python)
 
         # Write to egg.
-        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
-                                               child_objs=self.child_objs)
+        egg_info = self.model.save_to_egg(py_dir=PY_DIR,
+                                          child_objs=self.child_objs)
+        self.egg_name = egg_info[0]
 
         install_dir = os.path.join(os.getcwd(), 'install_dir')
         if os.path.exists(install_dir):
@@ -690,7 +698,7 @@ sys.exit(
 
             # Try a non-existent package.
             try:
-                obj = Component.load_from_eggpkg('no-such-pkg', 'no-such-entry')
+                Component.load_from_eggpkg('no-such-pkg', 'no-such-entry')
             except pkg_resources.DistributionNotFound, exc:
                 self.assertEqual(str(exc), 'no-such-pkg')
             else:
@@ -766,8 +774,10 @@ except Exception, err:
         logging.debug('test_pkg_resources_factory')
 
         # Write to egg.
-        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
-                                               child_objs=self.child_objs)
+        egg_info = self.model.save_to_egg(py_dir=PY_DIR,
+                                          child_objs=self.child_objs)
+        self.egg_name = egg_info[0]
+
         # Create factory.
         factory = PkgResourcesFactory([os.getcwd()], ['openmdao.components'])
         logging.debug('    loaders:')

@@ -30,17 +30,12 @@ class Source(Component):
 
     b = CBool(False, iostatus='out')
     f = Float(0., iostatus='out')
-    f1d = Array(dtype=numpy.float, shape=(None,), 
-                iostatus='out')
-    f2d = Array(dtype=numpy.float, shape=(None,None),
-                iostatus='out')
-    f3d = Array(dtype=numpy.float, shape=(None,None,None),
-                iostatus='out')
+    f1d = Array(dtype=numpy.float, shape=(None,), iostatus='out')
+    f2d = Array(dtype=numpy.float, shape=(None, None), iostatus='out')
+    f3d = Array(dtype=numpy.float, shape=(None, None, None), iostatus='out')
     i = Int(0, iostatus='out')
-    i1d = Array(dtype=numpy.int, shape=(None,), 
-                iostatus='out')
-    i2d = Array(dtype=numpy.int, shape=(None,None), 
-                iostatus='out')
+    i1d = Array(dtype=numpy.int, shape=(None,), iostatus='out')
+    i2d = Array(dtype=numpy.int, shape=(None, None), iostatus='out')
     s = Str('', iostatus='out')
     s1d = List(str, iostatus='out')
 
@@ -55,6 +50,7 @@ class Source(Component):
         self.binary_file.filename = 'source.bin'
 
         SourceData(name='sub', parent=self)
+        SourceSubData(name='sub_sub', parent=self)
 
     def execute(self):
         """ Write test data to files. """
@@ -72,17 +68,12 @@ class SourceData(Container):
 
     b = CBool(False, iostatus='out')
     f = Float(0., iostatus='out')
-    f1d = Array(dtype=numpy.float, shape=(None,), 
-                iostatus='out')
-    f2d = Array(dtype=numpy.float, shape=(None,None),
-                iostatus='out')
-    f3d = Array(dtype=numpy.float, shape=(None,None,None),
-                iostatus='out')
+    f1d = Array(dtype=numpy.float, shape=(None,), iostatus='out')
+    f2d = Array(dtype=numpy.float, shape=(None, None), iostatus='out')
+    f3d = Array(dtype=numpy.float, shape=(None, None, None), iostatus='out')
     i = Int(0, iostatus='out')
-    i1d = Array(dtype=numpy.int, shape=(None,), 
-                iostatus='out')
-    i2d = Array(dtype=numpy.int, shape=(None,None), 
-                iostatus='out')
+    i1d = Array(dtype=numpy.int, shape=(None,), iostatus='out')
+    i2d = Array(dtype=numpy.int, shape=(None, None), iostatus='out')
     s = Str('', iostatus='out')
     s1d = List(str, iostatus='out')
         
@@ -90,12 +81,26 @@ class SourceData(Container):
         super(SourceData, self).__init__(name, *args, **kwargs)
 
 
+class SourceSubData(Container):
+    """ Sub-sub-container data. """
+
+    ii = Int(0, iostatus='out')
+
+    def __init__(self, name='SourceSubData', *args, **kwargs):
+        super(SourceSubData, self).__init__(name, *args, **kwargs)
+
+
 class Passthrough(NPSScomponent):
     """ An NPSS component that passes-through various types of variable. """
 
-    def __init__(self, name, parent=None, doc=None, directory=''):
+    def __init__(self, indirect=False, name='Passthrough', parent=None,
+                 doc=None, directory=''):
         arglist = ['-D', 'XYZZY=twisty narrow passages', '-D', 'FLAG',
-                   '-I', '.', '-trace', os.path.join('..', 'passthrough.mdl')]
+                   '-I', '.', '-trace']
+        mdl = os.path.join('..', 'passthrough.mdl')
+        if indirect:
+            mdl = os.path.join('..', mdl)
+        arglist.append(mdl)
         super(Passthrough, self).__init__(name, parent, doc, directory,
                                           arglist, 'passthrough.out')
 
@@ -112,37 +117,18 @@ class Passthrough(NPSScomponent):
         #  this call to add_trait will have the 'b_out' attribute talk to NPSS
         self.add_trait('b_out', NPSSProperty(trait=CBool(iostatus='out')))
                 
-        self.make_public([
-             'b_in',
-             'f1d_in',
-             'f2d_in',
-             'f3d_in',
-             'i_in',
-             'i1d_in',
-             'i2d_in',
-             's_in',
-             's1d_in',
-             'text_in',
-             'binary_in',
-        ], iostatus='in')
+        self.make_public(['b_in', 'f1d_in', 'f2d_in', 'f3d_in',
+                          'i_in', 'i1d_in', 'i2d_in', 's_in', 's1d_in',
+                          'text_in', 'binary_in'], iostatus='in')
         
         # Automagic interface variable creation (not for Bool though).
-        self.make_public([
-            'f1d_out',
-            'f2d_out',
-            'f3d_out',
-            'i_out',
-            'i1d_out',
-            'i2d_out',
-            's_out', 
-            's1d_out',
-            'text_out',
-            'binary_out',
-        ], iostatus='out')
+        self.make_public(['f1d_out', 'f2d_out', 'f3d_out',
+                          'i_out', 'i1d_out', 'i2d_out', 's_out', 's1d_out',
+                          'text_out', 'binary_out'], iostatus='out')
 
         # (skip 'f_in' to test dynamic trait creation during connect().)
         # (skip 'f_out' to test dynamic trait creation during connect().)
-        
+
         # Sub-container needs Bools explicitly declared.
         self.hoist('sub.b_in', 'in', trait=CBool(iostatus='in'))
         self.hoist('sub.b_out', 'out', trait=CBool(iostatus='out'))
@@ -153,23 +139,17 @@ class Sink(Component):
 
     b = CBool(False, iostatus='in')
     f = Float(0., iostatus='in')
-    f1d = Array(dtype=numpy.float, shape=(None,), 
-                iostatus='in')
-    f2d = Array(dtype=numpy.float, shape=(None,None),
-                iostatus='in')
-    f3d = Array(dtype=numpy.float, shape=(None,None,None),
-                iostatus='in')
+    f1d = Array(dtype=numpy.float, shape=(None,), iostatus='in')
+    f2d = Array(dtype=numpy.float, shape=(None, None), iostatus='in')
+    f3d = Array(dtype=numpy.float, shape=(None, None, None), iostatus='in')
     i = Int(0, iostatus='in')
-    i1d = Array(dtype=numpy.int, shape=(None,), 
-                iostatus='in')
-    i2d = Array(dtype=numpy.int, shape=(None,None), 
-                iostatus='in')
+    i1d = Array(dtype=numpy.int, shape=(None,), iostatus='in')
+    i2d = Array(dtype=numpy.int, shape=(None, None), iostatus='in')
     s = Str('', iostatus='in')
     s1d = List(str, iostatus='in')
     
     text_data = Str(iostatus='out')
-    binary_data = Array(dtype=numpy.float, shape=(None,),
-                        iostatus='out')
+    binary_data = Array(dtype=numpy.float, shape=(None,), iostatus='out')
     text_file = FileTrait(iostatus='in')
     binary_file = FileTrait(iostatus='in')
         
@@ -179,6 +159,7 @@ class Sink(Component):
         self.binary_file.filename = 'sink.bin'
 
         SinkData(name='sub', parent=self)
+        SinkSubData(name='sub_sub', parent=self)
 
     def execute(self):
         """ Read test data from files. """
@@ -196,27 +177,32 @@ class SinkData(Container):
 
     b = CBool(False, iostatus='in')
     f = Float(0., iostatus='in')
-    f1d = Array(dtype=numpy.float, shape=(None,), 
-                iostatus='in')
-    f2d = Array(dtype=numpy.float, shape=(None,None),
-                iostatus='in')
-    f3d = Array(dtype=numpy.float, shape=(None,None,None),
-                iostatus='in')
+    f1d = Array(dtype=numpy.float, shape=(None,), iostatus='in')
+    f2d = Array(dtype=numpy.float, shape=(None, None), iostatus='in')
+    f3d = Array(dtype=numpy.float, shape=(None, None, None), iostatus='in')
     i = Int(0, iostatus='in')
-    i1d = Array(dtype=numpy.int, shape=(None,), 
-                iostatus='in')
-    i2d = Array(dtype=numpy.int, shape=(None,None), 
-                iostatus='in')
+    i1d = Array(dtype=numpy.int, shape=(None,), iostatus='in')
+    i2d = Array(dtype=numpy.int, shape=(None, None), iostatus='in')
     s = Str('', iostatus='in')
     s1d = List(str, iostatus='in')
     
     def __init__(self, name='SinkData', *args, **kwargs):
         super(SinkData, self).__init__(name, *args, **kwargs)
 
+
+class SinkSubData(Container):
+    """ Sub-sub-container data. """
+
+    ii = Int(0, iostatus='in')
+
+    def __init__(self, name='SinkSubData', *args, **kwargs):
+        super(SinkSubData, self).__init__(name, *args, **kwargs)
+
+
 class Model(Assembly):
     """ Sends data through Source -> NPSS_A -> NPSS_B -> Sink. """
     
-    def __init__(self, name='TestModel', *args, **kwargs):
+    def __init__(self, indirect=False, name='TestModel', *args, **kwargs):
         super(Model, self).__init__(name, *args, **kwargs)
 
         Source(parent=self)
@@ -247,90 +233,84 @@ class Model(Assembly):
         self.Source.sub.s = 'xyzzy'
         self.Source.sub.s1d = ['maze', 'of', 'twisty', 'passages']
 
-        name = 'NPSS_A'
-        Passthrough(name, self, directory=name)
-
-        name = 'NPSS_B'
-        Passthrough(name, self, directory=name)
+        self.Source.sub_sub.ii = 12345678
 
         Sink(parent=self)
 
-        self.connect('Source.b',   'NPSS_A.b_in')
-        self.connect('Source.f',   'NPSS_A.f_in')
-        self.connect('Source.f1d', 'NPSS_A.f1d_in')
-        self.connect('Source.f2d', 'NPSS_A.f2d_in')
-        self.connect('Source.f3d', 'NPSS_A.f3d_in')
-        self.connect('Source.i',   'NPSS_A.i_in')
-        self.connect('Source.i1d', 'NPSS_A.i1d_in')
-        self.connect('Source.i2d', 'NPSS_A.i2d_in')
-        self.connect('Source.s',   'NPSS_A.s_in')
-        self.connect('Source.s1d', 'NPSS_A.s1d_in')
+        vnames = ('b', 'f', 'f1d', 'f2d', 'f3d', 'i', 'i1d', 'i2d', 's', 's1d')
 
-        self.connect('Source.text_file', 'NPSS_A.text_in')
-        self.connect('Source.binary_file', 'NPSS_A.binary_in')
+        if indirect:
+            # Exercise passthru capability.
+            assembly = Assembly('Assembly', parent=self, directory='Assembly')
+            name = 'NPSS_A'
+            Passthrough(indirect, name, assembly, directory=name)
+            name = 'NPSS_B'
+            Passthrough(indirect, name, assembly, directory=name)
 
-        self.connect('Source.sub.b',   'NPSS_A.sub.b_in')
-        self.connect('Source.sub.f',   'NPSS_A.sub.f_in')
-        self.connect('Source.sub.f1d', 'NPSS_A.sub.f1d_in')
-        self.connect('Source.sub.f2d', 'NPSS_A.sub.f2d_in')
-        self.connect('Source.sub.f3d', 'NPSS_A.sub.f3d_in')
-        self.connect('Source.sub.i',   'NPSS_A.sub.i_in')
-        self.connect('Source.sub.i1d', 'NPSS_A.sub.i1d_in')
-        self.connect('Source.sub.i2d', 'NPSS_A.sub.i2d_in')
-        self.connect('Source.sub.s',   'NPSS_A.sub.s_in')
-        self.connect('Source.sub.s1d', 'NPSS_A.sub.s1d_in')
+            for var in vnames:
+                assembly.create_passthru('NPSS_A.'+var+'_in')
+                assembly.create_passthru('NPSS_A.sub.'+var+'_in',
+                                         'sub_'+var+'_in')
+                assembly.connect('NPSS_A.'+var+'_out', 'NPSS_B.'+var+'_in')
+                assembly.connect('NPSS_A.sub.'+var+'_out',
+                                 'NPSS_B.sub.'+var+'_in')
+                assembly.create_passthru('NPSS_B.'+var+'_out')
+                assembly.create_passthru('NPSS_B.sub.'+var+'_out',
+                                         'sub_'+var+'_out')
 
+            assembly.create_passthru('NPSS_A.text_in')
+            assembly.create_passthru('NPSS_A.binary_in')
+            assembly.create_passthru('NPSS_A.sub.sub.i_in', 'sub_sub_i_in')
 
-        self.connect('NPSS_A.b_out',   'NPSS_B.b_in')
-        self.connect('NPSS_A.f_out',   'NPSS_B.f_in')
-        self.connect('NPSS_A.f1d_out', 'NPSS_B.f1d_in')
-        self.connect('NPSS_A.f2d_out', 'NPSS_B.f2d_in')
-        self.connect('NPSS_A.f3d_out', 'NPSS_B.f3d_in')
-        self.connect('NPSS_A.i_out',   'NPSS_B.i_in')
-        self.connect('NPSS_A.i1d_out', 'NPSS_B.i1d_in')
-        self.connect('NPSS_A.i2d_out', 'NPSS_B.i2d_in')
-        self.connect('NPSS_A.s_out',   'NPSS_B.s_in')
-        self.connect('NPSS_A.s1d_out', 'NPSS_B.s1d_in')
+            assembly.connect('NPSS_A.text_out', 'NPSS_B.text_in')
+            assembly.connect('NPSS_A.binary_out', 'NPSS_B.binary_in')
+            assembly.connect('NPSS_A.sub.sub.i_out', 'NPSS_B.sub.sub.i_in')
 
-        self.connect('NPSS_A.text_out', 'NPSS_B.text_in')
-        self.connect('NPSS_A.binary_out', 'NPSS_B.binary_in')
+            assembly.create_passthru('NPSS_B.text_out')
+            assembly.create_passthru('NPSS_B.binary_out')
+            assembly.create_passthru('NPSS_B.sub.sub.i_out', 'sub_sub_i_out')
 
-        self.connect('NPSS_A.sub.b_out',   'NPSS_B.sub.b_in')
-        self.connect('NPSS_A.sub.f_out',   'NPSS_B.sub.f_in')
-        self.connect('NPSS_A.sub.f1d_out', 'NPSS_B.sub.f1d_in')
-        self.connect('NPSS_A.sub.f2d_out', 'NPSS_B.sub.f2d_in')
-        self.connect('NPSS_A.sub.f3d_out', 'NPSS_B.sub.f3d_in')
-        self.connect('NPSS_A.sub.i_out',   'NPSS_B.sub.i_in')
-        self.connect('NPSS_A.sub.i1d_out', 'NPSS_B.sub.i1d_in')
-        self.connect('NPSS_A.sub.i2d_out', 'NPSS_B.sub.i2d_in')
-        self.connect('NPSS_A.sub.s_out',   'NPSS_B.sub.s_in')
-        self.connect('NPSS_A.sub.s1d_out', 'NPSS_B.sub.s1d_in')
+            to_comp = 'Assembly.'
+            from_comp = 'Assembly.'
 
+        else:
+            name = 'NPSS_A'
+            Passthrough(indirect, name, self, directory=name)
+            name = 'NPSS_B'
+            Passthrough(indirect, name, self, directory=name)
 
-        self.connect('NPSS_B.b_out',   'Sink.b')
-        self.connect('NPSS_B.f_out',   'Sink.f')
-        self.connect('NPSS_B.f1d_out', 'Sink.f1d')
-        self.connect('NPSS_B.f2d_out', 'Sink.f2d')
-        self.connect('NPSS_B.f3d_out', 'Sink.f3d')
-        self.connect('NPSS_B.i_out',   'Sink.i')
-        self.connect('NPSS_B.i1d_out', 'Sink.i1d')
-        self.connect('NPSS_B.i2d_out', 'Sink.i2d')
-        self.connect('NPSS_B.s_out',   'Sink.s')
-        self.connect('NPSS_B.s1d_out', 'Sink.s1d')
+            for var in vnames:
+                self.connect('NPSS_A.'+var+'_out', 'NPSS_B.'+var+'_in')
+                self.connect('NPSS_A.sub.'+var+'_out', 'NPSS_B.sub.'+var+'_in')
+            self.connect('NPSS_A.text_out', 'NPSS_B.text_in')
+            self.connect('NPSS_A.binary_out', 'NPSS_B.binary_in')
+            self.connect('NPSS_A.sub.sub.i_out', 'NPSS_B.sub.sub.i_in')
 
-        self.connect('NPSS_B.text_out', 'Sink.text_file')
-        self.connect('NPSS_B.binary_out', 'Sink.binary_file')
+            to_comp = 'NPSS_A.'
+            from_comp = 'NPSS_B.'
 
-        self.connect('NPSS_B.sub.b_out',   'Sink.sub.b')
-        self.connect('NPSS_B.sub.f_out',   'Sink.sub.f')
-        self.connect('NPSS_B.sub.f1d_out', 'Sink.sub.f1d')
-        self.connect('NPSS_B.sub.f2d_out', 'Sink.sub.f2d')
-        self.connect('NPSS_B.sub.f3d_out', 'Sink.sub.f3d')
-        self.connect('NPSS_B.sub.i_out',   'Sink.sub.i')
-        self.connect('NPSS_B.sub.i1d_out', 'Sink.sub.i1d')
-        self.connect('NPSS_B.sub.i2d_out', 'Sink.sub.i2d')
-        self.connect('NPSS_B.sub.s_out',   'Sink.sub.s')
-        self.connect('NPSS_B.sub.s1d_out', 'Sink.sub.s1d')
+        for var in vnames:
+            self.connect('Source.'+var, to_comp+var+'_in')
+            self.connect(from_comp+var+'_out', 'Sink.'+var)
+            if indirect:
+                self.connect('Source.sub.'+var, to_comp+'sub_'+var+'_in')
+                self.connect(from_comp+'sub_'+var+'_out', 'Sink.sub.'+var)
+            else:
+                self.connect('Source.sub.'+var, to_comp+'sub.'+var+'_in')
+                self.connect(from_comp+'sub.'+var+'_out', 'Sink.sub.'+var)
+
+        self.connect('Source.text_file',   to_comp+'text_in')
+        self.connect('Source.binary_file', to_comp+'binary_in')
+
+        self.connect(from_comp+'text_out', 'Sink.text_file')
+        self.connect(from_comp+'binary_out', 'Sink.binary_file')
+
+        if indirect:
+            self.connect('Source.sub_sub.ii', to_comp+'sub_sub_i_in')
+            self.connect(from_comp+'sub_sub_i_out', 'Sink.sub_sub.ii')
+        else:
+            self.connect('Source.sub_sub.ii', to_comp+'sub.sub.i_in')
+            self.connect(from_comp+'sub.sub.i_out', 'Sink.sub_sub.ii')
 
 
 class NPSSTestCase(unittest.TestCase):
@@ -341,57 +321,79 @@ class NPSSTestCase(unittest.TestCase):
         """ Called before each test in this class. """
         # Set new simulation root so we can legally access files.
         SimulationRoot.chdir(NPSSTestCase.directory)
-        self.model = Model()
+        self.model = None
 
     def tearDown(self):
         """ Called after each test in this class. """
-        self.model.pre_delete()
-        shutil.rmtree(self.model.NPSS_A.directory)
-        shutil.rmtree(self.model.NPSS_B.directory)
-        self.model = None
+        if self.model:
+            self.model.pre_delete()
+            try:
+                shutil.rmtree(self.model.NPSS_A.directory)
+                shutil.rmtree(self.model.NPSS_B.directory)
+            except AttributeError:
+                shutil.rmtree(self.model.Assembly.directory)
+            self.model = None
         end_dir = os.getcwd()
         SimulationRoot.chdir(ORIG_DIR)
         if end_dir != NPSSTestCase.directory:
             self.fail('Ended in %s, expected %s' \
                       % (end_dir, NPSSTestCase.directory))
 
-    def test_connectivity(self):
+    def test_direct(self):
         logging.debug('')
-        logging.debug('test_connectivity')
+        logging.debug('test_direct')
+        self.model = Model()
+        self.check_connectivity()
 
-        self.assertNotEqual(self.model.Sink.b,   self.model.Source.b)
-        self.assertNotEqual(self.model.Sink.f,   self.model.Source.f)
+    def test_indirect(self):
+        logging.debug('')
+        logging.debug('test_indirect')
+        self.model = Model(indirect=True)
+        self.check_connectivity(indirect=True)
+
+    def check_connectivity(self, indirect=False):
+        self.assertNotEqual(self.model.Sink.b, self.model.Source.b)
+        self.assertNotEqual(self.model.Sink.f, self.model.Source.f)
         self.assertNotEqual(numpy.all(self.model.Sink.f1d==self.model.Source.f1d), True)
         self.assertNotEqual(numpy.all(self.model.Sink.f2d==self.model.Source.f2d), True)
         self.assertNotEqual(numpy.all(self.model.Sink.f3d==self.model.Source.f3d), True)
-        self.assertNotEqual(self.model.Sink.i,   self.model.Source.i)
+        self.assertNotEqual(self.model.Sink.i, self.model.Source.i)
         self.assertNotEqual(numpy.all(self.model.Sink.i1d==self.model.Source.i1d), True)
         self.assertNotEqual(numpy.all(self.model.Sink.i2d==self.model.Source.i2d), True)
-        self.assertNotEqual(self.model.Sink.s,   self.model.Source.s)
+        self.assertNotEqual(self.model.Sink.s, self.model.Source.s)
         self.assertNotEqual(numpy.all(self.model.Sink.s1d==self.model.Source.s1d), True)
 
         self.assertNotEqual(self.model.Sink.text_data,
                             self.model.Source.text_data)
         self.assertNotEqual(numpy.all(self.model.Sink.binary_data==self.model.Source.binary_data),
                             True)
-        self.assertNotEqual(
-            self.model.Sink.binary_file.binary, True)
+        self.assertNotEqual(self.model.Sink.binary_file.binary, True)
 
-        self.assertNotEqual(self.model.Sink.sub.b,   self.model.Source.sub.b)
-        self.assertNotEqual(self.model.Sink.sub.f,   self.model.Source.sub.f)
+        self.assertNotEqual(self.model.Sink.sub.b, self.model.Source.sub.b)
+        self.assertNotEqual(self.model.Sink.sub.f, self.model.Source.sub.f)
         self.assertNotEqual(numpy.all(self.model.Sink.sub.f1d==self.model.Source.sub.f1d), True)
         self.assertNotEqual(numpy.all(self.model.Sink.sub.f2d==self.model.Source.sub.f2d), True)
         self.assertNotEqual(numpy.all(self.model.Sink.sub.f3d==self.model.Source.sub.f3d), True)
-        self.assertNotEqual(self.model.Sink.sub.i,   self.model.Source.sub.i)
+        self.assertNotEqual(self.model.Sink.sub.i, self.model.Source.sub.i)
         self.assertNotEqual(numpy.all(self.model.Sink.sub.i1d==self.model.Source.sub.i1d), True)
         self.assertNotEqual(numpy.all(self.model.Sink.sub.i2d==self.model.Source.sub.i2d), True)
-        self.assertNotEqual(self.model.Sink.sub.s,   self.model.Source.sub.s)
+        self.assertNotEqual(self.model.Sink.sub.s, self.model.Source.sub.s)
         self.assertNotEqual(numpy.all(self.model.Sink.sub.s1d==self.model.Source.sub.s1d), True)
+
+        self.assertNotEqual(self.model.Sink.sub_sub.ii,
+                            self.model.Source.sub_sub.ii)
 
         self.model.run()
 
-        self.assertEqual(self.model.Source.b,   self.model.NPSS_A.b_in)
-        self.assertEqual(self.model.NPSS_A.b_in,   self.model.NPSS_A.b_out)
+        if indirect:
+            self.assertEqual(self.model.Source.b,
+                             self.model.Assembly.NPSS_A.b_in)
+            self.assertEqual(self.model.Assembly.NPSS_A.b_in,
+                             self.model.Assembly.NPSS_A.b_out)
+        else:
+            self.assertEqual(self.model.Source.b,    self.model.NPSS_A.b_in)
+            self.assertEqual(self.model.NPSS_A.b_in, self.model.NPSS_A.b_out)
+
         self.assertEqual(self.model.Sink.b,   self.model.Source.b)
         self.assertEqual(self.model.Sink.f,   self.model.Source.f)
         assert_equal(self.model.Sink.f1d,     self.model.Source.f1d)
@@ -407,8 +409,7 @@ class NPSSTestCase(unittest.TestCase):
                          self.model.Source.text_data)
         self.assertEqual(numpy.all(self.model.Sink.binary_data==self.model.Source.binary_data),
                          True)
-        self.assertEqual(
-            self.model.Sink.binary_file.binary, True)
+        self.assertEqual(self.model.Sink.binary_file.binary, True)
 
         self.assertEqual(self.model.Sink.sub.b,   self.model.Source.sub.b)
         self.assertEqual(self.model.Sink.sub.f,   self.model.Source.sub.f)
@@ -421,15 +422,19 @@ class NPSSTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.sub.s,   self.model.Source.sub.s)
         self.assertEqual(self.model.Sink.sub.s1d, self.model.Source.sub.s1d)
 
+        self.assertEqual(self.model.Sink.sub_sub.ii,
+                         self.model.Source.sub_sub.ii)
+
         for path in ('source.txt', 'source.bin', 'sink.txt', 'sink.bin'):
             os.remove(path)  # Will raise exception if any files don't exist.
 
     def test_preprocessor(self):
         logging.debug('')
         logging.debug('test_preprocessor')
-
+        self.model = Model()
         self.assertEqual(self.model.NPSS_A.xyzzy_val, 'twisty narrow passages')
         self.assertEqual(self.model.NPSS_A.flag_val, 1)
+
 
 if __name__ == '__main__':
     import nose

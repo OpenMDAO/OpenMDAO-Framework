@@ -13,14 +13,12 @@ import shutil
 import subprocess
 import sys
 import time
-import StringIO
 
-from enthought.traits.api import implements, on_trait_change, Str, Missing, \
-                                 Undefined, Python, TraitError
+from enthought.traits.api import on_trait_change, Str, Undefined, Python, \
+                                 TraitError
 from enthought.traits.trait_base import not_event
 
 from openmdao.main.container import Container
-import openmdao.main.container as container
 from openmdao.main.filevar import FileValue
 from openmdao.util.save_load import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
@@ -65,13 +63,14 @@ class Component (Container):
        accessible to the OpenMDAO framework and are 'runnable'.
 
     - `directory` is a string specifying the directory to execute in. \
-       If it is a relative path, it is relative to its parent's directory.
+      If it is a relative path, it is relative to its parent's directory.
     - `external_files` is a list of meta-data dictionaries for external \
       files used by the component.  The 'path' meta-data attribute can be \
       a glob-style pattern.
     """
 
-    directory = Str('',desc='If non-blank, the directory to execute in.', iostatus='in')
+    directory = Str('', desc='If non-blank, the directory to execute in.',
+                    iostatus='in')
     state = Python
     external_files = Python
         
@@ -89,7 +88,6 @@ class Component (Container):
         
         # List of meta-data dictionaries.
         self.external_files = []
-
 
 # pylint: disable-msg=E1101
         dirpath = self.get_directory()
@@ -114,9 +112,9 @@ class Component (Container):
 # pylint: enable-msg=E1101
 
     def check_config (self):
-        """Verify that the configuration of this component is correct. This function is
-        called once prior to the first execution of this component, and may be called
-        explicitly at other times if desired.
+        """Verify that the configuration of this component is correct. This
+        function is called once prior to the first execution of this component,
+        and may be called explicitly at other times if desired.
         """
         pass         
     
@@ -248,7 +246,7 @@ class Component (Container):
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-        Returns the egg's filename.
+        Returns (egg_filename, required_distributions, missing_modules).
         """
         if src_dir is None:
             src_dir = self.get_directory()
@@ -266,7 +264,7 @@ class Component (Container):
         # we do that after adjusting a parent, things can go bad.
         components = [self]
         components.extend([c for c in self.values(recurse=True)
-                                if isinstance(c, Component)])
+                                   if isinstance(c, Component)])
         for comp in sorted(components, reverse=True,
                            key=lambda comp: comp.get_pathname()):
 
@@ -339,6 +337,7 @@ class Component (Container):
                 else:
                     save_path = path
                 src_files.add(save_path)
+
         # Save relative directory for any entry points. Some oddness with
         # parent weakrefs seems to prevent reconstruction in load().
         if child_objs is not None:
@@ -369,8 +368,9 @@ class Component (Container):
                 comp.set(name+'.filename', fvar.filename, force=True)
 
     def get_file_vars(self):
-        """Return list of (filevarname,filevarvalue,filetrait) owned by this component."""
-        def _recurse_get_file_vars (container, file_vars, visited, scope):
+        """Return list of (filevarname,filevarvalue,filetrait) owned by this
+        component."""
+        def _recurse_get_file_vars(container, file_vars, visited, scope):
             for name, obj in container.items(type=not_event):
                 if id(obj) in visited:
                     continue
@@ -380,10 +380,11 @@ class Component (Container):
                     if self is scope:
                         file_vars.append((name, obj, ftrait))
                     else:
-                        file_vars.append(('.'.join(
-                                           [container.get_pathname(rel_to_scope=scope),name]), 
-                                            obj, ftrait))
-                elif isinstance(obj, Container) and not isinstance(obj, Component):
+                        relpath = container.get_pathname(rel_to_scope=scope)
+                        file_vars.append(('.'.join([relpath, name]),
+                                          obj, ftrait))
+                elif isinstance(obj, Container) and \
+                     not isinstance(obj, Component):
                     _recurse_get_file_vars(obj, file_vars, visited, scope)
 
         file_vars = []
@@ -431,7 +432,8 @@ class Component (Container):
         old_level = self.log_level
         self.log_level = LOG_DEBUG
         start = time.time()
-        egg_name = self.save_to_egg(py_dir=py_dir, format=format)
+        egg_info = self.save_to_egg(py_dir=py_dir, format=format)
+        egg_name = egg_info[0]
         elapsed = time.time() - start
         size = os.path.getsize(egg_name)
         print '\nSaved %d bytes in %.2f seconds (%.2f bytes/sec)' % \
@@ -445,7 +447,7 @@ class Component (Container):
         egg_path = os.path.join('..', egg_name)
         unpacker = None
         try:
-            print '\nUnpacking in subprocess...'
+            print '\nUnpacking %s in subprocess...' % egg_name
             env = os.environ
             env['OPENMDAO_INSTALL'] = '0'
             if logfile:
@@ -529,7 +531,6 @@ Component.load_from_eggfile('%s', install=False)
                     top.warning('No parent, using null relative directory')
                     relpath = ''
 
-
             # Set top directory.
             orig_dir = os.getcwd()
             if name:
@@ -583,7 +584,7 @@ Component.load_from_eggfile('%s', install=False)
                 const = metadata.get('constant', False)
                 self._copy_files(pattern, package, relpath, is_input, const)
 
-            for fvarname,fvar,ftrait in fvars:
+            for fvarname, fvar, ftrait in fvars:
                 pattern = fvar.filename
                 if not pattern:
                     continue
@@ -729,14 +730,23 @@ def eggsecutable():
     install = os.environ.get('OPENMDAO_INSTALL', '1')
     if install:
         install = int(install)
+
     debug = os.environ.get('OPENMDAO_INSTALL_DEBUG', '1')
     if debug:
         debug = int(debug)
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
-    try:
-        Component.load_from_eggfile(sys.path[0], install=install)
-    except Exception, exc:
-        print str(exc)
+
+    # Skip any accidental cruft (egg *should* be at [0]).
+    for path in sys.path:
+        if path.endswith('.egg'):
+            try:
+                Component.load_from_eggfile(path, install=install)
+                return
+            except Exception, exc:
+                print str(exc)
+                sys.exit(1)
+    else:
+        print "Can't find an egg file on sys.path!"
         sys.exit(1)
 

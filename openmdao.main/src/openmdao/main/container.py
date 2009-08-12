@@ -25,8 +25,9 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint: enable-msg=W0212
 
 import networkx as nx
-from enthought.traits.api import HasTraits, implements, Missing, TraitError,\
-                                 BaseStr, Undefined, push_exception_handler,\
+
+from enthought.traits.api import HasTraits, implements, Missing, TraitError, \
+                                 BaseStr, Undefined, push_exception_handler, \
                                  Python, TraitType, Property, Trait
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType
@@ -42,33 +43,11 @@ from openmdao.util.save_load import SAVE_CPICKLE
 from openmdao.main.unitsfloat import convert_units
 
 
-
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
 # re-raised.
-push_exception_handler(handler = lambda o,t,ov,nv: None,
-                       reraise_exceptions = True,
-                       main = True,
-                       locked = True )
-
-class IMHolder(object):
-    """Holds an instancemethod object in a pickleable form."""
-
-    def __init__(self, obj):
-        self.name = obj.__name__
-        self.im_self = obj.im_self
-        if obj.im_self:
-            self.im_class = None  # Avoid possible __main__ issues.
-        else:
-            # TODO: handle __main__ for im_class.__module__.
-            self.im_class = obj.im_class
-
-    def method(self):
-        """Return instancemethod corresponding to saved state."""
-        if self.im_self:
-            return getattr(self.im_self, self.name)
-        else:
-            return getattr(self.im_class, self.name)
+push_exception_handler(handler=lambda o,t,ov,nv: None,
+                       reraise_exceptions=True, main=True, locked=True)
 
 class _DumbTmp(object):
     pass
@@ -77,7 +56,7 @@ class PathProperty(TraitType):
     """A trait that allows attributes in child objects to be referenced
     using an alias in a parent scope.
     """
-    def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
+    def __init__(self, default_value=NoDefaultSpecified, **metadata):
         ref_name = metadata.get('ref_name')
         if not ref_name:
             raise TraitError("PathProperty constructor requires a"
@@ -317,7 +296,6 @@ class Container(HasTraits):
             self.raise_exception(str(err), NameError)
         self._logger.rename(self.get_pathname().replace('.', ','))
 
-
     def get_wrapped_attr(self, name):
         """If the named trait can return a TraitValMetaWrapper, then this
         function will return that, with the value set to the current
@@ -379,8 +357,7 @@ class Container(HasTraits):
                     "it's not an io trait." % name, RuntimeError)
 
     def add_child(self, obj):
-        """Add a Container object to this Container.
-        """
+        """Add a Container object to this Container."""
         if obj == self:
             self.raise_exception('cannot make an object a child of itself',
                                  RuntimeError)
@@ -487,7 +464,7 @@ class Container(HasTraits):
         if self._containers is None:
             dct = self.__dict__
             self._containers = [n for n,v in dct.items() 
-                                  if isinstance(v,Container)]            
+                                  if isinstance(v, Container)]            
         return self._containers
     
     def _traits_meta_filter(self, traits=None, **metadata):
@@ -503,16 +480,15 @@ class Container(HasTraits):
             if trait.type is 'event':
                 continue
             for meta_name, meta_eval in metadata.items():
-                if type( meta_eval ) is FunctionType:
-                    if not meta_eval(getattr(trait,meta_name)):
+                if type(meta_eval) is FunctionType:
+                    if not meta_eval(getattr(trait, meta_name)):
                         break
-                elif meta_eval != getattr(trait,meta_name):
+                elif meta_eval != getattr(trait, meta_name):
                     break
             else:
-                result[ name ] = trait
+                result[name] = trait
 
         return result
-        
         
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form 
@@ -542,7 +518,6 @@ class Container(HasTraits):
                     elif trait.iostatus is not None:
                         yield (name, obj)
 
-    
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
         rel_to_scope. If rel_to_scope is None, return the full pathname.
@@ -606,7 +581,6 @@ class Container(HasTraits):
             self.raise_exception("this object is not callable",
                                  RuntimeError)
         
-        
     def get(self, path, index=None):
         """Return any public object specified by the given 
         path, which may contain '.' characters.  
@@ -653,7 +627,6 @@ class Container(HasTraits):
             else:
                 return obj._array_get('.'.join(tup[1:]), index)
 
-     
     def set_source(self, name, source):
         """Mark the named io trait as a destination by registering a source
         for it, which will prevent it from being set directly or connected 
@@ -748,11 +721,10 @@ class Container(HasTraits):
             else:
                 if isinstance(obj, Container):
                     obj.set('.'.join(tup[1:]), value, index, force=force)
-                elif index is not None:
-                    obj._array_set('.'.join(tup[1:]), value, index)
+                elif index is None:
+                    setattr(obj, '.'.join(tup[1:]), value)
                 else:
-                    self.raise_exception("object has no attribute '%s'" % 
-                                         path, TraitError)
+                    obj._array_set('.'.join(tup[1:]), value, index)
 
     def _array_set(self, name, value, index):
         arr = getattr(self, name)
@@ -818,10 +790,7 @@ class Container(HasTraits):
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-        Returns the egg's filename.
-
-        NOTE: References to old-style class types can't be restored correctly.
-              This is typically related to the Variable var_types attribute.
+        Returns (egg_filename, required_distributions, missing_modules).
         """
         if name is None:
             name = self.name
@@ -830,6 +799,7 @@ class Container(HasTraits):
                 version = sys.modules[self.__class__.__module__].__version__
             except AttributeError:
                 pass
+
         # Entry point names are the pathname, starting at self.
         entry_pts = []
         if child_objs is not None:
@@ -933,13 +903,11 @@ class Container(HasTraits):
 
     def post_load(self):
         """Perform any required operations after model has been loaded."""
-        [x.post_load() for x in self.values() 
-                                          if isinstance(x,Container)]
+        [x.post_load() for x in self.values() if isinstance(x, Container)]
 
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
-        [x.pre_delete() for x in self.values() 
-                                          if isinstance(x,Container)]
+        [x.pre_delete() for x in self.values() if isinstance(x, Container)]
 
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output
@@ -1011,7 +979,6 @@ class Container(HasTraits):
             trait = self._build_trait(ref_name, iostat, trait)
             
             self.add_trait(name, trait)
-        
 
     def get_dyn_trait(self, name, iostat):
         """Retrieves the named trait, attempting to create it on-the-fly if
@@ -1030,7 +997,6 @@ class Container(HasTraits):
             return self.trait(name)
         return trait
 
-    
     def hoist(self, path, io_status=None, trait=None):
         """Create a trait that maps to some internal variable designated by a
         dotted path. If a trait is supplied as an argument, use that trait as
