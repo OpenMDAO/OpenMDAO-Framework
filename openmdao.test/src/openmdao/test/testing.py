@@ -1,6 +1,7 @@
+import sys
+import os
 
 import nose
-import sys
 
 
 oldexit = sys.exit
@@ -34,6 +35,12 @@ def run_openmdao_suite():
             else:
                 sys.argv.append('--cover-html-dir=html_coverage')
 
+    # this tells it to put enable_console calls in generated python
+    # scripts so test runner can see all output for debugging purposes.
+    if '--extern_capture' in sys.argv:
+        sys.argv.remove('--extern_capture')
+        os.environ['OPENMDAO_CAPTURE_EXTERN'] = 'TRUE'
+        
     if '--all' in sys.argv:
         sys.argv.remove('--all')
         nose.run_exit(argv=sys.argv+tlist)

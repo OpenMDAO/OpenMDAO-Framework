@@ -31,10 +31,10 @@ class Comp(Component):
     
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
-        self.top = Assembly('top', None)
-        A('a', self.top)
+        self.top = Assembly()
+        self.top.add_container('a', A())
         self.top.a.b = numpy.array([1., 2, 3, 4, 5, 6])
-        Comp('comp', self.top)
+        self.top.add_container('comp', Comp())
         self.top.comp.x = 3.14
 
     def test_set1(self):

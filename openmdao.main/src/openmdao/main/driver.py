@@ -22,8 +22,8 @@ class Driver(Assembly):
     
     implements(IDriver)
     
-    def __init__(self, name, parent=None, doc=None):
-        super(Driver, self).__init__(name, parent, doc=doc)
+    def __init__(self, doc=None):
+        super(Driver, self).__init__(doc=doc)
         self._ref_graph = { None: None, 'in': None, 'out': None }
         self._ref_comps = { None: None, 'in': None, 'out': None }
         self.graph_regen_needed()
@@ -41,32 +41,36 @@ class Driver(Assembly):
         """Call base class _pre_execute after determining if we have any invalid
         ref variables, which will cause us to have to regenerate our ref dependency graph.
         """
-        exec_needed = False
+        if self._call_execute:
+            super(Driver, self)._pre_execute()
+            return
+        
         refnames = self.get_refvar_names(iostatus='in')
         
         if not all(self.get_valids(refnames)):
-            exec_needed = True
+            self._call_execute = True
             # force regeneration of _ref_graph, _ref_comps, _iteration_comps
             self._ref_graph = { None: None, 'in': None, 'out': None } 
             self._ref_comps = { None: None, 'in': None, 'out': None }
             self.graph_regen_needed()
+            
         super(Driver, self)._pre_execute()
         
-        # force execution of the driver if any of its StringRefs reference
-        # invalid Variables
-        for name in refnames:
-            rv = getattr(self, name)
-            if isinstance(rv, list):
-                for entry in rv:
-                    if not entry.refs_valid():
-                        exec_needed = True
-                        break
-            else:
-                if not rv.refs_valid():
-                    exec_needed = True
-                    break
+        if not self._call_execute:
+            # force execution of the driver if any of its StringRefs reference
+            # invalid Variables
+            for name in refnames:
+                rv = getattr(self, name)
+                if isinstance(rv, list):
+                    for entry in rv:
+                        if not entry.refs_valid():
+                            self._call_execute = True
+                            return
+                else:
+                    if not rv.refs_valid():
+                        self._call_execute = True
+                        return
         
-        self._execute_needed |= exec_needed
                 
     def execute(self):
         """ Iterate over a collection of Components until some condition

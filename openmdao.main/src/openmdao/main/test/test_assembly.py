@@ -10,8 +10,8 @@ class Multiplier(Component):
     rval_out = Float(iostatus='out')
     mult = Float(iostatus='in')
     
-    def __init__(self, name):
-        super(Multiplier, self).__init__(name)
+    def __init__(self):
+        super(Multiplier, self).__init__()
         self.rval_in = 4.
         self.rval_out = 7.
         self.mult = 1.5
@@ -28,8 +28,8 @@ class Simple(Component):
     c = Float(iostatus='out')
     d = Float(iostatus='out')
     
-    def __init__(self, name, parent=None):
-        super(Simple, self).__init__(name, parent)
+    def __init__(self):
+        super(Simple, self).__init__()
         self.a = 4.
         self.b = 5.
         self.c = 7.
@@ -53,8 +53,8 @@ class DummyComp(Component):
     dummy_in = Instance(Component, iostatus='in')
     dummy_out = Instance(Component, iostatus='out')
     
-    def __init__(self, name, parent=None):
-        super(DummyComp, self).__init__(name, parent)
+    def __init__(self):
+        super(DummyComp, self).__init__()
         self.r = 1.0
         self.r2 = -1.0
         self.rout = 0.0
@@ -63,7 +63,7 @@ class DummyComp(Component):
         self.sout = ''
         
         # make a nested container with input and output ContainerVars
-        self.add_child(Multiplier('dummy'))
+        self.add_container('dummy', Multiplier())
         self.dummy_in = self.dummy
         self.dummy_out = self.dummy
                 
@@ -86,20 +86,21 @@ class AssemblyTestCase(unittest.TestCase):
             comp2
             comp3
         """
-        self.asm = Assembly('top', None)
-        dc1 = DummyComp('comp1', self.asm)        
-        nested = Assembly('nested', self.asm)
-        nested_dc = DummyComp('comp1', nested)        
-        children = [DummyComp(x, self.asm) for x in ['comp2','comp3']]
+        self.asm = Assembly()
+        self.asm.add_container('comp1', DummyComp())        
+        self.asm.add_container('nested', Assembly())
+        self.asm.nested.add_container('comp1', DummyComp())
+        for name in ['comp2', 'comp3']:
+            self.asm.add_container(name, DummyComp())
         
     def test_lazy_eval(self):
-        top = Assembly('top', None)
-        top.add_child(Multiplier('comp1'))
-        top.add_child(Multiplier('comp2'))
+        top = Assembly()
+        top.add_container('comp1', Multiplier())
+        top.add_container('comp2', Multiplier())
         top.comp1.mult = 2.0
         top.comp2.mult = 4.0
         top.connect('comp1.rval_out', 'comp2.rval_in')
-        top.set('comp1.rval_in', 5.0)
+        top.comp1.rval_in = 5.0
         top.run()
         self.assertEqual(top.get('comp1.rval_out'), 10.)
         self.assertEqual(top.get('comp2.rval_in'), 10.)
@@ -119,12 +120,12 @@ class AssemblyTestCase(unittest.TestCase):
         
      
     def test_data_passing(self):
-        comp1 = self.asm.get('comp1')
-        comp2 = self.asm.get('comp2')
+        comp1 = self.asm.comp1
+        comp2 = self.asm.comp2
         self.asm.connect('comp1.rout','comp2.r')
         self.asm.connect('comp1.sout','comp2.s')
-        self.asm.set('comp1.r', 3.0)
-        self.asm.set('comp1.s', 'once upon a time')
+        self.asm.comp1.r = 3.0
+        self.asm.comp1.s = 'once upon a time'
         self.assertEqual(comp1.get('r'), 3.0)
         self.assertEqual(comp1.get('s'), 'once upon a time')
         self.assertEqual(comp1.r, 3.0)
@@ -193,7 +194,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.create_passthru('comp2.r')
         except RuntimeError, err:
-            self.assertEqual(str(err), 'top: comp2.r is already connected')
+            self.assertEqual(str(err), ': comp2.r is already connected')
         else:
             self.fail('RuntimeError expected')
         self.asm.set('comp1.s', 'some new string')
@@ -215,14 +216,14 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('top: top.comp2.rout must be an input variable',
+            self.assertEqual(': comp2.rout must be an input variable',
                              str(err))
         else:
             self.fail('exception expected')
         try:
             self.asm.connect('comp1.r','comp2.rout')
         except RuntimeError, err:
-            self.assertEqual('top: top.comp1.r must be an output variable',
+            self.assertEqual(': comp1.r must be an output variable',
                              str(err))
         else:
             self.fail('exception expected')
@@ -231,7 +232,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp1.rout','comp1.r')
         except RuntimeError, err:
-            self.assertEqual('top: Cannot connect comp1.rout to comp1.r. Both are on same component.',
+            self.assertEqual(': Cannot connect comp1.rout to comp1.r. Both are on same component.',
                              str(err))
         else:
             self.fail('exception expected')
@@ -241,7 +242,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.units','comp2.s')
         except NameError, err:
             self.assertEqual(str(err), 
-                    "top.comp1: Cannot locate trait named 'rout.units'")
+                    "comp1: Cannot locate trait named 'rout.units'")
         else:
             self.fail('NameError expected')
         
@@ -250,7 +251,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.connect('comp1.rout.value','comp2.r2')
         except NameError, err:
             self.assertEqual(str(err), 
-                    "top.comp1: Cannot locate trait named 'rout.value'")
+                    "comp1: Cannot locate trait named 'rout.value'")
         else:
             self.fail('NameError expected')
         
@@ -260,7 +261,7 @@ class AssemblyTestCase(unittest.TestCase):
         try:
             self.asm.connect('comp2.rout','comp1.r')
         except RuntimeError, err:
-            self.assertEqual("top.dataflow: circular dependency (['comp2', 'comp1']) would be created by"+
+            self.assertEqual("circular dependency (['comp2', 'comp1']) would be created by"+
                              " connecting comp2.rout to comp1.r", str(err))
         else:
             self.fail('exception expected')
@@ -287,32 +288,32 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp2.r, 9.0)
         
     def test_input_passthru_to_2_inputs(self):
-        asm = Assembly('top')
-        nest = Assembly('nested', asm)
-        Simple('comp1', nest)
-        Simple('comp2', nest)
-        nest.create_passthru('comp1.a') 
-        nest.connect('a', 'comp2.b') 
-        self.assertEqual(nest.comp1.a, 4.)
-        self.assertEqual(nest.comp2.b, 5.)
-        nest.a = 0.5
-        self.assertEqual(nest.comp1.a, 0.5)
-        self.assertEqual(nest.comp2.b, 5.)
-        self.assertEqual(nest.comp2.get_valid('b'), False)
+        asm = Assembly()
+        asm.add_container('nested', Assembly())
+        asm.nested.add_container('comp1', Simple())
+        asm.nested.add_container('comp2', Simple())
+        asm.nested.create_passthru('comp1.a') 
+        asm.nested.connect('a', 'comp2.b') 
+        self.assertEqual(asm.nested.comp1.a, 4.)
+        self.assertEqual(asm.nested.comp2.b, 5.)
+        asm.nested.a = 0.5
+        self.assertEqual(asm.nested.comp1.a, 0.5)
+        self.assertEqual(asm.nested.comp2.b, 5.)
+        self.assertEqual(asm.nested.comp2.get_valid('b'), False)
         asm.run()
-        self.assertEqual(nest.comp1.a, 0.5)
-        self.assertEqual(nest.comp2.b, 0.5)
+        self.assertEqual(asm.nested.comp1.a, 0.5)
+        self.assertEqual(asm.nested.comp2.b, 0.5)
         
     def test_connect_2_outs_to_passthru(self):
-        asm = Assembly('top')
-        nest = Assembly('nested', asm)
-        Simple('comp1', nest)
-        Simple('comp2', nest)
-        nest.create_passthru('comp1.c')
+        asm = Assembly()
+        asm.add_container('nested', Assembly())
+        asm.nested.add_container('comp1', Simple())
+        asm.nested.add_container('comp2', Simple())
+        asm.nested.create_passthru('comp1.c')
         try:
-            nest.connect('comp2.d', 'c')
+            asm.nested.connect('comp2.d', 'c')
         except RuntimeError, err:
-            self.assertEqual(str(err), 'top.nested: c is already connected')
+            self.assertEqual(str(err), 'nested: c is already connected')
         else:
             self.fail('RuntimeError expected')
         
@@ -325,13 +326,13 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.disconnect('comp2.s')
 
     def test_listcon_with_deleted_objs(self):
-        self.asm.add_child(DummyComp('comp3'))
+        self.asm.add_container('comp3', DummyComp())
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.connect('comp3.sout', 'comp2.s')
         conns = self.asm.list_connections()
         self.assertEqual(conns, [('comp1.rout', 'comp2.r'),
                                  ('comp3.sout', 'comp2.s')])
-        self.asm.remove_child('comp3')
+        self.asm.remove_container('comp3')
         conns = self.asm.list_connections()
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])
         self.asm.run()

@@ -41,8 +41,8 @@ class OptRosenSuzukiComponent(Component):
     result = Float(iostatus='out')
     
     # pylint: disable-msg=C0103
-    def __init__(self, name, parent=None, doc=None):
-        super(OptRosenSuzukiComponent, self).__init__(name, parent, doc)
+    def __init__(self, doc=None):
+        super(OptRosenSuzukiComponent, self).__init__(doc)
         self.x = numpy.array([1., 1., 1., 1.], dtype=float)
         self.result = 0.
         
@@ -61,9 +61,9 @@ class CONMINdriverTestCase(unittest.TestCase):
     """test CONMIN optimizer component"""
 
     def setUp(self):
-        self.top = Assembly('top', None)
-        self.top.add_child(OptRosenSuzukiComponent('comp', self.top))
-        self.top.add_child(CONMINdriver('driver', self.top))
+        self.top = Assembly()
+        self.top.add_container('comp', OptRosenSuzukiComponent())
+        self.top.add_container('driver', CONMINdriver())
         self.top.driver.iprint = 0
         self.top.driver.maxiters = 30
         
@@ -101,7 +101,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.top.driver.objective = 'comp.missing'
         except TraitError, err:
             self.assertEqual(str(err), 
-                "top.driver: invalid value 'comp.missing' for input ref variable 'objective': top.comp: cannot get valid flag of 'missing' because it's not an io trait.")
+                "driver: invalid value 'comp.missing' for input ref variable 'objective': comp: cannot get valid flag of 'missing' because it's not an io trait.")
         else:
             self.fail('TraitError expected')
 
@@ -112,7 +112,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.top.run()
         except RuntimeError, err:
             self.assertEqual(str(err), 
-                "top.driver: no design variables specified")
+                "driver: no design variables specified")
         else:
             self.fail('RuntimeError expected')
     
@@ -148,7 +148,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.top.driver.design_vars = ['comp_bogus.x[0]', 'comp.x[1]']
         except TraitError, err:
             self.assertEqual(str(err), 
-                "top.driver: invalid value 'comp_bogus.x[0]' for input ref variable 'design_vars[0]': 'Assembly' object has no attribute 'comp_bogus'")
+                "driver: invalid value 'comp_bogus.x[0]' for input ref variable 'design_vars[0]': 'Assembly' object has no attribute 'comp_bogus'")
         else:
             self.fail('TraitError expected')
     
@@ -157,7 +157,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.top.driver.constraints = ['bogus.flimflam']
         except TraitError, err:
             self.assertEqual(str(err), 
-                "top.driver: invalid value 'bogus.flimflam' for input ref variable 'constraints[0]': 'Assembly' object has no attribute 'bogus'")
+                "driver: invalid value 'bogus.flimflam' for input ref variable 'constraints[0]': 'Assembly' object has no attribute 'bogus'")
         else:
             self.fail('TraitError expected')
             
@@ -169,7 +169,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.top.run()
         except ValueError, err:
             self.assertEqual(str(err),
-                             "top.driver: size of new lower bound array"+
+                             "driver: size of new lower bound array"+
                              " (4) does not match number of design vars (2)")
         else:
             self.fail('ValueError expected')
@@ -182,7 +182,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.top.run()
         except ValueError, err:
             self.assertEqual(str(err),
-                             "top.driver: size of new upper bound array"+
+                             "driver: size of new upper bound array"+
                              " (1) does not match number of design vars (2)")
         else:
             self.fail('ValueError expected')

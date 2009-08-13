@@ -19,8 +19,8 @@ class ImportFactory(Factory):
         super(ImportFactory, self).__init__()
         self._ctors = {}
 
-    def create(self, typ, name='', version=None, server=None, 
-               res_desc=None):
+    def create(self, typ, version=None, server=None, 
+               res_desc=None, **ctor_args):
         """Tries to import the given named module and return a factory 
         function from it. The factory function or constructor must have the same
         name as the module. The module must be importable in the current Python
@@ -47,5 +47,4 @@ class ImportFactory(Factory):
                 logger.debug(str(err))
                 return None
         
-        return self._ctors[typ](name)
-    
+        return self._ctors[typ](**ctor_args)

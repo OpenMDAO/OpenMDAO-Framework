@@ -160,8 +160,8 @@ class CONMINdriver(Driver):
     iprint = Int(0)
     maxiters = Int(40)
         
-    def __init__(self, name, parent=None, doc=None):
-        super(CONMINdriver, self).__init__(name, parent, doc)
+    def __init__(self, doc=None):
+        super(CONMINdriver, self).__init__( doc)
         
         # Save data from common blocks into our CONMINdriver object
         self.cnmn1 = _cnmn1()

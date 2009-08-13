@@ -26,8 +26,8 @@ class Source(Component):
     text_file = FileTrait(iostatus='out')
     binary_file = FileTrait(iostatus='out', binary=True)
         
-    def __init__(self, name='Source', *args, **kwargs):
-        super(Source, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Source, self).__init__(*args, **kwargs)
         self.text_file.filename = 'source.txt'
         self.binary_file.filename = 'source.bin'
 
@@ -51,8 +51,8 @@ class Sink(Component):
     text_file = FileTrait(iostatus='in')
     binary_file = FileTrait(iostatus='in')
         
-    def __init__(self, name='Sink', *args, **kwargs):
-        super(Sink, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Sink, self).__init__(*args, **kwargs)
         self.text_file.filename = 'sink.txt'
         self.binary_file.filename = 'sink.bin'
 
@@ -70,11 +70,12 @@ class Sink(Component):
 class MyModel(Assembly):
     """ Transfer files from producer to consumer. """
 
-    def __init__(self, name='FileVar_TestModel', *args, **kwargs):
-        super(MyModel, self).__init__(name, *args, **kwargs)
+    #name='FileVar_TestModel', 
+    def __init__(self, *args, **kwargs):
+        super(MyModel, self).__init__(*args, **kwargs)
 
-        Source(parent=self, directory='Source')
-        Sink(parent=self, directory='Sink')
+        self.add_container('Source', Source(directory='Source'))
+        self.add_container('Sink', Sink(directory='Sink'))
 
         self.connect('Source.text_file', 'Sink.text_file')
         self.connect('Source.binary_file', 'Sink.binary_file')
@@ -93,8 +94,14 @@ class FileTestCase(unittest.TestCase):
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
-        shutil.rmtree('Source')
-        shutil.rmtree('Sink')
+        try:
+            shutil.rmtree('Source')
+        except OSError:
+            pass
+        try:
+            shutil.rmtree('Sink')
+        except OSError:
+            pass
         self.model = None
 
     def test_connectivity(self):
@@ -135,9 +142,10 @@ class FileTestCase(unittest.TestCase):
         logging.debug('test_bad_directory')
 
         try:
-            Source(directory='/illegal')
+            src = Source(directory='/illegal')
+            src.hierarchy_defined()
         except ValueError, exc:
-            msg = "Source: Illegal execution directory '/illegal'," \
+            msg = ": Illegal execution directory '/illegal'," \
                   " not a decendant of"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
@@ -150,9 +158,10 @@ class FileTestCase(unittest.TestCase):
         os.chmod(directory, 0)
         exe_dir = os.path.join(directory, 'xyzzy')
         try:
-            Source(directory=exe_dir)
+            src = Source(directory=exe_dir)
+            src.hierarchy_defined()
         except OSError, exc:
-            msg = "Source: Can't create execution directory"
+            msg = ": Can't create execution directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected OSError')
@@ -167,10 +176,11 @@ class FileTestCase(unittest.TestCase):
         out.close()
         try:
             self.source = Source(directory=directory)
+            self.source.hierarchy_defined()
         except ValueError, exc:
             path = os.path.join(os.getcwd(), directory)
             self.assertEqual(str(exc),
-                "Source: Execution directory path '%s' is not a directory."
+                ": Execution directory path '%s' is not a directory."
                 % path)
         else:
             self.fail('Expected ValueError')
@@ -185,21 +195,23 @@ class FileTestCase(unittest.TestCase):
         try:
             self.model.run()
         except ValueError, exc:
-            msg = "FileVar_TestModel.Source: Illegal directory '/illegal'," \
+            msg = "Source: Illegal execution directory '/illegal'," \
                   " not a decendant of"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
 
-        self.model.Source.directory = 'no-such-dir'
-        try:
-            self.model.run()
-        except RuntimeError, exc:
-            msg = "FileVar_TestModel.Source: Could not move to execution" \
-                  " directory"
-            self.assertEqual(str(exc)[:len(msg)], msg)
-        else:
-            self.fail('Expected RuntimeError')
+        ## this test no longer fails because no-such-dir gets
+        ## created on-the-fly
+        #self.model.Source.directory = 'no-such-dir'
+        #try:
+            #self.model.run()
+        #except RuntimeError, exc:
+            #msg = "Source: Could not move to execution" \
+                  #" directory"
+            #self.assertEqual(str(exc)[:len(msg)], msg)
+        #else:
+            #self.fail('Expected RuntimeError')
 
 
 if __name__ == '__main__':

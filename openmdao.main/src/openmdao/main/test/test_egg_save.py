@@ -43,14 +43,13 @@ class Source(Assembly):
     text_data = Str(iostatus='in')
     text_file = FileTrait(iostatus='out')
 
-    def __init__(self, name='Source', *args, **kwargs):
-        super(Source, self).__init__(name, *args, **kwargs)
-        self.directory = self.get_directory()  # Force absolute.
+    def __init__(self, *args, **kwargs):
+        super(Source, self).__init__(*args, **kwargs)
 
         global SOURCE_INIT
         SOURCE_INIT = True
 
-        Subcontainer('sub', parent=self)
+        self.add_container('sub', Subcontainer())
         self.create_passthru('sub.binary_file')
 
         # Some custom objects that must be restored.
@@ -58,6 +57,14 @@ class Source(Assembly):
         
         self.text_file.filename = 'source.txt'
 
+
+        # External file that doesn't exist at time of save.
+        self.external_files.append({'path':'does-not-exist'})
+
+    def hierarchy_defined(self):
+        super(Source, self).hierarchy_defined()
+        
+        self.directory = self.get_abs_directory()  # Force absolute.
         # Absolute external file that exists at time of save.
         path = os.path.join(self.directory, EXTERNAL_FILES[0])
         out = open(path, 'w')
@@ -76,7 +83,7 @@ class Source(Assembly):
         self.external_files.append({'path':path})
 
         # Relative external file that exists at time of save.
-        self.push_dir(self.get_directory())
+        self.push_dir(self.get_abs_directory())
         path = EXTERNAL_FILES[2]
         out = open(path, 'w')
         out.write('Hello world!\n')
@@ -85,7 +92,7 @@ class Source(Assembly):
         self.external_files.append({'path':path})
 
         # Relative external file that exists at time of save, in separate tree.
-        self.push_dir(self.get_directory())
+        self.push_dir(self.get_abs_directory())
         path = EXTERNAL_FILES[3]
         leaf = os.path.dirname(path)
         if not os.path.exists(leaf):
@@ -95,10 +102,7 @@ class Source(Assembly):
         out.close()
         self.pop_dir()
         self.external_files.append({'path':path})
-
-        # External file that doesn't exist at time of save.
-        self.external_files.append({'path':'does-not-exist'})
-
+    
     def execute(self):
         """ Write test data to files. """
         if self.write_files:
@@ -122,8 +126,8 @@ class Subcontainer(Container):
     binary_data = Array('d', value=[], iostatus='in')
     binary_file = FileTrait(iostatus='out', binary=True)
         
-    def __init__(self, name='Subcontainer', parent=None):
-        super(Subcontainer, self).__init__(name, parent)
+    def __init__(self):
+        super(Subcontainer, self).__init__()
         self.binary_file.filename = os.path.join('..', 'sub', 'source.bin')
 
 
@@ -146,27 +150,31 @@ class Sink(Component):
 
     executions = Int(0, iostatus='in', desc='Count of Oddball instance_method() calls.')
     
-    def __init__(self, name='Sink', *args, **kwargs):
-        super(Sink, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Sink, self).__init__(*args, **kwargs)
 
         global SINK_INIT
         SINK_INIT = True
         
-        self.text_file.filename = os.path.join(self.get_directory(), 'sink.txt')
+        # Relative FileTrait that exists at time of save.
+        self.add_trait('binary_file', FileTrait(iostatus='in'))
+        
+
+    def hierarchy_defined(self):
+        self.text_file.filename = os.path.join(self.get_abs_directory(), 'sink.txt')
 
         out = open(self.text_file.filename, 'w')
         out.write('Absolute FileTrait that exists at time of save.\n')
         out.close()
 
-        # Relative FileTrait that exists at time of save.
-        self.add_trait('binary_file', FileTrait(iostatus='in'))
         self.binary_file.filename = 'sink.bin'
-        self.push_dir(self.get_directory())
+        self.push_dir(self.get_abs_directory())
         out = open(self.binary_file.filename, 'w')
         out.write('Relative FileTrait that exists at time of save.\n')
         out.close()
         self.pop_dir()
-
+        
+        
     def execute(self):
         """ Read test data from files. """
         inp = open(self.text_file.filename, 'r')
@@ -190,10 +198,10 @@ class Oddball(Assembly):
     #                         required=False)
     executions = Int(0, iostatus='out', desc='Counts instance_method() calls.')
 
-    def __init__(self, name='Oddball', *args, **kwargs):
-        super(Oddball, self).__init__(name, *args, **kwargs)
-        OddballComponent('oddcomp', parent=self)
-        OddballContainer('oddcont', parent=self)
+    def __init__(self, *args, **kwargs):
+        super(Oddball, self).__init__(*args, **kwargs)
+        self.add_container('oddcomp', OddballComponent())
+        self.add_container('oddcont', OddballContainer())
         self.thing_to_call = self.instance_method
         self.function_socket = os.getpid
         self.method_socket = self.instance_method
@@ -230,8 +238,8 @@ class Oddball(Assembly):
 class OddballComponent(Component):
     """ Just a subcomponent for Oddball to test nested entry points. """
 
-    def __init__(self, name='OddballComponent', parent=None):
-        super(OddballComponent, self).__init__(name, parent)
+    def __init__(self):
+        super(OddballComponent, self).__init__()
         # Some custom objects that must be restored.
         self.obj_list = [DataObj(i) for i in range(3)]
 
@@ -239,8 +247,8 @@ class OddballComponent(Component):
 class OddballContainer(Container):
     """ Just a subcontainer for Oddball to test nested entry points. """
 
-    def __init__(self, name='OddballContainer', parent=None):
-        super(OddballContainer, self).__init__(name, parent)
+    def __init__(self):
+        super(OddballContainer, self).__init__()
         # Some custom objects that must be restored.
         self.obj_list = [DataObj(i) for i in range(3)]
 
@@ -253,12 +261,12 @@ def main_function():
 class Model(Assembly):
     """ Transfer files from producer to consumer. """
 
-    def __init__(self, name='Egg_TestModel', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Model, self).__init__(*args, **kwargs)
 
-        Source(parent=self, directory='Source')
-        Oddball(parent=self, directory='Oddball')
-        Sink(parent=self, directory='Sink')
+        self.add_container('Source', Source(directory='Source'))
+        self.add_container('Oddball', Oddball(directory='Oddball'))
+        self.add_container('Sink', Sink(directory='Sink'))
 
         self.connect('Source.text_file', 'Sink.text_file')
         self.connect('Source.binary_file', 'Sink.binary_file')
@@ -274,7 +282,10 @@ class EggTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
+        self.top = Assembly()
+        self.top.is_top = True
         self.model = Model(directory='Egg')
+        self.top.add_container('Egg_TestModel', self.model)
         self.child_objs = [self.model.Source, self.model.Sink,
                            self.model.Oddball, self.model.Oddball.oddcomp,
                            self.model.Oddball.oddcont]
@@ -303,8 +314,9 @@ class EggTestCase(unittest.TestCase):
             self.model.Sink.binary_file.binary, True)
 
         for path in EXTERNAL_FILES:
-            path = os.path.join(self.model.Source.get_directory(), path)
-            self.assertEqual(os.path.exists(path), True)
+            path = os.path.join(self.model.Source.get_abs_directory(), path)
+            if not os.path.exists(path):
+                self.fail("pre-save path '%s' does not exist" % path)
 
         for i in range(3):
             self.assertEqual(self.model.Source.obj_list[i].data, i)
@@ -355,8 +367,9 @@ class EggTestCase(unittest.TestCase):
                 self.model.Sink.binary_file.binary, True)
 
             for path in EXTERNAL_FILES:
-                path = os.path.join(self.model.Source.get_directory(), path)
-                self.assertEqual(os.path.exists(path), True)
+                path = os.path.join(self.model.Source.get_abs_directory(), path)
+                if not os.path.exists(path):
+                    self.fail("after loading, path '%s' does not exist" % path)
 
             for i in range(3):
                 self.assertEqual(self.model.Source.obj_list[i].data, i)
@@ -541,11 +554,12 @@ class EggTestCase(unittest.TestCase):
         finally:
             if remove_buildout:
                 os.remove('buildout.cfg')
+                
     def test_save_bad_child(self):
         logging.debug('')
         logging.debug('test_save_bad_child')
 
-        orphan = Component('orphan')
+        orphan = Component()
         try:
             self.model.save_to_egg(py_dir=PY_DIR, child_objs=[orphan])
         except RuntimeError, exc:
@@ -553,11 +567,11 @@ class EggTestCase(unittest.TestCase):
         else:
             self.fail('Expected RuntimeError')
 
-        badboy = Component('badboy', orphan)
+        badboy = orphan.add_container('badboy', Component())
         try:
             self.model.save_to_egg(py_dir=PY_DIR, child_objs=[badboy])
         except RuntimeError, exc:
-            msg = 'Egg_TestModel: orphan.badboy is not a child of' \
+            msg = 'Egg_TestModel: badboy is not a child of' \
                   ' Egg_TestModel.'
             self.assertEqual(str(exc), msg)
         else:
@@ -726,21 +740,24 @@ sys.exit(
         try:
             # Create load-n-run script.
             out = open('load-n-run.py', 'w')
+            if os.environ.get('OPENMDAO_CAPTURE_EXTERN'):
+                console_str = """
+import openmdao.main.log
+openmdao.main.log.enable_console()
+"""
+            else:
+                console_str = ''
             out.write("""\
 import sys
 sys.path.append('%(egg)s')
 from openmdao.main.api import Component
-import openmdao.main.log
-openmdao.main.log.enable_console()
-try:
-    comp = Component.load_from_eggpkg('%(package)s', '%(entry)s')
-    comp.run()
-except Exception, err:
-    openmdao.main.log.logger.exception(str(err))
-    raise
+%(console_str)s
+comp = Component.load_from_eggpkg('%(package)s', '%(entry)s')
+comp.run()
     
 """ % {'egg':os.path.join(install_dir, self.egg_name),
-       'package':package_name, 'entry':entry_name})
+       'package':package_name, 'entry':entry_name,
+       'console_str': console_str})
             out.close()
 
             # Load & run in subprocess.
@@ -803,7 +820,7 @@ except Exception, err:
             self.create_and_check_model(factory, 'test_model_2', file_data)
 
             # Create a component.
-            comp = factory.create('Egg_TestModel.Oddball', 'test_comp')
+            comp = factory.create('Egg_TestModel.Oddball', name='test_comp')
             if comp is None:
                 self.fail('Create of test_comp failed.')
             self.assertEqual(comp.get_pathname(), 'test_comp')
@@ -811,19 +828,19 @@ except Exception, err:
             comp.run()
             self.assertEqual(comp.executions, 2)
             # Create a (sub)component.
-            sub = factory.create('Egg_TestModel.Oddball.oddcomp', 'test_sub')
+            sub = factory.create('Egg_TestModel.Oddball.oddcomp', name='test_sub')
             if sub is None:
                 self.fail('Create of test_sub failed.')
             self.assertEqual(sub.get_pathname(), 'test_sub')
 
             # Create a (sub)container.
-            sub = factory.create('Egg_TestModel.Oddball.oddcont', 'test_sub')
+            sub = factory.create('Egg_TestModel.Oddball.oddcont', name='test_sub')
             if sub is None:
                 self.fail('Create of test_sub failed.')
             self.assertEqual(sub.get_pathname(), 'test_sub')
 
             # Try a non-existent entry point.
-            obj = factory.create('no-such-entry', 'xyzzy')
+            obj = factory.create('no-such-entry', name='xyzzy')
             self.assertEqual(obj, None)
 
         finally:
@@ -832,10 +849,12 @@ except Exception, err:
 
     def create_and_check_model(self, factory, name, file_data):
         """ Create a complete model instance and check it's operation. """
-        model = factory.create('Egg_TestModel', name)
+        model = factory.create('Egg_TestModel', name=name)
+        #model.is_top = True
+        logging.debug('model.directory = %s' % model.directory)
         if model is None:
             self.fail("Create of '%s' failed." % name)
-        self.assertEqual(model.directory, os.path.join(os.getcwd(), name))
+        self.assertEqual(model.get_abs_directory(), os.path.join(os.getcwd(), name))
         self.assertEqual(model.Oddball.get_pathname(), name+'.Oddball')
 
         # Verify initial state.
@@ -846,10 +865,11 @@ except Exception, err:
         self.assertNotEqual(model.Sink.binary_file.binary, True)
 
         orig_dir = os.getcwd()
-        os.chdir(model.Source.get_directory())
+        os.chdir(model.Source.get_abs_directory())
         try:
             for path in EXTERNAL_FILES:
-                self.assertEqual(os.path.exists(path), True)
+                if not os.path.exists(path):
+                    self.fail("path '%s' does not exist" % path)
 
             inp = open(EXTERNAL_FILES[2])
             data = inp.read()

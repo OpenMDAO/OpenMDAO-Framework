@@ -43,6 +43,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_load')
 
         externp = ExternalCode()
+        externp.name = 'ExternalCode'
         externp.timeout = 5
         externp.command = 'python sleep.py 1'
 
@@ -60,7 +61,7 @@ class TestCase(unittest.TestCase):
         try:
             externp.run()
         except RunInterrupted, exc:
-            self.assertEqual(str(exc), 'ExternalCode: Timed out')
+            self.assertEqual(str(exc), ': Timed out')
             self.assertEqual(externp.timed_out, True)
         else:
             self.fail('Expected RunInterrupted')
@@ -76,7 +77,7 @@ class TestCase(unittest.TestCase):
         try:
             externp.run()
         except RuntimeError, exc:
-            msg = 'ExternalCode: return_code = 127'
+            msg = ': return_code = 127'
             self.assertEqual(str(exc).startswith(msg), True)
             self.assertEqual(externp.return_code, 127)
             self.assertEqual(os.path.exists(externp.stdout), True)
@@ -96,7 +97,7 @@ class TestCase(unittest.TestCase):
         try:
             externp.run()
         except ValueError, exc:
-            self.assertEqual(str(exc), 'ExternalCode: Null command line')
+            self.assertEqual(str(exc), ': Null command line')
         else:
             self.fail('Expected ValueError')
         finally:

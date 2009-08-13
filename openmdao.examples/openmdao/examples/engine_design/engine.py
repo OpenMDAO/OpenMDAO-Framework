@@ -46,7 +46,7 @@ class Engine(Component):
     engine_weight = UnitsFloat(0.0, iostatus='out', units='kg', 
                                desc='Engine weight estimation')
         
-    #def __init__(self, name, parent=None, desc=None, directory=''):
+    #def __init__(self, desc=None, directory=''):
         #""" Creates a new Engine object
 
             ## Design parameters
@@ -87,7 +87,7 @@ class Engine(Component):
             #engine_weight              # Engine weight estimation (kg)
             #"""
 
-        #super(Engine, self).__init__(name, parent, desc, directory)        
+        #super(Engine, self).__init__(desc, directory)        
 
 
 

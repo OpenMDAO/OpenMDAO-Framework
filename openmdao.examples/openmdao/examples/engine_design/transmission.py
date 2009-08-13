@@ -35,7 +35,7 @@ class Transmission(Component):
     torque_ratio = Float(0., iostatus='out',
                          desc='Ratio of output torque to engine torque')        
 
-    #def __init__(self, name, parent=None, doc=None, directory=''):
+    #def __init__(self, doc=None, directory=''):
         #""" Creates a new Transmission object
         
             ## Design parameters
@@ -57,7 +57,7 @@ class Transmission(Component):
             #RPM                 # RPM of the engine
             #"""
         
-        #super(Transmission, self).__init__(name, parent, doc, directory)        
+        #super(Transmission, self).__init__(doc, directory)        
         
         
     def execute(self):

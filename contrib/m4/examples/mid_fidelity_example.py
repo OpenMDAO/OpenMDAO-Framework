@@ -18,8 +18,9 @@ from m4.dummy_components import Model_A2d, Model_B2d
 class MyModel(Assembly):
     """ Simple M4 variable fidelity example.  """
 
-    def __init__(self, name='M4_VarFi', *args, **kwargs):
-        super(MyModel, self).__init__(name, *args, **kwargs)
+    #name='M4_VarFi', 
+    def __init__(self, *args, **kwargs):
+        super(MyModel, self).__init__(*args, **kwargs)
 
         # Specify DOE.
         doe = DOE(parent=self)
@@ -69,8 +70,9 @@ class VarFi(MidFidelity):
     z2 = Float(0., iostatus='out',
                desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
         
-    def __init__(self, name='VarFi', *args, **kwargs):
-        super(VarFi, self).__init__(name, *args, **kwargs)
+    #name='VarFi', 
+    def __init__(self, *args, **kwargs):
+        super(VarFi, self).__init__(*args, **kwargs)
 
         # Inputs.
         self.rs_type = 'rbf'
@@ -92,5 +94,7 @@ class VarFi(MidFidelity):
 
 if __name__ == '__main__':
 #    MyModel().run()
-    MyModel().check_save_load()  # Note: requires correct pythonV.R
+    mm = MyModel()
+    mm.name = 'top'
+    mm.check_save_load()  # Note: requires correct pythonV.R
 

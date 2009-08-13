@@ -126,9 +126,8 @@ class NPSSTestCase(unittest.TestCase):
                 self.npss = NPSScomponent.load_from_eggfile(egg_path,
                                                             install=False)
             except RuntimeError, exc:
-                self.assertEqual(str(exc).startswith(
-                    "NPSS: Reload caught exception: Model file 'xyzzy.mdl' not found while reloading in"),
-                    True)
+                msg = ": Reload caught exception: Model file 'xyzzy.mdl' not found while reloading in"
+                self.assertEqual(str(exc)[:len(msg)], msg)
             else:
                 self.fail('Expected RuntimeError')
         finally:
@@ -143,7 +142,7 @@ class NPSSTestCase(unittest.TestCase):
             self.npss.save_to_egg(dst_dir='/no-permission')
         except IOError, exc:
             self.assertEqual(str(exc),
-                "NPSS: Can't save to '/no-permission', no write permission")
+                ": Can't save to '/no-permission', no write permission")
         else:
             self.fail('Expected IOError')
 
@@ -156,7 +155,7 @@ class NPSSTestCase(unittest.TestCase):
             self.egg_name = self.npss.save_to_egg(format=SAVE_LIBYAML)
         except Exception, exc:
             self.assertEqual(str(exc),
-                "NPSS: Can't save to 'NPSS/NPSS.yaml': data type not understood")
+                ": Can't save to 'passthrough1/passthrough1.yaml': data type not understood")
         else:
             self.fail('Expected TypeError')
         finally:

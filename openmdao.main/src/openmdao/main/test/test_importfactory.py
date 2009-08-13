@@ -1,40 +1,40 @@
 
+import unittest
+
 # pylint: disable-msg=C0111
 
 from openmdao.main.api import ImportFactory
 
-def test_import():
-    ifactory = ImportFactory()
-    mycomp = ifactory.create('openmdao.main.component.Component')
-    assert mycomp.__class__.__name__ == 'Component'
-
-def test_bad_import():
-    ifactory = ImportFactory()
-    obj = ifactory.create('boguscompname')
-    assert obj is None
-
-def test_version_import():
-    ifactory = ImportFactory()
-    obj = ifactory.create('openmdao.main.component.Component', version='1.2')
-    assert obj is None
-
-def test_server_import():
-    ifactory = ImportFactory()
-    obj = ifactory.create('openmdao.main.component.Component', 
-                          server='open_mdao_srv')
-    assert obj is None
-
-def test_res_desc_import():
-    ifactory = ImportFactory()
-    obj = ifactory.create('openmdao.main.component.Component', 
-                          res_desc={'my_attribute':4})
-    assert obj is None
-
-
-if __name__ == '__main__':
-    test_import()
-    test_bad_import()
-    test_version_import()
-    test_server_import()
-    test_res_desc_import()
+class ImportFactoryTestCase(unittest.TestCase):
     
+    def test_import(self):
+        ifactory = ImportFactory()
+        mycomp = ifactory.create('openmdao.main.component.Component')
+        self.assertEqual(mycomp.__class__.__name__ , 'Component')
+    
+    def test_bad_import(self):
+        ifactory = ImportFactory()
+        obj = ifactory.create('boguscompname')
+        self.assertEqual(obj, None)
+    
+    def test_version_import(self):
+        ifactory = ImportFactory()
+        obj = ifactory.create('openmdao.main.component.Component', version='1.2')
+        self.assertEqual(obj, None)
+    
+    def test_server_import(self):
+        ifactory = ImportFactory()
+        obj = ifactory.create('openmdao.main.component.Component', 
+                              server='open_mdao_srv')
+        self.assertEqual(obj, None)
+    
+    def test_res_desc_import(self):
+        ifactory = ImportFactory()
+        obj = ifactory.create('openmdao.main.component.Component', 
+                              res_desc={'my_attribute':4})
+        self.assertEqual(obj, None)
+
+
+if __name__ == "__main__":
+    unittest.main()
+

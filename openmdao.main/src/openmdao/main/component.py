@@ -58,7 +58,20 @@ class SimulationRoot (object):
         if SimulationRoot.__root is None:
             SimulationRoot.__root = os.getcwd()
         return path.startswith(SimulationRoot.__root)
-
+    
+    @staticmethod
+    def relto_root (path):
+        """Return a path that is relative to SimulationRoot. Raises
+        a RuntimeError if path is not contained within SimulationRoot.
+        """
+        if not SimulationRoot.legal_path(path):
+            raise RuntimeError("'%s' cannot be expressed relative to SimulationRoot (%s)"%
+                               (path, SimulationRoot.get_root()))
+        rootpath = SimulationRoot.get_root()
+        if rootpath == path:
+            return ''
+        else:
+            return path[len(rootpath)+1:]
 
 class Component (Container):
     """This is the base class for all objects containing Traits that are 
@@ -71,72 +84,68 @@ class Component (Container):
       a glob-style pattern.
     """
 
-    directory = Str('',desc='If non-blank, the directory to execute in.', iostatus='in')
+    directory = Str('',desc='If non-blank, the directory to execute in.', 
+                    iostatus='in')
     state = Python
     external_files = Python
         
-    def __init__(self, name=None, parent=None, doc=None, directory='',
-                 add_to_parent=True):
-        super(Component, self).__init__(name, parent, doc, add_to_parent)
+    def __init__(self, doc=None, directory=''):
+        super(Component, self).__init__(doc)
         
         self.state = STATE_IDLE
         self._stop = False
-        self._need_check_config = True
-        self._execute_needed = True
-        self.directory = directory
+        self._call_check_config = True
+        self._call_execute = True
+        if directory:
+            self.directory = directory
         
         self._dir_stack = []
         
         # List of meta-data dictionaries.
         self.external_files = []
-
-
-# pylint: disable-msg=E1101
-        dirpath = self.get_directory()
-        if dirpath:
-            if not SimulationRoot.legal_path(dirpath):
-                self.raise_exception(
-                    "Illegal execution directory '%s', not a decendant of '%s'."
-                    % (dirpath, SimulationRoot.get_root()),
-                    ValueError)
-            if not os.path.exists(dirpath):
-                try:
-                    os.makedirs(dirpath)
-                except OSError, exc:
-                    self.raise_exception(
-                        "Can't create execution directory '%s': %s"
-                        % (dirpath, exc.strerror), OSError)
-            else:
-                if not os.path.isdir(dirpath):
-                    self.raise_exception(
-                        "Execution directory path '%s' is not a directory."
-                        % dirpath, ValueError)
-# pylint: enable-msg=E1101
-
+        
     def check_config (self):
-        """Verify that the configuration of this component is correct. This function is
-        called once prior to the first execution of this component, and may be called
-        explicitly at other times if desired.
+        """Verify that this component is fully configured to execute.
+        This function is called once prior to the first execution of this
+        component, and may be called explicitly at other times if desired. 
+        Classes that override this function must still call the base class
+        version.
         """
-        pass         
+        self._call_check_config = False
     
+    def hierarchy_defined(self):
+        """Called after the hierarchy containing this Container has been
+        defined back to the root. This does not guarantee that all sibling
+        Containers have been defined. It also does not guarantee that this
+        component is fully configured to execute. Classes that override this
+        function must still call the base class version.
+        """
+        super(Component, self).hierarchy_defined()
+        dirpath = self.get_abs_directory()
+        if dirpath:
+            dirpath = self.check_path(dirpath, create=True)
+        
     def _pre_execute (self):
         """Make preparations for execution. Overrides of this function must
         call this version.
         """
-        if self._need_check_config:
+        if self._call_hierarchy_defined:
+            self.hierarchy_defined()
+            
+        if self._call_check_config:
             self.check_config()
-            self._need_check_config = False
         
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.
-            self._execute_needed = True
+            self._call_execute = True
         else:
             invalid_ins = self.list_inputs(valid=False)
             if len(invalid_ins) > 0:
                 #self.debug('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
-                self._execute_needed |= self.parent.update_inputs(self.name,
-                                    ['.'.join([self.name, n]) for n in invalid_ins])
+                self._call_execute = True
+                name = self.name
+                self.parent.update_inputs(name,
+                                    ['.'.join([name, n]) for n in invalid_ins])
     
                             
     def execute (self):
@@ -154,14 +163,14 @@ class Component (Container):
             self.set_valid(name, True)
         for name in self.list_outputs():
             self.set_valid(name, True)
-        self._execute_needed = False
+        self._call_execute = False
         
     def run (self, force=False):
         """Run this object. This should include fetching input variables,
         executing, and updating output variables. Do not override this function.
         """
         if self.directory:
-            directory = self.get_directory()
+            directory = self.get_abs_directory()
             try:
                 self.push_dir(directory)
             except OSError, exc:
@@ -173,7 +182,7 @@ class Component (Container):
         self._stop = False
         try:
             self._pre_execute()
-            if self._execute_needed or force:
+            if self._call_execute or force:
                 #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
                 self.execute()
                 self._post_execute()
@@ -181,16 +190,76 @@ class Component (Container):
             self.state = STATE_IDLE
             if self.directory:
                 self.pop_dir()
+ 
+    def add_container(self, name, obj):
+        """Override of base class version to force call to check_config after
+        any child containers are added.
+        Returns the added Container object.
+        """
+        self._call_check_config = True # force config check prior to next execution
+        return super(Component, self).add_container(name, obj)
+        
+    def remove_container(self, name):
+        """Override of base class version to force call to check_config after
+        any child containers are removed.
+        """
+        self._call_check_config = True # force config check prior to next execution
+        super(Component, self).remove_container(name)
 
-    def get_directory (self):
+    def add_trait(self, name, *trait):
+        """Overrides base definition of add_trait in order to
+        force call to check_config prior to execution when new traits are
+        added.
+        """
+        self._call_check_config = True # force config check prior to next execution
+        super(Component, self).add_trait(name, *trait)
+        
+    def remove_trait(self, name):
+        """Overrides base definition of add_trait in order to
+        force call to check_config prior to execution when a trait is
+        removed.
+        """
+        self._call_check_config = True # force config check prior to next execution
+        super(Component, self).remove_trait(name)    
+
+    def check_path(self, path, create=True):
+        """Verify that the given path is a directory and is located
+        within the allowed area (somewhere within the simulation root path).
+        If create is True, create the path if it doesn't already exist.
+        """
+# pylint: disable-msg=E1101
+        if not SimulationRoot.legal_path(path):
+            self.raise_exception(
+                "Illegal execution directory '%s', not a decendant of '%s'."
+                % (path, SimulationRoot.get_root()),
+                ValueError)
+        if not os.path.exists(path):
+            try:
+                os.makedirs(path)
+            except OSError, exc:
+                self.raise_exception(
+                    "Can't create execution directory '%s': %s"
+                    % (path, exc.strerror), OSError)
+        else:
+            if not os.path.isdir(path):
+                self.raise_exception(
+                    "Execution directory path '%s' is not a directory."
+                    % path, ValueError)
+# pylint: enable-msg=E1101
+        return path
+    
+    def get_abs_directory (self):
         """Return absolute path of execution directory."""
         path = self.directory
         if not os.path.isabs(path):
             if self.parent is not None and isinstance(self.parent, Component):
-                parent_dir = self.parent.get_directory()
+                parent_dir = self.parent.get_abs_directory()
             else:
                 parent_dir = SimulationRoot.get_root()
             path = os.path.join(parent_dir, path)
+            
+        path = self.check_path(path, create=False)
+                    
         return path
 
     def push_dir (self, directory):
@@ -199,7 +268,7 @@ class Component (Container):
             directory = '.'
         cwd = os.getcwd()
         if not os.path.isabs(directory):
-            directory = os.path.join(self.get_directory(), directory)
+            directory = os.path.join(self.get_abs_directory(), directory)
         if not SimulationRoot.legal_path(directory):
             self.raise_exception(
                 "Illegal directory '%s', not a decendant of '%s'." % \
@@ -251,7 +320,7 @@ class Component (Container):
         Returns the egg's filename.
         """
         if src_dir is None:
-            src_dir = self.get_directory()
+            src_dir = self.get_abs_directory()
         if src_dir.endswith(os.sep):
             src_dir = src_dir[:-1]
         if src_files is None:
@@ -271,16 +340,18 @@ class Component (Container):
                            key=lambda comp: comp.get_pathname()):
 
             # Process execution directory.
-            comp_dir = comp.get_directory()
+            comp_dir = comp.get_abs_directory()
             if force_relative:
                 if comp_dir.startswith(src_dir):
                     if comp_dir == src_dir and comp.directory:
                         fixup_dirs.append((comp, comp.directory))
                         comp.directory = ''
                     elif os.path.isabs(comp.directory):
-                        parent_dir = comp.parent.get_directory()
+                        parent_dir = comp.parent.get_abs_directory()
                         fixup_dirs.append((comp, comp.directory))
                         comp.directory = self._relpath(comp_dir, parent_dir)
+                    logging.debug("%s.directory reset to '%s'" % 
+                                  (comp.name,comp.directory))
                 else:
                     self.raise_exception(
                         "Can't save, %s directory '%s' doesn't start with '%s'."
@@ -461,10 +532,19 @@ class Component (Container):
                 print '    python:', python
                 unpacker = 'unpack.py'
                 out = open(unpacker, 'w')
+                if os.environ.get('OPENMDAO_CAPTURE_EXTERN'):
+                    console_str = """
+import openmdao.main.log
+openmdao.main.log.enable_console()
+"""
+                else:
+                    console_str = ''
+
                 out.write("""\
 from openmdao.main.api import Component
+%s
 Component.load_from_eggfile('%s', install=False)
-""" % egg_path)
+""" % (console_str, egg_path))
                 out.close()
                 args = [python, unpacker]
             else:
@@ -475,6 +555,8 @@ Component.load_from_eggfile('%s', install=False)
             print '    retcode', retcode
             if retcode == 0:
                 print '\nRunning in subprocess...'
+                if not self.name:
+                    self.name = self.get_default_name(self.parent)
                 os.chdir(self.name)
                 if not python:
                     python = 'python'
@@ -496,7 +578,7 @@ Component.load_from_eggfile('%s', install=False)
 
     @staticmethod
     def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True,
-             top_obj=True, name=None):
+             top_obj=True, name=''):
         """Load object(s) from `instream`.  If `instream` is an installed
         package name, then any external files referenced in the object(s)
         are copied from the package installation to appropriate directories.
@@ -509,7 +591,7 @@ Component.load_from_eggfile('%s', install=False)
         component's directory attribute set accordingly.  Existing files
         are not overwritten.
         """
-        top = Container.load(instream, format, package, False, name)
+        top = Container.load(instream, format, package, False, name=name)
         if isinstance(top, Component):
             # Get path relative to real top before we clobber directory attr.
             if top_obj:
@@ -522,7 +604,7 @@ Component.load_from_eggfile('%s', install=False)
                           isinstance(obj.parent, Component):
                         relpath = os.path.join(obj.directory, relpath)
                         obj = obj.parent
-                elif hasattr(top, '_rel_dir_path'):
+                elif top.trait('_rel_dir_path'):
                     top.warning('No parent, using saved relative directory')
                     relpath = top._rel_dir_path  # Set during save_to_egg().
                 else:
@@ -532,18 +614,23 @@ Component.load_from_eggfile('%s', install=False)
 
             # Set top directory.
             orig_dir = os.getcwd()
+            
+            reltoroot = SimulationRoot.relto_root(orig_dir)
+                
             if name:
+                top.name = name
                 # New instance via create(name) gets new directory.
                 if not os.path.exists(name):
                     os.mkdir(name)
                 os.chdir(name)
+            #top.directory = os.path.join(reltoroot, name)
             top.directory = os.getcwd()
             
             try:
                 # Create any missing subdirectories.
                 for component in [c for c in top.values(recurse=True)
                                           if isinstance(c,Component)]:
-                    directory = component.get_directory()
+                    directory = component.get_abs_directory()
                     if not os.path.exists(directory):
                         os.makedirs(directory)
 
@@ -563,13 +650,13 @@ Component.load_from_eggfile('%s', install=False)
                     top.directory = ''
 
         if do_post_load:
-            top._post_load(name)
+            top.post_load()
         return top
 
     def _restore_files(self, package, relpath):
         """Restore external files from installed egg."""
         if self.directory:
-            self.push_dir(self.get_directory())
+            self.push_dir(self.get_abs_directory())
         try:
             fvars = self.get_file_vars()
             if self.external_files or fvars:

@@ -108,8 +108,8 @@ class pyevolvedriver(Driver):
     #outputs
     best_individual = Any(GenomeBase.GenomeBase(), iostatus='out')
         
-    def __init__(self,name,parent=None,doc=None): 
-        super(pyevolvedriver,self).__init__(name,parent,doc)
+    def __init__(self, doc=None): 
+        super(pyevolvedriver,self).__init__(doc)
 
         self.genome = GenomeBase.GenomeBase() #TODO: Mandatory Socket
         self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin

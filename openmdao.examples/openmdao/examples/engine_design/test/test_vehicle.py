@@ -12,8 +12,8 @@ class VehicleTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
-        self.model = Assembly('top')
-        Vehicle("test_vehicle", parent=self.model)
+        self.model = Assembly()
+        self.model.add_container('test_vehicle', Vehicle())
 
     def tearDown(self):
         self.model.pre_delete()

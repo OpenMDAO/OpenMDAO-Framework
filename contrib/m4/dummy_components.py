@@ -14,16 +14,18 @@ from openmdao.main.api import Component
 class Model_A2d(Component):
     """ Wrapper for M4 Model_A2d. """
 
-    def __init__(self, name='Model_A2d', *args, **kwargs):
-        super(Model_A2d, self).__init__(name, *args, **kwargs)
+    x = Float(0., iostatus='in', desc='X input value.')
+    y = Float(0., iostatus='in', desc='Y input value.')
+
+    z1 = Float(0., iostatus='out', desc='exp(x) + exp(y)')
+    z2 = Float(0., iostatus='out', 
+               desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
+        
+    #name='Model_A2d', 
+    def __init__(self, *args, **kwargs):
+        super(Model_A2d, self).__init__(*args, **kwargs)
         self._m4_comp = mool.Optimization.Models_test.Model_A2d()
 
-        Float('x', self, iostatus='in', desc='X input value.', default=0.)
-        Float('y', self, iostatus='in', desc='Y input value.', default=0.)
-
-        Float('z1', self, iostatus='out' desc='exp(x) + exp(y)', default=0.)
-        Float('z2', self, iostatus='out' desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0',
-              default = 0.)
 
     def execute(self):
         """ Run M4 component. """
@@ -37,14 +39,16 @@ class Model_A2d(Component):
 class Model_B2d(Component):
     """ Wrapper for M4 Model_B2d. """
 
-    def __init__(self, name='Model_B2d', *args, **kwargs):
-        super(Model_B2d, self).__init__(name, *args, **kwargs)
+    x = Float(0., iostatus='in', desc='X input value.')
+    y = Float(0., iostatus='in', desc='Y input value.')
+
+    z = Float(0., iostatus='out', desc='24.*x+24.*y')
+        
+    #name='Model_B2d'
+    def __init__(self, *args, **kwargs):
+        super(Model_B2d, self).__init__(*args, **kwargs)
         self._m4_comp = mool.Optimization.Models_test.Model_B2d()
 
-        Float('x', self, iostatus='in', desc='X input value.', default=0.)
-        Float('y', self, iostatus='in', desc='Y input value.', default=0.)
-
-        Float('z', self, iostatus='out' desc='24.*x+24.*y', default=0.)
 
     def execute(self):
         """ Run M4 component. """

@@ -275,35 +275,35 @@ class NPSSTestCase(unittest.TestCase):
         try:
             NPSScomponent(top=99)
         except TypeError, err:
-            self.assertEqual('NPSS: top must be a string', str(err))
+            self.assertEqual(': top must be a string', str(err))
         else:
             self.fail('TypeError expected')
 
         try:
             NPSScomponent(arglist=99)
         except TypeError, err:
-            self.assertEqual("NPSS: 'int' object is not iterable", str(err))
+            self.assertEqual(": 'int' object is not iterable", str(err))
         else:
             self.fail('TypeError expected')
 
         try:
             NPSScomponent(arglist=['-foobar'])
         except ValueError, err:
-            self.assertEqual("NPSS: illegal option '-foobar'", str(err))
+            self.assertEqual(": illegal option '-foobar'", str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-C'])
         except ValueError, err:
-            self.assertEqual("NPSS: expected object path", str(err))
+            self.assertEqual(": expected object path", str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-C', 'nosuchobject'])
         except ValueError, err:
-            self.assertEqual("NPSS: object 'nosuchobject' does not exist",
+            self.assertEqual(": object 'nosuchobject' does not exist",
                              str(err))
         else:
             self.fail('ValueError expected')
@@ -311,35 +311,35 @@ class NPSSTestCase(unittest.TestCase):
         try:
             NPSScomponent(arglist=['-D'])
         except ValueError, err:
-            self.assertEqual("NPSS: expected preprocessor value", str(err))
+            self.assertEqual(": expected preprocessor value", str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-E'])
         except ValueError, err:
-            self.assertEqual("NPSS: expected executive type", str(err))
+            self.assertEqual(": expected executive type", str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-I'])
         except ValueError, err:
-            self.assertEqual("NPSS: expected include path", str(err))
+            self.assertEqual(": expected include path", str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-I .'])
         except ValueError, err:
-            self.assertEqual("NPSS: illegal option '-I .'", str(err))
+            self.assertEqual(": illegal option '-I .'", str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-I', 'nosuchdir'])
         except ValueError, err:
-            self.assertEqual("NPSS: include path 'nosuchdir' does not exist",
+            self.assertEqual(": include path 'nosuchdir' does not exist",
                              str(err))
         else:
             self.fail('ValueError expected')
@@ -347,35 +347,35 @@ class NPSSTestCase(unittest.TestCase):
         try:
             NPSScomponent(arglist=['-X'])
         except ValueError, err:
-            self.assertEqual('NPSS: expected assembly type', str(err))
+            self.assertEqual(': expected assembly type', str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-a'])
         except ValueError, err:
-            self.assertEqual('NPSS: expected default access type', str(err))
+            self.assertEqual(': expected default access type', str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-a', 'OOPS'])
         except ValueError, err:
-            self.assertEqual("NPSS: invalid access 'OOPS'", str(err))
+            self.assertEqual(": invalid access 'OOPS'", str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-l'])
         except ValueError, err:
-            self.assertEqual('NPSS: expected DLM path', str(err))
+            self.assertEqual(': expected DLM path', str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-l', 'nosuchDLM'])
         except ValueError, err:
-            self.assertEqual("NPSS: DLM path 'nosuchDLM' does not exist",
+            self.assertEqual(": DLM path 'nosuchDLM' does not exist",
                              str(err))
         else:
             self.fail('ValueError expected')
@@ -383,14 +383,14 @@ class NPSSTestCase(unittest.TestCase):
         try:
             NPSScomponent(arglist=['-ns'])
         except ValueError, err:
-            self.assertEqual('NPSS: expected NameServer IOR path', str(err))
+            self.assertEqual(': expected NameServer IOR path', str(err))
         else:
             self.fail('ValueError expected')
 
         try:
             NPSScomponent(arglist=['-ns', 'nosuchIOR'])
         except ValueError, err:
-            self.assertEqual("NPSS: NameServer IOR path 'nosuchIOR' does not exist",
+            self.assertEqual(": NameServer IOR path 'nosuchIOR' does not exist",
                              str(err))
         else:
             self.fail('ValueError expected')
@@ -398,7 +398,7 @@ class NPSSTestCase(unittest.TestCase):
         try:
             NPSScomponent(arglist=['nosuchmodel.npss'])
         except ValueError, err:
-            self.assertEqual("NPSS: model file 'nosuchmodel.npss' does not exist",
+            self.assertEqual(": model file 'nosuchmodel.npss' does not exist",
                              str(err))
         else:
             self.fail('ValueError expected')
@@ -406,7 +406,7 @@ class NPSSTestCase(unittest.TestCase):
         try:
             NPSScomponent(arglist=['/nosuchmodel.npss'])
         except ValueError, err:
-            self.assertEqual("NPSS: model file '/nosuchmodel.npss' does not exist",
+            self.assertEqual(": model file '/nosuchmodel.npss' does not exist",
                              str(err))
         else:
             self.fail('ValueError expected')
@@ -495,14 +495,14 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.npss.make_public('sample')
         except NotImplementedError, exc:
-            self.assertEqual(str(exc), "NPSS: 'sample' is an unsupported NPSS type: 'Sample'")
+            self.assertEqual(str(exc), ": 'sample' is an unsupported NPSS type: 'Sample'")
         else:
             self.fail('Expected NotImplementedError')
 
         try:
             self.npss.make_public('sample.s2d')
         except NotImplementedError, exc:
-            self.assertEqual(str(exc), "NPSS: 'sample.s2d' is an unsupported NPSS type: 'string[][]'")
+            self.assertEqual(str(exc), ": 'sample.s2d' is an unsupported NPSS type: 'string[][]'")
         else:
             self.fail('Expected NotImplementedError')
 

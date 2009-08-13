@@ -163,9 +163,10 @@ class NPSScomponent(Component):
     # 1st session gets bad context for some reason...
     dummy = npss.npss()
 
-    def __init__(self, name='NPSS', parent=None, doc=None, directory='',
+    #name='NPSS'
+    def __init__(self, doc=None, directory='',
                  arglist=None, output_filename='', top=''):
-        super(NPSScomponent, self).__init__(name, parent, doc, directory)
+        super(NPSScomponent, self).__init__(doc, directory)
         if not isinstance(top, basestring):
             self.raise_exception('top must be a string', TypeError)
         self._topstr = top
@@ -339,7 +340,7 @@ class NPSScomponent(Component):
         if os.path.isabs(path):
             return os.path.exists(path)
         else:
-            return os.path.exists(os.path.join(self.get_directory(), path))
+            return os.path.exists(os.path.join(self.get_abs_directory(), path))
 
     def _generate_arglist(self):
         """ Generate argument list. """
@@ -404,7 +405,7 @@ class NPSScomponent(Component):
                 
             # Remove model input files from external_files list.
             paths = self._top.inputFileList
-            cwd = self.get_directory()+os.sep
+            cwd = self.get_abs_directory()+os.sep
             for path in paths:
                 if path.startswith(cwd):
                     path = path[len(cwd):]
@@ -421,7 +422,7 @@ class NPSScomponent(Component):
                 self.remove_trait(name)
 
         # Default session directory is set during initialization.
-        directory = self.get_directory()
+        directory = self.get_abs_directory()
         if not os.path.exists(directory):
             raise RuntimeError("Execution directory '%s' not found." \
                                % directory)

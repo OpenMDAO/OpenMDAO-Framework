@@ -16,16 +16,14 @@ from openmdao.main.pkg_res_factory import PkgResourcesFactory
 _factories = []
 search_path = []
 
-def create(typname, name='', version=None, server=None, res_desc=None):
+def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     """Create and return an object specified by the given type, name,
     version, etc.
     """
     obj = None
     for fct in _factories:
-        obj = fct.create(typname, version, server, res_desc)
+        obj = fct.create(typname, version, server, res_desc, **ctor_args)
         if obj is not None:
-            if isinstance(name, basestring):
-                obj.name = name
             return obj
     
     raise NameError("unable to create object of type '"+typname+"'")
@@ -48,5 +46,5 @@ def register_factory(fct):
 
 # by default, register factories that create things via pkg_resources 
 # and simple imports
-register_factory(PkgResourcesFactory())
 register_factory(ImportFactory())
+register_factory(PkgResourcesFactory())

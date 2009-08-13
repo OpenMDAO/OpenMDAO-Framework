@@ -49,12 +49,12 @@ class Source(Component):
     text_file = FileTrait(iostatus='out')
     binary_file = FileTrait(iostatus='out', binary=True)
         
-    def __init__(self, name='Source', *args, **kwargs):
-        super(Source, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Source, self).__init__(*args, **kwargs)
         self.text_file.filename = 'source.txt'
         self.binary_file.filename = 'source.bin'
 
-        SourceData(name='sub', parent=self)
+        self.add_container('sub', SourceData())
 
     def execute(self):
         """ Write test data to files. """
@@ -86,17 +86,14 @@ class SourceData(Container):
     s = Str('', iostatus='out')
     s1d = List(str, iostatus='out')
         
-    def __init__(self, name='SourceData', *args, **kwargs):
-        super(SourceData, self).__init__(name, *args, **kwargs)
-
 
 class Passthrough(NPSScomponent):
     """ An NPSS component that passes-through various types of variable. """
 
-    def __init__(self, name, parent=None, doc=None, directory=''):
+    def __init__(self, doc=None, directory=''):
         arglist = ['-D', 'XYZZY=twisty narrow passages', '-D', 'FLAG',
                    '-I', '.', '-trace', os.path.join('..', 'passthrough.mdl')]
-        super(Passthrough, self).__init__(name, parent, doc, directory,
+        super(Passthrough, self).__init__(doc, directory,
                                           arglist, 'passthrough.out')
 
         # Manual interface variable creation.
@@ -173,12 +170,12 @@ class Sink(Component):
     text_file = FileTrait(iostatus='in')
     binary_file = FileTrait(iostatus='in')
         
-    def __init__(self, name='Sink', *args, **kwargs):
-        super(Sink, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Sink, self).__init__(*args, **kwargs)
         self.text_file.filename = 'sink.txt'
         self.binary_file.filename = 'sink.bin'
 
-        SinkData(name='sub', parent=self)
+        self.add_container('sub', SinkData())
 
     def execute(self):
         """ Read test data from files. """
@@ -210,16 +207,15 @@ class SinkData(Container):
     s = Str('', iostatus='in')
     s1d = List(str, iostatus='in')
     
-    def __init__(self, name='SinkData', *args, **kwargs):
-        super(SinkData, self).__init__(name, *args, **kwargs)
 
 class Model(Assembly):
     """ Sends data through Source -> NPSS_A -> NPSS_B -> Sink. """
     
-    def __init__(self, name='TestModel', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+    #name='TestModel', 
+    def __init__(self, *args, **kwargs):
+        super(Model, self).__init__(*args, **kwargs)
 
-        Source(parent=self)
+        self.add_container('Source', Source())
         self.Source.b = True
         self.Source.f = 3.14159
         self.Source.f1d = [3.14159, 2.781828]
@@ -248,12 +244,12 @@ class Model(Assembly):
         self.Source.sub.s1d = ['maze', 'of', 'twisty', 'passages']
 
         name = 'NPSS_A'
-        Passthrough(name, self, directory=name)
+        self.add_container(name, Passthrough(directory=name))
 
         name = 'NPSS_B'
-        Passthrough(name, self, directory=name)
+        self.add_container(name, Passthrough(directory=name))
 
-        Sink(parent=self)
+        self.add_container('Sink', Sink())
 
         self.connect('Source.b',   'NPSS_A.b_in')
         self.connect('Source.f',   'NPSS_A.f_in')

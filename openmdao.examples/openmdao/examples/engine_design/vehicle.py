@@ -31,7 +31,7 @@ class Vehicle(Assembly):
     velocity = UnitsFloat(75.0, iostatus='in', units='mi/h', 
                           desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
-    def __init__(self, name, parent=None, directory=''):
+    def __init__(self, directory=''):
         """ Creates a new Vehicle Assembly object
 
             # Design parameters promoted from Engine
@@ -74,13 +74,13 @@ class Vehicle(Assembly):
             acceleration               # Calculated vehicle acceleration (m/s^2)
             """
         
-        super(Vehicle, self).__init__(name, parent, directory)
+        super(Vehicle, self).__init__(directory)
 
         # Create component instances
         
-        Transmission('transmission', parent=self)
-        Engine('engine', parent=self)
-        Chasis('chasis', parent=self)
+        self.add_container('transmission', Transmission())
+        self.add_container('engine', Engine())
+        self.add_container('chasis', Chasis())
 
         # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
@@ -133,8 +133,8 @@ class Vehicle(Assembly):
 
         
 if __name__ == "__main__": # pragma: no cover    
-    top = Assembly('top')
-    z = Vehicle("Testing", parent=top)        
+    top = Assembly()
+    z = top.add_container('Testing', Vehicle())      
     z.current_gear = 1
     z.velocity = 20.0*(26.8224/60.0)
     #z.throttle = .2

@@ -37,6 +37,8 @@ import tempfile
 import zc.buildout.easy_install
 import zipfile
 import StringIO
+import logging
+import pprint
 
 from openmdao.util import eggwriter
 
@@ -642,8 +644,9 @@ def _get_distributions(objs, py_dir, logger):
                 finder = modulefinder.ModuleFinder()
                 try:
                     finder.run_script(path)
-                except Exception:
-                    logger.exception("ModuleFinder for '%s'" % path)
+                except Exception, err:
+                    logger.exception("ModuleFinder for '%s': %s" % 
+                                     (path,str(err)))
                 else:
                     finder_items = finder.modules.items()
                     _SAVED_FINDINGS[path] = finder_items
@@ -685,6 +688,9 @@ def _process_found_modules(py_dir, finder_items, modules, distributions,
     py_version = 'python%s' % sys.version[:3]
     not_found = set()
 
+    #logger.debug('sys.path is %s' % pprint.pformat(sys.path))
+    #logger.debug('finder_iterms are %s' % pprint.pformat(finder_items))
+    
     for name, module in sorted(finder_items, key=lambda item: item[0]):
         if name in modules:
             continue
@@ -782,6 +788,10 @@ def _write_loader_script(path, state_name, package, top):
     else:
         top_arg = ', top_obj=False'
 
+    if os.environ.get('OPENMDAO_CAPTURE_EXTERN'):
+        console_str = "import openmdao.main.log; openmdao.main.log.enable_console()"
+    else:
+        console_str = ''
     out = open(path, 'w')
     out.write("""\
 import os
@@ -791,7 +801,7 @@ if not '.' in sys.path:
 
 try:
     from openmdao.main.api import Component, SAVE_CPICKLE, SAVE_LIBYAML
-    from openmdao.main.log import enable_console
+    %(console_str)s
 except ImportError:
     print 'No OpenMDAO distribution available.'
     if __name__ != '__main__':
@@ -799,15 +809,15 @@ except ImportError:
         print 'To get OpenMDAO, please visit openmdao.org'
     sys.exit(1)
 
-def load(name=None):
+def load(**kwargs):
     '''Create object(s) from state file.'''
     state_name = '%(name)s'
     if state_name.endswith('.pickle'):
         return Component.load(state_name,
-                              SAVE_CPICKLE%(pkg)s%(top)s, name=name)
+                              SAVE_CPICKLE%(pkg)s%(top)s, **kwargs)
     elif state_name.endswith('.yaml'):
         return Component.load(state_name,
-                              SAVE_LIBYAML%(pkg)s%(top)s, name=name)
+                              SAVE_LIBYAML%(pkg)s%(top)s, **kwargs)
     raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
                        state_name)
 
@@ -818,7 +828,8 @@ def main():
 
 if __name__ == '__main__':
     main()
-""" % {'name':state_name, 'pkg':pkg_arg, 'top':top_arg})
+""" % {'name':state_name, 'pkg':pkg_arg, 'top':top_arg, 
+       'console_str':console_str})
     out.close()
 
 
@@ -929,7 +940,7 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
 
     try:
         loader = dist.load_entry_point(entry_group, entry_name)
-        return loader(instance_name)
+        return loader(name=instance_name)
     except pkg_resources.DistributionNotFound, exc:
         logger.error('Distribution not found: %s', exc)
         visited = set()
@@ -941,7 +952,7 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
         _check_requirements(dist, visited, logger)
         raise exc
     except Exception, exc:
-        logger.exception('Loader exception:')
+        logger.exception('Loader exception: %s' % str(exc))
         raise exc
 
 
@@ -1109,6 +1120,9 @@ def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
     else:
         raise RuntimeError('cannot load object using format %s' % format)
 
+    if top is None:
+        raise RuntimeError('load returned a None object')
+    
     # Restore instancemethods from IMHolder objects.
     _restore_instancemethods(top)
     return top

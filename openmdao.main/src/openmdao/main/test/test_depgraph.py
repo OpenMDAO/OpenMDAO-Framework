@@ -14,8 +14,8 @@ class Simple(Component):
     c = Int(iostatus='out')
     d = Int(iostatus='out')
     
-    def __init__(self, name):
-        super(Simple, self).__init__(name)
+    def __init__(self):
+        super(Simple, self).__init__()
         self.a = 1
         self.b = 2
         self.c = 3
@@ -56,18 +56,18 @@ subvars = subins+subouts
 class DepGraphTestCase(unittest.TestCase):
 
     def setUp(self):
-        top = Assembly('top', None)
+        top = Assembly()
         self.top = top
-        top.add_child(Assembly('sub'))
+        top.add_container('sub', Assembly())
+        top.add_container('comp7', Simple())
+        top.add_container('comp8', Simple())
         sub = top.sub
-        top.add_child(Simple('comp7'))
-        top.add_child(Simple('comp8'))
-        sub.add_child(Simple('comp1'))
-        sub.add_child(Simple('comp2'))
-        sub.add_child(Simple('comp3'))
-        sub.add_child(Simple('comp4'))
-        sub.add_child(Simple('comp5'))
-        sub.add_child(Simple('comp6'))
+        sub.add_container('comp1', Simple())
+        sub.add_container('comp2', Simple())
+        sub.add_container('comp3', Simple())
+        sub.add_container('comp4', Simple())
+        sub.add_container('comp5', Simple())
+        sub.add_container('comp6', Simple())
 
         sub.create_passthru('comp1.a', 'a1')
         sub.create_passthru('comp3.a', 'a3')
@@ -91,8 +91,8 @@ class DepGraphTestCase(unittest.TestCase):
         top.connect('sub.d3', 'comp8.b')
 
     def test_simple(self):
-        top = Assembly('top', None)
-        top.add_child(Simple('comp1'))
+        top = Assembly()
+        top.add_container('comp1', Simple())
         vars = ['a','b','c','d']
         self.assertEqual(top.comp1.run_count, 0)
         valids = [top.comp1.get_valid(v) for v in vars]
@@ -116,7 +116,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(valids, [True, True, True, True])
         
         # now add another comp and connect them
-        top.add_child(Simple('comp2'))
+        top.add_container('comp2', Simple())
         top.connect('comp1.c', 'comp2.a')
         self.assertEqual(top.comp2.run_count, 0)
         self.assertEqual(top.comp2.c, 3)
@@ -219,14 +219,14 @@ class DepGraphTestCase(unittest.TestCase):
             self.top.sub.comp2.b = 4
         except TraitError, err:
             self.assertEqual(str(err), 
-                "top.sub.comp2: 'b' is already connected to source 'b2' and cannot be directly set")
+                "sub.comp2: 'b' is already connected to source 'b2' and cannot be directly set")
         else:
             self.fail('TraitError expected')
         try:
             self.top.set('sub.comp2.b', 4)
         except TraitError, err:
             self.assertEqual(str(err), 
-                "top.sub.comp2: 'b' is connected to source 'b2' and cannot be set by source 'None'")
+                "sub.comp2: 'b' is connected to source 'b2' and cannot be set by source 'None'")
         else:
             self.fail('TraitError expected')            
             

@@ -24,17 +24,12 @@ class Source(Component):
     npss_reload = Bool(False, iostatus='out', desc='Test input to NPSS')
     npss_in = Float(0., iostatus='out', desc='Test input to NPSS')
         
-    def __init__(self, name='Source', *args, **kwargs):
-        super(Source, self).__init__(name, *args, **kwargs)
-
 
 class Sink(Component):
     """ Just something to connect NPSS outputs to. """
 
     npss_out = Float(0., iostatus='in', desc='Test output from NPSS')
         
-    def __init__(self, name='Sink', *args, **kwargs):
-        super(Sink, self).__init__(name, *args, **kwargs)
 
 
 # pylint: disable-msg=E1101
@@ -48,11 +43,11 @@ class MyModel(Assembly):
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
 
-        Source(parent=self)
+        self.add_container('Source', Source())
         self.Source.npss_in = 9
 
-        self.NPSS = NPSScomponent(parent=self, arglist='-trace reload.mdl',
-                                  output_filename='reload.out')
+        self.add_container('NPSS', NPSScomponent(arglist='-trace reload.mdl',
+                                                 output_filename='reload.out'))
         self.NPSS.reload_flag = 'reload_requested'
 
         self.NPSS.make_public([
@@ -66,7 +61,7 @@ class MyModel(Assembly):
         #self.create_passthru('NPSS.s')
         #s = Str(self.NPSS, iostatus='in', desc='Unconnected input')
         
-        Sink(parent=self)
+        self.add_container('Sink', Sink())
 
         self.connect('Source.npss_reload', 'NPSS.reload_model')
         self.connect('Source.npss_in', 'NPSS.xyzzy_in')
@@ -88,7 +83,7 @@ class NPSSTestCase(unittest.TestCase):
         """ Called before each test in this class. """
         # Reset simulation root so we can legally access files.
         SimulationRoot.chdir(NPSSTestCase.directory)
-        self.model = MyModel('TestModel')
+        self.model = MyModel()
 
     def tearDown(self):
         """ Called after each test in this class. """
@@ -137,7 +132,7 @@ class NPSSTestCase(unittest.TestCase):
             self.model.rerun()
         except RuntimeError, exc:
             self.assertEqual(str(exc).startswith(
-                "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
+                "NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
                 True)
         else:
             self.fail('Expected RuntimeError')
@@ -146,7 +141,7 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.run()
         except RuntimeError, exc:
-            self.assertEqual(str(exc), "TestModel.NPSS: Exception getting 'no_such_variable': no_such_variable not found")
+            self.assertEqual(str(exc), "NPSS: Exception getting 'no_such_variable': no_such_variable not found")
         else:
             self.fail('Expected RuntimeError')
 
@@ -188,7 +183,7 @@ class NPSSTestCase(unittest.TestCase):
             self.model.rerun()
         except RuntimeError, exc:
             self.assertEqual(str(exc).startswith(
-                "TestModel.NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
+                "NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
                 True)
         else:
             self.fail('Expected RuntimeError')

@@ -17,9 +17,9 @@ class Dataflow(Workflow):
     data flow order.
     """
 
-    def __init__(self, name, parent=None):
+    def __init__(self, scope=None):
         """ Create an empty flow. """
-        super(Dataflow, self).__init__(name, parent, add_to_parent=False)
+        super(Dataflow, self).__init__(scope=scope)
         self._no_ref_graph = nx.DiGraph()
         
     def execute(self):
@@ -67,11 +67,11 @@ class Dataflow(Workflow):
                 graph[srccompname][destcompname] = refcount
             for strcon in strongly_connected:
                 if len(strcon) > 1:
-                    self.raise_exception(
+                    raise RuntimeError(
                         'circular dependency (%s) would be created by connecting %s to %s' %
                                  (str(strcon), 
                                   '.'.join([srccompname,srcvarname]), 
-                                  '.'.join([destcompname,destvarname])), RuntimeError) 
+                                  '.'.join([destcompname,destvarname]))) 
         
     def disconnect(self, comp1name, comp2name):
         """Decrement the ref count for the edge in the dependency graph 
@@ -87,24 +87,24 @@ class Dataflow(Workflow):
             
     def _find_drivers(self, names):
         """Returns a list of Drivers found in the given list of names."""
-        driverset = set([obj.name for obj in self.parent.drivers])
-        return [getattr(self.parent, n) for n in names if n in driverset]
+        driverset = set([obj.name for obj in self.scope.drivers])
+        return [getattr(self.scope, n) for n in names if n in driverset]
         
     def nodes_iter(self):
         """Iterate through the nodes in dataflow order, allowing for multiple Driver
         loops within the same Assembly.
         """
-        drivers = self.parent.drivers
+        drivers = self.scope.drivers
         self._drvsorter = None
         
         if len(drivers) == 0:  # no driver, so just sort and go
             for n in nx.topological_sort(self._no_ref_graph):
-                yield getattr(self.parent, n)
+                yield getattr(self.scope, n)
         elif len(drivers) == 1:  # one driver, so add its output ref edges, sort and go
             graph = self._no_ref_graph.copy()
             graph.add_edges_from(drivers[0].get_ref_graph(iostatus='out').edges_iter())
             for n in nx.topological_sort(graph):
-                yield getattr(self.parent, n)
+                yield getattr(self.scope, n)
             return
         else:  # multiple drivers
             graph = self._no_ref_graph.copy()
@@ -123,7 +123,7 @@ class Dataflow(Workflow):
                 # no loops found (SCCs are returned largest to smallest), 
                 # so just sort and we're done. 
                 for compname in nx.topological_sort(graph):
-                    yield getattr(self.parent, compname)
+                    yield getattr(self.scope, compname)
                 return
             
             # we have at least one loop, so...
@@ -143,7 +143,7 @@ class Dataflow(Workflow):
             
             for sccomp in sorted_strongs:
                 if len(strongs[sccomp]) == 1:  # no loop, just a single component
-                    yield getattr(self.parent, strongs[sccomp][0])
+                    yield getattr(self.scope, strongs[sccomp][0])
                 else:  # some kind of loop
                     for comp in self._loop_iter(strongs[sccomp]):
                         yield comp
@@ -159,4 +159,4 @@ class Dataflow(Workflow):
             self._drvsorter = DriverForest(drivers)
             collapsed_graph = self._drvsorter.collapse_graph(subgraph)
             for compname in nx.topological_sort(collapsed_graph):
-                yield getattr(self.parent, compname)
+                yield getattr(self.scope, compname)

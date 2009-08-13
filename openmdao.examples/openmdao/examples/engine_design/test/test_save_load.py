@@ -4,6 +4,7 @@
 
 import logging
 import os
+import sys
 import pkg_resources
 import shutil
 import subprocess
@@ -17,7 +18,8 @@ class EngineOptimizationTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
-        self.model = EngineOptimization("test_vehicle")
+        self.model = EngineOptimization()
+        self.model.hierarchy_defined()
 
     def tearDown(self):
         if self.model is not None:
@@ -28,6 +30,14 @@ class EngineOptimizationTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
+        if os.environ.get('OPENMDAO_CAPTURE_EXTERN'):
+            console_str = """
+import openmdao.main.log
+openmdao.main.log.enable_console()
+"""
+        else:
+            console_str = ''
+                
         self.model.driving_sim.bore = 95.
         self.model.driving_sim.spark_angle = -35.368341874
         self.model.driver.maxiters = 1
@@ -51,8 +61,14 @@ class EngineOptimizationTestCase(unittest.TestCase):
             out = open('unpack.py', 'w')
             out.write("""\
 from openmdao.main.api import Component
-Component.load_from_eggfile('%s', install=False)
-""" % egg_path)
+%s
+try:
+    Component.load_from_eggfile('%s', install=False)
+except Exception, err:
+    import openmdao.main.log
+    openmdao.main.log.logger.exception(str(err))
+    raise
+""" % (console_str, egg_path))
             out.close()
             retcode = subprocess.call([python, 'unpack.py'])
             self.assertEqual(retcode, 0)
@@ -60,6 +76,8 @@ Component.load_from_eggfile('%s', install=False)
             logging.debug('Load state and run test in subprocess...')
             logging.debug('    python %s' % python)
 
+            if not self.model.name:
+                self.model.name = self.model.get_default_name(self)
             os.chdir(self.model.name)
             out = open('test.py', 'w')
             out.write("""\
@@ -67,6 +85,7 @@ import sys
 if not '.' in sys.path:
     sys.path.append('.')
 import unittest
+%s
 class TestCase(unittest.TestCase):
     def test_load(self):
         loader = __import__('%s_loader')
@@ -81,7 +100,7 @@ class TestCase(unittest.TestCase):
                               
 if __name__ == '__main__':
     unittest.main()
-""" % self.model.name)
+""" % (console_str, self.model.name))
             out.close()
 
             out = open('test.out', 'w')

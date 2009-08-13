@@ -66,8 +66,7 @@ class Assembly (Component):
     drivers = List(IDriver)
     workflow = Instance(Workflow)
     
-    def __init__(self, name=None, parent=None, doc=None, directory='',
-                       workflow=None):
+    def __init__(self, doc=None, directory='', workflow=None):
         self.state = STATE_IDLE
         self._stop = False
         self._dir_stack = []
@@ -80,8 +79,7 @@ class Assembly (Component):
         # so they can also be represented in the graph. 
         self._var_graph = nx.DiGraph()
         
-        super(Assembly, self).__init__(name, parent, doc=doc,
-                                       directory=directory)
+        super(Assembly, self).__init__(doc=doc, directory=directory)
         
         # add any Variables we may have inherited from our base classes
         # to our _var_graph..
@@ -90,9 +88,10 @@ class Assembly (Component):
                 self._var_graph.add_node(v)
         
         if workflow is None:
-            self.workflow = Dataflow('dataflow', self)
+            self.workflow = Dataflow(scope=self)
         else:
             self.workflow = workflow
+            workflow.scope = self
 
         # List of meta-data dictionaries.
         self.external_files = []
@@ -129,9 +128,11 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add_child(self, obj):
-        """Update dependency graph and call base class add_child."""
-        super(Assembly, self).add_child(obj)
+    def add_container(self, name, obj):
+        """Update dependency graph and call base class add_container.
+        Returns the added Container object.
+        """
+        obj = super(Assembly, self).add_container(name, obj)
         if isinstance(obj, Component):
             # This is too early to get accurate Variable info from 
             # the child since it's __init__ function may not be complete
@@ -147,12 +148,17 @@ class Assembly (Component):
             pass
         return obj
         
-    def remove_child(self, name):
+    def remove_container(self, name):
         """Remove the named object from this container and notify any observers.
         """
         if '.' in name:
-            self.raise_exception('remove_child does not allow dotted path names like %s' %
-                                 name, ValueError)        
+            self.raise_exception('remove_container does not allow dotted path names like %s' %
+                                 name, ValueError)
+        trait = self.trait(name)
+        if trait is not None and trait.is_trait_type(Instance):
+            setattr(self, name, None)
+            return
+            
         obj = self.get(name)
         if isinstance(obj, Component):
             self.workflow.remove_node(obj.name)
@@ -467,7 +473,7 @@ class Assembly (Component):
                     self.raise_exception(msg, type(exc))
                 finally:
                     if comp.directory:
-                        comp.push_dir(comp.get_directory())
+                        comp.push_dir(comp.get_abs_directory())
             else:
                 try:
                     destcomp.set(destvarname, srcval, srcname=srcname)
@@ -488,7 +494,7 @@ class Assembly (Component):
     def check_config (self):
         """Verify that the configuration of this component is correct. This function is
         called once prior to the first execution of this Assembly, and prior to execution
-        if any children are added or removed, or if self._need_check_config is True.
+        if any children are added or removed, or if self._call_check_config is True.
         """
         super(Assembly, self).check_config()
         for name, value in self._traits_meta_filter(required=True).items():
@@ -560,8 +566,8 @@ class Assembly (Component):
     @staticmethod
     def xfer_file(src_comp, src_varname, dst_comp, dst_varname):
         """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """
-        src_path = os.path.join(src_comp.get_directory(), src_comp.get(src_varname+'.filename'))
-        dst_path = os.path.join(dst_comp.get_directory(), dst_comp.get(dst_varname+'.filename'))
+        src_path = os.path.join(src_comp.get_abs_directory(), src_comp.get(src_varname+'.filename'))
+        dst_path = os.path.join(dst_comp.get_abs_directory(), dst_comp.get(dst_varname+'.filename'))
         if src_path != dst_path:
             if src_comp.trait(src_varname).binary is True:
                 mode = 'b'

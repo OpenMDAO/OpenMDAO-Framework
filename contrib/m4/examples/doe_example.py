@@ -14,14 +14,16 @@ import m4.dummy_components
 class MyModel(Assembly):
     """ Simple M4 DOE example.  """
 
-    def __init__(self, name='M4_DOE_example', *args, **kwargs):
-        super(MyModel, self).__init__(name, *args, **kwargs)
+    #name='M4_DOE_example'
+    def __init__(self, *args, **kwargs):
+        super(MyModel, self).__init__(*args, **kwargs)
 
         # Specify DOE driver.
-        doe = m4.doe.DOE(parent=self)
+        self.add_container('M4_DOE', m4.doe.DOE())
+        doe = self.M4_DOE
 
         # The model is just an M4 test component.
-        doe.model = m4.dummy_components.Model_A2d(parent=self)
+        doe.add_chile('model', m4.dummy_components.Model_A2d())
 
         doe.design_variables = [
             ('Model_A2d.x', 0., 5.),

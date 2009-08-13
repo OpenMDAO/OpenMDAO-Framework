@@ -23,8 +23,8 @@ class SphereFunction(Component):
     total = Float(0., iostatus='out')
     points = Array(value=[], iostatus='in')
     
-    def __init__(self, name, parent=None, desc=None):
-        super(SphereFunction, self).__init__(name, parent, desc)
+    def __init__(self, desc=None):
+        super(SphereFunction, self).__init__(desc)
             
     def execute(self):
         """ calculate the sume of the squares for the list of numbers """
@@ -42,9 +42,10 @@ class pyevolvedriverTestCase(unittest.TestCase):
         sphere.points = [x for x in genome]
     
     def setUp(self):
-        self.top = Assembly('top',None)
-        SphereFunction('comp',self.top)
-        pyevolvedriver.pyevolvedriver('driver',self.top)
+        self.top = Assembly()
+        self.top.add_container('comp', SphereFunction())
+        self.top.add_container('driver', 
+                               pyevolvedriver.pyevolvedriver())
 
     def tearDown(self):
         self.top = None
@@ -239,7 +240,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
             self.top.driver.objective = "comp.badojbjective"        
         except TraitError, err:
             self.assertEqual(str(err), 
-                "top.driver: invalid value 'comp.badojbjective' for input ref variable 'objective': top.comp: cannot get valid flag of 'badojbjective' because it's not an io trait.")
+                "driver: invalid value 'comp.badojbjective' for input ref variable 'objective': comp: cannot get valid flag of 'badojbjective' because it's not an io trait.")
         else: 
             self.fail("TraitError expected")
     
@@ -259,7 +260,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         try:
             self.top.driver.run()
         except TypeError, err:
-            msg = "top.driver: decoder specified as 'None'." \
+            msg = "driver: decoder specified as 'None'." \
                   " A valid decoder must be present"
             self.assertEqual(str(err), msg)
         else: 
@@ -274,7 +275,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         try:
             self.top.driver.run()
         except TypeError, err:
-            msg = "top.driver: decoder as specified does not have the right" \
+            msg = "driver: decoder as specified does not have the right" \
                   " signature. Must take only 1 argument: decodeBad()" \
                   " takes exactly 2 arguments (1 given)"
             self.assertEqual(str(err), msg)
@@ -289,7 +290,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         try:
             self.top.driver.run()
         except TypeError, err:
-            msg = "top.driver: genome provided is not valid." \
+            msg = "driver: genome provided is not valid." \
                   " Does not inherit from pyevolve.GenomeBase.GenomeBase"
             self.assertEqual(str(err), msg)
         else: 
@@ -303,7 +304,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         try:
             self.top.driver.run()
         except TypeError, err:
-            msg = "top.driver: genome provided is not valid." \
+            msg = "driver: genome provided is not valid." \
                   " Does not inherit from pyevolve.GenomeBase.GenomeBase"
             self.assertEqual(str(err), msg)
         else: 
