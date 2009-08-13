@@ -792,16 +792,16 @@ class Container(HasTraits):
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns (egg_filename, required_distributions, missing_modules).
         """
-        if name is None:
-            name = self.name
+        name = name or self.name
         if version is None:
             try:
                 version = sys.modules[self.__class__.__module__].__version__
             except AttributeError:
                 pass
 
-        # Entry point names are the pathname, starting at self.
-        entry_pts = []
+        entry_pts = [(self, name, _get_entry_group(self))]
+
+        # Child entry point names are the pathname, starting at self.
         if child_objs is not None:
             root_pathname = self.get_pathname()
             root_start = root_pathname.rfind('.')
@@ -813,19 +813,20 @@ class Container(HasTraits):
                     self.raise_exception('%s is not a child of %s'
                                          % (pathname, root_pathname),
                                          RuntimeError)
-                entry_pts.append((child, pathname[root_start:]))
+                entry_pts.append((child, pathname[root_start:],
+                                  _get_entry_group(child)))
 
         parent = self.parent
         self.parent = None  # Don't want to save stuff above us.
         try:
             return openmdao.util.save_load.save_to_egg(
-                       self, name, version, py_dir, src_dir, src_files,
-                       entry_pts, dst_dir, format, proto, self._logger,
-                       use_setuptools)
+                       entry_pts, version, py_dir, src_dir, src_files,
+                       dst_dir, format, proto, self._logger, use_setuptools)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
             self.parent = parent
+
 
     def save(self, outstream, format=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
@@ -1046,4 +1047,24 @@ class Container(HasTraits):
     def debug(self, msg, *args, **kwargs):
         """Record a debug message."""
         self._logger.debug(msg, *args, **kwargs)
+
+
+def _get_entry_group(obj):
+    """Return entry point group for given object type."""
+    if _get_entry_group.group_map is None:
+        # Fill-in here to avoid import loop.
+        from openmdao.main.api import Component
+        _get_entry_group.group_map = [
+            (Component, 'openmdao.components'),
+            (Container, 'openmdao.containers'),
+        ]
+
+    for cls, group in _get_entry_group.group_map:
+        if isinstance(obj, cls):
+            return group
+
+    raise TypeError('No entry point group defined for %r' % obj)
+
+_get_entry_group.group_map = None  # Map from class to group name.
+
 

@@ -56,12 +56,6 @@ SAVE_CPICKLE = 4
 
 EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
 
-# Modules to exclude from ModuleFinder analysis.
-_EXCLUDES = None
-
-# Saved ModuleFinder results, keyed by module path.
-_SAVED_FINDINGS = {}
-
 
 class IMHolder(object):
     """ Holds an instancemethod object in a pickleable form. """
@@ -111,30 +105,28 @@ class NullLogger(object):
         pass
 
 
-def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
-                src_files=None, entry_pts=None, dst_dir=None,
-                format=SAVE_CPICKLE, proto=-1, logger=None,
-                use_setuptools=False):
+def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
+                src_files=None, dst_dir=None, format=SAVE_CPICKLE, proto=-1,
+                logger=None, use_setuptools=False):
     """
-    Save state and other files to an egg.
-    Analyzes the objects saved for distribution dependencies.
-    Modules not found in any distribution are recorded in a '`name`.missing' file.
-    Also creates and saves loader scripts for each entry point.
+    Save state and other files to an egg.  Analyzes the objects saved for
+    distribution dependencies.  Modules not found in any distribution are
+    recorded in a '`name`.missing' file.  Also creates and saves loader scripts
+    for each entry point.
 
-    - `root` is the root of the object graph to be saved.
-    - `name` is the name of the package.
+    - 'entry_pts' is a list of (obj, obj_name, obj_group) tuples. \
+      The first of these specifies the root object and package name.
     - `version` defaults to a timestamp of the form 'YYYY.MM.DD.HH.mm'.
     - `py_dir` is the (root) directory for local Python files. \
       It defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
-    - 'entry_pts' is a list of (obj, obj_name) tuples for additional entries.
     - `dst_dir` is the directory to write the egg in.
 
     The resulting egg can be unpacked on UNIX via 'sh egg-file'.
     Returns (egg_filename, required_distributions, missing_modules).
     """
+    root, name, group = entry_pts[0]
     logger = logger or NullLogger()
-    entry_pts = entry_pts or []
 
     orig_dir = os.getcwd()
 
@@ -147,16 +139,14 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
 
     if src_dir and not os.path.isabs(src_dir):
         src_dir = os.path.abspath(src_dir)
-    if src_files is None:
-        src_files = set()
+    src_files = src_files or set()
 
     if version is None:
         now = datetime.datetime.now()  # Could consider using utcnow().
         version = '%d.%02d.%02d.%02d.%02d' % \
                   (now.year, now.month, now.day, now.hour, now.minute)
 
-    if dst_dir is None:
-        dst_dir = orig_dir
+    dst_dir = dst_dir or orig_dir
     if not os.access(dst_dir, os.W_OK):
         raise IOError("Can't save to '%s', no write permission" % dst_dir)
 
@@ -231,11 +221,8 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                     out.close()
                     src_files.add(missing_name)
 
-                all_entries = [(root, name)]
-                all_entries.extend(entry_pts)
                 entry_info = []
-                for obj_info in all_entries:
-                    obj, obj_name = obj_info
+                for obj, obj_name, obj_group in entry_pts:
                     clean_name = obj_name
                     if clean_name.startswith(name+'.'):
                         clean_name = clean_name[len(name)+1:]
@@ -255,7 +242,7 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                     _write_loader_script(loader_path, state_name, name,
                                          obj is root)
 
-                    entry_info.append((obj_name, loader))
+                    entry_info.append((obj_group, obj_name, loader))
 
                 # Create buildout.cfg
                 if os.path.exists(buildout_path):
@@ -272,20 +259,17 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                     out.close()
 
                 # Save everything to an egg.
-                doc = root.__doc__
-                if doc is None:
-                    doc = ''
-                loader = entry_info[0][1]
+                doc = root.__doc__ or ''
+                entry_map = _create_entry_map(entry_info)
                 if use_setuptools:
-                    eggwriter.write_via_setuptools(name, doc, version, loader,
-                                                   src_files,
+                    eggwriter.write_via_setuptools(name, doc, version,
+                                                   entry_map, src_files,
                                                    required_distributions,
-                                                   dst_dir, logger,
-                                                   entry_info[1:])
+                                                   dst_dir, logger)
                 else:
-                    eggwriter.write(name, doc, version, loader,
+                    eggwriter.write(name, doc, version, entry_map,
                                     src_files, required_distributions,
-                                    dst_dir, logger, entry_info[1:])
+                                    dst_dir, logger)
             finally:
                 for path in cleanup_files:
                     if os.path.exists(path):
@@ -584,11 +568,11 @@ def _get_distributions(objs, py_dir, logger):
     site_lib = os.path.dirname(site.__file__)
     site_pkg = site_lib+os.sep+'site-packages'
 
-    global _EXCLUDES
-    if _EXCLUDES is None:
-        # Exclude Python stadard library from ModuleFinder analysis.
+    if _get_distributions.excludes is None:
+        # Exclude Python standard library from ModuleFinder analysis.
         pattern = os.path.join(os.path.dirname(site.__file__), '*.py')
-        _EXCLUDES = [os.path.basename(path)[:-3] for path in glob.glob(pattern)]
+        _get_distributions.excludes = \
+            [os.path.basename(path)[:-3] for path in glob.glob(pattern)]
 
     for obj, container, index in objs:
         try:
@@ -632,19 +616,20 @@ def _get_distributions(objs, py_dir, logger):
                 path = os.path.join(os.getcwd(), path)
 
             finder_items = None
-            if path in _SAVED_FINDINGS.keys():
+            if path in _get_distributions.saved.keys():
                 logger.debug("    reusing analysis of '%s'", path)
-                finder_items = _SAVED_FINDINGS[path]
+                finder_items = _get_distributions.saved[path]
             else:
                 logger.debug("    analyzing '%s'...", path)
-                finder = modulefinder.ModuleFinder(excludes=_EXCLUDES)
+                finder = modulefinder.ModuleFinder(
+                                          excludes=_get_distributions.excludes)
                 try:
                     finder.run_script(path)
                 except Exception:
                     logger.exception("ModuleFinder for '%s'" % path)
                 else:
                     finder_items = finder.modules.items()
-                    _SAVED_FINDINGS[path] = finder_items
+                    _get_distributions.saved[path] = finder_items
 
             if finder_items is not None:
                 _process_found_modules(py_dir, finder_items, modules,
@@ -656,6 +641,9 @@ def _get_distributions(objs, py_dir, logger):
     for dist in distributions:
         logger.debug('        %s %s', dist.project_name, dist.version)
     return (distributions, local_modules, missing)
+
+_get_distributions.excludes = None  # Modules to exclude from analysis.
+_get_distributions.saved = {}       # Saved results, keyed by module path.
 
 
 def _process_egg(path, distributions, prefixes, logger):
@@ -820,6 +808,39 @@ if __name__ == '__main__':
     out.close()
 
 
+def _create_entry_map(entry_pts):
+    """ Create entry point map from (group, name, loader) tuples. """
+    pkg_name = entry_pts[0][1]
+    pkg_loader = entry_pts[0][2]
+    ldattr = ['load']
+    entry_map = {}
+
+    entry_group = {}
+    entry_group['top'] = pkg_resources.EntryPoint('top', pkg_loader, ldattr)
+    entry_map['openmdao.top'] = entry_group
+
+    groups = set()
+    for group, name, loader in entry_pts:
+        groups.add(group)
+
+    for grp in sorted(groups):
+        entry_group = {}
+        for group, name, loader in entry_pts:
+            if group == grp:
+                entry_group[name] = \
+                    pkg_resources.EntryPoint(name, pkg_name+'.'+loader, ldattr)
+        if entry_group:
+            entry_map[grp] = entry_group
+
+    entry_group = {}
+    entry_group['eggsecutable'] = \
+        pkg_resources.EntryPoint('eggsecutable', 'openmdao.main.component',
+                                 ['eggsecutable'])
+    entry_map['setuptools.installation'] = entry_group
+
+    return entry_map
+
+
 def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
          fix_im=True):
     """
@@ -906,7 +927,7 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
     """ Invoke entry point in distribution and return result. """
     logger.debug('    entry points:')
     maps = dist.get_entry_map()
-    for group in maps.keys():
+    for group in sorted(maps.keys()):
         logger.debug('        group %s:' % group)
         for entry_pt in maps[group].values():
             logger.debug('            %s', entry_pt)

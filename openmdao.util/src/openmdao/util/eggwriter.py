@@ -4,12 +4,12 @@ Eggs contain a preamble that allows unpacking via 'sh' on UNIX systems.
 Supports what's needed for saving and loading components/simulations.
 
 - `doc` is used for the `Summary` entry in the egg's metadata.
-- `loader` is the module name containing the `load` entry point method.
+- `entry_map` is a pkg_resources EntryPoint map: a dictionary mapping \
+  group names to dictionaries mapping entry point names to EntryPoint objects.
 - `src_files` is a list of non-Python files to include.
 - `distributions` is a list of distributions this egg depends on.
 - `dst_dir` is the directory to write the egg to.
 - `logger` is the Logger object to use. 
-- `entry_pts` is a list of (name, loader) tuples for additional entry points.
 """
 
 import copy
@@ -27,8 +27,8 @@ def egg_filename(name, version):
     return '%s-%s-py%s.egg' % (name, version, sys.version[:3])
 
 
-def write(name, doc, version, loader, src_files, distributions,
-          dst_dir, logger, entry_pts=None, compress=True):
+def write(name, doc, version, entry_map, src_files, distributions,
+          dst_dir, logger, compress=True):
     """
     Write egg in the manner of setuptools, with some differences:
 
@@ -37,9 +37,6 @@ def write(name, doc, version, loader, src_files, distributions,
 
     Returns egg filename.
     """
-    if entry_pts is None:
-        entry_pts = []
-
     egg_name = egg_filename(name, version)
     egg_path = os.path.join(dst_dir, egg_name)
 
@@ -74,7 +71,8 @@ def write(name, doc, version, loader, src_files, distributions,
         for dirpath, dirnames, filenames in os.walk(name):
             dirs = copy.copy(dirnames)
             for path in dirs:
-                if not os.path.exists(os.path.join(dirpath, path, '__init__.py')):
+                if not os.path.exists(os.path.join(dirpath, path,
+                                                   '__init__.py')):
                     dirnames.remove(path)
             for path in filenames:
                 if path.endswith('.py'):
@@ -118,24 +116,13 @@ Platform: UNKNOWN
     bytes += len(dependency_links)
 
     # Entry points -> EGG-INFO/entry_points.txt
-    entry_points = """\
-[openmdao.top]
-top = %(loader)s:load
-
-[openmdao.components]
-%(name)s = %(name)s.%(loader)s:load
-""" % {'name':name, 'loader':loader}
-
-    for entry_name, entry_loader in entry_pts:
-        entry_points += """\
-%(name)s = %(pkg_name)s.%(loader)s:load
-""" % {'name':entry_name, 'pkg_name':name, 'loader':entry_loader}
-
-    entry_points += """
-[setuptools.installation]
-eggsecutable = openmdao.main.component:eggsecutable
-
-"""
+    entry_points = ''
+    for entry_group in sorted(entry_map.keys()):
+        entry_points = ''.join([entry_points, '[%s]\n' % entry_group])
+        for entry_name in sorted(entry_map[entry_group].keys()):
+            entry_points = ''.join([entry_points,
+                                   '%s\n' % entry_map[entry_group][entry_name]])
+        entry_points = ''.join([entry_points, '\n'])
     sources.append(name+'.egg-info/entry_points.txt\n')
     bytes += len(entry_points)
 
@@ -147,7 +134,8 @@ eggsecutable = openmdao.main.component:eggsecutable
     # Requirements -> EGG-INFO/requires.txt
     requirements = ''
     for dist in sorted(distributions, key=lambda dist: dist.project_name):
-        requirements += '%s == %s\n' % (dist.project_name, dist.version)
+        requirements = ''.join([requirements,
+                              '%s == %s\n' % (dist.project_name, dist.version)])
     sources.append(name+'.egg-info/requires.txt\n')
     bytes += len(requirements)
 
@@ -202,11 +190,10 @@ def _write_file(egg, path, logger):
     egg.write(path)
 
 
-def write_via_setuptools(name, doc, version, loader, src_files, distributions,
-                         dst_dir, logger, entry_pts=None):
+def write_via_setuptools(name, doc, version, entry_map, src_files,
+                         distributions, dst_dir, logger):
     """ Write an egg via setuptools. Returns egg filename. """ 
-    _write_setup_py(name, doc, version, loader, src_files, distributions,
-                    entry_pts)
+    _write_setup_py(name, doc, version, entry_map, src_files, distributions)
 
     # Use environment since 'python' might not recognize '-u'.
     env = os.environ
@@ -240,12 +227,8 @@ def write_via_setuptools(name, doc, version, loader, src_files, distributions,
     return egg_filename(name, version)
 
 
-def _write_setup_py(name, doc, version, loader, src_files, distributions,
-                    entry_pts=None):
+def _write_setup_py(name, doc, version, entry_map, src_files, distributions):
     """ Write setup.py file for installation later. """
-    if entry_pts is None:
-        entry_pts = []
-
     out = open('setup.py', 'w')
     out.write('import setuptools\n')
 
@@ -262,28 +245,15 @@ def _write_setup_py(name, doc, version, loader, src_files, distributions,
         out.write("    '%s == %s',\n" % (dist.project_name, dist.version))
     out.write(']\n')
     
+    out.write("entry_points = {\n")
+    for entry_group in sorted(entry_map.keys()):
+        out.write("    '%s' : [\n" % entry_group)
+        for entry_name in sorted(entry_map[entry_group].keys()):
+            out.write("        '%s',\n" % entry_map[entry_group][entry_name])
+        out.write("    ],\n")
+    out.write("}\n")
+
     out.write("""
-entry_points = {
-    'openmdao.top' : [
-        'top = %(loader)s:load',
-    ],
-    'openmdao.components' : [
-        '%(name)s = %(name)s.%(loader)s:load',
-""" % {'name':name, 'loader':loader})
-
-    for entry_info in entry_pts:
-        entry_name, entry_loader = entry_info
-        out.write("""\
-        '%(name)s = %(pkg_name)s.%(loader)s:load',
-""" % {'name':entry_name, 'pkg_name':name, 'loader':entry_loader})
-
-    out.write("""\
-    ],
-    'setuptools.installation' : [
-        'eggsecutable = openmdao.main.component:eggsecutable',
-    ],
-}
-
 setuptools.setup(
     name='%(name)s',
     description='''%(doc)s''',
