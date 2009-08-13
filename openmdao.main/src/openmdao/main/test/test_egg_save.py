@@ -104,14 +104,14 @@ class Source(Assembly):
         """ Write test data to files. """
         if self.write_files:
             cwd = os.getcwd()
-            self.debug("opening file '%s' in %s" % 
-                       (self.text_file.filename,cwd))
+            self.debug("opening file '%s' in %s",
+                       self.text_file.filename, cwd)
             out = open(self.text_file.filename, 'w')
             out.write(self.text_data)
             out.close()
 
-            self.debug("opening file '%s' in %s" % 
-                       (self.sub.binary_file.filename,cwd))
+            self.debug("opening file '%s' in %s",
+                       self.sub.binary_file.filename, cwd)
             out = open(self.sub.binary_file.filename, 'wb')
             cPickle.dump(self.sub.binary_data, out, 2)
             out.close()
@@ -547,6 +547,7 @@ class EggTestCase(unittest.TestCase):
         finally:
             if remove_buildout:
                 os.remove('buildout.cfg')
+
     def test_save_bad_child(self):
         logging.debug('')
         logging.debug('test_save_bad_child')
@@ -753,6 +754,7 @@ except Exception, err:
 
             # Load & run in subprocess.
             logging.debug("Load and run '%s' in subprocess...", entry_name)
+            logging.debug('    %s', os.path.join(install_dir, self.egg_name))
             cmdline = '%s load-n-run.py' % python
             stdout = open('load-n-run.out', 'w')
             retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
@@ -760,7 +762,7 @@ except Exception, err:
             stdout.close()
             stdout = open('load-n-run.out', 'r')
             for line in stdout:
-                logging.debug('    %s'% line.rstrip())
+                logging.debug('    %s', line.rstrip())
             stdout.close()
             return retcode
 

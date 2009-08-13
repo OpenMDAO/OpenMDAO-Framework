@@ -123,7 +123,6 @@ Platform: UNKNOWN
             entry_points = ''.join([entry_points,
                                    '%s\n' % entry_map[entry_group][entry_name]])
         entry_points = ''.join([entry_points, '\n'])
-
     sources.append(name+'.egg-info/entry_points.txt\n')
     bytes += len(entry_points)
 

@@ -799,7 +799,7 @@ class Container(HasTraits):
             except AttributeError:
                 pass
 
-        entry_pts = [(self, name, _obj_group(self))]
+        entry_pts = [(self, name, _get_entry_group(self))]
 
         # Child entry point names are the pathname, starting at self.
         if child_objs is not None:
@@ -814,7 +814,7 @@ class Container(HasTraits):
                                          % (pathname, root_pathname),
                                          RuntimeError)
                 entry_pts.append((child, pathname[root_start:],
-                                  _obj_group(child)))
+                                  _get_entry_group(child)))
 
         parent = self.parent
         self.parent = None  # Don't want to save stuff above us.
@@ -1049,22 +1049,22 @@ class Container(HasTraits):
         self._logger.debug(msg, *args, **kwargs)
 
 
-def _obj_group(obj):
+def _get_entry_group(obj):
     """Return entry point group for given object type."""
-    if _obj_group.group_map is None:
+    if _get_entry_group.group_map is None:
         # Fill-in here to avoid import loop.
         from openmdao.main.api import Component
-        _obj_group.group_map = [
+        _get_entry_group.group_map = [
             (Component, 'openmdao.components'),
             (Container, 'openmdao.containers'),
         ]
 
-    for cls, group in _obj_group.group_map:
+    for cls, group in _get_entry_group.group_map:
         if isinstance(obj, cls):
             return group
 
     raise TypeError('No entry point group defined for %r' % obj)
 
-_obj_group.group_map = None  # Map from class to group name.
+_get_entry_group.group_map = None  # Map from class to group name.
 
 
