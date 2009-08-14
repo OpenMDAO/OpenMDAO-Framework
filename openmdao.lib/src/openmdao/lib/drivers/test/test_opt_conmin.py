@@ -8,7 +8,7 @@ import numpy
 from enthought.traits.api import Float, Array, TraitError
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 class OptRosenSuzukiComponent(Component):
@@ -61,7 +61,7 @@ class CONMINdriverTestCase(unittest.TestCase):
     """test CONMIN optimizer component"""
 
     def setUp(self):
-        self.top = Assembly()
+        self.top = set_as_top(Assembly())
         self.top.add_container('comp', OptRosenSuzukiComponent())
         self.top.add_container('driver', CONMINdriver())
         self.top.driver.iprint = 0

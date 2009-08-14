@@ -4,11 +4,11 @@
 
 import random
 
-from enthought.traits.api import Int, Float, CBool, Str, Any, on_trait_change, TraitError
+from enthought.traits.api import Int, Float, CBool, Any, \
+                                 on_trait_change, TraitError
 
-from pyevolve import G1DList,G1DBinaryString,G2DList,GAllele,GenomeBase
-from pyevolve import GSimpleGA,Selectors,Initializators,Mutators,Consts,DBAdapters
-from pyevolve import GenomeBase
+from pyevolve import G1DList, G1DBinaryString, G2DList, GAllele, GenomeBase
+from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 try:
     from pyevolve import DBAdapters
 except ImportError:
@@ -30,7 +30,7 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     sister = gMom.clone()
     brother = gDad.clone()
     
-    bounds = (genome.getParam("rangemin",0),genome.getParam("rangemax",100))
+    bounds = (genome.getParam("rangemin",0), genome.getParam("rangemax",100))
     dim = len(genome)
     numparents = 2.0
         
@@ -91,19 +91,20 @@ class pyevolvedriver(Driver):
 
     # inputs
     objective = StringRef(iostatus='in',
-                          desc= 'A string containing the objective function expression.')
+                          desc='A string containing the objective function'
+                               ' expression.')
     freq_stats = Int(0, iostatus='in')
     seed = Float(0., iostatus='in')
-    population_size = Float(Consts.CDefGAPopulationSize, iostatus='in')
+    population_size = Int(Consts.CDefGAPopulationSize, iostatus='in')
     
     sort_type = CBool(Consts.sortType["scaled"], iostatus='in',
-                     desc='use Consts.sortType["raw"],Consts.sortType["scaled"] ') # can accept
+                      desc='use Consts.sortType["raw"] or Consts.sortType["scaled"]') # can accept
     mutation_rate = Float(Consts.CDefGAMutationRate, iostatus='in')
     crossover_rate = Float(Consts.CDefGACrossoverRate, iostatus='in')
     generations = Int(Consts.CDefGAGenerations, iostatus='in')
     mini_max = CBool(Consts.minimaxType["minimize"], iostatus='in',
-                    desc = 'use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
-    elitism = CBool(True, iostatus='in',desc='True of False')
+                    desc='use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
+    elitism = CBool(True, iostatus='in', desc='True of False')
     
     #outputs
     best_individual = Any(GenomeBase.GenomeBase(), iostatus='out')
@@ -121,7 +122,7 @@ class pyevolvedriver(Driver):
         self.terminationCriteria = None #TODO: optional socket
         self.DBAdapter = None #TODO: optional socket
 
-    def _set_GA_FunctionSlot(self,slot,funcList,RandomApply=False,):
+    def _set_GA_FunctionSlot(self, slot, funcList, RandomApply=False,):
         if funcList is None: 
             return
         slot.clear()
@@ -141,9 +142,9 @@ class pyevolvedriver(Driver):
             expr.refs_valid()  # force checking for existence of vars referenced in expression
         except (AttributeError, RuntimeError), err:
             self.raise_exception("invalid value '%s' for input ref variable '%s': %s" % 
-                                 (str(expr),name,err), TraitError)
+                                 (str(expr), name, err), TraitError)
             
-    def evaluate(self,genome):
+    def evaluate(self, genome):
         self.decoder(genome)
         self.run_iteration()
         return self.objective.evaluate()
@@ -167,8 +168,7 @@ class pyevolvedriver(Driver):
                 err, TypeError)
 
     def execute(self):
-        """ Perform the optimization"""
-        
+        """Perform the optimization"""
         self.verify()
         #configure the evaluator function of the genome
         self.genome.evaluator.set(self.evaluate)

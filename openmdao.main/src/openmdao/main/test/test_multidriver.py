@@ -6,7 +6,7 @@ from math import sqrt
 
 from enthought.traits.api import Float, Str
 
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 class Adder(Component):
@@ -67,7 +67,7 @@ class MultiDriverTestCase(unittest.TestCase):
         # Chop up the equations for the Rosen-Suzuki optimization problem
         # into 4 PolyOrder2 components and some Adders so that our driver
         # will iterate over more than one compnent
-        top = Assembly()
+        top = set_as_top(Assembly())
         self.top = top
         top.add_container('comp1', ExprComp(expr='x**2 - 5.0*x'))
         top.add_container('comp2', ExprComp(expr='x**2 - 5.0*x'))
@@ -161,7 +161,7 @@ class MultiDriverTestCase(unittest.TestCase):
         # 
         # Optimal solution: x = 6.6667; y = -7.3333
         
-        self.top = Assembly()
+        self.top = set_as_top(Assembly())
         self.top.add_container('comp1', ExprComp(expr='x-3'))
         self.top.add_container('comp2', ExprComp(expr='-3'))
         self.top.add_container('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'))

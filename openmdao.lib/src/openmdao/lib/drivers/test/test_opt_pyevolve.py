@@ -11,7 +11,7 @@ import numpy
 
 from enthought.traits.api import Float, Array, TraitError
 
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.drivers import pyevolvedriver
 
 import openmdao.util.testutil
@@ -42,7 +42,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         sphere.points = [x for x in genome]
     
     def setUp(self):
-        self.top = Assembly()
+        self.top = set_as_top(Assembly())
         self.top.add_container('comp', SphereFunction())
         self.top.add_container('driver', 
                                pyevolvedriver.pyevolvedriver())

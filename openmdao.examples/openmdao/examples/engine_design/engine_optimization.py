@@ -1,5 +1,7 @@
-# engine_optimization.py
-#
+"""
+    engine_optimization.py - Top level assembly for the example problem.
+"""
+
 # Optimize an engine disign using the driving_sim component.
 
 from openmdao.main.api import Assembly

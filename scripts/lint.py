@@ -28,7 +28,7 @@ def main():
                                os.path.dirname(
                                    os.path.dirname(__file__))))
     python = os.path.join(root, 'buildout', 'bin', 'python')
-    pylint = os.path.join(root, 'scripts', 'pylint.py')
+    pylint = os.path.join(root, 'buildout', 'bin', 'pylint')
 
     # If specific files requested, just process those and exit.
     if options.specific:
@@ -91,10 +91,11 @@ def process(python, pylint, dirpath, filename, update):
 
     # Run pylint.
     status = os.system('%s %s %s' % (python, pylint, args))
-    if status:
-        print >> sys.stderr, '    pylint returned', status
-        os.chdir(saved_dir)
-        return
+# status unreliable since using buildout/bin/pylint.
+#    if status:
+#        print >> sys.stderr, '    pylint returned', status
+#        os.chdir(saved_dir)
+#        return
 
     # Print code rating.
     glbl = 'pylint_global.txt'

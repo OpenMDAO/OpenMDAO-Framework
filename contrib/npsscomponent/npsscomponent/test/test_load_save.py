@@ -15,10 +15,10 @@ from numpy.testing import assert_equal
 
 from enthought.traits.api import Bool
 
-from openmdao.main.api import FileTrait, FileValue, SAVE_LIBYAML
+from openmdao.main.api import FileValue, SAVE_LIBYAML, set_as_top
 from openmdao.main.component import SimulationRoot
 
-from npsscomponent import NPSScomponent, NPSSProperty
+from npsscomponent import NPSScomponent
 
 ORIG_DIR = os.getcwd()
 
@@ -27,8 +27,11 @@ class Passthrough(NPSScomponent):
     """ An NPSS component that passes-through various types of variable. """
 
     def __init__(self):
-        super(Passthrough, self).__init__('NPSS', arglist='passthrough.mdl')
-
+        super(Passthrough, self).__init__(arglist='passthrough.mdl')
+        
+    def hierarchy_defined(self):
+        super(Passthrough, self).hierarchy_defined()
+        
         # Automagic interface variable creation
         self.make_public([
             'f_out',
@@ -54,7 +57,7 @@ class NPSSTestCase(unittest.TestCase):
         """ Called before each test in this class. """
         # Reset simulation root so we can legally access files.
         SimulationRoot.chdir(NPSSTestCase.directory)
-        self.npss = Passthrough()
+        self.npss = set_as_top(Passthrough())
         self.egg_name = None
 
     def tearDown(self):
@@ -76,7 +79,8 @@ class NPSSTestCase(unittest.TestCase):
         for name, var in self.npss.items():
             saved_values[name] = var
 
-        self.egg_name = self.npss.save_to_egg()
+        egg_info = self.npss.save_to_egg()
+        self.egg_name = egg_info[0]
         self.npss.pre_delete()
         self.npss = None
 
@@ -110,7 +114,8 @@ class NPSSTestCase(unittest.TestCase):
         logging.debug('test_nomodel')
 
         self.npss.model_filename = 'xyzzy.mdl'
-        self.egg_name = self.npss.save_to_egg(version='0.0')
+        egg_info = self.npss.save_to_egg(version='0.0')
+        self.egg_name = egg_info[0]
         self.npss.pre_delete()
         self.npss = None
 
@@ -126,7 +131,8 @@ class NPSSTestCase(unittest.TestCase):
                 self.npss = NPSScomponent.load_from_eggfile(egg_path,
                                                             install=False)
             except RuntimeError, exc:
-                msg = ": Reload caught exception: Model file 'xyzzy.mdl' not found while reloading in"
+                msg = ": Reload caught exception: Model file 'xyzzy.mdl'" \
+                      " not found while reloading in"
                 self.assertEqual(str(exc)[:len(msg)], msg)
             else:
                 self.fail('Expected RuntimeError')
@@ -152,10 +158,12 @@ class NPSSTestCase(unittest.TestCase):
 
         # This currently fails, not sure why.
         try:
-            self.egg_name = self.npss.save_to_egg(format=SAVE_LIBYAML)
+            egg_info = self.npss.save_to_egg(format=SAVE_LIBYAML)
+            self.egg_name = egg_info[0]
         except Exception, exc:
-            self.assertEqual(str(exc),
-                ": Can't save to 'passthrough1/passthrough1.yaml': data type not understood")
+            msg = ": Can't save to 'passthrough1/passthrough1.yaml': data type not" \
+                  " understood"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected TypeError')
         finally:

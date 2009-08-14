@@ -108,7 +108,6 @@ class FLOPSdata(Container):
         self.engdeck.filename = 'engdeck'
 
 
-
 class PlumeData(Container):
 
     m_dot = Float(0., iostatus='in')
@@ -224,7 +223,7 @@ class Model(Assembly):
     #name='SBJ_Propulsion', 
     def __init__(self, *args, **kwargs):
         super(Model, self).__init__(*args, **kwargs)
-        self.external_files.append({'path':'README.txt'})
+        self.external_files.append({'path':'README.txt', 'constant':True})
 
         model_dir = os.path.join('..', 'Full_Model', 'Cycle', 'run')
         includes = [
@@ -267,9 +266,10 @@ class Model(Assembly):
         arglist = []
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MC_SLS.mdl'))
-        self.add_container('NPSS_SLS', TracingNPSS(directory='NPSS_SLS',
-                                                   arglist=arglist, 
-                                                   output_filename='NPSS.out'))
+        self.add_container('NPSS_SLS', 
+             TracingNPSS(directory='NPSS_SLS',
+                         arglist=arglist, 
+                         output_filename='NPSS.out'))
         self.NPSS_SLS.external_files.append(
             {'path':os.path.join(model_dir, 'MC_SLS.run')})
         self.NPSS_SLS.run_command = 'mcRun()'

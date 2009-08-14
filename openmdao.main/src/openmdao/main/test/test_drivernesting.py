@@ -6,7 +6,7 @@ from math import sqrt
 
 from enthought.traits.api import Float, Int, Str
 
-from openmdao.main.api import Assembly, Component, Driver
+from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.main.stringref import StringRef
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
@@ -96,7 +96,7 @@ class NestedDriverTestCase(unittest.TestCase):
         #       |      |
         #       |<-----D2
         #
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add_container('C1', ExprComp(expr='x+1'))
         top.add_container('D1', Summer())
         top.D1.objective = 'C1.f_x'
@@ -124,7 +124,7 @@ class NestedDriverTestCase(unittest.TestCase):
         #              |    |
         #              |<---D2
         #
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add_container('C1', ExprComp(expr='x+1'))
         top.add_container('C2', ExprComp(expr='x+1'))
         top.add_container('D1', Summer())
@@ -154,7 +154,7 @@ class NestedDriverTestCase(unittest.TestCase):
         #  |        |<--C2-->
         #  |                |
         #  |<---------------C3
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add_container('C1', ExprComp(expr='x+1'))
         top.add_container('C2', ExprComp(expr='x+1'))
         top.add_container('C3', ExprComp(expr='x+1'))
@@ -192,7 +192,7 @@ class NestedDriverTestCase(unittest.TestCase):
         global exec_order
         exec_order = []
         
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add_container('C1', ExprComp(expr='x+1'))
         top.add_container('C2', ExprComp2(expr='x+y'))
         top.add_container('C3', ExprComp(expr='x+1'))
@@ -255,7 +255,7 @@ class NestedDriverTestCase(unittest.TestCase):
         global exec_order
         exec_order = []
         
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add_container('C1', ExprComp2(expr='x+1'))
         top.add_container('C2', ExprComp2(expr='x+y'))
         top.add_container('D1', Summer())
@@ -314,7 +314,7 @@ class NestedDriverTestCase(unittest.TestCase):
         global exec_order
         exec_order = []
         
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add_container('C1', ExprComp(expr='x+1'))
         top.add_container('C2', ExprComp2(expr='x+y'))
         top.add_container('C3', ExprComp2(expr='x+1'))

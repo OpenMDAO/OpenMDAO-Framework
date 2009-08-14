@@ -8,7 +8,7 @@ import pkg_resources
 import sys
 import unittest
 
-from openmdao.main.component import SimulationRoot
+from openmdao.main.api import SimulationRoot, set_as_top
 from openmdao.main.exceptions import RunInterrupted
 from openmdao.lib.components.external_code import ExternalCode
 
@@ -31,7 +31,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_normal')
 
-        externp = ExternalCode()
+        externp = set_as_top(ExternalCode())
         externp.timeout = 5
         externp.command = 'python sleep.py 1'
         externp.run()
@@ -42,7 +42,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
-        externp = ExternalCode()
+        externp = set_as_top(ExternalCode())
         externp.name = 'ExternalCode'
         externp.timeout = 5
         externp.command = 'python sleep.py 1'
@@ -55,7 +55,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_timeout')
 
-        externp = ExternalCode()
+        externp = set_as_top(ExternalCode())
         externp.timeout = 1
         externp.command = 'python sleep.py 5'
         try:
@@ -70,7 +70,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_badcmd')
 
-        externp = ExternalCode()
+        externp = set_as_top(ExternalCode())
         externp.command = 'xyzzy'
         externp.stdout = 'badcmd.out'
         externp.stderr = ExternalCode.STDOUT
@@ -91,7 +91,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_nullcmd')
 
-        externp = ExternalCode()
+        externp = set_as_top(ExternalCode())
         externp.stdout = 'nullcmd.out'
         externp.stderr = ExternalCode.STDOUT
         try:

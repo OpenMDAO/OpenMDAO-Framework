@@ -7,9 +7,9 @@ import os
 import pkg_resources
 import unittest
 
-from enthought.traits.api import Float, Bool, Str
+from enthought.traits.api import Float, Bool
 
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
@@ -40,8 +40,8 @@ class MyModel(Assembly):
 
     rerun_flag = Bool(False, iostatus='in')
         
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+    def hierarchy_defined(self):
+        super(MyModel, self).hierarchy_defined()
 
         self.add_container('Source', Source())
         self.Source.npss_in = 9
@@ -49,25 +49,16 @@ class MyModel(Assembly):
         self.add_container('NPSS', NPSScomponent(arglist='-trace reload.mdl',
                                                  output_filename='reload.out'))
         self.NPSS.reload_flag = 'reload_requested'
-
         self.NPSS.make_public([
               ('xyzzy_in','','in'),
               ('xyzzy_out','','out'),
             ])
-        #self.create_passthru('NPSS.xyzzy_in')
-        #self.create_passthru('NPSS.xyzzy_out')
-        #xyzzy_in = Float(self.NPSS, iostatus='in', desc='Test input')
-        #xyzzy_out = Float(self.NPSS, iostatus='out', desc='Test output')
-        #self.create_passthru('NPSS.s')
-        #s = Str(self.NPSS, iostatus='in', desc='Unconnected input')
         
         self.add_container('Sink', Sink())
 
         self.connect('Source.npss_reload', 'NPSS.reload_model')
         self.connect('Source.npss_in', 'NPSS.xyzzy_in')
-        #self.connect('Source.npss_in', 'xyzzy_in')
         self.connect('NPSS.xyzzy_out', 'Sink.npss_out')
-        #self.connect('xyzzy_out', 'Sink.npss_out')
 
     def rerun(self):
         self.debug('rerun()')
@@ -83,7 +74,7 @@ class NPSSTestCase(unittest.TestCase):
         """ Called before each test in this class. """
         # Reset simulation root so we can legally access files.
         SimulationRoot.chdir(NPSSTestCase.directory)
-        self.model = MyModel()
+        self.model = set_as_top(MyModel())
 
     def tearDown(self):
         """ Called after each test in this class. """
@@ -131,9 +122,9 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.rerun()
         except RuntimeError, exc:
-            self.assertEqual(str(exc).startswith(
-                "NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
-                True)
+            msg = "NPSS: Exception during reload: Model file" \
+                  " 'no_such_model' not found while reloading in"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected RuntimeError')
 
@@ -141,7 +132,9 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.run()
         except RuntimeError, exc:
-            self.assertEqual(str(exc), "NPSS: Exception getting 'no_such_variable': no_such_variable not found")
+            msg = "NPSS: Exception getting 'no_such_variable':" \
+                  " no_such_variable not found"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected RuntimeError')
 
@@ -182,9 +175,9 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.rerun()
         except RuntimeError, exc:
-            self.assertEqual(str(exc).startswith(
-                "NPSS: Exception during reload: Model file 'no_such_model' not found while reloading in"),
-                True)
+            msg = "NPSS: Exception during reload: Model file" \
+                  " 'no_such_model' not found while reloading in"
+            self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected RuntimeError')
 

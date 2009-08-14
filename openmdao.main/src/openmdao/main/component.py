@@ -20,7 +20,6 @@ from enthought.traits.api import implements, on_trait_change, Str, Missing, \
 from enthought.traits.trait_base import not_event
 
 from openmdao.main.container import Container
-import openmdao.main.container as container
 from openmdao.main.filevar import FileValue
 from openmdao.util.save_load import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
@@ -252,6 +251,9 @@ class Component (Container):
         """Return absolute path of execution directory."""
         path = self.directory
         if not os.path.isabs(path):
+            if self._call_hierarchy_defined:
+                self.raise_exception("can't call get_abs_directory before hierarchy is defined",
+                                     RuntimeError)
             if self.parent is not None and isinstance(self.parent, Component):
                 parent_dir = self.parent.get_abs_directory()
             else:
@@ -317,7 +319,7 @@ class Component (Container):
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-        Returns the egg's filename.
+        Returns (egg_filename, required_distributions, missing_modules).
         """
         if src_dir is None:
             src_dir = self.get_abs_directory()
@@ -440,8 +442,10 @@ class Component (Container):
                 comp.set(name+'.filename', fvar.filename, force=True)
 
     def get_file_vars(self):
-        """Return list of (filevarname,filevarvalue,filetrait) owned by this component."""
-        def _recurse_get_file_vars (container, file_vars, visited, scope):
+        """Return list of (filevarname,filevarvalue,filetrait) owned by this
+        component."""
+
+        def _recurse_get_file_vars(container, file_vars, visited, scope):
             for name, obj in container.items(type=not_event):
                 if id(obj) in visited:
                     continue
@@ -451,10 +455,11 @@ class Component (Container):
                     if self is scope:
                         file_vars.append((name, obj, ftrait))
                     else:
-                        file_vars.append(('.'.join(
-                                           [container.get_pathname(rel_to_scope=scope),name]), 
+                        relpath = container.get_pathname(rel_to_scope=scope)
+                        file_vars.append(('.'.join([relpath, name]),
                                             obj, ftrait))
-                elif isinstance(obj, Container) and not isinstance(obj, Component):
+                elif isinstance(obj, Container) and \
+                     not isinstance(obj, Component):
                     _recurse_get_file_vars(obj, file_vars, visited, scope)
 
         file_vars = []
@@ -502,7 +507,8 @@ class Component (Container):
         old_level = self.log_level
         self.log_level = LOG_DEBUG
         start = time.time()
-        egg_name = self.save_to_egg(py_dir=py_dir, format=format)
+        egg_info = self.save_to_egg(py_dir=py_dir, format=format)
+        egg_name = egg_info[0]
         elapsed = time.time() - start
         size = os.path.getsize(egg_name)
         print '\nSaved %d bytes in %.2f seconds (%.2f bytes/sec)' % \
@@ -516,7 +522,7 @@ class Component (Container):
         egg_path = os.path.join('..', egg_name)
         unpacker = None
         try:
-            print '\nUnpacking in subprocess...'
+            print '\nUnpacking %s in subprocess...' % egg_name
             env = os.environ
             env['OPENMDAO_INSTALL'] = '0'
             if logfile:
@@ -670,7 +676,7 @@ Component.load_from_eggfile('%s', install=False)
                 const = metadata.get('constant', False)
                 self._copy_files(pattern, package, relpath, is_input, const)
 
-            for fvarname,fvar,ftrait in fvars:
+            for fvarname, fvar, ftrait in fvars:
                 pattern = fvar.filename
                 if not pattern:
                     continue
@@ -821,9 +827,17 @@ def eggsecutable():
         debug = int(debug)
     if debug:
         logging.getLogger().setLevel(logging.DEBUG)
-    try:
-        Component.load_from_eggfile(sys.path[0], install=install)
-    except Exception, exc:
-        print str(exc)
+
+    # Skip any accidental cruft (egg *should* be at [0]).
+    for path in sys.path:
+        if path.endswith('.egg'):
+            try:
+                Component.load_from_eggfile(path, install=install)
+                return
+            except Exception, exc:
+                print str(exc)
+                sys.exit(1)
+    else:
+        print "Can't find an egg file on sys.path!"
         sys.exit(1)
 

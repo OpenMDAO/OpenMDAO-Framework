@@ -3,7 +3,7 @@
 import unittest
 
 from enthought.traits.api import Float, Str, Instance
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, set_as_top
 
 class Multiplier(Component):
     rval_in = Float(iostatus='in')
@@ -86,7 +86,7 @@ class AssemblyTestCase(unittest.TestCase):
             comp2
             comp3
         """
-        self.asm = Assembly()
+        self.asm = set_as_top(Assembly())
         self.asm.add_container('comp1', DummyComp())        
         self.asm.add_container('nested', Assembly())
         self.asm.nested.add_container('comp1', DummyComp())
@@ -94,7 +94,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.asm.add_container(name, DummyComp())
         
     def test_lazy_eval(self):
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add_container('comp1', Multiplier())
         top.add_container('comp2', Multiplier())
         top.comp1.mult = 2.0
@@ -288,7 +288,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp2.r, 9.0)
         
     def test_input_passthru_to_2_inputs(self):
-        asm = Assembly()
+        asm = set_as_top(Assembly())
         asm.add_container('nested', Assembly())
         asm.nested.add_container('comp1', Simple())
         asm.nested.add_container('comp2', Simple())
@@ -305,7 +305,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(asm.nested.comp2.b, 0.5)
         
     def test_connect_2_outs_to_passthru(self):
-        asm = Assembly()
+        asm = set_as_top(Assembly())
         asm.add_container('nested', Assembly())
         asm.nested.add_container('comp1', Simple())
         asm.nested.add_container('comp2', Simple())

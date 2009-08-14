@@ -4,7 +4,7 @@
 
 import unittest
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, set_as_top
 from openmdao.examples.engine_design.vehicle import Vehicle
 
 
@@ -12,7 +12,7 @@ class VehicleTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
-        self.model = Assembly()
+        self.model = set_as_top(Assembly())
         self.model.add_container('test_vehicle', Vehicle())
 
     def tearDown(self):

@@ -1,5 +1,7 @@
-# transmission.py
-#
+"""
+    transmission.py - Transmission component for the vehicle example problem.
+"""
+
 # This openMDAO component contains a simple transmission model
 # Transmission is a 5-speed manual.
 
@@ -75,7 +77,8 @@ class Transmission(Component):
                     *self.velocity)/(60.0*self.tire_circ)
         self.torque_ratio = ratios[gear]*differential
             
-        # At low speeds, hold engine speed at 1000 RPM and partially engage the clutch
+        # At low speeds, hold engine speed at 1000 RPM and
+        # partially engage clutch
         if self.RPM < 1000.0 and self.current_gear == 1 :
             self.RPM = 1000.0
         

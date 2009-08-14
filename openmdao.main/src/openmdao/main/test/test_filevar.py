@@ -8,7 +8,7 @@ import os
 import shutil
 import unittest
 
-from enthought.traits.api import Bool, Array, List, Str
+from enthought.traits.api import Bool, Array, Str
 
 from openmdao.main.api import Assembly, Component
 from openmdao.main.filevar import FileTrait

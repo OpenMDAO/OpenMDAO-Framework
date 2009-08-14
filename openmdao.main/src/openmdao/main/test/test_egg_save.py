@@ -13,7 +13,8 @@ import unittest
 
 from enthought.traits.api import Bool, List, Str, Array, Int, Instance, Callable, TraitError
 
-from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, SAVE_CPICKLE, SAVE_LIBYAML
+from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, \
+                              SAVE_CPICKLE, SAVE_LIBYAML, set_as_top
 from openmdao.main.filevar import FileTrait
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
@@ -161,6 +162,8 @@ class Sink(Component):
         
 
     def hierarchy_defined(self):
+        super(Sink, self).hierarchy_defined()
+        
         self.text_file.filename = os.path.join(self.get_abs_directory(), 'sink.txt')
 
         out = open(self.text_file.filename, 'w')
@@ -282,8 +285,7 @@ class EggTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        self.top = Assembly()
-        self.top.is_top = True
+        self.top = set_as_top(Assembly())
         self.model = Model(directory='Egg')
         self.top.add_container('Egg_TestModel', self.model)
         self.child_objs = [self.model.Source, self.model.Sink,
@@ -324,9 +326,10 @@ class EggTestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.executions, 0)
 
         # Save to egg.
-        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR, format=format,
+        egg_info = self.model.save_to_egg(py_dir=PY_DIR, format=format,
                                                child_objs=self.child_objs,
                                                use_setuptools=use_setuptools)
+        self.egg_name = egg_info[0]
 
         # Run and verify correct operation.
         self.model.run()
@@ -534,7 +537,7 @@ class EggTestCase(unittest.TestCase):
             remove_buildout = False
         else:
             out = open('buildout.cfg', 'w')
-            out.close
+            out.close()
             buildout_size = 0
             remove_buildout = True
 
@@ -582,7 +585,8 @@ class EggTestCase(unittest.TestCase):
         logging.debug('test_save_load_container')
 
         # Save to egg.
-        self.egg_name = self.model.Source.sub.save_to_egg(py_dir=PY_DIR)
+        egg_info = self.model.Source.sub.save_to_egg(py_dir=PY_DIR)
+        self.egg_name = egg_info[0]
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -645,8 +649,9 @@ class EggTestCase(unittest.TestCase):
         logging.debug('    Using python: %s' % python)
 
         # Write to egg.
-        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
+        egg_info = self.model.save_to_egg(py_dir=PY_DIR,
                                                child_objs=self.child_objs)
+        self.egg_name = egg_info[0]
 
         install_dir = os.path.join(os.getcwd(), 'install_dir')
         if os.path.exists(install_dir):
@@ -704,7 +709,7 @@ sys.exit(
 
             # Try a non-existent package.
             try:
-                obj = Component.load_from_eggpkg('no-such-pkg', 'no-such-entry')
+                Component.load_from_eggpkg('no-such-pkg', 'no-such-entry')
             except pkg_resources.DistributionNotFound, exc:
                 self.assertEqual(str(exc), 'no-such-pkg')
             else:
@@ -716,7 +721,7 @@ sys.exit(
             orig_ws = pkg_resources.working_set
             pkg_resources.working_set = pkg_resources.WorkingSet()
             try:
-                obj = Component.load_from_eggpkg(package_name, 'no-such-entry')
+                Component.load_from_eggpkg(package_name, 'no-such-entry')
             except RuntimeError, exc:
                 msg = "No 'openmdao.components' 'no-such-entry' entry point."
                 self.assertEqual(str(exc), msg)
@@ -762,6 +767,7 @@ comp.run()
 
             # Load & run in subprocess.
             logging.debug("Load and run '%s' in subprocess...", entry_name)
+            logging.debug('    %s', os.path.join(install_dir, self.egg_name))
             cmdline = '%s load-n-run.py' % python
             stdout = open('load-n-run.out', 'w')
             retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
@@ -783,10 +789,14 @@ comp.run()
         logging.debug('test_pkg_resources_factory')
 
         # Write to egg.
-        self.egg_name = self.model.save_to_egg(py_dir=PY_DIR,
+        egg_info = self.model.save_to_egg(py_dir=PY_DIR,
                                                child_objs=self.child_objs)
+        self.egg_name = egg_info[0]
+
         # Create factory.
-        factory = PkgResourcesFactory([os.getcwd()], ['openmdao.components'])
+        factory = PkgResourcesFactory([os.getcwd()],
+                                      ['openmdao.components',
+                                       'openmdao.containers'])
         logging.debug('    loaders:')
         for key, value in factory._loaders.items():
             logging.debug('        %s:', key)
@@ -850,7 +860,6 @@ comp.run()
     def create_and_check_model(self, factory, name, file_data):
         """ Create a complete model instance and check it's operation. """
         model = factory.create('Egg_TestModel', name=name)
-        #model.is_top = True
         logging.debug('model.directory = %s' % model.directory)
         if model is None:
             self.fail("Create of '%s' failed." % name)

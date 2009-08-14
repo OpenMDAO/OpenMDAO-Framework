@@ -5,7 +5,7 @@ import logging
 
 from enthought.traits.api import Int, TraitError
 
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, set_as_top
 
         
 class Simple(Component):
@@ -56,7 +56,7 @@ subvars = subins+subouts
 class DepGraphTestCase(unittest.TestCase):
 
     def setUp(self):
-        top = Assembly()
+        top = set_as_top(Assembly())
         self.top = top
         top.add_container('sub', Assembly())
         top.add_container('comp7', Simple())
@@ -91,7 +91,7 @@ class DepGraphTestCase(unittest.TestCase):
         top.connect('sub.d3', 'comp8.b')
 
     def test_simple(self):
-        top = Assembly()
+        top = set_as_top(Assembly())
         top.add_container('comp1', Simple())
         vars = ['a','b','c','d']
         self.assertEqual(top.comp1.run_count, 0)

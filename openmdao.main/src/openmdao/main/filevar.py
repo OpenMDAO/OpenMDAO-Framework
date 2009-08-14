@@ -45,7 +45,12 @@ class FileTrait(TraitType):
     def validate(self, object, name, value):
         if isinstance(value, FileValue):
             value = copy.copy(value)
-            value.filename = getattr(object, name).filename
+            # If we have a local filename definition, keep it.
+            # (If we're created for a passthru property, we won't have one)
+            if hasattr(object, name):
+                obj = getattr(object, name)
+                if hasattr(obj, 'filename'):
+                    value.filename = getattr(object, name).filename
             return value
         else:
             self.error(object, name, value)

@@ -26,27 +26,25 @@ except ImportError:
     _libyaml = False
 
 import datetime
+import glob
 import inspect
 import modulefinder
-import os
+import os.path
 import pkg_resources
 import shutil
 import site
 import sys
 import tempfile
-import zc.buildout.easy_install
 import zipfile
-import StringIO
-import logging
-import pprint
+
+import zc.buildout.easy_install
 
 from openmdao.util import eggwriter
 
-__all__ = ('save', 'save_to_egg',
+__all__ = ('save', 'save_to_egg', 'check_requirements',
            'load', 'load_from_eggfile', 'load_from_eggpkg',
            'SAVE_YAML', 'SAVE_LIBYAML', 'SAVE_PICKLE', 'SAVE_CPICKLE',
            'EGG_SERVER_URL')
-
 
 
 # Save formats.
@@ -56,9 +54,6 @@ SAVE_PICKLE  = 3
 SAVE_CPICKLE = 4
 
 EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
-
-# Saved modulefinder results, keyed by module path.
-_SAVED_FINDINGS = {}
 
 
 class IMHolder(object):
@@ -109,30 +104,28 @@ class NullLogger(object):
         pass
 
 
-def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
-                src_files=None, entry_pts=None, dst_dir=None,
-                format=SAVE_CPICKLE, proto=-1, logger=None,
-                use_setuptools=False):
+def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
+                src_files=None, dst_dir=None, format=SAVE_CPICKLE, proto=-1,
+                logger=None, use_setuptools=False):
     """
-    Save state and other files to an egg.
-    Analyzes the objects saved for distribution dependencies.
-    Modules not found in any distribution are recorded in a '`name`.missing' file.
-    Also creates and saves loader scripts for each entry point.
+    Save state and other files to an egg.  Analyzes the objects saved for
+    distribution dependencies.  Modules not found in any distribution are
+    recorded in a '`name`.missing' file.  Also creates and saves loader scripts
+    for each entry point.
 
-    - `root` is the root of the object graph to be saved.
-    - `name` is the name of the package.
+    - 'entry_pts' is a list of (obj, obj_name, obj_group) tuples. \
+      The first of these specifies the root object and package name.
     - `version` defaults to a timestamp of the form 'YYYY.MM.DD.HH.mm'.
     - `py_dir` is the (root) directory for local Python files. \
       It defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
-    - 'entry_pts' is a list of (obj, obj_name) tuples for additional entries.
     - `dst_dir` is the directory to write the egg in.
 
     The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-    Returns the egg's filename.
+    Returns (egg_filename, required_distributions, missing_modules).
     """
-    if logger is None:
-        logger = NullLogger()
+    root, name, group = entry_pts[0]
+    logger = logger or NullLogger()
 
     orig_dir = os.getcwd()
 
@@ -145,21 +138,16 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
 
     if src_dir and not os.path.isabs(src_dir):
         src_dir = os.path.abspath(src_dir)
-    if src_files is None:
-        src_files = set()
+    src_files = src_files or set()
 
     if version is None:
         now = datetime.datetime.now()  # Could consider using utcnow().
         version = '%d.%02d.%02d.%02d.%02d' % \
                   (now.year, now.month, now.day, now.hour, now.minute)
 
-    if dst_dir is None:
-        dst_dir = orig_dir
+    dst_dir = dst_dir or orig_dir
     if not os.access(dst_dir, os.W_OK):
         raise IOError("Can't save to '%s', no write permission" % dst_dir)
-
-    if entry_pts is None:
-        entry_pts = []
 
     egg_name = eggwriter.egg_filename(name, version)
     logger.debug('Saving to %s in %s...', egg_name, orig_dir)
@@ -232,11 +220,8 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                     out.close()
                     src_files.add(missing_name)
 
-                all_entries = [(root, name)]
-                all_entries.extend(entry_pts)
                 entry_info = []
-                for obj_info in all_entries:
-                    obj, obj_name = obj_info
+                for obj, obj_name, obj_group in entry_pts:
                     clean_name = obj_name
                     if clean_name.startswith(name+'.'):
                         clean_name = clean_name[len(name)+1:]
@@ -256,7 +241,7 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                     _write_loader_script(loader_path, state_name, name,
                                          obj is root)
 
-                    entry_info.append((obj_name, loader))
+                    entry_info.append((obj_group, obj_name, loader))
 
                 # Create buildout.cfg
                 if os.path.exists(buildout_path):
@@ -273,20 +258,17 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
                     out.close()
 
                 # Save everything to an egg.
-                doc = root.__doc__
-                if doc is None:
-                    doc = ''
-                loader = entry_info[0][1]
+                doc = root.__doc__ or ''
+                entry_map = _create_entry_map(entry_info)
                 if use_setuptools:
-                    eggwriter.write_via_setuptools(name, doc, version, loader,
-                                                   src_files,
+                    eggwriter.write_via_setuptools(name, doc, version,
+                                                   entry_map, src_files,
                                                    required_distributions,
-                                                   dst_dir, logger,
-                                                   entry_info[1:])
+                                                   dst_dir, logger)
                 else:
-                    eggwriter.write(name, doc, version, loader,
+                    eggwriter.write(name, doc, version, entry_map,
                                     src_files, required_distributions,
-                                    dst_dir, logger, entry_info[1:])
+                                    dst_dir, logger)
             finally:
                 for path in cleanup_files:
                     if os.path.exists(path):
@@ -305,10 +287,10 @@ def save_to_egg(root, name, version=None, py_dir=None, src_dir=None,
     finally:
         _restore_instancemethods(root)
 
-    return egg_name
+    return (egg_name, required_distributions, missing_modules)
 
 
-def _fix_instancemethods(root, previsited=None):
+def _fix_instancemethods(root):
     """ Replace references to instancemethods with IMHolders. """
 
     def _fix_im_recurse(obj, visited):
@@ -343,18 +325,10 @@ def _fix_instancemethods(root, previsited=None):
         elif hasattr(obj, '__dict__'):
             _fix_im_recurse(obj.__dict__, visited)
 
-    visited = set()
-    if previsited is None:
-        pass
-    elif isinstance(previsited, list):
-        for obj in previsited:
-            visited.add(id(obj))
-    else:
-        visited.add(id(previsited))
-    _fix_im_recurse(root, visited)
+    _fix_im_recurse(root, set())
 
 
-def _restore_instancemethods(root, previsited=None):
+def _restore_instancemethods(root):
     """ Restore references to instancemethods. """
 
     def _restore_im_recurse(obj, visited):
@@ -389,15 +363,7 @@ def _restore_instancemethods(root, previsited=None):
         elif hasattr(obj, '__dict__'):
             _restore_im_recurse(obj.__dict__, visited)
 
-    visited = set()
-    if previsited is None:
-        pass
-    elif isinstance(previsited, list):
-        for obj in previsited:
-            visited.add(id(obj))
-    else:
-        visited.add(id(previsited))
-    _restore_im_recurse(root, visited)
+    _restore_im_recurse(root, set())
 
 
 def _get_objects(root, logger):
@@ -513,6 +479,9 @@ def _fix_objects(objs):
             mod = obj.__module__
         except AttributeError:
             continue  # No module entry to fix.
+        if mod is None:
+            # Needed after switching to Traits for some reason.
+            mod = cls.__module__
 
         if mod == '__main__':
             if classname in ('function', 'type'):
@@ -598,17 +567,27 @@ def _get_distributions(objs, py_dir, logger):
     site_lib = os.path.dirname(site.__file__)
     site_pkg = site_lib+os.sep+'site-packages'
 
+    if _get_distributions.excludes is None:
+        # Exclude Python standard library from ModuleFinder analysis.
+        pattern = os.path.join(os.path.dirname(site.__file__), '*.py')
+        _get_distributions.excludes = \
+            [os.path.basename(path)[:-3] for path in glob.glob(pattern)]
+
     for obj, container, index in objs:
         try:
             name = obj.__module__
         except AttributeError:
             continue
-        if name in modules:
+        if name is None or name in modules:
             continue
         modules.append(name)
 
         # Skip modules in distributions we already know about.
-        path = sys.modules[name].__file__
+        try:
+            path = sys.modules[name].__file__
+        except AttributeError:
+            logger.debug('    module %s has no __file__', name)
+            continue
         if path.startswith(site_lib) and not path.startswith(site_pkg):
             continue
         found = False
@@ -636,20 +615,20 @@ def _get_distributions(objs, py_dir, logger):
                 path = os.path.join(os.getcwd(), path)
 
             finder_items = None
-            if path in _SAVED_FINDINGS.keys():
+            if path in _get_distributions.saved.keys():
                 logger.debug("    reusing analysis of '%s'", path)
-                finder_items = _SAVED_FINDINGS[path]
+                finder_items = _get_distributions.saved[path]
             else:
                 logger.debug("    analyzing '%s'...", path)
-                finder = modulefinder.ModuleFinder()
+                finder = modulefinder.ModuleFinder(
+                                          excludes=_get_distributions.excludes)
                 try:
                     finder.run_script(path)
-                except Exception, err:
-                    logger.exception("ModuleFinder for '%s': %s" % 
-                                     (path,str(err)))
+                except Exception:
+                    logger.exception("ModuleFinder for '%s'" % path)
                 else:
                     finder_items = finder.modules.items()
-                    _SAVED_FINDINGS[path] = finder_items
+                    _get_distributions.saved[path] = finder_items
 
             if finder_items is not None:
                 _process_found_modules(py_dir, finder_items, modules,
@@ -661,6 +640,9 @@ def _get_distributions(objs, py_dir, logger):
     for dist in distributions:
         logger.debug('        %s %s', dist.project_name, dist.version)
     return (distributions, local_modules, missing)
+
+_get_distributions.excludes = None  # Modules to exclude from analysis.
+_get_distributions.saved = {}       # Saved results, keyed by module path.
 
 
 def _process_egg(path, distributions, prefixes, logger):
@@ -688,9 +670,6 @@ def _process_found_modules(py_dir, finder_items, modules, distributions,
     py_version = 'python%s' % sys.version[:3]
     not_found = set()
 
-    #logger.debug('sys.path is %s' % pprint.pformat(sys.path))
-    #logger.debug('finder_iterms are %s' % pprint.pformat(finder_items))
-    
     for name, module in sorted(finder_items, key=lambda item: item[0]):
         if name in modules:
             continue
@@ -833,6 +812,39 @@ if __name__ == '__main__':
     out.close()
 
 
+def _create_entry_map(entry_pts):
+    """ Create entry point map from (group, name, loader) tuples. """
+    pkg_name = entry_pts[0][1]
+    pkg_loader = entry_pts[0][2]
+    ldattr = ['load']
+    entry_map = {}
+
+    entry_group = {}
+    entry_group['top'] = pkg_resources.EntryPoint('top', pkg_loader, ldattr)
+    entry_map['openmdao.top'] = entry_group
+
+    groups = set()
+    for group, name, loader in entry_pts:
+        groups.add(group)
+
+    for grp in sorted(groups):
+        entry_group = {}
+        for group, name, loader in entry_pts:
+            if group == grp:
+                entry_group[name] = \
+                    pkg_resources.EntryPoint(name, pkg_name+'.'+loader, ldattr)
+        if entry_group:
+            entry_map[grp] = entry_group
+
+    entry_group = {}
+    entry_group['eggsecutable'] = \
+        pkg_resources.EntryPoint('eggsecutable', 'openmdao.main.component',
+                                 ['eggsecutable'])
+    entry_map['setuptools.installation'] = entry_group
+
+    return entry_map
+
+
 def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
          fix_im=True):
     """
@@ -840,8 +852,7 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
     The format can be supplied in case something other than cPickle is needed.
     Set `fix_im` False if no instancemethod objects need to be fixed.
     """
-    if logger is None:
-        logger = NullLogger()
+    logger = logger or NullLogger()
 
     if isinstance(outstream, basestring):
         if format is SAVE_CPICKLE or format is SAVE_PICKLE:
@@ -880,8 +891,7 @@ def load_from_eggfile(filename, entry_group, entry_name, install=True,
     optionally install distributions the egg depends on, and then load object
     graph state by invoking the given entry point.  Returns the root object.
     """
-    if logger is None:
-        logger = NullLogger()
+    logger = logger or NullLogger()
     logger.debug('Loading %s from %s in %s...',
                  entry_name, filename, os.getcwd())
 
@@ -904,8 +914,7 @@ def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
     Load object graph state by invoking the given package entry point.
     Returns the root object.
     """
-    if logger is None:
-        logger = NullLogger()
+    logger = logger or NullLogger()
     logger.debug('Loading %s from %s in %s...',
                  entry_name, package, os.getcwd())
     try:
@@ -922,7 +931,7 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
     """ Invoke entry point in distribution and return result. """
     logger.debug('    entry points:')
     maps = dist.get_entry_map()
-    for group in maps.keys():
+    for group in sorted(maps.keys()):
         logger.debug('        group %s:' % group)
         for entry_pt in maps[group].values():
             logger.debug('            %s', entry_pt)
@@ -943,16 +952,14 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
         return loader(name=instance_name)
     except pkg_resources.DistributionNotFound, exc:
         logger.error('Distribution not found: %s', exc)
-        visited = set()
-        _check_requirements(dist, visited, logger)
+        check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
     except pkg_resources.VersionConflict, exc:
         logger.error('Version conflict: %s', exc)
-        visited = set()
-        _check_requirements(dist, visited, logger)
+        check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
     except Exception, exc:
-        logger.exception('Loader exception: %s' % str(exc))
+        logger.exception('Loader exception:')
         raise exc
 
 
@@ -1047,29 +1054,42 @@ def _dist_from_eggfile(filename, install, logger):
     return (name, dist)
 
 
-def _check_requirements(dist, visited, logger, level=1):
-    """ Display requirements and note conflicts. """
-    visited.add(dist)
-    indent  = '    ' * level
-    indent2 = '    ' * (level + 1)
-    working_set = pkg_resources.WorkingSet()
-    for req in dist.requires():
-        logger.debug('%schecking %s', indent, req)
-        dist = None
-        try:
-            dist = working_set.find(req)
-        except pkg_resources.VersionConflict:
-            dist = working_set.by_key[req.key]
-            logger.debug('%sconflicts with %s %s', indent2,
-                         dist.project_name, dist.version)
-        else:
-            if dist is None:
-                logger.debug('%sno distribution found', indent2)
-            else: 
-                logger.debug('%s%s %s', indent2,
+def check_requirements(required, logger=None, indent_level=0):
+    """
+    Display requirements (if logger debug level enabled) and note conflicts.
+    Returns list of unavailable requirements.
+    """
+    def _recursive_check(required, logger, level, visited, working_set,
+                         not_avail):
+        indent  = '    ' * level
+        indent2 = '    ' * (level + 1)
+        for req in required:
+            logger.debug('%schecking %s', indent, req)
+            dist = None
+            try:
+                dist = working_set.find(req)
+            except pkg_resources.VersionConflict:
+                dist = working_set.by_key[req.key]
+                logger.debug('%sconflicts with %s %s', indent2,
                              dist.project_name, dist.version)
-                if not dist in visited:
-                    _check_requirements(dist, visited, logger, level+1)
+                not_avail.append(req)
+            else:
+                if dist is None:
+                    logger.debug('%sno distribution found', indent2)
+                    not_avail.append(req)
+                else: 
+                    logger.debug('%s%s %s', indent2,
+                                 dist.project_name, dist.version)
+                    if not dist in visited:
+                        visited.add(dist)
+                        _recursive_check(dist.requires(), logger, level+1,
+                                         visited, working_set, not_avail)
+
+    logger = logger or NullLogger()
+    not_avail = []
+    _recursive_check(required, logger, indent_level, set(),
+                     pkg_resources.WorkingSet(), not_avail)
+    return not_avail
 
 
 def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
@@ -1079,8 +1099,7 @@ def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
     absolute path, then it is searched for using pkg_resources.
     Returns the root object.
     """
-    if logger is None:
-        logger = NullLogger()
+    logger = logger or NullLogger()
 
     if isinstance(instream, basestring):
         if not os.path.exists(instream) and not os.path.isabs(instream):
@@ -1120,9 +1139,6 @@ def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
     else:
         raise RuntimeError('cannot load object using format %s' % format)
 
-    if top is None:
-        raise RuntimeError('load returned a None object')
-    
     # Restore instancemethods from IMHolder objects.
     _restore_instancemethods(top)
     return top
