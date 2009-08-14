@@ -58,7 +58,8 @@ def set_as_top(cont):
 
 def deep_setattr(obj, path, value):
     """A multi-level setattr, setting the value of an
-    attribute specified by a dotted path.
+    attribute specified by a dotted path. For example,
+    deep_settattr(obj, 'a.b.c', value).
     """
     tup = path.split('.')
     for name in tup[:-1]:
