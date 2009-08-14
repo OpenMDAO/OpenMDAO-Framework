@@ -20,6 +20,7 @@ from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
 
+# Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
 
 
@@ -48,6 +49,7 @@ class Passthrough(NPSScomponent):
 
 class NPSSTestCase(unittest.TestCase):
 
+    # Directory where we can find NPSS model.
     directory = pkg_resources.resource_filename('npsscomponent', 'test')
 
     def setUp(self):
@@ -66,21 +68,29 @@ class NPSSTestCase(unittest.TestCase):
         if self.egg_name and os.path.exists(self.egg_name):
             os.remove(self.egg_name)
 
+        # Verify NPSScomponent didn't mess-up working directory.
+        end_dir = os.getcwd()
         SimulationRoot.chdir(ORIG_DIR)
+        if end_dir != NPSSTestCase.directory:
+            self.fail('Ended in %s, expected %s' \
+                      % (end_dir, NPSSTestCase.directory))
 
     def test_load_save(self):
         logging.debug('')
         logging.debug('test_load_save')
 
+        # Record current values.
         saved_values = {}
         for name, var in self.npss.items():
             saved_values[name] = var
 
+        # Save to an egg.
         egg_info = self.npss.save_to_egg()
         self.egg_name = egg_info[0]
         self.npss.pre_delete()
         self.npss = None
 
+        # Create and move to a test directory.
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
         if os.path.exists(test_dir):
@@ -88,9 +98,11 @@ class NPSSTestCase(unittest.TestCase):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
+            # Load from egg.
             egg_path = os.path.join('..', self.egg_name)
             self.npss = NPSScomponent.load_from_eggfile(egg_path, install=False)
 
+            # Verify loaded values are correct.
             for name, val in saved_values.items():
                 if name == 'directory':
                     continue  # This gets reset on purpose.
@@ -110,12 +122,16 @@ class NPSSTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_nomodel')
 
+        # Change model_filename to nonexistent file.
         self.npss.model_filename = 'xyzzy.mdl'
+
+        # Save to an egg.
         egg_info = self.npss.save_to_egg(version='0.0')
         self.egg_name = egg_info[0]
         self.npss.pre_delete()
         self.npss = None
 
+        # Create and move to a test directory.
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
         if os.path.exists(test_dir):
@@ -124,6 +140,7 @@ class NPSSTestCase(unittest.TestCase):
         os.chdir(test_dir)
         try:
             try:
+                # Load from egg.
                 egg_path = os.path.join('..', self.egg_name)
                 self.npss = NPSScomponent.load_from_eggfile(egg_path,
                                                             install=False)
@@ -142,6 +159,7 @@ class NPSSTestCase(unittest.TestCase):
         logging.debug('test_badsave')
 
         try:
+            # Save to an egg in a directory we can't write to.
             self.npss.save_to_egg(dst_dir='/no-permission')
         except IOError, exc:
             self.assertEqual(str(exc),
@@ -153,7 +171,7 @@ class NPSSTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_yaml')
 
-        # This currently fails, not sure why.
+        # This currently fails, not sure why YAML can't handle it.
         try:
             egg_info = self.npss.save_to_egg(format=SAVE_LIBYAML)
             self.egg_name = egg_info[0]
