@@ -16,7 +16,6 @@ class Workflow(object):
 
     def __init__(self, scope=None):
         """ Create an empty flow. """
-        #super(Workflow, self).__init__()
         self.scope = scope
         self.nodes = []
         self._iterator = None
@@ -42,11 +41,7 @@ class Workflow(object):
                 comp.remove_node(node)
         self.nodes = nodes
 
-    def run (self, force=False):
-        """Run this Workflow."""
-        self.execute()
-
-    def execute(self):
+    def run(self):
         """ Run through the nodes in the workflow list. """
         #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
         for node in self.nodes_iter():

@@ -22,9 +22,9 @@ class Dataflow(Workflow):
         super(Dataflow, self).__init__(scope=scope)
         self._no_ref_graph = nx.DiGraph()
         
-    def execute(self):
+    def run(self):
         try:
-            super(Dataflow, self).execute()
+            super(Dataflow, self).run()
         finally:
             self._drvsorter = None
             
@@ -105,7 +105,6 @@ class Dataflow(Workflow):
             graph.add_edges_from(drivers[0].get_ref_graph(iostatus='out').edges_iter())
             for n in nx.topological_sort(graph):
                 yield getattr(self.scope, n)
-            return
         else:  # multiple drivers
             graph = self._no_ref_graph.copy()
             
