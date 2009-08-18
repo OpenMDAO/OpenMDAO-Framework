@@ -21,10 +21,11 @@ def run_openmdao_suite():
     # In case --with-coverage is used, default these options in.
     if '--with-coverage' in sys.argv:
         sys.argv.append('--cover-erase')
-        for pkg in tlist:
-            opt = '--cover-package=%s' % pkg
-            if opt not in sys.argv:
-                sys.argv.append(opt)
+        if '--all' in sys.argv:
+            for pkg in tlist:
+                opt = '--cover-package=%s' % pkg
+                if opt not in sys.argv:
+                    sys.argv.append(opt)
 
         # at the moment, html annotation doesn't work through nose when
         # using version 3.0.1 of coverage...

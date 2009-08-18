@@ -569,9 +569,30 @@ def _get_distributions(objs, py_dir, logger):
 
     if _get_distributions.excludes is None:
         # Exclude Python standard library from ModuleFinder analysis.
-        pattern = os.path.join(os.path.dirname(site.__file__), '*.py')
-        _get_distributions.excludes = \
-            [os.path.basename(path)[:-3] for path in glob.glob(pattern)]
+        excl_dirs = []
+        if sys.platform == 'win32':
+            prefx = os.path.join(sys.prefix,'Lib')
+            excl_dirs = [prefx, os.path.join(sys.prefix,'DLLs')]
+            exts = ['*.py', '*.py?', '*.dll']
+        else:
+            prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
+            excl_dirs = [prefx, os.path.join(prefx,'lib-dynload'),
+                         #prefx+'.zip',
+                         os.path.join(prefx,'plat-'+sys.platform),
+                         os.path.join(prefx,'site-packages')]
+            exts = ['*.py', '*.py?', '*.so']
+        excludes = set()
+        for ext in exts:
+            for edir in excl_dirs:
+                pattern = os.path.join(edir, ext)
+                excludes.update([os.path.basename(p)[:-(len(ext)-1)]
+                                 for p in glob.glob(pattern)])
+              
+        excludes.update(sys.builtin_module_names)
+        #pattern = os.path.join(os.path.dirname(site.__file__), '*.py')
+        #_get_distributions.excludes = \
+        #    [os.path.basename(path)[:-3] for path in glob.glob(pattern)]
+        _get_distributions.excludes = list(excludes)
 
     for obj, container, index in objs:
         try:
