@@ -120,9 +120,18 @@ class Component (Container):
         function must still call the base class version.
         """
         super(Component, self).tree_defined()
-        dirpath = self.get_abs_directory()
-        if dirpath:
-            dirpath = self.check_path(dirpath, create=True)
+        if self.directory:
+            path = self.get_abs_directory()
+            if not os.path.exists(path):
+                self.check_path(path) # make sure it's legal path before creating
+                try:
+                    os.makedirs(path)
+                except OSError, exc:
+                    self.raise_exception(
+                        "Can't create execution directory '%s': %s"
+                        % (path, exc.strerror), OSError)
+            else:
+                self.check_path(path, check_exist=True)
         
     def _pre_execute (self):
         """Make preparations for execution. Overrides of this function must
@@ -221,10 +230,9 @@ class Component (Container):
         self._call_check_config = True # force config check prior to next execution
         super(Component, self).remove_trait(name)    
 
-    def check_path(self, path, create=True):
+    def check_path(self, path, check_exist=False):
         """Verify that the given path is a directory and is located
         within the allowed area (somewhere within the simulation root path).
-        If create is True, create the path if it doesn't already exist.
         """
 # pylint: disable-msg=E1101
         if not SimulationRoot.legal_path(path):
@@ -232,15 +240,7 @@ class Component (Container):
                 "Illegal execution directory '%s', not a decendant of '%s'."
                 % (path, SimulationRoot.get_root()),
                 ValueError)
-        if not os.path.exists(path):
-            try:
-                os.makedirs(path)
-            except OSError, exc:
-                self.raise_exception(
-                    "Can't create execution directory '%s': %s"
-                    % (path, exc.strerror), OSError)
-        else:
-            if not os.path.isdir(path):
+        elif not os.path.isdir(path) and check_exist:
                 self.raise_exception(
                     "Execution directory path '%s' is not a directory."
                     % path, ValueError)
@@ -260,8 +260,6 @@ class Component (Container):
                 parent_dir = SimulationRoot.get_root()
             path = os.path.join(parent_dir, path)
             
-        path = self.check_path(path, create=False)
-                    
         return path
 
     def push_dir (self, directory):

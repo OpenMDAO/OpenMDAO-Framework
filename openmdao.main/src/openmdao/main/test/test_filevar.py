@@ -140,7 +140,7 @@ class FileTestCase(unittest.TestCase):
         else:
             self.fail('IOError expected')
 
-    def test_bad_directory(self):
+    def test_illegal_directory(self):
         logging.debug('')
         logging.debug('test_bad_directory')
 
@@ -155,6 +155,9 @@ class FileTestCase(unittest.TestCase):
         else:
             self.fail('Expected ValueError')
 
+    def test_protected_directory(self):
+        logging.debug('')
+        logging.debug('test_protected_directory')
         # Create a protected directory.
         directory = 'protected'
         if os.path.exists(directory):
@@ -174,6 +177,9 @@ class FileTestCase(unittest.TestCase):
         finally:
             os.rmdir(directory)
 
+    def test_file_in_place_of_directory(self):
+        logging.debug('')
+        logging.debug('test_file_in_place_of_directory')
         # Create a plain file.
         directory = 'plain_file'
         if os.path.exists(directory):
@@ -185,19 +191,19 @@ class FileTestCase(unittest.TestCase):
             # Set execution directory to plain file.
             self.source = Source(directory=directory)
             self.source.tree_defined()
-        except ValueError, exc:
+        except Exception, exc:
             path = os.path.join(os.getcwd(), directory)
             self.assertEqual(str(exc),
                 ": Execution directory path '%s' is not a directory."
                 % path)
         else:
-            self.fail('Expected ValueError')
+            self.fail('Expected Exception')
         finally:
             os.remove(directory)
 
-    def test_bad_new_directory(self):
+    def test_nonexistent_directory(self):
         logging.debug('')
-        logging.debug('test_bad_new_directory')
+        logging.debug('test_nonexistent_directory')
 
         # Set execution directory to non-existant path.
         self.model.Source.directory = 'no-such-dir'
