@@ -53,8 +53,8 @@ class Source(Component):
     text_file = FileTrait(iostatus='out')
     binary_file = FileTrait(iostatus='out', binary=True)
         
-    def hierarchy_defined(self):
-        super(Source, self).hierarchy_defined()
+    def tree_defined(self):
+        super(Source, self).tree_defined()
         
         self.text_file.filename = 'source.txt'
         self.binary_file.filename = 'source.bin'
@@ -111,8 +111,8 @@ class Passthrough(NPSScomponent):
         super(Passthrough, self).__init__(doc, directory,
                                           arglist, 'passthrough.out')
         
-    def hierarchy_defined(self):
-        super(Passthrough, self).hierarchy_defined()
+    def tree_defined(self):
+        super(Passthrough, self).tree_defined()
 
         # Manual interface variable creation.
         # BAN - manual interface variable creation is error prone, because
@@ -166,8 +166,8 @@ class Sink(Component):
     text_file = FileTrait(iostatus='in')
     binary_file = FileTrait(iostatus='in')
         
-    def hierarchy_defined(self):
-        super(Sink, self).hierarchy_defined()
+    def tree_defined(self):
+        super(Sink, self).tree_defined()
         
         self.text_file.filename = 'sink.txt'
         self.binary_file.filename = 'sink.bin'
@@ -218,8 +218,8 @@ class Model(Assembly):
         super(Model, self).__init__(*args, **kwargs)        
         self._indirect = indirect
         
-    def hierarchy_defined(self):
-        super(Model, self).hierarchy_defined()
+    def tree_defined(self):
+        super(Model, self).tree_defined()
         
         self.add_container('Source', Source())
         self.Source.b = True

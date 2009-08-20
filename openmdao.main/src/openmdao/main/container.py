@@ -53,7 +53,7 @@ def set_as_top(cont):
     """Specifies that the given Container is the top of a 
     Container hierarchy.
     """
-    cont.hierarchy_defined()
+    cont.tree_defined()
     return cont
 
 def deep_setattr(obj, path, value):
@@ -170,7 +170,7 @@ class Container(HasTraits):
         self._output_names = None
         self._container_names = None
         
-        self._call_hierarchy_defined = True
+        self._call_tree_defined = True
         
         if doc is not None:
             self.__doc__ = doc
@@ -424,8 +424,8 @@ class Container(HasTraits):
             # then go ahead and tell the obj (which will in turn
             # tell all of its children) that its hierarchy is
             # defined.
-            if self._call_hierarchy_defined is False:
-                obj.hierarchy_defined()
+            if self._call_tree_defined is False:
+                obj.tree_defined()
         else:
             self.raise_exception("'"+str(type(obj))+
                     "' object is not an instance of Container.",
@@ -443,16 +443,16 @@ class Container(HasTraits):
             self.raise_exception("cannot remove child '%s': not found"%
                                  name, TraitError)
 
-    def hierarchy_defined(self):
+    def tree_defined(self):
         """Called after the hierarchy containing this Container has been
         defined back to the root. This does not guarantee that all sibling
         Containers have been defined. It also does not guarantee that this
         component is fully configured to execute. Classes that override this
         function must call their base class version.
         """
-        self._call_hierarchy_defined = False
+        self._call_tree_defined = False
         for cont in self.list_containers():
-            getattr(self, cont).hierarchy_defined()
+            getattr(self, cont).tree_defined()
             
     def unit_convert(self, name, units):
         """Return the value of the named io trait converted to the given

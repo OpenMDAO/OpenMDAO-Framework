@@ -143,8 +143,8 @@ class NPSSmodel(NPSScomponent):
         self._npssmodelclass = npssmodelclass
         self._npssargs = npssargs
         
-    def hierarchy_defined(self):
-        super(NPSSmodel, self).hierarchy_defined()
+    def tree_defined(self):
+        super(NPSSmodel, self).tree_defined()
         
         if 'parse_str' in self._kwargs:
             self.parse_string(self._kwargs['parse_str'])

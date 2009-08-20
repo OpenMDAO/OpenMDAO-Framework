@@ -156,12 +156,12 @@ class NPSScomponent(Component):
         self._top = None
         
 
-    def hierarchy_defined(self):
+    def tree_defined(self):
         """Performs checking of paths for any files/directories 
         supplied as args, in addition to calling the base class
-        version of hierarchy_defined.
+        version of tree_defined.
         """
-        super(NPSScomponent, self).hierarchy_defined()
+        super(NPSScomponent, self).tree_defined()
         
         if self._arglist is not None:
             self._parse_arglist(self._arglist)

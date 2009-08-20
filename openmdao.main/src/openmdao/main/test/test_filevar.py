@@ -147,7 +147,7 @@ class FileTestCase(unittest.TestCase):
         try:
             # Set an illegal execution directory, verify error.
             src = Source(directory='/illegal')
-            src.hierarchy_defined()
+            src.tree_defined()
         except ValueError, exc:
             msg = ": Illegal execution directory '/illegal'," \
                   " not a decendant of"
@@ -165,7 +165,7 @@ class FileTestCase(unittest.TestCase):
         try:
             # Attempt auto-creation of execution directory in protected area.
             src = Source(directory=exe_dir)
-            src.hierarchy_defined()
+            src.tree_defined()
         except OSError, exc:
             msg = ": Can't create execution directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -184,7 +184,7 @@ class FileTestCase(unittest.TestCase):
         try:
             # Set execution directory to plain file.
             self.source = Source(directory=directory)
-            self.source.hierarchy_defined()
+            self.source.tree_defined()
         except ValueError, exc:
             path = os.path.join(os.getcwd(), directory)
             self.assertEqual(str(exc),

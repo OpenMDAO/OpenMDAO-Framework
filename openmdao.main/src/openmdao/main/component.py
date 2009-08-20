@@ -112,14 +112,14 @@ class Component (Container):
         """
         self._call_check_config = False
     
-    def hierarchy_defined(self):
+    def tree_defined(self):
         """Called after the hierarchy containing this Container has been
         defined back to the root. This does not guarantee that all sibling
         Containers have been defined. It also does not guarantee that this
         component is fully configured to execute. Classes that override this
         function must still call the base class version.
         """
-        super(Component, self).hierarchy_defined()
+        super(Component, self).tree_defined()
         dirpath = self.get_abs_directory()
         if dirpath:
             dirpath = self.check_path(dirpath, create=True)
@@ -128,8 +128,8 @@ class Component (Container):
         """Make preparations for execution. Overrides of this function must
         call this version.
         """
-        if self._call_hierarchy_defined:
-            self.hierarchy_defined()
+        if self._call_tree_defined:
+            self.tree_defined()
             
         if self._call_check_config:
             self.check_config()
@@ -251,7 +251,7 @@ class Component (Container):
         """Return absolute path of execution directory."""
         path = self.directory
         if not os.path.isabs(path):
-            if self._call_hierarchy_defined:
+            if self._call_tree_defined:
                 self.raise_exception("can't call get_abs_directory before hierarchy is defined",
                                      RuntimeError)
             if self.parent is not None and isinstance(self.parent, Component):

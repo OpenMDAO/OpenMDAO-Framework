@@ -49,8 +49,8 @@ class MyModel(Assembly):
     """ Exercises NPSS auto-reload capability. """ 
 
        
-    def hierarchy_defined(self):
-        super(MyModel, self).hierarchy_defined()
+    def tree_defined(self):
+        super(MyModel, self).tree_defined()
 
         self.add_container('Source', Source())
         self.Source.npss_in = 9

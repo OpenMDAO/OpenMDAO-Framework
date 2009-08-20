@@ -19,7 +19,7 @@ class EngineOptimizationTestCase(unittest.TestCase):
 
     def setUp(self):
         self.model = EngineOptimization()
-        self.model.hierarchy_defined()
+        self.model.tree_defined()
 
     def tearDown(self):
         if self.model is not None:

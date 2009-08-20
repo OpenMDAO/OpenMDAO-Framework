@@ -30,8 +30,8 @@ class Passthrough(NPSScomponent):
     def __init__(self):
         super(Passthrough, self).__init__(arglist='passthrough.mdl')
         
-    def hierarchy_defined(self):
-        super(Passthrough, self).hierarchy_defined()
+    def tree_defined(self):
+        super(Passthrough, self).tree_defined()
         
         # Automagic interface variable creation
         self.make_public([
