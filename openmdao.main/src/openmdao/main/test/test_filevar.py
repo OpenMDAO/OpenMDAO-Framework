@@ -108,6 +108,7 @@ class FileTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_connectivity')
 
+        # Verify expected initial state.
         self.assertNotEqual(self.model.Sink.text_data,
                             self.model.Source.text_data)
         self.assertNotEqual(self.model.Sink.binary_data,
@@ -117,6 +118,7 @@ class FileTestCase(unittest.TestCase):
 
         self.model.run()
 
+        # Verify data transferred.
         self.assertEqual(self.model.Sink.text_data,
                          self.model.Source.text_data)
         self.assertEqual(all(self.model.Sink.binary_data==self.model.Source.binary_data),
@@ -128,6 +130,7 @@ class FileTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_src_failure')
 
+        # Turn off source write, verify error message.
         self.model.Source.write_files = False
         try:
             self.model.run()
@@ -142,6 +145,7 @@ class FileTestCase(unittest.TestCase):
         logging.debug('test_bad_directory')
 
         try:
+            # Set an illegal execution directory, verify error.
             src = Source(directory='/illegal')
             src.hierarchy_defined()
         except ValueError, exc:
@@ -151,6 +155,7 @@ class FileTestCase(unittest.TestCase):
         else:
             self.fail('Expected ValueError')
 
+        # Create a protected directory.
         directory = 'protected'
         if os.path.exists(directory):
             os.rmdir(directory)
@@ -158,6 +163,7 @@ class FileTestCase(unittest.TestCase):
         os.chmod(directory, 0)
         exe_dir = os.path.join(directory, 'xyzzy')
         try:
+            # Attempt auto-creation of execution directory in protected area.
             src = Source(directory=exe_dir)
             src.hierarchy_defined()
         except OSError, exc:
@@ -168,6 +174,7 @@ class FileTestCase(unittest.TestCase):
         finally:
             os.rmdir(directory)
 
+        # Create a plain file.
         directory = 'plain_file'
         if os.path.exists(directory):
             os.remove(directory)
@@ -175,6 +182,7 @@ class FileTestCase(unittest.TestCase):
         out.write('Hello world!\n')
         out.close()
         try:
+            # Set execution directory to plain file.
             self.source = Source(directory=directory)
             self.source.hierarchy_defined()
         except ValueError, exc:
@@ -191,27 +199,17 @@ class FileTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_bad_new_directory')
 
-        self.model.Source.directory = '/illegal'
+        # Set execution directory to non-existant path.
+        self.model.Source.directory = 'no-such-dir'
         try:
             self.model.run()
-        except ValueError, exc:
-            msg = "Source: Illegal execution directory '/illegal'," \
-                  " not a decendant of"
+        except RuntimeError, exc:
+            msg = "Source: Could not move to execution" \
+                  " directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
-            self.fail('Expected ValueError')
+            self.fail('Expected RuntimeError')
 
-        ## this test no longer fails because no-such-dir gets
-        ## created on-the-fly
-        #self.model.Source.directory = 'no-such-dir'
-        #try:
-            #self.model.run()
-        #except RuntimeError, exc:
-            #msg = "Source: Could not move to execution" \
-                  #" directory"
-            #self.assertEqual(str(exc)[:len(msg)], msg)
-        #else:
-            #self.fail('Expected RuntimeError')
 
 
 if __name__ == '__main__':

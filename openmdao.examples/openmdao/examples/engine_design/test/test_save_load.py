@@ -30,14 +30,6 @@ class EngineOptimizationTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
-        if os.environ.get('OPENMDAO_CAPTURE_EXTERN'):
-            console_str = """
-import openmdao.main.log
-openmdao.main.log.enable_console()
-"""
-        else:
-            console_str = ''
-                
         self.model.driving_sim.bore = 95.
         self.model.driving_sim.spark_angle = -35.368341874
         self.model.driver.maxiters = 1
@@ -62,14 +54,13 @@ openmdao.main.log.enable_console()
             out = open('unpack.py', 'w')
             out.write("""\
 from openmdao.main.api import Component
-%s
 try:
     Component.load_from_eggfile('%s', install=False)
 except Exception, err:
     import openmdao.main.log
     openmdao.main.log.logger.exception(str(err))
     raise
-""" % (console_str, egg_path))
+""" % egg_path)
             out.close()
             retcode = subprocess.call([python, 'unpack.py'])
             self.assertEqual(retcode, 0)
@@ -86,7 +77,6 @@ import sys
 if not '.' in sys.path:
     sys.path.append('.')
 import unittest
-%s
 class TestCase(unittest.TestCase):
     def test_load(self):
         loader = __import__('%s_loader')
@@ -101,7 +91,7 @@ class TestCase(unittest.TestCase):
                               
 if __name__ == '__main__':
     unittest.main()
-""" % (console_str, self.model.name))
+""" % self.model.name)
             out.close()
 
             out = open('test.out', 'w')

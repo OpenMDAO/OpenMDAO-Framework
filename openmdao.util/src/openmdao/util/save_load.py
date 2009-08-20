@@ -788,10 +788,6 @@ def _write_loader_script(path, state_name, package, top):
     else:
         top_arg = ', top_obj=False'
 
-    if os.environ.get('OPENMDAO_CAPTURE_EXTERN'):
-        console_str = "import openmdao.main.log; openmdao.main.log.enable_console()"
-    else:
-        console_str = ''
     out = open(path, 'w')
     out.write("""\
 import os
@@ -801,7 +797,6 @@ if not '.' in sys.path:
 
 try:
     from openmdao.main.api import Component, SAVE_CPICKLE, SAVE_LIBYAML
-    %(console_str)s
 except ImportError:
     print 'No OpenMDAO distribution available.'
     if __name__ != '__main__':
@@ -828,8 +823,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-""" % {'name':state_name, 'pkg':pkg_arg, 'top':top_arg, 
-       'console_str':console_str})
+""" % {'name':state_name, 'pkg':pkg_arg, 'top':top_arg})
     out.close()
 
 

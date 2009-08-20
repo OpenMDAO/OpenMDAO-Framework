@@ -18,6 +18,7 @@ from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_a
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 import openmdao.util.testutil
 
+# Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
@@ -44,7 +45,7 @@ class DrivenComponent(Component):
         """ Compute results from input vector. """
         self.rosen_suzuki = rosen_suzuki(self.x)
 # This gets "iter() returned non-iterator of type 'SyncNetProxy'"
-# (RPyC 2.6 doesn't know to 'box' Array objects)
+# (RPyC 2.6 as issues with proxied objects & iteration)
 #        self.sum_y = sum(self.y)
         self.sum_y = 0
         for i in range(len(self.y)):
@@ -64,6 +65,7 @@ class MyModel(Assembly):
 class DriverTestCase(unittest.TestCase):
     """ Test CaseIteratorDriver. """
 
+    # Need to be in this directory or there are issues with egg loading.
     directory = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
 
     def setUp(self):
@@ -82,6 +84,8 @@ class DriverTestCase(unittest.TestCase):
         self.model = None
         for server_dir in glob.glob('LocalHost_*'):
             shutil.rmtree(server_dir)
+
+        # Verify we didn't mess-up working directory.
         end_dir = os.getcwd()
         os.chdir(ORIG_DIR)
         if end_dir != self.directory:
@@ -96,6 +100,7 @@ class DriverTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_concurrent')
         try:
+            # Unsupported, but at least we're exercising egg generation.
             self.run_cases(sequential=False, n_servers=5)
         except NotImplementedError, exc:
             msg = 'driver: Concurrent evaluation is not' \
@@ -105,6 +110,7 @@ class DriverTestCase(unittest.TestCase):
             self.fail('Expected NotImplementedError')
 
     def run_cases(self, sequential, n_servers=0):
+        """ Evaluate cases, either sequentially or across n_servers. """
         self.model.driver.sequential = sequential
         self.model.driver._n_servers = n_servers
         self.model.driver.iterator = ListCaseIterator(self.cases)
@@ -113,6 +119,7 @@ class DriverTestCase(unittest.TestCase):
 
         self.model.run()
 
+        # Verify recorded results match expectations.
         self.assertEqual(len(results), len(self.cases))
         for case in results:
             self.assertEqual(case.msg, None)
@@ -131,6 +138,8 @@ class DriverTestCase(unittest.TestCase):
 
         # Set local dir in case we're running in a different directory.
         py_dir = self.directory
+
+        # Exercise check_save_load().  Must find correct python first.
         python = openmdao.util.testutil.find_python('openmdao.lib')
         retcode = self.model.check_save_load(py_dir=py_dir, python=python)
         self.assertEqual(retcode, 0)
@@ -139,6 +148,7 @@ class DriverTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_noinput')
 
+        # Create cases with missing input 'dc.z'.
         cases = []
         for i in range(2):
             inputs = [('x', None, numpy.random.normal(size=4)),
@@ -163,6 +173,7 @@ class DriverTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_nooutput')
 
+        # Create cases with missing output 'dc.sum_z'.
         cases = []
         for i in range(2):
             inputs = [('x', None, numpy.random.normal(size=4)),
@@ -187,6 +198,7 @@ class DriverTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_noiterator')
 
+        # Check resoponse to no iterator set.
         self.model.driver.outerator = []
         try:
             self.model.run()
@@ -201,6 +213,7 @@ class DriverTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_noouterator')
 
+        # Check resoponse to no outerator set.
         self.model.driver.iterator = ListCaseIterator([])
         try:
             self.model.run()

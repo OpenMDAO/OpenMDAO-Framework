@@ -38,9 +38,9 @@ def run_openmdao_suite():
 
     # this tells it to put enable_console calls in generated python
     # scripts so test runner can see all output for debugging purposes.
-    if '--extern_capture' in sys.argv:
-        sys.argv.remove('--extern_capture')
-        os.environ['OPENMDAO_CAPTURE_EXTERN'] = 'TRUE'
+    if '--enable_console' in sys.argv:
+        sys.argv.remove('--enable_console')
+        os.environ['OPENMDAO_ENABLE_CONSOLE'] = 'TRUE'
         
     if '--all' in sys.argv:
         sys.argv.remove('--all')

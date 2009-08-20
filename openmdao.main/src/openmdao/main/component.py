@@ -538,19 +538,10 @@ class Component (Container):
                 print '    python:', python
                 unpacker = 'unpack.py'
                 out = open(unpacker, 'w')
-                if os.environ.get('OPENMDAO_CAPTURE_EXTERN'):
-                    console_str = """
-import openmdao.main.log
-openmdao.main.log.enable_console()
-"""
-                else:
-                    console_str = ''
-
                 out.write("""\
 from openmdao.main.api import Component
-%s
 Component.load_from_eggfile('%s', install=False)
-""" % (console_str, egg_path))
+""" % egg_path)
                 out.close()
                 args = [python, unpacker]
             else:

@@ -100,6 +100,10 @@ def disable_console():
     logger.removeHandler(CONSOLE)
 
 
+if os.environ.get('OPENMDAO_ENABLE_CONSOLE'):
+    enable_console()
+
+
 class Logger(object):
     """ Pickle-able logger. Mostly a pass-through to a real logger."""
 

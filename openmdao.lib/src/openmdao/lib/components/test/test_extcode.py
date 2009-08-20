@@ -14,7 +14,9 @@ from openmdao.lib.components.external_code import ExternalCode
 
 import openmdao.util.testutil
 
+# Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
+# Directory where we can find sleep.py.
 DIRECTORY = pkg_resources.resource_filename('openmdao.lib.components', 'test')
 
 
@@ -31,6 +33,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_normal')
 
+        # Normal run should have no issues.
         externp = set_as_top(ExternalCode())
         externp.timeout = 5
         externp.command = 'python sleep.py 1'
@@ -47,6 +50,7 @@ class TestCase(unittest.TestCase):
         externp.timeout = 5
         externp.command = 'python sleep.py 1'
 
+        # Exercise check_save_load().  Must find correct python first.
         python = openmdao.util.testutil.find_python('openmdao.lib')
         retcode = externp.check_save_load(python=python)
         self.assertEqual(retcode, 0)
@@ -55,6 +59,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_timeout')
 
+        # Set timeout to less than execution time.
         externp = set_as_top(ExternalCode())
         externp.timeout = 1
         externp.command = 'python sleep.py 5'
@@ -70,6 +75,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_badcmd')
 
+        # Set command to nonexistant path.
         externp = set_as_top(ExternalCode())
         externp.command = 'xyzzy'
         externp.stdout = 'badcmd.out'
@@ -91,6 +97,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_nullcmd')
 
+        # Check response to no command set.
         externp = set_as_top(ExternalCode())
         externp.stdout = 'nullcmd.out'
         externp.stderr = ExternalCode.STDOUT
