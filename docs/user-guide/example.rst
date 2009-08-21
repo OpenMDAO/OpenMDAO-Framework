@@ -414,10 +414,9 @@ the base class Component. A very simple component is shown here:
 	class Transmission(Component):
 	    """ A simple transmission model."""
 	
-	    def __init__(self, name, parent=None, doc=None, directory=''):
-                """ Creates a new Transmission object """
-	            
-	        super(Transmission, self).__init__(name, parent, doc, directory)        
+    	    def __init__(self, doc=None, directory=''):
+        	    """ Creates a new Transmission object """
+        	super(Transmission, self).__init__(doc, directory)        
         
 	        def execute(self):
 	            """ The 5-speed manual transmission is simulated by determining the
@@ -678,16 +677,16 @@ Engine, and Chasis components.
     
 	    implements(IVehicle)
     
-	    def __init__(self, name, parent=None, directory=''):
+	    def __init__(self, directory=''):
 	        """ Creates a new Vehicle Assembly object """
 
-	        super(Vehicle, self).__init__(name, parent, directory)
+	        super(Vehicle, self).__init__(directory)
 
 	        # Create component instances
         
-	        Transmission('transmission', parent=self)
-	        Engine('engine', parent=self)
-	        Chasis('chasis', parent=self)
+	        self.add_container('transmission', Transmission())
+	        self.add_container('engine', Engine())
+	        self.add_container('chasis', Chasis())
 
 The Engine, Transmission, and Chasis components are imported the same way as they were in the
 Python shell, using ``openmdao.examples.engine_design`` name-space. In creating a new class, the main
@@ -948,16 +947,16 @@ was created and a SimVehicle and CONMINdriver were instantiated:
 	class EngineOptimization(Assembly):
 	    """ Top level assembly for optimizing a vehicle. """
     
-	    def __init__(self, name, parent=None, directory=''):
+	    def __init__(self, directory=''):
         	""" Creates a new Assembly containing a SimVehicle and an optimizer"""
         
-	        super(EngineOptimization, self).__init__(name, parent, directory)
+	        super(EngineOptimization, self).__init__(directory)
 
 	        # Create SimVehicle component instances
-        	Driving_Sim('driving_sim', parent=self)
+        	self.add_container('driving_sim', Driving_Sim())
 
 	        # Create CONMIN Optimizer instance
-        	CONMINdriver('driver', parent=self)
+        	self.add_container('driver', CONMINdriver())
 
 Note that the syntax for instantiated the CONMIN driver is the same as for any other component or subassembly. The CONMIN 
 driver requires some initialization and connecting before it can be used:

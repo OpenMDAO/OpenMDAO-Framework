@@ -11,8 +11,7 @@ import numpy
 from enthought.traits.api import Float, Array, TraitError
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.component import Component
-from openmdao.main.assembly import Assembly
+from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 import openmdao.util.testutil
@@ -126,8 +125,8 @@ class OptGolinskiComponent(Component):
     result = Float(0., iostatus='out')
         
     # pylint: disable-msg=C0103
-    def __init__(self, name, parent=None, desc=None):
-        super(OptGolinskiComponent, self).__init__(name, parent, desc)
+    def __init__(self, desc=None):
+        super(OptGolinskiComponent, self).__init__(desc)
         self.x = numpy.array([3.3,0.70,25.0,7.9,7.5999999,3.0,5.09999999],dtype=float)
         # self.x = numpy.array([3.3,0.589999970,25.0,7.9,7.5999999,3.0,5.09999999],dtype=float)
         # self.x = numpy.array([3.5,0.700,17.0,7.3,7.7153201,3.50215,5.2866545],dtype=float)
@@ -151,9 +150,9 @@ class GolinskiTestCase(unittest.TestCase):
 
     
     def setUp(self):
-        self.top = Assembly('top', None)
-        OptGolinskiComponent('comp', self.top)
-        CONMINdriver('driver', self.top)
+        self.top = set_as_top(Assembly())
+        self.top.add_container('comp', OptGolinskiComponent())
+        self.top.add_container('driver', CONMINdriver())
         self.top.driver.iprint = 0
         self.top.driver.maxiters = 30
         
@@ -283,7 +282,7 @@ class GolinskiTestCase(unittest.TestCase):
             self.top.driver.objective = 'comp.missing'
         except TraitError, err:
             self.assertEqual(str(err), 
-                "top.driver: invalid value 'comp.missing' for input ref variable 'objective': top.comp: cannot set valid flag of 'missing' because it's not an io trait.")
+                "driver: invalid value 'comp.missing' for input ref variable 'objective': comp: cannot get valid flag of 'missing' because it's not an io trait.")
         else:
             self.fail('TraitError expected')
 
@@ -291,10 +290,10 @@ class GolinskiTestCase(unittest.TestCase):
     def test_no_design_vars(self):
         try:
             self.top.run()
-        except TraitError, err:
-            self.assertEqual(str(err), "StringRef: string reference is undefined")
+        except Exception, err:
+            self.assertEqual(str(err), "driver: no design variables specified")
         else:
-            self.fail('TraitError expected')
+            self.fail('Exception expected')
     
     def test_no_objective(self):
         self.top.driver.design_vars = ['comp.x[1]','comp.x[2]',
@@ -334,7 +333,7 @@ class GolinskiTestCase(unittest.TestCase):
             self.top.driver.design_vars = ['comp_bogus.x[0]','comp.x[1]']
         except TraitError, err:
             self.assertEqual(str(err), 
-                "top.driver: invalid value 'comp_bogus.x[0]' for input ref variable 'design_vars[0]': 'Assembly' object has no attribute 'comp_bogus'")
+                "driver: invalid value 'comp_bogus.x[0]' for input ref variable 'design_vars[0]': 'Assembly' object has no attribute 'comp_bogus'")
         else:
             self.fail('TraitError expected')
     
@@ -343,7 +342,7 @@ class GolinskiTestCase(unittest.TestCase):
             self.top.driver.constraints = ['bogus.flimflam']
         except TraitError, err:
             self.assertEqual(str(err), 
-                "top.driver: invalid value 'bogus.flimflam' for input ref variable 'constraints[0]': 'Assembly' object has no attribute 'bogus'")
+                "driver: invalid value 'bogus.flimflam' for input ref variable 'constraints[0]': 'Assembly' object has no attribute 'bogus'")
         else:
             self.fail('TraitError expected')
             
@@ -355,7 +354,7 @@ class GolinskiTestCase(unittest.TestCase):
             self.top.run()
         except ValueError, err:
             self.assertEqual(str(err),
-                             "top.driver: size of new lower bound array"+
+                             "driver: size of new lower bound array"+
                              " (4) does not match number of design vars (2)")
         else:
             self.fail('ValueError expected')
@@ -367,7 +366,7 @@ class GolinskiTestCase(unittest.TestCase):
             self.top.driver.upper_bounds = [99]
             self.top.run()
         except ValueError, err:
-            msg = "top.driver: size of new upper bound array" \
+            msg = "driver: size of new upper bound array" \
                   " (1) does not match number of design vars (2)"
             self.assertEqual(str(err), msg)
         else:

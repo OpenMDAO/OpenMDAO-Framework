@@ -4,7 +4,7 @@
 #public symbols
 __all__ = ["ExprEvaluator"]
 
-__version__ = "0.1"
+
 
 
 #from __future__ import division

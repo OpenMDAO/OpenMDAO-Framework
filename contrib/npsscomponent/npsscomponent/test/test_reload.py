@@ -1,6 +1,5 @@
 """
 Test of NPSS auto-reload capability.
-
 By manipulating wrapper or NPSS variables it's possible to cause the wrapper
 to reload the NPSS model.  This is needed to switch models or recover when
 NPSS gets into a state the solver can't get out of.
@@ -17,7 +16,7 @@ import unittest
 
 from enthought.traits.api import Float, Bool
 
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
@@ -35,17 +34,12 @@ class Source(Component):
                        desc='Test external reload request input to NPSS')
     npss_in = Float(0., iostatus='out', desc='Test input to NPSS')
         
-    def __init__(self, name='Source', *args, **kwargs):
-        super(Source, self).__init__(name, *args, **kwargs)
-
 
 class Sink(Component):
     """ Just something to connect NPSS outputs to. """
 
     npss_out = Float(0., iostatus='in', desc='Test output from NPSS')
         
-    def __init__(self, name='Sink', *args, **kwargs):
-        super(Sink, self).__init__(name, *args, **kwargs)
 
 
 # pylint: disable-msg=E1101
@@ -54,14 +48,15 @@ class Sink(Component):
 class MyModel(Assembly):
     """ Exercises NPSS auto-reload capability. """ 
 
-    def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+       
+    def tree_defined(self):
+        super(MyModel, self).tree_defined()
 
-        Source(parent=self)
+        self.add_container('Source', Source())
         self.Source.npss_in = 9
 
-        self.NPSS = NPSScomponent(parent=self, arglist='-trace reload.mdl',
-                                  output_filename='reload.out')
+        self.add_container('NPSS', NPSScomponent(arglist='-trace reload.mdl',
+                                                 output_filename='reload.out'))
         # Set name of internal reload request variable.
         self.NPSS.reload_flag = 'reload_requested'
         self.NPSS.make_public([
@@ -69,7 +64,7 @@ class MyModel(Assembly):
               ('xyzzy_out','','out'),
             ])
         
-        Sink(parent=self)
+        self.add_container('Sink', Sink())
 
         # 'reload_model' is the wrapper's external reload request flag.
         self.connect('Source.npss_reload', 'NPSS.reload_model')
@@ -92,14 +87,13 @@ class NPSSTestCase(unittest.TestCase):
         """ Called before each test in this class. """
         # Reset simulation root so we can legally access files.
         SimulationRoot.chdir(NPSSTestCase.directory)
-        self.model = MyModel('TestModel')
+        self.model = set_as_top(MyModel())
 
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
         os.remove('reload.out')
         self.model = None
-
         # Verify NPSScomponent didn't mess-up working directory.
         end_dir = os.getcwd()
         SimulationRoot.chdir(ORIG_DIR)
@@ -151,7 +145,7 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.rerun()
         except RuntimeError, exc:
-            msg = "TestModel.NPSS: Exception during reload: Model file" \
+            msg = "NPSS: Exception during reload: Model file" \
                   " 'no_such_model' not found while reloading in"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
@@ -162,7 +156,7 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.run()
         except RuntimeError, exc:
-            msg = "TestModel.NPSS: Exception getting 'no_such_variable':" \
+            msg = "NPSS: Exception getting 'no_such_variable':" \
                   " no_such_variable not found"
             self.assertEqual(str(exc), msg)
         else:
@@ -210,7 +204,7 @@ class NPSSTestCase(unittest.TestCase):
         try:
             self.model.rerun()
         except RuntimeError, exc:
-            msg = "TestModel.NPSS: Exception during reload: Model file" \
+            msg = "NPSS: Exception during reload: Model file" \
                   " 'no_such_model' not found while reloading in"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:

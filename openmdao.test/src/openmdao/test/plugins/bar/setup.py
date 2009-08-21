@@ -13,11 +13,11 @@ setup(
     packages=[],
     py_modules=['bar'],
     install_requires = ['foo==1.0'],
-    entry_points='''
+    entry_points="""
     [openmdao.dumbplugins]
     bar.Comp1Plugin = bar:Comp1Plugin
     bar.Comp2Plugin = bar:Comp2Plugin
-    '''
+    """
 )
 
 

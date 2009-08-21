@@ -1,5 +1,5 @@
 __all__ = ('CaseIteratorDriver','ServerError')
-__version__ = '0.1'
+
 
 import os.path
 import Queue
@@ -333,7 +333,7 @@ class CaseIteratorDriver(Driver):
     def _model_set(self, server, name, index, value):
         """ Set value in server's model. """
         if server is None:
-            self.parent.set(name, value, index)
+            self.model.set(name, value, index)
         else:
             comp_name, attr = name.split('.', 1)
             comp = getattr(self._servers[server].tla, comp_name)
@@ -343,7 +343,7 @@ class CaseIteratorDriver(Driver):
     def _model_get(self, server, name, index):
         """ Get value from server's model. """
         if server is None:
-            return self.parent.get(name, index)
+            return self.model.get(name, index)
         else:
             comp_name, attr = name.split('.', 1)
             comp = getattr(self._servers[server].tla, comp_name)

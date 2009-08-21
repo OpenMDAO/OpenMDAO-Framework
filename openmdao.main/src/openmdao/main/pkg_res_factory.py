@@ -2,7 +2,7 @@
 #public symbols
 __all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory']
 
-__version__ = "0.1"
+import logging
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
@@ -10,8 +10,6 @@ from pkg_resources import working_set, get_entry_map, get_distribution
 from pkg_resources import Environment, Requirement, DistributionNotFound
     
 from openmdao.main.factory import Factory
-from openmdao.main.log import logger
-
 
 def import_version(modname, req, env=None):
     """Import the specified module from the package specified in the Requirement 
@@ -36,8 +34,6 @@ def import_version(modname, req, env=None):
             working_set.add(dist, entry=None, insert=False)  
             dist.activate()
                 
-#    dist = get_distribution(req)
-#    __import__(dist.project_name)
     __import__(modname)
 
 
@@ -52,7 +48,7 @@ class EntryPtLoader(object):
         self.entry_pt = entry_pt
         self.ctor = None
     
-    def create(self, env, name):
+    def create(self, env, **ctor_args):
         """Return the object created by calling the entry point.If
         necessary, first activate the distribution and load the entry
         point, and check for conflicting version dependencies before
@@ -62,7 +58,10 @@ class EntryPtLoader(object):
                            self.dist.as_requirement(), env)
             self.ctor = self.entry_pt.load(require=False, env=env)
             
-        return self.ctor(name)
+        logging.debug('calling %s(%s)' % (self.ctor.__name__, ctor_args))
+        obj = self.ctor(**ctor_args)
+        obj.parent = None
+        return obj
 
                 
 class PkgResourcesFactory(Factory):
@@ -81,8 +80,8 @@ class PkgResourcesFactory(Factory):
                 self._get_plugin_info(self.env, group)
         
         
-    def create(self, typ, name='', version=None, server=None, 
-               res_desc=None):
+    def create(self, typ, version=None, server=None, 
+               res_desc=None, **ctor_args):
         """Create and return an object of the given type, with
         optional name, version, server id, and resource description.
         """
@@ -91,12 +90,12 @@ class PkgResourcesFactory(Factory):
         
         try:
             if version is None:
-                return self._loaders[typ][0].create(self.env, name)
+                return self._loaders[typ][0].create(self.env, **ctor_args)
 
             for entry in self._loaders[typ]:
                 if entry.dist in Requirement.parse(entry.dist.project_name+
                                                    '=='+version):
-                    return entry.create(self.env, name)
+                    return entry.create(self.env, **ctor_args)
         except KeyError:
             pass
         return None

@@ -8,7 +8,7 @@ import pkg_resources
 import sys
 import unittest
 
-from openmdao.main.component import SimulationRoot
+from openmdao.main.api import SimulationRoot, set_as_top
 from openmdao.main.exceptions import RunInterrupted
 from openmdao.lib.components.external_code import ExternalCode
 
@@ -16,7 +16,6 @@ import openmdao.util.testutil
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
-
 # Directory where we can find sleep.py.
 DIRECTORY = pkg_resources.resource_filename('openmdao.lib.components', 'test')
 
@@ -35,7 +34,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_normal')
 
         # Normal run should have no issues.
-        externp = ExternalCode()
+        externp = set_as_top(ExternalCode())
         externp.timeout = 5
         externp.command = 'python sleep.py 1'
         externp.run()
@@ -46,7 +45,8 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_load')
 
-        externp = ExternalCode()
+        externp = set_as_top(ExternalCode())
+        externp.name = 'ExternalCode'
         externp.timeout = 5
         externp.command = 'python sleep.py 1'
 
@@ -60,13 +60,13 @@ class TestCase(unittest.TestCase):
         logging.debug('test_timeout')
 
         # Set timeout to less than execution time.
-        externp = ExternalCode()
+        externp = set_as_top(ExternalCode())
         externp.timeout = 1
         externp.command = 'python sleep.py 5'
         try:
             externp.run()
         except RunInterrupted, exc:
-            self.assertEqual(str(exc), 'ExternalCode: Timed out')
+            self.assertEqual(str(exc), ': Timed out')
             self.assertEqual(externp.timed_out, True)
         else:
             self.fail('Expected RunInterrupted')
@@ -76,14 +76,14 @@ class TestCase(unittest.TestCase):
         logging.debug('test_badcmd')
 
         # Set command to nonexistant path.
-        externp = ExternalCode()
+        externp = set_as_top(ExternalCode())
         externp.command = 'xyzzy'
         externp.stdout = 'badcmd.out'
         externp.stderr = ExternalCode.STDOUT
         try:
             externp.run()
         except RuntimeError, exc:
-            msg = 'ExternalCode: return_code = 127'
+            msg = ': return_code = 127'
             self.assertEqual(str(exc).startswith(msg), True)
             self.assertEqual(externp.return_code, 127)
             self.assertEqual(os.path.exists(externp.stdout), True)
@@ -98,13 +98,13 @@ class TestCase(unittest.TestCase):
         logging.debug('test_nullcmd')
 
         # Check response to no command set.
-        externp = ExternalCode()
+        externp = set_as_top(ExternalCode())
         externp.stdout = 'nullcmd.out'
         externp.stderr = ExternalCode.STDOUT
         try:
             externp.run()
         except ValueError, exc:
-            self.assertEqual(str(exc), 'ExternalCode: Null command line')
+            self.assertEqual(str(exc), ': Null command line')
         else:
             self.fail('Expected ValueError')
         finally:

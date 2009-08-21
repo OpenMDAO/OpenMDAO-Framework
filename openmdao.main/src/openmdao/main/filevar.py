@@ -1,6 +1,6 @@
 #public symbols
 __all__ = ['FileTrait']
-__version__ = "0.1"
+
 
 import copy
 

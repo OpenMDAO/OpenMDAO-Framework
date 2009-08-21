@@ -1,23 +1,25 @@
 
 from enthought.traits.api import implements
 
+from openmdao.main.container import Container
 from openmdao.main.component import Component, STATE_RUNNING, STATE_WAITING
 from openmdao.main.exceptions import RunStopped
 
 __all__ = ['Workflow']
 
 
-class Workflow(Component):
+class Workflow(object):
     """
     A Workflow consists of a list of Components which are executed in 
     some order.
     """
 
-    def __init__(self, name, parent=None, add_to_parent=True):
+    def __init__(self, scope=None):
         """ Create an empty flow. """
-        super(Workflow, self).__init__(name, parent, add_to_parent=add_to_parent)
+        self.scope = scope
         self.nodes = []
         self._iterator = None
+        self._stop = False
 
     def __len__(self):
         """ Not very meaningful, but it helps boolean tests when using RPyC. """
@@ -39,11 +41,7 @@ class Workflow(Component):
                 comp.remove_node(node)
         self.nodes = nodes
 
-    def run (self, force=False):
-        """Run this Workflow."""
-        self.execute()
-
-    def execute(self):
+    def run(self):
         """ Run through the nodes in the workflow list. """
         #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
         for node in self.nodes_iter():
