@@ -19,7 +19,7 @@ from enthought.traits.api import implements, on_trait_change, Str, Missing, \
                                  Undefined, Python, TraitError
 from enthought.traits.trait_base import not_event
 
-from openmdao.main.container import Container
+from openmdao.main.container import Container, set_as_top
 from openmdao.main.filevar import FileValue
 from openmdao.util.save_load import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
@@ -58,19 +58,29 @@ class SimulationRoot (object):
             SimulationRoot.__root = os.getcwd()
         return path.startswith(SimulationRoot.__root)
     
-    @staticmethod
-    def relto_root (path):
-        """Return a path that is relative to SimulationRoot. Raises
-        a RuntimeError if path is not contained within SimulationRoot.
-        """
-        if not SimulationRoot.legal_path(path):
-            raise RuntimeError("'%s' cannot be expressed relative to SimulationRoot (%s)"%
-                               (path, SimulationRoot.get_root()))
-        rootpath = SimulationRoot.get_root()
-        if rootpath == path:
-            return ''
-        else:
-            return path[len(rootpath)+1:]
+def _relpath(path1, path2):
+    """Return path for path1 relative to path2."""
+    assert os.path.isabs(path1)
+    assert os.path.isabs(path2)
+
+    if path1.endswith(os.sep):
+        path = path1[:-1]
+    else:
+        path = path1
+    if path2.endswith(os.sep):
+        start = path2[:-1]
+    else:
+        start = path2
+
+    if path == start:
+        return ''
+
+    relpath = ''
+    while start:
+        if path.startswith(start):
+            return os.path.join(relpath, path[len(start)+1:])
+        relpath = os.path.join('..', relpath)
+        start = os.path.dirname(start)
 
 class Component (Container):
     """This is the base class for all objects containing Traits that are 
@@ -102,7 +112,12 @@ class Component (Container):
         
         # List of meta-data dictionaries.
         self.external_files = []
-        
+
+    #def _directory_changed(self, old, new):
+        #if not self._call_tree_defined:
+            #self.check_path(self.get_abs_directory(), 
+                            #check_exist=True)
+            
     def check_config (self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
@@ -466,30 +481,11 @@ class Component (Container):
 
     def _relpath(self, path1, path2):
         """Return path for path1 relative to path2."""
-        assert os.path.isabs(path1)
-        assert os.path.isabs(path2)
-
-        if path1.endswith(os.sep):
-            path = path1[:-1]
-        else:
-            path = path1
-        if path2.endswith(os.sep):
-            start = path2[:-1]
-        else:
-            start = path2
-
-        if path == start:
-            return ''
-
-        relpath = ''
-        while start:
-            if path.startswith(start):
-                return os.path.join(relpath, path[len(start)+1:])
-            relpath = os.path.join('..', relpath)
-            start = os.path.dirname(start)
-
-        self.raise_exception("'%s' has no common prefix with '%s'"
-                             % (path1, path2), ValueError)
+        rpath = _relpath(path1, path2)
+        if rpath is None:            
+            self.raise_exception("'%s' has no common prefix with '%s'"
+                                 % (path1, path2), ValueError)
+        return rpath
 
     def check_save_load(self, py_dir=None, test_dir='test_dir', cleanup=True,
                         format=SAVE_CPICKLE, logfile=None, python=None):
@@ -610,15 +606,15 @@ Component.load_from_eggfile('%s', install=False)
             # Set top directory.
             orig_dir = os.getcwd()
             
-            reltoroot = SimulationRoot.relto_root(orig_dir)
-                
             if name:
                 top.name = name
                 # New instance via create(name) gets new directory.
                 if not os.path.exists(name):
                     os.mkdir(name)
                 os.chdir(name)
-            #top.directory = os.path.join(reltoroot, name)
+            # TODO: (maybe) Seems like we should make top.directory relative here 
+            # instead of absolute, but it doesn't work...
+            #top.directory = _relpath(os.getcwd(), SimulationRoot.get_root())
             top.directory = os.getcwd()
             
             try:

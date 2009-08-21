@@ -258,10 +258,7 @@ class Container(HasTraits):
             if trait.transient is not True:
                 dct[name] = trait
         state['_added_traits'] = dct
-        
-        # remove call to _io_trait_changed if any trait having 'iostatus'
-        # metadata is changed
-        self.on_trait_change(self._io_trait_changed, '+iostatus', remove=True)
+        #state['_call_tree_defined'] = True
         
         return state
 
