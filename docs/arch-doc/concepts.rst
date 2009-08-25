@@ -209,7 +209,7 @@ of the component will generate valid results.
 
 .. index:: ObjServerFactory
 .. index:: pair: environment; multi-version
-.. index:: config_from_obj()
+.. index:: replace()
 
 
 Multi-version Environment
@@ -235,17 +235,18 @@ Each buildout environment can run a different Python version and can also
 have its own set of modules installed.
 
 Users often want to update a model as its constituent components evolve. To
-facilitate this process, we will add a config_from_obj() function to the
-Component interface so that a newer Component can configure itself using an
+facilitate this process, we will add a replace() function to the
+Assembly interface so that a new Component can be configured using an
 existing older Component. This will allow the user to drag a new version of a
 Component onto an older version in a model, replacing the older version with
 the new version configured as identically as possible to the old one. The
 degree to which this automatic replacement will work depends upon the nature of
 the differences between the two versions. If the differences are internal to
 the Component and do not affect its public interface, then the replacement
-should just work. Because two versions of the same component cannot exist in
-the same process, the newer one will have to be a proxy to a component that is
-out of the process, as described above.
+should just work. If the two Components have dependency version conflicts, 
+the newer one will have to be a proxy to a component that is out of the process, 
+as described above, because two versions of the same package cannot exist in
+the same process at the same time.
 
 
 .. index:: wxPython

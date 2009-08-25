@@ -34,8 +34,6 @@ column contains a link to information about the egg (e.g., version, description,
 ---------------------------  ---------------------------------------------------------------------------------------------------------  ------------------------------------------------------------------------------------
 :term:`FormEncode`           `OSI Approved, Python Software Foundation <http://www.opensource.org/licenses/PythonSoftFoundation.php>`_  http://pypi.python.org/pypi/FormEncode/1.2.2     
 ---------------------------  ---------------------------------------------------------------------------------------------------------  ------------------------------------------------------------------------------------
-:term:`Jinja`                `OSI Approved, BSD <http://www.opensource.org/licenses/bsd-license.php>`_                                  http://pypi.python.org/pypi/Jinja/1.2 
----------------------------  ---------------------------------------------------------------------------------------------------------  ------------------------------------------------------------------------------------
 :term:`Jinja2`               `OSI Approved, BSD <http://www.opensource.org/licenses/bsd-license.php>`_                                  http://pypi.python.org/pypi/Jinja2/2.1.1
 ---------------------------  ---------------------------------------------------------------------------------------------------------  ------------------------------------------------------------------------------------
 :term:`Mako`                 `OSI Approved, MIT <http://www.opensource.org/licenses/mit-license.php>`_                                  http://pypi.python.org/pypi/Mako/0.2.4 

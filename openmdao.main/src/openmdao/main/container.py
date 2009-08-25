@@ -823,12 +823,12 @@ class Container(HasTraits):
                 arr = arr[idx]
             return arr
     
-    def config_from_obj(self, obj):
-        """This is intended to allow a newer version of a component to
-        configure itself based on an older version. By default, values
-        of dictionary entries from the old object will be copied to the
-        new one."""
-        raise NotImplementedError("config_from_obj")
+    def replace(self, name, newobj):
+        """This is intended to allow replacement of a named object by
+        a new object that may be a newer version of the named object or
+        another type of object with a compatible interface. 
+        """
+        raise NotImplementedError("replace")
 
     def save_to_egg(self, name=None, version=None, py_dir=None,
                     src_dir=None, src_files=None, child_objs=None,

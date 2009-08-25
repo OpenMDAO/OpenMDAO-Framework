@@ -368,8 +368,8 @@ Using OpenMDAO
 --------------
 OpenMDAO provides two interfaces through which the user interacts to build build and execute models -- a 
 graphical user interface and a scripting/command line interface. The graphical interface is currently
-under developed and is not covered here. This tutorial covers describes how to build and run models using
-the scripting interface, or more specifically, writing python scripts to interact with the OpenMDAO
+under developed and is not covered here. This tutorial describes how to build and run models using
+the scripting interface, or more specifically, how to write python scripts to interact with the OpenMDAO
 framework and components.
 
 This tutorial will also introduce the user to using the Python shell for creating and interacting with
