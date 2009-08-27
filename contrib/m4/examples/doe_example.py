@@ -6,7 +6,7 @@ and use it to set component inputs and get component outputs.
 The component in question just evaluates a simple expression.
 """
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, set_as_top
 
 import m4.doe
 import m4.dummy_components
@@ -23,16 +23,10 @@ class MyModel(Assembly):
         doe = self.M4_DOE
 
         # The model is just an M4 test component.
-        doe.add_chile('model', m4.dummy_components.Model_A2d())
+        doe.add_container('model', m4.dummy_components.Model_A2d())
 
-        doe.design_variables = [
-            ('Model_A2d.x', 0., 5.),
-            ('Model_A2d.y', 0., 5.)
-        ]
-        doe.response_variables = [
-            ('Model_A2d.z1'),
-            ('Model_A2d.z2')
-        ]
+        doe.design_variables = [('x', 0., 5.), ('y', 0., 5.)]
+        doe.response_variables = [('z1'), ('z2')]
         doe.type = 'rand_lhs'
         doe.n_samples = 200
 
@@ -51,6 +45,7 @@ class MyModel(Assembly):
 
 
 if __name__ == '__main__':
-#    MyModel().run()
-    MyModel().check_save_load()  # Note: requires correct pythonV.R
+    top = set_as_top(MyModel())
+#    top.run()
+    top.check_save_load()  # Note: requires correct pythonV.R
 
