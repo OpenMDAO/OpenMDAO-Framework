@@ -10,6 +10,8 @@ Contents:
    
    arch-doc/index
    user-guide/index
+   stdlib-guide/index
+   plugin-guide/index
    dev-guide/index
    srcdocs/index
    licenses/index

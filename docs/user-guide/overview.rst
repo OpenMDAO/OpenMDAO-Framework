@@ -17,9 +17,11 @@ their calculations.
 
 
 The following figure gives a conceptual view of what a simple Component might
-look like. This Component has three inputs (a, b, and c) and two outputs (x
-and y), and performs a simple calculation indicated by the equations shown in
-the center of the component.
+look like. This Component has two inputs (a, b) and one output (c), and 
+the calculation that it performs is to add the two inputs to produce the output.
+
+.. _`Conceptual-View-of-a-Simple-Component`:
+
 
 .. figure:: ../generated_images/Component.png
    :align: center
