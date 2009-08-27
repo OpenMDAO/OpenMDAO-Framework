@@ -6,7 +6,7 @@ from math import sqrt
 
 from enthought.traits.api import Float, Str
 
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 class Adder(Component):
@@ -16,8 +16,8 @@ class Adder(Component):
     x2 = Float(0., iostatus='in')
     sum = Float(0., iostatus='out')
     
-    def __init__(self, name, parent):
-        super(Adder, self).__init__(name, parent)
+    def __init__(self):
+        super(Adder, self).__init__()
         self.runcount = 0
         
     def execute(self):
@@ -31,8 +31,8 @@ class ExprComp(Component):
     f_x = Float(0., iostatus='out')
     expr = Str('', iostatus='in')
     
-    def __init__(self, name, parent, expr='x'):
-        super(ExprComp, self).__init__(name, parent)
+    def __init__(self, expr='x'):
+        super(ExprComp, self).__init__()
         self.expr = expr
         self.runcount = 0
         
@@ -49,8 +49,8 @@ class ExprComp2(Component):
     f_xy = Float(0., iostatus='out')
     expr = Str('', iostatus='in')
     
-    def __init__(self, name, parent, expr='x'):
-        super(ExprComp2, self).__init__(name, parent)
+    def __init__(self, expr='x'):
+        super(ExprComp2, self).__init__()
         self.expr = expr
         self.runcount = 0
         
@@ -67,27 +67,27 @@ class MultiDriverTestCase(unittest.TestCase):
         # Chop up the equations for the Rosen-Suzuki optimization problem
         # into 4 PolyOrder2 components and some Adders so that our driver
         # will iterate over more than one compnent
-        top = Assembly('top', None)
+        top = set_as_top(Assembly())
         self.top = top
-        ExprComp('comp1',top, expr='x**2 - 5.0*x')
-        ExprComp('comp2',top, expr='x**2 - 5.0*x')
-        ExprComp('comp3',top, expr='2.0*x**2 - 21.0*x')
-        ExprComp('comp4',top, expr='x**2 + 7.0*x')
+        top.add_container('comp1', ExprComp(expr='x**2 - 5.0*x'))
+        top.add_container('comp2', ExprComp(expr='x**2 - 5.0*x'))
+        top.add_container('comp3', ExprComp(expr='2.0*x**2 - 21.0*x'))
+        top.add_container('comp4', ExprComp(expr='x**2 + 7.0*x'))
         
-        Adder('adder1', top)
+        top.add_container('adder1', Adder())
         top.connect('comp1.f_x', 'adder1.x1')
         top.connect('comp2.f_x', 'adder1.x2')
         
-        Adder('adder2', top)
+        top.add_container('adder2', Adder())
         top.connect('comp3.f_x', 'adder2.x1')
         top.connect('comp4.f_x', 'adder2.x2')
         
-        Adder('adder3', top)
+        top.add_container('adder3', Adder())
         top.connect('adder1.sum', 'adder3.x1')
         top.connect('adder2.sum', 'adder3.x2')
         
         # create the first driver
-        drv = CONMINdriver('driver1',top)
+        drv = top.add_container('driver1', CONMINdriver())
         drv.maxiters = 30
         drv.objective = 'adder3.sum+50.'
         drv.design_vars = ['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']
@@ -125,10 +125,10 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertTrue(runcount+2 <= self.top.adder3.runcount)
         
     def test_2_drivers(self):
-        ExprComp('comp1a',self.top, expr='x**2')
-        ExprComp('comp2a',self.top, expr='x-5.0*sqrt(x)')
+        self.top.add_container('comp1a', ExprComp(expr='x**2'))
+        self.top.add_container('comp2a', ExprComp(expr='x-5.0*sqrt(x)'))
         self.top.connect('comp1a.f_x', 'comp2a.x')
-        drv = CONMINdriver('driver1a',self.top)
+        drv = self.top.add_container('driver1a', CONMINdriver())
         drv.maxiters = 40
         drv.objective = 'comp2a.f_x'
         drv.design_vars = ['comp1a.x']
@@ -161,29 +161,21 @@ class MultiDriverTestCase(unittest.TestCase):
         # 
         # Optimal solution: x = 6.6667; y = -7.3333
         
-        self.top = Assembly('top', None)
-        ExprComp('comp1',self.top, expr='x-3')
-        ExprComp('comp2',self.top, expr='-3')
-        ExprComp2('comp3',self.top, expr='x*x + (x+3)*y + (y+4)**2')
-        ExprComp2('comp4',self.top, expr='x+y')
-        self.top.comp1.set('x', 50)
-        self.top.comp3.set('y', -50)
+        self.top = set_as_top(Assembly())
+        self.top.add_container('comp1', ExprComp(expr='x-3'))
+        self.top.add_container('comp2', ExprComp(expr='-3'))
+        self.top.add_container('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'))
+        self.top.add_container('comp4', ExprComp2(expr='x+y'))
+        self.top.comp1.x = 50
+        self.top.comp3.y = -50
         
         # Hook stuff up
         self.top.connect('comp1.f_x', 'comp3.x')
         self.top.connect('comp3.f_xy', 'comp4.y')
         self.top.connect('comp2.f_x', 'comp4.x')
 
-        ## create one driver for testing
-        #drv1 = CONMINdriver('driver1',self.top)
-        #drv1.maxiters = 30
-        #drv1.objective.value = 'comp4.f_xy'
-        #drv1.design_vars.value = ['comp1.x', 'comp3.y']
-        #drv1.lower_bounds = [-50, -50]
-        #drv1.upper_bounds = [50, 50]
-        
         # create the inner driver
-        drv1 = CONMINdriver('driver1',self.top)
+        drv1 = self.top.add_container('driver1', CONMINdriver())
         drv1.maxiters = 30
         drv1.objective = 'comp3.f_xy'
         drv1.design_vars = ['comp3.y']
@@ -191,7 +183,7 @@ class MultiDriverTestCase(unittest.TestCase):
         drv1.upper_bounds = [50]
         
         # create the outer driver
-        drv2 = CONMINdriver('driver2',self.top)
+        drv2 = self.top.add_container('driver2', CONMINdriver())
         drv2.maxiters = 100
         drv2.objective = 'comp4.f_xy'
         drv2.design_vars = ['comp1.x']

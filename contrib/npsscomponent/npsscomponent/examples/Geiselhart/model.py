@@ -17,7 +17,7 @@ from openmdao.main.api import Assembly, Component, Container, FileTrait
 
 from npsscomponent import NPSScomponent
 
-__version__ = '0.1'
+
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -39,9 +39,6 @@ class Design(Component):
     I_divergFact = Float(0.5, iostatus='out')
     cowl_angle = Float(6., iostatus='out')
         
-    def __init__(self, name='Design', parent=None):
-        super(Design, self).__init__(name, parent)
-
     def execute(self):
         """ Just to trace execution. """
         print self.get_pathname(), 'execution begins'
@@ -61,14 +58,14 @@ class PropulsionData(Component):
 
     Acapture = Float(0., iostatus='out')
 
-    def __init__(self, name='PropulsionData', parent=None):
-        super(PropulsionData, self).__init__(name, parent)
+    def __init__(self):
+        super(PropulsionData, self).__init__()
 
-        FLOPSdata(parent=self)
-        PlumeData(parent=self)
-        USM3Ddata(parent=self)
-        NacelleData(parent=self)
-        ANOPPdata(parent=self)
+        self.add_container('FLOPS', FLOPSdata())
+        self.add_container('Plume', PlumeData())
+        self.add_container('USM3D', USM3Ddata())
+        self.add_container('Nacelle', NacelleData())
+        self.add_container('ANOPP', ANOPPdata())
 
     def execute(self):
         """ Evaluate link expressions. """
@@ -106,8 +103,8 @@ class FLOPSdata(Container):
     xnac = Float(0., iostatus='in')
     dnac = Float(0., iostatus='in')
         
-    def __init__(self, name='FLOPS', parent=None):
-        super(FLOPSdata, self).__init__(name, parent)
+    def __init__(self):
+        super(FLOPSdata, self).__init__()
         self.engdeck.filename = 'engdeck'
 
 
@@ -123,9 +120,6 @@ class PlumeData(Container):
     I_diverg = Float(0., iostatus='in')
     I_external = Float(0., iostatus='in')
     
-    def __init__(self, name='Plume', parent=None):
-        super(PlumeData, self).__init__(name, parent)
-
 
 class USM3Ddata(Container):
 
@@ -136,21 +130,20 @@ class USM3Ddata(Container):
     Rratio = Float(0., iostatus='in')
     T0jet = Float(0., iostatus='in')
     
-    def __init__(self, name='USM3D', parent=None):
-        super(USM3Ddata, self).__init__(name, parent)
-
-        USM3Dinputs(parent=self)
+    def __init__(self):
+        super(USM3Ddata, self).__init__()
+        self.add_container('Inputs', USM3Dinputs())
 
 
 class USM3Dinputs(Container):
 
-    def __init__(self, name='Inputs', parent=None):
-        super(USM3Dinputs, self).__init__(name, parent)
+    def __init__(self):
+        super(USM3Dinputs, self).__init__()
 
-        USM3Dfreestream(parent=self)
-        USM3Dplenum(parent=self)
-        USM3Dthroat(parent=self)
-        USM3Dexit(parent=self)
+        self.add_container('Freestream', USM3Dfreestream())
+        self.add_container('Plenum', USM3Dplenum())
+        self.add_container('Throat', USM3Dthroat())
+        self.add_container('Exit', USM3Dexit())
 
 
 class USM3Dfreestream(Container):
@@ -164,8 +157,6 @@ class USM3Dfreestream(Container):
     Ts = Float(0., iostatus='in')
     Tt = Float(0., iostatus='in')
     
-    def __init__(self, name='Freestream', parent=None):
-        super(USM3Dfreestream, self).__init__(name, parent)
 
 
 class USM3Dplenum(Container):
@@ -179,8 +170,6 @@ class USM3Dplenum(Container):
     Ts = Float(0., iostatus='in')
     Tt = Float(0., iostatus='in')
     
-    def __init__(self, name='Plenum', parent=None):
-        super(USM3Dplenum, self).__init__(name, parent)
 
 
 class USM3Dthroat(Container):
@@ -194,9 +183,6 @@ class USM3Dthroat(Container):
     Ts = Float(0., iostatus='in')
     Tt = Float(0., iostatus='in')
     
-    def __init__(self, name='Throat', parent=None):
-        super(USM3Dthroat, self).__init__(name, parent)
-
 
 class USM3Dexit(Container):
 
@@ -209,8 +195,6 @@ class USM3Dexit(Container):
     Ts = Float(0., iostatus='in')
     Tt = Float(0., iostatus='in')
     
-    def __init__(self, name='Exit', parent=None):
-        super(USM3Dexit, self).__init__(name, parent)
 
 
 class NacelleData(Container):
@@ -218,14 +202,10 @@ class NacelleData(Container):
     X = Array('d', shape=(None,), value=[], iostatus='in')
     Y = Array('d', shape=(None,), value=[], iostatus='in')
     
-    def __init__(self, name='Nacelle', parent=None):
-        super(NacelleData, self).__init__(name, parent)
 
 
 class ANOPPdata(Container):
-
-    def __init__(self, name='ANOPP', parent=None):
-        super(ANOPPdata, self).__init__(name, parent)
+    pass
 
 
 class TracingNPSS(NPSScomponent):
@@ -240,8 +220,9 @@ class TracingNPSS(NPSScomponent):
 class Model(Assembly):
     """ SBJ propulsion model. """
 
-    def __init__(self, name='SBJ_Propulsion', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
+    #name='SBJ_Propulsion', 
+    def __init__(self, *args, **kwargs):
+        super(Model, self).__init__(*args, **kwargs)
         self.external_files.append({'path':'README.txt', 'constant':True})
 
         model_dir = os.path.join('..', 'Full_Model', 'Cycle', 'run')
@@ -256,14 +237,16 @@ class Model(Assembly):
             '-I', '../Full_Model/ROSE/BaseClasses']
 
         # Design variables.
-        Design(parent=self)
+        self.add_container('Design', Design())
 
         # ADP.
         arglist = []
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MC_ADP.mdl'))
-        TracingNPSS('NPSS_ADP', self, directory='NPSS_ADP',
-                    arglist=arglist, output_filename='NPSS.out')
+        self.add_container('NPSS_ADP', 
+                           TracingNPSS(directory='NPSS_ADP',
+                                       arglist=arglist, 
+                                       output_filename='NPSS.out'))
         self.NPSS_ADP.external_files.append(
             {'path':os.path.join(model_dir, 'MC_ADP.run')})
         self.NPSS_ADP.run_command = 'mcRun()'
@@ -283,8 +266,10 @@ class Model(Assembly):
         arglist = []
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MC_SLS.mdl'))
-        TracingNPSS('NPSS_SLS', self, directory='NPSS_SLS',
-                    arglist=arglist, output_filename='NPSS.out')
+        self.add_container('NPSS_SLS', 
+             TracingNPSS(directory='NPSS_SLS',
+                         arglist=arglist, 
+                         output_filename='NPSS.out'))
         self.NPSS_SLS.external_files.append(
             {'path':os.path.join(model_dir, 'MC_SLS.run')})
         self.NPSS_SLS.run_command = 'mcRun()'
@@ -312,8 +297,9 @@ class Model(Assembly):
             '-I', '../Full_Model/ROSE',
             '-I', '../Full_Model/ROSE/BaseClasses']
         arglist.append(os.path.join(wate_dir, 'MCengine.mdl'))
-        TracingNPSS('NPSS_WATE', self, directory='NPSS_WATE',
-                    arglist=arglist, output_filename='NPSS.out')
+        self.add_container('NPSS_WATE', TracingNPSS(directory='NPSS_WATE',
+                                                    arglist=arglist, 
+                                                    output_filename='NPSS.out'))
         self.NPSS_WATE.external_files.append(
             {'path':os.path.join(wate_dir, 'MCengine.run')})
         self.NPSS_WATE.run_command = 'mcRun()'
@@ -332,8 +318,9 @@ class Model(Assembly):
         arglist = []
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MCengine.mdl'))
-        TracingNPSS('NPSS_FLOPS', self, directory='NPSS_FLOPS',
-                    arglist=arglist, output_filename='NPSS.out')
+        self.add_container('NPSS_FLOPS', TracingNPSS(directory='NPSS_FLOPS',
+                                                     arglist=arglist, 
+                                                     output_filename='NPSS.out'))
         self.NPSS_FLOPS.external_files.append(
             {'path':os.path.join(model_dir, 'MCengine.run')})
         self.NPSS_FLOPS.run_command = 'mcRun()'
@@ -353,8 +340,9 @@ class Model(Assembly):
         arglist = []
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MCnoise.mdl'))
-        TracingNPSS('NPSS_ANOPP', self, directory='NPSS_ANOPP',
-                    arglist=arglist, output_filename='NPSS.out')
+        self.add_container('NPSS_ANOPP', TracingNPSS(directory='NPSS_ANOPP',
+                                                     arglist=arglist, 
+                                                     output_filename='NPSS.out'))
         self.NPSS_ANOPP.external_files.append(
             {'path':os.path.join(model_dir, 'MCnoise.run')})
         self.NPSS_ANOPP.run_command = 'mcRun()'

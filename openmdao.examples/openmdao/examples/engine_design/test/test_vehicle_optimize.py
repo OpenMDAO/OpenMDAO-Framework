@@ -11,7 +11,7 @@ class EngineOptimizationTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
-        self.model = EngineOptimization("test_vehicle")
+        self.model = EngineOptimization()
 
     def tearDown(self):
         self.model.pre_delete()

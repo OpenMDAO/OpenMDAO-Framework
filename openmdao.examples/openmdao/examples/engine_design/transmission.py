@@ -37,7 +37,7 @@ class Transmission(Component):
     torque_ratio = Float(0., iostatus='out',
                          desc='Ratio of output torque to engine torque')        
 
-    #def __init__(self, name, parent=None, doc=None, directory=''):
+    #def __init__(self, doc=None, directory=''):
         #""" Creates a new Transmission object
         
             ## Design parameters
@@ -59,7 +59,7 @@ class Transmission(Component):
             #RPM                 # RPM of the engine
             #"""
         
-        #super(Transmission, self).__init__(name, parent, doc, directory)        
+        #super(Transmission, self).__init__(doc, directory)        
         
         
     def execute(self):
@@ -72,14 +72,12 @@ class Transmission(Component):
         
         gear = self.current_gear
         differential = self.final_drive_ratio
-        tire_circ = self.tire_circ
-        velocity = self.velocity
         
         self.RPM = (ratios[gear]*differential*5280.0*12.0 \
-                    *velocity)/(60.0*tire_circ)
+                    *self.velocity)/(60.0*self.tire_circ)
         self.torque_ratio = ratios[gear]*differential
             
-        # At low speeds, hold engine speed at 1000 RPM and \
+        # At low speeds, hold engine speed at 1000 RPM and
         # partially engage clutch
         if self.RPM < 1000.0 and self.current_gear == 1 :
             self.RPM = 1000.0

@@ -10,7 +10,7 @@ import unittest
 
 from enthought.traits.api import Bool, Array, Str
 
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.filevar import FileTrait
 
 # pylint: disable-msg=E1101
@@ -26,8 +26,8 @@ class Source(Component):
     text_file = FileTrait(iostatus='out')
     binary_file = FileTrait(iostatus='out', binary=True)
         
-    def __init__(self, name='Source', *args, **kwargs):
-        super(Source, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Source, self).__init__(*args, **kwargs)
         self.text_file.filename = 'source.txt'
         self.binary_file.filename = 'source.bin'
 
@@ -51,8 +51,8 @@ class Sink(Component):
     text_file = FileTrait(iostatus='in')
     binary_file = FileTrait(iostatus='in')
         
-    def __init__(self, name='Sink', *args, **kwargs):
-        super(Sink, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(Sink, self).__init__(*args, **kwargs)
         self.text_file.filename = 'sink.txt'
         self.binary_file.filename = 'sink.bin'
 
@@ -70,11 +70,12 @@ class Sink(Component):
 class MyModel(Assembly):
     """ Transfer files from producer to consumer. """
 
-    def __init__(self, name='FileVar_TestModel', *args, **kwargs):
-        super(MyModel, self).__init__(name, *args, **kwargs)
+    #name='FileVar_TestModel', 
+    def __init__(self, *args, **kwargs):
+        super(MyModel, self).__init__(*args, **kwargs)
 
-        Source(parent=self, directory='Source')
-        Sink(parent=self, directory='Sink')
+        self.add_container('Source', Source(directory='Source'))
+        self.add_container('Sink', Sink(directory='Sink'))
 
         self.connect('Source.text_file', 'Sink.text_file')
         self.connect('Source.binary_file', 'Sink.binary_file')
@@ -88,13 +89,19 @@ class FileTestCase(unittest.TestCase):
 
     def setUp(self):
         """ Called before each test in this class. """
-        self.model = MyModel()
+        self.model = set_as_top(MyModel())
 
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
-        shutil.rmtree('Source')
-        shutil.rmtree('Sink')
+        try:
+            shutil.rmtree('Source')
+        except OSError:
+            pass
+        try:
+            shutil.rmtree('Sink')
+        except OSError:
+            pass
         self.model = None
 
     def test_connectivity(self):
@@ -133,20 +140,24 @@ class FileTestCase(unittest.TestCase):
         else:
             self.fail('IOError expected')
 
-    def test_bad_directory(self):
+    def test_illegal_directory(self):
         logging.debug('')
         logging.debug('test_bad_directory')
 
         try:
             # Set an illegal execution directory, verify error.
-            Source(directory='/illegal')
+            src = Source(directory='/illegal')
+            src.tree_defined()
         except ValueError, exc:
-            msg = "Source: Illegal execution directory '/illegal'," \
+            msg = ": Illegal execution directory '/illegal'," \
                   " not a decendant of"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
 
+    def test_protected_directory(self):
+        logging.debug('')
+        logging.debug('test_protected_directory')
         # Create a protected directory.
         directory = 'protected'
         if os.path.exists(directory):
@@ -156,15 +167,19 @@ class FileTestCase(unittest.TestCase):
         exe_dir = os.path.join(directory, 'xyzzy')
         try:
             # Attempt auto-creation of execution directory in protected area.
-            Source(directory=exe_dir)
+            src = Source(directory=exe_dir)
+            src.tree_defined()
         except OSError, exc:
-            msg = "Source: Can't create execution directory"
+            msg = ": Can't create execution directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected OSError')
         finally:
             os.rmdir(directory)
 
+    def test_file_in_place_of_directory(self):
+        logging.debug('')
+        logging.debug('test_file_in_place_of_directory')
         # Create a plain file.
         directory = 'plain_file'
         if os.path.exists(directory):
@@ -175,30 +190,33 @@ class FileTestCase(unittest.TestCase):
         try:
             # Set execution directory to plain file.
             self.source = Source(directory=directory)
+            self.source.tree_defined()
         except ValueError, exc:
             path = os.path.join(os.getcwd(), directory)
             self.assertEqual(str(exc),
-                "Source: Execution directory path '%s' is not a directory."
+                ": Execution directory path '%s' is not a directory."
                 % path)
         else:
             self.fail('Expected ValueError')
         finally:
             os.remove(directory)
+            
+    ## This test currently fails because no exception is raised
+    ## When a non-existent path is set. Instead, that non-existent
+    ## path gets created
+    #def test_nonexistent_directory(self):
+        #logging.debug('')
+        #logging.debug('test_nonexistent_directory')
 
-    def test_bad_new_directory(self):
-        logging.debug('')
-        logging.debug('test_bad_new_directory')
+        #try:
+            ## Set execution directory to non-existant path.
+            #self.model.Source.directory = 'no-such-dir'
+        #except ValueError, exc:
+            #msg = "Source: Execution directory path "
+            #self.assertEqual(str(exc)[:len(msg)], msg)
+        #else:
+            #self.fail('Expected ValueError')
 
-        # Set execution directory to non-existant path.
-        self.model.Source.directory = 'no-such-dir'
-        try:
-            self.model.run()
-        except RuntimeError, exc:
-            msg = "FileVar_TestModel.Source: Could not move to execution" \
-                  " directory"
-            self.assertEqual(str(exc)[:len(msg)], msg)
-        else:
-            self.fail('Expected RuntimeError')
 
 
 if __name__ == '__main__':

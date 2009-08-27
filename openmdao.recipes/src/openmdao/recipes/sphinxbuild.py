@@ -13,16 +13,6 @@ from pkg_resources import WorkingSet, Requirement
 
 from openmdao.util.procutil import run_command
 
-script_template = """\
-#!%(python)s
-
-import webbrowser
-
-wb = webbrowser.get(%(browser)s)
-wb.open(r"%(index)s")
-
-"""
-
 bld_template = """\
 #!%s
 
@@ -298,9 +288,16 @@ class SphinxBuild(object):
         
         idxpath = os.path.join(self.branchdir, self.docdir, self.builddir,
                                'html','index.html')
-        script.write(script_template % dict(python=self.executable,
-                                            browser=browser,
-                                            index=idxpath))
+        script.write("""\
+#!%(python)s
+
+import webbrowser
+
+wb = webbrowser.get(%(browser)s)
+wb.open(r"%(index)s")
+        """ % dict(python=self.executable,
+                   browser=browser,
+                   index=idxpath))
         script.close()
         try:
             os.chmod(scriptname, 0775)

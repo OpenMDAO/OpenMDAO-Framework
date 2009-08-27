@@ -35,7 +35,7 @@ The example below is equivalent to calling enable_console():
 __all__ = ['logger', 'getLogger', 'enable_console', 'disable_console', 'Logger',
            'LOG_DEBUG', 'LOG_INFO', 'LOG_WARNING', 'LOG_ERROR', 'LOG_CRITICAL']
 
-__version__ = '0.1'
+
 
 
 import logging
@@ -98,6 +98,10 @@ def enable_console():
 def disable_console():
     """ Stop receiving log messages at the console. """
     logger.removeHandler(CONSOLE)
+
+
+if os.environ.get('OPENMDAO_ENABLE_CONSOLE'):
+    enable_console()
 
 
 class Logger(object):

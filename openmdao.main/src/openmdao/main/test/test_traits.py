@@ -6,7 +6,10 @@ work.
 
 import unittest
 
-from enthought.traits.api import HasTraits, TraitType, Int
+from enthought.traits.api import HasTraits, TraitType, Int, Instance
+
+class MyClass(object):
+    pass
 
 class MyProp(TraitType):
     def get(self, object, name):
@@ -19,6 +22,8 @@ class MyHasTraits(HasTraits):
     explicit_int = Int
     explicit_int_def = Int(7)
     explicit_property = MyProp()
+    
+    inst = Instance(MyClass)
     
     _ = MyProp()
 
@@ -104,7 +109,7 @@ class TraitsTestCase(unittest.TestCase):
         allnames = mht.all_trait_names()
         self.assertFalse('added_int' in allnames)
         self.assertFalse('added_property' in allnames)
-        
+                
 
 if __name__ == '__main__':
     unittest.main()

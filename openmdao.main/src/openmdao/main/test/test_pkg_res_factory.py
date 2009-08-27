@@ -50,7 +50,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
                                                            'test','plugins')],
                                              ['openmdao.components'])
         
-        comp = fact.create('testplugins.components.dumb.DumbComponent','foo')
+        comp = fact.create('testplugins.components.dumb.DumbComponent')
         logging.debug('    loaders:')
         for key, value in fact._loaders.items():
             logging.debug('        %s:', key)
@@ -73,7 +73,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         fact = PkgResourcesFactory(None,
                                              ['openmdao.components'])
         
-        comp = fact.create('openmdao.test.Box.Box','foo')
+        comp = fact.create('openmdao.test.Box.Box')
         comp.run()
         
     def test_load_version(self):
@@ -84,16 +84,16 @@ class PkgResFactoryTestCase(unittest.TestCase):
                                                            'openmdao','test',
                                                            'plugins')],
                                              ['openmdao.dumbplugins'])
-        foo = fact.create('foo.Comp1Plugin', name='foo', version='1.0')
+        foo = fact.create('foo.Comp1Plugin', version='1.0')
         self.assertEqual(foo.version, '1.0')
         
         # now try to create an object that requires a conflicting version of foo
         self.assertRaises(VersionConflict,
-                          fact.create,'foo.Comp1Plugin',name='foo2',
+                          fact.create,'foo.Comp1Plugin',
                           version='1.4')
         
         # now request a non-existent version of foo
-        foo10 = fact.create('foo.Comp1Plugin', name='foo2', version='10.5')
+        foo10 = fact.create('foo.Comp1Plugin', version='10.5')
         self.assertEqual(foo10, None)
         
     def test_get_loaders(self):
@@ -127,7 +127,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         self.assertEqual(dumb_loaders[0].name, 'bar.Comp1Plugin')
         self.assertEqual(dumb_loaders[0].dist.version, '1.0')
         self.assertEqual(dumb_loaders[0].dist.project_name, 'bar')
-        mybar = dumb_loaders[0].create(None, 'mybar')
+        mybar = dumb_loaders[0].create(None)
         self.assertEqual(mybar.version, '1.0')
         
         

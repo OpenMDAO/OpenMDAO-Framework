@@ -21,7 +21,7 @@ import logging
 from enthought.traits.api import Float, Array
 
 from openmdao.main.expreval import translate_expr, ExprEvaluator
-from openmdao.main.api import Assembly, Container, Component
+from openmdao.main.api import Assembly, Container, Component, set_as_top
 
 class A(Container):
     b = Array(iostatus='in')
@@ -31,10 +31,10 @@ class Comp(Component):
     
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
-        self.top = Assembly('top', None)
-        A('a', self.top)
+        self.top = set_as_top(Assembly())
+        self.top.add_container('a', A())
         self.top.a.b = numpy.array([1., 2, 3, 4, 5, 6])
-        Comp('comp', self.top)
+        self.top.add_container('comp', Comp())
         self.top.comp.x = 3.14
 
     def test_set1(self):

@@ -9,8 +9,8 @@ from openmdao.main.factory import Factory
 from openmdao.main.importfactory import ImportFactory
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
-from openmdao.main.container import Container
-from openmdao.main.component import Component
+from openmdao.main.container import Container, path_to_root, set_as_top
+from openmdao.main.component import Component, SimulationRoot
 from openmdao.main.assembly import Assembly
 from openmdao.main.driver import Driver
 from openmdao.main.workflow import Workflow

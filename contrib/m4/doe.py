@@ -6,7 +6,7 @@ and was written by someone without much 'mool' knowledge.
 """
 
 __all__ = ('DOE',)
-__version__ = '0.1'
+
 
 from enthought.traits.api import Str, Range
 
@@ -25,8 +25,8 @@ class DOE(CaseIteratorDriver):
     lhs = Range(value=2, low=1, iostatus='in',
                 desc='???, used by LHS and Rand_LHS.')
 
-    def __init__(self, name='M4_DOE', *args, **kwargs):
-        super(DOE, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(DOE, self).__init__(*args, **kwargs)
         self.design_variables = []    # List of (name, min, max) tuples.
         self.response_variables = []  # List of names.
 

@@ -13,16 +13,16 @@ from openmdao.examples.engine_design.driving_sim import DrivingSim
 class EngineOptimization(Assembly):
     """ Top level assembly for optimizing a vehicle. """
     
-    def __init__(self, name, parent=None, directory=''):
+    def __init__(self, directory=''):
         """ Creates a new Assembly containing a DrivingSim and an optimizer"""
         
-        super(EngineOptimization, self).__init__(name, parent, directory)
+        super(EngineOptimization, self).__init__(directory)
 
         # Create DrivingSim component instances
-        DrivingSim('driving_sim', parent=self)
+        self.add_container('driving_sim', DrivingSim())
 
         # Create CONMIN Optimizer instance
-        CONMINdriver('driver', self)
+        self.add_container('driver', CONMINdriver())
         
         # CONMIN Flags
         self.driver.iprint = 0

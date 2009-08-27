@@ -1,6 +1,6 @@
 
 __all__ = ('ExternalCode',)
-__version__ = '0.1'
+
 
 import os.path
 import signal
@@ -51,9 +51,8 @@ class ExternalCode(Component):
     return_code = Any(0, iostatus='out',
                       desc='Return code from command.')
 
-    def __init__(self, name='ExternalCode', parent=None, doc=None,
-                 directory=''):
-        super(ExternalCode, self).__init__(name, parent, doc, directory)
+    def __init__(self, doc=None, directory=''):
+        super(ExternalCode, self).__init__(doc, directory)
 
         self.stdin   = None
         self.stdout  = None

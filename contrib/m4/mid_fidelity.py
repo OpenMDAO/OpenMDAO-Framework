@@ -6,7 +6,7 @@ and was written by someone without much 'mool' knowledge.
 """
 
 __all__ = ('MidFidelity',)
-__version__ = '0.1'
+
 
 from enthought.traits.api import Float, Array, Int, Str, Instance, Range, \
                                  TraitError
@@ -55,8 +55,9 @@ class MidFidelity(Assembly):
     hifi_results = Array(iostatus='out', desc='Points used to make response',
                          ref_name='hifi_results', ref_parent='midfi_model')
     
-    def __init__(self, name='M4_MidFi', *args, **kwargs):
-        super(MidFidelity, self).__init__(name, *args, **kwargs)
+    #name='M4_MidFi', 
+    def __init__(self, *args, **kwargs):
+        super(MidFidelity, self).__init__(*args, **kwargs)
         self.need_updated_corrections = True
 
         self.input_mappings = []

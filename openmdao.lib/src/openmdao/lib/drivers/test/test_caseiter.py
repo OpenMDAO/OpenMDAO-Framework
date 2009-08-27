@@ -14,7 +14,7 @@ import numpy.random
 
 from enthought.traits.api import Float, Array, TraitError
 
-from openmdao.main.api import Assembly, Component, Case, ListCaseIterator
+from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 import openmdao.util.testutil
 
@@ -55,10 +55,11 @@ class DrivenComponent(Component):
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    def __init__(self, name='CID_TestModel', *args, **kwargs):
-        super(MyModel, self).__init__(name, *args, **kwargs)
-        cid = CaseIteratorDriver('driver', self)
-        cid.model = DrivenComponent('dc', self)
+    #name='CID_TestModel', 
+    def __init__(self, *args, **kwargs):
+        super(MyModel, self).__init__(*args, **kwargs)
+        self.add_container('driver', CaseIteratorDriver())
+        self.driver.add_container('model', DrivenComponent())
 
 
 class DriverTestCase(unittest.TestCase):
@@ -69,13 +70,13 @@ class DriverTestCase(unittest.TestCase):
 
     def setUp(self):
         os.chdir(self.directory)
-        self.model = MyModel()
+        self.model = set_as_top(MyModel())
         self.cases = []
         for i in range(10):
-            inputs = [('dc.x', None, numpy.random.normal(size=4)),
-                      ('dc.y', None, numpy.random.normal(size=10))]
-            outputs = [('dc.rosen_suzuki', None, None),
-                       ('dc.sum_y', None, None)]
+            inputs = [('x', None, numpy.random.normal(size=4)),
+                      ('y', None, numpy.random.normal(size=10))]
+            outputs = [('rosen_suzuki', None, None),
+                       ('sum_y', None, None)]
             self.cases.append(Case(inputs, outputs))
 
     def tearDown(self):
@@ -102,7 +103,7 @@ class DriverTestCase(unittest.TestCase):
             # Unsupported, but at least we're exercising egg generation.
             self.run_cases(sequential=False, n_servers=5)
         except NotImplementedError, exc:
-            msg = 'CID_TestModel.driver: Concurrent evaluation is not' \
+            msg = 'driver: Concurrent evaluation is not' \
                   ' supported yet.'
             self.assertEqual(str(exc), msg)
         else:
@@ -150,10 +151,10 @@ class DriverTestCase(unittest.TestCase):
         # Create cases with missing input 'dc.z'.
         cases = []
         for i in range(2):
-            inputs = [('dc.x', None, numpy.random.normal(size=4)),
-                      ('dc.z', None, numpy.random.normal(size=10))]
-            outputs = [('dc.rosen_suzuki', None, None),
-                       ('dc.sum_y', None, None)]
+            inputs = [('x', None, numpy.random.normal(size=4)),
+                      ('z', None, numpy.random.normal(size=10))]
+            outputs = [('rosen_suzuki', None, None),
+                       ('sum_y', None, None)]
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
@@ -163,8 +164,8 @@ class DriverTestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "CID_TestModel.driver: Exception setting 'dc.z':" \
-              " CID_TestModel.dc: object has no attribute 'z'"
+        msg = "driver: Exception setting 'z':" \
+              " driver.model: object has no attribute 'z'"
         for case in results:
             self.assertEqual(case.msg, msg)
 
@@ -175,10 +176,10 @@ class DriverTestCase(unittest.TestCase):
         # Create cases with missing output 'dc.sum_z'.
         cases = []
         for i in range(2):
-            inputs = [('dc.x', None, numpy.random.normal(size=4)),
-                      ('dc.y', None, numpy.random.normal(size=10))]
-            outputs = [('dc.rosen_suzuki', None, None),
-                       ('dc.sum_z', None, None)]
+            inputs = [('x', None, numpy.random.normal(size=4)),
+                      ('y', None, numpy.random.normal(size=10))]
+            outputs = [('rosen_suzuki', None, None),
+                       ('sum_z', None, None)]
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
@@ -188,8 +189,8 @@ class DriverTestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "CID_TestModel.driver: Exception getting 'dc.sum_z':" \
-              " 'DrivenComponent' object has no attribute 'sum_z'"
+        msg = "driver: Exception getting 'sum_z':" \
+              " driver.model: object has no attribute 'sum_z'"
         for case in results:
             self.assertEqual(case.msg, msg)
 
@@ -202,7 +203,7 @@ class DriverTestCase(unittest.TestCase):
         try:
             self.model.run()
         except TraitError, exc:
-            msg = "CID_TestModel.driver: required plugin 'iterator' is not" \
+            msg = "driver: required plugin 'iterator' is not" \
                   " present"
             self.assertEqual(str(exc), msg)
         else:
@@ -217,7 +218,7 @@ class DriverTestCase(unittest.TestCase):
         try:
             self.model.run()
         except TraitError, exc:
-            msg = "CID_TestModel.driver: required plugin 'outerator' is not" \
+            msg = "driver: required plugin 'outerator' is not" \
                   " present"
             self.assertEqual(str(exc), msg)
         else:

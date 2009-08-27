@@ -18,10 +18,12 @@ class Model_A2d(Component):
     y = Float(0., iostatus='in', desc='Y input value.')
 
     z1 = Float(0., iostatus='out', desc='exp(x) + exp(y)')
-    z2 = Float(0., iostatus='out', desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
-
-    def __init__(self, name='Model_A2d', *args, **kwargs):
-        super(Model_A2d, self).__init__(name, *args, **kwargs)
+    z2 = Float(0., iostatus='out', 
+               desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
+        
+    #name='Model_A2d', 
+    def __init__(self, *args, **kwargs):
+        super(Model_A2d, self).__init__(*args, **kwargs)
         self._m4_comp = mool.Optimization.Models_test.Model_A2d()
 
     def execute(self):
@@ -40,9 +42,10 @@ class Model_B2d(Component):
     y = Float(0., iostatus='in', desc='Y input value.')
 
     z = Float(0., iostatus='out', desc='24.*x+24.*y')
-
-    def __init__(self, name='Model_B2d', *args, **kwargs):
-        super(Model_B2d, self).__init__(name, *args, **kwargs)
+        
+    #name='Model_B2d'
+    def __init__(self, *args, **kwargs):
+        super(Model_B2d, self).__init__(*args, **kwargs)
         self._m4_comp = mool.Optimization.Models_test.Model_B2d()
 
     def execute(self):
