@@ -44,8 +44,11 @@ def mod2egg(argv):
                       help="author of the module")
     
     parser.add_option("-i","--install_dir", action="store", type="string", dest="install_dir",
-                      help="install the egg in the specified directory")    
-
+                      help="install the egg in the specified directory")
+    
+    parser.add_option("-z","--zipped_egg", action="store_true", dest="zipped", default=False,
+                      help="zip safe")
+    
     (options, args) = parser.parse_args(argv)
 
     if len(args) == 0:
@@ -77,15 +80,25 @@ def mod2egg(argv):
             print "ERROR: install directory %s does not exist\n" % options.install_dir
             sys.exit(-1)
         ename = _find_egg([options.install_dir], modname, options.version)
+        # be a little extra paranoid about accidental overwriting of an
+        # egg without updating its version
         if ename:
             print "ERROR: egg %s already exists in directory %s" %\
                   (ename, os.path.abspath(options.install_dir))
             sys.exit(-1)
-            
+        if os.path.isabs(options.install_dir):
+            idir_abs = options.install_dir
+        else:
+            idir_abs = os.path.join(os.getcwd(), options.install_dir)
+    else:
+        idir_abs = None
+
     destdir = options.dest or os.getcwd()
     pkgdir = tempfile.mkdtemp()
 
     ename = _find_egg([destdir], modname, options.version)
+    # be a little extra paranoid about accidental overwriting of an
+    # egg without updating its version
     if ename:
         print "ERROR: egg %s already exists in directory %s" %\
               (ename, os.path.abspath(destdir))
@@ -164,7 +177,7 @@ setup(
     description=%(desc)s,
     author=%(author)s,
     packages=['%(name)s'],
-    zip_safe=False,
+    zip_safe=%(zipped)s,
     install_requires=%(depends)s,
     entry_points="""%(entrypts)s"""
 )   
@@ -175,30 +188,37 @@ setup(
                                    'desc': options.desc,
                                    'author': options.author,
                                    'entrypts': entrypts,
+                                   'zipped': options.zipped,
                                    'depends': list(depends) })
         f.close()
+        sys.stdout.write(setup_template % { 'name': modname, 
+                                   'version': options.version,
+                                   'desc': options.desc,
+                                   'author': options.author,
+                                   'entrypts': entrypts,
+                                   'zipped': options.zipped,
+                                   'depends': list(depends) })
 
         # copy the given module into the package __init__.py file
         # to avoid an extra name in the path when using the egg
         shutil.copy(os.path.join(orig_dir,args[0]), 
                     os.path.join(pkgdir, modname, '__init__.py'))
         
-        # build the egg
-        check_call([sys.executable, 
-                   'setup.py', 'bdist_egg', '-d', destdir])
+        # build the egg (and if a zipped egg, put in install_dir)
+        if idir_abs and options.zipped:
+            check_call([sys.executable, 
+                        'setup.py', 'bdist_egg', '-d', idir_abs])
+        else:
+            check_call([sys.executable, 
+                        'setup.py', 'bdist_egg', '-d', destdir])
         
-        if options.install_dir:
-            if os.path.isabs(options.install_dir):
-                idir = options.install_dir
-            else:
-                idir = os.path.join(orig_dir, options.install_dir)
-            
+        if idir_abs and not options.zipped:
             # find the egg we just built
             eggname = _find_egg([destdir], modname, options.version)
             if not eggname:
                 raise RuntimeError("ERROR: cannot locate egg file")
             
-            os.chdir(idir)
+            os.chdir(idir_abs)
             check_call(['easy_install', '-d', '.', '-mNq', 
                         '%s' % os.path.join(destdir,eggname)])
             

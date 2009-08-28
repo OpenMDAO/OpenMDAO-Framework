@@ -167,8 +167,9 @@ class Component (Container):
                 #self.debug('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
                 self._call_execute = True
                 name = self.name
-                self.parent.update_inputs(name,
-                                    ['.'.join([name, n]) for n in invalid_ins])
+                if hasattr(self.parent, 'update_inputs'):
+                    self.parent.update_inputs(name,
+                                              ['.'.join([name, n]) for n in invalid_ins])
     
                             
     def execute (self):
