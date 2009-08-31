@@ -12,6 +12,8 @@ import StringIO
 import pprint
 import shutil
 import tempfile
+import logging
+import copy
 from subprocess import check_call
 from optparse import OptionParser
 
@@ -20,6 +22,13 @@ import zc.buildout
 from enthought.traits.api import TraitType
 
 from openmdao.main.api import Component, Driver # , ResourceAllocator, CaseIterator
+
+logging.basicConfig(level=logging.INFO)
+
+class Mod2EggError(RuntimeError):
+    def __init__(self, msg, parser=None):
+        super(Mod2EggError, self).__init__(msg)
+        self.parser = parser
 
 def _find_egg(path, pkgname, version):
     env = pkg_resources.Environment(path)
@@ -52,40 +61,37 @@ def mod2egg(argv):
     (options, args) = parser.parse_args(argv)
 
     if len(args) == 0:
-        print 'ERROR: No module specified\n'
-        parser.print_help()
-        sys.exit(-1)
+        raise Mod2EggError('No module specified', parser)
     elif len(args) > 1:
-        print 'ERROR: Only one module is allowed\n'
-        parser.print_help()
-        sys.exit(-1)
+        raise Mod2EggError('Only one module is allowed', parser)
 
     if not os.path.exists(args[0]):
-        print "ERROR: module %s does not exist\n" % args[0]
-        sys.exit(-1)
+        raise Mod2EggError("module %s does not exist" % args[0], parser)
         
     if not args[0].endswith('.py'):
-        print "ERROR: %s is not a python module\n" % args[0]
-        sys.exit(-1)
+        raise Mod2EggError("%s is not a python module" % args[0], parser)
 
     if not options.version:
-        print "ERROR: Version of distribution has not been specified\n"
-        parser.print_help()
-        sys.exit(-1)
+        raise Mod2EggError("distribution version has not been specified", 
+                          parser)
         
     modname = os.path.basename(os.path.splitext(args[0])[0])
+    modpath = os.path.abspath(os.path.dirname(args[0]))
+    
+    old_sys_path = copy.copy(sys.path)
+    old_sys_modules = sys.modules.copy()
+    
+    sys.path = [modpath]+sys.path
     
     if options.install_dir:
         if not os.path.isdir(options.install_dir):
-            print "ERROR: install directory %s does not exist\n" % options.install_dir
-            sys.exit(-1)
+            raise Mod2EggError("install directory %s does not exist\n" % options.install_dir)
         ename = _find_egg([options.install_dir], modname, options.version)
         # be a little extra paranoid about accidental overwriting of an
         # egg without updating its version
         if ename:
-            print "ERROR: egg %s already exists in directory %s" %\
-                  (ename, os.path.abspath(options.install_dir))
-            sys.exit(-1)
+            raise Mod2EggError("egg %s already exists in directory %s" %\
+                  (ename, os.path.abspath(options.install_dir)))
         if os.path.isabs(options.install_dir):
             idir_abs = options.install_dir
         else:
@@ -100,11 +106,9 @@ def mod2egg(argv):
     # be a little extra paranoid about accidental overwriting of an
     # egg without updating its version
     if ename:
-        print "ERROR: egg %s already exists in directory %s" %\
-              (ename, os.path.abspath(destdir))
-        sys.exit(-1)
+        raise Mod2EggError("egg %s already exists in directory %s" %\
+              (ename, os.path.abspath(destdir)))
         
-    sys.path[0:0] = '.'
     mod = __import__(modname)
 
     groups = { 'openmdao.component': Component,
@@ -149,6 +153,10 @@ def mod2egg(argv):
                     pass  # some stdlib dists barf when has_resource is called
             if found:
                 break
+            
+    # now put sys.path and sys.modules back to the way they were
+    sys.path = old_sys_path
+    sys.modules = old_sys_modules
                     
     orig_dir = os.getcwd()
     
@@ -191,14 +199,6 @@ setup(
                                    'zipped': options.zipped,
                                    'depends': list(depends) })
         f.close()
-        sys.stdout.write(setup_template % { 'name': modname, 
-                                   'version': options.version,
-                                   'desc': options.desc,
-                                   'author': options.author,
-                                   'entrypts': entrypts,
-                                   'zipped': options.zipped,
-                                   'depends': list(depends) })
-
         # copy the given module into the package __init__.py file
         # to avoid an extra name in the path when using the egg
         shutil.copy(os.path.join(orig_dir,args[0]), 
@@ -208,27 +208,35 @@ setup(
         if idir_abs and options.zipped:
             check_call([sys.executable, 
                         'setup.py', 'bdist_egg', '-d', idir_abs])
+            eggname = _find_egg([idir_abs], modname, options.version)
+            logging.info('installed %s (zipped) in %s' % (eggname, idir_abs))
         else:
             check_call([sys.executable, 
-                        'setup.py', 'bdist_egg', '-d', destdir])
-        
-        if idir_abs and not options.zipped:
-            # find the egg we just built
-            eggname = _find_egg([destdir], modname, options.version)
-            if not eggname:
-                raise RuntimeError("ERROR: cannot locate egg file")
+                        'setup.py', 'bdist_egg', '-d', destdir])        
+            if idir_abs:
+                # find the egg we just built
+                eggname = _find_egg([destdir], modname, options.version)
+                if not eggname:
+                    raise RuntimeError("ERROR: cannot locate egg file")
             
-            os.chdir(idir_abs)
-            check_call(['easy_install', '-d', '.', '-mNq', 
-                        '%s' % os.path.join(destdir,eggname)])
+                os.chdir(idir_abs)
+                check_call(['easy_install', '-d', '.', '-mNq', 
+                            '%s' % os.path.join(destdir,eggname)])
             
-            print 'installed %s in %s' % (eggname, destdir)
+                logging.info('installed %s in %s' % (eggname, idir_abs))
             
     finally:
         os.chdir(orig_dir)
         shutil.rmtree(pkgdir)
-   
+        
+    return 0
    
 if __name__ == "__main__":
-    mod2egg(sys.argv[1:])
+    try:
+        sys.exit(mod2egg(sys.argv[1:]))
+    except Mod2EggError, err:
+        sys.stderr.write(str(err)+'\n')
+        if err.parser:
+            err.parser.print_help()
+        sys.exit(-1)
    

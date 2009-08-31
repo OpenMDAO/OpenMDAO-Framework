@@ -3,6 +3,7 @@
 __all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory']
 
 import logging
+import copy
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
@@ -73,11 +74,14 @@ class PkgResourcesFactory(Factory):
     
     def __init__(self, groups, search_path=None):
         super(PkgResourcesFactory, self).__init__()
+        self._groups = copy.copy(groups)
+        self.update_search_path(search_path)
+    
+    def update_search_path(self, search_path):
         self.env = Environment(search_path)
         self._loaders = {}
-        for group in groups:
+        for group in self._groups:
             self._get_plugin_info(self.env, group)
-        
         
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):
