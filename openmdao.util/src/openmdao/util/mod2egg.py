@@ -50,13 +50,22 @@ def mod2egg(argv):
                       help="specify a description for the egg")
 
     parser.add_option("-a","--author", action="store", type="string", dest="author",
-                      help="author of the module")
+                      help="specify the author of the egg")
+    
+    parser.add_option("-e","--email", action="store", type="string", dest="author_email",
+                      help="specify a contact email for the egg")
     
     parser.add_option("-i","--install_dir", action="store", type="string", dest="install_dir",
                       help="install the egg in the specified directory")
     
+    parser.add_option("-l","--license", action="store", type="string", dest="license",
+                      help="specify a license for all files in the egg")
+    
+    parser.add_option("","--homepage", action="store", type="string", dest="homepage",
+                      help="specify a homepage for the egg")
+    
     parser.add_option("-z","--zipped_egg", action="store_true", dest="zipped", default=False,
-                      help="zip safe")
+                      help="egg is zip safe")
     
     (options, args) = parser.parse_args(argv)
 
@@ -184,6 +193,9 @@ setup(
     version='%(version)s',
     description=%(desc)s,
     author=%(author)s,
+    author_email=%(author_email)s,
+    license=%(license)s,
+    url=%(homepage)s,
     packages=['%(name)s'],
     zip_safe=%(zipped)s,
     install_requires=%(depends)s,
@@ -195,6 +207,9 @@ setup(
                                    'version': options.version,
                                    'desc': options.desc,
                                    'author': options.author,
+                                   'author_email': options.author_email,
+                                   'license': options.license,
+                                   'homepage': options.homepage,
                                    'entrypts': entrypts,
                                    'zipped': options.zipped,
                                    'depends': list(depends) })
