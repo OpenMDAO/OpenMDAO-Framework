@@ -37,7 +37,12 @@ def _find_egg(path, pkgname, version):
             return dist.egg_name()+'.egg'
     return None
 
-def mod2egg(argv):
+def mod2egg(argv, groups= { 'openmdao.component': Component,
+                            'openmdao.driver': Driver,
+                            #'openmdao.case_iterator': CaseIterator,
+                            #'openmdao.resource_allocator': ResourceAllocator,
+                            'openmdao.trait': TraitType
+                            }):
     parser = OptionParser()
     parser.usage = "mod2egg.py [options] <module_name>"
     parser.add_option("-v","--version", action="store", type="string", dest="version",
@@ -61,11 +66,17 @@ def mod2egg(argv):
     parser.add_option("-l","--license", action="store", type="string", dest="license",
                       help="specify a license for all files in the egg")
     
-    parser.add_option("","--homepage", action="store", type="string", dest="homepage",
-                      help="specify a homepage for the egg")
+    parser.add_option("-u","--url", action="store", type="string", dest="url",
+                      help="specify URL of the web page for the egg")
     
     parser.add_option("-z","--zipped_egg", action="store_true", dest="zipped", default=False,
                       help="egg is zip safe")
+    
+    parser.add_option("","--verbose", action="store_true", dest="verbose", default=False,
+                      help="generate verbose output while building")
+    
+    parser.add_option("-k","--keep", action="store_true", dest="keep", default=False,
+                      help="keep the package directory structure used to build the egg")
     
     (options, args) = parser.parse_args(argv)
 
@@ -82,7 +93,7 @@ def mod2egg(argv):
 
     if not options.version:
         raise Mod2EggError("distribution version has not been specified", 
-                          parser)
+                           parser)
         
     modname = os.path.basename(os.path.splitext(args[0])[0])
     modpath = os.path.abspath(os.path.dirname(args[0]))
@@ -109,7 +120,10 @@ def mod2egg(argv):
         idir_abs = None
 
     destdir = options.dest or os.getcwd()
-    pkgdir = tempfile.mkdtemp()
+    if options.keep:
+        pkgdir = destdir
+    else:
+        pkgdir = tempfile.mkdtemp()
 
     ename = _find_egg([destdir], modname, options.version)
     # be a little extra paranoid about accidental overwriting of an
@@ -119,13 +133,6 @@ def mod2egg(argv):
               (ename, os.path.abspath(destdir)))
         
     mod = __import__(modname)
-
-    groups = { 'openmdao.component': Component,
-                'openmdao.driver': Driver,
-                #'openmdao.case_iterator': CaseIterator,
-                #'openmdao.resource_allocator': ResourceAllocator,
-                'openmdao.trait': TraitType
-                }
 
     plugins = groups.copy()
     for name in plugins.keys():
@@ -170,8 +177,8 @@ def mod2egg(argv):
     orig_dir = os.getcwd()
     
     # create package dir
-    os.makedirs(os.path.join(pkgdir, modname))
-    os.chdir(os.path.join(pkgdir))
+    os.makedirs(os.path.join(pkgdir, modname, modname))
+    os.chdir(os.path.join(pkgdir, modname))
 
     # create the entry point string
     epstr = StringIO.StringIO()
@@ -195,7 +202,7 @@ setup(
     author=%(author)s,
     author_email=%(author_email)s,
     license=%(license)s,
-    url=%(homepage)s,
+    url=%(url)s,
     packages=['%(name)s'],
     zip_safe=%(zipped)s,
     install_requires=%(depends)s,
@@ -209,25 +216,30 @@ setup(
                                    'author': options.author,
                                    'author_email': options.author_email,
                                    'license': options.license,
-                                   'homepage': options.homepage,
+                                   'url': options.url,
                                    'entrypts': entrypts,
                                    'zipped': options.zipped,
                                    'depends': list(depends) })
         f.close()
-        # copy the given module into the package __init__.py file
-        # to avoid an extra name in the path when using the egg
         shutil.copy(os.path.join(orig_dir,args[0]), 
-                    os.path.join(pkgdir, modname, '__init__.py'))
+                    os.path.join(pkgdir, modname, modname, os.path.basename(args[0])))
+        f = open(os.path.join(pkgdir, modname, modname, '__init__.py'), 'w')
+        f.write(' ')
+        f.close()
         
         # build the egg (and if a zipped egg, put in install_dir)
+        if options.verbose:
+            qstr = '--verbose'
+        else:
+            qstr = '--quiet'
         if idir_abs and options.zipped:
             check_call([sys.executable, 
-                        'setup.py', 'bdist_egg', '-d', idir_abs])
+                        'setup.py', qstr, 'bdist_egg', '-d', idir_abs])
             eggname = _find_egg([idir_abs], modname, options.version)
             logging.info('installed %s (zipped) in %s' % (eggname, idir_abs))
         else:
             check_call([sys.executable, 
-                        'setup.py', 'bdist_egg', '-d', destdir])        
+                        'setup.py', qstr, 'bdist_egg', '-d', destdir])        
             if idir_abs:
                 # find the egg we just built
                 eggname = _find_egg([destdir], modname, options.version)
@@ -235,20 +247,25 @@ setup(
                     raise RuntimeError("ERROR: cannot locate egg file")
             
                 os.chdir(idir_abs)
-                check_call(['easy_install', '-d', '.', '-mNq', 
+                if options.verbose:
+                    optstr = '-mN'
+                else:
+                    optstr = '-mNq'
+                check_call(['easy_install', '-d', '.', optstr, 
                             '%s' % os.path.join(destdir,eggname)])
             
                 logging.info('installed %s in %s' % (eggname, idir_abs))
             
     finally:
         os.chdir(orig_dir)
-        shutil.rmtree(pkgdir)
+        if not options.keep:
+            shutil.rmtree(pkgdir)
         
     return 0
    
 if __name__ == "__main__":
     try:
-        sys.exit(mod2egg(sys.argv[1:]))
+        mod2egg(sys.argv[1:])
     except Mod2EggError, err:
         sys.stderr.write(str(err)+'\n')
         if err.parser:

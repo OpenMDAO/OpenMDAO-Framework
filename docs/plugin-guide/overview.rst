@@ -46,10 +46,10 @@ Options for Plugin Creation
 
 There are three primary ways to create a plugin for OpenMDAO. The simplest and
 most common for tasks that are not computationally intensive is to create the
-plugin by writing it completely in python. For tasks that are computationally
+plugin by writing it in pure python. For tasks that are computationally
 intensive, often the best choice is to create a python extension using a
 shared library that was compiled from FORTRAN, C, or C++ code. Finally, when a
-legacy code must be wrapped as a Component or Driver plugin, and creating a
+legacy code must be wrapped as a Component or Driver plugin and creating a
 python extension for it is not feasible, an ExternalCode component can be
 configured to communicate with the legacy code via file I/O.
 
@@ -115,6 +115,11 @@ TraitType                    openmdao.trait
 ===========================  ================================
 
 
+Quick and Dirty Egg Creation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+There is a tool called mod2egg.py that can be used to convert a single python
+module into an egg...
 
 
 Python Extension
