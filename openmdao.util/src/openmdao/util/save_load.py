@@ -46,7 +46,6 @@ __all__ = ('save', 'save_to_egg', 'check_requirements',
            'SAVE_YAML', 'SAVE_LIBYAML', 'SAVE_PICKLE', 'SAVE_CPICKLE',
            'EGG_SERVER_URL')
 
-
 # Save formats.
 SAVE_YAML    = 1
 SAVE_LIBYAML = 2
@@ -110,8 +109,9 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     """
     Save state and other files to an egg.  Analyzes the objects saved for
     distribution dependencies.  Modules not found in any distribution are
-    recorded in a '`name`.missing' file.  Also creates and saves loader scripts
-    for each entry point.
+    recorded in an 'egg-info/openmdao_orphans.txt' file.  Also creates and
+    saves loader scripts for each entry point.
+
 
     - 'entry_pts' is a list of (obj, obj_name, obj_group) tuples. \
       The first of these specifies the root object and package name.
@@ -122,7 +122,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     - `dst_dir` is the directory to write the egg in.
 
     The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-    Returns (egg_filename, required_distributions, missing_modules).
+    Returns (egg_filename, required_distributions, orphan_modules).
     """
     root, name, group = entry_pts[0]
     logger = logger or NullLogger()
@@ -168,7 +168,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         tmp_dir = None
         try:
             # Determine distributions and local modules required.
-            required_distributions, local_modules, missing_modules = \
+            required_distributions, local_modules, orphan_modules = \
                 _get_distributions(objs, py_dir, logger)
 
             logger.debug('    py_dir: %s', py_dir)
@@ -208,18 +208,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                                 path = os.path.join(py_dir, path)
                             shutil.copy(path, name)
 
-                # If any distributions couldn't be found, record them in a file.
-                if missing_modules:
-                    missing_name = '%s.missing' % name
-                    missing_path = os.path.join(name, missing_name)
-                    cleanup_files.append(missing_path)
-                    out = open(missing_path, 'w')
-                    for mod, path in sorted(missing_modules,
-                                            key=lambda item: item[0]):
-                        out.write(mod+'\n')
-                    out.close()
-                    src_files.add(missing_name)
-
+                # For each entry point...
                 entry_info = []
                 for obj, obj_name, obj_group in entry_pts:
                     clean_name = obj_name
@@ -260,15 +249,16 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                 # Save everything to an egg.
                 doc = root.__doc__ or ''
                 entry_map = _create_entry_map(entry_info)
+                orphans = [mod for mod, path in orphan_modules]
                 if use_setuptools:
                     eggwriter.write_via_setuptools(name, doc, version,
                                                    entry_map, src_files,
                                                    required_distributions,
-                                                   dst_dir, logger)
+                                                   orphans, dst_dir, logger)
                 else:
                     eggwriter.write(name, doc, version, entry_map,
                                     src_files, required_distributions,
-                                    dst_dir, logger)
+                                    orphans, dst_dir, logger)
             finally:
                 for path in cleanup_files:
                     if os.path.exists(path):
@@ -287,7 +277,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     finally:
         _restore_instancemethods(root)
 
-    return (egg_name, required_distributions, missing_modules)
+    return (egg_name, required_distributions, orphan_modules)
 
 
 def _fix_instancemethods(root):
@@ -558,10 +548,10 @@ def _restore_objects(fixup):
 
 
 def _get_distributions(objs, py_dir, logger):
-    """ Return (distributions, local_modules, missing) used by objs. """
+    """ Return (distributions, local_modules, orphans) used by objs. """
     distributions = set()
     local_modules = set()
-    missing = set()
+    orphans = set()
     modules = ['__builtin__']
     prefixes = []
     site_lib = os.path.dirname(site.__file__)
@@ -589,9 +579,6 @@ def _get_distributions(objs, py_dir, logger):
                                  for p in glob.glob(pattern)])
               
         excludes.update(sys.builtin_module_names)
-        #pattern = os.path.join(os.path.dirname(site.__file__), '*.py')
-        #_get_distributions.excludes = \
-        #    [os.path.basename(path)[:-3] for path in glob.glob(pattern)]
         _get_distributions.excludes = list(excludes)
 
     for obj, container, index in objs:
@@ -605,7 +592,7 @@ def _get_distributions(objs, py_dir, logger):
 
         # Skip modules in distributions we already know about.
         try:
-            path = sys.modules[name].__file__
+            path = os.path.realpath(sys.modules[name].__file__)
         except AttributeError:
             logger.debug('    module %s has no __file__', name)
             continue
@@ -654,13 +641,13 @@ def _get_distributions(objs, py_dir, logger):
             if finder_items is not None:
                 _process_found_modules(py_dir, finder_items, modules,
                                        distributions, prefixes, local_modules,
-                                       missing, logger)
+                                       orphans, logger)
 
     distributions = sorted(distributions, key=lambda dist: dist.project_name)
     logger.debug('    required distributions:')
     for dist in distributions:
         logger.debug('        %s %s', dist.project_name, dist.version)
-    return (distributions, local_modules, missing)
+    return (distributions, local_modules, orphans)
 
 _get_distributions.excludes = None  # Modules to exclude from analysis.
 _get_distributions.saved = {}       # Saved results, keyed by module path.
@@ -683,7 +670,7 @@ def _process_egg(path, distributions, prefixes, logger):
 
 
 def _process_found_modules(py_dir, finder_items, modules, distributions,
-                           prefixes, local_modules, missing, logger):
+                           prefixes, local_modules, orphans, logger):
     """ Use ModuleFinder data to update distributions and local_modules. """
     working_set = pkg_resources.WorkingSet()
     site_lib = os.path.dirname(site.__file__)
@@ -737,7 +724,7 @@ def _process_found_modules(py_dir, finder_items, modules, distributions,
                     not_found.add(dirpath)
                     path = dirpath
                 logger.warning('No distribution found for %s', path)
-                missing.add((name, path))
+                orphans.add((name, path))
 
 
 def _create_buildout(name, server_url, distributions, path):
@@ -1046,26 +1033,23 @@ def _dist_from_eggfile(filename, install, logger):
             raise RuntimeError("Install failed: '%s'" % exc)
 
     # If any module didn't have a distribution, check that we can import it.
-    missing = os.path.join(name, '%s.missing' % name)
-    if os.path.exists(missing):
-        inp = open(missing, 'r')
+    if provider.has_metadata('openmdao_orphans.txt'):
         errors = 0
-        missing_names = []
-        for mod in inp.readlines():
+        orphan_names = []
+        for mod in provider.get_metadata_lines('openmdao_orphans.txt'):
             mod = mod.strip()
-            logger.debug("    checking for 'missing' module: %s", mod)
+            logger.debug("    checking for 'orphan' module: %s", mod)
             try:
                 __import__(mod)
             except ImportError:
                 logger.error("Can't import %s, which didn't have a known"
                              " distribution when the egg was written.", mod)
-                missing_names.append(mod)
+                orphan_names.append(mod)
                 errors += 1
-        inp.close()
         if errors:
             plural = 's' if errors > 1 else ''
-            raise RuntimeError("Couldn't import %d 'missing' module%s: %s."
-                               % (errors, plural, missing_names))
+            raise RuntimeError("Couldn't import %d 'orphan' module%s: %s."
+                               % (errors, plural, orphan_names))
     return (name, dist)
 
 

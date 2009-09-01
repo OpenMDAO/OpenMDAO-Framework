@@ -849,7 +849,7 @@ class Container(HasTraits):
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-        Returns (egg_filename, required_distributions, missing_modules).
+        Returns (egg_filename, required_distributions, orphan_modules).
         """
         name = name or self.name
             
