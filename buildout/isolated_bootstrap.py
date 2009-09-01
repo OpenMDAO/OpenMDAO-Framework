@@ -14,15 +14,17 @@ $Id$
 
 import os, shutil, sys, tempfile #, urllib2
 import os.path
-
+import fnmatch
 
 bodir = os.getcwd()
 setupdir = os.path.join(bodir,'setup')
 
-stoolsname = boutname = None
+boutname = None
+
+stoolspat = "setuptools-*-py%s.egg" % sys.version[:3]
 
 for f in os.listdir(setupdir):
-    if f.startswith('setuptools'):
+    if fnmatch.fnmatch(f, stoolspat):
         stoolsname = f
     elif f.startswith('zc.buildout'):
         boutname = f
@@ -62,7 +64,8 @@ else:
     def quote (c):
         return c
 
-cmd = 'from setuptools.command.easy_install import main; main()'
+cmd = "import sys; sys.path.insert(0,'%s'); from setuptools.command.easy_install import main; main()" % os.path.join(bodir, 'setup', stoolsname)
+
 ws  = pkg_resources.working_set
 assert os.spawnle(
     os.P_WAIT, sys.executable, quote (sys.executable),

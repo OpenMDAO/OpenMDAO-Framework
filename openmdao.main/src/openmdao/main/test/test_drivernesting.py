@@ -351,6 +351,15 @@ class NestedDriverTestCase(unittest.TestCase):
                                             'C2', 'D1', 'C3', 'C3', 'C4', 
                                             'C2', 'D1', 'C3', 'C3', 'C4', 'C5'])
         
+        """
+                        ['D3', 'D2', 'C1', 'C2', 'D1', 'C3', 'C3', 'C4', 
+                                           'C2', 'D1', 'C3', 'C3', 'C4', 
+                                           'C2', 'D1', 'C3', 'C3', 'C4', 
+                               'D2', 'C1', 'C2', 'D1', 'C3', 'C3', 'C4', 
+                                           'C2', 'D1', 'C3', 'C3', 'C4', 
+                                           'C2', 'D1', 'C3', 'C3', 'C4']
+        """
+        
         top.C3.runcount = 0
         top.D1.runcount = 0
         top.D2.runcount = 0

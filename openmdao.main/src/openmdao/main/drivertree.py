@@ -2,8 +2,8 @@
 import networkx as nx
 
 def create_labeled_graph(parent_graph):
-    graph = nx.LabeledDiGraph()
-    graph .add_nodes_from([(name, set()) for name in parent_graph.nodes_iter()])
+    graph = nx.DiGraph()
+    graph .add_nodes_from([name for name in parent_graph.nodes_iter()], itercomps=set())
     graph.add_edges_from(parent_graph.edges_iter())
     graph.add_edges_from(parent_graph.in_edges_iter())
     return graph
@@ -162,13 +162,13 @@ class DriverTree(object):
 
         newset = set()
         for node, data in graph.nodes_iter(data=True):
-            newset = newset.union(data)
+            newset = newset.union(data['itercomps'])
         newset.update(nodes)
         newset.remove(name)
         
         to_remove = [n for n in all_nodes if n in graph]
         graph.remove_nodes_from(to_remove)
-        graph.add_node(name, data=newset)
+        graph.add_node(name, itercomps=newset)
         graph.add_edges_from(to_add)
         return nodes, to_add
         
