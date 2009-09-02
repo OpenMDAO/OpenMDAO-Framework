@@ -229,9 +229,6 @@ class SphinxBuild(object):
 
         # build the docs using Sphinx
         try:
-            # run our little build script using the python interpreter that
-            # knows how to find everything in the buildout, so it will use
-            # the version of Sphinx in the buildout
             out, ret = run_command(bspath)
         except Exception, err:
             self.logger.error(str(err))

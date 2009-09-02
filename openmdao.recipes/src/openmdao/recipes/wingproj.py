@@ -7,6 +7,7 @@ import fnmatch
 import ConfigParser
 import logging
 import pprint
+import platform
 
 import zc.buildout
 
@@ -56,9 +57,8 @@ if platform.system() != 'Windows':
         sodirs = set([os.path.dirname(x) for x in find_files('*.so',bzrtop)])
         libs.extend(sodirs)
         env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
-    Popen(["wing3.1", r"%(proj)s"], env=env)
-else:
-    Popen(["wing", r"%(proj)s"], env=env)
+        
+Popen([r"%(wingpath)s", r"%(proj)s"], env=env)
 
 
 """
@@ -86,6 +86,7 @@ class WingProj(object):
         self.logger = logging.getLogger(name)
         self.branchdir = os.path.split(buildout['buildout']['directory'])[0]
         self.partsdir = buildout['buildout']['parts-directory']
+        self.wingpath = options.get('wingpath', None)
         dev_egg_dir = buildout['buildout']['develop-eggs-directory']
         dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
         # grab the first line of each dev egg link file
@@ -216,10 +217,18 @@ class WingProj(object):
         # create a bin/wing script
         scriptname = os.path.join(self.buildout['buildout']['directory'],
                                   'bin','wing')
+        if self.wingpath:
+            wingpath = self.wingpath
+        else:
+            if platform.system() == 'Windows':
+                wingpath = 'wing'
+            else:
+                wingpath = 'wing3.1'
         try:
             script = open(scriptname, 'w')
             script.write(script_template % dict(python=self.executable,
-                                                proj=newfname))
+                                                proj=newfname,
+                                                wingpath=wingpath))
             script.close()
         except OSError, err:
             self.logger.error(str(err))
