@@ -223,8 +223,9 @@ class SphinxBuild(object):
             ['Sphinx'], self.working_set, 
             sys.executable, os.path.dirname(bspath), { 'sphinx-build': 'sphinx-build' },
             arguments= "argv=['-P', '-b', 'html', '-d', r'%s', r'%s', r'%s']" %
-                        (os.path.join(self.builddir, "doctrees"),
-                         self.docdir, os.path.join(self.builddir, "html")))        
+                        (os.path.abspath(os.path.join(self.builddir, "doctrees")),
+                         os.path.abspath(self.docdir), 
+                         os.path.abspath(os.path.join(self.builddir, "html"))))        
 
         # build the docs using Sphinx
         try:
