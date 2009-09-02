@@ -19,7 +19,7 @@ bld_template = """\
 import sys
 from pkg_resources import load_entry_point
 bld = load_entry_point("Sphinx","console_scripts","sphinx-build")
-args = ['-P', '-b', 'html', '-d', '%s', '%s', '%s']
+args = ['-P', '-b', 'html', '-d', r'%s', r'%s', r'%s']
                 
 sys.exit(bld(argv=args))
 
