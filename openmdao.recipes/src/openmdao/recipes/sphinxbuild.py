@@ -152,11 +152,6 @@ class SphinxBuild(object):
         self.srcmods = options.get('srcmods') or ''  
         self.docdir = options.get('doc_dir') or 'docs'
         self.builddir = options.get('build_dir') or '_build' 
-        self.builder = options.get('build_script') or os.path.join(
-                                                           self.branchdir,
-                                                           'docs',
-                                                           'python-scripts',
-                                                           'sphinx-build')
         self.egg_dir = buildout['buildout']['eggs-directory']
         self.dev_egg_dir = buildout['buildout']['develop-eggs-directory']
         self.working_set = None
@@ -199,16 +194,6 @@ class SphinxBuild(object):
 
                
     def install(self):
-        #dev_eggs = fnmatch.filter(os.listdir(self.dev_egg_dir), '*.egg-link')
-        ## grab the first line of each dev egg link file
-        #self.dev_eggs = [
-           #open(os.path.join(self.dev_egg_dir, f), 'r').readlines()[0].strip() 
-           #for f in dev_eggs]
-        #eggs = self.dev_eggs + \
-               #[os.path.join(self.egg_dir, x) 
-                #for x in fnmatch.filter(os.listdir(self.egg_dir), '*.egg')]
-        #self.env = Environment(eggs)
-        
         startdir = os.getcwd()
         if not os.path.isdir(self.docdir):
             self.docdir = os.path.join(self.branchdir, self.docdir)
@@ -246,7 +231,7 @@ class SphinxBuild(object):
             # run our little build script using the python interpreter that
             # knows how to find everything in the buildout, so it will use
             # the version of Sphinx in the buildout
-            out, ret = run_command('%s %s' % (self.executable, bspath))
+            out, ret = run_command(bspath)
         except Exception, err:
             self.logger.error(str(err))
             raise zc.buildout.UserError('sphinx build failed')
@@ -300,27 +285,3 @@ wb.open(r"%(index)s")
     
     
     update = install  
-
-    
-if __name__ == '__main__':
-    from optparse import OptionParser
-    
-    parser = OptionParser()
-    parser.add_option("-u", "", action="store_true", dest="show_undoc",
-                      help="show undocumented members")
-    parser.add_option("-o", "", action="store", type='string', dest="out",
-                      help="output filename (defaults to stdout)")
-    (options, args) = parser.parse_args(sys.argv[1:])
-    
-    if options.out:
-        outf = open(options.out, 'w')
-    else:
-        outf = sys.stdout
-    
-    if len(args) == 1:
-        _pkg_sphinx_info(args[0], outf, options.show_undoc)
-    else:
-        parser.print_help()
-        sys.exit(-1)
-
-
