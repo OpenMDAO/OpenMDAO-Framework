@@ -21,7 +21,7 @@ from enthought.traits.trait_base import not_event
 
 from openmdao.main.container import Container, set_as_top
 from openmdao.main.filevar import FileValue
-from openmdao.util.save_load import SAVE_CPICKLE
+from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
 
 # Execution states.
@@ -332,7 +332,7 @@ class Component (Container):
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-        Returns (egg_filename, required_distributions, missing_modules).
+        Returns (egg_filename, required_distributions, orphan_modules).
         """
         if src_dir is None:
             src_dir = self.get_abs_directory()

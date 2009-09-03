@@ -35,8 +35,9 @@ from enthought.traits.trait_base import not_none
 
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
-import openmdao.util.save_load
-from openmdao.util.save_load import SAVE_CPICKLE
+from openmdao.util import eggloader
+from openmdao.util import eggsaver
+from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.unitsfloat import convert_units
 
 
@@ -849,7 +850,7 @@ class Container(HasTraits):
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-        Returns (egg_filename, required_distributions, missing_modules).
+        Returns (egg_filename, required_distributions, orphan_modules).
         """
         name = name or self.name
             
@@ -881,9 +882,10 @@ class Container(HasTraits):
         parent = self.parent
         self.parent = None  # Don't want to save stuff above us.
         try:
-            return openmdao.util.save_load.save_to_egg(
-                       entry_pts, version, py_dir, src_dir, src_files,
-                       dst_dir, format, proto, self._logger, use_setuptools)
+            return eggsaver.save_to_egg(entry_pts, version, py_dir,
+                                        src_dir, src_files, dst_dir,
+                                        format, proto, self._logger,
+                                        use_setuptools)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
@@ -900,8 +902,7 @@ class Container(HasTraits):
         # Don't want to save stuff above us.
         self.parent = None  
         try:
-            openmdao.util.save_load.save(self, outstream, format, proto,
-                                         self._logger)
+            eggsaver.save(self, outstream, format, proto, self._logger)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
@@ -916,11 +917,9 @@ class Container(HasTraits):
         # Load from file gets everything.
         entry_group = 'openmdao.top'
         entry_name = 'top'
-        return openmdao.util.save_load.load_from_eggfile(filename, 
-                                                         entry_group,
-                                                         entry_name, 
-                                                         install,
-                                                         logger)
+        return eggloader.load_from_eggfile(filename, entry_group, entry_name,
+                                           install, logger)
+
     @staticmethod
     def load_from_eggpkg(package, entry_name=None, instance_name=None):
         """Load object graph state by invoking the given package entry point.
@@ -930,11 +929,8 @@ class Container(HasTraits):
         entry_group = 'openmdao.components'
         if not entry_name:
             entry_name = package  # Default component is top.
-        return openmdao.util.save_load.load_from_eggpkg(package, 
-                                                        entry_group,
-                                                        entry_name,
-                                                        instance_name, 
-                                                        logger)
+        return eggloader.load_from_eggpkg(package, entry_group, entry_name,
+                                          instance_name, logger)
 
     @staticmethod
     def load(instream, format=SAVE_CPICKLE, package=None, 
@@ -943,8 +939,7 @@ class Container(HasTraits):
         won't need to override this, but extensions will. The format can be
         supplied in case something other than cPickle is needed.
         """
-        top = openmdao.util.save_load.load(instream, format, 
-                                           package, logger)
+        top = eggloader.load(instream, format, package, logger)
         if name:
             top.name = name
         if do_post_load:
