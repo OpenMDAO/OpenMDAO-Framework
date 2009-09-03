@@ -53,18 +53,18 @@ class Dataflow(Workflow):
         # if an edge already exists between the two components, just increment the ref count
         graph = self._no_ref_graph
         try:
-            graph[srccompname][destcompname] += 1
+            graph[srccompname][destcompname]['refcount'] += 1
         except KeyError:
-            graph.add_edge(srccompname, destcompname, data=1)
+            graph.add_edge(srccompname, destcompname, refcount=1)
             
         if not is_directed_acyclic_graph(graph):
             # do a little extra work here to give more info to the user in the error message
             strongly_connected = strongly_connected_components(graph)
-            refcount = graph[srccompname][destcompname] - 1
+            refcount = graph[srccompname][destcompname]['refcount'] - 1
             if refcount == 0:
                 graph.remove_edge(srccompname, destcompname)
             else:
-                graph[srccompname][destcompname] = refcount
+                graph[srccompname][destcompname]['refcount'] = refcount
             for strcon in strongly_connected:
                 if len(strcon) > 1:
                     raise RuntimeError(
@@ -78,11 +78,11 @@ class Dataflow(Workflow):
         between the two components, or remove the edge if the ref count
         reaches 0.
         """
-        refcount = self._no_ref_graph[comp1name][comp2name] - 1
+        refcount = self._no_ref_graph[comp1name][comp2name]['refcount'] - 1
         if refcount == 0:
             self._no_ref_graph.remove_edge(comp1name, comp2name)
         else:
-            self._no_ref_graph[comp1name][comp2name] = refcount
+            self._no_ref_graph[comp1name][comp2name]['refcount'] = refcount
 
             
     def _find_drivers(self, names):

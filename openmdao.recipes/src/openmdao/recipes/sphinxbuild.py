@@ -8,22 +8,9 @@ import rfc822
 import StringIO
 import zc.buildout
 
-from pkg_resources import Environment
-from pkg_resources import WorkingSet, Requirement
+from pkg_resources import Environment, WorkingSet, Requirement, working_set
 
 from openmdao.util.procutil import run_command
-
-bld_template = """\
-#!%s
-
-import sys
-from pkg_resources import load_entry_point
-bld = load_entry_point("Sphinx","console_scripts","sphinx-build")
-args = ['-P', '-b', 'html', '-d', '%s', '%s', '%s']
-                
-sys.exit(bld(argv=args))
-
-""" 
 
 
 def _mod_sphinx_info(mod, outfile, show_undoc=False):
@@ -105,7 +92,7 @@ def _get_metadata(dist, dirname=''):
             yield (path, dist.get_metadata(path))
                 
             
-def _pkg_sphinx_info(env, startdir, pkg, outfile, show_undoc=False,
+def _pkg_sphinx_info(ws, startdir, pkg, outfile, show_undoc=False,
                     underline='-'):
     """Generate Sphinx autodoc directives for all of the modules in 
     the given package.
@@ -115,8 +102,9 @@ def _pkg_sphinx_info(env, startdir, pkg, outfile, show_undoc=False,
     topdir = pkg
     pkgdir = pkg
     
-    ws = WorkingSet()
-    dist = env.best_match(Requirement.parse(pkg), ws)
+    #ws = WorkingSet()
+    #dist = env.best_match(Requirement.parse(pkg), ws)
+    dist = ws.find(Requirement.parse(pkg))
     if dist is None:
         logging.error('no dist found for Requirement(%s)'%pkg)
     print >> outfile, 'Package %s' % pkg
@@ -164,13 +152,11 @@ class SphinxBuild(object):
         self.srcmods = options.get('srcmods') or ''  
         self.docdir = options.get('doc_dir') or 'docs'
         self.builddir = options.get('build_dir') or '_build' 
-        self.builder = options.get('build_script') or os.path.join(
-                                                           self.branchdir,
-                                                           'docs',
-                                                           'python-scripts',
-                                                           'sphinx-build')
         self.egg_dir = buildout['buildout']['eggs-directory']
         self.dev_egg_dir = buildout['buildout']['develop-eggs-directory']
+        self.working_set = None
+        self.specs = [r.strip() for r in options.get('eggs', '').split('\n')
+                         if r.strip()]
 
 
     def _write_src_docs(self):
@@ -187,7 +173,7 @@ class SphinxBuild(object):
         for pack in self.packages.split():
             self.logger.info('creating autodoc file for %s' % pack)
             f = open(os.path.join(pkgdir, pack+'.rst'), 'w')
-            _pkg_sphinx_info(self.env, self.branchdir, pack, f, 
+            _pkg_sphinx_info(self.working_set, self.branchdir, pack, f, 
                             show_undoc=True, underline='-')
             f.close()
         
@@ -208,22 +194,16 @@ class SphinxBuild(object):
 
                
     def install(self):
-        dev_eggs = fnmatch.filter(os.listdir(self.dev_egg_dir), '*.egg-link')
-        # grab the first line of each dev egg link file
-        self.dev_eggs = [
-           open(os.path.join(self.dev_egg_dir, f), 'r').readlines()[0].strip() 
-           for f in dev_eggs]
-        eggs = self.dev_eggs + \
-               [os.path.join(self.egg_dir, x) 
-                for x in fnmatch.filter(os.listdir(self.egg_dir), '*.egg')]
-        self.env = Environment(eggs)
-        
         startdir = os.getcwd()
         if not os.path.isdir(self.docdir):
             self.docdir = os.path.join(self.branchdir, self.docdir)
         if not os.path.isdir(self.docdir):
             raise RuntimeError('doc directory '+self.docdir+' not found')
             
+        self.working_set = zc.buildout.easy_install.install(self.specs, self.egg_dir,
+                                                            executable=self.executable,
+                                                            path=[self.egg_dir, self.dev_egg_dir],
+                                                            newest=False)
         self._write_src_docs()
             
         os.chdir(self.docdir)        
@@ -237,24 +217,19 @@ class SphinxBuild(object):
         
         # create the builddocs script
         bspath = os.path.join(self.buildout['buildout']['directory'], 'bin',
-                              'builddocs')
-        bld_script = open(bspath, 'w')
-        bld_script.write(bld_template % (self.executable,
-                                        os.path.join(self.builddir, "doctrees"),
-                                        self.docdir,
-                                        os.path.join(self.builddir, "html")))
-        bld_script.close()
-        try:
-            os.chmod(bspath, 0775)
-        except (AttributeError, os.error):
-            pass
-            
+                              'sphinx-build')
+         
+        scripts = zc.buildout.easy_install.scripts(
+            ['Sphinx'], self.working_set, 
+            sys.executable, os.path.dirname(bspath), { 'sphinx-build': 'sphinx-build' },
+            arguments= "argv=['-P', '-b', 'html', '-d', r'%s', r'%s', r'%s']" %
+                        (os.path.abspath(os.path.join(self.builddir, "doctrees")),
+                         os.path.abspath(self.docdir), 
+                         os.path.abspath(os.path.join(self.builddir, "html"))))        
+
         # build the docs using Sphinx
         try:
-            # run our little build script using the python interpreter that
-            # knows how to find everything in the buildout, so it will use
-            # the version of Sphinx in the buildout
-            out, ret = run_command('%s %s' % (self.interpreter, bspath))
+            out, ret = run_command(bspath)
         except Exception, err:
             self.logger.error(str(err))
             raise zc.buildout.UserError('sphinx build failed')
@@ -308,27 +283,3 @@ wb.open(r"%(index)s")
     
     
     update = install  
-
-    
-if __name__ == '__main__':
-    from optparse import OptionParser
-    
-    parser = OptionParser()
-    parser.add_option("-u", "", action="store_true", dest="show_undoc",
-                      help="show undocumented members")
-    parser.add_option("-o", "", action="store", type='string', dest="out",
-                      help="output filename (defaults to stdout)")
-    (options, args) = parser.parse_args(sys.argv[1:])
-    
-    if options.out:
-        outf = open(options.out, 'w')
-    else:
-        outf = sys.stdout
-    
-    if len(args) == 1:
-        _pkg_sphinx_info(args[0], outf, options.show_undoc)
-    else:
-        parser.print_help()
-        sys.exit(-1)
-
-

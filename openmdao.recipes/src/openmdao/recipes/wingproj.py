@@ -7,31 +7,27 @@ import fnmatch
 import ConfigParser
 import logging
 import pprint
+import platform
+from subprocess import Popen
 
 import zc.buildout
 
 from pkg_resources import working_set, get_entry_map
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
 
-def find_files_and_dirs(pat, startdir):
+
+def _find_files_and_dirs(pat, startdir):
     for path, dirlist, filelist in os.walk(startdir):
         for name in fnmatch.filter(filelist+dirlist, pat):
             yield os.path.join(path, name)
             
-script_template = """#!%(python)s
 
-import os
-import os.path
-import fnmatch
-import platform
-from subprocess import Popen
-
-def find_files(pat, startdir):
+def _find_files(pat, startdir):
     for path, dirlist, filelist in os.walk(startdir):
         for name in fnmatch.filter(filelist, pat):
             yield os.path.join(path, name)
 
-def find_bzr(path=None):
+def _find_bzr(path=None):
     if not path:
         path = os.getcwd()
     if not os.path.exists(path):
@@ -46,22 +42,20 @@ def find_bzr(path=None):
                 return None
     return None
 
-# in order to find all of our shared libraries, find them
-# all and put their directories in LD_LIBRARY_PATH
-env = os.environ
-if platform.system() != 'Windows':
-    libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
-    bzrtop = find_bzr()
-    if bzrtop:
-        sodirs = set([os.path.dirname(x) for x in find_files('*.so',bzrtop)])
-        libs.extend(sodirs)
-        env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
-    Popen(["wing3.1", r"%(proj)s"], env=env)
-else:
-    Popen(["wing", r"%(proj)s"], env=env)
+def runwing(wingpath, projpath):
+    # in order to find all of our shared libraries, find them
+    # all and put their directories in LD_LIBRARY_PATH
+    env = os.environ
+    if platform.system() != 'Windows':
+        libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
+        bzrtop = _find_bzr()
+        if bzrtop:
+            sodirs = set([os.path.dirname(x) for x in _find_files('*.so',bzrtop)])
+            libs.extend(sodirs)
+            env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
+            
+    Popen([wingpath, projpath], env=env)
 
-
-"""
 
 _wing_header = """#!wing
 #!version=3.0
@@ -85,13 +79,16 @@ class WingProj(object):
         self.options = options
         self.logger = logging.getLogger(name)
         self.branchdir = os.path.split(buildout['buildout']['directory'])[0]
+        self.bindir = os.path.join(buildout['buildout']['directory'], 'bin')
         self.partsdir = buildout['buildout']['parts-directory']
+        self.wingpath = options.get('wingpath', None)
+        self.executable = buildout['buildout']['executable']
+        
         dev_egg_dir = buildout['buildout']['develop-eggs-directory']
         dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
         # grab the first line of each dev egg link file
         self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() 
                             for f in dev_eggs]
-        self.executable = buildout['buildout']['executable']
         
         # try to find the default.wpr file in the user's home directory
         try:
@@ -183,7 +180,7 @@ class WingProj(object):
                             u'docs/_build', u'docs/_static', u'docs/generated_images']
                 # find all dirs containing setup.py files
                 setupdirs = [os.path.dirname(p) for p in 
-                                   find_files_and_dirs('setup.py', self.branchdir)]
+                                   _find_files_and_dirs('setup.py', self.branchdir)]
                 for sdir in setupdirs:
                     sdir = sdir[len(self.branchdir):]
                     bname = os.path.basename(sdir)
@@ -216,20 +213,35 @@ class WingProj(object):
         # create a bin/wing script
         scriptname = os.path.join(self.buildout['buildout']['directory'],
                                   'bin','wing')
-        try:
-            script = open(scriptname, 'w')
-            script.write(script_template % dict(python=self.executable,
-                                                proj=newfname))
-            script.close()
-        except OSError, err:
-            self.logger.error(str(err))
-            raise zc.buildout.UserError('creation of wing script failed')
-        try:
-            os.chmod(scriptname, 0775)
-        except (AttributeError, os.error):
-            pass
-            
-        return [scriptname]
+        if self.wingpath:
+            wingpath = self.wingpath
+        else:
+            if platform.system() == 'Windows':
+                wingpath = 'wing'
+            else:
+                wingpath = 'wing3.1'
+        #try:
+        #    script = open(scriptname, 'w')
+        #    script.write(script_template % dict(python=self.executable,
+        #                                        proj=newfname,
+        #                                        wingpath=wingpath))
+        #    script.close()
+        #except OSError, err:
+        #    self.logger.error(str(err))
+        #    raise zc.buildout.UserError('creation of wing script failed')
+        #try:
+        #    os.chmod(scriptname, 0775)
+        #except (AttributeError, os.error):
+        #    pass
+
+        mydist = working_set.find(Requirement.parse('openmdao.recipes'))
+        scripts = zc.buildout.easy_install.scripts(
+            [('wing', 'openmdao.recipes.wingproj', 'runwing')], 
+            WorkingSet([mydist.location]), 
+            sys.executable, self.bindir, 
+            arguments= "r'%s', r'%s'" % (wingpath, newfname))        
+        
+        return scripts
 
      
     update = install

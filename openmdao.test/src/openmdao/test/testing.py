@@ -36,8 +36,9 @@ def run_openmdao_suite():
             else:
                 sys.argv.append('--cover-html-dir=html_coverage')
 
-    # this tells it to put enable_console calls in generated python
-    # scripts so test runner can see all output for debugging purposes.
+    # this tells it to enable the console in the environment so that
+    # the logger will print output to stdout. This helps greatly when 
+    # debugging openmdao scripts running in separate processes.
     if '--enable_console' in sys.argv:
         sys.argv.remove('--enable_console')
         os.environ['OPENMDAO_ENABLE_CONSOLE'] = 'TRUE'
