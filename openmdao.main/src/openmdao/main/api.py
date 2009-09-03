@@ -25,8 +25,8 @@ from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 
 from openmdao.main.unitsfloat import UnitsFloat, convert_units
 
-from openmdao.util.save_load import SAVE_YAML, SAVE_LIBYAML, \
-                                    SAVE_PICKLE, SAVE_CPICKLE
+from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \
+                                   SAVE_PICKLE, SAVE_CPICKLE
 
 __all__ = ['Assembly',
            'Case',

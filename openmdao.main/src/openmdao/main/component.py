@@ -21,7 +21,7 @@ from enthought.traits.trait_base import not_event
 
 from openmdao.main.container import Container, set_as_top
 from openmdao.main.filevar import FileValue
-from openmdao.util.save_load import SAVE_CPICKLE
+from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
 
 # Execution states.
