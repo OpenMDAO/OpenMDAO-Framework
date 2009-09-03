@@ -181,8 +181,8 @@ class NestedDriverTestCase(unittest.TestCase):
         #
         #  D2-->
         #  |   |
-        #  |   C1--> 
-        #  |       |
+        #  |   C1------> 
+        #  |           |
         #  |       D1-->
         #  |       |   |
         #  |       |<--C2-->
@@ -297,12 +297,12 @@ class NestedDriverTestCase(unittest.TestCase):
         #
         #  D3-->
         #  |   |
-        #  |   C1--> 
-        #  |       |
+        #  |   C1------> 
+        #  |           |
         #  |       D2-->
         #  |       |   |
-        #  |       |   C2-->
-        #  |       |       |
+        #  |       |   C2------->
+        #  |       |            |
         #  |       |       D1--->
         #  |       |        |   |
         #  |       |        |<--C3-->

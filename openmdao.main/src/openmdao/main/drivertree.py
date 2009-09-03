@@ -144,11 +144,13 @@ class DriverTree(object):
         nodes = itergraph.nodes()
         added_nodes = []
         
-        # we may have already collapsed away some of the nodes in our iteration subgraph,
-        # so add any collapsed nodes to our node list so we don't miss any edges
+        # We may have already collapsed away some of the nodes in our iteration subgraph,
+        # so add any collapsed nodes to our node list so we don't miss any edges.
+        # Collapsed nodes should always be Driver nodes, i.e. they have a non-empty
+        # set of itercomps associated with their node.
         if len(self.children) > 0:
             for n,data in graph.nodes_iter(data=True):
-                if len(data) > 0 and n not in itergraph:
+                if len(data['itercomps']) > 0 and n not in itergraph:
                     added_nodes.append(n)
         
         all_nodes = nodes+added_nodes
