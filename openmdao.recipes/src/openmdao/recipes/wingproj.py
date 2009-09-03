@@ -234,8 +234,10 @@ class WingProj(object):
         #except (AttributeError, os.error):
         #    pass
 
+        mydist = working_set.find(Requirement.parse('openmdao.recipes'))
         scripts = zc.buildout.easy_install.scripts(
-            [('wing', 'openmdao.recipes.wingproj', 'runwing')], working_set, 
+            [('wing', 'openmdao.recipes.wingproj', 'runwing')], 
+            WorkingSet([mydist.location]), 
             sys.executable, self.bindir, 
             arguments= "r'%s', r'%s'" % (wingpath, newfname))        
         
