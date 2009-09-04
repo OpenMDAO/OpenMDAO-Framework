@@ -1,0 +1,6 @@
+CR
+C     CALCULATE GAS CONSTANT
+      SUBROUTINE R(P,T,F,W,RX)
+      RX=53.35045+(.658*F+32.433*W)/(1.+F+W)
+      RETURN
+      END
