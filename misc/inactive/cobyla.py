@@ -2,12 +2,12 @@
 #public symbols
 __all__ = ["COBYLA"]
 
-__version__ = "0.1"
+
 
 
 from scipy.optimize.cobyla import fmin_cobyla
 
-from openmdao.main.api import Driver
+from openmdao.main.api import Driver, StringRef, StringRefArray
 from openmdao.main.component import STATE_WAITING
 
 # if our globals dict doesn't contain __builtins__, python will 
@@ -18,8 +18,21 @@ from openmdao.main.component import STATE_WAITING
 class COBYLA(Driver):
     """ Constrained Optimization BY Linear Approximation. """
     
-    def __init__(self, name, parent=None, desc=None):
-        super(COBYLA, self).__init__(name, parent, desc)
+    rhobeg = Float(iostatus='in',
+                   desc='reasonable initial changes to the variables')
+    rhoend = Float(iostatus='in',
+                   desc='final accuracy (not precisely guaranteed)')
+    maxiters = Int(iostatus='in', desc='maximum number of function iterations')
+    iprint = Int(iostatus='in',
+                 desc='print frequency: 0 (no output),1,2,3')
+    min_expr = StringRef(iostatus='in', desc='expression to minimize')
+    constraint_exprs = StringRefArray(iostatus='in',
+                        desc='constraint expressions (must be >=0)')
+    design_vars = StringRefArray(iostatus='in',
+                                 desc='list of design variable names')
+        
+    def __init__(self, desc=None):
+        super(COBYLA, self).__init__(desc)
         self.design_vars = [] #names of design variables
         self.__funct = None
         self._code = None
@@ -34,21 +47,7 @@ class COBYLA(Driver):
         self.iter_count = 0
         self.xmin = []
         self.iprint = 0
-        
-        Float('rhobeg', self, iostatus='in',
-              desc='reasonable initial changes to the variables')
-        Float('rhoend', self, iostatus='in',
-              desc='final accuracy (not precisely guaranteed)')
-        Int('maxiters', self, iostatus='in',
-            desc='maximum number of function iterations')
-        Int('iprint', self, iostatus='in',
-            desc='print frequency: 0 (no output),1,2,3')
-        String('min_expr', self, iostatus='in', desc='expression to minimize')
-        StringList('constraint_exprs', self, iostatus='in',
-                   desc='constraint expressions (must be >=0)')
-        StringList('design_vars', self, iostatus='in',
-                   desc='list of design variable names')
-        
+                
     def _get_funct(self):
         return self.__funct
     

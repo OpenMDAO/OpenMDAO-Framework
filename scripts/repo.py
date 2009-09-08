@@ -199,8 +199,8 @@ def find_repository(repository, user):
     shared_base = os.path.join(os.sep, 'OpenMDAO', 'dev', 'shared')
 
     if not repository:
-        path = find_bzr('.')
-        if not path:
+        path = find_bzr()
+        if not path or not path.startswith('/OpenMDAO'):
             # Use default if this user only has one.
             paths = glob.glob(os.path.join(user_base, '*'))
             if len(paths) == 1:
@@ -211,7 +211,7 @@ def find_repository(repository, user):
                 print 'Default repository is ambiguous:'
                 for path in paths:
                     print '   ', path
-                    sys.exit(1)
+                sys.exit(1)
     path = find_bzr(repository)
     if not path:
         path = os.path.join(user_base, repository)
@@ -221,7 +221,7 @@ def find_repository(repository, user):
         path = find_bzr(path)
     return path
 
-def find_bzr(path):
+def find_bzr(path=None):
     """ Return bzr root directory path, or None. """
     if not path:
         path = os.getcwd()

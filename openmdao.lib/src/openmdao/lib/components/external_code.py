@@ -1,6 +1,6 @@
 
 __all__ = ('ExternalCode',)
-__version__ = '0.1'
+
 
 import os.path
 import signal
@@ -11,7 +11,7 @@ import time
 if sys.platform == 'win32':
     import win32api
 
-from enthought.traits.api import Float, Bool, Int, Str, Any
+from enthought.traits.api import Bool, Str, Any
 
 from openmdao.main.api import Component, UnitsFloat
 from openmdao.main.exceptions import RunInterrupted, RunStopped
@@ -43,7 +43,7 @@ class ExternalCode(Component):
                   desc='Command to be executed.')
 
     timeout = UnitsFloat(0., low=0., iostatus='in', units='s',
-                    desc='Max time to wait for command completion.')
+                         desc='Max time to wait for command completion.')
 
     timed_out = Bool(False, iostatus='out',
                      desc='True if command timed-out.')
@@ -51,9 +51,8 @@ class ExternalCode(Component):
     return_code = Any(0, iostatus='out',
                       desc='Return code from command.')
 
-    def __init__(self, name='ExternalCode', parent=None, doc=None,
-                 directory=''):
-        super(ExternalCode, self).__init__(name, parent, doc, directory)
+    def __init__(self, doc=None, directory=''):
+        super(ExternalCode, self).__init__(doc, directory)
 
         self.stdin   = None
         self.stdout  = None

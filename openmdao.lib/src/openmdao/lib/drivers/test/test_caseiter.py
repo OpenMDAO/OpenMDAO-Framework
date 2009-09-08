@@ -2,8 +2,11 @@
 Test CaseIteratorDriver.
 """
 
+import glob
 import logging
+import os.path
 import pkg_resources
+import shutil
 import sys
 import unittest
 
@@ -11,9 +14,12 @@ import numpy.random
 
 from enthought.traits.api import Float, Array, TraitError
 
-from openmdao.main.api import Assembly, Component, Case, ListCaseIterator
+from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 import openmdao.util.testutil
+
+# Capture original working directory so we can restore in tearDown().
+ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
 
@@ -38,73 +44,102 @@ class DrivenComponent(Component):
     def execute(self):
         """ Compute results from input vector. """
         self.rosen_suzuki = rosen_suzuki(self.x)
-        self.sum_y = sum(self.y)
+# This gets "iter() returned non-iterator of type 'SyncNetProxy'"
+# (RPyC 2.6 as issues with proxied objects & iteration)
+#        self.sum_y = sum(self.y)
+        self.sum_y = 0
+        for i in range(len(self.y)):
+            self.sum_y += self.y[i]
 
 
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    def __init__(self, name='CID_TestModel', *args, **kwargs):
-        super(MyModel, self).__init__(name, *args, **kwargs)
-        cid = CaseIteratorDriver('driver', self)
-        cid.model = DrivenComponent('dc', self)
+    #name='CID_TestModel', 
+    def __init__(self, *args, **kwargs):
+        super(MyModel, self).__init__(*args, **kwargs)
+        self.add_container('driver', CaseIteratorDriver())
+        self.driver.add_container('model', DrivenComponent())
 
 
 class DriverTestCase(unittest.TestCase):
     """ Test CaseIteratorDriver. """
 
+    # Need to be in this directory or there are issues with egg loading.
+    directory = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
+
     def setUp(self):
-        self.model = MyModel()
+        os.chdir(self.directory)
+        self.model = set_as_top(MyModel())
+        self.cases = []
+        for i in range(10):
+            inputs = [('x', None, numpy.random.normal(size=4)),
+                      ('y', None, numpy.random.normal(size=10))]
+            outputs = [('rosen_suzuki', None, None),
+                       ('sum_y', None, None)]
+            self.cases.append(Case(inputs, outputs))
 
     def tearDown(self):
         self.model.pre_delete()
         self.model = None
+        for server_dir in glob.glob('LocalHost_*'):
+            shutil.rmtree(server_dir)
 
-    def test_normal(self):
+        # Verify we didn't mess-up working directory.
+        end_dir = os.getcwd()
+        os.chdir(ORIG_DIR)
+        if end_dir != self.directory:
+            self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
+
+    def test_sequential(self):
         logging.debug('')
-        logging.debug('test_normal')
+        logging.debug('test_sequential')
+        self.run_cases(sequential=True)
 
-        cases = []
-        for i in range(10):
-            inputs = [('dc.x', None, numpy.random.normal(size=4)),
-                      ('dc.y', None, numpy.random.normal(size=10))]
-            outputs = [('dc.rosen_suzuki', None, None),
-                       ('dc.sum_y', None, None)]
-            cases.append(Case(inputs, outputs))
+    def test_concurrent(self):
+        logging.debug('')
+        logging.debug('test_concurrent')
+        try:
+            # Unsupported, but at least we're exercising egg generation.
+            self.run_cases(sequential=False, n_servers=5)
+        except NotImplementedError, exc:
+            msg = 'driver: Concurrent evaluation is not' \
+                  ' supported yet.'
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected NotImplementedError')
 
-        self.model.driver.iterator = ListCaseIterator(cases)
+    def run_cases(self, sequential, n_servers=0):
+        """ Evaluate cases, either sequentially or across n_servers. """
+        self.model.driver.sequential = sequential
+        self.model.driver._n_servers = n_servers
+        self.model.driver.iterator = ListCaseIterator(self.cases)
         results = []
         self.model.driver.outerator = results
 
         self.model.run()
 
-        self.assertEqual(len(results), len(cases))
-        for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg, None)
-            self.assertEqual(results[i].outputs[0][2],
+        # Verify recorded results match expectations.
+        self.assertEqual(len(results), len(self.cases))
+        for case in results:
+            self.assertEqual(case.msg, None)
+            self.assertEqual(case.outputs[0][2],
                              rosen_suzuki(case.inputs[0][2]))
-            self.assertEqual(results[i].outputs[1][2],
+            self.assertEqual(case.outputs[1][2],
                              sum(case.inputs[1][2]))
 
     def test_save_load(self):
         logging.debug('')
         logging.debug('test_save_load')
 
-        cases = []
-        for i in range(10):
-            inputs = [('dc.x', None, numpy.random.normal(size=4)),
-                      ('dc.y', None, numpy.random.normal(size=10))]
-            outputs = [('dc.rosen_suzuki', None, None),
-                       ('dc.sum_y', None, None)]
-            cases.append(Case(inputs, outputs))
-
-        self.model.driver.iterator = ListCaseIterator(cases)
+        self.model.driver.iterator = ListCaseIterator(self.cases)
         results = []
         self.model.driver.outerator = results
 
         # Set local dir in case we're running in a different directory.
-        py_dir = pkg_resources.resource_filename('openmdao.lib.drivers',
-                                                 'test')
+        py_dir = self.directory
+
+        # Exercise check_save_load().  Must find correct python first.
         python = openmdao.util.testutil.find_python('openmdao.lib')
         retcode = self.model.check_save_load(py_dir=py_dir, python=python)
         self.assertEqual(retcode, 0)
@@ -113,12 +148,13 @@ class DriverTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_noinput')
 
+        # Create cases with missing input 'dc.z'.
         cases = []
         for i in range(2):
-            inputs = [('dc.x', None, numpy.random.normal(size=4)),
-                      ('dc.z', None, numpy.random.normal(size=10))]
-            outputs = [('dc.rosen_suzuki', None, None),
-                       ('dc.sum_y', None, None)]
+            inputs = [('x', None, numpy.random.normal(size=4)),
+                      ('z', None, numpy.random.normal(size=10))]
+            outputs = [('rosen_suzuki', None, None),
+                       ('sum_y', None, None)]
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
@@ -128,21 +164,22 @@ class DriverTestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "CID_TestModel.driver: Exception setting 'dc.z':" \
-              " CID_TestModel.dc: object has no attribute 'z'"
-        for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg, msg)
+        msg = "driver: Exception setting 'z':" \
+              " driver.model: object has no attribute 'z'"
+        for case in results:
+            self.assertEqual(case.msg, msg)
 
     def test_nooutput(self):
         logging.debug('')
         logging.debug('test_nooutput')
 
+        # Create cases with missing output 'dc.sum_z'.
         cases = []
         for i in range(2):
-            inputs = [('dc.x', None, numpy.random.normal(size=4)),
-                      ('dc.y', None, numpy.random.normal(size=10))]
-            outputs = [('dc.rosen_suzuki', None, None),
-                       ('dc.sum_z', None, None)]
+            inputs = [('x', None, numpy.random.normal(size=4)),
+                      ('y', None, numpy.random.normal(size=10))]
+            outputs = [('rosen_suzuki', None, None),
+                       ('sum_z', None, None)]
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
@@ -152,20 +189,23 @@ class DriverTestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "CID_TestModel.driver: Exception getting 'dc.sum_z':" \
-              " 'DrivenComponent' object has no attribute 'sum_z'"
-        for i, case in enumerate(cases):
-            self.assertEqual(results[i].msg, msg)
+        msg = "driver: Exception getting 'sum_z':" \
+              " driver.model: object has no attribute 'sum_z'"
+        for case in results:
+            self.assertEqual(case.msg, msg)
 
     def test_noiterator(self):
         logging.debug('')
         logging.debug('test_noiterator')
 
+        # Check resoponse to no iterator set.
         self.model.driver.outerator = []
         try:
             self.model.run()
         except TraitError, exc:
-            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'iterator' is not present")
+            msg = "driver: required plugin 'iterator' is not" \
+                  " present"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('TraitError expected')
 
@@ -173,11 +213,14 @@ class DriverTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_noouterator')
 
+        # Check resoponse to no outerator set.
         self.model.driver.iterator = ListCaseIterator([])
         try:
             self.model.run()
         except TraitError, exc:
-            self.assertEqual(str(exc), "CID_TestModel.driver: required plugin 'outerator' is not present")
+            msg = "driver: required plugin 'outerator' is not" \
+                  " present"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('TraitError expected')
 

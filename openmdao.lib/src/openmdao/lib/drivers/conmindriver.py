@@ -3,7 +3,7 @@
 #public symbols
 __all__ = ['CONMINdriver']
 
-__version__ = "0.1"
+
 
 from copy import copy
 import numpy.numarray as numarray
@@ -132,11 +132,7 @@ class _consav(object):
         
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 
-    
-    NOTE: This implementation does not support multiple instances of
-    CONMINdriver within the same process because the common block information
-    used by conmin is not copied and restored per instance at this time.
-    
+        
     .. parsed-literal::
     
        TODO: make CONMIN's handling of user calculated gradients 
@@ -164,8 +160,8 @@ class CONMINdriver(Driver):
     iprint = Int(0)
     maxiters = Int(40)
         
-    def __init__(self, name, parent=None, doc=None):
-        super(CONMINdriver, self).__init__(name, parent, doc)
+    def __init__(self, doc=None):
+        super(CONMINdriver, self).__init__( doc)
         
         # Save data from common blocks into our CONMINdriver object
         self.cnmn1 = _cnmn1()

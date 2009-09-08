@@ -4,6 +4,7 @@
 
 import logging
 import os
+import sys
 import pkg_resources
 import shutil
 import subprocess
@@ -17,7 +18,8 @@ class EngineOptimizationTestCase(unittest.TestCase):
     """ Test Vehicle """
 
     def setUp(self):
-        self.model = EngineOptimization("test_vehicle")
+        self.model = EngineOptimization()
+        self.model.tree_defined()
 
     def tearDown(self):
         if self.model is not None:
@@ -36,7 +38,8 @@ class EngineOptimizationTestCase(unittest.TestCase):
         py_dir = pkg_resources.resource_filename('openmdao.examples.engine_design',
                                                  'test')
         python = openmdao.util.testutil.find_python('openmdao.examples')
-        egg_name = self.model.save_to_egg(py_dir=py_dir)
+        egg_info = self.model.save_to_egg(py_dir=py_dir)
+        egg_name = egg_info[0]
 
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
@@ -51,7 +54,12 @@ class EngineOptimizationTestCase(unittest.TestCase):
             out = open('unpack.py', 'w')
             out.write("""\
 from openmdao.main.api import Component
-Component.load_from_eggfile('%s', install=False)
+try:
+    Component.load_from_eggfile('%s', install=False)
+except Exception, err:
+    import openmdao.main.log
+    openmdao.main.log.logger.exception(str(err))
+    raise
 """ % egg_path)
             out.close()
             retcode = subprocess.call([python, 'unpack.py'])
@@ -60,6 +68,8 @@ Component.load_from_eggfile('%s', install=False)
             logging.debug('Load state and run test in subprocess...')
             logging.debug('    python %s' % python)
 
+            if not self.model.name:
+                self.model.name = self.model.get_default_name(self)
             os.chdir(self.model.name)
             out = open('test.py', 'w')
             out.write("""\

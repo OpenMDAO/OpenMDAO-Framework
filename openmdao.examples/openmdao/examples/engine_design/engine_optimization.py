@@ -1,5 +1,7 @@
-# engine_optimization.py
-#
+"""
+    engine_optimization.py - Top level assembly for the example problem.
+"""
+
 # Optimize an engine disign using the driving_sim component.
 
 from openmdao.main.api import Assembly
@@ -11,16 +13,16 @@ from openmdao.examples.engine_design.driving_sim import DrivingSim
 class EngineOptimization(Assembly):
     """ Top level assembly for optimizing a vehicle. """
     
-    def __init__(self, name, parent=None, directory=''):
-        ''' Creates a new Assembly containing a DrivingSim and an optimizer'''
+    def __init__(self, directory=''):
+        """ Creates a new Assembly containing a DrivingSim and an optimizer"""
         
-        super(EngineOptimization, self).__init__(name, parent, directory)
+        super(EngineOptimization, self).__init__(directory)
 
         # Create DrivingSim component instances
-        DrivingSim('driving_sim', parent=self)
+        self.add_container('driving_sim', DrivingSim())
 
         # Create CONMIN Optimizer instance
-        CONMINdriver('driver', self)
+        self.add_container('driver', CONMINdriver())
         
         # CONMIN Flags
         self.driver.iprint = 0
@@ -40,7 +42,7 @@ class EngineOptimization(Assembly):
 if __name__ == "__main__": # pragma: no cover         
 
     def prz(title):
-        ''' Print before and after'''
+        """ Print before and after"""
         
         print '---------------------------------'
         print title

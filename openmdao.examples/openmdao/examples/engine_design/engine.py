@@ -1,5 +1,7 @@
-# engine.py
-#
+"""
+    engine.py - Engine (Python implementation) for the vehicle example problem.
+"""
+
 # This openMDAO component contains an engine model found in Sitthiracha "AN
 # ANALYTICAL MODEL OF SPARK IGNITION ENGINE FOR PERFORMANCE PREDICTION"
 
@@ -10,7 +12,7 @@ from enthought.traits.api import Float, Int, Range
 from openmdao.main.api import Component, UnitsFloat
 
 class Engine(Component):
-    ''' Model of a piston engine - Python Implementation.'''
+    """ Model of a piston engine - Python Implementation."""
     
     # set up interface to the framework  
     # pylint: disable-msg=E1101
@@ -21,7 +23,7 @@ class Engine(Component):
                    desc='Connecting Rod Length')
     comp_ratio = Float(9.3, iostatus='in', desc='Compression Ratio')
     spark_angle = UnitsFloat(-37.0, iostatus='in', units='deg',
-                             desc = 'Spark Angle with respect to TDC (Top Dead Center)')
+                    desc = 'Spark Angle with respect to TDC (Top Dead Center)')
     ncyl = Int(6, iostatus='in', desc = 'Number of Cylinders')
     IVO = UnitsFloat(11.0, iostatus='in', units='deg',
                      desc = 'Intake Valve Open before TDC (Top Dead Center)')
@@ -46,55 +48,55 @@ class Engine(Component):
     engine_weight = UnitsFloat(0.0, iostatus='out', units='kg', 
                                desc='Engine weight estimation')
         
-    #def __init__(self, name, parent=None, desc=None, directory=''):
-        #''' Creates a new Engine object
+    #def __init__(self, desc=None, directory=''):
+        #""" Creates a new Engine object
 
             ## Design parameters
-            #stroke = 78.8              # Stroke (mm)
-            #bore = 82.0                # Bore (mm)
-            #conrod = 115.0             # Connecting Rod (mm)
-            #comp_ratio = 9.3           # Compression Ratio
-            #spark_angle = -37.0        # Spark Angle ref TDC (degree)
-            #ncyl = 6                   # Number of Cylinders
-            #IVO = 11.0                 # Intake Valve Open before TDC (degree BTDC)
-            #IVC = 53.0                 # Intake Valve Close after BDC (degree ABDC)
-            #L_v = 8.0                  # Maximum Valve Lift (mm)
-            #D_v = 41.2                 # Inlet Valve Dia (mm)
+            #stroke = 78.8           # Stroke (mm)
+            #bore = 82.0             # Bore (mm)
+            #conrod = 115.0          # Connecting Rod (mm)
+            #comp_ratio = 9.3        # Compression Ratio
+            #spark_angle = -37.0     # Spark Angle ref TDC (degree)
+            #ncyl = 6                # Number of Cylinders
+            #IVO = 11.0              # Intake Valve Open before TDC (deg BTDC)
+            #IVC = 53.0              # Intake Valve Close after BDC (deg ABDC)
+            #L_v = 8.0               # Maximum Valve Lift (mm)
+            #D_v = 41.2              # Inlet Valve Dia (mm)
 
             ## Constants
-            #k = 1.3                    # k (Specific heat ratio for Air)
-            #R = 287.0                  # R (Gas constant for Air - J/kg/degK)
-            #Ru = 8.314                 # R (Gas constant for Air - J/mole/degK)
-            #Hu = 44000.0               # Heating Value for gasoline (44000 kJ/kg)
-            #Tw = 400.0                 # Tw (Combustion Wall Temperature 400 degrees K)
-            #AFR = 14.6                 # Air Fuel Ratio for gasoline
-            #P_exth = 152               # Exhaust gas pressure
-            #P_amb = 101.325            # Ambient Pressure (kPa)
-            #T_amb = 298                # Ambient Temperature (deg K)
-            #air_density = 1.2          # Air Density (1.2 kg/m**2)
-            #mw_air = 28.97             # Molecular Weight of Air (g/mol)
-            #mw_fuel = 114              # Molecular Weight of Gasoline (g/mol)
+            #k = 1.3                 # k (Specific heat ratio for Air)
+            #R = 287.0               # R (Gas constant for Air - J/kg/degK)
+            #Ru = 8.314              # R (Gas constant for Air - J/mole/degK)
+            #Hu = 44000.0            # Heating Value for gasoline (44000 kJ/kg)
+            #Tw = 400.0              # Tw (Combustion Wall Temperature 400 degK)
+            #AFR = 14.6              # Air Fuel Ratio for gasoline
+            #P_exth = 152            # Exhaust gas pressure
+            #P_amb = 101.325         # Ambient Pressure (kPa)
+            #T_amb = 298             # Ambient Temperature (deg K)
+            #air_density = 1.2       # Air Density (1.2 kg/m**2)
+            #mw_air = 28.97          # Molecular Weight of Air (g/mol)
+            #mw_fuel = 114           # Molecular Weight of Gasoline (g/mol)
 
             ## Simulation inputs
-            #RPM = 1000.0               # RPM
-            #throttle = 1.0             # Throttle Position
-            #thetastep = 1.0            # Simulation time stepsize (crank angle degrees)
+            #RPM = 1000.0            # RPM
+            #throttle = 1.0          # Throttle Position
+            #thetastep = 1.0         # Sim time stepsize (crank angle deg)
 
             ## Outputs
-            #power                      # Power at engine output (KW)
-            #torque                     # Torque at engine output (N*m)
-            #fuel_burn                  # Fuel burn rate (liters/sec)
-            #engine_weight              # Engine weight estimation (kg)
-            #'''
+            #power                   # Power at engine output (KW)
+            #torque                  # Torque at engine output (N*m)
+            #fuel_burn               # Fuel burn rate (liters/sec)
+            #engine_weight           # Engine weight estimation (kg)
+            #"""
 
-        #super(Engine, self).__init__(name, parent, desc, directory)        
+        #super(Engine, self).__init__(desc, directory)        
 
 
 
     def execute(self):
-        ''' Simulates the Otto cycle for an internal combustion engine.
+        """ Simulates the Otto cycle for an internal combustion engine.
             Power and Torque are returned at the engine output.
-            '''
+            """
 
         # These Constants are all hard-coded for Gasoline.
         # Eventually, we'll move them to the input so that they can be tweaked.
@@ -202,7 +204,7 @@ class Engine(Component):
         Pmix = 0.0
         pmi = 0.0
 
-        for thetad in xrange(-360,181):
+        for thetad in xrange(-360, 181):
             theta = thetad*thetastep
 
             #--------------------------------------------------------------
@@ -290,7 +292,7 @@ class Engine(Component):
                 Pratio = (P+5.5*Pmix)/P0
 
                 # Pratio>1 means outflow
-                if Pratio>1:
+                if Pratio > 1:
                     Pratio = 1.0/Pratio
                     flow_direction = -1.0
                 else:
@@ -363,13 +365,13 @@ class Engine(Component):
 
 if __name__ == "__main__": 
     
-    z = Engine("Testing")
+    MyEngine = Engine("Testing")
     
     import time
-    t1 = time.time()
+    ttime = time.time()
     
-    for jj in xrange(1,50):
-        z.run()
+    for jj in xrange(1, 50):
+        MyEngine.run()
         
-    print "Elapsed time: ", time.time()-t1
+    print "Elapsed time: ", time.time()-ttime
 

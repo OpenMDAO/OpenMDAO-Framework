@@ -6,13 +6,14 @@ and was written by someone without much 'mool' knowledge.
 """
 
 __all__ = ('MidFidelity',)
-__version__ = '0.1'
 
-from enthought.traits.api import Float, Array, Int, Str, Instance
+
+from enthought.traits.api import Float, Array, Int, Str, Instance, Range, \
+                                 TraitError
 
 import mool.Optimization.MidFiModel
 
-from openmdao.main.api import Assembly, Component
+from openmdao.main.api import Assembly, Component, UnitsFloat
 
 import wrapper
 
@@ -28,48 +29,35 @@ class MidFidelity(Assembly):
 
     # Inputs.
     # No 'Option' variables yet.
-
     doe_type = Str('lhs', iostatus='in', 
                    desc='Type of DOE used to generate response surface.')
-
-    rs_type = Str('quadratic', iostatus='in',
-                     desc='Type of response surface.')
-
-    n_samples = Range(value=1, low=1, iostatus='in', 
-                      desc='Number of samples.')
-
+    rs_type = Str('quadratic', iostatus='in', desc='Type of response surface.')
+    n_samples = Range(value=1, low=1, iostatus='in', desc='Number of samples.')
     tolerance = Float(1.0e10, iostatus='in', desc='?')
-
     correction_function = Int(1, iostatus='in',
                               desc='Type of correction function.')
-
     w_h = Float(0.5, iostatus='in', desc='?')
-
     accuracy_test_type = Int(2, iostatus='in', 
                              desc='Method for testing accuracy of response.')
-
     n_samples_test = Range(value=10, low=1, iostatus='in',
                            desc='Number of additional samples for additional-points test.')
-
     ntheta = Int(3, iostatus='in', 
                  desc='For Kriging method, ntheta=1(SA),2(Cobyla),3(BFGS)')
     
     # TODO: change these to delegates or passthroughs
     
-    sample_points = Array(iostatus='out', 
-                          desc='Points used to make response',
+    sample_points = Array(iostatus='out', desc='Points used to make response',
                           ref_name='sample_points', ref_parent='midfi_model')
 
-    lofi_results = Array(iostatus='out', 
-                         desc='Points used to make response',
+    lofi_results = Array(iostatus='out', desc='Points used to make response',
                          ref_name='lofi_results', ref_parent='midfi_model')
 
-    hifi_results = Array(iostatus='out', 
-                         desc='Points used to make response',
+    hifi_results = Array(iostatus='out', desc='Points used to make response',
                          ref_name='hifi_results', ref_parent='midfi_model')
     
-    def __init__(self, name='M4_MidFi', *args, **kwargs):
-        super(MidFidelity, self).__init__(name, *args, **kwargs)
+    #name='M4_MidFi', 
+    def __init__(self, *args, **kwargs):
+        super(MidFidelity, self).__init__(*args, **kwargs)
         self.need_updated_corrections = True
 
         self.input_mappings = []
@@ -191,9 +179,19 @@ class MidFidelity(Assembly):
             # Collect upper and lower bounds.
             xlb = []
             xub = []
-            for mid, low, high in self.input_mappings:
-                xlb.append(self.get(mid+'.low'))
-                xub.append(self.get(mid+'.high'))
+            for i, mapping in enumerate(self.input_mappings):
+                trait = self.trait(mapping[0]).trait_type
+                if isinstance(trait, Range):
+                    low = trait._low
+                    high = trait._high
+                elif isinstance(trait, UnitsFloat):
+                    low = trait.low
+                    high = trait.high
+                else:
+                    msg = 'Unexpected input %d trait type %r' % (i, trait)
+                    self.raise_exception(msg, TraitError)
+                xlb.append(low)
+                xub.append(high)
 
             self._midfi_model.Set(
                 hifi=self._hifi_m4model,

@@ -1,7 +1,7 @@
 #public symbols
 #__all__ = []
 
-__version__ = "0.1"
+
 
 from enthought.traits.api import implements
 
@@ -32,6 +32,7 @@ class Case(object):
         self.retries = retries          # times case was retried
         self.msg = msg                  # If non-null, error message.
                                         # Implies outputs are invalid.  
+                                        
     def __str__(self):
         return 'Case:\n' \
                '    inputs: %s\n' \
@@ -40,6 +41,11 @@ class Case(object):
                '    msg: %s' % \
                (self.inputs, self.outputs,
                 self.max_retries, self.retries, self.msg)
+
+    def apply(self, scope):
+        """Set all of the inputs in this case to their specified values."""
+        for name,index,value in self.inputs:
+            scope.set(name, value, index)
 
 
 class FileCaseIterator(object):
@@ -105,6 +111,7 @@ class FileCaseIterator(object):
                     inputs.append((parts[0].strip(), None, parts[1].strip()))
                 else:
                     outputs.append((parts[0].strip(), None, None))
+                    
         if len(inputs) > 0:
             newcase = Case(inputs, outputs)
             inputs = []

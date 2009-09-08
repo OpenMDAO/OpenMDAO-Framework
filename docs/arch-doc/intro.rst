@@ -94,6 +94,6 @@ https://collaboration.grc.nasa.gov/eRoom/NASAc1f1/MDAOActivityWorkspace/0_fa294
 - Clements, Paul, et al, *Documenting Software Architectures: Views and Beyond,* Addison-Wesley, Boston, 2003.
 - Gamma, Erich, et al, *Design Patterns: Elements of Reusable Object-Oriented Software,* Addison-Wesley, Reading, MA, 1994.
 - Langtangen, H. P., *Python Scripting for Computational Science,* Third Edition, Springer-Verlag, Berlin, 2008.
-- von Weitershausen, Phillip, *Web Component Development with Zope 3,* Springer-Verlag, Berlin, 2005.
+- Ziade, Tarek, *Expert Python Programming,* PACKT Publishing, Birmingham - Mumbai, 2008.
 
 

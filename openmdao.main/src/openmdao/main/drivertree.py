@@ -2,8 +2,8 @@
 import networkx as nx
 
 def create_labeled_graph(parent_graph):
-    graph = nx.LabeledDiGraph()
-    graph .add_nodes_from([(name, set()) for name in parent_graph.nodes_iter()])
+    graph = nx.DiGraph()
+    graph .add_nodes_from([name for name in parent_graph.nodes_iter()], itercomps=set())
     graph.add_edges_from(parent_graph.edges_iter())
     graph.add_edges_from(parent_graph.in_edges_iter())
     return graph
@@ -144,11 +144,13 @@ class DriverTree(object):
         nodes = itergraph.nodes()
         added_nodes = []
         
-        # we may have already collapsed away some of the nodes in our iteration subgraph,
-        # so add any collapsed nodes to our node list so we don't miss any edges
+        # We may have already collapsed away some of the nodes in our iteration subgraph,
+        # so add any collapsed nodes to our node list so we don't miss any edges.
+        # Collapsed nodes should always be Driver nodes, i.e. they have a non-empty
+        # set of itercomps associated with their node.
         if len(self.children) > 0:
             for n,data in graph.nodes_iter(data=True):
-                if len(data) > 0 and n not in itergraph:
+                if len(data['itercomps']) > 0 and n not in itergraph:
                     added_nodes.append(n)
         
         all_nodes = nodes+added_nodes
@@ -162,13 +164,13 @@ class DriverTree(object):
 
         newset = set()
         for node, data in graph.nodes_iter(data=True):
-            newset = newset.union(data)
+            newset = newset.union(data['itercomps'])
         newset.update(nodes)
         newset.remove(name)
         
         to_remove = [n for n in all_nodes if n in graph]
         graph.remove_nodes_from(to_remove)
-        graph.add_node(name, data=newset)
+        graph.add_node(name, itercomps=newset)
         graph.add_edges_from(to_add)
         return nodes, to_add
         

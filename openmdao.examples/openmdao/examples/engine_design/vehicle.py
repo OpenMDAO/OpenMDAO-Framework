@@ -1,13 +1,15 @@
-# Vehicle.py
-#
+"""
+    vehicle.py - Vehicle component for the vehicle example problem.
+"""
+
 # Assembly that contains an engine, a transmission, and a chasis
 # component. Together, these output the acceleration for a set of input
 # the velocity and commanded throttle/gear positions given a set of design.
 # parameters.
 
-from enthought.traits.api import implements, Interface, Float, Int
+from enthought.traits.api import implements, Interface
 
-from openmdao.main.api import Assembly, UnitsFloat
+from openmdao.main.api import Assembly, UnitsFloat, set_as_top
 
 from openmdao.examples.engine_design.transmission import Transmission
 from openmdao.examples.engine_design.chasis import Chasis
@@ -29,10 +31,10 @@ class Vehicle(Assembly):
                                     desc='Circumference of tire (inches)')
     
     velocity = UnitsFloat(75.0, iostatus='in', units='mi/h', 
-                          desc='Vehicle velocity needed to determine engine RPM (mi/h)')
+                desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
-    def __init__(self, name, parent=None, directory=''):
-        ''' Creates a new Vehicle Assembly object
+    def __init__(self, directory=''):
+        """ Creates a new Vehicle Assembly object
 
             # Design parameters promoted from Engine
             stroke = 78.8              # Stroke (mm)
@@ -41,8 +43,8 @@ class Vehicle(Assembly):
             comp_ratio = 9.3           # Compression Ratio
             spark_angle = -37.0        # Spark Angle ref TDC (degree)
             n_cyl = 6                  # Number of Cylinders
-            IVO = 11.0                 # Intake Valve Open before TDC (degree BTDC)
-            IVC = 53.0                 # Intake Valve Close after BDC (degree ABDC)
+            IVO = 11.0                 # Intake Valve Open before TDC (deg BTDC)
+            IVC = 53.0                 # Intake Valve Close after BDC (deg ABDC)
             L_v = 8.0                  # Maximum Valve Lift (mm)
             D_v = 41.2                 # Inlet Valve Dia (mm)
             
@@ -72,15 +74,15 @@ class Vehicle(Assembly):
             torque                     # Torque at engine output (N*m)
             fuel_burn                  # Fuel burn rate (liters/sec)
             acceleration               # Calculated vehicle acceleration (m/s^2)
-            '''
+            """
         
-        super(Vehicle, self).__init__(name, parent, directory)
+        super(Vehicle, self).__init__(directory)
 
         # Create component instances
         
-        Transmission('transmission', parent=self)
-        Engine('engine', parent=self)
-        Chasis('chasis', parent=self)
+        self.add_container('transmission', Transmission())
+        self.add_container('engine', Engine())
+        self.add_container('chasis', Chasis())
 
         # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
@@ -133,8 +135,8 @@ class Vehicle(Assembly):
 
         
 if __name__ == "__main__": # pragma: no cover    
-    top = Assembly('top')
-    z = Vehicle("Testing", parent=top)        
+    top = set_as_top(Assembly())
+    z = top.add_container('Testing', Vehicle())      
     z.current_gear = 1
     z.velocity = 20.0*(26.8224/60.0)
     #z.throttle = .2
@@ -145,7 +147,7 @@ if __name__ == "__main__": # pragma: no cover
     print z.acceleration
     
     def prz(zz):
-        ''' Printing the results'''
+        """ Printing the results"""
         print "Accel = ", zz.acceleration
         print "Fuelburn = ", zz.fuel_burn
         print "(power, torque) ", zz.power, zz.torque

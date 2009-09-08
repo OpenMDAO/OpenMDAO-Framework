@@ -1,6 +1,6 @@
 #public symbols
 __all__ = ['StringRef', 'StringRefArray']
-__version__ = "0.1"
+
 
 from enthought.traits.api import BaseStr, List, TraitError
 from enthought.traits.trait_handlers import NoDefaultSpecified

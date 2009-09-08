@@ -9,33 +9,27 @@ is directly calculated.
 
 from enthought.traits.api import Float, Range
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, UnitsFloat, set_as_top
 
 from m4.doe import DOE
 from m4.mid_fidelity import MidFidelity 
 from m4.dummy_components import Model_A2d, Model_B2d
 
+
 class MyModel(Assembly):
     """ Simple M4 variable fidelity example.  """
 
-    def __init__(self, name='M4_VarFi', *args, **kwargs):
-        super(MyModel, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(MyModel, self).__init__(*args, **kwargs)
 
         # Specify DOE.
-        doe = DOE(parent=self)
+        doe = self.add_container('M4_DOE', DOE())
 
         # The model is an M4 variable fidelity component.
-        var_fi = VarFi(parent=self)
-        doe.model = var_fi
+        doe.model = self.add_container('VarFi', VarFi())
 
-        doe.design_variables = [
-            (var_fi.name+'.x', 0., 5.),
-            (var_fi.name+'.y', 0., 5.)
-        ]
-        doe.response_variables = [
-            (var_fi.name+'.z1'),
-            (var_fi.name+'.z2')
-        ]
+        doe.design_variables = [('x', 0., 5.), ('y', 0., 5.)]
+        doe.response_variables = [('z1'), ('z2')]
         doe.type = 'rand_lhs'
         doe.n_samples = 200
 
@@ -56,21 +50,18 @@ class MyModel(Assembly):
 class VarFi(MidFidelity):
     """ Example variable fidelity component. """
 
-    # Input mappings (mid, lo, hi).
-    x = Range(value=0., low=0., high=5., iostatus='in', 
-              desc='X input value.')
+    # Inputs.
+    x = Range(value=0., low=0., high=5., iostatus='in', desc='X input value.')
+    y = UnitsFloat(default_value=0., low=0., high=5., units='m', iostatus='in',
+                   desc='Y input value.')
 
-    y = Float(value=0., low=0., high=5., iostatus='in',
-              desc='Y input value.')
-
-    # Output mappings (mid, lo, hi).
-    z1 = Float(0., iostatus='out' desc='exp(x) + exp(y)')
-
+    # Outputs.
+    z1 = Float(0., iostatus='out', desc='exp(x) + exp(y)')
     z2 = Float(0., iostatus='out',
                desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
         
-    def __init__(self, name='VarFi', *args, **kwargs):
-        super(VarFi, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(VarFi, self).__init__(*args, **kwargs)
 
         # Inputs.
         self.rs_type = 'rbf'
@@ -84,6 +75,7 @@ class VarFi(MidFidelity):
         self.set_hifi_model(Model_A2d())
         self.set_lofi_model(Model_B2d())
 
+        # Mappings are (mid, low, high).
         self.add_input_mapping('x', 'x', 'x')
         self.add_input_mapping('y', 'y', 'y')
         self.add_output_mapping('z1', 'z', 'z1')
@@ -91,6 +83,7 @@ class VarFi(MidFidelity):
 
 
 if __name__ == '__main__':
-#    MyModel().run()
-    MyModel().check_save_load()  # Note: requires correct pythonV.R
+    top = set_as_top(MyModel())
+    top.run()
+#    top.check_save_load()  # Note: requires correct pythonV.R
 

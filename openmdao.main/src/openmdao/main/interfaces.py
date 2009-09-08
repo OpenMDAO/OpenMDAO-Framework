@@ -10,7 +10,7 @@ __all__ = ['IFactory',
            'IGeomQueryObject', 'IGeomModifier', 'IResourceAllocator',
            'ICaseIterator']
 
-__version__ = "0.1"
+
 
 
 from enthought.traits.api import Interface, Int

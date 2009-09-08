@@ -91,7 +91,7 @@ class SocketTestCase(unittest.TestCase):
 
         sc3 = SocketComp3()
         self.assertEqual(sc3.somesocket, None)
-        asm = Assembly('x',None)
+        asm = Assembly()
         sc3.somesocket = asm
         self.assertEqual(sc3.somesocket, asm)
         
@@ -99,14 +99,14 @@ class SocketTestCase(unittest.TestCase):
         sc2 = SocketComp2()
         sc2.iterator = ListCaseIterator([Case(), Case(), Case()])
         try:
-            sc2.iterator = Assembly('bad', None)
+            sc2.iterator = Assembly()
         except TraitError:
             pass
         else:
             self.fail('TraitError expected')
             
         sc4 = SocketComp4()
-        sc4.iterator = Assembly('foo', None)
+        sc4.iterator = Assembly()
         try:
             sc4.iterator = ListCaseIterator([Case(), Case(), Case()])
         except TraitError:

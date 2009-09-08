@@ -6,9 +6,9 @@ and was written by someone without much 'mool' knowledge.
 """
 
 __all__ = ('DOE',)
-__version__ = '0.1'
 
-from enthought.traits.api import Int, Str, Range
+
+from enthought.traits.api import Str, Range
 
 import mool.Optimization.DOE
 
@@ -22,10 +22,11 @@ class DOE(CaseIteratorDriver):
     # No 'Option' variables yet.
     type = Str('ccd', iostatus='in', desc='Type of experiment design.')
     n_samples = Range(value=1, low=1, iostatus='in', desc='Number of samples.')
-    lhs = Range(value=2, low=1, iostatus='in', desc='???, used by LHS and Rand_LHS.')
+    lhs = Range(value=2, low=1, iostatus='in',
+                desc='???, used by LHS and Rand_LHS.')
 
-    def __init__(self, name='M4_DOE', *args, **kwargs):
-        super(DOE, self).__init__(name, *args, **kwargs)
+    def __init__(self, *args, **kwargs):
+        super(DOE, self).__init__(*args, **kwargs)
         self.design_variables = []    # List of (name, min, max) tuples.
         self.response_variables = []  # List of names.
 

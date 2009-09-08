@@ -1,6 +1,7 @@
+import sys
+import os
 
 import nose
-import sys
 
 
 oldexit = sys.exit
@@ -20,10 +21,11 @@ def run_openmdao_suite():
     # In case --with-coverage is used, default these options in.
     if '--with-coverage' in sys.argv:
         sys.argv.append('--cover-erase')
-        for pkg in tlist:
-            opt = '--cover-package=%s' % pkg
-            if opt not in sys.argv:
-                sys.argv.append(opt)
+        if '--all' in sys.argv:
+            for pkg in tlist:
+                opt = '--cover-package=%s' % pkg
+                if opt not in sys.argv:
+                    sys.argv.append(opt)
 
         # at the moment, html annotation doesn't work through nose when
         # using version 3.0.1 of coverage...
@@ -34,6 +36,13 @@ def run_openmdao_suite():
             else:
                 sys.argv.append('--cover-html-dir=html_coverage')
 
+    # this tells it to enable the console in the environment so that
+    # the logger will print output to stdout. This helps greatly when 
+    # debugging openmdao scripts running in separate processes.
+    if '--enable_console' in sys.argv:
+        sys.argv.remove('--enable_console')
+        os.environ['OPENMDAO_ENABLE_CONSOLE'] = 'TRUE'
+        
     if '--all' in sys.argv:
         sys.argv.remove('--all')
         nose.run_exit(argv=sys.argv+tlist)

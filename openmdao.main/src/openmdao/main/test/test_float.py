@@ -11,7 +11,7 @@ class FloatTestCase(unittest.TestCase):
 
     def setUp(self):
         """this setup function will be called before each test in this class"""
-        self.hobj = Container('h1', None)
+        self.hobj = Container()
         self.hobj.add_trait('float1', 
                             UnitsFloat(98.9, low=0., high=99.,
                                   iostatus='in', units='ft'))
@@ -52,7 +52,7 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float1 = self.hobj.get_wrapped_attr('float2')
         except TraitError, err:
             self.assertEqual(str(err), 
-                "h1: Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 100.0")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 100.0")
         else:
             self.fail('ConstraintError expected')
         
@@ -94,14 +94,14 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float1 = 124
         except TraitError, err:
             self.assertEqual(str(err), 
-                "h1: Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 124")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 124")
         else:
             self.fail('TraitError expected')
         try:
             self.hobj.float1 = -3
         except TraitError, err:
             self.assertEqual(str(err),
-                "h1: Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is -3")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is -3")
         else:
             self.fail('TraitError exception')
 

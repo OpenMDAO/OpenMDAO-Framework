@@ -5,7 +5,7 @@ import unittest
 from enthought.traits.api import Float, Array, TraitError
 
 from openmdao.main.exceptions import ConstraintError
-from openmdao.main.api import Assembly, Component, StringRef, StringRefArray
+from openmdao.main.api import Assembly, Component, StringRef, StringRefArray, set_as_top
 
 class RefComp(Component):   
     desvar = StringRef(iostatus='out')
@@ -24,11 +24,11 @@ class StringRefTestCase(unittest.TestCase):
 
     def setUp(self):
         """this setup function will be called before each test in this class"""
-        self.top = Assembly('top', None)
-        self.comp1 = RefComp('comp1', parent=self.top)
-        self.comp2 = SimpleComp('comp2', parent=self.top)
-        self.comp3 = SimpleComp('comp3', parent=self.top)
-        self.comp4 = SimpleComp('comp4', parent=self.top)
+        self.top = set_as_top(Assembly())
+        self.comp1 = self.top.add_container('comp1', RefComp())
+        self.comp2 = self.top.add_container('comp2', SimpleComp())
+        self.comp3 = self.top.add_container('comp3', SimpleComp())
+        self.comp4 = self.top.add_container('comp4', SimpleComp())
         
     def test_assignment(self):
         self.comp1.objective = 'comp2.x'
@@ -109,7 +109,7 @@ class StringRefTestCase(unittest.TestCase):
             self.fail('expected RuntimeError')
 
     def test_novar_expr(self):
-        asm = Assembly('top')
+        asm = set_as_top(Assembly())
         asm.add_trait('ref', StringRef(iostatus='in'))
         asm.ref = '1+2'
         self.assertEqual(asm.ref.evaluate(), 3)

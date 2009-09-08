@@ -3,9 +3,7 @@ The Container class
 """
 
 #public symbols
-__all__ = ["Container"]
-
-__version__ = "0.1"
+__all__ = ["Container", "path_to_root", "set_as_top", "PathProperty"]
 
 import copy
 import sys
@@ -27,7 +25,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import networkx as nx
 from enthought.traits.api import HasTraits, implements, Missing, TraitError,\
                                  BaseStr, Undefined, push_exception_handler,\
-                                 Python, TraitType, Property, Trait
+                                 Python, TraitType, Property, Trait, on_trait_change
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType
 from enthought.traits.trait_base import not_none
@@ -37,11 +35,38 @@ from enthought.traits.trait_base import not_none
 
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
-import openmdao.util.save_load
-from openmdao.util.save_load import SAVE_CPICKLE
+from openmdao.util import eggloader
+from openmdao.util import eggsaver
+from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.unitsfloat import convert_units
 
 
+def path_to_root(node):
+    """An generator the returns nodes from the given
+    node up to (and including) the root node of a tree.
+    It assumes that node objects contain a 'parent' attribute.
+    """
+    while node:
+        yield node
+        node = node.parent
+        
+def set_as_top(cont):
+    """Specifies that the given Container is the top of a 
+    Container hierarchy.
+    """
+    cont.tree_defined()
+    return cont
+
+def deep_setattr(obj, path, value):
+    """A multi-level setattr, setting the value of an
+    attribute specified by a dotted path. For example,
+    deep_settattr(obj, 'a.b.c', value).
+    """
+    tup = path.split('.')
+    for name in tup[:-1]:
+        obj = getattr(obj, name)
+    setattr(obj, tup[-1], value)
+    
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
 # Without this, the default behavior is for the exception to be logged and not
@@ -51,25 +76,11 @@ push_exception_handler(handler = lambda o,t,ov,nv: None,
                        main = True,
                        locked = True )
 
-class IMHolder(object):
-    """Holds an instancemethod object in a pickleable form."""
-
-    def __init__(self, obj):
-        self.name = obj.__name__
-        self.im_self = obj.im_self
-        if obj.im_self:
-            self.im_class = None  # Avoid possible __main__ issues.
-        else:
-            # TODO: handle __main__ for im_class.__module__.
-            self.im_class = obj.im_class
-
-    def method(self):
-        """Return instancemethod corresponding to saved state."""
-        if self.im_self:
-            return getattr(self.im_self, self.name)
-        else:
-            return getattr(self.im_class, self.name)
-
+# regex to check for valid names.  Added '.' as allowed because
+# npsscomponent uses it...
+_namecheck_rgx = re.compile(
+    '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
+    
 class _DumbTmp(object):
     pass
 
@@ -124,49 +135,19 @@ class PathProperty(TraitType):
 
     def set(self, obj, name, value):
         """Set the value of the referenced attribute."""
-        if self.iostatus is 'out':
+        if self.iostatus == 'out':
             raise TraitError('%s is an output trait and cannot be set' % name)
         
         if self.trait:
             value = self.trait.validate(obj, name, value)
         
         setattr(self._ref() or self._resolve(obj), self._last_name, value)
-
     
-class ContainerName(BaseStr):
-    """A string that must match the allowed regex for the name of a 
-    Container.  This was necessary because the String class allowed 
-    names with spaces when using the same regex.
-    """
-    
-    # regex to check for valid names.  Added '.' as allowed because
-    # npsscomponent uses it...
-    _namecheck_rgx = re.compile(
-        '([_a-zA-Z][_a-zA-Z0-9]*)+(\.[_a-zA-Z][_a-zA-Z0-9]*)*')
-
-    def __init__(self, **metadata):
-        super(ContainerName, self).__init__(**metadata)
-
-    def validate(self, obj, name, value):
-        """Make sure the given name follows Container naming rules.
-        Returns the validated name.
-        """
-        if value == '' or value == None:
-            return value
         
-        # normal string validation
-        value = super(ContainerName, self).validate(obj, name, value) 
-        match = self._namecheck_rgx.search(value)
-        if match is None or match.group() != value:
-            raise TraitError("name '%s' contains illegal characters" % value)
-        return value          
-    
-
 class Container(HasTraits):
     """ Base class for all objects having Traits that are visible 
     to the framework"""
    
-    name = ContainerName()
     #parent = WeakRef(Container, allow_none=True, adapt='no', transient=True)
     parent = Python
     
@@ -175,7 +156,7 @@ class Container(HasTraits):
     
     __ = Python
     
-    def __init__(self, name='', parent=None, doc=None, add_to_parent=True):
+    def __init__(self, doc=None):
         super(Container, self).__init__() 
         self._valid_dict = {}  # contains validity flag for each io Trait
         self._sources = {}  # for checking that destination traits cannot be 
@@ -183,30 +164,88 @@ class Container(HasTraits):
         # for keeping track of dynamically added traits for serialization
         self._added_traits = {}  
                           
-        self.parent = parent
-        self.name = name
+        self.parent = None
+        self._name = None
         
-        self._inputs = None
-        self._outputs = None
-        self._containers = None
+        self._input_names = None
+        self._output_names = None
+        self._container_names = None
+        
+        self._call_tree_defined = True
         
         if doc is not None:
             self.__doc__ = doc
 
-        # Replace pathname to keep loggers from interfering with each other.
-        self._logger = Logger(self.get_pathname().replace('.', ','))
+        self._logger = Logger('')
         self.log_level = LOG_DEBUG
 
         self._io_graph = None
-        if parent is not None and name != '' and \
-           isinstance(parent, Container) and add_to_parent:
-            parent.add_child(self)
-            
+        
         # Call _io_trait_changed if any trait having 'iostatus' metadata is
         # changed. We originally used the decorator @on_trait_change for this,
         # but it failed to be activated properly when our objects were
         # unpickled.
         self.on_trait_change(self._io_trait_changed, '+iostatus')
+        
+        self.on_trait_change(self._par_update, 'parent')
+                
+    def _par_update(self, obj, name, value):
+        """This is called when the parent attribute is changed."""
+        self._logger.rename(self.get_pathname().replace('.', ','))
+ 
+    def _get_name(self):
+        if self._name is None:
+            if self.parent:
+                self._name = self.parent.findname(self)
+            if self._name is None:
+                self._name = ''
+        return self._name
+
+    def _set_name(self, name):
+        match = _namecheck_rgx.search(name)
+        if match is None or match.group() != name:
+            raise NameError("name '%s' contains illegal characters" % name)
+        self._name = name
+        self._logger.rename(self._name)
+        
+    name = property(_get_name, _set_name)
+    
+    def findname(self, obj):
+        """Return the object within this object's dict that has the given name.
+        Return None if not found.
+        """
+        for name,val in self.__dict__.items():
+            if val is obj:
+                return name
+        return None
+    
+    def get_default_name(self, scope):
+        """Return a unique name for the given object in the given scope."""
+        classname = self.__class__.__name__.lower()
+        if scope is None:
+            sdict = {}
+        else:
+            sdict = scope.__dict__
+            
+        ver = 1
+        while '%s%d' % (classname,ver) in sdict:
+            ver += 1
+        return '%s%d' % (classname,ver)
+        
+    def get_pathname(self, rel_to_scope=None):
+        """ Return full path name to this container, relative to scope
+        rel_to_scope. If rel_to_scope is None, return the full pathname.
+        """
+        path = []
+        obj = self
+        name = obj.name
+        while obj != rel_to_scope and name:
+            path.append(name)
+            obj = obj.parent
+            if obj is None:
+                break
+            name = obj.name
+        return '.'.join(path[::-1])
             
     #
     #  HasTraits overrides
@@ -220,10 +259,7 @@ class Container(HasTraits):
             if trait.transient is not True:
                 dct[name] = trait
         state['_added_traits'] = dct
-        
-        # remove call to _io_trait_changed if any trait having 'iostatus'
-        # metadata is changed
-        self.on_trait_change(self._io_trait_changed, '+iostatus', remove=True)
+        #state['_call_tree_defined'] = True
         
         return state
 
@@ -249,7 +285,7 @@ class Container(HasTraits):
             if not self.trait(name) and not name.startswith('__'):
                 setattr(self, name, val) # force def of implicit trait
 
-    def add_trait(self, name, *trait): #, **kwargs):
+    def add_trait(self, name, *trait):
         """Overrides HasTraits definition of add_trait in order to
         keep track of dynamically added traits for serialization.
         """
@@ -268,7 +304,7 @@ class Container(HasTraits):
         keep track of dynamically added traits for serialization.
         """
         # this just forces the regeneration (lazily) of the lists of
-        # inputs,outputs, and containers
+        # inputs, outputs, and containers
         self._trait_added_changed(name)
         del self._added_traits[name]
         super(Container, self).remove_trait(name)
@@ -294,7 +330,7 @@ class Container(HasTraits):
                     "'%s' is already connected to source '%s' and "
                     "cannot be directly set"%
                     (name, self._sources[name]), TraitError)
-            self._execute_needed = True
+            self._call_execute = True
         if self.get_valid(name):  # if var is not already invalid
             self.invalidate_deps([name], notify_parent=True)
 
@@ -306,17 +342,6 @@ class Container(HasTraits):
     def _set_log_level(self, level):
         """Set logging message level."""
         self._logger.level = level
-
-    def rename(self, name):
-        """Change name of self and associated logger."""
-        if not name:
-            self.raise_exception('name must be non-null', NameError)
-        try:
-            self.name = name
-        except TraitError, err:
-            self.raise_exception(str(err), NameError)
-        self._logger.rename(self.get_pathname().replace('.', ','))
-
 
     def get_wrapped_attr(self, name):
         """If the named trait can return a TraitValMetaWrapper, then this
@@ -355,7 +380,7 @@ class Container(HasTraits):
                 return False
             else:
                 self.raise_exception(
-                    "cannot set valid flag of '%s' because it's not "
+                    "cannot get valid flag of '%s' because it's not "
                     "an io trait." % name, RuntimeError)
         return valid
     
@@ -378,25 +403,34 @@ class Container(HasTraits):
                     "cannot set valid flag of '%s' because "
                     "it's not an io trait." % name, RuntimeError)
 
-    def add_child(self, obj):
+    def add_container(self, name, obj):
         """Add a Container object to this Container.
+        Returns the added Container object.
         """
         if obj == self:
             self.raise_exception('cannot make an object a child of itself',
                                  RuntimeError)
+            
         if isinstance(obj, Container):
-            # if an old child with that name exists, remove it
-            if self.contains(obj.name):
-                self.remove_child(obj.name)
-            setattr(self, obj.name, obj)
             obj.parent = self
+            # if an old child with that name exists, remove it
+            if self.contains(name):
+                self.remove_container(name)
+            setattr(self, name, obj)
+            obj.name = name
+            # if this object is already installed in a hierarchy,
+            # then go ahead and tell the obj (which will in turn
+            # tell all of its children) that its hierarchy is
+            # defined.
+            if self._call_tree_defined is False:
+                obj.tree_defined()
         else:
             self.raise_exception("'"+str(type(obj))+
                     "' object is not an instance of Container.",
                     TypeError)
         return obj
         
-    def remove_child(self, name):
+    def remove_container(self, name):
         """Remove the specified child from this container and remove any
         public Variable objects that reference that child. Notify any
         observers."""
@@ -406,7 +440,18 @@ class Container(HasTraits):
         else:
             self.raise_exception("cannot remove child '%s': not found"%
                                  name, TraitError)
-    
+
+    def tree_defined(self):
+        """Called after the hierarchy containing this Container has been
+        defined back to the root. This does not guarantee that all sibling
+        Containers have been defined. It also does not guarantee that this
+        component is fully configured to execute. Classes that override this
+        function must call their base class version.
+        """
+        self._call_tree_defined = False
+        for cont in self.list_containers():
+            getattr(self, cont).tree_defined()
+            
     def unit_convert(self, name, units):
         """Return the value of the named io trait converted to the given
         units.
@@ -460,35 +505,35 @@ class Container(HasTraits):
         """Return a list of names of input values. If valid is not None,
         the the list will contain names of inputs with matching validity.
         """
-        if self._inputs is None:
-            self._inputs = self.keys(iostatus='in')
+        if self._input_names is None:
+            self._input_names = self.keys(iostatus='in')
             
         if valid is None:
-            return self._inputs
+            return self._input_names
         else:
             fval = self.get_valid
-            return [n for n in self._inputs if fval(n)==valid]
+            return [n for n in self._input_names if fval(n)==valid]
         
     def list_outputs(self, valid=None):
         """Return a list of names of output values. If valid is not None,
         the the list will contain names of outputs with matching validity.
         """
-        if self._outputs is None:
-            self._outputs = self.keys(iostatus='out')
+        if self._output_names is None:
+            self._output_names = self.keys(iostatus='out')
             
         if valid is None:
-            return self._outputs
+            return self._output_names
         else:
             fval = self.get_valid
-            return [n for n in self._outputs if fval(n)==valid]
+            return [n for n in self._output_names if fval(n)==valid]
         
     def list_containers(self):
         """Return a list of names of child Containers."""
-        if self._containers is None:
+        if self._container_names is None:
             dct = self.__dict__
-            self._containers = [n for n,v in dct.items() 
-                                  if isinstance(v,Container)]            
-        return self._containers
+            self._container_names = [n for n,v in dct.items() 
+                                  if isinstance(v,Container) and v is not self.parent]            
+        return self._container_names
     
     def _traits_meta_filter(self, traits=None, **metadata):
         """This returns a dict that contains all entries in the traits dict
@@ -511,8 +556,7 @@ class Container(HasTraits):
             else:
                 result[ name ] = trait
 
-        return result
-        
+        return result       
         
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form 
@@ -529,9 +573,10 @@ class Container(HasTraits):
                     obj = getattr(self, name)
                     if name in match_dict and id(obj) not in visited:
                         yield(name, obj)
-                    for chname, child in obj._items(visited, recurse, 
-                                                    **metadata):
-                        yield ('.'.join([name, chname]), child)
+                    if obj:
+                        for chname, child in obj._items(visited, recurse, 
+                                                        **metadata):
+                            yield ('.'.join([name, chname]), child)
                             
             for name, trait in match_dict.items():
                 obj = getattr(self, name)
@@ -543,20 +588,6 @@ class Container(HasTraits):
                         yield (name, obj)
 
     
-    def get_pathname(self, rel_to_scope=None):
-        """ Return full path name to this container, relative to scope
-        rel_to_scope. If rel_to_scope is None, return the full pathname.
-        """
-        path = []
-        obj = self
-        while obj is not None and obj != rel_to_scope and obj.name:
-            path.append(obj.name)
-            obj = obj.parent
-        if len(path) > 0:
-            return '.'.join(path[::-1])
-        else:
-            return ''
-        
     def contains(self, path):
         """Return True if the child specified by the given dotted path
         name is publicly accessibly and is contained in this Container. 
@@ -580,8 +611,8 @@ class Container(HasTraits):
         
         Returns the new object.        
         """
-        obj = fmcreate(type_name, name, version, server, res_desc)
-        self.add_child(obj)
+        obj = fmcreate(type_name, version, server, res_desc)
+        self.add_container(name, obj)
         return obj
 
     def invoke(self, path, *args, **kwargs):
@@ -604,8 +635,7 @@ class Container(HasTraits):
                     return obj.invoke('.'.join(tup[1:]), *args, **kwargs)
         else:
             self.raise_exception("this object is not callable",
-                                 RuntimeError)
-        
+                                 RuntimeError)        
         
     def get(self, path, index=None):
         """Return any public object specified by the given 
@@ -652,7 +682,6 @@ class Container(HasTraits):
                 return getattr(obj, '.'.join(tup[1:]))
             else:
                 return obj._array_get('.'.join(tup[1:]), index)
-
      
     def set_source(self, name, source):
         """Mark the named io trait as a destination by registering a source
@@ -751,8 +780,11 @@ class Container(HasTraits):
                 elif index is not None:
                     obj._array_set('.'.join(tup[1:]), value, index)
                 else:
-                    self.raise_exception("object has no attribute '%s'" % 
-                                         path, TraitError)
+                    try:
+                        deep_setattr(obj, '.'.join(tup[1:]), value)
+                    except Exception:
+                        self.raise_exception("object has no attribute '%s'" % 
+                                             path, TraitError)
 
     def _array_set(self, name, value, index):
         arr = getattr(self, name)
@@ -818,20 +850,21 @@ class Container(HasTraits):
         - `dst_dir` is the directory to write the egg in.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
-        Returns the egg's filename.
-
-        NOTE: References to old-style class types can't be restored correctly.
-              This is typically related to the Variable var_types attribute.
+        Returns (egg_filename, required_distributions, orphan_modules).
         """
-        if name is None:
-            name = self.name
+        name = name or self.name
+            
+        if not name:
+            name = self.get_default_name(self.parent)
+            
         if version is None:
             try:
                 version = sys.modules[self.__class__.__module__].__version__
             except AttributeError:
                 pass
-        # Entry point names are the pathname, starting at self.
-        entry_pts = []
+        entry_pts = [(self, name, _get_entry_group(self))]
+
+        # Child entry point names are the pathname, starting at self.
         if child_objs is not None:
             root_pathname = self.get_pathname()
             root_start = root_pathname.rfind('.')
@@ -843,15 +876,16 @@ class Container(HasTraits):
                     self.raise_exception('%s is not a child of %s'
                                          % (pathname, root_pathname),
                                          RuntimeError)
-                entry_pts.append((child, pathname[root_start:]))
+                entry_pts.append((child, pathname[root_start:],
+                                  _get_entry_group(child)))
 
         parent = self.parent
         self.parent = None  # Don't want to save stuff above us.
         try:
-            return openmdao.util.save_load.save_to_egg(
-                       self, name, version, py_dir, src_dir, src_files,
-                       entry_pts, dst_dir, format, proto, self._logger,
-                       use_setuptools)
+            return eggsaver.save_to_egg(entry_pts, version, py_dir,
+                                        src_dir, src_files, dst_dir,
+                                        format, proto, self._logger,
+                                        use_setuptools)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
@@ -868,8 +902,7 @@ class Container(HasTraits):
         # Don't want to save stuff above us.
         self.parent = None  
         try:
-            openmdao.util.save_load.save(self, outstream, format, proto,
-                                         self._logger)
+            eggsaver.save(self, outstream, format, proto, self._logger)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
@@ -884,11 +917,9 @@ class Container(HasTraits):
         # Load from file gets everything.
         entry_group = 'openmdao.top'
         entry_name = 'top'
-        return openmdao.util.save_load.load_from_eggfile(filename, 
-                                                         entry_group,
-                                                         entry_name, 
-                                                         install,
-                                                         logger)
+        return eggloader.load_from_eggfile(filename, entry_group, entry_name,
+                                           install, logger)
+
     @staticmethod
     def load_from_eggpkg(package, entry_name=None, instance_name=None):
         """Load object graph state by invoking the given package entry point.
@@ -898,11 +929,8 @@ class Container(HasTraits):
         entry_group = 'openmdao.components'
         if not entry_name:
             entry_name = package  # Default component is top.
-        return openmdao.util.save_load.load_from_eggpkg(package, 
-                                                        entry_group,
-                                                        entry_name,
-                                                        instance_name, 
-                                                        logger)
+        return eggloader.load_from_eggpkg(package, entry_group, entry_name,
+                                          instance_name, logger)
 
     @staticmethod
     def load(instream, format=SAVE_CPICKLE, package=None, 
@@ -911,25 +939,13 @@ class Container(HasTraits):
         won't need to override this, but extensions will. The format can be
         supplied in case something other than cPickle is needed.
         """
-        top = openmdao.util.save_load.load(instream, format, 
-                                           package, logger)
+        top = eggloader.load(instream, format, package, logger)
         if name:
-            top.rename(name)
-            if do_post_load:
-                top._post_load(name)
+            top.name = name
+        if do_post_load:
+            top.parent = None
+            top.post_load()
         return top
-
-    def _post_load(self, name):
-        """Called above or in Component before post_load() to fix parent and
-        loggers. Maintains a simpler public post_load() interface.
-        """
-        parent = self.parent
-        if parent:
-            self.parent = None
-        if parent or name:
-            [x.rename(x.name) for x in self.values() 
-                                    if isinstance(x, Container)]
-        self.post_load()
 
     def post_load(self):
         """Perform any required operations after model has been loaded."""
@@ -1050,9 +1066,9 @@ class Container(HasTraits):
     
     def _trait_added_changed(self, name):
         """Called any time a new trait is added to this container."""
-        self._inputs = None
-        self._outputs = None
-        self._containers = None
+        self._input_names = None
+        self._output_names = None
+        self._container_names = None
     
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
@@ -1080,4 +1096,23 @@ class Container(HasTraits):
     def debug(self, msg, *args, **kwargs):
         """Record a debug message."""
         self._logger.debug(msg, *args, **kwargs)
+
+def _get_entry_group(obj):
+    """Return entry point group for given object type."""
+    if _get_entry_group.group_map is None:
+        # Fill-in here to avoid import loop.
+        from openmdao.main.api import Component
+        _get_entry_group.group_map = [
+            (Component, 'openmdao.components'),
+            (Container, 'openmdao.containers'),
+        ]
+
+    for cls, group in _get_entry_group.group_map:
+        if isinstance(obj, cls):
+            return group
+
+    raise TypeError('No entry point group defined for %r' % obj)
+
+_get_entry_group.group_map = None  # Map from class to group name.
+
 

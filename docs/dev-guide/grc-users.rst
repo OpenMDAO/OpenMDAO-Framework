@@ -141,7 +141,9 @@ from your buildout directory.  If the eggs used in your buildout change and you
 re-run your buildout, you will be prompted by Wing that your project settings
 have changed. Select ``Discard Changes and Reload`` if your Wing path needs to
 be updated. Otherwise, select ``Don't Reload`` to keep your existing project
-file. 
+file. If your wing project seems to not be working properly after this happens,
+you can remove the wing project file (``<buildout_dir>/parts/wingproj/wingproj.wpr``)
+and re-run the buildout to create a new one.
 
 
 .. index:: repo.py
