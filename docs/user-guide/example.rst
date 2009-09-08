@@ -41,7 +41,7 @@ mathematical model for the engine came from open literature.
 The simulation of the desired performance metrics primarily requires a model of the vehicle's power-train,
 including the engine, the transmission, and the rear differential. In addition, the equation of motion for
 the vehicle is needed. A logical way to compartmentalize the vehicle model is to break it into component
-models matching each of these subsystems: engine, transmission, and chasis (which includes the
+models matching each of these subsystems: engine, transmission, and chassis (which includes the
 rear differential ratio). In a typical problem, each of these component models will be a completely
 separate implementation, possibly with different authors or vendors. Each of these component models also
 requires a set of design variables which are detailed below.

@@ -225,7 +225,7 @@ running an optimization). Resource descriptions are represented by a dictionary
 whose keys are the various types of resources required and the values have
 meaning dependent on the resource. Examples of resources that might be
 explicitly specified include *number_cpus,* *memory,* and *ansys.* Implicit
-resources could include *module_versions.* Batch queueing systems (such as :term:`PBS`)
+resources could include *module_versions.* Batch queuing systems (such as :term:`PBS`)
 have other examples of useful keys.
 
 Explicit resource descriptions are part of a component's configuration. Implicit

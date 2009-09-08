@@ -38,6 +38,7 @@ met.
 
 .. index:: built-in Trait classes
 .. index:: classes; built-in Trait 
+.. index:: Traits
 
 
 Classes for Validation and Conversion of Component Attributes
@@ -47,7 +48,7 @@ Validation and conversion of Component attributes is done using the Traits_
 package.  There are a large number of built-in trait types to choose from, 
 including Int, Float, Str, Array, List, and many others.  You can also define
 your own custom traits by inheriting from TraitType and overriding the
-*validate()* function.  Traits also has built-in support for creation of
+``validate()`` function. :term:`Traits` also has built-in support for creation of
 graphical editors for each trait when running with a wxPython GUI, but it's not
 clear at this point whether this functionality will be useful in the context of
 a web GUI. The documentation claims that traits uses something called pyface,
