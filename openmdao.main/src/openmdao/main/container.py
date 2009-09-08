@@ -837,8 +837,8 @@ class Container(HasTraits):
                     use_setuptools=False):
         """Save state and other files to an egg. Analyzes the objects saved
         for distribution dependencies. Modules not found in any distribution
-        are recorded in a '`name`.missing' file. Also creates and saves loader
-        scripts for each entry point.
+        are recorded in an 'egg-info/openmdao_orphans.txt' file. Also creates
+        and saves loader scripts for each entry point.
 
         - `name` defaults to the name of the container.
         - `version` defaults to the container's module __version__, or \
@@ -853,11 +853,10 @@ class Container(HasTraits):
         Returns (egg_filename, required_distributions, orphan_modules).
         """
         name = name or self.name
-            
         if not name:
             name = self.get_default_name(self.parent)
             
-        if version is None:
+        if not version:
             try:
                 version = sys.modules[self.__class__.__module__].__version__
             except AttributeError:
@@ -899,8 +898,7 @@ class Container(HasTraits):
         can be supplied in case something other than cPickle is needed.
         """
         parent = self.parent
-        # Don't want to save stuff above us.
-        self.parent = None  
+        self.parent = None  # Don't want to save stuff above us.
         try:
             eggsaver.save(self, outstream, format, proto, self._logger)
         except Exception, exc:

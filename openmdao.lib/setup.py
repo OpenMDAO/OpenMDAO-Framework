@@ -46,6 +46,7 @@ setup(name='openmdao.lib',
           'openmdao.main',
           'conmin',
           'Pyevolve',
+#          'axod',
       ],
       entry_points="""
       [openmdao.drivers]

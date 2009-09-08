@@ -137,7 +137,6 @@ class Subcontainer(Container):
         self.binary_file.filename = os.path.join('..', 'sub', 'source.bin')
 
 
-
 class DataObj(object):
     """ Just a custom class for objects to save & reload. """
 
@@ -214,6 +213,7 @@ class Oddball(Assembly):
         self.add_container('oddcomp', OddballComponent())
         self.add_container('oddcont', OddballContainer())
         self.thing_to_call = self.instance_method
+        self.list_to_call = [self.instance_method]
         self.function_socket = os.getpid
         self.method_socket = self.instance_method
         self.peer_class = Source  # Check that class in __main__ is handled.
@@ -223,6 +223,9 @@ class Oddball(Assembly):
         """ Call stuff. Empty sockets are clumsy. """
         if self.thing_to_call:
             self.debug('thing_to_call returned %s', self.thing_to_call())
+
+        for thing in self.list_to_call:
+            self.debug('list-thing returned %s', thing())
 
         try:
             self.debug('function_socket returned %s', self.function_socket())
@@ -288,7 +291,7 @@ class Model(Assembly):
         self.Source.sub.binary_data = [3.14159, 2.781828, 42]
 
 
-class EggTestCase(unittest.TestCase):
+class TestCase(unittest.TestCase):
     """ Test saving and loading of simulations as eggs. """
 
     def setUp(self):
@@ -350,7 +353,7 @@ class EggTestCase(unittest.TestCase):
             all(self.model.Sink.binary_data==self.model.Source.sub.binary_data))
         self.assertEqual(self.model.Sink.binary_file.binary, True)
 
-        self.assertEqual(self.model.Sink.executions, 2)
+        self.assertEqual(self.model.Sink.executions, 3)
 
         # Restore in test directory.
         orig_dir = os.getcwd()
@@ -399,7 +402,7 @@ class EggTestCase(unittest.TestCase):
             self.assertEqual(
                 self.model.Sink.binary_file.binary, True)
 
-            self.assertEqual(self.model.Oddball.executions, 2)
+            self.assertEqual(self.model.Oddball.executions, 3)
 
         finally:
             os.chdir(orig_dir)
@@ -507,6 +510,7 @@ class EggTestCase(unittest.TestCase):
     def test_save_bad_function(self):
         logging.debug('')
         logging.debug('test_save_bad_function')
+
         # Set reference to unpickleable function.
         self.model.Oddball.function_socket = main_function
         try:
@@ -597,10 +601,10 @@ class EggTestCase(unittest.TestCase):
         else:
             self.fail('Expected RuntimeError')
 
-        # Create non-orphan compoennt that is not part of model.
+        # Create non-orphan component that is not part of model.
         badboy = orphan.add_container('badboy', Component())
         try:
-            # Try to include non-member compoennt as an entry point in egg.
+            # Try to include non-member component as an entry point in egg.
             self.model.save_to_egg(py_dir=PY_DIR, child_objs=[badboy])
         except RuntimeError, exc:
             msg = 'Egg_TestModel: badboy is not a child of' \
@@ -868,7 +872,7 @@ comp.run()
             self.assertEqual(comp.get_pathname(), 'test_comp')
             self.assertEqual(comp.executions, 0)
             comp.run()
-            self.assertEqual(comp.executions, 2)
+            self.assertEqual(comp.executions, 3)
             # Create a (sub)component.
             sub = factory.create('Egg_TestModel.Oddball.oddcomp', name='test_sub')
             if sub is None:
@@ -933,7 +937,7 @@ comp.run()
         
         self.assertEqual(model.Sink.binary_file.binary, True)
 
-        self.assertEqual(model.Oddball.executions, 2)
+        self.assertEqual(model.Oddball.executions, 3)
 
 
 if __name__ == '__main__':
