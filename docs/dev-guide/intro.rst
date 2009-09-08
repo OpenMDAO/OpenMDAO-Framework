@@ -41,6 +41,42 @@ local GRC machine called *torpedo*, so GRC users should view the buildout video
 intro from another machine. 
 
 
+.. _`Setting-Up-a-Local-Cache-of-Installed-Distributions`:
+
+Setting Up a Local Cache of Installed Distributions
++++++++++++++++++++++++++++++++++++++++++++++++++++
+
+
+Prior to running any buildouts, you should set up a default config file that
+specifies the location of a directory where installed distributions can be kept.
+If you don't do this, each buildout that you build will have its own copy of 
+all of the distributions that the buildout depends on, and running the buildout 
+will take longer because each distribution will have to be downloaded and
+installed in the buildout/eggs directory.
+
+To create your default buildout config file, start by making a ``.buildout`` 
+directory under your home directory.  Within that directory, create a file
+called ``default.cfg`` and put the following text in it:
+
+::
+
+    [buildout]
+    eggs-directory = <your_installed_distrib_dir>
+    
+    
+where ``<your_installed_distrib_dir>`` is the path to the directory where you 
+want the python distributions used by your buildouts to be installed.  
+
+Note that this directory may contain many distributions with the same package
+name, because the version number is included in the name of the distribution
+along with the package name, and even the platform name for binary distributions.
+This makes the name of each distribution unique.
+
+
+
+Bazaar User Setup
++++++++++++++++++
+
 If you have not previously used Bazaar on a particular machine where you intend
 to work with Bazaar repositories, you should run the ``whoami``
 command so that Bazaar will know your email address. You need to supply your
@@ -61,7 +97,7 @@ to a :term:`repository` on that machine.
 
 
 Code Location
-_____________
++++++++++++++
     
 
 The bazaar repository for the OpenMDAO source code is currently only available
@@ -98,8 +134,7 @@ this:
     is broken up into several major documents, each found in a separate 
     subdirectory, e.g., ``arch-doc`` contains the Architecture
     Document, ``dev-guide`` contains the Developer's Guide, and ``user-guide``
-    contains the User's Guide.
-    
+    contains the User's Guide.   
     
 ``openmdao.main``
     Python package containing all infrastructure source for OpenMDAO.
@@ -128,18 +163,18 @@ this:
  
 .. index:: egg
     
-``eggsrc``
+``contrib``
     Contains source to be packaged into Python :term:`eggs` that are releasable
     separately from OpenMDAO.  These eggs may or may not depend upon OpenMDAO. 
     Eggs that have not yet been approved to be part of openmdao.lib can live
-    here, as can any eggs containing source that is not license compatible with
-    NOSA, for example, eggs containing GPL code.
+    here, as long as their license is compatible with NOSA. No proprietary code
+    or GPL code can live in the OpenMDAO repository.
 
 
 .. index:: namespace package
 
 Layout of a Namespace Package
-+++++++++++++++++++++++++++++++++++++
++++++++++++++++++++++++++++++
 
 OpenMDAO is large enough that it makes sense to split it up into multiple Python
 packages, but we want all of those packages to be under the umbrella of
@@ -239,13 +274,15 @@ subdirectories:
     After running the buildout, contains links to any directories that have
     been specified in the *develop* list in the ``buildout.cfg`` file.
     
-``eggs``
-    After running the buildout, contains all of the installed eggs not
-    specified as *develop* eggs that you are listed as dependencies in the
-    ``buildout.cfg`` file.
-    
 ``parts``
     After running the buildout, contains any files specific to any parts that
     have been installed as part of the buildout. These could be anything. They
     do not have to be Python related.
 
+
+If you see an **eggs** directory under your buildout directory, then that means that
+you have not specified **eggs-directory** in your *default.cfg* file and you'll be getting
+a full copy of all dependent distributions into your buildout. This is generally NOT
+what you want. See the earlier discussion in 
+:ref:`Setting-Up-a-Local-Cache-of-Installed-Distributions` for how to set up your 
+*default.cfg* file.

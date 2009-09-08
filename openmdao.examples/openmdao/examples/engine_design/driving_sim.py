@@ -44,7 +44,7 @@ class DrivingSim(Assembly):
     EPA_highway = UnitsFloat(0., iostatus='out', units='mi/galUS', 
                              desc='EPA Fuel economy - Highway')
         
-    def __init__(self, name, parent=None, doc=None, directory=''):
+    def __init__(self, doc=None, directory=''):
         """ Creates a new DrivingSim object
         
             # Simulation inputs
@@ -57,12 +57,12 @@ class DrivingSim(Assembly):
             EPA_highway       # Fuel economy for highway driving
             """
         
-        super(DrivingSim, self).__init__(name, parent, doc, directory)    
+        super(DrivingSim, self).__init__(doc, directory)    
 
         # set up interface to the framework  
         # Pylint: disable-msg=E1101
 
-        Vehicle("vehicle", self)
+        self.add_container('vehicle', Vehicle())
         
         # Promoted From Vehicle -> Engine
         self.create_passthru('vehicle.stroke')

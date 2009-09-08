@@ -2,7 +2,7 @@
 #public symbols
 __all__ = ["UnitsFloat", "convert_units"]
 
-__version__ = "0.1"
+
 
 from enthought.traits.api import TraitType, Float, Range, TraitError
 

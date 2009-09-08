@@ -14,8 +14,8 @@ class Box(Component):
     volume = Float(0., iostatus='out', units='cm**3')
     surface_area = Float(0., iostatus='out', units='cm**2')
         
-    def __init__(self, name, parent=None, doc=None, directory=''):
-        super(Box, self).__init__(name, parent, doc, directory)
+    def __init__(self, doc=None, directory=''):
+        super(Box, self).__init__(doc, directory)
         
     def execute(self):
         self.surface_area = (self.width*(self.height+self.depth)+

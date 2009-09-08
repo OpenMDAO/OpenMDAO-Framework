@@ -2,7 +2,7 @@
 #public symbols
 __all__ = ["Factory"]
 
-__version__ = "0.1"
+
 
     
 class Factory(object):
@@ -13,8 +13,8 @@ class Factory(object):
     def __init__(self):
         pass
         
-    def create(self, typname, name='', version=None, server=None, 
-               res_desc=None):
+    def create(self, typname, version=None, server=None, 
+               res_desc=None, **ctor_args):
         """Return an object of type typename, using the specified
         package version, server location, and resource description.
         

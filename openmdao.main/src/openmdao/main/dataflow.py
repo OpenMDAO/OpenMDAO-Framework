@@ -17,86 +17,94 @@ class Dataflow(Workflow):
     data flow order.
     """
 
-    def __init__(self, name, parent=None):
+    def __init__(self, scope=None):
         """ Create an empty flow. """
-        super(Dataflow, self).__init__(name, parent, add_to_parent=False)
+        super(Dataflow, self).__init__(scope=scope)
         self._no_ref_graph = nx.DiGraph()
         
-    def execute(self):
+    def run(self):
         try:
-            super(Dataflow, self).execute()
+            super(Dataflow, self).run()
         finally:
             self._drvsorter = None
             
     def has_node(self, name):
+        """Return True if this Dataflow contains a Component with the
+        given name.
+        """
         return name in self._no_ref_graph
         
     def add_node(self, name):
+        """Add the name of a Component to this Dataflow."""
         self._no_ref_graph.add_node(name)
         
     def remove_node(self, name):
+        """Remove the name of a Component from this Dataflow."""
         self._no_ref_graph.remove_node(name)
         
     def get_graph(self):
+        """Return the Component graph for this Dataflow."""
         return self._no_ref_graph
         
     def connect(self, srccompname, destcompname, srcvarname, destvarname):
+        """Add an edge to our Component graph from *srccompname* to *destcompname*.
+        The *srcvarname* and *destvarname* args are for data reporting only.
+        """
         # if an edge already exists between the two components, just increment the ref count
         graph = self._no_ref_graph
         try:
-            graph[srccompname][destcompname] += 1
+            graph[srccompname][destcompname]['refcount'] += 1
         except KeyError:
-            graph.add_edge(srccompname, destcompname, data=1)
+            graph.add_edge(srccompname, destcompname, refcount=1)
             
         if not is_directed_acyclic_graph(graph):
             # do a little extra work here to give more info to the user in the error message
             strongly_connected = strongly_connected_components(graph)
-            refcount = graph[srccompname][destcompname] - 1
+            refcount = graph[srccompname][destcompname]['refcount'] - 1
             if refcount == 0:
                 graph.remove_edge(srccompname, destcompname)
             else:
-                graph[srccompname][destcompname] = refcount
+                graph[srccompname][destcompname]['refcount'] = refcount
             for strcon in strongly_connected:
                 if len(strcon) > 1:
-                    self.raise_exception(
+                    raise RuntimeError(
                         'circular dependency (%s) would be created by connecting %s to %s' %
                                  (str(strcon), 
                                   '.'.join([srccompname,srcvarname]), 
-                                  '.'.join([destcompname,destvarname])), RuntimeError) 
+                                  '.'.join([destcompname,destvarname]))) 
         
     def disconnect(self, comp1name, comp2name):
         """Decrement the ref count for the edge in the dependency graph 
         between the two components, or remove the edge if the ref count
         reaches 0.
         """
-        refcount = self._no_ref_graph[comp1name][comp2name] - 1
+        refcount = self._no_ref_graph[comp1name][comp2name]['refcount'] - 1
         if refcount == 0:
             self._no_ref_graph.remove_edge(comp1name, comp2name)
         else:
-            self._no_ref_graph[comp1name][comp2name] = refcount
+            self._no_ref_graph[comp1name][comp2name]['refcount'] = refcount
 
             
     def _find_drivers(self, names):
         """Returns a list of Drivers found in the given list of names."""
-        driverset = set([obj.name for obj in self.parent.drivers])
-        return [getattr(self.parent, n) for n in names if n in driverset]
+        driverset = set([obj.name for obj in self.scope.drivers])
+        return [getattr(self.scope, n) for n in names if n in driverset]
         
     def nodes_iter(self):
         """Iterate through the nodes in dataflow order, allowing for multiple Driver
         loops within the same Assembly.
         """
-        drivers = self.parent.drivers
+        drivers = self.scope.drivers
         self._drvsorter = None
         
         if len(drivers) == 0:  # no driver, so just sort and go
             for n in nx.topological_sort(self._no_ref_graph):
-                yield getattr(self.parent, n)
+                yield getattr(self.scope, n)
         elif len(drivers) == 1:  # one driver, so add its output ref edges, sort and go
             graph = self._no_ref_graph.copy()
             graph.add_edges_from(drivers[0].get_ref_graph(iostatus='out').edges_iter())
             for n in nx.topological_sort(graph):
-                yield getattr(self.parent, n)
-            return
+                yield getattr(self.scope, n)
         else:  # multiple drivers
             graph = self._no_ref_graph.copy()
             
@@ -114,7 +122,7 @@ class Dataflow(Workflow):
                 # no loops found (SCCs are returned largest to smallest), 
                 # so just sort and we're done. 
                 for compname in nx.topological_sort(graph):
-                    yield getattr(self.parent, compname)
+                    yield getattr(self.scope, compname)
                 return
             
             # we have at least one loop, so...
@@ -134,7 +142,7 @@ class Dataflow(Workflow):
             
             for sccomp in sorted_strongs:
                 if len(strongs[sccomp]) == 1:  # no loop, just a single component
-                    yield getattr(self.parent, strongs[sccomp][0])
+                    yield getattr(self.scope, strongs[sccomp][0])
                 else:  # some kind of loop
                     for comp in self._loop_iter(strongs[sccomp]):
                         yield comp
@@ -150,4 +158,4 @@ class Dataflow(Workflow):
             self._drvsorter = DriverForest(drivers)
             collapsed_graph = self._drvsorter.collapse_graph(subgraph)
             for compname in nx.topological_sort(collapsed_graph):
-                yield getattr(self.parent, compname)
+                yield getattr(self.scope, compname)

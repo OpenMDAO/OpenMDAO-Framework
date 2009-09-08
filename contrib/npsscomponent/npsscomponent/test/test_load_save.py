@@ -15,11 +15,12 @@ from numpy.testing import assert_equal
 
 from enthought.traits.api import Bool
 
-from openmdao.main.api import FileValue, SAVE_LIBYAML
+from openmdao.main.api import FileValue, SAVE_LIBYAML, set_as_top
 from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent
 
+# Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
 
 
@@ -27,8 +28,11 @@ class Passthrough(NPSScomponent):
     """ An NPSS component that passes-through various types of variable. """
 
     def __init__(self):
-        super(Passthrough, self).__init__('NPSS', arglist='passthrough.mdl')
-
+        super(Passthrough, self).__init__(arglist='passthrough.mdl')
+        
+    def tree_defined(self):
+        super(Passthrough, self).tree_defined()
+        
         # Automagic interface variable creation
         self.make_public([
             'f_out',
@@ -48,13 +52,14 @@ class Passthrough(NPSScomponent):
 
 class NPSSTestCase(unittest.TestCase):
 
+    # Directory where we can find NPSS model.
     directory = pkg_resources.resource_filename('npsscomponent', 'test')
 
     def setUp(self):
         """ Called before each test in this class. """
         # Reset simulation root so we can legally access files.
         SimulationRoot.chdir(NPSSTestCase.directory)
-        self.npss = Passthrough()
+        self.npss = set_as_top(Passthrough())
         self.egg_name = None
 
     def tearDown(self):
@@ -66,21 +71,29 @@ class NPSSTestCase(unittest.TestCase):
         if self.egg_name and os.path.exists(self.egg_name):
             os.remove(self.egg_name)
 
+        # Verify NPSScomponent didn't mess-up working directory.
+        end_dir = os.getcwd()
         SimulationRoot.chdir(ORIG_DIR)
+        if end_dir != NPSSTestCase.directory:
+            self.fail('Ended in %s, expected %s' \
+                      % (end_dir, NPSSTestCase.directory))
 
     def test_load_save(self):
         logging.debug('')
         logging.debug('test_load_save')
 
+        # Record current values.
         saved_values = {}
         for name, var in self.npss.items():
             saved_values[name] = var
 
+        # Save to an egg.
         egg_info = self.npss.save_to_egg()
         self.egg_name = egg_info[0]
         self.npss.pre_delete()
         self.npss = None
 
+        # Create and move to a test directory.
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
         if os.path.exists(test_dir):
@@ -88,9 +101,11 @@ class NPSSTestCase(unittest.TestCase):
         os.mkdir(test_dir)
         os.chdir(test_dir)
         try:
+            # Load from egg.
             egg_path = os.path.join('..', self.egg_name)
             self.npss = NPSScomponent.load_from_eggfile(egg_path, install=False)
 
+            # Verify loaded values are correct.
             for name, val in saved_values.items():
                 if name == 'directory':
                     continue  # This gets reset on purpose.
@@ -110,12 +125,16 @@ class NPSSTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_nomodel')
 
+        # Change model_filename to nonexistent file.
         self.npss.model_filename = 'xyzzy.mdl'
+
+        # Save to an egg.
         egg_info = self.npss.save_to_egg(version='0.0')
         self.egg_name = egg_info[0]
         self.npss.pre_delete()
         self.npss = None
 
+        # Create and move to a test directory.
         orig_dir = os.getcwd()
         test_dir = 'EggTest'
         if os.path.exists(test_dir):
@@ -124,11 +143,12 @@ class NPSSTestCase(unittest.TestCase):
         os.chdir(test_dir)
         try:
             try:
+                # Load from egg.
                 egg_path = os.path.join('..', self.egg_name)
                 self.npss = NPSScomponent.load_from_eggfile(egg_path,
                                                             install=False)
             except RuntimeError, exc:
-                msg = "NPSS: Reload caught exception: Model file 'xyzzy.mdl'" \
+                msg = ": Reload caught exception: Model file 'xyzzy.mdl'" \
                       " not found while reloading in"
                 self.assertEqual(str(exc)[:len(msg)], msg)
             else:
@@ -142,10 +162,11 @@ class NPSSTestCase(unittest.TestCase):
         logging.debug('test_badsave')
 
         try:
+            # Save to an egg in a directory we can't write to.
             self.npss.save_to_egg(dst_dir='/no-permission')
         except IOError, exc:
             self.assertEqual(str(exc),
-                "NPSS: Can't save to '/no-permission', no write permission")
+                ": Can't save to '/no-permission', no write permission")
         else:
             self.fail('Expected IOError')
 
@@ -153,12 +174,12 @@ class NPSSTestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_yaml')
 
-        # This currently fails, not sure why.
+        # This currently fails, not sure why YAML can't handle it.
         try:
             egg_info = self.npss.save_to_egg(format=SAVE_LIBYAML)
             self.egg_name = egg_info[0]
         except Exception, exc:
-            msg = "NPSS: Can't save to 'NPSS/NPSS.yaml': data type not" \
+            msg = ": Can't save to 'passthrough1/passthrough1.yaml': data type not" \
                   " understood"
             self.assertEqual(str(exc), msg)
         else:

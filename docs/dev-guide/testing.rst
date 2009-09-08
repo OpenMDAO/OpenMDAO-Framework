@@ -26,7 +26,7 @@ which should generate output something like this:
    OK
 
 To run the full test suite, which includes the openmdao namespace package and
-other packages from eggsrc, type:
+other packages from contrib, type:
 
 ::
 
@@ -34,7 +34,9 @@ other packages from eggsrc, type:
     
     
 To get a list of options available with ``bin/test``, type ``bin/test --help``
-from the ``buildout`` directory.
+from the ``buildout`` directory.  The bin/test script uses the *nose* testing
+framework internally, so all options available when running *nosetests*
+should also be available when using bin/test.
    
 .. index: test coverage
    

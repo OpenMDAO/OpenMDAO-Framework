@@ -5,7 +5,7 @@ import StringIO
 
 from enthought.traits.api import Float, TraitError
 
-import openmdao.util.save_load as constants
+import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container
 
 
@@ -25,37 +25,36 @@ class ContainerTestCase(unittest.TestCase):
                         number
         """
         
-        self.root = Container('root', None)
-        c1 = Container('c1', self.root)
-        c2 = Container('c2', self.root)
-        c21 = Container('c21', c2)
-        c22 = Container('c22', c2)
-        c221 = Container('c221', c22)
-        c221.add_trait('number', Float(3.14, iostatus='in'))
+        self.root = Container()
+        self.root.add_container('c1', Container())
+        self.root.add_container('c2', Container())
+        self.root.c2.add_container('c21', Container())
+        self.root.c2.add_container('c22', Container())
+        self.root.c2.c22.add_container('c221', Container())
+        self.root.c2.c22.c221.add_trait('number', Float(3.14, iostatus='in'))
 
     def tearDown(self):
         """this teardown function will be called after each test"""
         self.root = None
 
     def test_add_bad_child(self):
-        foo = Container('foo', None)
-        non_container = 'some string'
+        foo = Container()
         try:
-            foo.add_child(non_container)
+            foo.add_container('non_container', 'some string')
         except TypeError, err:
-            self.assertEqual(str(err), "foo: '<type 'str'>' "+
+            self.assertEqual(str(err), ": '<type 'str'>' "+
                 "object is not an instance of Container.")
         else:
             self.fail('TypeError expected')
         
     def test_pathname(self):
-        foo = Container('foo', None)
-        self.root.add_child(foo)
-        self.assertEqual(foo.get_pathname(), 'root.foo')
+        self.root.add_container('foo', Container())
+        self.root.foo.add_container('foochild', Container())
+        self.assertEqual(self.root.foo.foochild.get_pathname(), 'foo.foochild')
 
     def test_get(self):
         obj = self.root.get('c2.c21')
-        self.assertEqual(obj.get_pathname(), 'root.c2.c21')
+        self.assertEqual(obj.get_pathname(), 'c2.c21')
         num = self.root.get('c2.c22.c221.number')
         self.assertEqual(num, 3.14)
 
@@ -87,6 +86,13 @@ class ContainerTestCase(unittest.TestCase):
                                  ('c2.c21', True), 
                                  ('c1', True)])
         
+    def test_default_naming(self):
+        cont = Container()
+        cont.add_container('container1', Container())
+        cont.add_container('container2', Container())
+        cc = Container()
+        self.assertEqual(cc.get_default_name(cont), 'container3')
+        
     def test_bad_get(self):
         try:
             x = self.root.bogus
@@ -99,20 +105,20 @@ class ContainerTestCase(unittest.TestCase):
         names = [x.get_pathname() for x in self.root.values(recurse=True)
                                          if isinstance(x, Container)]
         self.assertEqual(sorted(names),
-                         ['root.c1', 'root.c2', 'root.c2.c21', 
-                          'root.c2.c22', 'root.c2.c22.c221'])
+                         ['c1', 'c2', 'c2.c21', 
+                          'c2.c22', 'c2.c22.c221'])
         
         names = [x.get_pathname() for x in self.root.values()
                                          if isinstance(x, Container)]
-        self.assertEqual(sorted(names), ['root.c1', 'root.c2'])
+        self.assertEqual(sorted(names), ['c1', 'c2'])
         
         names = [x.get_pathname() for x in self.root.values(recurse=True)
                                  if isinstance(x, Container) and x.parent==self.root]
-        self.assertEqual(sorted(names), ['root.c1', 'root.c2'])        
+        self.assertEqual(sorted(names), ['c1', 'c2'])        
 
         names = [x.get_pathname() for x in self.root.values(recurse=True)
                                  if isinstance(x, Container) and x.parent==self.root.c2]
-        self.assertEqual(sorted(names), ['root.c2.c21', 'root.c2.c22'])        
+        self.assertEqual(sorted(names), ['c2.c21', 'c2.c22'])        
 
     def test_create(self):
         new_obj = self.root.create('openmdao.main.component.Component','mycomp')
@@ -123,9 +129,8 @@ class ContainerTestCase(unittest.TestCase):
     
     def test_save_load_yaml(self):
         output = StringIO.StringIO()
-        c1 = Container('c1', None)
-        c2 = Container('c2', None)
-        c1.add_child(c2)
+        c1 = Container()
+        c1.add_container('c2', Container())
         c1.save(output, constants.SAVE_YAML)
         
         inp = StringIO.StringIO(output.getvalue())
@@ -133,9 +138,8 @@ class ContainerTestCase(unittest.TestCase):
                 
     def test_save_load_libyaml(self):
         output = StringIO.StringIO()
-        c1 = Container('c1', None)
-        c2 = Container('c2', None)
-        c1.add_child(c2)
+        c1 = Container()
+        c1.add_container('c2', Container())
         c1.save(output, constants.SAVE_LIBYAML)
         
         inp = StringIO.StringIO(output.getvalue())
@@ -143,9 +147,8 @@ class ContainerTestCase(unittest.TestCase):
                 
     def test_save_load_cpickle(self):
         output = StringIO.StringIO()
-        c1 = Container('c1', None)
-        c2 = Container('c2', None)
-        c1.add_child(c2)
+        c1 = Container()
+        c1.add_container('c2', Container())
         c1.save(output)
         
         inp = StringIO.StringIO(output.getvalue())
@@ -153,9 +156,8 @@ class ContainerTestCase(unittest.TestCase):
         
     def test_save_load_pickle(self):
         output = StringIO.StringIO()
-        c1 = Container('c1', None)
-        c2 = Container('c2', None)
-        c1.add_child(c2)
+        c1 = Container()
+        c1.add_container('c2', Container())
         c1.save(output, constants.SAVE_PICKLE)
         
         inp = StringIO.StringIO(output.getvalue())

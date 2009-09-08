@@ -2,7 +2,7 @@
 #public symbols
 __all__ = ['Assembly']
 
-__version__ = "0.1"
+
 
 import os.path
 
@@ -52,13 +52,12 @@ class MulticastTrait(TraitType):
 class Assembly (Component):
     """This is a container of Components. It understands how
     to connect inputs and outputs between its children 
-    and how to handle Sockets.
+    and how to run a Workflow.
     """
     drivers = List(IDriver)
     workflow = Instance(Workflow)
     
-    def __init__(self, name=None, parent=None, doc=None, directory='',
-                       workflow=None):
+    def __init__(self, doc=None, directory='', workflow=None):
         self.state = STATE_IDLE
         self._stop = False
         self._dir_stack = []
@@ -71,8 +70,7 @@ class Assembly (Component):
         # so they can also be represented in the graph. 
         self._var_graph = nx.DiGraph()
         
-        super(Assembly, self).__init__(name, parent, doc=doc,
-                                       directory=directory)
+        super(Assembly, self).__init__(doc=doc, directory=directory)
         
         # add any Variables we may have inherited from our base classes
         # to our _var_graph..
@@ -80,19 +78,18 @@ class Assembly (Component):
             if v not in self._var_graph:
                 self._var_graph.add_node(v)
         
-        self._dataflow = Dataflow('dataflow', self)
-        
         if workflow is None:
-            workflow = self._dataflow
-
-        self.workflow = workflow
+            self.workflow = Dataflow(scope=self)
+        else:
+            self.workflow = workflow
+            workflow.scope = self
 
         # List of meta-data dictionaries.
         self.external_files = []
 
     def get_component_graph(self):
         """Retrieve the dataflow graph of child components."""
-        return self._dataflow.get_graph()
+        return self.workflow.get_graph()
     
     def get_var_graph(self):
         """Returns the Variable dependency graph, after updating it with child
@@ -122,9 +119,11 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add_child(self, obj):
-        """Update dependency graph and call base class add_child."""
-        super(Assembly, self).add_child(obj)
+    def add_container(self, name, obj):
+        """Update dependency graph and call base class add_container.
+        Returns the added Container object.
+        """
+        obj = super(Assembly, self).add_container(name, obj)
         if isinstance(obj, Component):
             # This is too early to get accurate Variable info from 
             # the child since it's __init__ function may not be complete
@@ -133,22 +132,27 @@ class Assembly (Component):
             # it in later
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
-            self._dataflow.add_node(obj.name)
+            self.workflow.add_node(obj.name)
         try:
             self.drivers.append(obj)  # will fail if it's not an IDriver
         except TraitError:
             pass
         return obj
         
-    def remove_child(self, name):
+    def remove_container(self, name):
         """Remove the named object from this container and notify any observers.
         """
         if '.' in name:
-            self.raise_exception('remove_child does not allow dotted path names like %s' %
-                                 name, ValueError)        
+            self.raise_exception('remove_container does not allow dotted path names like %s' %
+                                 name, ValueError)
+        trait = self.trait(name)
+        if trait is not None and trait.is_trait_type(Instance):
+            setattr(self, name, None)
+            return
+            
         obj = self.get(name)
         if isinstance(obj, Component):
-            self._dataflow.remove_node(obj.name)
+            self.workflow.remove_node(obj.name)
             if name in self._child_io_graphs:
                 childgraph = self._child_io_graphs[name]
                 if childgraph is not None:
@@ -174,8 +178,9 @@ class Assembly (Component):
             self.raise_exception('%s is already connected' % 
                                  traitname, RuntimeError) 
 
-        # traitname must have two parts
-        compname, comp, vname = self.split_varpath(traitname)
+        # traitname must have at least two parts
+        compname, vname = traitname.split('.', 1)
+        comp = getattr(self, compname)
         name = alias or vname
         
         # make sure name isn't a dotted path
@@ -197,8 +202,8 @@ class Assembly (Component):
             except Exception, exc:
                 pass
         if not currtrait:
-            self.raise_exception("cannot find trait named '%s' in component '%s'" %
-                                 (vname, compname), TraitError)
+                self.raise_exception("cannot find trait named '%s' in component '%s'" %
+                                     (vname, compname), TraitError)
         iostatus = currtrait.iostatus
         try:
             if iostatus == 'in':
@@ -290,16 +295,16 @@ class Assembly (Component):
         if destcomp is not self:
             destcomp.set_source(destvarname, srcpath)
             if srccomp is not self: # neither var is on boundary
-                self._dataflow.connect(srccompname, destcompname, 
-                                       srcvarname, destvarname)
+                if hasattr(self.workflow, 'connect'):
+                    self.workflow.connect(srccompname, destcompname, 
+                                           srcvarname, destvarname)
         
         vgraph = self.get_var_graph()
         vgraph.add_edge(srcpath, destpath)
             
         # invalidate destvar if necessary
         if destcomp is self and desttrait.iostatus == 'out': # boundary output
-            if destcomp.get_valid(destvarname) and \
-               srccomp.get_valid(srcvarname) is False:
+            if destcomp.get_valid(destvarname) and srccomp.get_valid(srcvarname) is False:
                 if self.parent:
                     # tell the parent that anyone connected to our boundary
                     # output is invalid.
@@ -366,12 +371,12 @@ class Assembly (Component):
             vtup = v.split('.', 1)
             if len(vtup) > 1:
                 getattr(self, vtup[0]).remove_source(vtup[1])
-                # if its a connection between two children (no boundary
-                # connections) then remove a connection between two components
-                # in the component graph
-                utup = u.split('.', 1)
-                if len(utup)>1: 
-                    self._dataflow.disconnect(utup[0], vtup[0])
+                # if its a connection between two children (no boundary connections)
+                # then remove a connection between two components in the component
+                # graph
+                utup = u.split('.',1)
+                if len(utup)>1 and hasattr(self.workflow, 'disconnect'):
+                    self.workflow.disconnect(utup[0], vtup[0])
                 
             vargraph.remove_edges_from(to_remove)
                 
@@ -398,9 +403,11 @@ class Assembly (Component):
 
     def execute (self):
         """By default, run child components in data flow order."""
-        self._dataflow.run()
+        self.workflow.run()
+        self._update_boundary_vars()
         
-        # now update our invalid boundary outputs
+    def _update_boundary_vars (self):
+        """Update output variables on our bounary."""
         invalid_outs = self.list_outputs(valid=False)
         vgraph = self.get_var_graph()
         for out in invalid_outs:
@@ -414,7 +421,7 @@ class Assembly (Component):
         
     def step(self):
         """Execute a single child component and return."""
-        self._dataflow.step()
+        self.workflow.step()
     
     def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).
@@ -488,7 +495,7 @@ class Assembly (Component):
                     self.raise_exception(msg, type(exc))
                 finally:
                     if comp.directory:
-                        comp.push_dir(comp.get_directory())
+                        comp.push_dir(comp.get_abs_directory())
             else:
                 try:
                     destcomp.set(destvarname, srcval, srcname=srcname)
@@ -507,10 +514,9 @@ class Assembly (Component):
         self.update_inputs(None, varnames=outnames)
 
     def check_config (self):
-        """Verify that the configuration of this component is correct. This
-        function is called once prior to the first execution of this Assembly,
-        and prior to execution if any children are added or removed, or if
-        self._need_check_config is True.
+        """Verify that the configuration of this component is correct. This function is
+        called once prior to the first execution of this Assembly, and prior to execution
+        if any children are added or removed, or if self._call_check_config is True.
         """
         super(Assembly, self).check_config()
         for name, value in self._traits_meta_filter(required=True).items():
@@ -583,9 +589,9 @@ class Assembly (Component):
     @staticmethod
     def xfer_file(src_comp, src_varname, dst_comp, dst_varname):
         """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """
-        src_path = os.path.join(src_comp.get_directory(),
+        src_path = os.path.join(src_comp.get_abs_directory(), 
                                 src_comp.get(src_varname+'.filename'))
-        dst_path = os.path.join(dst_comp.get_directory(),
+        dst_path = os.path.join(dst_comp.get_abs_directory(), 
                                 dst_comp.get(dst_varname+'.filename'))
         if src_path != dst_path:
             if src_comp.trait(src_varname).binary is True:

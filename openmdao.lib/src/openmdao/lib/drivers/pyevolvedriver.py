@@ -1,6 +1,6 @@
 """A pyevolve based driver for OpenMDAO"""
 
-__version__ = "0.1"
+
 
 import random
 
@@ -54,8 +54,8 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     magnitude = sum([x**2 for x in seed_brother])**.5
     #checksum to enforce a circular distribution of random numbers
     while magnitude > 1:
-        seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
-        magnitude = sum([x**2 for x in seed_brother])**.5    
+       seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
+       magnitude = sum([x**2 for x in seed_brother])**.5    
     
     #create a children
     sister.resetStats()
@@ -109,8 +109,8 @@ class pyevolvedriver(Driver):
     #outputs
     best_individual = Any(GenomeBase.GenomeBase(), iostatus='out')
         
-    def __init__(self, name, parent=None, doc=None): 
-        super(pyevolvedriver, self).__init__(name, parent, doc)
+    def __init__(self, doc=None): 
+        super(pyevolvedriver,self).__init__(doc)
 
         self.genome = GenomeBase.GenomeBase() #TODO: Mandatory Socket
         self.GA = GSimpleGA.GSimpleGA(self.genome) #TODO: Mandatory Socket, with default plugin
@@ -122,8 +122,8 @@ class pyevolvedriver(Driver):
         self.terminationCriteria = None #TODO: optional socket
         self.DBAdapter = None #TODO: optional socket
 
-    def _set_GA_FunctionSlot(self, slot, funcList, RandomApply=False):
-        if funcList == None: 
+    def _set_GA_FunctionSlot(self, slot, funcList, RandomApply=False,):
+        if funcList is None: 
             return
         slot.clear()
         if not isinstance(funcList, list):
@@ -143,7 +143,7 @@ class pyevolvedriver(Driver):
         except (AttributeError, RuntimeError), err:
             self.raise_exception("invalid value '%s' for input ref variable '%s': %s" % 
                                  (str(expr), name, err), TraitError)
-
+            
     def evaluate(self, genome):
         self.decoder(genome)
         self.run_iteration()
@@ -157,14 +157,14 @@ class pyevolvedriver(Driver):
                 TypeError)
 
         #decoder verify
-        if self.decoder == None: # check if None first
+        if self.decoder is None: # check if None first
             self.raise_exception("decoder specified as 'None'."
                                  " A valid decoder must be present", TypeError)
         try: # won't work if decoder is None
             self.decoder(self.genome)
         except TypeError, err:
             self.raise_exception(
-                "decoder as specified does not have the right signature. Must take only 1 argument: %s" %
+                "decoder as specified does not have the right signature. Must take only 1 argument: %s"%
                 err, TypeError)
 
     def execute(self):

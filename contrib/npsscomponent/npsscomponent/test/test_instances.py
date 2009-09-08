@@ -1,5 +1,11 @@
 """
 Test of multiple NPSS instances.
+Various data types are sent from 'Source' to 'NPSS_A' to 'NPSS_B' and finally
+on to 'Sink'.  Both instances of NPSS are running passthrough.mdl.
+
+Two types of model are constructed: 'direct' as described above, and 'indirect'
+which puts 'NPSS_A' and 'NPSS_B' inside an Assembly.  This is to exercise the
+interaction of NPSS Property traits with passthru connections.
 """
 
 import cPickle
@@ -14,11 +20,12 @@ from numpy.testing import assert_equal
 
 from enthought.traits.api import Float, Int, Str, List, CBool, Array
 
-from openmdao.main.api import Assembly, Component, Container, FileTrait
+from openmdao.main.api import Assembly, Component, Container, FileTrait, set_as_top
 from openmdao.main.component import SimulationRoot
 
 from npsscomponent import NPSScomponent, NPSSProperty
 
+# Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
 
 # pylint: disable-msg=E1101
@@ -26,8 +33,10 @@ ORIG_DIR = os.getcwd()
 
 
 class Source(Component):
-    """ Just something to connect NPSS inputs to. """
-
+    """
+    Just something to connect NPSS inputs to.
+    Has an instance of each supported NPSS data type as an output.
+    """
     b = CBool(False, iostatus='out')
     f = Float(0., iostatus='out')
     f1d = Array(dtype=numpy.float, shape=(None,), iostatus='out')
@@ -44,13 +53,14 @@ class Source(Component):
     text_file = FileTrait(iostatus='out')
     binary_file = FileTrait(iostatus='out', binary=True)
         
-    def __init__(self, name='Source', *args, **kwargs):
-        super(Source, self).__init__(name, *args, **kwargs)
+    def tree_defined(self):
+        super(Source, self).tree_defined()
+        
         self.text_file.filename = 'source.txt'
         self.binary_file.filename = 'source.bin'
 
-        SourceData(name='sub', parent=self)
-        SourceSubData(name='sub_sub', parent=self)
+        self.add_container('sub', SourceData())
+        self.add_container('sub_sub', SourceSubData())
 
     def execute(self):
         """ Write test data to files. """
@@ -77,32 +87,32 @@ class SourceData(Container):
     s = Str('', iostatus='out')
     s1d = List(str, iostatus='out')
         
-    def __init__(self, name='SourceData', *args, **kwargs):
-        super(SourceData, self).__init__(name, *args, **kwargs)
-
 
 class SourceSubData(Container):
-    """ Sub-sub-container data. """
-
+    """
+    Sub-sub-container data.
+    To exercise connections multiple levels deep.
+    """
     ii = Int(0, iostatus='out')
-
-    def __init__(self, name='SourceSubData', *args, **kwargs):
-        super(SourceSubData, self).__init__(name, *args, **kwargs)
 
 
 class Passthrough(NPSScomponent):
     """ An NPSS component that passes-through various types of variable. """
 
-    def __init__(self, indirect=False, name='Passthrough', parent=None,
-                 doc=None, directory=''):
+    def __init__(self, indirect=False, doc=None, directory=''):
+        # Probably only need '-I .' here, others are just for testing.
         arglist = ['-D', 'XYZZY=twisty narrow passages', '-D', 'FLAG',
                    '-I', '.', '-trace']
         mdl = os.path.join('..', 'passthrough.mdl')
         if indirect:
+            # When inside an assembly we run in a subdirectory.
             mdl = os.path.join('..', mdl)
         arglist.append(mdl)
-        super(Passthrough, self).__init__(name, parent, doc, directory,
+        super(Passthrough, self).__init__(doc, directory,
                                           arglist, 'passthrough.out')
+        
+    def tree_defined(self):
+        super(Passthrough, self).tree_defined()
 
         # Manual interface variable creation.
         # BAN - manual interface variable creation is error prone, because
@@ -128,14 +138,17 @@ class Passthrough(NPSScomponent):
 
         # (skip 'f_in' to test dynamic trait creation during connect().)
         # (skip 'f_out' to test dynamic trait creation during connect().)
-
+        
         # Sub-container needs Bools explicitly declared.
         self.hoist('sub.b_in', 'in', trait=CBool(iostatus='in'))
         self.hoist('sub.b_out', 'out', trait=CBool(iostatus='out'))
 
 
 class Sink(Component):
-    """ Just something to connect NPSS outputs to. """
+    """
+    Just something to connect NPSS outputs to.
+    Has an instance of each supported NPSS data type as an input.
+    """
 
     b = CBool(False, iostatus='in')
     f = Float(0., iostatus='in')
@@ -153,13 +166,14 @@ class Sink(Component):
     text_file = FileTrait(iostatus='in')
     binary_file = FileTrait(iostatus='in')
         
-    def __init__(self, name='Sink', *args, **kwargs):
-        super(Sink, self).__init__(name, *args, **kwargs)
+    def tree_defined(self):
+        super(Sink, self).tree_defined()
+        
         self.text_file.filename = 'sink.txt'
         self.binary_file.filename = 'sink.bin'
 
-        SinkData(name='sub', parent=self)
-        SinkSubData(name='sub_sub', parent=self)
+        self.add_container('sub', SinkData())
+        self.add_container('sub_sub', SinkSubData())
 
     def execute(self):
         """ Read test data from files. """
@@ -186,26 +200,28 @@ class SinkData(Container):
     s = Str('', iostatus='in')
     s1d = List(str, iostatus='in')
     
-    def __init__(self, name='SinkData', *args, **kwargs):
-        super(SinkData, self).__init__(name, *args, **kwargs)
-
 
 class SinkSubData(Container):
     """ Sub-sub-container data. """
 
     ii = Int(0, iostatus='in')
 
-    def __init__(self, name='SinkSubData', *args, **kwargs):
-        super(SinkSubData, self).__init__(name, *args, **kwargs)
-
 
 class Model(Assembly):
-    """ Sends data through Source -> NPSS_A -> NPSS_B -> Sink. """
+    """
+    Sends data through Source -> NPSS_A -> NPSS_B -> Sink.
+    If 'indirect', then NPSS_A and NPSS_B are placed inside a subassembly.
+    """
     
-    def __init__(self, indirect=False, name='TestModel', *args, **kwargs):
-        super(Model, self).__init__(name, *args, **kwargs)
-
-        Source(parent=self)
+    #name='TestModel', 
+    def __init__(self, indirect=False, *args, **kwargs):
+        super(Model, self).__init__(*args, **kwargs)        
+        self._indirect = indirect
+        
+    def tree_defined(self):
+        super(Model, self).tree_defined()
+        
+        self.add_container('Source', Source())
         self.Source.b = True
         self.Source.f = 3.14159
         self.Source.f1d = [3.14159, 2.781828]
@@ -235,18 +251,18 @@ class Model(Assembly):
 
         self.Source.sub_sub.ii = 12345678
 
-        Sink(parent=self)
+        self.add_container('Sink', Sink())
 
         vnames = ('b', 'f', 'f1d', 'f2d', 'f3d', 'i', 'i1d', 'i2d', 's', 's1d')
 
-        if indirect:
-            # Exercise passthru capability.
-            assembly = Assembly('Assembly', parent=self, directory='Assembly')
-            name = 'NPSS_A'
-            Passthrough(indirect, name, assembly, directory=name)
-            name = 'NPSS_B'
-            Passthrough(indirect, name, assembly, directory=name)
-
+        if self._indirect:
+            # Exercise passthru capability by placing NPSS instances
+            # in a subassembly.
+            assembly = self.add_container('Assembly',
+                                          Assembly(directory='Assembly'))
+            for name in ['NPSS_A', 'NPSS_B']:
+                assembly.add_container(name, 
+                                       Passthrough(self._indirect, directory=name))
             for var in vnames:
                 assembly.create_passthru('NPSS_A.'+var+'_in')
                 assembly.create_passthru('NPSS_A.sub.'+var+'_in',
@@ -274,11 +290,10 @@ class Model(Assembly):
             from_comp = 'Assembly.'
 
         else:
-            name = 'NPSS_A'
-            Passthrough(indirect, name, self, directory=name)
-            name = 'NPSS_B'
-            Passthrough(indirect, name, self, directory=name)
-
+            # Don't communicate indirectly through a subassembly.
+            for name in ['NPSS_A', 'NPSS_B']:
+                self.add_container(name, 
+                                   Passthrough(self._indirect, directory=name))
             for var in vnames:
                 self.connect('NPSS_A.'+var+'_out', 'NPSS_B.'+var+'_in')
                 self.connect('NPSS_A.sub.'+var+'_out', 'NPSS_B.sub.'+var+'_in')
@@ -292,7 +307,7 @@ class Model(Assembly):
         for var in vnames:
             self.connect('Source.'+var, to_comp+var+'_in')
             self.connect(from_comp+var+'_out', 'Sink.'+var)
-            if indirect:
+            if self._indirect:
                 self.connect('Source.sub.'+var, to_comp+'sub_'+var+'_in')
                 self.connect(from_comp+'sub_'+var+'_out', 'Sink.sub.'+var)
             else:
@@ -305,7 +320,7 @@ class Model(Assembly):
         self.connect(from_comp+'text_out', 'Sink.text_file')
         self.connect(from_comp+'binary_out', 'Sink.binary_file')
 
-        if indirect:
+        if self._indirect:
             self.connect('Source.sub_sub.ii', to_comp+'sub_sub_i_in')
             self.connect(from_comp+'sub_sub_i_out', 'Sink.sub_sub.ii')
         else:
@@ -315,6 +330,7 @@ class Model(Assembly):
 
 class NPSSTestCase(unittest.TestCase):
 
+    # Directory where we can find NPSS model.
     directory = pkg_resources.resource_filename('npsscomponent', 'test')
 
     def setUp(self):
@@ -327,12 +343,15 @@ class NPSSTestCase(unittest.TestCase):
         """ Called after each test in this class. """
         if self.model:
             self.model.pre_delete()
+            # Cleanup directory dependent upon direct/indirect model.
             try:
                 shutil.rmtree(self.model.NPSS_A.directory)
                 shutil.rmtree(self.model.NPSS_B.directory)
             except AttributeError:
                 shutil.rmtree(self.model.Assembly.directory)
-            self.model = None
+        self.model = None
+
+        # Verify NPSScomponent didn't mess-up working directory.
         end_dir = os.getcwd()
         SimulationRoot.chdir(ORIG_DIR)
         if end_dir != NPSSTestCase.directory:
@@ -340,18 +359,22 @@ class NPSSTestCase(unittest.TestCase):
                       % (end_dir, NPSSTestCase.directory))
 
     def test_direct(self):
+        # Source -> NPSS_A -> NPSS_B -> Sink.
         logging.debug('')
         logging.debug('test_direct')
-        self.model = Model()
+        self.model = set_as_top(Model())
         self.check_connectivity()
 
     def test_indirect(self):
+        # Source -> Assembly                        Assembly-> Sink.
+        #                    -> NPSS_A -> NPSS_B ->
         logging.debug('')
         logging.debug('test_indirect')
-        self.model = Model(indirect=True)
+        self.model = set_as_top(Model(indirect=True))
         self.check_connectivity(indirect=True)
 
     def check_connectivity(self, indirect=False):
+        """ Verify Sink != Source, run, verify Sink == Source. """
         self.assertNotEqual(self.model.Sink.b, self.model.Source.b)
         self.assertNotEqual(self.model.Sink.f, self.model.Source.f)
         self.assertNotEqual(numpy.all(self.model.Sink.f1d==self.model.Source.f1d), True)
@@ -429,12 +452,12 @@ class NPSSTestCase(unittest.TestCase):
             os.remove(path)  # Will raise exception if any files don't exist.
 
     def test_preprocessor(self):
+        # Just verifying that some '-D' settings got propagated.
         logging.debug('')
         logging.debug('test_preprocessor')
-        self.model = Model()
+        self.model = set_as_top(Model())
         self.assertEqual(self.model.NPSS_A.xyzzy_val, 'twisty narrow passages')
         self.assertEqual(self.model.NPSS_A.flag_val, 1)
-
 
 if __name__ == '__main__':
     import nose
