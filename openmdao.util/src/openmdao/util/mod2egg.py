@@ -78,6 +78,9 @@ def mod2egg(argv, groups= { 'openmdao.component': Component,
     parser.add_option("-k","--keep", action="store_true", dest="keep", default=False,
                       help="keep the package directory structure used to build the egg")
     
+    parser.add_option("-n","--noegg", action="store_true", dest="noegg", default=False,
+                      help="don't actually build an egg")
+    
     (options, args) = parser.parse_args(argv)
 
     if len(args) == 0:
@@ -120,6 +123,7 @@ def mod2egg(argv, groups= { 'openmdao.component': Component,
         idir_abs = None
 
     destdir = options.dest or os.getcwd()
+    destdir = os.path.abspath(destdir)
     if options.keep:
         pkgdir = destdir
     else:
@@ -180,17 +184,14 @@ def mod2egg(argv, groups= { 'openmdao.component': Component,
     os.makedirs(os.path.join(pkgdir, modname, modname))
     os.chdir(os.path.join(pkgdir, modname))
 
-    # create the entry point string
-    epstr = StringIO.StringIO()
-    epstr.write('\n')
+    # create the entry point dict
+    entrypts = {}
     try:
         for group,pulist in plugins.items():
             if len(pulist) > 0:
-                epstr.write('    [%s]\n' % group)
+                if group not in entrypts: entrypts[group] = []
                 for pu in pulist:
-                    epstr.write('    %s = %s:%s\n' % (pu,modname,pu))
-        entrypts = epstr.getvalue()
-        epstr.close()
+                    entrypts[group].append('%s = %s:%s' % (pu,modname,pu))
  
         setup_template = '''
 from setuptools import setup
@@ -206,7 +207,7 @@ setup(
     packages=['%(name)s'],
     zip_safe=%(zipped)s,
     install_requires=%(depends)s,
-    entry_points="""%(entrypts)s"""
+    entry_points=%(entrypts)s
 )   
    '''
         f = open('setup.py', 'w')
@@ -232,30 +233,33 @@ setup(
             qstr = '--verbose'
         else:
             qstr = '--quiet'
-        if idir_abs and options.zipped:
-            check_call([sys.executable, 
-                        'setup.py', qstr, 'bdist_egg', '-d', idir_abs])
-            eggname = _find_egg([idir_abs], modname, options.version)
-            logging.info('installed %s (zipped) in %s' % (eggname, idir_abs))
-        else:
-            check_call([sys.executable, 
-                        'setup.py', qstr, 'bdist_egg', '-d', destdir])        
-            if idir_abs:
-                # find the egg we just built
-                eggname = _find_egg([destdir], modname, options.version)
-                if not eggname:
-                    raise RuntimeError("ERROR: cannot locate egg file")
             
-                os.chdir(idir_abs)
-                if options.verbose:
-                    optstr = '-mN'
-                else:
-                    optstr = '-mNq'
-                check_call(['easy_install', '-d', '.', optstr, 
-                            '%s' % os.path.join(destdir,eggname)])
-            
-                logging.info('installed %s in %s' % (eggname, idir_abs))
-            
+        if not options.noegg:
+            if idir_abs and options.zipped:
+                check_call([sys.executable, 
+                            'setup.py', qstr, 'bdist_egg', '-d', idir_abs])
+                eggname = _find_egg([idir_abs], modname, options.version)
+                logging.info('installed %s (zipped) in %s' % (eggname, idir_abs))
+            else:
+                check_call([sys.executable, 
+                            'setup.py', qstr, 'bdist_egg', '-d', destdir])        
+                if idir_abs:
+                    # find the egg we just built
+                    eggname = _find_egg([destdir], modname, options.version)
+                    if not eggname:
+                        raise RuntimeError("ERROR: cannot locate egg file")
+                
+                    os.chdir(idir_abs)
+                    if options.verbose:
+                        optstr = '-mN'
+                    else:
+                        optstr = '-mNq'
+                    check_call(['easy_install', '-d', '.', optstr, 
+                                '%s' % os.path.join(destdir,eggname)])
+                
+                    logging.info('installed %s in %s' % (eggname, idir_abs)) 
+            shutil.rmtree(os.path.join(destdir, modname, 'build'))
+            shutil.rmtree(os.path.join(destdir, modname, modname+'.egg-info'))
     finally:
         os.chdir(orig_dir)
         if not options.keep:

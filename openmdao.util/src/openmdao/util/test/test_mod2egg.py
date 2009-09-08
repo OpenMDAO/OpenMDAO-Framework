@@ -15,6 +15,7 @@ class mod2eggTestCase(unittest.TestCase):
         self.pudir = tempfile.mkdtemp()
         self.version = '1.999'
         self.mod2egg = openmdao.util.mod2egg.__file__.replace('.pyc','.py')
+        self.mod2egg = self.mod2egg.replace('.pyo','.py')
         self.python = find_python('openmdao.util')
         self.srcfile = os.path.join(os.path.dirname(__file__),'src','doubler.py')
     

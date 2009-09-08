@@ -30,19 +30,19 @@ def _parse_plugin_path(pathstr):
     else:
         return pathstr.split(':')
     
-pluginpath = _parse_plugin_path(os.environ.get('OPENMDAO_PLUGIN_PATH'))
-_old_pluginpath = pluginpath
+plugin_path = _parse_plugin_path(os.environ.get('OPENMDAO_PLUGIN_PATH'))
+_old_plugin_path = plugin_path
 
 
 def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     """Create and return an object specified by the given type, name,
     version, etc.
     """
-    global pluginpath, _old_pluginpath
+    global plugin_path, _old_plugin_path
     
-    if _old_pluginpath != pluginpath:  # update the pkg_res_factory with new search path
-        _pkg_res_factory.update_search_path(pluginpath)
-        _old_pluginpath = pluginpath
+    if _old_plugin_path != plugin_path:  # update the pkg_res_factory with new search path
+        _pkg_res_factory.update_search_path(plugin_path)
+        _old_plugin_path = plugin_path
         
     obj = None
     for fct in _factories:
@@ -73,7 +73,7 @@ def get_available_types(groups=None):
 
 # register factory that loads plugins via pkg_resources
 _pkg_res_factory = PkgResourcesFactory(groups=_container_groups,
-                                       search_path=pluginpath)   
+                                       search_path=plugin_path)   
 register_factory(_pkg_res_factory)
 
 # register factory for simple imports
