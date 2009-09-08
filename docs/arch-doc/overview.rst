@@ -177,9 +177,9 @@ number of eggs.  Some of those eggs will be found in  the OpenMDAO standard
 library, but others will not. Downloading all of those eggs from a package index
 every time a new buildout is created could cause unwanted delays and waste
 space, so configuring the system to avoid unnecessary copying of distributions
-is important. The easiest way to do this is for the user to set the
-**eggs-directory** attribute in his buildout default configuration file (in
-$HOME/.buildout/default.cfg).  After **eggs-directory** is set, all eggs needed
+is important. The easiest way to do this is for users to set the
+**eggs-directory** attribute in their buildout default configuration file (in
+``$HOME/.buildout/default.cfg``).  After **eggs-directory** is set, all eggs needed
 by any buildout run by the user will be installed in that directory, and if
 a needed egg is found in that directory, it doesn't have to be downloaded.
 Multiple versions of the same egg can be present in the **eggs-directory**

@@ -48,7 +48,7 @@ Directorate (ARMD), has a top-level goal to develop system-level,
 multidisciplinary capabilities for both civilian and military applications. To
 work toward achieving this goal, the Subsonic Fixed Wing Project has an
 overarching objective to develop fast and effective physics-based
-multidiscipline analysis and design tools with quantified levels of uncertainty
+multidisciplinary analysis and design tools with quantified levels of uncertainty
 that enable virtual access to the flight envelope and virtual expeditions
 through the design space. NASA is investing in this effort to improve in-house
 analysis and design capabilities important for guiding technology investment in

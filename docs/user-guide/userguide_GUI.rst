@@ -1,4 +1,4 @@
-.. index:: user guide GUIT
+.. index:: user guide GUI
 
 The OpenMDAO GUI
 ==================
