@@ -16,11 +16,12 @@ config.add_extension('axod', sources=['src/*.f'], f2py_options=['-m', 'axod'])
 
 config.add_data_dir('test')
 config.add_data_dir('src')
-config.add_data_files('README.txt')
+config.add_data_files('README.txt', 'axod.pdf', 'AXOD_AAO.pdf')
 # config.add_extension('axod',data_files)
+
 # Dictionary of compiler flags indexed by compiler name.
 f77_compiler_flags = {
-#    'gnu': '-g -fno-automatic',
+    'gnu': '-g -fno-automatic',
     'gnu95': '-g -fno-automatic',
 }
 
@@ -53,6 +54,4 @@ kwds = {'install_requires':['numpy'],
 kwds.update(config.todict())
 
 setup(**kwds)
-
-
 
