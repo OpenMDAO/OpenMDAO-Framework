@@ -111,7 +111,7 @@ There are two primary ways of creating geometry. The first is for a skilled CAD
 operator to create the geometry using a particular CAD package and then provide it
 to the OpenMDAO user.  In this scenario, using the :term:`CAPRI`  :term:`CAE`
 Gateway would allow the user to interact with that existing geometry. The second
-way is to create the geometry programatically from within OpenMDAO using some sort
+way is to create the geometry programmatically from within OpenMDAO using some sort
 of geometry creation API. CAPRI does not provide for creation of new geometry.
 CAPRI is also commercial software, so we cannot release it as part of OpenMDAO,
 but we can provide an OpenMDAO wrapper object that can interact with CAD packages
@@ -262,7 +262,7 @@ traditional GUI running on the desktop implemented in wxPython or PyQt, or a web
 based interface. Initial plans were to implement both kinds of graphical
 interface, but given the size of the development team and the amount of time
 allowed for development, this is simply not possible. In addition to the command
-line and graphical interface, there will also be a programatic interface that
+line and graphical interface, there will also be a programmatic interface that
 allows a user to write a python script that can interact with objects in the
 framework.
 

@@ -10,7 +10,8 @@ libraries and tools mentioned may change as the design of the framework evolves.
 
 **Flexibility**
     - Component Architecture (Zope's or similar)
-        - Adaptor design pattern
+      
+      * Adaptor design pattern
     - Isolated Python Environments using zc.buildout
     - Support multiple IPC protocols by using Twisted_
     

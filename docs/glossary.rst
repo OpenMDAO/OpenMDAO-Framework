@@ -399,6 +399,14 @@ Glossary
         the software will require a ticket, and the ticket number will identify
         the software :term:`branch` where the change is being made.
 
+	
+      **Traits**
+	A software package from Enthought, Inc. that aids in developing Python code. A trait is
+	a type definition that can be used for normal Python object attributes, giving the
+	attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
+	The Traits package works with version 2.4 and later of Python and is similar in some ways
+	to the Python property language feature. 
+
 
       **Variable**
         A wrapper for data passed between framework components. Variables can contain
