@@ -46,11 +46,12 @@ class Passthrough(NPSScomponent):
             's1d_out', 
             'text_out',
             'binary_out',
-            ('b_out','','out',Bool(iostatus='out')), # for bools, we need to supply a trait
+            ('b_out', '', 'out', Bool(iostatus='out')),
+            # for bools, we need to supply a trait
         ], iostatus='out')
         
 
-class NPSSTestCase(unittest.TestCase):
+class TestCase(unittest.TestCase):
 
     # Directory where we can find NPSS model.
     directory = pkg_resources.resource_filename('npsscomponent', 'test')
@@ -58,7 +59,7 @@ class NPSSTestCase(unittest.TestCase):
     def setUp(self):
         """ Called before each test in this class. """
         # Reset simulation root so we can legally access files.
-        SimulationRoot.chdir(NPSSTestCase.directory)
+        SimulationRoot.chdir(TestCase.directory)
         self.npss = set_as_top(Passthrough())
         self.egg_name = None
 
@@ -74,9 +75,9 @@ class NPSSTestCase(unittest.TestCase):
         # Verify NPSScomponent didn't mess-up working directory.
         end_dir = os.getcwd()
         SimulationRoot.chdir(ORIG_DIR)
-        if end_dir != NPSSTestCase.directory:
-            self.fail('Ended in %s, expected %s' \
-                      % (end_dir, NPSSTestCase.directory))
+        if end_dir != TestCase.directory:
+            self.fail('Ended in %s, expected %s'
+                      % (end_dir, TestCase.directory))
 
     def test_load_save(self):
         logging.debug('')
@@ -165,8 +166,8 @@ class NPSSTestCase(unittest.TestCase):
             # Save to an egg in a directory we can't write to.
             self.npss.save_to_egg(dst_dir='/no-permission')
         except IOError, exc:
-            self.assertEqual(str(exc),
-                ": Can't save to '/no-permission', no write permission")
+            msg = ": Can't save to '/no-permission', no write permission"
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected IOError')
 
@@ -179,14 +180,14 @@ class NPSSTestCase(unittest.TestCase):
             egg_info = self.npss.save_to_egg(format=SAVE_LIBYAML)
             self.egg_name = egg_info[0]
         except Exception, exc:
-            msg = ": Can't save to 'passthrough1/passthrough1.yaml': data type not" \
-                  " understood"
+            msg = ": Can't save to 'passthrough1/passthrough1.yaml':" \
+                  " data type not understood"
             self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected TypeError')
         finally:
-            if os.path.exists('NPSS.yaml'):
-                os.remove('NPSS.yaml')
+            if os.path.exists('passthrough1.yaml'):
+                os.remove('passthrough1.yaml')
 
 
 if __name__ == '__main__':
