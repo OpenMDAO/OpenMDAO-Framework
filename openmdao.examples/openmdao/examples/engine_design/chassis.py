@@ -1,5 +1,5 @@
 """
-    chasis.py - Chasis component for the vehicle example problem.
+    chassis.py - Chassis component for the vehicle example problem.
 """
 
 # This openMDAO component determines the vehicle acceleration based on the
@@ -11,7 +11,7 @@ from enthought.traits.api import Float
 from openmdao.main.api import Component, UnitsFloat
 from math import pi
 
-class Chasis(Component):
+class Chassis(Component):
     """ A vehicle dynamics component - calculates acceleration."""
     
     # set up interface to the framework  
@@ -69,4 +69,4 @@ class Chasis(Component):
         
         self.acceleration = (torque/tire_radius - friction - drag)/mass
         
-# End Chasis.py
+# End Chassis.py
