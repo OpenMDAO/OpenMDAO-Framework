@@ -732,6 +732,7 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
     Save the state of `root` and its children to an output stream (or filename).
     If `outstream` is a string, then it is used as a filename.
     The format can be supplied in case something other than cPickle is needed.
+    For the Pickle formats, a `proto` of -1 means use the highest protocol.
     Set `fix_im` False if no instancemethod objects need to be fixed.
     """
     logger = logger or NullLogger()
@@ -750,7 +751,7 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
         fix_instancemethods(root)
     try:
         if format is SAVE_CPICKLE:
-            cPickle.dump(root, outstream, proto) # -1 means use highest protocol
+            cPickle.dump(root, outstream, proto)
         elif format is SAVE_PICKLE:
             pickle.dump(root, outstream, proto)
         elif format is SAVE_YAML:
@@ -760,7 +761,7 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
                 logger.warning('libyaml not available, using yaml instead')
             yaml.dump(root, outstream, Dumper=Dumper)
         else:
-            raise RuntimeError('cannot save object using format '+str(format))
+            raise RuntimeError("can't save object using format '%s'" % format)
     finally:
         if fix_im:
             restore_instancemethods(root)

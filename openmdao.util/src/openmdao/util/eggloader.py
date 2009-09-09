@@ -278,7 +278,7 @@ def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
             logger.warning('libyaml not available, using yaml instead')
         top = yaml.load(instream, Loader=Loader)
     else:
-        raise RuntimeError('cannot load object using format %s' % format)
+        raise RuntimeError("can't load object using format '%s'" % format)
 
     # Restore instancemethods from IMHolder objects.
     restore_instancemethods(top)
