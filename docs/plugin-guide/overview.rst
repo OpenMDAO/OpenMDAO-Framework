@@ -13,9 +13,9 @@ them usable by the framework.
 Types of Plugins
 ----------------
 
-OpenMDAO supports a number of different plugin types, but the most common by
-far is the Component plugin. Other less common types of OpenMDAO plugins exist
-and can be found in the table below.
+OpenMDAO supports a number of different plugin types, but the most common is
+the Component plugin. Other less common types of OpenMDAO plugins exist and
+can be found in the table below.
 
 ===========================  =================================================================================================
 **Plugin Type**              **Purpose**                                                                                              
@@ -82,6 +82,23 @@ need to function properly as an OpenMDAO Component.
         def execute(self):
              self.c = self.a + self.b
 
+
+The code defines the class *SimpleAdder*, and it specifies that the class has
+three traits of type *Float* with the names *a*, *b*, and *c*. All three
+attributes have a default value of 0.0. Attributes *a* and *b* are inputs, so
+we specify that they have an *iostatus* of *'in'*. Attribute *c* is an output,
+so it has an *iostatus* of *'out'*. The *Float* trait is defined in the
+package *enthought.traits.api*, so we have to import it from there before we
+can use it. The *enthought.traits.api* package defines a wide variety of traits
+including basic types like *Int*, *Str*, and *Bool*; containers like *List* and
+*Dictionary*, and many others. OpenMDAO also supplies some special-purpose
+traits as well, e.g., *UnitsFloat*, a floating point attribute with
+units. OpenMDAO traits can be found in *openmdao.lib.traits*. Our *SimpleAdder*
+class inherits from the Component class defined in *openmdao.main.api* so we
+have to import it from there. The function in our Component that performs a
+computation is called *execute()*, and there we define that *c* is simply the
+sum of *a* and *b*. The *self* object that is passed as an argument to
+*execute()* represents an instance of our *SimpleAdder* class.
 
 At this point, we could import the module containing our SimpleAdder class and
 use it within OpenMDAO, but we want more than that. We want to package our
