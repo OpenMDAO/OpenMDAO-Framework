@@ -64,7 +64,6 @@ class Source(Assembly):
         
         self.text_file.filename = 'source.txt'
 
-
         # External file that doesn't exist at time of save.
         self.external_files.append({'path':'does-not-exist'})
 
@@ -476,6 +475,21 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected Exception')
+        finally:
+            os.remove(path)
+
+    def test_save_noforce(self):
+        logging.debug('')
+        logging.debug('test_save_noforce')
+
+        # Set external file path outside model root.
+        path = os.path.join(os.getcwd(), 'unforced-external')
+        out = open(path, 'w')
+        out.close()
+        metadata = self.model.Source.external_files[0]
+        metadata['path'] = path
+        try:
+            self.model.save_to_egg(py_dir=PY_DIR, force_relative=False)
         finally:
             os.remove(path)
 
