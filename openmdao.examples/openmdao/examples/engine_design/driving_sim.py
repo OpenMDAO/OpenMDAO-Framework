@@ -85,7 +85,7 @@ class DrivingSim(Assembly):
         self.create_passthru('vehicle.final_drive_ratio')
         self.create_passthru('vehicle.tire_circumference')
 
-        # Promoted From Vehicle -> Chasis
+        # Promoted From Vehicle -> Chassis
         self.create_passthru('vehicle.mass_vehicle')
         self.create_passthru('vehicle.Cf')
         self.create_passthru('vehicle.Cd')
