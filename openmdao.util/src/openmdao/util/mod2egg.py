@@ -258,8 +258,8 @@ setup(
                                 '%s' % os.path.join(destdir,eggname)])
                 
                     logging.info('installed %s in %s' % (eggname, idir_abs)) 
-            shutil.rmtree(os.path.join(destdir, modname, 'build'))
-            shutil.rmtree(os.path.join(destdir, modname, modname+'.egg-info'))
+            shutil.rmtree(os.path.join(pkgdir, modname, 'build'))
+            shutil.rmtree(os.path.join(pkgdir, modname, modname+'.egg-info'))
     finally:
         os.chdir(orig_dir)
         if not options.keep:
@@ -269,7 +269,7 @@ setup(
    
 if __name__ == "__main__":
     try:
-        mod2egg(sys.argv[1:])
+        sys.exit(mod2egg(sys.argv[1:]))
     except Mod2EggError, err:
         sys.stderr.write(str(err)+'\n')
         if err.parser:
