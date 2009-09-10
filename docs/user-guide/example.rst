@@ -41,20 +41,20 @@ mathematical model for the engine came from open literature.
 The simulation of the desired performance metrics primarily requires a model of the vehicle's power-train,
 including the engine, the transmission, and the rear differential. In addition, the equation of motion for
 the vehicle is needed. A logical way to compartmentalize the vehicle model is to break it into component
-models matching each of these subsystems: engine, transmission, and chasis (which includes the
+models matching each of these subsystems: engine, transmission, and chassis (which includes the
 rear differential ratio). In a typical problem, each of these component models will be a completely
 separate implementation, possibly with different authors or vendors. Each of these component models also
 requires a set of design variables which are detailed below.
 
-So a vehicle contains an engine, a transmission, and a chasis component. In addition to the
+So a vehicle contains an engine, a transmission, and a chassis component. In addition to the
 design variables, there are three simulation variables: throttle position, gear, and velocity. These
 variables, which are independent of any design, are used during simulation, where the vehicle model is
 essentially being "driven" to determine the desired test metrics. There are also a couple of
-other simulation inputs, such as RPM and Power, that are required by the engine and chasis
+other simulation inputs, such as RPM and Power, that are required by the engine and chassis
 models. These are provided by other components in the vehicle. For example, the engine needs an RPM to
 calculate its power. This RPM is output by the transmission component, which determines it from the
 vehicle's velocity and gear position. These inter-dependencies define the connection order for vehicle
-components in terms of the Data Flow: Transmission -> Engine -> Chasis. 
+components in terms of the Data Flow: Transmission -> Engine -> Chassis. 
 
 The full process model is shown below.
 
@@ -244,17 +244,17 @@ _`2`. Shikida, Takasuke, Yoshikatsu Nakamura, Tamio Nakakubo, and Hiroyuki Kawas
 Speed 2ZZ-GE Engine," SAE World Congress, March 6-9 2000, SAE 2000-01-0671.
 
   
-*The Chasis Model*
+*The Chassis Model*
 ____________________________
 
-The chasis model must simply provide the vehicle acceleration given the torque produced by
+The chassis model must simply provide the vehicle acceleration given the torque produced by
 the engine and scaled by the transmission. The equation used for the model comes from summing the
 forces acting on the vehicle in the forward direction. These forces include both the rolling friction
 associated with the tires and the vehicle drag which is proportional to the square of velocity.
 
 
 
-**Chasis - Design Variables:**
+**Chassis - Design Variables:**
 
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
@@ -270,7 +270,7 @@ area		   Front profile area				m*m
 
 |
 
-**Chasis - Simulation Inputs:**
+**Chassis - Simulation Inputs:**
 
 ==================  ===========================================  ======
 **Variable**	 	  **Description**			 **Units**
@@ -287,7 +287,7 @@ tire_circumference  Circumference of the tire			 m
 
 |
 
-**Chasis - Outputs:**
+**Chassis - Outputs:**
 
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
@@ -394,7 +394,7 @@ contains the pieces needed for the model:
 
 	``openmdao.examples/openmdao/examples/engine_design``
 
-The three engine models have been implemented in transmission.py, engine.py, and chasis.py. It will
+The three engine models have been implemented in transmission.py, engine.py, and chassis.py. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
 
 **Building a Python Component**
@@ -437,7 +437,8 @@ The next step is to add the inputs and outputs that are defined in our model des
 ::
 
 	from enthought.traits.api import Float, Int
-	from openmdao.main.api import Component, UnitsFloat
+	from openmdao.main.api import Component
+	from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 	class Transmission(Component):
 	    """ A simple transmission model."""
@@ -560,7 +561,7 @@ connected to each other.
 Executing a Component in the Python Shell
 -----------------------------------------
 
-The Python implementations of the three component models (engine.py, transmission.py, chasis.py) should all make sense now. This next section will demonstrate how to instantiate and use these components in the Python shell. From the top level directory in your OpenMDAO source tree, go to the ``buildout`` directory. From here, the Python shell can be launched by typing the following at the Unix prompt:
+The Python implementations of the three component models (engine.py, transmission.py, chassis.py) should all make sense now. This next section will demonstrate how to instantiate and use these components in the Python shell. From the top level directory in your OpenMDAO source tree, go to the ``buildout`` directory. From here, the Python shell can be launched by typing the following at the Unix prompt:
 
 .. _Prompt1: 
 
@@ -657,7 +658,7 @@ When an assembly does not explicitly contain a driver, the assembly executes the
 data connection.
 
 For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission,
-Engine, and Chasis components.
+Engine, and Chassis components.
 
 .. _Code5: 
 
@@ -665,12 +666,13 @@ Engine, and Chasis components.
 
 	from enthought.traits.api import implements, Interface, Float, Int
 
-	from openmdao.main.api import Assembly, UnitsFloat
+	from openmdao.main.api import Assembly
+	from openmdao.lib.traits.unitsfloat import UnitsFloat
 	from openmdao.main.interfaces import IComponent
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission
-	from openmdao.examples.engine_design.chasis import Chasis
+	from openmdao.examples.engine_design.chassis import Chassis
 	
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
@@ -686,15 +688,15 @@ Engine, and Chasis components.
         
 	        self.add_container('transmission', Transmission())
 	        self.add_container('engine', Engine())
-	        self.add_container('chasis', Chasis())
+	        self.add_container('chassis', Chassis())
 
-The Engine, Transmission, and Chasis components are imported the same way as they were in the
+The Engine, Transmission, and Chassis components are imported the same way as they were in the
 Python shell, using ``openmdao.examples.engine_design`` name-space. In creating a new class, the main
 difference between a component and an assembly is that an assembly inherits from the Assembly class
 instead of the Component class. This gives it the ability to contain other components, and to manage their
 data flow.
 
-Notice here that an instance of the Transmission, Engine, and Chasis are created, with the
+Notice here that an instance of the Transmission, Engine, and Chassis are created, with the
 parent set to "self," which in this context is Vehicle. This way, these components are created as part
 of the assembly, and are acessible through ``Vehicle.Transmission``, etc.
 
@@ -708,9 +710,9 @@ Now that the components are instantiated in the assembly, they need to be hooked
 ::
 
 	self.connect('transmission.RPM','engine.RPM')
-        self.connect('transmission.torque_ratio','chasis.torque_ratio')
-        self.connect('engine.torque','chasis.engine_torque')
-        self.connect('engine.engine_weight','chasis.mass_engine')
+        self.connect('transmission.torque_ratio','chassis.torque_ratio')
+        self.connect('engine.torque','chassis.engine_torque')
+        self.connect('engine.engine_weight','chassis.mass_engine')
 	
 The first argument in the call to ``self.connect`` is the output variable, and the second argument is
 the input variable. For a connection to be valid, the units of the output and input must be of the same
@@ -722,7 +724,7 @@ The Vehicle assembly behaves like any other component when interacting with the 
 inputs and outputs, it can be hooked up to other components and included in other assemblies, and it can
 be run. For the Vehicle block to be connected to other components and used in a simulation or design
 study, the inputs and outputs have to be assigned. We essentially just want to promote the design and
-simulation variables from the Engine, Transmission, and Chasis components to the input and
+simulation variables from the Engine, Transmission, and Chassis components to the input and
 output of the Vehicle component. This can be done by creating passthroughs in the Vehicle assembly.
 
 .. _Code7: 
@@ -737,14 +739,14 @@ output of the Vehicle component. This can be done by creating passthroughs in th
 	self.create_passthru('transmission.ratio2')
 	# ...
 	# ...
-	self.create_passthru('chasis.mass_vehicle')
-	self.create_passthru('chasis.Cf')
+	self.create_passthru('chassis.mass_vehicle')
+	self.create_passthru('chassis.Cf')
 		
 Now, the Vehicle assembly has its own inputs and outputs and can be accessed just like in any other
 component. As the name implies, these passthroughs purely pass data from the assembly input to the contained 
 component inputs. As such, there is no unit conversion as this would not be computationally efficient. The
 engine example problem actually contains components that expects inputs to be in English units (Engine and 
-Transmisson) as well as a component that expects inputs to be in metric (Chasis). There are two inputs that
+Transmisson) as well as a component that expects inputs to be in metric (Chassis). There are two inputs that
 are required by components with units that differ from the assembly level -- velocity and tire_circumference. 
 Unit conversion must be performed on these, so they need to be handled by regular component connections. To
 accomplish this, the inputs must be declared in the class header:
@@ -770,12 +772,12 @@ Now these input are available to connect to the components.
 
 ::
 
-        self.connect('velocity', 'chasis.velocity')
+        self.connect('velocity', 'chassis.velocity')
         self.connect('velocity', 'transmission.velocity')
-        self.connect('tire_circumference', 'chasis.tire_circ')
+        self.connect('tire_circumference', 'chassis.tire_circ')
         self.connect('tire_circumference', 'transmission.tire_circ')
 
-This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chasis and
+This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chassis and 
 Transmission components.
 
 Executing the Vehicle Assembly
@@ -894,7 +896,7 @@ simulations were implemented as a Component instead. However, this leads to the 
 :term:`Sockets`, which require the implementation to be an Assembly instead of just a Component.
 
 To investigate designs, a Vehicle class was defined as an assembly in OpenMDAO. This class has a set of specific inputs and outputs
-that include the design variables for the engine, transmission, and chasis, and the simulation
+that include the design variables for the engine, transmission, and chassis, and the simulation
 variables velocity, gear position and throttle position. These inputs and outputs comprise an interface
 for the Vehicle class. In the future, the user might want to replace the current vehicle model with a new model. This new model
 will be compatible provided that it has the same interface as the current vehicle model. The interface checking is 

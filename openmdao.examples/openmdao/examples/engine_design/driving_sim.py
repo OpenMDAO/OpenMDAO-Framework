@@ -14,7 +14,8 @@ from csv import reader
 from pkg_resources import resource_stream
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Assembly, UnitsFloat
+from openmdao.main.api import Assembly
+from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 from openmdao.examples.engine_design.vehicle import Vehicle
 

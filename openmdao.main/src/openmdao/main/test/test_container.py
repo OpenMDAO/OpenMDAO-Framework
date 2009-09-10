@@ -5,7 +5,7 @@ import StringIO
 
 from enthought.traits.api import Float, TraitError
 
-import openmdao.util.save_load as constants
+import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container
 
 

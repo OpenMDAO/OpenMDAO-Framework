@@ -13,10 +13,10 @@ Known problems:
 import os.path
 
 from enthought.traits.api import Array, Float
-from openmdao.main.api import Assembly, Component, Container, FileTrait
+from openmdao.main.api import Assembly, Component, Container, FileTrait, \
+                              set_as_top
 
 from npsscomponent import NPSScomponent
-
 
 
 # pylint: disable-msg=E1101
@@ -217,12 +217,11 @@ class TracingNPSS(NPSScomponent):
         print self.get_pathname(), '    complete'
 
 
-class Model(Assembly):
+class SBJ_Propulsion(Assembly):
     """ SBJ propulsion model. """
 
-    #name='SBJ_Propulsion', 
     def __init__(self, *args, **kwargs):
-        super(Model, self).__init__(*args, **kwargs)
+        super(SBJ_Propulsion, self).__init__(*args, **kwargs)
         self.external_files.append({'path':'README.txt', 'constant':True})
 
         model_dir = os.path.join('..', 'Full_Model', 'Cycle', 'run')
@@ -244,46 +243,24 @@ class Model(Assembly):
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MC_ADP.mdl'))
         self.add_container('NPSS_ADP', 
-                           TracingNPSS(directory='NPSS_ADP',
-                                       arglist=arglist, 
+                           TracingNPSS(directory='NPSS_ADP', arglist=arglist, 
                                        output_filename='NPSS.out'))
         self.NPSS_ADP.external_files.append(
             {'path':os.path.join(model_dir, 'MC_ADP.run')})
         self.NPSS_ADP.run_command = 'mcRun()'
         self.NPSS_ADP.reload_flag = 'mcReload'
 
-        self.connect('Design.alt',       'NPSS_ADP.engine.alt')
-        self.connect('Design.extractionRatio',
-                     'NPSS_ADP.engine.extractionRatio')
-        self.connect('Design.FanPRdes',  'NPSS_ADP.engine.FanPRdes')
-        self.connect('Design.HpcPRdes',  'NPSS_ADP.engine.HpcPRdes')
-        self.connect('Design.Knoz',      'NPSS_ADP.engine.Knoz')
-        self.connect('Design.MN',        'NPSS_ADP.engine.MN')
-        self.connect('Design.Cfg',       'NPSS_ADP.engine.nozzle.Cfg')
-        self.connect('Design.TOCThrust', 'NPSS_ADP.engine.TOCThrust')
-
         # SLS.
         arglist = []
         arglist.extend(includes)
         arglist.append(os.path.join(model_dir, 'MC_SLS.mdl'))
         self.add_container('NPSS_SLS', 
-             TracingNPSS(directory='NPSS_SLS',
-                         arglist=arglist, 
-                         output_filename='NPSS.out'))
+                           TracingNPSS(directory='NPSS_SLS', arglist=arglist, 
+                                       output_filename='NPSS.out'))
         self.NPSS_SLS.external_files.append(
             {'path':os.path.join(model_dir, 'MC_SLS.run')})
         self.NPSS_SLS.run_command = 'mcRun()'
         self.NPSS_SLS.reload_flag = 'mcReload'
-
-        self.connect('Design.alt',       'NPSS_SLS.engine.alt')
-        self.connect('Design.extractionRatio',
-                     'NPSS_SLS.engine.extractionRatio')
-        self.connect('Design.FanPRdes',  'NPSS_SLS.engine.FanPRdes')
-        self.connect('Design.HpcPRdes',  'NPSS_SLS.engine.HpcPRdes')
-        self.connect('Design.Knoz',      'NPSS_SLS.engine.Knoz')
-        self.connect('Design.MN',        'NPSS_SLS.engine.MN')
-        self.connect('Design.Cfg',       'NPSS_SLS.engine.nozzle.Cfg')
-        self.connect('Design.TOCThrust', 'NPSS_SLS.engine.TOCThrust')
 
         # WATE.
         wate_dir = os.path.join('..', 'Full_Model', 'Weight', 'run')
@@ -297,14 +274,67 @@ class Model(Assembly):
             '-I', '../Full_Model/ROSE',
             '-I', '../Full_Model/ROSE/BaseClasses']
         arglist.append(os.path.join(wate_dir, 'MCengine.mdl'))
-        self.add_container('NPSS_WATE', TracingNPSS(directory='NPSS_WATE',
-                                                    arglist=arglist, 
-                                                    output_filename='NPSS.out'))
+        self.add_container('NPSS_WATE',
+                           TracingNPSS(directory='NPSS_WATE', arglist=arglist, 
+                                       output_filename='NPSS.out'))
         self.NPSS_WATE.external_files.append(
             {'path':os.path.join(wate_dir, 'MCengine.run')})
         self.NPSS_WATE.run_command = 'mcRun()'
         self.NPSS_WATE.reload_flag = 'mcReload'
 
+        # FLOPS.
+        arglist = []
+        arglist.extend(includes)
+        arglist.append(os.path.join(model_dir, 'MCengine.mdl'))
+        self.add_container('NPSS_FLOPS',
+                           TracingNPSS(directory='NPSS_FLOPS', arglist=arglist, 
+                                       output_filename='NPSS.out'))
+        self.NPSS_FLOPS.external_files.append(
+            {'path':os.path.join(model_dir, 'MCengine.run')})
+        self.NPSS_FLOPS.run_command = 'mcRun()'
+        self.NPSS_FLOPS.reload_flag = 'mcReload'
+
+        # ANOPP
+        arglist = []
+        arglist.extend(includes)
+        arglist.append(os.path.join(model_dir, 'MCnoise.mdl'))
+        self.add_container('NPSS_ANOPP',
+                           TracingNPSS(directory='NPSS_ANOPP', arglist=arglist, 
+                                       output_filename='NPSS.out'))
+        self.NPSS_ANOPP.external_files.append(
+            {'path':os.path.join(model_dir, 'MCnoise.run')})
+        self.NPSS_ANOPP.run_command = 'mcRun()'
+        self.NPSS_ANOPP.reload_flag = 'mcReload'
+
+        # Propulsion data.
+        self.add_container('PropulsionData', PropulsionData())
+
+    def tree_defined(self):
+        super(SBJ_Propulsion, self).tree_defined()
+
+        # ADP.
+        self.connect('Design.alt',       'NPSS_ADP.engine.alt')
+        self.connect('Design.extractionRatio',
+                     'NPSS_ADP.engine.extractionRatio')
+        self.connect('Design.FanPRdes',  'NPSS_ADP.engine.FanPRdes')
+        self.connect('Design.HpcPRdes',  'NPSS_ADP.engine.HpcPRdes')
+        self.connect('Design.Knoz',      'NPSS_ADP.engine.Knoz')
+        self.connect('Design.MN',        'NPSS_ADP.engine.MN')
+        self.connect('Design.Cfg',       'NPSS_ADP.engine.nozzle.Cfg')
+        self.connect('Design.TOCThrust', 'NPSS_ADP.engine.TOCThrust')
+
+        # SLS.
+        self.connect('Design.alt',       'NPSS_SLS.engine.alt')
+        self.connect('Design.extractionRatio',
+                     'NPSS_SLS.engine.extractionRatio')
+        self.connect('Design.FanPRdes',  'NPSS_SLS.engine.FanPRdes')
+        self.connect('Design.HpcPRdes',  'NPSS_SLS.engine.HpcPRdes')
+        self.connect('Design.Knoz',      'NPSS_SLS.engine.Knoz')
+        self.connect('Design.MN',        'NPSS_SLS.engine.MN')
+        self.connect('Design.Cfg',       'NPSS_SLS.engine.nozzle.Cfg')
+        self.connect('Design.TOCThrust', 'NPSS_SLS.engine.TOCThrust')
+
+        # WATE.
         self.connect('Design.alt',       'NPSS_WATE.engine.ambient.Zalt')
         self.connect('Design.MN',        'NPSS_WATE.engine.ambient.ZMN')
         self.connect('Design.extractionRatio',
@@ -315,17 +345,6 @@ class Model(Assembly):
         self.connect('Design.TOCThrust', 'NPSS_WATE.engine.TOCThrust')
 
         # FLOPS.
-        arglist = []
-        arglist.extend(includes)
-        arglist.append(os.path.join(model_dir, 'MCengine.mdl'))
-        self.add_container('NPSS_FLOPS', TracingNPSS(directory='NPSS_FLOPS',
-                                                     arglist=arglist, 
-                                                     output_filename='NPSS.out'))
-        self.NPSS_FLOPS.external_files.append(
-            {'path':os.path.join(model_dir, 'MCengine.run')})
-        self.NPSS_FLOPS.run_command = 'mcRun()'
-        self.NPSS_FLOPS.reload_flag = 'mcReload'
-
         self.connect('Design.alt',       'NPSS_FLOPS.engine.alt')
         self.connect('Design.extractionRatio',
                      'NPSS_FLOPS.engine.extractionRatio')
@@ -337,17 +356,6 @@ class Model(Assembly):
         self.connect('Design.TOCThrust', 'NPSS_FLOPS.engine.TOCThrust')
 
         # ANOPP
-        arglist = []
-        arglist.extend(includes)
-        arglist.append(os.path.join(model_dir, 'MCnoise.mdl'))
-        self.add_container('NPSS_ANOPP', TracingNPSS(directory='NPSS_ANOPP',
-                                                     arglist=arglist, 
-                                                     output_filename='NPSS.out'))
-        self.NPSS_ANOPP.external_files.append(
-            {'path':os.path.join(model_dir, 'MCnoise.run')})
-        self.NPSS_ANOPP.run_command = 'mcRun()'
-        self.NPSS_ANOPP.reload_flag = 'mcReload'
-
         self.connect('Design.alt',       'NPSS_ANOPP.engine.alt')
         self.connect('Design.extractionRatio',
                      'NPSS_ANOPP.engine.extractionRatio')
@@ -437,8 +445,6 @@ class Model(Assembly):
                      'NPSS_ANOPP.WATE_LPT.tipRadius_stg')
 
         # Propulsion data.
-        PropulsionData(parent=self)
-
 #       PropulsionData.FLOPS.dnac =
 #           2*(NPSS_WATE.engine.WATE.WATE_fan.bladeTipRadius
 #              + NPSS_WATE.engine.WATE.WATE_fan.contRingRadialThickness/12)
@@ -474,6 +480,7 @@ class Model(Assembly):
 
 
 if __name__ == '__main__':
-#    Model().run()
-    Model().check_save_load()
+    top = set_as_top(SBJ_Propulsion())
+#    top.run()
+    top.check_save_load()
 

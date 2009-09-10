@@ -32,10 +32,9 @@ The example below is equivalent to calling enable_console():
 """
 
 #public symbols
-__all__ = ['logger', 'getLogger', 'enable_console', 'disable_console', 'Logger',
+__all__ = ['logger', 'getLogger', 'enable_console', 'disable_console',
+           'Logger', 'NullLogger',
            'LOG_DEBUG', 'LOG_INFO', 'LOG_WARNING', 'LOG_ERROR', 'LOG_CRITICAL']
-
-
 
 
 import logging
@@ -168,4 +167,26 @@ class Logger(object):
     def log(self, level, msg, *args, **kwargs):
         """ Log a message at a specified level. """
         self._logger.log(level, msg, *args, **kwargs)
+
+
+class NullLogger(object):
+    """ Can be useful when no logger has been supplied to a routine. """
+
+    def debug(self, msg, *args, **kwargs):
+        pass
+
+    def info(self, msg, *args, **kwargs):
+        pass
+
+    def warning(self, msg, *args, **kwargs):
+        pass
+
+    def error(self, msg, *args, **kwargs):
+        pass
+
+    def critical(self, msg, *args, **kwargs):
+        pass
+
+    def log(self, msg, *args, **kwargs):
+        pass
 

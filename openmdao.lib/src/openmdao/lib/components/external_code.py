@@ -9,11 +9,12 @@ import sys
 import time
 
 if sys.platform == 'win32':
-    import win32api
+    import ctypes
 
 from enthought.traits.api import Bool, Str, Any
 
-from openmdao.main.api import Component, UnitsFloat
+from openmdao.main.api import Component
+from openmdao.lib.traits.unitsfloat import UnitsFloat
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 
 
@@ -21,7 +22,10 @@ from openmdao.main.exceptions import RunInterrupted, RunStopped
 def kill_proc(proc, sig):
     """ Kill process with given signal. """
     if sys.platform == 'win32':
-        win32api.TerminateProcess(int(proc._handle), -1)
+        # BAN - changed over to ctypes.windll.kernel32.TerminateProcess 
+        #       to eliminate dependency on win32api (it's painful to build win32api egg)
+        #win32api.TerminateProcess(int(proc._handle), -1)
+        ctypes.windll.kernel32.TerminateProcess(int(proc._handle), -1)
     else:
         os.kill(proc.pid, sig)
 

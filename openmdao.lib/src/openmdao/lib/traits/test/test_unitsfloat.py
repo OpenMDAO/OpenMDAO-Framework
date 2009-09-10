@@ -5,9 +5,10 @@ import unittest
 from enthought.traits.api import TraitError
 
 from openmdao.main.exceptions import ConstraintError
-from openmdao.main.api import Container, UnitsFloat
+from openmdao.main.api import Container
+from openmdao.lib.traits.unitsfloat import UnitsFloat, convert_units
 
-class FloatTestCase(unittest.TestCase):
+class UnitsFloatTestCase(unittest.TestCase):
 
     def setUp(self):
         """this setup function will be called before each test in this class"""
@@ -38,12 +39,14 @@ class FloatTestCase(unittest.TestCase):
         
         # use unit_convert to perform unit conversion
         self.hobj.float1 = 3.
-        self.hobj.float2 = self.hobj.unit_convert('float1', 'inch')
+        self.hobj.float2 = convert_units(self.hobj.float1, self.hobj.trait('float1').units,
+                                         'inch')
         self.assertEqual(36., self.hobj.float2)
 
     def test_unit_conversion(self):
         self.hobj.float2 = 12.  # inches
-        self.hobj.float1 = self.hobj.unit_convert('float2', 'ft')
+        self.hobj.float1 = convert_units(self.hobj.float2, self.hobj.trait('float2').units,
+                                         'ft')
         self.assertEqual(self.hobj.float1, 1.) # 12 inches = 1 ft
         
         # now set to a value that will violate constraint after conversion

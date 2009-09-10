@@ -1,4 +1,4 @@
-.. index:: user guide script interface
+.. index:: user guide script interface
 
 The OpenMDAO Script Interface
 ==============================
@@ -111,8 +111,8 @@ PyEvolve
 Newton Solver
 +++++++++++++
 
-*Adding new Optimzers*
-~~~~~~~~~~~~~~~~~~~~~~
+*Adding new Optimizers*
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Running OpenMDAO
 -----------------

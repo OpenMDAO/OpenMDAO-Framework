@@ -9,7 +9,8 @@
 
 from enthought.traits.api import implements, Interface
 
-from openmdao.main.api import Assembly, UnitsFloat, set_as_top
+from openmdao.main.api import Assembly, set_as_top
+from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 from openmdao.examples.engine_design.transmission import Transmission
 from openmdao.examples.engine_design.chasis import Chasis

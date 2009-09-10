@@ -67,7 +67,7 @@ class CaseIteratorDriver(Driver):
 
         self._egg_file = None
         self._egg_required_distributions = None
-        self._egg_missing_modules = None
+        self._egg_orphan_modules = None
 
         self._reply_queue = None
         self._server_lock = None
@@ -116,7 +116,7 @@ class CaseIteratorDriver(Driver):
                 egg_info = replicant.save_to_egg(version=version)
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
-                self._egg_missing_modules = [name for name, path in egg_info[2]]
+                self._egg_orphan_modules = [name for name, path in egg_info[2]]
                 del replicant
 
             self.raise_exception('Concurrent evaluation is not supported yet.',
@@ -129,7 +129,7 @@ class CaseIteratorDriver(Driver):
                 name = 'cid_%d' % (i+1)
                 resources = {
                     'required_distributions':self._egg_required_distributions,
-                    'missing_modules':self._egg_missing_modules}
+                    'orphan_modules':self._egg_orphan_modules}
                 server_thread = threading.Thread(target=self._service_loop,
                                                  args=(name, resources))
                 server_thread.setDaemon(True)

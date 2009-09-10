@@ -91,14 +91,19 @@ so it has an *iostatus* of *'out'*. The *Float* trait is defined in the
 package *enthought.traits.api*, so we have to import it from there before we
 can use it. The *enthought.traits.api* package defines a wide variety of traits
 including basic types like *Int*, *Str*, and *Bool*; containers like *List* and
-*Dictionary*, and many others. OpenMDAO also supplies some special-purpose
-traits as well, e.g., *UnitsFloat*, a floating point attribute with
-units. OpenMDAO traits can be found in *openmdao.lib.traits*. Our *SimpleAdder*
-class inherits from the Component class defined in *openmdao.main.api* so we
-have to import it from there. The function in our Component that performs a
-computation is called *execute()*, and there we define that *c* is simply the
-sum of *a* and *b*. The *self* object that is passed as an argument to
-*execute()* represents an instance of our *SimpleAdder* class.
+*Dictionary*, and many others. The enthought.traits user manual can be found 
+`here <http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_
+and a list of available traits can be found 
+`here <http://code.enthought.com/projects/files/ETS32_API/enthought.traits.api.html>`_.
+
+OpenMDAO also supplies some special-purpose traits as well, e.g.,
+*UnitsFloat*, a floating point attribute with units. OpenMDAO traits can be
+found in *openmdao.lib.traits*. Our *SimpleAdder* class inherits from the
+Component class defined in *openmdao.main.api* so we have to import it from
+there. The function in our Component that performs a computation is called
+*execute()*, and there we define that *c* is simply the sum of *a* and *b*.
+The *self* object that is passed as an argument to *execute()* represents an
+instance of our *SimpleAdder* class.
 
 At this point, we could import the module containing our SimpleAdder class and
 use it within OpenMDAO, but we want more than that. We want to package our

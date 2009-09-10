@@ -24,7 +24,5 @@ from openmdao.main.filevar import FileTrait, FileValue
 
 from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 
-from openmdao.main.unitsfloat import UnitsFloat, convert_units
-
-from openmdao.util.save_load import SAVE_YAML, SAVE_LIBYAML, \
+from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \
                                     SAVE_PICKLE, SAVE_CPICKLE
