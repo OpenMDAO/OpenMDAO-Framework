@@ -84,5 +84,3 @@ setup(**kwds)
       #""",
       #)
 
-print "!! Test in Progress"
-
