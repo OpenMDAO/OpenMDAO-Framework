@@ -890,7 +890,7 @@ implement the solution procedure as a driver (or two drivers if prefered). So fa
 mentioned only as an attribute of assemblies, and they will be more thoroughly treated in the next section.
 Implementing the vehicle simulation as a driver might be a bit confusing for one's first exposure to
 drivers, particularly since it involves nesting the simulation driver with an optimizer, so the vehicle
-simulations were implemented as a Component instead. However, this leads to the concept of
+simulations were implemented in a single Component instead. However, this leads to the concept of
 :term:`Sockets`, which require the implementation to be an Assembly instead of just a Component.
 
 To investigate designs, a Vehicle class was defined as an assembly in OpenMDAO. This class has a set of specific inputs and outputs
