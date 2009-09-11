@@ -5,10 +5,8 @@ import os, sys
 from setuptools import setup
 
 
-version = '0.1.0'
-
 setup(name='openmdao.main',
-      version=version,
+      version='0.1',
       description="OpenMDAO framework infrastructure",
       long_description="""\
 """,
@@ -41,7 +39,12 @@ setup(name='openmdao.main',
           'networkx==1.0rc1',
           'Traits>=3.0',
       ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
-      )
+      entry_points = {
+          "distutils.setup_keywords": [
+              "openmdao_metadata=openmdao.main.dist:assert_dict_or_none",
+              ],
+          "egg_info.writers": [
+              "openmdao_metadata.txt=openmdao.main.dist:write_pretty",
+              ],
+          },
+    )

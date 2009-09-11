@@ -26,11 +26,13 @@ setup(name='openmdao.examples',
       url='',
       license='NASA Open Source Agreement 1.3',
       namespace_packages=["openmdao"],
-      #package_dir={'': 'src'},
-      packages=find_packages(), #['openmdao','openmdao.examples'],
+      packages=find_packages(), 
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,
+      setup_requires=[
+          'setuptools_bzr'
+      ],
       install_requires=[
          'setuptools'
       ],

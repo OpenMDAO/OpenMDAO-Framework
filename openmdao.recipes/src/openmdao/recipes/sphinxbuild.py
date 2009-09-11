@@ -215,7 +215,7 @@ class SphinxBuild(object):
             os.makedirs(os.path.join(self.builddir, 'doctrees'))
        
         
-        # create the builddocs script
+        # create the sphinx-build script
         bspath = os.path.join(self.buildout['buildout']['directory'], 'bin',
                               'sphinx-build')
          
