@@ -664,7 +664,7 @@ Component.load_from_eggfile('%s', install=False)
                 self.info('Restoring files in %s', os.getcwd())
 
             for metadata in self.external_files:
-                pattern = metadata['path']
+                pattern = metadata.get('path', None)
                 if pattern:
                     is_input = metadata.get('input', False)
                     const = metadata.get('constant', False)
@@ -673,10 +673,10 @@ Component.load_from_eggfile('%s', install=False)
                                      binary)
 
             for fvarname, fvar, ftrait in fvars:
-                pattern = fvar.filename
-                if pattern:
+                path = fvar.filename
+                if path:
                     is_input = ftrait.iostatus == 'in'
-                    self._copy_files(pattern, package, relpath, is_input, False,
+                    self._copy_files(path, package, relpath, is_input, False,
                                      ftrait.binary)
 
             for component in [c for c in self.values(recurse=False)
@@ -724,7 +724,12 @@ Component.load_from_eggfile('%s', install=False)
                         src = pkg_resources.resource_stream(package, src_name)
                         mode = 'wb' if binary else 'w'
                         dst = open(filename, mode)
-                        dst.write(src.read())
+                        chunk = 1 << 20  # 1MB
+                        bytes = src.read(chunk)
+                        while bytes:
+                            dst.write(bytes)
+                            bytes = src.read(chunk)
+                        src.close()
                         dst.close()
             if not found and is_input:
                 self.warning("No files found for '%s'", pattern)
