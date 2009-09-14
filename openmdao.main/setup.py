@@ -44,7 +44,7 @@ setup(name='openmdao.main',
               "openmdao_metadata=openmdao.main.dist:assert_dict_or_none",
               ],
           "egg_info.writers": [
-              "openmdao_metadata.txt=openmdao.main.dist:write_pretty",
+              "openmdao_metadata.txt=openmdao.main.dist:write_openmdao_meta",
               ],
           },
     )

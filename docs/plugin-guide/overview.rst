@@ -264,6 +264,12 @@ within the OpenMDAO framework:
           'openmdao.drivers': ['MyDriver = mydriver:MyDriver']
         }
 
+        
+**openmdao_metadata**
+    This is openmdao-specific metadata, supplied as a dict.  At this time, there are 
+    no standards defining what metadata will be required, if any, within the 
+    openmdao_metadata dictionary, but you can also add custom metadata here.
+    
     
 With the ``simple_adder`` directory structure shown above and the ``setup.py`` file shown,
 we can now build our egg.  From the ``simple_adder`` directory, typing
