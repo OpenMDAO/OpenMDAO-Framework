@@ -311,7 +311,7 @@ class Component (Container):
     def save_to_egg(self, name=None, version=None, py_dir=None,
                     force_relative=True, src_dir=None, src_files=None,
                     child_objs=None, dst_dir=None, format=SAVE_CPICKLE,
-                    proto=-1, use_setuptools=False):
+                    proto=-1, use_setuptools=False, observer=None):
         """Save state and other files to an egg.  Typically used to copy all or
         part of a simulation to another user or machine.  By specifying child
         components in `child_objs`, it will be possible to create instances of
@@ -330,6 +330,10 @@ class Component (Container):
           to this set.
         - `child_objs` is a list of child objects for additional entries.
         - `dst_dir` is the directory to write the egg in.
+        - During module analysis, `observer` will be called with \
+          (filename, -1, -1, -1, -1).  Later `observer` will be called \
+          with (filename, completed_files, total_files, completed_bytes, \
+          total_bytes). If the observer returns False, the write is aborted.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns (egg_filename, required_distributions, orphan_modules).
@@ -338,8 +342,8 @@ class Component (Container):
             src_dir = self.get_abs_directory()
         if src_dir.endswith(os.sep):
             src_dir = src_dir[:-1]
-        if src_files is None:
-            src_files = set()
+
+        src_files = src_files or set()
 
         fixup_dirs = []  # Used to restore original component config.
         fixup_meta = []
@@ -380,7 +384,8 @@ class Component (Container):
 
             return super(Component, self).save_to_egg(
                        name, version, py_dir, src_dir, src_files,
-                       child_objs, dst_dir, format, proto, use_setuptools)
+                       child_objs, dst_dir, format, proto, use_setuptools,
+                       observer)
         finally:
             # If any component config has been modified, restore it.
             for comp, path in fixup_dirs:
@@ -413,30 +418,32 @@ class Component (Container):
         """Ensure external files for `comp` are in relative form, and update
         src_files to include all matches."""
         for metadata in comp.external_files:
-            path = metadata['path']
-            path = os.path.expanduser(path)
-            path = os.path.expandvars(path)
+            path = metadata.get('path', None)
+            if not path:
+                continue
             if not os.path.isabs(path):
                 path = os.path.join(comp_dir, path)
+            path = os.path.normpath(path)
             paths = glob.glob(path)
-            for path in paths:
-                path = os.path.normpath(path)
-                if not os.path.exists(path):
-                    continue
-                if root_dir:
-                    if path.startswith(root_dir):
-                        save_path = self._relpath(path, root_dir)
-                        if os.path.isabs(metadata['path']):
-                            path = self._relpath(path, comp_dir)
-                            fixup_meta.append((metadata, metadata['path']))
-                            metadata['path'] = path
-                    else:
-                        self.raise_exception(
-                            "Can't save, %s file '%s' doesn't start with '%s'."
-                            % (comp.get_pathname(), path, root_dir), ValueError)
+            if not paths:
+                continue
+
+            if root_dir:
+                if path.startswith(root_dir):
+                    if os.path.isabs(metadata['path']):
+                        path = self._relpath(path, comp_dir)
+                        fixup_meta.append((metadata, metadata['path']))
+                        metadata['path'] = path
                 else:
-                    save_path = path
-                src_files.add(save_path)
+                    self.raise_exception(
+                        "Can't save, %s file '%s' doesn't start with '%s'."
+                        % (comp.get_pathname(), path, root_dir), ValueError)
+
+            for path in paths:
+                if root_dir:
+                    src_files.add(self._relpath(path, root_dir))
+                else:
+                    src_files.add(path)
 
     def _fix_file_vars(self, comp, comp_dir, root_dir, fixup_fvar, src_files):
         """Ensure FileTraits for `comp` are in relative form and add to
@@ -450,9 +457,10 @@ class Component (Container):
             path = os.path.normpath(path)
             if not os.path.exists(path):
                 continue
+
             if root_dir:
                 if path.startswith(root_dir):
-                    save_path = self._relpath(path, root_dir)
+                    src_files.add(self._relpath(path, root_dir))
                     if os.path.isabs(fvar.filename):
                         path = self._relpath(path, comp_dir)
                         fixup_fvar.append((comp, fvarname, fvar))
@@ -463,8 +471,7 @@ class Component (Container):
                         % ('.'.join([comp.get_pathname(), fvarname]),
                            path, root_dir), ValueError)
             else:
-                save_path = path
-            src_files.add(save_path)
+                src_files.add(path)
 
     def get_file_vars(self):
         """Return list of (filevarname,filevarvalue,filetrait) owned by this

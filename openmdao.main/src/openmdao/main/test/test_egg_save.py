@@ -39,6 +39,9 @@ MODULE_NAME = __name__
 # Set local dir in case we're running in a different directory.
 PY_DIR = pkg_resources.resource_filename('openmdao.main', 'test')
 
+# Observations made by observer().
+OBSERVATIONS = []
+
 
 class Source(Assembly):
     """
@@ -269,9 +272,13 @@ class OddballContainer(Container):
         self.obj_list = [DataObj(i) for i in range(3)]
 
 
-def main_function():
-    """ Can't pickle references to functions defined in __main__. """
-    return None
+def observer(filename, completed_files, total_files,
+             completed_bytes, total_bytes):
+    """ Observe progress. """
+    global OBSERVATIONS
+    OBSERVATIONS.append((filename, completed_files, total_files,
+                                   completed_bytes, total_bytes))
+    return True
 
 
 class Model(Assembly):
@@ -304,6 +311,8 @@ class TestCase(unittest.TestCase):
                            self.model.Oddball, self.model.Oddball.oddcomp,
                            self.model.Oddball.oddcont]
         self.egg_name = None
+        global OBSERVATIONS
+        OBSERVATIONS = []
 
     def tearDown(self):
         """ Called after each test in this class. """
@@ -343,9 +352,57 @@ class TestCase(unittest.TestCase):
 
         # Save to egg.
         egg_info = self.model.save_to_egg(py_dir=PY_DIR, format=format,
-                                               child_objs=self.child_objs,
-                                               use_setuptools=use_setuptools)
+                                          child_objs=self.child_objs,
+                                          use_setuptools=use_setuptools,
+                                          observer=observer)
         self.egg_name = egg_info[0]
+
+        # Check observations.
+        if use_setuptools:
+            expected = [
+                ('write-via-setuptools', 0, 13),
+            ]
+        else:
+            expected = [
+                ('EGG-INFO/PKG-INFO', 0, 29),
+                ('EGG-INFO/dependency_links.txt', 1, 29),
+                ('EGG-INFO/entry_points.txt', 2, 29),
+                ('EGG-INFO/not-zip-safe', 3, 29),
+                ('EGG-INFO/requires.txt', 4, 29),
+                ('EGG-INFO/openmdao_orphans.txt', 5, 29),
+                ('EGG-INFO/top_level.txt', 6, 29),
+                ('EGG-INFO/SOURCES.txt', 7, 29),
+                ('Egg_TestModel/Egg_TestModel.pickle', 8, 29),
+                ('Egg_TestModel/Egg_TestModel_loader.py', 9, 29),
+                ('Egg_TestModel/Oddball.pickle', 10, 29),
+                ('Egg_TestModel/Oddball_loader.py', 11, 29),
+                ('Egg_TestModel/Oddball_oddcomp.pickle', 12, 29),
+                ('Egg_TestModel/Oddball_oddcomp_loader.py', 13, 29),
+                ('Egg_TestModel/Oddball_oddcont.pickle', 14, 29),
+                ('Egg_TestModel/Oddball_oddcont_loader.py', 15, 29),
+                ('Egg_TestModel/Sink.pickle', 16, 29),
+                ('Egg_TestModel/Sink/sink.bin', 17, 29),
+                ('Egg_TestModel/Sink/sink.txt', 18, 29),
+                ('Egg_TestModel/Sink_loader.py', 19, 29),
+                ('Egg_TestModel/Source.pickle', 20, 29),
+                ('Egg_TestModel/Source/hello', 21, 29),
+                ('Egg_TestModel/Source/xyzzy', 22, 29),
+                ('Egg_TestModel/Source_loader.py', 23, 29),
+                ('Egg_TestModel/__init__.py', 24, 29),
+                ('Egg_TestModel/buildout.cfg', 25, 29),
+                ('Egg_TestModel/sub/data2', 26, 29),
+                ('Egg_TestModel/sub/data4', 27, 29),
+                ('Egg_TestModel/test_egg_save.py', 28, 29),
+            ]
+        for i, observation in enumerate(OBSERVATIONS):
+            filename, completed_files, total_files, \
+                completed_bytes, total_bytes  = observation
+#            logging.debug('observed %s, %d, %d, %d, %d', filename,
+#                          completed_files, total_files,
+#                          completed_bytes, total_bytes)
+            self.assertEqual(filename,        expected[i][0])
+            self.assertEqual(completed_files, expected[i][1])
+            self.assertEqual(total_files,     expected[i][2])
 
         # Run and verify correct operation.
         self.model.run()
@@ -530,7 +587,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_function')
 
         # Set reference to unpickleable function.
-        self.model.Oddball.function_socket = main_function
+        self.model.Oddball.function_socket = observer
         try:
             self.model.save_to_egg(py_dir=PY_DIR)
         except RuntimeError, exc:

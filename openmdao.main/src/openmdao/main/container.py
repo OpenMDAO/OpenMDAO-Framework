@@ -834,7 +834,7 @@ class Container(HasTraits):
     def save_to_egg(self, name=None, version=None, py_dir=None,
                     src_dir=None, src_files=None, child_objs=None,
                     dst_dir=None, format=SAVE_CPICKLE, proto=-1,
-                    use_setuptools=False):
+                    use_setuptools=False, observer=None):
         """Save state and other files to an egg. Analyzes the objects saved
         for distribution dependencies. Modules not found in any distribution
         are recorded in an 'egg-info/openmdao_orphans.txt' file. Also creates
@@ -848,6 +848,10 @@ class Container(HasTraits):
         - `src_dir` is the root of all (relative) `src_files`.
         - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
+        - During module analysis, `observer` will be called with \
+          (filename, -1, -1, -1, -1).  Later `observer` will be called \
+          with (filename, completed_files, total_files, completed_bytes, \
+          total_bytes). If the observer returns False, the write is aborted.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns (egg_filename, required_distributions, orphan_modules).
@@ -884,7 +888,7 @@ class Container(HasTraits):
             return eggsaver.save_to_egg(entry_pts, version, py_dir,
                                         src_dir, src_files, dst_dir,
                                         format, proto, self._logger,
-                                        use_setuptools)
+                                        use_setuptools, observer)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:

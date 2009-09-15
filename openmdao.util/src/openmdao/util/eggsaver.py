@@ -59,7 +59,7 @@ _SITE_PKG = os.path.join(_SITE_LIB, 'site-packages')
 
 def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                 src_files=None, dst_dir=None, format=SAVE_CPICKLE, proto=-1,
-                logger=None, use_setuptools=False):
+                logger=None, use_setuptools=False, observer=None):
     """
     Save state and other files to an egg.
 
@@ -74,12 +74,17 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
       It defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
     - `dst_dir` is the directory to write the egg in.
+    - During module analysis, `observer` will be called with \
+      (filename, -1, -1, -1, -1).  Later `observer` will be called \
+      with (filename, completed_files, total_files, completed_bytes, \
+      total_bytes). If the observer returns False, the write is aborted.
 
     The resulting egg can be unpacked on UNIX via 'sh egg-file'.
     Returns (egg_filename, required_distributions, orphan_modules).
     """
     root, name, group = entry_pts[0]
     logger = logger or NullLogger()
+    assert observer is None or callable(observer)
 
     orig_dir = os.getcwd()
 
@@ -121,7 +126,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         try:
             # Determine distributions and local modules required.
             required_distributions, local_modules, orphan_modules = \
-                _get_distributions(objs, py_dir, logger)
+                _get_distributions(objs, py_dir, logger, observer)
 
             logger.debug('    py_dir: %s', py_dir)
             logger.debug('    src_dir: %s', src_dir)
@@ -206,11 +211,12 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                     eggwriter.write_via_setuptools(name, doc, version,
                                                    entry_map, src_files,
                                                    required_distributions,
-                                                   orphans, dst_dir, logger)
+                                                   orphans, dst_dir, logger,
+                                                   observer)
                 else:
                     eggwriter.write(name, doc, version, entry_map,
                                     src_files, required_distributions,
-                                    orphans, dst_dir, logger)
+                                    orphans, dst_dir, logger, observer)
             finally:
                 for path in cleanup_files:
                     if os.path.exists(path):
@@ -425,7 +431,7 @@ def _restore_objects(fixup):
         del sys.modules[mod]
 
 
-def _get_distributions(objs, py_dir, logger):
+def _get_distributions(objs, py_dir, logger, observer):
     """ Return (distributions, local_modules, orphans) used by objs. """
     distributions = set()
     local_modules = set()
@@ -484,6 +490,15 @@ def _get_distributions(objs, py_dir, logger):
                 finder_items = _get_distributions.saved[path]
             else:
                 logger.debug("    analyzing '%s'...", path)
+                if observer is not None:
+                    proceed = True
+                    try:
+                        proceed = observer(path, -1, -1, -1, -1)
+                    except Exception, exc:
+                        logger.debug('Exception calling observer: %s', exc)
+                    else:
+                        if not proceed:
+                            raise RuntimeError('Write aborted by observer.')
                 finder = modulefinder.ModuleFinder(
                                           excludes=_get_distributions.excludes)
                 try:
@@ -761,7 +776,7 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
                 logger.warning('libyaml not available, using yaml instead')
             yaml.dump(root, outstream, Dumper=Dumper)
         else:
-            raise RuntimeError("can't save object using format '%s'" % format)
+            raise RuntimeError("Can't save object using format '%s'" % format)
     finally:
         if fix_im:
             restore_instancemethods(root)

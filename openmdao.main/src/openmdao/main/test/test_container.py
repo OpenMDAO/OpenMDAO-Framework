@@ -173,7 +173,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             c1.save(output, 'no-such-format')
         except RuntimeError, exc:
-            msg = ": can't save object using format 'no-such-format'"
+            msg = ": Can't save object using format 'no-such-format'"
             self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected RuntimeError')
