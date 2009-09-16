@@ -22,6 +22,7 @@ from enthought.traits.trait_base import not_event
 from openmdao.main.container import Container, set_as_top
 from openmdao.main.filevar import FileValue
 from openmdao.util.eggsaver import SAVE_CPICKLE
+from openmdao.util.eggobserver import EggObserver
 from openmdao.main.log import LOG_DEBUG
 
 # Execution states.
@@ -330,10 +331,7 @@ class Component (Container):
           to this set.
         - `child_objs` is a list of child objects for additional entries.
         - `dst_dir` is the directory to write the egg in.
-        - During module analysis, `observer` will be called with \
-          (filename, -1, -1, -1, -1).  Later `observer` will be called \
-          with (filename, completed_files, total_files, completed_bytes, \
-          total_bytes). If the observer returns False, the write is aborted.
+        - `observer` will be called via an EggObserver.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns (egg_filename, required_distributions, orphan_modules).
@@ -344,6 +342,8 @@ class Component (Container):
             src_dir = src_dir[:-1]
 
         src_files = src_files or set()
+
+        observer = EggObserver(observer, self._logger)
 
         fixup_dirs = []  # Used to restore original component config.
         fixup_meta = []
@@ -359,12 +359,16 @@ class Component (Container):
         try:
             for comp in sorted(components, reverse=True,
                                key=lambda comp: comp.get_pathname()):
-                comp_dir = comp.get_abs_directory()
-                self._fix_directory(comp, comp_dir, root_dir, fixup_dirs)
-                self._fix_external_files(comp, comp_dir, root_dir, fixup_meta,
-                                         src_files)
-                self._fix_file_vars(comp, comp_dir, root_dir, fixup_fvar,
-                                    src_files)
+                try:
+                    comp_dir = comp.get_abs_directory()
+                    self._fix_directory(comp, comp_dir, root_dir, fixup_dirs)
+                    self._fix_external_files(comp, comp_dir, root_dir,
+                                             fixup_meta, src_files)
+                    self._fix_file_vars(comp, comp_dir, root_dir, fixup_fvar,
+                                        src_files)
+                except Exception, exc:
+                    observer.exception(str(exc))
+                    raise
 
             # Save relative directory for any entry points. Some oddness with
             # parent weakrefs seems to prevent reconstruction in load().
@@ -375,7 +379,9 @@ class Component (Container):
                     relpath = child.directory
                     obj = child.parent
                     if obj is None:
-                        raise RuntimeError('Entry point object has no parent!')
+                        msg = 'Entry point object has no parent!'
+                        observer.exception(msg)
+                        raise RuntimeError(msg)
                     while obj.parent is not None and \
                           isinstance(obj.parent, Component):
                         relpath = os.path.join(obj.directory, relpath)
@@ -385,7 +391,7 @@ class Component (Container):
             return super(Component, self).save_to_egg(
                        name, version, py_dir, src_dir, src_files,
                        child_objs, dst_dir, format, proto, use_setuptools,
-                       observer)
+                       observer.observer)
         finally:
             # If any component config has been modified, restore it.
             for comp, path in fixup_dirs:

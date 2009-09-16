@@ -16,9 +16,7 @@ Supports what's needed for saving and loading components/simulations.
   is also recorded in the 'openmdao_orphans.txt' resource.
 - `dst_dir` is the directory to write the egg to.
 - `logger` is the Logger object to use. 
-- `observer` will be called with (filename, completed_files, total_files, \
-  completed_bytes, total_bytes).  If the observer returns False, the write \
-  is aborted.
+- `observer` will be called via an EggObserver intermediary.
 """
 
 import copy
@@ -28,6 +26,8 @@ import subprocess
 import sys
 import time
 import zipfile
+
+from openmdao.util import eggobserver
 
 __all__ = ('egg_filename', 'write', 'write_via_setuptools')
 
@@ -51,7 +51,7 @@ def write(name, doc, version, entry_map, src_files, distributions, modules,
 
     Returns egg filename.
     """
-    assert observer is None or callable(observer)
+    observer = eggobserver.EggObserver(observer, logger)
 
     egg_name = egg_filename(name, version)
     egg_path = os.path.join(dst_dir, egg_name)
@@ -181,76 +181,58 @@ fi
     compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
     egg = zipfile.ZipFile(egg_path, 'a', compression, zip64)
 
-    stats = {'completed_files': 0, 'total_files': 8+len(files),
-             'completed_bytes': 0, 'total_bytes': bytes}
+    stats = {'completed_files': 0., 'total_files': float(8+len(files)),
+             'completed_bytes': 0., 'total_bytes': float(bytes)}
 
     # Write egg info.
-    _write_info(egg, 'PKG-INFO', pkg_info, logger, observer, stats)
-    _write_info(egg, 'dependency_links.txt', dependency_links, logger, observer, stats)
-    _write_info(egg, 'entry_points.txt', entry_points, logger, observer, stats)
-    _write_info(egg, 'not-zip-safe', not_zip_safe, logger, observer, stats)
-    _write_info(egg, 'requires.txt', requirements, logger, observer, stats)
-    _write_info(egg, 'openmdao_orphans.txt', orphans, logger, observer, stats)
-    _write_info(egg, 'top_level.txt', top_level, logger, observer, stats)
-    _write_info(egg, 'SOURCES.txt', sources, logger, observer, stats)
+    _write_info(egg, 'PKG-INFO', pkg_info, observer, stats)
+    _write_info(egg, 'dependency_links.txt', dependency_links, observer, stats)
+    _write_info(egg, 'entry_points.txt', entry_points, observer, stats)
+    _write_info(egg, 'not-zip-safe', not_zip_safe, observer, stats)
+    _write_info(egg, 'requires.txt', requirements, observer, stats)
+    _write_info(egg, 'openmdao_orphans.txt', orphans, observer, stats)
+    _write_info(egg, 'top_level.txt', top_level, observer, stats)
+    _write_info(egg, 'SOURCES.txt', sources, observer, stats)
 
     # Write collected files.
     for path in sorted(files):
-        _write_file(egg, path, logger, observer, stats)
+        _write_file(egg, path, observer, stats)
+
+    observer.complete(egg_name)
 
     egg.close()
     if os.path.getsize(egg_path) > zipfile.ZIP64_LIMIT:
         logger.warning('Egg zipfile requires Zip64 support to unzip.')
     return egg_name
 
-def _write_info(egg, name, info, logger, observer, stats):
+def _write_info(egg, name, info, observer, stats):
     """ Write info string to egg. """
     path = os.path.join('EGG-INFO', name)
-    _write_update(logger, observer, path, stats)
+    observer.add(path, stats['completed_files'] / stats['total_files'],
+                       stats['completed_bytes'] / stats['total_bytes'])
     egg.writestr(path, info)
     stats['completed_files'] += 1
     stats['completed_bytes'] += len(info)
 
-def _write_file(egg, path, logger, observer, stats):
+def _write_file(egg, path, observer, stats):
     """ Write file to egg. """
-    _write_update(logger, observer, path, stats)
+    observer.add(path, stats['completed_files'] / stats['total_files'],
+                       stats['completed_bytes'] / stats['total_bytes'])
     egg.write(path)
     stats['completed_files'] += 1
     stats['completed_bytes'] += os.path.getsize(path)
-
-def _write_update(logger, observer, path, stats):
-    """ Update logger and observer. """
-    logger.debug("    adding '%s'", path)
-    if observer is not None:
-        proceed = True
-        try:
-            proceed = observer(path, stats['completed_files'],
-                                     stats['total_files'],
-                                     stats['completed_bytes'],
-                                     stats['total_bytes'])
-        except Exception, exc:
-            logger.debug('Exception calling observer: %s', exc)
-        else:
-            if not proceed:
-                raise RuntimeError('Write aborted by observer.')
 
 
 def write_via_setuptools(name, doc, version, entry_map, src_files,
                          distributions, modules, dst_dir, logger, observer):
     """ Write an egg via setuptools. Returns egg filename. """ 
-    _write_setup_py(name, doc, version, entry_map, src_files, distributions,
-                    modules)
+    observer = eggobserver.EggObserver(observer, logger)
 
-    if observer is not None:
-        # TODO: parse process output and relay to observer.
-        proceed = True
-        try:
-            proceed = observer('write-via-setuptools', 0, len(src_files), 0, 0)
-        except Exception, exc:
-            logger.debug('Exception calling observer: %s', exc)
-        else:
-            if not proceed:
-                raise RuntimeError('Write aborted by observer.')
+    _write_setup_py(name, doc, version, entry_map, src_files, distributions,
+                    modules, observer)
+
+    # TODO: parse process output and relay to observer.
+    observer.add('write-via-setuptools', 0, 0)
 
     # Use environment since 'python' might not recognize '-u'.
     env = os.environ
@@ -277,15 +259,18 @@ def write_via_setuptools(name, doc, version, entry_map, src_files,
     if proc.returncode != 0:
         for line in output:
             logger.error('    '+line)
-        logger.error('save_to_egg failed due to setup.py error %d:',
-                     proc.returncode)
-        raise RuntimeError('setup.py failed, check log for info.')
+        msg = 'save_to_egg failed due to setup.py error %d' % proc.returncode
+        observer.exception(msg)
+        raise RuntimeError(msg)
 
-    return egg_filename(name, version)
+    egg_name = egg_filename(name, version)
+    observer.complete(egg_name)
+
+    return egg_name
 
 
 def _write_setup_py(name, doc, version, entry_map, src_files, distributions,
-                    modules):
+                    modules, observer):
     """ Write setup.py file for installation later. """
     out = open('setup.py', 'w')
     out.write('import setuptools\n')
@@ -294,7 +279,9 @@ def _write_setup_py(name, doc, version, entry_map, src_files, distributions,
     for filename in sorted(src_files):
         path = os.path.join(name, filename)
         if not os.path.exists(path):
-            raise ValueError("Can't save, '%s' does not exist" % path)
+            msg = "Can't save, '%s' does not exist" % path
+            observer.exception(msg)
+            raise ValueError(msg)
         out.write("    '%s',\n" % filename)
     out.write(']\n')
     

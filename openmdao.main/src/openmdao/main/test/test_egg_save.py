@@ -272,12 +272,10 @@ class OddballContainer(Container):
         self.obj_list = [DataObj(i) for i in range(3)]
 
 
-def observer(filename, completed_files, total_files,
-             completed_bytes, total_bytes):
+def observer(state, string, file_fraction, byte_fraction):
     """ Observe progress. """
     global OBSERVATIONS
-    OBSERVATIONS.append((filename, completed_files, total_files,
-                                   completed_bytes, total_bytes))
+    OBSERVATIONS.append((state, string, file_fraction, byte_fraction))
     return True
 
 
@@ -360,49 +358,47 @@ class TestCase(unittest.TestCase):
         # Check observations.
         if use_setuptools:
             expected = [
-                ('write-via-setuptools', 0, 13),
+                ('add', 'write-via-setuptools'),
+                ('complete', 'Egg_TestModel-1.2.3-py2.5.egg'),
             ]
         else:
             expected = [
-                ('EGG-INFO/PKG-INFO', 0, 29),
-                ('EGG-INFO/dependency_links.txt', 1, 29),
-                ('EGG-INFO/entry_points.txt', 2, 29),
-                ('EGG-INFO/not-zip-safe', 3, 29),
-                ('EGG-INFO/requires.txt', 4, 29),
-                ('EGG-INFO/openmdao_orphans.txt', 5, 29),
-                ('EGG-INFO/top_level.txt', 6, 29),
-                ('EGG-INFO/SOURCES.txt', 7, 29),
-                ('Egg_TestModel/Egg_TestModel.pickle', 8, 29),
-                ('Egg_TestModel/Egg_TestModel_loader.py', 9, 29),
-                ('Egg_TestModel/Oddball.pickle', 10, 29),
-                ('Egg_TestModel/Oddball_loader.py', 11, 29),
-                ('Egg_TestModel/Oddball_oddcomp.pickle', 12, 29),
-                ('Egg_TestModel/Oddball_oddcomp_loader.py', 13, 29),
-                ('Egg_TestModel/Oddball_oddcont.pickle', 14, 29),
-                ('Egg_TestModel/Oddball_oddcont_loader.py', 15, 29),
-                ('Egg_TestModel/Sink.pickle', 16, 29),
-                ('Egg_TestModel/Sink/sink.bin', 17, 29),
-                ('Egg_TestModel/Sink/sink.txt', 18, 29),
-                ('Egg_TestModel/Sink_loader.py', 19, 29),
-                ('Egg_TestModel/Source.pickle', 20, 29),
-                ('Egg_TestModel/Source/hello', 21, 29),
-                ('Egg_TestModel/Source/xyzzy', 22, 29),
-                ('Egg_TestModel/Source_loader.py', 23, 29),
-                ('Egg_TestModel/__init__.py', 24, 29),
-                ('Egg_TestModel/buildout.cfg', 25, 29),
-                ('Egg_TestModel/sub/data2', 26, 29),
-                ('Egg_TestModel/sub/data4', 27, 29),
-                ('Egg_TestModel/test_egg_save.py', 28, 29),
+                ('add', 'EGG-INFO/PKG-INFO'),
+                ('add', 'EGG-INFO/dependency_links.txt'),
+                ('add', 'EGG-INFO/entry_points.txt'),
+                ('add', 'EGG-INFO/not-zip-safe'),
+                ('add', 'EGG-INFO/requires.txt'),
+                ('add', 'EGG-INFO/openmdao_orphans.txt'),
+                ('add', 'EGG-INFO/top_level.txt'),
+                ('add', 'EGG-INFO/SOURCES.txt'),
+                ('add', 'Egg_TestModel/Egg_TestModel.pickle'),
+                ('add', 'Egg_TestModel/Egg_TestModel_loader.py'),
+                ('add', 'Egg_TestModel/Oddball.pickle'),
+                ('add', 'Egg_TestModel/Oddball_loader.py'),
+                ('add', 'Egg_TestModel/Oddball_oddcomp.pickle'),
+                ('add', 'Egg_TestModel/Oddball_oddcomp_loader.py'),
+                ('add', 'Egg_TestModel/Oddball_oddcont.pickle'),
+                ('add', 'Egg_TestModel/Oddball_oddcont_loader.py'),
+                ('add', 'Egg_TestModel/Sink.pickle'),
+                ('add', 'Egg_TestModel/Sink/sink.bin'),
+                ('add', 'Egg_TestModel/Sink/sink.txt'),
+                ('add', 'Egg_TestModel/Sink_loader.py'),
+                ('add', 'Egg_TestModel/Source.pickle'),
+                ('add', 'Egg_TestModel/Source/hello'),
+                ('add', 'Egg_TestModel/Source/xyzzy'),
+                ('add', 'Egg_TestModel/Source_loader.py'),
+                ('add', 'Egg_TestModel/__init__.py'),
+                ('add', 'Egg_TestModel/buildout.cfg'),
+                ('add', 'Egg_TestModel/sub/data2'),
+                ('add', 'Egg_TestModel/sub/data4'),
+                ('add', 'Egg_TestModel/test_egg_save.py'),
+                ('complete', 'Egg_TestModel-1.2.3-py2.5.egg'),
             ]
+        self.assertEqual(len(OBSERVATIONS), len(expected))
         for i, observation in enumerate(OBSERVATIONS):
-            filename, completed_files, total_files, \
-                completed_bytes, total_bytes  = observation
-#            logging.debug('observed %s, %d, %d, %d, %d', filename,
-#                          completed_files, total_files,
-#                          completed_bytes, total_bytes)
-            self.assertEqual(filename,        expected[i][0])
-            self.assertEqual(completed_files, expected[i][1])
-            self.assertEqual(total_files,     expected[i][2])
+            state, string, file_fraction, byte_fraction = observation
+            self.assertEqual(state,  expected[i][0])
+            self.assertEqual(string, expected[i][1])
 
         # Run and verify correct operation.
         self.model.run()

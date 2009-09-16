@@ -35,8 +35,7 @@ from enthought.traits.trait_base import not_none
 
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
-from openmdao.util import eggloader
-from openmdao.util import eggsaver
+from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.unitsfloat import convert_units
 
@@ -848,10 +847,7 @@ class Container(HasTraits):
         - `src_dir` is the root of all (relative) `src_files`.
         - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
-        - During module analysis, `observer` will be called with \
-          (filename, -1, -1, -1, -1).  Later `observer` will be called \
-          with (filename, completed_files, total_files, completed_bytes, \
-          total_bytes). If the observer returns False, the write is aborted.
+        - `observer` will be called via an EggObserver.
 
         The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns (egg_filename, required_distributions, orphan_modules).
@@ -866,6 +862,8 @@ class Container(HasTraits):
             except AttributeError:
                 pass
 
+        observer = eggobserver.EggObserver(observer, self._logger)
+
         # Child entry point names are the pathname, starting at self.
         entry_pts = [(self, name, _get_entry_group(self))]
         if child_objs is not None:
@@ -876,9 +874,9 @@ class Container(HasTraits):
             for child in child_objs:
                 pathname = child.get_pathname()
                 if not pathname.startswith(root_pathname):
-                    self.raise_exception('%s is not a child of %s'
-                                         % (pathname, root_pathname),
-                                         RuntimeError)
+                    msg = '%s is not a child of %s' % (pathname, root_pathname)
+                    observer.exception(msg)
+                    self.raise_exception(msg, RuntimeError)
                 entry_pts.append((child, pathname[root_start:],
                                   _get_entry_group(child)))
 
@@ -888,7 +886,7 @@ class Container(HasTraits):
             return eggsaver.save_to_egg(entry_pts, version, py_dir,
                                         src_dir, src_files, dst_dir,
                                         format, proto, self._logger,
-                                        use_setuptools, observer)
+                                        use_setuptools, observer.observer)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
