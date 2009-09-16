@@ -44,5 +44,6 @@ setup(name='openmdao.recipes',
       wingproj = openmdao.recipes.wingproj:WingProj
       sphinxbuild = openmdao.recipes.sphinxbuild:SphinxBuild
       eggbundler = openmdao.recipes.eggbundler:EggBundler
+      metacollector = openmdao.recipes.metacollector:MetadataCollector
       """,
       )

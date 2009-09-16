@@ -68,6 +68,11 @@ def _match(name, inlist):
     return False
     
 
+def parse_txt(name, meta, metadata):
+    metaname = os.path.splitext(os.path.basename(name))[0]
+    metadata[metaname] = [x.strip() for x in meta.splitlines() 
+                          if x.strip() != '']
+
 def get_resource_files(dist, exList=None, incList=None, dirname=''):
     """A generator that retrieves resource file pathnames from 
     within a distribution.
@@ -104,8 +109,7 @@ def _getdist_metadata(dist, dirname=''):
             for md in _getdist_metadata(dist, path):
                 metadata[md[0]] = md[1]
         elif name.endswith('.txt'):
-            metadata[path[:-4]] = [x.strip() for x in 
-                     dist.get_metadata(path).splitlines() if x.strip() != '']
+            parse_txt(name, dist.get_metadata(path), metadata)
         elif name == 'PKG-INFO':
             instr = StringIO.StringIO(dist.get_metadata(name))
             message = rfc822.Message(instr)
@@ -137,8 +141,9 @@ def _meta_from_tarfile(path):
                 for k,v in message.items():
                     metadata[k] = v                
             elif name.endswith('.txt'):
-                metadata[metaname] = [x.strip() for x in 
-                                     meta.splitlines() if x.strip() != '']
+                parse_txt(name, meta, metadata)
+                #metadata[metaname] = [x.strip() for x in 
+                #                     meta.splitlines() if x.strip() != '']
             elif name.endswith('/not-zip-safe'):
                 metadata['zip-safe'] = False
             elif name.endswith('/zip-safe'):
@@ -164,7 +169,6 @@ def _meta_from_zipped_egg(path):
     zf = zipfile.ZipFile(path, 'r')
     for name in zf.namelist():
         if name.startswith('EGG-INFO/'):
-            metaname = os.path.splitext(os.path.basename(name))[0]
             meta = zf.read(name).strip()
             if name.endswith('/PKG-INFO'):
                 instr = StringIO.StringIO(meta)
@@ -172,8 +176,9 @@ def _meta_from_zipped_egg(path):
                 for k,v in message.items():
                     metadata[k] = v
             elif name.endswith('.txt'):
-                metadata[metaname] = [x.strip() for x in 
-                                     meta.splitlines() if x.strip() != '']
+                parse_txt(name, meta, metadata)
+                #metadata[metaname] = [x.strip() for x in 
+                #                     meta.splitlines() if x.strip() != '']
             elif name.endswith('/not-zip-safe'):
                 metadata['zip-safe'] = False
             elif name.endswith('/zip-safe'):
@@ -196,7 +201,7 @@ def get_metadata(path):
         # it's a tar file or gzipped tar file
         return _meta_from_tarfile(path)
 
-    dists = [x for x in find_distributions(path,only=True)]
+    dists = [x for x in find_distributions(path, only=True)]
     if len(dists) == 0:
         raise RuntimeError('%s is not a zipped egg or an installed distribution'%path)
 
