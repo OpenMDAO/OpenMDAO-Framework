@@ -407,21 +407,21 @@ the base class Component. A very simple component is shown here:
 
 .. _Code1: 
 
-::
+.. testcode:: Code1
 
 	from openmdao.main.api import Component
 
 	class Transmission(Component):
 	    """ A simple transmission model."""
-	
-    	    def __init__(self, doc=None, directory=''):
-        	    """ Creates a new Transmission object """
-        	super(Transmission, self).__init__(doc, directory)        
-        
-	        def execute(self):
-	            """ The 5-speed manual transmission is simulated by determining the
-	                torque output and engine RPM via the gear ratios.
-	                """
+
+	    def __init__(self, doc=None, directory=''):
+	        """ Creates a new Transmission object """
+	        super(Transmission, self).__init__(doc, directory)        
+
+	    def execute(self):
+	        """ The 5-speed manual transmission is simulated by determining the
+	            torque output and engine RPM via the gear ratios.
+	            """
 
 This new Transmission component does nothing yet. It does have the two functions that all components must have.
 The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
@@ -434,7 +434,7 @@ The next step is to add the inputs and outputs that are defined in our model des
 
 .. _Code2: 
 
-::
+.. testcode:: Code2
 
 	from enthought.traits.api import Float, Int
 	from openmdao.main.api import Component, UnitsFloat
@@ -509,7 +509,7 @@ engine.py.
 
 .. _Code3: 
 
-::
+.. testcode:: Code2
 
         	RPM = UnitsFloat(1000.0, low=1000., high=6000., iostatus='in', 
                      units='1/min',  desc='Engine RPM')		      
@@ -524,7 +524,7 @@ the input and output variables to perform a calculation.
 
 .. _Code4: 
 
-::
+.. testcode:: Code2
 
     def execute(self):
         """ The 5-speed manual transmission is simulated by determining the
@@ -598,32 +598,28 @@ Let's change the engine speed from its default value (1000 RPM) to 2500 RPM.
 
 	>>> my_engine.set("RPM",2500)
 	>>> my_engine.get("RPM")
-	2500
+	2500.0
 
 Similiarly, these values can also be set directly:
 
 	>>> my_engine.RPM = 2500
 	>>> my_engine.RPM
-	2500
+	2500.0
 
 Note that directly setting the input's value bypasses the check that normally prevents linked inputs from being changed.
 Type and units checking all work fine:
 
 	>>> my_engine.RPM = "Hello"
 	Traceback (most recent call last):
-	.
-	.
-	.
-	TraitError: new_engine: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but attempted value is Hello
+	    ...
+	TraitError: : Trait 'RPM' must be a float in the range [1000.0, 6000.0] but attempted value is Hello
 	
 Now, let's try setting the engine speed to a value that exceeds the maximum, which is 6000 RPM.
 
 	>>> my_engine.set("RPM",7500)
 	Traceback (most recent call last):
-	.
-	.
-	.
-	TraitError: new_engine: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but attempted value is 7500
+	    ...
+	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but attempted value is 7500
 
 The set function raises an exception indicating that the maximum value for RPM has been violated. This exception can be
 handled to provide some logical response to this condition; this will be seen in the acceleration simulation.
@@ -661,12 +657,11 @@ Engine, and Chassis components.
 
 .. _Code5: 
 
-::
+.. testcode:: Code5
 
 	from enthought.traits.api import implements, Interface, Float, Int
 
 	from openmdao.main.api import Assembly, UnitsFloat
-	from openmdao.main.interfaces import IComponent
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission
@@ -674,8 +669,6 @@ Engine, and Chassis components.
 	
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
-    
-	    implements(IVehicle)
     
 	    def __init__(self, directory=''):
 	        """ Creates a new Vehicle Assembly object """
@@ -703,14 +696,40 @@ section Sockets and Interfaces (??? needs section link).
 
 Now that the components are instantiated in the assembly, they need to be hooked up:
 
+.. testsetup:: Code5
+
+	from enthought.traits.api import implements, Interface, Float, Int
+
+	from openmdao.main.api import Assembly, UnitsFloat
+
+	from openmdao.examples.engine_design.engine import Engine
+	from openmdao.examples.engine_design.transmission import Transmission
+	from openmdao.examples.engine_design.chassis import Chassis
+	
+	class Vehicle(Assembly):
+	    """ Vehicle assembly. """
+    
+	    def __init__(self, directory=''):
+	        """ Creates a new Vehicle Assembly object """
+
+	        super(Vehicle, self).__init__(directory)
+
+	        # Create component instances
+        
+	        self.add_container('transmission', Transmission())
+	        self.add_container('engine', Engine())
+	        self.add_container('chassis', Chassis())
+		
+	self = Vehicle()
+
 .. _Code6: 
 
-::
+.. testcode:: Code5
 
-	self.connect('transmission.RPM','engine.RPM')
-        self.connect('transmission.torque_ratio','chassis.torque_ratio')
-        self.connect('engine.torque','chassis.engine_torque')
-        self.connect('engine.engine_weight','chassis.mass_engine')
+	        self.connect('transmission.RPM','engine.RPM')
+	        self.connect('transmission.torque_ratio','chassis.torque_ratio')
+	        self.connect('engine.torque','chassis.engine_torque')
+	        self.connect('engine.engine_weight','chassis.mass_engine')
 	
 The first argument in the call to ``self.connect`` is the output variable, and the second argument is
 the input variable. For a connection to be valid, the units of the output and input must be of the same
@@ -727,7 +746,7 @@ output of the Vehicle component. This can be done by creating passthroughs in th
 
 .. _Code7: 
 
-::
+.. testcode:: Code5
 
 	self.create_passthru('engine.stroke')
 	self.create_passthru('engine.bore')
@@ -751,12 +770,10 @@ accomplish this, the inputs must be declared in the class header:
 
 .. _Code7a: 
 
-::
+.. testcode:: Code5
 
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
-    
-	    implements(IVehicle)
     
 	    tire_circumference = UnitsFloat(75.0, iostatus='in', units='inch', 
                                 desc='Circumference of tire (inches)')
@@ -766,14 +783,46 @@ accomplish this, the inputs must be declared in the class header:
 
 Now these input are available to connect to the components.
 
+.. testsetup:: Code7b
+
+	from enthought.traits.api import implements, Interface, Float, Int
+
+	from openmdao.main.api import Assembly, UnitsFloat
+
+	from openmdao.examples.engine_design.engine import Engine
+	from openmdao.examples.engine_design.transmission import Transmission
+	from openmdao.examples.engine_design.chassis import Chassis
+	
+	class Vehicle(Assembly):
+	    """ Vehicle assembly. """
+    
+	    tire_circumference = UnitsFloat(75.0, iostatus='in', units='inch', 
+                                    desc='Circumference of tire (inches)')
+    
+	    velocity = UnitsFloat(75.0, iostatus='in', units='mi/h', 
+                desc='Vehicle velocity needed to determine engine RPM (mi/h)')
+    
+	    def __init__(self, directory=''):
+	        """ Creates a new Vehicle Assembly object. """
+        
+	        super(Vehicle, self).__init__(directory)
+
+	        # Create component instances
+        
+	        self.add_container('transmission', Transmission())
+	        self.add_container('engine', Engine())
+	        self.add_container('chassis', Chassis())
+		
+	self = Vehicle()
+
 .. _Code7b: 
 
-::
+.. testcode:: Code7b
 
-        self.connect('velocity', 'chassis.velocity')
-        self.connect('velocity', 'transmission.velocity')
-        self.connect('tire_circumference', 'chassis.tire_circ')
-        self.connect('tire_circumference', 'transmission.tire_circ')
+	        self.connect('velocity', 'chassis.velocity')
+	        self.connect('velocity', 'transmission.velocity')
+	        self.connect('tire_circumference', 'chassis.tire_circ')
+	        self.connect('tire_circumference', 'transmission.tire_circ')
 
 This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chassis and 
 Transmission components.
@@ -789,7 +838,7 @@ burn.
 	>>> from openmdao.examples.engine_design.vehicle import Vehicle
 	>>> my_car = Vehicle("new_car")
 	>>> my_car.set("velocity",25)
-	>>> my_car.set("currentGear",3)
+	>>> my_car.set("current_gear",3)
 	>>> my_car.set("throttle",.5)
 	>>> my_car.run()
 	>>> my_car.get("acceleration")
@@ -844,27 +893,11 @@ function RunEngineCycle. The function can be imported and used just like any pyt
 
 .. _Code8: 
 
-::
-
-	from openmdao.examples.engine_design.engineC import RunEngineCycle
-	
-        # Call the C model and pass it what it needs.
-        
-        power, torque, fuel_burn, engine_weight = RunEngineCycle(
-                    stroke, bore, conrod, comp_ratio, spark_angle,
-                    n_cyl, IVO, IVC, L_v, D_v, k,
-                    R, Ru, Hu, Tw, AFR, P_exth,
-                    T_amb, P_amb, air_density, mw_air, mw_fuel,
-                    RPM, throttle, thetastep, fuel_density)
-
-        
-        # Interogate results of engine simulation and store.
-        
-        self.power = power[0]
-        self.torque = torque[0]
-        self.fuelBurn = fuelBurn[0]
-        self.engineWeight = engineWeight[0]
-
+.. literalinclude:: ../../openmdao.examples/openmdao/examples/engine_design/engine_wrap_c.py
+   :start-after: engine_weight = 0.0
+   :end-before: # end engine.py
+   :language: python
+   
 Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first
 element (element zero.) This is not typically needed for return values from FORTRAN codes compiled with
 F2PY, but it seemes to be needed for C codes for which the signature file is manually created. This is
@@ -936,7 +969,7 @@ was created and a SimVehicle and CONMINdriver were instantiated:
 
 .. _Code9: 
 
-::
+.. testcode:: Code9
 
 	from openmdao.main.api import Assembly
 
@@ -962,9 +995,33 @@ Note that the syntax for instantiated the CONMIN driver is the same as for any o
 driver requires some initialization and connecting before it can be used:
 
         
+.. testsetup:: Code10
+
+	from openmdao.main.api import Assembly
+
+	from openmdao.lib.drivers.conmindriver import CONMINdriver
+
+	from openmdao.examples.engine_design.driving_sim import DrivingSim
+
+	class EngineOptimization(Assembly):
+	    """ Top level assembly for optimizing a vehicle. """
+    
+	    def __init__(self, directory=''):
+        	""" Creates a new Assembly containing a SimVehicle and an optimizer"""
+        
+	        super(EngineOptimization, self).__init__(directory)
+
+	        # Create SimVehicle component instances
+        	self.add_container('driving_sim', DrivingSim())
+
+	        # Create CONMIN Optimizer instance
+        	self.add_container('driver', CONMINdriver())
+
+	self = EngineOptimization()		
+		
 .. _Code10: 
 
-::
+.. testcode:: Code10
 
 	        # CONMIN Flags
         	self.driver.iprint = 0
@@ -999,7 +1056,7 @@ negating the expression:
 
 .. _Code11: 
 
-::
+.. testcode:: Code10
 
 	        # CONMIN Objective = Maximize accel_time 
         	self.driver.objective = '-driving_sim.accel_time'
@@ -1008,7 +1065,7 @@ Expressions can be built up from any number of OpenMDAO variables using Python's
 
 .. _Code12: 
 
-::
+.. testcode:: Code10
 
 	        # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
         	self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'

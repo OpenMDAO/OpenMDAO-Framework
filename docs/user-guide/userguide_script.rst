@@ -112,7 +112,7 @@ Newton Solver
 +++++++++++++
 
 *Adding new Optimizers*
-~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~
 
 Running OpenMDAO
 -----------------
