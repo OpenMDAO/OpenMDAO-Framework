@@ -227,6 +227,18 @@ class SphinxBuild(object):
                          os.path.abspath(self.docdir), 
                          os.path.abspath(os.path.join(self.builddir, "html"))))        
 
+        # create the testdocs script
+        bspath = os.path.join(self.buildout['buildout']['directory'], 'bin',
+                              'sphinx-build')
+         
+        scripts = zc.buildout.easy_install.scripts(
+            ['Sphinx'], self.working_set, 
+            sys.executable, os.path.dirname(bspath), { 'sphinx-build': 'testdocs' },
+            arguments= "argv=['-P', '-b', 'doctest', '-d', r'%s', r'%s', r'%s']" %
+                        (os.path.abspath(os.path.join(self.builddir, "doctrees")),
+                         os.path.abspath(self.docdir), 
+                         os.path.abspath(os.path.join(self.builddir, "html"))))        
+
         # build the docs using Sphinx
         try:
             out, ret = run_command(bspath)

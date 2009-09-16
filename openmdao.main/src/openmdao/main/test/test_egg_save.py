@@ -11,7 +11,8 @@ import subprocess
 import sys
 import unittest
 
-from enthought.traits.api import Bool, List, Str, Array, Int, Instance, Callable, TraitError
+from enthought.traits.api import Bool, List, Str, Array, Int, \
+                                 Instance, Callable, TraitError
 
 from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, \
                               SAVE_CPICKLE, SAVE_LIBYAML, set_as_top
@@ -62,7 +63,6 @@ class Source(Assembly):
         self.obj_list = [DataObj(i) for i in range(3)]
         
         self.text_file.filename = 'source.txt'
-
 
         # External file that doesn't exist at time of save.
         self.external_files.append({'path':'does-not-exist'})
@@ -165,11 +165,11 @@ class Sink(Component):
         # Relative FileTrait that exists at time of save.
         self.add_trait('binary_file', FileTrait(iostatus='in'))
         
-
     def tree_defined(self):
         super(Sink, self).tree_defined()
         
-        self.text_file.filename = os.path.join(self.get_abs_directory(), 'sink.txt')
+        self.text_file.filename = os.path.join(self.get_abs_directory(),
+                                               'sink.txt')
 
         out = open(self.text_file.filename, 'w')
         out.write('Absolute FileTrait that exists at time of save.\n')
@@ -213,7 +213,9 @@ class Oddball(Assembly):
         self.add_container('oddcomp', OddballComponent())
         self.add_container('oddcont', OddballContainer())
         self.thing_to_call = self.instance_method
-        self.list_to_call = [self.instance_method]
+        self.list_to_call = [[self.instance_method, ()],
+                             [Assembly.get_pathname, (self,)]]
+                             # Generate IMHolder with self == None.
         self.function_socket = os.getpid
         self.method_socket = self.instance_method
         self.peer_class = Source  # Check that class in __main__ is handled.
@@ -224,8 +226,8 @@ class Oddball(Assembly):
         if self.thing_to_call:
             self.debug('thing_to_call returned %s', self.thing_to_call())
 
-        for thing in self.list_to_call:
-            self.debug('list-thing returned %s', thing())
+        for thing, args in self.list_to_call:
+            self.debug('list-thing returned %s', thing(*args))
 
         try:
             self.debug('function_socket returned %s', self.function_socket())
@@ -438,7 +440,8 @@ class TestCase(unittest.TestCase):
         try:
             self.model.save_to_egg(py_dir=PY_DIR)
         except Exception, exc:
-            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp directory"
+            msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp" \
+                  " directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected Exception')
@@ -472,6 +475,21 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected Exception')
+        finally:
+            os.remove(path)
+
+    def test_save_noforce(self):
+        logging.debug('')
+        logging.debug('test_save_noforce')
+
+        # Set external file path outside model root.
+        path = os.path.join(os.getcwd(), 'unforced-external')
+        out = open(path, 'w')
+        out.close()
+        metadata = self.model.Source.external_files[0]
+        metadata['path'] = path
+        try:
+            self.model.save_to_egg(py_dir=PY_DIR, force_relative=False)
         finally:
             os.remove(path)
 
@@ -527,13 +545,13 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_bad_method')
 
-        # Set reference to unpickleable method.
+        # Set reference to unpickleable static method.
         self.model.Oddball.method_socket = self.model.Oddball.static_method
         try:
             self.model.save_to_egg(py_dir=PY_DIR)
         except RuntimeError, exc:
-            self.assertEqual(str(exc),
-                "Egg_TestModel: Can't save, 1 object cannot be pickled.")
+            msg = "Egg_TestModel: Can't save, 1 object cannot be pickled."
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected RuntimeError')
 
@@ -818,7 +836,6 @@ comp.run()
             os.chdir(orig_dir)
             shutil.rmtree(test_dir)
 
-
     def test_pkg_resources_factory(self):
         logging.debug('')
         logging.debug('test_pkg_resources_factory')
@@ -873,13 +890,15 @@ comp.run()
             comp.run()
             self.assertEqual(comp.executions, 3)
             # Create a (sub)component.
-            sub = factory.create('Egg_TestModel.Oddball.oddcomp', name='test_sub')
+            sub = factory.create('Egg_TestModel.Oddball.oddcomp',
+                                 name='test_sub')
             if sub is None:
                 self.fail('Create of test_sub failed.')
             self.assertEqual(sub.get_pathname(), 'test_sub')
 
             # Create a (sub)container.
-            sub = factory.create('Egg_TestModel.Oddball.oddcont', name='test_sub')
+            sub = factory.create('Egg_TestModel.Oddball.oddcont',
+                                 name='test_sub')
             if sub is None:
                 self.fail('Create of test_sub failed.')
             self.assertEqual(sub.get_pathname(), 'test_sub')
@@ -898,7 +917,8 @@ comp.run()
         logging.debug('model.directory = %s' % model.directory)
         if model is None:
             self.fail("Create of '%s' failed." % name)
-        self.assertEqual(model.get_abs_directory(), os.path.join(os.getcwd(), name))
+        self.assertEqual(model.get_abs_directory(),
+                         os.path.join(os.getcwd(), name))
         self.assertEqual(model.Oddball.get_pathname(), name+'.Oddball')
 
         # Verify initial state.

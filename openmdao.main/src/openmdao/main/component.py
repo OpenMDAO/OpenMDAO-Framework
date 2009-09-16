@@ -350,110 +350,122 @@ class Component (Container):
         # We have to check relative paths like '../somedir' and if
         # we do that after adjusting a parent, things can go bad.
         components = [self]
-        components.extend([c for c in self.values(recurse=True)
-                                if isinstance(c, Component)])
-        for comp in sorted(components, reverse=True,
-                           key=lambda comp: comp.get_pathname()):
-
-            # Process execution directory.
-            comp_dir = comp.get_abs_directory()
-            if force_relative:
-                if comp_dir.startswith(src_dir):
-                    if comp_dir == src_dir and comp.directory:
-                        fixup_dirs.append((comp, comp.directory))
-                        comp.directory = ''
-                    elif os.path.isabs(comp.directory):
-                        parent_dir = comp.parent.get_abs_directory()
-                        fixup_dirs.append((comp, comp.directory))
-                        comp.directory = self._relpath(comp_dir, parent_dir)
-                    logging.debug("%s.directory reset to '%s'" % 
-                                  (comp.name,comp.directory))
-                else:
-                    self.raise_exception(
-                        "Can't save, %s directory '%s' doesn't start with '%s'."
-                        % (comp.get_pathname(), comp_dir, src_dir), ValueError)
-
-            # Process external files.
-            for metadata in comp.external_files:
-                path = metadata['path']
-                path = os.path.expanduser(path)
-                path = os.path.expandvars(path)
-                if not os.path.isabs(path):
-                    path = os.path.join(comp_dir, path)
-                paths = glob.glob(path)
-                for path in paths:
-                    path = os.path.normpath(path)
-                    if not os.path.exists(path):
-                        continue
-                    if force_relative:
-                        if path.startswith(src_dir):
-                            save_path = self._relpath(path, src_dir)
-                            if os.path.isabs(metadata['path']):
-                                path = self._relpath(path, comp_dir)
-                                fixup_meta.append((metadata, metadata['path']))
-                                metadata['path'] = path
-                        else:
-                            self.raise_exception(
-                                "Can't save, %s file '%s' doesn't start with '%s'."
-                                % (comp.get_pathname(), path, src_dir),
-                                ValueError)
-                    else:
-                        save_path = path
-                    src_files.add(save_path)
-
-            # Process FileTraits for this component only.
-            for fvarname, fvar, ftrait in comp.get_file_vars():
-                path = fvar.filename
-                if not path:
-                    continue
-                if not os.path.isabs(path):
-                    path = os.path.join(comp_dir, path)
-                path = os.path.normpath(path)
-                if not os.path.exists(path):
-                    continue
-                if force_relative:
-                    if path.startswith(src_dir):
-                        save_path = self._relpath(path, src_dir)
-                        if os.path.isabs(fvar.filename):
-                            path = self._relpath(path, comp_dir)
-                            fixup_fvar.append((comp, fvarname, fvar))
-                            comp.set(fvarname+'.filename', path, force=True)
-                    else:
-                        self.raise_exception(
-                            "Can't save, %s path '%s' doesn't start with '%s'."
-                            % ('.'.join([comp.get_pathname(),
-                                         fvarname]), path, src_dir), ValueError)
-                else:
-                    save_path = path
-                src_files.add(save_path)
-        # Save relative directory for any entry points. Some oddness with
-        # parent weakrefs seems to prevent reconstruction in load().
-        if child_objs is not None:
-            for child in child_objs:
-                if not isinstance(child, Component):
-                    continue
-                relpath = child.directory
-                obj = child.parent
-                if obj is None:
-                    raise RuntimeError('Entry point object has no parent!')
-                while obj.parent is not None and \
-                      isinstance(obj.parent, Component):
-                    relpath = os.path.join(obj.directory, relpath)
-                    obj = obj.parent
-                child._rel_dir_path = relpath
-
+        components.extend([obj for obj in self.values(recurse=True)
+                                       if isinstance(obj, Component)])
+        root_dir = src_dir if force_relative else None
         try:
+            for comp in sorted(components, reverse=True,
+                               key=lambda comp: comp.get_pathname()):
+                comp_dir = comp.get_abs_directory()
+                self._fix_directory(comp, comp_dir, root_dir, fixup_dirs)
+                self._fix_external_files(comp, comp_dir, root_dir, fixup_meta,
+                                         src_files)
+                self._fix_file_vars(comp, comp_dir, root_dir, fixup_fvar,
+                                    src_files)
+
+            # Save relative directory for any entry points. Some oddness with
+            # parent weakrefs seems to prevent reconstruction in load().
+            if child_objs is not None:
+                for child in child_objs:
+                    if not isinstance(child, Component):
+                        continue
+                    relpath = child.directory
+                    obj = child.parent
+                    if obj is None:
+                        raise RuntimeError('Entry point object has no parent!')
+                    while obj.parent is not None and \
+                          isinstance(obj.parent, Component):
+                        relpath = os.path.join(obj.directory, relpath)
+                        obj = obj.parent
+                    child._rel_dir_path = relpath
+
             return super(Component, self).save_to_egg(
                        name, version, py_dir, src_dir, src_files,
                        child_objs, dst_dir, format, proto, use_setuptools)
         finally:
             # If any component config has been modified, restore it.
-            for ccomp, path in fixup_dirs:
-                ccomp.directory = path
+            for comp, path in fixup_dirs:
+                comp.directory = path
             for meta, path in fixup_meta:
                 meta['path'] = path
             for comp, name, fvar in fixup_fvar:
                 comp.set(name+'.filename', fvar.filename, force=True)
+
+    def _fix_directory(self, comp, comp_dir, root_dir, fixup_dirs):
+        """Ensure execution directory for `comp` is in relative form."""
+        if root_dir:
+            if comp_dir.startswith(root_dir):
+                if comp_dir == root_dir and comp.directory:
+                    fixup_dirs.append((comp, comp.directory))
+                    comp.directory = ''
+                elif os.path.isabs(comp.directory):
+                    parent_dir = comp.parent.get_abs_directory()
+                    fixup_dirs.append((comp, comp.directory))
+                    comp.directory = self._relpath(comp_dir, parent_dir)
+                self.debug("    %s.directory reset to '%s'", 
+                           comp.name, comp.directory)
+            else:
+                self.raise_exception(
+                    "Can't save, %s directory '%s' doesn't start with '%s'."
+                    % (comp.get_pathname(), comp_dir, root_dir), ValueError)
+
+    def _fix_external_files(self, comp, comp_dir, root_dir, fixup_meta,
+                            src_files):
+        """Ensure external files for `comp` are in relative form, and update
+        src_files to include all matches."""
+        for metadata in comp.external_files:
+            path = metadata['path']
+            path = os.path.expanduser(path)
+            path = os.path.expandvars(path)
+            if not os.path.isabs(path):
+                path = os.path.join(comp_dir, path)
+            paths = glob.glob(path)
+            for path in paths:
+                path = os.path.normpath(path)
+                if not os.path.exists(path):
+                    continue
+                if root_dir:
+                    if path.startswith(root_dir):
+                        save_path = self._relpath(path, root_dir)
+                        if os.path.isabs(metadata['path']):
+                            path = self._relpath(path, comp_dir)
+                            fixup_meta.append((metadata, metadata['path']))
+                            metadata['path'] = path
+                    else:
+                        self.raise_exception(
+                            "Can't save, %s file '%s' doesn't start with '%s'."
+                            % (comp.get_pathname(), path, root_dir), ValueError)
+                else:
+                    save_path = path
+                src_files.add(save_path)
+
+    def _fix_file_vars(self, comp, comp_dir, root_dir, fixup_fvar, src_files):
+        """Ensure FileTraits for `comp` are in relative form and add to
+        src_files."""
+        for fvarname, fvar, ftrait in comp.get_file_vars():
+            path = fvar.filename
+            if not path:
+                continue
+            if not os.path.isabs(path):
+                path = os.path.join(comp_dir, path)
+            path = os.path.normpath(path)
+            if not os.path.exists(path):
+                continue
+            if root_dir:
+                if path.startswith(root_dir):
+                    save_path = self._relpath(path, root_dir)
+                    if os.path.isabs(fvar.filename):
+                        path = self._relpath(path, comp_dir)
+                        fixup_fvar.append((comp, fvarname, fvar))
+                        comp.set(fvarname+'.filename', path, force=True)
+                else:
+                    self.raise_exception(
+                        "Can't save, %s path '%s' doesn't start with '%s'."
+                        % ('.'.join([comp.get_pathname(), fvarname]),
+                           path, root_dir), ValueError)
+            else:
+                save_path = path
+            src_files.add(save_path)
 
     def get_file_vars(self):
         """Return list of (filevarname,filevarvalue,filetrait) owned by this
@@ -471,7 +483,7 @@ class Component (Container):
                     else:
                         relpath = container.get_pathname(rel_to_scope=scope)
                         file_vars.append(('.'.join([relpath, name]),
-                                            obj, ftrait))
+                                          obj, ftrait))
                 elif isinstance(obj, Container) and \
                      not isinstance(obj, Component):
                     _recurse_get_file_vars(obj, file_vars, visited, scope)
@@ -603,25 +615,23 @@ Component.load_from_eggfile('%s', install=False)
                     top.warning('No parent, using null relative directory')
                     relpath = ''
 
-
             # Set top directory.
             orig_dir = os.getcwd()
-            
             if name:
                 top.name = name
                 # New instance via create(name) gets new directory.
                 if not os.path.exists(name):
                     os.mkdir(name)
                 os.chdir(name)
-            # TODO: (maybe) Seems like we should make top.directory relative here 
-            # instead of absolute, but it doesn't work...
+            # TODO: (maybe) Seems like we should make top.directory relative
+            # here # instead of absolute, but it doesn't work...
             #top.directory = _relpath(os.getcwd(), SimulationRoot.get_root())
             top.directory = os.getcwd()
             
             try:
                 # Create any missing subdirectories.
                 for component in [c for c in top.values(recurse=True)
-                                          if isinstance(c,Component)]:
+                                          if isinstance(c, Component)]:
                     directory = component.get_abs_directory()
                     if not os.path.exists(directory):
                         os.makedirs(directory)
@@ -656,32 +666,31 @@ Component.load_from_eggfile('%s', install=False)
 
             for metadata in self.external_files:
                 pattern = metadata['path']
-                if not pattern:
-                    continue
-                is_input = metadata.get('input', False)
-                const = metadata.get('constant', False)
-                self._copy_files(pattern, package, relpath, is_input, const)
+                if pattern:
+                    is_input = metadata.get('input', False)
+                    const = metadata.get('constant', False)
+                    binary = metadata.get('binary', False)
+                    self._copy_files(pattern, package, relpath, is_input, const,
+                                     binary)
 
             for fvarname, fvar, ftrait in fvars:
                 pattern = fvar.filename
-                if not pattern:
-                    continue
-                is_input = ftrait.iostatus == 'in'
-                const = False
-                self._copy_files(pattern, package, relpath, is_input, const)
+                if pattern:
+                    is_input = ftrait.iostatus == 'in'
+                    self._copy_files(pattern, package, relpath, is_input, False,
+                                     ftrait.binary)
 
             for component in [c for c in self.values(recurse=False)
-                                    if isinstance(c, Component)]:
+                                      if isinstance(c, Component)]:
                 path = relpath
                 if component.directory:
-                    # Must use '/' for resources.
-                    path += '/'+component.directory
+                    path += '/'+component.directory  # Use '/' for resources.
                 component._restore_files(package, path)
         finally:
             if self.directory:
                 self.pop_dir()
 
-    def _copy_files(self, pattern, package, relpath, is_input, const):
+    def _copy_files(self, pattern, package, relpath, is_input, const, binary):
         """Copy files from installed egg matching pattern."""
         symlink = const and sys.platform != 'win32'
 
@@ -690,8 +699,7 @@ Component.load_from_eggfile('%s', install=False)
         if directory:
             if not os.path.exists(directory):
                 os.makedirs(directory)
-            # Must use '/' for resources.
-            relpath = relpath+'/'+directory
+            relpath = relpath+'/'+directory  # Use '/' for resources.
 
         relpath = os.path.normpath(relpath)
         pkg_files = pkg_resources.resource_listdir(package, relpath)
@@ -707,8 +715,7 @@ Component.load_from_eggfile('%s', install=False)
                         # Don't overwrite existing files (reloaded instance).
                         self.debug("    '%s' exists", filename)
                         continue
-                    # Must use '/' for resources.
-                    src_name = relpath+'/'+filename
+                    src_name = relpath+'/'+filename  # Use '/' for resources.
                     self.debug("    '%s'", src_name)
                     if symlink:
                         src = pkg_resources.resource_filename(package, src_name)
@@ -716,7 +723,8 @@ Component.load_from_eggfile('%s', install=False)
                         os.symlink(src, dst)
                     else:
                         src = pkg_resources.resource_stream(package, src_name)
-                        dst = open(filename, 'w')
+                        mode = 'wb' if binary else 'w'
+                        dst = open(filename, mode)
                         dst.write(src.read())
                         dst.close()
             if not found and is_input:

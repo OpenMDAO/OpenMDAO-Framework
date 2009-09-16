@@ -8,6 +8,10 @@ from enthought.traits.api import Float, TraitError
 import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container
 
+# Various Pickle issues arise only when this test runs as the main module.
+# This is used to detect when we're the main module or not.
+MODULE_NAME = __name__
+
 
 class ContainerTestCase(unittest.TestCase):
 
@@ -163,7 +167,66 @@ class ContainerTestCase(unittest.TestCase):
         inp = StringIO.StringIO(output.getvalue())
         newc1 = Container.load(inp, constants.SAVE_PICKLE)
                 
+    def test_save_bad_format(self):
+        output = StringIO.StringIO()
+        c1 = Container()
+        try:
+            c1.save(output, 'no-such-format')
+        except RuntimeError, exc:
+            msg = ": can't save object using format 'no-such-format'"
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected RuntimeError')
+
+    def test_save_bad_filename(self):
+        c1 = Container()
+        try:
+            c1.save('/illegal')
+        except IOError, exc:
+            msg = ": Can't save to '/illegal': Permission denied"
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected RuntimeError')
+
+    def test_save_bad_method(self):
+        # This test exercises handling references to unbound methods defined
+        # in __main__.  Because of this, it only does it's job if this is the
+        # main module (not run as part of a larger suite in the buildout dir).
+        output = StringIO.StringIO()
+        c1 = Container()
+        c1.unbound_thing = ContainerTestCase.test_save_bad_method
+        try:
+            c1.save(output)
+        except RuntimeError, exc:
+            msg = ": IMHolder: <unbound method ContainerTestCase" \
+                  ".test_save_bad_method> with module __main__ (None)"
+            self.assertEqual(str(exc), msg)
+        else:
+            if MODULE_NAME == '__main__':
+                self.fail('Expected RuntimeError')
+
+    def test_load_bad_format(self):
+        try:
+            Container.load(StringIO.StringIO(''), 'no-such-format')
+        except RuntimeError, exc:
+            msg = "can't load object using format 'no-such-format'"
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected RuntimeError')
+
+    def test_load_nofile(self):
+        try:
+            Container.load('no-such-file')
+        except ValueError, exc:
+            msg = "Bad state filename 'no-such-file'."
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected ValueError')
+
 
 if __name__ == "__main__":
-    unittest.main()
+    import nose
+    sys.argv.append('--cover-package=openmdao')
+    sys.argv.append('--cover-erase')
+    nose.runmodule()
 

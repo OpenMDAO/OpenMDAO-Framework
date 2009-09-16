@@ -848,9 +848,9 @@ class Container(HasTraits):
                 version = sys.modules[self.__class__.__module__].__version__
             except AttributeError:
                 pass
-        entry_pts = [(self, name, _get_entry_group(self))]
 
         # Child entry point names are the pathname, starting at self.
+        entry_pts = [(self, name, _get_entry_group(self))]
         if child_objs is not None:
             root_pathname = self.get_pathname()
             root_start = root_pathname.rfind('.')
