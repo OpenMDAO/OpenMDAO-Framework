@@ -18,7 +18,7 @@ def run_openmdao_suite():
     
     args = sys.argv
         
-    tlist = ['openmdao', 'npsscomponent']
+    tlist = ['openmdao']
     
     # In case --with-coverage is used, default these options in.
     if '--with-coverage' in args:
