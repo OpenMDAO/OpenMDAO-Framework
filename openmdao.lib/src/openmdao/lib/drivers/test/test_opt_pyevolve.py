@@ -14,8 +14,6 @@ from enthought.traits.api import Float, Array, TraitError
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.drivers import pyevolvedriver
 
-import openmdao.util.testutil
-
 # pylint: disable-msg=E1101
 
 
@@ -31,7 +29,7 @@ class SphereFunction(Component):
         self.total = sum([x**2 for x in self.points])
         
 
-class pyevolvedriverTestCase(unittest.TestCase):
+class TestCase(unittest.TestCase):
     """ test case for the pyevolve component""" 
     
     #define decoder to map the genome to the model
@@ -123,8 +121,7 @@ class pyevolvedriverTestCase(unittest.TestCase):
         
         # Set local dir in case we're running in a different directory.
         py_dir = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
-        python = openmdao.util.testutil.find_python('openmdao.lib')
-        retcode = self.top.check_save_load(py_dir=py_dir, python=python)
+        retcode = self.top.check_save_load(py_dir=py_dir)
         self.assertEqual(retcode, 0)
         
     def test_hypersphereCrossover_real(self):

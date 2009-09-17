@@ -14,8 +14,6 @@ from enthought.traits.api import Float, Array, TraitError
 from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-import openmdao.util.testutil
-
 
 class OptGolinskiComponent(Component):
     """ From the University of Buffalo MDO Test Suite Problem 2.4
@@ -272,8 +270,7 @@ class GolinskiTestCase(unittest.TestCase):
         self.top.driver.constraints = ['1.0 - 40.0/(comp.x[2] * comp.x[3])']
         # Set local dir in case we're running in a different directory.
         py_dir = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
-        python = openmdao.util.testutil.find_python('openmdao.lib')
-        retcode = self.top.check_save_load(py_dir=py_dir, python=python)
+        retcode = self.top.check_save_load(py_dir=py_dir)
         self.assertEqual(retcode, 0)
 
 

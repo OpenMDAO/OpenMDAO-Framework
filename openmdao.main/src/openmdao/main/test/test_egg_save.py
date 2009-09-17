@@ -20,7 +20,7 @@ from openmdao.main.filevar import FileTrait
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
-import openmdao.util.testutil
+from openmdao.util.testutil import find_python
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
@@ -744,9 +744,8 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_check_save_load')
 
-        # Exercise check_save_load().  Must find correct python first.
-        python = openmdao.util.testutil.find_python('openmdao.main')
-        retcode = self.model.check_save_load(py_dir=PY_DIR, python=python)
+        # Exercise check_save_load().
+        retcode = self.model.check_save_load(py_dir=PY_DIR)
         self.assertEqual(retcode, 0)
 
     def test_install_load(self):
@@ -757,12 +756,12 @@ class TestCase(unittest.TestCase):
         logging.debug('test_install_load')
 
         # Find correct python.
-        python = openmdao.util.testutil.find_python('openmdao.main')
+        python = find_python()
         logging.debug('    Using python: %s' % python)
 
         # Write to egg.
         egg_info = self.model.save_to_egg(py_dir=PY_DIR,
-                                               child_objs=self.child_objs)
+                                          child_objs=self.child_objs)
         self.egg_name = egg_info[0]
 
         # Create directory for installation.

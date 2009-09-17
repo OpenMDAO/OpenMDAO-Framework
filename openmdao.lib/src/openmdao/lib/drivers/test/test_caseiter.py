@@ -16,7 +16,6 @@ from enthought.traits.api import Float, Array, TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
-import openmdao.util.testutil
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -62,7 +61,7 @@ class MyModel(Assembly):
         self.driver.add_container('model', DrivenComponent())
 
 
-class DriverTestCase(unittest.TestCase):
+class TestCase(unittest.TestCase):
     """ Test CaseIteratorDriver. """
 
     # Need to be in this directory or there are issues with egg loading.
@@ -139,9 +138,8 @@ class DriverTestCase(unittest.TestCase):
         # Set local dir in case we're running in a different directory.
         py_dir = self.directory
 
-        # Exercise check_save_load().  Must find correct python first.
-        python = openmdao.util.testutil.find_python('openmdao.lib')
-        retcode = self.model.check_save_load(py_dir=py_dir, python=python)
+        # Exercise check_save_load().
+        retcode = self.model.check_save_load(py_dir=py_dir)
         self.assertEqual(retcode, 0)
 
     def test_noinput(self):

@@ -14,8 +14,8 @@ from openmdao.examples.engine_design.engine_optimization import EngineOptimizati
 import openmdao.util.testutil
 
 
-class EngineOptimizationTestCase(unittest.TestCase):
-    """ Test Vehicle """
+class TestCase(unittest.TestCase):
+    """ Test Save/Load of Vehicle """
 
     def setUp(self):
         self.model = EngineOptimization()
@@ -37,7 +37,7 @@ class EngineOptimizationTestCase(unittest.TestCase):
         # Set local dir in case we're running in a different directory.
         py_dir = pkg_resources.resource_filename('openmdao.examples.engine_design',
                                                  'test')
-        python = openmdao.util.testutil.find_python('openmdao.examples')
+        python = openmdao.util.testutil.find_python()
         egg_info = self.model.save_to_egg(py_dir=py_dir)
         egg_name = egg_info[0]
 

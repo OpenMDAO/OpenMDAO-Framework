@@ -21,9 +21,10 @@ from enthought.traits.trait_base import not_event
 
 from openmdao.main.container import Container, set_as_top
 from openmdao.main.filevar import FileValue
+from openmdao.main.log import LOG_DEBUG
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.main.log import LOG_DEBUG
+from openmdao.util.testutil import find_python
 
 # Execution states.
 STATE_UNKNOWN = -1
@@ -513,7 +514,7 @@ class Component (Container):
         return rpath
 
     def check_save_load(self, py_dir=None, test_dir='test_dir', cleanup=True,
-                        format=SAVE_CPICKLE, logfile=None, python=None):
+                        format=SAVE_CPICKLE, logfile=None):
         """Convenience routine to check that saving & reloading work.
         It will create an egg in the current directory, unpack it in `test_dir`
         via a separate process, and then load and run the component in
@@ -551,9 +552,8 @@ class Component (Container):
                 stdout = None
                 stderr = None
 
-            if sys.platform == 'win32' or python:
-                if not python:
-                    python = 'python'
+            python = find_python()  # Returns just 'python' if no buildout.
+            if sys.platform == 'win32' or python != 'python':
                 print '    python:', python
                 unpacker = 'unpack.py'
                 out = open(unpacker, 'w')
@@ -574,8 +574,6 @@ Component.load_from_eggfile('%s', install=False)
                 if not self.name:
                     self.name = self.get_default_name(self.parent)
                 os.chdir(self.name)
-                if not python:
-                    python = 'python'
                 retcode = subprocess.call([python, self.name+'_loader.py'],
                                           stdout=stdout, stderr=stderr)
                 print '    retcode', retcode

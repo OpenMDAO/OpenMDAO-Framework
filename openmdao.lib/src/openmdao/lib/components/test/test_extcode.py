@@ -12,8 +12,6 @@ from openmdao.main.api import SimulationRoot, set_as_top
 from openmdao.main.exceptions import RunInterrupted
 from openmdao.lib.components.external_code import ExternalCode
 
-import openmdao.util.testutil
-
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
 # Directory where we can find sleep.py.
@@ -50,9 +48,8 @@ class TestCase(unittest.TestCase):
         externp.timeout = 5
         externp.command = 'python sleep.py 1'
 
-        # Exercise check_save_load().  Must find correct python first.
-        python = openmdao.util.testutil.find_python('openmdao.lib')
-        retcode = externp.check_save_load(python=python)
+        # Exercise check_save_load().
+        retcode = externp.check_save_load()
         self.assertEqual(retcode, 0)
 
     def test_timeout(self):
