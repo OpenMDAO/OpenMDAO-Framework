@@ -9,7 +9,8 @@ from enthought.traits.api import TraitType, Array, Bool, Float, Dict, Int, \
                                  Str, List, Undefined, TraitError, Instance, Python
 from enthought.traits.trait_handlers import NoDefaultSpecified
 
-from openmdao.main.api import Component, FileTrait, FileValue, UnitsFloat
+from openmdao.main.api import Component, FileTrait, FileValue
+from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 import npss
 npss.isolateContexts(True)

@@ -11,7 +11,8 @@ from math import pi
 
 from enthought.traits.api import Float, Int, Range
 
-from openmdao.main.api import Component, UnitsFloat
+from openmdao.main.api import Component
+from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 from openmdao.examples.engine_design.engineC import RunEngineCycle
 

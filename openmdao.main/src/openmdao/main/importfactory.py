@@ -48,3 +48,6 @@ class ImportFactory(Factory):
                 return None
         
         return self._ctors[typ](**ctor_args)
+
+    def get_available_types(self, groups=None):
+        return []

@@ -54,8 +54,8 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     magnitude = sum([x**2 for x in seed_brother])**.5
     #checksum to enforce a circular distribution of random numbers
     while magnitude > 1:
-       seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
-       magnitude = sum([x**2 for x in seed_brother])**.5    
+        seed_brother = [random.uniform(-1,1) for i in range(0,dim)]
+        magnitude = sum([x**2 for x in seed_brother])**.5    
     
     #create a children
     sister.resetStats()

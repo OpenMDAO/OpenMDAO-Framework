@@ -5,11 +5,13 @@
 # This openMDAO component determines the vehicle acceleration based on the
 # power output of the engine, modified by the transmission torque ratio.
 
+from math import pi
 
 from enthought.traits.api import Float
 
-from openmdao.main.api import Component, UnitsFloat
-from math import pi
+from openmdao.main.api import Component
+from openmdao.lib.traits.unitsfloat import UnitsFloat
+
 
 class Chassis(Component):
     """ A vehicle dynamics component - calculates acceleration."""

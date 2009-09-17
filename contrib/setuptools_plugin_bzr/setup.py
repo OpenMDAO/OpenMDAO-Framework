@@ -1,10 +1,9 @@
 from setuptools import setup, find_packages
 import sys, os
 
-version = '0.0.1'
 
 setup(name='setuptools_bzr',
-      version=version,
+      version='0.1',
       description="A setuptools plugin for bazaar.",
       long_description="""\
 This plugin allows the include_package_data attribute in a setup call to

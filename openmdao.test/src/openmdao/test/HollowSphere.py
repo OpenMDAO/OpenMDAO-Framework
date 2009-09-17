@@ -1,5 +1,6 @@
 
-from openmdao.main.api import Component, UnitsFloat
+from openmdao.main.api import Component
+from openmdao.lib.traits.unitsfloat import UnitsFloat
 from math import pi
 
 class HollowSphere(Component):

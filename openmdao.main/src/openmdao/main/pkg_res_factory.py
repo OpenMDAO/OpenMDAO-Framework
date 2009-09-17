@@ -3,6 +3,7 @@
 __all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory']
 
 import logging
+import copy
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
@@ -68,17 +69,19 @@ class PkgResourcesFactory(Factory):
     """A Factory that loads plugins using the pkg_resources API, which means
     it searches through egg info of distributions in order to find any entry
     point groups corresponding to openmdao plugin types, e.g.,
-    openmdao.components, openmdao.variables, etc.
+    openmdao.components, openmdao.traits, etc.
     """
     
-    def __init__(self, search_path=None, groups=None):
+    def __init__(self, groups, search_path=None):
         super(PkgResourcesFactory, self).__init__()
+        self._groups = copy.copy(groups)
+        self.update_search_path(search_path)
+    
+    def update_search_path(self, search_path):
         self.env = Environment(search_path)
         self._loaders = {}
-        if isinstance(groups, list):
-            for group in groups:
-                self._get_plugin_info(self.env, group)
-        
+        for group in self._groups:
+            self._get_plugin_info(self.env, group)
         
     def create(self, typ, version=None, server=None, 
                res_desc=None, **ctor_args):
@@ -90,6 +93,7 @@ class PkgResourcesFactory(Factory):
         
         try:
             if version is None:
+                # TODO: make sure this always creates the newest version
                 return self._loaders[typ][0].create(self.env, **ctor_args)
 
             for entry in self._loaders[typ]:
@@ -119,9 +123,14 @@ class PkgResourcesFactory(Factory):
                     if len(entry_pt.attrs) > 0:
                         if nm not in self._loaders:
                             self._loaders[nm] = []
-                        self._loaders[nm].append(
-                            EntryPtLoader(name=nm, group=groupname,
-                                          dist=dist, entry_pt=entry_pt))
+                        # avoid adding a loader we already have
+                        for loader in self._loaders[nm]:
+                            if dist == loader.dist:
+                                break
+                        else:
+                            self._loaders[nm].append(
+                                EntryPtLoader(name=nm, group=groupname,
+                                              dist=dist, entry_pt=entry_pt))
                     else:
                         raise NameError('entry point '+nm+' in setup.py file'+
                                  ' must specify an object within the module')
@@ -140,3 +149,9 @@ class PkgResourcesFactory(Factory):
                 
         return matches
     
+
+    def get_available_types(self, groups):
+        ret = []
+        for group in groups:
+            ret.extend([(l.name, l.dist.version) for l in self.get_loaders(group, False)])
+        return ret
