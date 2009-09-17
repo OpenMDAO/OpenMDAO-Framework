@@ -101,8 +101,8 @@ class WingProj(object):
         
         self.wingproj = os.path.join(home, '.wingide3', 'default.wpr')    
         if not os.path.isfile(self.wingproj):
-            self.wingproj = os.path.join(self.branchdir,
-                                         'misc','new_wing_proj.wpr')
+            self.wingproj = os.path.join(os.path.dirname(__file__),
+                                         'new_wing_proj.wpr')
         
         # build up a list of all egg dependencies we find in other recipes in this
         # buildout. We just look for the keyword 'eggs' and look into the eggs
