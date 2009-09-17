@@ -31,6 +31,8 @@ setup(name='openmdao.util',
       install_requires=[
           'setuptools',
       ],
-      entry_points = {
-      },
+      entry_points = """
+      [console_scripts]
+      mod2egg=openmdao.util.mod2egg:mod2egg
+      """
     )

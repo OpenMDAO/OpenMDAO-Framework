@@ -368,8 +368,8 @@ Using OpenMDAO
 --------------
 OpenMDAO provides two interfaces through which the user interacts to build build and execute models -- a 
 graphical user interface and a scripting/command line interface. The graphical interface is currently
-under developed and is not covered here. This tutorial covers describes how to build and run models using
-the scripting interface, or more specifically, writing python scripts to interact with the OpenMDAO
+under developed and is not covered here. This tutorial describes how to build and run models using
+the scripting interface, or more specifically, how to write python scripts to interact with the OpenMDAO
 framework and components.
 
 This tutorial will also introduce the user to using the Python shell for creating and interacting with
@@ -413,15 +413,15 @@ the base class Component. A very simple component is shown here:
 
 	class Transmission(Component):
 	    """ A simple transmission model."""
-
-	    def __init__(self, doc=None, directory=''):
-	        """ Creates a new Transmission object """
-	        super(Transmission, self).__init__(doc, directory)        
-
-	    def execute(self):
-	        """ The 5-speed manual transmission is simulated by determining the
-	            torque output and engine RPM via the gear ratios.
-	            """
+	
+    	    def __init__(self, doc=None, directory=''):
+        	    """ Creates a new Transmission object """
+        	super(Transmission, self).__init__(doc, directory)        
+        
+	        def execute(self):
+	            """ The 5-speed manual transmission is simulated by determining the
+	                torque output and engine RPM via the gear ratios.
+	                """
 
 This new Transmission component does nothing yet. It does have the two functions that all components must have.
 The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
@@ -437,7 +437,8 @@ The next step is to add the inputs and outputs that are defined in our model des
 .. testcode:: Code2
 
 	from enthought.traits.api import Float, Int
-	from openmdao.main.api import Component, UnitsFloat
+	from openmdao.main.api import Component
+	from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 	class Transmission(Component):
 	    """ A simple transmission model."""
@@ -661,7 +662,9 @@ Engine, and Chassis components.
 
 	from enthought.traits.api import implements, Interface, Float, Int
 
-	from openmdao.main.api import Assembly, UnitsFloat
+	from openmdao.main.api import Assembly
+	from openmdao.lib.traits.unitsfloat import UnitsFloat
+	from openmdao.main.interfaces import IComponent
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission
@@ -669,6 +672,7 @@ Engine, and Chassis components.
 	
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
+
     
 	    def __init__(self, directory=''):
 	        """ Creates a new Vehicle Assembly object """
@@ -726,10 +730,10 @@ Now that the components are instantiated in the assembly, they need to be hooked
 
 .. testcode:: Code5
 
-	        self.connect('transmission.RPM','engine.RPM')
-	        self.connect('transmission.torque_ratio','chassis.torque_ratio')
-	        self.connect('engine.torque','chassis.engine_torque')
-	        self.connect('engine.engine_weight','chassis.mass_engine')
+	self.connect('transmission.RPM','engine.RPM')
+        self.connect('transmission.torque_ratio','chassis.torque_ratio')
+        self.connect('engine.torque','chassis.engine_torque')
+        self.connect('engine.engine_weight','chassis.mass_engine')
 	
 The first argument in the call to ``self.connect`` is the output variable, and the second argument is
 the input variable. For a connection to be valid, the units of the output and input must be of the same
@@ -819,10 +823,10 @@ Now these input are available to connect to the components.
 
 .. testcode:: Code7b
 
-	        self.connect('velocity', 'chassis.velocity')
-	        self.connect('velocity', 'transmission.velocity')
-	        self.connect('tire_circumference', 'chassis.tire_circ')
-	        self.connect('tire_circumference', 'transmission.tire_circ')
+        self.connect('velocity', 'chassis.velocity')
+        self.connect('velocity', 'transmission.velocity')
+        self.connect('tire_circumference', 'chassis.tire_circ')
+        self.connect('tire_circumference', 'transmission.tire_circ')
 
 This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chassis and 
 Transmission components.
@@ -897,7 +901,7 @@ function RunEngineCycle. The function can be imported and used just like any pyt
    :start-after: engine_weight = 0.0
    :end-before: # end engine.py
    :language: python
-   
+
 Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first
 element (element zero.) This is not typically needed for return values from FORTRAN codes compiled with
 F2PY, but it seemes to be needed for C codes for which the signature file is manually created. This is

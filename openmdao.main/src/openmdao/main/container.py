@@ -38,7 +38,6 @@ from openmdao.main.factorymanager import create as fmcreate
 from openmdao.util import eggloader
 from openmdao.util import eggsaver
 from openmdao.util.eggsaver import SAVE_CPICKLE
-from openmdao.main.unitsfloat import convert_units
 
 
 def path_to_root(node):
@@ -176,6 +175,9 @@ class Container(HasTraits):
         if doc is not None:
             self.__doc__ = doc
 
+        # TODO: see about turning this back into a regular logger and just
+        # handling its unpickleability in __getstate__/__setstate__ in
+        # order to avoid the extra layer of function calls when logging
         self._logger = Logger('')
         self.log_level = LOG_DEBUG
 
@@ -452,21 +454,6 @@ class Container(HasTraits):
         for cont in self.list_containers():
             getattr(self, cont).tree_defined()
             
-    def unit_convert(self, name, units):
-        """Return the value of the named io trait converted to the given
-        units.
-        """
-        desttrait = self.trait(name)
-        if desttrait is None:
-            self.raise_exception("attribute '%s' not found"%name,
-                                 TraitError)
-        destunits = desttrait.units
-        if destunits is None:
-            raise self.raise_exception("'%s' has no units" % name,
-                                       TraitError)
-        else:
-            return convert_units(getattr(self, name), destunits, units)
-
     def dump(self, recurse=False, stream=None):
         """Print all items having iostatus metadata and
         their corresponding values to the given stream. If the stream
@@ -824,12 +811,12 @@ class Container(HasTraits):
                 arr = arr[idx]
             return arr
     
-    def config_from_obj(self, obj):
-        """This is intended to allow a newer version of a component to
-        configure itself based on an older version. By default, values
-        of dictionary entries from the old object will be copied to the
-        new one."""
-        raise NotImplementedError("config_from_obj")
+    def replace(self, name, newobj):
+        """This is intended to allow replacement of a named object by
+        a new object that may be a newer version of the named object or
+        another type of object with a compatible interface. 
+        """
+        raise NotImplementedError("replace")
 
     def save_to_egg(self, name=None, version=None, py_dir=None,
                     src_dir=None, src_files=None, child_objs=None,

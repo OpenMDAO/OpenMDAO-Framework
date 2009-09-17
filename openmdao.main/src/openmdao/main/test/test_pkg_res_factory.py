@@ -45,10 +45,11 @@ class PkgResFactoryTestCase(unittest.TestCase):
         # make sure we're looking in the right spot for the plugins whether
         # we're in a develop egg or in the released version
         dist = working_set.find(Requirement.parse('openmdao.test'))
-        fact = PkgResourcesFactory([os.path.join(dist.location,
-                                                           'openmdao',
-                                                           'test','plugins')],
-                                             ['openmdao.components'])
+        fact = PkgResourcesFactory(['openmdao.components'],
+                                   [os.path.join(dist.location,
+                                                 'openmdao',
+                                                 'test','plugins')],
+                                   )
         
         comp = fact.create('testplugins.components.dumb.DumbComponent')
         logging.debug('    loaders:')
@@ -70,8 +71,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         # make sure we're looking in the right spot for the plugins whether
         # we're in a develop egg or in the released version
         dist = working_set.find(Requirement.parse('openmdao.test'))
-        fact = PkgResourcesFactory(None,
-                                             ['openmdao.components'])
+        fact = PkgResourcesFactory(['openmdao.components'], None)
         
         comp = fact.create('openmdao.test.Box.Box')
         comp.run()
@@ -80,10 +80,10 @@ class PkgResFactoryTestCase(unittest.TestCase):
         """load a specific version, then try to load a conflicting version"""
         
         dist = working_set.find(Requirement.parse('openmdao.test'))
-        fact = PkgResourcesFactory([os.path.join(dist.location,
-                                                           'openmdao','test',
-                                                           'plugins')],
-                                             ['openmdao.dumbplugins'])
+        fact = PkgResourcesFactory(['openmdao.dumbplugins'],
+                                   [os.path.join(dist.location,
+                                                 'openmdao','test',
+                                                 'plugins')])
         foo = fact.create('foo.Comp1Plugin', version='1.0')
         self.assertEqual(foo.version, '1.0')
         
@@ -101,10 +101,10 @@ class PkgResFactoryTestCase(unittest.TestCase):
         # Get a list of entry point loaders for the openmdao.dumbplugins 
         # group.       
         dist = working_set.find(Requirement.parse('openmdao.test'))
-        fact = PkgResourcesFactory([os.path.join(dist.location,
-                                                           'openmdao',
-                                                           'test','plugins')],
-                                             ['openmdao.dumbplugins'])
+        fact = PkgResourcesFactory(['openmdao.dumbplugins'],
+                                   [os.path.join(dist.location,
+                                                 'openmdao',
+                                                 'test','plugins')])
         # first, look for active loaders. list should be empty
         dumb_loaders = fact.get_loaders('openmdao.dumbplugins')
         self.assertEqual(len(dumb_loaders), 0)

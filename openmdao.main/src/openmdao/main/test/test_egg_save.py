@@ -846,9 +846,8 @@ comp.run()
         self.egg_name = egg_info[0]
 
         # Create factory.
-        factory = PkgResourcesFactory([os.getcwd()],
-                                      ['openmdao.components',
-                                       'openmdao.containers'])
+        factory = PkgResourcesFactory(['openmdao.components','openmdao.containers'],
+                                      [os.getcwd()])
         logging.debug('    loaders:')
         for key, value in factory._loaders.items():
             logging.debug('        %s:', key)

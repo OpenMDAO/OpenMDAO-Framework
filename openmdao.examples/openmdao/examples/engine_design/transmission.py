@@ -6,7 +6,8 @@
 # Transmission is a 5-speed manual.
 
 from enthought.traits.api import Float, Int
-from openmdao.main.api import Component, UnitsFloat
+from openmdao.main.api import Component
+from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 class Transmission(Component):
     """ A simple transmission model."""
