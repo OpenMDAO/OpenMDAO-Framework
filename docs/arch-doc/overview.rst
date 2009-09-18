@@ -182,7 +182,7 @@ is important. The easiest way to do this is for users to set the
 ``$HOME/.buildout/default.cfg``).  After **eggs-directory** is set, all eggs needed
 by any buildout run by the user will be installed in that directory, and if
 a needed egg is found in that directory, it doesn't have to be downloaded.
-Multiple versions of the same egg can be present in the **eggs-directory**
+Multiple versions of the same egg can be present in the ``eggs-directory``
 since all of their filenames will be unique.
 
 

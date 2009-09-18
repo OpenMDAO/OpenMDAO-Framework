@@ -16,16 +16,16 @@ them usable by the framework.
 Types of Plugins
 ----------------
 
-OpenMDAO supports a number of different plugin types, but the most common is
-the Component plugin. Other less common types of OpenMDAO plugins exist and
-can be found in the table below.
+OpenMDAO supports a number of different plugin types, but the most common is the :terM`Component` plugin. The
+Component plugin, and other less common types of OpenMDAO plugins, are listed in following table
+along with a description of their purpose.
 
 ===========================  =================================================================================================
 **Plugin Type**              **Purpose**                                                                                              
 ===========================  =================================================================================================
 :term:`Component`            Add custom computations to an OpenMDAO model 
 ---------------------------  -------------------------------------------------------------------------------------------------
-TraitType                    Add custom data object to pass between components
+:term:`TraitType`            Add custom data object to pass between components
 ---------------------------  -------------------------------------------------------------------------------------------------
 :term:`Driver`               Add custom iterative executive (optimizer, solver, design space explorer) to an OpenMDAO model
 ---------------------------  -------------------------------------------------------------------------------------------------
@@ -35,7 +35,7 @@ TraitType                    Add custom data object to pass between components
 ===========================  =================================================================================================
 
 
-How does OpenMDAO find plugins?
+How Does OpenMDAO Find Plugins?
 -------------------------------
 
     - TODO: discuss entry points
@@ -64,8 +64,8 @@ Pure Python Component Plugin Example
 ------------------------------------
 
 For this example we'll build a plugin for the component shown in the figure
-:ref:`Conceptual-View-of-a-Simple-Component`.  This component simply computes
-the value of its single output by adding its two inputs.
+:ref:`Conceptual-View-of-a-Simple-Component` (from the User's Guide).  This component
+simply computes the value of its single output by adding its two inputs.
 
 Our first step is to create our class. We want to inherit from
 ``openmdao.main.api.Component``, because that provides us with the interface we
@@ -135,19 +135,19 @@ the class.  The entry point groups associated with each type of
 plugin are shown in the table below.
 
 
-===========================  ================================
-**Plugin Type**              **Entry Point Group**                                                                                              
-===========================  ================================
-:term:`Component`            openmado.component 
----------------------------  --------------------------------
-TraitType                    openmdao.trait
----------------------------  --------------------------------
-:term:`Driver`               openmdao.driver
----------------------------  --------------------------------
-:term:`CaseIterator`         openmdao.case_iterator
----------------------------  --------------------------------
-:term:`ResourceAllocator`    openmdao.resource_allocator
-===========================  ================================
+====================  ================================
+**Plugin Type**       **Entry Point Group**                                                                                              
+====================  ================================
+Component             openmado.component 
+--------------------  --------------------------------
+TraitType             openmdao.trait
+--------------------  --------------------------------
+Driver                openmdao.driver
+--------------------  --------------------------------
+aseIterator           openmdao.case_iterator
+--------------------  --------------------------------
+ResourceAllocator     openmdao.resource_allocator
+====================  ================================
 
 
 *Egg Creation*
@@ -179,7 +179,7 @@ only other file in the directory structure besides ``simple_adder.py`` is the
 ``setup.py`` file, which describes how to build an egg containing our module.
 In this case, the ``setup.py`` file looks like this:
 
-..  _Code1
+.. _Code1:
 
 
 ::
@@ -188,7 +188,7 @@ In this case, the ``setup.py`` file looks like this:
     from setuptools import setup, find_packages
     
     setup(
-        name='simple_adder',
+        name='simple_adder',bin
         version='1.0',
         packages=find_packages(),
         install_requires=['openmdao.lib', 'Traits>=3.1.0'],
@@ -199,13 +199,13 @@ In this case, the ``setup.py`` file looks like this:
 
     
 The ``setup()`` command has *many* options in addition to those shown above,
-e.g., **author**, **author_email**, **maintainer**, **maintainer_email**,
-**url**, **license**, **description**, **long_description**, **keywords**,
-**platforms**, **fullname**, **contact**, **contact_email**, **classifiers**,
-and **download_url**. If you supply any of these, their values will be stored
-as metadata in the egg. To keep things simple, we won't describe all of the
-options in detail, but if you're interested, you can go to 
-`<http://docs.python.org/distutils/apiref.html#module-distutils.core>`_ and 
+e.g., author, author_email, maintainer, maintainer_email, url, license,
+description, long_description, keywords, platforms, fullname, contact,
+contact_email, classifiers, and download_url. If you supply any of these,
+their values will be stored as metadata in the egg. To keep things simple, we
+won't describe all of the options in detail, but if you're interested, you can
+go to  `<http://docs.python.org/distutils/apiref.html#module-distutils.core>`_
+and 
 `<http://peak.telecommunity.com/DevCenter/setuptools#new-and-changed-setup-keywords>`_.
 
 The following options are required for our egg to function properly
@@ -267,8 +267,11 @@ within the OpenMDAO framework:
         [openmdao.drivers]
         MyDriver = mydriver:MyDriver
         """
-        
-     or
+	   
+    or
+     
+    :: 
+       
           
         { 'openmdao.components': ['SimpleAdder = simple_adder:SimpleAdder'],
           'openmdao.drivers': ['MyDriver = mydriver:MyDriver']

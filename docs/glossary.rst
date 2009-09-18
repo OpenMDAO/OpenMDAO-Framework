@@ -14,7 +14,7 @@ Glossary
 
       **Assembly**
 	The Assembly class is the primary building block of the system of 
-	systems aspect of this architecture. Each Assembly has a Workflow and a 
+	systems aspect of OpenMDAO. Each Assembly has a Workflow and a 
 	Driver, and acts as a container for Components. An Assembly is also a
 	Component, so hierarchical structures of Assemblies can be created.
       
@@ -69,7 +69,9 @@ Glossary
       
       **Component**
         A Container that is *runnable*; it also supports several other framework
-        functions, such as checkpoint/restart, stop, and invoke.
+	functions, such as checkpoint/restart, stop, and invoke. A component has
+	input and output attributes and can perform some sort of calculation when
+	it is executed. 
 
 
       **Components**
@@ -95,7 +97,6 @@ Glossary
 	Python decorator is a specific change to the Python syntax that allows users to
 	more conveniently alter functions and methods.
 	
-
       
       **DLL**
         Dynamically Loadable Library 
@@ -215,7 +216,7 @@ Glossary
         A Python package for creating and manipulating graphs and networks.
 	
 	
-            **NOSA**
+      **NOSA**
         NASA Open Source Agreement. A software license approved by the Open
         Source Initiative (:term:`OSI`). The National Aeronautics and Space
         Administration (NASA) releases some software under this license.
@@ -414,6 +415,11 @@ Glossary
 	to the Python property language feature. 
 
 
+      **TraitType** 
+	The base class used to validate and possibly convert data objects that are
+	passed between linked Components.
+
+      
       **Variable**
         A wrapper for data passed between framework components. Variables can contain
         a value, a default value, optional min/max values, and units. Variables can
