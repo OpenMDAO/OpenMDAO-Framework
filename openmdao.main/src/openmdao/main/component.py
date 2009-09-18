@@ -24,12 +24,6 @@ from openmdao.main.filevar import FileValue
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.log import LOG_DEBUG
 
-# Execution states.
-STATE_UNKNOWN = -1
-STATE_IDLE    = 0
-STATE_RUNNING = 1
-STATE_WAITING = 2
-
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -38,7 +32,7 @@ class SimulationRoot (object):
     __root = None
 
     @staticmethod
-    def chdir (path):
+    def chroot (path):
         """Change to directory 'path' and set the singleton's root.
         Normally not called, but useful in special situations."""
         os.chdir(path)
@@ -95,13 +89,11 @@ class Component (Container):
 
     directory = Str('',desc='If non-blank, the directory to execute in.', 
                     iostatus='in')
-    state = Python
     external_files = Python
         
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
-        self.state = STATE_IDLE
         self._stop = False
         self._call_check_config = True
         self._call_execute = True
@@ -202,7 +194,6 @@ class Component (Container):
                       (directory, exc.strerror)
                 self.raise_exception(msg, RuntimeError)
 
-        self.state = STATE_RUNNING
         self._stop = False
         try:
             self._pre_execute()
@@ -211,7 +202,6 @@ class Component (Container):
                 self.execute()
                 self._post_execute()
         finally:
-            self.state = STATE_IDLE
             if self.directory:
                 self.pop_dir()
  

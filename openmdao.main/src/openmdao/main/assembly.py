@@ -13,7 +13,7 @@ from enthought.traits.trait_base import not_none
 import networkx as nx
 
 from openmdao.main.interfaces import IDriver
-from openmdao.main.component import Component, STATE_IDLE
+from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.util import filexfer
@@ -58,7 +58,6 @@ class Assembly (Component):
     workflow = Instance(Workflow)
     
     def __init__(self, doc=None, directory='', workflow=None):
-        self.state = STATE_IDLE
         self._stop = False
         self._dir_stack = []
         self._child_io_graphs = {}
