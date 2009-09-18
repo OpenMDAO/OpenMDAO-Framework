@@ -8,34 +8,34 @@ drive the design.
 
 .. index:: pair: Python; module
 .. index:: egg
-.. index:: plug-in, registering
+.. index:: plugin, registering
 .. index:: FactoryManager
-.. index:: plug-ins
+.. index:: plugins
 
-Plug-ins
+Plugins
 ========
 
-Users of the framework will be able to extend its functionality using *plug-ins*. Any Python object will be usable as a plug-in as long as it
-supports the required interface. Typically, a plug-in will be implemented as a pure
+Users of the framework will be able to extend its functionality using *plugins*. Any Python object will be usable as a plugin as long as it
+supports the required interface. Typically, a plugin will be implemented as a pure
 Python module, a Python extension that wraps a shared library, or a file I/O  wrapper
 that interacts with a stand-alone executable code. The framework will include support
 for file I/O wrapping, including a template engine for generating input files, and
 tools to simplify the task of scanning output files for values.
 
-Plug-ins must be *registered* with the framework before the framework can locate
+Plugins must be *registered* with the framework before the framework can locate
 and activate them. In this framework, they will be registered by putting them in
 a directory or an :term:`egg` file that is in the search path of the
 :term:`FactoryManager` or in the search path of one of the ObjServerFactories
 that is itself registered with the FactoryManager.   
 
 
-The primary types of plug-in base classes available to extend 
+The primary types of plugin base classes available to extend 
 the framework are listed below:
 
 
-.. index:: pair: Component; plug-in base class 
-.. index:: pair: Driver; plug-in base class
-.. index:: pair: TraitType; plug-in base class
+.. index:: pair: Component; plugin base class 
+.. index:: pair: Driver; plug-n base class
+.. index:: pair: TraitType; plugin base class
 
 
 :ref:`Component<component.py>` - base class of an engineering tool or some 
@@ -52,14 +52,14 @@ between linked Components.
 .. _TraitType: http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_handlers.TraitType.html
 
 
-The plug-in interfaces available to extend the framework are listed below, and
+The plugin interfaces available to extend the framework are listed below, and
 their source documentation can be found in :ref:`interfaces.py<interfaces.py>`.
 
 
-.. index:: pair: IGeomQueryObject; plug-in interface
-.. index:: pair: IGeomModifier; plug-in interface
-.. index:: pair: IResourceAllocator; plug-in interface
-.. index:: pair: IFactory; plug-in interface
+.. index:: pair: IGeomQueryObject; plugin interface
+.. index:: pair: IGeomModifier; plugin interface
+.. index:: pair: IResourceAllocator; plugin interface
+.. index:: pair: IFactory; plugin interface
 
 
 IGeomQueryObject - interface to objects with geometry.
@@ -421,35 +421,35 @@ problem formulation view.
    N-squared View of Problem Formulation
 
 
-.. index:: pair: plug-in; view
+.. index:: pair: plugin; view
 .. index:: Sockets
 
 
-*Plug-in View*
+*Plugin View*
 ______________
 
-The figure below shows an example of a `plug-in view`_, which shows any Sockets
+The figure below shows an example of a `plugin view`_, which shows any Sockets
 existing in a particular :term:`Component`. A  :term:`Socket` is just a placeholder
 for an object within a :term:`Component` that has a name and  provides a
-particular  interface. In other words, it is a location for a plug-in within a
+particular  interface. In other words, it is a location for a plugin within a
 Component. Because any object placed in a Socket must have the interface specified
 by the Socket, the enclosing Component will know how to interact with that object.
 Adding Sockets to a :term:`Component` class gives the :term:`Component` developer
 a way to allow a user to easily customize the behavior of a :term:`Component` at
 runtime simply by dragging and dropping objects onto the :term:`Component`.
 
-.. _`plug-in view`:
+.. _`plugin view`:
 
 .. figure:: ../generated_images/PluginView.png
    :align: center
 
-   Plug-in View of a Component
+   Plugin View of a Component
 
 
-Sockets for optional plug-in objects will be visually distinct from Sockets for 
-mandatory plug-ins. For example, optional plug-ins could be displayed as boxes
-drawn with dotted lines, and  Sockets for mandatory plug-ins as dashed boxes.
-There are  also sockets allowing lists of plug-ins that share a common 
+Sockets for optional plugin objects will be visually distinct from Sockets for 
+mandatory plugins. For example, optional plugins could be displayed as boxes
+drawn with dotted lines, and  Sockets for mandatory plugins as dashed boxes.
+There are  also sockets allowing lists of plugins that share a common 
 interface.
 
 

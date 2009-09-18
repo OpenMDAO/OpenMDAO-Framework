@@ -2,7 +2,7 @@ Overview
 --------
 
 .. index:: pair: diagram; top-level context
-.. index:: plug-ins
+.. index:: plugins
 
 
 
@@ -12,7 +12,7 @@ Top-level Context Diagram
 
 The following figure shows which pieces of the overall MDAO effort are
 considered to be part of the framework infrastructure and which are considered
-to be :term:`plug-ins` to the framework.
+to be :term:`plugins` to the framework.
 
 
 .. figure:: ../generated_images/TopContext.png
@@ -80,7 +80,7 @@ components. This includes support for custom editors for each new type.
 Implementation Language
 =======================
 
-OpenMDAO will be implemented using the Python_ programming language. Plug-ins to
+OpenMDAO will be implemented using the Python_ programming language. Plugins to
 the framework will be Python modules. A Python module can be either a text file
 written in pure Python code or an extension module, which is a shared library
 that conforms to the Python C-API. Because Python is an interpreted language and
@@ -103,7 +103,7 @@ The framework will be distributed as a namespace package like other large Python
 projects, e.g., zope_. Parts of the framework that are decoupled and deemed
 useful on their own will be installable as individual :term:`eggs` like, for
 example, *zope.interface*. The framework namespace will also contain a standard
-library of open source plug-in components. A number of other components that are
+library of open source plugin components. A number of other components that are
 not open source, primarily wrappers for NASA analysis codes that cannot be
 released open source for various reasons, will be available as individual eggs.
 
@@ -113,7 +113,7 @@ The current package layout of the project is as follows:
     the OpenMDAO framework infrastructure
     
 **openmdao.lib**
-    standard library of OpenMDAO plug-ins
+    standard library of OpenMDAO plugins
     
 **openmdao.recipes**
     OpenMDAO specific recipes for zc.buildout_
