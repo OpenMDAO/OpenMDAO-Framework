@@ -13,7 +13,8 @@ from enthought.traits.api import Float, Array, Int, Str, Instance, Range, \
 
 import mool.Optimization.MidFiModel
 
-from openmdao.main.api import Assembly, Component, UnitsFloat
+from openmdao.main.api import Assembly, Component
+from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 import wrapper
 

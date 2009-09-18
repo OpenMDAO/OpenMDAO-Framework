@@ -898,9 +898,8 @@ comp.run()
         self.egg_name = egg_info[0]
 
         # Create factory.
-        factory = PkgResourcesFactory([os.getcwd()],
-                                      ['openmdao.components',
-                                       'openmdao.containers'])
+        factory = PkgResourcesFactory(['openmdao.components','openmdao.containers'],
+                                      [os.getcwd()])
         logging.debug('    loaders:')
         for key, value in factory._loaders.items():
             logging.debug('        %s:', key)
@@ -942,6 +941,7 @@ comp.run()
             self.assertEqual(comp.executions, 0)
             comp.run()
             self.assertEqual(comp.executions, 3)
+
             # Create a (sub)component.
             sub = factory.create('Egg_TestModel.Oddball.oddcomp',
                                  name='test_sub')

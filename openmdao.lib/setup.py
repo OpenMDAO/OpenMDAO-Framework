@@ -2,13 +2,13 @@
 # pylint: disable-msg=F0401
 
 from setuptools import setup, find_packages
-
-version = '0.1.0'
-
+import sys
+    
 setup(name='openmdao.lib',
-      version=version,
+      version='0.1.0',
       description="OpenMDAO Standard Library",
       long_description="""\
+Component, Driver, and TraitType plugins for OpenMDAO
 """,
       classifiers=[
         'Development Status :: 2 - Pre-Alpha',
@@ -26,28 +26,19 @@ setup(name='openmdao.lib',
       license='NASA Open Source Agreement 1.3',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
-      #packages=['openmdao',
-      #          'openmdao.lib',
-      #          'openmdao.lib.drivers',
-      #          'openmdao.lib.components',
-      #          'openmdao.lib.variables',
-      #          'openmdao.lib.factories'],
       package_dir={'': 'src'},
-      #package_data={'openmdao.lib.drivers': ['test/*.py'],
-      #              'openmdao.lib.components': ['test/*.py'],
-      #              'openmdao.lib.variables': ['test/*.py'],
-      #              'openmdao.lib.factories': ['test/*.py'],
-      #},
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,
       install_requires=[
           'setuptools',
+          'ScientificPython>=2.9.0',
           'openmdao.main',
+          'openmdao.util',
           'conmin',
           'Pyevolve',
-#          'axod',
-      ],
+          #   'axod',
+          ],
       entry_points="""
       [openmdao.drivers]
       conmindrv = openmdao.lib.drivers.conmindriver.CONMINdriver

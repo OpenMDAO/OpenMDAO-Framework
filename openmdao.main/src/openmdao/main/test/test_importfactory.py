@@ -3,7 +3,7 @@ import unittest
 
 # pylint: disable-msg=C0111
 
-from openmdao.main.api import ImportFactory
+from openmdao.main.importfactory import ImportFactory
 
 class ImportFactoryTestCase(unittest.TestCase):
     

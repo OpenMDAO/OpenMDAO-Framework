@@ -5,21 +5,45 @@ Manages the creation of framework objects, either locally or remotely.
 
 
 #public symbols
-__all__ = ["create", "get_factory_names", "register_factory"]
+__all__ = [ "create", "register_factory", "get_available_types", "plugin_path" ]
 
 
-
+import os
 
 from openmdao.main.importfactory import ImportFactory
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 _factories = []
-search_path = []
+_pkg_res_factory = None
+
+# this list should contain all openmdao entry point groups for Containers
+_container_groups = [ 'openmdao.container',
+                      'openmdao.component',
+                      'openmdao.driver',
+                    ]
+
+def _parse_plugin_path(pathstr):
+    if pathstr is None:
+        return []
+    if ';' in pathstr or ':\\' in pathstr:
+        return pathstr.split(';')
+    else:
+        return pathstr.split(':')
+    
+plugin_path = _parse_plugin_path(os.environ.get('OPENMDAO_PLUGIN_PATH'))
+_old_plugin_path = plugin_path
+
 
 def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     """Create and return an object specified by the given type, name,
     version, etc.
     """
+    global plugin_path, _old_plugin_path
+    
+    if _old_plugin_path != plugin_path:  # update the pkg_res_factory with new search path
+        _pkg_res_factory.update_search_path(plugin_path)
+        _old_plugin_path = plugin_path
+        
     obj = None
     for fct in _factories:
         obj = fct.create(typname, version, server, res_desc, **ctor_args)
@@ -29,22 +53,28 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     raise NameError("unable to create object of type '"+typname+"'")
 
 
-def get_factory_names():
-    """Return a list of names of Factory objects managed by this manager."""
-    names = []
-    for fct in _factories:
-        names.append(type(fct).__name__)
-        
-    return names
-
-
 def register_factory(fct):
     """Add a Factory to the factory list."""
     if fct not in _factories:
         _factories.append(fct)      
           
+def get_available_types(groups=None):
+    """Return a set of tuples of the form (typename, dist_version), one
+    for each available plugin type in the given entry point groups.
+    If groups is None, return the set for all openmdao entry point groups.
+    """
+    if groups is None:
+        groups = _container_groups
+    types = []
+    for fct in _factories:
+        types.extend(fct.get_available_types(groups))
+    return types
 
-# by default, register factories that create things via pkg_resources 
-# and simple imports
+
+# register factory that loads plugins via pkg_resources
+_pkg_res_factory = PkgResourcesFactory(groups=_container_groups,
+                                       search_path=plugin_path)   
+register_factory(_pkg_res_factory)
+
+# register factory for simple imports
 register_factory(ImportFactory())
-register_factory(PkgResourcesFactory())
