@@ -415,7 +415,7 @@ the base class Component. A very simple component is shown here:
 	    """ A simple transmission model."""
 	
     	    def __init__(self, doc=None, directory=''):
-        	    """ Creates a new Transmission object """
+        	""" Creates a new Transmission object """
         	super(Transmission, self).__init__(doc, directory)        
         
 	        def execute(self):
@@ -664,7 +664,6 @@ Engine, and Chassis components.
 
 	from openmdao.main.api import Assembly
 	from openmdao.lib.traits.unitsfloat import UnitsFloat
-	from openmdao.main.interfaces import IComponent
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission
@@ -704,7 +703,8 @@ Now that the components are instantiated in the assembly, they need to be hooked
 
 	from enthought.traits.api import implements, Interface, Float, Int
 
-	from openmdao.main.api import Assembly, UnitsFloat
+	from openmdao.main.api import Assembly
+	from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission
@@ -791,7 +791,8 @@ Now these input are available to connect to the components.
 
 	from enthought.traits.api import implements, Interface, Float, Int
 
-	from openmdao.main.api import Assembly, UnitsFloat
+	from openmdao.main.api import Assembly
+	from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission

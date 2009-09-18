@@ -9,7 +9,7 @@ from numpy.distutils.misc_util import Configuration
 
 version = '0.1.0'
 
-config = Configuration(name='openmdao.examples.engine_design')
+config = Configuration()
 config.add_extension('engineC', \
                      sources=['openmdao/examples/engine_design/engineC.pyf', \
                               'openmdao/examples/engine_design/engineC.c'] )
