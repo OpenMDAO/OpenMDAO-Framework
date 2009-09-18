@@ -15,7 +15,7 @@ from enthought.traits.api import Bool, List, Str, Array, Int, \
                                  Instance, Callable, TraitError
 
 from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, \
-                              SAVE_CPICKLE, SAVE_LIBYAML, set_as_top
+                              SAVE_CPICKLE, set_as_top
 from openmdao.main.filevar import FileTrait
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
@@ -274,7 +274,6 @@ class OddballContainer(Container):
 
 def observer(state, string, file_fraction, byte_fraction):
     """ Observe progress. """
-    global OBSERVATIONS
     OBSERVATIONS.append((state, string, file_fraction, byte_fraction))
     return True
 
@@ -309,8 +308,6 @@ class TestCase(unittest.TestCase):
                            self.model.Oddball, self.model.Oddball.oddcomp,
                            self.model.Oddball.oddcont]
         self.egg_name = None
-        global OBSERVATIONS
-        OBSERVATIONS = []
 
     def tearDown(self):
         """ Called after each test in this class. """
@@ -349,6 +346,8 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.executions, 0)
 
         # Save to egg.
+        global OBSERVATIONS
+        OBSERVATIONS = []
         egg_info = self.model.save_to_egg(py_dir=PY_DIR, format=format,
                                           child_objs=self.child_objs,
                                           use_setuptools=use_setuptools,
@@ -399,6 +398,7 @@ class TestCase(unittest.TestCase):
             state, string, file_fraction, byte_fraction = observation
             self.assertEqual(state,  expected[i][0])
             self.assertEqual(string, expected[i][1])
+            self.assertEqual(file_fraction, float(i)/float(len(expected)-1))
 
         # Run and verify correct operation.
         self.model.run()
@@ -425,8 +425,55 @@ class TestCase(unittest.TestCase):
             # Load from saved initial state in egg.
             self.model.pre_delete()
             egg_path = os.path.join('..', self.egg_name)
-            self.model = Component.load_from_eggfile(egg_path, install=False)
+            OBSERVATIONS = []
+            self.model = Component.load_from_eggfile(egg_path, install=False,
+                                                     observer=observer)
             self.model.directory = os.path.join(os.getcwd(), self.model.name)
+
+            # Check observations.
+            expected = [
+                ('extract', 'EGG-INFO/PKG-INFO'),
+                ('extract', 'EGG-INFO/dependency_links.txt'),
+                ('extract', 'EGG-INFO/entry_points.txt'),
+                ('extract', 'EGG-INFO/not-zip-safe'),
+                ('extract', 'EGG-INFO/requires.txt'),
+                ('extract', 'EGG-INFO/openmdao_orphans.txt'),
+                ('extract', 'EGG-INFO/top_level.txt'),
+                ('extract', 'EGG-INFO/SOURCES.txt'),
+                ('extract', 'Egg_TestModel/Egg_TestModel.pickle'),
+                ('extract', 'Egg_TestModel/Egg_TestModel_loader.py'),
+                ('extract', 'Egg_TestModel/Oddball.pickle'),
+                ('extract', 'Egg_TestModel/Oddball_loader.py'),
+                ('extract', 'Egg_TestModel/Oddball_oddcomp.pickle'),
+                ('extract', 'Egg_TestModel/Oddball_oddcomp_loader.py'),
+                ('extract', 'Egg_TestModel/Oddball_oddcont.pickle'),
+                ('extract', 'Egg_TestModel/Oddball_oddcont_loader.py'),
+                ('extract', 'Egg_TestModel/Sink.pickle'),
+                ('extract', 'Egg_TestModel/Sink/sink.bin'),
+                ('extract', 'Egg_TestModel/Sink/sink.txt'),
+                ('extract', 'Egg_TestModel/Sink_loader.py'),
+                ('extract', 'Egg_TestModel/Source.pickle'),
+                ('extract', 'Egg_TestModel/Source/hello'),
+                ('extract', 'Egg_TestModel/Source/xyzzy'),
+                ('extract', 'Egg_TestModel/Source_loader.py'),
+                ('extract', 'Egg_TestModel/__init__.py'),
+                ('extract', 'Egg_TestModel/buildout.cfg'),
+                ('extract', 'Egg_TestModel/sub/data2'),
+                ('extract', 'Egg_TestModel/sub/data4'),
+                ('extract', 'Egg_TestModel/test_egg_save.py'),
+                ('complete', None),
+            ]
+            self.assertEqual(len(OBSERVATIONS), len(expected))
+            if use_setuptools:  # No control on order, so sort on name.
+                expected.sort(key=lambda item: item[1])
+                OBSERVATIONS.sort(key=lambda item: item[1])
+            for i, observation in enumerate(OBSERVATIONS):
+                state, string, file_fraction, byte_fraction = observation
+                self.assertEqual(state,  expected[i][0])
+                self.assertEqual(string, expected[i][1])
+                if not use_setuptools:  # Sort messes-up this comparison.
+                    self.assertEqual(file_fraction,
+                                     float(i)/float(len(expected)-1))
 
             # Verify initial state.
             self.assertEqual(SOURCE_INIT, False)
@@ -894,11 +941,12 @@ comp.run()
 
         # Write to egg.
         egg_info = self.model.save_to_egg(py_dir=PY_DIR,
-                                               child_objs=self.child_objs)
+                                          child_objs=self.child_objs)
         self.egg_name = egg_info[0]
 
         # Create factory.
-        factory = PkgResourcesFactory(['openmdao.components','openmdao.containers'],
+        factory = PkgResourcesFactory(['openmdao.components',
+                                       'openmdao.containers'],
                                       [os.getcwd()])
         logging.debug('    loaders:')
         for key, value in factory._loaders.items():
@@ -933,8 +981,32 @@ comp.run()
             out.close()
             self.create_and_check_model(factory, 'test_model_2', file_data)
 
+            # Check observations.
+            global OBSERVATIONS
+            OBSERVATIONS = []
+            model = factory.create('Egg_TestModel', name='observed',
+                                   observer=observer)
+            if model is None:
+                self.fail("Create of 'observed' failed.")
+            expected = [
+                ('copy', 'Source/xyzzy'),
+                ('copy', 'sub/data2'),
+                ('copy', 'Source/hello'),
+                ('copy', 'sub/data4'),
+                ('copy', 'Sink/sink.bin'),
+                ('copy', 'Sink/sink.txt'),
+                ('complete', 'observed'),
+            ]
+            self.assertEqual(len(OBSERVATIONS), len(expected))
+            for i, observation in enumerate(OBSERVATIONS):
+                state, string, file_fraction, byte_fraction = observation
+                self.assertEqual(state,  expected[i][0])
+                self.assertEqual(string, expected[i][1])
+                self.assertEqual(file_fraction, float(i)/float(len(expected)-1))
+
             # Create a component.
-            comp = factory.create('Egg_TestModel.Oddball', name='test_comp')
+            comp = factory.create('Egg_TestModel.Oddball', name='test_comp',
+                                  observer=observer)
             if comp is None:
                 self.fail('Create of test_comp failed.')
             self.assertEqual(comp.get_pathname(), 'test_comp')

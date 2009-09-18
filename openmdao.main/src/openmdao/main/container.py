@@ -229,9 +229,9 @@ class Container(HasTraits):
             sdict = scope.__dict__
             
         ver = 1
-        while '%s%d' % (classname,ver) in sdict:
+        while '%s%d' % (classname, ver) in sdict:
             ver += 1
-        return '%s%d' % (classname,ver)
+        return '%s%d' % (classname, ver)
         
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
@@ -535,9 +535,9 @@ class Container(HasTraits):
                 continue
             for meta_name, meta_eval in metadata.items():
                 if type( meta_eval ) is FunctionType:
-                    if not meta_eval(getattr(trait,meta_name)):
+                    if not meta_eval(getattr(trait, meta_name)):
                         break
-                elif meta_eval != getattr(trait,meta_name):
+                elif meta_eval != getattr(trait, meta_name):
                     break
             else:
                 result[ name ] = trait
@@ -896,28 +896,30 @@ class Container(HasTraits):
             self.parent = parent
 
     @staticmethod
-    def load_from_eggfile(filename, install=True):
+    def load_from_eggfile(filename, install=True, observer=None):
         """Extract files in egg to a subdirectory matching the saved object
         name, optionally install distributions the egg depends on, and then
-        load object graph state.  Returns the root object.
+        load object graph state. `observer` will be called via an EggObserver.
+        Returns the root object.
         """
         # Load from file gets everything.
         entry_group = 'openmdao.top'
         entry_name = 'top'
         return eggloader.load_from_eggfile(filename, entry_group, entry_name,
-                                           install, logger)
+                                           install, logger, observer)
 
     @staticmethod
-    def load_from_eggpkg(package, entry_name=None, instance_name=None):
+    def load_from_eggpkg(package, entry_name=None, instance_name=None,
+                         observer=None):
         """Load object graph state by invoking the given package entry point.
         If specified, the root object is renamed to `instance_name`.
-        Returns the root object.
+        `observer` will be called via an EggObserver. Returns the root object.
         """
         entry_group = 'openmdao.components'
         if not entry_name:
             entry_name = package  # Default component is top.
         return eggloader.load_from_eggpkg(package, entry_group, entry_name,
-                                          instance_name, logger)
+                                          instance_name, logger, observer)
 
     @staticmethod
     def load(instream, format=SAVE_CPICKLE, package=None, 

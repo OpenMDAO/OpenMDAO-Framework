@@ -209,7 +209,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             Container.load(StringIO.StringIO(''), 'no-such-format')
         except RuntimeError, exc:
-            msg = "can't load object using format 'no-such-format'"
+            msg = "Can't load object using format 'no-such-format'"
             self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected RuntimeError')
@@ -226,6 +226,7 @@ class ContainerTestCase(unittest.TestCase):
 
 if __name__ == "__main__":
     import nose
+    import sys
     sys.argv.append('--cover-package=openmdao')
     sys.argv.append('--cover-erase')
     nose.runmodule()

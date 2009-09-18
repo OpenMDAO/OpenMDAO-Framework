@@ -95,7 +95,7 @@ class Component (Container):
       a glob-style pattern.
     """
 
-    directory = Str('',desc='If non-blank, the directory to execute in.', 
+    directory = Str('', desc='If non-blank, the directory to execute in.', 
                     iostatus='in')
     state = Python
     external_files = Python
@@ -593,7 +593,7 @@ Component.load_from_eggfile('%s', install=False)
 
     @staticmethod
     def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True,
-             top_obj=True, name=''):
+             top_obj=True, name='', observer=None):
         """Load object(s) from `instream`.  If `instream` is an installed
         package name, then any external files referenced in the object(s)
         are copied from the package installation to appropriate directories.
@@ -606,7 +606,14 @@ Component.load_from_eggfile('%s', install=False)
         component's directory attribute set accordingly.  Existing files
         are not overwritten.
         """
-        top = Container.load(instream, format, package, False, name=name)
+        observer = EggObserver(observer, logging.getLogger())
+        try:
+            top = Container.load(instream, format, package, False, name=name)
+        except Exception, exc:
+            observer.exception(str(exc))
+            raise
+
+        observer.logger = top._logger
         if isinstance(top, Component):
             # Get path relative to real top before we clobber directory attr.
             if top_obj:
@@ -654,7 +661,7 @@ Component.load_from_eggfile('%s', install=False)
                     if not package:
                         dot = instream.rfind('.')
                         package = instream[:dot]
-                    top._restore_files(package, relpath)
+                    top._restore_files(package, relpath, [], observer=observer)
             finally:
                 os.chdir(orig_dir)
                 if name and not glob.glob(os.path.join(name, '*')):
@@ -664,9 +671,12 @@ Component.load_from_eggfile('%s', install=False)
 
         if do_post_load:
             top.post_load()
+
+        observer.complete(name)
         return top
 
-    def _restore_files(self, package, relpath):
+    def _restore_files(self, package, relpath, file_list, do_copy=True,
+                       observer=None):
         """Restore external files from installed egg."""
         if self.directory:
             self.push_dir(self.get_abs_directory())
@@ -681,28 +691,34 @@ Component.load_from_eggfile('%s', install=False)
                     is_input = metadata.get('input', False)
                     const = metadata.get('constant', False)
                     binary = metadata.get('binary', False)
-                    self._copy_files(pattern, package, relpath, is_input, const,
-                                     binary)
+                    self._list_files(pattern, package, relpath, is_input, const,
+                                     binary, file_list)
 
             for fvarname, fvar, ftrait in fvars:
                 path = fvar.filename
                 if path:
                     is_input = ftrait.iostatus == 'in'
-                    self._copy_files(path, package, relpath, is_input, False,
-                                     ftrait.binary)
+                    self._list_files(path, package, relpath, is_input, False,
+                                     ftrait.binary, file_list)
 
             for component in [c for c in self.values(recurse=False)
                                       if isinstance(c, Component)]:
                 path = relpath
                 if component.directory:
                     path += '/'+component.directory  # Use '/' for resources.
-                component._restore_files(package, path)
+                component._restore_files(package, path, file_list,
+                                         do_copy=False)
+
+            if do_copy:
+                # Only copy once we've gotten the complete list.
+                self._copy_files(package, file_list, observer)
         finally:
             if self.directory:
                 self.pop_dir()
 
-    def _copy_files(self, pattern, package, relpath, is_input, const, binary):
-        """Copy files from installed egg matching pattern."""
+    def _list_files(self, pattern, package, relpath, is_input, const, binary,
+                    file_list):
+        """List files from installed egg matching pattern."""
         symlink = const and sys.platform != 'win32'
 
         directory = os.path.dirname(pattern)
@@ -717,6 +733,7 @@ Component.load_from_eggfile('%s', install=False)
 
         if directory:
             self.push_dir(directory)
+        cwd = os.getcwd()
         try:
             found = False
             for filename in pkg_files:
@@ -726,28 +743,50 @@ Component.load_from_eggfile('%s', install=False)
                         # Don't overwrite existing files (reloaded instance).
                         self.debug("    '%s' exists", filename)
                         continue
+
                     src_name = relpath+'/'+filename  # Use '/' for resources.
-                    self.debug("    '%s'", src_name)
+                    src_path = pkg_resources.resource_filename(package,
+                                                               src_name)
+                    size = os.path.getsize(src_path)
                     if symlink:
-                        src = pkg_resources.resource_filename(package, src_name)
-                        dst = filename
-                        os.symlink(src, dst)
+                        mode = 'symlink'
                     else:
-                        src = pkg_resources.resource_stream(package, src_name)
                         mode = 'wb' if binary else 'w'
-                        dst = open(filename, mode)
-                        chunk = 1 << 20  # 1MB
-                        bytes = src.read(chunk)
-                        while bytes:
-                            dst.write(bytes)
-                            bytes = src.read(chunk)
-                        src.close()
-                        dst.close()
+                    file_list.append((src_name, mode, size,
+                                      os.path.join(cwd, filename)))
             if not found and is_input:
                 self.warning("No files found for '%s'", pattern)
         finally:
             if directory:
                 self.pop_dir()
+
+    @staticmethod
+    def _copy_files(package, file_list, observer):
+        """Copy/symlink files in `file_list`."""
+        total_files = float(len(file_list))
+        total_bytes = 0.
+        for i, info in enumerate(file_list):
+            src_name, mode, size, dst_name = info
+            total_bytes += size
+
+        completed_bytes = 0.
+        for i, info in enumerate(file_list):
+            src_name, mode, size, dst_name = info
+            observer.copy(src_name, i/total_files, completed_bytes/total_bytes)
+            if mode == 'symlink':
+                src_path = pkg_resources.resource_filename(package, src_name)
+                os.symlink(src_path, dst_name)
+            else:
+                src = pkg_resources.resource_stream(package, src_name)
+                dst = open(dst_name, mode)
+                chunk = 1 << 20  # 1MB
+                bytes = src.read(chunk)
+                while bytes:
+                    dst.write(bytes)
+                    bytes = src.read(chunk)
+                src.close()
+                dst.close()
+            completed_bytes += size
 
     def step (self):
         """For Components that run other components (e.g., Assembly or Drivers),
