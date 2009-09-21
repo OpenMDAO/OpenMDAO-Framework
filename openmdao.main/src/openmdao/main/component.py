@@ -2,8 +2,6 @@
 #public symbols
 __all__ = ['Component', 'SimulationRoot']
 
-
-
 import fnmatch
 import glob
 import logging
@@ -311,19 +309,18 @@ class Component (Container):
         """
         self.load(instream)
 
-    def save_to_egg(self, name=None, version=None, py_dir=None,
-                    force_relative=True, src_dir=None, src_files=None,
-                    child_objs=None, dst_dir=None, format=SAVE_CPICKLE,
-                    proto=-1, use_setuptools=False, observer=None):
+    def save_to_egg(self, name, version, py_dir=None, force_relative=True,
+                    src_dir=None, src_files=None, child_objs=None,
+                    dst_dir=None, format=SAVE_CPICKLE, proto=-1,
+                    use_setuptools=False, observer=None):
         """Save state and other files to an egg.  Typically used to copy all or
         part of a simulation to another user or machine.  By specifying child
         components in `child_objs`, it will be possible to create instances of
         just those components from the installed egg.  Child component names
         should be specified relative to this component.
 
-        - `name` defaults to the name of the component.
-        - `version` defaults to the container's module __version__, or \
-          a timestamp if no __version__ exists.
+        - `name` must be an alphanumeric string.
+        - `version` must be an alphanumeric string.
         - `py_dir` is the (root) directory for local Python files. \
           It defaults to the current directory.
         - If `force_relative` is True, all paths are made relative to `src_dir`.
@@ -335,7 +332,6 @@ class Component (Container):
         - `dst_dir` is the directory to write the egg in.
         - `observer` will be called via an EggObserver.
 
-        The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns (egg_filename, required_distributions, orphan_modules).
         """
         if src_dir is None:
@@ -527,8 +523,9 @@ class Component (Container):
             return 0  # Enable once openmdao.util.testutil.find_python works.
         old_level = self.log_level
         self.log_level = LOG_DEBUG
+        name = self.name or self.get_default_name(self.parent)
         start = time.time()
-        egg_info = self.save_to_egg(py_dir=py_dir, format=format)
+        egg_info = self.save_to_egg(name, 'CSL.1', py_dir=py_dir, format=format)
         egg_name = egg_info[0]
         elapsed = time.time() - start
         size = os.path.getsize(egg_name)
@@ -554,18 +551,15 @@ class Component (Container):
                 stderr = None
 
             python = find_python()  # Returns just 'python' if no buildout.
-            if sys.platform == 'win32' or python != 'python':
-                print '    python:', python
-                unpacker = 'unpack.py'
-                out = open(unpacker, 'w')
-                out.write("""\
+            print '    python:', python
+            unpacker = 'unpack.py'
+            out = open(unpacker, 'w')
+            out.write("""\
 from openmdao.main.api import Component
 Component.load_from_eggfile('%s', install=False)
 """ % egg_path)
-                out.close()
-                args = [python, unpacker]
-            else:
-                args = ['sh', egg_path]
+            out.close()
+            args = [python, unpacker]
 
             retcode = subprocess.call(args, env=env,
                                       stdout=stdout, stderr=stderr)
@@ -864,29 +858,4 @@ Component.load_from_eggfile('%s', install=False)
 
              #"""
         #return None
-    
-    
-def eggsecutable():
-    """Unpack egg. Not in loader to avoid 2GB problems with zipimport."""
-    install = os.environ.get('OPENMDAO_INSTALL', '1')
-    if install:
-        install = int(install)
-    debug = os.environ.get('OPENMDAO_INSTALL_DEBUG', '1')
-    if debug:
-        debug = int(debug)
-    if debug:
-        logging.getLogger().setLevel(logging.DEBUG)
-
-    # Skip any accidental cruft (egg *should* be at [0]).
-    for path in sys.path:
-        if path.endswith('.egg'):
-            try:
-                Component.load_from_eggfile(path, install=install)
-                return
-            except Exception, exc:
-                print str(exc)
-                sys.exit(1)
-    else:
-        print "Can't find an egg file on sys.path!"
-        sys.exit(1)
 

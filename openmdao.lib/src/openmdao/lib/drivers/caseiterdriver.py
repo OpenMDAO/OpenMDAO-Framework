@@ -112,8 +112,8 @@ class CaseIteratorDriver(Driver):
                 import copy
                 replicant = copy.deepcopy(self.model)
                 self._replicants += 1
-                version = 'replicant-%d' % (self._replicants)
-                egg_info = replicant.save_to_egg(version=version)
+                version = 'replicant.%d' % (self._replicants)
+                egg_info = replicant.save_to_egg(self.model.name, version)
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]

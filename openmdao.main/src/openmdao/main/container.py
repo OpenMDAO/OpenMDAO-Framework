@@ -5,6 +5,7 @@ The Container class
 #public symbols
 __all__ = ["Container", "path_to_root", "set_as_top", "PathProperty"]
 
+import datetime
 import copy
 import sys
 import traceback
@@ -817,18 +818,17 @@ class Container(HasTraits):
         """
         raise NotImplementedError("replace")
 
-    def save_to_egg(self, name=None, version=None, py_dir=None,
-                    src_dir=None, src_files=None, child_objs=None,
-                    dst_dir=None, format=SAVE_CPICKLE, proto=-1,
-                    use_setuptools=False, observer=None):
+    def save_to_egg(self, name, version, py_dir=None, src_dir=None,
+                    src_files=None, child_objs=None, dst_dir=None,
+                    format=SAVE_CPICKLE, proto=-1, use_setuptools=False,
+                    observer=None):
         """Save state and other files to an egg. Analyzes the objects saved
         for distribution dependencies. Modules not found in any distribution
         are recorded in an 'egg-info/openmdao_orphans.txt' file. Also creates
         and saves loader scripts for each entry point.
 
-        - `name` defaults to the name of the container.
-        - `version` defaults to the container's module __version__, or \
-          a timestamp if no __version__ exists.
+        - `name` must be an alphanumeric string.
+        - `version` must be an alphanumeric string.
         - `py_dir` is the (root) directory for local Python files. \
            It defaults to the current directory.
         - `src_dir` is the root of all (relative) `src_files`.
@@ -836,18 +836,14 @@ class Container(HasTraits):
         - `dst_dir` is the directory to write the egg in.
         - `observer` will be called via an EggObserver.
 
-        The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns (egg_filename, required_distributions, orphan_modules).
         """
-        name = name or self.name
-        if not name:
-            name = self.get_default_name(self.parent)
-            
-        if not version:
-            try:
-                version = sys.modules[self.__class__.__module__].__version__
-            except AttributeError:
-                pass
+        assert name and isinstance(name, basestring)
+        assert version and isinstance(version, basestring)
+        now = datetime.datetime.now()  # Could consider using utcnow().
+        tstamp = '%d.%02d.%02d.%02d.%02d' % \
+                 (now.year, now.month, now.day, now.hour, now.minute)
+        version += tstamp
 
         observer = eggobserver.EggObserver(observer, self._logger)
 
@@ -938,13 +934,11 @@ class Container(HasTraits):
 
     def post_load(self):
         """Perform any required operations after model has been loaded."""
-        [x.post_load() for x in self.values() 
-                                          if isinstance(x,Container)]
+        [x.post_load() for x in self.values() if isinstance(x, Container)]
 
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
-        [x.pre_delete() for x in self.values() 
-                                          if isinstance(x,Container)]
+        [x.pre_delete() for x in self.values() if isinstance(x, Container)]
 
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output

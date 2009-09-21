@@ -76,7 +76,6 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     - `dst_dir` is the directory to write the egg in.
     - `observer` will be called via an EggObserver intermediary.
 
-    The resulting egg can be unpacked on UNIX via 'sh egg-file'.
     Returns (egg_filename, required_distributions, orphan_modules).
     """
     root, name, group = entry_pts[0]
@@ -207,13 +206,13 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                 entry_map = _create_entry_map(entry_info)
                 orphans = [mod for mod, path in orphan_modules]
                 if use_setuptools:
-                    eggwriter.write_via_setuptools(name, doc, version,
+                    eggwriter.write_via_setuptools(name, version, doc,
                                                    entry_map, src_files,
                                                    required_distributions,
                                                    orphans, dst_dir, logger,
                                                    observer.observer)
                 else:
-                    eggwriter.write(name, doc, version, entry_map,
+                    eggwriter.write(name, version, doc, entry_map,
                                     src_files, required_distributions,
                                     orphans, dst_dir, logger, observer.observer)
             finally:
@@ -735,12 +734,6 @@ def _create_entry_map(entry_pts):
                     pkg_resources.EntryPoint(name, pkg_name+'.'+loader, ldattr)
         if entry_group:
             entry_map[grp] = entry_group
-
-    entry_group = {}
-    entry_group['eggsecutable'] = \
-        pkg_resources.EntryPoint('eggsecutable', 'openmdao.main.component',
-                                 ['eggsecutable'])
-    entry_map['setuptools.installation'] = entry_group
 
     return entry_map
 
