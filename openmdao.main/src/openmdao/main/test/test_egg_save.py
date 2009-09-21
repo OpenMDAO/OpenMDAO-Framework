@@ -15,12 +15,13 @@ from enthought.traits.api import Bool, List, Str, Array, Int, \
                                  Instance, Callable, TraitError
 
 from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, \
-                              SAVE_CPICKLE, SAVE_LIBYAML, set_as_top
+                              SAVE_CPICKLE, set_as_top
 from openmdao.main.filevar import FileTrait
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
-import openmdao.util.testutil
+from openmdao.util.eggchecker import check_save_load
+from openmdao.util.testutil import find_python
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
@@ -38,6 +39,9 @@ MODULE_NAME = __name__
 
 # Set local dir in case we're running in a different directory.
 PY_DIR = pkg_resources.resource_filename('openmdao.main', 'test')
+
+# Observations made by observer().
+OBSERVATIONS = []
 
 
 class Source(Assembly):
@@ -269,9 +273,10 @@ class OddballContainer(Container):
         self.obj_list = [DataObj(i) for i in range(3)]
 
 
-def main_function():
-    """ Can't pickle references to functions defined in __main__. """
-    return None
+def observer(state, string, file_fraction, byte_fraction):
+    """ Observe progress. """
+    OBSERVATIONS.append((state, string, file_fraction, byte_fraction))
+    return True
 
 
 class Model(Assembly):
@@ -342,10 +347,64 @@ class TestCase(unittest.TestCase):
         self.assertEqual(self.model.Sink.executions, 0)
 
         # Save to egg.
-        egg_info = self.model.save_to_egg(py_dir=PY_DIR, format=format,
-                                               child_objs=self.child_objs,
-                                               use_setuptools=use_setuptools)
+        global OBSERVATIONS
+        OBSERVATIONS = []
+        egg_info = self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+                                          format=format,
+                                          child_objs=self.child_objs,
+                                          use_setuptools=use_setuptools,
+                                          observer=observer)
         self.egg_name = egg_info[0]
+
+        # Check observations.
+        if use_setuptools:
+            expected = [
+                ('add', 'write-via-setuptools'),
+                ('complete', 'Egg_TestModel-1.2.3-py2.5.egg'),
+            ]
+        else:
+            expected = [
+                ('add', 'EGG-INFO/PKG-INFO'),
+                ('add', 'EGG-INFO/dependency_links.txt'),
+                ('add', 'EGG-INFO/entry_points.txt'),
+                ('add', 'EGG-INFO/not-zip-safe'),
+                ('add', 'EGG-INFO/requires.txt'),
+                ('add', 'EGG-INFO/openmdao_orphans.txt'),
+                ('add', 'EGG-INFO/top_level.txt'),
+                ('add', 'EGG-INFO/SOURCES.txt'),
+                ('add', 'Egg_TestModel/Egg_TestModel.pickle'),
+                ('add', 'Egg_TestModel/Egg_TestModel_loader.py'),
+                ('add', 'Egg_TestModel/Oddball.pickle'),
+                ('add', 'Egg_TestModel/Oddball_loader.py'),
+                ('add', 'Egg_TestModel/Oddball_oddcomp.pickle'),
+                ('add', 'Egg_TestModel/Oddball_oddcomp_loader.py'),
+                ('add', 'Egg_TestModel/Oddball_oddcont.pickle'),
+                ('add', 'Egg_TestModel/Oddball_oddcont_loader.py'),
+                ('add', 'Egg_TestModel/Sink.pickle'),
+                ('add', 'Egg_TestModel/Sink/sink.bin'),
+                ('add', 'Egg_TestModel/Sink/sink.txt'),
+                ('add', 'Egg_TestModel/Sink_loader.py'),
+                ('add', 'Egg_TestModel/Source.pickle'),
+                ('add', 'Egg_TestModel/Source/hello'),
+                ('add', 'Egg_TestModel/Source/xyzzy'),
+                ('add', 'Egg_TestModel/Source_loader.py'),
+                ('add', 'Egg_TestModel/__init__.py'),
+                ('add', 'Egg_TestModel/buildout.cfg'),
+                ('add', 'Egg_TestModel/sub/data2'),
+                ('add', 'Egg_TestModel/sub/data4'),
+                ('add', 'Egg_TestModel/test_egg_save.py'),
+                ('complete', 'Egg_TestModel-1.2.3-py2.5.egg'),
+            ]
+        self.assertEqual(len(OBSERVATIONS), len(expected))
+        for i, observation in enumerate(OBSERVATIONS):
+            state, string, file_fraction, byte_fraction = observation
+            self.assertEqual(state,  expected[i][0])
+            if expected[i][1].endswith('.egg'): # Unique versions mess this up.
+                self.assertEqual(string.startswith(self.model.name), True)
+                self.assertEqual(string.endswith('.egg'), True)
+            else:
+                self.assertEqual(string, expected[i][1])
+            self.assertEqual(file_fraction, float(i)/float(len(expected)-1))
 
         # Run and verify correct operation.
         self.model.run()
@@ -372,8 +431,55 @@ class TestCase(unittest.TestCase):
             # Load from saved initial state in egg.
             self.model.pre_delete()
             egg_path = os.path.join('..', self.egg_name)
-            self.model = Component.load_from_eggfile(egg_path, install=False)
+            OBSERVATIONS = []
+            self.model = Component.load_from_eggfile(egg_path, install=False,
+                                                     observer=observer)
             self.model.directory = os.path.join(os.getcwd(), self.model.name)
+
+            # Check observations.
+            expected = [
+                ('extract', 'EGG-INFO/PKG-INFO'),
+                ('extract', 'EGG-INFO/dependency_links.txt'),
+                ('extract', 'EGG-INFO/entry_points.txt'),
+                ('extract', 'EGG-INFO/not-zip-safe'),
+                ('extract', 'EGG-INFO/requires.txt'),
+                ('extract', 'EGG-INFO/openmdao_orphans.txt'),
+                ('extract', 'EGG-INFO/top_level.txt'),
+                ('extract', 'EGG-INFO/SOURCES.txt'),
+                ('extract', 'Egg_TestModel/Egg_TestModel.pickle'),
+                ('extract', 'Egg_TestModel/Egg_TestModel_loader.py'),
+                ('extract', 'Egg_TestModel/Oddball.pickle'),
+                ('extract', 'Egg_TestModel/Oddball_loader.py'),
+                ('extract', 'Egg_TestModel/Oddball_oddcomp.pickle'),
+                ('extract', 'Egg_TestModel/Oddball_oddcomp_loader.py'),
+                ('extract', 'Egg_TestModel/Oddball_oddcont.pickle'),
+                ('extract', 'Egg_TestModel/Oddball_oddcont_loader.py'),
+                ('extract', 'Egg_TestModel/Sink.pickle'),
+                ('extract', 'Egg_TestModel/Sink/sink.bin'),
+                ('extract', 'Egg_TestModel/Sink/sink.txt'),
+                ('extract', 'Egg_TestModel/Sink_loader.py'),
+                ('extract', 'Egg_TestModel/Source.pickle'),
+                ('extract', 'Egg_TestModel/Source/hello'),
+                ('extract', 'Egg_TestModel/Source/xyzzy'),
+                ('extract', 'Egg_TestModel/Source_loader.py'),
+                ('extract', 'Egg_TestModel/__init__.py'),
+                ('extract', 'Egg_TestModel/buildout.cfg'),
+                ('extract', 'Egg_TestModel/sub/data2'),
+                ('extract', 'Egg_TestModel/sub/data4'),
+                ('extract', 'Egg_TestModel/test_egg_save.py'),
+                ('complete', None),
+            ]
+            self.assertEqual(len(OBSERVATIONS), len(expected))
+            if use_setuptools:  # No control on order, so sort on name.
+                expected.sort(key=lambda item: item[1])
+                OBSERVATIONS.sort(key=lambda item: item[1])
+            for i, observation in enumerate(OBSERVATIONS):
+                state, string, file_fraction, byte_fraction = observation
+                self.assertEqual(state,  expected[i][0])
+                self.assertEqual(string, expected[i][1])
+                if not use_setuptools:  # Sort messes-up this comparison.
+                    self.assertEqual(file_fraction,
+                                     float(i)/float(len(expected)-1))
 
             # Verify initial state.
             self.assertEqual(SOURCE_INIT, False)
@@ -432,13 +538,36 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_with_setuptools')
         self.save_load(SAVE_CPICKLE, use_setuptools=True)
 
+    def test_save_bad_name(self):
+        logging.debug('')
+        logging.debug('test_save_bad_name')
+        try:
+            self.model.save_to_egg('#%^&', '0', py_dir=PY_DIR)
+        except ValueError, exc:
+            msg = 'Egg_TestModel: Egg name must be alphanumeric'
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected ValueError')
+
+    def test_save_bad_version(self):
+        logging.debug('')
+        logging.debug('test_save_bad_version')
+        try:
+            self.model.save_to_egg(self.model.name, '#%^&', py_dir=PY_DIR)
+        except ValueError, exc:
+            msg = 'Egg_TestModel: Egg version must be alphanumeric'
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected ValueError')
+
     def test_save_bad_directory(self):
         logging.debug('')
         logging.debug('test_save_bad_directory')
+
         # Set subcomponent directory outside model root.
         self.model.Oddball.directory = os.getcwd()
         try:
-            self.model.save_to_egg(py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
         except Exception, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp" \
                   " directory"
@@ -451,7 +580,8 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_destination')
         try:
             # Attempt to save to directory we aren't allowed to write to.
-            self.model.save_to_egg(py_dir=PY_DIR, dst_dir='/')
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+                                   dst_dir='/')
         except IOError, exc:
             msg = "Egg_TestModel: Can't save to '/', no write permission"
             self.assertEqual(str(exc), msg)
@@ -469,7 +599,7 @@ class TestCase(unittest.TestCase):
         metadata = self.model.Source.external_files[0]
         metadata['path'] = path
         try:
-            self.model.save_to_egg(py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
         except Exception, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source file"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -489,7 +619,8 @@ class TestCase(unittest.TestCase):
         metadata = self.model.Source.external_files[0]
         metadata['path'] = path
         try:
-            self.model.save_to_egg(py_dir=PY_DIR, force_relative=False)
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+                                   force_relative=False)
         finally:
             os.remove(path)
 
@@ -503,7 +634,7 @@ class TestCase(unittest.TestCase):
         out.close()
         self.model.Source.text_file.filename = path
         try:
-            self.model.save_to_egg(py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
         except Exception, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file" \
                   " path"
@@ -518,7 +649,8 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_format')
         try:
             # Attempt to save in unknown format.
-            self.model.save_to_egg(py_dir=PY_DIR, format='unknown')
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+                                   format='unknown')
         except RuntimeError, exc:
             self.assertEqual(str(exc),
                              "Egg_TestModel: Unknown format 'unknown'.")
@@ -530,9 +662,9 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_function')
 
         # Set reference to unpickleable function.
-        self.model.Oddball.function_socket = main_function
+        self.model.Oddball.function_socket = observer
         try:
-            self.model.save_to_egg(py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
         except RuntimeError, exc:
             msg = "Egg_TestModel: Can't save: reference to function defined" \
                   " in main module"
@@ -548,7 +680,7 @@ class TestCase(unittest.TestCase):
         # Set reference to unpickleable static method.
         self.model.Oddball.method_socket = self.model.Oddball.static_method
         try:
-            self.model.save_to_egg(py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
         except RuntimeError, exc:
             msg = "Egg_TestModel: Can't save, 1 object cannot be pickled."
             self.assertEqual(str(exc), msg)
@@ -562,7 +694,7 @@ class TestCase(unittest.TestCase):
         # Set tuple to reference a method that has to be patched.
         self.model.Oddball.scratch_tuple = (self.model.Oddball.instance_method,)
         try:
-            self.model.save_to_egg(py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
         except RuntimeError, exc:
             msg = 'Egg_TestModel: _fix_im_recurse: tuple'
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -589,7 +721,7 @@ class TestCase(unittest.TestCase):
         try:
             try:
                 # This will fail due to code object.
-                self.model.save_to_egg(py_dir=PY_DIR)
+                self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
             except cPickle.PicklingError, exc:
                 msg = "Egg_TestModel: Can't save to" \
                       " 'Egg_TestModel/Egg_TestModel.pickle': Can't pickle" \
@@ -613,7 +745,8 @@ class TestCase(unittest.TestCase):
         orphan = Component()
         try:
             # Try to include orphan as an entry point in egg.
-            self.model.save_to_egg(py_dir=PY_DIR, child_objs=[orphan])
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+                                   child_objs=[orphan])
         except RuntimeError, exc:
             self.assertEqual(str(exc), 'Entry point object has no parent!')
         else:
@@ -623,7 +756,8 @@ class TestCase(unittest.TestCase):
         badboy = orphan.add_container('badboy', Component())
         try:
             # Try to include non-member component as an entry point in egg.
-            self.model.save_to_egg(py_dir=PY_DIR, child_objs=[badboy])
+            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+                                   child_objs=[badboy])
         except RuntimeError, exc:
             msg = 'Egg_TestModel: badboy is not a child of' \
                   ' Egg_TestModel.'
@@ -636,7 +770,8 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_load_container')
 
         # Save to egg.
-        egg_info = self.model.Source.sub.save_to_egg(py_dir=PY_DIR)
+        egg_info = self.model.Source.sub.save_to_egg(self.model.name, '0',
+                                                     py_dir=PY_DIR)
         self.egg_name = egg_info[0]
 
         # Restore in test directory.
@@ -691,9 +826,8 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_check_save_load')
 
-        # Exercise check_save_load().  Must find correct python first.
-        python = openmdao.util.testutil.find_python('openmdao.main')
-        retcode = self.model.check_save_load(py_dir=PY_DIR, python=python)
+        # Exercise check_save_load().
+        retcode = check_save_load(self.model, py_dir=PY_DIR)
         self.assertEqual(retcode, 0)
 
     def test_install_load(self):
@@ -704,12 +838,12 @@ class TestCase(unittest.TestCase):
         logging.debug('test_install_load')
 
         # Find correct python.
-        python = openmdao.util.testutil.find_python('openmdao.main')
+        python = find_python()
         logging.debug('    Using python: %s' % python)
 
         # Write to egg.
-        egg_info = self.model.save_to_egg(py_dir=PY_DIR,
-                                               child_objs=self.child_objs)
+        egg_info = self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+                                          child_objs=self.child_objs)
         self.egg_name = egg_info[0]
 
         # Create directory for installation.
@@ -841,12 +975,13 @@ comp.run()
         logging.debug('test_pkg_resources_factory')
 
         # Write to egg.
-        egg_info = self.model.save_to_egg(py_dir=PY_DIR,
-                                               child_objs=self.child_objs)
+        egg_info = self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+                                          child_objs=self.child_objs)
         self.egg_name = egg_info[0]
 
         # Create factory.
-        factory = PkgResourcesFactory(['openmdao.components','openmdao.containers'],
+        factory = PkgResourcesFactory(['openmdao.components',
+                                       'openmdao.containers'],
                                       [os.getcwd()])
         logging.debug('    loaders:')
         for key, value in factory._loaders.items():
@@ -881,14 +1016,39 @@ comp.run()
             out.close()
             self.create_and_check_model(factory, 'test_model_2', file_data)
 
+            # Check observations.
+            global OBSERVATIONS
+            OBSERVATIONS = []
+            model = factory.create('Egg_TestModel', name='observed',
+                                   observer=observer)
+            if model is None:
+                self.fail("Create of 'observed' failed.")
+            expected = [
+                ('copy', 'Source/xyzzy'),
+                ('copy', 'sub/data2'),
+                ('copy', 'Source/hello'),
+                ('copy', 'sub/data4'),
+                ('copy', 'Sink/sink.bin'),
+                ('copy', 'Sink/sink.txt'),
+                ('complete', 'observed'),
+            ]
+            self.assertEqual(len(OBSERVATIONS), len(expected))
+            for i, observation in enumerate(OBSERVATIONS):
+                state, string, file_fraction, byte_fraction = observation
+                self.assertEqual(state,  expected[i][0])
+                self.assertEqual(string, expected[i][1])
+                self.assertEqual(file_fraction, float(i)/float(len(expected)-1))
+
             # Create a component.
-            comp = factory.create('Egg_TestModel.Oddball', name='test_comp')
+            comp = factory.create('Egg_TestModel.Oddball', name='test_comp',
+                                  observer=observer)
             if comp is None:
                 self.fail('Create of test_comp failed.')
             self.assertEqual(comp.get_pathname(), 'test_comp')
             self.assertEqual(comp.executions, 0)
             comp.run()
             self.assertEqual(comp.executions, 3)
+
             # Create a (sub)component.
             sub = factory.create('Egg_TestModel.Oddball.oddcomp',
                                  name='test_sub')
