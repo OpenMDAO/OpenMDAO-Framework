@@ -840,6 +840,8 @@ class Container(HasTraits):
         """
         assert name and isinstance(name, basestring)
         assert version and isinstance(version, basestring)
+        if not version.endswith('.'):
+            version += '.'
         now = datetime.datetime.now()  # Could consider using utcnow().
         tstamp = '%d.%02d.%02d.%02d.%02d' % \
                  (now.year, now.month, now.day, now.hour, now.minute)

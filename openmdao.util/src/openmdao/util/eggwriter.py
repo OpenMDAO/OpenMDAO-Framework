@@ -1,7 +1,5 @@
 """
 Write Python egg files, either directly or via setuptools.
-
-Eggs contain a preamble that allows unpacking via 'sh' on UNIX systems.
 Supports what's needed for saving and loading components/simulations.
 
 - `name` must be an alphanumeric string.

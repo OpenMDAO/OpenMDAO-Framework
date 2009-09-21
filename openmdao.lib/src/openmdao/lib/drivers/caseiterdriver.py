@@ -119,6 +119,7 @@ class CaseIteratorDriver(Driver):
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
                 del replicant
 
+            os.remove(self._egg_file)
             self.raise_exception('Concurrent evaluation is not supported yet.',
                                  NotImplementedError)
 

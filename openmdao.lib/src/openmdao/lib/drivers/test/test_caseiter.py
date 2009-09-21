@@ -16,6 +16,7 @@ from enthought.traits.api import Float, Array, TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
+from openmdao.util.eggchecker import check_save_load
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -139,7 +140,7 @@ class TestCase(unittest.TestCase):
         py_dir = self.directory
 
         # Exercise check_save_load().
-        retcode = self.model.check_save_load(py_dir=py_dir)
+        retcode = check_save_load(self.model, py_dir=py_dir)
         self.assertEqual(retcode, 0)
 
     def test_noinput(self):

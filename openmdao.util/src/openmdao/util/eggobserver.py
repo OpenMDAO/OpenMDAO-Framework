@@ -21,7 +21,10 @@ class EggObserver(object):
         self.logger = logger
 
     def analyze(self, path):
-        """ Observe analysis of file. May cause an abort."""
+        """
+        Observe analysis of file.
+        If `observer` returns False, raises RuntimeError.
+        """
         self.logger.debug("    analyzing '%s'", path)
         if self.observer is not None:
             proceed = True
@@ -34,7 +37,10 @@ class EggObserver(object):
                     raise RuntimeError('Aborted by observer.')
 
     def add(self, path, file_fraction, byte_fraction):
-        """ Observe add of file. May cause an abort."""
+        """
+        Observe add of file.
+        If `observer` returns False, raises RuntimeError.
+        """
         self.logger.debug("    adding '%s'", path)
         if self.observer is not None:
             proceed = True
@@ -48,9 +54,10 @@ class EggObserver(object):
                     raise RuntimeError('Aborted by observer.')
 
     def copy(self, path, file_fraction, byte_fraction):
-        """ Observe copy of file. May cause an abort."""
-#        import time
-#        time.sleep(1)
+        """
+        Observe copy of file.
+        If `observer` returns False, raises RuntimeError.
+        """
         self.logger.debug("    copying '%s'", path)
         if self.observer is not None:
             proceed = True
@@ -64,9 +71,10 @@ class EggObserver(object):
                     raise RuntimeError('Aborted by observer.')
 
     def extract(self, path, file_fraction, byte_fraction):
-        """ Observe extraction of file. May cause an abort."""
-#        import time
-#        time.sleep(1)
+        """
+        Observe extraction of file.
+        If `observer` returns False, raises RuntimeError.
+        """
         self.logger.debug("    extracting '%s'", path)
         if self.observer is not None:
             proceed = True

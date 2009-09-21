@@ -20,6 +20,7 @@ from openmdao.main.filevar import FileTrait
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
+from openmdao.util.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
 
 # pylint: disable-msg=E1101,E1103
@@ -826,7 +827,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_check_save_load')
 
         # Exercise check_save_load().
-        retcode = self.model.check_save_load(py_dir=PY_DIR)
+        retcode = check_save_load(self.model, py_dir=PY_DIR)
         self.assertEqual(retcode, 0)
 
     def test_install_load(self):

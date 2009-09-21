@@ -11,6 +11,7 @@ import unittest
 from openmdao.main.api import SimulationRoot, set_as_top
 from openmdao.main.exceptions import RunInterrupted
 from openmdao.lib.components.external_code import ExternalCode
+from openmdao.util.eggchecker import check_save_load
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -49,7 +50,7 @@ class TestCase(unittest.TestCase):
         externp.command = 'python sleep.py 1'
 
         # Exercise check_save_load().
-        retcode = externp.check_save_load()
+        retcode = check_save_load(externp)
         self.assertEqual(retcode, 0)
 
     def test_timeout(self):
