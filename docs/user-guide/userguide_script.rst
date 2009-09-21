@@ -1,4 +1,4 @@
-.. index:: user guide script interface
+.. index:: user guide script interface
 
 The OpenMDAO Script Interface
 ==============================

@@ -1,4 +1,4 @@
-.. index:: pair: branch; working on
+.. index:: branch; working on
 
 Working on Your Branch
 ----------------------
