@@ -148,12 +148,12 @@ class Container(HasTraits):
     to the framework"""
    
     #parent = WeakRef(Container, allow_none=True, adapt='no', transient=True)
-    parent = Python
+    parent = Python()
     
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
     
-    __ = Python
+    __ = Python()
     
     def __init__(self, doc=None):
         super(Container, self).__init__() 

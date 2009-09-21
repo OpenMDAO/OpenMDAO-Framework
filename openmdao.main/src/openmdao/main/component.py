@@ -89,7 +89,7 @@ class Component (Container):
 
     directory = Str('',desc='If non-blank, the directory to execute in.', 
                     iostatus='in')
-    external_files = Python
+    external_files = Python()
         
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
