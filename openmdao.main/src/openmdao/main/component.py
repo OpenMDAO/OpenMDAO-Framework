@@ -105,26 +105,19 @@ class Component (Container):
         # List of meta-data dictionaries.
         self.external_files = []
 
-    #def _directory_changed(self, old, new):
-        #if not self._call_tree_defined:
-            #self.check_path(self.get_abs_directory(), 
-                            #check_exist=True)
-            
     def check_config (self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
         component, and may be called explicitly at other times if desired. 
         Classes that override this function must still call the base class
-        version.
+        version in case we decide to add framework functionality here at
+        a later point in time.
         """
-        self._call_check_config = False
+        pass
     
     def tree_defined(self):
-        """Called after the hierarchy containing this Container has been
-        defined back to the root. This does not guarantee that all sibling
-        Containers have been defined. It also does not guarantee that this
-        component is fully configured to execute. Classes that override this
-        function must still call the base class version.
+        """Calls the base class version of tree_defined(), checks our
+        directory for validity, and creates the directory if it doesn't exist.
         """
         super(Component, self).tree_defined()
         if self.directory:
@@ -149,6 +142,7 @@ class Component (Container):
             
         if self._call_check_config:
             self.check_config()
+            self._call_check_config = False
         
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.
@@ -218,7 +212,7 @@ class Component (Container):
         any child containers are removed.
         """
         self._call_check_config = True # force config check prior to next execution
-        super(Component, self).remove_container(name)
+        return super(Component, self).remove_container(name)
 
     def add_trait(self, name, *trait):
         """Overrides base definition of add_trait in order to
@@ -640,6 +634,8 @@ Component.load_from_eggfile('%s', install=False)
                     # Cleanup unused directory.
                     os.rmdir(name)
                     top.directory = ''
+                    
+        #top._call_tree_defined = True
 
         if do_post_load:
             top.post_load()

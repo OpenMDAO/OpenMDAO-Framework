@@ -261,7 +261,6 @@ class Container(HasTraits):
             if trait.transient is not True:
                 dct[name] = trait
         state['_added_traits'] = dct
-        #state['_call_tree_defined'] = True
         
         return state
 
@@ -308,6 +307,7 @@ class Container(HasTraits):
         # this just forces the regeneration (lazily) of the lists of
         # inputs, outputs, and containers
         self._trait_added_changed(name)
+        
         del self._added_traits[name]
         super(Container, self).remove_trait(name)
             
@@ -438,7 +438,9 @@ class Container(HasTraits):
         observers."""
         trait = self.trait(name)
         if trait is not None:
+            obj = getattr(self, name)
             self.remove_trait(name)
+            return obj       
         else:
             self.raise_exception("cannot remove child '%s': not found"%
                                  name, TraitError)
@@ -449,6 +451,8 @@ class Container(HasTraits):
         Containers have been defined. It also does not guarantee that this
         component is fully configured to execute. Classes that override this
         function must call their base class version.
+        
+        This version calls tree_defined() on all of its child Containers.
         """
         self._call_tree_defined = False
         for cont in self.list_containers():
@@ -517,9 +521,8 @@ class Container(HasTraits):
     def list_containers(self):
         """Return a list of names of child Containers."""
         if self._container_names is None:
-            dct = self.__dict__
-            self._container_names = [n for n,v in dct.items() 
-                                  if isinstance(v,Container) and v is not self.parent]            
+            self._container_names = [n for n,v in self.items() 
+                                                   if isinstance(v,Container)]            
         return self._container_names
     
     def _traits_meta_filter(self, traits=None, **metadata):
@@ -935,12 +938,12 @@ class Container(HasTraits):
     def post_load(self):
         """Perform any required operations after model has been loaded."""
         [x.post_load() for x in self.values() 
-                                          if isinstance(x,Container)]
+                                          if isinstance(x, Container)] 
 
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
         [x.pre_delete() for x in self.values() 
-                                          if isinstance(x,Container)]
+                                          if isinstance(x, Container)] 
 
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output

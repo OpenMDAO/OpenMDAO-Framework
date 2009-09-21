@@ -139,34 +139,36 @@ class Assembly (Component):
         return obj
         
     def remove_container(self, name):
-        """Remove the named object from this container and notify any observers.
-        """
+        """Remove the named object from this container."""
         if '.' in name:
             self.raise_exception('remove_container does not allow dotted path names like %s' %
                                  name, ValueError)
+            
+        self._call_check_config = True # force config check prior to next execution
         trait = self.trait(name)
         if trait is not None and trait.is_trait_type(Instance):
+            obj = getattr(self, name)
             setattr(self, name, None)
-            return
+        else:    
+            obj = self.get(name)
+            if isinstance(obj, Component):
+                self.workflow.remove_node(obj.name)
+                if name in self._child_io_graphs:
+                    childgraph = self._child_io_graphs[name]
+                    if childgraph is not None:
+                        self._var_graph.remove_nodes_from(childgraph)
+                    del self._child_io_graphs[name]
             
-        obj = self.get(name)
-        if isinstance(obj, Component):
-            self.workflow.remove_node(obj.name)
-            if name in self._child_io_graphs:
-                childgraph = self._child_io_graphs[name]
-                if childgraph is not None:
-                    self._var_graph.remove_nodes_from(childgraph)
-                del self._child_io_graphs[name]
-        
-            if obj in self.drivers:
-                self.drivers.remove(obj)
-        else:
-            self.raise_exception('attribute %s is not a Component' % name,
-                                 RuntimeError)
-            
-        for drv in self.drivers:
-            drv.graph_regen_needed()
-
+                if obj in self.drivers:
+                    self.drivers.remove(obj)
+            else:
+                self.raise_exception('attribute %s is not a Component' % name,
+                                     RuntimeError)                
+            for drv in self.drivers:
+                drv.graph_regen_needed()
+                
+        return obj
+    
     def create_passthru(self, traitname, alias=None):
         """Create a trait that's a copy of the named trait, add it to self,
         and create a passthru connection between it and var.  If alias is not
