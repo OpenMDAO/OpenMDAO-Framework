@@ -204,8 +204,7 @@ description, long_description, keywords, platforms, fullname, contact,
 contact_email, classifiers, and download_url. If you supply any of these,
 their values will be stored as metadata in the egg. To keep things simple, we
 won't describe all of the options in detail, but if you're interested, you can
-go to  `<http://docs.python.org/distutils/apiref.html#module-distutils.core>`_
-and 
+go to  `<http://docs.python.org/distutils/apiref.html#module-distutils.core>`_ and
 `<http://peak.telecommunity.com/DevCenter/setuptools#new-and-changed-setup-keywords>`_.
 
 The following options are required for our egg to function properly
