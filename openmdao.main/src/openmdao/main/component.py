@@ -131,11 +131,14 @@ class Component (Container):
                         "Can't create execution directory '%s': %s"
                         % (path, exc.strerror), OSError)
             else:
-                self.check_path(path, check_exist=True)
+                self.check_path(path, check_dir=True)
         
     def _pre_execute (self):
-        """Make preparations for execution. Overrides of this function must
-        call this version.
+        """Prepares for execution by calling tree_defined() and check_config() if
+        their 'dirty' flags are set, and by requesting that the parent Assembly
+        update this Component's invalid inputs.
+        
+        Overrides of this function must call this version.
         """
         if self._call_tree_defined:
             self.tree_defined()
@@ -147,30 +150,32 @@ class Component (Container):
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.
             self._call_execute = True
+            for name in self.list_inputs():
+                self.set_valid(name, True)
         else:
             invalid_ins = self.list_inputs(valid=False)
             if len(invalid_ins) > 0:
                 #self.debug('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
                 self._call_execute = True
                 name = self.name
+                # ask our parent to update our invalid inputs
                 if hasattr(self.parent, 'update_inputs'):
                     self.parent.update_inputs(name,
                                               ['.'.join([name, n]) for n in invalid_ins])
-    
-                            
+                for name in invalid_ins:
+                    self.set_valid(name, True)
+                                
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
-        have already been set. This should be overridden in derived classes.
+        have already been set. This must be overridden in derived classes.
         """
-        pass
+        raise NotImplementedError('execute')
     
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
         Overrides of this function must call this version.
         """
-        # make our Variables valid again
-        for name in self.list_inputs():
-            self.set_valid(name, True)
+        # make our output Variables valid again
         for name in self.list_outputs():
             self.set_valid(name, True)
         self._call_execute = False
@@ -230,7 +235,7 @@ class Component (Container):
         self._call_check_config = True # force config check prior to next execution
         super(Component, self).remove_trait(name)    
 
-    def check_path(self, path, check_exist=False):
+    def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
         within the allowed area (somewhere within the simulation root path).
         """
@@ -240,7 +245,7 @@ class Component (Container):
                 "Illegal execution directory '%s', not a descendant of '%s'."
                 % (path, SimulationRoot.get_root()),
                 ValueError)
-        elif not os.path.isdir(path) and check_exist:
+        elif check_dir and not os.path.isdir(path):
                 self.raise_exception(
                     "Execution directory path '%s' is not a directory."
                     % path, ValueError)
@@ -278,7 +283,12 @@ class Component (Container):
 
     def pop_dir (self):
         """Return to previous directory saved by push_dir()."""
-        os.chdir(self._dir_stack.pop())
+        try:
+            newdir = self._dir_stack.pop()
+        except IndexError:
+            self.raise_exception('Called pop_dir() with nothing on the dir stack',
+                                 IndexError)
+        os.chdir(newdir)
 
     def checkpoint (self, outstream, format=SAVE_CPICKLE):
         """Save sufficient information for a restart. By default, this

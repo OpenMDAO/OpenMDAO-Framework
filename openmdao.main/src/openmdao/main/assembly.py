@@ -504,7 +504,7 @@ class Assembly (Component):
                     msg = "cannot set '%s' from '%s': %s" % \
                         (vname, srcname, exc)
                     self.raise_exception(msg, type(exc))
-            destcomp.set_valid(destvarname, True)
+            #destcomp.set_valid(destvarname, True)
             
         return updated
 
