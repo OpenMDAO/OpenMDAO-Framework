@@ -7,22 +7,15 @@ import glob
 import logging
 import os.path
 import pkg_resources
-import shutil
-import subprocess
 import sys
-import time
-import StringIO
 
-from enthought.traits.api import implements, on_trait_change, Str, Missing, \
-                                 Undefined, Python, TraitError
+from enthought.traits.api import Str, Python
 from enthought.traits.trait_base import not_event
 
-from openmdao.main.container import Container, set_as_top
+from openmdao.main.container import Container
 from openmdao.main.filevar import FileValue
-from openmdao.main.log import LOG_DEBUG
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.util.testutil import find_python
 
 # Execution states.
 STATE_UNKNOWN = -1

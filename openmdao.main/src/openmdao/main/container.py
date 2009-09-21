@@ -7,7 +7,6 @@ __all__ = ["Container", "path_to_root", "set_as_top", "PathProperty"]
 
 import datetime
 import copy
-import sys
 import traceback
 import re
 import pprint
@@ -24,9 +23,9 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint: enable-msg=W0212
 
 import networkx as nx
-from enthought.traits.api import HasTraits, implements, Missing, TraitError,\
-                                 BaseStr, Undefined, push_exception_handler,\
-                                 Python, TraitType, Property, Trait, on_trait_change
+from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
+                                 push_exception_handler, Python, TraitType, \
+                                 Property, Trait
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType
 from enthought.traits.trait_base import not_none

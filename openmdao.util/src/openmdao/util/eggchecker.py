@@ -9,6 +9,8 @@ from openmdao.main.log import LOG_DEBUG
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.testutil import find_python
 
+__all__ = ('check_save_load',)
+
 
 def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
                     format=SAVE_CPICKLE, logfile=None):
