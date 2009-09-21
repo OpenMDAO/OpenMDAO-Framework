@@ -67,8 +67,8 @@ class Source(Assembly):
         # External file that doesn't exist at time of save.
         self.external_files.append({'path':'does-not-exist'})
 
-    def tree_defined(self):
-        super(Source, self).tree_defined()
+    def tree_rooted(self):
+        super(Source, self).tree_rooted()
         
         self.directory = self.get_abs_directory()  # Force absolute.
         # Absolute external file that exists at time of save.
@@ -165,8 +165,8 @@ class Sink(Component):
         # Relative FileTrait that exists at time of save.
         self.add_trait('binary_file', FileTrait(iostatus='in'))
         
-    def tree_defined(self):
-        super(Sink, self).tree_defined()
+    def tree_rooted(self):
+        super(Sink, self).tree_rooted()
         
         self.text_file.filename = os.path.join(self.get_abs_directory(),
                                                'sink.txt')

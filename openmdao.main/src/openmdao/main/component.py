@@ -115,11 +115,11 @@ class Component (Container):
         """
         pass
     
-    def tree_defined(self):
-        """Calls the base class version of tree_defined(), checks our
+    def tree_rooted(self):
+        """Calls the base class version of tree_rooted(), checks our
         directory for validity, and creates the directory if it doesn't exist.
         """
-        super(Component, self).tree_defined()
+        super(Component, self).tree_rooted()
         if self.directory:
             path = self.get_abs_directory()
             if not os.path.exists(path):
@@ -134,14 +134,14 @@ class Component (Container):
                 self.check_path(path, check_dir=True)
         
     def _pre_execute (self):
-        """Prepares for execution by calling tree_defined() and check_config() if
+        """Prepares for execution by calling tree_rooted() and check_config() if
         their 'dirty' flags are set, and by requesting that the parent Assembly
         update this Component's invalid inputs.
         
         Overrides of this function must call this version.
         """
-        if self._call_tree_defined:
-            self.tree_defined()
+        if self._call_tree_rooted:
+            self.tree_rooted()
             
         if self._call_check_config:
             self.check_config()
@@ -158,7 +158,10 @@ class Component (Container):
                 #self.debug('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
                 self._call_execute = True
                 name = self.name
-                # ask our parent to update our invalid inputs
+                # ask our parent to update our invalid inputs.
+                # we're using hasattr here instead of ininstance(x,Assembly) because
+                # importing Assembly would be a recursive import.  Could use a check
+                # for IAssembly interface instead...
                 if hasattr(self.parent, 'update_inputs'):
                     self.parent.update_inputs(name,
                                               ['.'.join([name, n]) for n in invalid_ins])
@@ -256,7 +259,7 @@ class Component (Container):
         """Return absolute path of execution directory."""
         path = self.directory
         if not os.path.isabs(path):
-            if self._call_tree_defined:
+            if self._call_tree_rooted:
                 self.raise_exception("can't call get_abs_directory before hierarchy is defined",
                                      RuntimeError)
             if self.parent is not None and isinstance(self.parent, Component):
@@ -645,7 +648,7 @@ Component.load_from_eggfile('%s', install=False)
                     os.rmdir(name)
                     top.directory = ''
                     
-        #top._call_tree_defined = True
+        #top._call_tree_rooted = True
 
         if do_post_load:
             top.post_load()
