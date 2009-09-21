@@ -47,7 +47,7 @@ class SimulationRoot (object):
 
     @staticmethod
     def legal_path (path):
-        """Return True if path is legal (decendant of our root)."""
+        """Return True if path is legal (descendant of our root)."""
         if SimulationRoot.__root is None:
             SimulationRoot.__root = os.getcwd()
         return path.startswith(SimulationRoot.__root)
@@ -243,7 +243,7 @@ class Component (Container):
 # pylint: disable-msg=E1101
         if not SimulationRoot.legal_path(path):
             self.raise_exception(
-                "Illegal execution directory '%s', not a decendant of '%s'."
+                "Illegal execution directory '%s', not a descendant of '%s'."
                 % (path, SimulationRoot.get_root()),
                 ValueError)
         elif not os.path.isdir(path) and check_exist:
@@ -277,7 +277,7 @@ class Component (Container):
             directory = os.path.join(self.get_abs_directory(), directory)
         if not SimulationRoot.legal_path(directory):
             self.raise_exception(
-                "Illegal directory '%s', not a decendant of '%s'." % \
+                "Illegal directory '%s', not a descendant of '%s'." % \
                 (directory, SimulationRoot.get_root()), ValueError)
         os.chdir(directory)
         self._dir_stack.append(cwd)

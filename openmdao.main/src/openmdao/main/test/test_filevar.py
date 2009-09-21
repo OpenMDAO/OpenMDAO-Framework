@@ -150,7 +150,7 @@ class FileTestCase(unittest.TestCase):
             src.tree_defined()
         except ValueError, exc:
             msg = ": Illegal execution directory '/illegal'," \
-                  " not a decendant of"
+                  " not a descendant of"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
