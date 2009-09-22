@@ -8,6 +8,7 @@ import fnmatch
 import glob
 import logging
 import os.path
+from os.path import isabs, isdir, dirname, basename, exists, join, normpath
 import pkg_resources
 import shutil
 import subprocess
@@ -54,8 +55,8 @@ class SimulationRoot (object):
     
 def _relpath(path1, path2):
     """Return path for path1 relative to path2."""
-    assert os.path.isabs(path1)
-    assert os.path.isabs(path2)
+    assert isabs(path1)
+    assert isabs(path2)
 
     if path1.endswith(os.sep):
         path = path1[:-1]
@@ -72,9 +73,9 @@ def _relpath(path1, path2):
     relpath = ''
     while start:
         if path.startswith(start):
-            return os.path.join(relpath, path[len(start)+1:])
-        relpath = os.path.join('..', relpath)
-        start = os.path.dirname(start)
+            return join(relpath, path[len(start)+1:])
+        relpath = join('..', relpath)
+        start = dirname(start)
 
 class Component (Container):
     """This is the base class for all objects containing Traits that are 
@@ -104,6 +105,7 @@ class Component (Container):
         
         # List of meta-data dictionaries.
         self.external_files = []
+        
 
     def check_config (self):
         """Verify that this component is fully configured to execute.
@@ -122,7 +124,7 @@ class Component (Container):
         super(Component, self).tree_rooted()
         if self.directory:
             path = self.get_abs_directory()
-            if not os.path.exists(path):
+            if not exists(path):
                 self.check_path(path) # make sure it's legal path before creating
                 try:
                     os.makedirs(path)
@@ -189,12 +191,7 @@ class Component (Container):
         """
         if self.directory:
             directory = self.get_abs_directory()
-            try:
-                self.push_dir(directory)
-            except OSError, exc:
-                msg = "Could not move to execution directory '%s': %s" % \
-                      (directory, exc.strerror)
-                self.raise_exception(msg, RuntimeError)
+            self.push_dir(directory)
 
         self._stop = False
         try:
@@ -212,14 +209,14 @@ class Component (Container):
         any child containers are added.
         Returns the added Container object.
         """
-        self._call_check_config = True # force config check prior to next execution
+        self.config_changed()
         return super(Component, self).add_container(name, obj)
         
     def remove_container(self, name):
         """Override of base class version to force call to check_config after
         any child containers are removed.
         """
-        self._call_check_config = True # force config check prior to next execution
+        self.config_changed()
         return super(Component, self).remove_container(name)
 
     def add_trait(self, name, *trait):
@@ -227,7 +224,7 @@ class Component (Container):
         force call to check_config prior to execution when new traits are
         added.
         """
-        self._call_check_config = True # force config check prior to next execution
+        self.config_changed()
         super(Component, self).add_trait(name, *trait)
         
     def remove_trait(self, name):
@@ -235,8 +232,15 @@ class Component (Container):
         force call to check_config prior to execution when a trait is
         removed.
         """
-        self._call_check_config = True # force config check prior to next execution
+        self.config_changed()
         super(Component, self).remove_trait(name)    
+
+    def config_changed(self):
+        """Call this whenever the configuration of this Container changes,
+        for example, children added or removed.
+        """
+        super(Component, self).config_changed()
+        self._call_check_config = True
 
     def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
@@ -248,7 +252,7 @@ class Component (Container):
                 "Illegal execution directory '%s', not a descendant of '%s'."
                 % (path, SimulationRoot.get_root()),
                 ValueError)
-        elif check_dir and not os.path.isdir(path):
+        elif check_dir and not isdir(path):
                 self.raise_exception(
                     "Execution directory path '%s' is not a directory."
                     % path, ValueError)
@@ -258,7 +262,7 @@ class Component (Container):
     def get_abs_directory (self):
         """Return absolute path of execution directory."""
         path = self.directory
-        if not os.path.isabs(path):
+        if not isabs(path):
             if self._call_tree_rooted:
                 self.raise_exception("can't call get_abs_directory before hierarchy is defined",
                                      RuntimeError)
@@ -266,7 +270,7 @@ class Component (Container):
                 parent_dir = self.parent.get_abs_directory()
             else:
                 parent_dir = SimulationRoot.get_root()
-            path = os.path.join(parent_dir, path)
+            path = join(parent_dir, path)
             
         return path
 
@@ -275,13 +279,14 @@ class Component (Container):
         if not directory:
             directory = '.'
         cwd = os.getcwd()
-        if not os.path.isabs(directory):
-            directory = os.path.join(self.get_abs_directory(), directory)
-        if not SimulationRoot.legal_path(directory):
-            self.raise_exception(
-                "Illegal directory '%s', not a descendant of '%s'." % \
-                (directory, SimulationRoot.get_root()), ValueError)
-        os.chdir(directory)
+        if not isabs(directory):
+            directory = join(self.get_abs_directory(), directory)
+        self.check_path(directory, True)
+        try:
+            os.chdir(directory)
+        except OSError, err:
+            self.raise_exception("Can't push_dir '%s': %s" % (directory, err),
+                                 OSError)
         self._dir_stack.append(cwd)
 
     def pop_dir (self):
@@ -372,7 +377,7 @@ class Component (Container):
                         raise RuntimeError('Entry point object has no parent!')
                     while obj.parent is not None and \
                           isinstance(obj.parent, Component):
-                        relpath = os.path.join(obj.directory, relpath)
+                        relpath = join(obj.directory, relpath)
                         obj = obj.parent
                     child._rel_dir_path = relpath
 
@@ -395,7 +400,7 @@ class Component (Container):
                 if comp_dir == root_dir and comp.directory:
                     fixup_dirs.append((comp, comp.directory))
                     comp.directory = ''
-                elif os.path.isabs(comp.directory):
+                elif isabs(comp.directory):
                     parent_dir = comp.parent.get_abs_directory()
                     fixup_dirs.append((comp, comp.directory))
                     comp.directory = self._relpath(comp_dir, parent_dir)
@@ -414,17 +419,17 @@ class Component (Container):
             path = metadata['path']
             path = os.path.expanduser(path)
             path = os.path.expandvars(path)
-            if not os.path.isabs(path):
-                path = os.path.join(comp_dir, path)
+            if not isabs(path):
+                path = join(comp_dir, path)
             paths = glob.glob(path)
             for path in paths:
-                path = os.path.normpath(path)
-                if not os.path.exists(path):
+                path = normpath(path)
+                if not exists(path):
                     continue
                 if root_dir:
                     if path.startswith(root_dir):
                         save_path = self._relpath(path, root_dir)
-                        if os.path.isabs(metadata['path']):
+                        if isabs(metadata['path']):
                             path = self._relpath(path, comp_dir)
                             fixup_meta.append((metadata, metadata['path']))
                             metadata['path'] = path
@@ -443,15 +448,15 @@ class Component (Container):
             path = fvar.filename
             if not path:
                 continue
-            if not os.path.isabs(path):
-                path = os.path.join(comp_dir, path)
-            path = os.path.normpath(path)
-            if not os.path.exists(path):
+            if not isabs(path):
+                path = join(comp_dir, path)
+            path = normpath(path)
+            if not exists(path):
                 continue
             if root_dir:
                 if path.startswith(root_dir):
                     save_path = self._relpath(path, root_dir)
-                    if os.path.isabs(fvar.filename):
+                    if isabs(fvar.filename):
                         path = self._relpath(path, comp_dir)
                         fixup_fvar.append((comp, fvarname, fvar))
                         comp.set(fvarname+'.filename', path, force=True)
@@ -519,11 +524,11 @@ class Component (Container):
               (size, elapsed, size/elapsed)
 
         orig_dir = os.getcwd()
-        if os.path.exists(test_dir):
+        if exists(test_dir):
             shutil.rmtree(test_dir)
         os.mkdir(test_dir)
         os.chdir(test_dir)
-        egg_path = os.path.join('..', egg_name)
+        egg_path = join('..', egg_name)
         unpacker = None
         try:
             print '\nUnpacking %s in subprocess...' % egg_name
@@ -567,7 +572,7 @@ Component.load_from_eggfile('%s', install=False)
             if logfile:
                 stdout.close()
         finally:
-            if unpacker and os.path.exists(unpacker):
+            if unpacker and exists(unpacker):
                 os.remove(unpacker)
             os.chdir(orig_dir)
             self.log_level = old_level
@@ -603,7 +608,7 @@ Component.load_from_eggfile('%s', install=False)
                     obj = top.parent
                     while obj.parent is not None and \
                           isinstance(obj.parent, Component):
-                        relpath = os.path.join(obj.directory, relpath)
+                        relpath = join(obj.directory, relpath)
                         obj = obj.parent
                 elif top.trait('_rel_dir_path'):
                     top.warning('No parent, using saved relative directory')
@@ -617,7 +622,7 @@ Component.load_from_eggfile('%s', install=False)
             if name:
                 top.name = name
                 # New instance via create(name) gets new directory.
-                if not os.path.exists(name):
+                if not exists(name):
                     os.mkdir(name)
                 os.chdir(name)
             # TODO: (maybe) Seems like we should make top.directory relative
@@ -630,12 +635,12 @@ Component.load_from_eggfile('%s', install=False)
                 for component in [c for c in top.values(recurse=True)
                                           if isinstance(c, Component)]:
                     directory = component.get_abs_directory()
-                    if not os.path.exists(directory):
+                    if not exists(directory):
                         os.makedirs(directory)
 
                 # If necessary, copy files from installed egg.
                 if isinstance(instream, basestring) and \
-                   not os.path.exists(instream) and not os.path.isabs(instream):
+                   not exists(instream) and not isabs(instream):
                     # If we got this far, then the stuff below "can't" fail.
                     if not package:
                         dot = instream.rfind('.')
@@ -643,7 +648,7 @@ Component.load_from_eggfile('%s', install=False)
                     top._restore_files(package, relpath)
             finally:
                 os.chdir(orig_dir)
-                if name and not glob.glob(os.path.join(name, '*')):
+                if name and not glob.glob(join(name, '*')):
                     # Cleanup unused directory.
                     os.rmdir(name)
                     top.directory = ''
@@ -693,14 +698,14 @@ Component.load_from_eggfile('%s', install=False)
         """Copy files from installed egg matching pattern."""
         symlink = const and sys.platform != 'win32'
 
-        directory = os.path.dirname(pattern)
+        directory = dirname(pattern)
         pattern = os.path.basename(pattern)
         if directory:
-            if not os.path.exists(directory):
+            if not exists(directory):
                 os.makedirs(directory)
             relpath = relpath+'/'+directory  # Use '/' for resources.
 
-        relpath = os.path.normpath(relpath)
+        relpath = normpath(relpath)
         pkg_files = pkg_resources.resource_listdir(package, relpath)
 
         if directory:
@@ -710,7 +715,7 @@ Component.load_from_eggfile('%s', install=False)
             for filename in pkg_files:
                 if fnmatch.fnmatch(filename, pattern):
                     found = True
-                    if os.path.exists(filename):
+                    if exists(filename):
                         # Don't overwrite existing files (reloaded instance).
                         self.debug("    '%s' exists", filename)
                         continue

@@ -66,7 +66,7 @@ Our first step is to create our class. We want to inherit from
 need to function properly as an OpenMDAO Component.
 
 
-.. _Code1: 
+.. _plugin_overview_Code1: 
 
 ::
 
@@ -171,7 +171,7 @@ only other file in the directory structure besides ``simple_adder.py`` is the
 ``setup.py`` file, which describes how to build an egg containing our module.
 In this case, the ``setup.py`` file looks like this:
 
-..  _Code1
+..  _plugin_overview_Code2:
 
 
 ::

@@ -189,11 +189,17 @@ class Container(HasTraits):
         # unpickled.
         self.on_trait_change(self._io_trait_changed, '+iostatus')
         
-        self.on_trait_change(self._par_update, 'parent')
+        # keep track of modifications to our parent
+        self.on_trait_change(self._parent_modified, 'parent')
                 
-    def _par_update(self, obj, name, value):
+    def _parent_modified(self, obj, name, value):
         """This is called when the parent attribute is changed."""
         self._logger.rename(self.get_pathname().replace('.', ','))
+        self._branch_moved()
+        
+    def _branch_moved(self):
+        self._call_tree_rooted = True
+        [x._branch_moved() for x in self.values() if isinstance(x, Container)]
  
     def _get_name(self):
         if self._name is None:
@@ -1052,12 +1058,18 @@ class Container(HasTraits):
                                  RuntimeError)
         return path
     
-    def _trait_added_changed(self, name):
-        """Called any time a new trait is added to this container."""
+    def config_changed(self):
+        """Call this whenever the configuration of this Container changes,
+        for example, children added or removed.
+        """
         self._input_names = None
         self._output_names = None
         self._container_names = None
-    
+        
+    def _trait_added_changed(self, name):
+        """Called any time a new trait is added to this container."""
+        self.config_changed()
+        
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)

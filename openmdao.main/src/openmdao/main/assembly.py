@@ -428,8 +428,7 @@ class Assembly (Component):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         conns = []
-        graph = self.get_var_graph()
-        for outname, inname in graph.edges_iter():
+        for outname, inname in self.get_var_graph().edges_iter():
             if '.' in outname or '.' in inname:
                 if show_passthru:
                     conns.append((outname, inname))
@@ -565,8 +564,7 @@ class Assembly (Component):
             else:
                 self.raise_exception("%s is not an io trait" % name,
                                      RuntimeError)
-            successors = succ.get(name, [])
-            for vname in successors:
+            for vname in succ.get(name, []):
                 tup = vname.split('.', 1)
                 if len(tup) == 1:  #boundary var or Component
                     if self.trait(vname).iostatus == 'out': # an output boundary var
