@@ -26,8 +26,6 @@ from openmdao.util.testutil import find_python
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
-__version__ = '1.2.3'  # Used in forming egg name.
-
 EXTERNAL_FILES = ('xyzzy', '../sub/data2', 'hello', '../sub/data4')
 
 SOURCE_INIT = False  # Used to verify __init__() gets called when expected.
@@ -620,7 +618,7 @@ class TestCase(unittest.TestCase):
         metadata['path'] = path
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
-                                   force_relative=False)
+                                   require_relpaths=False)
         finally:
             os.remove(path)
 
@@ -1014,6 +1012,7 @@ comp.run()
             out = open(path, 'w')
             out.write(file_data)
             out.close()
+            logging.debug('updated %s', path)
             self.create_and_check_model(factory, 'test_model_2', file_data)
 
             # Check observations.

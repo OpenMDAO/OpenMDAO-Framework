@@ -821,10 +821,11 @@ class Container(HasTraits):
                     src_files=None, child_objs=None, dst_dir=None,
                     format=SAVE_CPICKLE, proto=-1, use_setuptools=False,
                     observer=None):
-        """Save state and other files to an egg. Analyzes the objects saved
-        for distribution dependencies. Modules not found in any distribution
-        are recorded in an 'egg-info/openmdao_orphans.txt' file. Also creates
-        and saves loader scripts for each entry point.
+        """Save state and other files to an egg.  Typically used to copy all or
+        part of a simulation to another user or machine.  By specifying child
+        containers in `child_objs`, it will be possible to create instances of
+        just those containers from the installed egg.  Child container names
+        should be specified relative to this container.
 
         - `name` must be an alphanumeric string.
         - `version` must be an alphanumeric string.
@@ -833,8 +834,11 @@ class Container(HasTraits):
         - `src_dir` is the root of all (relative) `src_files`.
         - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
+        - `format` and `proto` are passed to eggsaver.save().
+        - 'use_setuptools` is passed to eggsaver.save_to_egg().
         - `observer` will be called via an EggObserver.
 
+        After collecting entry point information, calls eggsaver.save_to_egg().
         Returns (egg_filename, required_distributions, orphan_modules).
         """
         assert name and isinstance(name, basestring)
@@ -919,8 +923,8 @@ class Container(HasTraits):
                                           instance_name, logger, observer)
 
     @staticmethod
-    def load(instream, format=SAVE_CPICKLE, package=None, 
-             do_post_load=True, name=None):
+    def load(instream, format=SAVE_CPICKLE, package=None, call_post_load=True,
+             name=None):
         """Load object(s) from the input stream. Pure python classes generally
         won't need to override this, but extensions will. The format can be
         supplied in case something other than cPickle is needed.
@@ -928,7 +932,7 @@ class Container(HasTraits):
         top = eggloader.load(instream, format, package, logger)
         if name:
             top.name = name
-        if do_post_load:
+        if call_post_load:
             top.parent = None
             top.post_load()
         return top
