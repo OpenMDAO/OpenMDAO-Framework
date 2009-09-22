@@ -21,7 +21,7 @@ def _mod_sphinx_info(mod, outfile, show_undoc=False):
     short = os.path.basename(name)
     modbase = short.split('.').pop()
     
-    outfile.write('.. index:: _%s.py:\n\n'%modbase)
+    outfile.write('.. index:: %s.py\n\n'%modbase)
     outfile.write('.. _%s.py:\n\n'%modbase)
     outfile.write('%s.py\n' % modbase)
     outfile.write('_'*(3+len(short.split('.').pop()))+'\n\n')

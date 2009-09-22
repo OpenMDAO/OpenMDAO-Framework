@@ -8,7 +8,6 @@ __all__ = ["COBYLA"]
 from scipy.optimize.cobyla import fmin_cobyla
 
 from openmdao.main.api import Driver, StringRef, StringRefArray
-from openmdao.main.component import STATE_WAITING
 
 # if our globals dict doesn't contain __builtins__, python will 
 # copy current global dict into it
@@ -62,7 +61,6 @@ class COBYLA(Driver):
         # first, set the design variables in the model
         for name, val in zip(self.design_vars, dvars):
             eval(translate_expr(name+'='+str(val), self))
-        self.state = STATE_WAITING
         self.parent.workflow.run()
         
         if self._stop is True:
