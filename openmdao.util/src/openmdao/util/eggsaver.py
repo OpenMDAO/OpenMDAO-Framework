@@ -61,11 +61,10 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                 src_files=None, dst_dir=None, format=SAVE_CPICKLE, proto=-1,
                 logger=None, use_setuptools=False, observer=None):
     """
-    Save state and other files to an egg.
-
-    Analyzes the objects saved for distribution dependencies.  Modules not
-    found in any distribution are recorded in an 'egg-info/openmdao_orphans.txt'
-    file.  Also creates and saves loader scripts for each entry point.
+    Save state and other files to an egg. Analyzes the objects saved for
+    distribution dependencies.  Modules not found in any distribution are
+    recorded in an 'egg-info/openmdao_orphans.txt' file.  Also creates and
+    saves loader scripts for each entry point.
 
     - `entry_pts` is a list of (obj, obj_name, obj_group) tuples. \
       The first of these specifies the root object and package name.
@@ -74,6 +73,9 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
       It defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
     - `dst_dir` is the directory to write the egg in.
+    - `format` and `proto` are passed to save().
+    - If 'use_setuptools` is True, then eggwriter.write_via_setuptools() is \
+      called rather than eggwriter.write().
     - `observer` will be called via an EggObserver intermediary.
 
     Returns (egg_filename, required_distributions, orphan_modules).
