@@ -60,7 +60,7 @@ The full process model is shown below.
 
 .. _`Process Model for Tutorial Problem`:
 
-.. figure:: ../../openmdao.examples/openmdao/examples/engine_design/Engine_Example_Process_Diagram.png
+.. figure:: ../../examples/openmdao.examples.engine_design/openmdao/examples/engine_design/Engine_Example_Process_Diagram.png
    :align: center
 
    Process Model for Tutorial Problem
@@ -887,7 +887,7 @@ data types not native to C.
 The main algorithm in engine.py was rewritten in C as engine.C. A wrapped shared object of engine.C was
 created using F2Py; this tool can also be used to generate wrappers for C code provided that the
 signature file engine.pyf is manually created. This file engine.pyf defines the interface for the
-functions found in engine.C, and can be viewed in ``examples/openmdao.examples.engine_design/openmdao/examples/engine_design`. The
+functions found in engine.C, and can be viewed in ``examples/openmdao.examples.engine_design/openmdao/examples/engine_design``. The
 C code has been placed in a function called RunEngineCycle that takes the design and simulation
 variables as inputs. 
 
