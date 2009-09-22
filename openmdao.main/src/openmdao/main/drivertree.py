@@ -2,6 +2,10 @@
 import networkx as nx
 
 def create_labeled_graph(parent_graph):
+    """Returns a copy of the given graph where each node has an empty set called
+    'itercomps' associated with it.  itercomps is used for bookkeeping in a 
+    collapsed graph.
+    """
     graph = nx.DiGraph()
     graph .add_nodes_from([name for name in parent_graph.nodes_iter()], itercomps=set())
     graph.add_edges_from(parent_graph.edges_iter())
