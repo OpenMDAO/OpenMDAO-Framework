@@ -174,21 +174,31 @@ class MultiDriverTestCase(unittest.TestCase):
         self.top.connect('comp3.f_xy', 'comp4.y')
         self.top.connect('comp2.f_x', 'comp4.x')
 
-        # create the inner driver
+        ## create one driver for testing
         drv1 = self.top.add_container('driver1', CONMINdriver())
         drv1.maxiters = 30
-        drv1.objective = 'comp3.f_xy'
-        drv1.design_vars = ['comp3.y']
-        drv1.lower_bounds = [-50]
-        drv1.upper_bounds = [50]
+        drv1.iprint = 11
+        drv1.objective = 'comp4.f_xy'
+        drv1.design_vars = ['comp1.x', 'comp3.y']
+        #drv1.lower_bounds = [-50, -50]
+        #drv1.upper_bounds = [50, 50]
+        #drv1.constraints = ['comp1.x**2 + comp3.y**2']
+            
+        ## create the inner driver
+        #drv1 = self.top.add_container('driver1', CONMINdriver())
+        #drv1.maxiters = 30
+        #drv1.objective = 'comp3.f_xy'
+        #drv1.design_vars = ['comp3.y']
+        #drv1.lower_bounds = [-50]
+        #drv1.upper_bounds = [50]
         
-        # create the outer driver
-        drv2 = self.top.add_container('driver2', CONMINdriver())
-        drv2.maxiters = 100
-        drv2.objective = 'comp4.f_xy'
-        drv2.design_vars = ['comp1.x']
-        drv2.lower_bounds = [-50]
-        drv2.upper_bounds = [50]
+        ## create the outer driver
+        #drv2 = self.top.add_container('driver2', CONMINdriver())
+        #drv2.maxiters = 100
+        #drv2.objective = 'comp4.f_xy'
+        #drv2.design_vars = ['comp1.x']
+        #drv2.lower_bounds = [-50]
+        #drv2.upper_bounds = [50]
         
         self.top.run()
 
