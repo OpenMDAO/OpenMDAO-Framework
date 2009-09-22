@@ -14,10 +14,11 @@ from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 from openmdao.examples.engine_design.transmission import Transmission
 from openmdao.examples.engine_design.chassis import Chassis
-try:
-    from openmdao.examples.engine_design.engine_wrap_c import Engine
-except:
-    from openmdao.examples.engine_design.engine import Engine
+from openmdao.examples.engine_design.engine_wrap_c import Engine
+#try:
+#    from openmdao.examples.engine_design.engine_wrap_c import Engine
+#except:
+#    from openmdao.examples.engine_design.engine import Engine
 
     
 class IVehicle(Interface):
