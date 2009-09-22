@@ -206,7 +206,7 @@ the test files for ``openmdao.main`` are located in
 Testing Code in the Documentation
 =================================
 
-The OpenMDAO documentation includes quite a few examples of python code. These
+The OpenMDAO documentation includes quite a few examples of Python code. These
 examples are used to explain how to use features of the OpenMDAO API as well as
 how to develop new components and plugins. Thus, it is imperative that any code
 examples included in the documentation (particularly the User Guide and the
@@ -219,7 +219,7 @@ readable document as is done by the HTML builder, the doctest builder scans the
 documentation files for code blocks, and tests them. 
 
 There are two types of code examples found in the documentation. The first type 
-is a block of code as would be found in a python script:
+is a block of code as would be found in a Python script:
 
 .. testcode::
 
@@ -282,7 +282,7 @@ in Group1.
 The label is optional, and defaults to "default" when not explicitly defined.
 
 There is one other directive of note. The doctest directive is used to mark
-blocks of interactive shell python code. Note that if the directive is omitted,
+blocks of interactive shell Python code. Note that if the directive is omitted,
 the doctest builder can often find the Python blocks by itself, but it is
 still good form to include it.
 
