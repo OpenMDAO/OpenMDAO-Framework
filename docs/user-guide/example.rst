@@ -392,7 +392,7 @@ It is assumed that the user has some familiarity with Python and the basic conce
 programming, and has access to the OpenMDAO source tree. From the top of the tree, the following directory
 contains the pieces needed for the model:
 
-	``openmdao.examples/openmdao/examples/engine_design``
+	``examples/openmdao.examples.engine_design/openmdao/examples/engine_design``
 
 The three engine models have been implemented in transmission.py, engine.py, and chassis.py. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
@@ -415,7 +415,7 @@ the base class Component. A very simple component is shown here:
 	    """ A simple transmission model."""
 	
     	    def __init__(self, doc=None, directory=''):
-        	    """ Creates a new Transmission object """
+        	""" Creates a new Transmission object """
         	super(Transmission, self).__init__(doc, directory)        
         
 	        def execute(self):
@@ -664,7 +664,6 @@ Engine, and Chassis components.
 
 	from openmdao.main.api import Assembly
 	from openmdao.lib.traits.unitsfloat import UnitsFloat
-	from openmdao.main.interfaces import IComponent
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission
@@ -704,7 +703,8 @@ Now that the components are instantiated in the assembly, they need to be hooked
 
 	from enthought.traits.api import implements, Interface, Float, Int
 
-	from openmdao.main.api import Assembly, UnitsFloat
+	from openmdao.main.api import Assembly
+	from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission
@@ -791,7 +791,8 @@ Now these input are available to connect to the components.
 
 	from enthought.traits.api import implements, Interface, Float, Int
 
-	from openmdao.main.api import Assembly, UnitsFloat
+	from openmdao.main.api import Assembly
+	from openmdao.lib.traits.unitsfloat import UnitsFloat
 
 	from openmdao.examples.engine_design.engine import Engine
 	from openmdao.examples.engine_design.transmission import Transmission
@@ -886,7 +887,7 @@ data types not native to C.
 The main algorithm in engine.py was rewritten in C as engine.C. A wrapped shared object of engine.C was
 created using F2Py; this tool can also be used to generate wrappers for C code provided that the
 signature file engine.pyf is manually created. This file engine.pyf defines the interface for the
-functions found in engine.C, and can be viewed in ``openmdao.examples/openmdao/examples/engine_design``. The
+functions found in engine.C, and can be viewed in ``examples/openmdao.examples.engine_design/openmdao/examples/engine_design``. The
 C code has been placed in a function called RunEngineCycle that takes the design and simulation
 variables as inputs. 
 
@@ -897,10 +898,11 @@ function RunEngineCycle. The function can be imported and used just like any pyt
 
 .. _Code8: 
 
-.. literalinclude:: ../../openmdao.examples/openmdao/examples/engine_design/engine_wrap_c.py
+.. literalinclude:: ../../examples/openmdao.examples.engine_design/openmdao/examples/engine_design/engine_wrap_c.py
    :start-after: engine_weight = 0.0
    :end-before: # end engine.py
    :language: python
+
 
 Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first
 element (element zero.) This is not typically needed for return values from FORTRAN codes compiled with
@@ -1023,7 +1025,7 @@ driver requires some initialization and connecting before it can be used:
 
 	self = EngineOptimization()		
 		
-.. _Code10: 
+.. _Code10:
 
 .. testcode:: Code10
 

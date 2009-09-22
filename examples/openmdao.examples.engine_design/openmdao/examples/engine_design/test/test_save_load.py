@@ -14,8 +14,8 @@ from openmdao.examples.engine_design.engine_optimization import EngineOptimizati
 import openmdao.util.testutil
 
 
-class EngineOptimizationTestCase(unittest.TestCase):
-    """ Test Vehicle """
+class TestCase(unittest.TestCase):
+    """ Test Save/Load of Vehicle """
 
     def setUp(self):
         self.model = EngineOptimization()
@@ -37,8 +37,9 @@ class EngineOptimizationTestCase(unittest.TestCase):
         # Set local dir in case we're running in a different directory.
         py_dir = pkg_resources.resource_filename('openmdao.examples.engine_design',
                                                  'test')
-        python = openmdao.util.testutil.find_python('openmdao.examples')
-        egg_info = self.model.save_to_egg(py_dir=py_dir)
+        python = openmdao.util.testutil.find_python()
+        name = self.model.name or self.model.get_default_name(self)
+        egg_info = self.model.save_to_egg(name, '0', py_dir=py_dir)
         egg_name = egg_info[0]
 
         orig_dir = os.getcwd()
@@ -68,9 +69,7 @@ except Exception, err:
             logging.debug('Load state and run test in subprocess...')
             logging.debug('    python %s' % python)
 
-            if not self.model.name:
-                self.model.name = self.model.get_default_name(self)
-            os.chdir(self.model.name)
+            os.chdir(name)
             out = open('test.py', 'w')
             out.write("""\
 import sys
@@ -91,7 +90,7 @@ class TestCase(unittest.TestCase):
                               
 if __name__ == '__main__':
     unittest.main()
-""" % self.model.name)
+""" % name)
             out.close()
 
             out = open('test.out', 'w')

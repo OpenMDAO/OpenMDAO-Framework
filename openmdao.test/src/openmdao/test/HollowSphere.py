@@ -15,7 +15,7 @@ class HollowSphere(Component):
     surface_area = UnitsFloat(0., iostatus='out', units='cm**2')
 
     def __init__(self, doc=None, directory=''):
-        super(HollowSphere, self).__init__(name, parent, doc, directory) 
+        super(HollowSphere, self).__init__(doc, directory) 
         
     def execute(self):
         self.surface_area = 4.0*pi*self.radius*self.radius
