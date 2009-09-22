@@ -392,7 +392,7 @@ It is assumed that the user has some familiarity with Python and the basic conce
 programming, and has access to the OpenMDAO source tree. From the top of the tree, the following directory
 contains the pieces needed for the model:
 
-	``openmdao.examples/openmdao/examples/engine_design``
+	``examples/openmdao.examples.engine_design/openmdao/examples/engine_design``
 
 The three engine models have been implemented in transmission.py, engine.py, and chassis.py. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
@@ -887,7 +887,7 @@ data types not native to C.
 The main algorithm in engine.py was rewritten in C as engine.C. A wrapped shared object of engine.C was
 created using F2Py; this tool can also be used to generate wrappers for C code provided that the
 signature file engine.pyf is manually created. This file engine.pyf defines the interface for the
-functions found in engine.C, and can be viewed in ``openmdao.examples/openmdao/examples/engine_design``. The
+functions found in engine.C, and can be viewed in ``examples/openmdao.examples.engine_design/openmdao/examples/engine_design`. The
 C code has been placed in a function called RunEngineCycle that takes the design and simulation
 variables as inputs. 
 
@@ -898,7 +898,7 @@ function RunEngineCycle. The function can be imported and used just like any pyt
 
 .. _Code8: 
 
-.. literalinclude:: ../../openmdao.examples/openmdao/examples/engine_design/engine_wrap_c.py
+.. literalinclude:: ../../examples/openmdao.examples.engine_design/openmdao/examples/engine_design/engine_wrap_c.py
    :start-after: engine_weight = 0.0
    :end-before: # end engine.py
    :language: python
