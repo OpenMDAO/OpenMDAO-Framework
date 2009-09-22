@@ -98,11 +98,11 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
         loader = dist.load_entry_point(entry_group, entry_name)
         return loader(name=instance_name, observer=observer.observer)
     except pkg_resources.DistributionNotFound, exc:
-        observer.exception('Distribution not found: %s', exc)
+        observer.exception('Distribution not found: %s' % exc)
         check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
     except pkg_resources.VersionConflict, exc:
-        observer.exception('Version conflict: %s', exc)
+        observer.exception('Version conflict: %s' % exc)
         check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
     except Exception, exc:

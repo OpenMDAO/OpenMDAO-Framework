@@ -60,7 +60,7 @@ The full process model is shown below.
 
 .. _`Process Model for Tutorial Problem`:
 
-.. figure:: ../../openmdao.examples/openmdao/examples/engine_design/Engine_Example_Process_Diagram.png
+.. figure:: ../../examples/openmdao.examples.engine_design/openmdao/examples/engine_design/Engine_Example_Process_Diagram.png
    :align: center
 
    Process Model for Tutorial Problem

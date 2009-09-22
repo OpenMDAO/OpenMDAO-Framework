@@ -10,11 +10,7 @@ import logging
 import os.path
 from os.path import isabs, isdir, dirname, basename, exists, join, normpath
 import pkg_resources
-import shutil
-import subprocess
 import sys
-import time
-import StringIO
 
 from enthought.traits.api import implements, on_trait_change, Str, Missing, \
                                  Undefined, Python, TraitError
@@ -24,7 +20,6 @@ from openmdao.main.container import Container, set_as_top
 from openmdao.main.filevar import FileValue
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-from openmdao.main.log import LOG_DEBUG
 
 
 class SimulationRoot (object):
@@ -312,10 +307,9 @@ class Component (Container):
         """
         self.load(instream)
 
-    def save_to_egg(self, name, version, py_dir=None, force_relative=True,
-                    src_dir=None, src_files=None, child_objs=None,
-                    dst_dir=None, format=SAVE_CPICKLE, proto=-1,
-                    use_setuptools=False, observer=None):
+    def save_to_egg(self, name, version, py_dir=None, require_relpaths=True,
+                    child_objs=None, dst_dir=None, format=SAVE_CPICKLE,
+                    proto=-1, use_setuptools=False, observer=None):
         """Save state and other files to an egg.  Typically used to copy all or
         part of a simulation to another user or machine.  By specifying child
         components in `child_objs`, it will be possible to create instances of
@@ -326,26 +320,26 @@ class Component (Container):
         - `version` must be an alphanumeric string.
         - `py_dir` is the (root) directory for local Python files. \
           It defaults to the current directory.
-        - If `force_relative` is True, all paths are made relative to `src_dir`.
-        - `src_dir` is the root of all (relative) `src_files`. \
-          It defaults to the component's directory.
-        - `src_files` should be a set. Component external files will be added \
-          to this set.
-        - `child_objs` is a list of child objects for additional entries.
+        - If `require_relpaths` is True, any path (directory attribute,
+          external file, or file trait) which cannot be made relative to this \
+          component's directory will raise ValueError. Otherwise such paths \
+          generate a warning and the file is skipped.
+        - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
+        - `format` and `proto` are passed to eggsaver.save().
+        - 'use_setuptools` is passed to eggsaver.save_to_egg().
         - `observer` will be called via an EggObserver.
 
+        After collecting files and possibly modifying their paths, this
+        calls Container.save_to_egg().
         Returns (egg_filename, required_distributions, orphan_modules).
         """
-        if src_dir is None:
-            src_dir = self.get_abs_directory()
-        if src_dir.endswith(os.sep):
-            src_dir = src_dir[:-1]
-        src_files = src_files or set()
-
         observer = EggObserver(observer, self._logger)
 
-        fixup_dirs = []  # Used to restore original component config.
+        src_dir = self.get_abs_directory()
+        src_files = set()
+
+        fixup_dirs = []  # These are used to restore original component config.
         fixup_meta = []
         fixup_fvar = []
 
@@ -355,17 +349,18 @@ class Component (Container):
         components = [self]
         components.extend([obj for obj in self.values(recurse=True)
                                        if isinstance(obj, Component)])
-        root_dir = src_dir if force_relative else None
         try:
             for comp in sorted(components, reverse=True,
                                key=lambda comp: comp.get_pathname()):
                 try:
                     comp_dir = comp.get_abs_directory()
-                    self._fix_directory(comp, comp_dir, root_dir, fixup_dirs)
-                    self._fix_external_files(comp, comp_dir, root_dir,
-                                             fixup_meta, src_files)
-                    self._fix_file_vars(comp, comp_dir, root_dir, fixup_fvar,
+                    self._fix_directory(comp, comp_dir, src_dir,
+                                        require_relpaths, fixup_dirs)
+                    self._fix_external_files(comp, comp_dir, src_dir,
+                                             require_relpaths, fixup_meta,
                                         src_files)
+                    self._fix_file_vars(comp, comp_dir, src_dir,
+                                        require_relpaths, fixup_fvar, src_files)
                 except Exception, exc:
                     observer.exception(str(exc))
                     raise
@@ -401,26 +396,30 @@ class Component (Container):
             for comp, name, fvar in fixup_fvar:
                 comp.set(name+'.filename', fvar.filename, force=True)
 
-    def _fix_directory(self, comp, comp_dir, root_dir, fixup_dirs):
+    def _fix_directory(self, comp, comp_dir, root_dir, require_relpaths,
+                       fixup_dirs):
         """Ensure execution directory for `comp` is in relative form."""
-        if root_dir:
-            if comp_dir.startswith(root_dir):
-                if comp_dir == root_dir and comp.directory:
-                    fixup_dirs.append((comp, comp.directory))
-                    comp.directory = ''
-                elif isabs(comp.directory):
-                    parent_dir = comp.parent.get_abs_directory()
-                    fixup_dirs.append((comp, comp.directory))
-                    comp.directory = self._relpath(comp_dir, parent_dir)
+        if comp_dir.startswith(root_dir):
+            if comp_dir == root_dir and comp.directory:
+                fixup_dirs.append((comp, comp.directory))
+                comp.directory = ''
+            elif isabs(comp.directory):
+                parent_dir = comp.parent.get_abs_directory()
+                fixup_dirs.append((comp, comp.directory))
+                comp.directory = self._relpath(comp_dir, parent_dir)
                 self.debug("    %s.directory reset to '%s'", 
                            comp.name, comp.directory)
-            else:
+        elif require_relpaths:
                 self.raise_exception(
                     "Can't save, %s directory '%s' doesn't start with '%s'."
                     % (comp.get_pathname(), comp_dir, root_dir), ValueError)
 
-    def _fix_external_files(self, comp, comp_dir, root_dir, fixup_meta,
-                            src_files):
+        else:
+            self.warning("%s directory '%s' can't be made relative to '%s'.",
+                         comp.get_pathname(), comp_dir, root_dir)
+
+    def _fix_external_files(self, comp, comp_dir, root_dir, require_relpaths,
+                            fixup_meta, src_files):
         """Ensure external files for `comp` are in relative form, and update
         src_files to include all matches."""
         for metadata in comp.external_files:
@@ -434,24 +433,24 @@ class Component (Container):
             if not paths:
                 continue
 
-            if root_dir:
-                if path.startswith(root_dir):
-                    if isabs(metadata['path']):
-                        path = self._relpath(path, comp_dir)
-                        fixup_meta.append((metadata, metadata['path']))
-                        metadata['path'] = path
-                else:
+            if path.startswith(root_dir):
+                if isabs(metadata['path']):
+                    path = self._relpath(path, comp_dir)
+                    fixup_meta.append((metadata, metadata['path']))
+                    metadata['path'] = path
+                for path in paths:
+                    src_files.add(self._relpath(path, root_dir))
+            elif require_relpaths:
                     self.raise_exception(
                         "Can't save, %s file '%s' doesn't start with '%s'."
                         % (comp.get_pathname(), path, root_dir), ValueError)
 
-            for path in paths:
-                if root_dir:
-                    src_files.add(self._relpath(path, root_dir))
-                else:
-                    src_files.add(path)
+            else:
+                self.warning("%s file '%s' can't be made relative to '%s'.",
+                             comp.get_pathname(), path, root_dir)
 
-    def _fix_file_vars(self, comp, comp_dir, root_dir, fixup_fvar, src_files):
+    def _fix_file_vars(self, comp, comp_dir, root_dir, require_relpaths,
+                       fixup_fvar, src_files):
         """Ensure FileTraits for `comp` are in relative form and add to
         src_files."""
         for fvarname, fvar, ftrait in comp.get_file_vars():
@@ -463,20 +462,21 @@ class Component (Container):
             path = normpath(path)
             if not exists(path):
                 continue
-            if root_dir:
-                if path.startswith(root_dir):
-                    src_files.add(self._relpath(path, root_dir))
-                    if isabs(fvar.filename):
-                        path = self._relpath(path, comp_dir)
-                        fixup_fvar.append((comp, fvarname, fvar))
-                        comp.set(fvarname+'.filename', path, force=True)
-                else:
-                    self.raise_exception(
-                        "Can't save, %s path '%s' doesn't start with '%s'."
-                        % ('.'.join([comp.get_pathname(), fvarname]),
-                           path, root_dir), ValueError)
+            if path.startswith(root_dir):
+                src_files.add(self._relpath(path, root_dir))
+                if isabs(fvar.filename):
+                    path = self._relpath(path, comp_dir)
+                    fixup_fvar.append((comp, fvarname, fvar))
+                    comp.set(fvarname+'.filename', path, force=True)
+            elif require_relpaths:
+                self.raise_exception(
+                    "Can't save, %s path '%s' doesn't start with '%s'."
+                    % ('.'.join([comp.get_pathname(), fvarname]),
+                       path, root_dir), ValueError)
             else:
-                src_files.add(path)
+                self.warning("%s path '%s' can't be made relative to '%s'.",
+                             '.'.join([comp.get_pathname(), fvarname]),
+                             path, root_dir)
 
     def get_file_vars(self):
         """Return list of (filevarname,filevarvalue,filetrait) owned by this
@@ -512,8 +512,8 @@ class Component (Container):
         return rpath
 
     @staticmethod
-    def load(instream, format=SAVE_CPICKLE, package=None, do_post_load=True,
-             top_obj=True, name='', observer=None):
+    def load(instream, format=SAVE_CPICKLE, package=None,
+             call_post_load=True, top_obj=True, name='', observer=None):
         """Load object(s) from `instream`.  If `instream` is an installed
         package name, then any external files referenced in the object(s)
         are copied from the package installation to appropriate directories.
@@ -589,7 +589,7 @@ class Component (Container):
                     os.rmdir(name)
                     top.directory = ''
                     
-        if do_post_load:
+        if call_post_load:
             top.post_load()
 
         observer.complete(name)
