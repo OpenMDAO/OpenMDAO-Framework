@@ -20,6 +20,7 @@ import zipfile
 import zc.buildout.easy_install
 
 from openmdao.main.log import NullLogger
+from openmdao.util.eggobserver import EggObserver
 from openmdao.util.eggsaver import SAVE_CPICKLE, SAVE_PICKLE, SAVE_YAML, \
                                    SAVE_LIBYAML, EGG_SERVER_URL
 from openmdao.util.imholder import restore_instancemethods
@@ -29,17 +30,18 @@ __all__ = ('load', 'load_from_eggfile', 'load_from_eggpkg',
 
 
 def load_from_eggfile(filename, entry_group, entry_name, install=True,
-                      logger=None):
+                      logger=None, observer=None):
     """
     Extract files in egg to a subdirectory matching the saved object name.
     Optionally installs distributions the egg depends on, and then loads object
     graph state by invoking the given entry point.  Returns the root object.
     """
     logger = logger or NullLogger()
+    observer = EggObserver(observer, logger)
     logger.debug('Loading %s from %s in %s...',
                  entry_name, filename, os.getcwd())
 
-    egg_dir, dist = _dist_from_eggfile(filename, install, logger)
+    egg_dir, dist = _dist_from_eggfile(filename, install, logger, observer)
 
     if not '.' in sys.path:
         sys.path.append('.')
@@ -47,18 +49,19 @@ def load_from_eggfile(filename, entry_group, entry_name, install=True,
     os.chdir(egg_dir)
     try:
         return _load_from_distribution(dist, entry_group, entry_name, None,
-                                       logger)
+                                       logger, observer)
     finally:
         os.chdir(orig_dir)
 
 
 def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
-                     logger=None):
+                     logger=None, observer=None):
     """
     Load object graph state by invoking the given package entry point.
     Returns the root object.
     """
     logger = logger or NullLogger()
+    observer = EggObserver(observer, logger)
     logger.debug('Loading %s from %s in %s...',
                  entry_name, package, os.getcwd())
     try:
@@ -67,11 +70,11 @@ def load_from_eggpkg(package, entry_group, entry_name, instance_name=None,
         logger.error('Distribution not found: %s', exc)
         raise exc
     return _load_from_distribution(dist, entry_group, entry_name, instance_name,
-                                   logger)
+                                   logger, observer)
 
 
 def _load_from_distribution(dist, entry_group, entry_name, instance_name,
-                            logger):
+                            logger, observer):
     """ Invoke entry point in distribution and return result. """
     logger.debug('    entry points:')
     maps = dist.get_entry_map()
@@ -93,33 +96,56 @@ def _load_from_distribution(dist, entry_group, entry_name, instance_name,
 
     try:
         loader = dist.load_entry_point(entry_group, entry_name)
-        return loader(name=instance_name)
+        return loader(name=instance_name, observer=observer.observer)
     except pkg_resources.DistributionNotFound, exc:
-        logger.error('Distribution not found: %s', exc)
+        observer.exception('Distribution not found: %s' % exc)
         check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
     except pkg_resources.VersionConflict, exc:
-        logger.error('Version conflict: %s', exc)
+        observer.exception('Version conflict: %s' % exc)
         check_requirements(dist.requires(), logger=logger, indent_level=1)
         raise exc
     except Exception, exc:
-        logger.exception('Loader exception:')
+        observer.exception('Loader exception:')
+        logger.exception('')
         raise exc
 
 
-def _dist_from_eggfile(filename, install, logger):
+def _dist_from_eggfile(filename, install, logger, observer):
     """ Create distribution by unpacking egg file. """
     if not os.path.exists(filename):
-        raise ValueError("'%s' not found." % filename)
+        msg = "'%s' not found." % filename
+        observer.exception(msg)
+        raise ValueError(msg)
 
     if not zipfile.is_zipfile(filename):
-        raise ValueError("'%s' is not an egg/zipfile." % filename)
+        msg = "'%s' is not an egg/zipfile." % filename
+        observer.exception(msg)
+        raise ValueError(msg)
 
     # Extract files.
     archive = zipfile.ZipFile(filename, 'r', allowZip64=True)
     name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
     logger.debug("    name '%s'", name)
 
+    if observer.observer is not None:
+        # Collect totals.
+        total_files = 0.
+        total_bytes = 0.
+        for info in archive.infolist():
+            fname = info.filename
+            if not fname.startswith(name) and not fname.startswith('EGG-INFO'):
+                continue
+            if fname.endswith('.pyc') or fname.endswith('.pyo'):
+                continue  # Don't assume compiled OK for this platform.
+            total_files += 1
+            total_bytes += info.file_size
+    else:
+        total_files = 1.  # Avoid divide-by-zero.
+        total_bytes = 1.
+
+    files = 0.
+    bytes = 0.
     for info in archive.infolist():
         fname = info.filename
         if not fname.startswith(name) and not fname.startswith('EGG-INFO'):
@@ -127,7 +153,7 @@ def _dist_from_eggfile(filename, install, logger):
         if fname.endswith('.pyc') or fname.endswith('.pyo'):
             continue  # Don't assume compiled OK for this platform.
 
-        logger.debug("    extracting '%s' (%d bytes)...", fname, info.file_size)
+        observer.extract(fname, files/total_files, bytes/total_bytes)
         dirname = os.path.dirname(fname)
         if dirname == 'EGG-INFO':
             # Extract EGG-INFO as subdirectory.
@@ -141,6 +167,8 @@ def _dist_from_eggfile(filename, install, logger):
         out = open(path, 'w')
         out.write(archive.read(fname))
         out.close()
+        files += 1
+        bytes += info.file_size
 
     # Create distribution from extracted files.
     location = os.getcwd()
@@ -172,7 +200,9 @@ def _dist_from_eggfile(filename, install, logger):
                 [str(req) for req in dist.requires()], install_dir,
                 index=EGG_SERVER_URL, always_unzip=True)
         except Exception, exc:
-            raise RuntimeError("Install failed: '%s'" % exc)
+            msg = "Install failed: '%s'" % exc
+            observer.exception(msg)
+            raise RuntimeError(msg)
 
     # If any module didn't have a distribution, check that we can import it.
     if provider.has_metadata('openmdao_orphans.txt'):
@@ -190,8 +220,11 @@ def _dist_from_eggfile(filename, install, logger):
                 errors += 1
         if errors:
             plural = 's' if errors > 1 else ''
-            raise RuntimeError("Couldn't import %d 'orphan' module%s: %s."
-                               % (errors, plural, orphan_names))
+            msg = "Couldn't import %d 'orphan' module%s: %s." \
+                  % (errors, plural, orphan_names)
+            observer.exception(msg)
+            raise RuntimeError(msg)
+
     return (name, dist)
 
 
@@ -278,7 +311,7 @@ def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
             logger.warning('libyaml not available, using yaml instead')
         top = yaml.load(instream, Loader=Loader)
     else:
-        raise RuntimeError("can't load object using format '%s'" % format)
+        raise RuntimeError("Can't load object using format '%s'" % format)
 
     # Restore instancemethods from IMHolder objects.
     restore_instancemethods(top)

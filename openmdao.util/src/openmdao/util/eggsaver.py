@@ -38,7 +38,7 @@ import tempfile
 import zc.buildout.easy_install
 
 from openmdao.main.log import NullLogger
-from openmdao.util import eggwriter
+from openmdao.util import eggobserver, eggwriter
 from openmdao.util.imholder import fix_instancemethods, restore_instancemethods
 
 __all__ = ('save', 'save_to_egg',
@@ -59,13 +59,12 @@ _SITE_PKG = os.path.join(_SITE_LIB, 'site-packages')
 
 def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                 src_files=None, dst_dir=None, format=SAVE_CPICKLE, proto=-1,
-                logger=None, use_setuptools=False):
+                logger=None, use_setuptools=False, observer=None):
     """
-    Save state and other files to an egg.
-
-    Analyzes the objects saved for distribution dependencies.  Modules not
-    found in any distribution are recorded in an 'egg-info/openmdao_orphans.txt'
-    file.  Also creates and saves loader scripts for each entry point.
+    Save state and other files to an egg. Analyzes the objects saved for
+    distribution dependencies.  Modules not found in any distribution are
+    recorded in an 'egg-info/openmdao_orphans.txt' file.  Also creates and
+    saves loader scripts for each entry point.
 
     - `entry_pts` is a list of (obj, obj_name, obj_group) tuples. \
       The first of these specifies the root object and package name.
@@ -74,12 +73,16 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
       It defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
     - `dst_dir` is the directory to write the egg in.
+    - `format` and `proto` are passed to save().
+    - If 'use_setuptools` is True, then eggwriter.write_via_setuptools() is \
+      called rather than eggwriter.write().
+    - `observer` will be called via an EggObserver intermediary.
 
-    The resulting egg can be unpacked on UNIX via 'sh egg-file'.
     Returns (egg_filename, required_distributions, orphan_modules).
     """
     root, name, group = entry_pts[0]
     logger = logger or NullLogger()
+    observer = eggobserver.EggObserver(observer, logger)
 
     orig_dir = os.getcwd()
 
@@ -99,7 +102,9 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
 
     dst_dir = dst_dir or orig_dir
     if not os.access(dst_dir, os.W_OK):
-        raise IOError("Can't save to '%s', no write permission" % dst_dir)
+        msg = "Can't save to '%s', no write permission" % dst_dir
+        observer.exception(msg)
+        raise IOError(msg)
 
     egg_name = eggwriter.egg_filename(name, version)
     logger.debug('Saving to %s in %s...', egg_name, orig_dir)
@@ -112,16 +117,16 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         objs = _get_objects(root, logger)
 
         # Check that each object can be pickled.
-        _check_objects(objs, logger)
+        _check_objects(objs, logger, observer)
 
         # Fixup objects, classes, & sys.modules for __main__ imports.
-        fixup = _fix_objects(objs)
-        _verify_objects(root, logger)
+        fixup = _fix_objects(objs, observer)
+        _verify_objects(root, logger, observer)
         tmp_dir = None
         try:
             # Determine distributions and local modules required.
             required_distributions, local_modules, orphan_modules = \
-                _get_distributions(objs, py_dir, logger)
+                _get_distributions(objs, py_dir, logger, observer)
 
             logger.debug('    py_dir: %s', py_dir)
             logger.debug('    src_dir: %s', src_dir)
@@ -171,7 +176,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                     # Save state of object hierarchy.
                     state_name, state_path = \
                         _write_state_file(name, obj, clean_name, format, proto,
-                                          logger)
+                                          logger, observer)
                     src_files.add(state_name)
                     cleanup_files.append(state_path)
 
@@ -203,14 +208,15 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                 entry_map = _create_entry_map(entry_info)
                 orphans = [mod for mod, path in orphan_modules]
                 if use_setuptools:
-                    eggwriter.write_via_setuptools(name, doc, version,
+                    eggwriter.write_via_setuptools(name, version, doc,
                                                    entry_map, src_files,
                                                    required_distributions,
-                                                   orphans, dst_dir, logger)
+                                                   orphans, dst_dir, logger,
+                                                   observer.observer)
                 else:
-                    eggwriter.write(name, doc, version, entry_map,
+                    eggwriter.write(name, version, doc, entry_map,
                                     src_files, required_distributions,
-                                    orphans, dst_dir, logger)
+                                    orphans, dst_dir, logger, observer.observer)
             finally:
                 for path in cleanup_files:
                     if os.path.exists(path):
@@ -281,7 +287,7 @@ def _get_objects(root, logger):
     return objs
 
 
-def _check_objects(objs, logger):
+def _check_objects(objs, logger, observer):
     """ Check that each object can be pickled. """
     errors = 0
     for obj, container, index in objs:
@@ -307,11 +313,12 @@ def _check_objects(objs, logger):
 #            errors += 1
     if errors:
         plural = 's' if errors > 1 else ''
-        raise RuntimeError("Can't save, %d object%s cannot be pickled."
-                           % (errors, plural))
+        msg = "Can't save, %d object%s cannot be pickled." % (errors, plural)
+        observer.exception(msg)
+        raise RuntimeError(msg)
 
 
-def _verify_objects(root, logger):
+def _verify_objects(root, logger, observer):
     """ Verify no references to __main__ exist. """
     objs = _get_objects(root, logger)
     for obj, container, index in objs:
@@ -321,12 +328,13 @@ def _verify_objects(root, logger):
             continue
 
         if mod == '__main__':
-            raise RuntimeError("Can't save, unable to patch __main__"
-                               " module reference in obj %r, container %r"
-                               " index %s", obj, container, index)
+            msg = "Can't save, unable to patch __main__ module reference in" \
+                  " obj %r, container %r index %s" % (obj, container, index)
+            observer.exception(msg)
+            raise RuntimeError(msg)
 
 
-def _fix_objects(objs):
+def _fix_objects(objs, observer):
     """ Fixup objects, classes, & sys.modules for __main__ imports. """
     fixup_objects = []
     fixup_classes = {}
@@ -352,8 +360,10 @@ def _fix_objects(objs):
 
         try:
             if classname in ('function', 'type'):
-                raise RuntimeError("Can't save: reference to %s defined "
-                                   "in main module %r" % (classname, obj))
+                msg = "Can't save: reference to %s defined in main module %r" \
+                      % (classname, obj)
+                observer.exception(msg)
+                raise RuntimeError(msg)
             mod = cls.__module__
             if mod == '__main__' and (classname not in fixup_classes.keys()):
                 mod, module = _find_module(classname)
@@ -363,21 +373,26 @@ def _fix_objects(objs):
                     fixup_classes[classname] = (old, new)
                     fixup_modules.add(mod)
                 else:
-                    raise RuntimeError("Can't find module for '%s'" % classname)
+                    msg = "Can't find module for '%s'" % classname
+                    observer.exception(msg)
+                    raise RuntimeError(msg)
 
             if inspect.isclass(obj):
                 if isinstance(container, tuple):
-                    raise RuntimeError("Can't save: reference to class %s"
-                                       " defined in main module is contained in"
-                                       " a tuple." % classname)
+                    msg = "Can't save: reference to class %s defined in main" \
+                          " module is contained in a tuple." % classname
+                    observer.exception(msg)
+                    raise RuntimeError(msg)
                 else:
                     container[index] = fixup_classes[classname][1]
             else:
                 try:
                     obj.__class__ = fixup_classes[classname][1]
                 except KeyError:
-                    raise RuntimeError("Can't fix %r, classname %s, module %s"
-                                       % (obj, classname, mod))
+                    msg = "Can't fix %r, classname %s, module %s" \
+                          % (obj, classname, mod)
+                    observer.exception(msg)
+                    raise RuntimeError(msg)
                 obj.__module__ = obj.__class__.__module__
             fixup_objects.append((obj, container, index))
         except Exception:
@@ -425,7 +440,7 @@ def _restore_objects(fixup):
         del sys.modules[mod]
 
 
-def _get_distributions(objs, py_dir, logger):
+def _get_distributions(objs, py_dir, logger, observer):
     """ Return (distributions, local_modules, orphans) used by objs. """
     distributions = set()
     local_modules = set()
@@ -483,7 +498,7 @@ def _get_distributions(objs, py_dir, logger):
                 logger.debug("    reusing analysis of '%s'", path)
                 finder_items = _get_distributions.saved[path]
             else:
-                logger.debug("    analyzing '%s'...", path)
+                observer.analyze(path)
                 finder = modulefinder.ModuleFinder(
                                           excludes=_get_distributions.excludes)
                 try:
@@ -625,19 +640,24 @@ eggs =
     out.close()
 
 
-def _write_state_file(dst_dir, root, name, format, proto, logger):
+def _write_state_file(dst_dir, root, name, format, proto, logger, observer):
     """ Write state of `root` and its children. Returns (filename, path). """
     if format is SAVE_CPICKLE or format is SAVE_PICKLE:
         state_name = name+'.pickle'
     elif format is SAVE_LIBYAML or format is SAVE_YAML:
         state_name = name+'.yaml'
     else:
-        raise RuntimeError("Unknown format '%s'." % format)
+        msg = "Unknown format '%s'." % format
+        observer.exception(msg)
+        raise RuntimeError(msg)
+
     state_path = os.path.join(dst_dir, state_name)
     try:
         save(root, state_path, format, proto, logger, fix_im=False)
     except Exception, exc:
-        raise type(exc)("Can't save to '%s': %s" % (state_path, exc))
+        msg = "Can't save to '%s': %s" % (state_path, exc)
+        observer.exception(msg)
+        raise type(exc)(msg)
 
     return (state_name, state_path)
 
@@ -717,12 +737,6 @@ def _create_entry_map(entry_pts):
         if entry_group:
             entry_map[grp] = entry_group
 
-    entry_group = {}
-    entry_group['eggsecutable'] = \
-        pkg_resources.EntryPoint('eggsecutable', 'openmdao.main.component',
-                                 ['eggsecutable'])
-    entry_map['setuptools.installation'] = entry_group
-
     return entry_map
 
 
@@ -761,7 +775,7 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
                 logger.warning('libyaml not available, using yaml instead')
             yaml.dump(root, outstream, Dumper=Dumper)
         else:
-            raise RuntimeError("can't save object using format '%s'" % format)
+            raise RuntimeError("Can't save object using format '%s'" % format)
     finally:
         if fix_im:
             restore_instancemethods(root)

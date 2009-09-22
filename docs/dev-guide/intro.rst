@@ -1,4 +1,3 @@
-
 Introduction to OpenMDAO Development Process
 --------------------------------------------
 
@@ -17,7 +16,7 @@ System Configuration
 ====================
 
 Some steps of the development process, e.g., downloading a branch of the source
-repository and downloading python eggs, require network access.  If you're
+repository and downloading Python eggs, require network access.  If you're
 behind an http proxy, you'll have to set the **http_proxy** environment variable
 on your system in order for bazaar and zc.buildout to function properly.
 
@@ -65,7 +64,7 @@ called ``default.cfg`` and put the following text in it:
     
     
 where ``<your_installed_distrib_dir>`` is the path to the directory where you 
-want the python distributions used by your buildouts to be installed.  
+want the Python distributions used by your buildouts to be installed.  
 
 Note that this directory may contain many distributions with the same package
 name, because the version number is included in the name of the distribution
@@ -148,7 +147,7 @@ this:
     OpenMDAO.
     
 ``openmdao.util``
-    Python package containing source for various python utility routines
+    Python package containing source for various Python utility routines
     used by OpenMDAO developers.
     
 ``openmdao.test``
@@ -261,7 +260,7 @@ install, while using the regular bootstrap.py will allow use of distributions
 from the system level.
 
 
-At this point, your `buildout`` directory should contain the following
+At this point, your ``buildout`` directory should contain the following
 subdirectories:
 
 ``bin``
@@ -280,9 +279,10 @@ subdirectories:
     do not have to be Python related.
 
 
-If you see an **eggs** directory under your buildout directory, then that means that
-you have not specified **eggs-directory** in your *default.cfg* file and you'll be getting
-a full copy of all dependent distributions into your buildout. This is generally NOT
-what you want. See the earlier discussion in 
-:ref:`Setting-Up-a-Local-Cache-of-Installed-Distributions` for how to set up your 
-*default.cfg* file.
+If you see an ``eggs`` directory under your ``buildout`` directory, then
+that means that you have not specified **eggs-directory** in your
+``default.cfg`` file and you'll be getting a full copy of all dependent
+distributions into your buildout. This is generally NOT what you want. See
+the earlier discussion in 
+:ref:`Setting-Up-a-Local-Cache-of-Installed-Distributions` for how to set up
+your  ``default.cfg`` file.

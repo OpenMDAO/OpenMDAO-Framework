@@ -71,7 +71,8 @@ column contains a link to information about the egg (e.g., version, description,
 ---------------------------  ---------------------------------------------------------------------------------------------------------  ------------------------------------------------------------------------------------
 :term:`ScientificPython`     `CeCILL <http://www.cecill.info/licences/Licence_CeCILL_V2-en.html>`_                                      http://pypi.python.org/pypi/ScientificPython/2.6
 ---------------------------  ---------------------------------------------------------------------------------------------------------  ------------------------------------------------------------------------------------
-:term:`setuptools`           `OSI Approved, Zope Public License <http://pypi.python.org/pypi?:action=browse&c=89>`_                     http://pypi.python.org/pypi/setuptools/0.6c9
+:term:`setuptools`           `OSI Approved, Python Software Foundation <http://www.opensource.org/licenses/PythonSoftFoundation.php>`_
+                             or `OSI Approved, Zope Public License <http://pypi.python.org/pypi?:action=browse&c=89>`_                  http://pypi.python.org/pypi/setuptools/0.6c9
 ---------------------------  ---------------------------------------------------------------------------------------------------------  ------------------------------------------------------------------------------------
 :term:`simplejson`           `OSI Approved, MIT <http://www.opensource.org/licenses/mit-license.php>`_                                  http://pypi.python.org/pypi/simplejson/2.0.9
 ---------------------------  ---------------------------------------------------------------------------------------------------------  ------------------------------------------------------------------------------------

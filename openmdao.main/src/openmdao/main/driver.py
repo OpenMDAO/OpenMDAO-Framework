@@ -10,7 +10,7 @@ import networkx as nx
 from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.interfaces import IDriver
-from openmdao.main.component import Component, STATE_WAITING, STATE_IDLE
+from openmdao.main.component import Component
 from openmdao.main.api import Assembly
 from openmdao.main.stringref import StringRef, StringRefArray
 from openmdao.main.drivertree import DriverForest, create_labeled_graph
@@ -78,13 +78,11 @@ class Driver(Assembly):
         post_iteration, etc., just override this function. As a result, none
         of the <start/pre/post/continue>_iteration() functions will be called.
         """
-        self.state = STATE_WAITING
         self.start_iteration()
         while self.continue_iteration():
             self.pre_iteration()
             self.run_iteration()
             self.post_iteration()
-        self.state = STATE_IDLE
 
     def start_iteration(self):
         """Called just prior to the beginning of an iteration loop. This can 

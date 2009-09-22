@@ -5,6 +5,7 @@ The Container class
 #public symbols
 __all__ = ["Container", "path_to_root", "set_as_top", "PathProperty"]
 
+import datetime
 import copy
 import sys
 import traceback
@@ -23,9 +24,9 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint: enable-msg=W0212
 
 import networkx as nx
-from enthought.traits.api import HasTraits, implements, Missing, TraitError,\
-                                 BaseStr, Undefined, push_exception_handler,\
-                                 Python, TraitType, Property, Trait, on_trait_change
+from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
+                                 push_exception_handler, Python, TraitType, \
+                                 Property, Trait
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType
 from enthought.traits.trait_base import not_none
@@ -35,8 +36,7 @@ from enthought.traits.trait_base import not_none
 
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
-from openmdao.util import eggloader
-from openmdao.util import eggsaver
+from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 
 
@@ -53,7 +53,7 @@ def set_as_top(cont):
     """Specifies that the given Container is the top of a 
     Container hierarchy.
     """
-    cont.tree_defined()
+    cont.tree_rooted()
     return cont
 
 def deep_setattr(obj, path, value):
@@ -148,12 +148,12 @@ class Container(HasTraits):
     to the framework"""
    
     #parent = WeakRef(Container, allow_none=True, adapt='no', transient=True)
-    parent = Python
+    parent = Python()
     
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
     
-    __ = Python
+    __ = Python()
     
     def __init__(self, doc=None):
         super(Container, self).__init__() 
@@ -170,7 +170,7 @@ class Container(HasTraits):
         self._output_names = None
         self._container_names = None
         
-        self._call_tree_defined = True
+        self._call_tree_rooted = True
         
         if doc is not None:
             self.__doc__ = doc
@@ -189,11 +189,17 @@ class Container(HasTraits):
         # unpickled.
         self.on_trait_change(self._io_trait_changed, '+iostatus')
         
-        self.on_trait_change(self._par_update, 'parent')
+        # keep track of modifications to our parent
+        self.on_trait_change(self._parent_modified, 'parent')
                 
-    def _par_update(self, obj, name, value):
+    def _parent_modified(self, obj, name, value):
         """This is called when the parent attribute is changed."""
         self._logger.rename(self.get_pathname().replace('.', ','))
+        self._branch_moved()
+        
+    def _branch_moved(self):
+        self._call_tree_rooted = True
+        [x._branch_moved() for x in self.values() if isinstance(x, Container)]
  
     def _get_name(self):
         if self._name is None:
@@ -230,9 +236,9 @@ class Container(HasTraits):
             sdict = scope.__dict__
             
         ver = 1
-        while '%s%d' % (classname,ver) in sdict:
+        while '%s%d' % (classname, ver) in sdict:
             ver += 1
-        return '%s%d' % (classname,ver)
+        return '%s%d' % (classname, ver)
         
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
@@ -261,7 +267,6 @@ class Container(HasTraits):
             if trait.transient is not True:
                 dct[name] = trait
         state['_added_traits'] = dct
-        #state['_call_tree_defined'] = True
         
         return state
 
@@ -424,8 +429,8 @@ class Container(HasTraits):
             # then go ahead and tell the obj (which will in turn
             # tell all of its children) that its hierarchy is
             # defined.
-            if self._call_tree_defined is False:
-                obj.tree_defined()
+            if self._call_tree_rooted is False:
+                obj.tree_rooted()
         else:
             self.raise_exception("'"+str(type(obj))+
                     "' object is not an instance of Container.",
@@ -438,21 +443,25 @@ class Container(HasTraits):
         observers."""
         trait = self.trait(name)
         if trait is not None:
+            obj = getattr(self, name)
             self.remove_trait(name)
+            return obj       
         else:
             self.raise_exception("cannot remove child '%s': not found"%
                                  name, TraitError)
 
-    def tree_defined(self):
+    def tree_rooted(self):
         """Called after the hierarchy containing this Container has been
         defined back to the root. This does not guarantee that all sibling
         Containers have been defined. It also does not guarantee that this
         component is fully configured to execute. Classes that override this
         function must call their base class version.
+        
+        This version calls tree_rooted() on all of its child Containers.
         """
-        self._call_tree_defined = False
+        self._call_tree_rooted = False
         for cont in self.list_containers():
-            getattr(self, cont).tree_defined()
+            getattr(self, cont).tree_rooted()
             
     def dump(self, recurse=False, stream=None):
         """Print all items having iostatus metadata and
@@ -517,9 +526,8 @@ class Container(HasTraits):
     def list_containers(self):
         """Return a list of names of child Containers."""
         if self._container_names is None:
-            dct = self.__dict__
-            self._container_names = [n for n,v in dct.items() 
-                                  if isinstance(v,Container) and v is not self.parent]            
+            self._container_names = [n for n,v in self.items() 
+                                                   if isinstance(v,Container)]            
         return self._container_names
     
     def _traits_meta_filter(self, traits=None, **metadata):
@@ -536,9 +544,9 @@ class Container(HasTraits):
                 continue
             for meta_name, meta_eval in metadata.items():
                 if type( meta_eval ) is FunctionType:
-                    if not meta_eval(getattr(trait,meta_name)):
+                    if not meta_eval(getattr(trait, meta_name)):
                         break
-                elif meta_eval != getattr(trait,meta_name):
+                elif meta_eval != getattr(trait, meta_name):
                     break
             else:
                 result[ name ] = trait
@@ -818,36 +826,40 @@ class Container(HasTraits):
         """
         raise NotImplementedError("replace")
 
-    def save_to_egg(self, name=None, version=None, py_dir=None,
-                    src_dir=None, src_files=None, child_objs=None,
-                    dst_dir=None, format=SAVE_CPICKLE, proto=-1,
-                    use_setuptools=False):
-        """Save state and other files to an egg. Analyzes the objects saved
-        for distribution dependencies. Modules not found in any distribution
-        are recorded in an 'egg-info/openmdao_orphans.txt' file. Also creates
-        and saves loader scripts for each entry point.
+    def save_to_egg(self, name, version, py_dir=None, src_dir=None,
+                    src_files=None, child_objs=None, dst_dir=None,
+                    format=SAVE_CPICKLE, proto=-1, use_setuptools=False,
+                    observer=None):
+        """Save state and other files to an egg.  Typically used to copy all or
+        part of a simulation to another user or machine.  By specifying child
+        containers in `child_objs`, it will be possible to create instances of
+        just those containers from the installed egg.  Child container names
+        should be specified relative to this container.
 
-        - `name` defaults to the name of the container.
-        - `version` defaults to the container's module __version__, or \
-          a timestamp if no __version__ exists.
+        - `name` must be an alphanumeric string.
+        - `version` must be an alphanumeric string.
         - `py_dir` is the (root) directory for local Python files. \
            It defaults to the current directory.
         - `src_dir` is the root of all (relative) `src_files`.
         - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
+        - `format` and `proto` are passed to eggsaver.save().
+        - 'use_setuptools` is passed to eggsaver.save_to_egg().
+        - `observer` will be called via an EggObserver.
 
-        The resulting egg can be unpacked on UNIX via 'sh egg-file'.
+        After collecting entry point information, calls eggsaver.save_to_egg().
         Returns (egg_filename, required_distributions, orphan_modules).
         """
-        name = name or self.name
-        if not name:
-            name = self.get_default_name(self.parent)
-            
-        if not version:
-            try:
-                version = sys.modules[self.__class__.__module__].__version__
-            except AttributeError:
-                pass
+        assert name and isinstance(name, basestring)
+        assert version and isinstance(version, basestring)
+        if not version.endswith('.'):
+            version += '.'
+        now = datetime.datetime.now()  # Could consider using utcnow().
+        tstamp = '%d.%02d.%02d.%02d.%02d' % \
+                 (now.year, now.month, now.day, now.hour, now.minute)
+        version += tstamp
+
+        observer = eggobserver.EggObserver(observer, self._logger)
 
         # Child entry point names are the pathname, starting at self.
         entry_pts = [(self, name, _get_entry_group(self))]
@@ -859,9 +871,9 @@ class Container(HasTraits):
             for child in child_objs:
                 pathname = child.get_pathname()
                 if not pathname.startswith(root_pathname):
-                    self.raise_exception('%s is not a child of %s'
-                                         % (pathname, root_pathname),
-                                         RuntimeError)
+                    msg = '%s is not a child of %s' % (pathname, root_pathname)
+                    observer.exception(msg)
+                    self.raise_exception(msg, RuntimeError)
                 entry_pts.append((child, pathname[root_start:],
                                   _get_entry_group(child)))
 
@@ -871,7 +883,7 @@ class Container(HasTraits):
             return eggsaver.save_to_egg(entry_pts, version, py_dir,
                                         src_dir, src_files, dst_dir,
                                         format, proto, self._logger,
-                                        use_setuptools)
+                                        use_setuptools, observer.observer)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
@@ -894,32 +906,34 @@ class Container(HasTraits):
             self.parent = parent
 
     @staticmethod
-    def load_from_eggfile(filename, install=True):
+    def load_from_eggfile(filename, install=True, observer=None):
         """Extract files in egg to a subdirectory matching the saved object
         name, optionally install distributions the egg depends on, and then
-        load object graph state.  Returns the root object.
+        load object graph state. `observer` will be called via an EggObserver.
+        Returns the root object.
         """
         # Load from file gets everything.
         entry_group = 'openmdao.top'
         entry_name = 'top'
         return eggloader.load_from_eggfile(filename, entry_group, entry_name,
-                                           install, logger)
+                                           install, logger, observer)
 
     @staticmethod
-    def load_from_eggpkg(package, entry_name=None, instance_name=None):
+    def load_from_eggpkg(package, entry_name=None, instance_name=None,
+                         observer=None):
         """Load object graph state by invoking the given package entry point.
         If specified, the root object is renamed to `instance_name`.
-        Returns the root object.
+        `observer` will be called via an EggObserver. Returns the root object.
         """
         entry_group = 'openmdao.components'
         if not entry_name:
             entry_name = package  # Default component is top.
         return eggloader.load_from_eggpkg(package, entry_group, entry_name,
-                                          instance_name, logger)
+                                          instance_name, logger, observer)
 
     @staticmethod
-    def load(instream, format=SAVE_CPICKLE, package=None, 
-             do_post_load=True, name=None):
+    def load(instream, format=SAVE_CPICKLE, package=None, call_post_load=True,
+             name=None):
         """Load object(s) from the input stream. Pure python classes generally
         won't need to override this, but extensions will. The format can be
         supplied in case something other than cPickle is needed.
@@ -927,20 +941,18 @@ class Container(HasTraits):
         top = eggloader.load(instream, format, package, logger)
         if name:
             top.name = name
-        if do_post_load:
+        if call_post_load:
             top.parent = None
             top.post_load()
         return top
 
     def post_load(self):
         """Perform any required operations after model has been loaded."""
-        [x.post_load() for x in self.values() 
-                                          if isinstance(x,Container)]
+        [x.post_load() for x in self.values() if isinstance(x, Container)]
 
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
-        [x.pre_delete() for x in self.values() 
-                                          if isinstance(x,Container)]
+        [x.pre_delete() for x in self.values() if isinstance(x, Container)]
 
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output
@@ -1049,12 +1061,18 @@ class Container(HasTraits):
                                  RuntimeError)
         return path
     
-    def _trait_added_changed(self, name):
-        """Called any time a new trait is added to this container."""
+    def config_changed(self):
+        """Call this whenever the configuration of this Container changes,
+        for example, children added or removed.
+        """
         self._input_names = None
         self._output_names = None
         self._container_names = None
-    
+        
+    def _trait_added_changed(self, name):
+        """Called any time a new trait is added to this container."""
+        self.config_changed()
+        
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)

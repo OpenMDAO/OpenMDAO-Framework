@@ -2,7 +2,7 @@
 from enthought.traits.api import implements
 
 from openmdao.main.container import Container
-from openmdao.main.component import Component, STATE_RUNNING, STATE_WAITING
+from openmdao.main.component import Component
 from openmdao.main.exceptions import RunStopped
 
 __all__ = ['Workflow']
@@ -45,9 +45,7 @@ class Workflow(object):
         """ Run through the nodes in the workflow list. """
         #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
         for node in self.nodes_iter():
-            self.state = STATE_WAITING
             node.run()
-            self.state = STATE_RUNNING
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
     
@@ -61,14 +59,12 @@ class Workflow(object):
         if self._iterator is None:
             self._iterator = self.nodes_iter()
             
-        self.state = STATE_WAITING
         node = self._iterator.next()
         try:
             node.run()
         except StopIteration, err:
             self._iterator = None
             raise err
-        self.state = STATE_RUNNING
         self.raise_exception('Step complete', RunStopped)
 
     def steppable(self):
