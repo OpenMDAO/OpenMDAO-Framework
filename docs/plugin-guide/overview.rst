@@ -188,7 +188,7 @@ In this case, the ``setup.py`` file looks like this:
     from setuptools import setup, find_packages
     
     setup(
-        name='simple_adder',bin
+        name='simple_adder',
         version='1.0',
         packages=find_packages(),
         install_requires=['openmdao.lib', 'Traits>=3.1.0'],
