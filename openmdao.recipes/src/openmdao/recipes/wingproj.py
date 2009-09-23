@@ -178,7 +178,7 @@ class WingProj(object):
                 config.set('project attributes', 'proj.directory-list',
                            pprint.pformat([{'dirloc': None,
                              'excludes': excludes,
-                             'filter': '*.py ; *.rst',
+                             'filter': '*.py ; *.rst ; *.ini',
                              'include_hidden': 0,
                              'recursive': 1,
                              'watch_for_changes': 1}]

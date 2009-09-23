@@ -66,10 +66,10 @@ class MetadataCollector(object):
             outfile.close()
     
     def install(self):        
-        if not os.path.isdir(os.path.join(self.partsdir,'metadata')):
-            os.makedirs(os.path.join(self.partsdir,'metadata'))
+        if not os.path.isdir(os.path.join(self.partsdir, self.name)):
+            os.makedirs(os.path.join(self.partsdir, self.name))
             
-        fname = os.path.join(self.partsdir, 'metadata','metadata.txt')
+        fname = os.path.join(self.partsdir, self.name, self.name+'.txt')
         self._write_file(fname)
         
         return [fname]

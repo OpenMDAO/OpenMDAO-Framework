@@ -17,9 +17,8 @@ package. For instructions on how to create distributions, see the setuptools
 `documentation <http://peak.telecommunity.com/DevCenter/setuptools>`_.
 
 If a package contains code that must be compiled, you should create
-a binary egg distribution for it for each of our release platforms, which are
-currently *Windows*, *Linux*, and *OS X*.  To create a binary egg in the current
-directory for the current platform, type the following:
+a binary egg distribution for it for Windows.  To create a binary egg 
+in the current directory for the current platform, type the following:
 
 ::
 
@@ -27,7 +26,7 @@ directory for the current platform, type the following:
    
 This will create in the current directory an egg file with a name that contains
 information about version of the package, platform, and the Python version,
-e.g.,  ``conmin-1.0-py2.5-linux-x86_64.egg``. 
+e.g.,  ``conmin-1.0-py2.5-win32.egg``. 
 
 Regardless of the contents of the package, you should also produce a source 
 distribution of it. If your package has compiled code as mentioned above, you
