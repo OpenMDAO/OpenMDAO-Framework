@@ -15,6 +15,7 @@ import zc.buildout
 from pkg_resources import working_set, get_entry_map
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
 
+from openmdao.recipes.utils import find_all_deps
 
 def _find_files_and_dirs(pat, startdir):
     for path, dirlist, filelist in os.walk(startdir):
@@ -89,6 +90,8 @@ class WingProj(object):
         # grab the first line of each dev egg link file
         self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() 
                             for f in dev_eggs]
+        self.specs = [r.strip() for r in options.get('eggs', '').split('\n')
+                         if r.strip()]
         
         # try to find the default.wpr file in the user's home directory
         try:
@@ -104,29 +107,11 @@ class WingProj(object):
             self.wingproj = os.path.join(os.path.dirname(__file__),
                                          'new_wing_proj.wpr')
         
-        # build up a list of all egg dependencies we find in other recipes in this
-        # buildout. We just look for the keyword 'eggs' and look into the eggs
-        # directory for matching distributions
-        self.eggs = []
+        # build up a list of all egg dependencies resulting from our 'eggs' parameter
         env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory']])
-        ws = WorkingSet()
-        for entry,val in buildout.items():
-            if 'eggs' in val:
-                eggs = [x.strip() for x in val['eggs'].split()]
-                for egg in eggs:
-                    self._add_deps(self.eggs, env, ws, Requirement.parse(egg))
+        reqs = [Requirement.parse(x.strip()) for x in options['eggs'].split()]
+        self.depdists = find_all_deps(reqs, env)        
 
-    def _add_deps(self, deps, env, ws, req):
-        """Add a dependency for the given requirement and anything the resulting
-        distrib depends on.
-        """
-        dist = env.best_match(req, ws)
-        if dist is not None:
-            deps.append(dist.location)
-            reqs = dist.requires()
-            for r in reqs:
-                self._add_deps(deps, env, ws, r)
-                        
     def _unformat(self, namestr):
         """Take a path string from the Wing project file and chop it up into 
         individual paths.
@@ -162,7 +147,7 @@ class WingProj(object):
             oldnames = []
         
         oldset = set(oldnames)
-        newnames = self.dev_eggs+self.eggs
+        newnames = self.dev_eggs+[d.location for d in self.depdists]
         newset = set(newnames)
         
         diff = oldset ^ newset
@@ -220,24 +205,10 @@ class WingProj(object):
                 wingpath = 'wing'
             else:
                 wingpath = 'wing3.1'
-        #try:
-        #    script = open(scriptname, 'w')
-        #    script.write(script_template % dict(python=self.executable,
-        #                                        proj=newfname,
-        #                                        wingpath=wingpath))
-        #    script.close()
-        #except OSError, err:
-        #    self.logger.error(str(err))
-        #    raise zc.buildout.UserError('creation of wing script failed')
-        #try:
-        #    os.chmod(scriptname, 0775)
-        #except (AttributeError, os.error):
-        #    pass
 
-        mydist = working_set.find(Requirement.parse('openmdao.recipes'))
         scripts = zc.buildout.easy_install.scripts(
             [('wing', 'openmdao.recipes.wingproj', 'runwing')], 
-            WorkingSet([mydist.location]), 
+            WorkingSet([d.location for d in self.depdists]), 
             sys.executable, self.bindir, 
             arguments= "r'%s', r'%s'" % (wingpath, newfname))        
         

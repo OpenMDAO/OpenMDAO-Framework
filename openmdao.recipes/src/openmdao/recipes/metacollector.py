@@ -11,6 +11,7 @@ import zc.buildout
 
 from pkg_resources import WorkingSet, Environment, Requirement
 
+from openmdao.recipes.utils import find_all_deps
 
 class MetadataCollector(object):
     """A buildout recipe that creates a file with metadata collected from all 
@@ -31,31 +32,17 @@ class MetadataCollector(object):
                             for f in dev_eggs]
                             
         # build up a list of all egg dependencies resulting from our 'eggs' parameter
-        self.eggs = set()
         env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory']])
-        for egg in [x.strip() for x in options['eggs'].split()]:
-            self._add_deps(self.eggs, env, WorkingSet(), Requirement.parse(egg))
+        reqs = [Requirement.parse(x.strip()) for x in options['eggs'].split()]
+        self.depdists = find_all_deps(reqs, env)
             
-        self.logger.debug("dependency set is: %s" % 
-                             [str(dist) for dist in self.eggs])
+        self.logger.debug("dependency list is: %s" % 
+                             [str(dist) for dist in self.depdists])
 
-
-    def _add_deps(self, deps, env, ws, req):
-        """Add a dependency for the given requirement and anything the resulting
-        distrib depends on.
-        """
-        dist = env.best_match(req, ws)
-        if dist is None:
-            self.logger.error('No distrib found for %s' % req)
-        else:
-            deps.add(dist)
-            reqs = dist.requires()
-            for r in reqs:
-                self._add_deps(deps, env, ws, r)
 
     def _get_metadata(self, names):
         meta = {}
-        for dist in self.eggs:
+        for dist in self.depdists:
             mvalues = {}
             instr = StringIO.StringIO(dist.get_metadata('PKG-INFO'))
             message = rfc822.Message(instr)
