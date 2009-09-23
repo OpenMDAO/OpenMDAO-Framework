@@ -168,7 +168,7 @@ class Component (Container):
         """Perform calculations or other actions, assuming that inputs 
         have already been set. This must be overridden in derived classes.
         """
-        raise NotImplementedError('execute')
+        raise NotImplementedError('%s.execute' % self.get_pathname())
     
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
