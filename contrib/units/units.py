@@ -110,15 +110,18 @@ class PhysicalQuantity(object):
      """
 
     if len(args) == 2:
-     self.value = args[0]
-     self.unit = _findUnit(args[1])
+      self.value = args[0]
+      self.unit = _findUnit(args[1])
     else:
-     s = args[0].strip()
-     match = PhysicalQuantity._number.match(s)
-     if match is None:
-       raise TypeError("No number found in input argument: '%s'"%s)
-     self.value = float(match.group(0))
-     self.unit = _findUnit(s[len(match.group(0)):].strip())
+      s = args[0].strip()
+      match = PhysicalQuantity._number.match(s)
+      if match is None:
+        raise TypeError("No number found in input argument: '%s'"%s)
+      self.value = float(match.group(0))
+      print args[0]
+      self.unit = _findUnit(s[len(match.group(0)):].strip())
+      
+
 
   def __str__(self):
     return str(self.value) + ' ' + self.unit.name()
@@ -283,6 +286,14 @@ class PhysicalQuantity(object):
     unit = _findUnit(unit)
     return self.unit.isCompatible(unit)
 
+  def getValue(self):
+      """Return value (float) of physical quantity (no unit)."""
+      return self.value
+
+  def getUnitName(self):
+      """Return unit (string) of physical quantity."""
+      return self.unit.name()  
+  
   def sqrt(self):
       return pow(self, 0.5)
 
@@ -459,6 +470,7 @@ class PhysicalUnit(object):
     #   = ( (x+d1) - (d1*s2/s1) ) * s1/s2
     #   = (x + d1 - d2*s2/s1) * s1/s2
     # thus, D = d1 - d2*s2/s1 and S = s1/s2
+
     factor = self.factor / other.factor
     offset = self.offset - (other.offset * other.factor / self.factor)
     return (factor, offset)
@@ -523,7 +535,7 @@ def isPhysicalQuantity(x):
 
 #Helper Functions
 def _findUnit(unit):
-  if type(unit) == type(''):
+  if isinstance(unit,str):
     name = unit.strip()
     if name not in _unitLib.unit_table:
      
@@ -669,6 +681,7 @@ def importLibrary(libfilepointer):
     raise ValueError, "The following units were not defined because they could not be resolved as a function of any other defined units:%s"%[x[0] for x in retry1]
 
 defaultLib = resource_stream(__name__, 'unitLibdefault.ini')
+
 importLibrary(defaultLib)
 
 

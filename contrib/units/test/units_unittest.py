@@ -1,4 +1,3 @@
-
 import units
 import unittest
 import numpy
@@ -18,7 +17,7 @@ class test_moduleLevelFunctions(unittest.TestCase):
     def test_importlib(self):
         
         #check to make sure the import fucntion errors if not all required base_units are there
-        unitLib_test_bad = resource_stream(units.__name__, 'test\unitLib_test_badbaseunits.ini')
+        unitLib_test_bad = resource_stream(units.__name__, 'test//unitLib_test_badbaseunits.ini')
         try:
             units.importLibrary(unitLib_test_bad)
         except ValueError,err:
@@ -26,7 +25,7 @@ class test_moduleLevelFunctions(unittest.TestCase):
         except:
             self.fail("ValueError expected")
         #check to make sure that bad units in the units list cause an error    
-        unitLib_test_bad = resource_stream(units.__name__, 'test\unitLib_test_badunit.ini')
+        unitLib_test_bad = resource_stream(units.__name__, 'test//unitLib_test_badunit.ini')
         try:
             units.importLibrary(unitLib_test_bad)
         except ValueError,err:
@@ -484,7 +483,11 @@ class test__PhysicalQuantity(unittest.TestCase):
         for q1, q2, bool in testvals:
             x=units.PhysicalQuantity(q1)
             self.assertEqual(x.isCompatible(q2),bool)
-
+    
+    def test_integers_in_unit_definition(self):
+        x=units.PhysicalQuantity('10 1/min')
+        self.assertEqual(x.unit.factor,1/60.0)
+        self.asserEqual(x.unit.powers,[0, 0, 1, 0, 0, 0, 0, 0, 0, 0])
 #-----------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------
 
