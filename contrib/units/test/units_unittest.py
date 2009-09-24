@@ -128,25 +128,20 @@ class test__PhysicalQuantity(unittest.TestCase):
 
     def test_str(self):
         """__str__ """
-
         self.assertEqual(str(units.PhysicalQuantity('1 d')),"1.0 d")
 
     def test_repr(self):
         """__repr__ """
-
         self.assertEqual(repr(units.PhysicalQuantity('1 d')),"PhysicalQuantity(1.0,'d')")
 
     def test_cmp(self):
         """__cmp__ """
-        
         x=units.PhysicalQuantity('1 d')
         y = units.PhysicalQuantity('2 d')
         self.assertEqual(cmp(x,y),-1)
         self.assertEqual(cmp(y,x),1)
         self.assertEqual(cmp(x,x),0)
-        
-        
-        
+
         try:
             cmp(x,2)
         except TypeError,err:
@@ -154,7 +149,11 @@ class test__PhysicalQuantity(unittest.TestCase):
         else:
             self.fail('Expecting TypeError')
 
-
+    def test_integers_in_unit_string(self):
+        x = units.PhysicalQuantity('1 1/min')
+        self.assertAlmostEqual(x.unit.factor,0.0166666,places=5)
+        self.assertEqual(x.unit.names,{'1': 1, 'min': -1})
+        self.assertEqual(x.unit.powers,[0, 0, 0, 0, 0, 0, 0, 0, -1, 0])
 
 
     def test_add_known_Values(self):

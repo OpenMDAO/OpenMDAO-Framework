@@ -118,7 +118,6 @@ class PhysicalQuantity(object):
       if match is None:
         raise TypeError("No number found in input argument: '%s'"%s)
       self.value = float(match.group(0))
-      print args[0]
       self.unit = _findUnit(s[len(match.group(0)):].strip())
       
 
@@ -176,7 +175,8 @@ class PhysicalQuantity(object):
   def __rdiv__(self, other):
     if not isPhysicalQuantity(other):
       return self.__class__(other/self.value, pow(self.unit, -1))
-    value = other.value/self.value
+    value = other.value/sel
+    f.value
     unit = other.unit/self.unit
     if unit.isDimensionless():
       return value*unit.factor
@@ -387,7 +387,7 @@ class PhysicalUnit(object):
                           [a-b for (a,b) in zip(self.powers,other.powers)])
     else:
       return PhysicalUnit(self.names+{str(other): -1},
-                          self.factor/other, self.powers)
+                          self.factor/float(other), self.powers)
 
   def __rdiv__(self, other):
     if self.offset != 0 or (isPhysicalUnit(other) and other.offset != 0):
@@ -398,7 +398,7 @@ class PhysicalUnit(object):
                           [a-b for (a,b) in zip(other.powers,self.powers)])
     else:
       return PhysicalUnit({str(other): 1}-self.names,
-                          other/self.factor,
+                          float(other)/self.factor,
                           [-x for x in self.powers])
 
   def __pow__(self, other):
@@ -535,28 +535,28 @@ def isPhysicalQuantity(x):
 
 #Helper Functions
 def _findUnit(unit):
-  if isinstance(unit,str):
-    name = unit.strip()
-    if name not in _unitLib.unit_table:
-     
-      if(name[0] in _unitLib.prefixes and name[1:] in _unitLib.unit_table):
-        addUnit(unit,_unitLib.prefixes[name[0]]*_unitLib.unit_table[name[1:]])
-      elif(name[0:2] in _unitLib.prefixes and name[2:] in _unitLib.unit_table):
-        addUnit(unit,_unitLib.prefixes[name[0:2]]*_unitLib.unit_table[name[2:]])
-      else:
-        try:
-            unit =  eval(name, _unitLib.unit_table) 
-        except:
-            raise ValueError, "no unit named '%s' is defined"%name
-        #raise KeyError, name + ' not defined in the unit library'
-    unit = eval(name, _unitLib.unit_table)
-    for cruft in ['__builtins__', '__args__']:
-      try: del _unitLib.unit_table[cruft]
-      except: pass
-
-  if not isPhysicalUnit(unit):
-    raise TypeError(str(unit) + ' is not a unit')
-  return unit
+    if isinstance(unit,str):
+        name = unit.strip()
+        if name not in _unitLib.unit_table:
+            #check for single letter prefix before unit
+            if(name[0] in _unitLib.prefixes and name[1:] in _unitLib.unit_table):
+                addUnit(unit,_unitLib.prefixes[name[0]]*_unitLib.unit_table[name[1:]])
+            #check for double letter prefix before unit
+            elif(name[0:2] in _unitLib.prefixes and name[2:] in _unitLib.unit_table):
+                addUnit(unit,_unitLib.prefixes[name[0:2]]*_unitLib.unit_table[name[2:]])
+            #no prefixes found, might be function of multiple units
+            else:
+                try:
+                    unit =  eval(name, _unitLib.unit_table) 
+                except:
+                    raise ValueError, "no unit named '%s' is defined"%name
+        unit = eval(name, _unitLib.unit_table)
+        for cruft in ['__builtins__', '__args__']:
+            try: del _unitLib.unit_table[cruft]
+            except: pass
+    if not isPhysicalUnit(unit):
+        raise TypeError(str(unit) + ' is not a unit')
+    return unit
 
 
 def _newUnit(name,factor,powers):
