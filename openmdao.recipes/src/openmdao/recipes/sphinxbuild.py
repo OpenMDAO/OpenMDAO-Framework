@@ -136,6 +136,28 @@ class SphinxBuild(object):
     """Build Sphinx documentation and create a script to bring up the
     documentation in a browser. This is specific to the OpenMDAO Sphinx docs and
     is not a  general purpose Sphinx building recipe.
+    
+    The following options are supported:
+
+    **eggs**
+        list of dependencies that will be added to sys.path so autodoc can
+        find all referenced modules
+        
+    *packages*
+        names of packages to generate autodocumentation for
+        
+    *srcdirs*
+        directories to scan for python files to be autodocumented
+        
+    *srcmods*
+        modules to be autodocumented
+        
+    *doc_dir*
+        top level directory where sphinx documentation is found
+        
+    *build_dir*
+        directory where sphinx build resides
+        
     """
 
     def __init__(self, buildout, name, options):
