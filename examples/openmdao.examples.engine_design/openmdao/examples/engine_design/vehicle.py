@@ -32,8 +32,8 @@ class Vehicle(Assembly):
     tire_circumference = UnitsFloat(75.0, iostatus='in', units='inch', 
                                     desc='Circumference of tire (inches)')
     
-    velocity = UnitsFloat(75.0, iostatus='in', units='mi/h', 
-                desc='Vehicle velocity needed to determine engine RPM (mi/h)')
+    velocity = UnitsFloat(75.0, iostatus='in', units='mi/hr', 
+                desc='Vehicle velocity needed to determine engine RPM (mi/hr)')
     
     def __init__(self, directory=''):
         """ Creates a new Vehicle Assembly object
@@ -69,7 +69,7 @@ class Vehicle(Assembly):
             current_gear               # Gear Position
             throttle                   # Throttle Position
             velocity                   # Vehicle velocity needed to determine
-                                         engine RPM (mi/h)
+                                         engine RPM (mi/hr)
             
             # Outputs
             power                      # Power at engine output (KW)
