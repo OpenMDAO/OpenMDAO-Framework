@@ -11,6 +11,7 @@ import zc.buildout
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
 
 from openmdao.util.procutil import run_command
+from openmdao.recipes.utils import find_all_deps
 
 
 def _mod_sphinx_info(mod, outfile, show_undoc=False):
@@ -152,11 +153,17 @@ class SphinxBuild(object):
         self.srcmods = options.get('srcmods') or ''  
         self.docdir = options.get('doc_dir') or 'docs'
         self.builddir = options.get('build_dir') or '_build' 
-        self.egg_dir = buildout['buildout']['eggs-directory']
-        self.dev_egg_dir = buildout['buildout']['develop-eggs-directory']
-        self.working_set = None
-        self.specs = [r.strip() for r in options.get('eggs', '').split('\n')
-                         if r.strip()]
+        dev_egg_dir = buildout['buildout']['develop-eggs-directory']
+        dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
+        # grab the first line of each dev egg link file
+        self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() 
+                            for f in dev_eggs]
+                            
+        # build up a list of all egg dependencies resulting from our 'eggs' parameter
+        env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory']])
+        reqs = [Requirement.parse(x.strip()) for x in options['eggs'].split()]
+        self.depdists = find_all_deps(reqs, env)
+        self.working_set = WorkingSet([d.location for d in self.depdists])
 
 
     def _write_src_docs(self):
@@ -200,12 +207,7 @@ class SphinxBuild(object):
         if not os.path.isdir(self.docdir):
             raise RuntimeError('doc directory '+self.docdir+' not found')
             
-        self.working_set = zc.buildout.easy_install.install(self.specs, self.egg_dir,
-                                                            executable=self.executable,
-                                                            path=[self.egg_dir, self.dev_egg_dir],
-                                                            newest=False)
-        self._write_src_docs()
-            
+        self._write_src_docs()            
         os.chdir(self.docdir)        
         
         # make necessary directories if they aren't already there
@@ -213,7 +215,6 @@ class SphinxBuild(object):
             os.makedirs(os.path.join(self.builddir, 'html'))
         if not os.path.isdir(os.path.join(self.builddir, 'doctrees')):
             os.makedirs(os.path.join(self.builddir, 'doctrees'))
-       
         
         # create the sphinx-build script
         bspath = os.path.join(self.buildout['buildout']['directory'], 'bin',
@@ -228,9 +229,6 @@ class SphinxBuild(object):
                          os.path.abspath(os.path.join(self.builddir, "html"))))        
 
         # create the testdocs script
-        bspath = os.path.join(self.buildout['buildout']['directory'], 'bin',
-                              'sphinx-build')
-         
         scripts = zc.buildout.easy_install.scripts(
             ['Sphinx'], self.working_set, 
             sys.executable, os.path.dirname(bspath), { 'sphinx-build': 'testdocs' },

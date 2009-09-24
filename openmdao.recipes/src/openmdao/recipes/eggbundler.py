@@ -93,7 +93,7 @@ class EggBundler(object):
             if fetched is None:
                 self.logger.debug('could not find distrib for %s' % req)
         else:
-            self.logger.debug('found dist %s' % dist.as_requirement)
+            self.logger.debug('found dist %s' % dist.as_requirement())
             if dist.project_name not in excludes:
                 deps.add(dist)
             for req in dist.requires():
