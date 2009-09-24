@@ -302,7 +302,7 @@ Including Code Straight from the Source
 +++++++++++++++++++++++++++++++++++++++
 
 There are times that it is more efficient to directly include code from a source
-file. There is a directive built into Sphinx that enables this -- the linteralinclude
+file. There is a directive built into Sphinx that enables this -- the literalinclude
 block:
 
 ::
