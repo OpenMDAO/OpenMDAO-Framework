@@ -9,7 +9,8 @@ from copy import copy
 import numpy.numarray as numarray
 import numpy
 
-from enthought.traits.api import Int, Array, List, on_trait_change, TraitError
+from enthought.traits.api import Int, Array, List, on_trait_change, \
+                                 TraitError, Float
 import conmin.conmin as conmin
 
 from openmdao.main.api import Driver, StringRef, StringRefArray
@@ -166,9 +167,14 @@ class CONMINdriver(Driver):
     # of the solution. A subset of these parameters was chosen for inclusion
     # in the OpenMDAO wrapper.
     
-    iprint = Int(0, desc='Print information during CONMIN solution. Higher \
-                          values print more info.')
-    maxiters = Int(40, desc='Maximum number of iterations before termination')
+    iprint = Int(0, iostatus='in', desc='Print information during CONMIN \
+                    solution. Higher values print more info')
+    itmax = Int(10, iostatus='in', desc='Maximum number of iterations before \
+                    termination')
+    fdch = Float(.01, iostatus='in', desc='Relative change in design variables \
+                       when calculating finite difference gradients')
+    fdchm = Float(.01, iostatus='in', desc='Minimum absolute step in finite \
+                       difference \ gradient calculations')
         
     def __init__(self, doc=None):
         super(CONMINdriver, self).__init__( doc)
@@ -242,6 +248,7 @@ class CONMINdriver(Driver):
             
 # TODO: 'step around' ill-behaved cases.
             
+            # common blocks are saved before, and loaded after execution
             self._load_common_blocks()
             
             try:
@@ -261,7 +268,7 @@ class CONMINdriver(Driver):
             except Exception, err:
                 self.error(str(err))
                 raise
-            print "iGoto = ", self.cnmn1.igoto
+            
             # common blocks are saved before, and loaded after execution
             self._save_common_blocks()
             
@@ -350,8 +357,6 @@ class CONMINdriver(Driver):
             self.cnmn1.nside = 2*num_dvs
         else:
             self.cnmn1.nside = 0
-            self.cnmn1.fdch = .00001
-            self.cnmn1.fdchm = .00001
 
         self.cnmn1.nacmx1 = max(num_dvs,
                                 len(self.constraints)+self.cnmn1.nside)+1
@@ -370,8 +375,12 @@ class CONMINdriver(Driver):
         # temp storage
         self._ms1 = numarray.zeros(n5, 'i')
 
+        # Load all of the user-changeable parameters into the common block
+        
         self.cnmn1.iprint = self.iprint
-        self.cnmn1.itmax = self.maxiters
+        self.cnmn1.itmax = self.itmax
+        self.cnmn1.fdch = self.fdch
+        self.cnmn1.fdchm = self.fdchm
         
 
     @on_trait_change('objective') 

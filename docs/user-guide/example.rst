@@ -1030,7 +1030,7 @@ driver requires some initialization and connecting before it can be used:
 
 	        # CONMIN Flags
         	self.driver.iprint = 0
-	        self.driver.maxiters = 30
+	        self.driver.itmax = 30
         
 	        # CONMIN Objective 
         	self.driver.objective = 'driving_sim.accel_time'
@@ -1043,8 +1043,8 @@ driver requires some initialization and connecting before it can be used:
 	        self.driver.upper_bounds = [10, 100]
 
 In self.driver.iprint, driver refers to the title that the CONMIN driver is given when it is created above. The iprint flag
-enables or disables the printing of diagnostics internal to CONMIN, while the maxiters parameter specifies the maximum number
-of iterations for the optimization loop. Both of these have a default value (maxiters is 40), so setting them here is not required.
+enables or disables the printing of diagnostics internal to CONMIN, while the itmax parameter specifies the maximum number
+of iterations for the optimization loop. Both of these have a default value (itmax is 40), so setting them here is not required.
 
 The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which were chosen
 as bore and spark angle. Both the objective and the design variables are assigned using a type of Data Object called a StringRef.

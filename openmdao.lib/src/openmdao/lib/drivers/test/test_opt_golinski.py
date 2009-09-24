@@ -153,7 +153,7 @@ class GolinskiTestCase(unittest.TestCase):
         self.top.add_container('comp', OptGolinskiComponent())
         self.top.add_container('driver', CONMINdriver())
         self.top.driver.iprint = 0
-        self.top.driver.maxiters = 30
+        self.top.driver.itmax = 30
         
 
     def tearDown(self):

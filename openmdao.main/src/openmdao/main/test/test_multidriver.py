@@ -88,7 +88,7 @@ class MultiDriverTestCase(unittest.TestCase):
         
         # create the first driver
         drv = top.add_container('driver1', CONMINdriver())
-        drv.maxiters = 30
+        drv.itmax = 30
         drv.objective = 'adder3.sum+50.'
         drv.design_vars = ['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']
         drv.lower_bounds = [-10, -10, -10, -10]
@@ -129,7 +129,7 @@ class MultiDriverTestCase(unittest.TestCase):
         self.top.add_container('comp2a', ExprComp(expr='x-5.0*sqrt(x)'))
         self.top.connect('comp1a.f_x', 'comp2a.x')
         drv = self.top.add_container('driver1a', CONMINdriver())
-        drv.maxiters = 40
+        drv.itmax = 40
         drv.objective = 'comp2a.f_x'
         drv.design_vars = ['comp1a.x']
         drv.lower_bounds = [0]
@@ -175,38 +175,44 @@ class MultiDriverTestCase(unittest.TestCase):
         self.top.connect('comp2.f_x', 'comp4.x')
 
         ## create one driver for testing
-        drv1 = self.top.add_container('driver1', CONMINdriver())
-        drv1.maxiters = 30
-        drv1.iprint = 999999
-        drv1.objective = 'comp4.f_xy'
-        drv1.design_vars = ['comp1.x', 'comp3.y']
+        #drv1 = self.top.add_container('driver1', CONMINdriver())
+        #drv1.itmax = 30
+        #drv1.iprint = 1001
+        #drv1.fdch = .000001
+        #drv1.fdchm = .000001
+        #drv1.objective = 'comp4.f_xy'
+        #drv1.design_vars = ['comp1.x', 'comp3.y']
         #drv1.lower_bounds = [-50, -50]
         #drv1.upper_bounds = [50, 50]
-        #drv1.constraints = ['comp1.x**2 + comp3.y**2']
+        ##drv1.constraints = ['comp1.x**2 + comp3.y**2']
             
-        ## create the inner driver
-        #drv1 = self.top.add_container('driver1', CONMINdriver())
-        #drv1.maxiters = 30
-        #drv1.objective = 'comp3.f_xy'
-        #drv1.design_vars = ['comp3.y']
-        #drv1.lower_bounds = [-50]
-        #drv1.upper_bounds = [50]
+        # create the inner driver
+        drv1 = self.top.add_container('driver1', CONMINdriver())
+        drv1.itmax = 30
+        drv1.fdch = .000001
+        drv1.fdchm = .000001
+        drv1.objective = 'comp3.f_xy'
+        drv1.design_vars = ['comp3.y']
+        drv1.lower_bounds = [-50]
+        drv1.upper_bounds = [50]
         
-        ## create the outer driver
-        #drv2 = self.top.add_container('driver2', CONMINdriver())
-        #drv2.maxiters = 100
-        #drv2.objective = 'comp4.f_xy'
-        #drv2.design_vars = ['comp1.x']
-        #drv2.lower_bounds = [-50]
-        #drv2.upper_bounds = [50]
+        # create the outer driver
+        drv2 = self.top.add_container('driver2', CONMINdriver())
+        drv2.itmax = 30
+        drv2.fdch = .000001
+        drv2.fdchm = .000001
+        drv2.objective = 'comp4.f_xy'
+        drv2.design_vars = ['comp1.x']
+        drv2.lower_bounds = [-50]
+        drv2.upper_bounds = [50]
         
         self.top.run()
 
         # Notes: CONMIN does not quite reach the anlytical minimum
         # In fact, it only gets to about 2 places of accuracy.
         # This is also the case for a single 2-var problem.
-        self.assertAlmostEqual(self.top.comp1.x, 6.6667, places=1)
-        self.assertAlmostEqual(self.top.comp3.y, -7.3333, places=1)
+        self.assertAlmostEqual(self.top.comp1.x, 6.66667, places=4)
+        self.assertAlmostEqual(self.top.comp3.y, -7.33333, places=4)
         
         
 if __name__ == "__main__":
