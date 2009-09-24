@@ -77,8 +77,6 @@ Component.load_from_eggfile('%s', install=False)
         if logfile:
             stdout.close()
     finally:
-        if unpacker and os.path.exists(unpacker):
-            os.remove(unpacker)
         os.chdir(orig_dir)
         comp.log_level = old_level
         if cleanup:
