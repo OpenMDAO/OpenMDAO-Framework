@@ -5,8 +5,8 @@ The Container class
 #public symbols
 __all__ = ["Container", "path_to_root", "set_as_top", "PathProperty"]
 
+import datetime
 import copy
-import sys
 import traceback
 import re
 import pprint
@@ -23,9 +23,9 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 # pylint: enable-msg=W0212
 
 import networkx as nx
-from enthought.traits.api import HasTraits, implements, Missing, TraitError,\
-                                 BaseStr, Undefined, push_exception_handler,\
-                                 Python, TraitType, Property, Trait, on_trait_change
+from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
+                                 push_exception_handler, Python, TraitType, \
+                                 Property, Trait
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType
 from enthought.traits.trait_base import not_none
@@ -35,8 +35,7 @@ from enthought.traits.trait_base import not_none
 
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
-from openmdao.util import eggloader
-from openmdao.util import eggsaver
+from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 
 
@@ -230,9 +229,9 @@ class Container(HasTraits):
             sdict = scope.__dict__
             
         ver = 1
-        while '%s%d' % (classname,ver) in sdict:
+        while '%s%d' % (classname, ver) in sdict:
             ver += 1
-        return '%s%d' % (classname,ver)
+        return '%s%d' % (classname, ver)
         
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
@@ -536,9 +535,9 @@ class Container(HasTraits):
                 continue
             for meta_name, meta_eval in metadata.items():
                 if type( meta_eval ) is FunctionType:
-                    if not meta_eval(getattr(trait,meta_name)):
+                    if not meta_eval(getattr(trait, meta_name)):
                         break
-                elif meta_eval != getattr(trait,meta_name):
+                elif meta_eval != getattr(trait, meta_name):
                     break
             else:
                 result[ name ] = trait
@@ -818,36 +817,36 @@ class Container(HasTraits):
         """
         raise NotImplementedError("replace")
 
-    def save_to_egg(self, name=None, version=None, py_dir=None,
-                    src_dir=None, src_files=None, child_objs=None,
-                    dst_dir=None, format=SAVE_CPICKLE, proto=-1,
-                    use_setuptools=False):
+    def save_to_egg(self, name, version, py_dir=None, src_dir=None,
+                    src_files=None, child_objs=None, dst_dir=None,
+                    format=SAVE_CPICKLE, proto=-1, use_setuptools=False,
+                    observer=None):
         """Save state and other files to an egg. Analyzes the objects saved
         for distribution dependencies. Modules not found in any distribution
         are recorded in an 'egg-info/openmdao_orphans.txt' file. Also creates
         and saves loader scripts for each entry point.
 
-        - `name` defaults to the name of the container.
-        - `version` defaults to the container's module __version__, or \
-          a timestamp if no __version__ exists.
+        - `name` must be an alphanumeric string.
+        - `version` must be an alphanumeric string.
         - `py_dir` is the (root) directory for local Python files. \
            It defaults to the current directory.
         - `src_dir` is the root of all (relative) `src_files`.
         - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
+        - `observer` will be called via an EggObserver.
 
-        The resulting egg can be unpacked on UNIX via 'sh egg-file'.
         Returns (egg_filename, required_distributions, orphan_modules).
         """
-        name = name or self.name
-        if not name:
-            name = self.get_default_name(self.parent)
-            
-        if not version:
-            try:
-                version = sys.modules[self.__class__.__module__].__version__
-            except AttributeError:
-                pass
+        assert name and isinstance(name, basestring)
+        assert version and isinstance(version, basestring)
+        if not version.endswith('.'):
+            version += '.'
+        now = datetime.datetime.now()  # Could consider using utcnow().
+        tstamp = '%d.%02d.%02d.%02d.%02d' % \
+                 (now.year, now.month, now.day, now.hour, now.minute)
+        version += tstamp
+
+        observer = eggobserver.EggObserver(observer, self._logger)
 
         # Child entry point names are the pathname, starting at self.
         entry_pts = [(self, name, _get_entry_group(self))]
@@ -859,9 +858,9 @@ class Container(HasTraits):
             for child in child_objs:
                 pathname = child.get_pathname()
                 if not pathname.startswith(root_pathname):
-                    self.raise_exception('%s is not a child of %s'
-                                         % (pathname, root_pathname),
-                                         RuntimeError)
+                    msg = '%s is not a child of %s' % (pathname, root_pathname)
+                    observer.exception(msg)
+                    self.raise_exception(msg, RuntimeError)
                 entry_pts.append((child, pathname[root_start:],
                                   _get_entry_group(child)))
 
@@ -871,7 +870,7 @@ class Container(HasTraits):
             return eggsaver.save_to_egg(entry_pts, version, py_dir,
                                         src_dir, src_files, dst_dir,
                                         format, proto, self._logger,
-                                        use_setuptools)
+                                        use_setuptools, observer.observer)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
@@ -894,28 +893,30 @@ class Container(HasTraits):
             self.parent = parent
 
     @staticmethod
-    def load_from_eggfile(filename, install=True):
+    def load_from_eggfile(filename, install=True, observer=None):
         """Extract files in egg to a subdirectory matching the saved object
         name, optionally install distributions the egg depends on, and then
-        load object graph state.  Returns the root object.
+        load object graph state. `observer` will be called via an EggObserver.
+        Returns the root object.
         """
         # Load from file gets everything.
         entry_group = 'openmdao.top'
         entry_name = 'top'
         return eggloader.load_from_eggfile(filename, entry_group, entry_name,
-                                           install, logger)
+                                           install, logger, observer)
 
     @staticmethod
-    def load_from_eggpkg(package, entry_name=None, instance_name=None):
+    def load_from_eggpkg(package, entry_name=None, instance_name=None,
+                         observer=None):
         """Load object graph state by invoking the given package entry point.
         If specified, the root object is renamed to `instance_name`.
-        Returns the root object.
+        `observer` will be called via an EggObserver. Returns the root object.
         """
         entry_group = 'openmdao.components'
         if not entry_name:
             entry_name = package  # Default component is top.
         return eggloader.load_from_eggpkg(package, entry_group, entry_name,
-                                          instance_name, logger)
+                                          instance_name, logger, observer)
 
     @staticmethod
     def load(instream, format=SAVE_CPICKLE, package=None, 
@@ -934,13 +935,11 @@ class Container(HasTraits):
 
     def post_load(self):
         """Perform any required operations after model has been loaded."""
-        [x.post_load() for x in self.values() 
-                                          if isinstance(x,Container)]
+        [x.post_load() for x in self.values() if isinstance(x, Container)]
 
     def pre_delete(self):
         """Perform any required operations before the model is deleted."""
-        [x.pre_delete() for x in self.values() 
-                                          if isinstance(x,Container)]
+        [x.pre_delete() for x in self.values() if isinstance(x, Container)]
 
     def get_io_graph(self):
         """Return a graph connecting our input variables to our output

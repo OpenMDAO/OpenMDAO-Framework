@@ -177,7 +177,7 @@ class MultiDriverTestCase(unittest.TestCase):
         ## create one driver for testing
         drv1 = self.top.add_container('driver1', CONMINdriver())
         drv1.maxiters = 30
-        drv1.iprint = 11
+        drv1.iprint = 999999
         drv1.objective = 'comp4.f_xy'
         drv1.design_vars = ['comp1.x', 'comp3.y']
         #drv1.lower_bounds = [-50, -50]

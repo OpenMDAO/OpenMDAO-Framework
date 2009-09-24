@@ -16,7 +16,11 @@ def filexfer(src_server, src_path, dst_server, dst_path, mode=''):
     else:
         dst_file = dst_server.open(dst_path, 'w'+mode)
 
-    chunk = 1 << 17    # 128KB
+    if src_server is None and dst_server is None:
+        chunk = 1 << 20  # 1MB locally.
+    else:
+        chunk = 1 << 17  # 128KB over network.
+
     data = src_file.read(chunk)
     while data:
         dst_file.write(data)

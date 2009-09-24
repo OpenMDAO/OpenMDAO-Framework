@@ -14,7 +14,7 @@ Glossary
 
       **Assembly**
 	The Assembly class is the primary building block of the system of 
-	systems aspect of this architecture. Each Assembly has a Workflow and a 
+	systems aspect of OpenMDAO. Each Assembly has a Workflow and a 
 	Driver, and acts as a container for Components. An Assembly is also a
 	Component, so hierarchical structures of Assemblies can be created.
       
@@ -69,7 +69,9 @@ Glossary
       
       **Component**
         A Container that is *runnable*; it also supports several other framework
-        functions, such as checkpoint/restart, stop, and invoke.
+	functions, such as checkpoint/restart, stop, and invoke. A component has
+	input and output attributes and can perform some sort of calculation when
+	it is executed. 
 
 
       **Components**
@@ -95,7 +97,6 @@ Glossary
 	Python decorator is a specific change to the Python syntax that allows users to
 	more conveniently alter functions and methods.
 	
-
       
       **DLL**
         Dynamically Loadable Library 
@@ -117,7 +118,7 @@ Glossary
        
       **egg**
         A zip file with a specified internal directory structure that
-        contains a python package or module. It is similar to a jar file in java. For
+        contains a Python package or module. It is similar to a jar file in java. For
         more information on eggs, see PythonEggs_.
 
       .. _PythonEggs: http://peak.telecommunity.com/DevCenter/PythonEggs
@@ -200,7 +201,13 @@ Glossary
       **MDAO**  
         Multi-disciplinary Analysis & Optimization
 
+      
+      **metadata**
+	Metadata is information about an informational resource, such as a document (e.g,, a webpage), image,
+	dataset or other resource. It describes context, content, and structure of the resource and its
+	management through time. 
 
+      
       **model**
         A hierarchical structure with an :term:`Assembly` at its root.
        
@@ -209,7 +216,6 @@ Glossary
         A Python package for creating and manipulating graphs and networks.
 	
 	
-      
       **NOSA**
         NASA Open Source Agreement. A software license approved by the Open
         Source Initiative (:term:`OSI`). The National Aeronautics and Space
@@ -270,8 +276,9 @@ Glossary
 	A pluggable command-line frontend, including commands to setup package file layouts
 
 
-      **plug-ins**
-	Python objects that can be used to extend the functionality of the framework.
+      **plugins**
+	A computer program (e.g., a Python object) that interacts with a host aplication to
+	provide specific functionality without changing the host application.
 
            
       **PID**
@@ -367,7 +374,7 @@ Glossary
 	
 		
       **Socket**
-        A placeholder for a plug-in within a :term:`Component`.
+        A placeholder for a plugin within a :term:`Component`.
 
       
       **SocketList**
@@ -408,12 +415,17 @@ Glossary
 	to the Python property language feature. 
 
 
+      **TraitType** 
+	The base class used to validate and possibly convert data objects that are
+	passed between linked Components.
+
+      
       **Variable**
         A wrapper for data passed between framework components. Variables can contain
         a value, a default value, optional min/max values, and units. Variables can
         perform their own validation when being assigned to another Variable. To
         extend the framework by creating a new data type to be passed between
-        Components, a developer would create a new python class that inherits from
+        Components, a developer would create a new Python class that inherits from
         Variable. This Variable would have its own validation routine and could also
         have a custom viewer/editor.
 

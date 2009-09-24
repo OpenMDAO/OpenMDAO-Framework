@@ -141,7 +141,8 @@ class CONMINdriver(Driver):
     """
     
     design_vars = StringRefArray(iostatus='out',
-       desc='An array of design variable names. These names can include array indexing.')
+       desc='An array of design variable names. These names can include array \
+             indexing.')
     
     constraints = StringRefArray(iostatus='in',
             desc= 'An array of expression strings indicating constraints.'+
@@ -149,16 +150,25 @@ class CONMINdriver(Driver):
             'is violated.')
     
     objective = StringRef(iostatus='in',
-                      desc= 'A string containing the objective function expression.')
+                      desc= 'A string containing the objective function \
+                            expression.')
     
     upper_bounds = Array(dtype=numpy.float, iostatus='in',
-        desc='Array of constraints on the maximum value of each design variable.')
+        desc='Array of constraints on the maximum value of each design \
+              variable.')
     
     lower_bounds = Array(dtype=numpy.float, iostatus='in', 
-        desc='Array of constraints on the minimum value of each design variable.')
-        
-    iprint = Int(0)
-    maxiters = Int(40)
+        desc='Array of constraints on the minimum value of each design \
+              variable.')
+
+    # Control parameters for CONMIN.
+    # CONMIN has quite a few parameters to give the user control over aspects
+    # of the solution. A subset of these parameters was chosen for inclusion
+    # in the OpenMDAO wrapper.
+    
+    iprint = Int(0, desc='Print information during CONMIN solution. Higher \
+                          values print more info.')
+    maxiters = Int(40, desc='Maximum number of iterations before termination')
         
     def __init__(self, doc=None):
         super(CONMINdriver, self).__init__( doc)
@@ -218,6 +228,7 @@ class CONMINdriver(Driver):
         
         # loop until optimized
         while self.cnmn1.igoto or self.iter_count == 0:
+            
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
 
@@ -250,7 +261,7 @@ class CONMINdriver(Driver):
             except Exception, err:
                 self.error(str(err))
                 raise
-            
+            print "iGoto = ", self.cnmn1.igoto
             # common blocks are saved before, and loaded after execution
             self._save_common_blocks()
             
@@ -335,10 +346,12 @@ class CONMINdriver(Driver):
         self.cnmn1.ndv = num_dvs
         self.cnmn1.ncon = len(self.constraints)
         
-        if not self._lower_bounds.size == 0 or not self._upper_bounds.size == 0:
+        if len(self.lower_bounds) > 0 or len(self.upper_bounds) > 0:
             self.cnmn1.nside = 2*num_dvs
         else:
             self.cnmn1.nside = 0
+            self.cnmn1.fdch = .00001
+            self.cnmn1.fdchm = .00001
 
         self.cnmn1.nacmx1 = max(num_dvs,
                                 len(self.constraints)+self.cnmn1.nside)+1

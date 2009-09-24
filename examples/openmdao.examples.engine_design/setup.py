@@ -10,13 +10,13 @@ from numpy.distutils.misc_util import Configuration
 version = '0.1.0'
 
 config = Configuration()
-config.add_extension('engineC', \
+config.add_extension('openmdao.examples.engine_design.engineC', \
                      sources=['openmdao/examples/engine_design/engineC.pyf', \
                               'openmdao/examples/engine_design/engineC.c'] )
 
-kwds = { 'name':'openmdao.examples',
+kwds = { 'name':'openmdao.examples.engine_design',
       	 'version':version,
-         'description':"OpenMDAO examples",
+         'description':"OpenMDAO examples - Engine Design Problem",
          'long_description':"""\
          """,
          'classifiers':[
@@ -34,7 +34,7 @@ kwds = { 'name':'openmdao.examples',
          'url':'',
          'license':'NASA Open Source Agreement 1.3',
          'namespace_packages':["openmdao"],
-         #'package_dir':{'': 'src'},
+         #'package_dir':{'': 'openmdao/examples/engine_design'},
          'packages':find_packages(), #['openmdao','openmdao.examples'],
          'include_package_data':True,
          'test_suite':'nose.collector',
