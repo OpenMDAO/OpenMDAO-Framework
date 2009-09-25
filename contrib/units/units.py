@@ -131,7 +131,7 @@ class PhysicalQuantity(object):
 
 
   def _sum(self, other, sign1, sign2):
-    if not isPhysicalQuantity(other):
+    if not isinstance(other,PhysicalQuantity):
       raise TypeError('Incompatible types')
     new_value = sign1*self.value + sign2*other.value*other.unit.conversionFactorTo(self.unit)
     return self.__class__(new_value, self.unit)
@@ -151,7 +151,7 @@ class PhysicalQuantity(object):
     return cmp(diff.value, 0)
 
   def __mul__(self, other):
-    if not isPhysicalQuantity(other):
+    if not isinstance(other,PhysicalQuantity):
       return self.__class__(self.value*other, self.unit)
     value = self.value*other.value
     unit = self.unit*other.unit
@@ -163,7 +163,7 @@ class PhysicalQuantity(object):
   __rmul__ = __mul__
 
   def __div__(self, other):
-    if not isPhysicalQuantity(other):
+    if not isinstance(other,PhysicalQuantity):
       return self.__class__(self.value/other, self.unit)
     value = self.value/other.value
     unit = self.unit/other.unit
@@ -173,7 +173,7 @@ class PhysicalQuantity(object):
       return self.__class__(value, unit)
 
   def __rdiv__(self, other):
-    if not isPhysicalQuantity(other):
+    if not isinstance(other,PhysicalQuantity):
       return self.__class__(other/self.value, pow(self.unit, -1))
     value = other.value/sel
     f.value
@@ -184,7 +184,7 @@ class PhysicalQuantity(object):
       return self.__class__(value, unit)
 
   def __pow__(self, other):
-    if isPhysicalQuantity(other):
+    if isinstance(other,PhysicalQuantity):
       raise TypeError('Exponents must be dimensionless')
     return self.__class__(pow(self.value, other), pow(self.unit, other))
 
@@ -364,9 +364,9 @@ class PhysicalUnit(object):
     return cmp(self.factor, other.factor)
 
   def __mul__(self, other):
-    if self.offset != 0 or (isPhysicalUnit(other) and other.offset != 0):
+    if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
       raise TypeError("cannot multiply units with non-zero offset")
-    if isPhysicalUnit(other):
+    if isinstance(other,PhysicalUnit):
       return PhysicalUnit(self.names+other.names,
                           self.factor*other.factor,
                           [a+b for (a,b) in zip(self.powers,other.powers)])
@@ -379,9 +379,9 @@ class PhysicalUnit(object):
   __rmul__ = __mul__
 
   def __div__(self, other):
-    if self.offset != 0 or (isPhysicalUnit(other) and other.offset != 0):
+    if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
       raise TypeError("cannot divide units with non-zero offset")
-    if isPhysicalUnit(other):
+    if isinstance(other,PhysicalUnit):
       return PhysicalUnit(self.names-other.names,
                           self.factor/other.factor,
                           [a-b for (a,b) in zip(self.powers,other.powers)])
@@ -390,9 +390,9 @@ class PhysicalUnit(object):
                           self.factor/float(other), self.powers)
 
   def __rdiv__(self, other):
-    if self.offset != 0 or (isPhysicalUnit(other) and other.offset != 0):
+    if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
       raise TypeError("cannot divide units with non-zero offset")
-    if isPhysicalUnit(other):
+    if isinstance(other,PhysicalUnit):
       return PhysicalUnit(other.names-self.names,
                           other.factor/self.factor,
                           [a-b for (a,b) in zip(other.powers,self.powers)])
@@ -554,7 +554,7 @@ def _findUnit(unit):
         for cruft in ['__builtins__', '__args__']:
             try: del _unitLib.unit_table[cruft]
             except: pass
-    if not isPhysicalUnit(unit):
+    if not isinstance(unit,PhysicalUnit):
         raise TypeError(str(unit) + ' is not a unit')
     return unit
 
