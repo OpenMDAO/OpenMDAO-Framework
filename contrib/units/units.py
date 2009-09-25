@@ -522,7 +522,7 @@ def isPhysicalUnit(x):
   @returns: C{True} if x is a L{PhysicalUnit}
   @rtype: C{bool}
   """
-  return hasattr(x, 'factor') and hasattr(x, 'powers')
+  return isinstance(x,PhysicalUnit)
 
 def isPhysicalQuantity(x):
     """
@@ -531,7 +531,7 @@ def isPhysicalQuantity(x):
     @returns: C{True} if x is a L{PhysicalQuantity}
     @rtype: C{bool}
     """
-    return hasattr(x, 'value') and hasattr(x, 'unit')
+    return isinstance(x,PhysicalQuantity)
 
 #Helper Functions
 def _findUnit(unit):
