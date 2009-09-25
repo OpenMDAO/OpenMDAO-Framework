@@ -486,7 +486,7 @@ class test__PhysicalQuantity(unittest.TestCase):
     def test_integers_in_unit_definition(self):
         x=units.PhysicalQuantity('10 1/min')
         self.assertEqual(x.unit.factor,1/60.0)
-        self.assertEqual(x.unit.powers,[0, 0, 1, 0, 0, 0, 0, 0, 0, 0])
+        self.assertEqual(x.unit.powers,[0, 0, 0, 0, 0, 0, 0, 0, -1, 0])
 #-----------------------------------------------------------------------------------
 #-----------------------------------------------------------------------------------
 
