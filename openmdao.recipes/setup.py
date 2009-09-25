@@ -45,5 +45,6 @@ setup(name='openmdao.recipes',
       sphinxbuild = openmdao.recipes.sphinxbuild:SphinxBuild
       eggbundler = openmdao.recipes.eggbundler:EggBundler
       metatable = openmdao.recipes.metatable:MetadataTable
+      dumper = openmdao.recipes.bodumper:BuildoutDumper
       """,
       )

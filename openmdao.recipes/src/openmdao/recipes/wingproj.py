@@ -7,7 +7,6 @@ import fnmatch
 import ConfigParser
 import logging
 import pprint
-import platform
 from subprocess import Popen
 
 import zc.buildout
@@ -44,10 +43,13 @@ def _find_bzr(path=None):
     return None
 
 def runwing(wingpath, projpath):
+    """Runs the Wing IDE after first setting environment variables
+    necessary to locate shared libraries.
+    """
     # in order to find all of our shared libraries, find them
     # all and put their directories in LD_LIBRARY_PATH
     env = os.environ
-    if platform.system() != 'Windows':
+    if sys.platform != 'win32':
         libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
         bzrtop = _find_bzr()
         if bzrtop:
@@ -72,6 +74,17 @@ class WingProj(object):
     a file named wingproj.wpr will be created in the parts/wingproj directory of the 
     buildout.  This file will be updated during future buildouts only if the
     list of dependent eggs changes.
+    
+    The following options are supported:
+    
+    **eggs**
+        The list of top level distributions that will be findable by Wing. Any
+        distributions that are dependent upon the top level distributions will
+        be determined automatically
+    
+    *wingpath*
+        The path to the Wing executable
+    
     """
 
     def __init__(self, buildout, name, options):
@@ -201,7 +214,7 @@ class WingProj(object):
         if self.wingpath:
             wingpath = self.wingpath
         else:
-            if platform.system() == 'Windows':
+            if sys.platform == 'win32':
                 wingpath = 'wing'
             else:
                 wingpath = 'wing3.1'

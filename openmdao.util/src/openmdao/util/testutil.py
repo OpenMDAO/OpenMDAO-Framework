@@ -3,15 +3,11 @@ import os.path
 
 def assertRaisesError(test_case_instance, code, err_type, err_msg):
     """ Determine that `code` raises `err_type` with `err_msg`. """
-    test_failed = False
     try:
         eval(code)
-        test_failed = True
     except err_type, err:
         test_case_instance.assertEqual(str(err), err_msg)
-    except:
-        test_case_instance.fail("Expecting %s" % err_type)
-    if test_failed:
+    else:
         test_case_instance.fail("Expecting %s" % err_type)
 
 
