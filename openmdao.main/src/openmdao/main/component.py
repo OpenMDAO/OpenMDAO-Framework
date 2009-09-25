@@ -3,20 +3,18 @@
 __all__ = ['Component', 'SimulationRoot']
 
 
-
 import fnmatch
 import glob
 import logging
 import os.path
-from os.path import isabs, isdir, dirname, basename, exists, join, normpath
+from os.path import isabs, isdir, dirname, exists, join, normpath
 import pkg_resources
 import sys
 
-from enthought.traits.api import implements, on_trait_change, Str, Missing, \
-                                 Undefined, Python, TraitError
+from enthought.traits.api import Str, Python
 from enthought.traits.trait_base import not_event
 
-from openmdao.main.container import Container, set_as_top
+from openmdao.main.container import Container
 from openmdao.main.filevar import FileValue
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -84,7 +82,7 @@ class Component (Container):
       a glob-style pattern.
     """
 
-    directory = Str('',desc='If non-blank, the directory to execute in.', 
+    directory = Str('', desc='If non-blank, the directory to execute in.', 
                     iostatus='in')
     external_files = Python()
         
@@ -170,7 +168,7 @@ class Component (Container):
         """Perform calculations or other actions, assuming that inputs 
         have already been set. This must be overridden in derived classes.
         """
-        raise NotImplementedError('execute')
+        raise NotImplementedError('%s.execute' % self.get_pathname())
     
     def _post_execute (self):
         """Update output variables and anything else needed after execution. 
@@ -358,7 +356,7 @@ class Component (Container):
                                         require_relpaths, fixup_dirs)
                     self._fix_external_files(comp, comp_dir, src_dir,
                                              require_relpaths, fixup_meta,
-                                        src_files)
+                                             src_files)
                     self._fix_file_vars(comp, comp_dir, src_dir,
                                         require_relpaths, fixup_fvar, src_files)
                 except Exception, exc:
@@ -407,12 +405,12 @@ class Component (Container):
                 parent_dir = comp.parent.get_abs_directory()
                 fixup_dirs.append((comp, comp.directory))
                 comp.directory = self._relpath(comp_dir, parent_dir)
-                self.debug("    %s.directory reset to '%s'", 
-                           comp.name, comp.directory)
+            self.debug("    %s.directory reset to '%s'", 
+                       comp.name, comp.directory)
         elif require_relpaths:
-                self.raise_exception(
-                    "Can't save, %s directory '%s' doesn't start with '%s'."
-                    % (comp.get_pathname(), comp_dir, root_dir), ValueError)
+            self.raise_exception(
+                "Can't save, %s directory '%s' doesn't start with '%s'."
+                % (comp.get_pathname(), comp_dir, root_dir), ValueError)
 
         else:
             self.warning("%s directory '%s' can't be made relative to '%s'.",
@@ -441,10 +439,9 @@ class Component (Container):
                 for path in paths:
                     src_files.add(self._relpath(path, root_dir))
             elif require_relpaths:
-                    self.raise_exception(
-                        "Can't save, %s file '%s' doesn't start with '%s'."
-                        % (comp.get_pathname(), path, root_dir), ValueError)
-
+                self.raise_exception(
+                    "Can't save, %s file '%s' doesn't start with '%s'."
+                    % (comp.get_pathname(), path, root_dir), ValueError)
             else:
                 self.warning("%s file '%s' can't be made relative to '%s'.",
                              comp.get_pathname(), path, root_dir)
@@ -462,6 +459,7 @@ class Component (Container):
             path = normpath(path)
             if not exists(path):
                 continue
+
             if path.startswith(root_dir):
                 src_files.add(self._relpath(path, root_dir))
                 if isabs(fvar.filename):
@@ -603,7 +601,7 @@ class Component (Container):
         try:
             fvars = self.get_file_vars()
             if self.external_files or fvars:
-                self.info('Restoring files in %s', os.getcwd())
+                self.info('Checking files in %s', os.getcwd())
 
             for metadata in self.external_files:
                 pattern = metadata.get('path', None)
@@ -680,8 +678,7 @@ class Component (Container):
             if directory:
                 self.pop_dir()
 
-    @staticmethod
-    def _copy_files(package, file_list, observer):
+    def _copy_files(self, package, file_list, observer):
         """Copy/symlink files in `file_list`."""
         total_files = float(len(file_list))
         total_bytes = 0.
@@ -689,9 +686,13 @@ class Component (Container):
             src_name, mode, size, dst_name = info
             total_bytes += size
 
+        dst_dir = ''
         completed_bytes = 0.
         for i, info in enumerate(file_list):
             src_name, mode, size, dst_name = info
+            if dirname(dst_name) != dst_dir:
+                dst_dir = dirname(dst_name)
+                self.info('Restoring files in %s', dst_dir)
             observer.copy(src_name, i/total_files, completed_bytes/total_bytes)
             if mode == 'symlink':
                 src_path = pkg_resources.resource_filename(package, src_name)

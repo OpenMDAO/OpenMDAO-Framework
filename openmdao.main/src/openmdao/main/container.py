@@ -7,7 +7,6 @@ __all__ = ["Container", "path_to_root", "set_as_top", "PathProperty"]
 
 import datetime
 import copy
-import sys
 import traceback
 import re
 import pprint
