@@ -20,6 +20,8 @@ personal libararies which can be saved and reused"""
 import re
 import math
 import ConfigParser
+import pickle
+
 from pkg_resources import resource_string, resource_stream
 
 #Class definitions
@@ -51,31 +53,29 @@ class NumberDict(dict):
 
   def __add__(self, other):
     sum_dict = NumberDict()
-    for key in self.keys():
-        sum_dict[key] = self[key]
-    for key in other.keys():
-        sum_dict[key] = sum_dict[key] + other[key]
+    for (self_k,self_v),(other_k,other_v) in zip(self.iteritems(),other.iteritems()):
+        sum_dict[self_k] = self_v + other_v
+
     return sum_dict
 
   def __sub__(self, other):
     sum_dict = NumberDict()
-    for key in self.keys():
-        sum_dict[key] = self[key]
-    for key in other.keys():
-        sum_dict[key] = sum_dict[key] - other[key]
+    for (self_k,self_v),(other_k,other_v) in zip(self.iteritems(),other.iteritems()):
+        sum_dict[self_k] = self_v- other_v
+
     return sum_dict
 
   def __mul__(self, other):
     new = NumberDict()
-    for key in self.keys():
-        new[key] = other*self[key]
+    for key,value in self.iteritems():
+        new[key] = other*value
     return new
   __rmul__ = __mul__
 
   def __div__(self, other):
     new = NumberDict()
-    for key in self.keys():
-        new[key] = self[key]/other
+    for key,value in self.iteritems():
+        new[key] = value/other
     return new
 
 class PhysicalQuantity(object):
@@ -135,6 +135,7 @@ class PhysicalQuantity(object):
       raise TypeError('Incompatible types')
     new_value = sign1*self.value + sign2*other.value*other.unit.conversionFactorTo(self.unit)
     return self.__class__(new_value, self.unit)
+    
   def __add__(self, other):
     return self._sum(other, 1, 1)
 
@@ -679,9 +680,15 @@ def importLibrary(libfilepointer):
   if(len(retry1) >0):
     raise ValueError, "The following units were not defined because they could not be resolved as a function of any other defined units:%s"%[x[0] for x in retry1]
 
-defaultLib = resource_stream(__name__, 'unitLibdefault.ini')
-
-importLibrary(defaultLib)
+try:
+    #_unitLib = pickle(resource_stream(__name__, 'unitLib.save'))
+    import sys
+    _unitLib = pickle.load(open('unitLib.save','rb'))
+except IOError: 
+    defaultLib = resource_stream(__name__, 'unitLibdefault.ini')
+    importLibrary(defaultLib)
+    f = open('unitLib.save','wb')
+    pickle.dump(_unitLib,f,protocol = pickle.HIGHEST_PROTOCOL)
 
 
 
