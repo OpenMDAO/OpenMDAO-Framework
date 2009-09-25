@@ -175,7 +175,7 @@ class PhysicalQuantity(object):
   def __rdiv__(self, other):
     if not isinstance(other,PhysicalQuantity):
       return self.__class__(other/self.value, pow(self.unit, -1))
-    value = other.value/sel
+    value = other.value/self.value
     f.value
     unit = other.unit/self.unit
     if unit.isDimensionless():
