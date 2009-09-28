@@ -18,11 +18,15 @@ in its built in library, however it also supports generation of
 personal libararies which can be saved and reused"""
 
 import re
-import math
 import ConfigParser
-import pickle
+import os.path
+import numpy as N
 
-from pkg_resources import resource_string, resource_stream
+
+
+try: 
+    from pkg_resources import resource_string, resource_stream
+except ImportError: pass
 
 #Class definitions
 
@@ -134,7 +138,7 @@ class PhysicalQuantity(object):
     if not isinstance(other,PhysicalQuantity):
       raise TypeError('Incompatible types')
     new_value = sign1*self.value + sign2*other.value*other.unit.conversionFactorTo(self.unit)
-    return self.__class__(new_value, self.unit)
+    return PhysicalQuantity(new_value, self.unit)
     
   def __add__(self, other):
     return self._sum(other, 1, 1)
@@ -159,7 +163,7 @@ class PhysicalQuantity(object):
     if unit.isDimensionless():
       return value*unit.factor
     else:
-      return self.__class__(value, unit)
+      return PhysicalQuantity(value, unit)
 
   __rmul__ = __mul__
 
@@ -299,21 +303,21 @@ class PhysicalQuantity(object):
 
   def sin(self):
     if self.unit.isAngle():
-      return math.sin(self.value * \
+      return N.sin(self.value * \
              self.unit.conversionFactorTo(PhysicalQuantity('1rad').unit))
     else:
       raise TypeError('Argument of sin must be an angle')
 
   def cos(self):
     if self.unit.isAngle():
-        return math.cos(self.value * \
+        return N.cos(self.value * \
             self.unit.conversionFactorTo(PhysicalQuantity('1rad').unit))
     else:
         raise TypeError('Argument of cos must be an angle')
 
   def tan(self):
     if self.unit.isAngle():
-        return math.tan(self.value * \
+        return N.tan(self.value * \
             self.unit.conversionFactorTo(PhysicalQuantity('1rad').unit))
     else:
         raise TypeError('Argument of tan must be an angle')
@@ -409,7 +413,7 @@ class PhysicalUnit(object):
                           [x*other for x in self.powers])
     if isinstance(other, float):
       inv_exp = 1./other
-      rounded = int(math.floor(inv_exp+0.5))
+      rounded = int(N.floor(inv_exp+0.5))
       if abs(inv_exp-rounded) < 1.e-10:
         
         if all([x%rounded==0 for x in self.powers]):
@@ -421,8 +425,8 @@ class PhysicalUnit(object):
             names = NumberDict()
             if f != 1.:
               names[str(f)] = 1
-            for i in range(len(p)):
-              names[_unitLib.base_names[i]] = p[i]
+            for x,name in zip(p,_unitLib.base_names): 
+              names[name] = x
           return PhysicalUnit(names, f, p)
     raise TypeError('Only integer and inverse integer exponents allowed')
 
@@ -680,8 +684,12 @@ def importLibrary(libfilepointer):
   if(len(retry1) >0):
     raise ValueError, "The following units were not defined because they could not be resolved as a function of any other defined units:%s"%[x[0] for x in retry1]
 
+try:
+    defaultLib = resource_stream(__name__, 'unitLibdefault.ini')
+except NameError: #pck_resources was not imorted, try __file__
+    path = __file__
+    defaultLib = open(os.path.join(os.path.dirname(__file__),'unitLibDefault.ini')
 
-defaultLib = resource_stream(__name__, 'unitLibdefault.ini')
 importLibrary(defaultLib)
 
 
