@@ -30,7 +30,7 @@ class Transmission(Component):
                            desc='Circumference of tire (inches)')
 
     current_gear = Int(0, iostatus='in', desc='Current Gear')
-    velocity = UnitsFloat(0., iostatus='in', units='mi/hr',
+    velocity = UnitsFloat(0., iostatus='in', units='mi/h',
                      desc='Current Velocity of Vehicle')
 
     RPM = UnitsFloat(1000., iostatus='out', units='1/min',
