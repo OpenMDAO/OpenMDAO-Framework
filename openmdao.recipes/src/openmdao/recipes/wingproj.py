@@ -123,7 +123,10 @@ class WingProj(object):
         # build up a list of all egg dependencies resulting from our 'eggs' parameter
         env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory']])
         reqs = [Requirement.parse(x.strip()) for x in options['eggs'].split()]
-        self.depdists = find_all_deps(reqs, env)        
+        self.depdists, not_found = find_all_deps(reqs, env)
+        if not_found:
+            self.logger.error('distributions were not found for %s' %
+                              [x.project_name for x in not_found])
 
     def _unformat(self, namestr):
         """Take a path string from the Wing project file and chop it up into 
@@ -136,9 +139,8 @@ class WingProj(object):
         path = path.rstrip("\\n')}")
         return path.split(':') 
 
-                
-    def install(self):
-        
+ 
+    def install(self):        
         if not os.path.isdir(os.path.join(self.partsdir,'wingproj')):
             os.makedirs(os.path.join(self.partsdir,'wingproj'))
             
@@ -191,7 +193,7 @@ class WingProj(object):
                 config.set('project attributes', 'proj.directory-list',
                            pprint.pformat([{'dirloc': None,
                              'excludes': excludes,
-                             'filter': '*.py ; *.rst ; *.ini',
+                             'filter': '*.py ; *.rst ; *.ini; *.cfg',
                              'include_hidden': 0,
                              'recursive': 1,
                              'watch_for_changes': 1}]
@@ -227,6 +229,6 @@ class WingProj(object):
         
         return scripts
 
-     
+
     update = install
 

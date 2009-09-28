@@ -38,12 +38,7 @@ class EggBundler(object):
         bundle_cache = os.path.join(self.bundledir,'buildout',
                                     'distrib-cache','dist')
         self.bundle_cache = bundle_cache
-        dcache =  buildout['buildout'].get('download-cache')
-        if dcache is None:
-            self.downloads = bundle_cache
-        else:
-            self.downloads = os.path.join(dcache,'dist')
-        self.env = Environment([bundle_cache, self.downloads])
+        self.env = Environment([bundle_cache])
         self.installed_env = Environment([self.egg_dir])
         self.index = PackageIndex(buildout['buildout']['index'])
         self.bundle_name = options['bundle_name']
@@ -89,7 +84,7 @@ class EggBundler(object):
             return
                         
         if dist is None:
-            fetched = self.index.fetch_distribution(req,self.downloads)
+            fetched = self.index.fetch_distribution(req,self.bundle_cache)
             if fetched is None:
                 self.logger.debug('could not find distrib for %s' % req)
         else:
@@ -160,8 +155,10 @@ class EggBundler(object):
         for degg in self.develop:
             self.logger.info('building egg in %s' % degg)
             os.chdir(degg)
-            cmd = '%s setup.py bdist_egg -d %s' % (self.executable, 
-                                                   self.bundle_cache)
+            if os.path.exists('build'):
+                shutil.rmtree('build')
+            cmd = '%s setup.py build bdist_egg -d %s' % (self.executable, 
+                                                         self.bundle_cache)
             out, ret = run_command(cmd)
             if ret != 0:
                 self.logger.error(out)
@@ -182,6 +179,7 @@ class EggBundler(object):
         ws = WorkingSet()
         startdir = os.getcwd()
         if os.path.exists(self.bundledir):
+            self.logger.info('removing old bundle directory %s' % self.bundledir)
             shutil.rmtree(self.bundledir)
 
         if not os.path.isdir(self.bundle_cache):
@@ -244,21 +242,12 @@ class EggBundler(object):
         # Copy all of the dependent distribs into the cache directory.
         # The eggs made from the develop eggs are already there.
         for dist in distribs:
-            if self.downloads is not None: # look first in download cache
-                cached = os.path.join(self.downloads,
-                                      os.path.basename(dist.location))
-                if os.path.isfile(cached):
-                    self.logger.debug('fetching %s from cache' % 
-                                       os.path.basename(cached))
-                    shutil.copy(cached, os.path.join(self.bundle_cache,
-                                             os.path.basename(cached)))
-            else:                                               
-                self.logger.debug('fetching %s from index' % 
-                                                          dist.project_name)
-                fetched = self.index.fetch_distribution(dist.as_requirement(), 
-                                                        self.bundle_cache)
-                if fetched is None:
-                    self.logger.debug('could not find %s' % dist.project_name)
+            self.logger.debug('fetching %s from index' % 
+                              dist.project_name)
+            fetched = self.index.fetch_distribution(dist.as_requirement(), 
+                                                    self.bundle_cache)
+            if fetched is None:
+                self.logger.debug('could not find %s' % dist.project_name)
         
         self._create_buildout_dir()                                  
         
@@ -277,6 +266,8 @@ To get started (on UNIX):
 
 4. Test the installation.
      bin/test --all
+     
+    
 """)
         out.close()
 

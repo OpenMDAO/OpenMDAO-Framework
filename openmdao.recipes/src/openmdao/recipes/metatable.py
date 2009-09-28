@@ -66,9 +66,12 @@ class MetadataTable(object):
                             for f in dev_eggs]
                             
         # build up a list of all egg dependencies resulting from our 'eggs' parameter
-        env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory']])
-        reqs = [Requirement.parse(x.strip()) for x in options['eggs'].split()]
-        self.depdists = find_all_deps(reqs, env)
+        env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory'], dev_egg_dir])
+        reqs = [Requirement.parse(x.strip()) for x in options['eggs'].split() if x.strip()]
+        self.depdists, not_found = find_all_deps(reqs, env)
+        if not_found:
+            self.logger.error('distributions were not found for %s' %
+                              [x.project_name for x in not_found])
             
         self.logger.debug("dependency list is: %s" % 
                              [str(dist) for dist in self.depdists])
@@ -160,6 +163,5 @@ class MetadataTable(object):
         
         return [fname]
 
-     
     update = install
 

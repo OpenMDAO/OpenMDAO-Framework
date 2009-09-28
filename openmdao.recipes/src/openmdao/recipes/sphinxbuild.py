@@ -195,7 +195,10 @@ class SphinxBuild(object):
         # build up a list of all egg dependencies resulting from our 'eggs' parameter
         env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory']])
         reqs = [Requirement.parse(x.strip()) for x in options['eggs'].split()]
-        self.depdists = find_all_deps(reqs, env)
+        self.depdists, not_found = find_all_deps(reqs, env)
+        if not_found:
+            self.logger.error('distributions were not found for %s' %
+                              [x.project_name for x in not_found])
         self.working_set = WorkingSet([d.location for d in self.depdists])
 
 
@@ -232,7 +235,6 @@ class SphinxBuild(object):
             _mod_sphinx_info(os.path.basename(src), f)
             f.close()
 
-               
     def install(self):
         startdir = os.getcwd()
         if not os.path.isdir(self.docdir):
@@ -341,7 +343,9 @@ class SphinxDocsTestCase(unittest.TestCase):
         """ % os.path.join(bindir, 'testdocs')
         )
         
-        return [scriptname, utname]+bldscript+tstscript
-    
-    
-    update = install  
+        return [scriptname, utname]+bldscript+tstscript 
+
+
+    update = install
+
+

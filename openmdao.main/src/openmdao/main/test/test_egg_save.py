@@ -393,7 +393,8 @@ class TestCase(unittest.TestCase):
                 ('add', 'Egg_TestModel/test_egg_save.py'),
                 ('complete', 'Egg_TestModel-1.2.3-py2.5.egg'),
             ]
-        self.assertEqual(len(OBSERVATIONS), len(expected))
+        #self.assertEqual(len(OBSERVATIONS), len(expected))
+        self.assertEqual(set([x[1] for x in expected])-set([x[1] for x in OBSERVATIONS]), set([]))
         for i, observation in enumerate(OBSERVATIONS):
             state, string, file_fraction, byte_fraction = observation
             self.assertEqual(state,  expected[i][0])
