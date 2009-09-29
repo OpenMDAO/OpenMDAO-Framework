@@ -3,7 +3,6 @@
 __all__ = ['Assembly']
 
 
-
 import os.path
 
 from enthought.traits.api import implements, Array, List, Instance, TraitError
@@ -16,8 +15,7 @@ from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
-from openmdao.main.util import filexfer
-from openmdao.main.filevar import FileValue
+
 
 class MulticastTrait(TraitType):
     """A trait with a list of destination attributes (with names evaluated in
@@ -483,26 +481,11 @@ class Assembly (Component):
                 self.raise_exception("cannot retrieve value of source attribute '%s'" %
                                      srcname, type(err))
             
-            if isinstance(srcval, FileValue):
-                if comp.directory:
-                    comp.pop_dir()
-                try:
-                    destcomp.set(destvarname, srcval, srcname=srcname)
-                    self.xfer_file(srccomp, srcvarname, comp, destvarname)
-                except Exception, exc:
-                    msg = "cannot transfer file from '%s' to '%s': %s" % \
-                          (srcname, vname, exc)
-                    self.raise_exception(msg, type(exc))
-                finally:
-                    if comp.directory:
-                        comp.push_dir(comp.get_abs_directory())
-            else:
-                try:
-                    destcomp.set(destvarname, srcval, srcname=srcname)
-                except Exception, exc:
-                    msg = "cannot set '%s' from '%s': %s" % \
-                        (vname, srcname, exc)
-                    self.raise_exception(msg, type(exc))
+            try:
+                destcomp.set(destvarname, srcval, srcname=srcname)
+            except Exception, exc:
+                msg = "cannot set '%s' from '%s': %s" % (vname, srcname, exc)
+                self.raise_exception(msg, type(exc))
             #destcomp.set_valid(destvarname, True)
             
         return updated
@@ -584,18 +567,4 @@ class Assembly (Component):
                 self.parent.invalidate_deps(['.'.join([self.name,n]) for n in outs], 
                                             notify_parent)
         return outs
-
-    @staticmethod
-    def xfer_file(src_comp, src_varname, dst_comp, dst_varname):
-        """ Transfer src_comp.src_ref file to dst_comp.dst_ref file. """
-        src_path = os.path.join(src_comp.get_abs_directory(), 
-                                src_comp.get(src_varname+'.filename'))
-        dst_path = os.path.join(dst_comp.get_abs_directory(), 
-                                dst_comp.get(dst_varname+'.filename'))
-        if src_path != dst_path:
-            if src_comp.trait(src_varname).binary is True:
-                mode = 'b'
-            else:
-                mode = ''
-            filexfer(None, src_path, None, dst_path, mode)
 
