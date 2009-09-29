@@ -685,8 +685,7 @@ def importLibrary(libfilepointer):
 try:
     defaultLib = resource_stream(__name__, 'unitLibdefault.ini')
 except NameError: #pck_resources was not imorted, try __file__
-    path = __file__
-    defaultLib = open(os.path.join(os.path.dirname(__file__),'unitLibDefault.ini')
+    defaultLib = open(os.path.join(os.path.dirname(__file__),'unitLibDefault.ini'))
 
 importLibrary(defaultLib)
 
