@@ -22,8 +22,6 @@ import ConfigParser
 import os.path
 import numpy as N
 
-
-
 try: 
     from pkg_resources import resource_string, resource_stream
 except ImportError: pass
