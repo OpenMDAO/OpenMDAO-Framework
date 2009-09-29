@@ -6,7 +6,7 @@ __all__ = ["UnitsFloat", "convert_units"]
 
 from enthought.traits.api import TraitType, Float, Range, TraitError
 
-from Scientific.Physics.PhysicalQuantities import PhysicalQuantity
+from units import PhysicalQuantity
 
 from openmdao.main.tvalwrapper import TraitValMetaWrapper
 
