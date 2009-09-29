@@ -23,22 +23,17 @@ class Source(Component):
     write_files = Bool(True, iostatus='in')
     text_data = Str(iostatus='in')
     binary_data = Array('d', iostatus='in')
-    text_file = FileTrait(iostatus='out')
-    binary_file = FileTrait(iostatus='out', binary=True)
-        
-    def __init__(self, *args, **kwargs):
-        super(Source, self).__init__(*args, **kwargs)
-        self.text_file.filename = 'source.txt'
-        self.binary_file.filename = 'source.bin'
+    text_file = FileTrait(path='source.txt', iostatus='out')
+    binary_file = FileTrait(path='source.bin', iostatus='out', binary=True)
 
     def execute(self):
         """ Write test data to files. """
         if self.write_files:
-            out = open(self.text_file.filename, 'w')
+            out = open(self.text_file.path, 'w')
             out.write(self.text_data)
             out.close()
 
-            out = open(self.binary_file.filename, 'wb')
+            out = open(self.binary_file.path, 'wb')
             cPickle.dump(self.binary_data, out, 2)
             out.close()
 
@@ -48,8 +43,8 @@ class Sink(Component):
 
     text_data = Str(iostatus='out')
     binary_data = Array('d', iostatus='out')
-    text_file = FileTrait(iostatus='in')
-    binary_file = FileTrait(iostatus='in')
+    text_file = FileTrait(path='*', iostatus='in')
+    binary_file = FileTrait(path='*', iostatus='in')
         
     def __init__(self, *args, **kwargs):
         super(Sink, self).__init__(*args, **kwargs)
@@ -58,21 +53,20 @@ class Sink(Component):
 
     def execute(self):
         """ Read test data from files. """
-        inp = open(self.text_file.filename, 'r')
+        inp = self.text_file.open()
         self.text_data = inp.read()
         inp.close()
 
-        inp = open(self.binary_file.filename, 'rb')
+        inp = self.binary_file.open()
         self.binary_data = cPickle.load(inp)
         inp.close()
 
 
-class MyModel(Assembly):
+class Model(Assembly):
     """ Transfer files from producer to consumer. """
 
-    #name='FileVar_TestModel', 
     def __init__(self, *args, **kwargs):
-        super(MyModel, self).__init__(*args, **kwargs)
+        super(Model, self).__init__(*args, **kwargs)
 
         self.add_container('Source', Source(directory='Source'))
         self.add_container('Sink', Sink(directory='Sink'))
@@ -84,12 +78,12 @@ class MyModel(Assembly):
         self.Source.binary_data = [3.14159, 2.781828, 42]
 
 
-class FileTestCase(unittest.TestCase):
+class TestCase(unittest.TestCase):
     """ Test of FileTraits. """
 
     def setUp(self):
         """ Called before each test in this class. """
-        self.model = set_as_top(MyModel())
+        self.model = set_as_top(Model())
 
     def tearDown(self):
         """ Called after each test in this class. """
@@ -113,18 +107,15 @@ class FileTestCase(unittest.TestCase):
                             self.model.Source.text_data)
         self.assertNotEqual(self.model.Sink.binary_data,
                             self.model.Source.binary_data)
-        self.assertNotEqual(
-            self.model.Sink.binary_file.binary, True)
+        self.assertNotEqual(self.model.Sink.binary_file.binary, True)
 
         self.model.run()
 
         # Verify data transferred.
-        self.assertEqual(self.model.Sink.text_data,
-                         self.model.Source.text_data)
+        self.assertEqual(self.model.Sink.text_data, self.model.Source.text_data)
         self.assertEqual(all(self.model.Sink.binary_data==self.model.Source.binary_data),
                          True)
-        self.assertEqual(
-            self.model.Sink.binary_file.binary, True)
+        self.assertEqual(self.model.Sink.binary_file.binary, True)
 
     def test_src_failure(self):
         logging.debug('')
@@ -158,6 +149,7 @@ class FileTestCase(unittest.TestCase):
     def test_protected_directory(self):
         logging.debug('')
         logging.debug('test_protected_directory')
+
         # Create a protected directory.
         directory = 'protected'
         if os.path.exists(directory):
@@ -180,6 +172,7 @@ class FileTestCase(unittest.TestCase):
     def test_file_in_place_of_directory(self):
         logging.debug('')
         logging.debug('test_file_in_place_of_directory')
+
         # Create a plain file.
         directory = 'plain_file'
         if os.path.exists(directory):
@@ -216,7 +209,6 @@ class FileTestCase(unittest.TestCase):
             #self.assertEqual(str(exc)[:len(msg)], msg)
         #else:
             #self.fail('Expected ValueError')
-
 
 
 if __name__ == '__main__':
