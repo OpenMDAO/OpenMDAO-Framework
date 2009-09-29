@@ -20,9 +20,9 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.exceptions import ConstraintError
 
 from openmdao.main.stringref import StringRef, StringRefArray
-from openmdao.main.filevar import FileTrait, FileValue
+from openmdao.main.filevar import FileMetadata, FileTrait
 
 from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 
 from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \
-                                    SAVE_PICKLE, SAVE_CPICKLE
+                                   SAVE_PICKLE, SAVE_CPICKLE

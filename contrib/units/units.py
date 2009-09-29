@@ -18,9 +18,13 @@ in its built in library, however it also supports generation of
 personal libararies which can be saved and reused"""
 
 import re
-import math
 import ConfigParser
-from pkg_resources import resource_string, resource_stream
+import os.path
+import numpy as N
+
+try: 
+    from pkg_resources import resource_string, resource_stream
+except ImportError: pass
 
 #Class definitions
 
@@ -45,37 +49,35 @@ class NumberDict(dict):
         return 0
 
   def __coerce__(self, other):
-    if type(other) == type({}):
+    if isinstance(other,dict):
         other = NumberDict(other)
     return self, other
 
   def __add__(self, other):
     sum_dict = NumberDict()
-    for key in self.keys():
-        sum_dict[key] = self[key]
-    for key in other.keys():
-        sum_dict[key] = sum_dict[key] + other[key]
+    for (self_k,self_v),(other_k,other_v) in zip(self.iteritems(),other.iteritems()):
+        sum_dict[self_k] = self_v + other_v
+
     return sum_dict
 
   def __sub__(self, other):
     sum_dict = NumberDict()
-    for key in self.keys():
-        sum_dict[key] = self[key]
-    for key in other.keys():
-        sum_dict[key] = sum_dict[key] - other[key]
+    for (self_k,self_v),(other_k,other_v) in zip(self.iteritems(),other.iteritems()):
+        sum_dict[self_k] = self_v- other_v
+
     return sum_dict
 
   def __mul__(self, other):
     new = NumberDict()
-    for key in self.keys():
-        new[key] = other*self[key]
+    for key,value in self.iteritems():
+        new[key] = other*value
     return new
   __rmul__ = __mul__
 
   def __div__(self, other):
     new = NumberDict()
-    for key in self.keys():
-        new[key] = self[key]/other
+    for key,value in self.iteritems():
+        new[key] = value/other
     return new
 
 class PhysicalQuantity(object):
@@ -110,15 +112,17 @@ class PhysicalQuantity(object):
      """
 
     if len(args) == 2:
-     self.value = args[0]
-     self.unit = _findUnit(args[1])
+      self.value = args[0]
+      self.unit = _findUnit(args[1])
     else:
-     s = args[0].strip()
-     match = PhysicalQuantity._number.match(s)
-     if match is None:
-       raise TypeError("No number found in input argument: '%s'"%s)
-     self.value = float(match.group(0))
-     self.unit = _findUnit(s[len(match.group(0)):].strip())
+      s = args[0].strip()
+      match = PhysicalQuantity._number.match(s)
+      if match is None:
+        raise TypeError("No number found in input argument: '%s'"%s)
+      self.value = float(match.group(0))
+      self.unit = _findUnit(s[len(match.group(0)):].strip())
+      
+
 
   def __str__(self):
     return str(self.value) + ' ' + self.unit.name()
@@ -129,10 +133,11 @@ class PhysicalQuantity(object):
 
 
   def _sum(self, other, sign1, sign2):
-    if not isPhysicalQuantity(other):
+    if not isinstance(other,PhysicalQuantity):
       raise TypeError('Incompatible types')
     new_value = sign1*self.value + sign2*other.value*other.unit.conversionFactorTo(self.unit)
-    return self.__class__(new_value, self.unit)
+    return PhysicalQuantity(new_value, self.unit)
+    
   def __add__(self, other):
     return self._sum(other, 1, 1)
 
@@ -149,19 +154,19 @@ class PhysicalQuantity(object):
     return cmp(diff.value, 0)
 
   def __mul__(self, other):
-    if not isPhysicalQuantity(other):
+    if not isinstance(other,PhysicalQuantity):
       return self.__class__(self.value*other, self.unit)
     value = self.value*other.value
     unit = self.unit*other.unit
     if unit.isDimensionless():
       return value*unit.factor
     else:
-      return self.__class__(value, unit)
+      return PhysicalQuantity(value, unit)
 
   __rmul__ = __mul__
 
   def __div__(self, other):
-    if not isPhysicalQuantity(other):
+    if not isinstance(other,PhysicalQuantity):
       return self.__class__(self.value/other, self.unit)
     value = self.value/other.value
     unit = self.unit/other.unit
@@ -171,7 +176,7 @@ class PhysicalQuantity(object):
       return self.__class__(value, unit)
 
   def __rdiv__(self, other):
-    if not isPhysicalQuantity(other):
+    if not isinstance(other,PhysicalQuantity):
       return self.__class__(other/self.value, pow(self.unit, -1))
     value = other.value/self.value
     unit = other.unit/self.unit
@@ -181,7 +186,7 @@ class PhysicalQuantity(object):
       return self.__class__(value, unit)
 
   def __pow__(self, other):
-    if isPhysicalQuantity(other):
+    if isinstance(other,PhysicalQuantity):
       raise TypeError('Exponents must be dimensionless')
     return self.__class__(pow(self.value, other), pow(self.unit, other))
 
@@ -283,26 +288,34 @@ class PhysicalQuantity(object):
     unit = _findUnit(unit)
     return self.unit.isCompatible(unit)
 
+  def getValue(self):
+      """Return value (float) of physical quantity (no unit)."""
+      return self.value
+
+  def getUnitName(self):
+      """Return unit (string) of physical quantity."""
+      return self.unit.name()  
+  
   def sqrt(self):
       return pow(self, 0.5)
 
   def sin(self):
     if self.unit.isAngle():
-      return math.sin(self.value * \
+      return N.sin(self.value * \
              self.unit.conversionFactorTo(PhysicalQuantity('1rad').unit))
     else:
       raise TypeError('Argument of sin must be an angle')
 
   def cos(self):
     if self.unit.isAngle():
-        return math.cos(self.value * \
+        return N.cos(self.value * \
             self.unit.conversionFactorTo(PhysicalQuantity('1rad').unit))
     else:
         raise TypeError('Argument of cos must be an angle')
 
   def tan(self):
     if self.unit.isAngle():
-        return math.tan(self.value * \
+        return N.tan(self.value * \
             self.unit.conversionFactorTo(PhysicalQuantity('1rad').unit))
     else:
         raise TypeError('Argument of tan must be an angle')
@@ -331,9 +344,9 @@ class PhysicalUnit(object):
                    temperatures)
     @type offset: C{float}
     """
-    if type(names) == str:
-      self.names = NumberDict()
-      self.names[names] = 1;
+    if isinstance(names,str):
+      self.names = NumberDict(((names,1),))
+      #self.names[names] = 1;
 
     else:
       self.names = names
@@ -353,9 +366,9 @@ class PhysicalUnit(object):
     return cmp(self.factor, other.factor)
 
   def __mul__(self, other):
-    if self.offset != 0 or (isPhysicalUnit(other) and other.offset != 0):
+    if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
       raise TypeError("cannot multiply units with non-zero offset")
-    if isPhysicalUnit(other):
+    if isinstance(other,PhysicalUnit):
       return PhysicalUnit(self.names+other.names,
                           self.factor*other.factor,
                           [a+b for (a,b) in zip(self.powers,other.powers)])
@@ -368,26 +381,26 @@ class PhysicalUnit(object):
   __rmul__ = __mul__
 
   def __div__(self, other):
-    if self.offset != 0 or (isPhysicalUnit(other) and other.offset != 0):
+    if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
       raise TypeError("cannot divide units with non-zero offset")
-    if isPhysicalUnit(other):
+    if isinstance(other,PhysicalUnit):
       return PhysicalUnit(self.names-other.names,
                           self.factor/other.factor,
                           [a-b for (a,b) in zip(self.powers,other.powers)])
     else:
       return PhysicalUnit(self.names+{str(other): -1},
-                          self.factor/other, self.powers)
+                          self.factor/float(other), self.powers)
 
   def __rdiv__(self, other):
-    if self.offset != 0 or (isPhysicalUnit(other) and other.offset != 0):
+    if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
       raise TypeError("cannot divide units with non-zero offset")
-    if isPhysicalUnit(other):
+    if isinstance(other,PhysicalUnit):
       return PhysicalUnit(other.names-self.names,
                           other.factor/self.factor,
                           [a-b for (a,b) in zip(other.powers,self.powers)])
     else:
       return PhysicalUnit({str(other): 1}-self.names,
-                          other/self.factor,
+                          float(other)/self.factor,
                           [-x for x in self.powers])
 
   def __pow__(self, other):
@@ -398,7 +411,7 @@ class PhysicalUnit(object):
                           [x*other for x in self.powers])
     if isinstance(other, float):
       inv_exp = 1./other
-      rounded = int(math.floor(inv_exp+0.5))
+      rounded = int(N.floor(inv_exp+0.5))
       if abs(inv_exp-rounded) < 1.e-10:
         
         if all([x%rounded==0 for x in self.powers]):
@@ -410,8 +423,8 @@ class PhysicalUnit(object):
             names = NumberDict()
             if f != 1.:
               names[str(f)] = 1
-            for i in range(len(p)):
-              names[_unitLib.base_names[i]] = p[i]
+            for x,name in zip(p,_unitLib.base_names): 
+              names[name] = x
           return PhysicalUnit(names, f, p)
     raise TypeError('Only integer and inverse integer exponents allowed')
 
@@ -459,6 +472,7 @@ class PhysicalUnit(object):
     #   = ( (x+d1) - (d1*s2/s1) ) * s1/s2
     #   = (x + d1 - d2*s2/s1) * s1/s2
     # thus, D = d1 - d2*s2/s1 and S = s1/s2
+
     factor = self.factor / other.factor
     offset = self.offset - (other.offset * other.factor / self.factor)
     return (factor, offset)
@@ -510,7 +524,7 @@ def isPhysicalUnit(x):
   @returns: C{True} if x is a L{PhysicalUnit}
   @rtype: C{bool}
   """
-  return hasattr(x, 'factor') and hasattr(x, 'powers')
+  return isinstance(x,PhysicalUnit)
 
 def isPhysicalQuantity(x):
     """
@@ -519,32 +533,32 @@ def isPhysicalQuantity(x):
     @returns: C{True} if x is a L{PhysicalQuantity}
     @rtype: C{bool}
     """
-    return hasattr(x, 'value') and hasattr(x, 'unit')
+    return isinstance(x,PhysicalQuantity)
 
 #Helper Functions
 def _findUnit(unit):
-  if type(unit) == type(''):
-    name = unit.strip()
-    if name not in _unitLib.unit_table:
-     
-      if(name[0] in _unitLib.prefixes and name[1:] in _unitLib.unit_table):
-        addUnit(unit,_unitLib.prefixes[name[0]]*_unitLib.unit_table[name[1:]])
-      elif(name[0:2] in _unitLib.prefixes and name[2:] in _unitLib.unit_table):
-        addUnit(unit,_unitLib.prefixes[name[0:2]]*_unitLib.unit_table[name[2:]])
-      else:
-        try:
-            unit =  eval(name, _unitLib.unit_table) 
-        except:
-            raise ValueError, "no unit named '%s' is defined"%name
-        #raise KeyError, name + ' not defined in the unit library'
-    unit = eval(name, _unitLib.unit_table)
-    for cruft in ['__builtins__', '__args__']:
-      try: del _unitLib.unit_table[cruft]
-      except: pass
-
-  if not isPhysicalUnit(unit):
-    raise TypeError(str(unit) + ' is not a unit')
-  return unit
+    if isinstance(unit,str):
+        name = unit.strip()
+        if name not in _unitLib.unit_table:
+            #check for single letter prefix before unit
+            if(name[0] in _unitLib.prefixes and name[1:] in _unitLib.unit_table):
+                addUnit(unit,_unitLib.prefixes[name[0]]*_unitLib.unit_table[name[1:]])
+            #check for double letter prefix before unit
+            elif(name[0:2] in _unitLib.prefixes and name[2:] in _unitLib.unit_table):
+                addUnit(unit,_unitLib.prefixes[name[0:2]]*_unitLib.unit_table[name[2:]])
+            #no prefixes found, might be function of multiple units
+            else:
+                try:
+                    unit =  eval(name, _unitLib.unit_table) 
+                except:
+                    raise ValueError, "no unit named '%s' is defined"%name
+        unit = eval(name, _unitLib.unit_table)
+        for cruft in ['__builtins__', '__args__']:
+            try: del _unitLib.unit_table[cruft]
+            except: pass
+    if not isinstance(unit,PhysicalUnit):
+        raise TypeError(str(unit) + ' is not a unit')
+    return unit
 
 
 def _newUnit(name,factor,powers):
@@ -552,7 +566,7 @@ def _newUnit(name,factor,powers):
 
 
 def addOffsetUnit(name,baseunit,factor,offset,comment):
-    if type(baseunit) == str:
+    if isinstance(baseunit,str):
         baseunit = _findUnit(baseunit)
     #else, baseunit should be a instance of PhysicalUnit
     #names,factor,powers,offset=0
@@ -570,7 +584,7 @@ def addOffsetUnit(name,baseunit,factor,offset,comment):
 def addUnit(name, unit, comment=''):
     if comment:
       _unitLib.help.append((name, comment, unit))
-    if type(unit) == str:
+    if isinstance(unit,str):
       unit = eval(unit, _unitLib.unit_table)
       for cruft in ['__builtins__', '__args__']:
         try: del _unitLib.unit_table[cruft]
@@ -668,8 +682,14 @@ def importLibrary(libfilepointer):
   if(len(retry1) >0):
     raise ValueError, "The following units were not defined because they could not be resolved as a function of any other defined units:%s"%[x[0] for x in retry1]
 
-defaultLib = resource_stream(__name__, 'unitLibdefault.ini')
+try:
+    defaultLib = resource_stream(__name__, 'unitLibdefault.ini')
+except NameError: #pck_resources was not imorted, try __file__
+    defaultLib = open(os.path.join(os.path.dirname(__file__),'unitLibDefault.ini'))
+
 importLibrary(defaultLib)
+
+
 
 
 

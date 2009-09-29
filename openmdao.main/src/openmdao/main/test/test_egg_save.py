@@ -16,7 +16,7 @@ from enthought.traits.api import Bool, List, Str, Array, Int, \
 
 from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, \
                               SAVE_CPICKLE, set_as_top
-from openmdao.main.filevar import FileTrait
+from openmdao.main.filevar import FileMetadata, FileTrait
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
@@ -50,7 +50,7 @@ class Source(Assembly):
 
     write_files = Bool(True, iostatus='in')
     text_data = Str(iostatus='in')
-    text_file = FileTrait(iostatus='out')
+    text_file = FileTrait(path='source.txt', iostatus='out')
 
     def __init__(self, *args, **kwargs):
         super(Source, self).__init__(*args, **kwargs)
@@ -63,11 +63,9 @@ class Source(Assembly):
 
         # Some custom objects that must be restored.
         self.obj_list = [DataObj(i) for i in range(3)]
-        
-        self.text_file.filename = 'source.txt'
 
         # External file that doesn't exist at time of save.
-        self.external_files.append({'path':'does-not-exist'})
+        self.external_files.append(FileMetadata(path='does-not-exist'))
 
     def tree_rooted(self):
         super(Source, self).tree_rooted()
@@ -78,7 +76,8 @@ class Source(Assembly):
         out = open(path, 'w')
         out.write('Twisty narrow passages.\n')
         out.close()
-        self.external_files.append({'path':path, 'input':True, 'constant':True})
+        self.external_files.append(FileMetadata(path=path, input=True,
+                                   constant=True))
 
         # Absolute external file that exists at time of save, in separate tree.
         path = os.path.join(self.directory, EXTERNAL_FILES[1])
@@ -88,7 +87,7 @@ class Source(Assembly):
         out = open(path, 'w')
         out.write('Some external data.\n')
         out.close()
-        self.external_files.append({'path':path})
+        self.external_files.append(FileMetadata(path=path))
 
         # Relative external file that exists at time of save.
         self.push_dir(self.get_abs_directory())
@@ -97,7 +96,7 @@ class Source(Assembly):
         out.write('Hello world!\n')
         out.close()
         self.pop_dir()
-        self.external_files.append({'path':path})
+        self.external_files.append(FileMetadata(path=path))
 
         # Relative external file that exists at time of save, in separate tree.
         self.push_dir(self.get_abs_directory())
@@ -109,21 +108,21 @@ class Source(Assembly):
         out.write('Some more external data.\n')
         out.close()
         self.pop_dir()
-        self.external_files.append({'path':path})
+        self.external_files.append(FileMetadata(path=path))
     
     def execute(self):
         """ Write test data to files. """
         if self.write_files:
             cwd = os.getcwd()
             self.debug("opening file '%s' in %s" % 
-                       (self.text_file.filename,cwd))
-            out = open(self.text_file.filename, 'w')
+                       (self.text_file.path, cwd))
+            out = open(self.text_file.path, 'w')
             out.write(self.text_data)
             out.close()
 
             self.debug("opening file '%s' in %s" % 
-                       (self.sub.binary_file.filename,cwd))
-            out = open(self.sub.binary_file.filename, 'wb')
+                       (self.sub.binary_file.path, cwd))
+            out = open(self.sub.binary_file.path, 'wb')
             cPickle.dump(self.sub.binary_data, out, 2)
             out.close()
 
@@ -132,12 +131,9 @@ class Subcontainer(Container):
     """ Just a subcontainer for Source. """
 
     binary_data = Array('d', value=[], iostatus='in')
-    binary_file = FileTrait(iostatus='out', binary=True)
+    binary_file = FileTrait(path=os.path.join('..', 'sub', 'source.bin'),
+                            iostatus='out', binary=True)
         
-    def __init__(self):
-        super(Subcontainer, self).__init__()
-        self.binary_file.filename = os.path.join('..', 'sub', 'source.bin')
-
 
 class DataObj(object):
     """ Just a custom class for objects to save & reload. """
@@ -153,7 +149,7 @@ class Sink(Component):
     binary_data = Array('d', value=[], iostatus='out')
 
     # Absolute FileTrait that exists at time of save.
-    text_file = FileTrait(iostatus='in')
+    text_file = FileTrait(path='*', iostatus='in')
 
     executions = Int(0, iostatus='in',
                      desc='Count of Oddball instance_method() calls.')
@@ -165,32 +161,15 @@ class Sink(Component):
         SINK_INIT = True
         
         # Relative FileTrait that exists at time of save.
-        self.add_trait('binary_file', FileTrait(iostatus='in'))
-        
-    def tree_rooted(self):
-        super(Sink, self).tree_rooted()
-        
-        self.text_file.filename = os.path.join(self.get_abs_directory(),
-                                               'sink.txt')
-
-        out = open(self.text_file.filename, 'w')
-        out.write('Absolute FileTrait that exists at time of save.\n')
-        out.close()
-
-        self.binary_file.filename = 'sink.bin'
-        self.push_dir(self.get_abs_directory())
-        out = open(self.binary_file.filename, 'w')
-        out.write('Relative FileTrait that exists at time of save.\n')
-        out.close()
-        self.pop_dir()       
+        self.add_trait('binary_file', FileTrait(path='*', iostatus='in'))
         
     def execute(self):
         """ Read test data from files. """
-        inp = open(self.text_file.filename, 'r')
+        inp = self.text_file.open()
         self.text_data = inp.read()
         inp.close()
 
-        inp = open(self.binary_file.filename, 'rb')
+        inp = self.binary_file.open()
         self.binary_data = cPickle.load(inp)
         inp.close()
 
@@ -379,8 +358,6 @@ class TestCase(unittest.TestCase):
                 ('add', 'Egg_TestModel/Oddball_oddcont.pickle'),
                 ('add', 'Egg_TestModel/Oddball_oddcont_loader.py'),
                 ('add', 'Egg_TestModel/Sink.pickle'),
-                ('add', 'Egg_TestModel/Sink/sink.bin'),
-                ('add', 'Egg_TestModel/Sink/sink.txt'),
                 ('add', 'Egg_TestModel/Sink_loader.py'),
                 ('add', 'Egg_TestModel/Source.pickle'),
                 ('add', 'Egg_TestModel/Source/hello'),
@@ -390,9 +367,13 @@ class TestCase(unittest.TestCase):
                 ('add', 'Egg_TestModel/buildout.cfg'),
                 ('add', 'Egg_TestModel/sub/data2'),
                 ('add', 'Egg_TestModel/sub/data4'),
-                ('add', 'Egg_TestModel/test_egg_save.py'),
-                ('complete', 'Egg_TestModel-1.2.3-py2.5.egg'),
             ]
+
+            # Add our file if we're not considered part of an egg.
+            if sys.modules[self.__module__].__file__.find('.egg') < 0:
+                expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
+            expected.append(('complete', 'Egg_TestModel-1.2.3-py2.5.egg'))
+
         self.assertEqual(len(OBSERVATIONS), len(expected))
         for i, observation in enumerate(OBSERVATIONS):
             state, string, file_fraction, byte_fraction = observation
@@ -453,8 +434,6 @@ class TestCase(unittest.TestCase):
                 ('extract', 'Egg_TestModel/Oddball_oddcont.pickle'),
                 ('extract', 'Egg_TestModel/Oddball_oddcont_loader.py'),
                 ('extract', 'Egg_TestModel/Sink.pickle'),
-                ('extract', 'Egg_TestModel/Sink/sink.bin'),
-                ('extract', 'Egg_TestModel/Sink/sink.txt'),
                 ('extract', 'Egg_TestModel/Sink_loader.py'),
                 ('extract', 'Egg_TestModel/Source.pickle'),
                 ('extract', 'Egg_TestModel/Source/hello'),
@@ -464,9 +443,13 @@ class TestCase(unittest.TestCase):
                 ('extract', 'Egg_TestModel/buildout.cfg'),
                 ('extract', 'Egg_TestModel/sub/data2'),
                 ('extract', 'Egg_TestModel/sub/data4'),
-                ('extract', 'Egg_TestModel/test_egg_save.py'),
-                ('complete', None),
             ]
+
+            # Add our file if we're not considered part of an egg.
+            if sys.modules[self.__module__].__file__.find('.egg') < 0:
+                expected.append(('extract', 'Egg_TestModel/test_egg_save.py'))
+            expected.append(('complete', None))
+
             self.assertEqual(len(OBSERVATIONS), len(expected))
             if use_setuptools:  # No control on order, so sort on name.
                 expected.sort(key=lambda item: item[1])
@@ -595,7 +578,7 @@ class TestCase(unittest.TestCase):
         out = open(path, 'w')
         out.close()
         metadata = self.model.Source.external_files[0]
-        metadata['path'] = path
+        metadata.path = path
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
         except Exception, exc:
@@ -615,7 +598,7 @@ class TestCase(unittest.TestCase):
         out = open(path, 'w')
         out.close()
         metadata = self.model.Source.external_files[0]
-        metadata['path'] = path
+        metadata.path = path
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
                                    require_relpaths=False)
@@ -630,7 +613,8 @@ class TestCase(unittest.TestCase):
         path = os.path.join(os.getcwd(), 'bad-file-variable')
         out = open(path, 'w')
         out.close()
-        self.model.Source.text_file.filename = path
+        orig_path = self.model.Source.text_file.path
+        self.model.Source.text_file.path = path
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
         except Exception, exc:
@@ -641,6 +625,7 @@ class TestCase(unittest.TestCase):
             self.fail('Expected Exception')
         finally:
             os.remove(path)
+            self.model.Source.text_file.path = orig_path
 
     def test_save_bad_format(self):
         logging.debug('')
@@ -1027,8 +1012,6 @@ comp.run()
                 ('copy', 'sub/data2'),
                 ('copy', 'Source/hello'),
                 ('copy', 'sub/data4'),
-                ('copy', 'Sink/sink.bin'),
-                ('copy', 'Sink/sink.txt'),
                 ('complete', 'observed'),
             ]
             self.assertEqual(len(OBSERVATIONS), len(expected))
