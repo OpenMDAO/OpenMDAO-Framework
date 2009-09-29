@@ -14,9 +14,9 @@ if sys.platform == 'win32':
     include_dirs = [os.path.join(sdkdir,'Include')]
     library_dirs = [os.path.join(sdkdir,'Lib')]
     # make sure we have mt.exe available in path
-    path = os.environ['Path'].split(':')
+    path = os.environ['PATH'].split(';')
     path.append(os.path.join(sdkdir,'bin'))
-    os.environ['Path'] = ':'.join(path)
+    os.environ['PATH'] = ';'.join(path)
 else:
     include_dirs = []
     library_dirs = []

@@ -4,6 +4,7 @@ Test of Component.
 
 import logging
 import os.path
+import stat
 import unittest
 
 from openmdao.main.api import Component
@@ -56,6 +57,7 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('Expected OSError')
         finally:
+            os.chmod(directory, stat.S_IWUSR|stat.S_IWRITE|stat.S_IREAD)
             os.rmdir(directory)
 
     def test_file_in_place_of_directory(self):
