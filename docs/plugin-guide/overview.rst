@@ -144,7 +144,7 @@ TraitType             openmdao.trait
 --------------------  --------------------------------
 Driver                openmdao.driver
 --------------------  --------------------------------
-aseIterator           openmdao.case_iterator
+CaseIterator           openmdao.case_iterator
 --------------------  --------------------------------
 ResourceAllocator     openmdao.resource_allocator
 ====================  ================================

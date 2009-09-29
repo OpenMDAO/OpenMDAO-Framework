@@ -11,7 +11,6 @@ import zc.buildout
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
 
 from openmdao.util.procutil import run_command
-from openmdao.recipes.utils import find_all_deps
 
 
 def _mod_sphinx_info(mod, outfile, show_undoc=False):
@@ -171,8 +170,8 @@ class SphinxBuild(object):
     """
 
     def __init__(self, buildout, name, options):
-        self.buildout = buildout
         self.name = name
+        self.buildout = buildout
         self.options = options
         self.logger = logging.getLogger(name)
         self.branchdir = os.path.split(buildout['buildout']['directory'])[0]
@@ -191,12 +190,8 @@ class SphinxBuild(object):
         # grab the first line of each dev egg link file
         self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() 
                             for f in dev_eggs]
+        self.working_set = None
                             
-        # build up a list of all egg dependencies resulting from our 'eggs' parameter
-        env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory']])
-        reqs = [Requirement.parse(x.strip()) for x in options['eggs'].split()]
-        self.depdists = find_all_deps(reqs, env)
-        self.working_set = WorkingSet([d.location for d in self.depdists])
 
 
     def _write_src_docs(self):
@@ -232,8 +227,15 @@ class SphinxBuild(object):
             _mod_sphinx_info(os.path.basename(src), f)
             f.close()
 
-               
     def install(self):
+        # build up a list of all egg dependencies resulting from our 'eggs' parameter
+        env = Environment(self.dev_eggs+[self.buildout['buildout']['eggs-directory'],
+                                         os.path.join(self.buildout['buildout']['directory'],
+                                                      'setup')])
+        reqs = [Requirement.parse(x.strip()) for x in self.options['eggs'].split()]
+        self.depdists = WorkingSet().resolve(reqs, env)
+        self.working_set = WorkingSet([d.location for d in self.depdists])
+    
         startdir = os.getcwd()
         if not os.path.isdir(self.docdir):
             self.docdir = os.path.join(self.branchdir, self.docdir)
@@ -341,7 +343,10 @@ class SphinxDocsTestCase(unittest.TestCase):
         """ % os.path.join(bindir, 'testdocs')
         )
         
-        return [scriptname, utname]+bldscript+tstscript
-    
-    
-    update = install  
+        return [scriptname, utname]+bldscript+tstscript 
+
+
+    update = install
+        
+
+
