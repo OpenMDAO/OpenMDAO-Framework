@@ -41,7 +41,7 @@ class UnitsFloatTestCase(unittest.TestCase):
         self.hobj.float1 = 3.
         self.hobj.float2 = convert_units(self.hobj.float1, self.hobj.trait('float1').units,
                                          'inch')
-        self.assertEqual(36., self.hobj.float2)
+        self.assertAlmostEqual(36., self.hobj.float2,5)
 
     def test_unit_conversion(self):
         self.hobj.float2 = 12.  # inches

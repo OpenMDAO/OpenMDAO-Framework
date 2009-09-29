@@ -15,7 +15,14 @@ Contents:
    dev-guide/index
    srcdocs/index
    licenses/index
+
+
+.. toctree::
+   :hidden:
+    
+   glossary
       
+
 Glossary and Index
 ==================
 
