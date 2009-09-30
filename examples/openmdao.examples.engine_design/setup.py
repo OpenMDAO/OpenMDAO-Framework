@@ -47,14 +47,15 @@ kwds = { 'name':'openmdao.examples.engine_design',
          'author_email':'',
          'url':'',
          'license':'NASA Open Source Agreement 1.3',
-         'namespace_packages':["openmdao"],
+         'namespace_packages':["openmdao", "openmdao.examples"],
          #'package_dir':{'': 'openmdao/examples/engine_design'},
          'packages':find_packages(), #['openmdao','openmdao.examples'],
          'include_package_data':True,
          'test_suite':'nose.collector',
          'zip_safe':False,
          'install_requires':[
-             'setuptools'
+             'setuptools',
+             'openmdao.lib',
              ],
          'entry_points':"""
          # -*- Entry points: -*-

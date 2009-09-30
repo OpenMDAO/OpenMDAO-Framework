@@ -19,24 +19,27 @@ import fnmatch
 bodir = os.getcwd()
 setupdir = os.path.join(bodir,'setup')
 
-boutname = None
-
 stoolspat = "setuptools-*-py%s.egg" % sys.version[:3]
+buildoutpat = "zc.buildout-*.tar.gz"
+boeggpat = "zc.buildout-*-py%s.egg" % sys.version[:3]
 
-for f in os.listdir(setupdir):
-    if fnmatch.fnmatch(f, stoolspat):
-        stoolsname = f
-    elif f.startswith('zc.buildout'):
-        boutname = f
-        
-if stoolsname is None or boutname is None:
-    sys.stderr.write('Missing setuptools or zc.buildout eggs for this distrib')
+sorted_dir = sorted(os.listdir(setupdir))
+stools = fnmatch.filter(sorted_dir, stoolspat)
+bouts = fnmatch.filter(sorted_dir, buildoutpat)
+                
+if len(stools)==0 or len(bouts)==0:
+    sys.stderr.write('Missing setuptools or zc.buildout distribs needed for bootstrapping')
     sys.exit(-1)
+ 
+# take the last setuptools in the sorted list, assuming it's
+# the most recent version
+stoolsname = stools.pop()
 
 if os.path.basename(bodir) != 'buildout':
     sys.stderr.write('You must run this script from the buildout directory\n')
     sys.exit(-1)
 
+# put setuptools on sys.path so we can import pkg_resources
 sys.path = [os.path.join(bodir, 'setup', stoolsname)]
 
 # add paths for builtin python stuff (but no site-packages)                   
@@ -159,3 +162,10 @@ if 'OPENMDAO_REPO' in os.environ:
     except (AttributeError, os.error):
         pass
     
+# now clean up the zc.buildout egg we installed in the setup dir
+boeggs = fnmatch.filter(os.listdir(setupdir), boeggpat)
+for egg in boeggs:
+    if os.path.isdir(os.path.join(setupdir, egg)):
+        shutil.rmtree(os.path.join(setupdir, egg))
+
+        

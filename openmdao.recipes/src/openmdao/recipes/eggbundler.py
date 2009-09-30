@@ -50,6 +50,9 @@ class EggBundler(object):
             self.pin_versions = False
         else:
             self.pin_versions = True
+        self.readme = options.get('readme','').strip()
+        if not self.readme:
+            self.logger.warning('No README file has been supplied to this recipe')
         
         self.excludeparts = [x for x in options['exclude_parts'].split() if x != '']
         self.parts = [x for x in buildout['buildout']['parts'].split() 
@@ -124,7 +127,7 @@ class EggBundler(object):
                 f.write('[buildout]\n\n')
                 f.write('newest = %s\n\n' % self.buildout['buildout']['newest'])
                 f.write('offline = %s\n\n' % self.buildout['buildout']['offline'])
-                f.write('index = %s\n\n' % self.buildout['buildout']['index'])
+                #f.write('index = %s\n\n' % self.buildout['buildout']['index'])
                 f.write('parts = \n')
                 for part in self.parts:
                     f.write('   %s\n' % part)
@@ -255,25 +258,8 @@ class EggBundler(object):
         
         self._create_buildout_dir()                                  
         
-        out = open(os.path.join(self.bundledir, 'README.txt'), 'w')
-        out.write("""\
-To get started (on UNIX):
-
-1. Move to buildout directory.
-     cd buildout
-
-2. Create an isolated Python environment.
-     python isolated_bootstrap.py
-
-3. Get dependent distributions and install.
-     bin/buildout
-
-4. Test the installation.
-     bin/test --all
-     
-    
-""")
-        out.close()
+        if self.readme:
+            shutil.copy(self.readme, os.path.join(self.bundledir, 'README.txt'))
 
         if self.archive is True:
             tarname =  self._tarfile_name()
