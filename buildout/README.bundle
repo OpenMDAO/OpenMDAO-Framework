@@ -18,7 +18,7 @@ The contents of this bundle are:
 .
 |-- README.txt               --> this file
 |-- buildout                 --> this is where the actual 'install' takes place
-|  |-- buildout.cfg          --> instructions for the local install
+|  |-- buildout.cfg          --> configuration info for the local install
 |  |-- distrib-cache
 |  |   `-- dist              --> all dependent distributions are found here
 |  |-- isolated_bootstrap.py --> sets up the buildout environment
@@ -45,7 +45,9 @@ GETTING STARTED
      bin/test --all -v
      
      
-To view the OpenMDAO docs, open html/index.html in your browser
+To view the OpenMDAO docs, open html/index.html in your browser,
+for example:
+    firefox html/index.html
 
 After you've run bin/buildout, the installed distributions will
 be found under the buildout/eggs directory. The OpenMDAO source

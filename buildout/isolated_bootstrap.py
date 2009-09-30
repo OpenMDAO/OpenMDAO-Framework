@@ -40,20 +40,12 @@ if os.path.basename(bodir) != 'buildout':
     sys.exit(-1)
 
 # put setuptools on sys.path so we can import pkg_resources
-sys.path = [os.path.join(bodir, 'setup', stoolsname)]
+sys.path.append(os.path.join(bodir, 'setup', stoolsname))
 
 # add paths for builtin python stuff (but no site-packages)                   
-if sys.platform == 'win32':
-    prefx = os.path.join(sys.prefix,'Lib')
-    sys.path += [  prefx, os.path.join(sys.prefix,'DLLs') ]
-else:
-    prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
-    sys.path += [  prefx+'.zip',
-                     prefx,
-                     os.path.join(prefx,'lib-dynload'),
-                     os.path.join(prefx,'plat-'+sys.platform),
-                  ]
+sys.path = [x for x in sys.path if 'site-packages' not in x]
 
+print 'sys.path = ',sys.path
 
 import pkg_resources
 
@@ -123,20 +115,12 @@ if 'OPENMDAO_REPO' in os.environ:
     zc.buildout.easy_install._script = _script
     zc.buildout.easy_install._pyscript = _pyscript
     
-prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
-sys.path[:] = [  prefx+'.zip',
-                 prefx,
-                 os.path.join(prefx,'lib-dynload'),
-                 os.path.join(prefx,'plat-'+sys.platform),
-              ]+sys.path[0:2]
+sys.path = [x for x in sys.path if 'site-packages' not in x]
 """
 new_sp_win = """
 import zc.buildout.buildout
 import os.path
-prefx = os.path.join(sys.prefix,'Lib')
-sys.path[:] = [  prefx,
-                 os.path.join(sys.prefix,'DLLs'),
-              ]+sys.path[0:2]
+sys.path = [x for x in sys.path if 'site-packages' not in x]
 """
 
 if sys.platform == 'win32':
