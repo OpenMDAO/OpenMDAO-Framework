@@ -39,13 +39,11 @@ if os.path.basename(bodir) != 'buildout':
     sys.stderr.write('You must run this script from the buildout directory\n')
     sys.exit(-1)
 
-# put setuptools on sys.path so we can import pkg_resources
-sys.path.append(os.path.join(bodir, 'setup', stoolsname))
-
 # add paths for builtin python stuff (but no site-packages)                   
 sys.path = [x for x in sys.path if 'site-packages' not in x]
 
-print 'sys.path = ',sys.path
+# put setuptools on sys.path so we can import pkg_resources
+sys.path.insert(0, os.path.join(bodir, 'setup', stoolsname))
 
 import pkg_resources
 
@@ -59,8 +57,9 @@ else:
     def quote (c):
         return c
 
-cmd = "import sys; sys.path.insert(0,'%s'); from setuptools.command.easy_install import main; main()" % os.path.join(bodir, 'setup', stoolsname)
+cmd = "import sys; sys.path=%s; from setuptools.command.easy_install import main; main()" % sys.path
 
+pkg_resources.working_set = pkg_resources.WorkingSet(sys.path)
 ws  = pkg_resources.working_set
 assert os.spawnle(
     os.P_WAIT, sys.executable, quote (sys.executable),
@@ -71,8 +70,12 @@ assert os.spawnle(
          ),
     ) == 0
 
-ws.add_entry(setupdir)
-
+#ws.add_entry(setupdir)
+dist = pkg_resources.Environment([setupdir]).best_match(
+                      pkg_resources.Requirement.parse('zc.buildout'),
+                      ws)
+sys.path.insert(0, dist.location)
+ws.add_entry(dist.location)
 ws.require('zc.buildout')
 import zc.buildout.buildout
 
@@ -115,12 +118,18 @@ if 'OPENMDAO_REPO' in os.environ:
     zc.buildout.easy_install._script = _script
     zc.buildout.easy_install._pyscript = _pyscript
     
-sys.path = [x for x in sys.path if 'site-packages' not in x]
+sys.path = [os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                         'develop-eggs')]+[x for x in sys.path if 'site-packages' not in x]
+import pkg_resources
+pkg_resources.working_set = pkg_resources.WorkingSet(sys.path)
 """
 new_sp_win = """
 import zc.buildout.buildout
 import os.path
-sys.path = [x for x in sys.path if 'site-packages' not in x]
+sys.path = [os.path.join(os.path.dirname(os.path.dirname(__file__)),
+                         'develope-eggs')]+[x for x in sys.path if 'site-packages' not in x]
+import pkg_resources
+pkg_resources.working_set = pkg_resources.WorkingSet(sys.path)
 """
 
 if sys.platform == 'win32':

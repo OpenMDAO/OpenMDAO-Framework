@@ -7,12 +7,18 @@ from pkg_resources import Environment, WorkingSet, Requirement
 from setuptools.package_index import PackageIndex
 import tarfile
 import logging
+
 import zc.buildout
 
 from openmdao.util.procutil import run_command
 from openmdao.util.fileutil import rm
 
 
+def _find_files(startdir):
+    for path, dirlist, filelist in os.walk(startdir):
+        for name in filelist:
+            yield os.path.join(path, name)
+            
     
 class EggBundler(object):
     """Collect all of the eggs (not installed) that are used in the current
@@ -41,7 +47,11 @@ class EggBundler(object):
         self.bundle_cache = bundle_cache
         self.env = Environment([bundle_cache])
         self.installed_env = Environment([self.egg_dir])
-        self.index = PackageIndex(buildout['buildout']['index'])
+        # PackageIndex inherits from Environment, and if you don't set the
+        # search_path to [], if it finds an installed distrib locally it won't
+        # actually perform a download, leaving you with an installed distrib
+        # instead of an uninstalled one.
+        self.index = PackageIndex(buildout['buildout']['index'], search_path=[])
         self.bundle_name = options['bundle_name']
         self.bundle_version = options['bundle_version']
         self.configs = options.get('buildout_configs') or ['buildout.cfg']
@@ -132,6 +142,7 @@ class EggBundler(object):
                 for part in self.parts:
                     f.write('   %s\n' % part)
                 f.write('\n\ndownload-cache = distrib-cache\n\n')
+                f.write('\n\ninstall-from-cache = true\n\n')
                 f.write('\n\n')
                 if self.pin_versions:
                     f.write('versions = %s\n\n' % versions)
@@ -224,6 +235,14 @@ class EggBundler(object):
         for spec in [x.strip() for x in self.options['eggs'].split('\n') if x.strip()]:
             self._add_deps(distribs, self.installed_env, ws, 
                            Requirement.parse(spec), devprojs)
+            
+        # get dependencies for any recipes
+        #for part in [x.strip() for x in self.buildout['buildout']['parts'].split('\n') if x.strip()]:
+        #    rec = self.buildout[part].get('recipe','').strip().split(':')[0]
+        #    if rec:
+        #        self.logger.info('adding dep for recipe %s' % rec)
+        #        self._add_deps(distribs, self.installed_env, ws,
+        #                       Requirement.parse(rec), devprojs)
         
         # get the total set of all distribs (including develop eggs & all deps)
         self.dists.extend(distribs)
@@ -246,15 +265,15 @@ class EggBundler(object):
             else:
                 self.logger.error('%s is not a file or directory' % src)
             
-        # Copy all of the dependent distribs into the cache directory.
-        # The eggs made from the develop eggs are already there.
+        # Copy uninstalled versions of all of the dependent distribs into the
+        # cache directory. The eggs made from the develop eggs are already there.
         for dist in distribs:
             self.logger.debug('fetching %s from index' % 
                               dist.project_name)
-            fetched = self.index.fetch_distribution(dist.as_requirement(), 
-                                                    self.bundle_cache)
+            fetched = self.index.download(dist.as_requirement(), 
+                                          self.bundle_cache)
             if fetched is None:
-                self.logger.debug('could not find %s' % dist.project_name)
+                self.logger.error('could not find %s' % dist.project_name)
         
         self._create_buildout_dir()                                  
         
