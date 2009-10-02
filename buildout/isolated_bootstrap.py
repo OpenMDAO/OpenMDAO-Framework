@@ -3,7 +3,7 @@
 This is a modified version of the bootstrap.py file (Copyright (c) 2006 
 Zope Corporation and Contributors) that is
 part of zc.buildout.  This version creates a bin/buildout script that is 
-isolated from the system level installed packages. -BAN 6/25/09
+isolated from the system level installed packages.
 
 Simply run this script in a directory containing a buildout.cfg.
 The script accepts buildout command-line options, so you can
@@ -13,7 +13,6 @@ $Id$
 """
 
 import os, shutil, sys, tempfile #, urllib2
-import os.path
 import fnmatch
 
 bodir = os.getcwd()
@@ -57,10 +56,8 @@ else:
     def quote (c):
         return c
 
-cmd = "import sys; sys.path=%s; from setuptools.command.easy_install import main; main()" % sys.path
+cmd = "import sys; sys.path.insert(0,'%s'); from setuptools.command.easy_install import main; main()" % os.path.join(bodir, 'setup', stoolsname)
 
-pkg_resources.working_set = pkg_resources.WorkingSet(sys.path)
-ws  = pkg_resources.working_set
 assert os.spawnle(
     os.P_WAIT, sys.executable, quote (sys.executable),
     '-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
@@ -70,11 +67,13 @@ assert os.spawnle(
          ),
     ) == 0
 
+#pkg_resources.working_set = pkg_resources.WorkingSet()
+ws  = pkg_resources.working_set
 #ws.add_entry(setupdir)
 dist = pkg_resources.Environment([setupdir]).best_match(
                       pkg_resources.Requirement.parse('zc.buildout'),
                       ws)
-sys.path.insert(0, dist.location)
+#sys.path.insert(0, dist.location)
 ws.add_entry(dist.location)
 ws.require('zc.buildout')
 import zc.buildout.buildout
@@ -85,10 +84,16 @@ zc.buildout.buildout.main(sys.argv[1:] + ['bootstrap'])
 
 old_sp = 'import zc.buildout.buildout'
 new_sp = """
+import os
+prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
+sys.path[2:] = [  prefx+'.zip',
+                 prefx,
+                 os.path.join(prefx,'lib-dynload'),
+                 os.path.join(prefx,'plat-'+sys.platform),
+               ]
+              
 import zc.buildout.buildout
 import zc.buildout.easy_install
-import os.path
-import os
 
 # monkey patch zc.buildout.easy_install._script and _pyscript to change 
 # the chmod from 0755 to 0775
@@ -118,18 +123,14 @@ if 'OPENMDAO_REPO' in os.environ:
     zc.buildout.easy_install._script = _script
     zc.buildout.easy_install._pyscript = _pyscript
     
-sys.path = [os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                         'develop-eggs')]+[x for x in sys.path if 'site-packages' not in x]
-import pkg_resources
-pkg_resources.working_set = pkg_resources.WorkingSet(sys.path)
 """
 new_sp_win = """
-import zc.buildout.buildout
 import os.path
-sys.path = [os.path.join(os.path.dirname(os.path.dirname(__file__)),
-                         'develope-eggs')]+[x for x in sys.path if 'site-packages' not in x]
-import pkg_resources
-pkg_resources.working_set = pkg_resources.WorkingSet(sys.path)
+prefx = os.path.join(sys.prefix,'Lib')
+sys.path[2:] = [  prefx,
+                 os.path.join(sys.prefix,'DLLs'),
+               ]
+import zc.buildout.buildout
 """
 
 if sys.platform == 'win32':

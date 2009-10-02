@@ -8,10 +8,24 @@ import zc.buildout.easy_install
 # is being used as part of the buildout.
 
 old_sp = 'import sys'
-new_sp = """
-import sys
-sys.path = [x for x in sys.path if 'site-packages' not in x]
-"""
+if sys.platform == 'win32':
+    new_sp = """
+    import os.path
+    prefx = os.path.join(sys.prefix,'Lib')
+    sys.path[2:] = [  prefx,
+                     os.path.join(sys.prefix,'DLLs'),
+                   ]
+    """
+else:
+    new_sp = """
+    import os
+    prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
+    sys.path[2:] = [  prefx+'.zip',
+                     prefx,
+                     os.path.join(prefx,'lib-dynload'),
+                     os.path.join(prefx,'plat-'+sys.platform),
+                   ]
+    """
 
 _script_template = zc.buildout.easy_install.script_template.replace(old_sp,new_sp)
 _py_script_template = zc.buildout.easy_install.py_script_template.replace(old_sp,new_sp)
