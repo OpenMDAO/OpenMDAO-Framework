@@ -7,8 +7,12 @@ config = Configuration(name='conmin')
 config.add_extension('conmin', sources=['conmin.f'])
 
 kwds = {'install_requires':['numpy'],
-        'version':'1.0',
-        'zip_safe':False,
+        'version': '1.0',
+        'zip_safe': False,
+        'license': 'public domain',
+   # NOTE: we use 'url' here, but it really translates to 'home-page'
+   # in the metadata. Go figure.
+        'url': 'http://www.scilab.org/contrib/index_contrib.php?page=displayContribution&fileID=1086',
        }
 kwds.update(config.todict())
 

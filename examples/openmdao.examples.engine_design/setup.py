@@ -9,10 +9,24 @@ from numpy.distutils.misc_util import Configuration
 
 version = '0.1.0'
 
+if sys.platform == 'win32':
+    sdkdir = os.environ.get('WindowsSdkDir')
+    include_dirs = [os.path.join(sdkdir,'Include')]
+    library_dirs = [os.path.join(sdkdir,'Lib')]
+    # make sure we have mt.exe available in path
+    path = os.environ['PATH'].split(';')
+    path.append(os.path.join(sdkdir,'bin'))
+    os.environ['PATH'] = ';'.join(path)
+else:
+    include_dirs = []
+    library_dirs = []
+    
 config = Configuration()
 config.add_extension('openmdao.examples.engine_design.engineC', \
                      sources=['openmdao/examples/engine_design/engineC.pyf', \
-                              'openmdao/examples/engine_design/engineC.c'] )
+                              'openmdao/examples/engine_design/engineC.c'],
+                     include_dirs=include_dirs,
+                     library_dirs=library_dirs)
 
 kwds = { 'name':'openmdao.examples.engine_design',
       	 'version':version,

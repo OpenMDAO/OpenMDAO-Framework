@@ -10,8 +10,8 @@ __all__ = ['Workflow']
 
 class Workflow(object):
     """
-    A Workflow consists of a list of Components which are executed in 
-    some order.
+    A Workflow consists of a collection of Components which are to be executed
+    in some order.
     """
 
     def __init__(self, scope=None):
@@ -21,17 +21,12 @@ class Workflow(object):
         self._iterator = None
         self._stop = False
 
-    def __len__(self):
-        """ Not very meaningful, but it helps boolean tests when using RPyC. """
-        return len(self.nodes)
-
     def add_node(self, node):
         """ Add a new node to the end of the flow. """
         if isinstance(node, Component):
             self.nodes.append(node)
         else:
-            self.raise_exception('%s is either a Driver or is not a Component' % node.get_pathname(),
-                                 TypeError)
+            raise TypeError('%s is not a Component' % node.get_pathname())
         
     def remove_node(self, node):
         """Remove a component from this Workflow and any of its children."""
@@ -44,10 +39,13 @@ class Workflow(object):
     def run(self):
         """ Run through the nodes in the workflow list. """
         #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
-        for node in self.nodes_iter():
+        self._stop = False
+        self._iterator = self.nodes_iter()
+        for node in self._iterator:
             node.run()
             if self._stop:
-                self.raise_exception('Stop requested', RunStopped)
+                raise RunStopped('Stop requested')
+        self._iterator = None
     
     def nodes_iter(self):
         """Iterate through the nodes."""
@@ -65,7 +63,7 @@ class Workflow(object):
         except StopIteration, err:
             self._iterator = None
             raise err
-        self.raise_exception('Step complete', RunStopped)
+        raise RunStopped('Step complete')
 
     def steppable(self):
         """ Return True if it makes sense to 'step' this component. """
@@ -79,3 +77,4 @@ class Workflow(object):
         self._stop = True
         for node in self.nodes_iter():
             node.stop()
+

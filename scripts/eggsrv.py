@@ -4,7 +4,7 @@ http://pythonpaste.org/webob/file-example.html.
 
 Usage: python eggsrv.py --eggdir=<top level egg dir> --log=<my log file> --port=<port>
 
-eggdir is expected to have the following structure:
+eggdir is expected to have the following sort of structure:
 
 top
     package1_dir
@@ -20,8 +20,7 @@ top
 The egg server will automatically handle the addition of new distributions to the 
 egg directory structure, provided that they are structured as shown above.
     
-MD5 checksums are calculated and added to each file URL, but testing indicates that
-easy_install ignores them.
+MD5 checksums are calculated and added to each file URL.
 
 """
 
