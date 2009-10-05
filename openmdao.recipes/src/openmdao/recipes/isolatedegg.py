@@ -10,21 +10,23 @@ import zc.buildout.easy_install
 old_sp = 'import sys'
 if sys.platform == 'win32':
     new_sp = """
-    import os.path
-    prefx = os.path.join(sys.prefix,'Lib')
-    sys.path[2:] = [  prefx,
-                     os.path.join(sys.prefix,'DLLs'),
-                   ]
+import os
+import sys
+prefx = os.path.join(sys.prefix,'Lib')
+sys.path = [  prefx,
+                 os.path.join(sys.prefix,'DLLs'),
+               ]
     """
 else:
     new_sp = """
-    import os
-    prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
-    sys.path[2:] = [  prefx+'.zip',
-                     prefx,
-                     os.path.join(prefx,'lib-dynload'),
-                     os.path.join(prefx,'plat-'+sys.platform),
-                   ]
+import os
+import sys
+prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
+sys.path = [  prefx+'.zip',
+                 prefx,
+                 os.path.join(prefx,'lib-dynload'),
+                 os.path.join(prefx,'plat-'+sys.platform),
+               ]
     """
 
 _script_template = zc.buildout.easy_install.script_template.replace(old_sp,new_sp)
