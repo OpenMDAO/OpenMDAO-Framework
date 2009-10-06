@@ -22,7 +22,7 @@ setup(name='testplugins',
       ],
       test_suite='nose.collector',
       entry_points="""
-      [openmdao.components]
+      [openmdao.component]
       testplugins.components.dumb.DumbComponent = testplugins.components.dumb:DumbComponent
       """,
       )

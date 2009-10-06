@@ -890,7 +890,7 @@ sys.exit(
             try:
                 Component.load_from_eggpkg(package_name, 'no-such-entry')
             except RuntimeError, exc:
-                msg = "No 'openmdao.components' 'no-such-entry' entry point."
+                msg = "No 'openmdao.component' 'no-such-entry' entry point."
                 self.assertEqual(str(exc), msg)
             else:
                 self.fail('Expected RuntimeError')
@@ -943,6 +943,9 @@ comp.run()
             shutil.rmtree(test_dir)
 
     def test_pkg_resources_factory(self):
+        # NOTE: this test fails if run standalone:
+        #       ImportError: No module named test_egg_save
+        # Probably need Egg_TestModel.test_egg_save, or adjusted sys.path.
         logging.debug('')
         logging.debug('test_pkg_resources_factory')
 
@@ -952,8 +955,8 @@ comp.run()
         self.egg_name = egg_info[0]
 
         # Create factory.
-        factory = PkgResourcesFactory(['openmdao.components',
-                                       'openmdao.containers'],
+        factory = PkgResourcesFactory(['openmdao.component',
+                                       'openmdao.container'],
                                       [os.getcwd()])
         logging.debug('    loaders:')
         for key, value in factory._loaders.items():

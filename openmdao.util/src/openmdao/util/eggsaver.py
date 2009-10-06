@@ -664,6 +664,11 @@ def _write_state_file(dst_dir, root, name, format, proto, logger, observer):
 
 def _write_loader_script(path, state_name, package, top):
     """ Write script used for loading object(s). """
+    if state_name.endswith('.pickle'):
+        format = 'SAVE_CPICKLE'
+    else:
+        format = 'SAVE_LIBYAML'
+
     if state_name.startswith(package):
         pkg_arg = ''
     else:
@@ -682,7 +687,7 @@ if not '.' in sys.path:
     sys.path.append('.')
 
 try:
-    from openmdao.main.api import Component, SAVE_CPICKLE, SAVE_LIBYAML
+    from openmdao.main.api import Component, %(format)s
 except ImportError:
     print 'No OpenMDAO distribution available.'
     if __name__ != '__main__':
@@ -692,15 +697,8 @@ except ImportError:
 
 def load(**kwargs):
     '''Create object(s) from state file.'''
-    state_name = '%(name)s'
-    if state_name.endswith('.pickle'):
-        return Component.load(state_name,
-                              SAVE_CPICKLE%(pkg)s%(top)s, **kwargs)
-    elif state_name.endswith('.yaml'):
-        return Component.load(state_name,
-                              SAVE_LIBYAML%(pkg)s%(top)s, **kwargs)
-    raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
-                       state_name)
+    return Component.load('%(name)s',
+                          %(format)s%(pkg)s%(top)s, **kwargs)
 
 def main():
     '''Load state and run.'''
@@ -709,7 +707,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-""" % {'name':state_name, 'pkg':pkg_arg, 'top':top_arg})
+""" % {'name':state_name, 'format':format, 'pkg':pkg_arg, 'top':top_arg})
     out.close()
 
 
