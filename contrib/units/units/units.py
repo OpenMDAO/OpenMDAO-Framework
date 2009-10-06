@@ -390,8 +390,6 @@ class PhysicalUnit(object):
     if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
       raise TypeError("cannot divide units with non-zero offset")
     if isinstance(other,PhysicalUnit):
-      print "test" 
-      print self.names-other.names
       return PhysicalUnit(self.names-other.names,
                           self.factor/other.factor,
                           [a-b for (a,b) in zip(self.powers,other.powers)])
