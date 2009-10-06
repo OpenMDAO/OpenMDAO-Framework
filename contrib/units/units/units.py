@@ -389,7 +389,7 @@ class PhysicalUnit(object):
                           [a-b for (a,b) in zip(self.powers,other.powers)])
     else:
       return PhysicalUnit(self.names+{str(other): -1},
-                          self.factor/float(other), self.powers)
+                          self.factor/other, self.powers)
 
   def __rdiv__(self, other):
     if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
@@ -400,7 +400,7 @@ class PhysicalUnit(object):
                           [a-b for (a,b) in zip(other.powers,self.powers)])
     else:
       return PhysicalUnit({str(other): 1}-self.names,
-                          float(other)/self.factor,
+                          other/self.factor,
                           [-x for x in self.powers])
 
   def __pow__(self, other):
