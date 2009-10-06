@@ -10,6 +10,7 @@ import glob
 import optparse
 import os.path
 import pwd
+import shutil
 import stat
 import subprocess
 import sys
@@ -27,7 +28,7 @@ def main():
    lock   -- lock repository
    unlock -- unlock repository
    set    -- set this as current repository
-   fix    -- fix permissions"""
+   fix    -- fix permissions and remove generated directories"""
 
     parser = optparse.OptionParser(usage)
     parser.add_option('-f', '--force', action='store_true',
@@ -111,9 +112,22 @@ def do_set(path, user):
     os.environ['OPENMDAO_REPO'] = path
     sys.exit(subprocess.call(os.environ['SHELL']))
 
-def do_fix(path, options):
-    """ Check/fix permissions. """
-    for dirpath, dirnames, filenames in os.walk(path):
+def do_fix(repo_path, options):
+    """ Check/fix permissions and remove generated directories. """
+    directories = (
+        'buildout/bin',
+        'buildout/develop-eggs',
+        'buildout/eggs',
+        'buildout/html',
+        'buildout/parts',
+        'docs/_build',
+    )
+    for relpath in directories:
+        directory = os.path.join(repo_path, relpath)
+        if os.path.exists(directory):
+            shutil.rmtree(directory)
+
+    for dirpath, dirnames, filenames in os.walk(repo_path):
         if options.verbose:
             print dirpath[len(path):]
 

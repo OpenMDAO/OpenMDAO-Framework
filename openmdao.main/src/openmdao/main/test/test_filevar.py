@@ -65,15 +65,12 @@ class Passthru(Component):
 class Middle(Assembly):
     """ Intermediary which passes-on files. """
 
-    text_in = FileTrait(iostatus='in', legal_types=['xyzzy', 'txt'])
-
     def __init__(self, *args, **kwargs):
         super(Middle, self).__init__(*args, **kwargs)
 
         self.add_container('passthru', Passthru(directory='Passthru'))
 
-#        self.create_passthru('passthru.text_in')
-        self.connect('text_in', 'passthru.text_in')
+        self.create_passthru('passthru.text_in')
         self.create_passthru('passthru.binary_in')
 
         self.create_passthru('passthru.text_out')
