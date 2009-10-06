@@ -3,9 +3,7 @@
 __all__ = ['Assembly']
 
 
-import os.path
-
-from enthought.traits.api import implements, Array, List, Instance, TraitError
+from enthought.traits.api import Array, List, Instance, TraitError
 from enthought.traits.api import TraitType, Undefined
 from enthought.traits.trait_base import not_none
 
@@ -417,7 +415,7 @@ class Assembly (Component):
                                      RuntimeError)
             elif len(inedges) == 1:
                 setattr(self, out, self.get(inedges[0][0]))
-        
+
     def step(self):
         """Execute a single child component and return."""
         self.workflow.step()
@@ -437,10 +435,8 @@ class Assembly (Component):
     def update_inputs(self, compname, varnames):
         """Transfer input data to input variables on the specified component.
         If varnames is not None, only the variables in the list will be updated.
-        Note that we're called after incomp has set its execution directory,
-        so we'll need to account for this during file transfers. The varnames
-        iterator is assumed to contain names that include the component name,
-        for example: ['comp1.a', 'comp1.b'].
+        The varnames iterator is assumed to contain names that include the
+        component name, for example: ['comp1.a', 'comp1.b'].
         """
         updated = False  # this becomes True if we actually update any inputs
         parent = self.parent
@@ -463,7 +459,7 @@ class Assembly (Component):
             srcname = preds.keys()[0]
             srccompname,srccomp,srcvarname = self.split_varpath(srcname)
             destcompname,destcomp,destvarname = self.split_varpath(vname)
-            
+
             if srccomp.get_valid(srcvarname) is False:  # source is invalid 
                 # need to backtrack to get a valid source value
                 if srccompname is None: # a boundary var
@@ -480,7 +476,6 @@ class Assembly (Component):
             except Exception, err:
                 self.raise_exception("cannot retrieve value of source attribute '%s'" %
                                      srcname, type(err))
-            
             try:
                 destcomp.set(destvarname, srcval, srcname=srcname)
             except Exception, exc:

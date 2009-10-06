@@ -147,22 +147,16 @@ class Sink(Component):
 
     text_data = Str(iostatus='out')
     binary_data = Array('d', value=[], iostatus='out')
-
-    # Absolute FileTrait that exists at time of save.
-    text_file = FileTrait(path='*', iostatus='in')
-
+    text_file = FileTrait(iostatus='in')
+    binary_file = FileTrait(iostatus='in')
     executions = Int(0, iostatus='in',
                      desc='Count of Oddball instance_method() calls.')
-    
+
     def __init__(self, *args, **kwargs):
         super(Sink, self).__init__(*args, **kwargs)
-
         global SINK_INIT
         SINK_INIT = True
-        
-        # Relative FileTrait that exists at time of save.
-        self.add_trait('binary_file', FileTrait(path='*', iostatus='in'))
-        
+
     def execute(self):
         """ Read test data from files. """
         inp = self.text_file.open()
@@ -310,8 +304,6 @@ class TestCase(unittest.TestCase):
                             self.model.Source.text_data)
         self.assertNotEqual(self.model.Sink.binary_data,
                             self.model.Source.sub.binary_data)
-        self.assertNotEqual(
-            self.model.Sink.binary_file.binary, True)
 
         for path in EXTERNAL_FILES:
             path = os.path.join(self.model.Source.get_abs_directory(), path)
@@ -377,7 +369,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(OBSERVATIONS), len(expected))
         for i, observation in enumerate(OBSERVATIONS):
             state, string, file_fraction, byte_fraction = observation
-            self.assertEqual(state,  expected[i][0])
+            self.assertEqual(state, expected[i][0])
             if expected[i][1].endswith('.egg'): # Unique versions mess this up.
                 self.assertEqual(string.startswith(self.model.name), True)
                 self.assertEqual(string.endswith('.egg'), True)
@@ -469,8 +461,6 @@ class TestCase(unittest.TestCase):
                                 self.model.Source.text_data)
             self.assertNotEqual(self.model.Sink.binary_data,
                                 self.model.Source.sub.binary_data)
-            self.assertNotEqual(
-                self.model.Sink.binary_file.binary, True)
 
             for path in EXTERNAL_FILES:
                 path = os.path.join(self.model.Source.get_abs_directory(), path)
@@ -546,15 +536,18 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_directory')
 
         # Set subcomponent directory outside model root.
+        orig_dir = self.model.Oddball.directory
         self.model.Oddball.directory = os.getcwd()
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
-        except Exception, exc:
+        except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp" \
                   " directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
-            self.fail('Expected Exception')
+            self.fail('Expected ValueError')
+        finally:
+            self.model.Oddball.directory = orig_dir
 
     def test_save_bad_destination(self):
         logging.debug('')
@@ -610,21 +603,17 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_filevar')
 
         # Set file trait path outside model root.
-        path = os.path.join(os.getcwd(), 'bad-file-variable')
-        out = open(path, 'w')
-        out.close()
         orig_path = self.model.Source.text_file.path
-        self.model.Source.text_file.path = path
+        self.model.Source.text_file.path = '/illegal'
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
-        except Exception, exc:
+        except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file" \
                   " path"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
-            self.fail('Expected Exception')
+            self.fail('Expected ValueError')
         finally:
-            os.remove(path)
             self.model.Source.text_file.path = orig_path
 
     def test_save_bad_format(self):
@@ -1068,7 +1057,6 @@ comp.run()
                             model.Source.text_data)
         self.assertNotEqual(model.Sink.binary_data,
                             model.Source.sub.binary_data)
-        self.assertNotEqual(model.Sink.binary_file.binary, True)
 
         orig_dir = os.getcwd()
         os.chdir(model.Source.get_abs_directory())

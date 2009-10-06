@@ -33,6 +33,7 @@ from enthought.traits.trait_base import not_none
 # pylint apparently doesn't understand namespace packages...
 # pylint: disable-msg=E0611,F0401
 
+from openmdao.main.filevar import FileRef
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.util import eggloader, eggsaver, eggobserver
@@ -181,7 +182,13 @@ class Container(HasTraits):
         self.log_level = LOG_DEBUG
 
         self._io_graph = None
-        
+
+        # Create per-instance initial FileRefs for FileTraits.
+        # There ought to be a better way to not share default initial values.
+        for name, obj in self.items():
+            if isinstance(obj, FileRef):
+                setattr(self, name, obj.copy(owner=self))
+
         # Call _io_trait_changed if any trait having 'iostatus' metadata is
         # changed. We originally used the decorator @on_trait_change for this,
         # but it failed to be activated properly when our objects were
