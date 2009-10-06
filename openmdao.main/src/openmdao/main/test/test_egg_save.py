@@ -26,8 +26,6 @@ from openmdao.util.testutil import find_python
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
 
-__version__ = '1.2.3'  # Used in forming egg name.
-
 EXTERNAL_FILES = ('xyzzy', '../sub/data2', 'hello', '../sub/data4')
 
 SOURCE_INIT = False  # Used to verify __init__() gets called when expected.
@@ -71,8 +69,8 @@ class Source(Assembly):
         # External file that doesn't exist at time of save.
         self.external_files.append({'path':'does-not-exist'})
 
-    def tree_defined(self):
-        super(Source, self).tree_defined()
+    def tree_rooted(self):
+        super(Source, self).tree_rooted()
         
         self.directory = self.get_abs_directory()  # Force absolute.
         # Absolute external file that exists at time of save.
@@ -169,8 +167,8 @@ class Sink(Component):
         # Relative FileTrait that exists at time of save.
         self.add_trait('binary_file', FileTrait(iostatus='in'))
         
-    def tree_defined(self):
-        super(Sink, self).tree_defined()
+    def tree_rooted(self):
+        super(Sink, self).tree_rooted()
         
         self.text_file.filename = os.path.join(self.get_abs_directory(),
                                                'sink.txt')
@@ -620,7 +618,7 @@ class TestCase(unittest.TestCase):
         metadata['path'] = path
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
-                                   force_relative=False)
+                                   require_relpaths=False)
         finally:
             os.remove(path)
 
@@ -1014,6 +1012,7 @@ comp.run()
             out = open(path, 'w')
             out.write(file_data)
             out.close()
+            logging.debug('updated %s', path)
             self.create_and_check_model(factory, 'test_model_2', file_data)
 
             # Check observations.

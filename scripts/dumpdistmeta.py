@@ -1,17 +1,19 @@
 #!/usr/bin/env python
 """
-If run as main, dumpeggmeta.py will print out either a pretty-printed dict full
-of the metadata found in the specified distribution, or just the value of a single
-piece of metadata if metadata-item is specified on the command line.
+If run as main, dumpdistmeta.py will print out either a pretty-printed dict 
+full of the metadata found in the specified distribution, or just the value 
+of a single piece of metadata if metadata-item is specified on the command 
+line.  The distribution can be in the form of an installed egg, a zipped
+egg, or a gzipped tar file containing a distutils distribution.
 
-usage: dumpeggmeta.py egg-or-distribution [metadata-item]
+usage: dumpdistmeta.py distribution [metadata-item]
 
 Example output: 
 
 
 ::
 
-    $ dumpeggmeta.py pyparsing-1.5.1-py2.5.egg
+    $ dumpdistmeta.py pyparsing-1.5.1-py2.5.egg
     {'SOURCES': ['README',
                  'pyparsing.py',
                  'setup.py',
@@ -41,7 +43,7 @@ Example output:
 
 ::
 
-    $ dumpeggmeta.py pyparsing-1.5.1-py2.5.egg license
+    $ dumpdistmeta.py pyparsing-1.5.1-py2.5.egg license
     MIT License
 
 """
@@ -125,7 +127,7 @@ def _getdist_metadata(dist, dirname=''):
     
                 
 def _meta_from_tarfile(path):
-    """Retrieve metadata from a tar file of a python source distribution.
+    """Retrieve metadata from a tar file of a distutils distribution.
     Returns a dict.
     """
     metadata = {}
@@ -177,8 +179,6 @@ def _meta_from_zipped_egg(path):
                     metadata[k] = v
             elif name.endswith('.txt'):
                 parse_txt(name, meta, metadata)
-                #metadata[metaname] = [x.strip() for x in 
-                #                     meta.splitlines() if x.strip() != '']
             elif name.endswith('/not-zip-safe'):
                 metadata['zip-safe'] = False
             elif name.endswith('/zip-safe'):
@@ -241,6 +241,6 @@ if __name__ == '__main__':
     elif len(sys.argv) > 1:
         pprint.pprint(get_metadata(sys.argv[1]))
     else:
-        print 'usage: python dumpeggmeta.py egg-or-distribution [metadata-item]'
+        print 'usage: python dumpdistmeta.py distribution [metadata-item]'
 
 

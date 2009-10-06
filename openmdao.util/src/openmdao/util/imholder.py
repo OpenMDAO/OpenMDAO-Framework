@@ -1,6 +1,5 @@
 """
 Instancemethod utilities.
-
 Normally pickle won't handle instance methods.
 This code is intended to work around that limitation.
 """
@@ -41,7 +40,10 @@ class IMHolder(object):
 
 
 def fix_instancemethods(root):
-    """ Replace references to instancemethods with IMHolders. """
+    """
+    Traverse object tree starting at `root` replacing references to
+    instancemethods with IMHolders.
+    """
 
     def _fix_im_recurse(obj, visited):
         """ Replace recursively. """
@@ -79,7 +81,10 @@ def fix_instancemethods(root):
 
 
 def restore_instancemethods(root):
-    """ Restore references to instancemethods. """
+    """
+    Traverse object tree starting at `root` replacing references to IMHolders
+    with the saved instancemethod.
+    """
 
     def _restore_im_recurse(obj, visited):
         """ Restore recursively. """

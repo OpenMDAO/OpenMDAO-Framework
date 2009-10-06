@@ -23,10 +23,10 @@ class TestCase(unittest.TestCase):
     """ Test the ExternalCode component. """
 
     def setUp(self):
-        SimulationRoot.chdir(DIRECTORY)
+        SimulationRoot.chroot(DIRECTORY)
         
     def tearDown(self):
-        SimulationRoot.chdir(ORIG_DIR)
+        SimulationRoot.chroot(ORIG_DIR)
         
     def test_normal(self):
         logging.debug('')

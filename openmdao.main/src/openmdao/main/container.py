@@ -52,7 +52,7 @@ def set_as_top(cont):
     """Specifies that the given Container is the top of a 
     Container hierarchy.
     """
-    cont.tree_defined()
+    cont.tree_rooted()
     return cont
 
 def deep_setattr(obj, path, value):
@@ -147,12 +147,12 @@ class Container(HasTraits):
     to the framework"""
    
     #parent = WeakRef(Container, allow_none=True, adapt='no', transient=True)
-    parent = Python
+    parent = Python()
     
     # this will automagically call _get_log_level and _set_log_level when needed
     log_level = Property(desc='Logging message level')
     
-    __ = Python
+    __ = Python()
     
     def __init__(self, doc=None):
         super(Container, self).__init__() 
@@ -169,7 +169,7 @@ class Container(HasTraits):
         self._output_names = None
         self._container_names = None
         
-        self._call_tree_defined = True
+        self._call_tree_rooted = True
         
         if doc is not None:
             self.__doc__ = doc
@@ -188,11 +188,17 @@ class Container(HasTraits):
         # unpickled.
         self.on_trait_change(self._io_trait_changed, '+iostatus')
         
-        self.on_trait_change(self._par_update, 'parent')
+        # keep track of modifications to our parent
+        self.on_trait_change(self._parent_modified, 'parent')
                 
-    def _par_update(self, obj, name, value):
+    def _parent_modified(self, obj, name, value):
         """This is called when the parent attribute is changed."""
         self._logger.rename(self.get_pathname().replace('.', ','))
+        self._branch_moved()
+        
+    def _branch_moved(self):
+        self._call_tree_rooted = True
+        [x._branch_moved() for x in self.values() if isinstance(x, Container)]
  
     def _get_name(self):
         if self._name is None:
@@ -260,7 +266,6 @@ class Container(HasTraits):
             if trait.transient is not True:
                 dct[name] = trait
         state['_added_traits'] = dct
-        #state['_call_tree_defined'] = True
         
         return state
 
@@ -423,8 +428,8 @@ class Container(HasTraits):
             # then go ahead and tell the obj (which will in turn
             # tell all of its children) that its hierarchy is
             # defined.
-            if self._call_tree_defined is False:
-                obj.tree_defined()
+            if self._call_tree_rooted is False:
+                obj.tree_rooted()
         else:
             self.raise_exception("'"+str(type(obj))+
                     "' object is not an instance of Container.",
@@ -437,21 +442,25 @@ class Container(HasTraits):
         observers."""
         trait = self.trait(name)
         if trait is not None:
+            obj = getattr(self, name)
             self.remove_trait(name)
+            return obj       
         else:
             self.raise_exception("cannot remove child '%s': not found"%
                                  name, TraitError)
 
-    def tree_defined(self):
+    def tree_rooted(self):
         """Called after the hierarchy containing this Container has been
         defined back to the root. This does not guarantee that all sibling
         Containers have been defined. It also does not guarantee that this
         component is fully configured to execute. Classes that override this
         function must call their base class version.
+        
+        This version calls tree_rooted() on all of its child Containers.
         """
-        self._call_tree_defined = False
+        self._call_tree_rooted = False
         for cont in self.list_containers():
-            getattr(self, cont).tree_defined()
+            getattr(self, cont).tree_rooted()
             
     def dump(self, recurse=False, stream=None):
         """Print all items having iostatus metadata and
@@ -516,9 +525,8 @@ class Container(HasTraits):
     def list_containers(self):
         """Return a list of names of child Containers."""
         if self._container_names is None:
-            dct = self.__dict__
-            self._container_names = [n for n,v in dct.items() 
-                                  if isinstance(v,Container) and v is not self.parent]            
+            self._container_names = [n for n,v in self.items() 
+                                                   if isinstance(v,Container)]            
         return self._container_names
     
     def _traits_meta_filter(self, traits=None, **metadata):
@@ -821,10 +829,11 @@ class Container(HasTraits):
                     src_files=None, child_objs=None, dst_dir=None,
                     format=SAVE_CPICKLE, proto=-1, use_setuptools=False,
                     observer=None):
-        """Save state and other files to an egg. Analyzes the objects saved
-        for distribution dependencies. Modules not found in any distribution
-        are recorded in an 'egg-info/openmdao_orphans.txt' file. Also creates
-        and saves loader scripts for each entry point.
+        """Save state and other files to an egg.  Typically used to copy all or
+        part of a simulation to another user or machine.  By specifying child
+        containers in `child_objs`, it will be possible to create instances of
+        just those containers from the installed egg.  Child container names
+        should be specified relative to this container.
 
         - `name` must be an alphanumeric string.
         - `version` must be an alphanumeric string.
@@ -833,8 +842,11 @@ class Container(HasTraits):
         - `src_dir` is the root of all (relative) `src_files`.
         - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
+        - `format` and `proto` are passed to eggsaver.save().
+        - 'use_setuptools` is passed to eggsaver.save_to_egg().
         - `observer` will be called via an EggObserver.
 
+        After collecting entry point information, calls eggsaver.save_to_egg().
         Returns (egg_filename, required_distributions, orphan_modules).
         """
         assert name and isinstance(name, basestring)
@@ -919,8 +931,8 @@ class Container(HasTraits):
                                           instance_name, logger, observer)
 
     @staticmethod
-    def load(instream, format=SAVE_CPICKLE, package=None, 
-             do_post_load=True, name=None):
+    def load(instream, format=SAVE_CPICKLE, package=None, call_post_load=True,
+             name=None):
         """Load object(s) from the input stream. Pure python classes generally
         won't need to override this, but extensions will. The format can be
         supplied in case something other than cPickle is needed.
@@ -928,7 +940,7 @@ class Container(HasTraits):
         top = eggloader.load(instream, format, package, logger)
         if name:
             top.name = name
-        if do_post_load:
+        if call_post_load:
             top.parent = None
             top.post_load()
         return top
@@ -1048,12 +1060,18 @@ class Container(HasTraits):
                                  RuntimeError)
         return path
     
-    def _trait_added_changed(self, name):
-        """Called any time a new trait is added to this container."""
+    def config_changed(self):
+        """Call this whenever the configuration of this Container changes,
+        for example, children added or removed.
+        """
         self._input_names = None
         self._output_names = None
         self._container_names = None
-    
+        
+    def _trait_added_changed(self, name):
+        """Called any time a new trait is added to this container."""
+        self.config_changed()
+        
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)
