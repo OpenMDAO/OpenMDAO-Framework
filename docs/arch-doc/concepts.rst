@@ -8,7 +8,7 @@ drive the design.
 
 .. index:: pair: Python; module
 .. index:: egg
-.. index:: plugin, registering
+.. index:: plugins; registering
 .. index:: FactoryManager
 .. index:: plugins
 
@@ -34,7 +34,7 @@ the framework are listed below:
 
 
 .. index:: pair: Component; plugin base class 
-.. index:: pair: Driver; plug-n base class
+.. index:: pair: Driver; plugin base class
 .. index:: pair: TraitType; plugin base class
 
 

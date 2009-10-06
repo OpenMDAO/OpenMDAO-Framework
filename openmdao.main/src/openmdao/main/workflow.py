@@ -10,8 +10,8 @@ __all__ = ['Workflow']
 
 class Workflow(object):
     """
-    A Workflow consists of a list of Components which are executed in 
-    some order.
+    A Workflow consists of a collection of Components which are to be executed
+    in some order.
     """
 
     def __init__(self, scope=None):
