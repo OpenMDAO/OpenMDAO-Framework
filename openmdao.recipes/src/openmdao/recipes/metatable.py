@@ -11,8 +11,6 @@ import zc.buildout
 
 from pkg_resources import WorkingSet, Environment, Requirement
 
-from openmdao.recipes.utils import find_all_deps
-
 class MetadataTable(object):
     """A buildout recipe that creates a file with a restructured text table of
     metadata collected from all dependent distribs based on the 'eggs' 
@@ -43,6 +41,8 @@ class MetadataTable(object):
 
     def __init__(self, buildout, name, options):
         self.name = name
+        self.buildout = buildout
+        self.options = options
         self.logger = logging.getLogger(name)
         self.partsdir = buildout['buildout']['parts-directory']
         meta_names = options.get('meta_names', '')
@@ -65,14 +65,6 @@ class MetadataTable(object):
         self.dev_eggs = [open(os.path.join(dev_egg_dir,f),'r').readlines()[0].strip() 
                             for f in dev_eggs]
                             
-        # build up a list of all egg dependencies resulting from our 'eggs' parameter
-        env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory']])
-        reqs = [Requirement.parse(x.strip()) for x in options['eggs'].split()]
-        self.depdists = find_all_deps(reqs, env)
-            
-        self.logger.debug("dependency list is: %s" % 
-                             [str(dist) for dist in self.depdists])
-
     def _get_metadata(self, names):
         meta = {}
         for dist in self.depdists:
@@ -147,6 +139,13 @@ class MetadataTable(object):
         return data+' '*(colwidth-len(data))
     
     def install(self): 
+        # build up a list of all egg dependencies resulting from our 'eggs' parameter
+        env = Environment(self.dev_eggs+[self.buildout['buildout']['eggs-directory'],
+                                         os.path.join(self.buildout['buildout']['directory'],
+                                                      'setup')])
+        reqs = [Requirement.parse(x.strip()) for x in self.options['eggs'].split()]
+        self.depdists = WorkingSet().resolve(reqs, env)
+            
         if self.headers and len(self.headers) != len(self.meta_names):
             raise zc.buildout.UserError("number of headers doesn't match number of metadata items")
         if not os.path.isdir(os.path.join(self.partsdir, self.name)):
@@ -160,6 +159,5 @@ class MetadataTable(object):
         
         return [fname]
 
-     
     update = install
 

@@ -14,8 +14,6 @@ import zc.buildout
 from pkg_resources import working_set, get_entry_map
 from pkg_resources import Environment, WorkingSet, Requirement, DistributionNotFound
 
-from openmdao.recipes.utils import find_all_deps
-
 def _find_files_and_dirs(pat, startdir):
     for path, dirlist, filelist in os.walk(startdir):
         for name in fnmatch.filter(filelist+dirlist, pat):
@@ -119,12 +117,8 @@ class WingProj(object):
         if not os.path.isfile(self.wingproj):
             self.wingproj = os.path.join(os.path.dirname(__file__),
                                          'new_wing_proj.wpr')
+        self.working_set = None
         
-        # build up a list of all egg dependencies resulting from our 'eggs' parameter
-        env = Environment(self.dev_eggs+[buildout['buildout']['eggs-directory']])
-        reqs = [Requirement.parse(x.strip()) for x in options['eggs'].split()]
-        self.depdists = find_all_deps(reqs, env)        
-
     def _unformat(self, namestr):
         """Take a path string from the Wing project file and chop it up into 
         individual paths.
@@ -136,9 +130,16 @@ class WingProj(object):
         path = path.rstrip("\\n')}")
         return path.split(':') 
 
-                
-    def install(self):
-        
+ 
+    def install(self):        
+        # build up a list of all egg dependencies resulting from our 'eggs' parameter
+        env = Environment(self.dev_eggs+[self.buildout['buildout']['eggs-directory'],
+                                         os.path.join(self.buildout['buildout']['directory'],
+                                                      'setup')])
+        reqs = [Requirement.parse(x.strip()) for x in self.options['eggs'].split()]
+        self.depdists = WorkingSet().resolve(reqs, env)
+        self.working_set = WorkingSet([d.location for d in self.depdists])            
+
         if not os.path.isdir(os.path.join(self.partsdir,'wingproj')):
             os.makedirs(os.path.join(self.partsdir,'wingproj'))
             
@@ -174,7 +175,9 @@ class WingProj(object):
 
             if not config.has_option('project attributes', 'proj.directory-list'):
                 
-                excludes = [u'buildout', u'plans', 
+                excludes = [u'buildout/bin', u'buildout/parts', u'buildout/develop-eggs',
+                            u'buildout/eggs', u'buildout/setup', u'buildout/openmdao_log.txt',
+                            u'plans', 
                             u'docs/_build', u'docs/_static', u'docs/generated_images']
                 # find all dirs containing setup.py files
                 setupdirs = [os.path.dirname(p) for p in 
@@ -191,7 +194,7 @@ class WingProj(object):
                 config.set('project attributes', 'proj.directory-list',
                            pprint.pformat([{'dirloc': None,
                              'excludes': excludes,
-                             'filter': '*.py ; *.rst ; *.ini',
+                             'filter': '*.py ; *.rst ; *.ini; *.cfg',
                              'include_hidden': 0,
                              'recursive': 1,
                              'watch_for_changes': 1}]
@@ -221,12 +224,12 @@ class WingProj(object):
 
         scripts = zc.buildout.easy_install.scripts(
             [('wing', 'openmdao.recipes.wingproj', 'runwing')], 
-            WorkingSet([d.location for d in self.depdists]), 
+            self.working_set, 
             sys.executable, self.bindir, 
             arguments= "r'%s', r'%s'" % (wingpath, newfname))        
         
         return scripts
 
-     
+
     update = install
 
