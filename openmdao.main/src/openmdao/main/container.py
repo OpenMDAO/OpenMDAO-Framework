@@ -25,18 +25,21 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import networkx as nx
 from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
                                  push_exception_handler, Python, TraitType, \
-                                 Property, Trait
+                                 Property, Trait, Interface
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType
 from enthought.traits.trait_base import not_none
+from enthought.traits.trait_types import validate_implements
 
 # pylint apparently doesn't understand namespace packages...
 # pylint: disable-msg=E0611,F0401
 
+from openmdao.main.filevar import FileRef
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
+from openmdao.main.interfaces import ICaseIterator, IResourceAllocator
 
 
 def path_to_root(node):
@@ -181,7 +184,13 @@ class Container(HasTraits):
         self.log_level = LOG_DEBUG
 
         self._io_graph = None
-        
+
+        # Create per-instance initial FileRefs for FileTraits.
+        # There ought to be a better way to not share default initial values.
+        for name, obj in self.items():
+            if isinstance(obj, FileRef):
+                setattr(self, name, obj.copy(owner=self))
+
         # Call _io_trait_changed if any trait having 'iostatus' metadata is
         # changed. We originally used the decorator @on_trait_change for this,
         # but it failed to be activated properly when our objects were
@@ -924,7 +933,7 @@ class Container(HasTraits):
         If specified, the root object is renamed to `instance_name`.
         `observer` will be called via an EggObserver. Returns the root object.
         """
-        entry_group = 'openmdao.components'
+        entry_group = 'openmdao.component'
         if not entry_name:
             entry_name = package  # Default component is top.
         return eggloader.load_from_eggpkg(package, entry_group, entry_name,
@@ -1099,22 +1108,33 @@ class Container(HasTraits):
         """Record a debug message."""
         self._logger.debug(msg, *args, **kwargs)
 
+
 def _get_entry_group(obj):
     """Return entry point group for given object type."""
     if _get_entry_group.group_map is None:
         # Fill-in here to avoid import loop.
-        from openmdao.main.api import Component
+        from openmdao.main.api import Component, Driver
+
+        # Entry point definitions taken from plugin-guide.
+        # Order should be from most-specific to least.
         _get_entry_group.group_map = [
-            (Component, 'openmdao.components'),
-            (Container, 'openmdao.containers'),
+            (TraitType,          'openmdao.trait'),
+            (Driver,             'openmdao.driver'),
+            (ICaseIterator,      'openmdao.case_iterator'),
+            (IResourceAllocator, 'openmdao.resource_allocator'),
+            (Component,          'openmdao.component'),
+            (Container,          'openmdao.container'),
         ]
 
     for cls, group in _get_entry_group.group_map:
-        if isinstance(obj, cls):
-            return group
+        if issubclass(cls, Interface):
+            if validate_implements(obj, cls):
+                return group
+        else:
+            if isinstance(obj, cls):
+                return group
 
     raise TypeError('No entry point group defined for %r' % obj)
 
-_get_entry_group.group_map = None  # Map from class to group name.
-
+_get_entry_group.group_map = None  # Map from class/interface to group name.
 

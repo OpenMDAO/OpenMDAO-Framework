@@ -45,7 +45,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         # make sure we're looking in the right spot for the plugins whether
         # we're in a develop egg or in the released version
         dist = working_set.find(Requirement.parse('openmdao.test'))
-        fact = PkgResourcesFactory(['openmdao.components'],
+        fact = PkgResourcesFactory(['openmdao.component'],
                                    [os.path.join(dist.location,
                                                  'openmdao',
                                                  'test','plugins')],
@@ -71,7 +71,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         # make sure we're looking in the right spot for the plugins whether
         # we're in a develop egg or in the released version
         dist = working_set.find(Requirement.parse('openmdao.test'))
-        fact = PkgResourcesFactory(['openmdao.components'], None)
+        fact = PkgResourcesFactory(['openmdao.component'], None)
         
         comp = fact.create('openmdao.test.Box.Box')
         comp.run()
