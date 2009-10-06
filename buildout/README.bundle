@@ -36,6 +36,14 @@ The contents of this bundle are:
 GETTING STARTED
 ===============   
 
+To view the OpenMDAO docs (from the top of the untarred distribution), 
+open docs/index.html in your browser, for example:
+
+    firefox docs/index.html
+
+
+To install and test OpenMDAO, follow these steps:
+
 1. Move to buildout directory.
      cd buildout
 
@@ -49,11 +57,7 @@ GETTING STARTED
      bin/test --all -v
      
      
-To view the OpenMDAO docs, open docs/index.html in your browser,
-for example:
-    firefox docs/index.html
-
-After you've run bin/buildout, the installed distributions will
+After you've run bin/buildout (in step 3), the installed distributions will
 be found under the buildout/eggs directory. The OpenMDAO source
 code is found primarily in the openmdao.main distribution, in the
 openmdao.main-0.1-py2.5.egg/openmdao/main directory.
