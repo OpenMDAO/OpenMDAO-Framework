@@ -63,7 +63,8 @@ class NumberDict(dict):
   def __sub__(self, other):
     sum_dict = NumberDict()
     for (self_k,self_v),(other_k,other_v) in zip(self.iteritems(),other.iteritems()):
-        sum_dict[self_k] = self_v- other_v
+        print self_k, self_v
+        sum_dict[self_k] = self_v - other_v
 
     return sum_dict
 
