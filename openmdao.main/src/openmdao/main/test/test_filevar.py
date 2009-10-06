@@ -188,31 +188,27 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_legal_types')
 
-        saved_type = self.model.source.text_file.content_type
+        # Set mismatched type and verify error message.
+        self.model.source.text_file.content_type = 'invalid'
         try:
-            # Set mismatched type and verify error message.
-            self.model.source.text_file.content_type = 'invalid'
-            try:
-                self.model.run()
-            except TraitError, exc:
-                msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
-                      " Content type 'invalid' not one of ['xyzzy', 'txt']"
-                self.assertEqual(str(exc), msg)
-            else:
-                self.fail('Expected TraitError')
+            self.model.run()
+        except TraitError, exc:
+            msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
+                  " Content type 'invalid' not one of ['xyzzy', 'txt']"
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected TraitError')
 
-            # Set null type and verify error message.
-            self.model.source.text_file.content_type = ''
-            try:
-                self.model.run()
-            except TraitError, exc:
-                msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
-                      " Content type '' not one of ['xyzzy', 'txt']"
-                self.assertEqual(str(exc), msg)
-            else:
-                self.fail('Expected TraitError')
-        finally:
-            self.model.source.text_file.content_type = saved_type
+        # Set null type and verify error message.
+        self.model.source.text_file.content_type = ''
+        try:
+            self.model.run()
+        except TraitError, exc:
+            msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
+                  " Content type '' not one of ['xyzzy', 'txt']"
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected TraitError')
 
 
 if __name__ == '__main__':

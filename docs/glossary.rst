@@ -420,6 +420,10 @@ Glossary
 	passed between linked Components.
 
       
+      **units**
+        An egg used by OpenMDAO that provides unit conversion capability for variables.
+	
+	
       **Variable**
         A wrapper for data passed between framework components. Variables can contain
         a value, a default value, optional min/max values, and units. Variables can

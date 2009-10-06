@@ -536,7 +536,6 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_directory')
 
         # Set subcomponent directory outside model root.
-        orig_dir = self.model.Oddball.directory
         self.model.Oddball.directory = os.getcwd()
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
@@ -546,8 +545,6 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
-        finally:
-            self.model.Oddball.directory = orig_dir
 
     def test_save_bad_destination(self):
         logging.debug('')
@@ -603,7 +600,6 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_filevar')
 
         # Set file trait path outside model root.
-        orig_path = self.model.Source.text_file.path
         self.model.Source.text_file.path = '/illegal'
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
@@ -613,8 +609,6 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
-        finally:
-            self.model.Source.text_file.path = orig_path
 
     def test_save_bad_format(self):
         logging.debug('')

@@ -79,17 +79,25 @@ class FileRef(FileMetadata):
         """ Open file for reading. """
         path = self.path
         if os.path.isabs(path):
-            owner = self._get_valid_owner()
-            if owner is None:
-                raise ValueError("Path '%s' is absolute and no path checker"
-                                 " is available." % path)
-            owner.check_path(path)
+            try:
+                self.owner.check_path(path)
+            except AttributeError:
+                owner = self._get_valid_owner()
+                if owner is None:
+                    raise ValueError("Path '%s' is absolute and no path checker"
+                                     " is available." % path)
+                self.owner = owner
+                self.owner.check_path(path)
         else:
-            owner = self._get_valid_owner()
-            if owner is None:
-                raise ValueError("Path '%s' is relative and no absolute"
-                                 " directory is available." % path)
-            directory = owner.get_abs_directory()
+            try:
+                directory = self.owner.get_abs_directory()
+            except AttributeError:
+                owner = self._get_valid_owner()
+                if owner is None:
+                    raise ValueError("Path '%s' is relative and no absolute"
+                                     " directory is available." % path)
+                self.owner = owner
+                directory = self.owner.get_abs_directory()
             path = os.path.join(directory, path)
         mode = 'rb' if self.binary else 'rU'
         return open(path, mode)

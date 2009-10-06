@@ -55,15 +55,21 @@ class NumberDict(dict):
 
   def __add__(self, other):
     sum_dict = NumberDict()
-    for (self_k,self_v),(other_k,other_v) in zip(self.iteritems(),other.iteritems()):
-        sum_dict[self_k] = self_v + other_v
+    for k,v in self.iteritems():
+        sum_dict[k] = v
+    for k,v in other.iteritems(): 
+        sum_dict[k] = sum_dict[k] + v
+    return sum_dict
 
     return sum_dict
 
   def __sub__(self, other):
     sum_dict = NumberDict()
-    for (self_k,self_v),(other_k,other_v) in zip(self.iteritems(),other.iteritems()):
-        sum_dict[self_k] = self_v- other_v
+    for k,v in self.iteritems():
+        sum_dict[k] = v
+    for k,v in other.iteritems(): 
+        sum_dict[k] = sum_dict[k] - v
+    return sum_dict
 
     return sum_dict
 
@@ -384,6 +390,8 @@ class PhysicalUnit(object):
     if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
       raise TypeError("cannot divide units with non-zero offset")
     if isinstance(other,PhysicalUnit):
+      print "test" 
+      print self.names-other.names
       return PhysicalUnit(self.names-other.names,
                           self.factor/other.factor,
                           [a-b for (a,b) in zip(self.powers,other.powers)])
