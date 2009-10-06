@@ -28,7 +28,7 @@ The contents of this bundle are:
 |  |-- isolated_bootstrap.py --> sets up the buildout environment
 |  `-- setup                 --> contains files needed to bootstrap the 
 |                                buildout environment
-`-- html
+`-- docs
    `-- index.html            --> point your browser here to view OpenMDAO docs
 
 
@@ -49,9 +49,9 @@ GETTING STARTED
      bin/test --all -v
      
      
-To view the OpenMDAO docs, open html/index.html in your browser,
+To view the OpenMDAO docs, open docs/index.html in your browser,
 for example:
-    firefox html/index.html
+    firefox docs/index.html
 
 After you've run bin/buildout, the installed distributions will
 be found under the buildout/eggs directory. The OpenMDAO source
