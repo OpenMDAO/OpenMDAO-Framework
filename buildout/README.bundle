@@ -19,8 +19,12 @@ The contents of this bundle are:
 |-- README.txt               --> this file
 |-- buildout                 --> this is where the actual 'install' takes place
 |  |-- buildout.cfg          --> configuration info for the local install
+|  |-- eggs                  --> pre-installed distributions are found here,
+|  |                             as well as locally built ones after the 
+|  |                             buildout has run
 |  |-- distrib-cache
-|  |   `-- dist              --> all dependent distributions are found here
+|  |   `-- dist              --> dependent distributions requiring local
+|  |                             compilation are found here
 |  |-- isolated_bootstrap.py --> sets up the buildout environment
 |  `-- setup                 --> contains files needed to bootstrap the 
 |                                buildout environment
