@@ -9,7 +9,8 @@ from copy import copy
 import numpy.numarray as numarray
 import numpy
 
-from enthought.traits.api import Int, Array, List, on_trait_change, TraitError
+from enthought.traits.api import Int, Array, List, on_trait_change, \
+                                 TraitError, Float
 import conmin.conmin as conmin
 
 from openmdao.main.api import Driver, StringRef, StringRefArray
@@ -20,7 +21,10 @@ class _cnmn1(object):
     """Just a primitive data structure for storing common block data"""
     def __init__(self):
         self.clear()
-        
+
+    # Note: These values aren't the defaults. This object instantiates with
+    # "cleared" values. The true default values (as denoted in the corresponding
+    # traits) are assigned later.
     def clear(self):
         self.ndv = 0
         self.ncon = 0
@@ -141,7 +145,8 @@ class CONMINdriver(Driver):
     """
     
     design_vars = StringRefArray(iostatus='out',
-       desc='An array of design variable names. These names can include array indexing.')
+       desc='An array of design variable names. These names can include array \
+             indexing.')
     
     constraints = StringRefArray(iostatus='in',
             desc= 'An array of expression strings indicating constraints.'+
@@ -149,17 +154,53 @@ class CONMINdriver(Driver):
             'is violated.')
     
     objective = StringRef(iostatus='in',
-                      desc= 'A string containing the objective function expression.')
+                      desc= 'A string containing the objective function \
+                            expression.')
     
     upper_bounds = Array(dtype=numpy.float, iostatus='in',
-        desc='Array of constraints on the maximum value of each design variable.')
+        desc='Array of constraints on the maximum value of each design \
+              variable.')
     
     lower_bounds = Array(dtype=numpy.float, iostatus='in', 
-        desc='Array of constraints on the minimum value of each design variable.')
-        
-    iprint = Int(0)
-    maxiters = Int(40)
-        
+        desc='Array of constraints on the minimum value of each design \
+              variable.')
+
+    # Control parameters for CONMIN.
+    # CONMIN has quite a few parameters to give the user control over aspects
+    # of the solution. 
+    
+    iprint = Int(0, iostatus='in', desc='Print information during CONMIN \
+                    solution. Higher values are more verbose')
+    itmax = Int(10, iostatus='in', desc='Maximum number of iterations before \
+                    termination')
+    fdch = Float(.01, iostatus='in', desc='Relative change in design variables \
+                      when calculating finite difference gradients')
+    fdchm = Float(.01, iostatus='in', desc='Minimum absolute step in finite \
+                      difference gradient calculations')
+    icndir = Float(0, iostatus='in', desc='Conjugate gradient restart \
+                      parameter')
+    nscal = Float(0, iostatus='in', desc='Scaling control parameter -- \
+                      controls scaling of decision variables')
+    nfdg = Float(0, iostatus='in', desc='User-defined gradient flag (not yet \
+                      supported)')
+    ct = Float(-0.1, iostatus='in', desc='Constraint thickness parameter.')
+    ctmin = Float(0.004, iostatus='in', desc='Minimum absoluate value of ct \
+                      used in optimization.')
+    ctl = Float(-0.01, iostatus='in', desc='Constraint thickness parameter for \
+                      linear and side constraints.')
+    ctlmin = Float(0.001, iostatus='in', desc='Minimum absoluate value of ctl \
+                      used in optimization.')
+    theta = Float(1.0, iostatus='in', desc='Mean value of the push-off factor \
+                      in the method of felasible directions.')
+    phi = Float(5.0, iostatus='in', desc='Participation coefficient - penalty \
+                      parameter that pushes designs towards the feasible \
+                      region.')
+    delfun = Float(0.001, iostatus='in', desc='Relative convergence tolerance')
+    dabfun = Float(0.001, iostatus='in', desc='Absolute convergence tolerance')
+    linobj = Int(0, iostatus='in', desc='Linear objective function flag')
+    itrm = Int(3, iostatus='in', desc='Number of consecutive iterations to \
+                      indicate convergence (relative or absolute)')
+    
     def __init__(self, doc=None):
         super(CONMINdriver, self).__init__( doc)
         
@@ -175,7 +216,7 @@ class CONMINdriver(Driver):
         self.gradients = None
         
         # vector of scaling parameters
-        self.scal = numarray.ones(2, 'd')
+        self.scal = numarray.ones(0, 'd')
         
         # gradient of objective w.r.t x[i]
         self.df = numarray.zeros(2, 'd')
@@ -218,31 +259,38 @@ class CONMINdriver(Driver):
         
         # loop until optimized
         while self.cnmn1.igoto or self.iter_count == 0:
+            
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
 
             self.iter_count += 1 
                         
             # calculate objective
-            self.cnmn1.obj = numarray.array(self.objective.evaluate())
+            try:
+                self.cnmn1.obj = numarray.array(self.objective.evaluate())
+            except:
+                self.raise_exception('objective function is not pointing to a \
+                                      valid OpenMDAO Variable', RuntimeError)
+                    
             #self.debug('iter_count = %d' % self.iter_count)
             #self.debug('objective = %f' % self.cnmn1.obj)
             #self.debug('design vals = %s' % self.design_vals[:-2])
             
 # TODO: 'step around' ill-behaved cases.
             
+            # common blocks are saved before, and loaded after execution
             self._load_common_blocks()
             
             try:
                 (self.design_vals,
-                 self.scal, self.gradients, self.s,
+                 self._scal, self.gradients, self.s,
                  self.g1, self.g2, self._b, self._c,
                  self.cons_is_linear,
                  self.cons_active_or_violated, self._ms1) = \
                      conmin.conmin(self.design_vals,
                                    self._lower_bounds, self._upper_bounds,
                                    self.constraint_vals,
-                                   self.scal, self.df,
+                                   self._scal, self.df,
                                    self.gradients,
                                    self.s, self.g1, self.g2, self._b, self._c,
                                    self.cons_is_linear,
@@ -259,21 +307,36 @@ class CONMINdriver(Driver):
             for var,val in zip(self.design_vars, dvals):
                 var.set(val)
             
-            # update the model
-            self.run_iteration()
-            
-            # calculate constraints
+            # calculate objective and constraints
             if self.cnmn1.info == 1:
+                
+                # update the model
+                self.run_iteration()
+            
                 # update constraint value array
                 for i,v in enumerate(self.constraints):
                     self.constraint_vals[i] = v.evaluate()
                 #self.debug('constraints = %s'%self.constraint_vals)
                     
-            # calculate gradients
+            # calculate gradient of constraints and graident of objective
             elif self.cnmn1.info == 2:
-                self.raise_exception('user defined gradients not yet supported',
-                                     NotImplementedError)
-
+                
+                # Placeholder for future use of component gradient calc.
+                
+                # User-defined gradients for objective and constraints
+                if self.cnmn1.nfdg == 1:
+                    self.raise_exception('User defined gradients not yet \
+                               supported for constraints', NotImplementedError)
+                    
+                # User-defined gradients for just the objective
+                elif self.cnmn1.nfdg == 2:
+                    self.raise_exception('User defined gradients not yet \
+                               supported', NotImplementedError)
+                
+            else:
+                self.raise_exception('Unexpected value for flag INFO returned \
+                        from CONMIN', RuntimeError)
+                
 
     def _config_conmin(self):
         """Set up arrays for the FORTRAN conmin routine, and perform some
@@ -282,22 +345,24 @@ class CONMINdriver(Driver):
         self.cnmn1.clear()
         self.consav.clear()
         
+        if not isinstance(self.objective,basestring):
+            self.raise_exception('no objective specified', RuntimeError)
+        
         # size arrays based on number of design variables
         num_dvs = len(self.design_vars)
         self.design_vals = numarray.zeros(num_dvs+2, 'd')
-        
+
         if num_dvs < 1:
             self.raise_exception('no design variables specified', RuntimeError)
             
-        if self.objective is None:
-            self.raise_exception('no objective specified', RuntimeError)
-         
         # create lower_bounds numarray
         if len(self.lower_bounds) > 0:
             self._lower_bounds = numarray.zeros(len(self.lower_bounds)+2)
             if len(self.lower_bounds) != num_dvs:
-                self.raise_exception('size of new lower bound array (%d) does not match number of design vars (%d)'%
-                                     (len(self.lower_bounds),num_dvs), ValueError)
+                msg = 'size of new lower bound array (%d) does not match ' + \
+                      'number of design vars (%d)'
+                self.raise_exception(msg % (len(self.lower_bounds),num_dvs), \
+                                     ValueError)
             for i, lb in enumerate(self.lower_bounds):
                 self._lower_bounds[i] = lb
         else:
@@ -308,34 +373,66 @@ class CONMINdriver(Driver):
         if len(self.upper_bounds) > 0:
             self._upper_bounds = numarray.zeros(len(self.upper_bounds)+2)
             if len(self.upper_bounds) != num_dvs:
-                self.raise_exception('size of new upper bound array (%d) does not match number of design vars (%d)'%
-                                     (len(self.upper_bounds),num_dvs), ValueError)
+                msg = 'size of new upper bound array (%d) does not match ' + \
+                      'number of design vars (%d)'
+                self.raise_exception(msg % (len(self.upper_bounds),num_dvs), \
+                                     ValueError)
             
             for i, ub in enumerate(self.upper_bounds):
                 self._upper_bounds[i] = ub
         else:
             self._upper_bounds = numarray.array(([1.e99]*num_dvs)+[0.,0.])
+
+        # Check if the upper and lower bounds are swapped    
+        for i,val in enumerate(self._lower_bounds):
+            if val > self._upper_bounds[i]:
+                self.raise_exception('lower bound greater than upper bound ' + \
+                    'for design variable (%s)'%self.design_vars[i], ValueError)
+
+                
+        # create array for scaling of the design vars
+        if len(self.scal) > 0:
+            if len(self.upper_bounds) != num_dvs:
+                msg = 'size of scale factor array (%d) does not match ' + \
+                      'number of design vars (%d)'
+                self.raise_exception(msg % (len(self.scal),num_dvs), \
+                                     ValueError)
             
-        self.scal = numarray.ones(num_dvs+2, 'd')
+            self._scal = numarray.ones(len(self.scal)+2)
+            
+            for i, scale_factor in enumerate(self.scal):
+                self._scal[i] = scale_factor
+        else:
+            self._scal = numarray.ones(num_dvs+2, 'd')
+            
         self.df = numarray.zeros(num_dvs+2, 'd')
         self.s = numarray.zeros(num_dvs+2, 'd')
         
         # size constraint related arrays
-        length = len(self.constraints)+2*num_dvs
+        length = len(self.constraints) + 2*num_dvs
         self.constraint_vals = numarray.zeros(length, 'd')
-        # temp storage of constraint and des vals
+        
+        # temp storage of constraint and design vals
         self.g1 = numarray.zeros(length, 'd') 
+        
         # temp storage of constraint vals
         self.g2 = numarray.zeros(length, 'd') 
-        # if constraint i is known to be a linear function of des vals, 
-        # set cons_is_linear[i] to 1, otherwise set it to 0. This is 
-        # not essential is is for efficiency only.
-        self.cons_is_linear = numarray.zeros(length, 'i') 
+        
+        # if constraint i is known to be a linear function of design vars, 
+        # the user can set cons_is_linear[i] to 1, otherwise set it to 0. This
+        # is not essential and is for efficiency only.
+        if len(self.cons_is_linear) == 0:
+            self.cons_is_linear = numarray.zeros(length, 'i') 
+        else:
+            if len(self.cons_is_linear) != length:
+                self.raise_exception('size of cons_is_linear (%d) does not \
+                                      match number of constraints (%d)'%
+                               (len(self.cons_is_linear),length), ValueError)
         
         self.cnmn1.ndv = num_dvs
         self.cnmn1.ncon = len(self.constraints)
         
-        if not self._lower_bounds.size == 0 or not self._upper_bounds.size == 0:
+        if len(self.lower_bounds) > 0 or len(self.upper_bounds) > 0:
             self.cnmn1.nside = 2*num_dvs
         else:
             self.cnmn1.nside = 0
@@ -357,31 +454,52 @@ class CONMINdriver(Driver):
         # temp storage
         self._ms1 = numarray.zeros(n5, 'i')
 
+        # Load all of the user-changeable parameters into the common block
+        
         self.cnmn1.iprint = self.iprint
-        self.cnmn1.itmax = self.maxiters
+        self.cnmn1.itmax = self.itmax
+        self.cnmn1.fdch = self.fdch
+        self.cnmn1.fdchm = self.fdchm
+        self.cnmn1.icndir = self.icndir
+        self.cnmn1.nscal = self.nscal
+        self.cnmn1.nfdg = self.nfdg
+        self.cnmn1.ct = self.ct
+        self.cnmn1.ctmin = self.ctmin
+        self.cnmn1.ctl = self.ctl
+        self.cnmn1.ctlmin = self.ctlmin
+        self.cnmn1.theta = self.theta
+        self.cnmn1.phi = self.phi
+        self.cnmn1.dabfun = self.dabfun
+        self.cnmn1.delfun = self.delfun
+        self.cnmn1.linobj = self.linobj
+        self.cnmn1.itrm = self.itrm
         
 
     @on_trait_change('objective') 
     def _refvar_changed(self, obj, name, old, new):
         expr = getattr(obj, name)
         try:
-            expr.refs_valid()  # force checking for existence of vars referenced in expression
+            # force checking for existence of vars referenced in expression
+            expr.refs_valid()  
         except (AttributeError, RuntimeError), err:
-            self.raise_exception("invalid value '%s' for input ref variable '%s': %s" % 
-                                 (str(expr),name,err), TraitError)
+            msg = "invalid value '%s' for input ref variable '%s': %s"
+            self.raise_exception( msg % (str(expr),name,err), TraitError)
         
     @on_trait_change('constraints, design_vars') 
     def _refvar_array_changed(self, obj, name, old, new):
         exprevals = getattr(obj, name)
         for i,expr in enumerate(exprevals):
             try:
-                expr.refs_valid()  # force checking for existence of vars referenced in expression
+                # force checking for existence of vars referenced in expression
+                expr.refs_valid()  
             except (AttributeError, RuntimeError), err:
-                self.raise_exception("invalid value '%s' for input ref variable '%s[%d]': %s" % 
-                                     (str(expr),name,i,err), TraitError)
+                msg = "invalid value '%s' for input ref variable '%s[%d]': %s"
+                self.raise_exception( msg % (str(expr),name,i,err), TraitError)
         
     def _load_common_blocks(self):
-        """ Reloads the common blocks using the intermediate info saved in the class. """
+        """ Reloads the common blocks using the intermediate info saved in the
+            class.
+            """
         
         for name, value in self.cnmn1.__dict__.items():
             setattr( conmin.cnmn1, name, value )

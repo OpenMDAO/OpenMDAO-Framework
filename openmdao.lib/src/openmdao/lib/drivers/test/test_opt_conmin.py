@@ -65,7 +65,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.add_container('comp', OptRosenSuzukiComponent())
         self.top.add_container('driver', CONMINdriver())
         self.top.driver.iprint = 0
-        self.top.driver.maxiters = 30
+        self.top.driver.itmax = 30
         
     def tearDown(self):
         self.top = None
@@ -101,7 +101,9 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.top.driver.objective = 'comp.missing'
         except TraitError, err:
             self.assertEqual(str(err), 
-                "driver: invalid value 'comp.missing' for input ref variable 'objective': comp: cannot get valid flag of 'missing' because it's not an io trait.")
+                "driver: invalid value 'comp.missing' for input ref variable "+
+                "'objective': comp: cannot get valid flag of 'missing' because "+
+                "it's not an io trait.")
         else:
             self.fail('TraitError expected')
 
@@ -121,10 +123,10 @@ class CONMINdriverTestCase(unittest.TestCase):
                                              'comp.x[2]', 'comp.x[3]']
         try:
             self.top.run()
-        except TraitError, err:
-            self.assertEqual(str(err), "StringRef: string reference is undefined")
+        except RuntimeError, err:
+            self.assertEqual(str(err), "driver: no objective specified")
         else:
-            self.fail('TraitError expected')
+            self.fail('RuntimeError expected')
             
     def test_get_objective(self):
         self.top.driver.objective = 'comp.result'
@@ -188,6 +190,82 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.fail('ValueError expected')
 
     
+    def test_bounds_swapped(self):
+        
+        self.top.driver.objective = 'comp.result'
+        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
+                                             'comp.x[2]', 'comp.x[3]']
+        self.top.driver.lower_bounds = [-10, 99, -10, -10]
+        self.top.driver.upper_bounds = [99, -10, 99, 99]
+        try:
+            self.top.run()
+        except ValueError, err:
+            self.assertEqual(str(err),
+                             'driver: lower bound greater than upper bound '+
+                             'for design variable (comp.x[1])')
+        else:
+            self.fail('ValueError expected')
+        
+        
+    def test_scale_design_vector_size_mismatch(self):
+        self.top.driver.objective = 'comp.result'
+        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]']
+        self.top.driver.scal = [2,3,4]
+        try:
+            self.top.run()
+        except ValueError, err:
+            self.assertEqual(str(err),
+                             "driver: size of scale factor array"+
+                             " (3) does not match number of design vars (2)")
+        else:
+            self.fail('ValueError expected')
+
+    
+    def test_gradient_step_size_small(self):
+        # Test that a smaller value of fd step-size is more acurate
+        
+        self.top.driver.objective = 'comp.result'
+        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
+                                             'comp.x[2]', 'comp.x[3]']
+        self.top.driver.lower_bounds = [-10, -10, -10, -10]
+        self.top.driver.upper_bounds = [99, 99, 99, 99]
+        self.top.driver.fdch = .00001
+        self.top.driver.fdchm = .00001
+        
+        # pylint: disable-msg=C0301
+        self.top.driver.constraints = [
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
+        self.top.run()
+        # pylint: disable-msg=E1101
+        self.assertAlmostEqual(self.top.comp.opt_objective, 
+                               self.top.driver.objective.evaluate(), places=3)
+        
+    def test_gradient_step_size_large(self):
+        # Test that a larger value of fd step-size is less acurate
+        
+        self.top.driver.objective = 'comp.result'
+        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
+                                             'comp.x[2]', 'comp.x[3]']
+        self.top.driver.lower_bounds = [-10, -10, -10, -10]
+        self.top.driver.upper_bounds = [99, 99, 99, 99]
+        self.top.driver.fdch = .1
+        self.top.driver.fdchm = .1
+        
+        # pylint: disable-msg=C0301
+        self.top.driver.constraints = [
+            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
+            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
+        self.top.run()
+        
+        error = self.top.comp.opt_objective - self.top.driver.objective.evaluate()
+        # pylint: disable-msg=E1101
+        self.assertAlmostEqual(error, -.0180, places=2)
+        
+        
+        
 if __name__ == "__main__":
     unittest.main()
     #suite = unittest.TestLoader().loadTestsFromTestCase(ContainerTestCase)
