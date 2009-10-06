@@ -52,8 +52,8 @@ class IsolatedEgg(zc.recipe.egg.Scripts):
     behavior from (prepending to sys.path) to (replacing sys.path)."""
 
     def __init__(self, buildout, name, options):
+        self.bindir = buildout['buildout']['bin-directory']
         super(IsolatedEgg, self).__init__(buildout, name, options)
-        self.buildout = buildout
 
     def install(self):
         old, old_py = _swap_templates(_script_template, _py_script_template)
@@ -66,7 +66,7 @@ class IsolatedEgg(zc.recipe.egg.Scripts):
                 
         # Sometimes we need the explicit version command (eggsecutables).
         if sys.platform != 'win32':
-            bin = self.buildout['buildout']['bin-directory']
+            bin = self.bindir
             python = os.path.join(bin, 'python')
             pythonVR = os.path.join(bin, 'python'+sys.version[:3])
             shutil.copyfile(python, pythonVR)
