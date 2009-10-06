@@ -53,21 +53,17 @@ class NumberDict(dict):
         other = NumberDict(other)
     return self, other
 
-    def __add__(self, other):
-        sum_dict = NumberDict()
-        for key in self.keys():
-            sum_dict[key] = self[key]
-        for key in other.keys():
-            sum_dict[key] = sum_dict[key] + other[key]
-        return sum_dict
+  def __add__(self, other):
+    sum_dict = NumberDict()
+    for (self_k,self_v),(other_k,other_v) in zip(self.iteritems(),other.iteritems()):
+        sum_dict[self_k] = self_v + other_v
 
-    def __sub__(self, other):
-        sum_dict = NumberDict()
-        for key in self.keys():
-            sum_dict[key] = self[key]
-        for key in other.keys():
-            sum_dict[key] = sum_dict[key] - other[key]
-        return sum_dict
+    return sum_dict
+
+  def __sub__(self, other):
+    sum_dict = NumberDict()
+    for (self_k,self_v),(other_k,other_v) in zip(self.iteritems(),other.iteritems()):
+        sum_dict[self_k] = self_v - other_v
 
     return sum_dict
 
