@@ -384,12 +384,14 @@ class PhysicalUnit(object):
     if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
       raise TypeError("cannot divide units with non-zero offset")
     if isinstance(other,PhysicalUnit):
+      print "test" 
+      print self.names-other.names
       return PhysicalUnit(self.names-other.names,
                           self.factor/other.factor,
                           [a-b for (a,b) in zip(self.powers,other.powers)])
     else:
       return PhysicalUnit(self.names+{str(other): -1},
-                          self.factor/other, self.powers)
+                          self.factor/float(other), self.powers)
 
   def __rdiv__(self, other):
     if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
@@ -400,7 +402,7 @@ class PhysicalUnit(object):
                           [a-b for (a,b) in zip(other.powers,self.powers)])
     else:
       return PhysicalUnit({str(other): 1}-self.names,
-                          other/self.factor,
+                          float(other)/self.factor,
                           [-x for x in self.powers])
 
   def __pow__(self, other):
