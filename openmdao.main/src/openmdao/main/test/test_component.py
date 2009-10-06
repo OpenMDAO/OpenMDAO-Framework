@@ -30,8 +30,7 @@ class TestCase(unittest.TestCase):
             comp = Component(directory='/illegal')
             comp.tree_rooted()
         except ValueError, exc:
-            msg = ": Illegal execution directory '/illegal'," \
-                  " not a descendant of"
+            msg = ": Illegal path '/illegal', not a descendant of"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
@@ -94,7 +93,7 @@ class TestCase(unittest.TestCase):
         try:
             comp.run()
         except ValueError, exc:
-            msg = ": Illegal execution directory '/illegal',"
+            msg = ": Illegal path '/illegal', not a descendant of"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
