@@ -545,20 +545,21 @@ def isPhysicalQuantity(x):
 def _findUnit(unit):
     if isinstance(unit,str):
         name = unit.strip()
-        if name not in _unitLib.unit_table:
+        try: 
+            unit = eval(name, _unitLib.unit_table)
+        except NameError: 
             #check for single letter prefix before unit
             if(name[0] in _unitLib.prefixes and name[1:] in _unitLib.unit_table):
                 addUnit(unit,_unitLib.prefixes[name[0]]*_unitLib.unit_table[name[1:]])
             #check for double letter prefix before unit
             elif(name[0:2] in _unitLib.prefixes and name[2:] in _unitLib.unit_table):
                 addUnit(unit,_unitLib.prefixes[name[0:2]]*_unitLib.unit_table[name[2:]])
-            #no prefixes found, might be function of multiple units
+            #no prefixes found, unknown unit
             else:
-                try:
-                    unit =  eval(name, _unitLib.unit_table) 
-                except:
-                    raise ValueError, "no unit named '%s' is defined"%name
-        unit = eval(name, _unitLib.unit_table)
+                raise ValueError, "no unit named '%s' is defined"%name
+            
+            unit = eval(name, _unitLib.unit_table)
+        
         for cruft in ['__builtins__', '__args__']:
             try: del _unitLib.unit_table[cruft]
             except: pass
