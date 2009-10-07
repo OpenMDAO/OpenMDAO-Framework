@@ -104,7 +104,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         self.assertEqual(x.value,y.value)
         self.assertEqual(x.unit,y.unit)
         
-        z=units.PhysicalQuantity('1dam')
+        z=units.PhysicalQuantity('1dam') #check for two letter prefixes
         
         #error for improper init argument
         try:
@@ -681,6 +681,22 @@ class test__PhysicalUnit(unittest.TestCase):
         y=x2/(x1**2)
         self.assertEqual(y.unit.name(),'kg/m**2')
 
+
+class test__moduleFunctions(unittest.TestCase):        
+    def test_addUnit(self):
+        try:
+            units.addUnit('ft','20m')
+        except KeyError,err: 
+            self.assertEqual(str(err),'Unit ft already defined with different factor or powers')
+        else:
+            self.fail("Expecting Key Error")
+            
+        try:
+            units.addOffsetUnit('degR','10degK')
+        except KeyError,err: 
+            self.assertEqual(str(err),'Unit degR already defined with different factor or powers')
+        else:
+            self.fail("Expecting Key Error")            
 
 if __name__ == "__main__":
     unittest.main()
