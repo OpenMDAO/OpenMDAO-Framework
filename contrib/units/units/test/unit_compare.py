@@ -23,7 +23,8 @@ for jj in xrange(n):
     pq2 = pq/pq
     pq2 = pq + pq
     pq2 = pq - pq
-    pq2 = pq.sqrt()
+    pq2 = pq**2
+    pq2.sqrt()
     
     pq2 = case1.PhysicalQuantity(4,'rad')
     pq2.sin()
@@ -42,7 +43,8 @@ for jj in xrange(n):
     pq2 = pq/pq
     pq2 = pq + pq
     pq2 = pq - pq
-    pq2 = pq.sqrt()
+    pq2 = pq**2
+    pq2.sqrt()
     
     pq2 = case2.PhysicalQuantity(4,'rad')
     pq2.sin()
@@ -61,7 +63,8 @@ for jj in xrange(n):
     pq2 = pq/pq
     pq2 = pq + pq
     pq2 = pq - pq
-    pq2 = pq.sqrt()
+    pq2 = pq**2
+    pq2.sqrt()
     
     pq2 = case1.PhysicalQuantity(4,'rad')
     pq2.sin()
@@ -78,7 +81,8 @@ for jj in xrange(n):
     pq2 = pq/pq
     pq2 = pq + pq
     pq2 = pq - pq
-    pq2 = pq.sqrt()
+    pq2 = pq**2
+    pq2.sqrt()
     
     pq2 = case2.PhysicalQuantity(4,'rad')
     pq2.sin()
