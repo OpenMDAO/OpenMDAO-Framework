@@ -69,8 +69,6 @@ class NumberDict(dict):
         sum_dict[k] = sum_dict[k] - v
     return sum_dict
 
-    return sum_dict
-
   def __mul__(self, other):
     new = NumberDict()
     for key,value in self.iteritems():
