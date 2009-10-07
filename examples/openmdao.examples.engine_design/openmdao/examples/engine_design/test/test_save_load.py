@@ -32,7 +32,7 @@ class TestCase(unittest.TestCase):
 
         self.model.driving_sim.bore = 95.
         self.model.driving_sim.spark_angle = -35.368341874
-        self.model.driver.maxiters = 1
+        self.model.driver.itmax = 1
 
         # Set local dir in case we're running in a different directory.
         py_dir = pkg_resources.resource_filename('openmdao.examples.engine_design',
