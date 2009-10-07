@@ -262,9 +262,7 @@ class PhysicalQuantity(object):
     new_value = self.value * self.unit.factor
     num = ''
     denom = ''
-    for i in [0,1,2,3,4,5,6,7,8]:
-      unit = _unitLib.base_names[i]
-      power = self.unit.powers[i]
+    for unit,power in zip(_unitLib.base_names,self.unit.powers):
       if power < 0:
         denom = denom + '/' + unit
         if power < -1:
