@@ -392,14 +392,9 @@ class PhysicalUnit(object):
                           self.factor/float(other), self.powers)
 
   def __rdiv__(self, other):
-    if isinstance(other,PhysicalUnit):
-      return PhysicalUnit(other.names-self.names,
-                          other.factor/self.factor,
-                          [a-b for (a,b) in zip(other.powers,self.powers)])
-    else:
-      return PhysicalUnit({str(other): 1}-self.names,
-                          float(other)/self.factor,
-                          [-x for x in self.powers])
+     return PhysicalUnit({str(other): 1}-self.names,
+                       float(other)/self.factor,
+                       [-x for x in self.powers])
 
   def __pow__(self, other):
     if self.offset != 0:
