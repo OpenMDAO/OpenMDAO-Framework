@@ -482,7 +482,7 @@ class test__PhysicalQuantity(unittest.TestCase):
         
         x = units.PhysicalQuantity(1,'ft**3')
         y = x.inBaseUnits()
-        self.assertEqual(y,units.PhysicalQuantity(35.314666721488585,'m**3'))            
+        self.assertEqual(y,units.PhysicalQuantity((0.028316846592000004,'m**3'))            
         
         x=units.PhysicalQuantity('5cm')
         y = x.inBaseUnits()
