@@ -694,7 +694,7 @@ class test__moduleFunctions(unittest.TestCase):
         try:
             units.addOffsetUnit('degR','degK',20,10)
         except KeyError,err: 
-            self.assertEqual(str(err),"Unit degR already defined with different factor or powers")
+            self.assertEqual(str(err),"'Unit degR already defined with different factor or powers'")
         else:
             self.fail("Expecting Key Error")            
 
