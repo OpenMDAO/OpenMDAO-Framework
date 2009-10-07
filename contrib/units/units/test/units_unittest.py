@@ -563,7 +563,10 @@ class test__PhysicalUnit(unittest.TestCase):
         self.assertEqual(quo2,units.PhysicalUnit({'s': -1, 'g': 1},0.001,[0, 0, 0, 0, 0, 0, 0, 1, -1, 0],0))
 
         quo = y.unit/2.0
-        self.assertEqual(quo,units.PhysicalUnit({'s': 1,},1,[0, 0, 0, 0, 0, 0, 0, 0, -1, 0],0))
+        self.assertEqual(quo,units.PhysicalUnit({'s': 1,},1,[0, 0, 0, 0, 0, 0, 0, 0, 1, 0],0))
+        
+        quo = 2.0/y.unit
+        self.assertEqual(quo,units.PhysicalUnit({'s': -1,},1,[0, 0, 0, 0, 0, 0, 0, 0, -1, 0],0))        
         
         try:
             x.unit / z.unit
