@@ -392,8 +392,6 @@ class PhysicalUnit(object):
                           self.factor/float(other), self.powers)
 
   def __rdiv__(self, other):
-    if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
-      raise TypeError("cannot divide units with non-zero offset")
     if isinstance(other,PhysicalUnit):
       return PhysicalUnit(other.names-self.names,
                           other.factor/self.factor,
