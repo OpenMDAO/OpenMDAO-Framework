@@ -509,25 +509,6 @@ class PhysicalUnit(object):
       num = num[1:]
     return num + denom
 
-#Type Checks
-def isPhysicalUnit(x):
-  """
-  @param x: an object
-  @type x: any
-  @returns: C{True} if x is a L{PhysicalUnit}
-  @rtype: C{bool}
-  """
-  return isinstance(x,PhysicalUnit)
-
-def isPhysicalQuantity(x):
-    """
-    @param x: an object
-    @type x: any
-    @returns: C{True} if x is a L{PhysicalQuantity}
-    @rtype: C{bool}
-    """
-    return isinstance(x,PhysicalQuantity)
-
 #Helper Functions
 def _findUnit(unit):
     if isinstance(unit,str):
