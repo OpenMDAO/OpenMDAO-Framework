@@ -687,7 +687,7 @@ class test__moduleFunctions(unittest.TestCase):
         try:
             units.addUnit('ft','20*m')
         except KeyError,err: 
-            self.assertEqual(err,"Unit ft already defined with different factor or powers")
+            self.assertEqual(str(err),"Unit ft already defined with different factor or powers")
         else:
             self.fail("Expecting Key Error")
             
