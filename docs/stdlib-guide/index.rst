@@ -7,6 +7,10 @@ Guide to the OpenMDAO Standard Library
    :maxdepth: 4
    
    overview.rst
+   components.rst
+   drivers.rst
+   factories.rst
+   traits.rst
    changes
    
 
