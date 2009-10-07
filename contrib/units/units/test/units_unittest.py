@@ -104,6 +104,8 @@ class test__PhysicalQuantity(unittest.TestCase):
         self.assertEqual(x.value,y.value)
         self.assertEqual(x.unit,y.unit)
         
+        z=units.PhysicalQuantity('1dam')
+        
         #error for improper init argument
         try:
             x=units.PhysicalQuantity('m')
