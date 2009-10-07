@@ -547,7 +547,7 @@ def _findUnit(unit):
         name = unit.strip()
         try: 
             unit = eval(name, _unitLib.unit_table)
-        except NameError: 
+        except: 
             #check for single letter prefix before unit
             if(name[0] in _unitLib.prefixes and name[1:] in _unitLib.unit_table):
                 addUnit(unit,_unitLib.prefixes[name[0]]*_unitLib.unit_table[name[1:]])
