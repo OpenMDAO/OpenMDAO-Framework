@@ -374,7 +374,7 @@ class TestCase(unittest.TestCase):
                 self.assertEqual(string.startswith(self.model.name), True)
                 self.assertEqual(string.endswith('.egg'), True)
             else:
-                self.assertEqual(string, expected[i][1])
+                self.assertEqual(string.replace('\\','/'), expected[i][1])
             self.assertEqual(file_fraction, float(i)/float(len(expected)-1))
 
         # Run and verify correct operation.
@@ -554,8 +554,10 @@ class TestCase(unittest.TestCase):
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
                                    dst_dir='/')
         except IOError, exc:
-            msg = "Egg_TestModel: Can't save to '/', no write permission"
-            self.assertEqual(str(exc), msg)
+            #msg = "Egg_TestModel: Can't save to '/', no write permission"
+            #self.assertEqual(str(exc), msg)
+            self.assertTrue('no write permission' in str(exc) or 
+                            'Permission denied' in str(exc))
         else:
             self.fail('Expected IOError')
 
@@ -1065,7 +1067,7 @@ comp.run()
             inp = open(EXTERNAL_FILES[2])
             data = inp.read()
             inp.close()
-            self.assertEqual(data, file_data)
+            self.assertEqual(data.strip(), file_data.strip())
         finally:
             os.chdir(orig_dir)
 
