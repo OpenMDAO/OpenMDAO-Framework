@@ -153,7 +153,7 @@ class GolinskiTestCase(unittest.TestCase):
         self.top.add_container('comp', OptGolinskiComponent())
         self.top.add_container('driver', CONMINdriver())
         self.top.driver.iprint = 0
-        self.top.driver.maxiters = 30
+        self.top.driver.itmax = 30
         
 
     def tearDown(self):
@@ -286,6 +286,7 @@ class GolinskiTestCase(unittest.TestCase):
 
 
     def test_no_design_vars(self):
+        self.top.driver.objective = 'comp.result'
         try:
             self.top.run()
         except Exception, err:
@@ -298,10 +299,10 @@ class GolinskiTestCase(unittest.TestCase):
                                        'comp.x[3]','comp.x[4]']
         try:
             self.top.run()
-        except TraitError, err:
-            self.assertEqual(str(err), "StringRef: string reference is undefined")
+        except RuntimeError, err:
+            self.assertEqual(str(err), "driver: no objective specified")
         else:
-            self.fail('TraitError expected')
+            self.fail('RuntimeError expected')
             
     def test_get_objective(self):
         self.top.driver.objective = 'comp.result'

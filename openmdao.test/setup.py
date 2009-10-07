@@ -44,7 +44,7 @@ setup(name='openmdao.test',
           # -*- Extra requirements: -*-
       ],
       entry_points="""
-      [openmdao.components]
+      [openmdao.component]
       openmdao.test.HollowSphere.HollowSphere = openmdao.test.HollowSphere:HollowSphere
       openmdao.test.Box.Box = openmdao.test.Box:Box
       

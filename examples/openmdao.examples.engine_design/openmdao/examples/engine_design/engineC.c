@@ -57,7 +57,7 @@
     double C_heat, Pratio_crit, Mw, h_ind, FMEP, P0, T0, C1, C2;
     double e1, e2, Qfac, valve1, mass_in, Qloss, P, Pmix, pmi;
     double dWeibe_dtheta, A, V, dV_dtheta, s_theta, c_theta;
-    double term1, term2, Q, dQ_dtheta, phi, Ar, LD, CD, Tg, h, Lv;
+    double term2, Q, dQ_dtheta, phi, Ar, LD, CD, Tg, h, Lv;
     double theta, thetad, thetaSinceSpark, Pratio, flow_direction;
     double BMEP, term, dm_dtheta;
 
