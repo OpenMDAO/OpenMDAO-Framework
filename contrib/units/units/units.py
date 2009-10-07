@@ -549,7 +549,7 @@ def addOffsetUnit(name,baseunit,factor,offset,comment=''):
     unit.setName(name)
     if _unitLib.unit_table.has_key(name):
         if (_unitLib.unit_table[name].factor!=unit.factor or _unitLib.unit_table[name].powers!=unit.powers):
-          raise KeyError, 'Unit ' + name + ' already defined with different factor or powers'
+          raise KeyError, "Unit %s already defined with different factor or powers"%name
     _unitLib.unit_table[name] = unit
     _unitLib.set('units',name,unit)   
     if comment: 
@@ -567,7 +567,7 @@ def addUnit(name, unit, comment=''):
     unit.setName(name)
     if _unitLib.unit_table.has_key(name):
       if (_unitLib.unit_table[name].factor!=unit.factor or _unitLib.unit_table[name].powers!=unit.powers):
-        raise KeyError, 'Unit ' + name + ' already defined with different factor or powers'
+        raise KeyError, "Unit %s already defined with different factor or powers"%name
     _unitLib.unit_table[name] = unit
     _unitLib.set('units',name,unit)
 
