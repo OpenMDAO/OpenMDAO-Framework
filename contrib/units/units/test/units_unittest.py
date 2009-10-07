@@ -470,11 +470,11 @@ class test__PhysicalQuantity(unittest.TestCase):
         """inBaseUnits() should return a new PhysicalQuantity instance
         using the base units, leaving the original instance intact"""
 
-        x = units.PhysicalQuantity(1,'1/hr')
+        x = units.PhysicalQuantity(1,'1/h')
         y = x.inBaseUnits()
         
         self.assertEqual(y,units.PhysicalQuantity(1/3600.0,'1/s'))
-        self.assertEqual(x,units.PhysicalQuantity(1,'1/hr'))   
+        self.assertEqual(x,units.PhysicalQuantity(1,'1/h'))   
         
         x=units.PhysicalQuantity('5cm')
         y = x.inBaseUnits()
