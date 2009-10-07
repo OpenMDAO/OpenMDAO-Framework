@@ -3,7 +3,7 @@
 This is a modified version of the bootstrap.py file (Copyright (c) 2006 
 Zope Corporation and Contributors) that is
 part of zc.buildout.  This version creates a bin/buildout script that is 
-isolated from the system level installed packages. -BAN 6/25/09
+isolated from the system level installed packages.
 
 Simply run this script in a directory containing a buildout.cfg.
 The script accepts buildout command-line options, so you can
@@ -13,44 +13,36 @@ $Id$
 """
 
 import os, shutil, sys, tempfile #, urllib2
-import os.path
 import fnmatch
 
 bodir = os.getcwd()
 setupdir = os.path.join(bodir,'setup')
 
-boutname = None
-
 stoolspat = "setuptools-*-py%s.egg" % sys.version[:3]
+buildoutpat = "zc.buildout-*.tar.gz"
+boeggpat = "zc.buildout-*-py%s.egg" % sys.version[:3]
 
-for f in os.listdir(setupdir):
-    if fnmatch.fnmatch(f, stoolspat):
-        stoolsname = f
-    elif f.startswith('zc.buildout'):
-        boutname = f
-        
-if stoolsname is None or boutname is None:
-    sys.stderr.write('Missing setuptools or zc.buildout eggs for this distrib')
+sorted_dir = sorted(os.listdir(setupdir))
+stools = fnmatch.filter(sorted_dir, stoolspat)
+bouts = fnmatch.filter(sorted_dir, buildoutpat)
+                
+if len(stools)==0 or len(bouts)==0:
+    sys.stderr.write('Missing setuptools or zc.buildout distribs needed for bootstrapping')
     sys.exit(-1)
+ 
+# take the last setuptools in the sorted list, assuming it's
+# the most recent version
+stoolsname = stools.pop()
 
 if os.path.basename(bodir) != 'buildout':
     sys.stderr.write('You must run this script from the buildout directory\n')
     sys.exit(-1)
 
-sys.path = [os.path.join(bodir, 'setup', stoolsname)]
-
 # add paths for builtin python stuff (but no site-packages)                   
-if sys.platform == 'win32':
-    prefx = os.path.join(sys.prefix,'Lib')
-    sys.path += [  prefx, os.path.join(sys.prefix,'DLLs') ]
-else:
-    prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
-    sys.path += [  prefx+'.zip',
-                     prefx,
-                     os.path.join(prefx,'lib-dynload'),
-                     os.path.join(prefx,'plat-'+sys.platform),
-                  ]
+sys.path = [x for x in sys.path if 'site-packages' not in x]
 
+# put setuptools on sys.path so we can import pkg_resources
+sys.path.insert(0, os.path.join(bodir, 'setup', stoolsname))
 
 import pkg_resources
 
@@ -66,7 +58,6 @@ else:
 
 cmd = "import sys; sys.path.insert(0,'%s'); from setuptools.command.easy_install import main; main()" % os.path.join(bodir, 'setup', stoolsname)
 
-ws  = pkg_resources.working_set
 assert os.spawnle(
     os.P_WAIT, sys.executable, quote (sys.executable),
     '-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
@@ -76,8 +67,14 @@ assert os.spawnle(
          ),
     ) == 0
 
-ws.add_entry(setupdir)
-
+#pkg_resources.working_set = pkg_resources.WorkingSet()
+ws  = pkg_resources.working_set
+#ws.add_entry(setupdir)
+dist = pkg_resources.Environment([setupdir]).best_match(
+                      pkg_resources.Requirement.parse('zc.buildout'),
+                      ws)
+#sys.path.insert(0, dist.location)
+ws.add_entry(dist.location)
 ws.require('zc.buildout')
 import zc.buildout.buildout
 
@@ -87,10 +84,16 @@ zc.buildout.buildout.main(sys.argv[1:] + ['bootstrap'])
 
 old_sp = 'import zc.buildout.buildout'
 new_sp = """
+import os
+prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
+sys.path[2:] = [  prefx+'.zip',
+                 prefx,
+                 os.path.join(prefx,'lib-dynload'),
+                 os.path.join(prefx,'plat-'+sys.platform),
+               ]
+              
 import zc.buildout.buildout
 import zc.buildout.easy_install
-import os.path
-import os
 
 # monkey patch zc.buildout.easy_install._script and _pyscript to change 
 # the chmod from 0755 to 0775
@@ -120,20 +123,14 @@ if 'OPENMDAO_REPO' in os.environ:
     zc.buildout.easy_install._script = _script
     zc.buildout.easy_install._pyscript = _pyscript
     
-prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
-sys.path[:] = [  prefx+'.zip',
-                 prefx,
-                 os.path.join(prefx,'lib-dynload'),
-                 os.path.join(prefx,'plat-'+sys.platform),
-              ]+sys.path[0:2]
 """
 new_sp_win = """
-import zc.buildout.buildout
 import os.path
 prefx = os.path.join(sys.prefix,'Lib')
-sys.path[:] = [  prefx,
+sys.path[2:] = [  prefx,
                  os.path.join(sys.prefix,'DLLs'),
-              ]+sys.path[0:2]
+               ]
+import zc.buildout.buildout
 """
 
 if sys.platform == 'win32':
@@ -159,3 +156,10 @@ if 'OPENMDAO_REPO' in os.environ:
     except (AttributeError, os.error):
         pass
     
+# now clean up the zc.buildout egg we installed in the setup dir
+boeggs = fnmatch.filter(os.listdir(setupdir), boeggpat)
+for egg in boeggs:
+    if os.path.isdir(os.path.join(setupdir, egg)):
+        shutil.rmtree(os.path.join(setupdir, egg))
+
+        

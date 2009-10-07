@@ -2,12 +2,7 @@ import os, sys
 
 # pylint: disable-msg=F0401
 
-
-try:
-    from setuptools import setup
-except ImportError, e:
-    from distutils.core import setup
-
+from setuptools import setup
 
 version = '0.1.0'
 

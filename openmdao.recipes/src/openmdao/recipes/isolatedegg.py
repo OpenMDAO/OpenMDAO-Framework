@@ -8,27 +8,26 @@ import zc.buildout.easy_install
 # is being used as part of the buildout.
 
 old_sp = 'import sys'
-new_sp = """
+if sys.platform == 'win32':
+    new_sp = """
+import os
 import sys
-import os.path
+prefx = os.path.join(sys.prefix,'Lib')
+sys.path = [  prefx,
+                 os.path.join(sys.prefix,'DLLs'),
+               ]
+    """
+else:
+    new_sp = """
+import os
+import sys
 prefx = os.path.join(sys.prefix,'lib','python'+sys.version[0:3])
-sys.path[:] = [  prefx+'.zip',
+sys.path = [  prefx+'.zip',
                  prefx,
                  os.path.join(prefx,'lib-dynload'),
                  os.path.join(prefx,'plat-'+sys.platform),
-              ]
-"""
-new_sp_win = """
-import sys
-import os.path
-prefx = os.path.join(sys.prefix,'Lib')
-sys.path[:] = [  prefx,
-                 os.path.join(sys.prefix,'DLLs'),
-              ]
-"""
-
-if sys.platform == 'win32':
-    new_sp = new_sp_win
+               ]
+    """
 
 _script_template = zc.buildout.easy_install.script_template.replace(old_sp,new_sp)
 _py_script_template = zc.buildout.easy_install.py_script_template.replace(old_sp,new_sp)
@@ -53,8 +52,8 @@ class IsolatedEgg(zc.recipe.egg.Scripts):
     behavior from (prepending to sys.path) to (replacing sys.path)."""
 
     def __init__(self, buildout, name, options):
+        self.bindir = buildout['buildout']['bin-directory']
         super(IsolatedEgg, self).__init__(buildout, name, options)
-        self.buildout = buildout
 
     def install(self):
         old, old_py = _swap_templates(_script_template, _py_script_template)
@@ -67,7 +66,7 @@ class IsolatedEgg(zc.recipe.egg.Scripts):
                 
         # Sometimes we need the explicit version command (eggsecutables).
         if sys.platform != 'win32':
-            bin = self.buildout['buildout']['bin-directory']
+            bin = self.bindir
             python = os.path.join(bin, 'python')
             pythonVR = os.path.join(bin, 'python'+sys.version[:3])
             shutil.copyfile(python, pythonVR)
