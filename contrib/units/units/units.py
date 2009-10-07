@@ -540,7 +540,7 @@ def _newUnit(name,factor,powers):
   _unitLib.unit_table[name] = PhysicalUnit(name,factor,powers)
 
 
-def addOffsetUnit(name,baseunit,factor,offset,comment):
+def addOffsetUnit(name,baseunit,factor,offset,comment=''):
     if isinstance(baseunit,str):
         baseunit = _findUnit(baseunit)
     #else, baseunit should be a instance of PhysicalUnit

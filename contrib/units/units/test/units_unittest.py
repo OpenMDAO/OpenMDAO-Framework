@@ -685,14 +685,14 @@ class test__PhysicalUnit(unittest.TestCase):
 class test__moduleFunctions(unittest.TestCase):        
     def test_addUnit(self):
         try:
-            units.addUnit('ft','20 m')
+            units.addUnit('ft','20*m')
         except KeyError,err: 
             self.assertEqual(str(err),'Unit ft already defined with different factor or powers')
         else:
             self.fail("Expecting Key Error")
             
         try:
-            units.addOffsetUnit('degR','10 degK')
+            units.addOffsetUnit('degR','degK',20,10)
         except KeyError,err: 
             self.assertEqual(str(err),'Unit degR already defined with different factor or powers')
         else:
