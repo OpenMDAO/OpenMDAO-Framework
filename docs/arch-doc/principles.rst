@@ -9,19 +9,13 @@ libraries and tools mentioned may change as the design of the framework evolves.
 
 
 **Flexibility**
-    - Component Architecture (Zope's or similar)
-      
-      * Adaptor design pattern
-    - Isolated Python Environments using zc.buildout
-    - Support multiple IPC protocols by using Twisted_
-    
-.. _Twisted : http://twistedmatrix.com/trac
+    - Interfaces and adaptors
 
 **Ease of extensibility**
-    - Component Publishing
+    - Plugins (easy to obtain and distribute via a package index e.g., PyPI)
 
 **Portability**
-    - use of Python/wxPython
+    - use of Python
 
 **100% open source infrastructure**
     - Python's many open source libraries
@@ -29,5 +23,3 @@ libraries and tools mentioned may change as the design of the framework evolves.
 **Location transparency**
     - Abstract Factory design pattern
     - proxy objects
-
-
