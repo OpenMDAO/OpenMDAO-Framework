@@ -218,7 +218,7 @@ class WingProj(object):
             wingpath = self.wingpath
         else:
             if sys.platform == 'win32':
-                wingpath = 'wing'
+                wingpath = r'C:\Program Files\Wing IDE 3.2\bin\wing.exe'
             else:
                 wingpath = 'wing3.1'
 

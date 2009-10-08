@@ -329,7 +329,7 @@ class TestCase(unittest.TestCase):
         if use_setuptools:
             expected = [
                 ('add', 'write-via-setuptools'),
-                ('complete', 'Egg_TestModel-1.2.3-py2.5.egg'),
+                ('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]),
             ]
         else:
             expected = [
@@ -364,7 +364,7 @@ class TestCase(unittest.TestCase):
             # Add our file if we're not considered part of an egg.
             if sys.modules[self.__module__].__file__.find('.egg') < 0:
                 expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
-            expected.append(('complete', 'Egg_TestModel-1.2.3-py2.5.egg'))
+            expected.append(('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]))
 
         self.assertEqual(len(OBSERVATIONS), len(expected))
         for i, observation in enumerate(OBSERVATIONS):
@@ -374,7 +374,7 @@ class TestCase(unittest.TestCase):
                 self.assertEqual(string.startswith(self.model.name), True)
                 self.assertEqual(string.endswith('.egg'), True)
             else:
-                self.assertEqual(string, expected[i][1])
+                self.assertEqual(string.replace('\\','/'), expected[i][1])
             self.assertEqual(file_fraction, float(i)/float(len(expected)-1))
 
         # Run and verify correct operation.
@@ -554,8 +554,10 @@ class TestCase(unittest.TestCase):
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
                                    dst_dir='/')
         except IOError, exc:
-            msg = "Egg_TestModel: Can't save to '/', no write permission"
-            self.assertEqual(str(exc), msg)
+            #msg = "Egg_TestModel: Can't save to '/', no write permission"
+            #self.assertEqual(str(exc), msg)
+            self.assertTrue('no write permission' in str(exc) or 
+                            'Permission denied' in str(exc))
         else:
             self.fail('Expected IOError')
 
@@ -692,7 +694,7 @@ class TestCase(unittest.TestCase):
                 msg = "Egg_TestModel: Can't save to" \
                       " 'Egg_TestModel/Egg_TestModel.pickle': Can't pickle" \
                       " <type 'code'>: attribute lookup __builtin__.code failed"
-                self.assertEqual(str(exc), msg)
+                self.assertEqual(str(exc).replace('\\','/'), msg)
             else:
                 self.fail('Expected cPickle.PicklingError')
 
@@ -1065,7 +1067,7 @@ comp.run()
             inp = open(EXTERNAL_FILES[2])
             data = inp.read()
             inp.close()
-            self.assertEqual(data, file_data)
+            self.assertEqual(data.strip(), file_data.strip())
         finally:
             os.chdir(orig_dir)
 

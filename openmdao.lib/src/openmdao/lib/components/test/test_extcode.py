@@ -81,9 +81,13 @@ class TestCase(unittest.TestCase):
         try:
             externp.run()
         except RuntimeError, exc:
-            msg = ': return_code = 127'
-            self.assertEqual(str(exc).startswith(msg), True)
-            self.assertEqual(externp.return_code, 127)
+            if sys.platform == 'win32':
+                self.assertTrue('Operation not permitted' in str(exc))
+                self.assertEqual(externp.return_code, 1)
+            else:
+                msg = ': return_code = 127'
+                self.assertEqual(str(exc).startswith(msg), True)
+                self.assertEqual(externp.return_code, 127)
             self.assertEqual(os.path.exists(externp.stdout), True)
         else:
             self.fail('Expected RuntimeError')

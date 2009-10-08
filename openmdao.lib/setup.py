@@ -16,7 +16,7 @@ Component, Driver, and TraitType plugins for OpenMDAO
         'License :: OSI Approved',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.5',
+        'Programming Language :: Python :: 2.6',
         'Topic :: Scientific/Engineering',
       ],
       keywords='optimization multidisciplinary multi-disciplinary analysis',
