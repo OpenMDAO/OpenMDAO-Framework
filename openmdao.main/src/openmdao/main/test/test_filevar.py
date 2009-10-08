@@ -4,6 +4,7 @@ Test of FileTraits.
 
 import cPickle
 import logging
+import os.path
 import shutil
 import unittest
 
@@ -12,7 +13,7 @@ from numpy.testing import assert_equal
 from enthought.traits.api import Bool, Array, Str, TraitError
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.main.filevar import FileTrait
+from openmdao.main.filevar import FileTrait, FileRef
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -40,26 +41,16 @@ class Source(Component):
 
 
 class Passthru(Component):
-    """ Copies input files to output. """
-
-    text_in = FileTrait(iostatus='in', legal_types=['xyzzy', 'txt'])
-    binary_in = FileTrait(iostatus='in')
+    """ Copies input files (implicitly via local_path) to output. """
+    text_in = FileTrait(iostatus='in', local_path='tout',
+                        legal_types=['xyzzy', 'txt'])
+    binary_in = FileTrait(iostatus='in', local_path='bout')
     text_out = FileTrait(path='tout', iostatus='out')
     binary_out = FileTrait(path='bout', iostatus='out', binary=True)
 
     def execute(self):
-        """ Copy input files to local directory. """
-        self.copy(self.text_in, self.text_out.path)
-        self.copy(self.binary_in, self.binary_out.path)
-
-    def copy(self, src_ref, dst_path):
-        """ Copy file to `dst_path`. """
-        src = src_ref.open()
-        mode = 'wb' if src_ref.binary else 'w'
-        dst = open(dst_path, mode)
-        dst.write(src.read())
-        dst.close()
-        src.close()
+        """ File copies are performed implicitly. """
+        pass
 
 
 class Middle(Assembly):
@@ -117,6 +108,18 @@ class Model(Assembly):
 
         self.source.text_data = 'Hello World!'
         self.source.binary_data = [3.14159, 2.781828, 42]
+
+    def tree_rooted(self):
+        """ Sets passthru paths to absolute to exercise code. """
+        super(Model, self).tree_rooted()
+
+        self.middle.passthru.trait('text_in').trait_type._metadata['local_path'] = \
+            os.path.join(self.middle.passthru.get_abs_directory(),
+                         self.middle.passthru.trait('text_in').local_path)
+
+        self.middle.passthru.trait('text_out').trait_type._metadata['path'] = \
+            os.path.join(self.middle.passthru.get_abs_directory(),
+                         self.middle.passthru.trait('text_out').path)
 
 
 class TestCase(unittest.TestCase):
@@ -206,6 +209,108 @@ class TestCase(unittest.TestCase):
         except TraitError, exc:
             msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
                   " Content type '' not one of ['xyzzy', 'txt']"
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected TraitError')
+
+    def test_formatting(self):
+        logging.debug('')
+        logging.debug('test_formatting')
+        msg = "{'binary': False, 'single_precision': False," \
+              " 'unformatted': False, 'content_type': 'txt'," \
+              " 'recordmark_8': False, 'path': 'source.txt'," \
+              " 'big_endian': False, 'desc': ''}"
+        self.assertEqual(str(self.model.source.text_file), msg)
+
+    def test_no_owner(self):
+        logging.debug('')
+        logging.debug('test_no_owner')
+
+        # Absolute FileRef.
+        path = os.path.join(os.sep, 'xyzzy')
+        ref = FileRef(path)
+        try:
+            inp = ref.open()
+        except ValueError, exc:
+            msg = "Path '%s' is absolute and no path checker is available." \
+                  % path
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected ValueError')
+
+        # Relative FileRef.
+        path = 'xyzzy'
+        ref = FileRef(path)
+        try:
+            inp = ref.open()
+        except ValueError, exc:
+            msg = "Path '%s' is relative and no absolute directory is available." \
+                  % path
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected ValueError')
+
+    def test_bad_trait(self):
+        logging.debug('')
+        logging.debug('test_no_owner')
+
+        try:
+            trait = FileTrait(42)
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             'FileTrait default value must be a FileRef.')
+        else:
+            self.fail('Expected TraitError')
+
+        try:
+            trait = FileTrait()
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             "FileTrait must have 'iostatus' defined.")
+        else:
+            self.fail('Expected TraitError')
+
+        try:
+            trait = FileTrait(iostatus='out')
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             "Output FileTrait must have 'path' defined.")
+        else:
+            self.fail('Expected TraitError')
+
+        try:
+            trait = FileTrait(iostatus='out', path='xyzzy', legal_types=42)
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             "'legal_types' invalid for output FileTraits.")
+        else:
+            self.fail('Expected TraitError')
+
+        try:
+            trait = FileTrait(iostatus='out', path='xyzzy', local_path=42)
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             "'local_path' invalid for output FileTraits.")
+        else:
+            self.fail('Expected TraitError')
+
+        try:
+            trait = FileTrait(iostatus='in', path='xyzzy')
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             "'path' invalid for input FileTraits.")
+        else:
+            self.fail('Expected TraitError')
+
+    def test_bad_value(self):
+        logging.debug('')
+        logging.debug('test_bad_value')
+        try:
+            self.model.source.text_file = 42
+        except TraitError, exc:
+            msg = "The 'text_file' trait of a Source instance must be" \
+                  " a legal value, but a value of 42 <type 'int'> was" \
+                  " specified."
             self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected TraitError')
