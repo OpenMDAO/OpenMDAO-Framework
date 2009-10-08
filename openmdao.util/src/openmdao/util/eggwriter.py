@@ -234,7 +234,7 @@ def write_via_setuptools(name, version, doc, entry_map, src_files,
     # Use environment since 'python' might not recognize '-u'.
     env = os.environ
     env['PYTHONUNBUFFERED'] = '1'
-    proc = subprocess.Popen(['python', 'setup.py', 'bdist_egg', '-d', dst_dir],
+    proc = subprocess.Popen([sys.executable, 'setup.py', 'bdist_egg', '-d', dst_dir],
                             env=env, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT)
     output = []

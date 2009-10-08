@@ -10,6 +10,9 @@ import time
 
 if sys.platform == 'win32':
     import ctypes
+    SIGKILL = 0    # signal.SIGKILL not defined on win32
+else:
+    SIGKILL = signal.SIGKILL
 
 from enthought.traits.api import Bool, Str, Any
 
@@ -144,7 +147,7 @@ class ExternalCode(Component):
                 if (self.timeout > 0) and (npolls < 0):
                     self.timed_out = True
                     self.return_code = None
-                    kill_proc(self._process, signal.SIGKILL)
+                    kill_proc(self._process, SIGKILL)
                     self.raise_exception('Timed out', RunInterrupted)
                 time.sleep(poll_delay)
                 try:

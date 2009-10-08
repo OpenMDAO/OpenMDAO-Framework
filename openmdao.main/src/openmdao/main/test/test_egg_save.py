@@ -329,7 +329,7 @@ class TestCase(unittest.TestCase):
         if use_setuptools:
             expected = [
                 ('add', 'write-via-setuptools'),
-                ('complete', 'Egg_TestModel-1.2.3-py2.5.egg'),
+                ('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]),
             ]
         else:
             expected = [
@@ -364,7 +364,7 @@ class TestCase(unittest.TestCase):
             # Add our file if we're not considered part of an egg.
             if sys.modules[self.__module__].__file__.find('.egg') < 0:
                 expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
-            expected.append(('complete', 'Egg_TestModel-1.2.3-py2.5.egg'))
+            expected.append(('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]))
 
         self.assertEqual(len(OBSERVATIONS), len(expected))
         for i, observation in enumerate(OBSERVATIONS):
@@ -694,7 +694,7 @@ class TestCase(unittest.TestCase):
                 msg = "Egg_TestModel: Can't save to" \
                       " 'Egg_TestModel/Egg_TestModel.pickle': Can't pickle" \
                       " <type 'code'>: attribute lookup __builtin__.code failed"
-                self.assertEqual(str(exc), msg)
+                self.assertEqual(str(exc).replace('\\','/'), msg)
             else:
                 self.fail('Expected cPickle.PicklingError')
 
