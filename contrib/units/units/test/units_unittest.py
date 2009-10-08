@@ -104,6 +104,8 @@ class test__PhysicalQuantity(unittest.TestCase):
         self.assertEqual(x.value,y.value)
         self.assertEqual(x.unit,y.unit)
         
+        z=units.PhysicalQuantity('1dam') #check for two letter prefixes
+        
         #error for improper init argument
         try:
             x=units.PhysicalQuantity('m')
@@ -470,6 +472,20 @@ class test__PhysicalQuantity(unittest.TestCase):
         """inBaseUnits() should return a new PhysicalQuantity instance
         using the base units, leaving the original instance intact"""
 
+        x = units.PhysicalQuantity(1,'1/h')
+        y = x.inBaseUnits()
+        
+        self.assertEqual(y,units.PhysicalQuantity(1/3600.0,'1/s'))
+        self.assertEqual(x,units.PhysicalQuantity(1,'1/h'))   
+        
+        x = units.PhysicalQuantity(1,'ft**-3')
+        y = x.inBaseUnits()
+        self.assertEqual(y,units.PhysicalQuantity(35.314666721488585,'1/m**3'))         
+        
+        x = units.PhysicalQuantity(1,'ft**3')
+        y = x.inBaseUnits()
+        self.assertEqual(y,units.PhysicalQuantity(0.028316846592000004,'m**3'))            
+        
         x=units.PhysicalQuantity('5cm')
         y = x.inBaseUnits()
         self.assertEqual(y,units.PhysicalQuantity('0.05m'))
@@ -547,7 +563,13 @@ class test__PhysicalUnit(unittest.TestCase):
 
         self.assertEqual(quo,units.PhysicalUnit({'kg': 1, 'g': -1},1000.0,[0, 0, 0, 0, 0, 0, 0, 0, 0, 0],0))
         self.assertEqual(quo2,units.PhysicalUnit({'s': -1, 'g': 1},0.001,[0, 0, 0, 0, 0, 0, 0, 1, -1, 0],0))
-
+        
+        quo = y.unit/2.0
+        self.assertEqual(quo,units.PhysicalUnit({'s': 1, "2.0":-1},.5,[0, 0, 0, 0, 0, 0, 0, 0, 1, 0],0))
+        
+        quo = 2.0/y.unit
+        self.assertEqual(quo,units.PhysicalUnit({'s': -1,"2.0":1},2,[0, 0, 0, 0, 0, 0, 0, 0, -1, 0],0))        
+        
         try:
             x.unit / z.unit
         except TypeError,err:
@@ -659,6 +681,22 @@ class test__PhysicalUnit(unittest.TestCase):
         y=x2/(x1**2)
         self.assertEqual(y.unit.name(),'kg/m**2')
 
+
+class test__moduleFunctions(unittest.TestCase):        
+    def test_addUnit(self):
+        try:
+            units.addUnit('ft','20*m')
+        except KeyError,err: 
+            self.assertEqual(str(err),"'Unit ft already defined with different factor or powers'")
+        else:
+            self.fail("Expecting Key Error")
+            
+        try:
+            units.addOffsetUnit('degR','degK',20,10)
+        except KeyError,err: 
+            self.assertEqual(str(err),"'Unit degR already defined with different factor or powers'")
+        else:
+            self.fail("Expecting Key Error")            
 
 if __name__ == "__main__":
     unittest.main()
