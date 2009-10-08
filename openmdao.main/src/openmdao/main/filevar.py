@@ -3,6 +3,7 @@ Support for files, either as FileTraits or external files.
 """
 import copy
 import os.path
+import pprint
 
 from enthought.traits.api import TraitType, TraitError
 
@@ -23,7 +24,8 @@ _FILEMETA = {
 
 class FileMetadata(object):
     """
-    Metadata related to a file. By default, the metadata includes:
+    Metadata related to a file, specified by keyword arguments (except for
+    'path').  By default, the metadata includes:
 
     - 'path', a string, no default value. It may be a glob-style pattern in \
       the case of an external file description. Non-absolute paths are \
@@ -44,6 +46,8 @@ class FileMetadata(object):
       after execution.
     - 'constant', boolean, default False. If True, the file(s) may be safely \
       symlinked.
+
+    Arbitrary additional metadata may be assigned.
     """
 
     def __init__(self, path, **metadata):
@@ -54,10 +58,11 @@ class FileMetadata(object):
         self.path = path
 
     def __str__(self):
-        data = self.__dict__
+        """ Return sorted, possibly pruned, dictionary data. """
+        data = self.__dict__.copy()
         if 'owner' in data:
             del data['owner']
-        return str(data)
+        return pprint.pformat(data).replace('\n', '')
 
 
 class FileRef(FileMetadata):
@@ -65,7 +70,7 @@ class FileRef(FileMetadata):
     A reference to a file on disk. As well as containing metadata information,
     it supports 'open()' to read the file's contents. Before open() is
     called, 'owner' must be set to an object supporting 'check_path()' and
-    'get_abs_directory()'.
+    'get_abs_directory()' (typically a Component).
     """
 
     def __init__(self, path, owner=None, **metadata):
@@ -141,6 +146,20 @@ class FileTrait(TraitType):
                 raise TraitError("'path' invalid for input FileTraits.")
         super(FileTrait, self).__init__(default_value, **metadata)
 
+# It appears this scheme won't pickle, requiring a hack in Container...
+#    def get_default_value(self):
+#        """ Return (default_value_type, default_value). """
+#        return (8, self.make_default)
+#
+#    def make_default(self, obj):
+#        """ Make a default value for obj. """
+#        iostatus = self._metadata['iostatus']
+#        if iostatus == 'out':
+#            default = self.default_value.copy(obj)
+#        else:
+#            default = None
+#        return default
+
     def validate(self, obj, name, value):
         """ Verify that `value` is a FileRef of a legal type. """
         if value is None:
@@ -156,7 +175,10 @@ class FileTrait(TraitType):
             self.error(obj, name, value)
 
     def post_setattr(self, obj, name, value):
-        """ If local_path is set on input, then copy file to that path. """
+        """
+        If 'local_path' is set on an input, then copy the source FileRef's
+        file to that path.
+        """
         if value is None:
             return
         iostatus = self._metadata.get('iostatus')
@@ -165,9 +187,6 @@ class FileTrait(TraitType):
         path = self._metadata.get('local_path', None)
         if not path:
             return
-
-        import logging
-        logging.debug('post_setattr %s %s', name, path)
 
         owner = _get_valid_owner(obj)
         if os.path.isabs(path):

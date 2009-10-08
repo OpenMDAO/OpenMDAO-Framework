@@ -8,6 +8,9 @@ from enthought.traits.api import Bool, Int
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.main.exceptions import RunStopped
 
+# pylint: disable-msg=E1101,E1103
+# "Instance of <class> has no <attr> member"
+
 
 class TestComponent(Component):
     """
