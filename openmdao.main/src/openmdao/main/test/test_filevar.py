@@ -26,7 +26,8 @@ class Source(Component):
     text_data = Str(iostatus='in')
     binary_data = Array('d', iostatus='in')
     text_file = FileTrait(path='source.txt', iostatus='out', content_type='txt')
-    binary_file = FileTrait(path='source.bin', iostatus='out', binary=True)
+    binary_file = FileTrait(path='source.bin', iostatus='out', binary=True,
+                            extra_stuff='Hello world!')
 
     def execute(self):
         """ Write test data to files. """
@@ -50,7 +51,9 @@ class Passthru(Component):
 
     def execute(self):
         """ File copies are performed implicitly. """
-        pass
+        # We have to manually propagate 'extra_stuff' because the output
+        # FileRef isn't copied from the input FileRef.
+        self.binary_out.extra_stuff = self.binary_in.extra_stuff
 
 
 class Middle(Assembly):
@@ -157,6 +160,8 @@ class TestCase(unittest.TestCase):
         assert_equal(self.model.sink.binary_data,
                      self.model.source.binary_data)
         self.assertEqual(self.model.sink.binary_file.binary, True)
+        self.assertEqual(self.model.sink.binary_file.extra_stuff,
+                         self.model.source.binary_file.extra_stuff)
 
     def test_src_failure(self):
         logging.debug('')
@@ -216,11 +221,11 @@ class TestCase(unittest.TestCase):
     def test_formatting(self):
         logging.debug('')
         logging.debug('test_formatting')
-        msg = "{'binary': False, 'single_precision': False," \
-              " 'unformatted': False, 'content_type': 'txt'," \
-              " 'recordmark_8': False, 'path': 'source.txt'," \
-              " 'big_endian': False, 'desc': ''}"
-        self.assertEqual(str(self.model.source.text_file), msg)
+        msg = "{'big_endian': False, 'binary': True, 'content_type': ''," \
+              " 'desc': '', 'extra_stuff': 'Hello world!'," \
+              " 'path': 'source.bin', 'recordmark_8': False," \
+              " 'single_precision': False, 'unformatted': False}"
+        self.assertEqual(str(self.model.source.binary_file), msg)
 
     def test_no_owner(self):
         logging.debug('')
@@ -230,7 +235,7 @@ class TestCase(unittest.TestCase):
         path = os.path.join(os.sep, 'xyzzy')
         ref = FileRef(path)
         try:
-            inp = ref.open()
+            ref.open()
         except ValueError, exc:
             msg = "Path '%s' is absolute and no path checker is available." \
                   % path
@@ -242,7 +247,7 @@ class TestCase(unittest.TestCase):
         path = 'xyzzy'
         ref = FileRef(path)
         try:
-            inp = ref.open()
+            ref.open()
         except ValueError, exc:
             msg = "Path '%s' is relative and no absolute directory is available." \
                   % path
@@ -252,10 +257,10 @@ class TestCase(unittest.TestCase):
 
     def test_bad_trait(self):
         logging.debug('')
-        logging.debug('test_no_owner')
+        logging.debug('test_bad_trait')
 
         try:
-            trait = FileTrait(42)
+            FileTrait(42)
         except TraitError, exc:
             self.assertEqual(str(exc),
                              'FileTrait default value must be a FileRef.')
@@ -263,7 +268,7 @@ class TestCase(unittest.TestCase):
             self.fail('Expected TraitError')
 
         try:
-            trait = FileTrait()
+            FileTrait()
         except TraitError, exc:
             self.assertEqual(str(exc),
                              "FileTrait must have 'iostatus' defined.")
@@ -271,7 +276,7 @@ class TestCase(unittest.TestCase):
             self.fail('Expected TraitError')
 
         try:
-            trait = FileTrait(iostatus='out')
+            FileTrait(iostatus='out')
         except TraitError, exc:
             self.assertEqual(str(exc),
                              "Output FileTrait must have 'path' defined.")
@@ -279,7 +284,7 @@ class TestCase(unittest.TestCase):
             self.fail('Expected TraitError')
 
         try:
-            trait = FileTrait(iostatus='out', path='xyzzy', legal_types=42)
+            FileTrait(iostatus='out', path='xyzzy', legal_types=42)
         except TraitError, exc:
             self.assertEqual(str(exc),
                              "'legal_types' invalid for output FileTraits.")
@@ -287,7 +292,7 @@ class TestCase(unittest.TestCase):
             self.fail('Expected TraitError')
 
         try:
-            trait = FileTrait(iostatus='out', path='xyzzy', local_path=42)
+            FileTrait(iostatus='out', path='xyzzy', local_path=42)
         except TraitError, exc:
             self.assertEqual(str(exc),
                              "'local_path' invalid for output FileTraits.")
@@ -295,7 +300,7 @@ class TestCase(unittest.TestCase):
             self.fail('Expected TraitError')
 
         try:
-            trait = FileTrait(iostatus='in', path='xyzzy')
+            FileTrait(iostatus='in', path='xyzzy')
         except TraitError, exc:
             self.assertEqual(str(exc),
                              "'path' invalid for input FileTraits.")

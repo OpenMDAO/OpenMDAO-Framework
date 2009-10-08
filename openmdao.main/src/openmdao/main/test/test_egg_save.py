@@ -68,6 +68,7 @@ class Source(Assembly):
         self.external_files.append(FileMetadata(path='does-not-exist'))
 
     def tree_rooted(self):
+        """ Called once we have a valid hierarchy above us. """
         super(Source, self).tree_rooted()
         
         self.directory = self.get_abs_directory()  # Force absolute.
