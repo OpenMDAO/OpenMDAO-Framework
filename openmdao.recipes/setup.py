@@ -2,13 +2,7 @@ import os, sys
 
 # pylint: disable-msg=F0401
 
-from distutils.errors import DistutilsExecError,DistutilsPlatformError
-
-try:
-    from setuptools import setup
-except ImportError, e:
-    from distutils.core import setup
-
+from setuptools import setup
 
 version = '0.1.0'
 
@@ -43,8 +37,7 @@ setup(name='openmdao.recipes',
       isolatedegg = openmdao.recipes.isolatedegg:IsolatedEgg
       wingproj = openmdao.recipes.wingproj:WingProj
       sphinxbuild = openmdao.recipes.sphinxbuild:SphinxBuild
-      eggbundler = openmdao.recipes.eggbundler:EggBundler
+      bundler = openmdao.recipes.bundler:Bundler
       metatable = openmdao.recipes.metatable:MetadataTable
-      dumper = openmdao.recipes.bodumper:BuildoutDumper
       """,
       )

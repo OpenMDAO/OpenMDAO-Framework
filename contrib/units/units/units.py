@@ -61,16 +61,12 @@ class NumberDict(dict):
         sum_dict[k] = sum_dict[k] + v
     return sum_dict
 
-    return sum_dict
-
   def __sub__(self, other):
     sum_dict = NumberDict()
     for k,v in self.iteritems():
         sum_dict[k] = v
     for k,v in other.iteritems(): 
         sum_dict[k] = sum_dict[k] - v
-    return sum_dict
-
     return sum_dict
 
   def __mul__(self, other):
@@ -266,9 +262,7 @@ class PhysicalQuantity(object):
     new_value = self.value * self.unit.factor
     num = ''
     denom = ''
-    for i in [0,1,2,3,4,5,6,7,8]:
-      unit = _unitLib.base_names[i]
-      power = self.unit.powers[i]
+    for unit,power in zip(_unitLib.base_names,self.unit.powers):
       if power < 0:
         denom = denom + '/' + unit
         if power < -1:
@@ -398,16 +392,9 @@ class PhysicalUnit(object):
                           self.factor/float(other), self.powers)
 
   def __rdiv__(self, other):
-    if self.offset != 0 or (isinstance(other,PhysicalUnit) and other.offset != 0):
-      raise TypeError("cannot divide units with non-zero offset")
-    if isinstance(other,PhysicalUnit):
-      return PhysicalUnit(other.names-self.names,
-                          other.factor/self.factor,
-                          [a-b for (a,b) in zip(other.powers,self.powers)])
-    else:
-      return PhysicalUnit({str(other): 1}-self.names,
-                          float(other)/self.factor,
-                          [-x for x in self.powers])
+     return PhysicalUnit({str(other): 1}-self.names,
+                       float(other)/self.factor,
+                       [-x for x in self.powers])
 
   def __pow__(self, other):
     if self.offset != 0:
@@ -522,43 +509,25 @@ class PhysicalUnit(object):
       num = num[1:]
     return num + denom
 
-#Type Checks
-def isPhysicalUnit(x):
-  """
-  @param x: an object
-  @type x: any
-  @returns: C{True} if x is a L{PhysicalUnit}
-  @rtype: C{bool}
-  """
-  return isinstance(x,PhysicalUnit)
-
-def isPhysicalQuantity(x):
-    """
-    @param x: an object
-    @type x: any
-    @returns: C{True} if x is a L{PhysicalQuantity}
-    @rtype: C{bool}
-    """
-    return isinstance(x,PhysicalQuantity)
-
 #Helper Functions
 def _findUnit(unit):
     if isinstance(unit,str):
         name = unit.strip()
-        if name not in _unitLib.unit_table:
+        try: 
+            unit = eval(name, _unitLib.unit_table)
+        except: 
             #check for single letter prefix before unit
             if(name[0] in _unitLib.prefixes and name[1:] in _unitLib.unit_table):
                 addUnit(unit,_unitLib.prefixes[name[0]]*_unitLib.unit_table[name[1:]])
             #check for double letter prefix before unit
             elif(name[0:2] in _unitLib.prefixes and name[2:] in _unitLib.unit_table):
                 addUnit(unit,_unitLib.prefixes[name[0:2]]*_unitLib.unit_table[name[2:]])
-            #no prefixes found, might be function of multiple units
+            #no prefixes found, unknown unit
             else:
-                try:
-                    unit =  eval(name, _unitLib.unit_table) 
-                except:
-                    raise ValueError, "no unit named '%s' is defined"%name
-        unit = eval(name, _unitLib.unit_table)
+                raise ValueError, "no unit named '%s' is defined"%name
+            
+            unit = eval(name, _unitLib.unit_table)
+        
         for cruft in ['__builtins__', '__args__']:
             try: del _unitLib.unit_table[cruft]
             except: pass
@@ -571,7 +540,7 @@ def _newUnit(name,factor,powers):
   _unitLib.unit_table[name] = PhysicalUnit(name,factor,powers)
 
 
-def addOffsetUnit(name,baseunit,factor,offset,comment):
+def addOffsetUnit(name,baseunit,factor,offset,comment=''):
     if isinstance(baseunit,str):
         baseunit = _findUnit(baseunit)
     #else, baseunit should be a instance of PhysicalUnit
@@ -580,7 +549,7 @@ def addOffsetUnit(name,baseunit,factor,offset,comment):
     unit.setName(name)
     if _unitLib.unit_table.has_key(name):
         if (_unitLib.unit_table[name].factor!=unit.factor or _unitLib.unit_table[name].powers!=unit.powers):
-          raise KeyError, 'Unit ' + name + ' already defined with different factor or powers'
+          raise KeyError, "Unit %s already defined with different factor or powers"%name
     _unitLib.unit_table[name] = unit
     _unitLib.set('units',name,unit)   
     if comment: 
@@ -598,7 +567,7 @@ def addUnit(name, unit, comment=''):
     unit.setName(name)
     if _unitLib.unit_table.has_key(name):
       if (_unitLib.unit_table[name].factor!=unit.factor or _unitLib.unit_table[name].powers!=unit.powers):
-        raise KeyError, 'Unit ' + name + ' already defined with different factor or powers'
+        raise KeyError, "Unit %s already defined with different factor or powers"%name
     _unitLib.unit_table[name] = unit
     _unitLib.set('units',name,unit)
 
