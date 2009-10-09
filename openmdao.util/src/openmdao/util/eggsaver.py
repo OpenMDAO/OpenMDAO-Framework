@@ -617,8 +617,15 @@ def _process_found_modules(py_dir, finder_items, modules, distributions,
                 if not dirpath.endswith('site-packages'):
                     not_found.add(dirpath)
                     path = dirpath
-                logger.warning('No distribution found for %s', name)
-                orphans.add((name, path))
+                # Verify name is valid. ModuleFinder can report a module
+                # that was never successfully imported.
+                try:
+                    __import__(name)
+                except ImportError:
+                    logger.debug('Skipping %s, not importable.' % name)
+                else:
+                    logger.warning('No distribution found for %s', name)
+                    orphans.add((name, path))
 
 
 def _create_buildout(name, server_url, distributions, path):
