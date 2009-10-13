@@ -155,8 +155,7 @@ class Component (Container):
                 # importing Assembly would be a recursive import.  Could use a check
                 # for IAssembly interface instead...
                 if hasattr(self.parent, 'update_inputs'):
-                    self.parent.update_inputs(name,
-                                              ['.'.join([name, n]) for n in invalid_ins])
+                    self.parent.update_inputs(['.'.join([name, n]) for n in invalid_ins])
                 for name in invalid_ins:
                     self.set_valid(name, True)
                                 

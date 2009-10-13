@@ -17,13 +17,13 @@ from openmdao.main.dataflow import Dataflow
 
 class MulticastTrait(TraitType):
     """A trait with a list of destination attributes (with names evaluated in
-    the scope of the instance object containing the trait)
-    that are set whenever the attribute corresponding to this trait is set.
+    the scope of the instance object containing the trait) that are set
+    whenever the attribute corresponding to this trait is set.
     """
     
     def init(self):
         self.names = self._metadata.get('names', [])
-        self.val_trait = self._metadata.get('val_trait', None)            
+        self.val_trait = self._metadata.get('val_trait', None)
 
     def validate(self, obj, name, value):
         if self.val_trait:
@@ -46,16 +46,13 @@ class MulticastTrait(TraitType):
                 
         
 class Assembly (Component):
-    """This is a container of Components. It understands how
-    to connect inputs and outputs between its children 
-    and how to run a Workflow.
+    """This is a container of Components. It understands how to connect inputs
+    and outputs between its children and how to run a Workflow.
     """
     drivers = List(IDriver)
     workflow = Instance(Workflow)
     
-    def __init__(self, doc=None, directory='', workflow=None):
-        self._stop = False
-        self._dir_stack = []
+    def __init__(self, doc=None, directory=''):
         self._child_io_graphs = {}
         self._need_child_io_update = True
         
@@ -73,14 +70,7 @@ class Assembly (Component):
             if v not in self._var_graph:
                 self._var_graph.add_node(v)
         
-        if workflow is None:
-            self.workflow = Dataflow(scope=self)
-        else:
-            self.workflow = workflow
-            workflow.scope = self
-
-        # List of meta-data dictionaries.
-        self.external_files = []
+        self.workflow = Dataflow(scope=self)
 
     def get_component_graph(self):
         """Retrieve the dataflow graph of child components."""
@@ -107,8 +97,8 @@ class Assembly (Component):
     #def get_io_graph(self):
         #"""For now, just return our base class version of get_io_graph."""
         ## TODO: make this return an actual graph of inputs to outputs based on 
-        ##       the contents of this Assembly instead of a graph where all outputs
-        ##       depend on all inputs
+        ##       the contents of this Assembly instead of a graph where all 
+        ##       outputs depend on all inputs
         ## NOTE: if the io_graph changes, this function must return a NEW graph
         ## object instead of modifying the old one, because object identity
         ## is used in the parent assembly to determine of the graph has changed
@@ -122,7 +112,8 @@ class Assembly (Component):
         if isinstance(obj, Component):
             # This is too early to get accurate Variable info from 
             # the child since it's __init__ function may not be complete
-            # yet (in the case of auto-registration by the Container base class),
+            # yet (in the case of auto-registration by the Container base 
+            # class),
             # so just put a None entry in the _child_io_graphs dict and fill
             # it in later
             self._child_io_graphs[obj.name] = None
@@ -137,10 +128,13 @@ class Assembly (Component):
     def remove_container(self, name):
         """Remove the named object from this container."""
         if '.' in name:
-            self.raise_exception('remove_container does not allow dotted path names like %s' %
+            self.raise_exception(
+                'remove_container does not allow dotted path names like %s' %
                                  name, ValueError)
             
-        self._call_check_config = True # force config check prior to next execution
+        # force config check prior to next execution
+        self._call_check_config = True 
+        
         trait = self.trait(name)
         if trait is not None and trait.is_trait_type(Instance):
             obj = getattr(self, name)
@@ -199,7 +193,8 @@ class Assembly (Component):
             except Exception, exc:
                 pass
         if not currtrait:
-                self.raise_exception("cannot find trait named '%s' in component '%s'" %
+                self.raise_exception(\
+                    "cannot find trait named '%s' in component '%s'" %
                                      (vname, compname), TraitError)
         iostatus = currtrait.iostatus
         try:
@@ -266,21 +261,25 @@ class Assembly (Component):
         desttrait = destcomp.get_dyn_trait(destvarname, 'in')
         
         if srccompname == destcompname:
-            self.raise_exception('Cannot connect %s to %s. Both are on same component.' %
+            self.raise_exception(
+                'Cannot connect %s to %s. Both are on same component.' %
                                  (srcpath, destpath), RuntimeError)
         if srccomp is self or destcomp is self: # it's a passthru connection
             if srccomp is destcomp:
-                self.raise_exception('Cannot connect "%s" to "%s" on same component' %
+                self.raise_exception(
+                    'Cannot connect "%s" to "%s" on same component' %
                                       (srcvarname, destvarname), RuntimeError)
         else: # it's not a passthru connection so must connect output to input
             if srctrait.iostatus != 'out':
-                self.raise_exception('.'.join([srccomp.get_pathname(),srcvarname])+
-                                     ' must be an output variable',
-                                     RuntimeError)
+                self.raise_exception(
+                    '.'.join([srccomp.get_pathname(),srcvarname])+
+                    ' must be an output variable',
+                    RuntimeError)
             if desttrait.iostatus != 'in':
-                self.raise_exception('.'.join([destcomp.get_pathname(),destvarname])+
-                                     ' must be an input variable',
-                                     RuntimeError)
+                self.raise_exception(
+                    '.'.join([destcomp.get_pathname(),destvarname])+
+                    ' must be an input variable',
+                    RuntimeError)
         if self.is_destination(destpath):
             self.raise_exception(destpath+' is already connected',
                                  RuntimeError)             
@@ -301,7 +300,8 @@ class Assembly (Component):
             
         # invalidate destvar if necessary
         if destcomp is self and desttrait.iostatus == 'out': # boundary output
-            if destcomp.get_valid(destvarname) and srccomp.get_valid(srcvarname) is False:
+            if destcomp.get_valid(destvarname) and \
+               srccomp.get_valid(srcvarname) is False:
                 if self.parent:
                     # tell the parent that anyone connected to our boundary
                     # output is invalid.
@@ -358,26 +358,27 @@ class Assembly (Component):
         else:  # remove all connections from the Variable
             # remove outgoing edges
             to_remove = []
-            for u,v in vargraph.edges_iter(varpath):
-                to_remove.append((u,v))
+            for src,sink in vargraph.edges_iter(varpath):
+                to_remove.append((src,sink))
             # remove incoming edges
-            for u,v in vargraph.in_edges_iter(varpath):
-                to_remove.append((u,v))
+            for src,sink in vargraph.in_edges_iter(varpath):
+                to_remove.append((src,sink))
         
-        for u,v in self._filter_internal_edges(to_remove):
-            vtup = v.split('.', 1)
+        for src,sink in self._filter_internal_edges(to_remove):
+            vtup = sink.split('.', 1)
             if len(vtup) > 1:
                 getattr(self, vtup[0]).remove_source(vtup[1])
-                # if its a connection between two children (no boundary connections)
-                # then remove a connection between two components in the component
-                # graph
-                utup = u.split('.',1)
+                # if its a connection between two children 
+                # (no boundary connections) then remove a connection 
+                # between two components in the component graph
+                utup = src.split('.',1)
                 if len(utup)>1 and hasattr(self.workflow, 'disconnect'):
                     self.workflow.disconnect(utup[0], vtup[0])
                 
             vargraph.remove_edges_from(to_remove)
-                
-        self._io_graph = None  # the io graph has changed, so have to remake it
+        
+        # the io graph has changed, so have to remake it
+        self._io_graph = None  
         for drv in self.drivers:
             drv.graph_regen_needed()
 
@@ -410,9 +411,10 @@ class Assembly (Component):
         for out in invalid_outs:
             inedges = vgraph.in_edges(nbunch=out)
             if len(inedges) > 1:
-                self.raise_exception("attribute '%s' has multiple inputs (%s)" %
-                                     (out, [x[1] for x in inedges]),
-                                     RuntimeError)
+                self.raise_exception(
+                    "attribute '%s' has multiple inputs (%s)" %
+                    (out, [x[1] for x in inedges]),
+                    RuntimeError)
             elif len(inedges) == 1:
                 setattr(self, out, self.get(inedges[0][0]))
 
@@ -432,20 +434,16 @@ class Assembly (Component):
                 conns.append((outname, inname))
         return self._filter_internal_edges(conns)
 
-    def update_inputs(self, compname, varnames):
+    def update_inputs(self, varnames):
         """Transfer input data to input variables on the specified component.
-        If varnames is not None, only the variables in the list will be updated.
-        The varnames iterator is assumed to contain names that include the
-        component name, for example: ['comp1.a', 'comp1.b'].
+        If varnames is not None, only the variables in the list will be
+        updated. The varnames iterator is assumed to contain names that
+        include the component name, for example: ['comp1.a', 'comp1.b'].
         """
         updated = False  # this becomes True if we actually update any inputs
         parent = self.parent
         vargraph = self.get_var_graph()
         pred = vargraph.pred
-        if compname is None:
-            comp = self
-        else:
-            comp = getattr(self, compname)
         
         for vname in varnames:
             preds = pred.get(vname, '')
@@ -464,8 +462,7 @@ class Assembly (Component):
                 # need to backtrack to get a valid source value
                 if srccompname is None: # a boundary var
                     if parent:
-                        parent.update_inputs(self.name,
-                                             ['.'.join([self.name, srcname])])
+                        parent.update_inputs(['.'.join([self.name, srcname])])
                     else:
                         srccomp.set_valid(srcvarname, True) # validate source
                 else:
@@ -474,27 +471,28 @@ class Assembly (Component):
             try:
                 srcval = srccomp.get_wrapped_attr(srcvarname)
             except Exception, err:
-                self.raise_exception("cannot retrieve value of source attribute '%s'" %
-                                     srcname, type(err))
+                self.raise_exception(
+                    "cannot retrieve value of source attribute '%s'" %
+                    srcname, type(err))
             try:
                 destcomp.set(destvarname, srcval, srcname=srcname)
             except Exception, exc:
                 msg = "cannot set '%s' from '%s': %s" % (vname, srcname, exc)
                 self.raise_exception(msg, type(exc))
-            #destcomp.set_valid(destvarname, True)
             
         return updated
 
     def update_outputs(self, outnames):
-        """Execute any necessary internal or predecessor components in order to
-        make the specified output variables valid.
+        """Execute any necessary internal or predecessor components in order
+        to make the specified output variables valid.
         """
-        self.update_inputs(None, varnames=outnames)
+        self.update_inputs(outnames)
 
     def check_config (self):
-        """Verify that the configuration of this component is correct. This function is
-        called once prior to the first execution of this Assembly, and prior to execution
-        if any children are added or removed, or if self._call_check_config is True.
+        """Verify that the configuration of this component is correct. This
+        function is called once prior to the first execution of this Assembly,
+        and prior to execution if any children are added or removed, or if
+        self._call_check_config is True.
         """
         super(Assembly, self).check_config()
         for name, value in self._traits_meta_filter(required=True).items():
@@ -503,11 +501,10 @@ class Assembly (Component):
                                      name, TraitError)                
         
     def get_valids(self, names):
-        """Returns a list of boolean values indicating whether the
-        named attributes are valid (True) or invalid (False). Entries
-        in names may specify either direct traits of self or those
-        of direct children of self, but no deeper in the hierarchy than 
-        that.
+        """Returns a list of boolean values indicating whether the named
+        attributes are valid (True) or invalid (False). Entries in names may
+        specify either direct traits of self or those of direct children of
+        self, but no deeper in the hierarchy than that.
         """
         valids = []
         for name in names:
@@ -524,8 +521,8 @@ class Assembly (Component):
         return valids
 
     def invalidate_deps(self, varnames, notify_parent=False):
-        """Mark all Variables invalid that depend on vars.
-        Returns a list of our newly invalidated boundary outputs.
+        """Mark all Variables invalid that depend on vars. Returns a list of
+        our newly invalidated boundary outputs.
         """
         vargraph = self.get_var_graph()
         succ = vargraph.succ  #successor nodes in the graph
@@ -545,7 +542,8 @@ class Assembly (Component):
             for vname in succ.get(name, []):
                 tup = vname.split('.', 1)
                 if len(tup) == 1:  #boundary var or Component
-                    if self.trait(vname).iostatus == 'out': # an output boundary var
+                    if self.trait(vname).iostatus == 'out':
+                        # it's an output boundary var
                         outs.append(vname)
                 else:  # a var from a child component 
                     compname, compvar = tup
@@ -559,7 +557,8 @@ class Assembly (Component):
             for out in outs:
                 self.set_valid(out, False)
             if notify_parent and self.parent:
-                self.parent.invalidate_deps(['.'.join([self.name,n]) for n in outs], 
-                                            notify_parent)
+                self.parent.invalidate_deps(
+                    ['.'.join([self.name,n]) for n in outs], 
+                    notify_parent)
         return outs
 

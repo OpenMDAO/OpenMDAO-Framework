@@ -257,7 +257,8 @@ setup(
                         optstr = '-mN'
                     else:
                         optstr = '-mNq'
-                        setuptools.command.easy_install.main(argv=['-d','.',optstr,'%s' % os.path.join(destdir, eggname)])
+                        setuptools.command.easy_install.main(
+                            argv=['-d','.',optstr,'%s' % os.path.join(destdir, eggname)])
                 
                     logging.info('installed %s in %s' % (eggname, idir_abs)) 
             shutil.rmtree(os.path.join(pkgdir, modname, 'build'))
