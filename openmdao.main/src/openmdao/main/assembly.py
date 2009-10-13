@@ -110,12 +110,8 @@ class Assembly (Component):
         """
         obj = super(Assembly, self).add_container(name, obj)
         if isinstance(obj, Component):
-            # This is too early to get accurate Variable info from 
-            # the child since it's __init__ function may not be complete
-            # yet (in the case of auto-registration by the Container base 
-            # class),
-            # so just put a None entry in the _child_io_graphs dict and fill
-            # it in later
+            # since the internals of the given Component can change after it's
+            # added to us, wait to collect its io_graph until we need it
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
             self.workflow.add_node(obj.name)
@@ -328,9 +324,11 @@ class Assembly (Component):
                               if u.split('.', 1)[0] != v.split('.', 1)[0]]
     
     def disconnect(self, varpath, varpath2=None):
-        """Remove all connections to/from a given variable in the current scope.
-        This does not remove connections to boundary Variables from the parent
-        scope.
+        """If varpath2 is supplied, remove the connection between varpath and
+        varpath2. Otherwise, if varpath is the name of a trait, remove all
+        connections to/from varpath in the current scope. If varpath is the
+        name of a Component, remove all connections from all of its inputs
+        and outputs. 
         """
         vargraph = self.get_var_graph()
         if varpath not in vargraph:
