@@ -220,7 +220,7 @@ class WingProj(object):
             if sys.platform == 'win32':
                 wingpath = r'C:\Program Files\Wing IDE 3.2\bin\wing.exe'
             else:
-                wingpath = 'wing3.1'
+                wingpath = 'wing3.2'
 
         scripts = zc.buildout.easy_install.scripts(
             [('wing', 'openmdao.recipes.wingproj', 'runwing')], 
