@@ -247,7 +247,8 @@ class OddballContainer(Container):
 
 def observer(state, string, file_fraction, byte_fraction):
     """ Observe progress. """
-    OBSERVATIONS.append((state, string, file_fraction, byte_fraction))
+    if state != 'analyze':  # 'analyze' is sporadic due to re-use of analyses.
+        OBSERVATIONS.append((state, string, file_fraction, byte_fraction))
     return True
 
 
@@ -836,11 +837,10 @@ sys.exit(
 )
 """)
             out.close()
-            os.chmod(installer, 0755)
 
             # Install via subprocess with PYTHONPATH set (for easy_install).
             logging.debug('Installing via subprocess...')
-            env = os.environ
+            env = os.environ.copy()
             path = env.get('PYTHONPATH', '')
             if path:
                 path += os.pathsep
@@ -917,7 +917,7 @@ from openmdao.main.api import Component
 comp = Component.load_from_eggpkg('%(package)s', '%(entry)s')
 comp.run()
     
-""" % {'egg':os.path.join(install_dir, self.egg_name),
+""" % {'egg':os.path.join(install_dir, self.egg_name).replace('\\', '/'),
        'package':package_name, 'entry':entry_name})
             out.close()
 

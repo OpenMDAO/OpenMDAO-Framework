@@ -164,7 +164,7 @@ def _dist_from_eggfile(filename, install, logger, observer):
         if dirname and not os.path.exists(dirname):
             os.makedirs(dirname)
         # TODO: use 2.6 ability to extract to filename.
-        out = open(path, 'w')
+        out = open(path, 'wb')
         out.write(archive.read(fname))
         out.close()
         files += 1

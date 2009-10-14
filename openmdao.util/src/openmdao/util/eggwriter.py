@@ -232,7 +232,7 @@ def write_via_setuptools(name, version, doc, entry_map, src_files,
     observer.add('write-via-setuptools', 0, 0)
 
     # Use environment since 'python' might not recognize '-u'.
-    env = os.environ
+    env = os.environ.copy()
     env['PYTHONUNBUFFERED'] = '1'
     proc = subprocess.Popen([sys.executable, 'setup.py', 'bdist_egg', '-d', dst_dir],
                             env=env, stdout=subprocess.PIPE,
@@ -278,7 +278,7 @@ def _write_setup_py(name, version, doc, entry_map, src_files, distributions,
             msg = "Can't save, '%s' does not exist" % path
             observer.exception(msg)
             raise ValueError(msg)
-        out.write("    '%s',\n" % filename)
+        out.write("    '%s',\n" % filename.replace('\\', '/'))
     out.write(']\n')
     
     out.write('\nrequirements = [\n')
