@@ -426,6 +426,10 @@ class Container(HasTraits):
         """Add a Container object to this Container.
         Returns the added Container object.
         """
+        if '.' in name:
+            self.raise_exception(
+                'add_container does not allow dotted path names like %s' %
+                name, ValueError)
         if obj == self:
             self.raise_exception('cannot make an object a child of itself',
                                  RuntimeError)
