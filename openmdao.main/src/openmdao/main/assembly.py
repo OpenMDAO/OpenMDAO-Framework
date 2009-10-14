@@ -167,8 +167,8 @@ class Assembly (Component):
                                  name)
             
         # check to see if a trait already exists with the given traitname
-        if name in self.__dict__:
-            self.raise_exception('%s is already a public Variable' % name, 
+        if self.trait(name):
+            self.raise_exception('%s is already a trait' % name, 
                                  RuntimeError) 
         
         # Check if existing trait is a property.
@@ -179,8 +179,8 @@ class Assembly (Component):
                 currtrait = comp.trait(vname)
             except Exception, exc:
                 pass
-        if not currtrait:
-                self.raise_exception(\
+            if not currtrait:
+                self.raise_exception(
                     "cannot find trait named '%s' in component '%s'" %
                                      (vname, compname), TraitError)
         iostatus = currtrait.iostatus
