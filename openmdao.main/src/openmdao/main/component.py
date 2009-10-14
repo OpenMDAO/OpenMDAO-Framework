@@ -204,8 +204,9 @@ class Component (Container):
         """Override of base class version to force call to check_config after
         any child containers are removed.
         """
+        obj = super(Component, self).remove_container(name)
         self.config_changed()
-        return super(Component, self).remove_container(name)
+        return obj
 
     def add_trait(self, name, *trait):
         """Overrides base definition of add_trait in order to

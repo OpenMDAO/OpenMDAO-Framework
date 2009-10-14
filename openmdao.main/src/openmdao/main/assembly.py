@@ -11,6 +11,7 @@ import networkx as nx
 
 from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
+from openmdao.main.container import Container
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 
@@ -123,22 +124,14 @@ class Assembly (Component):
         
     def remove_container(self, name):
         """Remove the named object from this container."""
-        if '.' in name:
-            self.raise_exception(
-                'remove_container does not allow dotted path names like %s' %
-                                 name, ValueError)
-            
-        # force config check prior to next execution
-        self._call_check_config = True 
-        
         trait = self.trait(name)
-        if trait is not None and trait.is_trait_type(Instance):
+        if trait is not None:
             obj = getattr(self, name)
-            setattr(self, name, None)
-        else:    
-            obj = self.get(name)
+            # if the named object is a Component, then assume it must
+            # be removed from our workflow
             if isinstance(obj, Component):
                 self.workflow.remove_node(obj.name)
+                
                 if name in self._child_io_graphs:
                     childgraph = self._child_io_graphs[name]
                     if childgraph is not None:
@@ -147,13 +140,11 @@ class Assembly (Component):
             
                 if obj in self.drivers:
                     self.drivers.remove(obj)
-            else:
-                self.raise_exception('attribute %s is not a Component' % name,
-                                     RuntimeError)                
+                    
             for drv in self.drivers:
                 drv.graph_regen_needed()
                 
-        return obj
+        return super(Assembly, self).remove_container(name)
     
     def create_passthru(self, traitname, alias=None):
         """Create a trait that's a copy of the named trait, add it to self,

@@ -25,7 +25,7 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import networkx as nx
 from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
                                  push_exception_handler, Python, TraitType, \
-                                 Property, Trait, Interface
+                                 Property, Trait, Interface, Instance
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType
 from enthought.traits.trait_base import not_none
@@ -322,7 +322,10 @@ class Container(HasTraits):
         # this just forces the regeneration (lazily) of the lists of
         # inputs, outputs, and containers
         self._trait_added_changed(name)
-        del self._added_traits[name]
+        try:
+            del self._added_traits[name]
+        except KeyError:
+            pass
         super(Container, self).remove_trait(name)
             
     def trait_get(self, *names, **metadata):
@@ -434,10 +437,9 @@ class Container(HasTraits):
                 self.remove_container(name)
             setattr(self, name, obj)
             obj.name = name
-            # if this object is already installed in a hierarchy,
-            # then go ahead and tell the obj (which will in turn
-            # tell all of its children) that its hierarchy is
-            # defined.
+            # if this object is already installed in a hierarchy, then go
+            # ahead and tell the obj (which will in turn tell all of its
+            # children) that its scope tree back to the root is defined.
             if self._call_tree_rooted is False:
                 obj.tree_rooted()
         else:
@@ -448,12 +450,30 @@ class Container(HasTraits):
         
     def remove_container(self, name):
         """Remove the specified child from this container and remove any
-        public Variable objects that reference that child. Notify any
+        public trait objects that reference that child. Notify any
         observers."""
+        if '.' in name:
+            self.raise_exception(
+                'remove_container does not allow dotted path names like %s' %
+                                 name, ValueError)
         trait = self.trait(name)
         if trait is not None:
+            # for Instance traits, set their value to None but don't remove
+            # the trait
             obj = getattr(self, name)
-            self.remove_trait(name)
+            if obj is not None and not isinstance(obj, Container):
+                self.raise_exception('attribute %s is not a Container' % name,
+                                     RuntimeError)
+            if trait.is_trait_type(Instance):
+                if obj is not None:
+                    if trait._allow_none:
+                        setattr(self, name, None)
+                    else:
+                        self.raise_exception(
+                            "Instance trait %s does not allow a value of None so it's contents can't be removed"
+                            % name, RuntimeError)
+            else:
+                self.remove_trait(name)
             return obj       
         else:
             self.raise_exception("cannot remove child '%s': not found"%
