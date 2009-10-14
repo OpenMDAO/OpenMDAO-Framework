@@ -195,8 +195,10 @@ class CONMINdriver(Driver):
     phi = Float(5.0, iostatus='in', desc='Participation coefficient - penalty \
                       parameter that pushes designs towards the feasible \
                       region.')
-    delfun = Float(0.001, iostatus='in', desc='Relative convergence tolerance')
-    dabfun = Float(0.001, iostatus='in', desc='Absolute convergence tolerance')
+    delfun = Float(0.001, iostatus='in', low=0.0001, desc='Relative convergence \
+                      tolerance')
+    dabfun = Float(0.001, iostatus='in', low=1.0e-10, desc='Absolute convergence \
+                      tolerance')
     linobj = Int(0, iostatus='in', desc='Linear objective function flag')
     itrm = Int(3, iostatus='in', desc='Number of consecutive iterations to \
                       indicate convergence (relative or absolute)')
