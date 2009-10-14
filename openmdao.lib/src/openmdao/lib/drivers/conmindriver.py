@@ -165,6 +165,9 @@ class CONMINdriver(Driver):
         desc='Array of constraints on the minimum value of each design \
               variable.')
 
+    scal = Array(dtype=numpy.float, iostatus='in', 
+        desc='Array of scaling factors for the design variables.')
+
     # Control parameters for CONMIN.
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution. 
@@ -191,7 +194,7 @@ class CONMINdriver(Driver):
     ctlmin = Float(0.001, iostatus='in', desc='Minimum absoluate value of ctl \
                       used in optimization.')
     theta = Float(1.0, iostatus='in', desc='Mean value of the push-off factor \
-                      in the method of felasible directions.')
+                      in the method of feasible directions.')
     phi = Float(5.0, iostatus='in', desc='Participation coefficient - penalty \
                       parameter that pushes designs towards the feasible \
                       region.')
@@ -393,19 +396,16 @@ class CONMINdriver(Driver):
 
                 
         # create array for scaling of the design vars
+        self._scal = numarray.ones(num_dvs+2)
         if len(self.scal) > 0:
-            if len(self.upper_bounds) != num_dvs:
+            if len(self.scal) != num_dvs:
                 msg = 'size of scale factor array (%d) does not match ' + \
                       'number of design vars (%d)'
                 self.raise_exception(msg % (len(self.scal),num_dvs), \
                                      ValueError)
             
-            self._scal = numarray.ones(len(self.scal)+2)
-            
             for i, scale_factor in enumerate(self.scal):
                 self._scal[i] = scale_factor
-        else:
-            self._scal = numarray.ones(num_dvs+2, 'd')
             
         self.df = numarray.zeros(num_dvs+2, 'd')
         self.s = numarray.zeros(num_dvs+2, 'd')
