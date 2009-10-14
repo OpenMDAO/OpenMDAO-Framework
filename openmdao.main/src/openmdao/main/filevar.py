@@ -3,6 +3,7 @@ Support for files, either as FileTraits or external files.
 """
 import copy
 import os.path
+import pprint
 
 from enthought.traits.api import TraitType, TraitError
 
@@ -23,7 +24,8 @@ _FILEMETA = {
 
 class FileMetadata(object):
     """
-    Metadata related to a file. By default, the metadata includes:
+    Metadata related to a file, specified by keyword arguments (except for
+    'path').  By default, the metadata includes:
 
     - 'path', a string, no default value. It may be a glob-style pattern in \
       the case of an external file description. Non-absolute paths are \
@@ -44,6 +46,8 @@ class FileMetadata(object):
       after execution.
     - 'constant', boolean, default False. If True, the file(s) may be safely \
       symlinked.
+
+    Arbitrary additional metadata may be assigned.
     """
 
     def __init__(self, path, **metadata):
@@ -54,7 +58,11 @@ class FileMetadata(object):
         self.path = path
 
     def __str__(self):
-        return str(self.__dict__)
+        """ Return sorted, possibly pruned, dictionary data. """
+        data = self.__dict__.copy()
+        if 'owner' in data:
+            del data['owner']
+        return pprint.pformat(data).replace('\n', '')
 
 
 class FileRef(FileMetadata):
@@ -62,7 +70,7 @@ class FileRef(FileMetadata):
     A reference to a file on disk. As well as containing metadata information,
     it supports 'open()' to read the file's contents. Before open() is
     called, 'owner' must be set to an object supporting 'check_path()' and
-    'get_abs_directory()'.
+    'get_abs_directory()' (typically a Component).
     """
 
     def __init__(self, path, owner=None, **metadata):
@@ -82,7 +90,7 @@ class FileRef(FileMetadata):
             try:
                 self.owner.check_path(path)
             except AttributeError:
-                owner = self._get_valid_owner()
+                owner = _get_valid_owner(self.owner)
                 if owner is None:
                     raise ValueError("Path '%s' is absolute and no path checker"
                                      " is available." % path)
@@ -92,7 +100,7 @@ class FileRef(FileMetadata):
             try:
                 directory = self.owner.get_abs_directory()
             except AttributeError:
-                owner = self._get_valid_owner()
+                owner = _get_valid_owner(self.owner)
                 if owner is None:
                     raise ValueError("Path '%s' is relative and no absolute"
                                      " directory is available." % path)
@@ -102,26 +110,14 @@ class FileRef(FileMetadata):
         mode = 'rb' if self.binary else 'rU'
         return open(path, mode)
 
-    def _get_valid_owner(self):
-        """ Try to find an owner that supports the required functionality. """
-        owner = self.owner
-        while owner is not None:
-            if hasattr(owner, 'check_path') and \
-               hasattr(owner, 'get_abs_directory'):
-                return owner
-            if hasattr(owner, 'parent'):
-                owner = owner.parent
-            else:
-                return None
-        return None
-
 
 class FileTrait(TraitType):
     """
-    A trait wrapper for a FileRef attribute. If desired, the 'legal_types'
+    A trait wrapper for a FileRef object. For input files the 'legal_types'
     attribute may be set to a list of expected 'content_type' strings.
     Then upon assignment the actual 'content_type' must match one of the
-    'legal_types' strings.
+    'legal_types' strings.  Also for input files, if the 'local_path' attribute
+    is set, then upon assignent the associated file will be copied to that path.
     """
     
     def __init__(self, default_value=None, **metadata):
@@ -132,18 +128,37 @@ class FileTrait(TraitType):
             raise TraitError("FileTrait must have 'iostatus' defined.")
         iostatus = metadata['iostatus']
         if iostatus == 'out':
-            if 'path' not in metadata:
-                raise TraitError("Output FileTrait must have 'path' defined.")
-            if 'legal_types' in metadata:
-                raise TraitError("'legal_types' invalid for output FileTrait.")
             if default_value is None:
+                if 'path' not in metadata:
+                    raise TraitError("Output FileTrait must have 'path' defined.")
+                if 'legal_types' in metadata:
+                    raise TraitError("'legal_types' invalid for output FileTraits.")
+                if 'local_path' in metadata:
+                    raise TraitError("'local_path' invalid for output FileTraits.")
                 meta = metadata.copy()
                 path = metadata['path']
-                for name in ('path', 'iostatus'):
+                for name in ('path', 'legal_types', 'local_path', 'iostatus'):
                     if name in meta:
                         del meta[name]
                 default_value = FileRef(path, **meta)
+        else:
+            if 'path' in metadata:
+                raise TraitError("'path' invalid for input FileTraits.")
         super(FileTrait, self).__init__(default_value, **metadata)
+
+# It appears this scheme won't pickle, requiring a hack in Container...
+#    def get_default_value(self):
+#        """ Return (default_value_type, default_value). """
+#        return (8, self.make_default)
+#
+#    def make_default(self, obj):
+#        """ Make a default value for obj. """
+#        iostatus = self._metadata['iostatus']
+#        if iostatus == 'out':
+#            default = self.default_value.copy(obj)
+#        else:
+#            default = None
+#        return default
 
     def validate(self, obj, name, value):
         """ Verify that `value` is a FileRef of a legal type. """
@@ -158,4 +173,63 @@ class FileTrait(TraitType):
             return value
         else:
             self.error(obj, name, value)
+
+    def post_setattr(self, obj, name, value):
+        """
+        If 'local_path' is set on an input, then copy the source FileRef's
+        file to that path.
+        """
+        if value is None:
+            return
+        iostatus = self._metadata.get('iostatus')
+        if iostatus != 'in':
+            return
+        path = self._metadata.get('local_path', None)
+        if not path:
+            return
+
+        owner = _get_valid_owner(obj)
+        if os.path.isabs(path):
+            if owner is None:
+                raise ValueError("Path '%s' is absolute and no path checker"
+                                 " is available." % path)
+            owner.check_path(path)
+            directory = None
+        else:
+            if owner is None:
+                raise ValueError("Path '%s' is relative and no absolute"
+                                 " directory is available." % path)
+            directory = owner.get_abs_directory()
+            path = os.path.join(directory, path)
+
+        mode = 'wb' if value.binary else 'w'
+        chunk = 1 << 20  # 1MB
+        if directory:
+            orig_dir = os.getcwd()
+            os.chdir(directory)
+        try:
+            src = value.open()
+            dst = open(path, mode)
+            bytes = src.read(chunk)
+            while bytes:
+                dst.write(bytes)
+                bytes = src.read(chunk)
+            src.close()
+            dst.close()
+        finally:
+            if directory:
+                os.chdir(orig_dir)
+
+
+def _get_valid_owner(owner):
+    """ Try to find an owner that supports the required functionality. """
+    while owner is not None:
+        if hasattr(owner, 'check_path') and \
+           hasattr(owner, 'get_abs_directory'):
+            return owner
+        if hasattr(owner, 'parent'):
+            owner = owner.parent
+        else:
+            return None
+    return None
 

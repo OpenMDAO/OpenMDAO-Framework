@@ -121,11 +121,21 @@ def do_fix(repo_path, options):
         'buildout/html',
         'buildout/parts',
         'docs/_build',
+        'examples/openmdao.examples.engine_design/build',
+        'examples/openmdao.examples.engine_design/openmdao.examples.engine_design.egg-info',
+    )
+    files = (
+        'examples/openmdao.examples.engine_design/openmdao/examples/engine_design/engineCmodule.c',
+        'examples/openmdao.examples.engine_design/openmdao/examples/engine_design/engineC.so',
     )
     for relpath in directories:
         directory = os.path.join(repo_path, relpath)
         if os.path.exists(directory):
             shutil.rmtree(directory)
+    for relpath in files:
+        ff = os.path.join(repo_path, relpath)
+        if os.path.exists(ff):
+            os.remove(ff)
 
     for dirpath, dirnames, filenames in os.walk(repo_path):
         if options.verbose:
