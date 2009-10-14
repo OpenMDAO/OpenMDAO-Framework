@@ -132,9 +132,9 @@ class FileTrait(TraitType):
                 if 'path' not in metadata:
                     raise TraitError("Output FileTrait must have 'path' defined.")
                 if 'legal_types' in metadata:
-                    raise TraitError("'legal_types' invalid for output FileTraits.")
+                    raise TraitError("'legal_types' invalid for output FileTrait.")
                 if 'local_path' in metadata:
-                    raise TraitError("'local_path' invalid for output FileTraits.")
+                    raise TraitError("'local_path' invalid for output FileTrait.")
                 meta = metadata.copy()
                 path = metadata['path']
                 for name in ('path', 'legal_types', 'local_path', 'iostatus'):
@@ -143,7 +143,7 @@ class FileTrait(TraitType):
                 default_value = FileRef(path, **meta)
         else:
             if 'path' in metadata:
-                raise TraitError("'path' invalid for input FileTraits.")
+                raise TraitError("'path' invalid for input FileTrait.")
         super(FileTrait, self).__init__(default_value, **metadata)
 
 # It appears this scheme won't pickle, requiring a hack in Container...
@@ -194,7 +194,6 @@ class FileTrait(TraitType):
                 raise ValueError("Path '%s' is absolute and no path checker"
                                  " is available." % path)
             owner.check_path(path)
-            directory = None
         else:
             if owner is None:
                 raise ValueError("Path '%s' is relative and no absolute"
@@ -204,21 +203,14 @@ class FileTrait(TraitType):
 
         mode = 'wb' if value.binary else 'w'
         chunk = 1 << 20  # 1MB
-        if directory:
-            orig_dir = os.getcwd()
-            os.chdir(directory)
-        try:
-            src = value.open()
-            dst = open(path, mode)
+        src = value.open()
+        dst = open(path, mode)
+        bytes = src.read(chunk)
+        while bytes:
+            dst.write(bytes)
             bytes = src.read(chunk)
-            while bytes:
-                dst.write(bytes)
-                bytes = src.read(chunk)
-            src.close()
-            dst.close()
-        finally:
-            if directory:
-                os.chdir(orig_dir)
+        src.close()
+        dst.close()
 
 
 def _get_valid_owner(owner):
