@@ -287,7 +287,7 @@ class TestCase(unittest.TestCase):
             FileTrait(iostatus='out', path='xyzzy', legal_types=42)
         except TraitError, exc:
             self.assertEqual(str(exc),
-                             "'legal_types' invalid for output FileTraits.")
+                             "'legal_types' invalid for output FileTrait.")
         else:
             self.fail('Expected TraitError')
 
@@ -295,7 +295,7 @@ class TestCase(unittest.TestCase):
             FileTrait(iostatus='out', path='xyzzy', local_path=42)
         except TraitError, exc:
             self.assertEqual(str(exc),
-                             "'local_path' invalid for output FileTraits.")
+                             "'local_path' invalid for output FileTrait.")
         else:
             self.fail('Expected TraitError')
 
@@ -303,7 +303,7 @@ class TestCase(unittest.TestCase):
             FileTrait(iostatus='in', path='xyzzy')
         except TraitError, exc:
             self.assertEqual(str(exc),
-                             "'path' invalid for input FileTraits.")
+                             "'path' invalid for input FileTrait.")
         else:
             self.fail('Expected TraitError')
 

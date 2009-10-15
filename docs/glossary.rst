@@ -281,7 +281,7 @@ Glossary
 	    A computer program that interacts with a host aplication to
 	    provide specific functionality without changing the host application.
 
-      
+
 	  **plugins**
 	    See :term:`plugin`
 
