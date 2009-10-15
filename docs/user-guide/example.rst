@@ -418,10 +418,10 @@ the base class Component. A very simple component is shown here:
         	""" Creates a new Transmission object """
         	super(Transmission, self).__init__(doc, directory)        
         
-	        def execute(self):
-	            """ The 5-speed manual transmission is simulated by determining the
-	                torque output and engine RPM via the gear ratios.
-	                """
+	    def execute(self):
+	        """ The 5-speed manual transmission is simulated by determining the
+	            torque output and engine RPM via the gear ratios.
+	            """
 
 This new Transmission component does nothing yet. It does have the two functions that all components must have.
 The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
