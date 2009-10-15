@@ -1,0 +1,2358 @@
+<HTML><HEAD><TITLE>CONMIN USER'S MANUAL</TITLE><HEAD>
+<BODY>
+<CENTER>
+<H1>CONMIN USER'S MANUAL</H1>
+<H2>NASA Technical Memorandum X-62282, 1978</H2>
+</CENTER>
+
+<H3><DL>
+  <DD><A HREF="#Addendum">Addendum</A> to Technical Memorandum, 1978
+  <DD><A HREF="#Original">Original</A> Technical Memorandum, 1973
+</DL></H3>
+
+<P>
+<HR>
+<CENTER>[Cover]</CENTER>
+<PRE>
+
+   NASA TECHNICAL                                 NASA TM X-62,282
+	MEMORANDUM
+
+
+
+
+   CONMIN - A FORTRAN PROGRAM FOR CONSTRAINED
+
+   FUNCTION MINIMIZATION
+
+   USER'S MANUAL
+
+
+
+
+   Garret N. Vanderplaats
+
+
+
+
+   Ames Research Center and U.S. Army Air Mobility
+   R&D Laboratory, Moffett Field, Calif.  94035
+
+
+
+   August 1973
+   [Reprinted 1991]
+
+
+</PRE>
+<A NAME="Addendum">
+<HR>
+
+<CENTER><H3>CONMIN USER'S MANUAL ADDENDUM<BR>
+by G. N. VANDERPLAATS<BR>
+May, 1978</H3></CENTER><P>
+
+Since the original release of the CONMIN program, numerous modifications and
+improvements have been made.  These include changes to the program organization,
+COMMON block structures, array dimensions and control parameters.  An
+understanding of these changes is necessary for the operation of the current
+version of the program and these are outlined in the following sections.<P>
+
+This version of CONMIN is identified by a comment card near the beginning of
+subroutine CONMIN:<P>
+<CODE>C * * MAY, 1978 VERSION * * </CODE>.<P>
+
+<H3>PROGRAM ORGANIZATION</H3>
+
+The original version of CONMIN was written such that a user-supplied
+subroutine was called by CONMIN for function and gradient calculations.
+The current version is organized such that the function evaluation routine
+is contained in, or is called by, the main program.  CONMIN executes
+according to the parameter IGOTO which must be initialized to zero.
+<A HREF=figA1.gif>Figure A1</A> shows the required program
+organization.  The purpose of this new logic is so that the program can
+be used in an overlay system or can be restarted in mid-execution.<P>
+
+<H3>COMMON BLOCKS</H3>
+
+<CODE>CNMN2, CNMN3</CODE> and <CODE>CNMN4</CODE> as originally defined are no
+longer required.  However, the arrays contained in these common blocks must
+still be dimensioned in the main program.  Common block name CONSAV is now used
+for internal storage by CONMIN and this name must not be used elsewhere.  The
+information in common block <CODE>CNMN1</CODE> has been changed, and is now:<P>
+
+<CODE>COMMON /CNMN1/ DELFUN, DABFUN, FDCH, FDCHM, CT, CTMIN, CTL, CTLMIN,
+ALPHAX, ABOBJ1, THETA, <B>obj</B>, NDV, NCON, NSIDE, IPRINT, NFDG, NSCAL,
+LINOBJ, ITMAX, ITRM, ICNDIR, IGOTO, <B>nac</B>, info, infog, iter.</CODE><P>
+
+NOTE:  The parameters typed in upper case must be initialized before the first
+call to CONMIN.  The parameters typed in &nbsp;<CODE><B>bold</B></CODE>&nbsp;
+characters are calculated by the user during execution, depending on the value
+of <CODE>info</CODE>; &nbsp;<CODE>nac</CODE> will be calculated by the user
+only if <CODE>NFDG = 1</CODE>.<P>
+
+<H3>ARRAY DIMENSIONS</H3>
+
+The storage requirements for the arrays used in CONMIN have changed.
+The current storage requirements are:<P>
+
+<CODE>DIMENSION X(N1), VLB(N1), VUB(N1), g(N2), SCAL(N1), df(N1), a(N1,N3),
+s(N1), g1(N2), g2(N2), b(N3,N3), c(N4), ISC(N2), ic(N3), ms1(N5)</CODE><P>
+where
+<DL><CODE>
+  <DD>N1 = NDV + 2
+  <DD>N2 = NCON + 2*NDV
+  <DD>N3 = NACMX1
+  <DD>N4 = MAX (N3,NDV)
+  <DD>N5 = 2*N4<BR>
+</CODE></DL>
+
+Note that these are <EM>minimum</EM> dimensions.  The arrays may be dimensioned
+larger than this at the user's option.<P>
+
+NOTE:  Uppercase denotes arrays which must be initialized before the first
+call to CONMIN. <CODE>VLB, VUB, ISC</CODE> and <CODE>SCAL</CODE> must be
+initialized only if they will be used: <CODE>VLB</CODE> and <CODE>VUB</CODE>
+if <CODE>NSIDE.GT.0</CODE>, <CODE>ISC</CODE> if <CODE>NCON.GT.0</CODE> and
+<CODE>SCAL</CODE> if <CODE>NSCAL.LT.0.</CODE><P>
+
+During execution, the arrays <CODE>g</CODE>, <CODE>a</CODE>, and <CODE>isc</CODE>
+must be calculated by the user, depending on the value of <CODE>NFDG</CODE>.
+If <CODE>NFDG</CODE> = 0, only array <CODE>g</CODE> is calculated.
+If <CODE>NFDG</CODE> = 2, only arrays <CODE>g</CODE> and <CODE>df</CODE> are
+calculated.  The remaining arrays are used internally by CONMIN.<P>
+
+<H3>CALLING STATEMENT</H3>
+
+CONMIN is now called by the FORTRAN statement:<P>
+
+<CODE>CALL CONMIN (X, VLB, VUB, G, SCAL, DF, A, S, G1, G2, B, C, ISC, IC,
+MS1, N1, N2, N3, N4, N5)</CODE>.<P>
+
+CAUTION: Check that the values of <CODE>N1, N2, N3, N4</CODE> and <CODE>N5</CODE> in
+the calling statement are consistent with the array dimensions discussed above.<P>
+
+<H3>PARAMETER CHANGES</H3>
+
+Variable <CODE>NACMX1</CODE> defined in common block <CODE>CNMN1</CODE> is replaced
+by <CODE>N3</CODE> in the parameter list.<P>
+
+A new parameter, <CODE>INFOG</CODE>, has been added:
+
+<PRE>
+     INFOG = 0:   same as when INFOG was not used.
+
+     INFOG = 1:   only those constraints identified as active or violated
+                  in array IC(I), I = 1, NAC need be evaluated.  This is
+                  only meaningful if finite difference gradients are
+                  calculated, and allows the user to avoid
+                  calculating non-essential information.  If it is
+                  convenient to evaluate all constraints each time,
+                  variable INFOG may be ignored.
+</PRE>
+
+The parameters <CODE>ALPHAX</CODE> and <CODE>ABOBJ1</CODE> have been added to
+<CODE>CNMN1</CODE>.<P>
+
+<CODE>ALPHAX</CODE> (default = 0.1) is the maximum fractional change in any
+component of <CODE>X</CODE> as an initial estimate for <CODE>ALPHA</CODE> in the
+one-dimensional search.  That is, the initial <CODE>ALPHA</CODE> will be such that
+no component of <CODE>X</CODE> is changed by more than this amount.
+This only applies to those <CODE>X(i)</CODE> of magnitude greater than 0.1.
+If an optimization run shows numerous <CODE>ALPHA</CODE> = 0 results for the
+one-dimensional search, it may help to try <CODE>ALPHAX</CODE> less than the
+default.  <CODE>ALPHAX</CODE> is changed by CONMIN depending
+on the progress of the optimization.<P>
+
+<CODE>ABOBJ1</CODE> (default = 0.1) is the fractional change attempted as a
+first step in the one-dimensional search and is based on a linear approximation.
+<CODE>ABOBJ1</CODE> is updated during the optimization, depending on progress.
+The initial step in the one-dimensional search is taken as the amount necessary
+to change <CODE>OBJ</CODE> by <CODE>ABOBJ1*ABS(OBJ)</CODE> or to change some
+<CODE>X(i)</CODE> by <CODE>ALPHAX*ABS( X(i) )</CODE>, whichever is less.<P>
+
+The definition of parameter INFO has changed.  The current definition is:
+<PRE>
+    INFO = 1:  calculate OBJ and G(I), I = 1, NCON
+
+    INFO = 2:  calculate NAC, IC(I), I = 1,NAC, the gradient of OBJ, and 
+               the gradient of G(J), where J = IC(I), I = 1,NAC.
+               Store the gradients of G in columns of A.
+</PRE>
+
+The definition of the finite difference gradient parameter, <CODE>NFDG</CODE>
+has changed.  The current definition is:
+<PRE>
+    NFDG = 0:  all gradient information is calculated by finite difference
+               within CONMIN.
+
+    NFDG = 1:  all gradient information is supplied by the user.
+
+    NFDG = 2:  the gradient of OBJ is supplied by the user and the
+               gradients of constraints are calculated by finite
+               difference within CONMIN.
+</PRE>
+
+Additional printing is now available using the IPRINT parameter:
+<PRE>
+    IPRINT = 1, 2, 3, 4:  same as before.
+
+    IPRINT = 5:  all of above plus each proposed design vector, objective
+                 and constraints during the one-dimensional search.
+</PRE>
+
+<H3>GRADIENT STORAGE</H3>
+
+The gradients of active or violated constraints are now stored in the
+<EM>columns</EM> of array [<CODE>A</CODE>], instead of the <EM>rows</EM> of
+[<CODE>A</CODE>].  This is for computational efficiency and convenience.
+Also, it sometimes simplifies programming associated with user-supplied
+gradients (<CODE>NFDG</CODE> = 1).  This change only effects those users who
+use the <CODE>NFDG</CODE> = 1 option.  If gradients of constraints are
+calculated by CONMIN the user only needs to be sure that array [<CODE>A</CODE>]
+is correctly dimensioned in the calling program.
+
+<H3>OVERLAY/RESTART CAPABILITY</H3>
+
+CONMIN can now be in its own overlay.  It is only required that the arrays be
+saved in overlay zero as well as the contents of common blocks <CODE>CNMN1</CODE>
+and <CODE>CONSAV</CODE>.  <CODE>CONSAV</CODE> contains 50 real parameters followed
+by 25 integer parameters:<P>
+<CODE>COMMON /CONSAV/ REAL(50), INT(25)</CODE><P>
+
+This also allows the user to restart CONMIN at any point during the
+optimization.  Upon return from CONMIN it is only necessary to write the
+information in the parameter list (all arrays plus <CODE>N1 - N5</CODE>) on disc,
+together with the contents of <CODE>CNMN1</CODE> and <CODE>CONSAV</CODE>.
+The program can be restarted by reading this information back from disc
+and continuing the program execution from this point.
+
+<H3>DOUBLE PRECISION OPERATIONS</H3>
+
+Occasionally it is desirable to use CONMIN in double precision, usually
+on an IBM machine.  To do this, add implicit <CODE>READ*8 A-H, O-Z</CODE>
+cards at the beginning of each routine.<P>
+
+NOTE:  This has not been tested because on unavailability of an IBM computer,
+but care has been taken to insure that no parity errors will occur.
+If you use double precision please inform the author of success or failure
+so other users can be assured of the operational status of this option.<P>
+
+<A NAME="Original">
+<HR>
+<CENTER>[Original NASA TM]</CENTER>
+<PRE>
+
+
+
+NASA TECHNICAL                                       NASA TM X-62,282
+     MEMORANDUM
+
+CONMIN - A FORTRAN PROGRAM FOR CONSTRAINED FUNCTION MINIMIZATION
+USER'S MANUAL
+
+
+Garret N. Vanderplaats
+
+
+
+</PRE>
+<HR>
+<CENTER><H2>CONTENTS</H2></CENTER>
+<DL>
+  <DD>&nbsp; &nbsp; &nbsp; &nbsp; <A HREF="#Summary">SUMMARY</A><P>
+  <DD>I. &nbsp; &nbsp; <A HREF="#Introduction">INTRODUCTION</A><P>
+  <DD>II. &nbsp;&nbsp; <A HREF="#Operational">MAKING CONMIN OPERATIONAL</A><P>
+  <DD>III. &nbsp; <A HREF="#Organization">PROGRAM ORGANIZATION</A><P>
+  <DD>IV. &nbsp; <A HREF="#Param_Main">PARAMETERS DEFINED IN MAIN PROGRAM</A><P>
+  <DD>V. &nbsp;&nbsp; <A HREF="#Param_Extrn">PARAMETERS DEFINED
+	IN EXTERNAL ROUTINE</A><P>
+  <DD>VI. &nbsp; <A HREF="#Param_Conmin">PARAMETERS DEFINED IN CONMIN AND
+	ASSOCIATED ROUTINES</A><P>
+  <DD>VII. &nbsp;<A HREF="#Dimensions">REQUIRED DIMENSIONS OF ARRAYS</A><P>
+  <DD>VIII. <A HREF="#Examples">EXAMPLES</A><P>
+  <DD>Appendices
+  <DD>A. &nbsp; &nbsp; <A HREF="#Appndx_A">SUMMARY OF PARAMETERS USED BY CONMIN</A>
+  <DD>B. &nbsp; &nbsp; <A HREF="#Appndx_B">CONMIN SUBROUTINE DESCRIPTIONS</A><P>
+  <DD>&nbsp; &nbsp; &nbsp; &nbsp; <A HREF="#References">REFERENCES</A><P>
+  <DD>LIST OF EXAMPLES<P>
+  <OL>LISTING NO.
+	<LI><A HREF="#List_1"> Main Program, Examples 1 and 2.</A>
+	<LI><A HREF="#List_2"> Analysis Routine for Example 1.</A>
+	<LI><A HREF="#List_3"> Optimization Results for Example 1.</A>
+	<LI><A HREF="#List_4"> Analysis Routine for Example 2.</A>
+	<LI><A HREF="#List_5"> Optimization Results for Example 2.</A>
+	<LI><A HREF="#List_6"> Main Program and Analysis For Example 3.</A>
+	<LI><A HREF="#List_7"> Optimization Results For Example 3.</A>
+  </OL><P>
+  <DD>&nbsp; &nbsp; &nbsp; &nbsp; <A HREF="#Addendum">ADDENDUM</A> (1978)<P>
+</DL>
+<PRE>
+
+</PRE><A NAME="Summary"><P>
+<HR>
+<CENTER><H3>SUMMARY</H3></CENTER>
+
+CONMIN is a FORTRAN program, in subroutine form, for the solution
+of linear or nonlinear constrained optimization problems.  The basic
+optimization algorithm is the Method of Feasible Directions.  The user
+must provide a main calling program and an external routine to evaluate
+the objective and constraint functions and to provide gradient
+information.  If analytic gradients of the objective or constraint
+functions are not available, this information is calculated by finite
+difference.  While the program is intended primarily for efficient
+solution of constrained problems, unconstrained function minimization
+problems may also be solved, and the conjugate direction method of
+Fletcher and Reeves is used for this purpose.  This manual describes the
+use of CONMIN and defines all necessary parameters.  Sufficient
+information is provided so that the program can be used without special
+knowledge of optimization techniques.  Sample problems are included to
+help the user become familiar with CONMIN and to make the program
+operational.
+
+
+<A NAME="Introduction"><P>
+
+<HR>
+<CENTER><H3>SECTION I</H3></CENTER>
+<CENTER><H3>INTRODUCTION</H3></CENTER>
+
+In many mathematical problems, it is necessary to determine the minimum
+or maximum of a function of several variables, limited by various linear and
+nonlinear inequality constraints.  It is seldom possible, in practical
+applications, to solve these problems directly, and iterative methods are
+used to obtain the numerical solution.  Machine-calculation of this
+solution is, of course, desirable and the CONMIN program has been
+developed to solve a wide variety of such problems.<P>
+
+CONMIN is a FORTRAN program, in subroutine form, for the minimization of a
+multi-variable function subject to a set of inequality constraints.  The
+general minimization problem is:  Find values for the set of variables,
+<CODE>X(I)</CODE>, to<P>
+<PRE>
+     Minimize    OBJ
+
+     Subject to:
+
+          G(J).LE.0                          J = 1,NCON
+
+          VLB(I).LE.X(I).LE.VUB(I)           I = 1,NDV      NSIDE.GT.0
+</PRE>
+where <CODE>OBJ</CODE> is a general function (objective function) of the
+variables, <CODE>X(I)</CODE> referred to hereafter as decision variables.
+<CODE>OBJ</CODE> need not be a simple analytic function, and may be any
+function which can be numerically evaluated.<P>
+
+<CODE>G(J)</CODE> is the value of the <CODE>J</CODE>th inequality constraint,
+which is also a function of the <CODE>X(I)</CODE>.
+<CODE>NCON</CODE> is the number of constraints, <CODE>G(J)</CODE>.
+<CODE>NCON</CODE> may be zero. 
+<CODE>VLB(I)</CODE> and <CODE>VUB(I)</CODE> are lower and upper bounds
+respectively on variable <CODE>X(I)</CODE>, and are referred to as side
+constraints.  <CODE>NSIDE</CODE> = 0 indicates that no lower or upper bounds
+are prescribed.  If <CODE>NCON</CODE> = 0 and <CODE>NSIDE</CODE> = 0, the
+objective function is said to be unconstrained.  <CODE>NDV</CODE> is the
+total number of decision variables, <CODE>X(I)</CODE>.<P>
+
+Constraint <CODE>G(J)</CODE> is defined as active if
+<CODE>CT.LE.G(J).LE.ABS(CT)</CODE> and violated if <CODE>G(J).GT.ABS(CT)</CODE>,
+where constraint thickness, <CODE>CT</CODE>, is a small specified negative
+number.  The numerical significance of <CODE>CT</CODE> may be understood
+by referring to <A HREF=fig1.gif>Fig. 1</A>,
+which shows a single constraint in a two variable design space.
+Constraint <CODE>G(J)</CODE> is mathematically equal to zero along a single
+curve in design space.  However, on a digital computer, the exact value of
+<CODE>G(J)</CODE> = 0 can seldom be obtained.  Therefore, the "curve" becomes
+a thick band with constraint thickness of <CODE>2*ABS(CT)</CODE> over which
+<CODE>G(J)</CODE> is assumed to be zero.  Because all <CODE>G(J)</CODE> must
+be negative, <CODE>CT</CODE> is taken as a negative number for consistency
+so that any <CODE>G(J).GT.CT</CODE> is defined as active (or violated) if
+<CODE>G(J).GT.ABS(CT)</CODE>.  While it may seem logical to choose a very small
+value (in magnitude) for <CODE>CT</CODE> (say -1.0E-6), the nature of the
+optimization algorithm used by CONMIN is such that more numerical stability can be achieved by taking <CODE>CT</CODE> = -0.1 or even -0.2.  <CODE>CT</CODE> is
+used for numerical stability only, and when the optimization is complete, one
+or more constraints, <CODE>G(J)</CODE>, will usually be very near zero, as seen
+in the examples in <A HREF="#Examples">SECTION VIII</A>.<P>
+
+It is desirable that <CODE>G(J)</CODE> be normalized so that<P>
+<PRE>
+     -1 .LE. G(J) .LE. 1             J = 1, NCON
+</PRE>
+In this way the constraint thickness, <CODE>CT</CODE>, has the same numerical
+significance for all <CODE>G(J)</CODE>.  It is not necessary that all
+<CODE>G(J)</CODE> be precisely in this form, and such normalization may not be
+possible.  However, it is important that all <CODE>G(J)</CODE> at least be of
+the same order of magnitude.  For example, assume that some <CODE>G(J) =
+X(1)**2-X(2)</CODE>.  If <CODE>X(1)</CODE> and <CODE>X(2)</CODE> are expected
+to be of order 100 for the particular problem under consideration,
+<CODE>G(J)</CODE> may be scaled by dividing by 10,000 to provide a value
+for <CODE>G(J)</CODE> of order one.<P>
+
+The basic analytic technique used by CONMIN is to minimize <CODE>OBJ</CODE>
+until one or more constraints, <CODE>G(J)</CODE>, become active.  The
+minimization process then continues by following the constraint boundaries in
+a direction such that the value of <CODE>OBJ</CODE> continues to decrease. 
+When a point is reached such that no further decrease in <CODE>OBJ</CODE> can
+be obtained, the process is terminated.  The value of the constraint thickness
+parameter, <CODE>CT</CODE>, and the normalization of the constraints,
+<CODE>G(J)</CODE>, have considerable effect on the numerical stability and
+rate of convergence of the optimization process.<P>
+
+An example of a constrained nonlinear problem is the minimization of the
+four variable Rosen-Suzuki function (<A HREF="#References">ref. 1</A>):<P>
+<PRE>
+     MINIMIZE OBJ = X(1)**2 - 5*X(1) + X(2)**2 - 5*X(2) +
+                    2*X(3)**2 - 21*X(3) + X(4)**2 + 7*X(4) + 50
+
+     Subject to:
+
+         G(1) = X(1)**2 + X(1) + X(2)**2 - X(2) +
+                X(3)**2 + X(3) + X(4)**2 - X(4) - 8  .LE. 0
+
+         G(2) = X(1)**2 - X(1) + 2*X(2)**2 + X(3)**2 +
+                2*X(4)**2 - X(4) - 10                .LE. 0
+
+         G(3) = 2*X(1)**2 + 2*X(1) + X(2)**2 - X(2) +
+                X(3)**2 - X(4) - 5                   .LE. 0
+</PRE>
+This problem has four decision variables and three constraints,
+(<CODE>NDV&nbsp;=&nbsp;4, NCON&nbsp;=&nbsp;3</CODE>).  No lower or upper bounds
+<CODE>VLB(I)</CODE> or <CODE>VUB(I)</CODE> are prescribed so control parameter
+<CODE>NSIDE</CODE> is specified as <CODE>NSIDE&nbsp;=&nbsp;0</CODE> to indicate
+this.  It is necessary to provide a set of initial values for <CODE>X(I)</CODE>,
+and from this the constrained optimum is obtained by CONMIN and its associated
+routines.  This problem will be solved using CONMIN in
+<A HREF="#Examples">SECTION VIII</A>.<P>
+
+The minimization algorithm is based on Zoutendijk's method of feasible
+directions (<A HREF="#References">ref. 2</A>).  The algorithm has been modified
+to improve efficiency and numerical stability and to solve optimization
+problems in which one or more constraints, <CODE>G(J)</CODE>, are initially
+violated (<A HREF="#References">ref. 3</A>).  While the program is intended
+primarily for the efficient solution of constrained functions, unconstrained
+functions may also be minimized (<CODE>NCON&nbsp;=&nbsp;0</CODE> and
+<CODE>NSIDE&nbsp;=&nbsp;0</CODE>), and the conjugate direction method of
+Fletcher and Reeves (<A HREF="#References">ref. 4</A>) is used for this purpose.
+If a function is to be maximized, this may be achieved by minimizing the
+negative of the function.<P>
+
+For constrained minimization problems, the initial design need not be
+feasible (one or more <CODE>G(J)</CODE> may be greater than
+<CODE>ABS(CT)</CODE>), and a feasible solution (if one exists) is obtained
+with a minimal increase in the value of the objective function.<P>
+
+The user must supply a main program to call subroutine CONMIN along with
+an external subroutine to evaluate the objective function, constraint
+functions and the analytic gradient of the objective and currently active
+or violated constraint functions.  At any given time in the minimization
+process, gradient information is required only for constraints which are
+active or violated (<CODE>G(J).GE.CT</CODE>).  Gradients are calculated by
+finite difference if this information is not directly obtainable, and a
+subroutine is included with CONMIN for this purpose.<P>
+
+The basic program organization is described here, and sufficient
+information is provided so that the program may be used without special
+knowledge of optimization techniques.  The various control parameters are
+described and the required dimensions of all arrays are given so that the
+user can limit storage requirements to that necessary to solve his
+particular problems.  Sample problems are included to aid the user in
+making the program operational and to gain familiarity with its use.<P>
+
+A summary of all parameters used by CONMIN and its associated routines is
+given in <A HREF="#Appndx_A">APPENDIX A</A> for convenient reference.<P>
+
+<A HREF="#Appndx_B">APPENDIX B</A> contains a brief description of the subroutines associated with CONMIN.
+<P>
+
+<A NAME="Operational">
+
+<HR>
+<CENTER><H3>SECTION II</H3></CENTER>
+<CENTER><H3>MAKING CONMIN OPERATIONAL</H3></CENTER>
+
+CONMIN utilizes iterative techniques to numerically obtain the minimum of
+a general function, subject to a prescribed set of linear and/or
+nonlinear constraints.  Because of the nature of these techniques, the
+efficiency of the optimization process (the number of times the functions
+must be evaluated) can often be improved by the proper choice of control
+parameters to deal effectively with a given problem.  For this reason, it
+is particularly desirable that the new user solve several simple two to
+five variable problems, experimenting with different control parameters.
+The following steps are suggested to help the user make CONMIN operational
+and to gain the familiarity necessary for its efficient application to a
+particular problem.<P>
+<OL>
+  <LI> Obtain the source code, including example problems.<P>
+  <LI> Read SECTION VIII (<A HREF="#Examples">EXAMPLES</A>) of this manual.<P>
+  <LI> Solve the example problems using CONMIN, and verify the results by
+	comparison with the output listed in this manual.  Note that the precise
+	numerical values may differ slightly on different computers.<P>
+  <LI> Read this entire manual carefully.<P>
+  <LI> Devise several two to five variable unconstrained and constrained
+	minimization problems and solve them using CONMIN.  If the precise
+	optimum can be determined analytically, compare this with the optimums
+	obtained using CONMIN.<P>
+  <LI> Experiment by starting from several different initial points (different
+	initial <CODE>X</CODE> vectors).  This is good practice in all 
+	optimization problems, since it improves the chances that the absolute
+	minimum is obtained (instead of a relative minimum).<P>
+  <LI> Experiment with various analytic gradient options by solving the same
+	problems with and without calculating precise analytic gradients (see
+	examples 1 and 2 of <A HREF="#Examples">SECTION VIII</A>).<P>
+  <LI> Experiment with various convergence criteria, <CODE>DELFUN, DABFUN and
+	ITRM</CODE>.<P>
+  <LI> Experiment with various constraint thickness parameters, <CODE>CT, CTMIN,
+	CTL</CODE> and <CODE>CTLMIN</CODE> to understand the effect of these
+	parameters on constrained minimization problems.<P>
+  <LI> Experiment with various values of the push-off factor,
+	<CODE>THETA</CODE>, on several constrained minimization problems.
+	Small values of <CODE>THETA</CODE> may be used if constraints,
+	<CODE>G(J)</CODE>, are nearly linear functions of the decision
+	variables, <CODE>X(I)</CODE>, and larger values should be used if one
+	or more <CODE>G(J)</CODE> are highly nonlinear.<P>
+  <LI> Experiment with scaling options by using no scaling, automatic scaling,
+	or user provided scaling options.<P>
+  <LI> Experiment with various conjugate direction restart parameters,
+	<CODE>ICNDIR</CODE>, using examples of unconstrained minimization.
+	Note that if <CODE>ICNDIR&nbsp;=&nbsp;1</CODE>, the steepest descent
+	method will be used throughout the optimization process.<P>
+  <LI> Re-read this entire manual.
+</OL>
+
+     The default options on the various control parameters have been chosen as
+reasonable values for most optimization problems.  The steps listed above
+are intended to provide the user with the experience necessary to change
+these parameters as required to efficiently solve new optimization
+problems of special interest.
+
+
+<A NAME="Organization"><P>
+
+<HR>
+<CENTER>
+<H3>SECTION III</H3>
+<H3>PROGRAM ORGANIZATION<BR>
+[ENTIRE SECTION SUPERCEDED BY THE <A HREF="#Addendum">ADDENDUM</A>]</H3>
+</CENTER>
+
+The overall program organization is shown in <A HREF=fig2.gif>Fig.
+2</A> [SUPERCEDED].  The variables are initialized in the main program.
+The vector <CODE>X</CODE> is changed in subroutine CONMIN and its associated
+routines, and external routine <CODE>SUB1</CODE> calculates the required
+function values and gradient information.<P>
+
+Subroutine CONMIN is called by the main program by the call statement:<P>
+<PRE>
+     CALL CONMIN (SUB1,OBJ)<P>
+</PRE>
+where <CODE>SUB1</CODE> is the name of the user supplied external subroutine
+and <CODE>OBJ</CODE> is the optimum value of the objective function upon return
+from CONMIN.  The variables, <CODE>X(I)</CODE>, contained in vector
+<CODE>X</CODE> and constraint values, <CODE>G(J)</CODE>, contained in vector
+<CODE>G</CODE> will correspond to this optimum upon return.  If additional
+information calculated in external routine <CODE>SUB1</CODE> is required,
+the routine should be called again upon return from CONMIN to insure that
+this information corresponds to the final values of <CODE>X(I)</CODE>.<P>
+
+Subroutine <CODE>SUB1</CODE> is called by CONMIN and its associated routines
+by the call statement:<P>
+<PRE>
+     CALL SUB1(INFO,OBJ)<P>
+</PRE>
+where <CODE>INFO</CODE> is a control parameter defining which information must
+be supplied, and <CODE>OBJ</CODE> is the value of the objective function to be
+calculated corresponding to the current decision variables contained in
+<CODE>X</CODE>.  <CODE>INFO</CODE> will have a value of from 1 to 4 to
+identify what information must be supplied by <CODE>SUB1</CODE>.
+
+<PRE>
+     INFO = 1   Calculate objective function value, OBJ, for current
+                variables X.
+
+     INFO = 2   Calculate objective function value, OBJ, and constraint
+                values, G(J), J = 1, NCON for current variables, X.
+
+     INFO = 3   Calculate analytic gradient of objective function
+                corresponding to current variables, X.  The objective
+                function and constraint values already correspond to the
+                current values of X and need not be recalculated.
+                However, other information obtained in SUB1 when
+                calculating OBJ and G(J) may not correspond to X and must
+                be calculated again here if it is used in gradient
+                computations.  If finite difference control parameter,
+                NFDG, is set to NFDG = 1 in the main program this value
+                of INFO will never be considered.
+
+     INFO = 4   For current variables, X, determine which constraints
+                are active and which are violated (G(J).GE.CT) and how
+                many such constraints there are (NAC = Number of active
+                and violated constraints).  Calculate the analytic
+                gradients of the objective function and all active or
+                violated constraints.  Values of the objective function,
+                OBJ, and constraints, G(J), already correspond to the
+                current variables, X, and need not be recalculated.
+                As in the case of INFO = 3, all other information used
+                in gradient computations must be calculated for the
+                current variables, X.  If finite difference control
+                parameter NFDG, defined in the main program, is not zero,
+                this value of INFO will never be considered.
+</PRE>
+
+Note that <CODE>INFO&nbsp;=&nbsp;3</CODE> and <CODE>INFO&nbsp;=&nbsp;4</CODE>
+are considered only if gradient information is calculated in the user supplied
+subroutine, <CODE>SUB1</CODE>.<P>
+
+With the exception of the external subroutine name, <CODE>SUB1</CODE>, the
+objective function value, <CODE>OBJ</CODE>, and the control parameter,
+<CODE>INFO</CODE>, all information used in the optimization process is
+transferred by means of the following labeled common blocks.<P>
+<PRE>
+     COMMON/CNMN1/IPRINT, NDV, ITMAX, NCON, NSIDE, ICNDIR, NSCAL, NFDG,
+     1 FDCH, FDCHM, CT, CTMIN, CTL, CTLMIN, THETA, PHI, NAC, NACMX1, DELFUN,
+     2 DABFUN, LINOBJ, ITRM, ITER, NCAL(4)<P>
+
+     COMMON/CNMN2/X(N1), DF(N1), G(N2), ISC(N8), IC(N4), A(N4,N3)<P>
+
+     COMMON/CNMN3/S(N3), G1(N7), G2(N2), C(N9), MS1(N6), B(N4,N4)<P>
+
+     COMMON/CNMN4/VLB(N1), VUB(N1), SCAL(N5)<P>
+</PRE>
+The parameters and arrays used in the minimization process will now be
+defined, followed by the required array dimensions, <CODE>N1</CODE> through
+<CODE>N9</CODE>.  If a default value is listed, this value will be used if a
+zero value is transferred from the main program.<P>
+
+<A NAME="Param_Main"><P>
+
+<HR>
+<CENTER><H3>SECTION IV</H3></CENTER>
+<CENTER><H3>PARAMETERS DEFINED IN MAIN PROGRAM</H3></CENTER>
+<PRE>
+IPRINT   Print control.  All printing is done on unit number 6.
+
+         0:  Print nothing.
+
+         1:  Print initial and final function information.
+
+         2:  1st debug level.  Print all of above plus control
+             parameters.  Print function value and X-vector at each
+             iteration.
+
+         3:  2nd. debug level.  Print all of above plus all constraint
+             values, numbers of active or violated constraints, direction
+             vectors, move parameters and miscellaneous information.  The
+             constraint parameter, BETA, printed under this option
+             approaches zero as the optimum objective is achieved.
+
+         4:  Complete debug.  Print all of above plus gradients of
+             objective function, active or violated constraint functions
+             and miscellaneous information.
+
+NDV      Number of decision variables, X(I), contained in vector X.
+
+ITMAX    Default value = 10.  Maximum number of iterations in the
+         minimization process.  If NFDG.EQ.0 each iteration requires one
+         set of gradient computations (INFO = 3 or 4) and approximately
+         three function evaluations (INFO = 1 or 2).  If NFDG.GT.0
+         each iteration requires approximately NDV + 3 function
+         evaluations (INFO = 1 or 2).
+
+NCON     Number of constraint functions, G(J).  NCON may be zero.
+
+NSIDE    Side constraint parameter.  NSIDE = 0 signifies that the
+         variables X(I) do not have lower or upper bounds.  NSIDE.GT.0
+         signifies that all variables X(I) have lower and upper bounds
+         defined by VLB(I) and VUB(I) respectively.  If one or more
+         variables are not bounded while others are, the values of the
+         lower and upper bounds on the unbounded variables must be taken
+         as very large negative and positive values respectively
+         (i.e., VLB(I) = -1.0E+10, VUB(I) = 1.0E+10).
+
+ICNDIR   Default value = NDV + 1.  Conjugate direction restart parameter.
+         If the function is currently unconstrained, (all G(J).LT.CT or
+         NCON = NSIDE = 0), Fletcher-Reeves conjugate direction method will
+         be restarted with a steepest descent direction every ICNDIR
+         iterations.  If ICNDIR = 1 only steepest descent will be used.
+
+NSCAL    Scaling control parameter.  The decision variables will be
+         scaled linearly.
+
+         NSCAL.LT.0:  Scale variables X(I) by dividing by SCAL(I), where
+                      vector SCAL is defined by the user.
+
+         NSCAL.EQ.0:  Do not scale the variables.
+
+         NSCAL.GT.0:  Scale the variables every NSCAL iterations.
+                      Variables are normalized so that scaled
+                      X(I) = X(I)/ABS(X(I)).  When using this option, it
+                      is desirable that NSCAL = ICNDIR if ICNDIR is input
+                      as nonzero, and NSCAL = NDV + 1 in ICNDIR is input
+                      as zero.
+
+NFDG     Gradient calculation control parameter. [SEE <A HREF="#Addendum">ADDENDUM</A>]
+
+         NFDG = 0:  All gradient information is provided by external
+                    routine SUB1.  This information may be calculated
+                    analytically, or by finite difference, at the user's
+                    discretion.
+
+         NFDG = 1:  All gradient information will be calculated by finite
+                    difference in CONMIN.  SUB1 provides only function
+                    values, OBJ and G(J), J = 1, NCON.
+
+         NFDG = 2:  Gradient of objective function is provided by external
+                    routine SUB1, and gradients of active and violated
+                    constraints are calculated by finite difference in
+                    CONMIN.  This option is desirable if the gradient of
+                    the objective function is easily obtained in closed
+                    form, but gradients of constraint functions, G(J), are
+                    unobtainable.  This option may improve efficiency if
+                    several variables are limited by lower or upper bounds.
+
+FDCH     Default value = 0.01.  Not used if NFDG = 0.  Relative change in
+         decision variable X(I) in calculating finite difference
+         gradients.  For example, FDCH = 0.01 corresponds to a finite
+         difference step of one percent of the value of the decision
+         variable.
+
+FDCHM    Default value = 0.01.  Not used if NFDG = 0.  Minimum absolute
+         step in finite difference gradient calculations.  FDCHM applies
+         to the unscaled variable values.
+
+CT       Default value = -0.1.  Not used if NCON = NSIDE = 0.
+         Constraint thickness parameter.  If CT.LE.G(J).LE.ABS(CT),
+         G(J) is defined as active.  If G(J).GT.ABS(CT), G(J) is said to
+         be violated.  If G(J).LT.CT, G(J) is not active.  CT is
+         sequentially reduced in magnitude during the optimization
+         process.  If ABS(CT) is very small, one or more constraints
+         may be active on one iteration and inactive on the next,
+         only to become active again on a subsequent iteration.
+         This is often referred to as "zigzagging" between constraints.
+         A wide initial value of the constraint thickness is desirable
+         for highly nonlinear problems so that when a constraint
+         becomes active it tends to remain active, thus reducing the
+         zigzagging problem.  The default value is usually adequate.
+
+CTMIN    Default value = 0.004.  Not used if NCON = NSIDE = 0.  Minimum
+         absolute value of CT considered in the optimization process.
+         CTMIN may be considered as "numerical zero" since it may not be
+         meaningful to compare numbers smaller than CTMIN.  The value of
+         CTMIN is chosen to indicate that satisfaction of a constraint
+         within this tolerance is acceptable.  The default value is usually
+         adequate.
+
+CTL      Default value = -0.01.  Not used if NCON = NSIDE = 0.
+         Constraint thickness parameter for linear and side constraints.
+         CTL is smaller in magnitude than CT because the zigzagging
+         problem is avoided with linear and side constraints.  The default
+         value is usually adequate.
+
+CTLMIN   Default value = 0.001.  Not used if NCON = NSIDE = 0.  Minimum
+         absolute value of CTL considered in the optimization process.
+         The default value is usually adequate.
+
+THETA    Default value = 1.0.  Not used if NCON = NSIDE = 0.  Mean value
+         of the push-off factor in the method of feasible directions.
+         A larger value of THETA is desirable if the constraints, G(J),
+         are known to be highly nonlinear, and a smaller value may be
+         used if all G(J) are known to be nearly linear.  The actual
+         value of the push-off factor used in the program is a quadratic
+         function of each G(J), varying from 0.0 for G(J) = CT to 4.0*THETA
+         for G(J) = ABS(CT).  A value of THETA = 0.0 is used in the
+         program for constraints which are identified by the user to be
+         strictly linear.  THETA is called a "push-off" factor because
+         it pushes the design away from the active constraints into the
+         feasible region.  The default value is usually adequate.
+
+PHI      Default value = 5.0.  Not used if NCON = NSIDE = 0.
+         Participation coefficient, used if a design is infeasible
+         (one or more G(J).GT.ABS(CT)).  PHI is a measure of how hard
+         the design will be "pushed" towards the feasible region and
+         is, in effect, a penalty parameter.  If in a given problem, a
+         feasible solution cannot be obtained with the default value,
+         PHI should be increased, and the problem run again.  If a
+         feasible solution cannot be obtained with PHI = 100, it is
+         probable that no feasible solution exists.  The default value
+         is usually adequate.
+
+NACMX1   Not used if NSIDE = NCON = 0.  1 plus user's best estimate of
+         the maximum number of constraints (including side constraints,
+         VLB(I) and VUB(I)) which will be active at any given time in
+         the minimization process.  NACMX1 = number of rows in array A.
+         If NAC + 1 ever exceeds this value, the minimization process will
+         be terminated, an error message will be printed, and control
+         will return to the main program.  NACMX1 will never exceed
+         NDV + 1 if all constraints G(J) and bounds VLB(I) and VUB(I)
+         are independent.  A reasonable value for NACMX1 (and the
+         corresponding dimension of array A) is MIN(40, NDV + 1),
+         where the minimum of 40 will only apply for large problems
+         and is arbitrary, based on the observation that even for very
+         large problems (over a hundred X(I) and several thousand G(J)),
+         it is uncommon for many constraints to be active at any time
+         in the minimization process (the optimum solution is seldom
+         "fully constrained" for very large nonlinear problems).
+
+DELFUN   Default value = 0.001.  Minimum relative change in the objective
+         function to indicate convergence.  If in ITRM consecutive
+         iterations, ABS(1.0-OBJ(J-1)/OBJ(J)).LT.DELFUN and the current
+         design is feasible (all G(J).LE.ABS(CT)), the minimization
+         process is terminated.  If the current design is infeasible
+         (some G(J).GT.ABS(CT)), five iterations are required to
+         terminate and this situation indicates that a feasible design
+         may not exist.
+
+DABFUN   Default value = 0.001 times the initial function value.  Same
+         as DELFUN except comparison is on absolute change in the
+         objective function, ABS(OBJ(J)-OBJ(J-1)), instead of relative
+         change.
+
+LINOBJ   Not used if NCON = NSIDE = 0.  Linear objective function
+         identifier.  If the objective, OBJ, is specifically known to
+         be a strictly linear function of the decision variables, X(I),
+         set LINOBJ = 1.  If OBJ is a general nonlinear function, set
+         LINOBJ = 0.
+
+ITRM     Default value = 3.  Number of consecutive iterations to indicate
+         convergence by relative or absolute changes, DELFUN or DABFUN.
+
+X(N1)    Vector of decision variables, X(I), I = 1, NDV.  The initial
+         X-vector contains the user's best estimate of the set of optimum
+         design variables.
+
+VLB(N1)  Used only if NSIDE.NE.0.  VLB(I) is the lower allowable value
+         (lower bound) of variable X(I).  If one or more variables, X(I),
+         do not have lower bounds, the corresponding VLB(I) must be
+          initialized to a very large negative number (say -1.0E+10).
+
+VUB(N1)  Used only if NSIDE.NE.0.  VUB(I) is the maximum allowable value
+         (upper bound) of X(I).  If one or more variables, X(I), do not
+         have upper bounds, the corresponding VUB(I) must be initialized
+         to a very large positive number (say 1.0E+10).
+
+SCAL(N5) Not used if NSCAL = 0.  Vector of scaling parameters.  If
+         NSCAL.GT.0 vector SCAL need not be initialized since SCAL will
+         be defined in CONMIN and its associated routines.  If NSCAL.LT.0,
+         vector SCAL is initialized in the main program, and the scaled
+         variables X(I) = X(I)/SCAL(I).  Efficiency of the optimization
+         process can sometimes be improved if the variables are either
+         normalized or are scaled in such a way that the partial deri-
+         vative of the objective function, OBJ, with respect to variable
+         X(I) is of the same order of magnitude for all X(I).  SCAL(I)
+         must be greater than zero because a negative value of SCAL(I)
+         will result in a change of sign of X(I) and possibly yield
+         erroneous optimization results.  The decision of if, and how, the
+         variables should be scaled is highly problem dependent, and some
+         experimentation is desirable for any given class of problems.
+
+ISC(N8)  Not used if NCON = 0.  Linear constraint identification vector.
+         If constraint G(J) is known to be a linear function of the
+         decision variables, X(I), ISC(I) should be initialized to
+         ISC(I) = 1.  If constraint G(J) is nonlinear ISC(I) is initialized
+         to ISC(I) = 0.  Identification of linear constraints may improve
+         efficiency of the optimization process and is therefore desirable,
+         but is not essential.  If G(J) is not specifically known to be
+         linear, set ISC(I) = 0.
+
+</PRE><A NAME="Param_Extrn"><P>
+
+<HR>
+<CENTER><H3>SECTION V</H3></CENTER>
+<CENTER><H3>PARAMETERS DEFINED IN EXTERNAL ROUTINE SUB1.</H3></CENTER>
+<PRE>
+OBJ       Value of objective function for the current decision variables,
+          X(I), I = 1, NDV contained in vector X.  Calculate OBJ if
+          INFO = 1 or INFO = 2.
+
+G(N2)     Not used if NCON = NSIDE = 0.  Vector containing all constraint
+          functions, G(J), J = 1, NCON for current decision variables, X.
+          Calculate G(J), J = 1, NCON if INFO = 2.
+
+DF(N1)    Analytic gradient of the objective function for the current
+          decision variables, X(I).  DF(I) contains the partial derivative
+          of OBJ with respect to X(I).  Calculate DF(I), I = 1,
+          NDV if INFO = 3 or INFO = 4 and if NFDG = 0 or NFDG = 2.
+
+NAC       Number of active and violated constraints (G(J).GE.CT).
+          Calculate NAC if INFO = 4 and NFDG = 0.
+
+A(N4,N3)  Not used if NCON = NSIDE = 0.  Gradients of active or violated
+          constraints, for current decision variables, X(I).
+          A(J,I) contains the gradient of the Jth active or violated
+          constraint, G(J), with respect to the Ith decision variable,
+          X(I) for J = 1, NAC and I = 1, NDV.  Calculate if INFO = 4
+          and NFDG = 0.  [SEE <A HREF="#Addendum">ADDENDUM</A>]
+
+IC(N4)    Identifies which constraints are active or violated.  IC(J)
+          contains the number of the Jth active or violated constraint
+          for J = 1, NAC.  For example, if G(10) is the first active
+          or violated constraint (G(J).LT.CT, J = 1,9), set IC(1) = 10.
+          Calculate if INFO = 4 and NFDG = 0.
+</PRE>
+If it is convenient to calculate more information than is required by
+the information control parameter, <CODE>INFO</CODE>, this may be done.
+<CODE>INFO</CODE> identifies the minimum amount of information which is
+necessary at a given time in the optimization process.  It is never necessary
+to determine which bounds (side constraints) <CODE>VLB(I)</CODE> and
+<CODE>VUB(I)</CODE> are active because this information is determined by CONMIN.
+
+<P>The required organization of SUB1 is shown in
+<A HREF=fig3.gif>Fig. 3</A>.  Note that if <CODE>NCON = 0</CODE>,
+<CODE>NFDG = 1</CODE>, or <CODE>NFDG = 2</CODE>, much of Fig. 3 is inapplicable
+and can be omitted.
+
+<A NAME="Param_Conmin"><P>
+
+<HR>
+<CENTER><H3>SECTION VI</H3></CENTER>
+<CENTER><H3>PARAMETERS DEFINED IN CONMIN AND ASSOCIATED ROUTINES</H3></CENTER>
+
+<PRE>
+ITER     Iteration number.  The optimization process is iterative so
+         that the vector of decision variables at the Kth iteration
+         is defined by X(K) = X(K - 1) + ALPHA*S(K), where in this case
+         K refers to the iteration number and the components X(I) are
+         all changed simultaneously.  ALPHA is defined as the move
+         parameter and is printed if the print control IPRINT.GE.3.
+         S is the move direction.
+
+NCAL(4)  Bookkeeping information.  NCAL(1) gives the number of times
+         external routine SUB1 was called with INFO = 1.  NCAL(2) gives
+         the number of times INFO = 2.  NCAL(3) gives the number of times
+         INFO = 3 and NCAL(4) gives the number of times INFO = 4.
+
+S(N3)    Move direction in the NDV-dimensional optimization space.  S(I)
+         gives the rate at which variable X(I) changes with respect to
+         ALPHA.
+
+G1(N7)   Not used if NCON = NSIDE = NSCAL = 0.  Used for temporary
+         storage of constraint values G(J), J = 1, NCON and decision
+         variables X(I), I = 1, NDV.
+
+G2(N2)   Not used if NCON = NSIDE = 0.  Used for temporary storage of
+         constraint values G(J), J = 1, NCON.
+
+B(N4,N4) Not used if NCON = NSIDE = 0.  Used in determining direction
+         vector S for constrained minimization problems.  Array B may
+         be used for temporary storage in external routine SUB1.
+
+C(N9)    Not used in NCON = NSIDE = 0.  Used with array B in determining
+         direction vector S for constrained minimization problems.  Used
+         for temporary storage of vector X if NSCAL.NE.0. routine SUB1.
+
+MS1(N6)  Not used if NCON = NSIDE = 0.  Used with array B in determining
+         direction vector S for constrained minimization problems.  Array
+         MS1 may be used for temporary storage in external routine SUB1.
+
+</PRE><A NAME="Dimensions"><P>
+
+<HR>
+<CENTER><H3>SECTION VII</H3></CENTER>
+<CENTER><H3>REQUIRED DIMENSIONS OF ARRAYS<BR>
+[ENTIRE SECTION SUPERCEDED BY THE <A HREF="#Addendum">ADDENDUM</A>]</H3></CENTER>
+<PRE>
+COMMON/CNMN2/X(N1), DF(N1), G(N2), ISC(N8), IC(N4), A(N4,N3)
+COMMON/CNMN3/S(N3), G1(N7), G2(N2), C(N9), MS1(N6), B(N4,N4)
+COMMON/CNMN4/VLB(N1), VUB(N1), SCAL(N5)
+</PRE>
+
+Dimensions <CODE>N1</CODE> through <CODE>N7</CODE> are minimum dimensions on
+the arrays and are defined by:
+<PRE>
+     N1 = NDV
+
+     N2 = 1 if NCON = NSIDE = 0
+        = NCON if NCON.GT.0 and NSIDE = 0
+        = 2*NDV if NCON = 0 and NSIDE.GT.0
+        = NCON + 2*NDV is NCON.GT.0 and NSIDE.GT.0
+
+     N3 = NDV + 2
+
+     N4 = 1 if NCON = NSIDE = 0
+          NACMX1 if NCON.GT.0 or NSIDE.GT.0
+
+     N5 = 1 if NSCAL = 0
+        = N1 if NSCAL.NE.0
+
+     N6 = 1 if NCON = NSIDE = 0
+        = 2*N4 if NCON.GT.0 or NSIDE.GT.0
+
+     N7 = N2 if NSCAL = 0
+        = MAX(N2, NDV) if NSCAL.NE.0
+
+     N8 = 1 if NCON = 0
+        = NCON if NCON.GT.0
+
+     N9 = N4 if NFDG.EQ.0
+        = MAX(N4, NDV) if NFDG.GT.0
+
+</PRE><A NAME="Examples"><P>
+
+<HR>
+<CENTER>
+<H3>SECTION VIII</H3>
+<H3>EXAMPLES<BR>
+[These examples have been revised to use the MAY&nbsp;1978 version of
+CONMIN]</H3>
+</CENTER>
+
+In this section several examples are presented, together with results, to
+provide a better understanding of the program organization.  In each case
+the default values are used for control parameters unless otherwise
+noted.
+
+<P>The examples were solved using a CDC 7600 computer.  The numerical results
+obtained using other computers may differ slightly from those obtained here.<P>
+
+EXAMPLE 1 - CONSTRAINED ROSEN-SUZUKI FUNCTION.  NO GRADIENT INFORMATION.<P>
+
+Consider the minimization problem discussed in
+<A HREF="#Introduction">SECTION I</A>:<P>
+<PRE>
+     MINIMIZE OBJ = X(1)**2 - 5*X(1) + X(2)**2 - 5*X(2) +
+                    2*X(3)**2 - 21*X(3) + X(4)**2 + 7*X(4) + 50
+
+     Subject to:
+
+          G(1) = X(1)**2 + X(1) + X(2)**2 - X(2) +
+                 X(3)**2 + X(3) + X(4)**2 - X(4) - 8   .LE.0
+
+          G(2) = X(1)**2 - X(1) + 2*X(2)**2 + X(3)**2 +
+                 2*X(4)**2 - X(4) - 10                  .LE.0
+
+          G(3) = 2*X(1)**2 + 2*X(1) + X(2)**2 - X(2) +
+                 X(3)**2 - X(4) - 5                     .LE.0
+</PRE>
+This problem is solved beginning with an initial <CODE>X</CODE>-vector of
+<PRE>
+     X = (1.0, 1.0, 1.0, 1.0)
+</PRE>
+The optimum design is known to be
+<PRE>
+     OBJ = 6.000
+</PRE>
+and the corresponding <CODE>X</CODE>-vector is
+<PRE>
+     X = (0.0, 1.0, 2.0, -1.0)
+</PRE>
+The print control parameter of <CODE>IPRINT&nbsp;=&nbsp;2</CODE> is used and
+all gradients are calculated by finite difference.  The maximum number of
+iterations is taken as <CODE>ITMAX&nbsp;=&nbsp;40</CODE> to insure normal
+termination.  The variables are not scaled, so <CODE>NSCAL&nbsp;=&nbsp;0</CODE>.
+The objective function is nonlinear, so <CODE>LINOBJ&nbsp;=&nbsp;0</CODE>.
+The control parameters are defined as:<P>
+<PRE>
+     IPRINT = 2, NDV = 4, ITMAX = 40, NCON = 3
+     NSIDE=ICNDIR=NSCAL=LINOBJ=ITRM = 0.
+     FDCH=FDCHM=CT=CTMIN=CTL=CTLMIN=THETA=PHI=DELFUN=DABFUN = 0.
+</PRE>
+
+All constraints are nonlinear so the linear constraint identification
+vector contains all zeros:<P>
+</PRE>
+     ISC(J) = 0     J = 1, NCON
+</PRE>
+
+The main program and analysis subroutine <CODE>ANALYS</CODE> are listed in 
+<A HREF="#List_1">Listing 1</A> and <A HREF="#List_2">Listing 2</A>
+respectively, with the optimization results in <A HREF="#List_3">Listing 3</A>.
+An optimum design of <CODE>OBJ&nbsp;=&nbsp;6.01</CODE> is obtained with the
+corresponding decision variables:
+<PRE>
+     X = (0.0194, 0.995, 1.99, -1.01)
+</PRE>
+
+Note that the unconstrained minimum of this function may be found by
+setting <CODE>NCON&nbsp;=&nbsp;0</CODE> in the main program.  The unconstrained
+minimum of <CODE>OBJ&nbsp;=&nbsp;-30.0</CODE> may be found in this way, and
+this is left as an exercise.<P>
+
+An additional problem of interest is to set <CODE>NCON&nbsp;=&nbsp;2</CODE> and,
+having found the optimum subject to these first two constraints only, increase
+<CODE>NCON</CODE> to 3 and call CONMIN again, to obtain the final optimum
+design.  This is easily done by initially setting
+<CODE>NCON&nbsp;=&nbsp;2</CODE> in the main program, then immediately after
+returning from CONMIN, set <CODE>NCON&nbsp;=&nbsp;3</CODE> and call CONMIN
+again.  It is not necessary to reinitialize the control parameters.
+This exercise demonstrates the capability of CONMIN to deal with initially
+infeasible designs, and such an option may be desirable when minimizing
+functions for which one or more constraints are difficult or time-consuming
+to evaluate.  In this way, the optimization problem may be first solved by
+ignoring constraints which are particularly complex.  These constraints
+are then checked to determine if they are violated.  If not, the
+optimization is complete.  If one or more such constraints are violated,
+they are added to the set of constraints, <CODE>G(J)</CODE>, and CONMIN is
+called again to obtain the final optimum design.  This approach cannot always
+be expected to be most efficient, but does merit consideration, especially
+when only moderate constraint violations are expected.<P>
+
+EXAMPLE 2 - CONSTRAINED ROSEN-SUZUKI FUNCTION WITH ANALYTIC GRADIENTS<P>
+
+The function minimized in EXAMPLE 1 is now solved by computing all
+analytic gradients in closed form.  All control parameters are the same as
+before except for NFDG and IPRINT.  The gradient of the
+objective function with respect to the decision variables is:
+<PRE>
+                 | 2*X(1) -  5 |
+    grad(OBJ) =  | 2*X(2) -  5 |
+                 | 4*X(3) - 21 |
+                 | 2*X(4) +  7 |
+</PRE>
+The gradients of the constraint functions are:
+<PRE>
+                  | 2*X(1) + 1 |                     | 2*X(1) - 1 |
+    grad(G(1)) =  | 2*X(2) - 1 |        grad(G(2)) = | 4*X(2)     |
+                  | 2*X(3) + 1 |                     | 2*X(3)     |
+                  | 2*X(4) - 1 |                     | 4*X(4) - 1 |
+
+                  | 4*X(1) + 2 |
+    grad(G(3)) =  | 2*X(2) - 1 |
+                  | 2*X(3)     |
+                  |   - 1      |
+</PRE>
+
+The main program is the same as before (<A HREF="#List_1">Listing 1</A>).
+The subroutine is in <A HREF="#List_4">Listing 4</A>
+and the optimization results in <A HREF="#List_5">Listing 5</A>,
+where an optimum design of <CODE>OBJ&nbsp;=&nbsp;6.01</CODE> is obtained with
+<PRE>
+     X = (0.027, 0.995, 1.98, -1.01)
+</PRE>
+The additional exercises described in example 1 may also be solved here,
+just as before.<P>
+
+EXAMPLE 3 - 3-BAR TRUSS.<P>
+
+As a final example, consider the 3-bar truss shown in
+<A HREF=fig9.gif>Fig. 9</A>.  The
+structure is subjected to two symmetric, but independent load conditions,
+P1 and P2, as shown.  The truss is to be designed for minimum weight,
+subject to stress limitations only, so that:<P>
+<PRE>
+     -15 KSI .LE. SIGIJ .LE. 20 KSI     I = 1,3     J = 1,2
+</PRE>
+where <CODE>SIGIJ</CODE> is the stress in member <CODE>I</CODE> under load
+condition <CODE>J</CODE>.
+While this is a very simple structure, it is of particular historical
+significance in the field of automated structural design, having been first
+used by Schmit (<A HREF="#References">ref. 5</A>) to demonstrate that an
+optimally designed structure may not be fully stressed.  That is, one or more
+members may not be stressed to their maximum design stress under any of the
+applied load conditions.<P>
+
+The design variables are chosen as the member cross-sectional areas,
+<CODE>A1</CODE> and <CODE>A2</CODE>, where <CODE>A3&nbsp;=&nbsp;A1</CODE> due
+to symmetry.  Then the objective function is:<P>
+<PRE>
+     OBJ = 10*RHO*(2*SQRT(2)*A1 + A2)
+</PRE>
+where <CODE>RHO</CODE> is the material density
+(<CODE>RHO&nbsp;=&nbsp;0.1</CODE>).  The stress state is defined by:
+<PRE>
+     SIG11 = SIG32 = 20.*(SQRT(2.)*A1 + A2)/(2.*A1*A2 + SQRT(2.)*A1*A1)
+
+     SIG21 = SIG22 = 20.*SQRT(2.)*A1/(2.*A1*A2+SQRT(2.)*A1*A1)
+
+     SIG31 = SIG13 = -20.*A2/(2.*A1*A2+SQRT(2.)*A1*A1)
+</PRE>
+Remembering that
+<CODE>-15&nbsp;KSI&nbsp;.LE.&nbsp;SIGIJ&nbsp;.LE.&nbsp;20&nbsp;KSI,</CODE>
+there are six independent nonlinear constraints.  The compressive stress
+constraint on member 1 under load condition 1 is given as:<P>
+<PRE>
+     -SIG11 - 15.0 .LE. 0
+</PRE>
+or in normalized form:
+<PRE>
+     -SIG11/15.0 -1 .LE. 0
+</PRE>
+Similarly:
+<PRE>
+      SIG11/20.0 -1 .LE. 0
+
+     -SIG21/15.0 -1 .LE. 0
+
+      SIG21/20.0 -1 .LE. 0
+
+     -SIG31/15.0 -1 .LE. 0
+
+      SIG31/20.0 -1 .LE. 0
+</PRE>
+Because negative member areas are not physically meaningful, lower bounds
+of zero must be imposed on the design variables.  However, noting that the
+stress, <CODE>SIGIJ</CODE>, is undefined if <CODE>A1</CODE> equals zero,
+lower bounds of 0.001 will be prescribed.  The upper bounds are taken as
+1.0E&nbsp;+&nbsp;10 to insure that these bounds will never be active.<P>
+
+The objective function is linear in <CODE>A1</CODE> and <CODE>A2</CODE>
+so the linear objective function identifier is taken as
+<CODE>LINOBJ&nbsp;=&nbsp;1</CODE>.<P>
+
+The gradient of <CODE>OBJ</CODE> is easily calculated so this will be done
+analytically, while the gradients of the constraint functions are calculated
+by finite difference.  Then the gradient of <CODE>OBJ</CODE> is defined by:<P>
+<PRE>
+                   | 20.0*SQRT(2.0)*RHO |
+     grad(OBJ)  =  |                    |
+                   | 10.0*RHO           |
+</PRE>
+
+The print control will be taken as <CODE>IPRINT&nbsp;=&nbsp;1</CODE> and the
+default values are used for all other control parameters.
+Then the control parameters are defined as:<P>
+<PRE>
+     IPRINT = 1, NDV = 2, NCON = 6, NSIDE = 1, NFDG = 2, LINOBJ = 1,
+     ITMAX = ICNDIR = NSCAL = ITRM = DABFUN = 0,
+     FDCH = FDCHM = CT = CTMIN = CTL = CTLMIN = THETA = PHI = DELFUN = 0.
+</PRE>
+All constraints are nonlinear so the linear constraint identification
+vector contains all zeros:<P>
+<PRE>
+     ISC(J) = 0     J = 1, NCON
+</PRE>
+The lower and upper bounds are defined as:
+<PRE>
+     VLB(I) = 0.001     VUB(I) = 1.0E+10     I = 1, NDV
+</PRE>
+The optimum design is known to be
+<PRE>
+     OBJ = 2.639
+</PRE>
+where
+<PRE>
+     X = (0.789, 0.408)
+</PRE>
+The main program and analysis subroutine for this example is in 
+<A HREF="#List_6">Listing 6</A>
+The optimization results are given in <A HREF="#List_7">Listing 7</A>,
+where:
+<PRE>
+     OBJ = 2.63
+</PRE>
+and
+<PRE>
+     X = (0.78, 0.43)
+</PRE>
+Note that only constraint number 2 (the tensile stress constraint in
+member 1 under load condition 1) is active.  These results were produced
+on a MicroVAX workstation using single precision arithmetic.<P>
+
+<A NAME="Appndx_A"><P>
+
+<HR>
+<CENTER><H3>APPENDIX A</H3></CENTER>
+<CENTER><H3>SUMMARY OF PARAMETERS USED BY CONMIN</H3></CENTER>
+COMMON BLOCKS:
+<PRE>
+     COMMON /CNMN1/ IPRINT, NDV, ITMAX, NCON, NSIDE, ICNDIR, NSCAL, NFDG,
+    1 FDCH, FDCHM, CT, CTMIN, CTL, CTLMIN, THETA, PHI, NAC, NACMX1, DELFUN,
+    2 DABFUN, LINOBJ, ITRM, ITER, NCAL(4)
+
+     COMMON /CNMN2/ X(N1), DF(N1), G(N2), ISC(N8), IC(N4), A(N4,N3)
+
+     COMMON /CNMN3/ S(N3), G1(N7), G2(N2), C(N9), MS1(N6), B(N4,N4)
+
+     COMMON /CNMN4/ VLB(N1), VUB(N1), SCAL(N5)
+</PRE>
+
+CALL STATEMENTS:
+
+<PRE>
+     CALL CONMIN (SUB1, OBJ)
+
+     CALL SUB1(INFO, OBJ)
+</PRE>
+
+
+PARAMETERS DEFINED IN THE MAIN PROGRAM:
+
+<PRE>
+PARAMETERS  DEFAULT          DEFINITION
+
+  IPRINT                Print control.
+
+  NDV                   Number of decision variables, X(I).
+
+  ITMAX     10          Maximum number of iterations in the
+                        minimization process.
+
+  NCON                  Number of constraint functions, G(J).
+
+  NSIDE                 Side constraint parameter.
+                        NSIDE.GT.0 indicates that lower and upper
+                        bounds are imposed on the decision variables.
+
+  ICNDIR   NDV + 1      Conjugate direction restart parameter.
+                        Restart with steepest descent move every
+                        ICNDIR iterations.
+
+  NSCAL                 Scaling control parameter.
+                        NSCAL.LT.0, user supplies scaling vector.
+                        NSCAL.EQ.0, no scaling, NSCAL.GT.0, automatic
+                        linear scaling every NSCAL iterations.
+
+  NFDG                  Gradient calculation control parameter.
+
+  FDCH       0.01       Relative change in decision variable, X(I),
+                        in calculating finite difference gradients.
+
+  FDCHM      0.01       Minimum absolute step in finite difference
+                        gradient calculations.
+
+  CT        -0.1        Constraint thickness parameter.
+
+  CTMIN      0.004      Minimum absolute value of CT considered
+                        in optimization process.
+
+  CTL       -0.01       Constraint thickness parameter for linear
+                        and side constraints.
+
+  CTLMIN     0.001      Minimum absolute value of CTL considered
+                        in optimization process.
+
+  THETA      1.0        Mean value of push-off factor in method
+                        of feasible directions.
+
+  PHI        5.0        Participation coefficient, used if one or more
+                        constraints are violated.
+
+  NACMX1                1 plus user's best estimate of the maximum
+                        number of constraints (including side constraints)
+                        which will be active or violated at any time
+                        in the minimization process.
+
+  DELFUN     0.001      Minimum relative change in objective function,
+                        OBJ, to indicate convergence.
+
+  DABFUN     0.001*initial OBJ   Minimum absolute change in objective
+				 function, OBJ, to indicate convergence.
+
+  LINOBJ                Linear objective function identifier.
+                        LINOBJ = 1 if OBJ is specifically known to be
+                        linear in X(I).  LINOBJ = 0 if OBJ is nonlinear.
+
+  ITRM       3          Number of consecutive iterations to indicate
+                        convergence by relative or absolute changes,
+                        DELFUN or DABFUN.
+
+  X                     Vector of decision variables.
+
+  VLB                   Vector of lower bounds on decision variables.
+
+  VUB                   Vector of upper bounds on decision variables.
+
+  SCAL                  Vector of scaling parameters.
+
+  ISC                   Linear constraint identification vector.
+</PRE>
+
+PARAMETERS DEFINED IN EXTERNAL ROUTINE SUB1:
+
+<PRE>
+PARAMETER            DEFINITION
+
+  OBJ          Value of objective function.
+
+  G            Vector of constraint values.
+
+  DF           Analytic gradient of objective function.
+
+  NAC          Number of active and violated constraints (G(J).GE.CT).
+
+  A            Matrix containing analytic gradients of active
+               or violated constraints.
+
+  IC           Identifies which constraints are active or violated.
+</PRE>
+
+
+PARAMETERS DEFINED IN CONMIN AND ASSOCIATED ROUTINES
+
+<PRE>
+PARAMETER            DEFINITION
+
+  ITER         Iteration number.
+
+  NCAL(4)      Bookkeeping information.  NCAL(I) gives number of
+               times that INFO = I during optimization process.
+
+  S            Direction vector.
+
+  G1           Temporary storage of vectors G and X.
+
+  G2           Temporary storage of vector G.
+
+  B            Used in finding usable-feasible direction.
+
+  C            Used in finding usable-feasible direction and for
+               temporary storage of vector X.
+</PRE><A NAME="Appndx_B"><P>
+
+<HR>
+<CENTER><H3>APPENDIX B</H3></CENTER>
+<CENTER><H3>CONMIN SUBROUTINE DESCRIPTIONS</H3></CENTER>
+
+Following is a list of the subroutines associated with CONMIN.  If
+the array dimensions are changed from those currently used,  the common
+blocks in each routine must be changed accordingly.
+
+<PRE>
+CONMIN    Main optimization routine.
+
+CNMN01    Routine to calculate gradient information by finite
+          difference.
+
+CNMN02    Calculate direction of steepest descent, or conjugate
+          direction in unconstrained function minimization.
+
+CNMN03    Solve one-dimensional search in unconstrained function
+          minimization.
+
+CNMN04    Find minimum of one-dimensional function by polynomial
+          interpolation.
+
+CNMN05    Determine usable-feasible, or modified usable-feasible,
+          direction in constrained function minimization.
+
+CNMN06    Solve one-dimensional search for constrained function
+          minimization.
+
+CNMN07    Find zero of one-dimensional function by polynomial
+          interpolation.
+
+CNMN08    Solve special linear programming problem in determination
+          of usable-feasible, or modified usable-feasible direction
+          in constrained function minimization.
+
+CNMN09    Unscale and rescale decision variables before and after
+          function evaluation.
+</PRE><A NAME="List_1"><PRE>
+
+<HR>
+<CENTER><H3>LISTING 1</H3></CENTER>
+<CENTER><H3>MAIN PROGRAM FOR EXAMPLES 1 & 2</H3></CENTER>
+
+<PRE>
+CCCCC
+      PROGRAM EXAMPL1
+      DIMENSION S(6),G1(11),G2(11),B(11,11),C(11),MS1(22) 
+      DIMENSION VLB(6),VUB(6),SCAL(6),DF(6),A(6,11),
+     .              ISC(11),IC(11)
+      COMMON /CNMN1/ DELFUN,DABFUN,FDCH,FDCHM,CT,CTMIN,CTL,CTLMIN,
+     .               ALPHAX,ABOBJ1,THETA,OBJ,NDV,NCON,NSIDE,IPRINT, 
+     .               NFDG,NSCAL,LINOBJ,ITMAX,ITRM,ICNDIR,IGOTO,NAC, 
+     .               INFO,INFOG,ITER
+      COMMON /VARABLE/ AOBJ,X(6),G(11)
+      COMMON /ANDATA/ LOOPCNT 
+      NAMELIST /CONPAR/ INFOG,INFO,NFDG,IPRINT,NDV,ITMAX,NCON,NSIDE,
+     .                  ICNDIR,NSCAL,FDCH,FDCHM,CT,CTMIN,CTLMIN,THETA,
+     .                  PHI,DELFUN,DABFUN,LINOBJ,ITRM,X,VLB,VUB,
+     .                  N1,N2,N3,N4,N5,ALPHAX,ABOBJ1,CTL,ISC,SCAL 
+C 
+C     THIS PROGRAM EXECUTES THE EXAMPLE PROBLEM ONE OF THE CONMIN 
+C     MANUAL. 
+C 
+C 
+C  INITIALIZE 
+C 
+      INFOG=0 
+      INFO=0
+      NFDG=0
+      IPRINT=2
+      NDV=4 
+      ITMAX=40
+      NCON=3
+      NSIDE=0 
+      ICNDIR=0
+      NSCAL=0 
+      FDCH=0.0
+      FDCHM=0.0 
+      CT=0.0
+      CTMIN=0.0 
+      CTL=0.0 
+      CTLMIN=0.0
+      THETA=0.0 
+      PHI=0.0 
+      DELFUN=0.0
+      DABFUN=0.0
+      LINOBJ=0.0
+      ITRM=0
+      N1=6
+      N2=11 
+      N3=11 
+      N4=11 
+      N5=22 
+      ALPHAX=0.0
+      ABOBJ1=0.0
+      CTL=0.0 
+      DO 5 I=1,NDV
+        X(I)=1.0
+        VLB(I)=-99999.
+        VUB(I)= 99999.
+    5 CONTINUE
+C 
+      DO 6 J=1,NCON 
+        ISC(J)=0
+    6 CONTINUE
+C 
+C     READ THE PARAMETERS FOR CONMIN
+C 
+CCC   READ(5,CONPAR)                  USE DEFAULT VALUES
+      WRITE(6,CONPAR) 
+      NLIM=ITMAX*(NDV+5)
+C 
+C     NON-ITERATIVE PART OF ANALYSIS
+C 
+      IGOTO = 0 
+C 
+C     ITERATIVE PART OF ANALYSIS
+C 
+      DO 1000 I = 1,NLIM
+        LOOPCNT=I 
+C 
+C       CALL THE OPTIMIZATION ROUTINE CONMIN
+C 
+        CALL CONMIN(X,VLB,VUB,G,SCAL,DF,A,S,G1,G2,B,C,ISC,IC,MS1,N1,N2, 
+     .              N3,N4,N5) 
+C 
+        IF(IGOTO.EQ.0) LOOPCNT=-999 
+C 
+C       ANALYSIS MODULE 
+C 
+        CALL ANALYS 
+        OBJ=AOBJ
+        IF (IGOTO.EQ.0) GO TO 1100
+ 1000 CONTINUE
+C 
+C 
+ 1100 CONTINUE
+      STOP
+      END 
+CCCCC
+</PRE><A NAME="List_2">
+
+<HR>
+<CENTER><H3>LISTING 2</H3></CENTER>
+<CENTER><H3>ANALYSIS SUBROUTINE FOR EXAMPLE 1</H3></CENTER>
+ 
+<PRE>
+CCCCC
+      SUBROUTINE ANALYS 
+      COMMON /VARABLE/ AOBJ,X(6),G(11)
+C 
+C   ROUTINE TO CALCULATE OBJECTIVE FUNCTION AND 
+C   CONSTRAINTS 
+C 
+C 
+C  OBJECTIVE FUNCTION 
+C 
+      AOBJ = X(1)**2 - 5.*X(1) + X(2)**2 - 5.*X(2) + 2.*X(3)**2 
+     .       - 21.*X(3) + X(4)**2 + 7.0*X(4) + 50.
+C 
+C 
+C   CONSTRAINT VALUES 
+C 
+      G(1) = X(1)**2 + X(1) + X(2)**2 - X(2) + X(3)**2 + X(3) 
+     .       + X(4)**2 - X(4) - 8.0
+C 
+      G(2) = X(1)**2 - X(1) + 2. * X(2)**2 + X(3)**2 + 2.*X(4)**2 
+     .       - X(4) - 10.0 
+C 
+      G(3) = 2.*X(1)**2 + 2.*X(1) + X(2)**2 - X(2) + X(3)**2 - X(4) -5.0 
+C 
+      RETURN
+      END 
+CCCCC
+
+</PRE><A NAME="List_3">
+
+<HR>
+<CENTER><H3>LISTING 3</H3></CENTER>
+<CENTER><H3>OPTIMIZATION RESULTS FOR EXAMPLE 1</H3></CENTER>
+
+<PRE>
+1$CONPAR
+INFOG   = 0,
+INFO    = 0,
+NFDG    = 0,
+IPRINT  = 2,
+NDV     = 4,
+ITMAX   = 40,
+NCON    = 3,
+NSIDE   = 0,
+ICNDIR  = 0,
+NSCAL   = 0,
+FDCH    = 0.0,
+FDCHM   = 0.0,
+CT      = 0.0,
+CTMIN   = 0.0,
+CTLMIN  = 0.0,
+THETA   = 0.0,
+PHI     = 0.0,
+DELFUN  = 0.0,
+DABFUN  = 0.0,
+LINOBJ  = 0,
+ITRM    = 0,
+X       = .1E+01, .1E+01, .1E+01, .1E+01, 0.0, 0.0,
+VLB     = -.99999E+05, -.99999E+05, -.99999E+05, -.99999E+05, 0.0, 0.0,
+VUB     = .99999E+05, .99999E+05, .99999E+05, .99999E+05, 0.0, 0.0,
+N1      = 6,
+N2      = 11,
+N3      = 11,
+N4      = 11,
+N5      = 22,
+ALPHAX  = 0.0,
+ABOBJ1  = 0.0,
+CTL     = 0.0,
+ISC     = 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+SCAL    = 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+$END
+ 
+            * * * * * * * * * * * * * * * * * * * * * * * * * * *
+            *                                                   *
+            *                    C O N M I N                    *
+            *                                                   *
+            *                FORTRAN PROGRAM FOR                *
+            *                                                   *
+            *         CONSTRAINED FUNCTION MINIMIZATION         *
+            *                                                   *
+            * * * * * * * * * * * * * * * * * * * * * * * * * * *
+ 
+ 
+ 
+ 
+     CONSTRAINED FUNCTION MINIMIZATION
+ 
+     CONTROL PARAMETERS
+ 
+     IPRINT  NDV    ITMAX    NCON    NSIDE  ICNDIR   NSCAL   NFDG
+       2       4      40       3       0       5       0       0
+ 
+     LINOBJ  ITRM     N1      N2      N3      N4      N5
+       0       3       6      11      11      11      22
+ 
+         CT              CTMIN           CTL             CTLMIN
+      -.10000E+00      .40000E-02     -.10000E-01      .10000E-02
+ 
+         THETA           PHI             DELFUN          DABFUN
+       .10000E+01      .50000E+01      .10000E-03      .31000E-01
+ 
+         FDCH            FDCHM           ALPHAX          ABOBJ1
+       .10000E-01      .10000E-01      .10000E+00      .10000E+00
+ 
+     ALL CONSTRAINTS ARE NON-LINEAR
+ 
+ 
+     INITIAL FUNCTION INFORMATION
+ 
+     OBJ =    .310000E+02
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)     .10000E+01   .10000E+01   .10000E+01   .10000E+01
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.40000E+01  -.60000E+01  -.10000E+01
+ 
+ 
+ 
+ 
+ 
+     ITER =    1     OBJ =    .25484E+02
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)     .10436E+01   .10436E+01   .12479E+01   .86847E+00
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.31307E+01  -.55788E+01  -.56843E-13
+ 
+ 
+ 
+ 
+     ITER =    2     OBJ =    .12204E+02
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)    -.65498E+00   .10325E+01   .23572E+01   .13804E+00
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.39775E+00  -.13275E+01  -.76739E-12
+ 
+ 
+ 
+ 
+     ITER =    3     OBJ =    .83763E+01
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)     .22440E+00   .99268E+00   .20345E+01  -.31841E+00
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.11388E+01  -.35427E+01  -.85265E-13
+ 
+ 
+ 
+ 
+     ITER =    4     OBJ =    .69420E+01
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)    -.34392E+00   .10043E+01   .21498E+01  -.80388E+00
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.11369E-12  -.80266E+00  -.21613E-01
+ 
+ 
+ 
+ 
+     ITER =    5     OBJ =    .63271E+01
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)    -.67566E-01   .10136E+01   .20734E+01  -.81323E+00
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.20225E+00  -.14382E+01   .28422E-13
+ 
+ 
+ 
+ 
+     ITER =    6     OBJ =    .61723E+01
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)    -.94581E-01   .99247E+00   .20400E+01  -.96346E+00
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.56843E-13  -.94507E+00  -.53852E-01
+ 
+ 
+ 
+ 
+     ITER =    7     OBJ =    .60706E+01
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)     .74640E-01   .98928E+00   .19478E+01  -.10562E+01
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.16766E-01  -.10302E+01  -.28422E-13
+ 
+ 
+ 
+ 
+     ITER =    8     OBJ =    .60218E+01
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)    -.17653E-01   .10038E+01   .20139E+01  -.97523E+00
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.17726E-01  -.10338E+01  0.
+ 
+ 
+ 
+ 
+     ITER =    9     OBJ =    .60182E+01
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)     .23921E-01   .99428E+00   .19869E+01  -.10102E+01
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.15891E-01  -.10472E+01   .11747E-02
+ 
+ 
+ 
+ 
+     ITER =   10     OBJ =    .60133E+01
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)    -.17147E-01   .10055E+01   .20139E+01  -.97533E+00
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.15050E-01  -.10270E+01   .29211E-02
+ 
+ 
+ 
+ 
+     ITER =   11     OBJ =    .60098E+01
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)     .19441E-01   .99482E+00   .19908E+01  -.10058E+01
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.13894E-01  -.10474E+01   .34703E-02
+ 
+ 
+    FINAL OPTIMIZATION INFORMATION
+ 
+     OBJ =    .600982E+01
+ 
+     DECISION VARIABLES (X-VECTOR)
+       1)     .19441E-01   .99482E+00   .19908E+01  -.10058E+01
+ 
+     CONSTRAINT VALUES (G-VECTOR)
+       1)    -.13894E-01  -.10474E+01   .34703E-02
+ 
+     THERE ARE    2 ACTIVE CONSTRAINTS
+     CONSTRAINT NUMBERS ARE
+         1    3
+ 
+     THERE ARE    0 VIOLATED CONSTRAINTS
+ 
+     TERMINATION CRITERION
+          ABS(OBJ(I)-OBJ(I-1))   LESS THAN DABFUN FOR  3 ITERATIONS
+ 
+     NUMBER OF ITERATIONS =   11
+ 
+     OBJECTIVE FUNCTION WAS EVALUATED           78  TIMES
+ 
+     CONSTRAINT FUNCTIONS WERE EVALUATED        78  TIMES
+
+
+</PRE><A NAME="List_4"><P>
+
+<HR>
+<CENTER><H3>LISTING 4</H3></CENTER>
+<CENTER><H3>ANALYSIS SUBROUTINE FOR EXAMPLE 2</H3></CENTER>
+
+<PRE>
+CCCCC
+      PROGRAM EXAMPL2
+      DIMENSION S(6),G1(11),G2(11),B(11,11),C(11),MS1(22) 
+      DIMENSION VLB(6),VUB(6),SCAL(6) 
+      COMMON/GRAD/ ISC(11),IC(11),DF(6),A(6,11) 
+      COMMON /CNMN1/ DELFUN,DABFUN,FDCH,FDCHM,CT,CTMIN,CTL,CTLMIN,
+     .               ALPHAX,ABOBJ1,THETA,OBJ,NDV,NCON,NSIDE,IPRINT, 
+     .               NFDG,NSCAL,LINOBJ,ITMAX,ITRM,ICNDIR,IGOTO,NAC, 
+     .               INFO,INFOG,ITER
+      COMMON /VARABLE/ AOBJ,X(6),G(11)
+      COMMON /ANDATA/ LOOPCNT 
+      NAMELIST /CONPAR/ INFOG,INFO,NFDG,IPRINT,NDV,ITMAX,NCON,NSIDE,
+     .                  ICNDIR,NSCAL,FDCH,FDCHM,CT,CTMIN,CTLMIN,THETA,
+     .                  PHI,DELFUN,DABFUN,LINOBJ,ITRM,X,VLB,VUB,
+     .                  N1,N2,N3,N4,N5,ALPHAX,ABOBJ1,CTL,ISC,SCAL 
+C 
+C     THIS PROGRAM EXECUTES THE EXAMPLE PROBLEM TWO OF THE CONMIN MANUAL. 
+
+      OPEN( UNIT=6,FILE='EXOUT2.TXT',STATUS='NEW')
+C 
+C 
+C  INITIALIZE 
+C 
+      INFOG=0 
+      INFO=0
+      NFDG=1
+      IPRINT=1
+      NDV=4 
+      ITMAX=40
+      NCON=3
+      NSIDE=0 
+      ICNDIR=0
+      NSCAL=0 
+      FDCH=0.0
+      FDCHM=0.0 
+      CT=0.0
+      CTMIN=0.0 
+      CTL=0.0 
+      CTLMIN=0.0
+      THETA=0.0 
+      PHI=0.0 
+      DELFUN=0.0
+      DABFUN=0.0
+      LINOBJ=0.0
+      ITRM=0
+      N1=6
+      N2=11 
+      N3=11 
+      N4=11 
+      N5=22 
+      ALPHAX=0.0
+      ABOBJ1=0.0
+      CTL=0.0 
+      DO 5 I=1,NDV
+        X(I)=1.0
+        VLB(I)=-99999.
+        VUB(I)= 99999.
+    5 CONTINUE
+C 
+      DO 6 J=1,NCON 
+        ISC(J)=0
+    6 CONTINUE
+C 
+C     READ THE PARAMETERS FOR CONMIN
+C 
+CCC   READ(5,CONPAR)      USE DEFAULT VALUES
+      WRITE(6,CONPAR) 
+      NLIM=ITMAX*(NDV+5)
+C 
+C     NON-ITERATIVE PART OF ANALYSIS
+C 
+      IGOTO = 0 
+C 
+C     ITERATIVE PART OF ANALYSIS
+C 
+      DO 1000 I = 1,NLIM
+        LOOPCNT=I 
+C 
+C       CALL THE OPTIMIZATION ROUTINE CONMIN
+C 
+        CALL CONMIN(X,VLB,VUB,G,SCAL,DF,A,S,G1,G2,B,C,ISC,IC,MS1,N1,N2, 
+     .              N3,N4,N5) 
+C 
+        IF(IGOTO.EQ.0) LOOPCNT=-999 
+C 
+C       ANALYSIS MODULE 
+C 
+        CALL ANALYS 
+        OBJ=AOBJ
+        IF (IGOTO.EQ.0) GO TO 1100
+ 1000 CONTINUE
+C 
+C 
+ 1100 CONTINUE
+      STOP
+      END 
+
+
+      SUBROUTINE ANALYS 
+      COMMON /VARABLE/ AOBJ,X(6),G(11)
+      COMMON/GRAD/ ISC(11),IC(11),DF(6),A(6,11) 
+      COMMON /CNMN1/ DELFUN,DABFUN,FDCH,FDCHM,CT,CTMIN,CTL,CTLMIN,
+     .               ALPHAX,ABOBJ1,THETA,OBJ,NDV,NCON,NSIDE,IPRINT, 
+     .               NFDG,NSCAL,LINOBJ,ITMAX,ITRM,ICNDIR,IGOTO,NAC, 
+     .               INFO,INFOG,ITER
+C 
+C   ROUTINE TO CALCULATE OBJECTIVE FUNCTION AND 
+C   CONSTRAINT  VALUES FOR OPTIMIZATION OF CONSTRAINED ROSEN-SUZUKI 
+C   FUNCTION. 
+C 
+C 
+      IF(INFO.GE.2) GO TO 10
+C 
+C  OBJECTIVE FUNCTION 
+C 
+      AOBJ = X(1)**2 - 5.*X(1) + X(2)**2 - 5.*X(2) + 2.*X(3)**2 
+     .       - 21.*X(3) + X(4)**2 + 7.0*X(4) + 50.
+C 
+C 
+C   CONSTRAINT VALUES 
+C 
+      G(1) = X(1)**2 + X(1) + X(2)**2 - X(2) + X(3)**2 + X(3) 
+     .       + X(4)**2 - X(4) - 8.0
+C 
+      G(2) = X(1)**2 - X(1) + 2. * X(2)**2 + X(3)**2 + 2.*X(4)**2 
+     .       - X(4) - 10.0 
+C 
+      G(3) = 2.*X(1)**2 + 2.*X(1) + X(2)**2 - X(2) + X(3)**2 - X(4) -5.0 
+C 
+      GO TO 999 
+   10 CONTINUE
+C 
+C 
+C    GRADIENT INFORMATION 
+C 
+      DF(1)=2.0*X(1) - 5.0
+      DF(2)=2.0*X(2) - 5.0
+      DF(3)=4.0*X(3) - 21.
+      DF(4)=2.0*X(4) + 7. 
+C 
+C  GRADIENTS OF ACTIVE AND VIOLATED CONSTRAINTS 
+C 
+      NAC=0 
+      IF(G(1).LT.CT) GO TO 20 
+      NAC=1 
+      IC(1)=1 
+      A(1,1)=2.*X(1)+1. 
+      A(2,1)=2.*X(2)-1. 
+      A(3,1)=2.*X(3)+1. 
+      A(4,1)=2.*X(4)-1. 
+C 
+   20 IF(G(2).LT.CT) GO TO 30 
+      NAC=NAC+1 
+      IC(NAC)=2 
+      A(1,NAC)=2.*X(1)-1.0
+      A(2,NAC)=4.*X(2)
+      A(3,NAC)=2.*X(3)
+      A(4,NAC)=4.*X(4)-1.0
+C 
+   30 IF(G(3).LT.CT) GO TO 999
+      NAC=NAC+1 
+      IC(NAC)=3 
+      A(1,NAC)=4.*X(1)+2. 
+      A(2,NAC)=2.*X(2)-1. 
+      A(3,NAC)=2.*X(3)
+      A(4,NAC)=-1.
+  999 RETURN
+      END 
+
+CCCCC
+</PRE><A NAME="List_5"><P>
+
+<HR>
+<CENTER><H3>LISTING 5</H3></CENTER>
+<CENTER><H3>OPTIMIZATION RESULTS FOR EXAMPLE 2</H3></CENTER>
+
+<PRE>
+ $CONPAR
+ INFOG   =           0,
+ INFO    =           0,
+ NFDG    =           1,
+ IPRINT  =           1,
+ NDV     =           4,
+ ITMAX   =          40,
+ NCON    =           3,
+ NSIDE   =           0,
+ ICNDIR  =           0,
+ NSCAL   =           0,
+ FDCH    =  0.0000000E+00,
+ FDCHM   =  0.0000000E+00,
+ CT      =  0.0000000E+00,
+ CTMIN   =  0.0000000E+00,
+ CTLMIN  =  0.0000000E+00,
+ THETA   =  0.0000000E+00,
+ PHI     =  0.0000000E+00,
+ DELFUN  =  0.0000000E+00,
+ DABFUN  =  0.0000000E+00,
+ LINOBJ  =           0,
+ ITRM    =           0,
+ X       = 4*1.000000    , 2*0.0000000E+00,
+ VLB     = 4*-99999.00    , 2*0.0000000E+00,
+ VUB     = 4*99999.00    , 2*0.0000000E+00,
+ N1      =           6,
+ N2      =          11,
+ N3      =          11,
+ N4      =          11,
+ N5      =          22,
+ ALPHAX  =  0.0000000E+00,
+ ABOBJ1  =  0.0000000E+00,
+ CTL     =  0.0000000E+00,
+ ISC     = 11*0,
+ SCAL    = 6*0.0000000E+00
+ $END
+
+            * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+            *                                                   *
+            *                    C O N M I N                    *
+            *                                                   *
+            *                FORTRAN PROGRAM FOR                *
+            *                                                   *
+            *         CONSTRAINED FUNCTION MINIMIZATION         *
+            *                                                   *
+            * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+
+     INITIAL FUNCTION INFORMATION
+
+     OBJ =   0.310000E+02
+
+     DECISION VARIABLES (X-VECTOR)
+       1)    0.10000E+01  0.10000E+01  0.10000E+01  0.10000E+01
+
+     CONSTRAINT VALUES (G-VECTOR)
+       1)   -0.40000E+01 -0.60000E+01 -0.10000E+01
+
+
+    FINAL OPTIMIZATION INFORMATION
+
+     OBJ =   0.601078E+01
+
+     DECISION VARIABLES (X-VECTOR)
+       1)    0.26916E-01  0.99458E+00  0.19848E+01 -0.10128E+01
+
+     CONSTRAINT VALUES (G-VECTOR)
+       1)   -0.14837E-01 -0.10438E+01  0.21458E-02
+
+     THERE ARE    2 ACTIVE CONSTRAINTS
+     CONSTRAINT NUMBERS ARE
+         1    3
+
+     THERE ARE    0 VIOLATED CONSTRAINTS
+
+     TERMINATION CRITERION
+          ABS(OBJ(I)-OBJ(I-1))   LESS THAN DABFUN FOR  3 ITERATIONS
+
+     NUMBER OF ITERATIONS =   11
+
+     OBJECTIVE FUNCTION WAS EVALUATED           34  TIMES
+
+     CONSTRAINT FUNCTIONS WERE EVALUATED        34  TIMES
+
+     GRADIENT OF OBJECTIVE WAS CALCULATED       11  TIMES
+
+     GRADIENTS OF CONSTRAINTS WERE CALCULATED   11  TIMES
+
+
+</PRE><A NAME="List_6"><P>
+
+<HR>
+<CENTER><H3>LISTING 6</H3></CENTER>
+<CENTER><H3>MAIN PROGRAM AND ANALYSIS SUBROUTINE FOR EXAMPLE 3</H3></CENTER>
+
+<PRE>
+ccccc
+      PROGRAM EXAMPL3
+      DIMENSION S(4),G1(10),G2(10),B(10,10),C(10),MS1(20) 
+      DIMENSION VLB(4),VUB(4),SCAL(4) 
+      COMMON /VARABLE/ AOBJ,X(4),G(10)
+      COMMON/GRAD/ ISC(10),IC(10),DF(4),A(4,10)
+      COMMON/CONSAV/ RNUM(50),INUM(25) 
+      COMMON /CNMN1/ DELFUN,DABFUN,FDCH,FDCHM,CT,CTMIN,CTL,CTLMIN,
+     .               ALPHAX,ABOBJ1,THETA,OBJ,NDV,NCON,NSIDE,IPRINT, 
+     .               NFDG,NSCAL,LINOBJ,ITMAX,ITRM,ICNDIR,IGOTO,NAC, 
+     .               INFO,INFOG,ITER
+      COMMON /ANDATA/ LOOPCNT 
+      NAMELIST /CONPAR/ INFOG,INFO,NFDG,IPRINT,NDV,ITMAX,NCON,NSIDE,
+     .                  ICNDIR,NSCAL,FDCH,FDCHM,CT,CTMIN,CTLMIN,THETA,
+     .                  PHI,DELFUN,DABFUN,LINOBJ,ITRM,X,VLB,VUB,
+     .                  N1,N2,N3,N4,N5,ALPHAX,ABOBJ1,CTL,ISC,SCAL 
+C
+      OPEN(UNIT=6,FILE='EXOUT3.TXT',STATUS='NEW')
+C 
+C     THIS PROGRAM EXECUTES THE EXAMPLE PROBLEM THREE OF THE CONMIN MANUAL. 
+C 
+C 
+C  INITIALIZE 
+C 
+      INFOG=0 
+      INFO=0
+      NFDG=2
+      IPRINT=1
+      NDV=2 
+      ITMAX=40
+      NCON=6
+      NSIDE=1 
+      ICNDIR=0
+      NSCAL=0 
+      FDCH=0.0
+      FDCHM=0.0 
+      CT=0.0
+      CTMIN=0.0 
+      CTL=0.0 
+      CTLMIN=0.0
+      THETA=0.0 
+      PHI=0.0 
+      DELFUN=0.0
+      DABFUN=0.0
+      LINOBJ=1
+      ITRM=0
+      N1=4
+      N2=10 
+      N3=10 
+      N4=10 
+      N5=20 
+      ALPHAX=0.0
+      ABOBJ1=0.0
+      CTL=0.0 
+      DO 5 I=1,NDV
+        X(I)=1.0
+        VLB(I)=0.001
+        VUB(I)= 1.0E+10
+    5 CONTINUE
+C 
+      DO 6 J=1,NCON 
+        ISC(J)=0
+    6 CONTINUE
+C 
+C     READ THE PARAMETERS FOR CONMIN
+C 
+CCC   READ(5,CONPAR)      USE DEFAULT VALUES
+      WRITE(6,CONPAR) 
+      NLIM=ITMAX*(NDV+5)
+C 
+C     NON-ITERATIVE PART OF ANALYSIS
+C 
+      IGOTO = 0 
+C 
+C     ITERATIVE PART OF ANALYSIS
+C 
+      DO 1000 I = 1,NLIM
+        LOOPCNT=I 
+C 
+C       CALL THE OPTIMIZATION ROUTINE CONMIN
+C 
+        CALL CONMIN(X,VLB,VUB,G,SCAL,DF,A,S,G1,G2,B,C,ISC,IC,MS1,N1,N2, 
+     .              N3,N4,N5) 
+C 
+        IF(IGOTO.EQ.0) LOOPCNT=-999 
+C 
+C       ANALYSIS MODULE 
+C 
+        CALL ANALYS 
+        OBJ=AOBJ
+        IF (IGOTO.EQ.0) GO TO 1100
+ 1000 CONTINUE
+C 
+C 
+ 1100 CONTINUE
+      CLOSE(6)
+      STOP
+      END 
+
+
+      SUBROUTINE ANALYS 
+      COMMON /VARABLE/ AOBJ,X(4),G(10)
+      COMMON/GRAD/ ISC(10),IC(10),DF(4),A(4,10) 
+      COMMON /CNMN1/ DELFUN,DABFUN,FDCH,FDCHM,CT,CTMIN,CTL,CTLMIN,
+     .               ALPHAX,ABOBJ1,THETA,OBJ,NDV,NCON,NSIDE,IPRINT, 
+     .               NFDG,NSCAL,LINOBJ,ITMAX,ITRM,ICNDIR,IGOTO,NAC, 
+     .               INFO,INFOG,ITER
+C 
+C   ROUTINE TO CALCULATE OBJECTIVE FUNCTION AND 
+C   CONSTRAINT  VALUES FOR OPTIMIZATION OF CONSTRAINED ROSEN-SUZUKI 
+C   FUNCTION. 
+C 
+C
+      RHO= 0.1
+      A1= X(1)
+      A2= X(2)
+C 
+      IF(INFO.GE.2) GO TO 10
+C 
+C  OBJECTIVE FUNCTION 
+C 
+      AOBJ= 10.*RHO*(2.*SQRT(2.)*A1+A2)
+C 
+C 
+C   CONSTRAINT VALUES 
+C 
+      DENOM= 2.*A1*A2 + SQRT(2.)*A1*A1
+      SIG11= 20.*(SQRT(2.)*A1+A2)/DENOM
+      SIG21= 20.*SQRT(2.)*A1/DENOM
+      SIG31= -20.*A2/DENOM
+C
+      G(1)= -SIG11/15.-1.
+      G(2)= SIG11/20.-1.
+      G(3)= -SIG21/15.-1.
+      G(4)= SIG21/20.-1.
+      G(5)= -SIG31/15.-1.
+      G(6)= SIG31/20.-1.
+C
+      GO TO 999 
+   10 CONTINUE
+C 
+C 
+C    GRADIENT INFORMATION 
+C 
+      DF(1)=20.*SQRT(2.)*RHO
+      DF(2)=10.*RHO
+C
+C  GRADIENTS OF ACTIVE AND VIOLATED CONSTRAINTS 
+C  WILL BE CALCULATED BY FINITE DIFFERENCE WITHIN 
+C  CONMIN 
+C
+C
+  999 RETURN
+      END 
+ccccc
+</PRE><A NAME="List_7"><P>
+
+<HR>
+<CENTER><H3>LISTING 7</H3></CENTER>
+<CENTER><H3>OPTIMIZATION RESULTS FOR EXAMPLE 3</H3></CENTER>
+
+<PRE>
+ $CONPAR
+ INFOG   =           0,
+ INFO    =           0,
+ NFDG    =           2,
+ IPRINT  =           1,
+ NDV     =           2,
+ ITMAX   =          40,
+ NCON    =           6,
+ NSIDE   =           1,
+ ICNDIR  =           0,
+ NSCAL   =           0,
+ FDCH    =  0.0000000E+00,
+ FDCHM   =  0.0000000E+00,
+ CT      =  0.0000000E+00,
+ CTMIN   =  0.0000000E+00,
+ CTLMIN  =  0.0000000E+00,
+ THETA   =  0.0000000E+00,
+ PHI     =  0.0000000E+00,
+ DELFUN  =  0.0000000E+00,
+ DABFUN  =  0.0000000E+00,
+ LINOBJ  =           1,
+ ITRM    =           0,
+ X       = 2*1.000000    , 2*0.0000000E+00,
+ VLB     = 2*1.0000000E-03, 2*0.0000000E+00,
+ VUB     = 2*1.0000000E+10, 2*0.0000000E+00,
+ N1      =           4,
+ N2      =          10,
+ N3      =          10,
+ N4      =          10,
+ N5      =          20,
+ ALPHAX  =  0.0000000E+00,
+ ABOBJ1  =  0.0000000E+00,
+ CTL     =  0.0000000E+00,
+ ISC     = 10*0,
+ SCAL    = 4*0.0000000E+00
+ $END
+
+            * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+            *                                                   *
+            *                    C O N M I N                    *
+            *                                                   *
+            *                FORTRAN PROGRAM FOR                *
+            *                                                   *
+            *         CONSTRAINED FUNCTION MINIMIZATION         *
+            *                                                   *
+            * * * * * * * * * * * * * * * * * * * * * * * * * * * 
+
+
+     INITIAL FUNCTION INFORMATION
+
+     OBJ =   0.382843E+01
+
+     DECISION VARIABLES (X-VECTOR)
+       1)    0.10000E+01  0.10000E+01
+
+     CONSTRAINT VALUES (G-VECTOR)
+       1)   -0.19428E+01 -0.29289E+00 -0.15523E+01 -0.58579E+00 -0.60948E+00 -0.12929E+01
+
+    FINAL OPTIMIZATION INFORMATION
+
+     OBJ =   0.263281E+01
+
+     DECISION VARIABLES (X-VECTOR)
+       1)    0.77853E+00  0.43079E+00
+
+     CONSTRAINT VALUES (G-VECTOR)
+       1)   -0.23367E+01  0.25257E-02 -0.19608E+01 -0.27942E+00 -0.62408E+00 -0.12819E+01
+
+     THERE ARE    1 ACTIVE CONSTRAINTS
+     CONSTRAINT NUMBERS ARE
+         2
+
+     THERE ARE    0 VIOLATED CONSTRAINTS
+
+     THERE ARE    0 ACTIVE SIDE CONSTRAINTS
+
+     TERMINATION CRITERION
+          ABS(OBJ(I)-OBJ(I-1))   LESS THAN DABFUN FOR  3 ITERATIONS
+
+     NUMBER OF ITERATIONS =    7
+
+     OBJECTIVE FUNCTION WAS EVALUATED           32  TIMES
+
+     CONSTRAINT FUNCTIONS WERE EVALUATED        32  TIMES
+
+     GRADIENT OF OBJECTIVE WAS CALCULATED        6  TIMES
+
+</PRE><A NAME="References"><P>
+
+<HR>
+<CENTER><H3>REFERENCES</H3></CENTER>
+
+<OL>
+  <LI>  Lund, S., "Direct Search Program for Optimization of Non-linear
+    Functions with Non-linear Constraints," Users Manual SK/P13, NTH,
+    Trondheim, Norway, 1971.
+
+  <LI>  Zoutendijk, G., "Methods of Feasible Directions," Elsevier Publishing
+    Co., Amsterdam, 1960.
+
+  <LI>  Vanderplaats, G. N., and Moses, F., "Structural Optimization by
+    Methods of Feasible Directions," National Symposium on Computerized
+    Structural Analysis and Design, Washington, D.C., March 1972.
+
+  <LI>  Fletcher, R. and Reeves, C. M., "Function Minimization by Conjugate
+    Gradients," British Computer J., Vol. 7, No. 2, 1964.
+
+  <LI>  Schmit, L. A., Jr., "Structural Design by Systematic Synthesis,"
+    Proceedings of the Second National Conference on Electronic Computation,
+    Structural Division, ASCE, Pittsburgh, PA, Sept. 1960.
+</OL>
+</BODY>
+</HTML>
