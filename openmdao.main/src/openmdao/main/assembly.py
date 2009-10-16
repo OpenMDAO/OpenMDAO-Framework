@@ -441,7 +441,6 @@ class Assembly (Component):
             elif len(preds) > 1:
                 self.raise_exception("variable '%s' has multiple sources %s" %
                                      (vname, preds.keys()), RuntimeError)
-                
             updated = True
             srcname = preds.keys()[0]
             srccompname,srccomp,srcvarname = self.split_varpath(srcname)
