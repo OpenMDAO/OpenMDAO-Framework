@@ -41,6 +41,6 @@ if __name__ == '__main__':
                 versions_done = True
             if done:
                 break
-    print 'versions:',versions
-    print 'releases:',releases
+    print 'version:',versions
+    print 'release:',releases
     
