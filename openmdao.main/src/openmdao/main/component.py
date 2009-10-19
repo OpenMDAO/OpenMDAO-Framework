@@ -147,15 +147,9 @@ class Component (Container):
         else:
             invalid_ins = self.list_inputs(valid=False)
             if len(invalid_ins) > 0:
-                #self.debug('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
                 self._call_execute = True
                 name = self.name
-                # ask our parent to update our invalid inputs.
-                # we're using hasattr here instead of ininstance(x,Assembly) because
-                # importing Assembly would be a recursive import.  Could use a check
-                # for IAssembly interface instead...
-                if hasattr(self.parent, 'update_inputs'):
-                    self.parent.update_inputs(['.'.join([name, n]) for n in invalid_ins])
+                self.parent.update_inputs(['.'.join([name, n]) for n in invalid_ins])
                 for name in invalid_ins:
                     self.set_valid(name, True)
                                 

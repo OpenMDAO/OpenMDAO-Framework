@@ -277,7 +277,7 @@ class Assembly (Component):
             if srccomp is not self: # neither var is on boundary
                 if hasattr(self.workflow, 'connect'):
                     self.workflow.connect(srccompname, destcompname, 
-                                           srcvarname, destvarname)
+                                          srcvarname, destvarname)
         
         vgraph = self.get_var_graph()
         vgraph.add_edge(srcpath, destpath)
@@ -391,12 +391,7 @@ class Assembly (Component):
         vgraph = self.get_var_graph()
         for out in invalid_outs:
             inedges = vgraph.in_edges(nbunch=out)
-            if len(inedges) > 1:
-                self.raise_exception(
-                    "attribute '%s' has multiple inputs (%s)" %
-                    (out, [x[1] for x in inedges]),
-                    RuntimeError)
-            elif len(inedges) == 1:
+            if len(inedges) == 1:
                 setattr(self, out, self.get(inedges[0][0]))
 
     def step(self):
@@ -406,20 +401,17 @@ class Assembly (Component):
     def list_connections(self, show_passthru=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        conns = []
-        for outname, inname in self.get_var_graph().edges_iter():
-            if '.' in outname or '.' in inname:
-                if show_passthru:
-                    conns.append((outname, inname))
-            else:
-                conns.append((outname, inname))
-        return self._filter_internal_edges(conns)
+        if show_passthru:
+            return self._filter_internal_edges(self.get_var_graph().edges())
+        else:
+            return self._filter_internal_edges([(outname,inname) for outname,inname in 
+                                                self.get_var_graph().edges_iter() 
+                                                if '.' in outname and '.' in inname])
 
     def update_inputs(self, varnames):
         """Transfer input data to input variables on the specified component.
-        If varnames is not None, only the variables in the list will be
-        updated. The varnames iterator is assumed to contain names that
-        include the component name, for example: ['comp1.a', 'comp1.b'].
+        The varnames iterator is assumed to contain names that include the
+        component name, for example: ['comp1.a', 'comp1.b'].
         """
         updated = False  # this becomes True if we actually update any inputs
         parent = self.parent
@@ -501,8 +493,8 @@ class Assembly (Component):
         return valids
 
     def invalidate_deps(self, varnames, notify_parent=False):
-        """Mark all Variables invalid that depend on vars. Returns a list of
-        our newly invalidated boundary outputs.
+        """Mark all Variables invalid that depend on varnames. Returns a list
+        of our newly invalidated boundary outputs.
         """
         vargraph = self.get_var_graph()
         succ = vargraph.succ  #successor nodes in the graph
