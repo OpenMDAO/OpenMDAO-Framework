@@ -460,18 +460,6 @@ class Assembly (Component):
         """
         self.update_inputs(outnames)
 
-    def check_config (self):
-        """Verify that the configuration of this component is correct. This
-        function is called once prior to the first execution of this Assembly,
-        and prior to execution if any children are added or removed, or if
-        self._call_check_config is True.
-        """
-        super(Assembly, self).check_config()
-        for name, value in self._traits_meta_filter(required=True).items():
-            if value.is_trait_type(Instance) and getattr(self, name) is None:
-                self.raise_exception("required plugin '%s' is not present" %
-                                     name, TraitError)                
-        
     def get_valids(self, names):
         """Returns a list of boolean values indicating whether the named
         attributes are valid (True) or invalid (False). Entries in names may

@@ -102,10 +102,9 @@ class Component (Container):
         This function is called once prior to the first execution of this
         component, and may be called explicitly at other times if desired. 
         Classes that override this function must still call the base class
-        version in case we decide to add framework functionality here at
-        a later point in time.
+        version .
         """
-        pass
+        super(Component, self).check_config()
     
     def tree_rooted(self):
         """Calls the base class version of tree_rooted(), checks our

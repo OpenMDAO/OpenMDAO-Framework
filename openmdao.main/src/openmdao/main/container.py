@@ -422,6 +422,17 @@ class Container(HasTraits):
                     "cannot set valid flag of '%s' because "
                     "it's not an io trait." % name, RuntimeError)
 
+    def check_config (self):
+        """Verify that the configuration of this component is correct. This
+        function is called once prior to the first execution of this Assembly,
+        and prior to execution if any children are added or removed, or if
+        self._call_check_config is True.
+        """
+        for name, value in self._traits_meta_filter(required=True).items():
+            if value.is_trait_type(Instance) and getattr(self, name) is None:
+                self.raise_exception("required plugin '%s' is not present" %
+                                     name, TraitError)                
+        
     def add_container(self, name, obj):
         """Add a Container object to this Container.
         Returns the added Container object.
