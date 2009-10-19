@@ -251,12 +251,8 @@ class Assembly (Component):
             self.raise_exception(
                 'Cannot connect %s to %s. Both are on same component.' %
                                  (srcpath, destpath), RuntimeError)
-        if srccomp is self or destcomp is self: # it's a passthru connection
-            if srccomp is destcomp:
-                self.raise_exception(
-                    'Cannot connect "%s" to "%s" on same component' %
-                                      (srcvarname, destvarname), RuntimeError)
-        else: # it's not a passthru connection so must connect output to input
+        if srccomp is not self and destcomp is not self:
+            # it's not a passthru, so must connect input to output
             if srctrait.iostatus != 'out':
                 self.raise_exception(
                     '.'.join([srccomp.get_pathname(),srcvarname])+
@@ -267,6 +263,7 @@ class Assembly (Component):
                     '.'.join([destcomp.get_pathname(),destvarname])+
                     ' must be an input variable',
                     RuntimeError)
+                
         if self.is_destination(destpath):
             self.raise_exception(destpath+' is already connected',
                                  RuntimeError)             
@@ -467,7 +464,7 @@ class Assembly (Component):
             except Exception, exc:
                 msg = "cannot set '%s' from '%s': %s" % (vname, srcname, exc)
                 self.raise_exception(msg, type(exc))
-            
+        
         return updated
 
     def update_outputs(self, outnames):

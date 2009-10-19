@@ -226,12 +226,12 @@ class AssemblyTestCase(unittest.TestCase):
             self.assertEqual(': comp1.r must be an output variable',
                              str(err))
         else:
-            self.fail('exception expected')
+            self.fail('RuntimeError expected')
             
     def test_self_connect(self):
         try:
             self.asm.connect('comp1.rout','comp1.r')
-        except RuntimeError, err:
+        except Exception, err:
             self.assertEqual(': Cannot connect comp1.rout to comp1.r. Both are on same component.',
                              str(err))
         else:
@@ -264,7 +264,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.assertEqual("circular dependency (['comp2', 'comp1']) would be created by"+
                              " connecting comp2.rout to comp1.r", str(err))
         else:
-            self.fail('exception expected')
+            self.fail('RuntimeError expected')
             
     def test_disconnect(self):
         # first, run connected
