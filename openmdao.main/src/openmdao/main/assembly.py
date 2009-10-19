@@ -335,20 +335,15 @@ class Assembly (Component):
         to_remove = []
         if varpath2 is not None:
             if varpath2 in vargraph[varpath]:
-                to_remove.append(varpath, varpath2)
+                to_remove.append((varpath, varpath2))
             elif varpath in vargraph[varpath2]:
-                to_remove.append(varpath2, varpath)
+                to_remove.append((varpath2, varpath))
             else:
                 self.raise_exception('%s is not connected to %s' % 
                                      (varpath, varpath2), RuntimeError)
         else:  # remove all connections from the Variable
-            # remove outgoing edges
-            to_remove = []
-            for src,sink in vargraph.edges_iter(varpath):
-                to_remove.append((src,sink))
-            # remove incoming edges
-            for src,sink in vargraph.in_edges_iter(varpath):
-                to_remove.append((src,sink))
+            to_remove.extend(vargraph.edges(varpath)) # outgoing edges
+            to_remove.extend(vargraph.in_edges(varpath)) # incoming
         
         for src,sink in self._filter_internal_edges(to_remove):
             vtup = sink.split('.', 1)
@@ -361,7 +356,7 @@ class Assembly (Component):
                 if len(utup)>1 and hasattr(self.workflow, 'disconnect'):
                     self.workflow.disconnect(utup[0], vtup[0])
                 
-            vargraph.remove_edges_from(to_remove)
+        vargraph.remove_edges_from(to_remove)
         
         # the io graph has changed, so have to remake it
         self._io_graph = None  
