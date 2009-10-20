@@ -101,23 +101,30 @@ class UnitsFloat(TraitType):
         """Perform validation and unit conversion using metadata from
         the source trait.
         """
+        src_units = srcmeta['units']
+        dst_units = object.trait(name).units
+        if src_units == dst_units:
+            try:
+                return self._validator.validate(object, name, value)
+            except TraitError:
+                self.error(object, name, value)
+
         try:
-            pq = PhysicalQuantity(value, srcmeta['units'])
+            pq = PhysicalQuantity(value, src_units)
         except KeyError:
             raise TraitError("while setting value of %s: no 'units' metadata found."%
                              name)
         except NameError:
-            raise TraitError("while setting value of %s: undefined unit '%s'" % 
-                             srcmeta['units'])    
+            raise TraitError("while setting value of %s: undefined unit '%s'" %
+                             (src_units, name))
         try:
-            pq.convertToUnit(object.trait(name).units)
+            pq.convertToUnit(dst_units)
         except NameError:
-            raise TraitError("undefined unit '%s' for attribute '%s'" % 
-                             (srcmeta['units'], name))
+            raise TraitError("undefined unit '%s' for attribute '%s'" %
+                             (dst_units, name))
         except TypeError, err:
-            raise TraitError("%s: units '%s' are incompatible with assigning units of '%s'" % 
-                             (name, pq.getUnitName(),
-                              object.trait(name).units))            
+            raise TraitError("%s: units '%s' are incompatible with assigning units of '%s'" %
+                             (name, pq.getUnitName(), dst_units))
         try:
             return self._validator.validate(object, name, pq.value)
         except TraitError:
