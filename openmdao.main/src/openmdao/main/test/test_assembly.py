@@ -160,9 +160,9 @@ class AssemblyTestCase(unittest.TestCase):
         #self.asm.run()
         #self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4*1.5)
         
-    def test_create_passthru(self):
+    def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)
-        self.asm.create_passthru('comp3.rout')
+        self.asm.create_passthrough('comp3.rout')
         self.assertEqual(self.asm.get('comp3.r'), 75.4)
         self.assertEqual(self.asm.get('rout'), 0.0)
         self.asm.run()
@@ -171,17 +171,17 @@ class AssemblyTestCase(unittest.TestCase):
         
     def test_passthru_nested(self):
         self.asm.set('comp1.r', 8.)
-        self.asm.nested.create_passthru('comp1.r')
-        self.asm.nested.create_passthru('comp1.rout', 'foobar')
+        self.asm.nested.create_passthrough('comp1.r')
+        self.asm.nested.create_passthrough('comp1.rout', 'foobar')
         self.asm.connect('comp1.rout', 'nested.r')
         self.asm.connect('nested.foobar','comp2.r')
         self.asm.run()
         self.assertEqual(self.asm.get('comp1.rout'), 12.)
         self.assertEqual(self.asm.get('comp2.rout'), 27.)
                 
-    def test_create_passthru_alias(self):
+    def test_create_passthrough_alias(self):
         self.asm.nested.set('comp1.r', 75.4)
-        self.asm.nested.create_passthru('comp1.r','foobar')
+        self.asm.nested.create_passthrough('comp1.r','foobar')
         self.assertEqual(self.asm.nested.get('foobar'), 75.4)
         self.asm.run()
         self.assertEqual(self.asm.nested.get('foobar'), 75.4)
@@ -192,20 +192,20 @@ class AssemblyTestCase(unittest.TestCase):
         # this should fail since we're creating a second connection
         # to an input
         try:
-            self.asm.create_passthru('comp2.r')
+            self.asm.create_passthrough('comp2.r')
         except RuntimeError, err:
             self.assertEqual(str(err), ': comp2.r is already connected')
         else:
             self.fail('RuntimeError expected')
         self.asm.set('comp1.s', 'some new string')
         # this one should be OK since outputs can have multiple connections
-        self.asm.create_passthru('comp1.sout')
+        self.asm.create_passthrough('comp1.sout')
         self.asm.run()
         self.assertEqual(self.asm.get('sout'), 'some new string'[::-1])
         
     def test_container_passthru(self):
         self.asm.set('comp1.dummy_out.rval_in', 75.4)
-        self.asm.create_passthru('comp1.dummy_out','dummy_out_passthru')
+        self.asm.create_passthrough('comp1.dummy_out','dummy_out_passthru')
         self.asm.run()
         self.assertEqual(self.asm.get('dummy_out_passthru.rval_out'), 75.4*1.5)
 
@@ -292,7 +292,7 @@ class AssemblyTestCase(unittest.TestCase):
         asm.add_container('nested', Assembly())
         asm.nested.add_container('comp1', Simple())
         asm.nested.add_container('comp2', Simple())
-        asm.nested.create_passthru('comp1.a') 
+        asm.nested.create_passthrough('comp1.a') 
         asm.nested.connect('a', 'comp2.b') 
         self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
@@ -309,7 +309,7 @@ class AssemblyTestCase(unittest.TestCase):
         asm.add_container('nested', Assembly())
         asm.nested.add_container('comp1', Simple())
         asm.nested.add_container('comp2', Simple())
-        asm.nested.create_passthru('comp1.c')
+        asm.nested.create_passthrough('comp1.c')
         try:
             asm.nested.connect('comp2.d', 'c')
         except RuntimeError, err:

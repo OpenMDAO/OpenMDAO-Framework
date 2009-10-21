@@ -64,11 +64,11 @@ class Middle(Assembly):
 
         self.add_container('passthru', Passthru(directory='Passthru'))
 
-        self.create_passthru('passthru.text_in')
-        self.create_passthru('passthru.binary_in')
+        self.create_passthrough('passthru.text_in')
+        self.create_passthrough('passthru.binary_in')
 
-        self.create_passthru('passthru.text_out')
-        self.create_passthru('passthru.binary_out')
+        self.create_passthrough('passthru.text_out')
+        self.create_passthrough('passthru.binary_out')
 
 
 class Sink(Component):

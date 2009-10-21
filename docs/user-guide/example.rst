@@ -752,16 +752,16 @@ output of the Vehicle component. This can be done by creating passthroughs in th
 
 .. testcode:: Code5
 
-	self.create_passthru('engine.stroke')
-	self.create_passthru('engine.bore')
+	self.create_passthrough('engine.stroke')
+	self.create_passthrough('engine.bore')
 	# ...
 	# ...
-	self.create_passthru('transmission.ratio1')
-	self.create_passthru('transmission.ratio2')
+	self.create_passthrough('transmission.ratio1')
+	self.create_passthrough('transmission.ratio2')
 	# ...
 	# ...
-	self.create_passthru('chassis.mass_vehicle')
-	self.create_passthru('chassis.Cf')
+	self.create_passthrough('chassis.mass_vehicle')
+	self.create_passthrough('chassis.Cf')
 		
 Now, the Vehicle assembly has its own inputs and outputs and can be accessed just like in any other
 component. As the name implies, these passthroughs purely pass data from the assembly input to the contained 

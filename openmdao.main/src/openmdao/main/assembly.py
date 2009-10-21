@@ -146,7 +146,7 @@ class Assembly (Component):
                 
         return super(Assembly, self).remove_container(name)
     
-    def create_passthru(self, traitname, alias=None):
+    def create_passthrough(self, traitname, alias=None):
         """Create a trait that's a copy of the named trait, add it to self,
         and create a passthru connection between it and var.  If alias is not
         None, the name of the 'promoted' trait will be the alias.
