@@ -1072,9 +1072,7 @@ class Container(HasTraits):
         obj.make_public('foo')
         obj.make_public(['foo','bar','baz'])
         obj.make_public(('foo', 'foo_alias', 'in', some_trait))
-        obj.make_public([('foo', 'foo_alias', 'in', some_trait),
-        ('bar', 'bar_alias', 'out'),
-        ('baz', 'baz_alias')])
+        obj.make_public([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
         """
         if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
             lst = [obj_info]
