@@ -509,28 +509,37 @@ class PhysicalUnit(object):
       num = num[1:]
     return num + denom
 
+
 #Helper Functions
+
+_unit_cache = {}
+
 def _findUnit(unit):
     if isinstance(unit,str):
         name = unit.strip()
-        try: 
-            unit = eval(name, _unitLib.unit_table)
-        except: 
-            #check for single letter prefix before unit
-            if(name[0] in _unitLib.prefixes and name[1:] in _unitLib.unit_table):
-                addUnit(unit,_unitLib.prefixes[name[0]]*_unitLib.unit_table[name[1:]])
-            #check for double letter prefix before unit
-            elif(name[0:2] in _unitLib.prefixes and name[2:] in _unitLib.unit_table):
-                addUnit(unit,_unitLib.prefixes[name[0:2]]*_unitLib.unit_table[name[2:]])
-            #no prefixes found, unknown unit
-            else:
-                raise ValueError, "no unit named '%s' is defined"%name
+        try:
+            unit = _unit_cache[name]
+        except KeyError:
+            try: 
+                unit = eval(name, _unitLib.unit_table)
+            except: 
+                #check for single letter prefix before unit
+                if(name[0] in _unitLib.prefixes and name[1:] in _unitLib.unit_table):
+                    addUnit(unit,_unitLib.prefixes[name[0]]*_unitLib.unit_table[name[1:]])
+                #check for double letter prefix before unit
+                elif(name[0:2] in _unitLib.prefixes and name[2:] in _unitLib.unit_table):
+                    addUnit(unit,_unitLib.prefixes[name[0:2]]*_unitLib.unit_table[name[2:]])
+                #no prefixes found, unknown unit
+                else:
+                    raise ValueError, "no unit named '%s' is defined"%name
             
-            unit = eval(name, _unitLib.unit_table)
+                unit = eval(name, _unitLib.unit_table)
         
-        for cruft in ['__builtins__', '__args__']:
-            try: del _unitLib.unit_table[cruft]
-            except: pass
+            for cruft in ['__builtins__', '__args__']:
+                try: del _unitLib.unit_table[cruft]
+                except: pass
+            _unit_cache[name] = unit
+
     if not isinstance(unit,PhysicalUnit):
         raise TypeError(str(unit) + ' is not a unit')
     return unit
@@ -580,6 +589,8 @@ _unitLib.optionxform = doNothing
 
 def importLibrary(libfilepointer):
   global _unitLib 
+  global _unit_cache
+  _unit_cache = {}
   _unitLib = ConfigParser.ConfigParser()
   _unitLib.optionxform = doNothing
   _unitLib.readfp(libfilepointer)
