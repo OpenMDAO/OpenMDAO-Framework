@@ -161,10 +161,20 @@ class Assembly (Component):
         comp = getattr(self, compname)
         name = alias or vname
         
-        # make sure name isn't a dotted path
+        # if name is a dotted path, try to come up with a legal alias
         if '.' in name:
-            self.raise_exception('%s must be a simple name, not a dotted path' %
-                                 name)
+            if alias is None:
+                parts = name.split('.')
+                last = parts[len(parts)-1]
+                if self.trait(last) is None:
+                    name = last
+                else:
+                    newname = '_'.join(parts)
+                    if self.trait(newname) is None:
+                        name = newname
+            if '.' in name:
+                self.raise_exception('%s must be a simple name, not a dotted path.' % 
+                                     name)
             
         # check to see if a trait already exists with the given traitname
         if self.trait(name):
@@ -199,16 +209,19 @@ class Assembly (Component):
         # If property, make a corresponding plain trait, else just copy.
         if prop:
             trait = currtrait.trait_type.trait
-            try:
-                if isinstance(trait, Array):
-                    comptrait = Array(trait.dtype, shape=trait.shape,
-                                      desc=currtrait.desc, iostatus=iostatus)
-                else:
-                    comptrait = trait.__class__(default, desc=currtrait.desc,
-                                                iostatus=iostatus)
-            except TraitError, exc:
-                self.raise_exception("can't create passthru trait for %s:%s: %s"
-                                     % (compname, vname, exc), TraitError)
+            if trait is None:
+                comptrait = comp.trait(vname, copy=True)
+            else:
+                try:
+                    if isinstance(trait, Array):
+                        comptrait = Array(trait.dtype, shape=trait.shape,
+                                          desc=currtrait.desc, iostatus=iostatus)
+                    else:
+                        comptrait = trait.__class__(default, desc=currtrait.desc,
+                                                    iostatus=iostatus)
+                except TraitError, exc:
+                    self.raise_exception("can't create passthru trait for %s:%s: %s"
+                                         % (compname, vname, exc), TraitError)
         else:
             comptrait = comp.trait(vname, copy=True)
 
@@ -269,8 +282,9 @@ class Assembly (Component):
                                  RuntimeError)             
             
         # test compatability (raises TraitError on failure)
-        desttrait.validate(destcomp, destvarname, 
-                           getattr(srccomp, srcvarname))
+        if desttrait.validate is not None:
+            desttrait.validate(destcomp, destvarname, 
+                               getattr(srccomp, srcvarname))
         
         if destcomp is not self:
             destcomp.set_source(destvarname, srcpath)

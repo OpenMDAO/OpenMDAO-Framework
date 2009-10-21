@@ -67,6 +67,18 @@ def deep_setattr(obj, path, value):
     for name in tup[:-1]:
         obj = getattr(obj, name)
     setattr(obj, tup[-1], value)
+
+    
+# TODO: implement get_closest_proxy, along with a way to detect
+# when a Container is proxy so we can differentiate between
+# failure to find an attribute vs. failure to find a local
+# version of the attribute
+#def get_closest_proxy(start_scope, pathname):
+    #"""Resolve down to the closest in-process parent object
+    #of the object indicated by pathname.
+    #Returns a tuple containing (proxy_or_parent, rest_of_pathname)
+    #"""
+    
     
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
@@ -87,7 +99,9 @@ class _DumbTmp(object):
 
 class PathProperty(TraitType):
     """A trait that allows attributes in child objects to be referenced
-    using an alias in a parent scope.
+    using an alias in a parent scope.  We don't use a delegate because
+    we can't be sure that the attribute we want is found in a HasTraits
+    object.
     """
     def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
         ref_name = metadata.get('ref_name')
@@ -100,7 +114,7 @@ class PathProperty(TraitType):
                              "two entries in the path."
                              " The given ref_name was '%s'" % ref_name)        
         #make weakref to a transient object to force a re-resolve later
-        #without an extra check of self._ref is None
+        #without checking for self._ref being equal to None
         self._ref = weakref.ref(_DumbTmp()) 
         super(PathProperty, self).__init__(default_value, **metadata)
 
@@ -120,6 +134,8 @@ class PathProperty(TraitType):
         """Try to resolve down to the last containing object in the path and
         store a weakref to that object.
         """
+        # TODO - need to handle only being able to resolve down to 
+        #        the nearest proxy here
         try:
             for name in self._names[:-1]:
                 obj = getattr(obj, name)
@@ -1031,7 +1047,13 @@ class Container(HasTraits):
         names = ref_name.split('.')
         obj = self
         for name in names:
+            if iostatus is None and isinstance(obj, HasTraits):
+                objtrait = obj.trait(name)
+            else:
+                objtrait = None
             obj = getattr(obj, name)
+        if iostatus is None and objtrait is not None:
+            iostatus = objtrait.iostatus
         # if we make it to here, object specified by ref_name exists
         return PathProperty(ref_name=ref_name, iostatus=iostatus, 
                             trait=trait)
@@ -1040,6 +1062,19 @@ class Container(HasTraits):
         """Create trait(s) specified by the contents of obj_info. Calls
         _build_trait(), which can be overridden by subclasses, to create each
         trait.
+        
+        obj_info is assumed to be either a string, a tuple, or an iterator
+        that returns strings or tuples. Tuples must contain a name and an
+        alias, and my optionally contain an iostatus and a validation trait.
+        
+        For example, the following are valid calls:
+
+        obj.make_public('foo')
+        obj.make_public(['foo','bar','baz'])
+        obj.make_public(('foo', 'foo_alias', 'in', some_trait))
+        obj.make_public([('foo', 'foo_alias', 'in', some_trait),
+        ('bar', 'bar_alias', 'out'),
+        ('baz', 'baz_alias')])
         """
         if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
             lst = [obj_info]
@@ -1064,10 +1099,8 @@ class Container(HasTraits):
             else:
                 self.raise_exception('make_public cannot add trait %s' % entry,
                                      TraitError)
-                
-            trait = self._build_trait(ref_name, iostat, trait)
-            
-            self.add_trait(name, trait)
+            self.add_trait(name, 
+                           self._build_trait(ref_name, iostat, trait))
         
 
     def get_dyn_trait(self, name, iostat):
@@ -1080,11 +1113,10 @@ class Container(HasTraits):
             try:
                 # check to see if component has the ability to create traits
                 # on-the-fly
-                self.hoist(name, iostat)
+                return self.hoist(name, iostat)
             except AttributeError:
                 self.raise_exception("Cannot locate trait named '%s'" %
                                      name, NameError)
-            return self.trait(name)
         return trait
 
     
@@ -1096,14 +1128,12 @@ class Container(HasTraits):
         """
         oldtrait = self.trait(path)
         if oldtrait is None:
-            if trait is None:
-                self.make_public((path, path, io_status))
-            else:
-                self.make_public((path, path, io_status, trait))                
+            newtrait = self._build_trait(path, iostatus=io_status, trait=trait)
+            self.add_trait(path, newtrait)
+            return newtrait
         else:
             self.raise_exception("'%s' has already been hoisted." % path, 
                                  RuntimeError)
-        return path
     
     def config_changed(self):
         """Call this whenever the configuration of this Container changes,
