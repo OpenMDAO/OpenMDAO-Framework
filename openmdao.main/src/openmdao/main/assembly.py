@@ -136,6 +136,7 @@ class Assembly (Component):
         the new trait is only tied to the specified trait by a connection
         in the Assembly. This means that updates to the new trait value will
         not be reflected in the connected trait until the assembly executes.
+        The trait specified by pathname must exist.
         """
         if alias:
             newname = alias
@@ -148,28 +149,41 @@ class Assembly (Component):
             self.raise_exception("a trait named '%s' already exists" %
                                  newname, TraitError)
         trait, val = self._find_trait_and_value(pathname)
-        if trait:
-            iostatus = trait.iostatus
-        else:
-            iostatus = 'in'
+        if not trait:
+            self.raise_exception("the trait named '%s' can't be found" %
+                                 pathname, TraitError)
+        iostatus = trait.iostatus
         # the trait.trait_type stuff below is for the case where the trait is actually
         # a ctrait (very common). In that case, trait_type is the actual underlying
         # trait object
-        if trait and (getattr(trait,'get') or getattr(trait,'set') or
-                      getattr(trait.trait_type, 'get') or getattr(trait.trait_type,'set')):
+        if (getattr(trait,'get') or getattr(trait,'set') or
+            getattr(trait.trait_type, 'get') or getattr(trait.trait_type,'set')):
             trait = None  # not sure how to validate using a property
                           # trait without setting it, so just don't use it
-        self.add_trait(newname, PassthroughTrait(iostatus=iostatus,
-                                                 validation_trait=trait))
-        # set before connection to avoid unnecessary invalidation
+        newtrait = PassthroughTrait(iostatus=iostatus, validation_trait=trait)
+        self.add_trait(newname, newtrait)
         setattr(self, newname, val)
-        
+
         if iostatus == 'in':
             self.connect(newname, pathname)
         else:
             self.connect(pathname, newname)
 
-        
+        return newtrait
+
+    def get_dyn_trait(self, pathname, iostatus=None):
+        """Retrieves the named trait, attempting to create a Passthrough trait
+        on-the-fly if the specified trait doesn't exist.
+        """
+        trait = self.trait(pathname)
+        if trait is None:
+            newtrait = self.create_passthrough(pathname)
+            if iostatus is not None and iostatus != newtrait.iostatus:
+                self.raise_exception(
+                    "new trait has iostatus of '%s' but '%s' was expected" %
+                    (newtrait.iostatus, iostatus), TraitError)
+        return trait
+
     def split_varpath(self, path):
         """Return a tuple of compname,component,varname given a path
         name of the form 'compname.varname'. If the name is of the form 'varname'

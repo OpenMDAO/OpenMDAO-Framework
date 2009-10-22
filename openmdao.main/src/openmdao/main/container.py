@@ -1115,21 +1115,18 @@ class Container(HasTraits):
                            self._build_trait(ref_name, iostat, trait))
         
 
-    def get_dyn_trait(self, name, iostat):
+    def get_dyn_trait(self, name, iostatus=None):
         """Retrieves the named trait, attempting to create it on-the-fly if
         it doesn't already exist.
         """
         trait = self.trait(name)
-        
-        if trait is None:
-            try:
-                # check to see if component has the ability to create traits
-                # on-the-fly
-                return self.create_alias(name, iostat)
-            except AttributeError:
-                self.raise_exception("Cannot locate trait named '%s'" %
-                                     name, NameError)
-        return trait
+        if trait:
+            return trait
+        try:
+            return self.create_alias(name, iostatus)
+        except AttributeError:
+            self.raise_exception("Cannot locate trait named '%s'" %
+                                 name, NameError)
 
     
     def create_alias(self, path, io_status=None, trait=None, alias=None):
