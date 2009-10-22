@@ -5,7 +5,7 @@ Overview of OpenMDAO Plugin Development
 =======================================
 
 Plugins provide a way to extend the functionality of an application without
-modifying the application itself.  This is possible because a :term:`plugin` must
+modifying the application itself.  This is possible because the :term:`plugins` must
 implement a particular interface that the framework knows how to interact with.
 This section will describe the types of plugins available to extend
 the functionality of OpenMDAO and will explain how to build them and how to make 
@@ -119,7 +119,7 @@ Installing an OpenMDAO Plugin
 
 
 *Making Your Plugin Available to Others*
-----------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
 ::
 
@@ -127,7 +127,7 @@ Installing an OpenMDAO Plugin
    
    
 *Adding Custom Egg Metadata*
-----------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ::
 
