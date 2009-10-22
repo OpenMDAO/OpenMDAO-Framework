@@ -185,7 +185,7 @@ class Assembly (Component):
         currtrait = comp.trait(vname)
         if not currtrait:
             try:
-                comp.make_public(vname, iostatus=None)
+                comp.create_io_traits(vname, iostatus=None)
                 currtrait = comp.trait(vname)
             except Exception, exc:
                 pass

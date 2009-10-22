@@ -151,15 +151,6 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
     
-    ## currently, connecting directly to/from Variables from a Container
-    ## inside of a ContainerVariable is not allowed.  Maybe later we can
-    ## add the ability to create passthru variables on-the-fly or something
-    #def test_connect_containers_sub(self):
-        #self.asm.set('comp1.dummy_in.rval_in', 75.4)
-        #self.asm.connect('comp1.dummy_out.rval_out','comp2.dummy_in.rval_in')
-        #self.asm.run()
-        #self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4*1.5)
-        
     def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)
         self.asm.create_passthrough('comp3.rout')

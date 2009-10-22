@@ -1058,8 +1058,8 @@ class Container(HasTraits):
         return PathProperty(ref_name=ref_name, iostatus=iostatus, 
                             trait=trait)
 
-    def make_public(self, obj_info, iostatus='in'):
-        """Create trait(s) specified by the contents of obj_info. Calls
+    def create_io_traits(self, obj_info, iostatus='in'):
+        """Create io trait(s) specified by the contents of obj_info. Calls
         _build_trait(), which can be overridden by subclasses, to create each
         trait.
         
@@ -1069,10 +1069,10 @@ class Container(HasTraits):
         
         For example, the following are valid calls:
 
-        obj.make_public('foo')
-        obj.make_public(['foo','bar','baz'])
-        obj.make_public(('foo', 'foo_alias', 'in', some_trait))
-        obj.make_public([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
+        obj.create_io_traits('foo')
+        obj.create_io_traits(['foo','bar','baz'])
+        obj.create_io_traits(('foo', 'foo_alias', 'in', some_trait))
+        obj.create_io_traits([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
         """
         if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
             lst = [obj_info]
@@ -1095,7 +1095,7 @@ class Container(HasTraits):
                 except IndexError:
                     pass
             else:
-                self.raise_exception('make_public cannot add trait %s' % entry,
+                self.raise_exception('create_io_traits cannot add trait %s' % entry,
                                      TraitError)
             self.add_trait(name, 
                            self._build_trait(ref_name, iostat, trait))
@@ -1122,7 +1122,8 @@ class Container(HasTraits):
         """Create a trait that maps to some internal variable designated by a
         dotted path. If a trait is supplied as an argument, use that trait as
         a validator for the hoisted value. The resulting trait will have the
-        dotted path as its name.
+        dotted path as its name and will be added to self.  An exception will
+        be raised if the trait already exists.
         """
         oldtrait = self.trait(path)
         if oldtrait is None:
@@ -1130,8 +1131,9 @@ class Container(HasTraits):
             self.add_trait(path, newtrait)
             return newtrait
         else:
-            self.raise_exception("'%s' has already been hoisted." % path, 
-                                 RuntimeError)
+            self.raise_exception(
+                "Can't hoist trait '%s' because it already exists." % path, 
+                RuntimeError)
     
     def config_changed(self):
         """Call this whenever the configuration of this Container changes,
