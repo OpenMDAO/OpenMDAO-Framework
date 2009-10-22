@@ -1039,24 +1039,38 @@ class Container(HasTraits):
                 io_graph.add_edges_from([(invar, o) for o in outs])
         return self._io_graph
     
-    def _build_trait(self, ref_name, iostatus=None, trait=None):
+    def _build_trait(self, pathname, iostatus=None, trait=None):
         """Asks the component to dynamically create a trait for the 
         attribute given by ref_name, based on whatever knowledge the
         component has of that attribute.
         """
-        names = ref_name.split('.')
-        obj = self
-        for name in names:
-            if iostatus is None and isinstance(obj, HasTraits):
-                objtrait = obj.trait(name)
-            else:
-                objtrait = None
-            obj = getattr(obj, name)
+        objtrait, value = self._find_trait_and_value(pathname)
         if iostatus is None and objtrait is not None:
             iostatus = objtrait.iostatus
+        if trait is None:
+            trait = objtrait
         # if we make it to here, object specified by ref_name exists
-        return PathProperty(ref_name=ref_name, iostatus=iostatus, 
+        return PathProperty(ref_name=pathname, iostatus=iostatus, 
                             trait=trait)
+    
+    def _find_trait_and_value(self, pathname):
+        """Return a tuple of the form (trait, value) for the value indicated
+        by the given dotted pathname. Raises an exception if the value
+        indicated by the pathname is not found. If the value is found but has
+        no trait, then (None, value) is returned.
+        """
+        if pathname:
+            names = pathname.split('.')
+            obj = self
+            for name in names:
+                if isinstance(obj, HasTraits):
+                    objtrait = obj.trait(name)
+                else:
+                    objtrait = None
+                obj = getattr(obj, name)
+            return (objtrait, obj)
+        else:
+            return (None, None)
 
     def create_io_traits(self, obj_info, iostatus='in'):
         """Create io trait(s) specified by the contents of obj_info. Calls
@@ -1111,28 +1125,30 @@ class Container(HasTraits):
             try:
                 # check to see if component has the ability to create traits
                 # on-the-fly
-                return self.hoist(name, iostat)
+                return self.create_alias(name, iostat)
             except AttributeError:
                 self.raise_exception("Cannot locate trait named '%s'" %
                                      name, NameError)
         return trait
 
     
-    def hoist(self, path, io_status=None, trait=None):
+    def create_alias(self, path, io_status=None, trait=None, alias=None):
         """Create a trait that maps to some internal variable designated by a
         dotted path. If a trait is supplied as an argument, use that trait as
-        a validator for the hoisted value. The resulting trait will have the
-        dotted path as its name and will be added to self.  An exception will
-        be raised if the trait already exists.
+        a validator for the aliased value. The resulting trait will have the
+        dotted path as its name (or alias if specified) and will be added to 
+        self.  An exception will be raised if the trait already exists.
         """
-        oldtrait = self.trait(path)
+        if alias is None:
+            alias = path
+        oldtrait = self.trait(alias)
         if oldtrait is None:
             newtrait = self._build_trait(path, iostatus=io_status, trait=trait)
-            self.add_trait(path, newtrait)
+            self.add_trait(alias, newtrait)
             return newtrait
         else:
             self.raise_exception(
-                "Can't hoist trait '%s' because it already exists." % path, 
+                "Can't create alias '%s' because it already exists." % alias, 
                 RuntimeError)
     
     def config_changed(self):

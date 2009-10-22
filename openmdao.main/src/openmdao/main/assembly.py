@@ -16,36 +16,17 @@ from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 
 
-class MulticastTrait(TraitType):
-    """A trait with a list of destination attributes (with names evaluated in
-    the scope of the instance object containing the trait) that are set
-    whenever the attribute corresponding to this trait is set.
+class PassthroughTrait(TraitType):
+    """A trait that can use another trait for validation, but otherwise is
+    just a trait that lives on an Assembly boundary and can be connected
+    to other traits within the Assembly.
     """
     
-    def init(self):
-        self.names = self._metadata.get('names', [])
-        self.val_trait = self._metadata.get('val_trait', None)
-
     def validate(self, obj, name, value):
-        if self.val_trait:
-            val = self.val_trait.validate(obj, name, value)
-        else:
-            msg = ("No validating trait has been specified when creating "+
-                  "Multicast trait '%s'" % name)
-            raise TraitError(msg)
-        return val
-    
-    def post_setattr(self, obj, name, value):
-        if value is not Undefined:
-            for vname in self.names:
-                try:
-                    obj.set(vname, value, srcname=name)
-                except Exception, exc:
-                    msg = "cannot set '%s' from '%s': %s" % \
-                        (vname, name, exc)
-                    obj.raise_exception(msg, type(exc))
-                
-        
+        if self.validation_trait:
+            return self.validation_trait.validate(obj, name, value)
+        return value
+
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
     and outputs between its children and how to run a Workflow.
@@ -146,98 +127,48 @@ class Assembly (Component):
                 
         return super(Assembly, self).remove_container(name)
     
-    def create_passthrough(self, traitname, alias=None):
-        """Create a trait that's a copy of the named trait, add it to self,
-        and create a passthru connection between it and var.  If alias is not
-        None, the name of the 'promoted' trait will be the alias.
+    def create_passthrough(self, pathname, alias=None):
+        """Creates a PassthroughTrait that uses the trait indicated by
+        pathname for validation (if it's not a property trait), adds it to
+        self, and creates a connection between the two. If alias is None,
+        the name of the 'promoted' trait will be the last entry in its
+        pathname.  This is different than the create_alias function because
+        the new trait is only tied to the specified trait by a connection
+        in the Assembly. This means that updates to the new trait value will
+        not be reflected in the connected trait until the assembly executes.
         """
-        # check to see if var is already connected
-        if self.is_destination(traitname):
-            self.raise_exception('%s is already connected' % 
-                                 traitname, RuntimeError) 
-
-        # traitname must have at least two parts
-        compname, vname = traitname.split('.', 1)
-        comp = getattr(self, compname)
-        name = alias or vname
-        
-        # if name is a dotted path, try to come up with a legal alias
-        if '.' in name:
-            if alias is None:
-                parts = name.split('.')
-                last = parts[len(parts)-1]
-                if self.trait(last) is None:
-                    name = last
-                else:
-                    newname = '_'.join(parts)
-                    if self.trait(newname) is None:
-                        name = newname
-            if '.' in name:
-                self.raise_exception('%s must be a simple name, not a dotted path.' % 
-                                     name)
-            
-        # check to see if a trait already exists with the given traitname
-        if self.trait(name):
-            self.raise_exception('%s is already a trait' % name, 
-                                 RuntimeError) 
-        
-        # Check if existing trait is a property.
-        currtrait = comp.trait(vname)
-        if not currtrait:
-            try:
-                comp.create_io_traits(vname, iostatus=None)
-                currtrait = comp.trait(vname)
-            except Exception, exc:
-                pass
-            if not currtrait:
-                self.raise_exception(
-                    "cannot find trait named '%s' in component '%s'" %
-                                     (vname, compname), TraitError)
-        iostatus = currtrait.iostatus
-        try:
-            if iostatus == 'in':
-                prop = currtrait.trait_type.set
-            elif iostatus == 'out':
-                prop = currtrait.trait_type.get
-            else:
-                self.raise_exception('unknown iostatus %s' % iostatus)
-        except AttributeError:
-            prop = None
-
-        default = getattr(comp, vname)
-
-        # If property, make a corresponding plain trait, else just copy.
-        if prop:
-            trait = currtrait.trait_type.trait
-            if trait is None:
-                comptrait = comp.trait(vname, copy=True)
-            else:
-                try:
-                    if isinstance(trait, Array):
-                        comptrait = Array(trait.dtype, shape=trait.shape,
-                                          desc=currtrait.desc, iostatus=iostatus)
-                    else:
-                        comptrait = trait.__class__(default, desc=currtrait.desc,
-                                                    iostatus=iostatus)
-                except TraitError, exc:
-                    self.raise_exception("can't create passthru trait for %s:%s: %s"
-                                         % (compname, vname, exc), TraitError)
+        if alias:
+            newname = alias
         else:
-            comptrait = comp.trait(vname, copy=True)
+            parts = pathname.split('.')
+            newname = parts[-1]
 
-        # create the passthru connection 
+        oldtrait = self.trait(newname)
+        if oldtrait:
+            self.raise_exception("a trait named '%s' already exists" %
+                                 newname, TraitError)
+        trait, val = self._find_trait_and_value(pathname)
+        if trait:
+            iostatus = trait.iostatus
+        else:
+            iostatus = 'in'
+        # the trait.trait_type stuff below is for the case where the trait is actually
+        # a ctrait (very common). In that case, trait_type is the actual underlying
+        # trait object
+        if trait and (getattr(trait,'get') or getattr(trait,'set') or
+                      getattr(trait.trait_type, 'get') or getattr(trait.trait_type,'set')):
+            trait = None  # not sure how to validate using a property
+                          # trait without setting it, so just don't use it
+        self.add_trait(newname, PassthroughTrait(iostatus=iostatus,
+                                                 validation_trait=trait))
+        # set before connection to avoid unnecessary invalidation
+        setattr(self, newname, val)
+        
         if iostatus == 'in':
-            self.add_trait(name, MulticastTrait(default_value=default,
-                                                val_trait=comptrait,
-                                                names=[traitname],
-                                                iostatus=iostatus))
-            setattr(self, name, default)
-            self.connect(name, traitname)
+            self.connect(newname, pathname)
         else:
-            self.add_trait(name, comptrait)
-            setattr(self, name, default)
-            self.connect(traitname, name)
-        self.set_valid(name, comp.get_valid(vname))
+            self.connect(pathname, newname)
+
         
     def split_varpath(self, path):
         """Return a tuple of compname,component,varname given a path
@@ -253,7 +184,7 @@ class Assembly (Component):
 
     def connect(self, srcpath, destpath):
         """Connect one src Variable to one destination Variable. This could be
-        a normal connection (output to input) or a passthru connection."""
+        a normal connection (output to input) or a passthrough connection."""
 
         srccompname, srccomp, srcvarname = self.split_varpath(srcpath)
         srctrait = srccomp.get_dyn_trait(srcvarname, 'out')
@@ -265,7 +196,7 @@ class Assembly (Component):
                 'Cannot connect %s to %s. Both are on same component.' %
                                  (srcpath, destpath), RuntimeError)
         if srccomp is not self and destcomp is not self:
-            # it's not a passthru, so must connect input to output
+            # it's not a passthrough, so must connect input to output
             if srctrait.iostatus != 'out':
                 self.raise_exception(
                     '.'.join([srccomp.get_pathname(),srcvarname])+
@@ -304,7 +235,7 @@ class Assembly (Component):
                     # tell the parent that anyone connected to our boundary
                     # output is invalid.
                     # Note that it's a dest var in this scope, but a src var in
-                    # the # parent scope.
+                    # the parent scope.
                     self.parent.invalidate_deps([destpath], True)
             self.set_valid(destpath, False)
         elif srccomp is self and srctrait.iostatus == 'in': # boundary input
@@ -412,10 +343,10 @@ class Assembly (Component):
         """Execute a single child component and return."""
         self.workflow.step()
     
-    def list_connections(self, show_passthru=True):
+    def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
         """
-        if show_passthru:
+        if show_passthrough:
             return self._filter_internal_edges(self.get_var_graph().edges())
         else:
             return self._filter_internal_edges([(outname,inname) for outname,inname in 

@@ -160,7 +160,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(self.asm.get('comp3.rout'), 75.4*1.5)
         self.assertEqual(self.asm.get('rout'), 75.4*1.5)
         
-    def test_passthru_nested(self):
+    def test_passthrough_nested(self):
         self.asm.set('comp1.r', 8.)
         self.asm.nested.create_passthrough('comp1.r')
         self.asm.nested.create_passthrough('comp1.rout', 'foobar')
@@ -177,7 +177,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(self.asm.nested.get('foobar'), 75.4)
         
-    def test_passthru_already_connected(self):
+    def test_passthrough_already_connected(self):
         self.asm.connect('comp1.rout','comp2.r')
         self.asm.connect('comp1.sout','comp2.s')
         # this should fail since we're creating a second connection
@@ -194,13 +194,13 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(self.asm.get('sout'), 'some new string'[::-1])
         
-    def test_container_passthru(self):
+    def test_container_passthrough(self):
         self.asm.set('comp1.dummy_out.rval_in', 75.4)
-        self.asm.create_passthrough('comp1.dummy_out','dummy_out_passthru')
+        self.asm.create_passthrough('comp1.dummy_out','dummy_out_passthrough')
         self.asm.run()
-        self.assertEqual(self.asm.get('dummy_out_passthru.rval_out'), 75.4*1.5)
+        self.assertEqual(self.asm.get('dummy_out_passthrough.rval_out'), 75.4*1.5)
 
-#    def test_discon_reconnect_passthru(self):
+#    def test_discon_reconnect_passthrough(self):
 #        self.fail('unfinished test')
         
     def test_invalid_connect(self):
@@ -278,7 +278,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(comp2.r, 9.0)
         
-    def test_input_passthru_to_2_inputs(self):
+    def test_input_passthrough_to_2_inputs(self):
         asm = set_as_top(Assembly())
         asm.add_container('nested', Assembly())
         asm.nested.add_container('comp1', Simple())
@@ -288,14 +288,25 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
         asm.nested.a = 0.5
-        self.assertEqual(asm.nested.comp1.a, 0.5)
+        # until we run, the values of comp1.a and comp2.b won't change
+        self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
         self.assertEqual(asm.nested.comp2.get_valid('b'), False)
         asm.run()
         self.assertEqual(asm.nested.comp1.a, 0.5)
         self.assertEqual(asm.nested.comp2.b, 0.5)
+        self.assertEqual(asm.nested.comp1.get_valid('a'), True)
+        self.assertEqual(asm.nested.comp2.get_valid('b'), True)
+        asm.nested.a = 999.
+        self.assertEqual(asm.nested.comp1.get_valid('a'), False)
+        self.assertEqual(asm.nested.comp2.get_valid('b'), False)
+        self.assertEqual(asm.nested.comp1.a, 0.5)
+        self.assertEqual(asm.nested.comp2.b, 0.5)
+        asm.run()
+        self.assertEqual(asm.nested.comp1.a, 999.)
+        self.assertEqual(asm.nested.comp2.b, 999.)
         
-    def test_connect_2_outs_to_passthru(self):
+    def test_connect_2_outs_to_passthrough(self):
         asm = set_as_top(Assembly())
         asm.add_container('nested', Assembly())
         asm.nested.add_container('comp1', Simple())
