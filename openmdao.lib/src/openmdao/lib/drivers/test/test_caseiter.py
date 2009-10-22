@@ -115,7 +115,7 @@ class TestCase(unittest.TestCase):
         self.model.driver._n_servers = n_servers
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = []
-        self.model.driver.outerator = results
+        self.model.driver.recorder = results
 
         self.model.run()
 
@@ -134,7 +134,7 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = []
-        self.model.driver.outerator = results
+        self.model.driver.recorder = results
 
         # Set local dir in case we're running in a different directory.
         py_dir = self.directory
@@ -158,7 +158,7 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(cases)
         results = []
-        self.model.driver.outerator = results
+        self.model.driver.recorder = results
 
         self.model.run()
 
@@ -183,7 +183,7 @@ class TestCase(unittest.TestCase):
 
         self.model.driver.iterator = ListCaseIterator(cases)
         results = []
-        self.model.driver.outerator = results
+        self.model.driver.recorder = results
 
         self.model.run()
 
@@ -198,7 +198,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noiterator')
 
         # Check resoponse to no iterator set.
-        self.model.driver.outerator = []
+        self.model.driver.recorder = []
         try:
             self.model.run()
         except TraitError, exc:
@@ -208,16 +208,16 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('TraitError expected')
 
-    def test_noouterator(self):
+    def test_norecorder(self):
         logging.debug('')
-        logging.debug('test_noouterator')
+        logging.debug('test_norecorder')
 
-        # Check resoponse to no outerator set.
+        # Check resoponse to no recorder set.
         self.model.driver.iterator = ListCaseIterator([])
         try:
             self.model.run()
         except TraitError, exc:
-            msg = "driver: required plugin 'outerator' is not" \
+            msg = "driver: required plugin 'recorder' is not" \
                   " present"
             self.assertEqual(str(exc), msg)
         else:

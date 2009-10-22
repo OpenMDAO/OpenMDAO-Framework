@@ -1,6 +1,3 @@
-__all__ = ('CaseIteratorDriver','ServerError')
-
-
 import os.path
 import Queue
 import threading
@@ -13,6 +10,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.util import filexfer
 
+__all__ = ('CaseIteratorDriver','ServerError')
 
 SERVER_EMPTY    = 1
 SERVER_READY    = 2
@@ -31,7 +29,7 @@ class CaseIteratorDriver(Driver):
 
     - The `iterator` socket provides the cases to be evaluated.
     - The `model` socket provides the model to be executed.
-    - The `outerator` socket is used to record results.
+    - The `recorder` socket is used to record results.
     - If `sequential` is True, then the cases are evaluated sequentially. \
       (currently non-sequential evaluation is not supported)
     - If `reload_model` is True, the model is reloaded between executions.
@@ -39,14 +37,14 @@ class CaseIteratorDriver(Driver):
 
     .. parsed-literal::
 
-        TODO: define interface for 'outerator'.
+        TODO: define interface for 'recorder'.
         TODO: support concurrent evaluation.
         TODO: improve response to a stop request.
 
     """
 
     iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
-    outerator = Instance(object, desc='Something to append() to.', required=True)
+    recorder = Instance(object, desc='Something to append() to.', required=True)
     model = Instance(Component, desc='Model to be executed.', required=True)
     
     sequential = Bool(True, iostatus='in',
@@ -72,6 +70,7 @@ class CaseIteratorDriver(Driver):
         self._reply_queue = None
         self._server_lock = None
         self._servers = {}      # Server objects, keyed by name.
+        self._top_levels = {}   # Server top-level objects, keyed by name.
         self._server_info = {}  # Server information, keyed by name.
         self._queues = {}       # Request queues, keyed by server name.
         self._in_use = {}       # In-use flags, keyed by server name.
@@ -82,7 +81,7 @@ class CaseIteratorDriver(Driver):
         self._rerun = []
 
     def execute(self):
-        """ Run each case in iterator and record results in outerator. """
+        """ Run each case in iterator and record results in recorder. """
         self._start()
         self._cleanup()
         if self._stop:
@@ -105,19 +104,14 @@ class CaseIteratorDriver(Driver):
                       self._n_servers)
 
             if replicate or self._egg_file is None:
-                # Replicate model and save to egg.
+                # Save model to egg.
                 # Must do this before creating any locks or queues.
-#                replicant = self.model.replicate()
-#               # Stopgap replicate(), not expected to handle real evaluation.
-                import copy
-                replicant = copy.deepcopy(self.model)
                 self._replicants += 1
                 version = 'replicant.%d' % (self._replicants)
-                egg_info = replicant.save_to_egg(self.model.name, version)
+                egg_info = self.model.save_to_egg(self.model.name, version)
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
-                del replicant
 
             os.remove(self._egg_file)
             self.raise_exception('Concurrent evaluation is not supported yet.',
@@ -130,7 +124,8 @@ class CaseIteratorDriver(Driver):
                 name = 'cid_%d' % (i+1)
                 resources = {
                     'required_distributions':self._egg_required_distributions,
-                    'orphan_modules':self._egg_orphan_modules}
+                    'orphan_modules':self._egg_orphan_modules,
+                    'python_version':sys.version[:3]}
                 server_thread = threading.Thread(target=self._service_loop,
                                                  args=(name, resources))
                 server_thread.setDaemon(True)
@@ -164,6 +159,7 @@ class CaseIteratorDriver(Driver):
             self._reply_queue = None
             self._server_lock = None
             self._servers = {}
+            self._top_levels = {}
             self._queues = {}
             self._in_use = {}
 
@@ -233,7 +229,7 @@ class CaseIteratorDriver(Driver):
                 else:
                     case.msg = str(exc)
                 # Record the data.
-                self.outerator.append(case)
+                self.recorder.append(case)
 
                 if not case.msg:
                     if self.reload_model:
@@ -275,7 +271,7 @@ class CaseIteratorDriver(Driver):
                 self._rerun.append(case)
             else:
                 case.msg = str(exc)
-                self.outerator.append(case)
+                self.recorder.append(case)
 
     def _service_loop(self, name, resource_desc=None):
         """ Each server has an associated thread executing this. """
@@ -325,10 +321,12 @@ class CaseIteratorDriver(Driver):
         """ Load model into server. """
         filexfer(None, self._egg_file,
                  self._servers[server], self._egg_file, 'b')
-        if not self._servers[server].load_model(self._egg_file):
+        tlo = self._servers[server].load_model(self._egg_file)
+        if not tlo:
             self.error("server.load_model of '%s' failed :-(",
                        self._egg_file)
             return False
+        self._top_levels[server] = tlo
         return True
 
     def _model_set(self, server, name, index, value):
@@ -336,9 +334,7 @@ class CaseIteratorDriver(Driver):
         if server is None:
             self.model.set(name, value, index)
         else:
-            comp_name, attr = name.split('.', 1)
-            comp = getattr(self._servers[server].tla, comp_name)
-            comp.set(attr, value, index)
+            self._top_levels[server].set(name, value, index)
         return True
 
     def _model_get(self, server, name, index):
@@ -346,9 +342,7 @@ class CaseIteratorDriver(Driver):
         if server is None:
             return self.model.get(name, index)
         else:
-            comp_name, attr = name.split('.', 1)
-            comp = getattr(self._servers[server].tla, comp_name)
-            return comp.get(attr, index)
+            return self._top_levels[server].get(name, index)
 
     def _model_execute(self, server):
         """ Execute model in server. """
@@ -365,7 +359,7 @@ class CaseIteratorDriver(Driver):
     def _remote_model_execute(self, server):
         """ Execute model. """
         try:
-            self._servers[server].tla.run()
+            self._top_levels[server].run()
         except Exception, exc:
             self._exceptions[server] = exc
             self.error('Caught exception from server %s, PID %d on %s: %s',
