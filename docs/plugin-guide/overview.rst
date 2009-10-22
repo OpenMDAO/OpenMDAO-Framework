@@ -260,10 +260,10 @@ within the OpenMDAO framework:
     ::
     
         """
-        [openmdao.components]
+        [openmdao.component]
         SimpleAdder = simple_adder:SimpleAdder
         
-        [openmdao.drivers]
+        [openmdao.driver]
         MyDriver = mydriver:MyDriver
         """
 	   
@@ -272,8 +272,8 @@ within the OpenMDAO framework:
     :: 
        
           
-        { 'openmdao.components': ['SimpleAdder = simple_adder:SimpleAdder'],
-          'openmdao.drivers': ['MyDriver = mydriver:MyDriver']
+        { 'openmdao.component': ['SimpleAdder = simple_adder:SimpleAdder'],
+          'openmdao.driver': ['MyDriver = mydriver:MyDriver']
         }
 
         
