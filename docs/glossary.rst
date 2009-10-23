@@ -8,15 +8,15 @@ Glossary
 .. glossary::
       
       **API**
-	Application Programming Interface. A set of functions that can be called from
-	an application program to access features of another program.
+	    Application Programming Interface. A set of functions that can be called from
+	    an application program to access features of another program.
 
 
       **Assembly**
-	The Assembly class is the primary building block of the system of 
-	systems aspect of OpenMDAO. Each Assembly has a Workflow and a 
-	Driver, and acts as a container for Components. An Assembly is also a
-	Component, so hierarchical structures of Assemblies can be created.
+	    The Assembly class is the primary building block of the system of 
+	    systems aspect of OpenMDAO. Each Assembly has a Workflow and a 
+	    Driver, and acts as a container for Components. An Assembly is also a
+	    Component, so hierarchical structures of Assemblies can be created.
       
       
       **Beaker** 
@@ -24,8 +24,8 @@ Glossary
 	      
       
       **branch**
-	An ordered series of revisions (see :term:`revision` below) that describes the
-	history of a set of files. 	
+	    An ordered series of revisions (see :term:`revision` below) that describes the
+	    history of a set of files. 	
 
 
       **CAD**
@@ -45,13 +45,14 @@ Glossary
 
 
       **Case**
-        A collection of input names and values, and names of outputs to be stored
-        along with the inputs after the process model runs.
+        An object containing a collection of input names and values, and names of outputs 
+		to be stored along with the inputs after the process model runs.
 
 
       **CaseIterator**
-        An iterator that contains a number of Cases. This iterator could be tied
-        to a simple file, a database, or some object that generates cases dynamically.
+        An object that iteratively supplies Case objects. This iterator could be tied
+        to a simple file, a database, or some object that generates Case objects
+        dynamically.
 
 
       **CFD**
@@ -80,12 +81,12 @@ Glossary
 	
 	
       **CONMIN**
-	An interface to the NASTRAN/NASA CONMIN optimization program.
+	 An interface to the NASTRAN/NASA CONMIN optimization program.
       
       
       **Container**
 	A container of Variables and other Containers. The base class of all objects
-	within the framework that  support user access to input and output Variables. 
+	 within the framework that  support user access to input and output Variables. 
 
       
       **Coverage**
@@ -224,13 +225,13 @@ Glossary
       
       
       **nose**
-	A unittest extension offering automatic test suite discovery and easy test
+        A unittest extension offering automatic test suite discovery and easy test
         authoring.
 
             
       **NumPy**
         NumPy is the fundamental package needed for scientific computing with Python. See
-	http://numpy.scipy.org/ 
+	    http://numpy.scipy.org/ 
 	
       
       **ObjServer**
@@ -277,11 +278,15 @@ Glossary
 	A pluggable command-line frontend, including commands to setup package file layouts
 
 
-      **plugins**
-	A computer program (e.g., a Python object) that interacts with a host aplication to
+      **plugin**
+        A computer program that interacts with a host aplication to
 	provide specific functionality without changing the host application.
 
-           
+
+      **plugins**
+        See :term:`plugin`
+
+	
       **PID**
         Process id
 
@@ -394,9 +399,9 @@ Glossary
 	
 	
       **SWIG**
-	Simplified Wrapper and Interface Generator. A software development tool that connects
-	programs written in C and C++ with a variety of high-level programming languages. Go to 
-	http://www.swig.org/index.php for more information.
+		Simplified Wrapper and Interface Generator. A software development tool that connects
+		programs written in C and C++ with a variety of high-level programming languages. Go to 
+		http://www.swig.org/index.php for more information.
 
      
       **Tempita**
@@ -416,16 +421,16 @@ Glossary
 
 	
       **Traits**
-	A software package from Enthought, Inc. that aids in developing Python code. A trait is
-	a type definition that can be used for normal Python object attributes, giving the
-	attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
-	The Traits package works with version 2.4 and later of Python and is similar in some ways
-	to the Python property language feature. 
+		A software package from Enthought, Inc. that aids in developing Python code. A trait is
+		a type definition that can be used for normal Python object attributes, giving the
+		attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
+		The Traits package works with version 2.4 and later of Python and is similar in some ways
+		to the Python property language feature. 
 
 
       **TraitType** 
-	The base class used to validate and possibly convert data objects that are
-	passed between linked Components.
+		The base class used to validate and possibly convert data objects that are
+		passed between linked Components.
 
       
       **units**
@@ -454,20 +459,20 @@ Glossary
               
        
       **WebHelpers**
-	A library of helper functions intended to make writing templates in Web applications
-	easier. It's the standard function library for Pylons and TurboGears 2. It also
-	contains a large number of functions not specific to the Web, including text
-	processing, number formatting, date calculations, container objects, etc.
+		A library of helper functions intended to make writing templates in Web applications
+		easier. It's the standard function library for Pylons and TurboGears 2. It also
+		contains a large number of functions not specific to the Web, including text
+		processing, number formatting, date calculations, container objects, etc.
 
             
       **WebOb**
-	:term:`WSGI` request and response object 
+        :term:`WSGI` request and response object 
 	
 
       **WebTest** 
-	Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
-	easy to send test requests to that application without starting up an HTTP
-	server. 
+		Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
+		easy to send test requests to that application without starting up an HTTP
+		server. 
 	
 
       **Workflow**
@@ -478,17 +483,17 @@ Glossary
 
 
       **WSGI**
-	Web Server Gateway Interface. WSGI is a standard interface for Python Web
+        Web Server Gateway Interface. WSGI is a standard interface for Python Web
         applications to communicate with Web servers. 
 	
 
       **YAML**
-	YAML is a data serialization format designed for human readability and interaction
+        YAML is a data serialization format designed for human readability and interaction
         with scripting languages. 
       
       
       **zc.buildout** 
-	System for managing development buildouts.
+	    System for managing development buildouts.
 	
       
       **zc.recipe.egg**
@@ -496,9 +501,9 @@ Glossary
 	
 	
       **Zope**
-	Zope is an open source application server for building content management
-	systems, intranets, portals, and custom applications. Zope is written in
-	Python, an object-oriented scripting language.
+		Zope is an open source application server for building content management
+		systems, intranets, portals, and custom applications. Zope is written in
+		Python, an object-oriented scripting language.
 	
       
       **zope.component**
@@ -506,12 +511,12 @@ Glossary
 	
 	
       **zope.deferredimport** 
-	The zope.deferredimport package provided facilities for defining names in modules
-	that will be imported from somewhere else when used.
+		The zope.deferredimport package provided facilities for defining names in modules
+		that will be imported from somewhere else when used.
 
 
       **zope.deprecation** 
-	This package provides a simple function called "deprecated(names, reason)" to
+        This package provides a simple function called "deprecated(names, reason)" to
         deprecate Python objects.
 
       
@@ -520,10 +525,10 @@ Glossary
 	
       
       **zope.i18nmessageid**
-	This package provides facilities for delaring  messages (which carry a
-	translation source domain and possibly a default translation) within program
-	source text; translation of the messages is the responsiblitiy of the "zope.i18n"
-	package.
+		This package provides facilities for delaring  messages (which carry a
+		translation source domain and possibly a default translation) within program
+		source text; translation of the messages is the responsiblitiy of the "zope.i18n"
+		package.
 	
 
       **zope.interface**
@@ -531,17 +536,17 @@ Glossary
 
 
       **zope.proxy**
-	Generic transparent proxies. Proxies are special objects which serve as
-	mostly transparent wrappers around another object, intervening in the apparent
-	behavior of the wrapped object only when necessary to apply the policy (e.g.,
-	access checking, location brokering, etc.) for which the proxy is responsible.
+        Generic transparent proxies. Proxies are special objects which serve as
+        mostly transparent wrappers around another object, intervening in the apparent
+        behavior of the wrapped object only when necessary to apply the policy (e.g.,
+        access checking, location brokering, etc.) for which the proxy is responsible.
 
 	
       **zope.schema**
-	zope.interface extension for defining data schemas
-	
+        zope.interface extension for defining data schemas
+
 	
       **ZopeSkel**
-	ZopeSkel provides a collection of skeletons for quickstarting Zope and Plone
-	projects.
+        ZopeSkel provides a collection of skeletons for quickstarting Zope and Plone
+        projects.
 	

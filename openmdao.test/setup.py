@@ -22,7 +22,7 @@ setup(name='openmdao.test',
         'License :: OSI Approved',
         'Natural Language :: English',
         'Operating System :: OS Independent',
-        'Programming Language :: Python :: 2.5',
+        'Programming Language :: Python :: 2.6',
         'Topic :: Scientific/Engineering',
       ],
       keywords='testing',
@@ -44,7 +44,7 @@ setup(name='openmdao.test',
           # -*- Extra requirements: -*-
       ],
       entry_points="""
-      [openmdao.components]
+      [openmdao.component]
       openmdao.test.HollowSphere.HollowSphere = openmdao.test.HollowSphere:HollowSphere
       openmdao.test.Box.Box = openmdao.test.Box:Box
       

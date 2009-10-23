@@ -18,6 +18,9 @@ from subprocess import check_call
 from optparse import OptionParser
 
 import pkg_resources
+# easy install barfs without distutils import
+import distutils.command.build
+import setuptools.command.easy_install
 import zc.buildout
 from enthought.traits.api import TraitType
 
@@ -254,8 +257,8 @@ setup(
                         optstr = '-mN'
                     else:
                         optstr = '-mNq'
-                    check_call(['easy_install', '-d', '.', optstr, 
-                                '%s' % os.path.join(destdir,eggname)])
+                        setuptools.command.easy_install.main(
+                            argv=['-d','.',optstr,'%s' % os.path.join(destdir, eggname)])
                 
                     logging.info('installed %s in %s' % (eggname, idir_abs)) 
             shutil.rmtree(os.path.join(pkgdir, modname, 'build'))

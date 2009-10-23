@@ -69,7 +69,7 @@ class PkgResourcesFactory(Factory):
     """A Factory that loads plugins using the pkg_resources API, which means
     it searches through egg info of distributions in order to find any entry
     point groups corresponding to openmdao plugin types, e.g.,
-    openmdao.components, openmdao.traits, etc.
+    openmdao.component, openmdao.trait, etc.
     """
     
     def __init__(self, groups, search_path=None):
@@ -146,12 +146,16 @@ class PkgResourcesFactory(Factory):
                 if loader.group == group:
                     if loader.ctor is not None or active is False:
                         matches.append(loader)
-                
         return matches
     
 
-    def get_available_types(self, groups):
+    def get_available_types(self, groups=None):
+        """Return a set of tuples of the form (typename, dist_version), one
+        for each available plugin type in the given entry point groups.
+        If groups is None, return the set for all openmdao entry point groups.
+        """
         ret = []
         for group in groups:
             ret.extend([(l.name, l.dist.version) for l in self.get_loaders(group, False)])
         return ret
+

@@ -29,7 +29,7 @@ config.add_extension('openmdao.examples.engine_design.engineC', \
                      library_dirs=library_dirs)
 
 kwds = { 'name':'openmdao.examples.engine_design',
-      	 'version':version,
+         'version':version,
          'description':"OpenMDAO examples - Engine Design Problem",
          'long_description':"""\
          """,
@@ -39,7 +39,7 @@ kwds = { 'name':'openmdao.examples.engine_design',
             'License :: OSI Approved',
             'Natural Language :: English',
             'Operating System :: OS Independent',
-            'Programming Language :: Python :: 2.5',
+            'Programming Language :: Python :: 2.6',
             'Topic :: Scientific/Engineering',
              ],
          'keywords':'optimization multidisciplinary multi-disciplinary analysis',
@@ -47,14 +47,16 @@ kwds = { 'name':'openmdao.examples.engine_design',
          'author_email':'',
          'url':'',
          'license':'NASA Open Source Agreement 1.3',
-         'namespace_packages':["openmdao"],
+         'namespace_packages':["openmdao", "openmdao.examples"],
          #'package_dir':{'': 'openmdao/examples/engine_design'},
          'packages':find_packages(), #['openmdao','openmdao.examples'],
-         'include_package_data':True,
+         'package_data': {'openmdao.examples.engine_design': ['*.csv']},
+         'include_package_data': True,
          'test_suite':'nose.collector',
-         'zip_safe':False,
+         'zip_safe': False,
          'install_requires':[
-             'setuptools'
+             'setuptools',
+             'openmdao.lib',
              ],
          'entry_points':"""
          # -*- Entry points: -*-
@@ -64,37 +66,3 @@ kwds = { 'name':'openmdao.examples.engine_design',
 kwds.update(config.todict())
 
 setup(**kwds)
-
-#setup(name='openmdao.examples',
-      #version=version,
-      #description="OpenMDAO examples",
-      #long_description="""\
-#""",
-      #classifiers=[
-        #'Development Status :: 2 - Pre-Alpha',
-        #'Intended Audience :: Science/Research',
-        #'License :: OSI Approved',
-        #'Natural Language :: English',
-        #'Operating System :: OS Independent',
-        #'Programming Language :: Python :: 2.5',
-        #'Topic :: Scientific/Engineering',
-      #],
-      #keywords='optimization multidisciplinary multi-disciplinary analysis',
-      #author='',
-      #author_email='',
-      #url='',
-      #license='NASA Open Source Agreement 1.3',
-      #namespace_packages=["openmdao"],
-      ##package_dir={'': 'src'},
-      #packages=find_packages(), #['openmdao','openmdao.examples'],
-      #include_package_data=True,
-      #test_suite='nose.collector',
-      #zip_safe=False,
-      #install_requires=[
-         #'setuptools'
-      #],
-      #entry_points="""
-      ## -*- Entry points: -*-
-      #""",
-      #)
-

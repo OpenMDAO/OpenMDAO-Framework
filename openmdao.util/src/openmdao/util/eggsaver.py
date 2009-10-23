@@ -55,6 +55,9 @@ EGG_SERVER_URL = 'http://torpedo.grc.nasa.gov:31001'
 
 _SITE_LIB = os.path.dirname(site.__file__)
 _SITE_PKG = os.path.join(_SITE_LIB, 'site-packages')
+if sys.platform == 'win32':
+    _SITE_LIB = _SITE_LIB.lower()
+    _SITE_PKG = _SITE_PKG.lower()
 
 
 def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
@@ -90,9 +93,14 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         py_dir = orig_dir
     else:
         py_dir = os.path.realpath(py_dir)
+    if sys.platform == 'win32':
+        py_dir = py_dir.lower()
 
     if src_dir:
         src_dir = os.path.realpath(src_dir)
+        if sys.platform == 'win32':
+            src_dir = src_dir.lower()
+
     src_files = src_files or set()
 
     if not version:
@@ -221,10 +229,10 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                 for path in cleanup_files:
                     if os.path.exists(path):
                         os.remove(path)
+                if os.path.exists(buildout_path):
+                    os.remove(buildout_path)
                 if os.path.exists(buildout_orig):
                     os.rename(buildout_orig, buildout_path)
-                elif os.path.exists(buildout_path):
-                    os.remove(buildout_path)
 
         finally:
             os.chdir(orig_dir)
@@ -368,9 +376,8 @@ def _fix_objects(objs, observer):
             if mod == '__main__' and (classname not in fixup_classes.keys()):
                 mod, module = _find_module(classname)
                 if mod:
-                    old = cls
                     new = getattr(module, classname)
-                    fixup_classes[classname] = (old, new)
+                    fixup_classes[classname] = (cls, new)
                     fixup_modules.add(mod)
                 else:
                     msg = "Can't find module for '%s'" % classname
@@ -467,6 +474,8 @@ def _get_distributions(objs, py_dir, logger, observer):
         except AttributeError:
             logger.debug('    module %s has no __file__', name)
             continue
+        if sys.platform == 'win32':
+            path = path.lower()
         if path.startswith(_SITE_LIB) and not path.startswith(_SITE_PKG):
             continue
         found = False
@@ -584,6 +593,8 @@ def _process_found_modules(py_dir, finder_items, modules, distributions,
         if not path:
             continue
 
+        if sys.platform == 'win32':
+            path = path.lower()
         dirpath = os.path.realpath(os.path.dirname(path))
         if dirpath.startswith(py_dir):
             # May need to be copied later.
@@ -617,8 +628,15 @@ def _process_found_modules(py_dir, finder_items, modules, distributions,
                 if not dirpath.endswith('site-packages'):
                     not_found.add(dirpath)
                     path = dirpath
-                logger.warning('No distribution found for %s', name)
-                orphans.add((name, path))
+                # Verify name is valid. ModuleFinder can report a module
+                # that was never successfully imported.
+                try:
+                    __import__(name)
+                except ImportError:
+                    logger.debug('Skipping %s, not importable.' % name)
+                else:
+                    logger.warning('No distribution found for %s', name)
+                    orphans.add((name, path))
 
 
 def _create_buildout(name, server_url, distributions, path):
@@ -664,6 +682,11 @@ def _write_state_file(dst_dir, root, name, format, proto, logger, observer):
 
 def _write_loader_script(path, state_name, package, top):
     """ Write script used for loading object(s). """
+    if state_name.endswith('.pickle'):
+        format = 'SAVE_CPICKLE'
+    else:
+        format = 'SAVE_LIBYAML'
+
     if state_name.startswith(package):
         pkg_arg = ''
     else:
@@ -682,7 +705,7 @@ if not '.' in sys.path:
     sys.path.append('.')
 
 try:
-    from openmdao.main.api import Component, SAVE_CPICKLE, SAVE_LIBYAML
+    from openmdao.main.api import Component, %(format)s
 except ImportError:
     print 'No OpenMDAO distribution available.'
     if __name__ != '__main__':
@@ -692,15 +715,8 @@ except ImportError:
 
 def load(**kwargs):
     '''Create object(s) from state file.'''
-    state_name = '%(name)s'
-    if state_name.endswith('.pickle'):
-        return Component.load(state_name,
-                              SAVE_CPICKLE%(pkg)s%(top)s, **kwargs)
-    elif state_name.endswith('.yaml'):
-        return Component.load(state_name,
-                              SAVE_LIBYAML%(pkg)s%(top)s, **kwargs)
-    raise RuntimeError("State file '%%s' is not a pickle or yaml save file.",
-                       state_name)
+    return Component.load('%(name)s',
+                          %(format)s%(pkg)s%(top)s, **kwargs)
 
 def main():
     '''Load state and run.'''
@@ -709,7 +725,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-""" % {'name':state_name, 'pkg':pkg_arg, 'top':top_arg})
+""" % {'name':state_name, 'format':format, 'pkg':pkg_arg, 'top':top_arg})
     out.close()
 
 
@@ -752,7 +768,7 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
     logger = logger or NullLogger()
 
     if isinstance(outstream, basestring):
-        if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+        if (format is SAVE_CPICKLE or format is SAVE_PICKLE) and proto != 0:
             mode = 'wb'
         else:
             mode = 'w'

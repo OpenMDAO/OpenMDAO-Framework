@@ -44,8 +44,8 @@ def runwing(wingpath, projpath):
     """Runs the Wing IDE after first setting environment variables
     necessary to locate shared libraries.
     """
-    # in order to find all of our shared libraries, find them
-    # all and put their directories in LD_LIBRARY_PATH
+    # in order to find all of our shared libraries,
+    # put their directories in LD_LIBRARY_PATH
     env = os.environ
     if sys.platform != 'win32':
         libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
@@ -218,9 +218,9 @@ class WingProj(object):
             wingpath = self.wingpath
         else:
             if sys.platform == 'win32':
-                wingpath = 'wing'
+                wingpath = r'C:\Program Files\Wing IDE 3.2\bin\wing.exe'
             else:
-                wingpath = 'wing3.1'
+                wingpath = 'wing3.2'
 
         scripts = zc.buildout.easy_install.scripts(
             [('wing', 'openmdao.recipes.wingproj', 'runwing')], 

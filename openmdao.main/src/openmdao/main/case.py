@@ -6,7 +6,6 @@
 from enthought.traits.api import implements
 
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.main.api import ExprEvaluator
 
 
 class Case(object):

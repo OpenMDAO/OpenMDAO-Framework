@@ -418,10 +418,10 @@ the base class Component. A very simple component is shown here:
         	""" Creates a new Transmission object """
         	super(Transmission, self).__init__(doc, directory)        
         
-	        def execute(self):
-	            """ The 5-speed manual transmission is simulated by determining the
-	                torque output and engine RPM via the gear ratios.
-	                """
+	    def execute(self):
+	        """ The 5-speed manual transmission is simulated by determining the
+	            torque output and engine RPM via the gear ratios.
+	            """
 
 This new Transmission component does nothing yet. It does have the two functions that all components must have.
 The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
@@ -752,16 +752,16 @@ output of the Vehicle component. This can be done by creating passthroughs in th
 
 .. testcode:: Code5
 
-	self.create_passthru('engine.stroke')
-	self.create_passthru('engine.bore')
+	self.create_passthrough('engine.stroke')
+	self.create_passthrough('engine.bore')
 	# ...
 	# ...
-	self.create_passthru('transmission.ratio1')
-	self.create_passthru('transmission.ratio2')
+	self.create_passthrough('transmission.ratio1')
+	self.create_passthrough('transmission.ratio2')
 	# ...
 	# ...
-	self.create_passthru('chassis.mass_vehicle')
-	self.create_passthru('chassis.Cf')
+	self.create_passthrough('chassis.mass_vehicle')
+	self.create_passthrough('chassis.Cf')
 		
 Now, the Vehicle assembly has its own inputs and outputs and can be accessed just like in any other
 component. As the name implies, these passthroughs purely pass data from the assembly input to the contained 
@@ -1031,7 +1031,7 @@ driver requires some initialization and connecting before it can be used:
 
 	        # CONMIN Flags
         	self.driver.iprint = 0
-	        self.driver.maxiters = 30
+	        self.driver.itmax = 30
         
 	        # CONMIN Objective 
         	self.driver.objective = 'driving_sim.accel_time'
@@ -1044,8 +1044,8 @@ driver requires some initialization and connecting before it can be used:
 	        self.driver.upper_bounds = [10, 100]
 
 In self.driver.iprint, driver refers to the title that the CONMIN driver is given when it is created above. The iprint flag
-enables or disables the printing of diagnostics internal to CONMIN, while the maxiters parameter specifies the maximum number
-of iterations for the optimization loop. Both of these have a default value (maxiters is 40), so setting them here is not required.
+enables or disables the printing of diagnostics internal to CONMIN, while the itmax parameter specifies the maximum number
+of iterations for the optimization loop. Both of these have a default value (itmax is 40), so setting them here is not required.
 
 The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which were chosen
 as bore and spark angle. Both the objective and the design variables are assigned using a type of Data Object called a StringRef.

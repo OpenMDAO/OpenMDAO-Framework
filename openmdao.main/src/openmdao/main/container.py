@@ -3,7 +3,7 @@ The Container class
 """
 
 #public symbols
-__all__ = ["Container", "path_to_root", "set_as_top", "PathProperty"]
+__all__ = ["Container", "set_as_top", "PathProperty"]
 
 import datetime
 import copy
@@ -25,29 +25,22 @@ copy._deepcopy_dispatch[weakref.KeyedRef] = copy._deepcopy_atomic
 import networkx as nx
 from enthought.traits.api import HasTraits, Missing, TraitError, Undefined, \
                                  push_exception_handler, Python, TraitType, \
-                                 Property, Trait
+                                 Property, Trait, Interface, Instance
 from enthought.traits.trait_handlers import NoDefaultSpecified
 from enthought.traits.has_traits import FunctionType
 from enthought.traits.trait_base import not_none
+from enthought.traits.trait_types import validate_implements
 
 # pylint apparently doesn't understand namespace packages...
 # pylint: disable-msg=E0611,F0401
 
+from openmdao.main.filevar import FileRef
 from openmdao.main.log import Logger, logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
+from openmdao.main.interfaces import ICaseIterator, IResourceAllocator
 
-
-def path_to_root(node):
-    """An generator the returns nodes from the given
-    node up to (and including) the root node of a tree.
-    It assumes that node objects contain a 'parent' attribute.
-    """
-    while node:
-        yield node
-        node = node.parent
-        
 def set_as_top(cont):
     """Specifies that the given Container is the top of a 
     Container hierarchy.
@@ -55,7 +48,7 @@ def set_as_top(cont):
     cont.tree_rooted()
     return cont
 
-def deep_setattr(obj, path, value):
+def _deep_setattr(obj, path, value):
     """A multi-level setattr, setting the value of an
     attribute specified by a dotted path. For example,
     deep_settattr(obj, 'a.b.c', value).
@@ -64,6 +57,17 @@ def deep_setattr(obj, path, value):
     for name in tup[:-1]:
         obj = getattr(obj, name)
     setattr(obj, tup[-1], value)
+
+    
+# TODO: implement get_closest_proxy, along with a way to detect
+# when a Container is proxy so we can differentiate between
+# failure to find an attribute vs. failure to find a local
+# version of the attribute
+#def get_closest_proxy(start_scope, pathname):
+    #"""Resolve down to the closest in-process parent object
+    #of the object indicated by pathname.
+    #Returns a tuple containing (proxy_or_parent, rest_of_pathname)
+    #"""
     
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
@@ -84,7 +88,9 @@ class _DumbTmp(object):
 
 class PathProperty(TraitType):
     """A trait that allows attributes in child objects to be referenced
-    using an alias in a parent scope.
+    using an alias in a parent scope.  We don't use a delegate because
+    we can't be sure that the attribute we want is found in a HasTraits
+    object.
     """
     def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
         ref_name = metadata.get('ref_name')
@@ -97,7 +103,7 @@ class PathProperty(TraitType):
                              "two entries in the path."
                              " The given ref_name was '%s'" % ref_name)        
         #make weakref to a transient object to force a re-resolve later
-        #without an extra check of self._ref is None
+        #without checking for self._ref being equal to None
         self._ref = weakref.ref(_DumbTmp()) 
         super(PathProperty, self).__init__(default_value, **metadata)
 
@@ -117,6 +123,8 @@ class PathProperty(TraitType):
         """Try to resolve down to the last containing object in the path and
         store a weakref to that object.
         """
+        # TODO - need to handle only being able to resolve down to 
+        #        the nearest proxy here
         try:
             for name in self._names[:-1]:
                 obj = getattr(obj, name)
@@ -181,7 +189,14 @@ class Container(HasTraits):
         self.log_level = LOG_DEBUG
 
         self._io_graph = None
-        
+
+        # Create per-instance initial FileRefs for FileTraits. There ought
+        # to be a better way to not share default initial values, but
+        # FileRef.get_default_value/make_default won't pickle.
+        for name, obj in self.items():
+            if isinstance(obj, FileRef):
+                setattr(self, name, obj.copy(owner=self))
+
         # Call _io_trait_changed if any trait having 'iostatus' metadata is
         # changed. We originally used the decorator @on_trait_change for this,
         # but it failed to be activated properly when our objects were
@@ -312,7 +327,10 @@ class Container(HasTraits):
         # this just forces the regeneration (lazily) of the lists of
         # inputs, outputs, and containers
         self._trait_added_changed(name)
-        del self._added_traits[name]
+        try:
+            del self._added_traits[name]
+        except KeyError:
+            pass
         super(Container, self).remove_trait(name)
             
     def trait_get(self, *names, **metadata):
@@ -322,7 +340,7 @@ class Container(HasTraits):
         if len(names) == 0:
             names = self._traits_meta_filter(None, **metadata).keys()
         return super(Container, self).trait_get(*names, **metadata)
-        
+    
         
     # call this if any trait having 'iostatus' metadata is changed    
     #@on_trait_change('+iostatus') 
@@ -409,10 +427,25 @@ class Container(HasTraits):
                     "cannot set valid flag of '%s' because "
                     "it's not an io trait." % name, RuntimeError)
 
+    def check_config (self):
+        """Verify that the configuration of this component is correct. This
+        function is called once prior to the first execution of this Assembly,
+        and prior to execution if any children are added or removed, or if
+        self._call_check_config is True.
+        """
+        for name, value in self._traits_meta_filter(required=True).items():
+            if value.is_trait_type(Instance) and getattr(self, name) is None:
+                self.raise_exception("required plugin '%s' is not present" %
+                                     name, TraitError)                
+        
     def add_container(self, name, obj):
         """Add a Container object to this Container.
         Returns the added Container object.
         """
+        if '.' in name:
+            self.raise_exception(
+                'add_container does not allow dotted path names like %s' %
+                name, ValueError)
         if obj == self:
             self.raise_exception('cannot make an object a child of itself',
                                  RuntimeError)
@@ -424,10 +457,9 @@ class Container(HasTraits):
                 self.remove_container(name)
             setattr(self, name, obj)
             obj.name = name
-            # if this object is already installed in a hierarchy,
-            # then go ahead and tell the obj (which will in turn
-            # tell all of its children) that its hierarchy is
-            # defined.
+            # if this object is already installed in a hierarchy, then go
+            # ahead and tell the obj (which will in turn tell all of its
+            # children) that its scope tree back to the root is defined.
             if self._call_tree_rooted is False:
                 obj.tree_rooted()
         else:
@@ -438,15 +470,33 @@ class Container(HasTraits):
         
     def remove_container(self, name):
         """Remove the specified child from this container and remove any
-        public Variable objects that reference that child. Notify any
+        public trait objects that reference that child. Notify any
         observers."""
+        if '.' in name:
+            self.raise_exception(
+                'remove_container does not allow dotted path names like %s' %
+                                 name, ValueError)
         trait = self.trait(name)
         if trait is not None:
+            # for Instance traits, set their value to None but don't remove
+            # the trait
             obj = getattr(self, name)
-            self.remove_trait(name)
+            if obj is not None and not isinstance(obj, Container):
+                self.raise_exception('attribute %s is not a Container' % name,
+                                     RuntimeError)
+            if trait.is_trait_type(Instance):
+                if obj is not None:
+                    if trait._allow_none:
+                        setattr(self, name, None)
+                    else:
+                        self.raise_exception(
+                            "Instance trait %s does not allow a value of None so it's contents can't be removed"
+                            % name, RuntimeError)
+            else:
+                self.remove_trait(name)
             return obj       
         else:
-            self.raise_exception("cannot remove child '%s': not found"%
+            self.raise_exception("cannot remove container '%s': not found"%
                                  name, TraitError)
 
     def tree_rooted(self):
@@ -550,8 +600,8 @@ class Container(HasTraits):
             else:
                 result[ name ] = trait
 
-        return result       
-        
+        return result
+    
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form 
         (rel_pathname, obj) for each trait of this Container that matches
@@ -775,7 +825,7 @@ class Container(HasTraits):
                     obj._array_set('.'.join(tup[1:]), value, index)
                 else:
                     try:
-                        deep_setattr(obj, '.'.join(tup[1:]), value)
+                        _deep_setattr(obj, '.'.join(tup[1:]), value)
                     except Exception:
                         self.raise_exception("object has no attribute '%s'" % 
                                              path, TraitError)
@@ -924,7 +974,7 @@ class Container(HasTraits):
         If specified, the root object is renamed to `instance_name`.
         `observer` will be called via an EggObserver. Returns the root object.
         """
-        entry_group = 'openmdao.components'
+        entry_group = 'openmdao.component'
         if not entry_name:
             entry_name = package  # Default component is top.
         return eggloader.load_from_eggpkg(package, entry_group, entry_name,
@@ -978,23 +1028,54 @@ class Container(HasTraits):
                 io_graph.add_edges_from([(invar, o) for o in outs])
         return self._io_graph
     
-    def _build_trait(self, ref_name, iostatus=None, trait=None):
+    def _build_trait(self, pathname, iostatus=None, trait=None):
         """Asks the component to dynamically create a trait for the 
         attribute given by ref_name, based on whatever knowledge the
         component has of that attribute.
         """
-        names = ref_name.split('.')
-        obj = self
-        for name in names:
-            obj = getattr(obj, name)
+        objtrait, value = self._find_trait_and_value(pathname)
+        if iostatus is None and objtrait is not None:
+            iostatus = objtrait.iostatus
+        if trait is None:
+            trait = objtrait
         # if we make it to here, object specified by ref_name exists
-        return PathProperty(ref_name=ref_name, iostatus=iostatus, 
+        return PathProperty(ref_name=pathname, iostatus=iostatus, 
                             trait=trait)
+    
+    def _find_trait_and_value(self, pathname):
+        """Return a tuple of the form (trait, value) for the value indicated
+        by the given dotted pathname. Raises an exception if the value
+        indicated by the pathname is not found. If the value is found but has
+        no trait, then (None, value) is returned.
+        """
+        if pathname:
+            names = pathname.split('.')
+            obj = self
+            for name in names:
+                if isinstance(obj, HasTraits):
+                    objtrait = obj.trait(name)
+                else:
+                    objtrait = None
+                obj = getattr(obj, name)
+            return (objtrait, obj)
+        else:
+            return (None, None)
 
-    def make_public(self, obj_info, iostatus='in'):
-        """Create trait(s) specified by the contents of obj_info. Calls
+    def create_io_traits(self, obj_info, iostatus='in'):
+        """Create io trait(s) specified by the contents of obj_info. Calls
         _build_trait(), which can be overridden by subclasses, to create each
         trait.
+        
+        obj_info is assumed to be either a string, a tuple, or an iterator
+        that returns strings or tuples. Tuples must contain a name and an
+        alias, and my optionally contain an iostatus and a validation trait.
+        
+        For example, the following are valid calls:
+
+        obj.create_io_traits('foo')
+        obj.create_io_traits(['foo','bar','baz'])
+        obj.create_io_traits(('foo', 'foo_alias', 'in', some_trait))
+        obj.create_io_traits([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
         """
         if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
             lst = [obj_info]
@@ -1017,48 +1098,44 @@ class Container(HasTraits):
                 except IndexError:
                     pass
             else:
-                self.raise_exception('make_public cannot add trait %s' % entry,
+                self.raise_exception('create_io_traits cannot add trait %s' % entry,
                                      TraitError)
-                
-            trait = self._build_trait(ref_name, iostat, trait)
-            
-            self.add_trait(name, trait)
+            self.add_trait(name, 
+                           self._build_trait(ref_name, iostat, trait))
         
 
-    def get_dyn_trait(self, name, iostat):
+    def get_dyn_trait(self, name, iostatus=None):
         """Retrieves the named trait, attempting to create it on-the-fly if
         it doesn't already exist.
         """
         trait = self.trait(name)
-        
-        if trait is None:
-            try:
-                # check to see if component has the ability to create traits
-                # on-the-fly
-                self.hoist(name, iostat)
-            except AttributeError:
-                self.raise_exception("Cannot locate trait named '%s'" %
-                                     name, NameError)
-            return self.trait(name)
-        return trait
+        if trait:
+            return trait
+        try:
+            return self.create_alias(name, iostatus)
+        except AttributeError:
+            self.raise_exception("Cannot locate trait named '%s'" %
+                                 name, NameError)
 
     
-    def hoist(self, path, io_status=None, trait=None):
+    def create_alias(self, path, io_status=None, trait=None, alias=None):
         """Create a trait that maps to some internal variable designated by a
         dotted path. If a trait is supplied as an argument, use that trait as
-        a validator for the hoisted value. The resulting trait will have the
-        dotted path as its name.
+        a validator for the aliased value. The resulting trait will have the
+        dotted path as its name (or alias if specified) and will be added to 
+        self.  An exception will be raised if the trait already exists.
         """
-        oldtrait = self.trait(path)
+        if alias is None:
+            alias = path
+        oldtrait = self.trait(alias)
         if oldtrait is None:
-            if trait is None:
-                self.make_public((path, path, io_status))
-            else:
-                self.make_public((path, path, io_status, trait))                
+            newtrait = self._build_trait(path, iostatus=io_status, trait=trait)
+            self.add_trait(alias, newtrait)
+            return newtrait
         else:
-            self.raise_exception("'%s' has already been hoisted." % path, 
-                                 RuntimeError)
-        return path
+            self.raise_exception(
+                "Can't create alias '%s' because it already exists." % alias, 
+                RuntimeError)
     
     def config_changed(self):
         """Call this whenever the configuration of this Container changes,
@@ -1099,22 +1176,33 @@ class Container(HasTraits):
         """Record a debug message."""
         self._logger.debug(msg, *args, **kwargs)
 
+
 def _get_entry_group(obj):
     """Return entry point group for given object type."""
     if _get_entry_group.group_map is None:
         # Fill-in here to avoid import loop.
-        from openmdao.main.api import Component
+        from openmdao.main.api import Component, Driver
+
+        # Entry point definitions taken from plugin-guide.
+        # Order should be from most-specific to least.
         _get_entry_group.group_map = [
-            (Component, 'openmdao.components'),
-            (Container, 'openmdao.containers'),
+            (TraitType,          'openmdao.trait'),
+            (Driver,             'openmdao.driver'),
+            (ICaseIterator,      'openmdao.case_iterator'),
+            (IResourceAllocator, 'openmdao.resource_allocator'),
+            (Component,          'openmdao.component'),
+            (Container,          'openmdao.container'),
         ]
 
     for cls, group in _get_entry_group.group_map:
-        if isinstance(obj, cls):
-            return group
+        if issubclass(cls, Interface):
+            if validate_implements(obj, cls):
+                return group
+        else:
+            if isinstance(obj, cls):
+                return group
 
     raise TypeError('No entry point group defined for %r' % obj)
 
-_get_entry_group.group_map = None  # Map from class to group name.
-
+_get_entry_group.group_map = None  # Map from class/interface to group name.
 

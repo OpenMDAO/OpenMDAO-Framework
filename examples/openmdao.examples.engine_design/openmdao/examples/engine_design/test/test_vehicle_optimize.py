@@ -25,7 +25,7 @@ class EngineOptimizationTestCase(unittest.TestCase):
         self.model.driving_sim.bore = 95
         self.model.driving_sim.spark_angle = -35.368341874
 
-        self.model.driver.maxiters = 1
+        self.model.driver.itmax = 1
         
         self.model.run()
         

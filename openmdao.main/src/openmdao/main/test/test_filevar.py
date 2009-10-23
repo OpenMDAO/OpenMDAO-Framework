@@ -4,14 +4,16 @@ Test of FileTraits.
 
 import cPickle
 import logging
-import os
+import os.path
 import shutil
 import unittest
 
-from enthought.traits.api import Bool, Array, Str
+from numpy.testing import assert_equal
+
+from enthought.traits.api import Bool, Array, Str, TraitError
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.main.filevar import FileTrait
+from openmdao.main.filevar import FileTrait, FileRef
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -23,8 +25,9 @@ class Source(Component):
     write_files = Bool(True, iostatus='in')
     text_data = Str(iostatus='in')
     binary_data = Array('d', iostatus='in')
-    text_file = FileTrait(path='source.txt', iostatus='out')
-    binary_file = FileTrait(path='source.bin', iostatus='out', binary=True)
+    text_file = FileTrait(path='source.txt', iostatus='out', content_type='txt')
+    binary_file = FileTrait(path='source.bin', iostatus='out', binary=True,
+                            extra_stuff='Hello world!')
 
     def execute(self):
         """ Write test data to files. """
@@ -38,21 +41,49 @@ class Source(Component):
             out.close()
 
 
+class Passthrough(Component):
+    """ Copies input files (implicitly via local_path) to output. """
+    text_in = FileTrait(iostatus='in', local_path='tout',
+                        legal_types=['xyzzy', 'txt'])
+    binary_in = FileTrait(iostatus='in', local_path='bout')
+    text_out = FileTrait(path='tout', iostatus='out')
+    binary_out = FileTrait(path='bout', iostatus='out', binary=True)
+
+    def execute(self):
+        """ File copies are performed implicitly. """
+        # We have to manually propagate 'extra_stuff' because the output
+        # FileRef isn't copied from the input FileRef.
+        self.binary_out.extra_stuff = self.binary_in.extra_stuff
+
+
+class Middle(Assembly):
+    """ Intermediary which passes-on files. """
+
+    def __init__(self, *args, **kwargs):
+        super(Middle, self).__init__(*args, **kwargs)
+
+        self.add_container('passthrough', Passthrough(directory='Passthrough'))
+
+        self.create_passthrough('passthrough.text_in')
+        self.create_passthrough('passthrough.binary_in')
+
+        self.create_passthrough('passthrough.text_out')
+        self.create_passthrough('passthrough.binary_out')
+
+
 class Sink(Component):
     """ Consumes files. """
 
+    bogus_path = Str('', iostatus='in')
     text_data = Str(iostatus='out')
     binary_data = Array('d', iostatus='out')
-    text_file = FileTrait(path='*', iostatus='in')
-    binary_file = FileTrait(path='*', iostatus='in')
-        
-    def __init__(self, *args, **kwargs):
-        super(Sink, self).__init__(*args, **kwargs)
-        self.text_file.filename = 'sink.txt'
-        self.binary_file.filename = 'sink.bin'
+    text_file = FileTrait(iostatus='in')
+    binary_file = FileTrait(iostatus='in')
 
     def execute(self):
         """ Read test data from files. """
+        if self.bogus_path:
+            self.text_file.path = self.bogus_path
         inp = self.text_file.open()
         self.text_data = inp.read()
         inp.close()
@@ -68,14 +99,30 @@ class Model(Assembly):
     def __init__(self, *args, **kwargs):
         super(Model, self).__init__(*args, **kwargs)
 
-        self.add_container('Source', Source(directory='Source'))
-        self.add_container('Sink', Sink(directory='Sink'))
+        self.add_container('source', Source(directory='Source'))
+        self.add_container('middle', Middle(directory='Middle'))
+        self.add_container('sink', Sink(directory='Sink'))
 
-        self.connect('Source.text_file', 'Sink.text_file')
-        self.connect('Source.binary_file', 'Sink.binary_file')
+        self.connect('source.text_file', 'middle.text_in')
+        self.connect('source.binary_file', 'middle.binary_in')
 
-        self.Source.text_data = 'Hello World!'
-        self.Source.binary_data = [3.14159, 2.781828, 42]
+        self.connect('middle.text_out', 'sink.text_file')
+        self.connect('middle.binary_out', 'sink.binary_file')
+
+        self.source.text_data = 'Hello World!'
+        self.source.binary_data = [3.14159, 2.781828, 42]
+
+    def tree_rooted(self):
+        """ Sets passthrough paths to absolute to exercise code. """
+        super(Model, self).tree_rooted()
+
+        self.middle.passthrough.trait('text_in').trait_type._metadata['local_path'] = \
+            os.path.join(self.middle.passthrough.get_abs_directory(),
+                         self.middle.passthrough.trait('text_in').local_path)
+
+        self.middle.passthrough.trait('text_out').trait_type._metadata['path'] = \
+            os.path.join(self.middle.passthrough.get_abs_directory(),
+                         self.middle.passthrough.trait('text_out').path)
 
 
 class TestCase(unittest.TestCase):
@@ -88,14 +135,11 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         """ Called after each test in this class. """
         self.model.pre_delete()
-        try:
-            shutil.rmtree('Source')
-        except OSError:
-            pass
-        try:
-            shutil.rmtree('Sink')
-        except OSError:
-            pass
+        for directory in ('Source', 'Middle', 'Sink'):
+            try:
+                shutil.rmtree(directory)
+            except OSError:
+                pass
         self.model = None
 
     def test_connectivity(self):
@@ -103,26 +147,28 @@ class TestCase(unittest.TestCase):
         logging.debug('test_connectivity')
 
         # Verify expected initial state.
-        self.assertNotEqual(self.model.Sink.text_data,
-                            self.model.Source.text_data)
-        self.assertNotEqual(self.model.Sink.binary_data,
-                            self.model.Source.binary_data)
-        self.assertNotEqual(self.model.Sink.binary_file.binary, True)
+        self.assertNotEqual(self.model.sink.text_data,
+                            self.model.source.text_data)
+        self.assertNotEqual(self.model.sink.binary_data,
+                            self.model.source.binary_data)
 
         self.model.run()
 
         # Verify data transferred.
-        self.assertEqual(self.model.Sink.text_data, self.model.Source.text_data)
-        self.assertEqual(all(self.model.Sink.binary_data==self.model.Source.binary_data),
-                         True)
-        self.assertEqual(self.model.Sink.binary_file.binary, True)
+        self.assertEqual(self.model.sink.text_data,
+                         self.model.source.text_data)
+        assert_equal(self.model.sink.binary_data,
+                     self.model.source.binary_data)
+        self.assertEqual(self.model.sink.binary_file.binary, True)
+        self.assertEqual(self.model.sink.binary_file.extra_stuff,
+                         self.model.source.binary_file.extra_stuff)
 
     def test_src_failure(self):
         logging.debug('')
         logging.debug('test_src_failure')
 
         # Turn off source write, verify error message.
-        self.model.Source.write_files = False
+        self.model.source.write_files = False
         try:
             self.model.run()
         except IOError, exc:
@@ -131,84 +177,148 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('IOError expected')
 
-    def test_illegal_directory(self):
+    def test_illegal_src(self):
         logging.debug('')
-        logging.debug('test_bad_directory')
+        logging.debug('test_illegal_src')
 
+        # Set illegal path (during execution of sink), verify error message.
+        self.model.sink.bogus_path = '/illegal'
         try:
-            # Set an illegal execution directory, verify error.
-            src = Source(directory='/illegal')
-            src.tree_rooted()
+            self.model.run()
         except ValueError, exc:
-            msg = ": Illegal execution directory '/illegal'," \
+            msg = "middle.passthrough: Illegal path '/illegal'," \
                   " not a descendant of"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected ValueError')
 
-    def test_protected_directory(self):
+    def test_legal_types(self):
         logging.debug('')
-        logging.debug('test_protected_directory')
+        logging.debug('test_legal_types')
 
-        # Create a protected directory.
-        directory = 'protected'
-        if os.path.exists(directory):
-            os.rmdir(directory)
-        os.mkdir(directory)
-        os.chmod(directory, 0)
-        exe_dir = os.path.join(directory, 'xyzzy')
+        # Set mismatched type and verify error message.
+        self.model.source.text_file.content_type = 'invalid'
         try:
-            # Attempt auto-creation of execution directory in protected area.
-            src = Source(directory=exe_dir)
-            src.tree_rooted()
-        except OSError, exc:
-            msg = ": Can't create execution directory"
-            self.assertEqual(str(exc)[:len(msg)], msg)
+            self.model.run()
+        except TraitError, exc:
+            msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
+                  " Content type 'invalid' not one of ['xyzzy', 'txt']"
+            self.assertEqual(str(exc), msg)
         else:
-            self.fail('Expected OSError')
-        finally:
-            os.rmdir(directory)
+            self.fail('Expected TraitError')
 
-    def test_file_in_place_of_directory(self):
-        logging.debug('')
-        logging.debug('test_file_in_place_of_directory')
-
-        # Create a plain file.
-        directory = 'plain_file'
-        if os.path.exists(directory):
-            os.remove(directory)
-        out = open(directory, 'w')
-        out.write('Hello world!\n')
-        out.close()
+        # Set null type and verify error message.
+        self.model.source.text_file.content_type = ''
         try:
-            # Set execution directory to plain file.
-            self.source = Source(directory=directory)
-            self.source.tree_rooted()
+            self.model.run()
+        except TraitError, exc:
+            msg = ": cannot set 'middle.text_in' from 'source.text_file':" \
+                  " Content type '' not one of ['xyzzy', 'txt']"
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected TraitError')
+
+    def test_formatting(self):
+        logging.debug('')
+        logging.debug('test_formatting')
+        msg = "{'big_endian': False, 'binary': True, 'content_type': ''," \
+              " 'desc': '', 'extra_stuff': 'Hello world!'," \
+              " 'path': 'source.bin', 'recordmark_8': False," \
+              " 'single_precision': False, 'unformatted': False}"
+        self.assertEqual(str(self.model.source.binary_file), msg)
+
+    def test_no_owner(self):
+        logging.debug('')
+        logging.debug('test_no_owner')
+
+        # Absolute FileRef.
+        path = os.path.join(os.sep, 'xyzzy')
+        ref = FileRef(path)
+        try:
+            ref.open()
         except ValueError, exc:
-            path = os.path.join(os.getcwd(), directory)
-            self.assertEqual(str(exc),
-                ": Execution directory path '%s' is not a directory."
-                % path)
+            msg = "Path '%s' is absolute and no path checker is available." \
+                  % path
+            self.assertEqual(str(exc), msg)
         else:
             self.fail('Expected ValueError')
-        finally:
-            os.remove(directory)
-            
-    ## This test currently fails because no exception is raised
-    ## When a non-existent path is set. Instead, that non-existent
-    ## path gets created
-    #def test_nonexistent_directory(self):
-        #logging.debug('')
-        #logging.debug('test_nonexistent_directory')
 
-        #try:
-            ## Set execution directory to non-existant path.
-            #self.model.Source.directory = 'no-such-dir'
-        #except ValueError, exc:
-            #msg = "Source: Execution directory path "
-            #self.assertEqual(str(exc)[:len(msg)], msg)
-        #else:
-            #self.fail('Expected ValueError')
+        # Relative FileRef.
+        path = 'xyzzy'
+        ref = FileRef(path)
+        try:
+            ref.open()
+        except ValueError, exc:
+            msg = "Path '%s' is relative and no absolute directory is available." \
+                  % path
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected ValueError')
+
+    def test_bad_trait(self):
+        logging.debug('')
+        logging.debug('test_bad_trait')
+
+        try:
+            FileTrait(42)
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             'FileTrait default value must be a FileRef.')
+        else:
+            self.fail('Expected TraitError')
+
+        try:
+            FileTrait()
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             "FileTrait must have 'iostatus' defined.")
+        else:
+            self.fail('Expected TraitError')
+
+        try:
+            FileTrait(iostatus='out')
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             "Output FileTrait must have 'path' defined.")
+        else:
+            self.fail('Expected TraitError')
+
+        try:
+            FileTrait(iostatus='out', path='xyzzy', legal_types=42)
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             "'legal_types' invalid for output FileTrait.")
+        else:
+            self.fail('Expected TraitError')
+
+        try:
+            FileTrait(iostatus='out', path='xyzzy', local_path=42)
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             "'local_path' invalid for output FileTrait.")
+        else:
+            self.fail('Expected TraitError')
+
+        try:
+            FileTrait(iostatus='in', path='xyzzy')
+        except TraitError, exc:
+            self.assertEqual(str(exc),
+                             "'path' invalid for input FileTrait.")
+        else:
+            self.fail('Expected TraitError')
+
+    def test_bad_value(self):
+        logging.debug('')
+        logging.debug('test_bad_value')
+        try:
+            self.model.source.text_file = 42
+        except TraitError, exc:
+            msg = "The 'text_file' trait of a Source instance must be" \
+                  " a legal value, but a value of 42 <type 'int'> was" \
+                  " specified."
+            self.assertEqual(str(exc), msg)
+        else:
+            self.fail('Expected TraitError')
 
 
 if __name__ == '__main__':

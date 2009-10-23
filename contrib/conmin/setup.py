@@ -13,6 +13,7 @@ kwds = {'install_requires':['numpy'],
    # NOTE: we use 'url' here, but it really translates to 'home-page'
    # in the metadata. Go figure.
         'url': 'http://www.scilab.org/contrib/index_contrib.php?page=displayContribution&fileID=1086',
+        'package_data': {'openmdao.main': ['*.html']},
        }
 kwds.update(config.todict())
 

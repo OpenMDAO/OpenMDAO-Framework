@@ -150,7 +150,7 @@ In order to assemble a complete working version of OpenMDAO, the following
 steps are performed:
 
     1. bootstrap a buildout using the appropriate python version, e.g.,
-         ``python2.5 bootstrap.py``
+         ``python2.6 bootstrap.py``
     2. obtain a buildout configuration file from the OpenMDAO website, e.g.,
           ``wget http://openmdao.org/releases/1.0.3/buildout.cfg``
     3. execute the buildout using that configuration file, e.g.,

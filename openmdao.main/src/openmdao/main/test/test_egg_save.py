@@ -59,7 +59,7 @@ class Source(Assembly):
         SOURCE_INIT = True
 
         self.add_container('sub', Subcontainer())
-        self.create_passthru('sub.binary_file')
+        self.create_passthrough('sub.binary_file')
 
         # Some custom objects that must be restored.
         self.obj_list = [DataObj(i) for i in range(3)]
@@ -68,6 +68,7 @@ class Source(Assembly):
         self.external_files.append(FileMetadata(path='does-not-exist'))
 
     def tree_rooted(self):
+        """ Called once we have a valid hierarchy above us. """
         super(Source, self).tree_rooted()
         
         self.directory = self.get_abs_directory()  # Force absolute.
@@ -147,22 +148,16 @@ class Sink(Component):
 
     text_data = Str(iostatus='out')
     binary_data = Array('d', value=[], iostatus='out')
-
-    # Absolute FileTrait that exists at time of save.
-    text_file = FileTrait(path='*', iostatus='in')
-
+    text_file = FileTrait(iostatus='in')
+    binary_file = FileTrait(iostatus='in')
     executions = Int(0, iostatus='in',
                      desc='Count of Oddball instance_method() calls.')
-    
+
     def __init__(self, *args, **kwargs):
         super(Sink, self).__init__(*args, **kwargs)
-
         global SINK_INIT
         SINK_INIT = True
-        
-        # Relative FileTrait that exists at time of save.
-        self.add_trait('binary_file', FileTrait(path='*', iostatus='in'))
-        
+
     def execute(self):
         """ Read test data from files. """
         inp = self.text_file.open()
@@ -252,7 +247,8 @@ class OddballContainer(Container):
 
 def observer(state, string, file_fraction, byte_fraction):
     """ Observe progress. """
-    OBSERVATIONS.append((state, string, file_fraction, byte_fraction))
+    if state != 'analyze':  # 'analyze' is sporadic due to re-use of analyses.
+        OBSERVATIONS.append((state, string, file_fraction, byte_fraction))
     return True
 
 
@@ -310,8 +306,6 @@ class TestCase(unittest.TestCase):
                             self.model.Source.text_data)
         self.assertNotEqual(self.model.Sink.binary_data,
                             self.model.Source.sub.binary_data)
-        self.assertNotEqual(
-            self.model.Sink.binary_file.binary, True)
 
         for path in EXTERNAL_FILES:
             path = os.path.join(self.model.Source.get_abs_directory(), path)
@@ -337,7 +331,7 @@ class TestCase(unittest.TestCase):
         if use_setuptools:
             expected = [
                 ('add', 'write-via-setuptools'),
-                ('complete', 'Egg_TestModel-1.2.3-py2.5.egg'),
+                ('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]),
             ]
         else:
             expected = [
@@ -372,17 +366,17 @@ class TestCase(unittest.TestCase):
             # Add our file if we're not considered part of an egg.
             if sys.modules[self.__module__].__file__.find('.egg') < 0:
                 expected.append(('add', 'Egg_TestModel/test_egg_save.py'))
-            expected.append(('complete', 'Egg_TestModel-1.2.3-py2.5.egg'))
+            expected.append(('complete', 'Egg_TestModel-1.2.3-py%d.%d.egg' % sys.version_info[:2]))
 
         self.assertEqual(len(OBSERVATIONS), len(expected))
         for i, observation in enumerate(OBSERVATIONS):
             state, string, file_fraction, byte_fraction = observation
-            self.assertEqual(state,  expected[i][0])
+            self.assertEqual(state, expected[i][0])
             if expected[i][1].endswith('.egg'): # Unique versions mess this up.
                 self.assertEqual(string.startswith(self.model.name), True)
                 self.assertEqual(string.endswith('.egg'), True)
             else:
-                self.assertEqual(string, expected[i][1])
+                self.assertEqual(string.replace('\\','/'), expected[i][1])
             self.assertEqual(file_fraction, float(i)/float(len(expected)-1))
 
         # Run and verify correct operation.
@@ -469,8 +463,6 @@ class TestCase(unittest.TestCase):
                                 self.model.Source.text_data)
             self.assertNotEqual(self.model.Sink.binary_data,
                                 self.model.Source.sub.binary_data)
-            self.assertNotEqual(
-                self.model.Sink.binary_file.binary, True)
 
             for path in EXTERNAL_FILES:
                 path = os.path.join(self.model.Source.get_abs_directory(), path)
@@ -549,12 +541,12 @@ class TestCase(unittest.TestCase):
         self.model.Oddball.directory = os.getcwd()
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
-        except Exception, exc:
+        except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp" \
                   " directory"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
-            self.fail('Expected Exception')
+            self.fail('Expected ValueError')
 
     def test_save_bad_destination(self):
         logging.debug('')
@@ -564,8 +556,10 @@ class TestCase(unittest.TestCase):
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
                                    dst_dir='/')
         except IOError, exc:
-            msg = "Egg_TestModel: Can't save to '/', no write permission"
-            self.assertEqual(str(exc), msg)
+            #msg = "Egg_TestModel: Can't save to '/', no write permission"
+            #self.assertEqual(str(exc), msg)
+            self.assertTrue('no write permission' in str(exc) or 
+                            'Permission denied' in str(exc))
         else:
             self.fail('Expected IOError')
 
@@ -610,22 +604,15 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_filevar')
 
         # Set file trait path outside model root.
-        path = os.path.join(os.getcwd(), 'bad-file-variable')
-        out = open(path, 'w')
-        out.close()
-        orig_path = self.model.Source.text_file.path
-        self.model.Source.text_file.path = path
+        self.model.Source.text_file.path = '/illegal'
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
-        except Exception, exc:
+        except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file" \
                   " path"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
-            self.fail('Expected Exception')
-        finally:
-            os.remove(path)
-            self.model.Source.text_file.path = orig_path
+            self.fail('Expected ValueError')
 
     def test_save_bad_format(self):
         logging.debug('')
@@ -709,7 +696,7 @@ class TestCase(unittest.TestCase):
                 msg = "Egg_TestModel: Can't save to" \
                       " 'Egg_TestModel/Egg_TestModel.pickle': Can't pickle" \
                       " <type 'code'>: attribute lookup __builtin__.code failed"
-                self.assertEqual(str(exc), msg)
+                self.assertEqual(str(exc).replace('\\','/'), msg)
             else:
                 self.fail('Expected cPickle.PicklingError')
 
@@ -850,11 +837,10 @@ sys.exit(
 )
 """)
             out.close()
-            os.chmod(installer, 0755)
 
             # Install via subprocess with PYTHONPATH set (for easy_install).
             logging.debug('Installing via subprocess...')
-            env = os.environ
+            env = os.environ.copy()
             path = env.get('PYTHONPATH', '')
             if path:
                 path += os.pathsep
@@ -901,7 +887,7 @@ sys.exit(
             try:
                 Component.load_from_eggpkg(package_name, 'no-such-entry')
             except RuntimeError, exc:
-                msg = "No 'openmdao.components' 'no-such-entry' entry point."
+                msg = "No 'openmdao.component' 'no-such-entry' entry point."
                 self.assertEqual(str(exc), msg)
             else:
                 self.fail('Expected RuntimeError')
@@ -931,7 +917,7 @@ from openmdao.main.api import Component
 comp = Component.load_from_eggpkg('%(package)s', '%(entry)s')
 comp.run()
     
-""" % {'egg':os.path.join(install_dir, self.egg_name),
+""" % {'egg':os.path.join(install_dir, self.egg_name).replace('\\', '/'),
        'package':package_name, 'entry':entry_name})
             out.close()
 
@@ -954,6 +940,9 @@ comp.run()
             shutil.rmtree(test_dir)
 
     def test_pkg_resources_factory(self):
+        # NOTE: this test fails if run standalone:
+        #       ImportError: No module named test_egg_save
+        # Probably need Egg_TestModel.test_egg_save, or adjusted sys.path.
         logging.debug('')
         logging.debug('test_pkg_resources_factory')
 
@@ -963,8 +952,8 @@ comp.run()
         self.egg_name = egg_info[0]
 
         # Create factory.
-        factory = PkgResourcesFactory(['openmdao.components',
-                                       'openmdao.containers'],
+        factory = PkgResourcesFactory(['openmdao.component',
+                                       'openmdao.container'],
                                       [os.getcwd()])
         logging.debug('    loaders:')
         for key, value in factory._loaders.items():
@@ -1068,7 +1057,6 @@ comp.run()
                             model.Source.text_data)
         self.assertNotEqual(model.Sink.binary_data,
                             model.Source.sub.binary_data)
-        self.assertNotEqual(model.Sink.binary_file.binary, True)
 
         orig_dir = os.getcwd()
         os.chdir(model.Source.get_abs_directory())
@@ -1080,7 +1068,7 @@ comp.run()
             inp = open(EXTERNAL_FILES[2])
             data = inp.read()
             inp.close()
-            self.assertEqual(data, file_data)
+            self.assertEqual(data.strip(), file_data.strip())
         finally:
             os.chdir(orig_dir)
 

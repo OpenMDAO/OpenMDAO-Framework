@@ -26,7 +26,7 @@ class EngineOptimization(Assembly):
         
         # CONMIN Flags
         self.driver.iprint = 0
-        self.driver.maxiters = 30
+        self.driver.itmax = 30
         
         # CONMIN Objective 
         self.driver.objective = 'driving_sim.accel_time'

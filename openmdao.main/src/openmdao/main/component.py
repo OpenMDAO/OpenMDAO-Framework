@@ -102,10 +102,9 @@ class Component (Container):
         This function is called once prior to the first execution of this
         component, and may be called explicitly at other times if desired. 
         Classes that override this function must still call the base class
-        version in case we decide to add framework functionality here at
-        a later point in time.
+        version .
         """
-        pass
+        super(Component, self).check_config()
     
     def tree_rooted(self):
         """Calls the base class version of tree_rooted(), checks our
@@ -125,11 +124,6 @@ class Component (Container):
             else:
                 self.check_path(path, check_dir=True)
 
-        # Set owner for output file variables.
-        for fvarname, fvar, ftrait in self.get_file_vars():
-            if ftrait.iostatus == 'out':
-                fvar.owner = self
-        
     def _pre_execute (self):
         """Prepares for execution by calling tree_rooted() and check_config() if
         their 'dirty' flags are set, and by requesting that the parent Assembly
@@ -152,16 +146,9 @@ class Component (Container):
         else:
             invalid_ins = self.list_inputs(valid=False)
             if len(invalid_ins) > 0:
-                #self.debug('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
                 self._call_execute = True
                 name = self.name
-                # ask our parent to update our invalid inputs.
-                # we're using hasattr here instead of ininstance(x,Assembly) because
-                # importing Assembly would be a recursive import.  Could use a check
-                # for IAssembly interface instead...
-                if hasattr(self.parent, 'update_inputs'):
-                    self.parent.update_inputs(name,
-                                              ['.'.join([name, n]) for n in invalid_ins])
+                self.parent.update_inputs(['.'.join([name, n]) for n in invalid_ins])
                 for name in invalid_ins:
                     self.set_valid(name, True)
                                 
@@ -185,8 +172,7 @@ class Component (Container):
         executing, and updating output variables. Do not override this function.
         """
         if self.directory:
-            directory = self.get_abs_directory()
-            self.push_dir(directory)
+            self.push_dir()
 
         self._stop = False
         try:
@@ -211,8 +197,9 @@ class Component (Container):
         """Override of base class version to force call to check_config after
         any child containers are removed.
         """
+        obj = super(Component, self).remove_container(name)
         self.config_changed()
-        return super(Component, self).remove_container(name)
+        return obj
 
     def add_trait(self, name, *trait):
         """Overrides base definition of add_trait in order to
@@ -243,10 +230,9 @@ class Component (Container):
         """
 # pylint: disable-msg=E1101
         if not SimulationRoot.legal_path(path):
-            self.raise_exception(
-                "Illegal execution directory '%s', not a descendant of '%s'."
-                % (path, SimulationRoot.get_root()),
-                ValueError)
+            self.raise_exception("Illegal path '%s', not a descendant of '%s'."
+                                 % (path, SimulationRoot.get_root()),
+                                 ValueError)
         elif check_dir and not isdir(path):
                 self.raise_exception(
                     "Execution directory path '%s' is not a directory."
@@ -269,10 +255,10 @@ class Component (Container):
             
         return path
 
-    def push_dir (self, directory):
+    def push_dir (self, directory=None):
         """Change directory to dir, remembering current for later pop_dir()."""
         if not directory:
-            directory = '.'
+            directory = self.get_abs_directory()
         cwd = os.getcwd()
         if not isabs(directory):
             directory = join(self.get_abs_directory(), directory)
@@ -392,8 +378,8 @@ class Component (Container):
                 comp.directory = path
             for meta, path in fixup_meta:
                 meta.path = path
-            for comp, name, fvar in fixup_fvar:
-                comp.set(name+'.path', fvar.path, force=True)
+            for comp, name, path in fixup_fvar:
+                comp.set(name+'.path', path, force=True)
 
     def _fix_directory(self, comp, comp_dir, root_dir, require_relpaths,
                        fixup_dirs):
@@ -406,8 +392,8 @@ class Component (Container):
                 parent_dir = comp.parent.get_abs_directory()
                 fixup_dirs.append((comp, comp.directory))
                 comp.directory = self._relpath(comp_dir, parent_dir)
-            self.debug("    %s.directory reset to '%s'", 
-                       comp.name, comp.directory)
+                self.debug("    %s.directory reset to '%s'", 
+                           comp.name, comp.directory)
         elif require_relpaths:
             self.raise_exception(
                 "Can't save, %s directory '%s' doesn't start with '%s'."
@@ -428,16 +414,12 @@ class Component (Container):
             if not isabs(path):
                 path = join(comp_dir, path)
             path = normpath(path)
-            paths = glob.glob(path)
-            if not paths:
-                continue
-
             if path.startswith(root_dir):
                 if isabs(metadata.path):
-                    path = self._relpath(path, comp_dir)
+                    new_path = self._relpath(path, comp_dir)
                     fixup_meta.append((metadata, metadata.path))
-                    metadata.path = path
-                for path in paths:
+                    metadata.path = new_path
+                for path in glob.glob(path):
                     src_files.add(self._relpath(path, root_dir))
             elif require_relpaths:
                 self.raise_exception(
@@ -460,14 +442,12 @@ class Component (Container):
             if not isabs(path):
                 path = join(comp_dir, path)
             path = normpath(path)
-            if not exists(path):
-                continue
-
             if path.startswith(root_dir):
-                src_files.add(self._relpath(path, root_dir))
+                if exists(path):
+                    src_files.add(self._relpath(path, root_dir))
                 if isabs(fvar.path):
                     path = self._relpath(path, comp_dir)
-                    fixup_fvar.append((comp, fvarname, fvar))
+                    fixup_fvar.append((comp, fvarname, fvar.path))
                     comp.set(fvarname+'.path', path, force=True)
             elif require_relpaths:
                 self.raise_exception(
@@ -600,7 +580,7 @@ class Component (Container):
                        observer=None):
         """Restore external files from installed egg."""
         if self.directory:
-            self.push_dir(self.get_abs_directory())
+            self.push_dir()
         try:
             fvars = self.get_file_vars()
             if self.external_files or fvars:
