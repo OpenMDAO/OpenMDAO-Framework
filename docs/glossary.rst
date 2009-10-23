@@ -43,6 +43,7 @@ Glossary
         programming interface that aids in acquiring geometry data directly from CAD
         files.
 
+
       **Case**
         A collection of input names and values, and names of outputs to be stored
         along with the inputs after the process model runs.
@@ -329,8 +330,15 @@ Glossary
       **ResourceDescription**
         An object containing information defining system attributes required to
         select a  viable place to run a code.
+	
      
-
+      **reStructuredText**
+	A plain-text markup syntax and parser system used for in-line
+	program documentation (such as Python docstrings), for quickly
+	creating simple Web pages, and for standalone documents. The
+	reStructuredText parser is a component of Docutils.
+	
+     
       **revision**
         A snapshot of the state of files and directories, including their
         content. A revision also has some metadata associated with it, including

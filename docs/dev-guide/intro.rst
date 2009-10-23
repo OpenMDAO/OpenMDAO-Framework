@@ -42,8 +42,8 @@ intro from another machine.
 
 .. _`Setting-Up-a-Local-Cache-of-Installed-Distributions`:
 
-Setting Up a Local Cache of Installed Distributions
-+++++++++++++++++++++++++++++++++++++++++++++++++++
+*Setting Up a Local Cache of Installed Distributions*
++++++++++++++++++++++++++++++++++++++++++++++++++++++
 
 
 Prior to running any buildouts, you should set up a default config file that
@@ -73,8 +73,8 @@ This makes the name of each distribution unique.
 
 
 
-Bazaar User Setup
-+++++++++++++++++
+*Bazaar User Setup*
++++++++++++++++++++
 
 If you have not previously used Bazaar on a particular machine where you intend
 to work with Bazaar repositories, you should run the ``whoami``
@@ -95,8 +95,8 @@ to a :term:`repository` on that machine.
 .. index:: branch
 
 
-Code Location
-+++++++++++++
+*Code Location*
++++++++++++++++
     
 
 The bazaar repository for the OpenMDAO source code is currently only available
@@ -118,8 +118,8 @@ the form of bazaar merge directives sent via email to ``patches@openmdao.org``.
 .. index:: buildout
 
 
-Layout of a Source Repository
-+++++++++++++++++++++++++++++
+*Layout of a Source Repository*
++++++++++++++++++++++++++++++++
 
 Within an OpenMDAO branch repository,  the directory structure will look like
 this:
@@ -172,8 +172,8 @@ this:
 
 .. index:: namespace package
 
-Layout of a Namespace Package
-+++++++++++++++++++++++++++++
+*Layout of a Namespace Package*
++++++++++++++++++++++++++++++++
 
 OpenMDAO is large enough that it makes sense to split it up into multiple Python
 packages, but we want all of those packages to be under the umbrella of

@@ -46,6 +46,8 @@ How Does OpenMDAO Find Plugins?
 
 .. index:: plugin creation
 
+.. _Options-for-Plugin-Creation:
+
 Options for Plugin Creation
 ===========================
 

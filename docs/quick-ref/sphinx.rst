@@ -1,0 +1,510 @@
+.. index:: Sphinx, reStructuredText
+
+Sphinx and reStructuredText
+===========================
+
+OpenMDAO uses reStructruedText (reST), a plaintext markup language, to create
+files for its documentation. Sphinx is a Python documentation generator that
+converts reST to HTML. While reST provides the basic structure, Sphinx has
+specific directives that are used with reST to produce the desired results. For more
+information, please see the references that follow.
+
+References:
+
+* reStructuredText primer: http://docutils.sourceforge.net/docs/user/rst/quickstart.html 
+* Sphinx Documentation:  http://sphinx.pocoo.org/contents.html 
+
+
+Some Basics 
+-----------
+
+* The reST markup language assumes that a paragraph is the space between two blank
+  lines. One blank line between paragraphs is treated the same as four blank
+  lines between paragraphs.
+
+* You need at least one space between words and after periods. Extra spaces are
+  ignored. 
+  
+* Use one asterisk for emphasis (italics): ``*text*``
+
+* Use two asterisks for strong emphasis (boldface) ``**text**`` 
+
+* All text in headings (level one, level two, level three, etc.)
+  must be underlined. (In OpenMDAO documents, generally the title is overlined
+  and underlined, while the other headings are underlined only. All levels must
+  be different. Please see the :ref:`Style-Guide` for more information.)
+
+
+Updating your version of Sphinx
+-------------------------------
+
+*This assumes that the sys admin or one of the senior developers has upgraded the
+system to a later version of Sphinx than you are using.*
+
+To use the latest version of the software, you must first delete the old version
+from your ``installed_eggs`` directory. Type the following:
+
+
+::
+
+% cd /OpenMDAO/dev/<your_working_directory>/installed_eggs
+% rm -rf Sphinx-[current_version]   
+
+The next time you build, the new version of Sphinx will be added to your
+``installed_eggs`` directory and used to build your documentation.
+
+.. index:: literal text
+
+Literal text
+------------
+
+**- Inline literal text:**
+
+Use this markup for code samples or or any time you want literal text. 
+
+Typing this:
+
+::
+
+     ``Inline literal text``  
+   
+will result in this:
+
+| ``Inline literal text`` 
+
+.. seealso:: :ref:`Using-Inline-Literal-Text`
+
+
+**- Code:**
+
+To introduce a literal code block, use a double colon and skip a line before the
+text. You must indent the text two or more spaces. For example, typing this:
+
+
+::
+
+  ::
+  
+    self.connect('velocity', 'chassis.velocity')
+    self.connect('velocity', 'transmission.velocity')
+    self.connect('tire_circumference', 'chassis.tire_circ')
+    self.connect('tire_circumference', 'transmission.tire_circ')
+
+will produce this:
+
+::
+
+  self.connect('velocity', 'chassis.velocity')
+  self.connect('velocity', 'transmission.velocity')
+  self.connect('tire_circumference', 'chassis.tire_circ')
+  self.connect('tire_circumference', 'transmission.tire_circ')
+
+Syntax highlighting is done automatically for Python code if Pygments (a Python
+syntax highlighter) is installed.
+
+.. note::
+   You can also use this special marker (``::``) to introduce non-code literal
+   text for use in examples. (It was used to show the index examples and other
+   example files.)
+
+
+Hyperlinks
+----------
+
+**- External links**
+
+Use ```Link text <http://target>`_`` for inline Web links. 
+
+For example, typing:
+	 ```Python  2.2.1 <http://www.python.org/download/releases/2.1.1/license/>`_``
+
+will result in the following hyperlink: 
+	`Python  2.2.1 <http://www.python.org/download/releases/2.1.1/license/>`_ 
+
+If the link text should be the Web address, you don't need special markup; just
+type the address in the reST file, and the parser will find the
+link/mailing address in the text.
+
+For example, typing:
+	``http://www.python.org/download/releases/2.1.1/license/`` 
+	
+will result in this link:
+	http://www.python.org/download/releases/2.1.1/license/
+
+
+**- Internal links:** cross-referencing to a section title
+
+You can place a label before a section title using ``:ref:`label-name```. The
+section you are cross-referencing can be in the same file, a different
+file, or even a different document within the MDAO user documentation. However, 
+label names must be unique.
+
+For example, if you are in the *Developer's Guide* and want to refer the user to
+the tutorial problem overview in the the *User's Guide*, you would type
+something like:
+
+::
+  
+  Please see the tutorial problem, specifically the :ref:`Problem-Overview`.
+
+Then you would go to the *User's Guide* and place the label before the section
+title, as follows:
+
+::
+
+  .. _Problem-Overview:
+  
+  Problem Overview
+  ----------------
+
+  The overall objective of the tutorial problem is to design an automobile that
+  performs "well" as measured by three metrics:  . . . . 
+
+
+**- Seealso directive**
+
+This directive is similar to the internal link to a section title that was previously
+described. However, when you use this directive, the text (cross reference)
+appears in a highlighted box that spans the width of the page. 
+
+
+For example, typing this:
+
+::  
+
+  .. seealso:: :ref:`Options-for-Plugin-Creation`
+
+results in:
+
+.. seealso:: :ref:`Options-for-Plugin-Creation`
+
+
+You must also place the label before the section referred to, for example:
+
+::  
+
+  .. _Options-for-Plugin-Creation:
+
+
+Figures
+-------
+
+**- Generated figures**
+
+In the OpenMDAO documentation, we have been using the open source Dia application to
+create diagrams (figures) and saving them as .png files. Since these files may
+need to be updated, they go in the ``docs/generated_images`` directory on your
+branch.
+
+Here is an example to imitate or copy of how to link to a figure:
+
+::
+
+  .. _`Class Diagram of Core Classes`:
+
+  .. figure:: ../generated_images/ModelClasses.png     
+     :align: center
+
+     Class Diagram of Core Classes
+
+
+In the above example, ``.. _`Class Diagram of Core Classes`:`` is an optional label that is
+linked to from text that precedes the figure. In this case the preceding text says:
+``The figure `Class Diagram of Core Classes`_
+shows . . .`` . A hyperlink (cross reference) is not necessary, but if your figure is further down in the
+text, it is helpful to the reader. 
+
+The path to the image is: ``.. figure:: ../generated_images/ModelClasses.png``.
+Generally we align our figures *center*, as shown in the example, but that is up to the
+author.
+
+Last is the figure caption: ``Class Diagram of Core Classes``. You must leave a blank
+line before the title. (You would also leave a blank line after it since it is the end of a
+paragraph.) In Firefox, figure captions are automatically centered, but in Internet Explorer
+they appear flush left. 
+
+
+**- Static figures** 
+
+Static figures are stored in ``docs/images/<document_directory>`` on your branch. Here is an
+example from the *User Guide* where the author linked to a static figure titled *EPA City
+Driving Profile.* 
+
+
+::
+
+  .. _`EPA City Driving Profile`:
+
+  .. figure:: ../images/user-guide/EPA-city.gif
+     :align: center
+
+     EPA City Driving Profile
+
+
+Adding extra lines/maintaining like breaks
+------------------------------------------
+
+If you want to add an extra line after a graphic or table, use the vertical bar ("|")
+found above the backslash on the keyboard. Put it on a line by itself.
+
+ 
+Also use the vertical bar when you want to maintain line breaks. You might want
+to do this inside to maintain breaks in a specific block of text. If your text needs to be
+indented, then first indent, type the vertical bar, leave a space, and then type
+the desired text.
+
+
+Lists/bullets
+-------------
+
+To create a list: 
+
+* Place an asterisk (or hyphen or plus sign) at the start of a paragraph (list item). 
+
+* Indent any line after the first line in a list item so it aligns with the
+  first line. The same goes for numbered lists. 
+  
+* Leave a blank line after the last list item.
+
+You may insert a blank line between list items, but it is not necessary and does not change
+how they appear.
+
+**- Bullet list:**
+
+Typing this:
+
+::
+  
+  * Determine acceleration required to reach next velocity point
+  * Determine correct gear
+  * Solve for throttle position that matches the required
+    acceleration
+  
+will result in this:
+
+* Determine acceleration required to reach next velocity point
+* Determine correct gear
+* Solve for throttle position that matches the required
+  acceleration
+
+
+**- Numbered list:**
+
+You can type this:
+
+::
+
+  1. Torque seen by the transmission
+  2. Fuel burn under current load
+
+or this (use a # sign to auto number the items):
+  
+| ``#. Torque seen by the transmission``
+| ``#. Fuel burn under current load``  
+
+and you get this:
+
+1. Torque seen by the transmission
+2. Fuel burn under current load
+
+
+**- Nested list:**
+
+To create a nested list, you must place a blank line between the parent list and
+the nested list and indent the nested list.
+
+::
+
+  * Item 1 in the parent list
+  * Subitems in the parent list
+
+    * Beginning of a nested list
+    * Subitems in nested list
+
+  * Parent list continues 
+  
+
+In this case, it results in this:
+
+* Item 1 in the parent list
+* Subitems in the parent list
+
+    * Beginning of a nested list
+    * Subitems in nested list
+
+* Parent list continues 
+
+You may notice that even though we didn't put a blank line between items in the parent list,
+a blank line appears between them because of our nested list.
+
+
+Tables
+------
+
+**- Simple table:**
+
+The following table is an example of simple table. When you create a simple
+table, you must:
+
+* Leave at least 2 spaces between columns
+* Make sure the space between columns is free of text
+* Make sure the overline and underlines are all of identical length
+
+
+::
+
+   ==================  ===========================================  =======
+   **Variable**	       **Description**			            **Units**
+   ------------------  -------------------------------------------  -------
+   power	       Power produced by engine			    kW
+   ------------------  -------------------------------------------  -------
+   torque	       Torque produced by engine		    N*m
+   ------------------  -------------------------------------------  -------
+   fuel_burn	       Fuel burn rate				    li/sec
+   ------------------  -------------------------------------------  -------
+   engine_weight       Engine weight estimate			    kg
+   ==================  ===========================================  =======
+
+it results in:
+
+
+==================  ===========================================  =======
+**Variable**	    **Description**			         **Units**
+------------------  -------------------------------------------  -------
+power		    Power produced by engine			 kW
+------------------  -------------------------------------------  -------
+torque	            Torque produced by engine			 N*m
+------------------  -------------------------------------------  -------
+fuel_burn	    Fuel burn rate				 li/sec
+------------------  -------------------------------------------  -------
+engine_weight	    Engine weight estimate			 kg
+==================  ===========================================  =======
+
+The table that is generated does not have a box outline around it. Also, there is no space
+after the column line. Indenting the text does not affect this; the text will still be flush
+left to the column. (We can only hope that at some future date, the appearance of tables
+will be improved.)
+
+
+**- Grid table:**
+
+Grid tables are more cumbersome to produce because they require lines between
+columns and rows, and at the intersections of columns and rows. Use a simple table
+unless you have cell content or row and column spans that cannot be displayed using a
+simple table. 
+
+The grid table uses these characters:
+
+* Equals sign ("=") to separate an optional header row from the table body
+* Vertical bar ("|") to create column separators 
+* Hyphen ("-") to create row separators
+* Plus sign ("+") for the intersections of rows and columns
+
+Typing this:
+
+::
+
+  
+  +------------------------+------------+-----------+----------+
+  | Header row, column 1   | Header 2   | Header 3  | Header 4 |
+  | (header rows optional) |            |           |          |
+  +========================+============+===========+==========+
+  | body row 1, column 1   | column 2   | column 3  | column 4 |
+  +------------------------+------------+-----------+----------+
+  | body row 2             |Cells may span columns, if desired.|
+  +------------------------+------------+----------------------+
+  | body row 3             | Cells could| - Table cells        |
+  +------------------------+ also span  | - contain            |
+  | body row 4             | rows, as   | - body elements.     |
+  |                        | shown in   |                      |
+  |                        | this       |                      |
+  |                        | example.   |                      |
+  +------------------------+------------+----------------------+
+
+
+will produce this:
+
++------------------------+------------+-----------+----------+
+| Header row, column 1   | Header 2   | Header 3  | Header 4 |
+| (header rows optional) |            |           |          |
++========================+============+===========+==========+
+| body row 1, column 1   | column 2   | column 3  | column 4 |
++------------------------+------------+-----------+----------+
+| body row 2             |Cells may span columns, if desired.|
++------------------------+------------+----------------------+
+| body row 3             | Cells could| - Table cells        |
++------------------------+ also span  | - contain            |
+| body row 4             | rows, as   | - body elements.     |
+|                        | shown in   |                      |
+|                        | this       |                      |
+|                        | example.   |                      |
++------------------------+------------+----------------------+
+
+
+Index items
+------------
+
+The tech writer will review all new documentation and add index (and glossary) entries as
+needed. If you wish to add your own index items to a file, you may. Index entries go in the
+file preceding the section or paragraph containing the text to be indexed. *Note that all
+index entries are placed flush left.* Some examples follow.
+
+**- Single term** 
+     ``.. index:: egg``         
+
+Will appear in the index as:
+     ``egg``
+
+**- Pair**  
+     ``.. index:: pair: Python; module`` 
+
+will appear in the index under the P's as:
+
+::
+
+  Python
+      module
+
+and under the M's as:
+
+::
+   
+    module
+	Python
+
+**- Modified single**
+    ``.. plugins; registering``
+    
+will appear under the P's as:
+
+::
+
+    plugins, 
+       registering 
+
+|
+
+**- Shortcut for single entries**
+
+::
+
+  .. index:: component, assembly, egg, plugins
+
+  
+Testing Code
+------------
+
+For details on testing code in the documentation, please refer
+to :ref:`Testing-Code-in-the-Documentation` in the *Developer's Guide.*
+
+
+Including Code from the Source
+------------------------------
+
+See :ref:`Including-Code-Straight-from-the-Source` in the *Developer's Guide.*
+
+
+.. note::  Whenever you include a code snippet, list, a block of text, or similar syntax, be sure to leave a
+           blank line after the text. You might even need to extend the last line so it doesn't wrap. 
+
+
