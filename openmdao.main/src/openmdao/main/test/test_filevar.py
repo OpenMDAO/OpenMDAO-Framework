@@ -41,7 +41,7 @@ class Source(Component):
             out.close()
 
 
-class Passthru(Component):
+class Passthrough(Component):
     """ Copies input files (implicitly via local_path) to output. """
     text_in = FileTrait(iostatus='in', local_path='tout',
                         legal_types=['xyzzy', 'txt'])
@@ -62,13 +62,13 @@ class Middle(Assembly):
     def __init__(self, *args, **kwargs):
         super(Middle, self).__init__(*args, **kwargs)
 
-        self.add_container('passthru', Passthru(directory='Passthru'))
+        self.add_container('passthrough', Passthrough(directory='Passthrough'))
 
-        self.create_passthru('passthru.text_in')
-        self.create_passthru('passthru.binary_in')
+        self.create_passthrough('passthrough.text_in')
+        self.create_passthrough('passthrough.binary_in')
 
-        self.create_passthru('passthru.text_out')
-        self.create_passthru('passthru.binary_out')
+        self.create_passthrough('passthrough.text_out')
+        self.create_passthrough('passthrough.binary_out')
 
 
 class Sink(Component):
@@ -113,16 +113,16 @@ class Model(Assembly):
         self.source.binary_data = [3.14159, 2.781828, 42]
 
     def tree_rooted(self):
-        """ Sets passthru paths to absolute to exercise code. """
+        """ Sets passthrough paths to absolute to exercise code. """
         super(Model, self).tree_rooted()
 
-        self.middle.passthru.trait('text_in').trait_type._metadata['local_path'] = \
-            os.path.join(self.middle.passthru.get_abs_directory(),
-                         self.middle.passthru.trait('text_in').local_path)
+        self.middle.passthrough.trait('text_in').trait_type._metadata['local_path'] = \
+            os.path.join(self.middle.passthrough.get_abs_directory(),
+                         self.middle.passthrough.trait('text_in').local_path)
 
-        self.middle.passthru.trait('text_out').trait_type._metadata['path'] = \
-            os.path.join(self.middle.passthru.get_abs_directory(),
-                         self.middle.passthru.trait('text_out').path)
+        self.middle.passthrough.trait('text_out').trait_type._metadata['path'] = \
+            os.path.join(self.middle.passthrough.get_abs_directory(),
+                         self.middle.passthrough.trait('text_out').path)
 
 
 class TestCase(unittest.TestCase):
@@ -186,7 +186,7 @@ class TestCase(unittest.TestCase):
         try:
             self.model.run()
         except ValueError, exc:
-            msg = "middle.passthru: Illegal path '/illegal'," \
+            msg = "middle.passthrough: Illegal path '/illegal'," \
                   " not a descendant of"
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
