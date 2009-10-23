@@ -356,6 +356,10 @@ class Assembly (Component):
     def step(self):
         """Execute a single child component and return."""
         self.workflow.step()
+        
+    def stop(self):
+        """Stop the workflow."""
+        self.workflow.stop()
     
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).

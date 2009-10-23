@@ -3,7 +3,7 @@ The Container class
 """
 
 #public symbols
-__all__ = ["Container", "path_to_root", "set_as_top", "PathProperty"]
+__all__ = ["Container", "set_as_top", "PathProperty"]
 
 import datetime
 import copy
@@ -41,16 +41,6 @@ from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.main.interfaces import ICaseIterator, IResourceAllocator
 
-
-def path_to_root(node):
-    """An generator the returns nodes from the given
-    node up to (and including) the root node of a tree.
-    It assumes that node objects contain a 'parent' attribute.
-    """
-    while node:
-        yield node
-        node = node.parent
-        
 def set_as_top(cont):
     """Specifies that the given Container is the top of a 
     Container hierarchy.
@@ -58,7 +48,7 @@ def set_as_top(cont):
     cont.tree_rooted()
     return cont
 
-def deep_setattr(obj, path, value):
+def _deep_setattr(obj, path, value):
     """A multi-level setattr, setting the value of an
     attribute specified by a dotted path. For example,
     deep_settattr(obj, 'a.b.c', value).
@@ -78,7 +68,6 @@ def deep_setattr(obj, path, value):
     #of the object indicated by pathname.
     #Returns a tuple containing (proxy_or_parent, rest_of_pathname)
     #"""
-    
     
 
 # this causes any exceptions occurring in trait handlers to be re-raised.
@@ -351,7 +340,7 @@ class Container(HasTraits):
         if len(names) == 0:
             names = self._traits_meta_filter(None, **metadata).keys()
         return super(Container, self).trait_get(*names, **metadata)
-        
+    
         
     # call this if any trait having 'iostatus' metadata is changed    
     #@on_trait_change('+iostatus') 
@@ -507,7 +496,7 @@ class Container(HasTraits):
                 self.remove_trait(name)
             return obj       
         else:
-            self.raise_exception("cannot remove child '%s': not found"%
+            self.raise_exception("cannot remove container '%s': not found"%
                                  name, TraitError)
 
     def tree_rooted(self):
@@ -611,8 +600,8 @@ class Container(HasTraits):
             else:
                 result[ name ] = trait
 
-        return result       
-        
+        return result
+    
     def _items(self, visited, recurse=False, **metadata):
         """Return an iterator that returns a list of tuples of the form 
         (rel_pathname, obj) for each trait of this Container that matches
@@ -836,7 +825,7 @@ class Container(HasTraits):
                     obj._array_set('.'.join(tup[1:]), value, index)
                 else:
                     try:
-                        deep_setattr(obj, '.'.join(tup[1:]), value)
+                        _deep_setattr(obj, '.'.join(tup[1:]), value)
                     except Exception:
                         self.raise_exception("object has no attribute '%s'" % 
                                              path, TraitError)
