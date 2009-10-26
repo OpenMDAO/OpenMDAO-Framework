@@ -27,7 +27,7 @@ given requirement string(s). Downloaded distributions are placed in the
 specified destination or the current directory if no destination is
 specified.  If a distribution cannot be found in the given index(s), the
 Python Package Index will be searched as a last resort unless 
-search_pypi is False.
+search_pypi is False.  This does NOT install the distribution.
     """
     
     # allow multiple package indexes to be specified

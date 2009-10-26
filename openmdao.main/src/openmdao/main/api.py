@@ -7,10 +7,10 @@ from openmdao.main.log import logger
 from openmdao.main.expreval import ExprEvaluator
 
 from openmdao.main.factory import Factory
-from openmdao.main.factorymanager import create, get_available_types
+from openmdao.main.factorymanager import create, get_available_types, plugin_path
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
-from openmdao.main.container import Container, path_to_root, set_as_top
+from openmdao.main.container import Container, set_as_top
 from openmdao.main.component import Component, SimulationRoot
 from openmdao.main.assembly import Assembly
 from openmdao.main.driver import Driver

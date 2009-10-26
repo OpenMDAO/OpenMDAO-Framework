@@ -59,7 +59,7 @@ class Source(Assembly):
         SOURCE_INIT = True
 
         self.add_container('sub', Subcontainer())
-        self.create_passthru('sub.binary_file')
+        self.create_passthrough('sub.binary_file')
 
         # Some custom objects that must be restored.
         self.obj_list = [DataObj(i) for i in range(3)]

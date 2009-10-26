@@ -5,11 +5,17 @@ Working on Your Branch
 
 You must run ``bin/buildout`` from your ``buildout`` directory before you'll be
 able to execute OpenMDAO in any way. Running ``bin/buildout`` populates your
-``buildout/eggs`` directory with all of the eggs that OpenMDAO depends upon.
+eggs directory with all of the eggs that OpenMDAO depends upon and also builds
+the OpenMDAO Sphinx documentation, which can be viewed in a browser by typing 
+``bin/docs``.
 
 As you make changes to the source code, you may want to modify your buildout
 in some way, possibly adding new eggs, updating to new versions, etc. Whenever
 this happens, you must re-run ``bin/buildout``.
+
+When you make changes to the OpenMDAO documentation, you can either run ``bin/buildout``
+to rebuild the Sphinx docs, or run ``bin/sphinx-build`` if you don't want to 
+run a full buildout.
 
 
 .. index:: pair: source code; editing and debugging

@@ -102,10 +102,9 @@ class Component (Container):
         This function is called once prior to the first execution of this
         component, and may be called explicitly at other times if desired. 
         Classes that override this function must still call the base class
-        version in case we decide to add framework functionality here at
-        a later point in time.
+        version .
         """
-        pass
+        super(Component, self).check_config()
     
     def tree_rooted(self):
         """Calls the base class version of tree_rooted(), checks our
@@ -147,16 +146,9 @@ class Component (Container):
         else:
             invalid_ins = self.list_inputs(valid=False)
             if len(invalid_ins) > 0:
-                #self.debug('updating inputs %s on %s' % (invalid_ins,self.get_pathname()))
                 self._call_execute = True
                 name = self.name
-                # ask our parent to update our invalid inputs.
-                # we're using hasattr here instead of ininstance(x,Assembly) because
-                # importing Assembly would be a recursive import.  Could use a check
-                # for IAssembly interface instead...
-                if hasattr(self.parent, 'update_inputs'):
-                    self.parent.update_inputs(name,
-                                              ['.'.join([name, n]) for n in invalid_ins])
+                self.parent.update_inputs(['.'.join([name, n]) for n in invalid_ins])
                 for name in invalid_ins:
                     self.set_valid(name, True)
                                 
@@ -205,8 +197,9 @@ class Component (Container):
         """Override of base class version to force call to check_config after
         any child containers are removed.
         """
+        obj = super(Component, self).remove_container(name)
         self.config_changed()
-        return super(Component, self).remove_container(name)
+        return obj
 
     def add_trait(self, name, *trait):
         """Overrides base definition of add_trait in order to

@@ -151,65 +151,56 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
     
-    ## currently, connecting directly to/from Variables from a Container
-    ## inside of a ContainerVariable is not allowed.  Maybe later we can
-    ## add the ability to create passthru variables on-the-fly or something
-    #def test_connect_containers_sub(self):
-        #self.asm.set('comp1.dummy_in.rval_in', 75.4)
-        #self.asm.connect('comp1.dummy_out.rval_out','comp2.dummy_in.rval_in')
-        #self.asm.run()
-        #self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4*1.5)
-        
-    def test_create_passthru(self):
+    def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)
-        self.asm.create_passthru('comp3.rout')
+        self.asm.create_passthrough('comp3.rout')
         self.assertEqual(self.asm.get('comp3.r'), 75.4)
         self.assertEqual(self.asm.get('rout'), 0.0)
         self.asm.run()
         self.assertEqual(self.asm.get('comp3.rout'), 75.4*1.5)
         self.assertEqual(self.asm.get('rout'), 75.4*1.5)
         
-    def test_passthru_nested(self):
+    def test_passthrough_nested(self):
         self.asm.set('comp1.r', 8.)
-        self.asm.nested.create_passthru('comp1.r')
-        self.asm.nested.create_passthru('comp1.rout', 'foobar')
+        self.asm.nested.create_passthrough('comp1.r')
+        self.asm.nested.create_passthrough('comp1.rout', 'foobar')
         self.asm.connect('comp1.rout', 'nested.r')
         self.asm.connect('nested.foobar','comp2.r')
         self.asm.run()
         self.assertEqual(self.asm.get('comp1.rout'), 12.)
         self.assertEqual(self.asm.get('comp2.rout'), 27.)
                 
-    def test_create_passthru_alias(self):
+    def test_create_passthrough_alias(self):
         self.asm.nested.set('comp1.r', 75.4)
-        self.asm.nested.create_passthru('comp1.r','foobar')
+        self.asm.nested.create_passthrough('comp1.r','foobar')
         self.assertEqual(self.asm.nested.get('foobar'), 75.4)
         self.asm.run()
         self.assertEqual(self.asm.nested.get('foobar'), 75.4)
         
-    def test_passthru_already_connected(self):
+    def test_passthrough_already_connected(self):
         self.asm.connect('comp1.rout','comp2.r')
         self.asm.connect('comp1.sout','comp2.s')
         # this should fail since we're creating a second connection
         # to an input
         try:
-            self.asm.create_passthru('comp2.r')
+            self.asm.create_passthrough('comp2.r')
         except RuntimeError, err:
             self.assertEqual(str(err), ': comp2.r is already connected')
         else:
             self.fail('RuntimeError expected')
         self.asm.set('comp1.s', 'some new string')
         # this one should be OK since outputs can have multiple connections
-        self.asm.create_passthru('comp1.sout')
+        self.asm.create_passthrough('comp1.sout')
         self.asm.run()
         self.assertEqual(self.asm.get('sout'), 'some new string'[::-1])
         
-    def test_container_passthru(self):
+    def test_container_passthrough(self):
         self.asm.set('comp1.dummy_out.rval_in', 75.4)
-        self.asm.create_passthru('comp1.dummy_out','dummy_out_passthru')
+        self.asm.create_passthrough('comp1.dummy_out','dummy_out_passthrough')
         self.asm.run()
-        self.assertEqual(self.asm.get('dummy_out_passthru.rval_out'), 75.4*1.5)
+        self.assertEqual(self.asm.get('dummy_out_passthrough.rval_out'), 75.4*1.5)
 
-#    def test_discon_reconnect_passthru(self):
+#    def test_discon_reconnect_passthrough(self):
 #        self.fail('unfinished test')
         
     def test_invalid_connect(self):
@@ -226,12 +217,12 @@ class AssemblyTestCase(unittest.TestCase):
             self.assertEqual(': comp1.r must be an output variable',
                              str(err))
         else:
-            self.fail('exception expected')
+            self.fail('RuntimeError expected')
             
     def test_self_connect(self):
         try:
             self.asm.connect('comp1.rout','comp1.r')
-        except RuntimeError, err:
+        except Exception, err:
             self.assertEqual(': Cannot connect comp1.rout to comp1.r. Both are on same component.',
                              str(err))
         else:
@@ -264,7 +255,7 @@ class AssemblyTestCase(unittest.TestCase):
             self.assertEqual("circular dependency (['comp2', 'comp1']) would be created by"+
                              " connecting comp2.rout to comp1.r", str(err))
         else:
-            self.fail('exception expected')
+            self.fail('RuntimeError expected')
             
     def test_disconnect(self):
         # first, run connected
@@ -287,29 +278,40 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(comp2.r, 9.0)
         
-    def test_input_passthru_to_2_inputs(self):
+    def test_input_passthrough_to_2_inputs(self):
         asm = set_as_top(Assembly())
         asm.add_container('nested', Assembly())
         asm.nested.add_container('comp1', Simple())
         asm.nested.add_container('comp2', Simple())
-        asm.nested.create_passthru('comp1.a') 
+        asm.nested.create_passthrough('comp1.a') 
         asm.nested.connect('a', 'comp2.b') 
         self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
         asm.nested.a = 0.5
-        self.assertEqual(asm.nested.comp1.a, 0.5)
+        # until we run, the values of comp1.a and comp2.b won't change
+        self.assertEqual(asm.nested.comp1.a, 4.)
         self.assertEqual(asm.nested.comp2.b, 5.)
         self.assertEqual(asm.nested.comp2.get_valid('b'), False)
         asm.run()
         self.assertEqual(asm.nested.comp1.a, 0.5)
         self.assertEqual(asm.nested.comp2.b, 0.5)
+        self.assertEqual(asm.nested.comp1.get_valid('a'), True)
+        self.assertEqual(asm.nested.comp2.get_valid('b'), True)
+        asm.nested.a = 999.
+        self.assertEqual(asm.nested.comp1.get_valid('a'), False)
+        self.assertEqual(asm.nested.comp2.get_valid('b'), False)
+        self.assertEqual(asm.nested.comp1.a, 0.5)
+        self.assertEqual(asm.nested.comp2.b, 0.5)
+        asm.run()
+        self.assertEqual(asm.nested.comp1.a, 999.)
+        self.assertEqual(asm.nested.comp2.b, 999.)
         
-    def test_connect_2_outs_to_passthru(self):
+    def test_connect_2_outs_to_passthrough(self):
         asm = set_as_top(Assembly())
         asm.add_container('nested', Assembly())
         asm.nested.add_container('comp1', Simple())
         asm.nested.add_container('comp2', Simple())
-        asm.nested.create_passthru('comp1.c')
+        asm.nested.create_passthrough('comp1.c')
         try:
             asm.nested.connect('comp2.d', 'c')
         except RuntimeError, err:

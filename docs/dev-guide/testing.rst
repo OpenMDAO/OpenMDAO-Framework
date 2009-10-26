@@ -260,7 +260,7 @@ A simple example of how to implement these three blocks is shown here:
     .. testsetup:: Group1
     
 	# Put any preliminary code that needs to run before the sample code. 
-	# This block does not show up when Sphinx build the HTML
+	# This block does not show up when Sphinx builds the HTML
     
     .. testcode:: Group1
 
