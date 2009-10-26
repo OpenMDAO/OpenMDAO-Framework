@@ -75,17 +75,16 @@ def write(name, version, doc, entry_map, src_files, distributions, modules,
 
     sources = []
     files = []
-    bytes = 0 # Approximate (uncompressed) size. Used to set allowZip64 flag.
+    size = 0 # Approximate (uncompressed) size. Used to set allowZip64 flag.
 
     # Collect src_files.
     for path in src_files:
         path = os.path.join(name, path)
         files.append(path)
-        bytes += os.path.getsize(path)
+        size += os.path.getsize(path)
 
     # Collect Python modules.
-    # TODO: use 2.6 followlinks.
-    for dirpath, dirnames, filenames in os.walk('.'):
+    for dirpath, dirnames, filenames in os.walk('.', followlinks=True):
         dirs = copy.copy(dirnames)
         for path in dirs:
             if not os.path.exists(os.path.join(dirpath, path, '__init__.py')):
@@ -94,22 +93,8 @@ def write(name, version, doc, entry_map, src_files, distributions, modules,
             if path.endswith('.py'):
                 path = os.path.join(dirpath[2:], path)  # Skip leading './'
                 files.append(path)
-                bytes += os.path.getsize(path)
+                size += os.path.getsize(path)
                 sources.append(path)
-
-    if os.path.islink(name):
-        for dirpath, dirnames, filenames in os.walk(name):
-            dirs = copy.copy(dirnames)
-            for path in dirs:
-                if not os.path.exists(os.path.join(dirpath, path,
-                                                   '__init__.py')):
-                    dirnames.remove(path)
-            for path in filenames:
-                if path.endswith('.py'):
-                    path = os.path.join(dirpath, path)
-                    files.append(path)
-                    bytes += os.path.getsize(path)
-                    sources.append(path)
 
     # Package info -> EGG-INFO/PKG-INFO
     pkg_info = []
@@ -127,12 +112,12 @@ def write(name, version, doc, entry_map, src_files, distributions, modules,
         pkg_info.append('Requires: %s' % module)
     pkg_info = '\n'.join(pkg_info)+'\n'
     sources.append(name+'.egg-info/PKG-INFO')
-    bytes += len(pkg_info)
+    size += len(pkg_info)
 
     # Dependency links -> EGG-INFO/dependency_links.txt
     dependency_links = '\n'
     sources.append(name+'.egg-info/dependency_links.txt')
-    bytes += len(dependency_links)
+    size += len(dependency_links)
 
     # Entry points -> EGG-INFO/entry_points.txt
     entry_points = []
@@ -143,42 +128,42 @@ def write(name, version, doc, entry_map, src_files, distributions, modules,
         entry_points.append('')
     entry_points = '\n'.join(entry_points)+'\n'
     sources.append(name+'.egg-info/entry_points.txt')
-    bytes += len(entry_points)
+    size += len(entry_points)
 
     # Unsafe -> EGG-INFO/not-zip-safe
     not_zip_safe = '\n'
     sources.append(name+'.egg-info/not-zip-safe')
-    bytes += len(not_zip_safe)
+    size += len(not_zip_safe)
 
     # Requirements -> EGG-INFO/requires.txt
     requirements = [str(dist.as_requirement()) for dist in distributions]
     requirements = '\n'.join(requirements)+'\n'
     sources.append(name+'.egg-info/requires.txt')
-    bytes += len(requirements)
+    size += len(requirements)
 
     # Modules not part of a distribution -> EGG-INFO/openmdao_orphans.txt
     orphans = '\n'.join(modules)+'\n'
     sources.append(name+'.egg-info/openmdao_orphans.txt')
-    bytes += len(orphans)
+    size += len(orphans)
 
     # Top-level names -> EGG-INFO/top_level.txt
     top_level = '%s\n' % name
     sources.append(name+'.egg-info/top_level.txt')
-    bytes += len(top_level)
+    size += len(top_level)
 
     # Manifest -> EGG-INFO/SOURCES.txt
     sources.append(name+'.egg-info/SOURCES.txt')
     sources = '\n'.join(sorted(sources))+'\n'
-    bytes += len(sources)
+    size += len(sources)
 
     # Open zipfile.
     logger.debug('Creating %s', egg_path)
-    zip64 = bytes > zipfile.ZIP64_LIMIT
+    zip64 = size > zipfile.ZIP64_LIMIT
     compression = zipfile.ZIP_DEFLATED if compress else zipfile.ZIP_STORED
     egg = zipfile.ZipFile(egg_path, 'w', compression, zip64)
 
     stats = {'completed_files': 0., 'total_files': float(8+len(files)),
-             'completed_bytes': 0., 'total_bytes': float(bytes)}
+             'completed_bytes': 0., 'total_bytes': float(size)}
 
     # Write egg info.
     _write_info(egg, 'PKG-INFO', pkg_info, observer, stats)

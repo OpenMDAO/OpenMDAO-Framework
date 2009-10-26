@@ -104,7 +104,6 @@ class TestCase(unittest.TestCase):
 
 if __name__ == '__main__':
     import nose
-    import sys
     sys.argv.append('--cover-package=openmdao.main')
     nose.runmodule()
 

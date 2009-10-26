@@ -877,7 +877,7 @@ class Container(HasTraits):
 
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,
-                    format=SAVE_CPICKLE, proto=-1, use_setuptools=False,
+                    fmt=SAVE_CPICKLE, proto=-1, use_setuptools=False,
                     observer=None):
         """Save state and other files to an egg.  Typically used to copy all or
         part of a simulation to another user or machine.  By specifying child
@@ -892,7 +892,7 @@ class Container(HasTraits):
         - `src_dir` is the root of all (relative) `src_files`.
         - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
-        - `format` and `proto` are passed to eggsaver.save().
+        - `fmt` and `proto` are passed to eggsaver.save().
         - 'use_setuptools` is passed to eggsaver.save_to_egg().
         - `observer` will be called via an EggObserver.
 
@@ -931,14 +931,14 @@ class Container(HasTraits):
         try:
             return eggsaver.save_to_egg(entry_pts, version, py_dir,
                                         src_dir, src_files, dst_dir,
-                                        format, proto, self._logger,
+                                        fmt, proto, self._logger,
                                         use_setuptools, observer.observer)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
             self.parent = parent
 
-    def save(self, outstream, format=SAVE_CPICKLE, proto=-1):
+    def save(self, outstream, fmt=SAVE_CPICKLE, proto=-1):
         """Save the state of this object and its children to the given
         output stream. Pure Python classes generally won't need to
         override this because the base class version will suffice, but
@@ -948,7 +948,7 @@ class Container(HasTraits):
         parent = self.parent
         self.parent = None  # Don't want to save stuff above us.
         try:
-            eggsaver.save(self, outstream, format, proto, self._logger)
+            eggsaver.save(self, outstream, fmt, proto, self._logger)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:
@@ -981,13 +981,13 @@ class Container(HasTraits):
                                           instance_name, logger, observer)
 
     @staticmethod
-    def load(instream, format=SAVE_CPICKLE, package=None, call_post_load=True,
+    def load(instream, fmt=SAVE_CPICKLE, package=None, call_post_load=True,
              name=None):
         """Load object(s) from the input stream. Pure python classes generally
         won't need to override this, but extensions will. The format can be
         supplied in case something other than cPickle is needed.
         """
-        top = eggloader.load(instream, format, package, logger)
+        top = eggloader.load(instream, fmt, package, logger)
         if name:
             top.name = name
         if call_post_load:

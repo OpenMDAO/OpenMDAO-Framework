@@ -24,9 +24,7 @@ def main():
     options, arguments = parser.parse_args()
 
     # Find location of OpenMDAO root.
-    root = os.path.abspath(os.path.dirname(
-                               os.path.dirname(
-                                   os.path.dirname(__file__))))
+    root = os.path.abspath(os.path.dirname(os.path.dirname(__file__)))
     python = os.path.join(root, 'buildout', 'bin', 'python')
     pylint = os.path.join(root, 'buildout', 'bin', 'pylint')
 
@@ -44,13 +42,13 @@ def main():
         roots = (os.getcwd(),)
     else:
         roots = (
-            os.path.join(root, 'openmdao.examples'),
             os.path.join(root, 'openmdao.lib'),
             os.path.join(root, 'openmdao.main'),
             os.path.join(root, 'openmdao.recipes'),
             os.path.join(root, 'openmdao.test'),
             os.path.join(root, 'openmdao.util'),
             os.path.join(root, 'contrib'),
+            os.path.join(root, 'examples'),
             os.path.join(root, 'scripts'),
             os.path.join(root, 'testplugins'),
         )

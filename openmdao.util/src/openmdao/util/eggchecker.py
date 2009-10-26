@@ -13,7 +13,7 @@ __all__ = ('check_save_load',)
 
 
 def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
-                    format=SAVE_CPICKLE, logfile=None):
+                    fmt=SAVE_CPICKLE, logfile=None):
     """Convenience routine to check that saving & reloading work.
     It will create an egg in the current directory, unpack it in `test_dir`
     via a separate process, and then load and run the component in
@@ -29,7 +29,7 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
     comp.log_level = LOG_DEBUG
     name = comp.name or comp.get_default_name(comp.parent)
     start = time.time()
-    egg_info = comp.save_to_egg(name, 'CSL.1', py_dir=py_dir, format=format)
+    egg_info = comp.save_to_egg(name, 'CSL.1', py_dir=py_dir, fmt=fmt)
     egg_name = egg_info[0]
     elapsed = time.time() - start
     size = os.path.getsize(egg_name)
