@@ -8,15 +8,15 @@ Glossary
 .. glossary::
       
       **API**
-	    Application Programming Interface. A set of functions that can be called from
-	    an application program to access features of another program.
+	Application Programming Interface. A set of functions that can be called from
+	an application program to access features of another program.
 
 
       **Assembly**
-	    The Assembly class is the primary building block of the system of 
-	    systems aspect of OpenMDAO. Each Assembly has a Workflow and a 
-	    Driver, and acts as a container for Components. An Assembly is also a
-	    Component, so hierarchical structures of Assemblies can be created.
+	The Assembly class is the primary building block of the system of 
+	systems aspect of OpenMDAO. Each Assembly has a Workflow and a 
+	Driver, and acts as a container for Components. An Assembly is also a
+	Component, so hierarchical structures of Assemblies can be created.
       
       
       **Beaker** 
@@ -24,8 +24,8 @@ Glossary
 	      
       
       **branch**
-	    An ordered series of revisions (see :term:`revision` below) that describes the
-	    history of a set of files. 	
+	An ordered series of revisions (see :term:`revision` below) that describes the
+	history of a set of files. 	
 
 
       **CAD**
@@ -46,7 +46,7 @@ Glossary
 
       **Case**
         An object containing a collection of input names and values, and names of outputs 
-		to be stored along with the inputs after the process model runs.
+	to be stored along with the inputs after the process model runs.
 
 
       **CaseIterator**
@@ -86,7 +86,7 @@ Glossary
       
       **Container**
 	A container of Variables and other Containers. The base class of all objects
-	 within the framework that  support user access to input and output Variables. 
+	within the framework that  support user access to input and output Variables. 
 
       
       **Coverage**
@@ -231,7 +231,7 @@ Glossary
             
       **NumPy**
         NumPy is the fundamental package needed for scientific computing with Python. See
-	    http://numpy.scipy.org/ 
+	http://numpy.scipy.org/ 
 	
       
       **ObjServer**
@@ -261,7 +261,7 @@ Glossary
       **PBS**
         Portable Batch System (PBS) is a queueing system. Jobs are submitted to the
         queue that reflects the resources needed, and a scheduler decides which ones
-        to run when nodes become available. These decisions are made on the basis of
+        to run when nodes become available. These de cisions are made on the basis of
         length of run, how long a job has been waiting, and fair sharing of resources
         among different users.
 
@@ -399,9 +399,9 @@ Glossary
 	
 	
       **SWIG**
-		Simplified Wrapper and Interface Generator. A software development tool that connects
-		programs written in C and C++ with a variety of high-level programming languages. Go to 
-		http://www.swig.org/index.php for more information.
+	Simplified Wrapper and Interface Generator. A software development tool that connects
+	programs written in C and C++ with a variety of high-level programming languages. Go to 
+	http://www.swig.org/index.php for more information.
 
      
       **Tempita**
@@ -421,16 +421,16 @@ Glossary
 
 	
       **Traits**
-		A software package from Enthought, Inc. that aids in developing Python code. A trait is
-		a type definition that can be used for normal Python object attributes, giving the
-		attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
-		The Traits package works with version 2.4 and later of Python and is similar in some ways
-		to the Python property language feature. 
+	A software package from Enthought, Inc. that aids in developing Python code. A trait is
+	a type definition that can be used for normal Python object attributes, giving the
+	attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
+	The Traits package works with version 2.4 and later of Python and is similar in some ways
+	to the Python property language feature. 
 
 
       **TraitType** 
-		The base class used to validate and possibly convert data objects that are
-		passed between linked Components.
+	The base class used to validate and possibly convert data objects that are
+	passed between linked Components.
 
       
       **units**
@@ -459,10 +459,10 @@ Glossary
               
        
       **WebHelpers**
-		A library of helper functions intended to make writing templates in Web applications
-		easier. It's the standard function library for Pylons and TurboGears 2. It also
-		contains a large number of functions not specific to the Web, including text
-		processing, number formatting, date calculations, container objects, etc.
+	A library of helper functions intended to make writing templates in Web applications
+	easier. It's the standard function library for Pylons and TurboGears 2. It also
+	contains a large number of functions not specific to the Web, including text
+	processing, number formatting, date calculations, container objects, etc.
 
             
       **WebOb**
@@ -470,9 +470,9 @@ Glossary
 	
 
       **WebTest** 
-		Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
-		easy to send test requests to that application without starting up an HTTP
-		server. 
+	Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
+	easy to send test requests to that application without starting up an HTTP
+	server. 
 	
 
       **Workflow**
@@ -493,7 +493,7 @@ Glossary
       
       
       **zc.buildout** 
-	    System for managing development buildouts.
+	System for managing development buildouts.
 	
       
       **zc.recipe.egg**
@@ -501,18 +501,18 @@ Glossary
 	
 	
       **Zope**
-		Zope is an open source application server for building content management
-		systems, intranets, portals, and custom applications. Zope is written in
-		Python, an object-oriented scripting language.
-	
+	Zope is an open source application server for building content management
+	systems, intranets, portals, and custom applications. Zope is written in
+	Python, an object-oriented scripting language.
+
       
       **zope.component**
         Zope Component Architecture
 	
 	
       **zope.deferredimport** 
-		The zope.deferredimport package provided facilities for defining names in modules
-		that will be imported from somewhere else when used.
+	The zope.deferredimport package provided facilities for defining names in modules
+	that will be imported from somewhere else when used.
 
 
       **zope.deprecation** 
@@ -525,11 +525,11 @@ Glossary
 	
       
       **zope.i18nmessageid**
-		This package provides facilities for delaring  messages (which carry a
-		translation source domain and possibly a default translation) within program
-		source text; translation of the messages is the responsiblitiy of the "zope.i18n"
-		package.
-	
+	This package provides facilities for delaring  messages (which carry a
+	translation source domain and possibly a default translation) within program
+	source text; translation of the messages is the responsiblitiy of the "zope.i18n"
+	package.
+
 
       **zope.interface**
         A package that provides an implementation of object interfaces for Python. 

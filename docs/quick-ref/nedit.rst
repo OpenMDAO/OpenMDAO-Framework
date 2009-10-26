@@ -14,7 +14,7 @@ Reference:
 PDF file of NEdit Help Documentation: http://www.nedit.org/ftp/contrib/misc/nedit.pdf
 
 
-Editing a file
+Editing a File
 --------------
 
 Go to the ``docs/`` directory on your branch, *cd* to the desired directory, and bring up the file
@@ -27,8 +27,8 @@ that you wish to edit:
 %nedit <file_name>  &
 
 
-Using the Fill Paragraph option
--------------------------------
+Using the *Fill Paragraph* Option
+---------------------------------
 
 You can use the *Fill Paragraph* option on the *Edit* menu (or type ``Ctrl+J``) to fill text in
 the paragraph:
@@ -46,7 +46,7 @@ the paragraph:
   visible.)
 
 
-Moving text right or left
+Moving Text Right or Left
 -------------------------
 
 -  To move text to the **right**:
@@ -68,7 +68,7 @@ of one space.
 .. index:: NEdit; spell check
 .. index:: spell check: in NEdit
 
-Launching spell check from NEdit
+Launching Spell Check from NEdit
 --------------------------------
 
 1. Open the file you want to spell-check and type: ``nedit <file_name> &``
@@ -84,7 +84,7 @@ Launching spell check from NEdit
    launching ispell is considered a modification to the file.)
 
 
-Using line numbers to find Sphinx errors
+Using Line Numbers to Find Sphinx Errors
 ----------------------------------------
 
 If you get a Sphinx build error when trying to build your documentation files, your build will

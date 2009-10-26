@@ -56,9 +56,10 @@ calculate its power. This RPM is output by the transmission component, which det
 vehicle's velocity and gear position. These inter-dependencies define the connection order for vehicle
 components in terms of the Data Flow: Transmission -> Engine -> Chassis. 
 
-The full process model is shown below.
 
-.. _`Process Model for Tutorial Problem`:
+.. _`process-model`:
+
+The full process model is shown below.
 
 .. figure:: ../../examples/openmdao.examples.engine_design/openmdao/examples/engine_design/Engine_Example_Process_Diagram.png
    :align: center

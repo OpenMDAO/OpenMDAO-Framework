@@ -7,7 +7,7 @@ If you have any questions or would like help with the documentation, please cont
 writer (Paulette) at: 1-216-433-8056 or paulette.j.ziegfeld@nasa.gov. 
 
 
-Updating an existing document
+Updating an Existing Document
 -----------------------------
 
 All documentation is located in the ``docs/`` directory on your branch. There are separate
@@ -126,7 +126,7 @@ not to the changes file.
 .. index:: documentation; creating
 .. index:: documentation; updating
  
-Creating a new document
+Creating a New Document
 -----------------------
 
 If you need to create a new document within the OpenMDAO documentation, you must:
@@ -234,7 +234,7 @@ Add ``new-guide/index`` in the desired location in the list of documents and sav
 
 
 
-Building and displaying documents
+Building and Displaying Documents
 ----------------------------------
 
 You must be in the ``buildout`` directory: 

@@ -72,7 +72,7 @@ be set up:
 Notice that the italics designation (a set of asterisks) is used for Heading 3. Heading levels 2 and 3 are similar in size, so asterisks are used to
 better designate the hierarchy.
 
-About heading levels:
+About Heading Levels:
 
 * If you are adding text to an existing file, you *must* use the same
   underlining scheme as the file's creator.
@@ -95,7 +95,7 @@ Please follow the guidelines in the next section.
 
 .. index:; buildout recipes
 
-*Buildout recipe fonts*
+*Buildout Recipe Fonts*
 +++++++++++++++++++++++
 
 Buildout recipes have configuration parameters. Please adhere to the guidelines
@@ -130,7 +130,7 @@ to use literal inline markup.
 
 .. index:: Python; capitalizing
 
-Capitalization (Python & other software packages) 
+Capitalization (Python & other Software Packages) 
 --------------------------------------------------
 
 Capitalize *Python* when referring to the programming language, for example, a
@@ -222,7 +222,7 @@ index for all OpenMDAO user documents.
 3D - Abbreviation for three-dimensional. No hyphen in the abbreviation.
 
 
-Commas (before "and" in a compound sentence)
+Commas (Before "and" in a Compound Sentence)
 --------------------------------------------
 
 * Use a comma before "and" when you have a compound sentence, for example:

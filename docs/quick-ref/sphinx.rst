@@ -35,7 +35,7 @@ Some Basics
   be different. Please see the :ref:`Style-Guide` for more information.)
 
 
-Updating your version of Sphinx
+Updating Your Version of Sphinx
 -------------------------------
 
 *This assumes that the sys admin or one of the senior developers has upgraded the
@@ -55,7 +55,7 @@ The next time you build, the new version of Sphinx will be added to your
 
 .. index:: literal text
 
-Literal text
+Literal Text
 ------------
 
 **- Inline literal text:**
@@ -66,7 +66,7 @@ Typing this:
 
 ::
 
-     ``Inline literal text``  
+  ``Inline literal text``  
    
 will result in this:
 
@@ -75,10 +75,10 @@ will result in this:
 .. seealso:: :ref:`Using-Inline-Literal-Text`
 
 
-**- Code:**
+**- Literal code block:**
 
 To introduce a literal code block, use a double colon and skip a line before the
-text. You must indent the text two or more spaces. For example, typing this:
+text. Also, you must indent at least two spaces. For example, typing this:
 
 
 ::
@@ -108,6 +108,13 @@ syntax highlighter) is installed.
    example files.)
 
 
+**- Parsed-literal:**
+
+**In what circumstances do developers use this vs ``::``? The documentation says that
+parsed literal blocks are useful for adding hyperlinks to code examples.**
+
+
+
 Hyperlinks
 ----------
 
@@ -132,7 +139,7 @@ will result in this link:
 	http://www.python.org/download/releases/2.1.1/license/
 
 
-**- Internal links:** cross-referencing to a section title
+**- Internal links** (to a section title)
 
 You can place a label before a section title using ``:ref:`label-name```. The
 section you are cross-referencing can be in the same file, a different
@@ -147,8 +154,7 @@ something like:
   
   Please see the tutorial problem, specifically the :ref:`Problem-Overview`.
 
-Then you would go to the *User's Guide* and place the label before the section
-title, as follows:
+In the *User's Guide* you would place the label before the section title, as follows:
 
 ::
 
@@ -157,9 +163,27 @@ title, as follows:
   Problem Overview
   ----------------
 
-  The overall objective of the tutorial problem is to design an automobile that
-  performs "well" as measured by three metrics:  . . . . 
+  The overall objective of the tutorial problem is to design . . . . 
 
+You can use same type of cross-reference label with figures. See :ref:`Figures`.
+
+
+**-Internal links** (to an arbitrary location)
+
+Labels that aren't placed before a section title can still be referenced to, but you must give the link
+an explicit title, using this syntax: ``:ref:`Link title <label-name>```.  For example, I created the
+following cross reference:  ``:ref:`process model <process-model>```, which in the text would appear as:
+
+  :ref:`process model <process-model>`
+  
+Before the relevant paragraph in the *User Guide* that discusses the process model and shows a figure
+of it, I placed this label:
+   
+   ``.. _`process-model`:``
+   
+So, clicking on my cross reference (above) takes you to the label (and figure) of the process model in the
+example problem. I made my own arbitrary label rather than cross referencing to the figure title.
+ 
 
 **- Seealso directive**
 
@@ -172,19 +196,21 @@ For example, typing this:
 
 ::  
 
-  .. seealso:: :ref:`Options-for-Plugin-Creation`
+  .. seealso:: :ref:`Bazaar-Commands`
 
 results in:
 
-.. seealso:: :ref:`Options-for-Plugin-Creation`
+.. seealso:: :ref:`Bazaar-Commands`
 
 
 You must also place the label before the section referred to, for example:
 
 ::  
 
-  .. _Options-for-Plugin-Creation:
+  .. _Bazaar-Commands:
 
+
+.. _Figures:
 
 Figures
 -------
@@ -208,11 +234,10 @@ Here is an example to imitate or copy of how to link to a figure:
      Class Diagram of Core Classes
 
 
-In the above example, ``.. _`Class Diagram of Core Classes`:`` is an optional label that is
-linked to from text that precedes the figure. In this case the preceding text says:
-``The figure `Class Diagram of Core Classes`_
-shows . . .`` . A hyperlink (cross reference) is not necessary, but if your figure is further down in the
-text, it is helpful to the reader. 
+In the above example, ``.. _`Class Diagram of Core Classes`:`` is an optional label that is used for
+cross referencing to this figure. In this case there was some preceding text: ``The figure `Class Diagram of
+Core Classes`_ shows . . .`` . A cross reference is not necessary, but if you are discussing a figure
+that appears later in the text, it is helpful to the reader. 
 
 The path to the image is: ``.. figure:: ../generated_images/ModelClasses.png``.
 Generally we align our figures *center*, as shown in the example, but that is up to the
@@ -241,7 +266,7 @@ Driving Profile.*
      EPA City Driving Profile
 
 
-Adding extra lines/maintaining like breaks
+Adding Extra Lines/Maintaining Line Breaks
 ------------------------------------------
 
 If you want to add an extra line after a graphic or table, use the vertical bar ("|")
@@ -254,7 +279,7 @@ indented, then first indent, type the vertical bar, leave a space, and then type
 the desired text.
 
 
-Lists/bullets
+Lists/Bullets
 -------------
 
 To create a list: 
@@ -441,7 +466,7 @@ will produce this:
 +------------------------+------------+----------------------+
 
 
-Index items
+Index Items
 ------------
 
 The tech writer will review all new documentation and add index (and glossary) entries as

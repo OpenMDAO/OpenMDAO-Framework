@@ -1,21 +1,19 @@
 .. index:: Bazaar; commands
 
+.. _Bazaar-Commands:
+
 Bazaar Commands 
 ===============
 
 Please note that the OpenMDAO *Developer's Guide* contains all the information you need
 to get started working, including Bazaar setup, code location, and creating your branch. The
-information here is a quick reference for
-some common tasks you will be doing. 
+information here is a quick reference for some common tasks you will be doing. 
 
 .. note::
    In the examples, the percent sign (%) represents the command-line prompt. 
    Text included in pointy brackets means you have to supply a name or other
    information. For example, ``/OpenMDAO/dev/<your_working_directory>`` requires you
    to supply a name for the working directory, such as: ``/OpenMDAO/dev/pziegfel``  
-
-Using Common Bazaar Commands 
-----------------------------
 
 References:
 
@@ -26,8 +24,8 @@ References:
 
 .. index:: branch; creating
 
-*Creating a branch from working_main*
-++++++++++++++++++++++++++++++++++++++
+Creating a Branch from working_main
+-------------------------------------
 
 You need to be in your OpenMDAO working directory (e.g., pziegfel, kmoore), so type:
 
@@ -44,24 +42,22 @@ added.
 
 %bzr add 
 
-
-
 .. index:: branch; building on
 
-.. _Building-on-your-branch:
+.. _Building-on-Your-Branch:
 
-*Building on your branch*
-+++++++++++++++++++++++++
+Building on Your Branch
+-----------------------
 
 ::
 
 %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>
 %cd /buildout			
-%python<version#> isolatedbootstrap.py  (If you do not use a version #, it builds with the default.) 
+%python2.6 isolatedbootstrap.py  
 %bin/buildout  			
 %bin/test --all		
 
-.. note:: Always run the ``python<version#> isolatedbootstrap.py`` script the first time you build on a
+.. note:: Always run the ``python2.6 isolatedbootstrap.py`` script the first time you build on a
    branch. For subsequent builds, only ``bin/buildout`` is required. 
    
    The test suite tests the code snippets in the documentation.
@@ -69,10 +65,47 @@ added.
 .. index:: branch; merging
 
 
-*Merging your branch to working_main*
-+++++++++++++++++++++++++++++++++++++
+Merging working_main to Your Branch
+------------------------------------
 
-- Commit changes and merge:
+As you work on your branch, you may want to update it every few days to avoid conflicts when you merge
+back to ``working_main``. In the example that follows, we display the log first to see what was
+recently committed:
+
+::
+
+%cd /OpenMDAO/dev/shared/working_main
+%bzr log --forward 	(Using the "--forward" option will display the most recent activity last.) 
+%cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>   
+%bzr status
+%bzr commit -m "<commit comments>"         
+%cd buildout
+%bzr merge /OpenMDAO/dev/shared/working_main
+
+Resolve any conflicts that come up during the merge. See the section on :ref:`if you have a conflict
+<if-you-have-a-conflict>` during merge. After you have resolved conflicts, type:
+
+::
+
+%bin/buildout
+
+If you have any build errors or warnings, resolve them before continuing. When you can
+build without successful without warnings, type the following:
+
+::
+
+%bin/test --all
+%bzr status
+%bzr commit -m "<commit comments>"
+
+
+Merging Your Branch to working_main
+------------------------------------
+
+You need to commit your changes before merging. When you commit changes, you
+must add comments. If you forget to add "-m", you will automatically go into a
+file in the NEdit text editor, where you will have to enter comments, save them,
+and then exit the file.
 
 ::
 
@@ -93,53 +126,60 @@ list any conflicts.
 
 ::
 
- %cd /buildout			
- %python<version#> isolatedbootstrap.py   (Always run this script before building on working_main.)
- %bin/buildout 				
- %bin/test --all				
- %bzr status					
- %bzr commit -m "<commit comments>"	
- %repo.py fix 	             		  (Always run this script after building on work_main.)
+%cd /buildout			
+%python2.6 isolatedbootstrap.py   (Always run this script before building on working_main.)
+%bin/buildout 				
+%bin/test --all				
+%bzr status					
+%bzr commit -m "<commit comments>"	
+%repo.py fix 	             		  (Always run this script after building on work_main.)
 
 The ``repo.py fix`` script fixes file permissions that may have gotten changed during the build process. 
+
+.. _`if-you-have-a-conflict`:
 
 - If you **HAVE** a conflict, you must resolve it:
 
 Bazaar will display the number of conflicts and provide the path to the files in
-conflict. (It also embeds markers in the file where there is a conflict.) You want to
-confirm that there are conflicts and then bring up a graphical interface for
-resolving them. Type the following:
+conflict. (It also embeds markers in the file where there is a conflict.) 
+
+To bring up a graphical interface for displaying the conflicts, type the following:
 
 :: 
-
-%bzr conflicts        			
+  			
 %conrez.py
 
+Bazaar automatically creates three versions of the file in conflict, each with a different
+suffix. The files appear left to right in the order listed here:
 
-For each file with a conflict, Bazaar creates 3 versions, each with a different
-suffix:
 
-	| ``filename.THIS``  	 (file you are merging to)
+        | ``filename.BASE``   	 (original file)
 	| ``filename.OTHER``  	 (file that is being merged)
-	| ``filename.BASE``   	 (original file)
+	| ``filename.THIS``  	 (file you are merging to)
 
+Conflicts will be displayed in colored text across all three files. You must look the files and
+decide which version to send to ``filename.THIS.`` You do this by clicking on the appropriate
+arrow for that change. You will automatically move down the file through the changes. If you
+make a mistake, you can select *undo* from the menu bar at the top of the screen.
 
-After you select the file you want, save it. (Don't exit the GUI, just that file.) You should automatically
-move on to the next conflict. If you don't, run ``conrez.py`` again and finish resolving the conflicts. Then
-type:
+After you have gone through the file and made your selections, save your changes and then exit
+the file. When you exit you will be asked if you want to save the selected file.  Assuming you
+do, select that option. 
+
+Check to make sure the conflicts there are no more conflicts by typing:
 
 ::
 
 %bzr conflicts    	
 %bzr resolve		
 
-Running ``resolve`` marks the files as resolved and cleans up BASE, THIS and OTHER from
-working_main.
+Running ``resolve`` marks the files as resolved and cleans up BASE, OTHER, and
+THIS from working_main.
 
 :: 
 
 %cd /buildout			
-%python<version#> isolatedbootstrap.py  
+%python2.6 isolatedbootstrap.py  
 %bin/buildout 				
 %bin/test --all				
 %bzr status					
@@ -149,8 +189,8 @@ working_main.
 This last script fixes permissions that may have gotten changed during the build process. 
 
 
-*Canceling a merge/removing uncommitted changes*
-++++++++++++++++++++++++++++++++++++++++++++++++
+Canceling a Merge/Removing Uncommitted Changes
+----------------------------------------------
 
 If you have an issue that cannot be resolved timely, you can cancel the merge by typing:
 
@@ -168,8 +208,8 @@ good idea to see what files will be removed, so type:
 
 
 
-*Removing a directory and its files*
-++++++++++++++++++++++++++++++++++++
+Removing a Directory and Its Files
+----------------------------------
 
 This is a UNIX command for removing directory and files:
 
