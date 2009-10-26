@@ -14,7 +14,7 @@ class Optimization_Unconstrained(Assembly):
     """ Top level assembly for optimizing a vehicle. """
     
     def __init__(self, directory=''):
-        """ Creates a new Assembly containing a DrivingSim and an optimizer"""
+        """ Creates a new Assembly containing a Parabaloid and an optimizer"""
         
         super(Optimization_Unconstrained, self).__init__(directory)
 

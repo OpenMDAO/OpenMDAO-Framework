@@ -38,24 +38,46 @@ from the standard library drivers namespace.
 
 	from openmdao.lib.drivers.conmindriver import CONMINdriver
 
+Using	
+	
+.. testcode:: CONMIN_load
+
+	from openmdao.main.api import Assembly
+	from openmdao.lib.drivers.conmindriver import CONMINdriver
+
+	class EngineOptimization(Assembly):
+	    """ Top level assembly for optimizing a vehicle. """
+    
+	    def __init__(self, directory=''):
+	        """ Creates a new Assembly containing a DrivingSim and an optimizer"""
+        
+	        super(EngineOptimization, self).__init__(directory)
+
+	        # Create DrivingSim component instances
+	        self.add_container('driving_sim', DrivingSim())
+
+	        # Create CONMIN Optimizer instance
+	        self.add_container('driver', CONMINdriver())
+        
+	
 .. testsetup:: CONMIN_show
 
 	from openmdao.examples.engine_design.engine_optimization import EngineOptimization
 	
-	TopLevelAssembly = EngineOptimization()
+	self = EngineOptimization()
 	
 Both the objective function and the design variables are assigned via a
 StringRef variable. A StringRef is a string that points to some other OpenMDAO
 variable in the variable tree. There is only 1 objective function, but there
-can be multiple design variables which are assigned as a Python list.
+can be multiple design variables; these are assigned as a Python list.
 
 .. testcode:: CONMIN_show
         
 	# CONMIN Objective 
-	TopLevelAssembly.driver.objective = 'driving_sim.accel_time'
+	self.driver.objective = 'driving_sim.accel_time'
         
 	# CONMIN Design Variables 
-	TopLevelAssembly.driver.design_vars = ['driving_sim.spark_angle', 
+	self.driver.design_vars = ['driving_sim.spark_angle', 
                                                'driving_sim.bore' ]
 
 These StringRef variables must point to something that can be seen in the scope
@@ -68,7 +90,7 @@ The objective function can actually be a function:
 .. testcode:: CONMIN_show
 
 	# CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-	TopLevelAssembly.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+	self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
 
 In this example, the objective is to maximize the weighted sum of two variables.
 The equation must be constructed using valid Python operators. All variables in
@@ -84,8 +106,8 @@ Side constraints are defined using the lower_bounds and upper_bounds parameters:
 
 .. testcode:: CONMIN_show
 
-	TopLevelAssembly.driver.lower_bounds = [-50, 65]
-	TopLevelAssembly.driver.upper_bounds = [10, 100]
+	self.driver.lower_bounds = [-50, 65]
+	self.driver.upper_bounds = [10, 100]
 
 These size of these lists must be equal to the number of design variables or 
 OpenMDAO will raise an exception. Similarly, the upper bound must be greater
@@ -99,7 +121,7 @@ when they return positive value.
 
 .. testcode:: CONMIN_show
 
-	TopLevelAssembly.driver.constraints = ['driving_sim.stroke - driving_sim.bore']
+	self.driver.constraints = ['driving_sim.stroke - driving_sim.bore']
 	    
 Note that any equation can also be expressed as an inequality.
 
@@ -117,7 +139,7 @@ The default value is 10.
 
 .. testcode:: CONMIN_show
 
-        TopLevelAssembly.driver.itmax = 30
+        self.driver.itmax = 30
 
 The convergence tolerance is controlled with delfun and dabfun. Delfun is the
 absolute change in the objective function to indicate convergence (i.e., if the
@@ -128,8 +150,8 @@ to the value at the previous step. Note that dabfun has a hard-wired minimum of
 
 .. testcode:: CONMIN_show
 
-        TopLevelAssembly.driver.dabfun = .001
-        TopLevelAssembly.driver.dabfun = .1
+        self.driver.dabfun = .001
+        self.driver.dabfun = .1
 
 All of these convergence checks are always active during optimization. The 
 tests are performed in the following sequence:
@@ -145,7 +167,7 @@ itrm parameter, whose default value is 3.
 	
 .. testcode:: CONMIN_show
 
-        TopLevelAssembly.driver.itrm = 3
+        self.driver.itrm = 3
 
 CONMIN can calculate the gradient of both the objective functions and of the
 constraints using a finite difference approximation. This is the current
@@ -156,8 +178,8 @@ the local gradient.
 
 .. testcode:: CONMIN_show
 
-        TopLevelAssembly.driver.fdch = .0001
-        TopLevelAssembly.driver.fdchm = .0001
+        self.driver.fdch = .0001
+        self.driver.fdchm = .0001
 	
 The fdchm parameter is the minimum absolute step size that the finite
 difference will use, and fdch is the step size relative to the design variable.
@@ -188,8 +210,8 @@ used to scale the design variables.
 
 .. testcode:: CONMIN_show
 
-        TopLevelAssembly.driver.scal = [10.0, 10.0, 10.0, 10.0]
-        TopLevelAssembly.driver.nscal = -1
+        self.driver.scal = [10.0, 10.0, 10.0, 10.0]
+        self.driver.nscal = -1
 	
 Note that there need to be as many scale values as there are design variables.
 	
@@ -199,7 +221,7 @@ output.
 
 .. testcode:: CONMIN_show
 
-       	TopLevelAssembly.driver.iprint = 0
+       	self.driver.iprint = 0
 	
 Higher positive values of iprint turn on the display of more levels of output, as summarized below.
 
