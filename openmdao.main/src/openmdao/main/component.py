@@ -7,7 +7,7 @@ import fnmatch
 import glob
 import logging
 import os.path
-from os.path import isabs, isdir, dirname, exists, join, normpath
+from os.path import isabs, isdir, dirname, exists, join, normpath, relpath
 import pkg_resources
 import sys
 
@@ -47,29 +47,6 @@ class SimulationRoot (object):
             SimulationRoot.__root = os.getcwd()
         return path.startswith(SimulationRoot.__root)
     
-def _relpath(path1, path2):
-    """Return path for path1 relative to path2."""
-    assert isabs(path1)
-    assert isabs(path2)
-
-    if path1.endswith(os.sep):
-        path = path1[:-1]
-    else:
-        path = path1
-    if path2.endswith(os.sep):
-        start = path2[:-1]
-    else:
-        start = path2
-
-    if path == start:
-        return ''
-
-    relpath = ''
-    while start:
-        if path.startswith(start):
-            return join(relpath, path[len(start)+1:])
-        relpath = join('..', relpath)
-        start = dirname(start)
 
 class Component (Container):
     """This is the base class for all objects containing Traits that are 
@@ -279,11 +256,11 @@ class Component (Container):
                                  IndexError)
         os.chdir(newdir)
 
-    def checkpoint (self, outstream, format=SAVE_CPICKLE):
+    def checkpoint (self, outstream, fmt=SAVE_CPICKLE):
         """Save sufficient information for a restart. By default, this
         just calls save().
         """
-        self.save(outstream, format)
+        self.save(outstream, fmt)
 
     def restart (self, instream):
         """Restore state using a checkpoint file. The checkpoint file is
@@ -293,7 +270,7 @@ class Component (Container):
         self.load(instream)
 
     def save_to_egg(self, name, version, py_dir=None, require_relpaths=True,
-                    child_objs=None, dst_dir=None, format=SAVE_CPICKLE,
+                    child_objs=None, dst_dir=None, fmt=SAVE_CPICKLE,
                     proto=-1, use_setuptools=False, observer=None):
         """Save state and other files to an egg.  Typically used to copy all or
         part of a simulation to another user or machine.  By specifying child
@@ -311,7 +288,7 @@ class Component (Container):
           generate a warning and the file is skipped.
         - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
-        - `format` and `proto` are passed to eggsaver.save().
+        - `fmt` and `proto` are passed to eggsaver.save().
         - 'use_setuptools` is passed to eggsaver.save_to_egg().
         - `observer` will be called via an EggObserver.
 
@@ -356,7 +333,7 @@ class Component (Container):
                 for child in child_objs:
                     if not isinstance(child, Component):
                         continue
-                    relpath = child.directory
+                    rel_path = child.directory
                     obj = child.parent
                     if obj is None:
                         msg = 'Entry point object has no parent!'
@@ -364,13 +341,13 @@ class Component (Container):
                         raise RuntimeError(msg)
                     while obj.parent is not None and \
                           isinstance(obj.parent, Component):
-                        relpath = join(obj.directory, relpath)
+                        rel_path = join(obj.directory, rel_path)
                         obj = obj.parent
-                    child._rel_dir_path = relpath
+                    child._rel_dir_path = rel_path
 
             return super(Component, self).save_to_egg(
                        name, version, py_dir, src_dir, src_files,
-                       child_objs, dst_dir, format, proto, use_setuptools,
+                       child_objs, dst_dir, fmt, proto, use_setuptools,
                        observer.observer)
         finally:
             # If any component config has been modified, restore it.
@@ -391,7 +368,7 @@ class Component (Container):
             elif isabs(comp.directory):
                 parent_dir = comp.parent.get_abs_directory()
                 fixup_dirs.append((comp, comp.directory))
-                comp.directory = self._relpath(comp_dir, parent_dir)
+                comp.directory = relpath(comp_dir, parent_dir)
                 self.debug("    %s.directory reset to '%s'", 
                            comp.name, comp.directory)
         elif require_relpaths:
@@ -416,11 +393,11 @@ class Component (Container):
             path = normpath(path)
             if path.startswith(root_dir):
                 if isabs(metadata.path):
-                    new_path = self._relpath(path, comp_dir)
+                    new_path = relpath(path, comp_dir)
                     fixup_meta.append((metadata, metadata.path))
                     metadata.path = new_path
                 for path in glob.glob(path):
-                    src_files.add(self._relpath(path, root_dir))
+                    src_files.add(relpath(path, root_dir))
             elif require_relpaths:
                 self.raise_exception(
                     "Can't save, %s file '%s' doesn't start with '%s'."
@@ -444,9 +421,9 @@ class Component (Container):
             path = normpath(path)
             if path.startswith(root_dir):
                 if exists(path):
-                    src_files.add(self._relpath(path, root_dir))
+                    src_files.add(relpath(path, root_dir))
                 if isabs(fvar.path):
-                    path = self._relpath(path, comp_dir)
+                    path = relpath(path, comp_dir)
                     fixup_fvar.append((comp, fvarname, fvar.path))
                     comp.set(fvarname+'.path', path, force=True)
             elif require_relpaths:
@@ -473,8 +450,8 @@ class Component (Container):
                     if self is scope:
                         file_vars.append((name, obj, ftrait))
                     else:
-                        relpath = container.get_pathname(rel_to_scope=scope)
-                        file_vars.append(('.'.join([relpath, name]),
+                        rel_path = container.get_pathname(rel_to_scope=scope)
+                        file_vars.append(('.'.join([rel_path, name]),
                                           obj, ftrait))
                 elif isinstance(obj, Container) and \
                      not isinstance(obj, Component):
@@ -484,16 +461,8 @@ class Component (Container):
         _recurse_get_file_vars(self, file_vars, set(), self)
         return file_vars
 
-    def _relpath(self, path1, path2):
-        """Return path for path1 relative to path2."""
-        rpath = _relpath(path1, path2)
-        if rpath is None:            
-            self.raise_exception("'%s' has no common prefix with '%s'"
-                                 % (path1, path2), ValueError)
-        return rpath
-
     @staticmethod
-    def load(instream, format=SAVE_CPICKLE, package=None,
+    def load(instream, fmt=SAVE_CPICKLE, package=None,
              call_post_load=True, top_obj=True, name='', observer=None):
         """Load object(s) from `instream`.  If `instream` is an installed
         package name, then any external files referenced in the object(s)
@@ -509,7 +478,7 @@ class Component (Container):
         """
         observer = EggObserver(observer, logging.getLogger())
         try:
-            top = Container.load(instream, format, package, False, name=name)
+            top = Container.load(instream, fmt, package, False, name=name)
         except Exception, exc:
             observer.exception(str(exc))
             raise
@@ -518,21 +487,21 @@ class Component (Container):
         if isinstance(top, Component):
             # Get path relative to real top before we clobber directory attr.
             if top_obj:
-                relpath = '.'
+                rel_path = '.'
             else:
                 if top.parent is not None:
-                    relpath = top.directory
+                    rel_path = top.directory
                     obj = top.parent
                     while obj.parent is not None and \
                           isinstance(obj.parent, Component):
-                        relpath = join(obj.directory, relpath)
+                        rel_path = join(obj.directory, rel_path)
                         obj = obj.parent
                 elif top.trait('_rel_dir_path'):
                     top.warning('No parent, using saved relative directory')
-                    relpath = top._rel_dir_path  # Set during save_to_egg().
+                    rel_path = top._rel_dir_path  # Set during save_to_egg().
                 else:
                     top.warning('No parent, using null relative directory')
-                    relpath = ''
+                    rel_path = ''
 
             # Set top directory.
             orig_dir = os.getcwd()
@@ -544,7 +513,7 @@ class Component (Container):
                 os.chdir(name)
             # TODO: (maybe) Seems like we should make top.directory relative
             # here # instead of absolute, but it doesn't work...
-            #top.directory = _relpath(os.getcwd(), SimulationRoot.get_root())
+            #top.directory = relpath(os.getcwd(), SimulationRoot.get_root())
             top.directory = os.getcwd()
             
             try:
@@ -562,7 +531,7 @@ class Component (Container):
                     if not package:
                         dot = instream.rfind('.')
                         package = instream[:dot]
-                    top._restore_files(package, relpath, [], observer=observer)
+                    top._restore_files(package, rel_path, [], observer=observer)
             finally:
                 os.chdir(orig_dir)
                 if name and not glob.glob(join(name, '*')):
@@ -576,7 +545,7 @@ class Component (Container):
         observer.complete(name)
         return top
 
-    def _restore_files(self, package, relpath, file_list, do_copy=True,
+    def _restore_files(self, package, rel_path, file_list, do_copy=True,
                        observer=None):
         """Restore external files from installed egg."""
         if self.directory:
@@ -592,19 +561,19 @@ class Component (Container):
                     is_input = getattr(metadata, 'input', False)
                     const = getattr(metadata, 'constant', False)
                     binary = getattr(metadata, 'binary', False)
-                    self._list_files(pattern, package, relpath, is_input, const,
-                                     binary, file_list)
+                    self._list_files(pattern, package, rel_path, is_input,
+                                     const, binary, file_list)
 
             for fvarname, fvar, ftrait in fvars:
                 path = fvar.path
                 if path:
                     is_input = ftrait.iostatus == 'in'
-                    self._list_files(path, package, relpath, is_input, False,
+                    self._list_files(path, package, rel_path, is_input, False,
                                      ftrait.binary, file_list)
 
             for component in [c for c in self.values(recurse=False)
                                       if isinstance(c, Component)]:
-                path = relpath
+                path = rel_path
                 if component.directory:
                     path += '/'+component.directory  # Use '/' for resources.
                 component._restore_files(package, path, file_list,
@@ -617,7 +586,7 @@ class Component (Container):
             if self.directory:
                 self.pop_dir()
 
-    def _list_files(self, pattern, package, relpath, is_input, const, binary,
+    def _list_files(self, pattern, package, rel_path, is_input, const, binary,
                     file_list):
         """List files from installed egg matching pattern."""
         symlink = const and sys.platform != 'win32'
@@ -627,14 +596,14 @@ class Component (Container):
         if directory:
             if not exists(directory):
                 os.makedirs(directory)
-            relpath = relpath+'/'+directory  # Use '/' for resources.
+            rel_path = rel_path+'/'+directory  # Use '/' for resources.
 
-        relpath = normpath(relpath)
-        if not pkg_resources.resource_exists(package, relpath):
+        rel_path = normpath(rel_path)
+        if not pkg_resources.resource_exists(package, rel_path):
             return
-        if not pkg_resources.resource_isdir(package, relpath):
+        if not pkg_resources.resource_isdir(package, rel_path):
             return
-        pkg_files = pkg_resources.resource_listdir(package, relpath)
+        pkg_files = pkg_resources.resource_listdir(package, rel_path)
 
         if directory:
             self.push_dir(directory)
@@ -649,7 +618,7 @@ class Component (Container):
                         self.debug("    '%s' exists", filename)
                         continue
 
-                    src_name = relpath+'/'+filename  # Use '/' for resources.
+                    src_name = rel_path+'/'+filename  # Use '/' for resources.
                     src_path = pkg_resources.resource_filename(package,
                                                                src_name)
                     size = os.path.getsize(src_path)
@@ -688,10 +657,10 @@ class Component (Container):
                 src = pkg_resources.resource_stream(package, src_name)
                 dst = open(dst_name, mode)
                 chunk = 1 << 20  # 1MB
-                bytes = src.read(chunk)
-                while bytes:
-                    dst.write(bytes)
-                    bytes = src.read(chunk)
+                data = src.read(chunk)
+                while data:
+                    dst.write(data)
+                    data = src.read(chunk)
                 src.close()
                 dst.close()
             completed_bytes += size

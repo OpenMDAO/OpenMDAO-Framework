@@ -1,5 +1,6 @@
 import os.path
 import Queue
+import sys
 import threading
 import time
 
@@ -10,12 +11,13 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.util import filexfer
 
-__all__ = ('CaseIteratorDriver','ServerError')
+__all__ = ('CaseIteratorDriver', 'ServerError')
 
 SERVER_EMPTY    = 1
 SERVER_READY    = 2
 SERVER_COMPLETE = 3
 SERVER_ERROR    = 4
+
 
 class ServerError(Exception):
     """ Raised when a server thread has problems. """
