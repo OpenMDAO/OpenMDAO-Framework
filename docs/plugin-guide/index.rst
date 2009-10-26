@@ -4,9 +4,11 @@ Plugin Developer Guide
 ====================== 
 
 .. toctree::
-   :maxdepth: 4
    
-   overview.rst
+   overview
+   plugin_creation
+   module_plugin
+   extension_plugin
+   filewrapper_plugin
    changes
    
-

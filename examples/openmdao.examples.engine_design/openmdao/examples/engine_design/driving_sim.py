@@ -66,31 +66,31 @@ class DrivingSim(Assembly):
         self.add_container('vehicle', Vehicle())
         
         # Promoted From Vehicle -> Engine
-        self.create_passthru('vehicle.stroke')
-        self.create_passthru('vehicle.bore')
-        self.create_passthru('vehicle.conrod')
-        self.create_passthru('vehicle.comp_ratio')
-        self.create_passthru('vehicle.spark_angle')
-        self.create_passthru('vehicle.n_cyl')
-        self.create_passthru('vehicle.IVO')
-        self.create_passthru('vehicle.IVC')
-        self.create_passthru('vehicle.L_v')
-        self.create_passthru('vehicle.D_v')
+        self.create_passthrough('vehicle.stroke')
+        self.create_passthrough('vehicle.bore')
+        self.create_passthrough('vehicle.conrod')
+        self.create_passthrough('vehicle.comp_ratio')
+        self.create_passthrough('vehicle.spark_angle')
+        self.create_passthrough('vehicle.n_cyl')
+        self.create_passthrough('vehicle.IVO')
+        self.create_passthrough('vehicle.IVC')
+        self.create_passthrough('vehicle.L_v')
+        self.create_passthrough('vehicle.D_v')
 
         # Promoted From Vehicle -> Transmission
-        self.create_passthru('vehicle.ratio1')
-        self.create_passthru('vehicle.ratio2')
-        self.create_passthru('vehicle.ratio3')
-        self.create_passthru('vehicle.ratio4')
-        self.create_passthru('vehicle.ratio5')
-        self.create_passthru('vehicle.final_drive_ratio')
-        self.create_passthru('vehicle.tire_circumference')
+        self.create_passthrough('vehicle.ratio1')
+        self.create_passthrough('vehicle.ratio2')
+        self.create_passthrough('vehicle.ratio3')
+        self.create_passthrough('vehicle.ratio4')
+        self.create_passthrough('vehicle.ratio5')
+        self.create_passthrough('vehicle.final_drive_ratio')
+        self.create_passthrough('vehicle.tire_circumference')
 
         # Promoted From Vehicle -> Chassis
-        self.create_passthru('vehicle.mass_vehicle')
-        self.create_passthru('vehicle.Cf')
-        self.create_passthru('vehicle.Cd')
-        self.create_passthru('vehicle.area')
+        self.create_passthrough('vehicle.mass_vehicle')
+        self.create_passthrough('vehicle.Cf')
+        self.create_passthrough('vehicle.Cd')
+        self.create_passthrough('vehicle.area')
 
         
     def execute(self):

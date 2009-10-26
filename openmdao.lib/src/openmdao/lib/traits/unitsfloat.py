@@ -124,7 +124,7 @@ class UnitsFloat(TraitType):
                              (dst_units, name))
         except TypeError, err:
             raise TraitError("%s: units '%s' are incompatible with assigning units of '%s'" %
-                             (name, pq.getUnitName(), dst_units))
+                             (name, src_units, dst_units))
         try:
             return self._validator.validate(object, name, pq.value)
         except TraitError:

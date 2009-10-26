@@ -44,8 +44,8 @@ def runwing(wingpath, projpath):
     """Runs the Wing IDE after first setting environment variables
     necessary to locate shared libraries.
     """
-    # in order to find all of our shared libraries, find them
-    # all and put their directories in LD_LIBRARY_PATH
+    # in order to find all of our shared libraries,
+    # put their directories in LD_LIBRARY_PATH
     env = os.environ
     if sys.platform != 'win32':
         libs = env.get('LD_LIBRARY_PATH','').split(os.pathsep)
