@@ -282,7 +282,7 @@ Glossary
 	    provide specific functionality without changing the host application.
 
 
-	  **plugins**
+      **plugins**
 	    See :term:`plugin`
 
 	

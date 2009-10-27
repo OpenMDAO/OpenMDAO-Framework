@@ -381,7 +381,7 @@ and typing:
 
 ::
 
-        ../../../../../bin/python optimization_unconstrained
+        ../../../../../bin/python optimization_unconstrained.py
 	
 This should produce the output:
 
