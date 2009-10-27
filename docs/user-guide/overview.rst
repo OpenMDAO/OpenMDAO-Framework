@@ -5,6 +5,8 @@
 .. index:: Workflow
 .. index:: Assembly
 
+.. _Overview-of-the-OpenMDAO-Framework:
+
 Overview of the OpenMDAO Framework
 ==================================
 
