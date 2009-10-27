@@ -3,5 +3,407 @@
 Getting Started with OpenMDAO: A Simple Example Problem
 =======================================================
 
-This section presents an example of how to set up and execute a simple problem
-to find the minimum of a function with two inputs and one output. 
+The purpose of this section is to teach the novice user how to set up and
+execute a simple optimization problem using the OpenMDAO script interface. This
+tutorial assumes that the user is familiar (thought not necessarily proficient)
+with the Python language, and has a reasonable understanding of the concepts
+presented in :ref:`Overview-of-the-OpenMDAO-Framework`, particularly the
+concepts of the :term:`Component`, :term:`Assembly`, and :term:`Driver`.
+
+The problem presented here is a parabaloid that is a function of two design 
+variables. The optimiztion goal is to find the minimum values of this function
+over the design space. For the simplest form of this problem, there are no
+constraints, and the analytical derivative of the objective function is assumed
+to be unavailable. The problem can be expressed graphically as follows:
+
+
+.. _`OpenMDAO_overview`:
+
+.. figure:: ../../examples/openmdao.examples.simple/openmdao/examples/simple/Simple1.png
+   :align: center
+
+   A Simple Optimization Problem
+   
+This graphical view of the problem also helps in understanding how to map the
+problem onto the OpenMDAO framework. The CONMIN optimizer is the :term:`Driver`,
+and its job is to manipulate the two design variables (x and y) in order to 
+minimize the output of the parabaloid function (f). The objective equation fits
+into the OpenMDAO process as a :term:`component`. More specifically, this 
+Parabaloid component contains an "execute" function which takes the inputs 
+(x and y), and returns the value of the function (f) evaluated at that desgin 
+point. Finally, both the driver and the component are contained in an 
+:term:`assembly` which maintains the connections between the driver and the
+component, and knows how to run the system.
+
+The python code for this example problem can be found here:
+
+	``examples/openmdao.examples.simple/openmdao/examples/simple``
+
+Building a Simple Component - Parabaloid
+-----------------------------------------
+
+At the highest level, a component is simply something that takes a set of
+inputs and operates on them, producing a set of outputs. In the OpenMDAO
+architecture, a class called :term:`Component` provides this behavior. Any
+component has inputs and outputs and contains a function that executes the
+component. This function operates on the inputs to produce the outputs. Our
+purpose in creating a component for the Parabaloid equation is to provide an
+object that can evaluate the objective function during the optimization process.
+The python code for the Parabaloid component is as follows:
+
+.. testcode:: simple_component_Parabaloid
+
+    from enthought.traits.api import Float
+    from openmdao.main.api import Component
+    
+    class Parabaloid(Component):
+        """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """
+    
+	# set up interface to the framework  
+	x = Float(0.0, iostatus='in', desc='The variable y')
+        y = Float(0.0, iostatus='in', desc='The variable x')
+
+        f_xy = Float(0.0, iostatus='out', desc='F(x,y)')        
+
+        
+	def execute(self):
+	    """ Solve (x-3)^2 + xy + (y+4)^2 = 3
+	        Optimal solution (minimum): x = 6.6667; y = -7.3333
+	        """
+        
+	    x = self.x
+	    y = self.y
+        
+	    self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
+
+The details of this will now be explained. One thing to note is that a component
+is implemented in the OpenMDAO framework by writing python code, and placing
+it in a file. Typically, a file will contain one component, although it is 
+possible to include more than one component in a single file. The file 
+parabaloid.py contains the code shown above. How to execute a model containing
+this component will be discussed later in this tutorial.
+
+Python is a very extensible language, and comes with a convenient way to manage
+and load add-ons and extensions. The OpenMDAO source was also structured to
+allow its functions and classes to follow a namespace convention (i.e., dotted
+pathes that compartmentalize the functions.) Additionally, a special namespace
+called "openmdao.main.api" was added, which contains some of the more commonly
+used functions.
+
+.. testcode:: simple_component_Parabaloid_pieces
+
+    from enthought.traits.api import Float
+    from openmdao.main.api import Component
+    
+These first two lines in the Parabaloid component contain the two inputs that
+are used here: Float and Component. One guideline that should always be followed
+is to only import what you need.
+
+The very next line creates a class called Parabaloid:
+
+.. testcode:: simple_component_Parabaloid_pieces
+
+    class Parabaloid(Component):
+        """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """
+	
+At this point, it is essential that the component developer has a clear
+understanding of the distinction between classes, and functions. On the surface
+it would appear that we merely need a function that can take two inputs and
+return an output, and for an example this simple, such a case could be made.
+However, object-oriented programming allows much more complicated systems to be
+described without increasing the complexity of the framework code. A flexible
+framework like OpenMDAO probably could not be implemented without objects, and
+even if it could, it would be complex and difficult to maintain.
+
+So, this line of Python code defines the Parabaloid class by deriving it from
+the Component class. This means that a Parabaloid is a Component, so it contains
+all of the data and functions that a Component contains. This includes a lot of
+helper functions that are used by the framework infrastruture to manage things.
+Another side benefit is that the user doesn't have to worry about any of the
+framework back-end; there are just two functions that a typical user will
+provide -- one for initialization (any calculation that needs to be done
+before the optimization loop), and one to execute the component (provide the 
+objective evaluation.)
+
+Note that if we stop here, we have a Parabloid component with no inputs, no 
+outputs, and an execute function that does nothing. The first thing we need
+to do is to define the inputs and outputs. This is done in the class definition
+by adding these lines:
+
+.. testcode:: simple_component_Parabaloid_pieces
+
+	# set up interface to the framework  
+	x = Float(0.0, iostatus='in', desc='The variable y')
+        y = Float(0.0, iostatus='in', desc='The variable x')
+
+        f_xy = Float(0.0, iostatus='out', desc='F(x,y)')  
+	
+OpenMDAO implements framework variables using a Python add-on called Traits.
+This is a open-source extension to Python that was put out by a company called
+Enthought. Traits provide a way to apply explicit typing to the normally untyped
+Python variables. They also provide the capability to add some other features to
+the framework variables, including unit checking and conversion, default values,
+minima and maxima, and a way to create callback functions.
+
+Here, we are using a trait called Float, which was imported above, that creates
+a floating point variable available to the framework. The constructor contains
+a default value (set to zero for these), an iostatus (which declares this 
+variable as an input or an output), and a description (just a string of text
+that describes this variable -- this will be more useful in the GUI.) For the
+Parabaloid component, we've created 2 inputs and 1 output. Note that the two
+inputs can be set by something else in the model, whether that be triggered
+by an optimization, or by the change of some other component output to which
+this input is connected. The variable names are limited to those names that are
+valid as Python variables.
+
+Finally, we need an function to execute this component:
+
+.. testcode:: simple_component_Parabaloid_pieces
+
+	def execute(self):
+	    """ Solve (x-3)^2 + xy + (y+4)^2 = 3
+	        Optimal solution (minimum): x = 6.6667; y = -7.3333
+	        """
+        
+	    x = self.x
+	    y = self.y
+        
+	    self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
+	    
+The execute function is where you define what a component will do when it is
+told to run. Typically a run is triggered when an input becomes "invalid", which
+is to say that its value has changed and thus the output no longer matches the
+functional evaluation of the component inputs. For the Parabaloid component, the
+equation for the parabloid goes here. Note that the framework variables are 
+accessed as members of the Parabaloid class, meaning that self.x returns the
+value of the framework input x. To make the equation clearer, self.x was
+to x and self.y was assigned to y before the equation. Note also that the
+output value is assigned here similiarly via self.f_xy. This changes the value
+of the framework variable and completes the component execution.
+
+It will often be the case that a component developer will already have the code
+for evaluating the objective function, but it will be in some other language
+such as FORTRAN or C/C++. Section ??? gives some examples of how to incorporate
+these kinds of components into OpenMDAO.
+
+The Parabaloid component is now built, and ready for inclusion in a model.
+
+
+Building a Simple Model - Unconstrained Optimization using CONMIN
+------------------------------------------------------------------
+
+The next task is to build a model that finds the minimum objective value for the
+Parabaloid component described above. This model will contain the Parabaloid as
+well as a public domain gradient optimizer called CONMIN, for which a Python-wrapped
+driver has been included in the OpenMDAO standard library. The model can be
+found in the python file optimization_unconstrainted.py:
+
+.. testcode:: simple_model_Unconstrained
+
+	from openmdao.main.api import Assembly
+	from openmdao.lib.drivers.conmindriver import CONMINdriver
+	from openmdao.examples.simple.parabaloid import Parabaloid
+
+	class Optimization_Unconstrained(Assembly):
+    	    """ Top level assembly for optimizing a vehicle. """
+    
+    	    def __init__(self, directory=''):
+                """ Creates a new Assembly containing a Parabaloid and an optimizer"""
+        
+	        super(Optimization_Unconstrained, self).__init__(directory)
+
+	        # Create Parabaloid component instances
+	        self.add_container('parabaloid', Parabaloid())
+
+	        # Create CONMIN Optimizer instance
+	        self.add_container('driver', CONMINdriver())
+        
+	        # CONMIN Flags
+	        self.driver.iprint = 0
+	        self.driver.itmax = 30
+	        self.driver.fdch = .000001
+	        self.driver.fdchm = .000001
+        
+	        # CONMIN Objective 
+	        self.driver.objective = 'parabaloid.f_xy'
+        
+	        # CONMIN Design Variables 
+	        self.driver.design_vars = ['parabaloid.x', 
+	                                 'parabaloid.y' ]
+        
+	        self.driver.lower_bounds = [-50, -50]
+        	self.driver.upper_bounds = [50, 50]
+		
+In OpenMDAO parlance, we usually describe this as the "Top Level Assembly." An 
+assembly is a container that can hold some number of components, drivers, and 
+other assemblies. An assembly also manages the interconnections between the
+components and assemblies that it owns, and it has its own workflow, which it
+uses to execute the components and drivers in the correct order. For our
+problem, this Top Level Assembly will include a Parabaloid component and a 
+CONMIN driver. It will tell the CONMIN driver when to run, and what to run.
+
+Note that this is an assembly, so the class is derived from Assembly instead
+of Component. This gives it access to the management functions mentioned above.
+
+.. testsetup:: simple_model_Unconstrained_pieces
+
+	from openmdao.main.api import Assembly
+	from openmdao.lib.drivers.conmindriver import CONMINdriver
+	from openmdao.examples.simple.parabaloid import Parabaloid
+	from openmdao.examples.simple.optimization_unconstrained import Optimization_Unconstrained
+	
+	self = Optimization_Unconstrained()
+	
+.. testcode:: simple_model_Unconstrained_pieces
+
+	class Optimization_Unconstrained(Assembly):
+    	    """ Top level assembly for optimizing a vehicle. """
+    
+For the Parabaloid component, we created an execute function to tell it what to
+do when the component is run. This is not needed for the 
+Optimization_Unconstrained assembly because the Assembly class already has an
+execution function that should be useable for most cases. However, this assembly
+does need an initialize function to set parameters for the optimization. This
+is done using the __init__ function.
+
+.. testcode:: simple_model_Unconstrained_pieces
+
+    	    def __init__(self, directory=''):
+                """ Creates a new Assembly containing a Parabaloid and an optimizer"""
+        
+	        super(Optimization_Unconstrained, self).__init__(directory)
+		
+This initialize function is actually a special function called a constructor,
+which is the function that instantiates an object. The double leading and
+trailing underscores are a required part of the syntax. This function executes
+once when the Top Level Assembly is created, so it's a good spot to set up
+any parameters that are needed for CONMIN. The "super" command calls the
+constructor of the parent (Assembly); this is also required.
+
+Next, the Parabloid and the CONMIN driver have to be created (instantiated.)
+This is done using the function add_container, which is one of the framework
+management functions that are part of the Assembly class.
+
+.. testcode:: simple_model_Unconstrained_pieces
+
+	        # Create Parabaloid component instances
+	        self.add_container('parabaloid', Parabaloid())
+
+	        # Create CONMIN Optimizer instance
+	        self.add_container('driver', CONMINdriver())
+		
+Here, a Parabloid component is created, and given the name "parabaloid." Similiary
+a CONMIN driver is created and given the name "driver." As with other class
+members, these now become accessible via self.parabaloid and self.driver.
+		
+The objective function is defined using the concept of a StringRef variable:		
+        
+.. testcode:: simple_model_Unconstrained_pieces
+
+	        # CONMIN Objective 
+	        self.driver.objective = 'parabaloid.f_xy'
+		
+A StringRef is 	a special kind of trait that contains a string that points to
+some location in the OpenMDAO variable tree. This string is analogous to the
+pathname in a file system, using the "." as a separator. This allows for two
+components to have the same variable name while still assuring they'll be
+uniquely refererable. Here, the f_xy output of the Parabaloid component is
+selected as the objective for minimization.
+
+StringRefs are also used to define the design variables (decision variables)
+for the optimization problem. While CONMIN only operates on a single objective,
+it allows multiple design variables. These are assigned in a Python list:
+        
+.. testcode:: simple_model_Unconstrained_pieces
+
+	        # CONMIN Design Variables 
+	        self.driver.design_vars = ['parabaloid.x', 
+	                                 'parabaloid.y' ]
+					 
+Here, both x and y are chosen as the design variables. We can also add a range
+of validity for these variables. CONMIN provides a specialized constraint
+called a "Side Constraint", which allows an unconstrainted optimization to be
+performed on what is essentially a bounded problem. For this problem, we have
+created a lower and an upper bound, constraining x and y to lie on [-50, 50].
+        
+.. testcode:: simple_model_Unconstrained_pieces
+
+	        self.driver.lower_bounds = [-50, -50]
+        	self.driver.upper_bounds = [50, 50]
+
+The problem is now exxentially ready to execute. CONMIN contains quite a few
+additional control parameters; these are detailed in :ref:`CONMIN-driver`.
+		
+.. testcode:: simple_model_Unconstrained_pieces
+
+	        # CONMIN Flags
+	        self.driver.iprint = 0
+	        self.driver.itmax = 30
+	        self.driver.fdch = .000001
+	        self.driver.fdchm = .000001
+
+The ones used here include the debug verbosity (iprint) and the number of
+iterations (itmax.) Additionally, the relative and absolute step sizes for the
+numerical gradient calculation are adjusted to reduce the step size for this
+problem (fdch and fdchm.) If the default values are used, only 2 places of
+accuracy can be obtained in the calculated minimum because the default step
+size is too large for this problem.
+		
+Executing the Simple Optimization Problem
+-----------------------------------------
+
+In the absence of the OpenMDAO GUI, one other step must be taken to set up and
+execute this optimization problem. The Top Level Assembly has to be created
+and told to run. One convenient way to do this is to include some code in the
+Top Level Assembly file that allows execution by executing it in Python, either
+at the command line or in the shell. Using the check "if __name__ == "__main__":"
+some Python code can be included at the bottom of optimization_unconstrained.py
+which only executes when it is called at the command line or the shell. So, the
+final lines in this file are:
+
+.. testsetup:: simple_model_Unconstrained_run
+
+	from openmdao.examples.simple.optimization_unconstrained import Optimization_Unconstrained
+	__name__ = "__main__"
+
+.. testcode:: simple_model_Unconstrained_run
+
+	if __name__ == "__main__": 
+
+	    opt_problem = Optimization_Unconstrained("Top")
+	    opt_problem.run()
+
+	    print "Minimum found at (%f, %f)" % (opt_problem.parabaloid.get("x"), \
+                                                 opt_problem.parabaloid.get("y"))
+						 
+This can be executed in the shell by going to the examples/openmdao.examples.simple/openmdao/examples/simple directory, 
+and typing:
+
+::
+
+        ../../../../../bin/python optimization_unconstrained
+	
+This should produce the output:
+
+.. testoutput:: simple_model_Unconstrained_run
+
+    Minimum found at (6.666309, -7.333026)
+
+An Optimization_Unconstrained Top Level Assembly is instantiated and given the
+name "opt_problem." This created the problem, and instantiates a Parabloid and
+a CONMIN driver. The run function is used to run the model, which solves the
+optimization problem as set up above. Finally, the final design variables are
+accessed using the "get" function on the Parabaloid component, which is
+accessable even from outside the Top Level Assembly.
+
+
+Building a Simple Model - Constrained Optimization using CONMIN
+---------------------------------------------------------------
+Coming Soon.
+
+Afterword
+---------
+
+This concludes a simple introduction to component creation and execution in
+OpenMDAO. The next tutorial section presents a problem with more complexity, and
+presents some more of the features.

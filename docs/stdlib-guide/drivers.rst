@@ -3,6 +3,8 @@
 Drivers
 =======
 
+.. _CONMIN-driver:
+
 The CONMIN Driver
 -----------------
 
@@ -38,7 +40,10 @@ from the standard library drivers namespace.
 
 	from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-Using	
+Typically, CONMIN will be used as a driver in the top level assemblly, though it
+can be also used in a subassembly as part of a nested driver scheme. Using the
+OpenMDAO script interface, a simple optimization problem can be set up as
+follows:
 	
 .. testcode:: CONMIN_load
 
@@ -58,7 +63,13 @@ Using
 
 	        # Create CONMIN Optimizer instance
 	        self.add_container('driver', CONMINdriver())
-        
+
+This first section of code defines an assembly called EngineOptimization. This
+assembly contains a DrivingSim component and a CONMIN driver, both of which are
+created and added inside the __init__ function with add_container(). The 
+objective function, design variables, constraints, and any CONMIN parameters
+are also assigned in the __init__ function. The specific syntax for all of 
+these is given below.
 	
 .. testsetup:: CONMIN_show
 
@@ -79,13 +90,20 @@ can be multiple design variables; these are assigned as a Python list.
 	# CONMIN Design Variables 
 	self.driver.design_vars = ['driving_sim.spark_angle', 
                                                'driving_sim.bore' ]
+					       
+Note that all input parameters for the CONMIN driver are assigned via 
+"self.driver".
 
 These StringRef variables must point to something that can be seen in the scope
 of the CONMIN driver. In other words, if an assembly contains a CONMIN driver,
 the objective function and design variables cannot be located outside of that
-assembly.
+assembly. Also, each design variable must point to a component input. During
+the optimization process, the desgin variables are modified, and the relevant
+portion of the model is executed to evaluate the new objective. Note that it
+is generally not possible to connect more than 1 driver to an available input.
 
-The objective function can actually be a function:
+Additionally, the objective function must always be either an output from a
+component, or a function of available component outputs:
 
 .. testcode:: CONMIN_show
 

@@ -18,7 +18,7 @@ class Optimization_Unconstrained(Assembly):
         
         super(Optimization_Unconstrained, self).__init__(directory)
 
-        # Create DrivingSim component instances
+        # Create Parabaloid component instances
         self.add_container('parabaloid', Parabaloid())
 
         # Create CONMIN Optimizer instance
@@ -44,15 +44,15 @@ class Optimization_Unconstrained(Assembly):
 if __name__ == "__main__": # pragma: no cover         
 
     import time
-    #import profile
     
     opt_problem = Optimization_Unconstrained("Top")
     
     tt = time.time()
     opt_problem.run()
 
-    print "CONMIN Iterations: ", opt_problem.driver.iter_count
-    print "Minimum found at (%f, %f)" % (opt_problem.parabaloid.x, opt_problem.parabaloid.y)
+    print "CONMIN Iterations: ", opt_problem.driver.get("iter_count")
+    print "Minimum found at (%f, %f)" % (opt_problem.parabaloid.get("x"), \
+                                         opt_problem.parabaloid.get("y"))
     print "Elapsed time: ", time.time()-tt
     
-# end engine_optimization.py
+# end optimization_unconstrained.py
