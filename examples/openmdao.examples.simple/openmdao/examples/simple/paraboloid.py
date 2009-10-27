@@ -1,5 +1,5 @@
 """
-    parabaloid.py - Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3
+    paraboloid.py - Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3
 """
 
 
@@ -7,7 +7,7 @@ from enthought.traits.api import Float
 from openmdao.main.api import Component
 from openmdao.lib.traits.unitsfloat import UnitsFloat
 
-class Parabaloid(Component):
+class Paraboloid(Component):
     """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """
     
     # set up interface to the framework  
@@ -31,4 +31,4 @@ class Parabaloid(Component):
         
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
         
-# End parabaloid.py
+# End paraboloid.py
