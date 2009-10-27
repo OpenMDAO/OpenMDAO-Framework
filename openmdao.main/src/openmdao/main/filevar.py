@@ -205,10 +205,10 @@ class FileTrait(TraitType):
         chunk = 1 << 20  # 1MB
         src = value.open()
         dst = open(path, mode)
-        bytes = src.read(chunk)
-        while bytes:
-            dst.write(bytes)
-            bytes = src.read(chunk)
+        data = src.read(chunk)
+        while data:
+            dst.write(data)
+            data = src.read(chunk)
         src.close()
         dst.close()
 

@@ -44,9 +44,6 @@ class DrivenComponent(Component):
     def execute(self):
         """ Compute results from input vector. """
         self.rosen_suzuki = rosen_suzuki(self.x)
-# This gets "iter() returned non-iterator of type 'SyncNetProxy'"
-# (RPyC 2.6 as issues with proxied objects & iteration)
-#        self.sum_y = sum(self.y)
         self.sum_y = 0
         for i in range(len(self.y)):
             self.sum_y += self.y[i]
@@ -55,7 +52,6 @@ class DrivenComponent(Component):
 class MyModel(Assembly):
     """ Use CaseIteratorDriver with DrivenComponent. """
 
-    #name='CID_TestModel', 
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
         self.add_container('driver', CaseIteratorDriver())
@@ -202,8 +198,7 @@ class TestCase(unittest.TestCase):
         try:
             self.model.run()
         except TraitError, exc:
-            msg = "driver: required plugin 'iterator' is not" \
-                  " present"
+            msg = "driver: required plugin 'iterator' is not present"
             self.assertEqual(str(exc), msg)
         else:
             self.fail('TraitError expected')
@@ -217,8 +212,7 @@ class TestCase(unittest.TestCase):
         try:
             self.model.run()
         except TraitError, exc:
-            msg = "driver: required plugin 'recorder' is not" \
-                  " present"
+            msg = "driver: required plugin 'recorder' is not present"
             self.assertEqual(str(exc), msg)
         else:
             self.fail('TraitError expected')
