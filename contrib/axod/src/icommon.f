@@ -75,6 +75,10 @@ C    1           PS2(6,8),PHI2(6,8)
      *DBT2(6),DCPR(6),DSR2(6)
 C
        COMMON /SLSHFT/TSLSH(102)
+C
+       COMMON /DATTRF/ HP1, TT123(48), PT123(48), WG123(48), 
+     *                 ETAS123(48), ETAR123(48), KS1
+
 C      Common Block SNTCP variables:
          G = 0.
          AJ = 0.
@@ -284,5 +288,16 @@ C     COMMON BLOCK ... SLSHFT
       DO K = 1,102    
          TSLSH(K) = 0.
       ENDDO
+C     COMMON BLOCK ... DATTRF
+      HP1 = 0
+      KS1 = 0
+      DO  K = 1, 48
+        TT123(K) = 0.
+        PT123(K) = 0.
+        WG123(K) = 0.
+        ETAS123(K) = 0.
+        ETAR123(K) = 0.
+      ENDDO
+C
       RETURN
       END

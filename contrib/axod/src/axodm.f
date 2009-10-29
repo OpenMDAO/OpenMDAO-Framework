@@ -6,7 +6,15 @@ c     to 'axod.out'.
 c
 C     NASA TURBINE PROGRAM
 C
-      SUBROUTINE AXOD (LOOP)
+      SUBROUTINE AXOD (HPOWER, TOTT, TOTP, TOTF, EFFS, EFFR)
+      REAL HPOWER, TOTT(48), TOTP(48), TOTF(48), EFFS(48), EFFR(48)
+Cf2py intent(out) HPOWER
+Cf2py intent(out) TOTT
+Cf2py intent(out) TOTP
+Cf2py intent(out) TOTF
+Cf2py intent(out) EFFS
+Cf2py intent(out) EFFR
+
       REAL MFSTOP
       LOGICAL PREVER
       COMMON /SNTCP/ G,AJ,PRPC,ICASE,PREVER,MFSTOP,JUMP,LOPIN,ISCASE,
@@ -49,17 +57,18 @@ C
       dimension tangms(6,8),tangmr(6,8),tangm1(6,8),tangm2(6,8),tang0(6)
       common/slope/tangms,tangmr,tangm1,tangm2,tang0,iar,icyl
 
-      WRITE (*,'(///,A,/,A,/,A)') 
+      COMMON /DATTRF/ HP1, TT123(48), PT123(48), WG123(48), ETAS123(48),
+     *                ETAR123(48), KS1
+
+      OPEN(15,FILE='axod.inp',STATUS='OLD')
+      OPEN(16,FILE='axod.out',STATUS='UNKNOWN')
+c	open(10,file='etaout',status='UNKNOWN')
+
+      WRITE (16,'(///,A,/,A,/,A)') 
      .'     Conceptual Analysis for Axial-flow Turbines (AXOD)',
      .'               A COMPUTER PROGRAM DEVELOPED AT',
      .'         NASA GLENN RESEARCH CENTER, CLEVELAND, OHIO'
-      WRITE (*,'(A,///)') '             '
-
-      OPEN(5,FILE='axod.inp',STATUS='OLD')
-      OPEN(6,FILE='axod.out',STATUS='UNKNOWN')
-      write (6,1100) loop
-1100  format('   Value of LOOP =',I2)
-c	open(10,file='etaout',status='UNKNOWN')
+      WRITE (16,'(A,///)') '             '
 
       CALL ICOMMON
       ENDPLT=0.0
@@ -344,7 +353,7 @@ c        PT0PS1(IP,JL-8)=PT0PS1(IP,JL-8)+DELPR
       goto 4
 
 40    continue
-      WRITE(6,106)
+      WRITE(16,106)
 106   FORMAT(//3X,'THE PREVIOUS CASE HAS BEEN TERMINATED DUE TO ERRORS',
      .'- CHECK DUMP.'//' **IF THIS IS THE FIRST POINT ON A SPEED LINE, T
      .HE INPUT VALUE OF PTPS MAY BE TOO LOW**')
@@ -361,8 +370,8 @@ C     print *,'  endplt =',endplt
       IF ((ENDPLT-1.).lt.0) then
 c     IF ((ENDPLT-1.).le.0) then
         print *,'  closing unit 6 & unit 5 files...'
-        CLOSE (UNIT=5)
-        CLOSE (UNIT=6)
+        CLOSE (UNIT=15)
+        CLOSE (UNIT=16)
         stop
       endif
 
@@ -372,9 +381,16 @@ c     IF ((ENDPLT-1.).le.0) then
 
       
       CALL PLOTER
-c     print *,'   RETURNING from axod.f ****'
-      CLOSE (UNIT=5)
-      close(6)
+c     print *,'   RETURNING from axod.f ****KSTG =', KSTG
+      CALL GETDATA(HPOWER, TOTT, TOTP, TOTF, EFFS, EFFR, KSTG)
+c     print *,'  HPOWER =', HPOWER
+c     print *,' TOTT =',(TOTT(III),III=1,KSTG)
+c     print *,' TOTP =',(TOTP(III),III=1,KSTG)
+c     print *,' TOTF =',(TOTF(III),III=1,KSTG)
+c     print *,' EFFS =',(EFFS(III),III=1,KSTG)
+c     print *,' EFFR =',(EFFR(III),III=1,KSTG)
+      CLOSE (UNIT=15)
+      close(16)
       close(7)
 
       RETURN

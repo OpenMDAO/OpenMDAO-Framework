@@ -92,6 +92,9 @@ C
       DIMENSION IFMTA(4),IFMI1(4,61),Y(7,61)
       dimension slopd0(6),slopd1(6,8),slopd2(6,8)
       EQUIVALENCE (IFMI1(1,1),IFMI01(1)),(Y(1,1),STDP0(1))
+      COMMON /DATTRF/ HP1, TT123(48), PT123(48), WG123(48), ETAS123(48),
+     *                ETAR123(48), KS1
+
 C
 C
       DATA DOR/57.29578/
@@ -222,114 +225,136 @@ c     go to 46
       slopd2(iw,k)=atan(tangm2(iw,k))*dor
       if (k.eq.1) slopd0(iw)=atan(tang0(iw))*dor
   210 continue
-117   WRITE(6,1000) XNAME,TITLE,ICASE,ISCASE
+117   WRITE(16,1000) XNAME,TITLE,ICASE,ISCASE
 1000  FORMAT(1H1,20X,29H     TURBINE COMPUTER PROGRAM/
      16X,20A4/6X,20A4/30X,5HCASE ,I3,1H.,I3/24X,
      223HINTER-STAGE PERFORMANCE/ )
-      WRITE(6,1001) K
+      WRITE(16,1001) K
 1001  FORMAT(5X,5HSTA 0,2X,12HSTATOR INLET,10X,
      15HSTAGE,I3,1H. )
-      WRITE(6,301) (Y(KW,1),KW=lj,jj,kj)
-      if (k.eq.1) write(6,1301) (slopd0(kw),kw=1,isect)
-      if (k.gt.1) write(6,1301) (slopd2(kw,k-1),kw=1,isect)
-      if (k.eq.1) write(6,1302) (w0(kw),kw=1,isect)
-      if (k.gt.1) write(6,1302) (wg2a(kw,k-1),kw=1,isect)
-      WRITE(6,302) (Y(KW,2),KW=lj,jj,kj)
-      WRITE(6,303) (Y(KW,3),KW=lj,jj,kj)
-      WRITE(6,304) (Y(KW,4),KW=lj,jj,kj)
-      WRITE(6,305) (Y(KW,5),KW=lj,jj,kj)
-      WRITE(6,306) (Y(KW,6),KW=lj,jj,kj)
-      WRITE(6,307) (Y(KW,7),KW=lj,jj,kj)
-      WRITE(6,308) (Y(KW,8),KW=lj,jj,kj)
-      WRITE(6,309) (Y(KW,9),KW=lj,jj,kj)
-      WRITE(6,310) (Y(KW,10),KW=lj,jj,kj)
-      WRITE(6,311) (Y(KW,11),KW=lj,jj,kj)
-      WRITE(6,312) (Y(KW,12),KW=lj,jj,kj)
-140   WRITE(6,1010)
+      WRITE(16,301) (Y(KW,1),KW=lj,jj,kj)
+      if (k.eq.1) write(16,1301) (slopd0(kw),kw=1,isect)
+      if (k.gt.1) write(16,1301) (slopd2(kw,k-1),kw=1,isect)
+      if (k.eq.1) write(16,1302) (w0(kw),kw=1,isect)
+      if (k.gt.1) write(16,1302) (wg2a(kw,k-1),kw=1,isect)
+      WRITE(16,302) (Y(KW,2),KW=lj,jj,kj)
+      WRITE(16,303) (Y(KW,3),KW=lj,jj,kj)
+      WRITE(16,304) (Y(KW,4),KW=lj,jj,kj)
+      WRITE(16,305) (Y(KW,5),KW=lj,jj,kj)
+      WRITE(16,306) (Y(KW,6),KW=lj,jj,kj)
+      WRITE(16,307) (Y(KW,7),KW=lj,jj,kj)
+      WRITE(16,308) (Y(KW,8),KW=lj,jj,kj)
+      WRITE(16,309) (Y(KW,9),KW=lj,jj,kj)
+      WRITE(16,310) (Y(KW,10),KW=lj,jj,kj)
+      WRITE(16,311) (Y(KW,11),KW=lj,jj,kj)
+      WRITE(16,312) (Y(KW,12),KW=lj,jj,kj)
+140   WRITE(16,1010)
 1010  FORMAT(/5X,5HSTA 1,2X,11HSTATOR EXIT )
-      WRITE(6,313) (Y(KW,13),KW=lj,jj,kj)
-      write(6,1313) (slopd1(kw,k),kw=1,isect)
-      write(6,1314) (wg1(kw,k),kw=1,isect)
-      WRITE(6,314) (Y(KW,14),KW=lj,jj,kj)
-      WRITE(6,315) (Y(KW,15),KW=lj,jj,kj)
-      WRITE(6,316) (Y(KW,16),KW=lj,jj,kj)
-      WRITE(6,317) (Y(KW,17),KW=lj,jj,kj)
-      WRITE(6,318) (Y(KW,18),KW=lj,jj,kj)
-      WRITE(6,319) (Y(KW,19),KW=lj,jj,kj)
-      WRITE(6,320) (Y(KW,20),KW=lj,jj,kj)
-      WRITE(6,321) (Y(KW,21),KW=lj,jj,kj)
-      WRITE(6,322) (Y(KW,22),KW=lj,jj,kj)
-      WRITE(6,323) (Y(KW,23),KW=lj,jj,kj)
-      WRITE(6,324) (Y(KW,24),KW=lj,jj,kj)
-      WRITE(6,325) (Y(KW,25),KW=lj,jj,kj)
-145   WRITE(6,2000)
+      WRITE(16,313) (Y(KW,13),KW=lj,jj,kj)
+      write(16,1313) (slopd1(kw,k),kw=1,isect)
+      write(16,1314) (wg1(kw,k),kw=1,isect)
+      WRITE(16,314) (Y(KW,14),KW=lj,jj,kj)
+      WRITE(16,315) (Y(KW,15),KW=lj,jj,kj)
+      WRITE(16,316) (Y(KW,16),KW=lj,jj,kj)
+      WRITE(16,317) (Y(KW,17),KW=lj,jj,kj)
+      WRITE(16,318) (Y(KW,18),KW=lj,jj,kj)
+      WRITE(16,319) (Y(KW,19),KW=lj,jj,kj)
+      WRITE(16,320) (Y(KW,20),KW=lj,jj,kj)
+      WRITE(16,321) (Y(KW,21),KW=lj,jj,kj)
+      WRITE(16,322) (Y(KW,22),KW=lj,jj,kj)
+      WRITE(16,323) (Y(KW,23),KW=lj,jj,kj)
+      WRITE(16,324) (Y(KW,24),KW=lj,jj,kj)
+      WRITE(16,325) (Y(KW,25),KW=lj,jj,kj)
+145   WRITE(16,2000)
 2000  FORMAT(/12X,13HSTATOR FORCES )
-      WRITE(6,2005) (DBARS(I),I=lj,jj,kj)
+      WRITE(16,2005) (DBARS(I),I=lj,jj,kj)
 2005  FORMAT(1X,7HAVG DIA,7F9.3)
-      WRITE(6,2006) (FTANS(I),I=lj,jj,kj)
+      WRITE(16,2006) (FTANS(I),I=lj,jj,kj)
 2006  FORMAT(1X,7HFTAN/IN,7F9.1)
-      WRITE(6,2007) FTANTS
+      WRITE(16,2007) FTANTS
 2007  FORMAT(28X,7H  F TAN,F9.1)
-      WRITE(6,2008) (FAXS(I),I=lj,jj,kj)
+      WRITE(16,2008) (FAXS(I),I=lj,jj,kj)
 2008  FORMAT(1X,7H FAX/IN,7F9.1)
-      WRITE(6,2009) FAXTS,FAXDHS,FAXDTS
+      WRITE(16,2009) FAXTS,FAXDHS,FAXDTS
 2009  FORMAT(31X,4HF AX,F9.1/2X,6HF DRUM,F9.1,45X,F9.1)
-150   WRITE(6,1000)XNAME,TITLE,ICASE,ISCASE
-      WRITE(6,1015) K
+150   WRITE(16,1000)XNAME,TITLE,ICASE,ISCASE
+      WRITE(16,1015) K
 1015  FORMAT(4X,6HSTA 1A,2X,11HROTOR INLET,10X,5HSTAGE,I3 )
-      WRITE(6,326) (Y(KW,26),KW=lj,jj,kj)
-      write(6,1326)(slopd1(kw,k),kw=1,isect)
-      write(6,1327)(wg1a(kw,k),kw=1,isect)
-      WRITE(6,327) (Y(KW,27),KW=lj,jj,kj)
-      WRITE(6,328) (Y(KW,28),KW=lj,jj,kj)
-      WRITE(6,329) (Y(KW,29),KW=lj,jj,kj)
-      WRITE(6,330) (Y(KW,30),KW=lj,jj,kj)
-      WRITE(6,331) (Y(KW,31),KW=lj,jj,kj)
-      WRITE(6,332) (Y(KW,32),KW=lj,jj,kj)
-      WRITE(6,333) (Y(KW,33),KW=lj,jj,kj)
-      WRITE(6,334) (Y(KW,34),KW=lj,jj,kj)
-160   WRITE(6,1020)
+      WRITE(16,326) (Y(KW,26),KW=lj,jj,kj)
+      write(16,1326)(slopd1(kw,k),kw=1,isect)
+      write(16,1327)(wg1a(kw,k),kw=1,isect)
+      WRITE(16,327) (Y(KW,27),KW=lj,jj,kj)
+      WRITE(16,328) (Y(KW,28),KW=lj,jj,kj)
+      WRITE(16,329) (Y(KW,29),KW=lj,jj,kj)
+      WRITE(16,330) (Y(KW,30),KW=lj,jj,kj)
+      WRITE(16,331) (Y(KW,31),KW=lj,jj,kj)
+      WRITE(16,332) (Y(KW,32),KW=lj,jj,kj)
+      WRITE(16,333) (Y(KW,33),KW=lj,jj,kj)
+      WRITE(16,334) (Y(KW,34),KW=lj,jj,kj)
+160   WRITE(16,1020)
 1020  FORMAT(/5X,5HSTA 2,2X,10HROTOR EXIT )
-      WRITE(6,335) (Y(KW,35),KW=lj,jj,kj)
-      write(6,1335)(slopd2(kw,k),kw=1,isect)
-      write(6,1336)(wg2(kw,k),kw=1,isect)
-      WRITE(6,336) (Y(KW,36),KW=lj,jj,kj)
-      WRITE(6,337) (Y(KW,37),KW=lj,jj,kj)
-      WRITE(6,338) (Y(KW,38),KW=lj,jj,kj)
-      WRITE(6,339) (Y(KW,39),KW=lj,jj,kj)
-      WRITE(6,340) (Y(KW,40),KW=lj,jj,kj)
-      WRITE(6,341) (Y(KW,41),KW=lj,jj,kj)
-      WRITE(6,342) (Y(KW,42),KW=lj,jj,kj)
-      WRITE(6,343) (Y(KW,43),KW=lj,jj,kj)
-      WRITE(6,344) (Y(KW,44),KW=lj,jj,kj)
-      WRITE(6,345) (Y(KW,45),KW=lj,jj,kj)
-      WRITE(6,346) (Y(KW,46),KW=lj,jj,kj)
-      WRITE(6,347) (Y(KW,47),KW=lj,jj,kj)
-      WRITE(6,348) (Y(KW,48),KW=lj,jj,kj)
-      WRITE(6,349) (Y(KW,49),KW=lj,jj,kj)
-165   WRITE(6,2010)
+      WRITE(16,335) (Y(KW,35),KW=lj,jj,kj)
+      write(16,1335)(slopd2(kw,k),kw=1,isect)
+      write(16,1336)(wg2(kw,k),kw=1,isect)
+      WRITE(16,336) (Y(KW,36),KW=lj,jj,kj)
+      WRITE(16,337) (Y(KW,37),KW=lj,jj,kj)
+      WRITE(16,338) (Y(KW,38),KW=lj,jj,kj)
+      WRITE(16,339) (Y(KW,39),KW=lj,jj,kj)
+      WRITE(16,340) (Y(KW,40),KW=lj,jj,kj)
+      WRITE(16,341) (Y(KW,41),KW=lj,jj,kj)
+      WRITE(16,342) (Y(KW,42),KW=lj,jj,kj)
+      WRITE(16,343) (Y(KW,43),KW=lj,jj,kj)
+      WRITE(16,344) (Y(KW,44),KW=lj,jj,kj)
+      WRITE(16,345) (Y(KW,45),KW=lj,jj,kj)
+      WRITE(16,346) (Y(KW,46),KW=lj,jj,kj)
+      WRITE(16,347) (Y(KW,47),KW=lj,jj,kj)
+      WRITE(16,348) (Y(KW,48),KW=lj,jj,kj)
+      WRITE(16,349) (Y(KW,49),KW=lj,jj,kj)
+165   WRITE(16,2010)
 2010  FORMAT(/12X,12HROTOR FORCES )
-      WRITE(6,2005) (DBARR(I),I=lj,jj,kj)
-      WRITE(6,2006) (FTANR(I),I=lj,jj,kj)
-      WRITE(6,2007) FTANTR
-      WRITE(6,2008) (FAXR(I),I=lj,jj,kj)
-      WRITE(6,2009) FAXTR,FAXDHR,FAXDTR
-      WRITE(6,2020)
+      WRITE(16,2005) (DBARR(I),I=lj,jj,kj)
+      WRITE(16,2006) (FTANR(I),I=lj,jj,kj)
+      WRITE(16,2007) FTANTR
+      WRITE(16,2008) (FAXR(I),I=lj,jj,kj)
+      WRITE(16,2009) FAXTR,FAXDHR,FAXDTR
+      WRITE(16,2020)
 2020  FORMAT(/4X,6HSTA 2A,2X,10HSTAGE EXIT)
-      WRITE(6,350) (Y(KW,50),KW=lj,jj,kj)
-      write(6,1350)(slopd2(kw,k),kw=1,isect)
-      write(6,1351)(wg2a(kw,k),kw=1,isect)
-      WRITE(6,351) (Y(KW,51),KW=lj,jj,kj)
-      WRITE(6,352) (Y(KW,52),KW=lj,jj,kj)
-      WRITE(6,353) (Y(KW,53),KW=lj,jj,kj)
-      WRITE(6,354) (Y(KW,54),KW=lj,jj,kj)
-      WRITE(6,355) (Y(KW,55),KW=lj,jj,kj)
-      WRITE(6,356) (Y(KW,56),KW=lj,jj,kj)
-      WRITE(6,357) (Y(KW,57),KW=lj,jj,kj)
-      WRITE(6,358) (Y(KW,58),KW=lj,jj,kj)
-      WRITE(6,359) (Y(KW,59),KW=lj,jj,kj)
-      WRITE(6,360) (Y(KW,60),KW=lj,jj,kj)
-      WRITE(6,361) (Y(KW,61),KW=lj,jj,kj)
+      WRITE(16,350) (Y(KW,50),KW=lj,jj,kj)
+      write(16,1350)(slopd2(kw,k),kw=1,isect)
+      write(16,1351)(wg2a(kw,k),kw=1,isect)
+c     print *,'  wg2a...  isect =',isect,' k=',k
+      DO 555 I = 1,isect
+         WG123(I) = WG2A(I,k)
+555   CONTINUE
+      WRITE(16,351) (Y(KW,51),KW=lj,jj,kj)
+      
+c     print *,'   lj,jj,kj  =',lj,jj,kj
+      WRITE(16,352) (Y(KW,52),KW=lj,jj,kj)
+C
+C     save PT2A () values
+      nii = 0
+      DO 556 I = lJ,JJ,KJ
+         nii = nii + 1
+         KW = I
+         PT123(NII) = Y(KW,51)
+556   CONTINUE
+C
+C     save TT2A () values
+      nii = 0
+      DO 557 I = lJ,JJ,KJ
+         nii = nii + 1
+         KW = I
+         TT123(NII) = Y(KW,52)
+557   CONTINUE
+      WRITE(16,353) (Y(KW,53),KW=lj,jj,kj)
+      WRITE(16,354) (Y(KW,54),KW=lj,jj,kj)
+      WRITE(16,355) (Y(KW,55),KW=lj,jj,kj)
+      WRITE(16,356) (Y(KW,56),KW=lj,jj,kj)
+      WRITE(16,357) (Y(KW,57),KW=lj,jj,kj)
+      WRITE(16,358) (Y(KW,58),KW=lj,jj,kj)
+      WRITE(16,359) (Y(KW,59),KW=lj,jj,kj)
+      WRITE(16,360) (Y(KW,60),KW=lj,jj,kj)
+      WRITE(16,361) (Y(KW,61),KW=lj,jj,kj)
   301 FORMAT (1X,7H DIAM 0,7F9.3)
  1301 format (1x,7hSLOPE 0,9x,6f9.2)
  1302 format (1x,7h   WG 0,9x,6f9.3)
