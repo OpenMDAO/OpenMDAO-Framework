@@ -11,6 +11,17 @@ def assertRaisesError(test_case_instance, code, err_type, err_msg):
         test_case_instance.fail("Expecting %s" % err_type)
 
 
+def assert_rel_error(actual, desired, tolerance):
+    """
+    Determine that the relative error between `actual` and `desired`
+    is within `tolerance`.  Raises :exc:`AssertionError` if not.
+    """
+    error = (actual - desired) / desired
+    if abs(error) > tolerance:
+        raise AssertionError('actual %s, desired %s, error %s, tolerance %s'
+                             % (actual, desired, error, tolerance))
+
+
 def find_python():
     """
     Return path to python in buildout/bin. Assumes it is somewhere

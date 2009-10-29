@@ -5,8 +5,22 @@ from numpy.distutils.core import setup
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.fcompiler import get_default_fcompiler
 
+if sys.platform == 'win32':
+    sdkdir = os.environ.get('WindowsSdkDir')
+    include_dirs = [os.path.join(sdkdir,'Include')]
+    library_dirs = [os.path.join(sdkdir,'Lib')]
+    # make sure we have mt.exe available in path
+    path = os.environ['PATH'].split(';')
+    path.append(os.path.join(sdkdir,'bin'))
+    os.environ['PATH'] = ';'.join(path)
+else:
+    include_dirs = []
+    library_dirs = []
+
 config = Configuration(name='axod')
-config.add_extension('axod', sources=['src/*.f'], f2py_options=['-m', 'axod'])
+config.add_extension('axod', sources=['src/*.f'], f2py_options=['-m', 'axod'],
+                     include_dirs=include_dirs,
+                     library_dirs=library_dirs)
 
 config.add_data_dir('test')
 config.add_data_dir('src')
