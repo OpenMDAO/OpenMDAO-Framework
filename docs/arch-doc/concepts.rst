@@ -85,7 +85,7 @@ Geometry
 
 Many analysis components will require some representation of geometry, and that
 representation could vary in detail from simple parameters, e.g., length, up to
-a full 3d mesh. It is also important that the components dealing with the same
+a full 3D mesh. It is also important that the components dealing with the same
 physical object are using geometric representations generated from the same
 underlying geometry. Also, real world geometries tend to be complex hierarchical
 assemblies of parts, and some components will be interested in only a single
