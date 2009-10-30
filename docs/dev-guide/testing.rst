@@ -194,14 +194,16 @@ want the test to fail if no exception is raised at all.  Without the else
 block, the test would pass if no exception were raised.
 
 
-Test File Locations
-+++++++++++++++++++
+*Test File Locations*
++++++++++++++++++++++
 
 Unit tests are typically placed in a ``test`` subdirectory within the
 directory where the source code being tested is located.  For example,
 the test files for ``openmdao.main`` are located in
 ``openmdao.main/src/openmdao/main/test``.
 
+
+.. _Testing-Code-in-the-Documentation:
 
 Testing Code in the Documentation
 =================================
@@ -239,8 +241,8 @@ only handle shell session blocks, the doctest builder included with Sphinx can
 handle both of these code sample types.
 
 
-Testing Code Blocks
-+++++++++++++++++++
+*Testing Code Blocks*
++++++++++++++++++++++
 
 The doctest builder in Sphinx provides a flexible environment to easily and
 effectively test blocks of code using a set of directives. The test code
@@ -297,9 +299,12 @@ There are other options that can be enabled for the doctest blocks, but so far
 the default ones have been fine.
 
 More details on using the doctest builder can be found here: http://sphinx.pocoo.org/ext/doctest.html
+
+
+.. _Including-Code-Straight-from-the-Source:
 	
-Including Code Straight from the Source
-+++++++++++++++++++++++++++++++++++++++
+*Including Code Straight from the Source*
++++++++++++++++++++++++++++++++++++++++++
 
 There are times that it is more efficient to directly include code from a source
 file. There is a directive built into Sphinx that enables this -- the literalinclude
@@ -328,8 +333,8 @@ also be done with the "lines" option.
 
 More detail on the literalinclude directive can be found at http://sphinx.pocoo.org/markup/code.html       
        
-Helpful Tips
-++++++++++++
+*Helpful Tips*
+++++++++++++++
 
 * Indentation is not preserved between code blocks in the same group. This means that all functions and class definitions effectively close when the block ends. If you need to show code from the middle of a function class, you may have to get creative in what you place in your testsetup block (e.g. defining "self" as something.)
 
@@ -344,8 +349,8 @@ Helpful Tips
 
 * Be wary of including code by line number. If the source file is changed, and lines are added or removed, then the included code might not be what was intended.
 	
-Running the Tests
-+++++++++++++++++
+*Running the Tests*
++++++++++++++++++++
 
 The buildout procedure currently generates a script for testing the code in the
 documents. This can be run by going to the buildout folder, and running:

@@ -92,6 +92,17 @@ Glossary
         A Python module that measures code coverage during test execution.
 	
 
+	
+      **Data Objects** 
+      
+	    A component's inputs and outputs. A Data Object is a wrapper for data
+	    containing a value, a default value, optional min/max values, and units
+	    that is passed between framework components. Data Objects can also
+	    perform their own validation when being assigned to another Data Object.
+	    OpenMDAO's Data Objects are implemented using Traits, an open source
+	    extension to Python authored by Enthought, Inc.
+
+	
       **decorator**
 		A Python module that aims to simplify the usage of decorators for the average
 		programmer and to popularize decorators by showing various non-trivial examples. A
@@ -336,6 +347,13 @@ Glossary
         select a  viable place to run a code.
      
 
+      **reStructuredText**
+	     A plain-text markup syntax and parser system used for in-line
+	     program documentation (such as Python docstrings), for quickly
+	     creating simple Web pages, and for standalone documents. The
+	     reStructuredText parser is a component of Docutils.
+	
+     
       **revision**
         A snapshot of the state of files and directories, including their
         content. A revision also has some metadata associated with it, including

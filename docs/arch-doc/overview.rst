@@ -109,23 +109,23 @@ released open source for various reasons, will be available as individual eggs.
 
 The current package layout of the project is as follows:
 
-**openmdao.main**
+``openmdao.main``
     the OpenMDAO framework infrastructure
     
-**openmdao.lib**
+``openmdao.lib``
     standard library of OpenMDAO plugins
     
-**openmdao.recipes**
+``openmdao.recipes``
     OpenMDAO specific recipes for zc.buildout_
 
-**openmdao.util**
+``openmdao.util``
     OpenMDAO utility routines for file handling, subprocess execution, etc.
 
-**openmdao.test**
+``openmdao.test``
     Classes and utilities that are specific to testing various aspects
     of OpenMDAO
 
-**openmdao.examples**
+``openmdao.examples``
     OpenMDAO tutorial problems and other examples
 
 .. _zope: http://wiki.zope.org/zope3/Zope3Wiki

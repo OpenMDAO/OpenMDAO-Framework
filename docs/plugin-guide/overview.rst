@@ -47,6 +47,7 @@ entry point must be a member of an entry point group. An application
 can look at the entry point groups that are defined to determine if
 any applicable plugins exist within a given distribution.
 
+
 OpenMDAO looks for the following entry point groups in order to find
 plugins within a distribution:
 
@@ -93,7 +94,6 @@ called *simple_adder*:
         }
     )
 
-
 The example above shows that an entry point named *SimpleAdder* that maps to
 the *SimpleAdder* class within the *simple_adder.py* module is a member of
 the *openmdao.component* entry point group.  This tells OpenMDAO that the
@@ -133,4 +133,13 @@ Installing an OpenMDAO Plugin
 
    TODO: need to work with team to determine standard openmdao metadata
       
+
+
+Python Extension
+----------------
+
+
+File Wrapper
+------------
+
 
