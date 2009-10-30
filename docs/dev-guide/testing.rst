@@ -342,7 +342,7 @@ Helpful Tips
 	
 * Care should be taken to assure that each block of code is being tested. One way to do this is to purposefully introduce an error into a block to verify that it is caught.
 
-* Be wary of including code by line number. If the source file is changed, and lines are added, then the included code might not be what was intended.
+* Be wary of including code by line number. If the source file is changed, and lines are added or removed, then the included code might not be what was intended.
 	
 Running the Tests
 +++++++++++++++++
