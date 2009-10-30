@@ -15,7 +15,8 @@ Contents:
    dev-guide/index
    srcdocs/index
    licenses/index
-
+   quick-ref/index
+  
 
 .. toctree::
    :hidden:
