@@ -143,7 +143,14 @@ The ``repo.py fix`` script fixes file permissions that may have gotten changed d
 - If you **HAVE** a conflict, you must resolve it:
 
 Bazaar will display the number of conflicts and provide the path to the files in
-conflict. (It also embeds markers in the file where there is a conflict.) 
+conflict, as in the following example:
+
+
+.. figure:: ../images/quick-ref/merge_conflict.png
+   :align: center
+
+   Example of Conflicts When Merging
+
 
 To bring up a graphical interface for displaying the conflicts, type the following:
 
@@ -157,17 +164,19 @@ order listed here:
 
 
         | ``filename.BASE``   	 (original file)
-	| ``filename.OTHER``  	 (file that is being merged)
-	| ``filename.THIS``  	 (file you are merging to)
+	| ``filename.OTHER``  	 (your file -- the one being merged)
+	| ``filename.THIS``  	 (file you are merging to -- i.e., the mainline)
 
-Conflicts will be displayed in colored text across all three files. You must look at the files and
-decide which version to send to ``filename.THIS.`` You do this by clicking on the appropriate
-arrow for that change. You will automatically move down the file through the changes. If you
+Conflicts will be displayed in colored text across all three files. You must look at the files and decide
+which version to send to ``filename.THIS.`` If the "THIS" file is okay, you can keep scrolling down.
+However, if you have to update it, select the appropriate arrow for that change and click on it. If you
 make a mistake, you can select *undo* from the menu bar at the top of the screen.
 
 After you have gone through the file and made your selections, save your changes and then exit
-the file. When you exit you will be asked if you want to save the selected file.  Assuming you
-do, select that option. 
+the file. You can just click the X in the upper right corner.
+
+When you exit you will be asked if you want to Save Selected. Assuming you do, click that option and then
+click *Yes* when asked to save the file. 
 
 Make sure there are no more conflicts; then build and commit your changes by typing: 
 
@@ -175,7 +184,6 @@ Make sure there are no more conflicts; then build and commit your changes by typ
 ::
 
 %bzr conflicts    	
-%bzr resolve	  (This command marks the files as resolved and cleans up BASE, OTHER, and THIS from working_main.)
 %cd /buildout			
 %python2.6 isolatedbootstrap.py  
 %bin/buildout 				
@@ -190,7 +198,7 @@ This last script fixes permissions that may have gotten changed during the build
 Canceling a Merge/Removing Uncommitted Changes
 ----------------------------------------------
 
-If you have an issue that cannot be resolved timely, you can cancel the merge by typing:
+If you have an issue that cannot be resolved quickly, you can cancel the merge by typing:
 
 ::
 

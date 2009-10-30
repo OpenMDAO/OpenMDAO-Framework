@@ -8,24 +8,28 @@ Glossary
 .. glossary::
       
       **API**
-	    Application Programming Interface. A set of functions that can be called from
-	    an application program to access features of another program.
+        Application Programming Interface. A set of functions that can be called from
+        an application program to access features of another program.
 
 
       **Assembly**
-	    The Assembly class is the primary building block of the system of 
-	    systems aspect of OpenMDAO. Each Assembly has a Workflow and a 
-	    Driver, and acts as a container for Components. An Assembly is also a
-	    Component, so hierarchical structures of Assemblies can be created.
+        The Assembly class is the primary building block of the system of 
+        systems aspect of OpenMDAO. Each Assembly has a Workflow and a 
+        Driver, and acts as a container for Components. An Assembly is also a
+        Component, so hierarchical structures of Assemblies can be created.
       
       
+      
+      **AXOD**
+        Add definition here ...
+        
       **Beaker** 
         A Session and Caching library with :term:`WSGI` Middleware. 
 	      
       
       **branch**
-	    An ordered series of revisions (see :term:`revision` below) that describes the
-	    history of a set of files. 	
+	An ordered series of revisions (see :term:`revision` below) that describes the
+	history of a set of files. 	
 
 
       **CAD**
@@ -45,7 +49,7 @@ Glossary
 
       **Case**
         An object containing a collection of input names and values, and names of outputs 
-		to be stored along with the inputs after the process model runs.
+        to be stored along with the inputs after the process model runs.
 
 
       **CaseIterator**
@@ -69,10 +73,10 @@ Glossary
 	
       
       **Component**
-        A Container that is *runnable*; it also supports several other framework
-	    functions, such as checkpoint/restart, stop, and invoke. A component has
-	    input and output attributes and can perform some sort of calculation when
-	    it is executed. 
+        Container that is *runnable*; it also supports several other framework
+        functions, such as checkpoint/restart, stop, and invoke. A component has
+	input and output attributes and can perform some sort of calculation when
+	it is executed. 
 
 
       **Components**
@@ -80,12 +84,12 @@ Glossary
 	
 	
       **CONMIN**
-	    An interface to the NASTRAN/NASA CONMIN optimization program.
+        An interface to the NASTRAN/NASA CONMIN optimization program.
       
       
       **Container**
-	    A container of Variables and other Containers. The base class of all objects
-	    within the framework that  support user access to input and output Variables. 
+        A container of Variables and other Containers. The base class of all objects
+        within the framework that  support user access to input and output Variables. 
 
       
       **Coverage**
@@ -94,31 +98,30 @@ Glossary
 
 	
       **Data Objects** 
-      
-	    A component's inputs and outputs. A Data Object is a wrapper for data
-	    containing a value, a default value, optional min/max values, and units
-	    that is passed between framework components. Data Objects can also
-	    perform their own validation when being assigned to another Data Object.
-	    OpenMDAO's Data Objects are implemented using Traits, an open source
-	    extension to Python authored by Enthought, Inc.
+        A component's inputs and outputs. A Data Object is a wrapper for data
+        containing a value, a default value, optional min/max values, and units
+        that is passed between framework components. Data Objects can also
+        perform their own validation when being assigned to another Data Object.
+        OpenMDAO's Data Objects are implemented using Traits, an open source
+        extension to Python authored by Enthought, Inc.
 
 	
       **decorator**
-		A Python module that aims to simplify the usage of decorators for the average
-		programmer and to popularize decorators by showing various non-trivial examples. A
-		Python decorator is a specific change to the Python syntax that allows users to
-		more conveniently alter functions and methods.
-	
+        A Python module that aims to simplify the usage of decorators for the average
+        programmer and to popularize decorators by showing various non-trivial examples. A
+        Python decorator is a specific change to the Python syntax that allows users to
+        more conveniently alter functions and methods.
+
       
       **DLL**
         Dynamically Loadable Library 
 	
 	
       **docutils**
-		Docutils is a modular system for processing documentation into useful
-		formats, such as HTML, XML, and LaTeX. For input Docutils supports
-		reStructuredText, an easy-to-read, what-you-see-is-what-you-get plain text
-		markup syntax.
+        Docutils is a modular system for processing documentation into useful
+        formats, such as HTML, XML, and LaTeX. For input Docutils supports
+        reStructuredText, an easy-to-read, what-you-see-is-what-you-get plain text
+        markup syntax.
 
 
       **Driver**
@@ -141,14 +144,14 @@ Glossary
 
       
       **Elixir**
-		A declarative layer on top of SQLAlchemy that provides the ability to create simple
-		Python classes that map directly to relational database tables. It provides many of
-		the benefits of traditional databases without losing the convenience of Python
-		objects.
+        A declarative layer on top of SQLAlchemy that provides the ability to create simple
+        Python classes that map directly to relational database tables. It provides many of
+        the benefits of traditional databases without losing the convenience of Python
+        objects.
 
 	
       **F2PY**
-      	FORTRAN to Python interface generator.
+        FORTRAN to Python interface generator.
 
      
       **Factory**
@@ -156,10 +159,10 @@ Glossary
 
 
       **FactoryManager**
-		All requests to create any type of Container must go through the
-		FactoryManager object. Multiple Factory derived objects can be registered with
-		the FactoryManager to allow creation of objects in various ways, e.g., locally
-		via import and remotely via an ObjServer.
+        All requests to create any type of Container must go through the
+        FactoryManager object. Multiple Factory derived objects can be registered with
+        the FactoryManager to allow creation of objects in various ways, e.g., locally
+        via import and remotely via an ObjServer.
 
 
       **FormEncode**
@@ -185,19 +188,19 @@ Glossary
 
 
       **Jinja**
-		A small but fast and easy-to-use stand-alone template engine written in pure
-		Python. 
+        A small but fast and easy-to-use stand-alone template engine written in pure
+        Python. 
 
 
       **Jinja2**
-		Jinja2 is the new and improved version of Jinja with new features and a simpler and
-		faster runtime. 
+        Jinja2 is the new and improved version of Jinja with new features and a simpler and
+        faster runtime. 
 	
 
       **JSON**
-		JSON, short for JavaScript Object Notation, is a lightweight computer data
-		interchange format. It is a text-based, human-readable format for representing
-		simple data structures and associative arrays (called objects).
+        JSON, short for JavaScript Object Notation, is a lightweight computer data
+        interchange format. It is a text-based, human-readable format for representing
+        simple data structures and associative arrays (called objects).
 
 
       **LAN** 
@@ -206,8 +209,8 @@ Glossary
 
 
       **Mako**
-		A template library written in Python that provides a familiar, non-XML syntax which
-		compiles into Python modules for maximum performance.
+        A template library written in Python that provides a familiar, non-XML syntax which
+        compiles into Python modules for maximum performance.
 
 	
       **MDAO**  
@@ -215,9 +218,9 @@ Glossary
 
       
       **metadata**
-		Metadata is information about an informational resource, such as a document (e.g,, a webpage), image,
-		dataset or other resource. It describes context, content, and structure of the resource and its
-		management through time. 
+        Metadata is information about an informational resource, such as a document (e.g,, a webpage), image,
+        dataset or other resource. It describes context, content, and structure of the resource and its
+        management through time. 
 
       
       **model**
@@ -241,7 +244,7 @@ Glossary
             
       **NumPy**
         NumPy is the fundamental package needed for scientific computing with Python. See
-	    http://numpy.scipy.org/ 
+	http://numpy.scipy.org/ 
 	
       
       **ObjServer**
@@ -281,20 +284,20 @@ Glossary
 	
       
       **PasteDeploy**
-	    A tool to load, configure, and compose :term:`WSGI` applications and servers.
+        A tool to load, configure, and compose :term:`WSGI` applications and servers.
 
 
       **PasteScript**
-	    A pluggable command-line frontend, including commands to setup package file layouts
+	A pluggable command-line frontend, including commands to setup package file layouts
 
 
       **plugin**
-	    A computer program that interacts with a host aplication to
-	    provide specific functionality without changing the host application.
+        A computer program that interacts with a host aplication to
+        provide specific functionality without changing the host application.
 
 
       **plugins**
-	    See :term:`plugin`
+        See :term:`plugin`
 
 	
       **PID**
@@ -348,11 +351,11 @@ Glossary
      
 
       **reStructuredText**
-	     A plain-text markup syntax and parser system used for in-line
-	     program documentation (such as Python docstrings), for quickly
-	     creating simple Web pages, and for standalone documents. The
-	     reStructuredText parser is a component of Docutils.
-	
+        A plain-text markup syntax and parser system used for in-line
+        program documentation (such as Python docstrings), for quickly
+        creating simple Web pages, and for standalone documents. The
+        reStructuredText parser is a component of Docutils.
+
      
       **revision**
         A snapshot of the state of files and directories, including their
@@ -366,13 +369,13 @@ Glossary
 	
 	
       **Routes**   
-		A Routing package for Python that matches URLs to dicts (dictionary network
-		protocols) and vice versa.
+        A Routing package for Python that matches URLs to dicts (dictionary network
+        protocols) and vice versa.
 	
 	
       **SciPy**   
-		SciPy (pronounced "Sigh Pie") is open-source software for mathematics, science, and
-		engineering.
+        SciPy (pronounced "Sigh Pie") is open-source software for mathematics, science, and
+        engineering.
 
 	
       **ScientificPython**
@@ -380,8 +383,8 @@ Glossary
 	
 	
       **setuptools**
-		Tools for downloading, building, installing, upgrading, and uninstalling
-		Python packages. 
+        Tools for downloading, building, installing, upgrading, and uninstalling
+        Python packages. 
 
       
       **simplejson**
@@ -409,9 +412,9 @@ Glossary
 	
 	
       **SWIG**
-		Simplified Wrapper and Interface Generator. A software development tool that connects
-		programs written in C and C++ with a variety of high-level programming languages. Go to 
-		http://www.swig.org/index.php for more information.
+        Simplified Wrapper and Interface Generator. A software development tool that connects
+        programs written in C and C++ with a variety of high-level programming languages. Go to 
+        http://www.swig.org/index.php for more information.
 
      
       **Tempita**
@@ -431,16 +434,16 @@ Glossary
 
 	
       **Traits**
-		A software package from Enthought, Inc. that aids in developing Python code. A trait is
-		a type definition that can be used for normal Python object attributes, giving the
-		attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
-		The Traits package works with version 2.4 and later of Python and is similar in some ways
-		to the Python property language feature. 
+        A software package from Enthought, Inc. that aids in developing Python code. A trait is
+        a type definition that can be used for normal Python object attributes, giving the
+        attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
+	The Traits package works with version 2.4 and later of Python and is similar in some ways
+	to the Python property language feature. 
 
 
       **TraitType** 
-		The base class used to validate and possibly convert data objects that are
-		passed between linked Components.
+        The base class used to validate and possibly convert data objects that are
+        passed between linked Components.
 
       
       **units**
@@ -469,10 +472,10 @@ Glossary
               
        
       **WebHelpers**
-		A library of helper functions intended to make writing templates in Web applications
-		easier. It's the standard function library for Pylons and TurboGears 2. It also
-		contains a large number of functions not specific to the Web, including text
-		processing, number formatting, date calculations, container objects, etc.
+	A library of helper functions intended to make writing templates in Web applications
+	easier. It's the standard function library for Pylons and TurboGears 2. It also
+	contains a large number of functions not specific to the Web, including text
+	processing, number formatting, date calculations, container objects, etc.
 
             
       **WebOb**
@@ -480,9 +483,9 @@ Glossary
 	
 
       **WebTest** 
-		Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
-		easy to send test requests to that application without starting up an HTTP
-		server. 
+	Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
+	easy to send test requests to that application without starting up an HTTP
+	server. 
 	
 
       **Workflow**
@@ -503,7 +506,7 @@ Glossary
       
       
       **zc.buildout** 
-	    System for managing development buildouts.
+        System for managing development buildouts.
 	
       
       **zc.recipe.egg**
@@ -511,9 +514,9 @@ Glossary
 	
 	
       **Zope**
-		Zope is an open source application server for building content management
-		systems, intranets, portals, and custom applications. Zope is written in
-		Python, an object-oriented scripting language.
+	Zope is an open source application server for building content management
+	systems, intranets, portals, and custom applications. Zope is written in
+	Python, an object-oriented scripting language.
 	
       
       **zope.component**
@@ -521,8 +524,8 @@ Glossary
 	
 	
       **zope.deferredimport** 
-		The zope.deferredimport package provided facilities for defining names in modules
-		that will be imported from somewhere else when used.
+        The zope.deferredimport package provided facilities for defining names in modules
+        that will be imported from somewhere else when used.
 
 
       **zope.deprecation** 
@@ -535,10 +538,10 @@ Glossary
 	
       
       **zope.i18nmessageid**
-		This package provides facilities for delaring  messages (which carry a
-		translation source domain and possibly a default translation) within program
-		source text; translation of the messages is the responsiblitiy of the "zope.i18n"
-		package.
+        This package provides facilities for delaring  messages (which carry a
+        translation source domain and possibly a default translation) within program
+        source text; translation of the messages is the responsiblitiy of the "zope.i18n"
+        package.
 	
 
       **zope.interface**
