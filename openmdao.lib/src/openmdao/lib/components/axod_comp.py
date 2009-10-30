@@ -1,6 +1,5 @@
 import os.path
 import shutil
-import sys
 
 import numpy
 
@@ -30,13 +29,6 @@ class AxodComp(Component):
     mflow = Array(dtype=numpy.float32, shape=(48,), iostatus='out')
     effs  = Array(dtype=numpy.float32, shape=(48,), iostatus='out')
     effr  = Array(dtype=numpy.float32, shape=(48,), iostatus='out')
-
-    # An alternative mechanism for accessing data would be to
-    # directly access the DATTRF common block.  Need to find out how to
-    # associate a Trait with a Python object for that (possibly a
-    # property trait).
-
-    # TODO: support multiple instances.
 
     def __init__(self, doc=None, directory='', input_filename=''):
         super(AxodComp, self).__init__(doc, directory)

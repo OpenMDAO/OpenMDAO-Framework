@@ -23,7 +23,7 @@ class EggObserver(object):
     def analyze(self, path):
         """
         Observe analysis of file.
-        If `observer` returns False, raises RuntimeError.
+        If `observer` returns False, raises :exc:`RuntimeError`.
         """
         self.logger.debug("    analyzing '%s'", path)
         if self.observer is not None:
@@ -39,7 +39,7 @@ class EggObserver(object):
     def add(self, path, file_fraction, byte_fraction):
         """
         Observe add of file.
-        If `observer` returns False, raises RuntimeError.
+        If `observer` returns False, raises :exc:`RuntimeError`.
         """
         self.logger.debug("    adding '%s'", path)
         if self.observer is not None:
@@ -56,7 +56,7 @@ class EggObserver(object):
     def copy(self, path, file_fraction, byte_fraction):
         """
         Observe copy of file.
-        If `observer` returns False, raises RuntimeError.
+        If `observer` returns False, raises :exc:`RuntimeError`.
         """
         self.logger.debug("    copying '%s'", path)
         if self.observer is not None:
@@ -73,7 +73,7 @@ class EggObserver(object):
     def extract(self, path, file_fraction, byte_fraction):
         """
         Observe extraction of file.
-        If `observer` returns False, raises RuntimeError.
+        If `observer` returns False, raises :exc:`RuntimeError`.
         """
         self.logger.debug("    extracting '%s'", path)
         if self.observer is not None:
@@ -97,6 +97,7 @@ class EggObserver(object):
 
     def exception(self, msg):
         """ Observe exception. """
+        self.logger.error(msg)
         if self.observer is not None:
             try:
                 self.observer('except', msg, -1, -1)

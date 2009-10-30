@@ -1,9 +1,12 @@
+import os.path
 import setuptools
 import sys
 
 from numpy.distutils.core import setup
 from numpy.distutils.misc_util import Configuration
 from numpy.distutils.fcompiler import get_default_fcompiler
+
+version = '0.1.0'
 
 if sys.platform == 'win32':
     sdkdir = os.environ.get('WindowsSdkDir')
@@ -18,7 +21,7 @@ else:
     library_dirs = []
 
 config = Configuration(name='axod')
-config.add_extension('axod', sources=['src/*.f'], f2py_options=['-m', 'axod'],
+config.add_extension('axod', sources=['src/*.f'],
                      include_dirs=include_dirs,
                      library_dirs=library_dirs)
 
@@ -27,6 +30,8 @@ config.add_data_dir('src')
 config.add_data_files('README.txt', 'axod.pdf', 'AXOD_AAO.pdf')
 
 # Dictionary of compiler flags indexed by compiler name.
+# AXOD assumes (somewhere) that variables are statically allocated.
+# (and likely depending on those variables to be initialized to zero)
 # Note that these will replace the default flags.
 f77_compiler_flags = {
     'gnu': '-Wall -ffixed-form -fno-second-underscore -fno-automatic',
@@ -50,10 +55,13 @@ if config_index > 0:
         sys.argv[config_index:config_index] = \
             ['config_fc', '--f77flags=%s' % f77flags]
 
-kwds = {'install_requires':['numpy'],
-        'version':'1.0',
+kwds = {'description':'AXOD - axial turbine off-design analysis.',
+        'version':version,
+        'license': 'public domain',
+        'install_requires':['numpy'],
         'zip_safe':False,
        }
+
 kwds.update(config.todict())
 
 setup(**kwds)

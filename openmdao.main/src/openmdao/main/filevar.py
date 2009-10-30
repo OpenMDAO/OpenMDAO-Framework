@@ -1,5 +1,5 @@
 """
-Support for files, either as FileTraits or external files.
+Support for files, either as :class:`FileTraits` or external files.
 """
 import copy
 import os.path
@@ -27,9 +27,9 @@ class FileMetadata(object):
     Metadata related to a file, specified by keyword arguments (except for
     'path').  By default, the metadata includes:
 
-    - 'path', a string, no default value. It may be a glob-style pattern in \
-      the case of an external file description. Non-absolute paths are \
-      relative to their owning component's directory.
+    - 'path', a string, no default value. It may be a :mod:`glob`-style \
+      pattern in the case of an external file description. Non-absolute paths \
+      are relative to their owning component's directory.
     - 'desc', a string, default null.
     - 'content_type', a string, default null.
     - 'binary', boolean, default False.
@@ -68,9 +68,10 @@ class FileMetadata(object):
 class FileRef(FileMetadata):
     """
     A reference to a file on disk. As well as containing metadata information,
-    it supports 'open()' to read the file's contents. Before open() is
-    called, 'owner' must be set to an object supporting 'check_path()' and
-    'get_abs_directory()' (typically a Component).
+    it supports :meth:`open` to read the file's contents. Before :meth:`open` \
+    is called, 'owner' must be set to an object supporting :meth:`check_path` \
+    and :meth:`get_abs_directory` (typically a :class:`Component` or one of \
+    its child :class:`Container` objects).
     """
 
     def __init__(self, path, owner=None, **metadata):
@@ -113,10 +114,10 @@ class FileRef(FileMetadata):
 
 class FileTrait(TraitType):
     """
-    A trait wrapper for a FileRef object. For input files the 'legal_types'
-    attribute may be set to a list of expected 'content_type' strings.
+    A trait wrapper for a :class:`FileRef` object. For input files
+    :attr:`legal_types` may be set to a list of expected 'content_type' strings.
     Then upon assignment the actual 'content_type' must match one of the
-    'legal_types' strings.  Also for input files, if the 'local_path' attribute
+    :attr:`legal_types` strings.  Also for input files, if :attr:`local_path`
     is set, then upon assignent the associated file will be copied to that path.
     """
     
