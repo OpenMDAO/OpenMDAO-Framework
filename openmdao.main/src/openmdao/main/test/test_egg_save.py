@@ -665,7 +665,7 @@ class TestCase(unittest.TestCase):
         try:
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
         except RuntimeError, exc:
-            msg = 'Egg_TestModel: _fix_im_recurse: tuple'
+            msg = 'Egg_TestModel: fix_instancemethods: tuple'
             self.assertEqual(str(exc)[:len(msg)], msg)
         else:
             self.fail('Expected RuntimeError')

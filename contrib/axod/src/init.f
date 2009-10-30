@@ -42,7 +42,7 @@ c     IF(STGCH)5,5,4
 4     IK=1
    5  l=2
       GO TO(6,8),L
-6     WRITE(6,100)ICASE
+6     WRITE(16,100)ICASE
       IF(STGCH)3,3,7
 7     IK=2
       GO TO 3
@@ -242,7 +242,7 @@ c        Calculate Axial Chords and Sector Slopes
       end if
   355 continue
   360 continue
-      write (6,400) sumcx
+      write (16,400) sumcx
   400 format (1h0,' TURBINE LENGTH = ',f6.2,' INCHES')
 C        CALCULATE INLET AND EXIT ANGLES IN RADIANS
       DO 31 K=1,KSTG

@@ -300,10 +300,10 @@ C        END OF INCIDENCE LOSS CORRECTION LOOP
 18    CONTINUE
       WGT0(K)=WGT1(K)/RWG(2,K)*RWG(1,K)
       IF(TRLOOP.ne.0.) then
-        WRITE(6,1000) WGT0(K),WGT1(K),(WG0(L,K),L=1,ISECT)
-        WRITE(6,1001)              (PT0PS0(L,K),L=1,ISECT)
-        WRITE(6,1002)                 (WG1(L,K),L=1,ISECT)
-        WRITE(6,1003)              (PT0PS1(L,K),L=1,ISECT)
+        WRITE(16,1000) WGT0(K),WGT1(K),(WG0(L,K),L=1,ISECT)
+        WRITE(16,1001)              (PT0PS0(L,K),L=1,ISECT)
+        WRITE(16,1002)                 (WG1(L,K),L=1,ISECT)
+        WRITE(16,1003)              (PT0PS1(L,K),L=1,ISECT)
 1000    FORMAT(2X,6H WGT0=,F8.3,2X,6H WGT1=,F8.3/2X,6H  WG0=,6F8.3)
 1001    FORMAT(1X,7HPT0PS0=,6F8.5)
 1002    FORMAT(2X,6H  WG1=,6F8.3)

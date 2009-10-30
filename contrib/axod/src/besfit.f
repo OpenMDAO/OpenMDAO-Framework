@@ -41,7 +41,7 @@ c     EQUIVALENCE (P0,R),(P1,R(  7))
       IF(J.LE.22) GO TO 24
 27    K=IAF
       LL=K+1
-C     WRITE(6,29) IAF
+C     WRITE(16,29) IAF
       GO TO 4
 24    C1=0.
       XPP=0.
@@ -61,7 +61,7 @@ C     WRITE(6,29) IAF
 12    K=J
       IF(RES(J).LT.ABS(RES(J+1))) K=J-1
       LL=K+1
-C  43 WRITE(6,14) K
+C  43 WRITE(16,14) K
 43    CONTINUE
       GO TO 4
 13    A(J+1)=XPP/C1

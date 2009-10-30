@@ -1,14 +1,15 @@
 """
 Egg save utilities.
 
-Note that Pickle can't save references to functions that aren't defined at the
-top level of a module, and there doesn't appear to be a viable workaround.
-Normally pickle won't handle instance methods either, but there is code in
-place to work around that.
+Note that :mod:`pickle` can't save references to functions that aren't defined
+at the top level of a module, and there doesn't appear to be a viable
+workaround.  Normally :mod:`pickle` won't handle instance methods either,
+but there is code in place to work around that.
 
-When saving to an egg, the module named __main__ changes when reloading. This
-requires finding the real module name and munging references to __main__.
-References to old-style class types can't be restored correctly.
+When saving to an egg, the module named :mod:`__main__` changes when reloading.
+This requires finding the real module name and munging references to
+:mod:`__main__`.  References to old-style class types can't be restored
+correctly.
 
 Also note that YAML format doesn't handle more than one layer of back-pointers, 
 so it's only suitable for very flat object networks.
@@ -77,9 +78,9 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     - `src_dir` is the root of all (relative) `src_files`.
     - `dst_dir` is the directory to write the egg in.
     - `fmt` and `proto` are passed to save().
-    - If 'use_setuptools` is True, then eggwriter.write_via_setuptools() is \
-      called rather than eggwriter.write().
-    - `observer` will be called via an EggObserver intermediary.
+    - If 'use_setuptools` is True, then :func:`eggwriter.write_via_setuptools` \
+      is called rather than :func:`eggwriter.write`.
+    - `observer` will be called via an :class:`EggObserver` intermediary.
 
     Returns (egg_filename, required_distributions, orphan_modules).
     """
@@ -635,7 +636,7 @@ def _process_found_modules(py_dir, finder_items, modules, distributions,
                 except ImportError:
                     logger.debug('Skipping %s, not importable.' % name)
                 else:
-                    logger.warning('No distribution found for %s', name)
+                    logger.warning('No distribution found for %s.', name)
                     orphans.add((name, path))
 
 
@@ -760,9 +761,10 @@ def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None, fix_im=True):
     """
     Save the state of `root` and its children to an output stream (or filename).
     If `outstream` is a string, then it is used as a filename.
-    The format can be supplied in case something other than cPickle is needed.
-    For the Pickle formats, a `proto` of -1 means use the highest protocol.
-    Set `fix_im` False if no instancemethod objects need to be fixed.
+    The format can be supplied in case something other than :mod:`cPickle`
+    is needed.  For the :mod:`pickle` formats, a `proto` of -1 means use the
+    highest protocol.  Set `fix_im` False if no instance method objects need
+    to be fixed.
     """
     logger = logger or NullLogger()
 

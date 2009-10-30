@@ -145,7 +145,7 @@ def _dist_from_eggfile(filename, install, logger, observer):
         total_bytes = 1.
 
     files = 0.
-    data = 0.
+    size = 0.
     for info in archive.infolist():
         fname = info.filename
         if not fname.startswith(name) and not fname.startswith('EGG-INFO'):
@@ -153,15 +153,15 @@ def _dist_from_eggfile(filename, install, logger, observer):
         if fname.endswith('.pyc') or fname.endswith('.pyo'):
             continue  # Don't assume compiled OK for this platform.
 
-        observer.extract(fname, files/total_files, data/total_bytes)
+        observer.extract(fname, files/total_files, size/total_bytes)
         dirname = os.path.dirname(fname)
         if dirname == 'EGG-INFO':
-            # Extract as subdirectory.
+            # Extract EGG-INFO as subdirectory.
             archive.extract(fname, name)
         else:
             archive.extract(fname)
         files += 1
-        data += info.file_size
+        size += info.file_size
 
     # Create distribution from extracted files.
     location = os.getcwd()
@@ -224,7 +224,7 @@ def _dist_from_eggfile(filename, install, logger, observer):
 def check_requirements(required, logger=None, indent_level=0):
     """
     Display requirements (if logger debug level enabled) and note conflicts.
-    Returns list of unavailable requirements.
+    Returns a list of unavailable requirements.
     """
     def _recursive_check(required, logger, level, visited, working_set,
                          not_avail):
@@ -263,7 +263,7 @@ def load(instream, fmt=SAVE_CPICKLE, package=None, logger=None):
     """
     Load object(s) from an input stream (or filename).
     If `instream` is a string that is not an existing filename or
-    absolute path, then it is searched for using pkg_resources.
+    absolute path, then it is searched for using :mod:`pkg_resources`.
     Returns the root object.
     """
     logger = logger or NullLogger()
