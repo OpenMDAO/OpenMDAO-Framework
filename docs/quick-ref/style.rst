@@ -78,7 +78,7 @@ About Heading Levels:
   underlining scheme as the file's creator.
 * If you are adding a new file to an existing document, it is not imperative (but it is
   preferred) that you use the same underlining scheme as used in the rest of the document.
-  Consistency is a must.
+  However you do it, you must be consistent.
 * If you are creating a new document, you do not have to use the same underlining
   scheme as shown in the example. As long as each heading level is different and
   you are consistent, it is fine. It is better to use what you will remember. 
@@ -115,18 +115,7 @@ Use italics for the following:
 
 * Titles of books and our OpenMDAO documents (e.g., *Plugin Developer's Guide*)
 * The first time you refer to a term  (". . . is called a *Component*.")
-* When referring to text inside a code sample that you are discussing. Please write it
-  exactly as shown in the code sample. 
-
-For example, if the code says: 
-
-	| ``c = Float (0.0, iostatus= 'out')``
-
-and you're referring to part of it, you would italicize it, as in:  *c, Float,* and
-*'out'*.  
-
-This is for cases where the references are short. For longer references, you probably want
-to use literal inline markup.
+* Italics are often used in place of quotation marks. Let your subject matter be your guide.
 
 .. index:: Python; capitalizing
 
@@ -222,6 +211,44 @@ index for all OpenMDAO user documents.
 3D - Abbreviation for three-dimensional. No hyphen in the abbreviation.
 
 
+Hyphens and Dashes
+------------------
+
+**- Hyphen:**
+
+Use a hyphen (-) for the following:
+
+* Simple compound modifiers (twentieth-century writers) -- Do not use a hyphen with
+  adverb-adjective modifiers (wholly owned subsidiary)
+* Certain prefixes and suffixes	-- American English tends toward the omission of
+  hyphens, particularly for certain prefixes (co-, pre-, mid-, non-, anti-, de-,
+  etc.) However, a hyphen is required when a prefix is applied to a proper noun
+  (un-American, non-Sphinx). 
+* Adjectival phrases formed by connecting numbers and words 
+
+  * Numerals or words for numbers 	(320-foot wingspan, twenty-eight-year-old man)
+  * Spelled out fractions	(two-thirds majority)
+  * Symbols or SI units that are spelled out	(25-kilogram sphere, as opposed to 25 kg
+    sphere)
+    
+* Two-word numbers less than a hundred  (twenty-nine)
+
+
+**- En dash:**
+
+Use an en dash (--) for the following:
+
+* To indicate a range (pp. 25--36, June--July 2006, 1:00--2:00 p.m., etc. Note
+  that there are no spaces on either side of the dash.  
+
+* For parenthetical expressions	-- Use an en dash (--) and leave a single space on
+  either side. 
+
+* To contrast values or show a  relationship between two things (New York--London flight,
+  Supreme Court's 5--4 decision)  
+
+In reST an en dash is formed by typing two hyphens or minus signs.
+
 Commas (Before "and" in a Compound Sentence)
 --------------------------------------------
 
@@ -243,6 +270,14 @@ Commas (Before "and" in a Compound Sentence)
     
  | In this case the sentence has one subject *(some)* but two verbs *(were derived*
    and *are*). It is not a compound sentence.
+
+Numbers
+-------
+
+*  Write out numbers between zero and nine (0--9) when they are modifiers (two
+   assemblies). 
+*  Numbers above nine may be written in digit form (12 components).
+*  Numbers that are values should always be written in digit form (default value is 8).
 
 
 Login vs Log in

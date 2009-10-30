@@ -145,7 +145,7 @@ def _dist_from_eggfile(filename, install, logger, observer):
         total_bytes = 1.
 
     files = 0.
-    bytes = 0.
+    data = 0.
     for info in archive.infolist():
         fname = info.filename
         if not fname.startswith(name) and not fname.startswith('EGG-INFO'):
@@ -153,22 +153,15 @@ def _dist_from_eggfile(filename, install, logger, observer):
         if fname.endswith('.pyc') or fname.endswith('.pyo'):
             continue  # Don't assume compiled OK for this platform.
 
-        observer.extract(fname, files/total_files, bytes/total_bytes)
+        observer.extract(fname, files/total_files, data/total_bytes)
         dirname = os.path.dirname(fname)
         if dirname == 'EGG-INFO':
-            # Extract EGG-INFO as subdirectory.
-            dirname = os.path.join(name, dirname)
-            path = os.path.join(name, fname)
+            # Extract as subdirectory.
+            archive.extract(fname, name)
         else:
-            path = fname
-        if dirname and not os.path.exists(dirname):
-            os.makedirs(dirname)
-        # TODO: use 2.6 ability to extract to filename.
-        out = open(path, 'wb')
-        out.write(archive.read(fname))
-        out.close()
+            archive.extract(fname)
         files += 1
-        bytes += info.file_size
+        data += info.file_size
 
     # Create distribution from extracted files.
     location = os.getcwd()
@@ -266,7 +259,7 @@ def check_requirements(required, logger=None, indent_level=0):
     return not_avail
 
 
-def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
+def load(instream, fmt=SAVE_CPICKLE, package=None, logger=None):
     """
     Load object(s) from an input stream (or filename).
     If `instream` is a string that is not an existing filename or
@@ -294,24 +287,24 @@ def load(instream, format=SAVE_CPICKLE, package=None, logger=None):
             if not package_dir in sys.path:
                 sys.path.append(package_dir)
 
-        if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+        if fmt is SAVE_CPICKLE or fmt is SAVE_PICKLE:
             mode = 'rb'
         else:
             mode = 'rU'
         instream = open(instream, mode)
 
-    if format is SAVE_CPICKLE:
+    if fmt is SAVE_CPICKLE:
         top = cPickle.load(instream)
-    elif format is SAVE_PICKLE:
+    elif fmt is SAVE_PICKLE:
         top = pickle.load(instream)
-    elif format is SAVE_YAML:
+    elif fmt is SAVE_YAML:
         top = yaml.load(instream)
-    elif format is SAVE_LIBYAML:
+    elif fmt is SAVE_LIBYAML:
         if _libyaml is False:
             logger.warning('libyaml not available, using yaml instead')
         top = yaml.load(instream, Loader=Loader)
     else:
-        raise RuntimeError("Can't load object using format '%s'" % format)
+        raise RuntimeError("Can't load object using format '%s'" % fmt)
 
     # Restore instancemethods from IMHolder objects.
     restore_instancemethods(top)

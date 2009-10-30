@@ -61,7 +61,7 @@ if sys.platform == 'win32':
 
 
 def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
-                src_files=None, dst_dir=None, format=SAVE_CPICKLE, proto=-1,
+                src_files=None, dst_dir=None, fmt=SAVE_CPICKLE, proto=-1,
                 logger=None, use_setuptools=False, observer=None):
     """
     Save state and other files to an egg. Analyzes the objects saved for
@@ -76,7 +76,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
       It defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
     - `dst_dir` is the directory to write the egg in.
-    - `format` and `proto` are passed to save().
+    - `fmt` and `proto` are passed to save().
     - If 'use_setuptools` is True, then eggwriter.write_via_setuptools() is \
       called rather than eggwriter.write().
     - `observer` will be called via an EggObserver intermediary.
@@ -183,7 +183,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
 
                     # Save state of object hierarchy.
                     state_name, state_path = \
-                        _write_state_file(name, obj, clean_name, format, proto,
+                        _write_state_file(name, obj, clean_name, fmt, proto,
                                           logger, observer)
                     src_files.add(state_name)
                     cleanup_files.append(state_path)
@@ -658,20 +658,20 @@ eggs =
     out.close()
 
 
-def _write_state_file(dst_dir, root, name, format, proto, logger, observer):
+def _write_state_file(dst_dir, root, name, fmt, proto, logger, observer):
     """ Write state of `root` and its children. Returns (filename, path). """
-    if format is SAVE_CPICKLE or format is SAVE_PICKLE:
+    if fmt is SAVE_CPICKLE or fmt is SAVE_PICKLE:
         state_name = name+'.pickle'
-    elif format is SAVE_LIBYAML or format is SAVE_YAML:
+    elif fmt is SAVE_LIBYAML or fmt is SAVE_YAML:
         state_name = name+'.yaml'
     else:
-        msg = "Unknown format '%s'." % format
+        msg = "Unknown format '%s'." % fmt
         observer.exception(msg)
         raise RuntimeError(msg)
 
     state_path = os.path.join(dst_dir, state_name)
     try:
-        save(root, state_path, format, proto, logger, fix_im=False)
+        save(root, state_path, fmt, proto, logger, fix_im=False)
     except Exception, exc:
         msg = "Can't save to '%s': %s" % (state_path, exc)
         observer.exception(msg)
@@ -683,9 +683,9 @@ def _write_state_file(dst_dir, root, name, format, proto, logger, observer):
 def _write_loader_script(path, state_name, package, top):
     """ Write script used for loading object(s). """
     if state_name.endswith('.pickle'):
-        format = 'SAVE_CPICKLE'
+        fmt = 'SAVE_CPICKLE'
     else:
-        format = 'SAVE_LIBYAML'
+        fmt = 'SAVE_LIBYAML'
 
     if state_name.startswith(package):
         pkg_arg = ''
@@ -705,7 +705,7 @@ if not '.' in sys.path:
     sys.path.append('.')
 
 try:
-    from openmdao.main.api import Component, %(format)s
+    from openmdao.main.api import Component, %(fmt)s
 except ImportError:
     print 'No OpenMDAO distribution available.'
     if __name__ != '__main__':
@@ -716,7 +716,7 @@ except ImportError:
 def load(**kwargs):
     '''Create object(s) from state file.'''
     return Component.load('%(name)s',
-                          %(format)s%(pkg)s%(top)s, **kwargs)
+                          %(fmt)s%(pkg)s%(top)s, **kwargs)
 
 def main():
     '''Load state and run.'''
@@ -725,7 +725,7 @@ def main():
 
 if __name__ == '__main__':
     main()
-""" % {'name':state_name, 'format':format, 'pkg':pkg_arg, 'top':top_arg})
+""" % {'name':state_name, 'fmt':fmt, 'pkg':pkg_arg, 'top':top_arg})
     out.close()
 
 
@@ -756,8 +756,7 @@ def _create_entry_map(entry_pts):
     return entry_map
 
 
-def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
-         fix_im=True):
+def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None, fix_im=True):
     """
     Save the state of `root` and its children to an output stream (or filename).
     If `outstream` is a string, then it is used as a filename.
@@ -768,7 +767,7 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
     logger = logger or NullLogger()
 
     if isinstance(outstream, basestring):
-        if (format is SAVE_CPICKLE or format is SAVE_PICKLE) and proto != 0:
+        if (fmt is SAVE_CPICKLE or fmt is SAVE_PICKLE) and proto != 0:
             mode = 'wb'
         else:
             mode = 'w'
@@ -780,18 +779,18 @@ def save(root, outstream, format=SAVE_CPICKLE, proto=-1, logger=None,
     if fix_im:
         fix_instancemethods(root)
     try:
-        if format is SAVE_CPICKLE:
+        if fmt is SAVE_CPICKLE:
             cPickle.dump(root, outstream, proto)
-        elif format is SAVE_PICKLE:
+        elif fmt is SAVE_PICKLE:
             pickle.dump(root, outstream, proto)
-        elif format is SAVE_YAML:
+        elif fmt is SAVE_YAML:
             yaml.dump(root, outstream)
-        elif format is SAVE_LIBYAML:
+        elif fmt is SAVE_LIBYAML:
             if _libyaml is False:
                 logger.warning('libyaml not available, using yaml instead')
             yaml.dump(root, outstream, Dumper=Dumper)
         else:
-            raise RuntimeError("Can't save object using format '%s'" % format)
+            raise RuntimeError("Can't save object using format '%s'" % fmt)
     finally:
         if fix_im:
             restore_instancemethods(root)

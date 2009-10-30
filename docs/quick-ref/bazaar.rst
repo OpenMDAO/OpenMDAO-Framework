@@ -49,6 +49,8 @@ added.
 Building on Your Branch
 -----------------------
 
+If you are in your home directory, type:
+
 ::
 
 %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>
@@ -82,15 +84,15 @@ recently committed:
 %cd buildout
 %bzr merge /OpenMDAO/dev/shared/working_main
 
-Resolve any conflicts that come up during the merge. See the section on :ref:`if you have a conflict
-<if-you-have-a-conflict>` during merge. After you have resolved conflicts, type:
+Resolve any conflicts that come up during the merge. See :ref:`if you have a conflict
+<if-you-have-a-conflict>`. After you have resolved any conflicts, type:
 
 ::
 
 %bin/buildout
 
 If you have any build errors or warnings, resolve them before continuing. When you can
-build without successful without warnings, type the following:
+build successfully without warnings, type the following:
 
 ::
 
@@ -149,15 +151,16 @@ To bring up a graphical interface for displaying the conflicts, type the followi
   			
 %conrez.py
 
-Bazaar automatically creates three versions of the file in conflict, each with a different
-suffix. The files appear left to right in the order listed here:
+Bazaar automatically creates three versions of the file in conflict, each with a
+different suffix. The files appear in columns across the screen, left to right, in the
+order listed here:
 
 
         | ``filename.BASE``   	 (original file)
 	| ``filename.OTHER``  	 (file that is being merged)
 	| ``filename.THIS``  	 (file you are merging to)
 
-Conflicts will be displayed in colored text across all three files. You must look the files and
+Conflicts will be displayed in colored text across all three files. You must look at the files and
 decide which version to send to ``filename.THIS.`` You do this by clicking on the appropriate
 arrow for that change. You will automatically move down the file through the changes. If you
 make a mistake, you can select *undo* from the menu bar at the top of the screen.
@@ -166,25 +169,20 @@ After you have gone through the file and made your selections, save your changes
 the file. When you exit you will be asked if you want to save the selected file.  Assuming you
 do, select that option. 
 
-Check to make sure the conflicts there are no more conflicts by typing:
+Make sure there are no more conflicts; then build and commit your changes by typing: 
+
 
 ::
 
 %bzr conflicts    	
-%bzr resolve		
-
-Running ``resolve`` marks the files as resolved and cleans up BASE, OTHER, and
-THIS from working_main.
-
-:: 
-
+%bzr resolve	  (This command marks the files as resolved and cleans up BASE, OTHER, and THIS from working_main.)
 %cd /buildout			
 %python2.6 isolatedbootstrap.py  
 %bin/buildout 				
 %bin/test --all				
 %bzr status					
 %bzr commit -m "<commit comments>"	
-%repo.py fix 			   (Always run this script after building on work_main.)
+%repo.py fix 	  (Always run this script after building on work_main.)
 
 This last script fixes permissions that may have gotten changed during the build process. 
 
@@ -211,7 +209,7 @@ good idea to see what files will be removed, so type:
 Removing a Directory and Its Files
 ----------------------------------
 
-This is a UNIX command for removing directory and files:
+This is not a Bazaar command but a UNIX command for removing a directory and its files:
 
 ::
 

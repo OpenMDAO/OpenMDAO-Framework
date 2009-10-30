@@ -292,9 +292,9 @@ class TestCase(unittest.TestCase):
         if os.path.exists('Egg'):
             shutil.rmtree('Egg')
 
-    def save_load(self, format, use_setuptools=False):
+    def save_load(self, fmt, use_setuptools=False):
         """
-        Save to egg using `format` and reload.
+        Save to egg using `fmt` and reload.
         Writes egg natively or via setuptools.
         """
         global SOURCE_INIT, SINK_INIT
@@ -321,8 +321,7 @@ class TestCase(unittest.TestCase):
         global OBSERVATIONS
         OBSERVATIONS = []
         egg_info = self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
-                                          format=format,
-                                          child_objs=self.child_objs,
+                                          fmt=fmt, child_objs=self.child_objs,
                                           use_setuptools=use_setuptools,
                                           observer=observer)
         self.egg_name = egg_info[0]
@@ -620,7 +619,7 @@ class TestCase(unittest.TestCase):
         try:
             # Attempt to save in unknown format.
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
-                                   format='unknown')
+                                   fmt='unknown')
         except RuntimeError, exc:
             self.assertEqual(str(exc),
                              "Egg_TestModel: Unknown format 'unknown'.")

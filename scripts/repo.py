@@ -133,13 +133,13 @@ def do_fix(repo_path, options):
         if os.path.exists(directory):
             shutil.rmtree(directory)
     for relpath in files:
-        ff = os.path.join(repo_path, relpath)
-        if os.path.exists(ff):
-            os.remove(ff)
+        filename = os.path.join(repo_path, relpath)
+        if os.path.exists(filename):
+            os.remove(filename)
 
     for dirpath, dirnames, filenames in os.walk(repo_path):
         if options.verbose:
-            print dirpath[len(path):]
+            print dirpath[len(repo_path):]
 
         names = dirnames
         names.extend(filenames)

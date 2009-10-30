@@ -1,4 +1,4 @@
-.. index:: standard library drivers
+.. index:: standard library drivers, CONMIN driver
 
 Drivers
 =======
@@ -15,7 +15,8 @@ efficient solution of constrained problems, unconstrained function
 minimization problems may also be solved, and the conjugate direction method
 of Fletcher and Reeves is used for this purpose.
 
-More information on CONMIN can be found in the `CONMIN User's Manual <file:../../../../contrib/conmin/CONMIN_user_manual.html>`_.
+More information on CONMIN can be found in the `CONMIN User's Manual
+<file:../../../../contrib/conmin/CONMIN_user_manual.html>`_.
 
 CONMIN has been included in the OpenMDAO standard library to provide users
 with a basic gradient-based optimization algorithm.
@@ -25,10 +26,10 @@ Basic Interface
 
 The CONMIN code contains a number of different parameters and switches that
 are useful for controlling the optimization process. These can be subdivided
-into those parameters that will be used in a typical optimization problem, and
+into those parameters that will be used in a typical optimization problem and
 those that are more likely to be used by an expert user.
 
-For the simplest possible unconstrained optimization problem, CONMIN just needs
+For the simplest possible unconstrained optimization problem, CONMIN needs just
 an objective function and one or more decision variables (design variables.)
 
 The OpenMDAO CONMIN driver can be loaded by importing the CONMINdriver component
@@ -46,7 +47,7 @@ from the standard library drivers namespace.
 	
 Both the objective function and the design variables are assigned via a
 StringRef variable. A StringRef is a string that points to some other OpenMDAO
-variable in the variable tree. There is only 1 objective function, but there
+variable in the variable tree. There is only one objective function, but there
 can be multiple design variables which are assigned as a Python list.
 
 .. testcode:: CONMIN_show
@@ -77,7 +78,7 @@ CONMIN driver.
 
 More realistically, optimization problems usually have constraints. There are
 two types of constrains in CONMIN -- ordinary constraints which are expressed
-as functions of the design variables, and side constraints which are used to
+as functions of the design variables and side constraints which are used to
 bound the design space (i.e., specify a range for each design variable.)
 
 Side constraints are defined using the lower_bounds and upper_bounds parameters:
@@ -87,9 +88,11 @@ Side constraints are defined using the lower_bounds and upper_bounds parameters:
 	TopLevelAssembly.driver.lower_bounds = [-50, 65]
 	TopLevelAssembly.driver.upper_bounds = [10, 100]
 
-These size of these lists must be equal to the number of design variables or 
+The size of these lists must be equal to the number of design variables or 
 OpenMDAO will raise an exception. Similarly, the upper bound must be greater
 than the lower bound for each design variable.
+
+..index:: constraints
 
 Constraints are equations (or inequalities) much like the objective function, so
 they are also constructed from the available OpenMDAO variables using Python
@@ -110,7 +113,7 @@ Controlling the Optimization
 It is often necessary to control the convergence criteria for an optimization.
 The CONMIN driver allows the user to control both the number of iterations
 before termination as well as the convergence tolerance (both absolute and
-relative.)
+relative).
 
 The maximum number of iterations is specified by setting the itmax parameter.
 The default value is 10.

@@ -8,4 +8,4 @@ Overview of the OpenMDAO Standard Library
 =========================================
 
 The OpenMDAO standard library contains an assortment of useful plugins to the
-framework sorted into 4 catgories: components, drivers, factories, and traits.
+framework sorted into four catgories: components, drivers, factories, and traits.

@@ -3,7 +3,7 @@
 Sphinx and reStructuredText
 ===========================
 
-OpenMDAO uses reStructruedText (reST), a plaintext markup language, to create
+OpenMDAO uses :term:`reStructuredText` (reST), a plaintext markup language, to create
 files for its documentation. Sphinx is a Python documentation generator that
 converts reST to HTML. While reST provides the basic structure, Sphinx has
 specific directives that are used with reST to produce the desired results. For more
@@ -33,6 +33,11 @@ Some Basics
   must be underlined. (In OpenMDAO documents, generally the title is overlined
   and underlined, while the other headings are underlined only. All levels must
   be different. Please see the :ref:`Style-Guide` for more information.)
+  
+* If you get a Sphinx build error that says "Unexpected indentation," it is probably because
+  Sphinx is expecting a blank line, such as after a literal text block. Your line may have
+  wrapped and confused Sphinx. In this case, try pulling the text up to the previous line even
+  if it extends out past the margin of your window.  
 
 
 Updating Your Version of Sphinx
@@ -110,8 +115,8 @@ syntax highlighter) is installed.
 
 **- Parsed-literal:**
 
-**In what circumstances do developers use this vs ``::``? The documentation says that
-parsed literal blocks are useful for adding hyperlinks to code examples.**
+*Under what circumstances do developers use this vs ``::``? The documentation says that
+parsed literal blocks are useful for adding hyperlinks to code examples.*
 
 
 
@@ -147,7 +152,7 @@ file, or even a different document within the MDAO user documentation. However,
 label names must be unique.
 
 For example, if you are in the *Developer's Guide* and want to refer the user to
-the tutorial problem overview in the the *User's Guide*, you would type
+the tutorial problem overview in the *User's Guide*, you would type
 something like:
 
 ::
@@ -170,7 +175,7 @@ You can use same type of cross-reference label with figures. See :ref:`Figures`.
 
 **-Internal links** (to an arbitrary location)
 
-Labels that aren't placed before a section title can still be referenced to, but you must give the link
+Labels that aren't placed before a section title can still be referenced, but you must give the link
 an explicit title, using this syntax: ``:ref:`Link title <label-name>```.  For example, I created the
 following cross reference:  ``:ref:`process model <process-model>```, which in the text would appear as:
 
@@ -181,8 +186,8 @@ of it, I placed this label:
    
    ``.. _`process-model`:``
    
-So, clicking on my cross reference (above) takes you to the label (and figure) of the process model in the
-example problem. I made my own arbitrary label rather than cross referencing to the figure title.
+So, clicking on my cross reference (above) takes you to the text where the label was placed.
+I made my own arbitrary label rather than cross referencing to the figure title.
  
 
 **- Seealso directive**
@@ -217,12 +222,12 @@ Figures
 
 **- Generated figures**
 
-In the OpenMDAO documentation, we have been using the open source Dia application to
-create diagrams (figures) and saving them as .png files. Since these files may
-need to be updated, they go in the ``docs/generated_images`` directory on your
-branch.
+In the OpenMDAO documentation, we have been using the open source Dia application to create
+diagrams (figures) and saving them as .png files. (A script automatically resizes the Dia
+files for our documentation.) Since these files may need to be updated, they go in the
+``docs/generated_images`` directory on your branch.
 
-Here is an example to imitate or copy of how to link to a figure:
+Here is an example of how to link to a figure:
 
 ::
 
@@ -244,21 +249,19 @@ Generally we align our figures *center*, as shown in the example, but that is up
 author.
 
 Last is the figure caption: ``Class Diagram of Core Classes``. You must leave a blank
-line before the title. (You would also leave a blank line after it since it is the end of a
-paragraph.) In Firefox, figure captions are automatically centered, but in Internet Explorer
-they appear flush left. 
+line before the title. You would also leave a blank line after it, since it is the end of a
+paragraph. (In Firefox, figure captions are automatically centered, but in Internet Explorer
+they appear flush left.) 
 
 
 **- Static figures** 
 
 Static figures are stored in ``docs/images/<document_directory>`` on your branch. Here is an
-example from the *User Guide* where the author linked to a static figure titled *EPA City
+example from the *User Guide* where the author pulled in a static figure titled *EPA City
 Driving Profile.* 
 
 
-::
-
-  .. _`EPA City Driving Profile`:
+:: 
 
   .. figure:: ../images/user-guide/EPA-city.gif
      :align: center
@@ -274,7 +277,7 @@ found above the backslash on the keyboard. Put it on a line by itself.
 
  
 Also use the vertical bar when you want to maintain line breaks. You might want
-to do this inside to maintain breaks in a specific block of text. If your text needs to be
+to do this inside a specific block of text. If your text needs to be
 indented, then first indent, type the vertical bar, leave a space, and then type
 the desired text.
 
@@ -322,12 +325,12 @@ You can type this:
   1. Torque seen by the transmission
   2. Fuel burn under current load
 
-or this (use a # sign to auto number the items):
+or this (using a # sign to auto number the items):
   
 | ``#. Torque seen by the transmission``
 | ``#. Fuel burn under current load``  
 
-and you get this:
+In either case, you get this:
 
 1. Torque seen by the transmission
 2. Fuel burn under current load
@@ -469,10 +472,10 @@ will produce this:
 Index Items
 ------------
 
-The tech writer will review all new documentation and add index (and glossary) entries as
-needed. If you wish to add your own index items to a file, you may. Index entries go in the
-file preceding the section or paragraph containing the text to be indexed. *Note that all
-index entries are placed flush left.* Some examples follow.
+If you wish to add index items to a file as you are writing, please do. Additionally the tech
+writer will review new documentation and add index (and glossary) entries as needed. Index
+entries go in the file preceding the section or paragraph containing the text to be indexed.
+*Note that all index entries are placed flush left.* Some examples follow.
 
 **- Single term** 
      ``.. index:: egg``         
@@ -529,7 +532,9 @@ Including Code from the Source
 See :ref:`Including-Code-Straight-from-the-Source` in the *Developer's Guide.*
 
 
-.. note::  Whenever you include a code snippet, list, a block of text, or similar syntax, be sure to leave a
-           blank line after the text. You might even need to extend the last line so it doesn't wrap. 
+.. note::  Whenever you include a code snippet, list, a block of text, or similar syntax, be
+	   sure to leave a blank line after the text. You might even need to extend the last
+	   line so it doesn't wrap. This should avoid a Sphinx "Unexpected Indentation"
+	   error. 
 
 

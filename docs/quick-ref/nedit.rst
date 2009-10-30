@@ -62,7 +62,7 @@ Moving Text Right or Left
 
 An easy way to remember this is that *0* is under the right parenthesis for moving right, while
 the *9* is under the left parenthesis for moving left. If you hold down the *Ctrl* key and
-type a right parens (requiring you to press the *shift* key), the text moves one *tab* instead
+type a right parens (requiring you to press the *shift* key simultaneously), the text moves one *tab* instead
 of one space. 
 
 .. index:: NEdit; spell check

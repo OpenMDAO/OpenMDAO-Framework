@@ -367,10 +367,9 @@ points, so simulating these driving profiles consumes much more CPU time than th
 
 Using OpenMDAO
 --------------
-OpenMDAO provides two interfaces through which the user interacts to build build and execute models -- a 
-graphical user interface and a scripting/command line interface. The graphical interface is currently
+OpenMDAO provides two interfaces through which the user interacts to build and execute models -- a graphical user interface and a scripting/command line interface. The graphical interface is currently
 under developed and is not covered here. This tutorial describes how to build and run models using
-the scripting interface, or more specifically, how to write python scripts to interact with the OpenMDAO
+the scripting interface, or more specifically, how to write Python scripts to interact with the OpenMDAO
 framework and components.
 
 This tutorial will also introduce the user to using the Python shell for creating and interacting with
@@ -472,9 +471,12 @@ Note that the addition of inputs and outputs for this component requires several
 two lines. It is important to import only those features that you need from the framework base classes
 instead of loading everything into the workspace. 
 
-A component's inputs and outputs are called `Data Objects` (name subject to possible change) in OpenMDAO. An often-used
-synonymn for this is *Variable*, though the more general term data object reflects the ability to pass more
-generalized objects such as data structures or geometries. A Data Object is wrapper for data passed between framework components,
+
+.. Index: Data Object
+
+A component's inputs and outputs are called :term:`Data Objects` (name subject to possible change) in OpenMDAO. An often-used
+synonym for this is :term:`Variable`, though the more general term *data object* reflects the ability to pass more
+generalized objects such as data structures or geometries. A Data Object is a wrapper for data passed between framework components,
 containing a value, a default value, optional min/max values, and units. Data Objects can also perform their own validation
 when being assigned to another Data Object. OpenMDAO's Data Objects are implemented using Traits, an open-source extension to Python
 authored by Enthought, Inc. Traits provide a way to apply explicit typing to the normally untyped Python variables.
@@ -570,7 +572,7 @@ The Python implementations of the three component models (engine.py, transmissio
 
 	[unix_prompt]$ bin/python
 
-The python environment in buildout/bin is a special one that has all of the OpenMDAO site packages installed,
+The Python environment in buildout/bin is a special one that has all of the OpenMDAO site packages installed,
 including the tutorial problem. The user interface for the default Python shell leaves a lot to be desired,
 but it is still a good way to demonstrate these components.
 
@@ -602,7 +604,7 @@ Let's change the engine speed from its default value (1000 RPM) to 2500 RPM.
 	>>> my_engine.get("RPM")
 	2500.0
 
-Similiarly, these values can also be set directly:
+Similarly, these values can also be set directly:
 
 	>>> my_engine.RPM = 2500
 	>>> my_engine.RPM
@@ -693,7 +695,7 @@ data flow.
 
 Notice here that an instance of the Transmission, Engine, and Chassis are created, with the
 parent set to "self," which in this context is Vehicle. This way, these components are created as part
-of the assembly, and are acessible through ``Vehicle.Transmission``, etc.
+of the assembly, and are accessible through ``Vehicle.Transmission``, etc.
 
 The implements function defines an interface for this object. This will be explained in more detail in the
 section Sockets and Interfaces (??? needs section link).
@@ -768,7 +770,7 @@ Now, the Vehicle assembly has its own inputs and outputs and can be accessed jus
 component. As the name implies, these passthroughs purely pass data from the assembly input to the contained 
 component inputs. As such, there is no unit conversion as this would not be computationally efficient. The
 engine example problem actually contains components that expects inputs to be in English units (Engine and 
-Transmisson) as well as a component that expects inputs to be in metric (Chassis). There are two inputs that
+Transmission) as well as a component that expects inputs to be in metric (Chassis). There are two inputs that
 are required by components with units that differ from the assembly level -- velocity and tire_circumference. 
 Unit conversion must be performed on these, so they need to be handled by regular component connections. To
 accomplish this, the inputs must be declared in the class header:
@@ -874,7 +876,7 @@ with other languages, in particular C (in which Python was written) and related 
 C++). This is particularly important for a scripting language, where code execution is generally slower,
 and it is often necessary to use a compiled language like C for implementing computationally intensive
 functions. On top of this native integration ability, the community has developed some excellent tools,
-such as F2PY (http://cens.ioc.ee/projects/f2py2e/) (FORTRAN to Python) and SWIG (Simplified Wrapper and
+such as F2PY (http://cens.ioc.ee/projects/f2py2e/) (FORTRAN to Python) and :term:`SWIG` (Simplified Wrapper and
 Interface Generator), that simplify the process of building the wrapper for a code. As the name implies,
 F2PY is a Python utility that takes a FORTRAN source code file and compiles and generates a wrapped
 object callable from Python. F2PY is actually part of the numerical computing package NumPy. SWIG has a
@@ -895,7 +897,7 @@ variables as inputs.
 The C function containing the engine simulation algorithm is called RunEngineCycle. A new Python
 component named engine_wrap_c.py was created to replace engine.py. This component contains the same
 inputs and outputs as engine.py, but replaces the engine internal calculations with a call to the C
-function RunEngineCycle. The function can be imported and used just like any python function:
+function RunEngineCycle. The function can be imported and used just like any Python function:
 
 .. _Code8: 
 
@@ -907,7 +909,7 @@ function RunEngineCycle. The function can be imported and used just like any pyt
 
 Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first
 element (element zero.) This is not typically needed for return values from FORTRAN codes compiled with
-F2PY, but it seemes to be needed for C codes for which the signature file is manually created. This is
+F2PY, but it seems to be needed for C codes for which the signature file is manually created. This is
 something that might be fixable and will be investigated.
 
 .. index:: Sockets and Interfaces
@@ -926,7 +928,7 @@ procedures were implemented in a component called DrivingSim, which requires a V
 perform a simulation.
 
 At this point, there are a couple of ways to implement this kind of problem in OpenMDAO. One way is to
-implement the solution procedure as a driver (or two drivers if prefered). So far, drivers have been
+implement the solution procedure as a driver (or two drivers if preferred). So far, drivers have been
 mentioned only as an attribute of assemblies, and they will be more thoroughly treated in the next section.
 Implementing the vehicle simulation as a driver might be a bit confusing for one's first exposure to
 drivers, particularly since it involves nesting the simulation driver with an optimizer, so the vehicle
@@ -1053,7 +1055,7 @@ as bore and spark angle. Both the objective and the design variables are assigne
 Instead of containing a variable value, the StringRef contains a string that gives the OpenMDAO path pointing to the variable
 that the StringRef references. This path is always relative to the driver's parent, so here we use "driving_sim.accel_time"
 instead of "self.driving_sim.accel_time". StringRefs are primarily used to connect the inputs and outputs of drivers (e.g., 
-optimizers, solvers, etc.) CONMIN is a single objective optimizer, so there can only be one objetive. However, there can be
+optimizers, solvers, etc.) CONMIN is a single objective optimizer, so there can only be one objective. However, there can be
 multiple design variables, and these are stored in a list. The upper and lower bounds for all the design variables are set 
 using lower_bounds and upper_bounds respectively.
 

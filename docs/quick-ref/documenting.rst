@@ -11,7 +11,7 @@ Updating an Existing Document
 -----------------------------
 
 All documentation is located in the ``docs/`` directory on your branch. There are separate
-directories for each user document. The following is a list of documents and
+directories for each user document. The following is a recent list of documents and
 their directory names in the Sphinx OpenMDAO Documentation project: 
 
 * Architecture Document -- ``arch-doc``
@@ -55,8 +55,7 @@ name.
 
   | When you request a status, Bazaar will display any pending changes on your branch---additions, 			removals,
     modifications, unknown files you forgot to add. When you commit changes, you are required to enter
-    comments. If you do not add the comments here, you will go directly into the Vi text editor and must add
-    them.
+    comments. 
 
 3. If you need to create a new file, just type: 
 
@@ -82,8 +81,7 @@ name.
 
 %nedit index.rst &
 
- | There are just a couple of placeholder files in the ``stdlib-guide`` directory (at the time of this
-   writing), so add your file after the overview. The list of files would then look like:
+ | Add your file after the overview. The index would then look something like this:
 
 ::
       
@@ -95,18 +93,23 @@ name.
          :maxdepth: 4
 
          overview.rst
-         new_file.rst
-         changes      
+	 new_file.rst
+	 components.rst
+	 drivers.rst
+	 factories.rst
+	 traits.rst
+	 changes
+        
 
 As mentioned previously, it is not necessary to include the ".rst" suffix when adding a file to the
-index, but it does no harm. In this case, the document author added ".rst" to the overview file but
-not to the changes file. 
+index, but it does no harm. In this case, most of the files end in ".rst", but the file called 
+*changes* does not. 
 
 
 .. note::  
    When you finish your documentation (e.g., complete a ticket and are ready to merge), you
    should update the changes.rst file. If you forget for would prefer that the tech writer do
-   this, please email the tech writer and include the following: a summary of your changes,the
+   this, please email the tech writer and include the following: a summary of your changes, the
    ticket number, and the date you merged your changes. The latest changes go at the top of
    the list, for example:
    
@@ -137,7 +140,7 @@ If you need to create a new document within the OpenMDAO documentation, you must
 * Add the document (new subdirectory) to the project index, so Sphinx knows about it
 
 There is a main index.rst file for the entire OpenMDAO documentation project. Additionally, each
-document subdirectory has its own index.rst file that lists the files in its document (in the
+document subdirectory has its own index.rst that lists the files in its document (in the
 order they are to appear). For example, if you are at the top level on your branch and want to
 create a new document called *New Guide* in our OpenMDAO documentation, you would do the
 following:   
@@ -187,11 +190,11 @@ following:
    always go to another index and copy its structure. (If you copy the source from this file, be
    sure to start flush left.)
 
-In general use overline and underline only for the title of a document (e.g., in the index file 
-of a document). It's easier to use just underline. If you use both, the length of the lines must
-match or your build will fail. If you use just underline, and the line is shorter than the text you
-are underlining, you will get a warning, but it will build. If you use just underline and it is
-longer than the text, Sphinx doesn't seem to mind.
+In general use overline and underline only for the title of a document (e.g., in the index file  of a
+document). In other cases, it's easier to use just underline. If you use both, the length of the lines must
+match or your build will fail. If you use just underline, and the line is shorter than the text you are
+underlining, you will get a warning, but it will build. If you use just underline and it is longer than the
+text, Sphinx doesn't seem to mind.
 
 
 4. Now that you have a subdirectory with files and have added the file names to the
@@ -248,8 +251,8 @@ You must be in the ``buildout`` directory:
 
 The ``bin/buildout`` command builds the documentation just as it builds all code files, while
 ``bin/docs`` will display the documentation in HTML using Firefox. In the above example, it is
-assumed that you have built at least once on your branch. If you haven't, you need to run the
-following script ``python<version#> isolatedbootstrap.py`` before ``bin/buildout``. Refer to the
+assumed that you have built at least once on your branch. If you haven't, you need to run the script 
+``python<version#> isolatedbootstrap.py`` before ``bin/buildout``. Refer to the
 section on :ref:`Building-on-your-branch` under *Bazaar Commands.*
 
 	

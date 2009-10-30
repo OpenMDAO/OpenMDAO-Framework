@@ -92,7 +92,17 @@ Glossary
       **Coverage**
         A Python module that measures code coverage during test execution.
 	
+	
+      **Data Objects** 
+      
+	A component's inputs and outputs. A Data Object is a wrapper for data
+	containing a value, a default value, optional min/max values, and units
+	that is passed between framework components. Data Objects can also
+	perform their own validation when being assigned to another Data Object.
+	OpenMDAO's Data Objects are implemented using Traits, an open source
+	extension to Python authored by Enthought, Inc.
 
+	
       **decorator**
 	A Python module that aims to simplify the usage of decorators for the average
 	programmer and to popularize decorators by showing various non-trivial examples. A
