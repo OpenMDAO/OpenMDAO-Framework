@@ -1,4 +1,4 @@
-.. index:: standard library drivers
+.. index:: standard library drivers, CONMIN driver
 
 Drivers
 =======
@@ -8,7 +8,7 @@ Drivers
 The CONMIN Driver
 -----------------
 
-CONMIN is a FORTRAN program written in subroutine form, for the solution of
+:term:`CONMIN` is a FORTRAN program written in subroutine form for the solution of
 linear or nonlinear constrained optimization problems. The basic optimization
 algorithm is the Method of Feasible Directions. If analytic gradients of the
 objective or constraint functions are not available, this information is
@@ -23,8 +23,8 @@ More information on CONMIN can be found in the `CONMIN User's Manual
 CONMIN has been included in the OpenMDAO standard library to provide users
 with a basic gradient-based optimization algorithm.
 
-Basic Interface
-~~~~~~~~~~~~~~~
+*Basic Interface*
+~~~~~~~~~~~~~~~~~
 
 The CONMIN code contains a number of different parameters and switches that
 are useful for controlling the optimization process. These can be subdivided
@@ -32,7 +32,7 @@ into those parameters that will be used in a typical optimization problem and
 those that are more likely to be used by an expert user.
 
 For the simplest possible unconstrained optimization problem, CONMIN needs just
-an objective function and one or more decision variables (design variables.)
+an objective function and one or more decision variables (design variables)
 
 The OpenMDAO CONMIN driver can be loaded by importing the CONMINdriver component
 from the standard library drivers namespace.
@@ -41,7 +41,7 @@ from the standard library drivers namespace.
 
 	from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-Typically, CONMIN will be used as a driver in the top level assemblly, though it
+Typically, CONMIN will be used as a driver in the top level assembly, though it
 can be also used in a subassembly as part of a nested driver scheme. Using the
 OpenMDAO script interface, a simple optimization problem can be set up as
 follows:
@@ -65,7 +65,7 @@ follows:
 	        # Create CONMIN Optimizer instance
 	        self.add_container('driver', CONMINdriver())
 
-This first section of code defines an assembly called EngineOptimization. This
+This first section of code defines an assembly called *EngineOptimization.* This
 assembly contains a DrivingSim component and a CONMIN driver, both of which are
 created and added inside the __init__ function with add_container(). The 
 objective function, design variables, constraints, and any CONMIN parameters
@@ -79,7 +79,7 @@ these is given below.
 	self = EngineOptimization()
 	
 Both the objective function and the design variables are assigned via a
-StringRef variable. A StringRef is a string that points to some other OpenMDAO
+:term:`StringRef` variable. A StringRef is a string that points to some other OpenMDAO
 variable in the variable tree. There is only one objective function, but there
 can be multiple design variables which are assigned as a Python list.
 
@@ -92,19 +92,19 @@ can be multiple design variables which are assigned as a Python list.
 	self.driver.design_vars = ['driving_sim.spark_angle', 
                                                'driving_sim.bore' ]
 					       
-Note that all input parameters for the CONMIN driver are assigned via 
-"self.driver".
+Note that all input parameters for the CONMIN driver are assigned via 					       
+*self.driver.*
 
 These StringRef variables must point to something that can be seen in the scope
 of the CONMIN driver. In other words, if an assembly contains a CONMIN driver,
 the objective function and design variables cannot be located outside of that
 assembly. Also, each design variable must point to a component input. During
-the optimization process, the desgin variables are modified, and the relevant
+the optimization process, the design variables are modified, and the relevant
 portion of the model is executed to evaluate the new objective. Note that it
-is generally not possible to connect more than 1 driver to an available input.
+is generally not possible to connect more than one driver to an available input.
 
 Additionally, the objective function must always be either an output from a
-component, or a function of available component outputs:
+component or a function of available component outputs:
 
 .. testcode:: CONMIN_show
 
@@ -116,10 +116,12 @@ The equation must be constructed using valid Python operators. All variables in
 the function are expressed in the scope of the local assembly that contains the
 CONMIN driver.
 
+.. index:: constraints
+
 More realistically, optimization problems usually have constraints. There are
-two types of constrains in CONMIN -- ordinary constraints which are expressed
-as functions of the design variables, and side constraints which are used to
-bound the design space (i.e., specify a range for each design variable.)
+two types of constrains in CONMIN -- *ordinary* constraints, which are expressed
+as functions of the design variables, and *side* constraints, which are used to
+bound the design space (i.e., specify a range for each design variable).
 
 Side constraints are defined using the lower_bounds and upper_bounds parameters:
 
@@ -128,13 +130,11 @@ Side constraints are defined using the lower_bounds and upper_bounds parameters:
 	self.driver.lower_bounds = [-50, 65]
 	self.driver.upper_bounds = [10, 100]
 
-These size of these lists must be equal to the number of design variables or 
+The size of these lists must be equal to the number of design variables or 
 OpenMDAO will raise an exception. Similarly, the upper bound must be greater
 than the lower bound for each design variable.
 
-..index:: constraints
-
-Constraints are equations (or inequalities) much like the objective function, so
+*Constraints* are equations (or inequalities) much like the objective function, so
 they are also constructed from the available OpenMDAO variables using Python
 mathematical syntax. The constraints parameter is a list of inequalities that
 are defined to be satisfied when they return a negative value or zero, and violated
@@ -147,8 +147,8 @@ when they return positive value.
 Note that any equation can also be expressed as an inequality.
 
 
-Controlling the Optimization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*Controlling the Optimization*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is often necessary to control the convergence criteria for an optimization.
 The CONMIN driver allows the user to control both the number of iterations
@@ -162,10 +162,10 @@ The default value is 10.
 
         self.driver.itmax = 30
 
-The convergence tolerance is controlled with delfun and dabfun. Delfun is the
+The convergence tolerance is controlled with delfun and dabfun. *Delfun* is the
 absolute change in the objective function to indicate convergence (i.e., if the
-objective function changes by less than delfun, then the problem is converged.)
-Similarly, dabfun is the relative change of the objective function with respect
+objective function changes by less than delfun, then the problem is converged).
+Similarly, *dabfun* is the relative change of the objective function with respect
 to the value at the previous step. Note that dabfun has a hard-wired minimum of 
 1e-10 in the Fortran code, and delfun has a minimum of 0.0001.
 
@@ -184,7 +184,7 @@ tests are performed in the following sequence:
 
 There is also a parameter to control how many iterations the convergence
 tolerance should be checked before terminating the loop. This is done with the 
-itrm parameter, whose default value is 3.
+*itrm* parameter, whose default value is 3.
 	
 .. testcode:: CONMIN_show
 
@@ -202,12 +202,14 @@ the local gradient.
         self.driver.fdch = .0001
         self.driver.fdchm = .0001
 	
-The fdchm parameter is the minimum absolute step size that the finite
-difference will use, and fdch is the step size relative to the design variable.
-**Note: the default values of fdch and fdchm are set to 0.01. This may be too
-low for some problems, and will manifest itself by converging to a value that
-is not the minimum.** It is important to evaluate the scale of the objective
-function around the optimum so that these can be chosen well.
+The *fdchm* parameter is the minimum absolute step size that the finite
+difference will use, and *fdch* is the step size relative to the design variable.
+
+.. note::
+   The default values of *fdch* and *fdchm* are set to 0.01. This may be too
+   low for some problems and will manifest itself by converging to a value that
+   is not the minimum. It is important to evaluate the scale of the objective
+   function around the optimum so that these can be chosen well.
 
 For certain problems, it is desirable to scale the inputs. There are 
 several scaling options available, as summarized here:
@@ -225,8 +227,8 @@ nscal > 0     Scale the design variables every NSCAL iterations.
 ============  ========================================================
 
 The default setting is nscal=0 for no scaling of the design variables. The 
-nscal parameter can be set to a negative number to turn on user-defined
-scaling. When this is enabled, the array of values in the vector "scal" is
+*nscal* parameter can be set to a negative number to turn on user-defined
+scaling. When this is enabled, the array of values in the vector *scal* is
 used to scale the design variables.
 
 .. testcode:: CONMIN_show
@@ -236,7 +238,7 @@ used to scale the design variables.
 	
 Note that there need to be as many scale values as there are design variables.
 	
-Finally, the iprint parameter can be used to turn on the display of diagnostic
+Finally, the *iprint* parameter can be used to turn on the display of diagnostic
 messages inside of CONMIN. These messages are currently sent to the standard
 output.
 
@@ -271,36 +273,36 @@ iprint = 101  All of above plus a dump of the arguments passed to
 ============  ========================================================
 
 	
-Advanced Options
-~~~~~~~~~~~~~~~~
+*Advanced Options*
+~~~~~~~~~~~~~~~~~~
 The following options exercise some of the more advanced capabilities of CONMIN.
 The details given here briefly summarize the effects of these parameters; more
-info is available in the CONMIN User's Manual <file:../../../../contrib/conmin/CONMIN_user_manual.html>`_.
+info is available in the `CONMIN User's Manual <file:../../../../contrib/conmin/CONMIN_user_manual.html>`_.
 
 
-**icndir** -- Conjugate direction restart parameter. For a unconstrained problem
+**icndir** -- Conjugate direction restart parameter. For an unconstrained problem
 (no side constraints either), Fletcher-Reeves conjugate direction method will
 be restarted with a steepest descent direction every ICNDIR iterations.  If 
-ICNDIR = 1 only steepest descent will be used. Default value is the number of
+ICNDIR = 1, only the steepest descent will be used. Default value is the number of
 design variables + 1.
 
-**Constraint Thickness** -- CONMIN gives 4 parameters for controlling the 
-thickness of constraints -- ct, ctmin, ctl, and ctlmin. Using these parameters
-essentially puts a tolerance around a constraint surface. Note that ct is used
-for general constraints, and ctl is just used for linear constraints. A wide
+**Constraint Thickness** -- CONMIN gives four parameters for controlling the 
+thickness of constraints -- *ct, ctmin, ctl,* and *ctlmin.* Using these parameters
+essentially puts a tolerance around a constraint surface. Note that *ct* is used
+for general constraints, and *ctl* is just used for linear constraints. A wide
 initial value of the constraint thickness is desirable for highly nonlinear 
-problems so that when a constraint becomes active it tends to remain active,
-thus reducing the zigzagging problem. The values of ct and ctl adapt as the
-problem converges, so the minima can be set with ctl and ctlmin.
+problems so that when a constraint becomes active, it tends to remain active,
+thus reducing the zigzagging problem. The values of *ct* and *ctl* adapt as the
+problem converges, so the minima can be set with *ctl* and *ctlmin.*
 
 **theta** -- Mean value of the push-off factor in the method of feasible
 directions. A larger value of theta is desirable if the constraints are known
 to be highly nonlinear, and a smaller value may be used if all constraints are
 known to be nearly linear. The actual value of the push-off factor used in the
-program is a quadratic function of each constraint (G(J)), varying from 0.0
-for G(J) = ct to 4.0*theta for G(J) = ABS(ct). A value of theta = 0.0 is used
+program is a quadratic function of each constraint (G(J)), varying from ``0.0
+for G(J) = ct to 4.0*theta for G(J) = ABS(ct)``. A value of theta = 0.0 is used
 in the program for constraints which are identified by the user to be strictly
-linear. Theta is called a "push-off" factor because it pushes the design away
+linear. Theta is called a *push-off* factor because it pushes the design away
 from the active constraints into the feasible region. The default value is
 usually adequate. This is only used for constrained problems.
 
@@ -308,7 +310,7 @@ usually adequate. This is only used for constrained problems.
 one or more violated constraints). Phi is a measure of how hard the design
 will be "pushed" towards the feasible region and is, in effect, a penalty
 parameter. If in a given problem, a feasible solution cannot be obtained with
-the default value, PHI should be increased, and the problem run again. If a
+the default value, phi should be increased, and the problem run again. If a
 feasible solution cannot be obtained with phi = 100, it is probable that no
 feasible solution exists. The default value of 5.0 is usually adequate. This
 is only used for constrained problems.

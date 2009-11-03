@@ -18,7 +18,7 @@ Creating New Components
 Python
 +++++++
 
-f2py
+F2PY
 ++++
 
 SWIG

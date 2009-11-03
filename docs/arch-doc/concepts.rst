@@ -15,12 +15,13 @@ drive the design.
 Plugins
 ========
 
-Users of the framework will be able to extend its functionality using *plugins*. Any Python object will be usable as a plugin as long as it
-supports the required interface. Typically, a plugin will be implemented as a pure
-Python module, a Python extension that wraps a shared library, or a file I/O  wrapper
-that interacts with a stand-alone executable code. The framework will include support
-for file I/O wrapping, including a template engine for generating input files, and
-tools to simplify the task of scanning output files for values.
+Users of the framework will be able to extend its functionality using *plugins*. Any
+Python object will be usable as a plugin as long as it supports the required
+interface. Typically, a plugin will be implemented as a pure Python module, a Python
+extension that wraps a shared library, or a file I/O  wrapper that interacts with a
+stand-alone executable code. The framework will include support for file I/O
+wrapping, including a template engine for generating input files, and tools to
+simplify the task of scanning output files for values.
 
 Plugins must be *registered* with the framework before the framework can locate
 and activate them. In this framework, they will be registered by putting them in
@@ -42,11 +43,11 @@ the framework are listed below:
 sort of calculation. It inherits from :ref:`Container<container.py>`.
 
 :ref:`Driver<driver.py>` - base class for optimizers, solvers, 
-parameter studies, and other objects that iterate over a set of Components. 
+parameter studies, and other objects that iterate over a set of components. 
 It inherits from :ref:`Component<component.py>`.
 
-TraitType_ - base class used to validate and possibly convert data objects that are passed
-between linked Components. 
+TraitType_ - base class used to validate and possibly convert data objects that are
+passed between linked components. 
 
 
 .. _TraitType: http://code.enthought.com/projects/files/ETS32_API/enthought.traits.trait_handlers.TraitType.html
@@ -243,7 +244,7 @@ the new version configured as identically as possible to the old one. The
 degree to which this automatic replacement will work depends upon the nature of
 the differences between the two versions. If the differences are internal to
 the Component and do not affect its public interface, then the replacement
-should just work. If the two Components have dependency version conflicts, 
+should just work. If the two components have dependency version conflicts, 
 the newer one will have to be a proxy to a component that is out of the process, 
 as described above, because two versions of the same package cannot exist in
 the same process at the same time.
@@ -314,9 +315,9 @@ _______________
 
 This view will show the components that make up the process model and the data
 connections between those components. Users will be able to drag & drop a 
-:term:`Component` onto the dataflow view and connect two Components by dragging
+:term:`Component` onto the dataflow view and connect two components by dragging
 a line between them. Dropping a line on a component will display a connection
-dialog allowing individual variables to be connected between the two Components.
+dialog allowing individual variables to be connected between the two components.
 The dataflow view can be arranged in either `N squared`_ form or `free form`_,
 as shown below.
 
