@@ -91,7 +91,6 @@ Although, if you are not consistent, Sphinx will complain when you try to build.
 Fonts
 ------
 
-Please follow the guidelines in the next section.
 
 .. index:; buildout recipes
 
@@ -117,8 +116,10 @@ Use italics for the following:
 
 * The first time you refer to a term  (". . . is called a *Component*.")
 
-* In many cases, use italics in place of quotation marks. Before the widespread use of
-  computers and desktop publishing, italics could not be designated
+* In place of quotation marks (in many cases). Before the widespread use of
+  computers and desktop publishing, italics could not be designated, so quotation marks
+  were used. Now italics can easily be specified and in general should be used in place
+  of quotes, for example, when discussing a parameter in a code sample.  
 
 
 .. index:: Python; capitalization
