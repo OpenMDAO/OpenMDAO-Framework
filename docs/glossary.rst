@@ -14,15 +14,16 @@ Glossary
 
       **Assembly**
         The Assembly class is the primary building block of the system of 
-        systems aspect of OpenMDAO. Each Assembly has a Workflow and a 
-        Driver, and acts as a container for Components. An Assembly is also a
-        Component, so hierarchical structures of Assemblies can be created.
+        systems aspect of OpenMDAO. Each assembly has a Workflow and a 
+        Driver, and acts as a container for Components. An assembly is also a
+        component, so hierarchical structures of assemblies can be created.
       
       
-      
-      **AXOD**
-        Add definition here ...
-        
+      **AXOD** 
+        Axial-Flow Turbine Off-Design. A a computer code used for
+	preliminary studies of the gas turbine system.
+	
+
       **Beaker** 
         A Session and Caching library with :term:`WSGI` Middleware. 
 	      
@@ -79,7 +80,7 @@ Glossary
 	it is executed. 
 
 
-      **Components**
+      **components**
       	See :term:`Component` above.
 	
 	
@@ -96,7 +97,6 @@ Glossary
         A Python module that measures code coverage during test execution.
 	
 
-	
       **Data Objects** 
         A component's inputs and outputs. A Data Object is a wrapper for data
         containing a value, a default value, optional min/max values, and units
@@ -410,7 +410,12 @@ Glossary
       **Sockets**
         See :term:`Socket`.
 	
-	
+
+      **StringRef**	
+	A special kind of trait that contains a string that points to some
+	location in the OpenMDAO variable tree. 
+
+
       **SWIG**
         Simplified Wrapper and Interface Generator. A software development tool that connects
         programs written in C and C++ with a variety of high-level programming languages. Go to 

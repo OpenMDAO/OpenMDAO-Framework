@@ -113,13 +113,6 @@ syntax highlighter) is installed.
    example files.)
 
 
-**- Parsed-literal:**
-
-*Under what circumstances do developers use this vs ``::``? The documentation says that
-parsed literal blocks are useful for adding hyperlinks to code examples.*
-
-
-
 Hyperlinks
 ----------
 
