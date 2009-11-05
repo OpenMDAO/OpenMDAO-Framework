@@ -76,6 +76,12 @@ these is given below.
 
 	from openmdao.examples.engine_design.engine_optimization import EngineOptimization
 	
+	# Note: This block of code does not display in the documentation.
+	# This is a trick to get around a limitation in Sphinx's doctest, where
+	# there is no way to preserve the indentation level between code
+	# blocks, and the concept of "self" is not defined when we fall
+	# out of the class scope.
+	
 	self = EngineOptimization()
 	
 Both the objective function and the design variables are assigned via a

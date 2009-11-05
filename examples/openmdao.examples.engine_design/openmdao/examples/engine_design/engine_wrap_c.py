@@ -145,7 +145,7 @@ class Engine(Component):
         
         # Call the C model and pass it what it needs.
         
-        power, torque, fuel_burn, engine_weight = RunEngineCycle(
+        (power, torque, fuel_burn, engine_weight) = RunEngineCycle(
                     stroke, bore, conrod, comp_ratio, spark_angle,
                     n_cyl, IVO, IVC, L_v, D_v, k,
                     R, Ru, Hu, Tw, AFR, P_exth,
