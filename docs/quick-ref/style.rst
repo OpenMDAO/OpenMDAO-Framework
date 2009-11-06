@@ -2,8 +2,14 @@
 
 .. _Style-Guide:
 
-Style Guide
-===========
+
+Style Guide (General)
+=====================
+
+When coding in Python, please refer to the `Python Style Guide
+<http://www.python.org/dev/peps/pep-0008/>`_ for conventions. This document provides some
+general guidelines for writing non-code documentation.
+
 
 Underlines (and Overlines)
 --------------------------

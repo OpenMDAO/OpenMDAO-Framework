@@ -79,8 +79,12 @@ linkcheck:
 	@echo "Link check complete; look for any errors in the above output " \
 	      "or in _build/linkcheck/output.txt."
 	      
-	      
-      
+pdf:
+	mkdir -p _build/pdf _build/doctrees
+	$(SPHINXBUILD) -b pdf $(ALLSPHINXOPTS) _build/pdf
+	@echo
+	@echo "Build finished. The PDF files are in _build/pdf."	      
+       
 	      
 	      
 	      
