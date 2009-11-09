@@ -6,8 +6,8 @@ The framework is still very immature at this point, so many capabilities
 that will be found in the production release of the framework don't exist
 yet.
 
-This version requires python 2.5, and in the near term we will be transitioning
-to python 2.6.  There are no plans to move to python 3.x for at least 2 years.
+This version requires python 2.6.  There are no plans to move to python 3.x
+for at least 2 years.
 
 
 
@@ -48,7 +48,7 @@ To install and test OpenMDAO, follow these steps:
      cd buildout
 
 2. Create an isolated Python environment.
-     python isolated_bootstrap.py  (for this release, python must be python 2.5)
+     python isolated_bootstrap.py  (for this release, python must be python 2.6)
 
 3. Install the required distributions.
      bin/buildout
@@ -60,10 +60,10 @@ To install and test OpenMDAO, follow these steps:
 After you've run bin/buildout (in step 3), the installed distributions will
 be found under the buildout/eggs directory. The OpenMDAO source
 code is found primarily in the openmdao.main distribution, in the
-openmdao.main-0.1-py2.5.egg/openmdao/main directory.
+openmdao.main-0.1-py2.6.egg/openmdao/main directory.
 
 The source code for the engine design tutorial found in the User Guide
 can be found under 
-openmdao.examples.engine_design-0.1.0-py2.5-linux-x86_64.egg/openmdao/examples/engine_design.
+openmdao.examples.engine_design-0.1.0-py2.6-linux-x86_64.egg/openmdao/examples/engine_design.
 
 
