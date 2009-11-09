@@ -27,6 +27,7 @@ Component, Driver, and TraitType plugins for OpenMDAO
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
       package_dir={'': 'src'},
+      package_data={'openmdao.lib': ['components/test/*.inp']},
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,

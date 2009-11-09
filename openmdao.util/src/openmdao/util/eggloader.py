@@ -23,7 +23,6 @@ from openmdao.main.log import NullLogger
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.eggsaver import SAVE_CPICKLE, SAVE_PICKLE, SAVE_YAML, \
                                    SAVE_LIBYAML, EGG_SERVER_URL
-from openmdao.util.imholder import restore_instancemethods
 
 __all__ = ('load', 'load_from_eggfile', 'load_from_eggpkg',
            'check_requirements')
@@ -306,7 +305,5 @@ def load(instream, fmt=SAVE_CPICKLE, package=None, logger=None):
     else:
         raise RuntimeError("Can't load object using format '%s'" % fmt)
 
-    # Restore instancemethods from IMHolder objects.
-    restore_instancemethods(top)
     return top
 
