@@ -1,6 +1,11 @@
 Changes to the User Guide
 =========================
 
+
+**Updates 10/09**
+        - Added simple example problem
+        - Added overview of the OpenMDAO framework
+
 **Updates 10-27-09**
        - Simple example problem added
 

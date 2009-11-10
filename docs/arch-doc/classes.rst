@@ -19,9 +19,9 @@ Model Composition Classes
 The figure `Class Diagram of Core Classes`_ shows the classes that are the
 building blocks of a *model*. A model is a hierarchical structure with an
 :term:`Assembly` at its root. Within the :term:`Assembly` is some number of
-:term:`Components`, and a :term:`Workflow`, which controls the execution order
-of the Components. The Components have attributes that can be linked to
-attributes on other Components. An Assembly is a Component, which means that it
+:term:`components`, and a :term:`Workflow`, which controls the execution order
+of the components. The components have attributes that can be linked to
+attributes on other components. An Assembly is a Component, which means that it
 can be contained within another :term:`Assembly`. This allows for the creation
 of hierarchical models with many levels of nested Assemblies. A :term:`Driver`
 is an Assembly that repeatedly executes its workflow until some condition is

@@ -91,7 +91,6 @@ Although, if you are not consistent, Sphinx will complain when you try to build.
 Fonts
 ------
 
-Please follow the guidelines in the next section.
 
 .. index:; buildout recipes
 
@@ -108,26 +107,52 @@ for specifying parameters in OpenMDAO buildout recipes:
   example, ``*parameter name*``, which results in *parameter name*.
   
           
-*Italics font (In general)*
-+++++++++++++++++++++++++++
+*Italics*
++++++++++
 
 Use italics for the following:
 
 * Titles of books and our OpenMDAO documents (e.g., *Plugin Developer's Guide*)
+
 * The first time you refer to a term  (". . . is called a *Component*.")
-* Italics are often used in place of quotation marks. Let your subject matter be your guide.
 
-.. index:: Python; capitalizing
+* In place of quotation marks (in many cases). Before the widespread use of
+  computers and desktop publishing, italics could not be designated, so quotation marks
+  were used. Now italics can easily be specified and in general should be used in place
+  of quotes, for example, when discussing a parameter in a code sample.  
 
-Capitalization (Python & other Software Packages) 
---------------------------------------------------
+
+.. index:: Python; capitalization
+
+Capitalization 
+---------------
+
+*Python* 
+++++++++
 
 Capitalize *Python* when referring to the programming language, for example, a
-*Python* module.  However, *python* should be lower case when it refers to an
+*Python* module. However, *python* should be lower case when it refers to an
 OpenMDAO path name, script name, command, part of a URL, etc., that is lower case.
 
-This rule also applies to other software programs or packages;  for example,
+This rule also applies to other programming languages or software programs; for example,
 *Enthought, Inc.* is capitalized, but *enthoughts.traits.api* is not. 
+
+
+*Class Names*
++++++++++++++
+
+Capitalize class names, such as Component, Assembly, Driver, Engine, etc. When
+Component, Assembly, Driver, Engine (or similar nouns) are plural or they ??????????,
+they should be lower case.
+
+
+Numbers
+-------
+
+*  Write out numbers between zero and nine (0--9) when they are modifiers (two
+   assemblies). 
+*  Numbers above nine may be written in digit form (12 components).
+*  Numbers that are values should always be written in digit form (default value is 8).
 
 
 .. _Using-Inline-Literal-Text:
@@ -270,14 +295,6 @@ Commas (Before "and" in a Compound Sentence)
     
  | In this case the sentence has one subject *(some)* but two verbs *(were derived*
    and *are*). It is not a compound sentence.
-
-Numbers
--------
-
-*  Write out numbers between zero and nine (0--9) when they are modifiers (two
-   assemblies). 
-*  Numbers above nine may be written in digit form (12 components).
-*  Numbers that are values should always be written in digit form (default value is 8).
 
 
 Login vs Log in
