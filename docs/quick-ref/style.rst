@@ -12,7 +12,7 @@ inclusive.
 For Python coding conventions, please refer to the `Python Style Guide
 <http://www.python.org/dev/peps/pep-0008/>`_.
 
-.. index:: docstrings
+.. index:: docstrings standard
 
 Standard for Coding Docstrings
 ------------------------------
@@ -42,6 +42,7 @@ when specifying parameters in OpenMDAO buildout recipes:
   example, ``*parameter name*``, which results in *parameter name*.
  
 
+.. index:: underlines in reST
 
 Underlines (and Overlines)
 --------------------------

@@ -18,12 +18,6 @@
 import sys, os
 
 
-import pkg_resources 
-pkg_resources.require("rst2pdf") 
-# get latest version 
-import rst2pdf 
-
-
 # If your extensions are in another directory, add it here. If the directory
 # is relative to the documentation root, use os.path.abspath to make it
 # absolute, like shown here.
@@ -39,7 +33,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath('.')),'scripts'))
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', \
-              'sphinx.ext.doctest', 'rst2pdf.pdfbuilder'
+              'sphinx.ext.doctest'
 	      ]
 
 # Add any paths that contain templates here, relative to this directory.

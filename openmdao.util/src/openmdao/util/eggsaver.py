@@ -25,6 +25,7 @@ except ImportError:
     from yaml import Dumper
     _libyaml = False
 
+import copy_reg
 import datetime
 import glob
 import inspect
@@ -35,12 +36,12 @@ import shutil
 import site
 import sys
 import tempfile
+import types
 
 import zc.buildout.easy_install
 
 from openmdao.main.log import NullLogger
 from openmdao.util import eggobserver, eggwriter
-from openmdao.util.imholder import fix_instancemethods, restore_instancemethods
 
 __all__ = ('save', 'save_to_egg',
            'SAVE_YAML', 'SAVE_LIBYAML', 'SAVE_PICKLE', 'SAVE_CPICKLE',
@@ -59,6 +60,28 @@ _SITE_PKG = os.path.join(_SITE_LIB, 'site-packages')
 if sys.platform == 'win32':
     _SITE_LIB = _SITE_LIB.lower()
     _SITE_PKG = _SITE_PKG.lower()
+
+
+def _pickle_method(method):
+    """ Pickles an instancemethod object. """
+    func_name = method.im_func.__name__
+    obj = method.im_self
+    cls = method.im_class
+    return _unpickle_method, (func_name, obj, cls)
+
+def _unpickle_method(func_name, obj, cls):
+    """ Unpickles an instancemethod object. """
+    for cls in cls.mro():
+        try:
+            func = cls.__dict__[func_name]
+        except KeyError:
+            pass
+        else:
+            break
+    return func.__get__(obj, cls)
+
+# Register instancemethod handling.
+copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 
 def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
@@ -118,131 +141,123 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     egg_name = eggwriter.egg_filename(name, version)
     logger.debug('Saving to %s in %s...', egg_name, orig_dir)
 
-    # Put instance methods into pickleable form.
-    # (do this now, rather than in save(), so fix_objects() can fix __main__)
-    fix_instancemethods(root)
+    # Get a list of all objects we'll be saving.
+    objs = _get_objects(root, logger)
+
+    # Check that each object can be pickled.
+    _check_objects(objs, logger, observer)
+
+    # Fixup objects, classes, & sys.modules for __main__ imports.
+    fixup = _fix_objects(objs, observer)
+    _verify_objects(root, logger, observer)
+    tmp_dir = None
     try:
-        # Get a list of all objects we'll be saving.
-        objs = _get_objects(root, logger)
+        # Determine distributions and local modules required.
+        required_distributions, local_modules, orphan_modules = \
+            _get_distributions(objs, py_dir, logger, observer)
 
-        # Check that each object can be pickled.
-        _check_objects(objs, logger, observer)
+        logger.debug('    py_dir: %s', py_dir)
+        logger.debug('    src_dir: %s', src_dir)
+        logger.debug('    local_modules:')
+        for module in sorted(local_modules):
+            mod = module
+            if mod.startswith(py_dir):
+                mod = mod[len(py_dir)+1:]
+            logger.debug('        %s', mod)
 
-        # Fixup objects, classes, & sys.modules for __main__ imports.
-        fixup = _fix_objects(objs, observer)
-        _verify_objects(root, logger, observer)
-        tmp_dir = None
+        # Move to scratch area.
+        tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
+        os.chdir(tmp_dir)
+        cleanup_files = []
+
+        buildout_name = 'buildout.cfg'
+        buildout_path = os.path.join(name, buildout_name)
+        buildout_orig = buildout_path+'-orig'
         try:
-            # Determine distributions and local modules required.
-            required_distributions, local_modules, orphan_modules = \
-                _get_distributions(objs, py_dir, logger, observer)
-
-            logger.debug('    py_dir: %s', py_dir)
-            logger.debug('    src_dir: %s', src_dir)
-            logger.debug('    local_modules:')
-            for module in sorted(local_modules):
-                mod = module
-                if mod.startswith(py_dir):
-                    mod = mod[len(py_dir)+1:]
-                logger.debug('        %s', mod)
-
-            # Move to scratch area.
-            tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)
-            os.chdir(tmp_dir)
-            cleanup_files = []
-
-            buildout_name = 'buildout.cfg'
-            buildout_path = os.path.join(name, buildout_name)
-            buildout_orig = buildout_path+'-orig'
-            try:
-                if src_dir:
-                    if py_dir != src_dir or sys.platform == 'win32':
-                        # Copy original directory to object name.
-                        shutil.copytree(src_dir, name)
-                    else:
-                        # Just link original directory to object name.
-                        os.symlink(src_dir, name)
+            if src_dir:
+                if py_dir != src_dir or sys.platform == 'win32':
+                    # Copy original directory to object name.
+                    shutil.copytree(src_dir, name)
                 else:
-                    os.mkdir(name)
+                    # Just link original directory to object name.
+                    os.symlink(src_dir, name)
+            else:
+                os.mkdir(name)
 
-                # If py_dir isn't src_dir, copy local modules from py_dir.
-                if py_dir != src_dir:
-                    for path in local_modules:
-                        if not os.path.exists(
-                                   os.path.join(name, os.path.basename(path))):
-                            if not os.path.isabs(path):
-                                path = os.path.join(py_dir, path)
-                            shutil.copy(path, name)
+            # If py_dir isn't src_dir, copy local modules from py_dir.
+            if py_dir != src_dir:
+                for path in local_modules:
+                    if not os.path.exists(
+                               os.path.join(name, os.path.basename(path))):
+                        if not os.path.isabs(path):
+                            path = os.path.join(py_dir, path)
+                        shutil.copy(path, name)
 
-                # For each entry point...
-                entry_info = []
-                for obj, obj_name, obj_group in entry_pts:
-                    clean_name = obj_name
-                    if clean_name.startswith(name+'.'):
-                        clean_name = clean_name[len(name)+1:]
-                    clean_name = clean_name.replace('.', '_')
+            # For each entry point...
+            entry_info = []
+            for obj, obj_name, obj_group in entry_pts:
+                clean_name = obj_name
+                if clean_name.startswith(name+'.'):
+                    clean_name = clean_name[len(name)+1:]
+                clean_name = clean_name.replace('.', '_')
 
-                    # Save state of object hierarchy.
-                    state_name, state_path = \
-                        _write_state_file(name, obj, clean_name, fmt, proto,
-                                          logger, observer)
-                    src_files.add(state_name)
-                    cleanup_files.append(state_path)
+                # Save state of object hierarchy.
+                state_name, state_path = \
+                    _write_state_file(name, obj, clean_name, fmt, proto,
+                                      logger, observer)
+                src_files.add(state_name)
+                cleanup_files.append(state_path)
 
-                    # Create loader script.
-                    loader = '%s_loader' % clean_name
-                    loader_path = os.path.join(name, loader+'.py')
-                    cleanup_files.append(loader_path)
-                    _write_loader_script(loader_path, state_name, name,
-                                         obj is root)
+                # Create loader script.
+                loader = '%s_loader' % clean_name
+                loader_path = os.path.join(name, loader+'.py')
+                cleanup_files.append(loader_path)
+                _write_loader_script(loader_path, state_name, name, obj is root)
 
-                    entry_info.append((obj_group, obj_name, loader))
+                entry_info.append((obj_group, obj_name, loader))
 
-                # Create buildout.cfg
-                if os.path.exists(buildout_path):
-                    os.rename(buildout_path, buildout_orig)
-                _create_buildout(name, EGG_SERVER_URL, required_distributions,
-                                 buildout_path)
-                src_files.add(buildout_name)
+            # Create buildout.cfg
+            if os.path.exists(buildout_path):
+                os.rename(buildout_path, buildout_orig)
+            _create_buildout(name, EGG_SERVER_URL, required_distributions,
+                             buildout_path)
+            src_files.add(buildout_name)
 
-                # If needed, make an empty __init__.py
-                init_path = os.path.join(name, '__init__.py')
-                if not os.path.exists(init_path):
-                    cleanup_files.append(init_path)
-                    out = open(init_path, 'w')
-                    out.close()
+            # If needed, make an empty __init__.py
+            init_path = os.path.join(name, '__init__.py')
+            if not os.path.exists(init_path):
+                cleanup_files.append(init_path)
+                out = open(init_path, 'w')
+                out.close()
 
-                # Save everything to an egg.
-                doc = root.__doc__ or ''
-                entry_map = _create_entry_map(entry_info)
-                orphans = [mod for mod, path in orphan_modules]
-                if use_setuptools:
-                    eggwriter.write_via_setuptools(name, version, doc,
-                                                   entry_map, src_files,
-                                                   required_distributions,
-                                                   orphans, dst_dir, logger,
-                                                   observer.observer)
-                else:
-                    eggwriter.write(name, version, doc, entry_map,
-                                    src_files, required_distributions,
-                                    orphans, dst_dir, logger, observer.observer)
-            finally:
-                for path in cleanup_files:
-                    if os.path.exists(path):
-                        os.remove(path)
-                if os.path.exists(buildout_path):
-                    os.remove(buildout_path)
-                if os.path.exists(buildout_orig):
-                    os.rename(buildout_orig, buildout_path)
-
+            # Save everything to an egg.
+            doc = root.__doc__ or ''
+            entry_map = _create_entry_map(entry_info)
+            orphans = [mod for mod, path in orphan_modules]
+            if use_setuptools:
+                eggwriter.write_via_setuptools(name, version, doc,
+                                               entry_map, src_files,
+                                               required_distributions,
+                                               orphans, dst_dir, logger,
+                                               observer.observer)
+            else:
+                eggwriter.write(name, version, doc, entry_map,
+                                src_files, required_distributions,
+                                orphans, dst_dir, logger, observer.observer)
         finally:
-            os.chdir(orig_dir)
-            if tmp_dir:
-                shutil.rmtree(tmp_dir)
-            _restore_objects(fixup)
+            for path in cleanup_files:
+                if os.path.exists(path):
+                    os.remove(path)
+            if os.path.exists(buildout_path):
+                os.remove(buildout_path)
+            if os.path.exists(buildout_orig):
+                os.rename(buildout_orig, buildout_path)
 
     finally:
-        restore_instancemethods(root)
+        os.chdir(orig_dir)
+        if tmp_dir:
+            shutil.rmtree(tmp_dir)
+        _restore_objects(fixup)
 
     return (egg_name, required_distributions, orphan_modules)
 
@@ -778,22 +793,16 @@ def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None, fix_im=True):
         except IOError, exc:
             raise type(exc)("Can't save to '%s': %s" %
                             (outstream, exc.strerror))
-    if fix_im:
-        fix_instancemethods(root)
-    try:
-        if fmt is SAVE_CPICKLE:
-            cPickle.dump(root, outstream, proto)
-        elif fmt is SAVE_PICKLE:
-            pickle.dump(root, outstream, proto)
-        elif fmt is SAVE_YAML:
-            yaml.dump(root, outstream)
-        elif fmt is SAVE_LIBYAML:
-            if _libyaml is False:
-                logger.warning('libyaml not available, using yaml instead')
-            yaml.dump(root, outstream, Dumper=Dumper)
-        else:
-            raise RuntimeError("Can't save object using format '%s'" % fmt)
-    finally:
-        if fix_im:
-            restore_instancemethods(root)
+    if fmt is SAVE_CPICKLE:
+        cPickle.dump(root, outstream, proto)
+    elif fmt is SAVE_PICKLE:
+        pickle.dump(root, outstream, proto)
+    elif fmt is SAVE_YAML:
+        yaml.dump(root, outstream)
+    elif fmt is SAVE_LIBYAML:
+        if _libyaml is False:
+            logger.warning('libyaml not available, using yaml instead')
+        yaml.dump(root, outstream, Dumper=Dumper)
+    else:
+        raise RuntimeError("Can't save object using format '%s'" % fmt)
 

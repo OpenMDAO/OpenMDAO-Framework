@@ -7,6 +7,7 @@ from setuptools.package_index import PackageIndex
 import tarfile
 import logging
 import fnmatch
+import urllib2
 
 import zc.buildout
 import setuptools
@@ -209,7 +210,19 @@ class Bundler(object):
         
         self._setup_buildout_dir()  
         
-        index = PackageIndex(self.buildout['buildout']['index'], search_path=[])
+        # Check that we can contact the egg server.
+        url = self.buildout['buildout']['index']
+        if self.dists:
+            proxy_support = urllib2.ProxyHandler({})
+            opener = urllib2.build_opener(proxy_support)
+            try:
+                opener.open(url).read()
+            except urllib2.URLError, exc:
+                raise zc.buildout.UserError("Can't contact egg server at '%s': %s"
+                                            % (url, exc))
+
+        index = PackageIndex(url, search_path=[])
+        failed_downloads = 0
         for dist in self.dists:
             newloc = os.path.join(eggdir, os.path.basename(dist.location))
             if dist.platform is None:  # pure python
@@ -221,6 +234,10 @@ class Bundler(object):
                     self.logger.debug('successfully downloaded %s' % fetched)
                 else:
                     self.logger.error('failed to download distrib for %s' % dist.as_requirement())
+                    failed_downloads += 1
+        if failed_downloads:
+            raise zc.buildout.UserError('%d failed downloads'
+                                        % failed_downloads)
                 
         # Copy any extra stuff specified in the config
         for src, dest in self.extra_stuff:
