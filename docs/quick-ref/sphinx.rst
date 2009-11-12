@@ -112,6 +112,7 @@ syntax highlighter) is installed.
    text for use in examples. (It was used to show the index examples and other
    example files.)
 
+.. index:: hyperlinks; creating
 
 Hyperlinks
 ----------
