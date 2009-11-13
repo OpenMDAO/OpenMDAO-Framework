@@ -486,7 +486,7 @@ and integer input respectively. String variables and arrays are also possible us
 constructors. The Data Object constructors require the first two inputs but also allow several optional parameters to
 be specified.
 
-.. index:: PEP 8::
+.. index:: PEP 8
 
 The Data Object is given a name by assigning it to a Python variable (i.e. the left hand side argument when calling the 
 constructor.) As a Python variable, this name needs to follow Python's standard for variable names,

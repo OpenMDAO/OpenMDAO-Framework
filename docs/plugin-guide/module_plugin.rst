@@ -1,15 +1,15 @@
 .. index:: SimpleAdder
 
 Building a Plugin from a Python Module
---------------------------------------
+======================================
 
 For this example we'll build a plugin for the component shown in the figure
-:ref:`Conceptual-View-of-a-Simple-Component` (from the User's Guide).  This component
+:ref:`Conceptual-View-of-a-Simple-Component` (from the *User's Guide*).  This component
 simply computes the value of its single output by adding its two inputs.
 
 Our first step is to create our class. We want to inherit from
 ``openmdao.main.api.Component``, because that provides us with the interface we
-need to function properly as an OpenMDAO Component.
+need to function properly as an OpenMDAO component.
 
 
 .. _plugin_overview_Code1: 
@@ -31,7 +31,7 @@ need to function properly as an OpenMDAO Component.
 
 The code defines the class *SimpleAdder*, which inherits from the
 Component class defined in ``openmdao.main.api``, so we have to import it from
-there. The function in our Component that performs a computation is called
+there. The function in our domponent that performs a computation is called
 ``execute()``, and there we define *c* as the sum of *a* and *b*.
 The *self* object that is passed as an argument to ``execute()`` represents an
 instance of our *SimpleAdder* class.
@@ -40,6 +40,8 @@ instance of our *SimpleAdder* class.
 *c*. All three attributes have a default value of 0.0. Attributes *a* and *b*
 are inputs, so we specify that they have an *iostatus* of *'in'*. Attribute
 *c* is an output, so it has an *iostatus* of *'out'*.
+
+.. index:: traits
 
 The *Float* trait is defined in the package ``enthought.traits.api``, so we have
 to import it from there before we can use it. The ``enthought.traits.api``
@@ -58,13 +60,14 @@ At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply
 import the module containing it and use it in a model; but we want more than
 that. By packaging our plugin in a Python :term:`egg`, we can make it more usable by
 others in the OpenMDAO community. We can give our egg a version identifier and
-other :term:`metadata` that will help perspective users determine if our egg will meet
+other :term:`metadata` that will help prospective users determine if our egg will meet
 their needs. We can also upload our egg to a package index so that others can
 install it via ``easy_install`` or ``zc.buildout``.
 
+.. index:: egg; creation
 
-*Egg Creation*
-~~~~~~~~~~~~~~
+Egg Creation
+------------
 
 Creating an egg out of a Python module is straightforward, but it does
 require the creation of a simple directory structure, because eggs are
@@ -145,21 +148,22 @@ within the OpenMDAO framework:
     *version* is specified as a string, e.g., '1.0.4'.
     
 **packages**
-    In the case where you only have one module there will only be one package, but
+    In the case where you have only one module there will be only one package, but
     the egg format allows for the existence of multiple packages. You can specify
     *packages* as an explicit list of strings, but the easiest thing to do is to use
     the ``find_packages()`` function from setuptools as shown in the example above.
     
-**install_requires**
-    This specifies the packages that your egg depends upon. Note that you only need to
-    include *direct* dependencies in this list, i.e., if your package depends on *package_A*
-    which in turn depends on *package_B*, you only need to include *package_A*. Make sure not
-    to leave out any direct dependencies here, because doing so will result in failure to
-    install needed dependent distributions whenever your egg is installed.  The value
-    of *install_requires* should be a list of strings.
-    
+**install_requires**  
+    This specifies the packages that your egg depends upon. Note that you
+    need to include only *direct* dependencies in this list, i.e., if your package
+    depends on *package_A*, which in turn depends on *package_B*, you need to
+    include only *package_A*. Make sure not to leave out any direct dependencies
+    here, because doing so will result in failure to install needed dependent
+    distributions whenever your egg is installed.  The value of *install_requires*
+    should be a list of strings.
+
 **entry_points**
-    Entry points can be used by OpenMDAO to determine what plugins are
+    Entry points can be used by OpenMDAO to determine which plugins are
     available within an egg. Entry points are divided into groups, and each
     type of OpenMDAO plugin has a particular group. For example, Component
     plugins are found in the *openmdao.component* group. Each individual entry
@@ -201,8 +205,8 @@ compiled code, then our egg name would also include the name of the platform we'
 since simple_adder is nothing but pure Python code, that's not necessary.
 
 
-*Egg Creation for the Lazy*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Egg Creation for the Lazy
+--------------------------
 
 A tool called ``mod2egg`` exists for those of us who don't want to create a package
 directory structure and a setup.py file manually. It has a number of options that you
