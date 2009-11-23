@@ -1,4 +1,3 @@
-
 # -*- coding: utf-8 -*-
 #
 # OpenMDAO documentation build configuration file, created by
@@ -114,7 +113,8 @@ html_title = 'OpenMDAO Documentation'
 
 # The name of an image file (relative to this directory) to place at the top
 # of the sidebar.
-#html_logo = None
+html_logo = 'OpenMDAO_Logo_sm1.bmp'
+
 
 # The name of an image file (within the static path) to use as favicon of the
 # docs.  This file should be a Windows icon file (.ico) being 16x16 or 32x32
@@ -163,6 +163,15 @@ html_last_updated_fmt = '%b %d, %Y'
 
 # Output file base name for HTML help builder.
 #htmlhelp_basename = 'OpenMDAOdoc'
+
+html_theme = "default"
+html_theme_options = {
+     "rightsidebar": "true",
+     "relbarbgcolor": "teal",
+     "headtextcolor": "teal",
+     "stickysidebar": "",
+     "headfont": "Arial"  
+    }
 
 
 # Options for LaTeX output

@@ -1,3 +1,4 @@
+
 .. index:: tutorial problem
 
 The OpenMDAO Tutorial Problem
@@ -61,7 +62,7 @@ components in terms of the Data Flow: Transmission -> Engine -> Chassis.
 
 The full process model is shown below.
 
-.. figure:: ../../examples/openmdao.examples.engine_design/openmdao/examples/engine_design/Engine_Example_Process_Diagram.png
+.. figure:: ../images/user-guide/Process_Diagram4.png
    :align: center
 
    Process Model for Tutorial Problem
