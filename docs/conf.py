@@ -167,8 +167,8 @@ html_last_updated_fmt = '%b %d, %Y'
 html_theme = "default"
 html_theme_options = {
      "rightsidebar": "true",
-     "relbarbgcolor": "teal",
      "headtextcolor": "teal",
+     "relbarbgcolor": "teal",
      "stickysidebar": "",
      "headfont": "Arial"  
     }
