@@ -3,6 +3,7 @@ setup(
   name="units",
   version = "0.1",
   packages = find_packages(),
+  package_data = {'units': ['unitLibdefault.ini']},
   include_package_data=True,
   zip_safe = False,
   )

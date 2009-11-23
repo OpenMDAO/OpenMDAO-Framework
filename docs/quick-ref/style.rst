@@ -2,8 +2,47 @@
 
 .. _Style-Guide:
 
-Style Guide
+
+Style Guide 
 ===========
+
+This document provides some general guidelines for writing documentation. It is by no means
+inclusive.
+
+For Python coding conventions, please refer to the `Python Style Guide
+<http://www.python.org/dev/peps/pep-0008/>`_.
+
+.. index:: docstrings standard
+
+Standard for Coding Docstrings
+------------------------------
+
+A documentation string (docstring) is a string that describes a module, function, class, or
+method definition. NumPy, SciPy, and SciKits already follow a common convention for docstrings
+that provides consistency. Since an acceptable standard already exists, the OpenMDAO project will
+follow it.
+
+Please refer to NumPy's `Docstring Standard
+<http://projects.scipy.org/numpy/wiki/CodingStyleGuidelines#docstring-standard>`_ when coding
+docstrings.
+
+
+.. index:: buildout recipes
+
+Buildout Recipes (Fonts)
+------------------------
+
+Buildout recipes have configuration parameters. Please follow to these guidelines
+when specifying parameters in OpenMDAO buildout recipes:
+
+* **Required** parameters should be in boldface type, designated in reStructuredText
+  (reST) by double asterisks, for example, ``**parameter name**``, which results in
+  **parameter name**.  
+* *Optional* parameters should be in italics, designated by single asterisks, for
+  example, ``*parameter name*``, which results in *parameter name*.
+ 
+
+.. index:: underlines in reST
 
 Underlines (and Overlines)
 --------------------------
@@ -87,28 +126,9 @@ About Heading Levels:
 The tech writer will review new documentation to make sure you are consistent.
 Although, if you are not consistent, Sphinx will complain when you try to build. 
 
-
-Fonts
-------
-
-
-.. index:; buildout recipes
-
-*Buildout Recipe Fonts*
-+++++++++++++++++++++++
-
-Buildout recipes have configuration parameters. Please adhere to the guidelines
-for specifying parameters in OpenMDAO buildout recipes:
-
-* **Required** parameters should be in boldface type, designated in reStructuredText
-  (reST) by double asterisks, for example, ``**parameter name**``, which results in
-  **parameter name**.  
-* *Optional* parameters should be in italics, designated by single asterisks, for
-  example, ``*parameter name*``, which results in *parameter name*.
-  
-          
-*Italics*
-+++++++++
+         
+Italics
+-------
 
 Use italics for the following:
 
@@ -141,9 +161,9 @@ This rule also applies to other programming languages or software programs; for 
 *Class Names*
 +++++++++++++
 
-Capitalize class names, such as Component, Assembly, Driver, Engine, etc. When
-Component, Assembly, Driver, Engine (or similar nouns) are plural or they ??????????,
-they should be lower case.
+Always capitalize class names (e.g., Component, Assembly, Driver, Engine, etc.).
+Sometimes, a  class represents a concept having the same name. In that case, the name
+of the concept would generally *not* be capitalized. 
 
 
 Numbers

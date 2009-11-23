@@ -656,20 +656,6 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('Expected RuntimeError')
 
-    def test_save_bad_tuple(self):
-        logging.debug('')
-        logging.debug('test_save_bad_tuple')
-
-        # Set tuple to reference a method that has to be patched.
-        self.model.Oddball.scratch_tuple = (self.model.Oddball.instance_method,)
-        try:
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
-        except RuntimeError, exc:
-            msg = 'Egg_TestModel: fix_instancemethods: tuple'
-            self.assertEqual(str(exc)[:len(msg)], msg)
-        else:
-            self.fail('Expected RuntimeError')
-
     def test_save_bad_pickle(self):
         logging.debug('')
         logging.debug('test_save_bad_pickle')

@@ -21,13 +21,22 @@ setupdir = os.path.join(bodir,'setup')
 stoolspat = "setuptools-*-py%s.egg" % sys.version[:3]
 buildoutpat = "zc.buildout-*.tar.gz"
 boeggpat = "zc.buildout-*-py%s.egg" % sys.version[:3]
+receggpat = "zc.recipe.egg-*.tar.gz"
+receggeggpat = "zc.recipe.egg-*-py%s.egg" % sys.version[:3]
 
 sorted_dir = sorted(os.listdir(setupdir))
 stools = fnmatch.filter(sorted_dir, stoolspat)
 bouts = fnmatch.filter(sorted_dir, buildoutpat)
+receggs = fnmatch.filter(sorted_dir, receggpat)
                 
-if len(stools)==0 or len(bouts)==0:
-    sys.stderr.write('Missing setuptools or zc.buildout distribs needed for bootstrapping')
+if len(stools)==0:
+    sys.stderr.write('Missing setuptools distrib needed for bootstrapping')
+    sys.exit(-1)
+if len(bouts)==0:
+    sys.stderr.write('Missing zc.buildout distrib needed for bootstrapping')
+    sys.exit(-1)
+if len(receggs)==0:
+    sys.stderr.write('Missing zc.recipe.egg distrib needed for bootstrapping')
     sys.exit(-1)
  
 # take the last setuptools in the sorted list, assuming it's
@@ -67,18 +76,37 @@ assert os.spawnle(
          ),
     ) == 0
 
-#pkg_resources.working_set = pkg_resources.WorkingSet()
 ws  = pkg_resources.working_set
-#ws.add_entry(setupdir)
 dist = pkg_resources.Environment([setupdir]).best_match(
                       pkg_resources.Requirement.parse('zc.buildout'),
                       ws)
-#sys.path.insert(0, dist.location)
 ws.add_entry(dist.location)
 ws.require('zc.buildout')
 import zc.buildout.buildout
 
-zc.buildout.buildout.main(sys.argv[1:] + ['bootstrap'])
+# instead of calling zc.buildout.buildout.main, we create a Buildout
+# object ourselves so we can figure out where the eggs-directory is                                
+try:
+    command = 'bootstrap'
+    buildout = zc.buildout.buildout.Buildout('buildout.cfg', cloptions=[],
+                        user_defaults=True, windows_restart=False, command=command)
+    getattr(buildout, command)(sys.argv[1:])
+except SystemExit:
+    pass
+
+eggdir = buildout['buildout']['eggs-directory']
+
+#zc.buildout.buildout.main(sys.argv[1:] + ['bootstrap'])
+
+# make sure we have zc.recipe.egg
+assert os.spawnle(
+    os.P_WAIT, sys.executable, quote (sys.executable),
+    '-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
+    quote (eggdir), 'zc.recipe.egg',
+    dict(os.environ,
+         PYTHONPATH=setupdir
+         ),
+    ) == 0
 
 # now modify the bin/buildout script to isolate it
 
@@ -156,10 +184,8 @@ if 'OPENMDAO_REPO' in os.environ:
     except (AttributeError, os.error):
         pass
     
-# now clean up the zc.buildout egg we installed in the setup dir
-boeggs = fnmatch.filter(os.listdir(setupdir), boeggpat)
-for egg in boeggs:
+# now clean up the zc.buildout egg we installed 
+# in the setup dir
+for egg in fnmatch.filter(os.listdir(setupdir), boeggpat):
     if os.path.isdir(os.path.join(setupdir, egg)):
         shutil.rmtree(os.path.join(setupdir, egg))
-
-        
