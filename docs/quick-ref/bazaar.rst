@@ -186,8 +186,10 @@ occurred. See the following example:
 
 .. figure:: ../images/quick-ref/merge_conflict.png
    :align: center
-
+   
    Example of Conflicts When Merging
+
+|
 
 In the above example the "+N" indicates new files or directories. The "M" indicates modified files or directories. If
 a file or directory is removed, an "R" appears before its name.
@@ -215,10 +217,12 @@ order listed here:
 
 Conflicts will be displayed in colored text across all three files. See the following example:
 
-.. figure:: ../images/quick-ref/gui_conflict.png
-   :align: center
-
+.. figure:: ../images/quick-ref/gui_merge_conflict.png
+   :align: left
+   
    GUI Showing Versions of a File in Conflict
+ 
+|
   
 In the above example, a new index entry ``CONMIN driver`` shows up in the ``.OTHER`` file (blue background
 and red text). In the ``.THIS`` file on the right, the text with the green background is new. 

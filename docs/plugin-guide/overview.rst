@@ -17,7 +17,7 @@ Types of Plugins
 ----------------
 
 OpenMDAO supports a number of different plugin types, but the most common is the :term:`Component` plugin. The
-Component plugin, and other less common types of OpenMDAO plugins, are listed in following table
+Component plugin, and other less common types of OpenMDAO plugins, are listed in the following table
 along with a description of their purpose.
 
 ===========================  =================================================================================================
@@ -38,10 +38,10 @@ along with a description of their purpose.
 How Does OpenMDAO Find Plugins?
 -------------------------------
 
-When creating a distribution of a python project, the author can 
+When creating a distribution of a Python project, the author can 
 associate a variety of metadata with that distribution.  A list of
 entry points is one piece of metadata that can be associated. An 
-entry point is a mapping of a name to some python object, usually
+entry point is a mapping of a name to some Python object, usually
 a class or a function, that exists within the distribution.  Each
 entry point must be a member of an entry point group. An application
 can look at the entry point groups that are defined to determine if
@@ -66,12 +66,12 @@ ResourceAllocator     openmdao.resource_allocator
 ====================  ================================
 
 
-Defining Entry Points
-~~~~~~~~~~~~~~~~~~~~~
+*Defining Entry Points*
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Entry points are defined within the setup.py file that is
+Entry points are defined within the ``setup.py`` file that is
 used to build the distribution.  The following code snippet
-shows a setup.py file that defines an entry point for an
+shows a ``setup.py`` file that defines an entry point for an
 OpenMDAO component plugin called *SimpleAdder* in a distribution 
 called *simple_adder*:
 
@@ -100,14 +100,14 @@ the *openmdao.component* entry point group.  This tells OpenMDAO that the
 SimpleAdder plugin is an OpenMDAO Component.
 
 
-Installing an OpenMDAO Plugin
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*Installing an OpenMDAO Plugin*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 
     - TODO: tell how to use easy_install to install plugin 
           (easy_install -mNq -f http://...  -d <plugin_dir> where <plugin_dir> must be on Python path)
           When we install a plugin, it's dependencies will also be installed and must be on the
-          python path to be used by the system.  -We may need to write our own plugin installer in 
+          Python path to be used by the system. We may need to write our own plugin installer in 
           order to put plugins in the expected place and to prevent the installation of dependencies
           in the plugin directory when they are already a part of the distribution.
     - TODO: should we have a plugins directory, OPENMDAO_PLUGIN_PATH env var, ...
