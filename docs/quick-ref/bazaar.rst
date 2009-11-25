@@ -189,10 +189,9 @@ occurred. See the following example:
    
    Example of Conflicts When Merging
 
-|
 
-In the above example the "+N" indicates new files or directories. The "M" indicates modified files or directories. If
-a file or directory is removed, an "R" appears before its name.
+In the above example the "+N" indicates new files or directories. The "M" indicates modified files or
+directories. If a file or directory is deleted, "-D" appears before its name.
 
 To bring up a graphical interface for displaying the conflicts, type the following:
 
