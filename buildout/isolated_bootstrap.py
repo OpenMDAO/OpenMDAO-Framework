@@ -65,7 +65,7 @@ else:
     def quote (c):
         return c
 
-cmd = "import sys; sys.path.insert(0,'%s'); from setuptools.command.easy_install import main; main()" % os.path.join(bodir, 'setup', stoolsname)
+cmd = "import sys; sys.path.insert(0,r'%s'); from setuptools.command.easy_install import main; main()" % os.path.join(bodir, 'setup', stoolsname)
 
 assert os.spawnle(
     os.P_WAIT, sys.executable, quote (sys.executable),

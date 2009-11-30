@@ -705,6 +705,8 @@ Now that the components are instantiated in the assembly, they need to be hooked
 
 .. testsetup:: Code5
 
+	# Note: This block of code does not display in the documentation.
+
 	from enthought.traits.api import implements, Interface, Float, Int
 
 	from openmdao.main.api import Assembly
@@ -728,6 +730,11 @@ Now that the components are instantiated in the assembly, they need to be hooked
 	        self.add_container('engine', Engine())
 	        self.add_container('chassis', Chassis())
 		
+	# This is a trick to get around a limitation in Sphinx's doctest, where
+	# there is no way to preserve the indentation level between code
+	# blocks, and the concept of "self" is not defined when we fall out of
+	# the class scope.
+	
 	self = Vehicle()
 
 .. _Code6: 
