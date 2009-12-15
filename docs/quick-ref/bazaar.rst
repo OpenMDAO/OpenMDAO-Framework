@@ -32,7 +32,7 @@ To use these commands, type ``bzr <command_name>``, for example ``bzr add``.
   
   add 		(Adds files/directories to the Bazaar repository on your branch. Added files are listed.)
   branch	(Creates a new copy of a branch.)
-  commit	(Commits changes into a new revision. You must be add commit comments via "-m" (for "message") or you automatically go into NEdit and must them there.)
+  commit	(Commits changes into a new revision. You must add commit comments via "-m" (for "message") or you automatically go into NEdit and must them.)
   conflicts	(Lists files with conflicts.)
   log --forward	(Displays revisions on a branch [e.g., your branch, working_main]. The "--forward" option displays most recent activity last.)    
   merge		(Merges committed changes from a branch to working_main [for developers]. SCM merges to the trunk/mainline.)
