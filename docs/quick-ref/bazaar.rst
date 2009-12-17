@@ -32,7 +32,7 @@ To use these commands, type ``bzr <command_name>``, for example ``bzr add``.
   
   add 		(Adds files/directories to the Bazaar repository on your branch. Added files are listed.)
   branch	(Creates a new copy of a branch.)
-  commit	(Commits changes into a new revision. Commit comments are required. If you don't add comments via "-m", you go into NEdit and must add them there.)
+  commit	(Commits changes into a new revision. You must add commit comments via "-m" (for "message") or you automatically go into NEdit and must add comments there.)
   conflicts	(Lists files with conflicts.)
   log --forward	(Displays revisions on a branch [e.g., your branch, working_main]. The "--forward" option displays most recent activity last.)    
   merge		(Merges committed changes from a branch to working_main [for developers]. SCM merges to the trunk/mainline.)
@@ -99,7 +99,7 @@ To do so, type:
 
   %cd /OpenMDAO/dev/shared/working_main
   %bzr log --forward 	 
-  %bzr status		(Check to make sure there is not a pending merge by another team member. You wantto return to the prompt.)
+  %bzr status		(Check to make sure there is not a pending merge by another team member. You want to return to the prompt.)
  		
   
 If you decide to merge out from ``working_main``, type the following:
