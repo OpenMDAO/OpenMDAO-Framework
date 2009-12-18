@@ -17,6 +17,41 @@ from pyparsing import oneOf, alphas, nums, alphanums, Optional, Combine
 from pyparsing import Forward, StringEnd
 from pyparsing import ParseException
 
+_evalglobals = {
+    'abs': abs, 
+    'all': all, 
+    'any': any, 
+    'bool': bool, 
+    'complex': complex, 
+    'divmod': divmod, 
+    'filter': filter, 
+    'float': float, 
+    'hex': hex, 
+    'int': int, 
+    'isinstance': isinstance, 
+    'issubclass': issubclass, 
+    'iter': iter, 
+    'len': len, 
+    'list': list, 
+    'long': long, 
+    'math': math,
+    'max': max, 
+    'min': min, 
+    'oct': oct, 
+    'ord': ord, 
+    'pow': pow, 
+    'range': range, 
+    'reduce': reduce, 
+    'reversed': reversed, 
+    'round': round, 
+    'set': set, 
+    'sorted': sorted, 
+    'str': str, 
+    'sum': sum, 
+    'tuple': tuple
+}
+
+
 def _cannot_find(name):
     raise RuntimeError("ExprEvaluator: cannot find variable '%s'" % name)
 
@@ -87,7 +122,9 @@ def _trans_fancyname(strng, loc, tok, exprobj):
     scope = exprobj._scope()
     lazy_check = exprobj.lazy_check
     
-    if scope.contains(tok[0]):
+    if tok[0].startswith('math.'):
+        return tok
+    elif scope.contains(tok[0]):
         scname = 'scope'
         if scope.trait(tok[0]) is not None:
             return tok  # use name unmodified for faster local access
@@ -110,9 +147,16 @@ def _trans_fancyname(strng, loc, tok, exprobj):
             full += ","+tok[1]
         exprobj.var_names.add(tok[0])
     else:
-        full = scname + ".invoke('" + tok[0] + "'"
-        if len(tok[1]) > 2:
-            full += "," + tok[1][1:-1]
+        # special check here for calls to builtins like abs, all, any, etc.
+        # or calls to math functions (math.sin, math.cos, etc.)
+        if tok[0] in _evalglobals or tok[0].startswith('math.'):
+            full = tok[0] + "("
+            if len(tok[1]) > 2:
+                full += tok[1][1:-1]
+        else:
+            full = scname + ".invoke('" + tok[0] + "'"
+            if len(tok[1]) > 2:
+                full += "," + tok[1][1:-1]
         
     return [full + ")"]
     
@@ -135,6 +179,8 @@ def translate_expr(text, exprobj, single_name=False):
     lpar     = Literal( "(" )
     rpar     = Literal( ")" )
     dot      = Literal( "." )
+    
+# TODO: add boolean operations
 #    equal    = Literal( "==" )
 #    notequal = Literal( "!=" )
 #    less     = Literal( "<" )
@@ -297,10 +343,15 @@ class ExprEvaluator(str):
         try:
             if self._text != self:  # text has changed
                 self._parse()
+            globdict = _evalglobals.copy()
+            import pprint
             if scope:
-                return eval(self._code, scope.__dict__, locals())
+                globdict.update(scope.__dict__)
+                print self.scoped_text
+                return eval(self._code, globdict, locals())
             else:
-                return eval(self._code, {}, locals())
+                print self.scoped_text
+                return eval(self._code, globdict, locals())
         except Exception, err:
             raise type(err)("ExprEvaluator failed evaluating expression "+
                             "'%s'. Caught message is: %s" %(self,str(err)))
