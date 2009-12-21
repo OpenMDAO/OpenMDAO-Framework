@@ -176,7 +176,7 @@ is to say that its value has changed, and thus the output no longer matches the
 functional evaluation of the component inputs. For the Paraboloid component, the
 equation for the paraboloid goes here. Note that the framework variables are 
 accessed as members of the Paraboloid class, meaning that *self.x* returns the
-value of the framework input *x.* To make the equation clearer, *self.x* was
+value of the framework input *x.* To make the equation clearer, *self.x* was assigned
 to *x* and *self.y* was assigned to *y* before the equation. Note also that the
 output value is assigned here similarly via *self.f_xy.* This changes the value
 of the framework variable and completes the component execution.

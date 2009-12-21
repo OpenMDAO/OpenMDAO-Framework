@@ -12,6 +12,7 @@ Architecture Document
    classes.rst
    processes.rst
    principles.rst
+   geometry.rst
    changeRecord.rst
       
 
