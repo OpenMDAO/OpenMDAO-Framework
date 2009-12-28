@@ -512,6 +512,13 @@ class Container(HasTraits):
         for cont in self.list_containers():
             getattr(self, cont).tree_rooted()
             
+    def revert_to_defaults(self, recurse=True):
+        """Sets the values of all of the inputs to their default values."""
+        self.reset_traits(iostatus='in')
+        if recurse:
+            for cname in self.list_containers():
+                getattr(self, cname).revert_to_defaults(recurse)
+            
     def dump(self, recurse=False, stream=None):
         """Print all items having iostatus metadata and
         their corresponding values to the given stream. If the stream
