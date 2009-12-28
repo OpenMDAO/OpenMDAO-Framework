@@ -12,16 +12,21 @@ import urllib2
 import zc.buildout
 import setuptools
 
-from openmdao.util.procutil import run_command
-from openmdao.util.fileutil import rm
-
+from subprocess import Popen, PIPE, STDOUT
 
 def _find_files(startdir):
     for path, dirlist, filelist in os.walk(startdir):
         for name in filelist:
             yield os.path.join(path, name)
             
-    
+            
+def rm(path):
+    """Delete a file or directory"""
+    if os.path.isdir(path):
+        shutil.rmtree(path)
+    else:
+        os.remove(path)
+
 class Bundler(object):
     """Collect all of the eggs that are used in the current
     buildout and put them along with a custom buildout config into a 
@@ -148,7 +153,9 @@ class Bundler(object):
             
             cmd = '%s setup.py build bdist_egg -d %s' % (self.buildout['buildout']['executable'], 
                                                          self.bundle_cache)
-            out, ret = run_command(cmd)
+            p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+            out = p.communicate()[0]
+            ret = p.returncode
             if ret != 0:
                 self.logger.error(out)
                 raise zc.buildout.UserError(
