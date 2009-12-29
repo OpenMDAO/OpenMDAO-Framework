@@ -7,10 +7,8 @@ import logging
 import rfc822
 import StringIO
 import zc.buildout
-
+from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
-
-from openmdao.util.procutil import run_command
 
 
 def _mod_sphinx_info(mod, outfile, show_undoc=False):
@@ -275,7 +273,9 @@ class SphinxBuild(object):
         if self.build == 'true':
             # build the docs using Sphinx
             try:
-                out, ret = run_command(bspath)
+                p = Popen(bspath, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+                out = p.communicate()[0]
+                ret = p.returncode
             except Exception, err:
                 self.logger.error(str(err))
                 raise zc.buildout.UserError('sphinx build failed')
@@ -332,12 +332,15 @@ wb.open(r"%(index)s")
         utest = open(utname, 'w')
         utest.write("""
 import unittest
+import os
 from os.path import join
-from openmdao.util.procutil import run_command
+from subprocess import Popen, PIPE, STDOUT
 
 class SphinxDocsTestCase(unittest.TestCase):
     def test_docs(self):
-        output, retval = run_command(r'%s')
+        p = Popen(r'%s', stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+        output = p.communicate()[0]
+        retval = p.returncode
         if not output.strip().endswith('build succeeded.'):
             self.fail('problem in documentation source code examples:\\n'+output)
         """ % os.path.join(bindir, 'testdocs')

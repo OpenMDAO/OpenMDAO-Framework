@@ -17,6 +17,42 @@ from pyparsing import oneOf, alphas, nums, alphanums, Optional, Combine
 from pyparsing import Forward, StringEnd
 from pyparsing import ParseException
 
+_evalglobals = {
+    'abs': abs, 
+    'all': all, 
+    'any': any, 
+    'bool': bool, 
+    'complex': complex, 
+    'divmod': divmod, 
+    'filter': filter, 
+    'float': float, 
+    'hex': hex, 
+    'int': int, 
+    'isinstance': isinstance, 
+    'issubclass': issubclass, 
+    'iter': iter, 
+    'len': len, 
+    'list': list, 
+    'long': long, 
+    'math': math,
+    'max': max, 
+    'min': min, 
+    'oct': oct, 
+    'ord': ord, 
+    'pow': pow, 
+    'range': range, 
+    'reduce': reduce, 
+    'reversed': reversed, 
+    'round': round, 
+    'set': set, 
+    'sorted': sorted, 
+    'str': str, 
+    'sum': sum, 
+    'tuple': tuple
+}
+
+_fake_eq = '_@EQ@_'  # used to replace '==' to avoid ambiguity with '='
+
 def _cannot_find(name):
     raise RuntimeError("ExprEvaluator: cannot find variable '%s'" % name)
 
@@ -50,11 +86,8 @@ def _trans_lhs(strng, loc, tok, exprobj):
     
 def _trans_assign(strng, loc, tok, exprobj):
     if tok[0] == '=':
-        #exprobj.lhs = tok[1].replace('_@RHS@_', '', 1)
-        #exprobj.rhs = tok[2]
         return [tok[1].replace('_@RHS@_', tok[2], 1)]
     else:
-        #exprobj.lhs = ''.join(tok)
         return tok
     
 def _trans_arrayindex(strng, loc, tok):
@@ -87,7 +120,10 @@ def _trans_fancyname(strng, loc, tok, exprobj):
     scope = exprobj._scope()
     lazy_check = exprobj.lazy_check
     
-    if scope.contains(tok[0]):
+    if tok[0].startswith('math.'):
+        exprobj._has_globals = True
+        return tok
+    elif scope.contains(tok[0]):
         scname = 'scope'
         if scope.trait(tok[0]) is not None:
             return tok  # use name unmodified for faster local access
@@ -110,9 +146,17 @@ def _trans_fancyname(strng, loc, tok, exprobj):
             full += ","+tok[1]
         exprobj.var_names.add(tok[0])
     else:
-        full = scname + ".invoke('" + tok[0] + "'"
-        if len(tok[1]) > 2:
-            full += "," + tok[1][1:-1]
+        # special check here for calls to builtins like abs, all, any, etc.
+        # or calls to math functions (math.sin, math.cos, etc.)
+        if tok[0] in _evalglobals or tok[0].startswith('math.'):
+            exprobj._has_globals = True
+            full = tok[0] + "("
+            if len(tok[1]) > 2:
+                full += tok[1][1:-1]
+        else:
+            full = scname + ".invoke('" + tok[0] + "'"
+            if len(tok[1]) > 2:
+                full += "," + tok[1][1:-1]
         
     return [full + ")"]
     
@@ -123,7 +167,6 @@ def translate_expr(text, exprobj, single_name=False):
     names in the framework, e.g., 'a.b.c' becomes get('a.b.c') or 'a.b.c(1,2,3)'
     becomes invoke('a.b.c',1,2,3).
     """
-    #scope = exprobj._scope()
     lazy_check = exprobj.lazy_check
     
     ee = CaselessLiteral('E')
@@ -135,12 +178,13 @@ def translate_expr(text, exprobj, single_name=False):
     lpar     = Literal( "(" )
     rpar     = Literal( ")" )
     dot      = Literal( "." )
-#    equal    = Literal( "==" )
-#    notequal = Literal( "!=" )
-#    less     = Literal( "<" )
-#    lesseq   = Literal( "<=" )
-#    greater  = Literal( ">" )
-#    greatereq = Literal( ">=" )
+    
+    equal    = Literal( _fake_eq ) # substitute for '==' to avoid ambiguity in grammar
+    notequal = Literal( "!=" )
+    less     = Literal( "<" )
+    lesseq   = Literal( "<=" )
+    greater  = Literal( ">" )
+    greatereq = Literal( ">=" )
     
     assignop = Literal( "=" )
     lbracket = Literal( "[" )
@@ -177,13 +221,14 @@ def translate_expr(text, exprobj, single_name=False):
 
     addop  = plus | minus
     multop = mult | div
-#    boolop = equal | notequal | less | lesseq | greater | greatereq
+    boolop = equal | notequal | lesseq | less | greatereq | greater 
 
     factor = Forward()
     atom = Combine(Optional("-") + (( number | fancyname) | (lpar+expr+rpar)))
     factor << atom + ZeroOrMore( ( expop + factor ) )
     term = factor + ZeroOrMore( ( multop + factor ) )
-    expr << term + ZeroOrMore( ( addop + term ) )
+    addterm = term + ZeroOrMore( ( addop + term ) )
+    expr << addterm + ZeroOrMore( ( boolop + addterm ) )
     
     lhs_fancyname = pathname + ZeroOrMore(arrayindex)
     lhs = lhs_fancyname + assignop
@@ -220,8 +265,9 @@ class ExprEvaluator(str):
     or a RuntimeError will be raised.  If lazy_check is True, error reporting will
     be delayed until the expression is evaluated.
     
-    If single_name is True, the expression can only be the name one object, with
-    optional array indexing, but general expressions are not allowed.
+    If single_name is True, the expression can only be the name of one object, with
+    optional array indexing, but general expressions are not allowed because the
+    expression is intended to be on the LHS of an assignment statement.
     """
     
     def __new__(cls, text, scope=None, single_name=False, lazy_check=True):
@@ -232,11 +278,10 @@ class ExprEvaluator(str):
             s._scope = weakref.ref(scope)
         s.lazy_check = lazy_check
         s.single_name = single_name
-        #s.rhs = ''
-        #s.lhs = ''
         s._text = None  # used to detect change in str
         s.var_names = set()
         s.scoped_text = None
+        s._has_globals = False
         if lazy_check is False:
             s._parse()
         return s
@@ -265,22 +310,23 @@ class ExprEvaluator(str):
                                             '<string>', 'exec')
 
     def _parse(self):
-        self._text = str(self)
+        self._text = str(self).replace('==', _fake_eq)
         self.var_names = set()
-        self.scoped_text = translate_expr(str(self), self, 
-                                          single_name=self.single_name)
+        self.scoped_text = translate_expr(self._text, self, 
+                                          single_name=self.single_name).replace(_fake_eq,'==')
         self._code = compile(self.scoped_text, '<string>','eval')
         if self.single_name: # set up a compiled assignment statement
             old_lazy_check = self.lazy_check
             try:
                 self.lazy_check = True
                 self.scoped_assignment_text = translate_expr(
-                                            '%s = _local_setter' % str(self), 
-                                            self)
+                                            '%s = _local_setter' % self._text, 
+                                            self).replace(_fake_eq,'==')
                 self._assignment_code = compile(self.scoped_assignment_text, 
                                                 '<string>','exec')
             finally:
                 self.lazy_check = old_lazy_check
+        self._text = self._text.replace(_fake_eq, '==')
                 
     def evaluate(self):
         """Return the value of the scoped string, evaluated 
@@ -298,9 +344,14 @@ class ExprEvaluator(str):
             if self._text != self:  # text has changed
                 self._parse()
             if scope:
-                return eval(self._code, scope.__dict__, locals())
+                if self._has_globals:
+                    globdict = _evalglobals.copy()
+                    globdict.update(scope.__dict__)
+                else:
+                    globdict = scope.__dict__
+                return eval(self._code, globdict, locals())
             else:
-                return eval(self._code, {}, locals())
+                return eval(self._code, _evalglobals, locals())
         except Exception, err:
             raise type(err)("ExprEvaluator failed evaluating expression "+
                             "'%s'. Caught message is: %s" %(self,str(err)))

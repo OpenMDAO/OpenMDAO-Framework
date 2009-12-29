@@ -247,8 +247,8 @@ You must resolve any conflicts that come up during the merge. See :ref:`if you h
 
 ::
 
-  %bin/buildout    (Makes sure you can build on the branch after the merge
-  
+  %bin/buildout    	(Makes sure you can build on the branch after the merge.)
+  %bin/test --all	(Makes sure the tests pass after merging and before committing the changes.)
 
 
 
