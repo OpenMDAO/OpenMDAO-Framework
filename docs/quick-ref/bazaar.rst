@@ -30,20 +30,144 @@ To use these commands, type ``bzr <command_name>``, for example ``bzr add``.
 
 ::
   
-  add 		(Adds files/directories to the Bazaar repository on your branch. Added files are listed.)
+  add 		(Adds files/directories to the Bazaar repository on your branch.)
   branch	(Creates a new copy of a branch.)
   commit	(Commits changes into a new revision. You must add commit comments via "-m" (for "message") or you automatically go into NEdit and must add comments there.)
   conflicts	(Lists files with conflicts.)
-  log --forward	(Displays revisions on a branch [e.g., your branch, working_main]. The "--forward" option displays most recent activity last.)    
+  log --forward	(Displays revisions on a branch. The "--forward" option means the most recent activity will be displayed last.)    
   merge		(Merges committed changes from a branch to working_main [for developers]. SCM merges to the trunk/mainline.)
-  revert	(Reverts files to a previous revision.) 
+  revert	(Cancels all changes since the last merge, so you revert to the previous revision.)
   status	(Displays pending changes, if any; if no uncommitted changes are pending, it returns to the prompt.)
-  uncommit	(Removes the last committed revision.)
   
 Note that all files on your branch are available to be changed. By running the ``bzr status``
 command, you can see all of the uncommitted revisions on your branch. 
 
   
+Managing Files
+--------------
+
+This section discusses some of the commands used to manage your files.
+
+
+*Creating a Directory*
+++++++++++++++++++++++
+
+If you want to create a new versioned directory, type the following:
+
+::
+
+  %bzr mkdir <directory_name>
+  
+  
+*Adding a File*
++++++++++++++++
+
+To add a file or directory to the Bazaar repository on your branch, type:
+
+::
+
+  %bzr add
+  
+You can provide an argument with this command (i.e., a specific file name). If you add a
+file whose parent directory is not versioned, Bazaar will automatically add the parent
+directory and so on up to the root. 
+
+If you use this command without an argument, Bazaar will add everything under the current
+directory that has not yet been added to the repository.
+
+After you type ``bzr add``, Bazaar will display a list of the files and directories that were added.
+
+.. index:: removing a file/directory
+
+
+
+*Removing a File or Directory*
+++++++++++++++++++++++++++++++
+
+Bazaar's ``remove`` command is similar to the UNIX command, and either can be used to remove a file.
+
+::
+
+  %bzr remove <file_name>    (Bazaar "remove" command)
+  %rm <file_name> 	     (UNIX "remove" command)
+    
+However, to remove a directory, it's easier to use the UNIX remove command (``rm``). See the
+following example:
+
+::
+  
+  %rm -rf <directory_name>   (Removes a directory and recursively removes the files in it.)
+
+
+.. index:: moving a file/directory
+.. index:: renaming a file/directory
+
+
+*Moving or Renaming a File*
++++++++++++++++++++++++++++
+
+The move command (``bzr mv``) is used to rename or move a file, depending on the arguments you
+provide. For example, when moving a file, you must provide the path to the new location. When you
+move a file, Bazaar deletes the file from its current location.
+
+Go to the directory containing the file you want to rename or move; then enter the appropriate
+command. See the examples that follow: 
+
+::
+
+  %bzr mv <old_file_name> <new_file_name>  	(Renames a file)
+  %bzr mv test1.rst test2.rst 			(Example: renames "test1.rst" to "test2.rst")
+  
+  %bzr mv <file_to_move> <path_to_new_location><new_name>  (Moves and renames a file) 
+  %bzr mv test1.rst ../user-guide/test2.rst 	(Example: Moves "test1.rst" and renames it to "test2.rst")   
+  %bzr mv test1.rst ../user-guide/.		(Example: Moves "test1.rst" and keeps the same file name)
+
+
+.. note::
+   If you need to move an entire directory, be sure to use the ``bzr mv`` command and NOT the UNIX command (which is
+   similar) to ensure that all files in the directory get moved correctly.
+
+.. index:: diff command
+
+*Viewing Changes in a File*
++++++++++++++++++++++++++++
+
+If you have edited a file and want to see what you have done, type:
+
+::
+
+  %bzr diff <file_name>
+  
+Bazaar will display the name of the modified file (the name you specified) and then list the additions and deletions with a
+plus (+) or minus (-) sign in front of the changed lines.   	
+
+
+.. index:: log command
+
+*Viewing the Revision Log*
+++++++++++++++++++++++++++
+
+
+You can see the history of your branch by browsing its log. To see a complete list of revisions on the current branch
+beginning with the first revision and displaying the most recent revision last, type: 
+
+::
+
+  %bzr log --forward 
+  
+Information will be provided about each revision, including:
+
+  * Revision number
+  * Name of the person who committed the revision
+  * Name of branch where revision originated
+  * Date/time the revision was committed
+  * Commit message 
+
+If you do not use the ``--forward`` option and merely type ``bzr log``, the first revision will be
+displayed last, and you will have to scroll up to view the most recent revisions.
+
+ 
+
 .. index:: branch; creating
 
 Creating a Branch from working_main
@@ -106,18 +230,38 @@ If you decide to merge out from ``working_main``, type the following:
 
 ::
   
-  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>   
-  %bzr status		 			(Checks for any uncommitted changes.)
-  %bzr commit -m "<commit comments>"		(Needed only if you have uncommitted changes.) 
-  %cd buildout					(Takes you to the "buildout" directory.)
-  %bin/buildout					(Makes sure your branch builds after committing changes.)
+  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>/buildout  (Takes you to the "buildout" on your branch.)
+  %bin/buildout					(Makes sure your branch builds before you merge to it.)
   %bin/docs 					(Checks that the documentation displays correctly.)	
-  %bin/test --all				(Makes sure the tests pass before you merge.)
-  %bzr status					(Needed if you committed and want to verify that nothing was missed. Should return to the prompt if OK to merge.) 
+  %bin/test --all 				(Makes sure tests pass on your branch before merging to it.)
+  %bzr status		 			(Checks for any uncommitted changes.)
+
+**If you have NO uncommitted changes,** and your branch has built correctly and passed the tests, you can merge:
+
+::
+  
   %bzr merge /OpenMDAO/dev/shared/working_main  (Merges from working_main to your branch.)
 
-You can check the Bazaar documentation for additional options to use with the *log* command to restrict
-how much you see on the screen.
+You must resolve any conflicts that come up during the merge. See :ref:`if you have a conflict
+<if-you-have-a-conflict>`. After you have resolved any conflicts, type:
+
+::
+
+  %bin/buildout    (Makes sure you can build on the branch after the merge
+  
+
+
+
+
+
+
+**If there were uncommitted changes** when you checked the status of your branch, you can merge:
+
+ %bzr commit -m "<commit comments>"		(Commits changes and allows you to enter a commit message.) 
+  
+  
+  bin/test --all				(Makes sure the tests pass before you merge.)
+
 
 Resolve any conflicts that come up during the merge. See :ref:`if you have a conflict
 <if-you-have-a-conflict>`. After you have resolved any conflicts, type:
@@ -257,7 +401,8 @@ commit your changes. Type:
 Canceling a Merge/Removing Uncommitted Changes
 ----------------------------------------------
 
-If you have an issue that cannot be resolved quickly, you can cancel the merge by typing:
+If you encounter a problem when merging and the issue cannot be resolved quickly, you can cancel the
+merge by typing:
 
 ::
 
@@ -272,20 +417,3 @@ good idea to see what files will be removed, so type:
   %bzr revert
   
   
-Additionally, you may commit changes on your branch and then you decide that you don't want them. To remove 
-them, you can type:
-
-::
-
-  %bzr uncommit
-
-
-Removing a Directory and Its Files
-----------------------------------
-
-Although Bazaar does have a ``remove`` command, it is probably just as easy to use the
-common UNIX command for removing a directory and its files:
-
-::
-  
-  %rm -rf <directory_name>
