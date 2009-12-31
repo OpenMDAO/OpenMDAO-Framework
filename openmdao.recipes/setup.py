@@ -29,8 +29,6 @@ setup(name='openmdao.recipes',
           'setuptools',
           'zc.recipe.egg',
           'Sphinx',
-          'nose',
-          'coverage',
       ],
       entry_points="""
       [zc.buildout]

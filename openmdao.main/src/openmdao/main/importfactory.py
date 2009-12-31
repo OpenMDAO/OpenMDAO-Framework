@@ -6,7 +6,7 @@ __all__ = ["ImportFactory"]
 
 
 from openmdao.main.factory import Factory
-from openmdao.main.log import logger
+from openmdao.util.log import logger
    
 class ImportFactory(Factory):
     """Creates objects using the standard Python __import__ mechanism. The 

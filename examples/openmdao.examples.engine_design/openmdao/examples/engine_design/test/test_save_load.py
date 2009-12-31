@@ -58,8 +58,8 @@ from openmdao.main.api import Component
 try:
     Component.load_from_eggfile('%s', install=False)
 except Exception, err:
-    import openmdao.main.log
-    openmdao.main.log.logger.exception(str(err))
+    import openmdao.util.log
+    openmdao.util.log.logger.exception(str(err))
     raise
 """ % egg_path)
             out.close()
