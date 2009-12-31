@@ -3,9 +3,10 @@ import shutil
 import subprocess
 import sys
 import time
+import logging
 
 from openmdao.main.api import Component
-from openmdao.main.log import LOG_DEBUG
+from openmdao.util.log import LOG_DEBUG
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.testutil import find_python
 

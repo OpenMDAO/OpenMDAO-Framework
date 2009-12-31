@@ -35,7 +35,7 @@ from enthought.traits.trait_types import validate_implements
 # pylint: disable-msg=E0611,F0401
 
 from openmdao.main.filevar import FileRef
-from openmdao.main.log import Logger, logger, LOG_DEBUG
+from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE

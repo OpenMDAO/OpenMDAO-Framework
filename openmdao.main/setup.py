@@ -38,6 +38,8 @@ setup(name='openmdao.main',
           'PyYAML',
           'networkx==1.0rc1',
           'Traits>=3.0',
+          'units',
+          'openmdao.util',
       ],
       entry_points = {
           ## This is how we add openmdao specific metadata that can be supplied by

@@ -39,9 +39,8 @@ setup(name='openmdao.test',
       zip_safe=False,
       install_requires=[
           'setuptools',
-          'openmdao.main',
           'openmdao.lib',
-          # -*- Extra requirements: -*-
+          'nose',
       ],
       entry_points="""
       [openmdao.component]

@@ -34,9 +34,7 @@ Component, Driver, and TraitType plugins for OpenMDAO
       install_requires=[
           'setuptools',
           'openmdao.main',
-          'openmdao.util',
           'conmin',
-          'units',
           'Pyevolve',
           'axod',
           ],
