@@ -14,6 +14,7 @@ comp is a Component
 x is an float variable
 """
 import unittest
+import math
 
 import numpy
 import logging
@@ -28,6 +29,7 @@ class A(Container):
     
 class Comp(Component):
     x = Float(iostatus='in')
+    y = Float(iostatus='in')
     
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):
@@ -36,6 +38,7 @@ class ExprEvalTestCase(unittest.TestCase):
         self.top.a.b = numpy.array([1., 2, 3, 4, 5, 6])
         self.top.add_container('comp', Comp())
         self.top.comp.x = 3.14
+        self.top.comp.y = 42.
 
     def test_set1(self):
         # each test is a tuple of the form (input, expected output)
@@ -44,6 +47,9 @@ class ExprEvalTestCase(unittest.TestCase):
         ('-b', "-b"),
         ('b[0]', "b[0]"),
         ('b[-3]', "b[-3]"),
+        ('abs(b)', 'abs(b)'),
+        ('comp.x < b', "scope.parent.get('comp.x')<b"),
+        ('math.sin(b)+math.cos(b+math.pi)', 'math.sin(b)+math.cos(b+math.pi)'),
         ('comp.x[0]', "scope.parent.get('comp.x',[0])"),
         ('comp.x[0] = 10.-(3.2*b[3]+1.1*b[2])', 
              "scope.parent.set('comp.x',10.-(3.2*b[3]+1.1*b[2]),[0])"),
@@ -60,6 +66,7 @@ class ExprEvalTestCase(unittest.TestCase):
         tests = [
         ('a.b[1+3**4*1]', "scope.get('a.b',[1+3**4*1])"),
         ('a.b[1][2]', "scope.get('a.b',[1,2])"),
+        ('abs(a.b[1][2])', "abs(scope.get('a.b',[1,2]))"),
         ('a.b[1,2]', "scope.get('a.b',[1,2])"),
         ('a.b[1][x.y]', "scope.get('a.b',[1,scope.parent.get('x.y')])"),
         ('a.b()', "scope.invoke('a.b')"),
@@ -89,6 +96,56 @@ class ExprEvalTestCase(unittest.TestCase):
         ex.set(75.4)
         self.assertEqual(75.4, self.top.comp.x)
 
+    def test_boolean(self):
+        comp = self.top.comp
+        comp.x = 1.
+        comp.y = 3.
+        self.assertEqual(True, ExprEvaluator('comp.x < comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x <= comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x != comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x == comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x > comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x >= comp.y', self.top).evaluate())
+        
+        self.assertEqual(True, ExprEvaluator('1< comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('1<= comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('1!= comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('1== comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('1> comp.y', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('1>= comp.y', self.top).evaluate())
+        
+        self.assertEqual(True, ExprEvaluator('comp.x < 3', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x <= 3', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x != 3', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x == 3', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x > 3', self.top).evaluate())
+        self.assertEqual(False, ExprEvaluator('comp.x >= 3', self.top).evaluate())
+        
+        comp.x = 3.
+        self.assertEqual(False, ExprEvaluator('comp.x != comp.y', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('comp.x == comp.y', self.top).evaluate())
+        
+        self.top.a.b = [1,1,1,1]
+        self.assertEqual(True, ExprEvaluator('all(a.b)', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('any(a.b)', self.top).evaluate())
+        self.top.a.b = [1,1,0,1]
+        self.assertEqual(False, ExprEvaluator('all(a.b)', self.top).evaluate())
+        self.assertEqual(True, ExprEvaluator('any(a.b)', self.top).evaluate())
+        
+    def test_builtins(self):
+        comp = self.top.comp
+        comp.x = 1.
+        comp.y = -3.
+        self.assertEqual(3., ExprEvaluator('abs(comp.y)', self.top).evaluate())
+        self.assertAlmostEqual(0., ExprEvaluator('math.sin(math.pi)', self.top).evaluate())
+        comp.x = 1.35
+        self.assertEqual(1., ExprEvaluator('math.floor(comp.x)', self.top).evaluate())
+        self.assertEqual(2., ExprEvaluator('math.ceil(comp.x)', self.top).evaluate())
+        comp.x = 0.
+        self.assertEqual(True, ExprEvaluator('math.sin(comp.x)<math.cos(comp.x)', self.top).evaluate())
+        comp.x = math.pi/2.
+        self.assertEqual(False, ExprEvaluator('math.sin(comp.x)<math.cos(comp.x)', self.top).evaluate())
+        
     def test_multi_object(self):
         # verify that single_name will not allow expressions with multiple objects
         try:

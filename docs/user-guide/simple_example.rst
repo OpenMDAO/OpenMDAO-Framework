@@ -87,7 +87,7 @@ Python is a very extensible language and comes with a convenient way to manage
 and load add-ons and extensions. The OpenMDAO source was also structured to
 allow its functions and classes to follow a namespace convention (i.e., dotted
 paths that compartmentalize the functions). Additionally, a special namespace
-called ``openmdao.main.ap`` was added, which contains some of the more commonly
+called ``openmdao.main.api`` was added, which contains some of the more commonly
 used functions.
 
 .. testcode:: simple_component_Paraboloid_pieces
@@ -171,9 +171,7 @@ Finally, we need a function to execute this component:
 	    self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 	    
 The execute function is where you define what a component will do when it is
-told to run. Typically a run is triggered when an input becomes *invalid,* which
-is to say that its value has changed, and thus the output no longer matches the
-functional evaluation of the component inputs. For the Paraboloid component, the
+told to run. For the Paraboloid component, the
 equation for the paraboloid goes here. Note that the framework variables are 
 accessed as members of the Paraboloid class, meaning that *self.x* returns the
 value of the framework input *x.* To make the equation clearer, *self.x* was assigned
