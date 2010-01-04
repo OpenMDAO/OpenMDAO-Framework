@@ -11,7 +11,7 @@ import unittest
 from openmdao.main.api import SimulationRoot, set_as_top
 from openmdao.main.exceptions import RunInterrupted
 from openmdao.lib.components.external_code import ExternalCode
-from openmdao.util.eggchecker import check_save_load
+from openmdao.main.eggchecker import check_save_load
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()

@@ -20,7 +20,7 @@ from openmdao.main.filevar import FileMetadata, FileTrait
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
-from openmdao.util.eggchecker import check_save_load
+from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
 
 # pylint: disable-msg=E1101,E1103
