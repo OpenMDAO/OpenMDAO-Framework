@@ -2,7 +2,7 @@
 
 import unittest
 
-from enthought.traits.api import Float, Str, Instance
+from enthought.traits.api import Float, Str, Instance, TraitError
 from openmdao.main.api import Assembly, Component, set_as_top
 
 class Multiplier(Component):
@@ -131,10 +131,23 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp1.r, 3.0)
         self.assertEqual(comp1.s, 'once upon a time')
         
+        # also, test that we can't do a direct set of a connected input
+        oldval = self.asm.comp2.r
+        try:
+            self.asm.comp2.r = 44
+        except TraitError, err:
+            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'comp1.rout'"+
+                                       " and cannot be directly set")
+        else:
+            self.fail("Expected a TraitError when setting a connected input")
+        
+        # verify that old value of connected input hasn't changed
+        self.assertEqual(oldval, self.asm.comp2.r)
+        
         self.asm.run()
         
         self.assertEqual(comp1.get('rout'), 4.5)
-        self.assertEqual(comp1.get('sout'), 'emit a nopu ecno')       
+        self.assertEqual(comp1.get('sout'), 'emit a nopu ecno')
         self.assertEqual(comp1.rout, 4.5)
         self.assertEqual(comp1.sout, 'emit a nopu ecno')
         self.assertEqual(comp2.get('r'), 4.5)
@@ -143,6 +156,35 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp2.rout, 6.75)
         self.assertEqual(comp2.s, 'emit a nopu ecno')
         self.assertEqual(comp2.sout, 'once upon a time')
+        
+        # now test removal of the error callback when a connected input is disconnected
+        self.asm.disconnect('comp1.rout','comp2.r')
+        self.asm.comp2.r = 33
+        self.assertEqual(33, self.asm.comp2.r)
+        
+    def test_direct_set_of_connected_input(self):
+        comp1 = self.asm.comp1
+        comp2 = self.asm.comp2
+        self.asm.connect('comp1.rout','comp2.r')
+        self.asm.connect('comp1.sout','comp2.s')
+        
+        # test that we can't do a direct set of a connected input
+        oldval = self.asm.comp2.r
+        try:
+            self.asm.comp2.r = 44
+        except TraitError, err:
+            self.assertEqual(str(err), "comp2: 'r' is already connected to source 'comp1.rout'"+
+                                       " and cannot be directly set")
+        else:
+            self.fail("Expected a TraitError when setting a connected input")
+        
+        # verify that old value of connected input hasn't changed
+        self.assertEqual(oldval, self.asm.comp2.r)
+        
+        # now test removal of the error callback when a connected input is disconnected
+        self.asm.disconnect('comp1.rout','comp2.r')
+        self.asm.comp2.r = 33
+        self.assertEqual(33, self.asm.comp2.r)
 
     def test_connect_containers(self):
         self.asm.set('comp1.dummy_in.rval_in', 75.4)
