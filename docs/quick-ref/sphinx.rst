@@ -3,16 +3,17 @@
 Sphinx and reStructuredText
 ===========================
 
-OpenMDAO uses :term:`reStructuredText` (reST), a plaintext markup language, to create
-files for its documentation. Sphinx is a Python documentation generator that
-converts reST to HTML. While reST provides the basic structure, Sphinx has
-specific directives that are used with reST to produce the desired results. For more
+OpenMDAO uses :term:`reStructuredText` (reST), a plaintext markup language that is part of the Docutils
+text-processing system, to create documentation files. Sphinx is a Python documentation generator
+that converts reST to HTML. While reST provides the basic structure (Docutils is the parsing and translating
+suite), Sphinx has specific directives that are used with reST to produce the desired results. For more
 information, please see the references that follow.
+
 
 References:
 
-* reStructuredText primer: http://docutils.sourceforge.net/docs/user/rst/quickstart.html 
-* Sphinx Documentation:  http://sphinx.pocoo.org/contents.html 
+* A reStructuredText Primer: http://docutils.sourceforge.net/docs/user/rst/quickstart.html 
+* Sphinx Python Documentation Generator: http://sphinx.pocoo.org/contents.html 
 
 
 Some Basics 
@@ -25,9 +26,9 @@ Some Basics
 * You need at least one space between words and after periods. Extra spaces are
   ignored. 
   
-* Use one asterisk for emphasis (italics): ``*text*``
+* Use one asterisk for emphasis (*italics*): ``*text*`` 
 
-* Use two asterisks for strong emphasis (boldface) ``**text**`` 
+* Use two asterisks for strong emphasis (**boldface**) ``**text**`` 
 
 * All text in headings (level one, level two, level three, etc.)
   must be underlined. (In OpenMDAO documents, generally the title is overlined
@@ -37,26 +38,8 @@ Some Basics
 * If you get a Sphinx build error that says "Unexpected indentation," it is probably because
   Sphinx is expecting a blank line, such as after a literal text block. Your line may have
   wrapped and confused Sphinx. In this case, try pulling the text up to the previous line even
-  if it extends out past the margin of your window.  
-
-
-Updating Your Version of Sphinx
--------------------------------
-
-*This assumes that the sys admin or one of the senior developers has upgraded the
-system to a later version of Sphinx than you are using.*
-
-To use the latest version of the software, you must first delete the old version
-from your ``installed_eggs`` directory. Type the following:
-
-
-::
-
-% cd /OpenMDAO/dev/<your_working_directory>/installed_eggs
-% rm -rf Sphinx-[current_version]   
-
-The next time you build, the new version of Sphinx will be added to your
-``installed_eggs`` directory and used to build your documentation.
+  if it extends out past the margin of your window. Or, you could press **Enter** to go to the next
+  line, but be sure to indent the text on the new line.  
 
 .. index:: literal text
 
@@ -110,7 +93,7 @@ syntax highlighter) is installed.
 .. note::
    You can also use this special marker (``::``) to introduce non-code literal
    text for use in examples. (It was used to show the index examples and other
-   example files.)
+   example files in this section.)
 
 .. index:: hyperlinks; creating
 
@@ -147,7 +130,7 @@ label names must be unique.
 
 For example, if you are in the *Developer's Guide* and want to refer the user to
 the tutorial problem overview in the *User's Guide*, you would type
-something like:
+something like the following in the source file:
 
 ::
   
@@ -164,24 +147,27 @@ In the *User's Guide* you would place the label before the section title, as fol
 
   The overall objective of the tutorial problem is to design . . . . 
 
+
+Note the hyphenation between words in the label and the cross reference to the label.
+
 You can use same type of cross-reference label with figures. See :ref:`Figures`.
 
 
-**-Internal links** (to an arbitrary location)
+**- Internal links** (to an arbitrary location)
 
 Labels that aren't placed before a section title can still be referenced, but you must give the link
-an explicit title, using this syntax: ``:ref:`Link title <label-name>```.  For example, I created the
-following cross reference:  ``:ref:`process model <process-model>```, which in the text would appear as:
+an explicit title using this syntax: ``:ref:`Link title <label-name>```.  For example, the cross
+reference ``:ref:`process model <process-model>``` appears in the HTML text file as:
 
   :ref:`process model <process-model>`
   
-Before the relevant paragraph in the *User Guide* that discusses the process model and shows a figure
-of it, I placed this label:
+The label below was placed above the paragraph in the *User Guide* that discusses the process model and shows
+a figure of it, 
    
    ``.. _`process-model`:``
    
-So, clicking on my cross reference (above) takes you to the text where the label was placed.
-I made my own arbitrary label rather than cross referencing to the figure title.
+So, clicking on th cross reference in the text file takes you to where the label was placed. In this case an  
+arbitrary label was created rather than cross referencing to the figure title.
  
 
 **- Seealso directive**
@@ -202,7 +188,7 @@ results in:
 .. seealso:: :ref:`Bazaar-Commands`
 
 
-You must also place the label before the section referred to, for example:
+You must also place a label before the section referred to, for example:
 
 ::  
 
@@ -243,7 +229,7 @@ Generally we align our figures *center*, as shown in the example, but that is up
 author.
 
 Last is the figure caption: ``Class Diagram of Core Classes``. You must leave a blank
-line before the title. You would also leave a blank line after it, since it is the end of a
+line before the caption. You would also leave a blank line after it, since it is the end of a
 paragraph. (In Firefox, figure captions are automatically centered, but in Internet Explorer
 they appear flush left.) 
 
@@ -357,7 +343,11 @@ In this case, it results in this:
 * Parent list continues 
 
 You may notice that even though we didn't put a blank line between items in the parent list,
-a blank line appears between them because of our nested list.
+a blank line appears between them because of our nested list. Whenever there is nested bullet list or
+a bullet is longer than one paragraph, a blank line appears between bullet items. Otherwise, there is no blank
+line between bullet items. Consequently, different sets of bullets within the same document will
+look different (inconsistent). This is the way reST or Sphinx currently works, and the author cannot
+change it.  
 
 
 Tables
@@ -468,7 +458,7 @@ Index Items
 
 If you wish to add index items to a file as you are writing, please do. Additionally the tech
 writer will review new documentation and add index (and glossary) entries as needed. Index
-entries go in the file preceding the section or paragraph containing the text to be indexed.
+entries should precede the section or paragraph containing the text to be indexed.
 *Note that all index entries are placed flush left.* Some examples follow.
 
 **- Single term** 

@@ -32,7 +32,7 @@ docstrings.
 Buildout Recipes (Fonts)
 ------------------------
 
-Buildout recipes have configuration parameters. Please follow to these guidelines
+Buildout recipes have configuration parameters. Please follow these guidelines
 when specifying parameters in OpenMDAO buildout recipes:
 
 * **Required** parameters should be in boldface type, designated in reStructuredText
@@ -138,7 +138,7 @@ Use italics for the following:
 
 * In place of quotation marks (in many cases). Before the widespread use of
   computers and desktop publishing, italics could not be designated, so quotation marks
-  were used. Now italics can easily be specified and in general should be used in place
+  were used. Now italics can easily be specified and, in general, should be used in place
   of quotes, for example, when discussing a parameter in a code sample.  
 
 
@@ -292,7 +292,7 @@ Use an en dash (--) for the following:
 * To contrast values or show a  relationship between two things (New York--London flight,
   Supreme Court's 5--4 decision)  
 
-In reST an en dash is formed by typing two hyphens or minus signs.
+In reST an en dash is formed by typing two hyphens (minus signs).
 
 Commas (Before "and" in a Compound Sentence)
 --------------------------------------------
