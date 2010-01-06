@@ -13,7 +13,7 @@ from enthought.traits.api import Float, Array, TraitError
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.lib.drivers.conmindriver import CONMINdriver
-from openmdao.util.eggchecker import check_save_load
+from openmdao.main.eggchecker import check_save_load
 
 
 class OptGolinskiComponent(Component):

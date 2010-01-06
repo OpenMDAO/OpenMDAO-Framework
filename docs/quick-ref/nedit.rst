@@ -17,14 +17,14 @@ PDF file of NEdit Help Documentation: http://www.nedit.org/ftp/contrib/misc/nedi
 Editing a File
 --------------
 
-Go to the ``docs/`` directory on your branch, *cd* to the desired directory, and bring up the file
+Go to the ``docs`` directory on your branch, *cd* to the desired directory, and bring up the file
 that you wish to edit:
 
 ::
 
 %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>/docs
 %cd <directory_name>    		(e.g., %cd user-guide)
-%nedit <file_name>  &
+%nedit <file_name>  &                   (Brings up a file in NEdit and runs NEdit in the background.)
 
 
 Using the *Fill Paragraph* Option
@@ -75,15 +75,16 @@ Launching Spell Check from NEdit
 
 2. From inside the file, type: ``Alt+b``
 
-   An XWindow will appear. 
+   An XWindow titled *ispell* will appear, and the first potentially misspelled word will be highlighted.
 
-3. Select the desired option---*Replace All, Ignore All*, etc.
-   You will automatically go to next potentially misspelled word.
+3. Select the letter or number of the desired option (e.g., Replace All, Ignore All, exit, etc.).
+   You will automatically go to next potentially misspelled word and so on until you come to the end of the
+   file.
 
-4. When you are finished checking the file, save it, even if you made no changes. (Just
+4. When you are finished checking the file, save it, even if you made no changes. (Merely
    launching ispell is considered a modification to the file.)
-
-
+   
+  
 Using Line Numbers to Find Sphinx Errors
 ----------------------------------------
 
@@ -94,7 +95,7 @@ fail. Sphinx provides the file name and line number where the error occurs. To f
 
 2.  On the menu bar, click on *Preferences* and then on *Show Line Numbers*. 
 
-You should be able to locate the line with the error and correct the problem.
+    You should be able to locate the line with the error and correct the problem.
 
 
 

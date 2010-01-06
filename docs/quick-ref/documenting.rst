@@ -25,8 +25,8 @@ their directory names in the Sphinx OpenMDAO Documentation project:
 There are several other files and subdirectories in this directory (e.g., images,
 generated_images, config.py, Makefile, _build, _static) that you can ignore for now. User
 document files (e.g., index.rst, glossary.rst) are in :term:`reStructuredText` (reST) markup
-language and always end in ".rst". The subdirectories for the documents in many cases contain a hyphen in their
-name. 
+language and always end in ".rst". The subdirectories for the documents in many cases contain a hyphen in
+their name. 
 
 1. In the following example, we will add text to an existing file (overview.rst) in the *Guide to
    the OpenMDAO Standard Library,* so you need to go to that document's directory on your branch:
@@ -44,18 +44,16 @@ name.
 .. seealso:: :ref:`Using-NEdit`
 
 
-2. After you have added the text to the file, save it. 
+2. After you have added the desired text, save the file and commit your changes. 
 
-   Remember that you also have to commit your changes. Always check the status before you commit changes.
-
+   
 ::
 
-%bzr status		
-%bzr commit -m "<commit comments>"   	
-
-  | When you request a status, Bazaar will display any pending changes on your branch---additions, 			removals,
-    modifications, unknown files you forgot to add. When you commit changes, you are required to enter
-    comments. 
+  %bzr status	 		     (Displays pending changes on your branch---additions, deletions, 
+                                      modifications, and unknown files you did not add.)			
+  %bzr commit -m "<commit_message>"  (Commits changes and allows you to add a commit message. Or, you may omit
+                                      "-m", and after pressing "Enter," type your comments using NEdit.)
+ 	
 
 3. If you need to create a new file, just type: 
 
@@ -81,7 +79,7 @@ name.
 
 %nedit index.rst &
 
- | Add your file after the overview. The index would then look something like this:
+  | Add your file after the overview. The index would then look something like this:
 
 ::
       
@@ -108,7 +106,7 @@ index, but it does no harm. In this case, most of the files end in ".rst", but t
 
 .. note::  
    When you finish your documentation (e.g., complete a ticket and are ready to merge), you
-   should update the changes.rst file. If you forget for would prefer that the tech writer do
+   should update the ``changes.rst`` file. If you forget or would prefer that the tech writer do
    this, please email the tech writer and include the following: a summary of your changes, the
    ticket number, and the date you merged your changes. The latest changes go at the top of
    the list, for example:
@@ -134,7 +132,7 @@ Creating a New Document
 
 If you need to create a new document within the OpenMDAO documentation, you must:
 
-* Create a new subdirectory in the ``/docs`` directory 
+* Create a new subdirectory in the ``docs`` directory 
 * Create your new .rst files in that subdirectory, including an index.rst 
 * Add the new files to your index
 * Add the document (new subdirectory) to the project index, so Sphinx knows about it
@@ -159,7 +157,7 @@ following:
 
 %nedit & 
 
-  | This command brings up blank document that you save under the desired name, such as
+  | This command brings up a blank document that you save under the desired name, such as
     *file1.rst*.  Create as many files as you need, including an index.
 
 3. Add the file names to your index:
@@ -187,8 +185,7 @@ following:
 
 
 .. note:: Be sure to align the file names correctly or your file(s) will not display. You can
-   always go to another index and copy its structure. (If you copy the source from this file, be
-   sure to start flush left.)
+   always go to another index and copy its structure. 
 
 In general use overline and underline only for the title of a document (e.g., in the index file  of a
 document). In other cases, it's easier to use just underline. If you use both, the length of the lines must
@@ -201,13 +198,13 @@ text, Sphinx doesn't seem to mind.
    index.rst for your document, you must add the document to the index.rst for the entire
    OpenMDAO Documentation project. 
 
-   After saving your file, go up a level to the ``docs/`` directory. Then use NEdit to add your new
-   document (*New Guide*) to the the project's index.rst: 
+   Remember, you are in ``new-guide`` directory. After saving your file, go up one level to the ``docs``
+   directory. Then use NEdit to add your new document (*New Guide*) to the the project's index.rst: 
 
 ::
 
-%cd ../	  	
-%nedit index.rst &
+%cd ../	  	     (Takes you up one level.)
+%nedit index.rst &   (Opens the index.rst in NEdit.)
 	
 
  | You should see something similar to this:
@@ -231,9 +228,10 @@ text, Sphinx doesn't seem to mind.
 	srcdocs/index
 	licenses/index
 
-Add ``new-guide/index`` in the desired location in the list of documents and save the file. 
+   | Add ``new-guide/index`` in the desired location in the list of documents and save the file. 
 
-5. If you have not done so, add any new files to Bazaar using ``bzr add``. 
+5. If you have not done so, add any new files to Bazaar using ``bzr add``. Also remember to commit your
+   changes when ready.
 
 
 
@@ -244,16 +242,15 @@ You must be in the ``buildout`` directory:
 
 ::
 
-%cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>   
-%cd buildout/	
-%bin/buildout  	
-%bin/docs     	
+%cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>/buildout  (Takes you to "buildout" dir.)
+%bin/buildout  		(Builds the documentation as well as code files on your branch.)
+%bin/docs     	        (Displays the documentation in HTML using the Firefox browser.) 
 
-The ``bin/buildout`` command builds the documentation just as it builds all code files, while
-``bin/docs`` will display the documentation in HTML using Firefox. In the above example, it is
-assumed that you have built at least once on your branch. If you haven't, you need to run the script 
-``python<version#> isolatedbootstrap.py`` before ``bin/buildout``. Refer to the
-section on :ref:`Building-on-your-branch` under *Bazaar Commands.*
+The above example assumes that you have built at least once on your branch. If you haven't, you need to run
+the script  ``python2.6 isolatedbootstrap.py`` before running ``bin/buildout``. Refer to the section on
+:ref:`Building-on-your-branch` under *Bazaar* Commands. 
+
+(Note that when we move to a new version of Python, the version number will change.)
 
 	
 
