@@ -19,7 +19,7 @@ quick reference for some common tasks you will be doing.
 References:
 
 * Bazaar User Guide: http://doc.bazaar-vcs.org/latest/en/user-guide/index.html
-* Bazaar in Five Minutes: http://doc.bazaar-vcs.org/latest/en/mini-tutorial/index.html
+* Bazaar in five minutes: http://doc.bazaar-vcs.org/latest/en/mini-tutorial/index.html
 * Bazaar Tutorial: http://doc.bazaar-vcs.org/latest/en/tutorials/tutorial.html
 
 .. index Bazaar commands
@@ -33,7 +33,7 @@ To use these commands, type ``bzr <command_name>``, for example ``bzr add``.
   
   add 		(Adds files/directories to the Bazaar repository on your branch.)
   branch	(Creates a new copy of a branch.)
-  commit	(Commits changes into a new revision. You must add a commit message via "-m" or Nedit, the text editor.)
+  commit	(Commits changes into a new revision. You must add a commit message via "-m" or NEdit, a text editor.)
   conflicts	(Lists files with conflicts.)
   log --forward	(Displays revisions on a branch. The "--forward" option means the most recent activity will be displayed last.)    
   merge		(Pulls in committed changes from another branch.)
@@ -89,15 +89,15 @@ Bazaar's ``remove`` command is similar to the UNIX command, and either can be us
 
 ::
 
-  %bzr remove <file_name>    (Bazaar "remove" command)
-  %rm <file_name> 	     (UNIX "remove" command)
+  %bzr remove <file_name>     (Bazaar "remove" command)
+  %rm <file_name> 	      (UNIX "remove" command)
     
 However, to remove a directory, it's easier to use the UNIX remove command (``rm``), as follows:
 
 
 ::
   
-  %rm -rf <directory_name>   (Removes a directory and recursively removes the files in it.)
+  %rm -rf <directory_name>    (Removes a directory and recursively removes the files in it.)
 
 
 .. index:: moving a file/directory
@@ -108,20 +108,22 @@ However, to remove a directory, it's easier to use the UNIX remove command (``rm
 +++++++++++++++++++++++++++
 
 The move command (``bzr mv``) is used to rename or move a file, depending on the arguments you
-provide. For example, when moving a file, you must provide the path to the new location. When you
+provide. When moving a file, you must provide the path to the new location. When you
 move a file, Bazaar deletes the file from its current location.
 
-Go to the directory containing the file you want to rename or move; then enter the appropriate
-command. See the examples that follow: 
+To rename or move a file, you must be in the directory containing the file you want to rename or move; then enter
+the appropriate command. See the examples that follow: 
 
 ::
 
-  %bzr mv <old_file_name> <new_file_name>  	(Renames a file)
-  %bzr mv test1.rst test2.rst 			(Example: renames "test1.rst" to "test2.rst")
+  %bzr mv <old_file_name> <new_file_name>                  (Renames a file)
+  Example:
+  %bzr mv test1.rst test2.rst                              (Renames "test1.rst" to "test2.rst")
   
-  %bzr mv <file_to_move> <path_to_new_location><new_name>  (Moves and renames a file) 
-  %bzr mv test1.rst ../user-guide/test2.rst 	(Example: Moves "test1.rst" and renames it to "test2.rst")   
-  %bzr mv test1.rst ../user-guide/.		(Example: Moves "test1.rst" and keeps the same file name)
+  %bzr mv <file_to_move> <path_to_new_location><new_name>  (Moves and renames a file)
+  Examples: 
+  %bzr mv test1.rst ../user-guide/test2.rst                (Moves "test1.rst" to "user-guide" dir & renames it "test2.rst")   
+  %bzr mv test1.rst ../user-guide/.                        (Moves "test1.rst" to "user-guide" dir & keeps the same name)
 
 
 .. note::
@@ -179,13 +181,16 @@ You need to be in your OpenMDAO working directory (e.g., pziegfel, ktmoore1), so
 
 ::
 
-  %cd /OpenMDAO/dev/<your_working_directory>  
-  %bzr branch /OpenMDAO/dev/shared/working_main/ T<ticket#>-<branch_name>
+  %cd /OpenMDAO/dev/<your_working_directory>  				   (Takes you to your working_directory.)
+  %bzr branch /OpenMDAO/dev/shared/working_main/ T<ticket#>-<branch_name>  (Creates branch from "working_main.)
+  Example:
+  %bzr branch /OpenMDAO/dev/shared/working_main/ T30-user_guide_updates	   (Creates branch: "T30-user_guide_updates.")
 
 Your Trac ticket number and branch number should correspond. When working on your branch, be sure
 to add any new files that you create using the ``bzr add`` command. You can use the command to
-add a specific file or directory (``bzr add <filename>``), but it's easier to type it by itself,
-in which case, all new files and directories will be added.
+add a specific file or directory (``bzr add <filename>``), but it's easier to type it by itself. In the
+latter case, everything in the current directory will be added. So, if you enter the command at the top of
+your branch, all unadded directories and files will be added.
 
 
 .. index:: branch; building on
@@ -199,17 +204,17 @@ If you are in your home directory, type:
 
 ::
 
-  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>    (Takes you to your branch.)
-  %cd /buildout			       (Takes you to the "buildout" directory.) 
-  %python2.6 isolated_bootstrap.py     (Runs a script that is required before you can build the first time.)
-  %bin/buildout			       (Builds on your branch.)		
-  %bin/docs			       (Displays the documentation.)  			
-  %bin/test --all		       (Runs the test suite.)
+  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>  (Takes you to your branch.)
+  %cd /buildout			                         (Takes you to the "buildout" directory.) 
+  %python2.6 isolated_bootstrap.py                       (Runs the script needed before you can build the first time.)
+  %bin/buildout			                         (Builds on your branch.)		
+  %bin/docs			                         (Displays the documentation.)  			
+  %bin/test --all		                         (Runs the test suite.)
 
 .. note:: You must run the ``python2.6 isolated_bootstrap.py`` script the first time you build on
    a branch. However, for subsequent builds, only ``bin/buildout`` is required. 
    
-   The test suite also tests code snippets in the documentation.
+   The test suite includes tests for code snippets in the documentation.
 
 
 .. index:: branch; merging to
@@ -217,71 +222,51 @@ If you are in your home directory, type:
 Merging working_main to Your Branch
 ------------------------------------
 
-As you work on your branch, you may want to periodically  update it from ``working_main`` to avoid conflicts
+As you work on your branch, you may want to periodically update it from ``working_main`` to avoid conflicts
 when you merge back. In the example that follows, first we go to ``working_main`` and display the log to see what
-was recently committed. If you want those changes now, you can then merge to your branch. To do this, type:
+was recently committed. You can then decide if you want to merge to your branch. Type:
 
 ::
 
   %cd /OpenMDAO/dev/shared/working_main
-  %bzr log --forward 	(Checks the log for recent activity.) 
-  %bzr status		(Checks to make sure there is not a pending merge by another team member. If there is, try later.)
+  %bzr log --forward 	  (Checks the log for recent activity.) 
+  %bzr status		  (Checks to make sure there is no pending merge by another team member. If there is, check later.)
  		
-  
-When you decide to merge from ``working_main`` to your branch, type the following:
+You decide to merge out from ``working_main``, so go to your branch.
 
 ::
   
-  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>/buildout  (Takes you to the "buildout" directory on your branch.)
-  %bin/buildout		(Makes sure your branch builds before you merge to it.)
-  %bin/docs 		(Checks that the documentation displays correctly.)	
-  %bin/test --all 	(Makes sure tests pass on your branch before merging to it.)
-  %bzr status		(Checks for uncommitted changes on your branch; you cannot merge if there are uncommitted changes.)
-
-**If you have NO uncommitted changes,** on your branch and your branch has built correctly and passed the tests, you
-can merge:
+  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>
+  Example:
+  %cd /OpenMDAO/dev/pziegfel/T30-user_guide_updates
+  
+  %bzr status		  (Checks your branch for uncommitted changes; you cannot merge if you have any.)
+  
+If you have uncommitted changes, use the ``bzr commit`` command. If you have no uncommitted changes, go
+straight to the ``buildout`` directory.
 
 ::
   
+  %bzr commit -m "<commit_message>"  (Commits changes and allows you to add commit message. [Or, you can use NEdit].)
+  %cd buildout 		             (Takes you to your "buildout" directory.)
+  %bin/buildout		             (Makes sure branch builds before you merge to it [and after your commit, if applicable].)
+  %bin/docs 		             (Checks that docs display correctly. Optional if no doc changes.)	
+  %bin/test --all 	             (Runs test suite; all tests should pass before you merge.)
   %bzr merge /OpenMDAO/dev/shared/working_main  (Merges from working_main to your branch.)
 
-You must resolve any conflicts that come up during the merge. If conflicts arose, see :ref:`if you have a
+You must resolve any conflicts that come up during the merge. If conflicts arise, see :ref:`if you have a
 conflict <if-you-have-a-conflict>`. After you have resolved any conflicts or if you had none, type:
 
 ::
 
-  %bin/buildout    	(Makes sure you can build on the branch after the merge.)
-  %bin/test --all	(Makes sure the tests pass after merging and before committing the changes.)
-  %bzr status		(Lists added, removed, & modified files & pending merges, since merged files have not yet been committed.)
-  %bzr commit -m "<commit_message>" (Commits the changes from the merge and allows you to add the required commit message.)
-
-
-**If there were uncommitted changes** when you checked the status of your branch BEFORE merging, you need to
-commit those changes. Type:
-
-::
-
-  %bzr commit -m "<commit_message>"  	       (Commits changes & allows you to enter comments about the merge.)
-  %bzr merge /OpenMDAO/dev/shared/working_main (Merges from working_main to your branch.)
+  %bin/buildout    		       (Makes sure you can build on the branch after the merge.)
+  %bin/test --all		       (Makes sure the tests pass after merging and before committing the changes.)
+  %bzr status			       (Lists pending changes & merges, since merged files have not yet been committed.)
+  %bzr commit -m "<commit_message>"    (Commits changes from the merge and allows you to add required commit message. 
+                                        You can also omit the "-m" and write the message using the NEdit text editor.)
+  %bzr python2.6 isolated_bootstrap.py (Runs rerquired script before first build after committing changes.)
+  %bin/buildout    		       (Builds on the branch after the merge.)
   
-Assuming there were no conflicts, you can proceed with the merge process. Type:
-
-::
-
-  %bin/buildout    	(Makes sure you can build on the branch after the merge.)
-  
-If you have any build warnings, you should resolve them before continuing. When you can
-build successfully without warnings, type the following:
-
-::
-
-  %bin/docs		(Displays the documentation using Firefox.)
-  %bin/test --all	(Makes sure the tests pass after merging and before committing the changes.)
-  %bzr status		(Lists added, removed, & modified files & pending merges, since merged files have not yet been committed.)
-  %bzr commit -m "<commit_message>" (Commits the changes from the merge and allows you to add the required commit message.)
-
-
-
 .. index:: branch; merging from
  
 
@@ -289,20 +274,20 @@ Merging Your Branch to working_main
 ------------------------------------
 
 You need to commit your changes to your local repository before merging your branch to ``working_main``. When
-you commit changes, you must add comments about the revision. If you forget to add "-m" and the commit message,
-you will automatically go into a file in the NEdit text editor. Enter your commit comments and save them when
+you commit changes, you must add comments about the revision. If you forget to add "-m" and/or the commit message,
+you will automatically go into a file in NEdit, a text editor. Enter your commit comments and save them when
 exiting.
 
 ::
 
-  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>  (Takes you to the branch you want to merge.) 
-  %bzr status			      (Checks to see if there are uncommitted changes. You cannot merge if there are.)
-  %bzr commit -m "<commit_message>"   (Needed only if you have uncommitted changes.)       
-  %cd buildout			      (Takes you to the "buildout" directory.)
-  %bin/buildout 		      (Builds your branch. You should be able to build without errors or warnings.)
-  %bin/test --all	              (Runs the test suite. Tests should pass on your branch before you merge.)
-  %cd ../../shared/working_main	      (Takes you up two levels and then to "working_main."
-  %bzr status			      (Checks the status to make sure there are no pending merges.)
+  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>        (Takes you to the branch to be merged.) 
+  %bzr status			       (Checks for uncommitted changes. You cannot merge if there are any.)
+  %bzr commit -m "<commit_message>"    (Needed only if you have uncommitted changes.)       
+  %cd buildout			       (Takes you to the "buildout" directory.)
+  %bin/buildout 		       (Builds your branch. You should be able to build without errors or warnings.)
+  %bin/test --all	               (Runs the test suite. Tests should pass on your branch before you merge.)
+  %cd ../../shared/working_main	       (Takes you up two levels and then to "working_main."
+  %bzr status			       (Checks to make sure there are no pending merges.)
   %bzr merge /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>  (Merges your branch to "working_main.")
 
 Bazaar will merge your branch to ``working_main`` and then list all added, removed, and modified files. It will
@@ -314,9 +299,11 @@ also list any conflicts.
 ::
 
   %cd /buildout		             	
-  %python2.6 isolated_bootstrap.py   (Always run this script before building on working_main.)
-  %bin/buildout 		     (Makes sure you can build on "working_main after the merge.)	
-  %bin/test --all		     (Runs the test suite. All tests must pass before you can commit changes to "working_main.")	
+  %python2.6 isolated_bootstrap.py    (Required script that must be run before building on "working_main.")
+  %bin/buildout 		      (Makes sure you can build on "working_main" after the merge.)
+  %bin/docs			      (Displays the documentation.)
+  %bin/test --all		      (Runs the test suite. All tests must pass before you can commit your  
+                                       changes to "working_main.")	
   
 
 .. note::
@@ -328,9 +315,12 @@ If all tests passed, you may continue with the merge process.
    
 ::
 
-  %bzr status			     (Lists pending changes & merges that have not yet been committed.)	
-  %bzr commit -m "<commit_message>"  (Commits changes from the merge to "working_main.")
-  %repo.py fix 	    (Always run this script after building on "working_main." It fixes file permissions that changed.) 
+  %bzr status			      (Lists pending changes & merges that have not yet been committed.)	
+  %bzr commit -m "<commit_message>"   (Commits changes from the merge to "working_main.")
+  %repo.py fix 	    		      (Always run this script after building on "working_main." It fixes any file 
+                                       permissions that may have gotten changed during the merge and cleans up 
+				       temporary files created during the buildout.) 
+				     
 
 .. _`if-you-have-a-conflict`:
 
@@ -361,8 +351,8 @@ order listed here:
 
 
         | ``filename.BASE`` 	(original file)
-	| ``filename.OTHER``	(the file being merged)
-	| ``filename.THIS``	(the file you are merging to)
+	| ``filename.OTHER``	(file being merged)
+	| ``filename.THIS``	(file you are merging to)
 
 .. note::
 
@@ -398,18 +388,20 @@ commit your changes. Type:
 
 ::
 
-  %bzr conflicts    		    (Checks to see if there are still conflicts. Displays them if there are.)
-  %cd /buildout			
-  %python2.6 isolated_bootstrap.py  (Required script that must be run before building on "working_main.")
-  %bin/buildout 
-  %bin/docs				
-  %bin/test --all		    (All tests should pass before you commit.)	
-  %bzr status			    (Shows all the merged files from "working_main" that have not yet been committed on your branch.)		
-  %bzr commit -m "<commit_message>" (Commits merged files on your branch and allows you to enter a commit message [comments].)
-  %repo.py fix 	  		    (Runs script to fix permissions that got changed. You must run this whenever you build on "working_main.") 
+  %bzr conflicts    		     (Checks to see if there are still conflicts. Displays them if there are.)
+  %cd /buildout			     (Takes you to the "buildout" directory.)
+  %python2.6 isolated_bootstrap.py   (Required script that must be run before building on "working_main.")
+  %bin/buildout 		     (Builds the branch.)						
+  %bin/docs		             (Displays the documentation.)
+  %bin/test --all		     (All tests should pass before you commit.)	
+  %bzr status			     (Shows all the merged files from "working_main" that have not yet been  
+                                      committed on your branch.)		
+  %bzr commit -m "<commit_message>"  (Commits merged files on your branch and allows you to enter a commit message.)
+  %repo.py fix 	  		     (Runs a script to fix file permissions that may have gotten changed when you 
+                                      did a buildout. Always run this script after building on "working_main.") 
 
 
-.. index:: merge; Canceling
+.. index:: merge; canceling
 .. index:: reverting changes
 
 .. _`Canceling-a-Merge-and-Reverting-Changes`:
