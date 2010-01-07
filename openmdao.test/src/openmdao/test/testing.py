@@ -16,7 +16,7 @@ def run_openmdao_suite(*pargs, **kwargs):
     as bin/test.  Add any directories to search for tests to tlist.
     """
     
-    args = sys.argv
+    args = sys.argv[1:]
         
     tlist = ['openmdao']
     
@@ -47,9 +47,9 @@ def run_openmdao_suite(*pargs, **kwargs):
         
     if '--all' in args:
         args.remove('--all')
-        argv = args[:]+tlist
-        argv.extend(pargs)
-        nose.run_exit(argv=argv)
+        args.extend(tlist)
+        args.extend(pargs)
+        nose.run_exit(argv=args)
     elif '--help' in args or '-h' in args:
         # TODO: find a better way to do this, maybe by messing with optparse?
         # since nose.run() immediately exits after printing its help info,
