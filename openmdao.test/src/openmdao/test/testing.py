@@ -20,23 +20,29 @@ def run_openmdao_suite(*pargs, **kwargs):
         
     tlist = ['openmdao']
     
+    # force the use of our updated coverage plugin, called coverage2 
+    # (allows html and cobertura output)
+    for i,arg in enumerate(args):
+        if arg.startswith('--cover') and not arg.startswith('--cover2'):
+            args[i] = arg.replace('--cover', '--cover2')
+        elif arg == '--with-coverage':
+            args[i] = '--with-coverage2'
+    
     # In case --with-coverage is used, default these options in.
-    if '--with-coverage' in args:
-        args.append('--cover-erase')
+    if '--with-coverage2' in args:
+        args.append('--cover2-erase')
         if '--all' in args:
             for pkg in tlist:
-                opt = '--cover-package=%s' % pkg
+                opt = '--cover2-package=%s' % pkg
                 if opt not in args:
                     args.append(opt)
 
-        # at the moment, html annotation doesn't work through nose when
-        # using version 3.0.1 of coverage...
-        if '--cover-html' in args:
+        if '--cover2-html' in args:
             for arg in args:
-                if arg.startswith('--cover-html-dir='):
+                if arg.startswith('--cover2-html-dir='):
                     break
             else:
-                args.append('--cover-html-dir=html_coverage')
+                args.append('--cover2-html-dir=html_coverage')
 
     # this tells it to enable the console in the environment so that
     # the logger will print output to stdout. This helps greatly when 
