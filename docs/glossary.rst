@@ -241,6 +241,9 @@ Glossary
         A unittest extension offering automatic test suite discovery and easy test
         authoring.
 
+      **nose_coverage2**
+        A nose plugin that exposes some features of version 3.2 of the **coverage**
+        package, including html output and cobertura output.
             
       **NumPy**
         NumPy is the fundamental package needed for scientific computing with Python. See
