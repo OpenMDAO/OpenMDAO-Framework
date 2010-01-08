@@ -16,17 +16,9 @@ def run_openmdao_suite(*pargs, **kwargs):
     as bin/test.  Add any directories to search for tests to tlist.
     """
     
-    args = sys.argv[1:]
+    args = sys.argv[:]
         
     tlist = ['openmdao']
-    
-    # force the use of our updated coverage plugin, called coverage2 
-    # (allows html and cobertura output)
-    for i,arg in enumerate(args):
-        if arg.startswith('--cover') and not arg.startswith('--cover2'):
-            args[i] = arg.replace('--cover', '--cover2')
-        elif arg == '--with-coverage':
-            args[i] = '--with-coverage2'
     
     # In case --with-coverage is used, default these options in.
     if '--with-coverage2' in args:
