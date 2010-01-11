@@ -30,8 +30,10 @@ def G1DListCrossOverRealHypersphere(genome, **args):
     sister = gMom.clone()
     brother = gDad.clone()
     
-    bounds = (genome.getParam("rangemin",0), genome.getParam("rangemax",100))
-    dim = len(genome)
+    #bounds = (genome.getParam("rangemin",0), genome.getParam("rangemax",100))
+    bounds = (gMom.getParam("rangemin",0), gMom.getParam("rangemax",100))
+    #dim = len(genome)
+    dim = len(gMom)
     numparents = 2.0
         
     # find the center of mass (average value) between the two parents

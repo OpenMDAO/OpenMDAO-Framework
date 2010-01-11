@@ -26,3 +26,5 @@ generated_images
 repo_lock
 docs/srcdocs/packages/*.rst
 docs/srcdocs/modules/*.rst
+cobertura.xml
+nosetests.xml
