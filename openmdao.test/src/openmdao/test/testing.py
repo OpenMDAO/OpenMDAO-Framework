@@ -20,7 +20,7 @@ def run_openmdao_suite(*pargs, **kwargs):
         
     tlist = ['openmdao']
     
-    # In case --with-coverage is used, default these options in.
+    # In case --with-coverage2 is used, default these options in.
     if '--with-coverage2' in args:
         args.append('--cover2-erase')
         if '--all' in args:
