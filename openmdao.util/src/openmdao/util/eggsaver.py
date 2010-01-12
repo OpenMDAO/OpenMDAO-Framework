@@ -40,7 +40,7 @@ import types
 
 import zc.buildout.easy_install
 
-from openmdao.main.log import NullLogger
+from openmdao.util.log import NullLogger
 from openmdao.util import eggobserver, eggwriter
 
 __all__ = ('save', 'save_to_egg',

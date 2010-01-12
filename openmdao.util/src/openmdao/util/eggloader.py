@@ -19,7 +19,7 @@ import zipfile
 
 import zc.buildout.easy_install
 
-from openmdao.main.log import NullLogger
+from openmdao.util.log import NullLogger
 from openmdao.util.eggobserver import EggObserver
 from openmdao.util.eggsaver import SAVE_CPICKLE, SAVE_PICKLE, SAVE_YAML, \
                                    SAVE_LIBYAML, EGG_SERVER_URL

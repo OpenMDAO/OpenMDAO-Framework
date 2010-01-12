@@ -35,7 +35,7 @@ from enthought.traits.trait_types import validate_implements
 # pylint: disable-msg=E0611,F0401
 
 from openmdao.main.filevar import FileRef
-from openmdao.main.log import Logger, logger, LOG_DEBUG
+from openmdao.util.log import Logger, logger, LOG_DEBUG
 from openmdao.main.factorymanager import create as fmcreate
 from openmdao.util import eggloader, eggsaver, eggobserver
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -350,6 +350,12 @@ class Container(HasTraits):
         # attribute from an existing connection.
         if self.trait(name).iostatus == 'in':
             if old is not Undefined and name in self._sources:
+                # bypass the callback here and set it back to the old value
+                self._trait_change_notify(False)
+                try:
+                    setattr(obj, name, old)
+                finally:
+                    self._trait_change_notify(True)
                 self.raise_exception(
                     "'%s' is already connected to source '%s' and "
                     "cannot be directly set"%
@@ -511,6 +517,13 @@ class Container(HasTraits):
         self._call_tree_rooted = False
         for cont in self.list_containers():
             getattr(self, cont).tree_rooted()
+            
+    def revert_to_defaults(self, recurse=True):
+        """Sets the values of all of the inputs to their default values."""
+        self.reset_traits(iostatus='in')
+        if recurse:
+            for cname in self.list_containers():
+                getattr(self, cname).revert_to_defaults(recurse)
             
     def dump(self, recurse=False, stream=None):
         """Print all items having iostatus metadata and
@@ -736,7 +749,7 @@ class Container(HasTraits):
             self.raise_exception(
                 "'%s' is already connected to source '%s'" % 
                 (name, self._sources[name]), TraitError)
-        self._sources[name] = source   
+        self._sources[name] = source
             
     def remove_source(self, destination):
         """Remove the source from the given destination io trait. This will
@@ -744,7 +757,7 @@ class Container(HasTraits):
         to have its value directly set.
         """
         del self._sources[destination]    
-            
+        
     def _check_trait_settable(self, name, srcname=None, force=False):
         if force:
             src = None

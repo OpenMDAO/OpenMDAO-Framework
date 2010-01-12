@@ -33,11 +33,8 @@ Component, Driver, and TraitType plugins for OpenMDAO
       zip_safe=False,
       install_requires=[
           'setuptools',
-          'ScientificPython>=2.9.0',
           'openmdao.main',
-          'openmdao.util',
           'conmin',
-          'units',
           'Pyevolve',
           'axod',
           ],
