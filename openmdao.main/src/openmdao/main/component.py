@@ -11,7 +11,7 @@ from os.path import isabs, isdir, dirname, exists, join, normpath, relpath
 import pkg_resources
 import sys
 
-from enthought.traits.api import List, Str, Python
+from enthought.traits.api import Bool, List, Str
 from enthought.traits.trait_base import not_event
 
 from openmdao.main.container import Container
@@ -52,13 +52,20 @@ class Component (Container):
     """This is the base class for all objects containing Traits that are 
        accessible to the OpenMDAO framework and are 'runnable'.
 
+    - If `create_instance_dir` is True, then this component needs a unique \
+      per-instance execution directory.  The created directory is filled \
+      based on `external_files` and `directory` (which should contain the \
+      required files).
     - `directory` is a string specifying the directory to execute in. \
-       If it is a relative path, it is relative to its parent's directory.
+      If it is a relative path, it is relative to its parent's directory.
     - `external_files` is a list of FileMetadata objects for external \
       files used by the component.  The 'path' attribute can be a glob-style \
       pattern.
     """
 
+    create_instance_dir = Bool(False, desc='If True, create a unique'
+                               ' per-instance execution directory',
+                               iostatus='in')
     directory = Str('', desc='If non-blank, the directory to execute in.', 
                     iostatus='in')
     external_files = List(FileMetadata)
@@ -88,10 +95,41 @@ class Component (Container):
         directory for validity, and creates the directory if it doesn't exist.
         """
         super(Component, self).tree_rooted()
-        if self.directory:
+
+        if self.create_instance_dir:
+            # Create unique subdirectory of parent based on our name.
+            parent_dir = self.parent.get_abs_directory()
+            new_name = self.name
+            new_suffix = ''
+            counter = 1
+            new_dir = ''.join((new_name, new_suffix))
+            path = os.path.join(parent_dir, new_dir)
+            while os.path.exists(path):
+                counter += 1
+                new_suffix = '_%d' % counter
+                new_dir = ''.join((new_name, new_suffix))
+                path = os.path.join(parent_dir, new_dir)
+            try:
+                os.makedirs(path)
+            except OSError, exc:
+                self.raise_exception("Can't create execution directory '%s': %s"
+                                     % (path, exc.strerror), OSError)
+            
+            # Populate with external files from config directory.
+            config_dir = self.directory
+            self.directory = new_dir
+            try:
+                self._restore_files(config_dir, '', [], from_egg=False)
+            except Exception:
+                self.directory = config_dir
+                raise
+            self.create_instance_dir = False
+
+        elif self.directory:
             path = self.get_abs_directory()
             if not exists(path):
-                self.check_path(path) # make sure it's legal path before creating
+                # Make sure it's legal path before creating.
+                self.check_path(path)
                 try:
                     os.makedirs(path)
                 except OSError, exc:
@@ -211,9 +249,9 @@ class Component (Container):
                                  % (path, SimulationRoot.get_root()),
                                  ValueError)
         elif check_dir and not isdir(path):
-                self.raise_exception(
-                    "Execution directory path '%s' is not a directory."
-                    % path, ValueError)
+            self.raise_exception(
+                "Execution directory path '%s' is not a directory."
+                % path, ValueError)
 # pylint: enable-msg=E1101
         return path
     
@@ -429,11 +467,11 @@ class Component (Container):
             elif require_relpaths:
                 self.raise_exception(
                     "Can't save, %s path '%s' doesn't start with '%s'."
-                    % ('.'.join([comp.get_pathname(), fvarname]),
+                    % ('.'.join((comp.get_pathname(), fvarname)),
                        path, root_dir), ValueError)
             else:
                 self.warning("%s path '%s' can't be made relative to '%s'.",
-                             '.'.join([comp.get_pathname(), fvarname]),
+                             '.'.join((comp.get_pathname(), fvarname)),
                              path, root_dir)
 
     def get_file_vars(self):
@@ -451,7 +489,7 @@ class Component (Container):
                         file_vars.append((name, obj, ftrait))
                     else:
                         rel_path = container.get_pathname(rel_to_scope=scope)
-                        file_vars.append(('.'.join([rel_path, name]),
+                        file_vars.append(('.'.join((rel_path, name)),
                                           obj, ftrait))
                 elif isinstance(obj, Container) and \
                      not isinstance(obj, Component):
@@ -546,8 +584,8 @@ class Component (Container):
         return top
 
     def _restore_files(self, package, rel_path, file_list, do_copy=True,
-                       observer=None):
-        """Restore external files from installed egg."""
+                       observer=None, from_egg=True):
+        """Restore external files from installed egg or config directory."""
         if self.directory:
             self.push_dir()
         try:
@@ -562,48 +600,54 @@ class Component (Container):
                     const = getattr(metadata, 'constant', False)
                     binary = getattr(metadata, 'binary', False)
                     self._list_files(pattern, package, rel_path, is_input,
-                                     const, binary, file_list)
+                                     const, binary, file_list, from_egg)
 
             for fvarname, fvar, ftrait in fvars:
                 path = fvar.path
                 if path:
                     is_input = ftrait.iostatus == 'in'
                     self._list_files(path, package, rel_path, is_input, False,
-                                     ftrait.binary, file_list)
+                                     ftrait.binary, file_list, from_egg)
 
-            for component in [c for c in self.values(recurse=False)
-                                      if isinstance(c, Component)]:
-                path = rel_path
-                if component.directory:
-                    path += '/'+component.directory  # Use '/' for resources.
-                component._restore_files(package, path, file_list,
-                                         do_copy=False)
+            if from_egg:
+                for component in [c for c in self.values(recurse=False)
+                                          if isinstance(c, Component)]:
+                    path = rel_path
+                    if component.directory:
+                        # Always use '/' for resources.
+                        path += '/'+component.directory
+                    component._restore_files(package, path, file_list,
+                                             do_copy=False)
 
             if do_copy:
                 # Only copy once we've gotten the complete list.
-                self._copy_files(package, file_list, observer)
+                self._copy_files(package, file_list, observer, from_egg)
         finally:
             if self.directory:
                 self.pop_dir()
 
     def _list_files(self, pattern, package, rel_path, is_input, const, binary,
-                    file_list):
-        """List files from installed egg matching pattern."""
+                    file_list, from_egg):
+        """List files from installed egg or config dir matching pattern."""
         symlink = const and sys.platform != 'win32'
+        sep = '/' if from_egg else os.sep
 
         directory = dirname(pattern)
         pattern = os.path.basename(pattern)
         if directory:
             if not exists(directory):
                 os.makedirs(directory)
-            rel_path = rel_path+'/'+directory  # Use '/' for resources.
+            rel_path = ''.join((rel_path, sep, directory))
 
         rel_path = normpath(rel_path)
-        if not pkg_resources.resource_exists(package, rel_path):
-            return
-        if not pkg_resources.resource_isdir(package, rel_path):
-            return
-        pkg_files = pkg_resources.resource_listdir(package, rel_path)
+        if from_egg:
+            if not pkg_resources.resource_exists(package, rel_path):
+                return
+            if not pkg_resources.resource_isdir(package, rel_path):
+                return
+            pkg_files = pkg_resources.resource_listdir(package, rel_path)
+        else:
+            pkg_files = os.listdir(os.path.join(package, rel_path))
 
         if directory:
             self.push_dir(directory)
@@ -618,9 +662,12 @@ class Component (Container):
                         self.debug("    '%s' exists", filename)
                         continue
 
-                    src_name = rel_path+'/'+filename  # Use '/' for resources.
-                    src_path = pkg_resources.resource_filename(package,
-                                                               src_name)
+                    src_name = ''.join((rel_path, sep, filename))
+                    if from_egg:
+                        src_path = pkg_resources.resource_filename(package,
+                                                                   src_name)
+                    else:
+                        src_path = os.path.join(package, src_name)
                     size = os.path.getsize(src_path)
                     if symlink:
                         mode = 'symlink'
@@ -634,7 +681,7 @@ class Component (Container):
             if directory:
                 self.pop_dir()
 
-    def _copy_files(self, package, file_list, observer):
+    def _copy_files(self, package, file_list, observer, from_egg):
         """Copy/symlink files in `file_list`."""
         total_files = float(len(file_list))
         total_bytes = 0.
@@ -649,12 +696,22 @@ class Component (Container):
             if dirname(dst_name) != dst_dir:
                 dst_dir = dirname(dst_name)
                 self.info('Restoring files in %s', dst_dir)
-            observer.copy(src_name, i/total_files, completed_bytes/total_bytes)
+            if observer is not None:
+                observer.copy(src_name, i/total_files,
+                              completed_bytes/total_bytes)
             if mode == 'symlink':
-                src_path = pkg_resources.resource_filename(package, src_name)
+                if from_egg:
+                    src_path = pkg_resources.resource_filename(package,
+                                                               src_name)
+                else:
+                    src_path = os.path.join(package, src_name)
                 os.symlink(src_path, dst_name)
             else:
-                src = pkg_resources.resource_stream(package, src_name)
+                if from_egg:
+                    src = pkg_resources.resource_stream(package, src_name)
+                else:
+                    src_mode = 'rb' if 'b' in mode else 'r'
+                    src = open(os.path.join(package, src_name), src_mode)
                 dst = open(dst_name, mode)
                 chunk = 1 << 20  # 1MB
                 data = src.read(chunk)
