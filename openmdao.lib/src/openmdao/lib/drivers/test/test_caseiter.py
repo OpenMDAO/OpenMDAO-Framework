@@ -78,12 +78,12 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         self.model.pre_delete()
         self.model = None
-        for server_dir in glob.glob('LocalHost_*'):
-            shutil.rmtree(server_dir)
 
         # Verify we didn't mess-up working directory.
         end_dir = os.getcwd()
         os.chdir(ORIG_DIR)
+        if sys.platform == 'win32':
+            end_dir = end_dir.lower()
         if end_dir != self.directory:
             self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
 
@@ -95,15 +95,8 @@ class TestCase(unittest.TestCase):
     def test_concurrent(self):
         logging.debug('')
         logging.debug('test_concurrent')
-        try:
-            # Unsupported, but at least we're exercising egg generation.
-            self.run_cases(sequential=False, n_servers=5)
-        except NotImplementedError, exc:
-            msg = 'driver: Concurrent evaluation is not' \
-                  ' supported yet.'
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected NotImplementedError')
+        self.run_cases(sequential=False, n_servers=5)
+        self.assertEqual(glob.glob('Sim-*'), [])
 
     def run_cases(self, sequential, n_servers=0):
         """ Evaluate cases, either sequentially or across n_servers. """
