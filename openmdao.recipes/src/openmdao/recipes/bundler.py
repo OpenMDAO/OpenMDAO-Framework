@@ -218,7 +218,7 @@ class Bundler(object):
         self._setup_buildout_dir()  
         
         # Check that we can contact the egg server.
-        url = self.buildout['buildout']['index']
+        url = self.buildout['buildout'].get('index', 'http://pypi.python.org/pypi')
         if self.dists:
             proxy_support = urllib2.ProxyHandler({})
             opener = urllib2.build_opener(proxy_support)
