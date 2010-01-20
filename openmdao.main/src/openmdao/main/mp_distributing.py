@@ -31,7 +31,8 @@ except ImportError:
 
 from multiprocessing import Process, current_process, cpu_count
 from multiprocessing import util, connection, forking, pool
-from multiprocessing import managers
+#from multiprocessing import managers
+import openmdao.main.mp_managers as managers
 
 # SSH command.
 if sys.platform == 'win32':

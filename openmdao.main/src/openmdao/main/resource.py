@@ -12,22 +12,30 @@ import traceback
 from openmdao.main import mp_distributing
 from openmdao.main.objserverfactory import ObjServerFactory, ObjServer
 
-_RAM = None  # Singleton.
-
 
 class ResourceAllocationManager(object):
     """ Primitive allocation manager. """
 
+    _lock = threading.Lock()
+    _RAM = None  # Singleton.
+
     def __init__(self):
-        self._lock = threading.Lock()
         self._allocations = 0
         self._allocators = []
         self._alloc_index = 0
 
         self._allocators.append(LocalAllocator())
-#        if sys.platform != 'win32':
-#            # Storm needs firewall changes.
-#            self._allocators.append(RemoteAllocator())
+        if sys.platform != 'win32':
+            # Storm needs firewall changes.
+            self._allocators.append(RemoteAllocator())
+
+    @staticmethod
+    def get_instance():
+        """ Return singleton instance. """
+        with ResourceAllocationManager._lock:
+            if ResourceAllocationManager._RAM is None:
+                ResourceAllocationManager._RAM = ResourceAllocationManager()
+            return ResourceAllocationManager._RAM
 
     @staticmethod
     def allocate(resource_desc, transient):
@@ -35,12 +43,14 @@ class ResourceAllocationManager(object):
         for handler in logging._handlerList:
             handler.flush()
 
+        ram = ResourceAllocationManager.get_instance()
+
         # Simple round-robin allocator selection.
-        with _RAM._lock:
-            _RAM._allocations += 1
-            name = 'Sim-%d' % _RAM._allocations
-            allocator = _RAM._allocators[_RAM._alloc_index]
-            _RAM._alloc_index = (_RAM._alloc_index + 1) % len(_RAM._allocators)
+        with ResourceAllocationManager._lock:
+            ram._allocations += 1
+            name = 'Sim-%d' % ram._allocations
+            allocator = ram._allocators[ram._alloc_index]
+            ram._alloc_index = (ram._alloc_index + 1) % len(ram._allocators)
 
         server = allocator.allocate(name, resource_desc, transient)
         server_info = {'name':server.get_name(), 'pid':server.get_pid(),
@@ -86,6 +96,9 @@ class LocalAllocator(ObjServerFactory):
         }
         manager.register(name, LocalAllocator,
                          method_to_typeid=method_to_typeid)
+
+LocalAllocator.register(mp_distributing.Cluster)
+LocalAllocator.register(mp_distributing.HostManager)
 
 
 class RemoteAllocator(object):
@@ -140,10 +153,4 @@ class RemoteAllocator(object):
 
         return self.local_allocators[host_ip].allocate(name, resource_desc,
                                                        transient)
-
-# One-time initialization.
-if _RAM is None:
-    _RAM = ResourceAllocationManager()
-    LocalAllocator.register(mp_distributing.Cluster)
-    LocalAllocator.register(mp_distributing.HostManager)
 

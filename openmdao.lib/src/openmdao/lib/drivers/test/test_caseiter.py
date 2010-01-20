@@ -6,7 +6,6 @@ import glob
 import logging
 import os.path
 import pkg_resources
-import shutil
 import sys
 import unittest
 

@@ -41,7 +41,6 @@ class CaseIteratorDriver(Driver):
     .. parsed-literal::
 
         TODO: define interface for 'recorder'.
-        TODO: support concurrent evaluation.
         TODO: improve response to a stop request.
 
     """
@@ -290,7 +289,7 @@ class CaseIteratorDriver(Driver):
         self._in_use[name] = False
         self._server_lock.release()
 
-        self._reply_queue.put((name, True))
+        self._reply_queue.put((name, True))  # ACK startup.
 
         while True:
             request = request_queue.get()
@@ -300,7 +299,7 @@ class CaseIteratorDriver(Driver):
             self._reply_queue.put((name, result))
 
         RAM.release(server)
-        self._reply_queue.put((name, True))
+        self._reply_queue.put((name, True))  # ACK shutdown.
 
     def _busy(self):
         """ Return True while at least one server is in use. """
