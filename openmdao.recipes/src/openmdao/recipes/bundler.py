@@ -223,9 +223,10 @@ class Bundler(object):
         except KeyError:
             url = 'http://pypi.python.org/pypi'
         try:
-            search_path = [self.buildout['buildout']['find-links']]
+            spath = self.buildout['buildout']['extra-paths']
+            search_path = [x.strip() for x in spath.split('\n') if x.strip()]
         except KeyError:
-            search_path = []
+            search_path = None
         self.logger.info('using URL %s', url)
         self.logger.info('    and search path %s', search_path)
 
@@ -239,6 +240,15 @@ class Bundler(object):
                 raise zc.buildout.UserError(msg)
 
         index = PackageIndex(url, search_path=search_path)
+        try:
+            flinks = self.buildout['buildout']['find-links']
+        except KeyError:
+            pass
+        else:
+            findlinks = [x.strip() for x in flinks.split('\n') if x.strip()]
+            index.add_find_links(findlinks)
+            self.logger.info('using find-links of %s', findlinks)
+
         failed_downloads = 0
         for dist in self.dists:
             newloc = os.path.join(eggdir, os.path.basename(dist.location))
