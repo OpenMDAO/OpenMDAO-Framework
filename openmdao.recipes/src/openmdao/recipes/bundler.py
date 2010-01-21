@@ -228,7 +228,7 @@ class Bundler(object):
         except KeyError:
             search_path = None
         self.logger.info('using URL %s', url)
-        self.logger.info('    and search path %s', search_path)
+        self.logger.info('    search path %s', search_path)
 
         if self.dists:
             proxy_support = urllib2.ProxyHandler({})
@@ -247,7 +247,7 @@ class Bundler(object):
         else:
             findlinks = [x.strip() for x in flinks.split('\n') if x.strip()]
             index.add_find_links(findlinks)
-            self.logger.info('using find-links of %s', findlinks)
+            self.logger.info('    find-links %s', findlinks)
 
         failed_downloads = 0
         for dist in self.dists:
