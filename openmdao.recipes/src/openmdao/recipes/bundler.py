@@ -218,17 +218,37 @@ class Bundler(object):
         self._setup_buildout_dir()  
         
         # Check that we can contact the egg server.
-        url = self.buildout['buildout']['index']
+        try:
+            url = self.buildout['buildout']['index']
+        except KeyError:
+            url = 'http://pypi.python.org/pypi'
+        try:
+            spath = self.buildout['buildout']['extra-paths']
+            search_path = [x.strip() for x in spath.split('\n') if x.strip()]
+        except KeyError:
+            search_path = None
+        self.logger.info('using URL %s', url)
+        self.logger.info('    and search path %s', search_path)
+
         if self.dists:
             proxy_support = urllib2.ProxyHandler({})
             opener = urllib2.build_opener(proxy_support)
             try:
                 opener.open(url).read()
             except urllib2.URLError, exc:
-                raise zc.buildout.UserError("Can't contact egg server at '%s': %s"
-                                            % (url, exc))
+                msg = "Can't contact egg server at '%s': %s" % (url, exc)
+                raise zc.buildout.UserError(msg)
 
-        index = PackageIndex(url, search_path=[])
+        index = PackageIndex(url, search_path=search_path)
+        try:
+            flinks = self.buildout['buildout']['find-links']
+        except KeyError:
+            pass
+        else:
+            findlinks = [x.strip() for x in flinks.split('\n') if x.strip()]
+            index.add_find_links(findlinks)
+            self.logger.info('using find-links of %s', findlinks)
+        
         failed_downloads = 0
         for dist in self.dists:
             newloc = os.path.join(eggdir, os.path.basename(dist.location))
