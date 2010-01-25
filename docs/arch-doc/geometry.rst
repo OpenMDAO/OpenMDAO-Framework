@@ -127,11 +127,11 @@ states, and tags, from a saved egg.
 
 **tag_volume(volume_label, tag_name, tag_description)**
 
-**tag_surface(surface_label, tag_name, tag_description)**
+**tag_face(face_label, tag_name, tag_description)**
 
-**tag_curve(curve_label, tag_name, tag_description)**
+**tag_edge(edge_label, tag_name, tag_description)**
 
-**tag_point(point_label, tag_name, tag_description)**
+**tag_node(node_label, tag_name, tag_description)**
 
 Associates a geometric entity with some metadata. This is useful for marking
 an entity for later use by an analysis tool (e.g. marking loads and boundary
@@ -203,15 +203,102 @@ Shuts down the geometry modeler, and performs any necessary cleanup.
 The Geometry Object and its Query Interface
 ===========================================
 
-General Query
-_____________
+OpenMDAO provides query access at the Python component level to the geometry object.
+
+Geometry Access
+_______________
+
+Required in Tools/Geometry/Interaction/07
+
+Geometry access for query includes entity query and evalution, traversal of 
+topology, and tag query.
+
+The following functions comprise traversal of the Boundary Representation topology.
+
+**(point) = GetNode(vol, node)**
+
+Returns the (x,y,z) coordinate for a node in the volume.
+
+**(trange, nodes) = GetEdge(vol, edge)**
+
+Returns the nodes associated with an edge in a given volume. (CAPRI question: Why
+return min and max parameter t? Wouldn't that just be (0,1)?)
+
+**(urange, nloop, loops, edges) = GetFace(vol, face)**
+
+Returns the edges assocated with a face in a given volume. **nloop** is the
+number of loops, **loops** is the edge loop lengths, and **edges** contains
+the edge indices and connectivity. (CAPRI question: Why return range for (u,v)
+parameterization? Wouldn't that just be (0,1; 0,1)?) (Note: more understanding needed
+on how loops work.)
+
+**(nface, faces, name) = GetBoundary(vol, bound)**
+
+Returns the faces associated with a boundary in a given volume. Also returns a
+boundary name.
+
+**(nnode, nedge, nface, nbound, name) = GetVolume(vol)**
+
+Returns basic info for a volume, including its name, and the number of nodes,
+edges, faces, and boundaries that it includes.
 
 Mesh Generation
 _______________
 
+Required in Tools/Geometry/Grid Generation/01
+
+**(point, du, dv, duu, duv, dvv) = PointOnFace(vol, face, uv, req_derivative)**
+
+Returns the cartesian coordinate of a point on a face given the point's coordinate in
+the local (u,v) parameter space used to mesh the face. First and second
+derivatives can also be returned if available using the req_derivative parameter
+(0 = no derivatives, 1 = 1st order, 2 = 2nd order.)
+
+**(point, d1, d2) = PointOnEdge(vol, edge, t, req_derivative)**
+
+Returns the cartesian coordinate of a point on an edge given the point's coordinate in
+the local (t) parameter space used to mesh the edge. First and second
+derivatives can also be returned if available using the req_derivative parameter
+(0 = no derivatives, 1 = 1st order, 2 = 2nd order.)
+
+Measurements
+____________
+
+Required in Tools/Geometry/Interaction/08
+
+**(distance) = Distance_Node_Node(vol1, edge1, node1, vol2, edge2, node2)**
+
+Returns the distance between two nodes in the boundary represenation given 
+their labels. Note, this isn't in CAPRI, but it's a simple calculation.
+
+[Are other distance measurements required? point to closest point on line? etc.]
+
+**(length) = LengthOfEdge(vol, edge, t1, t2)**
+
+Returns the arc length for an edge. Parameters t1 and t2 can be used to return
+the length of a subsection of the edge. (CAPRI question. Isn't **t** a length based
+parameterization anyway?)
+
+Planar Cuts
+___________
+
+Required in Tools/Geometry/Interaction/10
+
+**(nsec, ivec, data) = VolumeSection(vol, face, type, isvec, idata)**
+
+A basic interface would require a volume label, a set of face labels, and a vector
+that defines the normal of the cutting plane. CAPRI suggests a more detailed
+interface that allows a few different types of cuts.
 
 The Mesh Object
 ===============
 
 Use Cases
 =========
+
+.. figure:: ../images/arch-doc/top_level2.png
+   :align: center
+
+   An OpenMDAO process model that shows how multiple geometry manipulators are
+   used to provide derived geometries based on the original geometry
+
