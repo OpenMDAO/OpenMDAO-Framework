@@ -31,6 +31,20 @@ class UnitsFloatTestCase(unittest.TestCase):
         """this teardown function will be called after each test"""
         self.hobj = None
 
+    def test_set_to_default(self):
+        self.assertEqual(3.1415926, self.hobj.float1)
+        self.hobj.add_trait('float4',
+                            UnitsFloat(iostatus='in', units='kg'))
+        self.assertEqual(0., self.hobj.float4)
+        self.hobj.float4 = 6.5
+        self.assertEqual(6.5, self.hobj.float4)
+        
+        self.hobj.revert_to_defaults()
+        
+        self.assertEqual(98.9, self.hobj.float1)
+        self.assertEqual(0., self.hobj.float4)
+
+        
     def test_assignment(self):
         # check starting value
         self.assertEqual(3.1415926, self.hobj.float1)

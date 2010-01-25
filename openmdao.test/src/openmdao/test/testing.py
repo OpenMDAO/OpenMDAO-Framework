@@ -16,27 +16,25 @@ def run_openmdao_suite(*pargs, **kwargs):
     as bin/test.  Add any directories to search for tests to tlist.
     """
     
-    args = sys.argv
+    args = sys.argv[:]
         
     tlist = ['openmdao']
     
-    # In case --with-coverage is used, default these options in.
-    if '--with-coverage' in args:
-        args.append('--cover-erase')
+    # In case --with-coverage2 is used, default these options in.
+    if '--with-coverage2' in args:
+        args.append('--cover2-erase')
         if '--all' in args:
             for pkg in tlist:
-                opt = '--cover-package=%s' % pkg
+                opt = '--cover2-package=%s' % pkg
                 if opt not in args:
                     args.append(opt)
 
-        # at the moment, html annotation doesn't work through nose when
-        # using version 3.0.1 of coverage...
-        if '--cover-html' in args:
+        if '--cover2-html' in args:
             for arg in args:
-                if arg.startswith('--cover-html-dir='):
+                if arg.startswith('--cover2-html-dir='):
                     break
             else:
-                args.append('--cover-html-dir=html_coverage')
+                args.append('--cover2-html-dir=html_coverage')
 
     # this tells it to enable the console in the environment so that
     # the logger will print output to stdout. This helps greatly when 
@@ -47,9 +45,9 @@ def run_openmdao_suite(*pargs, **kwargs):
         
     if '--all' in args:
         args.remove('--all')
-        argv = args[:]+tlist
-        argv.extend(pargs)
-        nose.run_exit(argv=argv)
+        args.extend(tlist)
+        args.extend(pargs)
+        nose.run_exit(argv=args)
     elif '--help' in args or '-h' in args:
         # TODO: find a better way to do this, maybe by messing with optparse?
         # since nose.run() immediately exits after printing its help info,

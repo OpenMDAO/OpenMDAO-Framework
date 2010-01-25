@@ -3,7 +3,7 @@ Pseudo package containing all of the main classes/objects in the
 openmdao.main API.
 """
 
-from openmdao.main.log import logger
+from openmdao.util.log import logger
 from openmdao.main.expreval import ExprEvaluator
 
 from openmdao.main.factory import Factory

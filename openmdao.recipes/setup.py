@@ -23,13 +23,12 @@ setup(name='openmdao.recipes',
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,
+      # NOTE: the openmdao.recipes distrib should NOT be dependent on
+      #       any other openmdao packages
       install_requires=[
           'setuptools',
           'zc.recipe.egg',
           'Sphinx',
-          'nose',
-          'coverage',
-          'openmdao.util',
       ],
       entry_points="""
       [zc.buildout]

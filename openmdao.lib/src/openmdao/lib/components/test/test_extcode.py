@@ -5,18 +5,40 @@ Test the ExternalCode component.
 import logging
 import os
 import pkg_resources
+import shutil
 import sys
 import unittest
 
-from openmdao.main.api import SimulationRoot, set_as_top
+from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
 from openmdao.main.exceptions import RunInterrupted
 from openmdao.lib.components.external_code import ExternalCode
-from openmdao.util.eggchecker import check_save_load
+from openmdao.main.eggchecker import check_save_load
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
 # Directory where we can find sleep.py.
 DIRECTORY = pkg_resources.resource_filename('openmdao.lib.components', 'test')
+
+
+class Unique(ExternalCode):
+    """ Used to test `create_instance_dir` functionality. """
+
+    def __init__(self):
+        super(Unique, self).__init__(directory=DIRECTORY)
+        self.create_instance_dir = True
+        self.external_files = [
+            FileMetadata(path='sleep.py', input=True, constant=True),
+        ]
+        self.command = 'python sleep.py 1'
+
+
+class Model(Assembly):
+    """ Run multiple `Unique` component instances. """
+
+    def __init__(self):
+        super(Model, self).__init__()
+        self.add_container('a', Unique())
+        self.add_container('b', Unique())
 
 
 class TestCase(unittest.TestCase):
@@ -26,6 +48,9 @@ class TestCase(unittest.TestCase):
         SimulationRoot.chroot(DIRECTORY)
         
     def tearDown(self):
+        for directory in ('a', 'b'):
+            if os.path.exists(directory):
+                shutil.rmtree(directory)
         SimulationRoot.chroot(ORIG_DIR)
         
     def test_normal(self):
@@ -113,6 +138,29 @@ class TestCase(unittest.TestCase):
             if os.path.exists(externp.stdout):
                 os.remove(externp.stdout)
     
+    def test_unique(self):
+        logging.debug('')
+        logging.debug('test_unique')
+
+        model = Model()
+        for comp in (model.a, model.b):
+            self.assertEqual(comp.create_instance_dir, True)
+        self.assertNotEqual(model.a.directory, 'a')
+        self.assertNotEqual(model.b.directory, 'b')
+
+        set_as_top(model)
+        for comp in (model.a, model.b):
+            self.assertEqual(comp.create_instance_dir, False)
+            self.assertEqual(comp.return_code, 0)
+            self.assertEqual(comp.timed_out, False)
+        self.assertEqual(model.a.directory, 'a')
+        self.assertEqual(model.b.directory, 'b')
+
+        model.run()
+        for comp in (model.a, model.b):
+            self.assertEqual(comp.return_code, 0)
+            self.assertEqual(comp.timed_out, False)
+
 
 if __name__ == "__main__":
     import nose

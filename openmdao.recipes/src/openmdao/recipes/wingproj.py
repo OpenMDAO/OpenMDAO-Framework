@@ -216,11 +216,12 @@ class WingProj(object):
                                   'bin','wing')
         if self.wingpath:
             wingpath = self.wingpath
+        elif sys.platform == 'win32':
+            wingpath = r'C:\Program Files\Wing IDE 3.2\bin\wing.exe'
+        elif sys.platform == 'darwin':
+            wingpath = '/Applications/Wing/WingIDE.app/Contents/MacOS/wing'
         else:
-            if sys.platform == 'win32':
-                wingpath = r'C:\Program Files\Wing IDE 3.2\bin\wing.exe'
-            else:
-                wingpath = 'wing3.2'
+            wingpath = 'wing3.2'
 
         scripts = zc.buildout.easy_install.scripts(
             [('wing', 'openmdao.recipes.wingproj', 'runwing')], 
