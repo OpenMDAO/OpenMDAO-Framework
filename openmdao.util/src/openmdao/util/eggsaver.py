@@ -61,24 +61,46 @@ if sys.platform == 'win32':
     _SITE_LIB = _SITE_LIB.lower()
     _SITE_PKG = _SITE_PKG.lower()
 
+# Code from the net.  More flexible, but doesn't handle __main__ as well.
+#
+#def _pickle_method(method):
+#    """ Pickles an instancemethod object. """
+#    func_name = method.im_func.__name__
+#    obj = method.im_self
+#    cls = method.im_class
+#    return _unpickle_method, (func_name, obj, cls)
+#
+#def _unpickle_method(func_name, obj, cls):
+#    """ Unpickles an instancemethod object. """
+#    for cls in cls.mro():
+#        try:
+#            func = cls.__dict__[func_name]
+#        except KeyError:
+#            pass
+#        else:
+#            break
+#    return func.__get__(obj, cls)
 
 def _pickle_method(method):
     """ Pickles an instancemethod object. """
-    func_name = method.im_func.__name__
-    obj = method.im_self
-    cls = method.im_class
-    return _unpickle_method, (func_name, obj, cls)
+    name = method.__name__
+    im_self = method.im_self
+    if im_self is not None:
+        im_class = None  # Avoid possible __main__ issues.
+    else:
+        # TODO: handle __main__ for im_class.__module__.
+        im_class = method.im_class
+        if im_class.__module__ == '__main__':
+            raise RuntimeError('_pickle_method: %r with module __main__ (%s)'
+                               % (method, im_self))
+    return _unpickle_method, (name, im_self, im_class)
 
-def _unpickle_method(func_name, obj, cls):
+def _unpickle_method(name, im_self, im_class):
     """ Unpickles an instancemethod object. """
-    for cls in cls.mro():
-        try:
-            func = cls.__dict__[func_name]
-        except KeyError:
-            pass
-        else:
-            break
-    return func.__get__(obj, cls)
+    if im_self is not None:
+        return getattr(im_self, name)
+    else:
+        return getattr(im_class, name)
 
 # Register instancemethod handling.
 copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
@@ -149,7 +171,10 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
 
     # Fixup objects, classes, & sys.modules for __main__ imports.
     fixup = _fix_objects(objs, observer)
+
+    # Verify that the fixups are retained.
     _verify_objects(root, logger, observer)
+
     tmp_dir = None
     try:
         # Determine distributions and local modules required.
@@ -346,6 +371,8 @@ def _verify_objects(root, logger, observer):
     """ Verify no references to __main__ exist. """
     objs = _get_objects(root, logger)
     for obj, container, index in objs:
+        if obj.__class__.__name__ == 'instancemethod':
+            continue  # Handled by _pickle_method() above.
         try:
             mod = obj.__module__
         except AttributeError:
@@ -365,24 +392,24 @@ def _fix_objects(objs, observer):
     fixup_modules = set()
 
     for obj, container, index in objs:
-        if inspect.isclass(obj):
-            cls = obj
-        else:
-            cls = obj.__class__
-        classname = cls.__name__
-        if classname == 'instancemethod':
-            obj = obj.im_self
         try:
-            mod = obj.__module__
-        except AttributeError:
-            continue  # No module entry to fix.
-        if mod is None:
-            # Needed after switching to Traits for some reason.
-            mod = cls.__module__
-        if mod != '__main__':
-            continue
+            if obj.__class__.__name__ == 'instancemethod':
+                continue  # Handled by _pickle_method() above.
+            try:
+                mod = obj.__module__
+            except AttributeError:
+                continue  # No module entry to fix.
+            if inspect.isclass(obj):
+                cls = obj
+            else:
+                cls = obj.__class__
+            if mod is None:
+                # Needed after switching to Traits for some reason.
+                mod = cls.__module__
+            if mod != '__main__':
+                continue
 
-        try:
+            classname = cls.__name__
             if classname in ('function', 'type'):
                 msg = "Can't save: reference to %s defined in main module %r" \
                       % (classname, obj)
@@ -390,7 +417,7 @@ def _fix_objects(objs, observer):
                 raise RuntimeError(msg)
             mod = cls.__module__
             if mod == '__main__' and (classname not in fixup_classes.keys()):
-                mod, module = _find_module(classname)
+                mod, module = _find_in_main(classname)
                 if mod:
                     new = getattr(module, classname)
                     fixup_classes[classname] = (cls, new)
@@ -417,6 +444,7 @@ def _fix_objects(objs, observer):
                     observer.exception(msg)
                     raise RuntimeError(msg)
                 obj.__module__ = obj.__class__.__module__
+
             fixup_objects.append((obj, container, index))
         except Exception:
             _restore_objects((fixup_objects, fixup_classes, fixup_modules))
@@ -425,19 +453,19 @@ def _fix_objects(objs, observer):
     return (fixup_objects, fixup_classes, fixup_modules)
 
 
-def _find_module(attr):
-    """ Try to determine 'real' module name for attribute in __main__. """
-    if '.' not in sys.path:
-        sys.path.append('.')
-    for arg in sys.argv:
-        if arg.endswith('.py'):
-            mod = os.path.basename(arg)[:-3]
-            try:
-                module = __import__(mod, fromlist=[attr])
-            except ImportError:
-                pass
-            else:
-                return (mod, module)
+def _find_in_main(classname):
+    """ Try to get 'real' module for __main__ class. """
+    filename = sys.modules['__main__'].__file__
+    if filename.endswith('.py'):
+        if not '.' in sys.path:
+            sys.path.append('.')
+        mod = os.path.basename(filename)[:-3]
+        try:
+            module = __import__(mod, fromlist=[classname])
+        except ImportError:
+            pass
+        else:
+            return (mod, module)
     return (None, None)
 
 
