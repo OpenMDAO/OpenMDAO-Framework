@@ -928,6 +928,9 @@ comp.run()
         # NOTE: this test fails if run standalone:
         #       ImportError: No module named test_egg_save
         # Probably need Egg_TestModel.test_egg_save, or adjusted sys.path.
+        if MODULE_NAME == '__main__':
+            return
+
         logging.debug('')
         logging.debug('test_pkg_resources_factory')
 
@@ -1072,6 +1075,36 @@ comp.run()
         self.assertEqual(model.Sink.binary_file.binary, True)
 
         self.assertEqual(model.Oddball.executions, 3)
+
+    def test_main_module(self):
+        if MODULE_NAME == '__main__':
+            return
+
+        # Ensure that __main__ translation is correctly handled. 
+        logging.debug('')
+        logging.debug('test_main_module')
+
+        # Find correct python.
+        python = find_python()
+        logging.debug('    Using python: %s' % python)
+
+        orig_dir = os.getcwd()
+        os.chdir(PY_DIR)
+        try:
+            cmdline = '%s test_egg_save.py' % python
+            stdout = open('main_handling.out', 'w')
+            retcode = subprocess.call(cmdline, shell=True, stdout=stdout,
+                                      stderr=subprocess.STDOUT)
+            stdout.close()
+            stdout = open('main_handling.out', 'r')
+            for line in stdout:
+                logging.debug('    %s'% line.rstrip())
+            stdout.close()
+            os.remove('main_handling.out')
+        finally:
+            os.chdir(orig_dir)
+
+        self.assertEqual(retcode, 0)
 
 
 if __name__ == '__main__':

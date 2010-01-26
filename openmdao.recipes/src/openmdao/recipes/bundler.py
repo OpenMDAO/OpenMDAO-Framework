@@ -218,10 +218,8 @@ class Bundler(object):
         self._setup_buildout_dir()  
         
         # Check that we can contact the egg server.
-        try:
-            url = self.buildout['buildout']['index']
-        except KeyError:
-            url = 'http://pypi.python.org/pypi'
+        url = self.buildout['buildout'].get('index',
+                                            'http://pypi.python.org/pypi')
         try:
             spath = self.buildout['buildout']['extra-paths']
             search_path = [x.strip() for x in spath.split('\n') if x.strip()]
