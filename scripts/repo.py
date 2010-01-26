@@ -253,7 +253,7 @@ def find_bzr(path=None):
         return None
     while path:
         if os.path.exists(os.path.join(path, '.bzr')):
-            return path
+            return os.path.abspath(path)
         else:
             pth = path
             path = os.path.dirname(path)
