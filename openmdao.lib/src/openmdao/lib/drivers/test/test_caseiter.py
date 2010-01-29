@@ -111,8 +111,9 @@ class TestCase(unittest.TestCase):
             elif self.local_ssh_available():
                 machines.append({'hostname':node, 'python':python})
             if machines:
-                cluster = ClusterAllocator(machines)
-                ResourceAllocationManager.add_allocator(cluster)
+                name = node.replace('.', '_')
+                cluster = ClusterAllocator(name, machines)
+                ResourceAllocationManager.insert_allocator(0, cluster)
         self.run_cases(sequential=False, n_servers=5)
         self.assertEqual(glob.glob('Sim-*'), [])
 
@@ -125,7 +126,7 @@ class TestCase(unittest.TestCase):
         try:
             with open(os.path.join(home, '.ssh', 'authorized_keys'), 'r') as keys:
                 for line in keys:
-                    if line.index(user+'@'+node) > 0:
+                    if line.find(user+'@'+node) > 0:
                         return True
                 return False
         except IOError:
