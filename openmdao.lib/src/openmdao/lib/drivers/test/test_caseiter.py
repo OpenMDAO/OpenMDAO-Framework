@@ -95,6 +95,8 @@ class TestCase(unittest.TestCase):
         self.run_cases(sequential=True)
 
     def test_concurrent(self):
+        # This will always test using a LocalAllocator (forked processes).
+        # It will also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
         logging.debug('test_concurrent')
         if sys.platform != 'win32':
@@ -103,13 +105,31 @@ class TestCase(unittest.TestCase):
             node = platform.node()
             python = find_python()
             if node == 'gxterm3':
+                # User environment assumed OK.
                 for i in range(1, 6):
                     machines.append({'hostname':'gx%02d' % i, 'python':python})
-            else:
+            elif self.local_ssh_available():
                 machines.append({'hostname':node, 'python':python})
-            ResourceAllocationManager.add_allocator(ClusterAllocator(machines))
+            if machines:
+                cluster = ClusterAllocator(machines)
+                ResourceAllocationManager.add_allocator(cluster)
         self.run_cases(sequential=False, n_servers=5)
         self.assertEqual(glob.glob('Sim-*'), [])
+
+    @staticmethod
+    def local_ssh_available():
+        """ Return True if this user has an authorized key for this machine. """
+        node = platform.node()
+        user = os.environ['USER']
+        home = os.environ['HOME']
+        try:
+            with open(os.path.join(home, '.ssh', 'authorized_keys'), 'r') as keys:
+                for line in keys:
+                    if line.index(user+'@'+node) > 0:
+                        return True
+                return False
+        except IOError:
+            return False
 
     def run_cases(self, sequential, n_servers=0):
         """ Evaluate cases, either sequentially or across n_servers. """

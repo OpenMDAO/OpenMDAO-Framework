@@ -229,10 +229,12 @@ class Bundler(object):
         self.logger.info('    search path %s', search_path)
 
         if self.dists:
-            proxy_support = urllib2.ProxyHandler({})
-            opener = urllib2.build_opener(proxy_support)
+#            proxy_support = urllib2.ProxyHandler({})
+#            opener = urllib2.build_opener(proxy_support)
+#            try:
+#                opener.open(url).read()
             try:
-                opener.open(url).read()
+                urllib2.urlopen(url, timeout=10)
             except urllib2.URLError, exc:
                 msg = "Can't contact egg server at '%s': %s" % (url, exc)
                 raise zc.buildout.UserError(msg)
