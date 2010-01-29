@@ -6,7 +6,7 @@ import glob
 import logging
 import os.path
 import pkg_resources
-import shutil
+import platform
 import sys
 import unittest
 
@@ -15,8 +15,10 @@ import numpy.random
 from enthought.traits.api import Float, Array, TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
+from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.main.eggchecker import check_save_load
+from openmdao.util.testutil import find_python
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -78,12 +80,12 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         self.model.pre_delete()
         self.model = None
-        for server_dir in glob.glob('LocalHost_*'):
-            shutil.rmtree(server_dir)
 
         # Verify we didn't mess-up working directory.
         end_dir = os.getcwd()
         os.chdir(ORIG_DIR)
+        if sys.platform == 'win32':
+            end_dir = end_dir.lower()
         if end_dir != self.directory:
             self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
 
@@ -93,17 +95,42 @@ class TestCase(unittest.TestCase):
         self.run_cases(sequential=True)
 
     def test_concurrent(self):
+        # This will always test using a LocalAllocator (forked processes).
+        # It will also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
         logging.debug('test_concurrent')
+        if sys.platform != 'win32':
+            # Storm needs firewall changes.
+            machines = []
+            node = platform.node()
+            python = find_python()
+            if node == 'gxterm3':
+                # User environment assumed OK.
+                for i in range(1, 6):
+                    machines.append({'hostname':'gx%02d' % i, 'python':python})
+            elif self.local_ssh_available():
+                machines.append({'hostname':node, 'python':python})
+            if machines:
+                name = node.replace('.', '_')
+                cluster = ClusterAllocator(name, machines)
+                ResourceAllocationManager.insert_allocator(0, cluster)
+        self.run_cases(sequential=False, n_servers=5)
+        self.assertEqual(glob.glob('Sim-*'), [])
+
+    @staticmethod
+    def local_ssh_available():
+        """ Return True if this user has an authorized key for this machine. """
+        node = platform.node()
+        user = os.environ['USER']
+        home = os.environ['HOME']
         try:
-            # Unsupported, but at least we're exercising egg generation.
-            self.run_cases(sequential=False, n_servers=5)
-        except NotImplementedError, exc:
-            msg = 'driver: Concurrent evaluation is not' \
-                  ' supported yet.'
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected NotImplementedError')
+            with open(os.path.join(home, '.ssh', 'authorized_keys'), 'r') as keys:
+                for line in keys:
+                    if line.find(user+'@'+node) > 0:
+                        return True
+                return False
+        except IOError:
+            return False
 
     def run_cases(self, sequential, n_servers=0):
         """ Evaluate cases, either sequentially or across n_servers. """
