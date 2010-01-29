@@ -6,6 +6,7 @@ import glob
 import logging
 import os.path
 import pkg_resources
+import platform
 import sys
 import unittest
 
@@ -14,8 +15,10 @@ import numpy.random
 from enthought.traits.api import Float, Array, TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
+from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.main.eggchecker import check_save_load
+from openmdao.util.testutil import find_python
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -94,6 +97,17 @@ class TestCase(unittest.TestCase):
     def test_concurrent(self):
         logging.debug('')
         logging.debug('test_concurrent')
+        if sys.platform != 'win32':
+            # Storm needs firewall changes.
+            machines = []
+            node = platform.node()
+            python = find_python()
+            if node == 'gxterm3':
+                for i in range(1, 6):
+                    machines.append({'hostname':'gx%02d' % i, 'python':python})
+            else:
+                machines.append({'hostname':node, 'python':python})
+            ResourceAllocationManager.add_allocator(ClusterAllocator(machines))
         self.run_cases(sequential=False, n_servers=5)
         self.assertEqual(glob.glob('Sim-*'), [])
 

@@ -23,11 +23,7 @@ class ResourceAllocationManager(object):
         self._allocations = 0
         self._allocators = []
         self._alloc_index = 0
-
         self._allocators.append(LocalAllocator())
-        if sys.platform != 'win32':
-            # Storm needs firewall changes.
-            self._allocators.append(RemoteAllocator())
 
     @staticmethod
     def get_instance():
@@ -38,10 +34,24 @@ class ResourceAllocationManager(object):
             return ResourceAllocationManager._RAM
 
     @staticmethod
+    def add_allocator(allocator):
+        """ Add an allocator to the list of resource allocators. """
+        ram = ResourceAllocationManager.get_instance()
+        with ResourceAllocationManager._lock:
+            ram._allocators.append(allocator)
+
+    @staticmethod
+    def insert_allocator(self, index, allocator):
+        """ Insert an allocator into the list of resource allocators. """
+        ram = ResourceAllocationManager.get_instance()
+        with ResourceAllocationManager._lock:
+            ram._allocators.insert(index, allocator)
+
+    @staticmethod
     def allocate(resource_desc, transient):
         """ Allocate a server. """
         for handler in logging._handlerList:
-            handler.flush()
+            handler.flush()  # Try to keep log messages sane.
 
         ram = ResourceAllocationManager.get_instance()
 
@@ -101,34 +111,25 @@ LocalAllocator.register(mp_distributing.Cluster)
 LocalAllocator.register(mp_distributing.HostManager)
 
 
-class RemoteAllocator(object):
+class ClusterAllocator(object):
     """ Cluster-based resource allocator. """
 
-    def __init__(self):
+    def __init__(self, machines):
         self._lock = threading.Lock()
-        hosts = []
+        self.machines = machines
+        self.local_allocators = {}
 
-        node = platform.node()
-        if node == 'gxterm3':
-            python = '/gx/u/setowns1/OpenMDAO-0.1-py2.6/buildout/bin/python'
-            for i in range(1, 6):
-                hosts.append(mp_distributing.Host('gx%02d' % i, slots=1,
-                                                  python=python))
-        elif node == 'torpedo.grc.nasa.gov':
-            python = '/OpenMDAO/dev/setowns1/T0047/buildout/bin/python'
-            hosts.append(mp_distributing.Host('torpedo', slots=1,
-                                              python=python))
-        elif node == 'viper.grc.nasa.gov':
-            python = '/Users/setowns1/T0047/buildout/bin/python'
-            hosts.append(mp_distributing.Host('viper', slots=1,
-                                              python=python))
-        for host in hosts:
+        hosts = []
+        for machine in machines:
+            logging.debug('ClusterAllocator: %s', machine)
+            host = mp_distributing.Host(machine['hostname'], slots=1,
+                                        python=machine['python'])
             LocalAllocator.register(host)
+            hosts.append(host)
 
         self.cluster = mp_distributing.Cluster(hosts, [])
         self.cluster.start()
-        self.local_allocators = {}
-        logging.debug('RemoteAllocator: cluster server listening on %s',
+        logging.debug('ClusterAllocator: server listening on %s',
                       self.cluster.address)
 
     def allocate(self, name, resource_desc, transient):
