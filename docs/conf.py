@@ -167,11 +167,10 @@ html_last_updated_fmt = '%b %d, %Y'
 html_theme = "default"
 html_theme_options = {
      "rightsidebar": "",
-     "headtextcolor": "teal",
-     "relbarbgcolor": "teal",
-     "headfont": "Arial"  
+     "headtextcolor": "darkcyan",
+     "relbarbgcolor": "darkcyan",
+     "headfont": "Arial"
     }
-
 
 # Options for LaTeX output
 # ------------------------
