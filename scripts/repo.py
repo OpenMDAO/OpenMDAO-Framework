@@ -28,7 +28,8 @@ def main():
    lock   -- lock repository
    unlock -- unlock repository
    set    -- set this as current repository
-   fix    -- fix permissions and remove generated directories"""
+   fix    -- fix permissions and remove generated directories
+   rmpyc  -- remove 'orphan' .pyc files"""
 
     parser = optparse.OptionParser(usage)
     parser.add_option('-f', '--force', action='store_true',
@@ -67,6 +68,9 @@ def main():
         do_set(path, this_user)
     elif operation == 'fix':
         do_fix(path, options)
+        do_rmpyc(path)
+    elif operation == 'rmpyc':
+        do_rmpyc(path)
     else:
         parser.print_help()
         sys.exit(1)
@@ -170,6 +174,17 @@ def do_fix(repo_path, options):
                 except OSError, exc:
                     print '    %s' % exc
                     print '    (owner %s)' % pwd.getpwuid(info.st_uid).pw_name
+
+def do_rmpyc(repo_path):
+    """ Remove 'orphan' .pyc files. """
+    for dirpath, dirnames, filenames in os.walk(repo_path):
+        for name in filenames:
+            if not name.endswith('.pyc'):
+                continue
+            path = os.path.join(dirpath, name)
+            if not os.path.exists(path[:-1]):
+                print 'removing', path
+                os.remove(path)
 
 
 def permission_bits(mode):

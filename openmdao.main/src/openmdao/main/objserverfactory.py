@@ -19,7 +19,7 @@ __all__ = ('ObjServerFactory', 'ObjServer')
 
 
 class ObjServerFactory(Factory):
-    """ Creates ObjServers. """
+    """ Creates :class:`ObjServer`. """
 
     def __init__(self):
         super(ObjServerFactory, self).__init__()
@@ -50,11 +50,11 @@ class ObjServer(object):
         os.mkdir(self.root_dir)
         os.chdir(self.root_dir)
         util.Finalize(None, self.cleanup, exitpriority=-100)
-        self.fix_logging()
+        self._fix_logging()
         SimulationRoot.chroot(self.root_dir)
         self.tlo = None
 
-    def fix_logging(self):
+    def _fix_logging(self):
         # Only want/need this for forked servers to reset log output.
         logging.root.handlers = []
         logging.basicConfig(level=logging.NOTSET, datefmt='%b %d %H:%M:%S',
@@ -62,23 +62,26 @@ class ObjServer(object):
             filename='openmdao_log.txt', filemode='w')
 
     def get_name(self):
+        """ Return this server's :attr:`name`. """
         return self.name
 
     def get_pid(self):
+        """ Return this server's :attr:`pid`. """
         return self.pid
 
     def get_host(self):
+        """ Return this server's :attr:`host`. """
         return self.host
 
     def cleanup(self):
-        """ Cleanup our directory. """
+        """ Cleanup this server's directory. """
         logging.shutdown()
         os.chdir(self.orig_dir)
         if os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
 
     def load_model(self, egg_filename):
-        """ Load model from egg file. """
+        """ Load model from `egg_filename`. """
         logging.debug('%s load_model %s', self.name, egg_filename)
         if os.path.isabs(egg_filename):
             if not egg_filename.startswith(self.root_dir):
@@ -112,7 +115,7 @@ class ObjServer(object):
 
     @staticmethod
     def register(manager):
-        """ Register ObjServer proxy info with `manager`. """
+        """ Register :class:`ObjServer` proxy info with `manager`. """
         name = 'ObjServer'
         method_to_typeid = {
             'load_model': 'LoadedObject',
