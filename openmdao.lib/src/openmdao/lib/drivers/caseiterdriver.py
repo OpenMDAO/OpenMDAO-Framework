@@ -27,14 +27,13 @@ class ServerError(Exception):
 
 class CaseIteratorDriver(Driver):
     """
-    Run a set of cases provided by an ICaseIterator in a manner similar
+    Run a set of cases provided by an :class:`ICaseIterator` in a manner similar
     to the ROSE framework.
 
     - The `iterator` socket provides the cases to be evaluated.
     - The `model` socket provides the model to be executed.
     - The `recorder` socket is used to record results.
-    - If `sequential` is True, then the cases are evaluated sequentially. \
-      (currently non-sequential evaluation is not supported)
+    - If `sequential` is True, then the cases are evaluated sequentially.
     - If `reload_model` is True, the model is reloaded between executions.
     - `max_retries` sets the number of times to retry a failed case.
 
@@ -274,7 +273,7 @@ class CaseIteratorDriver(Driver):
     def _service_loop(self, name, resource_desc=None):
         """ Each server has an associated thread executing this. """
         resource_desc = resource_desc or {}
-        server, server_info = RAM.allocate(resource_desc, transient=True)
+        server, server_info = RAM.allocate(resource_desc)
         if server is None:
             self.error('Server allocation for %s failed :-(', name)
             self._reply_queue.put((name, False))

@@ -1,3 +1,8 @@
+"""
+Based on the 'distributing.py' file example which was (temporarily) posted
+with the multiprocessing module documentation.
+"""
+
 #
 # Module to allow spawning of processes on foreign host
 #
@@ -5,12 +10,6 @@
 #
 # Copyright (c) 2006-2008, R Oudkerk
 # All rights reserved.
-#
-
-__all__ = ['Cluster', 'Host', 'current_process']
-
-#
-# Imports
 #
 
 import copy
@@ -34,70 +33,62 @@ from multiprocessing import util, connection, forking, pool
 #from multiprocessing import managers
 import openmdao.main.mp_managers as managers
 
+__all__ = ['Cluster', 'Host', 'current_process']
+
+
 # SSH command.
 if sys.platform == 'win32':
     _SSH = [r'C:\Putty\plink.exe', '-i', r'C:\Users\setowns1\id-rsa.ppk']
 else:
     _SSH = ['ssh']
 
-#
-# Logging
-#
+# Logging.
 util.log_to_stderr(logging.WARNING)  # Keep debug out of testing output.
 _logger = util.get_logger()
 info = _logger.info
 debug = _logger.debug
 
-#
-# Get number of cpus
-#
-
+# Get number of cpus.
 try:
     slot_count = cpu_count()
 except NotImplemented:
     slot_count = 1
 
-#
-# Manager type which spawns subprocesses
-#
 
 class HostManager(managers.SyncManager):
-    '''
-    Manager type used for spawning processes on a (presumably) foreign host
-    '''
+    """
+    Manager type used for spawning processes on a (presumably) foreign host.
+    """
+
     def __init__(self, address, authkey):
         managers.SyncManager.__init__(self, address, authkey)
         self._name = 'Host-unknown'
 
-    def Process(self, group=None, target=None, name=None, args=(), kwargs={}):
+    def Process(self, group=None, target=None, name=None,
+                args=None, kwargs=None):
+        args = args or ()
+        kwargs = kwargs = {}
         if hasattr(sys.modules['__main__'], '__file__'):
             main_path = os.path.basename(sys.modules['__main__'].__file__)
         else:
             main_path = None
         data = pickle.dumps((target, args, kwargs))
-        p = self._RemoteProcess(data, main_path)
+        proc = self._RemoteProcess(data, main_path)
         if name is None:
             temp = self._name.split('Host-')[-1] + '/Process-%s'
-            name = temp % ':'.join(map(str, p.get_identity()))
-        p.name = name
-        return p
+            name = temp % ':'.join(map(str, proc.get_identity()))
+        proc.name = name
+        return proc
 
     @classmethod
     def from_address(cls, address, authkey):
         manager = cls(address, authkey)
-# Original:
-#        managers.transact(address, authkey, 'dummy')
-#        manager._state.value = managers.State.STARTED
-# Backport:
         conn = connection.Client(address, authkey=authkey)
         try:
             managers.dispatch(conn, None, 'dummy')
         finally:
             conn.close()
         manager._state.value = managers.State.STARTED
-# Better?
-#        manager.connect()
-#
         manager._name = 'Host-%s:%s' % manager.address
         manager.shutdown = util.Finalize(
             manager, HostManager._finalize_host,
@@ -108,27 +99,19 @@ class HostManager(managers.SyncManager):
 
     @staticmethod
     def _finalize_host(address, authkey, name):
-# Original:
-#        managers.transact(address, authkey, 'shutdown')
-# Backport:
         conn = connection.Client(address, authkey=authkey)
         try:
             return managers.dispatch(conn, None, 'shutdown')
         finally:
             conn.close()
-#
 
     def __repr__(self):
         return '<Host(%s)>' % self._name
 
-#
-# Process subclass representing a process on (possibly) a remote machine
-#
 
 class RemoteProcess(Process):
-    '''
-    Represents a process started on a remote host
-    '''
+    """ Represents a process started on a remote host. """
+
     def __init__(self, data, main_path):
         assert not main_path or os.path.basename(main_path) == main_path
         Process.__init__(self)
@@ -138,7 +121,7 @@ class RemoteProcess(Process):
     def start(self):
         try:
             Process.start(self)
-        except Exception, exc:
+        except Exception:
             traceback.print_exc()
             raise
 
@@ -152,11 +135,9 @@ class RemoteProcess(Process):
 
 HostManager.register('_RemoteProcess', RemoteProcess)
 
-#
-# A Pool class that uses a cluster
-#
 
 class DistributedPool(pool.Pool):
+    """ A Pool class that uses a cluster. """
 
     def __init__(self, cluster, processes=None, initializer=None, initargs=()):
         self._cluster = cluster
@@ -174,6 +155,7 @@ class DistributedPool(pool.Pool):
     def _help_stuff_finish(inqueue, task_handler, size):
         inqueue.set_contents([None] * size)
 
+
 #
 # Manager type which starts host managers on other machines
 #
@@ -183,13 +165,15 @@ def LocalProcess(**kwds):
     p.name = 'localhost/' + p.name
     return p
 
+
 class Cluster(managers.SyncManager):
-    '''
+    """
     Represents collection of slots running on various hosts.
 
     `Cluster` is a subclass of `SyncManager` so it allows creation of
     various types of shared objects.
-    '''
+    """
+
     def __init__(self, hostlist, modules):
         managers.SyncManager.__init__(self, address=('localhost', 0))
         self._hostlist = hostlist
@@ -197,10 +181,10 @@ class Cluster(managers.SyncManager):
         if __name__ not in modules:
             modules.append(__name__)
         files = [sys.modules[name].__file__ for name in modules]
-        for i, file in enumerate(files):
-            if file.endswith(('.pyc', '.pyo')):
-                files[i] = file[:-1]
-        self._files = [os.path.abspath(file) for file in files]
+        for i, filename in enumerate(files):
+            if filename.endswith(('.pyc', '.pyo')):
+                files[i] = filename[:-1]
+        self._files = [os.path.abspath(filename) for filename in files]
 
     def start(self):
         managers.SyncManager.start(self)
@@ -241,7 +225,10 @@ class Cluster(managers.SyncManager):
                 host.manager.shutdown()
         self._base_shutdown()
 
-    def Process(self, group=None, target=None, name=None, args=(), kwargs={}):
+    def Process(self, group=None, target=None, name=None,
+                args=None, kwargs=None):
+        args = args or ()
+        kwargs = kwargs or {}
         slot = self._slot_iterator.next()
         return slot.Process(
             group=group, target=target, name=name, args=args, kwargs=kwargs
@@ -267,11 +254,9 @@ class Cluster(managers.SyncManager):
     def __iter__(self):
         return iter(self._slotlist)
 
-#
-# Queue subclass used by distributed pool
-#
 
 class SettableQueue(Queue.Queue):
+    """ Queue subclass used by distributed pool. """
 
     def empty(self):
         return not self.queue
@@ -280,8 +265,10 @@ class SettableQueue(Queue.Queue):
         return self.maxsize > 0 and len(self.queue) == self.maxsize
 
     def set_contents(self, contents):
-        # length of contents must be at least as large as the number of
-        # threads which have potentially called get()
+        """
+        Length of contents must be at least as large as the number of
+        threads which have potentially called get().
+        """
         self.not_empty.acquire()
         try:
             self.queue.clear()
@@ -292,22 +279,17 @@ class SettableQueue(Queue.Queue):
 
 Cluster.register('_SettableQueue', SettableQueue)
 
-#
-# Class representing a notional cpu in the cluster
-#
 
 class Slot(object):
+    """ Class representing a notional cpu in the cluster. """
 
     def __init__(self, host):
         self.host = host
         self.Process = host.Process
 
-#
-# Host
-#
 
 class Host(object):
-    '''
+    """
     Represents a host to use as a node in a cluster.
 
     `hostname` gives the name of the host.  If hostname is not
@@ -319,7 +301,8 @@ class Host(object):
     the host.  This affects how often processes will be allocated to
     this host.  Normally this should be equal to the number of cpus on
     that host.
-    '''
+    """
+
     def __init__(self, hostname, slots=None, python=None):
         self.hostname = hostname
         if hostname != 'localhost':
@@ -363,11 +346,8 @@ class Host(object):
             pickle.dump(data, p.stdin, pickle.HIGHEST_PROTOCOL)
             p.stdin.close()
 
-#
-# Copy files to remote directory, returning name of directory
-#
 
-unzip_code = '''"import tempfile, os, sys, tarfile
+_UNZIP_CODE = '''"import tempfile, os, sys, tarfile
 tempdir = tempfile.mkdtemp(prefix='distrib-')
 os.chdir(tempdir)
 tf = tarfile.open(fileobj=sys.stdin, mode='r|gz')
@@ -375,22 +355,21 @@ tf.extractall()
 print tempdir"'''
 
 def copy_to_remote_temporary_directory(hostname, files):
+    """ Copy files to remote directory, returning name of directory. """
     cmd = copy.copy(_SSH)
-    cmd.extend([hostname, 'python', '-c', unzip_code.replace("\n", ';')])
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
-                         stderr=subprocess.PIPE)
-    tf = tarfile.open(fileobj=p.stdin, mode='w|gz')
+    cmd.extend([hostname, 'python', '-c', _UNZIP_CODE.replace("\n", ';')])
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
+                            stderr=subprocess.PIPE)
+    archive = tarfile.open(fileobj=proc.stdin, mode='w|gz')
     for name in files:
-        tf.add(name, os.path.basename(name))
-    tf.close()
-    p.stdin.close()
-    return p.stdout.read().rstrip()
+        archive.add(name, os.path.basename(name))
+    archive.close()
+    proc.stdin.close()
+    return proc.stdout.read().rstrip()
 
-#
-# Code which runs a host manager
-#
 
 def main():
+    """ Code which runs a host manager. """
     sys.stdout = open('stdout', 'w')
     sys.stderr = open('stderr', 'w')
     _logger.setLevel(logging.DEBUG)
@@ -404,7 +383,7 @@ def main():
     out.write('%s main startup\n'% ident)
     out.flush()
 
-    # get data from parent over stdin
+    # Get data from parent over stdin.
     data = pickle.load(sys.stdin)
     sys.stdin.close()
     debug('%s data received', ident)
@@ -424,35 +403,36 @@ def main():
             callable = None
         HostManager.register(key, callable, method_to_typeid=method_to_typeid)
 
-    # set some stuff
+    # Set some stuff.
     _logger.setLevel(data['dist_log_level'])
     forking.prepare(data)
 
-    # create Server for a `HostManager` object
+    # Create Server for a `HostManager` object.
     server = managers.Server(HostManager._registry, (hostname, 0),
                              data['authkey'], "pickle")
     current_process()._server = server
 
-    # report server address and number of cpus back to parent
+    # Report server address and number of cpus back to parent.
     debug('%s connecting to parent at %s', ident, data['parent_address'])
-    out.write('%s connecting to parent at %s\n' % (ident, data['parent_address']))
+    out.write('%s connecting to parent at %s\n'
+              % (ident, data['parent_address']))
     out.flush()
     conn = connection.Client(data['parent_address'], authkey=data['authkey'])
     conn.send((data['index'], server.address, slot_count))
     conn.close()
 
-    # set name etc
+    # Set name etc.
     current_process()._name = 'Host-%s:%s' % server.address
     util._run_after_forkers()
 
-    # register a cleanup function
+    # Register a cleanup function.
     def cleanup(directory):
         debug('%s removing directory %s', ident, directory)
         shutil.rmtree(directory)
         debug('%s shutting down host manager', ident)
     util.Finalize(None, cleanup, args=[data['dir']], exitpriority=0)
 
-    # start host manager
+    # Start host manager.
     debug('%s remote host manager starting in %s', ident, data['dir'])
     out.write('%s remote host manager starting in %s\n' % (ident, data['dir']))
     out.flush()

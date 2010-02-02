@@ -16,7 +16,11 @@ from openmdao.util.eggloader import check_requirements
 
 
 class ResourceAllocationManager(object):
-    """ Primitive allocation manager. """
+    """
+    The allocation manager maintains a list of allocators which are used
+    to select the 'best fit' for a particular resource request.  The manager
+    is initialized with a :class:`LocalAllocator` for the local host.
+    """
 
     _lock = threading.Lock()
     _RAM = None  # Singleton.
@@ -51,13 +55,9 @@ class ResourceAllocationManager(object):
             ram._allocators.insert(index, allocator)
 
     @staticmethod
-    def allocate(resource_desc, transient):
+    def allocate(resource_desc):
         """
-        Determine best resource for resource_desc and deploy.
-        Allocators return >0 for an estimate of walltime (seconds),
-                           0 for no estimate,
-                          -1 for no resource at this time,
-                          -2 for no support for resource_desc.
+        Determine best resource for `resource_desc` and deploy.
         In the case of a tie, the first allocator in the allocators list wins.
         Returns (proxy-object, server-dict).
         """
@@ -66,9 +66,9 @@ class ResourceAllocationManager(object):
 
         ram = ResourceAllocationManager.get_instance()
         with ResourceAllocationManager._lock:
-            return ram._allocate(resource_desc, transient)
+            return ram._allocate(resource_desc)
 
-    def _allocate(self, resource_desc, transient):
+    def _allocate(self, resource_desc):
         """ Do the allocation. """
         deployment_retries = 0
         best_score = -1
@@ -79,7 +79,7 @@ class ResourceAllocationManager(object):
                 self._allocations += 1
                 name = 'Sim-%d' % self._allocations
                 self._logger.debug('deploying on %s', best_allocator.name)
-                server = best_allocator.deploy(name, resource_desc, transient)
+                server = best_allocator.deploy(name, resource_desc)
                 if server is not None:
                     server_info = {
                         'name':server.get_name(),
@@ -123,7 +123,7 @@ class ResourceAllocationManager(object):
 
     @staticmethod
     def release(server):
-        """ Release a server. """
+        """ Release a server (proxy). """
         name = server.get_name()
         try:
             server.cleanup()
@@ -152,15 +152,20 @@ class ResourceAllocator(ObjServerFactory):
         """
         Return a score indicating how well this resource allocator can satisfy
         the `resource_desc` request.
-        >0 for an estimate of walltime (seconds),
-         0 for no estimate,
-        -1 for no resource at this time,
-        -2 for no support for `resource_desc`.
+
+        - >0 for an estimate of walltime (seconds).
+        -  0 for no estimate.
+        - -1 for no resource at this time.
+        - -2 for no support for `resource_desc`.
+
         """
-        return (-2, None)
+        raise NotImplementedError
 
     def check_required_distributions(self, resource_value):
-        """ Check if we can support required distributions. """
+        """
+        Returns True if this allocator can support the specified required
+        distributions.
+        """
         required = []
         for dist in resource_value:
             required.append(dist.as_requirement())
@@ -170,7 +175,10 @@ class ResourceAllocator(ObjServerFactory):
         return (0, None)
 
     def check_orphan_modules(self, resource_value):
-        """ Check if we can support 'orphan' modules. """
+        """
+        Returns True if this allocator can support the specified 'orphan'
+        modules.
+        """
 #FIXME: shouldn't pollute the environment like this does.
         not_found = []
         for module in sorted(resource_value):
@@ -184,10 +192,10 @@ class ResourceAllocator(ObjServerFactory):
             return (-2, {'orphan_modules' : not_found})
         return (0, None)
 
-    def deploy(self, resource_desc, transient, args=None):
+    def deploy(self, resource_desc):
         """
-        Start the process described by resource_desc.
-        Returns (top-level-object, server-dict).
+        Deploy a server suitable for `resource_desc`.
+        Returns a proxy to the deployed server.
         """
         raise NotImplementedError
 
@@ -203,11 +211,13 @@ class LocalAllocator(ResourceAllocator):
     def rate_resource(self, resource_desc):
         """
         Return a score indicating how well this resource allocator can satisfy
-        the resource_desc request.
-        >0 for an estimate of walltime (seconds),
-         0 for no estimate,
-        -1 for no resource at this time,
-        -2 for no support for `resource_desc`.
+        the `resource_desc` request.
+
+        - >0 for an estimate of walltime (seconds).
+        -  0 for no estimate.
+        - -1 for no resource at this time.
+        - -2 for no support for `resource_desc`.
+
         """
         for key, value in resource_desc.items():
             if key == 'localhost':
@@ -247,13 +257,16 @@ class LocalAllocator(ResourceAllocator):
         else:
             return (-1, {'loadavgs' : loadavgs, 'max_load' : self.max_load})
 
-    def deploy(self, name, resource_desc, transient):
-        """ Deploy a server suitable for `resource_desc`. """
+    def deploy(self, name, resource_desc):
+        """
+        Deploy a server suitable for `resource_desc`.
+        Returns a proxy to the deployed server.
+        """
         return self.create(typname='', name=name)
 
     @staticmethod
     def register(manager):
-        """ Register LocalAllocator proxy info with `manager`. """
+        """ Register :class:`LocalAllocator` proxy info with `manager`. """
         name = 'LocalAllocator'
         ObjServer.register(manager)
         method_to_typeid = {
@@ -267,7 +280,14 @@ LocalAllocator.register(mp_distributing.HostManager)
 
 
 class ClusterAllocator(object):
-    """ Cluster-based resource allocator. """
+    """
+    Cluster-based resource allocator.  This allocator manages a collection
+    of :class:`LocalAllocator`, one for each machine in the cluster.
+    `machines` is a list of dictionaries providing configuration data for each
+    machine in the cluster.  At a minimum, each dictionary must specify a host
+    address in 'hostname' and the path to the OpenMDAO python command in
+    'python'.
+    """
 
     def __init__(self, name, machines):
         self.name = name
@@ -292,15 +312,20 @@ class ClusterAllocator(object):
         """
         Return a score indicating how well this resource allocator can satisfy
         the `resource_desc` request.
-        >0 for an estimate of walltime (seconds),
-         0 for no estimate,
-        -1 for no resource at this time,
-        -2 for no support for `resource_desc`.
+
+        - >0 for an estimate of walltime (seconds).
+        -  0 for no estimate.
+        - -1 for no resource at this time.
+        - -2 for no support for `resource_desc`.
+
         """
         return (0, None)
 
-    def deploy(self, name, resource_desc, transient):
-        """ Deploy a server suitable for `resource_desc`. """
+    def deploy(self, name, resource_desc):
+        """
+        Deploy a server suitable for `resource_desc`.
+        Returns a proxy to the deployed server.
+        """
         manager = self.cluster.get_host_manager()
         try:
             host = manager._name
@@ -319,6 +344,5 @@ class ClusterAllocator(object):
                 self._logger.debug('LocalAllocator for %s %s', host,
                                    self.local_allocators[host_ip])
 
-        return self.local_allocators[host_ip].deploy(name, resource_desc,
-                                                     transient)
+        return self.local_allocators[host_ip].deploy(name, resource_desc)
 
