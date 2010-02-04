@@ -31,6 +31,8 @@ component is instantiated, but before it can be used in a process model:
 
 **(Setting Parameters and Suppression States)**
 
+*Required in Tools/Geometry/Interaction/01 and Tools/Geometry/Interaction/02*
+
 Parameters are set the same way as any other OpenMDAO input variable. For
 example, consider a cylinder with two parameters: radius and height. If we 
 have a geometry manipulator called geo_manipulator, the geometry parameters
@@ -133,6 +135,8 @@ states, and tags, from a saved egg.
 
 **tag_node(node_label, tag_name, tag_description)**
 
+*Required in Tools/Geometry/Interaction/07*
+
 Associates a geometric entity with some metadata. This is useful for marking
 an entity for later use by an analysis tool (e.g. marking loads and boundary
 conditions.) The most straightforward way to implement the tags' storage would
@@ -205,10 +209,11 @@ The Geometry Object and its Query Interface
 
 OpenMDAO provides query access at the Python component level to the geometry object.
 
+
 Geometry Access
 _______________
 
-Required in Tools/Geometry/Interaction/07
+*Required in Tools/Geometry/Interaction/07*
 
 Geometry access for query includes entity query and evalution, traversal of 
 topology, and tag query.
@@ -245,7 +250,7 @@ edges, faces, and boundaries that it includes.
 Mesh Generation
 _______________
 
-Required in Tools/Geometry/Grid Generation/01
+*Required in Tools/Geometry/Grid Generation/01*
 
 **(point, du, dv, duu, duv, dvv) = PointOnFace(vol, face, uv, req_derivative)**
 
@@ -264,14 +269,16 @@ derivatives can also be returned if available using the req_derivative parameter
 Measurements
 ____________
 
-Required in Tools/Geometry/Interaction/08
+*All Required in Tools/Geometry/Interaction/08*
 
 **(distance) = Distance_Node_Node(vol1, edge1, node1, vol2, edge2, node2)**
 
 Returns the distance between two nodes in the boundary represenation given 
-their labels. Note, this isn't in CAPRI, but it's a simple calculation.
+their labels. Note, this isn't in CAPRI (or is it), but it's a simple calculation.
 
 [Are other distance measurements required? point to closest point on line? etc.]
+
+[Reqs also call out for measuring angle.]
 
 **(length) = LengthOfEdge(vol, edge, t1, t2)**
 
@@ -279,10 +286,23 @@ Returns the arc length for an edge. Parameters t1 and t2 can be used to return
 the length of a subsection of the edge. (CAPRI question. Isn't **t** a length based
 parameterization anyway?)
 
+**(arc_length, centroid, bounding_box) = EdgeProperties(vol, edge)**
+
+Returns the arc length and centroid coordinate for an edge in a given volume.
+
+**(area, centroid, inertia_matrix, bounding_box) = FaceProperties(vol, face)**
+
+Returns the area, centroid coordinate, and inertia matrix for a face in a given volume.
+
+**(mass_properties, bounding_box) = VolumeProperties(vol)**
+
+Returns the mass properties for a given volume. These include volume, wetted area,
+center of gravity, inertia matrix, and mass.
+
 Planar Cuts
 ___________
 
-Required in Tools/Geometry/Interaction/10
+*Required in Tools/Geometry/Interaction/10*
 
 **(nsec, ivec, data) = VolumeSection(vol, face, type, isvec, idata)**
 
