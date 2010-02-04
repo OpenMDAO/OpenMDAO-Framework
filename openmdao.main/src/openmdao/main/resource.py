@@ -148,6 +148,10 @@ class ResourceAllocator(ObjServerFactory):
         self.name = name
         self._logger = logging.getLogger(name)
 
+    def get_name(self):
+        """ Return :atr:`name`. """
+        return self.name
+
     def rate_resource(self, resource_desc):
         """
         Return a score indicating how well this resource allocator can satisfy
@@ -203,8 +207,8 @@ class ResourceAllocator(ObjServerFactory):
 class LocalAllocator(ResourceAllocator):
     """ Purely local resource allocator. """
 
-    def __init__(self, total_cpus=1, max_load=2):
-        super(LocalAllocator, self).__init__(name='LocalAllocator')
+    def __init__(self, name='LocalAllocator', total_cpus=1, max_load=2):
+        super(LocalAllocator, self).__init__(name)
         self.total_cpus = total_cpus
         self.max_load = max_load
 
@@ -287,6 +291,9 @@ class ClusterAllocator(object):
     machine in the cluster.  At a minimum, each dictionary must specify a host
     address in 'hostname' and the path to the OpenMDAO python command in
     'python'.
+
+    We assume that machines in the cluster are similar enough that ranking
+    by load average is reasonable.
     """
 
     def __init__(self, name, machines):
@@ -299,7 +306,7 @@ class ClusterAllocator(object):
         hosts = []
         for machine in machines:
             self._logger.debug('initializing %s', machine)
-            host = mp_distributing.Host(machine['hostname'], slots=1,
+            host = mp_distributing.Host(machine['hostname'],
                                         python=machine['python'])
             LocalAllocator.register(host)
             hosts.append(host)
@@ -307,6 +314,24 @@ class ClusterAllocator(object):
         self.cluster = mp_distributing.Cluster(hosts, [])
         self.cluster.start()
         self._logger.debug('server listening on %s', self.cluster.address)
+
+        for i in range(len(self.machines)):
+            manager = self.cluster.get_host_manager()
+            try:
+                host = manager._name
+            except AttributeError:
+                host = 'localhost'
+                host_ip = '127.0.0.1'
+            else:
+                # 'host' is 'Host-<ipaddr>:<port>
+                dash = host.index('-')
+                colon = host.index(':')
+                host_ip = host[dash+1:colon]
+
+            if host_ip not in self.local_allocators:
+                self.local_allocators[host_ip] = manager.LocalAllocator(host)
+                self._logger.debug('LocalAllocator for %s %s', host,
+                                   self.local_allocators[host_ip])
 
     def rate_resource(self, resource_desc):
         """
@@ -318,31 +343,52 @@ class ClusterAllocator(object):
         - -1 for no resource at this time.
         - -2 for no support for `resource_desc`.
 
+        This allocator polls each :class:`LocalAllocator` in the cluster
+        to find the best match and returns that.
         """
-        return (0, None)
+        best_score, best_criteria, best_allocator = \
+            self._get_scores(resource_desc)
+        return (best_score, best_criteria)
 
     def deploy(self, name, resource_desc):
         """
         Deploy a server suitable for `resource_desc`.
         Returns a proxy to the deployed server.
         """
-        manager = self.cluster.get_host_manager()
-        try:
-            host = manager._name
-        except AttributeError:
-            host = 'localhost'
-            host_ip = '127.0.0.1'
+        best_score, best_criteria, best_allocator = \
+            self._get_scores(resource_desc)
+        if best_score >= 0:
+            return best_allocator.deploy(name, resource_desc)
         else:
-            # 'host' is 'Host-<ipaddr>:<port>
-            dash = host.index('-')
-            colon = host.index(':')
-            host_ip = host[dash+1:colon]
+            msg = 'Cannot deploy, best score %s' % best_score
+            self._logger.error(msg)
+            raise RuntimeError(msg)
 
-        with self._lock:
-            if host_ip not in self.local_allocators:
-                self.local_allocators[host_ip] = manager.LocalAllocator()
-                self._logger.debug('LocalAllocator for %s %s', host,
-                                   self.local_allocators[host_ip])
+    def _get_scores(self, resource_desc):
+        """ Return best (score, criteria, allocator). """
+        best_score = -2
+        best_criteria = None
+        best_allocator = None
 
-        return self.local_allocators[host_ip].deploy(name, resource_desc)
+        for allocator in self.local_allocators.values():
+            score, criteria = allocator.rate_resource(resource_desc)
+            self._logger.debug('allocator %s returned %g',
+                               allocator.get_name(), score)
+            if (best_score == -2 and score >= -1) or \
+               (best_score == 0  and score >  0) or \
+               (best_score >  0  and score < best_score):
+                best_score = score
+                best_criteria = criteria
+                best_allocator = allocator
+            elif (best_score == 0 and score == 0):
+                best_load = best_criteria['loadavgs'][0]
+                load = criteria['loadavgs'][0]
+                self._logger.debug('comparing loadavgs %g vs. %g',
+                                   load, best_load)
+                if load < best_load:
+                    best_score = score
+                    best_criteria = criteria
+                    best_allocator = allocator
+
+        return (best_score, best_criteria, best_allocator)
 

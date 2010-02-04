@@ -115,12 +115,12 @@ class TestCase(unittest.TestCase):
         logging.debug('test_concurrent')
 
         if sys.platform != 'win32':
-            # Storm needs firewall changes.
+            # ssh server not typically available on Windows.
             machines = []
             node = platform.node()
             python = find_python()
             if node == 'gxterm3':
-                # User environment assumed OK.
+                # User environment assumed OK on this GRC cluster front-end.
                 for i in range(1, 6):
                     machines.append({'hostname':'gx%02d' % i, 'python':python})
             elif self.local_ssh_available():
