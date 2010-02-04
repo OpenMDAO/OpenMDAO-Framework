@@ -10,6 +10,7 @@ from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.util import filexfer
+from openmdao.main.resource import ResourceAllocationManager as RAM
 
 __all__ = ('CaseIteratorDriver', 'ServerError')
 
@@ -26,21 +27,19 @@ class ServerError(Exception):
 
 class CaseIteratorDriver(Driver):
     """
-    Run a set of cases provided by an ICaseIterator in a manner similar
+    Run a set of cases provided by an :class:`ICaseIterator` in a manner similar
     to the ROSE framework.
 
     - The `iterator` socket provides the cases to be evaluated.
     - The `model` socket provides the model to be executed.
     - The `recorder` socket is used to record results.
-    - If `sequential` is True, then the cases are evaluated sequentially. \
-      (currently non-sequential evaluation is not supported)
+    - If `sequential` is True, then the cases are evaluated sequentially.
     - If `reload_model` is True, the model is reloaded between executions.
     - `max_retries` sets the number of times to retry a failed case.
 
     .. parsed-literal::
 
         TODO: define interface for 'recorder'.
-        TODO: support concurrent evaluation.
         TODO: improve response to a stop request.
 
     """
@@ -114,10 +113,6 @@ class CaseIteratorDriver(Driver):
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
-
-            os.remove(self._egg_file)
-            self.raise_exception('Concurrent evaluation is not supported yet.',
-                                 NotImplementedError)
 
             # Start servers.
             self._server_lock = threading.Lock()
@@ -278,8 +273,7 @@ class CaseIteratorDriver(Driver):
     def _service_loop(self, name, resource_desc=None):
         """ Each server has an associated thread executing this. """
         resource_desc = resource_desc or {}
-        ram = None
-        server, server_info = ram.allocate(resource_desc, transient=True)
+        server, server_info = RAM.allocate(resource_desc)
         if server is None:
             self.error('Server allocation for %s failed :-(', name)
             self._reply_queue.put((name, False))
@@ -294,7 +288,7 @@ class CaseIteratorDriver(Driver):
         self._in_use[name] = False
         self._server_lock.release()
 
-        self._reply_queue.put((name, True))
+        self._reply_queue.put((name, True))  # ACK startup.
 
         while True:
             request = request_queue.get()
@@ -303,8 +297,8 @@ class CaseIteratorDriver(Driver):
             result = request[0](request[1])
             self._reply_queue.put((name, result))
 
-        ram.release(server)
-        self._reply_queue.put((name, True))
+        RAM.release(server)
+        self._reply_queue.put((name, True))  # ACK shutdown.
 
     def _busy(self):
         """ Return True while at least one server is in use. """

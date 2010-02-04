@@ -181,6 +181,13 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         required_distributions, local_modules, orphan_modules = \
             _get_distributions(objs, py_dir, logger, observer)
 
+        # Ensure module corresponding to __main__ is local if it was used.
+        # (Test script embedded in egg is an example of how this might occur)
+        fixup_objects, fixup_classes, fixup_modules = fixup
+        if fixup_objects:  # Something references __main__.
+            main_mod = sys.modules['__main__'].__file__
+            local_modules.add(main_mod)
+
         logger.debug('    py_dir: %s', py_dir)
         logger.debug('    src_dir: %s', src_dir)
         logger.debug('    local_modules:')
@@ -188,7 +195,6 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
             mod = module
             if mod.startswith(py_dir):
                 mod = mod[len(py_dir)+1:]
-            logger.debug('        %s', mod)
 
         # Move to scratch area.
         tmp_dir = tempfile.mkdtemp(prefix='Egg_', dir=tmp_dir)

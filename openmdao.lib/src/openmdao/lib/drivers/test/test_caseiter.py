@@ -6,17 +6,19 @@ import glob
 import logging
 import os.path
 import pkg_resources
-import shutil
+import platform
 import sys
 import unittest
 
 import numpy.random
 
-from enthought.traits.api import Float, Array, TraitError
+from enthought.traits.api import Bool, Float, Array, TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
+from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.main.eggchecker import check_save_load
+from openmdao.util.testutil import find_python
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -35,6 +37,7 @@ class DrivenComponent(Component):
 
     x = Array('d', value=[1., 1., 1., 1.], iostatus='in')
     y = Array('d', value=[1., 1., 1., 1.], iostatus='in')
+    raise_error = Bool(False, iostatus='in')
     rosen_suzuki = Float(0., iostatus='out')
     sum_y = Float(0., iostatus='out')
         
@@ -47,6 +50,8 @@ class DrivenComponent(Component):
         self.sum_y = 0
         for i in range(len(self.y)):
             self.sum_y += self.y[i]
+        if self.raise_error:
+            self.raise_exception('Forced error', RuntimeError)
 
 
 class MyModel(Assembly):
@@ -67,10 +72,15 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         os.chdir(self.directory)
         self.model = set_as_top(MyModel())
+        self.generate_cases()
+
+    def generate_cases(self, force_errors=False):
         self.cases = []
         for i in range(10):
+            raise_error = force_errors and i%4 == 3
             inputs = [('x', None, numpy.random.normal(size=4)),
-                      ('y', None, numpy.random.normal(size=10))]
+                      ('y', None, numpy.random.normal(size=10)),
+                      ('raise_error', None, raise_error)]
             outputs = [('rosen_suzuki', None, None),
                        ('sum_y', None, None)]
             self.cases.append(Case(inputs, outputs))
@@ -78,12 +88,12 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         self.model.pre_delete()
         self.model = None
-        for server_dir in glob.glob('LocalHost_*'):
-            shutil.rmtree(server_dir)
 
         # Verify we didn't mess-up working directory.
         end_dir = os.getcwd()
         os.chdir(ORIG_DIR)
+        if sys.platform == 'win32':
+            end_dir = end_dir.lower()
         if end_dir != self.directory:
             self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
 
@@ -92,20 +102,61 @@ class TestCase(unittest.TestCase):
         logging.debug('test_sequential')
         self.run_cases(sequential=True)
 
+        logging.debug('')
+        logging.debug('test_sequential_errors')
+        self.generate_cases(force_errors=True)
+        self.model.driver._call_execute = True
+        self.run_cases(sequential=True, forced_errors=True)
+
     def test_concurrent(self):
+        # This can always test using a LocalAllocator (forked processes).
+        # It can also use a ClusterAllocator if the environment looks OK.
         logging.debug('')
         logging.debug('test_concurrent')
-        try:
-            # Unsupported, but at least we're exercising egg generation.
-            self.run_cases(sequential=False, n_servers=5)
-        except NotImplementedError, exc:
-            msg = 'driver: Concurrent evaluation is not' \
-                  ' supported yet.'
-            self.assertEqual(str(exc), msg)
-        else:
-            self.fail('Expected NotImplementedError')
 
-    def run_cases(self, sequential, n_servers=0):
+        if sys.platform != 'win32':
+            # Storm needs firewall changes.
+            machines = []
+            node = platform.node()
+            python = find_python()
+            if node == 'gxterm3':
+                # User environment assumed OK.
+                for i in range(1, 6):
+                    machines.append({'hostname':'gx%02d' % i, 'python':python})
+            elif self.local_ssh_available():
+                machines.append({'hostname':node, 'python':python})
+            if machines:
+                name = node.replace('.', '_')
+                cluster = ClusterAllocator(name, machines)
+                ResourceAllocationManager.insert_allocator(0, cluster)
+
+        self.run_cases(sequential=False, n_servers=5)
+        self.assertEqual(glob.glob('Sim-*'), [])
+
+        logging.debug('')
+        logging.debug('test_concurrent_errors')
+        self.generate_cases(force_errors=True)
+        self.model.driver._call_execute = True
+        self.run_cases(sequential=False, n_servers=5, forced_errors=True)
+        self.assertEqual(glob.glob('Sim-*'), [])
+
+    @staticmethod
+    def local_ssh_available():
+        """ Return True if this user has an authorized key for this machine. """
+        node = platform.node()
+        user = os.environ['USER']
+        home = os.environ['HOME']
+        keyfile = os.path.join(home, '.ssh', 'authorized_keys')
+        try:
+            with open(keyfile, 'r') as keys:
+                for line in keys:
+                    if line.find(user+'@'+node) > 0:
+                        return True
+                return False
+        except IOError:
+            return False
+
+    def run_cases(self, sequential, n_servers=0, forced_errors=False):
         """ Evaluate cases, either sequentially or across n_servers. """
         self.model.driver.sequential = sequential
         self.model.driver._n_servers = n_servers
@@ -117,12 +168,19 @@ class TestCase(unittest.TestCase):
 
         # Verify recorded results match expectations.
         self.assertEqual(len(results), len(self.cases))
-        for case in results:
-            self.assertEqual(case.msg, None)
-            self.assertEqual(case.outputs[0][2],
-                             rosen_suzuki(case.inputs[0][2]))
-            self.assertEqual(case.outputs[1][2],
-                             sum(case.inputs[1][2]))
+        for i, case in enumerate(results):
+            error_expected = forced_errors and i%4 == 3
+            if error_expected:
+                if sequential:
+                    self.assertEqual(case.msg, 'driver.model: Forced error')
+                else:
+                    self.assertEqual(case.msg, 'model: Forced error')
+            else:
+                self.assertEqual(case.msg, None)
+                self.assertEqual(case.outputs[0][2],
+                                 rosen_suzuki(case.inputs[0][2]))
+                self.assertEqual(case.outputs[1][2],
+                                 sum(case.inputs[1][2]))
 
     def test_save_load(self):
         logging.debug('')

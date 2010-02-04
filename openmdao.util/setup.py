@@ -1,8 +1,7 @@
-import os, sys
 
 # pylint: disable-msg=F0401
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 version = '0.1.0'
 
@@ -18,7 +17,7 @@ setup(name='openmdao.util',
       url='',
       license='NASA Open Source Agreement 1.3',
       namespace_packages=["openmdao"],
-      packages=['openmdao', 'openmdao.util'],
+      packages=find_packages('src'),
       package_dir={'': 'src'},
       include_package_data=True,
       test_suite='nose.collector',
