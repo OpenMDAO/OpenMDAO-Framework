@@ -149,7 +149,7 @@ class ResourceAllocator(ObjServerFactory):
         self._logger = logging.getLogger(name)
 
     def get_name(self):
-        """ Return :atr:`name`. """
+        """ Return :attr:`name`. """
         return self.name
 
     def rate_resource(self, resource_desc):
