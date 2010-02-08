@@ -202,7 +202,7 @@ class ResourceAllocator(ObjServerFactory):
     def deploy(self, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
-        `criteria` is the dictionary returned by :method:`rate_resource`.
+        `criteria` is the dictionary returned by :meth:`rate_resource`.
         Returns a proxy to the deployed server.
         """
         raise NotImplementedError
