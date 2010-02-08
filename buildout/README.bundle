@@ -7,7 +7,7 @@ that will be found in the production release of the framework don't exist
 yet.
 
 This version requires python 2.6.  There are no plans to move to python 3.x
-for at least 2 years.
+until at least 2012.
 
 
 
@@ -64,6 +64,6 @@ openmdao.main-0.1-py2.6.egg/openmdao/main directory.
 
 The source code for the engine design tutorial found in the User Guide
 can be found under 
-openmdao.examples.engine_design-0.1.0-py2.6-linux-x86_64.egg/openmdao/examples/engine_design.
+openmdao.examples.engine_design-0.1.0-py2.6-????.egg/openmdao/examples/engine_design, where ????? differs based on the platform you're using.
 
 
