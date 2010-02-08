@@ -13,14 +13,16 @@ with the multiprocessing module documentation.
 #
 
 import copy
-import sys
-import os
-import tarfile
-import traceback
-import shutil
-import subprocess
-import logging
 import itertools
+import logging
+import os
+import shutil
+import socket
+import subprocess
+import sys
+import tarfile
+import threading
+import traceback
 
 try:
     import cPickle as pickle
@@ -152,16 +154,21 @@ class Cluster(managers.SyncManager):
     def start(self):
         """ Start this manager and all remote managers. """
         managers.SyncManager.start(self)
+#        AF_INET family results in default address of 'localhost'.
 #        listener = connection.Listener(family='AF_INET', authkey=self._authkey)
-        import socket
         hostname = socket.getfqdn()
         listener = connection.Listener(address=(hostname, 0),
-                                       authkey=self._authkey)
-# TODO: support multiple addresses if multiple networks attached.
+                                       authkey=self._authkey,
+                                       backlog=5)  # Default is 1.
+# TODO: support multiple addresses if multiple networks are attached.
 
-        for i, host in enumerate(self._hostlist):
-            host._start_manager(i, self._authkey, listener.address, self._files)
+        # Start managers in separate thread to avoid losing connections.
+        starter = threading.Thread(target=self._start_hosts,
+                                   args=(listener.address,))
+        starter.daemon = True
+        starter.start()
 
+# TODO: don't hang if manager doesn't start.
         for host in self._hostlist:
             conn = listener.accept()
             i, address = conn.recv()
@@ -171,11 +178,16 @@ class Cluster(managers.SyncManager):
                                                           self._authkey)
             other_host.Process = other_host.manager.Process
 
-        self._slotlist = [Slot(host)]
+        self._slotlist = [Slot(host) for host in self._hostlist]
         self._slot_iterator = itertools.cycle(self._slotlist)
         self._slot_index = 0
         self._base_shutdown = self.shutdown
         del self.shutdown
+
+    def _start_hosts(self, address):
+        """ Start host managers. """
+        for i, host in enumerate(self._hostlist):
+            host.start_manager(i, self._authkey, address, self._files)
 
     def shutdown(self):
         """ Shut down all remote managers and then this one. """
@@ -247,7 +259,7 @@ class Host(object):
             module = callable.__module__
         self.registry[typeid] = (name, module, method_to_typeid)
 
-    def _start_manager(self, index, authkey, address, files):
+    def start_manager(self, index, authkey, address, files):
         """ Launch remote manager process. """
         tempdir = copy_to_remote(self.hostname, files)
         _LOGGER.debug('startup files copied to %s:%s', self.hostname, tempdir)

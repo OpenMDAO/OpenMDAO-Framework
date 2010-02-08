@@ -121,7 +121,7 @@ class TestCase(unittest.TestCase):
             python = find_python()
             if node == 'gxterm3':
                 # User environment assumed OK on this GRC cluster front-end.
-                for i in range(1, 6):
+                for i in range(55):
                     machines.append({'hostname':'gx%02d' % i, 'python':python})
             elif self.local_ssh_available():
                 machines.append({'hostname':node, 'python':python})
@@ -143,9 +143,12 @@ class TestCase(unittest.TestCase):
     @staticmethod
     def local_ssh_available():
         """ Return True if this user has an authorized key for this machine. """
-        node = platform.node()
         user = os.environ['USER']
+# Avoid problems with users who don't have a valid environment.
+        if user not in ('setowns1',):
+            return False
         home = os.environ['HOME']
+        node = platform.node()
         keyfile = os.path.join(home, '.ssh', 'authorized_keys')
         try:
             with open(keyfile, 'r') as keys:
