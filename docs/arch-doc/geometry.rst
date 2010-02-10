@@ -247,6 +247,20 @@ boundary name.
 Returns basic info for a volume, including its name, and the number of nodes,
 edges, faces, and boundaries that it includes.
 
+The following functions are required for entity query:
+
+**(ivec, data) = Curve2NURBS(vol, edge)**
+
+Returns information about the NURB associated with a given edge in the BRep.
+The vector *ivec* contains the NURB properties, and *data* contains the knots,
+control points, and weights associated with the NURB.
+
+**(ivec, data) = Surface2NURBS(vol, face)**
+
+Returns information about the NURB associated with a given face in the BRep.
+The vector *ivec* contains the NURB properties, and *data* contains the knots,
+control points, and weights associated with the NURB.
+
 Mesh Generation
 _______________
 
@@ -278,7 +292,7 @@ their labels. Note, this isn't in CAPRI (or is it), but it's a simple calculatio
 
 [Are other distance measurements required? point to closest point on line? etc.]
 
-[Reqs also call out for measuring angle.]
+[Reqs also call out for measuring angle -- need to learn more about this.]
 
 **(length) = LengthOfEdge(vol, edge, t1, t2)**
 
