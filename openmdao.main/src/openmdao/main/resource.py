@@ -10,6 +10,7 @@ import platform
 import Queue
 import sys
 import threading
+import time
 import traceback
 
 from openmdao.main import mp_distributing
@@ -320,8 +321,13 @@ class ClusterAllocator(object):
         self.cluster.start()
         self._logger.debug('server listening on %s', self.cluster.address)
 
-        for i in machines:
-            manager = self.cluster.get_host_manager()
+        for slot in self.cluster:
+            if slot.host.state != 'up':
+                self._logger.error('Host %s state is %s', slot.host.hostname,
+                                   slot.host.state)
+                continue
+
+            manager = slot.host.manager
             try:
                 host = manager._name
             except AttributeError:
@@ -337,6 +343,10 @@ class ClusterAllocator(object):
                 self._allocators[host_ip] = manager.LocalAllocator(host)
                 self._logger.debug('LocalAllocator for %s %s', host,
                                    self._allocators[host_ip])
+
+    def __len__(self):
+        """ Length of cluster is the number of allocators. """
+        return len(self._allocators)
 
     def rate_resource(self, resource_desc):
         """
@@ -454,6 +464,10 @@ class ClusterAllocator(object):
         allocator = criteria['allocator']
         self._last_deployed = allocator
         return allocator.deploy(name, resource_desc, criteria)
+
+    def shutdown(self):
+        """ Shutdown, releasing resources. """
+        self.cluster.shutdown()
 
 
 class WorkerPool(object):

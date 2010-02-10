@@ -22,6 +22,7 @@ import subprocess
 import sys
 import tarfile
 import threading
+import time
 import traceback
 
 try:
@@ -45,8 +46,9 @@ else:
     _SSH = ['ssh']
 
 # Logging.
-util.log_to_stderr(logging.WARNING)  # Keep debug out of testing output.
-_LOGGER = util.get_logger()
+#util.log_to_stderr(logging.DEBUG)
+#_LOGGER = util.get_logger()
+_LOGGER = logging.getLogger('mp_distributing')
 
 
 class HostManager(managers.SyncManager):
@@ -168,19 +170,40 @@ class Cluster(managers.SyncManager):
         starter.daemon = True
         starter.start()
 
-# TODO: don't hang if manager doesn't start.
-        for host in self._hostlist:
-            conn = listener.accept()
-            i, address = conn.recv()
-            conn.close()
-            other_host = self._hostlist[i]
-            other_host.manager = HostManager.from_address(address,
-                                                          self._authkey)
-            other_host.Process = other_host.manager.Process
+        # Accept callback connections from started managers.
+        more_to_go = 1
+        retry = 0
+        while more_to_go:
+            more_to_go = 0
+            host_processed = False
+            for host in self._hostlist:
+                if host.state == 'started':
+                    conn = listener.accept()
+                    i, address = conn.recv()
+                    conn.close()
+                    other_host = self._hostlist[i]
+                    other_host.manager = HostManager.from_address(address,
+                                                                  self._authkey)
+                    other_host.Process = other_host.manager.Process
+                    other_host.state = 'up'
+                    host_processed = True
+                    _LOGGER.debug('Host %s is now up', other_host.hostname)
+                elif host.state == 'init':
+                    more_to_go += 1
+            if more_to_go:
+                if not host_processed:
+                    retry += 1
+                    if retry < 300:  # ~30 seconds.
+                        time.sleep(0.1)
+                    else:
+                        _LOGGER.error('Cluster startup timeout,'
+                                      ' %d hosts never started', more_to_go)
+            else:
+                break
 
-        self._slotlist = [Slot(host) for host in self._hostlist]
+        self._slotlist = [Slot(host) for host in self._hostlist
+                                              if host.state == 'up']
         self._slot_iterator = itertools.cycle(self._slotlist)
-        self._slot_index = 0
         self._base_shutdown = self.shutdown
         del self.shutdown
 
@@ -192,7 +215,9 @@ class Cluster(managers.SyncManager):
     def shutdown(self):
         """ Shut down all remote managers and then this one. """
         for host in self._hostlist:
-            host.manager.shutdown()
+            if host.state == 'up':
+                host.state = 'shutdown'
+                host.manager.shutdown()
         self._base_shutdown()
 
     def Process(self, group=None, target=None, name=None,
@@ -203,11 +228,6 @@ class Cluster(managers.SyncManager):
         return slot.Process(
             group=group, target=target, name=name, args=args, kwargs=kwargs
             )
-
-    def get_host_manager(self):
-        """ Return a HostManager. """
-        slot = self._slot_iterator.next()
-        return slot.host.manager
 
     def __getitem__(self, i):
         return self._slotlist[i]
@@ -248,6 +268,7 @@ class Host(object):
             self.hostname = '%s@%s' % (user, hostname)
         self.python = python or 'python'
         self.registry = {}
+        self.state = 'init'
 
     def register(self, typeid, callable=None, method_to_typeid=None):
         """ Register proxy info to be sent to remote process. """
@@ -261,11 +282,17 @@ class Host(object):
 
     def start_manager(self, index, authkey, address, files):
         """ Launch remote manager process. """
+        try:
+            check_ssh(self.hostname)
+        except Exception:
+            self.state = 'failed'
+            return
+
         tempdir = copy_to_remote(self.hostname, files)
         _LOGGER.debug('startup files copied to %s:%s', self.hostname, tempdir)
         cmd = copy.copy(_SSH)
         cmd.extend([self.hostname, self.python, '-c',
-                 '"import sys; sys.path.append(\'.\'); import os; os.chdir(\'%s\'); from mp_distributing import main; main()"' % tempdir])
+            '"import sys; sys.path.append(\'.\'); import os; os.chdir(\'%s\'); from mp_distributing import main; main()"' % tempdir])
         proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                 stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         data = dict(
@@ -276,6 +303,48 @@ class Host(object):
             )
         pickle.dump(data, proc.stdin, pickle.HIGHEST_PROTOCOL)
         proc.stdin.close()
+        self.state = 'started'
+
+
+def check_ssh(hostname):
+    """ Check basic communication with `hostname`. """
+    cmd = copy.copy(_SSH)
+    cmd.extend([hostname, 'date'])
+    proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT)
+    for retry in range(150):  # ~15 seconds based on sleep() below.
+        proc.poll()
+        if proc.returncode is None:
+            time.sleep(0.1)
+        elif proc.returncode == 0:
+            return
+        else:
+            msg = "ssh to '%s' failed, returncode %s" \
+                  % (hostname, proc.returncode)
+            _LOGGER.error(msg)
+            for line in proc.stdout:
+                _LOGGER.error('   >%s', line.rstrip())
+            raise RuntimeError(msg)
+
+    # Timeout.  Kill process and log error.
+    proc.kill()
+    for retry in range(5):
+        proc.poll()
+        if proc.returncode is None:
+            time.sleep(1)
+        msg = "ssh to '%s' timed-out, returncode %s" \
+              % (hostname, proc.returncode)
+        _LOGGER.error(msg)
+        for line in proc.stdout:
+            _LOGGER.error('   >%s', line.rstrip())
+        raise RuntimeError(msg)
+
+    # Total zombie...
+    msg = "ssh to '%s' is a zombie, PID %s" % (hostname, proc.pid)
+    _LOGGER.error(msg)
+    for line in proc.stdout:
+        _LOGGER.error('   >%s', line.rstrip())
+    raise RuntimeError(msg)
 
 
 _UNZIP_CODE = '''"import tempfile, os, sys, tarfile

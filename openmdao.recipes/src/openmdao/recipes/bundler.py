@@ -243,16 +243,21 @@ class Bundler(object):
 
         failed_downloads = 0
         for dist in self.dists:
+            self.logger.info('processing %s...', dist.as_requirement())
             newloc = os.path.join(eggdir, os.path.basename(dist.location))
             if dist.platform is None:  # pure python
                 if dist.location != newloc and dist.precedence != DEVELOP_DIST:
                     setuptools.archive_util.unpack_archive(dist.location, newloc)
+                    self.logger.info('    unpacked %s',
+                                     os.path.basename(dist.location))
             else:  # not pure python, so put in distrib-cache and build when user runs buildout
-                fetched = index.download(dist.as_requirement(), self.bundle_cache)
+                fetched = index.download(dist.as_requirement(),
+                                         self.bundle_cache)
                 if fetched:
-                    self.logger.debug('successfully downloaded %s' % fetched)
+                    self.logger.info('    downloaded %s',
+                                     fetched[len(self.bundle_cache)+1:])
                 else:
-                    self.logger.error('failed to download distrib for %s' % dist.as_requirement())
+                    self.logger.error('    download failed')
                     failed_downloads += 1
         if failed_downloads:
             raise zc.buildout.UserError('%d failed downloads'
