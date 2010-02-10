@@ -226,18 +226,8 @@ class Bundler(object):
         except KeyError:
             search_path = None
         self.logger.info('using URL %s', url)
+        self._check_url(url)
         self.logger.info('    search path %s', search_path)
-
-        if self.dists:
-#            proxy_support = urllib2.ProxyHandler({})
-#            opener = urllib2.build_opener(proxy_support)
-#            try:
-#                opener.open(url).read()
-            try:
-                urllib2.urlopen(url, timeout=10)
-            except urllib2.URLError, exc:
-                msg = "Can't contact egg server at '%s': %s" % (url, exc)
-                raise zc.buildout.UserError(msg)
 
         index = PackageIndex(url, search_path=search_path)
         try:
@@ -248,19 +238,26 @@ class Bundler(object):
             findlinks = [x.strip() for x in flinks.split('\n') if x.strip()]
             index.add_find_links(findlinks)
             self.logger.info('    find-links %s', findlinks)
+            for link in findlinks:
+                self._check_url(link)
 
         failed_downloads = 0
         for dist in self.dists:
+            self.logger.info('processing %s...', dist.as_requirement())
             newloc = os.path.join(eggdir, os.path.basename(dist.location))
             if dist.platform is None:  # pure python
                 if dist.location != newloc and dist.precedence != DEVELOP_DIST:
                     setuptools.archive_util.unpack_archive(dist.location, newloc)
+                    self.logger.info('    unpacked %s',
+                                     os.path.basename(dist.location))
             else:  # not pure python, so put in distrib-cache and build when user runs buildout
-                fetched = index.download(dist.as_requirement(), self.bundle_cache)
+                fetched = index.download(dist.as_requirement(),
+                                         self.bundle_cache)
                 if fetched:
-                    self.logger.debug('successfully downloaded %s' % fetched)
+                    self.logger.info('    downloaded %s',
+                                     fetched[len(self.bundle_cache)+1:])
                 else:
-                    self.logger.error('failed to download distrib for %s' % dist.as_requirement())
+                    self.logger.error('    download failed')
                     failed_downloads += 1
         if failed_downloads:
             raise zc.buildout.UserError('%d failed downloads'
@@ -309,6 +306,19 @@ class Bundler(object):
                         self.logger.error(str(err))
             
         return [self.bundledir]
+
+    def _check_url(self, url):
+        """ Check that we can contact a URL. """
+#        proxy_support = urllib2.ProxyHandler({})
+#        opener = urllib2.build_opener(proxy_support)
+#        try:
+#            opener.open(url).read()
+        try:
+            urllib2.urlopen(url, timeout=10)
+        except urllib2.URLError, exc:
+            msg = "Can't contact egg server at '%s': %s" % (url, exc)
+            raise zc.buildout.UserError(msg)
+
 
     update = install
 

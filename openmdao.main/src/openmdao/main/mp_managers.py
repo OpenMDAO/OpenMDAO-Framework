@@ -31,15 +31,6 @@ try:
 except ImportError:
     from pickle import PicklingError
 
-# Set True to enable 'transparent' communication.
-# This significantly reduces the need to register proxy information.
-# Still under development...
-_TRANSPARENT = False
-
-# Transparency depends on knowing what are considered 'simple' types.
-from numpy import float64
-_SIMPLE = set((bool, float, float64, int, str))
-
 #
 # Register some things for pickling
 #
@@ -122,15 +113,7 @@ def public_methods(obj):
     '''
     Return a list of names of methods of `obj` which do not start with '_'
     '''
-    if _TRANSPARENT:
-        # Add special methods for attribute access.
-        methods = [name for name in all_methods(obj) if name[0] != '_']
-        specials = ('__getattribute__', '__getattr__',
-                    '__setattr__', '__delattr__')
-        methods.extend([name for name in specials if hasattr(obj, name)])
-        return methods
-    else:
-        return [name for name in all_methods(obj) if name[0] != '_']
+    return [name for name in all_methods(obj) if name[0] != '_']
 
 #
 # Server which is run in a process controlled by a manager
@@ -238,10 +221,6 @@ class Server(object):
                         (methodname, type(obj), exposed)
                         )
 
-                if methodname == 'write':
-                    util.debug('Calling %s', methodname)
-                else:
-                    util.debug('Calling %s %s %s', methodname, args, kwds)
                 function = getattr(obj, methodname)
 
                 try:
@@ -265,20 +244,6 @@ class Server(object):
                         util.debug('Returning proxy for %s at %s',
                                    typeid, self.address)
                         msg = ('#PROXY', (rexposed, token))
-                    elif _TRANSPARENT:
-                        # Create proxy if not simple.
-                        if res is None or type(res) in _SIMPLE:
-                            util.debug("Returning '%s'", res)
-                            msg = ('#RETURN', res)
-                        else:
-                            typeid = res.__class__.__name__
-                            if typeid not in self.registry:
-                                self.registry[typeid] = (None, None, None, None)
-                            rident, rexposed = self.create(conn, typeid, res)
-                            token = Token(typeid, self.address, rident)
-                            util.debug('Returning proxy for %s at %s',
-                                       typeid, self.address)
-                            msg = ('#PROXY', (rexposed, token))
                     else:
                         # Create proxy if told to.
                         typeid = gettypeid and gettypeid.get(methodname, None)
@@ -304,7 +269,6 @@ class Server(object):
                             )
                         msg = ('#RETURN', result)
                     except Exception:
-#                        msg = ('#TRACEBACK', format_exc())
                         msg = ('#TRACEBACK', orig_traceback)
 
             except EOFError:
@@ -410,7 +374,6 @@ class Server(object):
         try:
             callable, exposed, method_to_typeid, proxytype = \
                       self.registry[typeid]
-            util.debug('create %s %s %s', typeid, args, kwds)
 
             if callable is None:
                 assert len(args) == 1 and not kwds
@@ -445,12 +408,7 @@ class Server(object):
         '''
         Return the methods of the shared object indicated by token
         '''
-        try:
-            return tuple(self.id_to_obj[token.id][1])
-        except KeyError:
-            util.info('get_methods for unknown id %s', token.id)
-            util.info('    known ids %s', self.id_to_obj.keys())
-            return tuple()
+        return tuple(self.id_to_obj[token.id][1])
 
     def accept_connection(self, c, name):
         '''
@@ -464,9 +422,6 @@ class Server(object):
         self.mutex.acquire()
         try:
             self.id_to_refcount[ident] += 1
-        except KeyError:
-            util.info('incref for unknown ident %s', ident)
-            util.info('    known idents %s', self.id_to_refcount.keys())
         finally:
             self.mutex.release()
 
@@ -478,9 +433,6 @@ class Server(object):
             if self.id_to_refcount[ident] == 0:
                 del self.id_to_obj[ident], self.id_to_refcount[ident]
                 util.debug('disposing of obj with id %r', ident)
-        except KeyError:
-            util.info('decref for unknown ident %s', ident)
-            util.info('    known idents %s', self.id_to_refcount.keys())
         finally:
             self.mutex.release()
 
@@ -799,10 +751,6 @@ class BaseProxy(object):
             return result
         elif kind == '#PROXY':
             exposed, token = result
-            if _TRANSPARENT:
-                # Dynamic proxy registration
-                if token.typeid not in self._manager._registry:
-                    self._manager.register(token.typeid, None)
             proxytype = self._manager._registry[token.typeid][-1]
             proxy = proxytype(
                 token, self._serializer, manager=self._manager,
@@ -907,10 +855,8 @@ def RebuildProxy(func, token, serializer, kwds):
 
     If possible the shared object is returned, or otherwise a proxy for it.
     '''
-    util.debug('RebuildProxy typeid %s, address %s',
-               token.typeid, token.address)
-
     server = getattr(current_process(), '_manager_server', None)
+
     if server and server.address == token.address:
         return server.id_to_obj[token.id][0]
     else:
@@ -937,33 +883,8 @@ def MakeProxyType(name, exposed, _cache={}):
     dic = {}
 
     for meth in exposed:
-        if _TRANSPARENT:
-            # Special handling for specials...
-            if meth == '__getattr__':
-                pass  # Avoid recursion loop, but must be in 'exposed'.
-            if meth == '__getattribute__':
-                exec '''
-def __getattr__(self, *args, **kwds):
-    if args[0][0] == '_':
-        return object.%s(self, *args, **kwds)
-    try:
-        return self._callmethod(%r, args, kwds)
-    except AttributeError:
-        return self._callmethod('__getattr__', args, kwds)
-''' % (meth, meth) in dic
-            elif meth == '__setattr__' or meth == '__delattr__':
-                exec '''
-def %s(self, *args, **kwds):
-    if args[0][0] == '_':
-        return object.%s(self, *args, **kwds)
-    return self._callmethod(%r, args, kwds)
-''' % (meth, meth, meth) in dic
-            else:
-                exec '''def %s(self, *args, **kwds):
-                return self._callmethod(%r, args, kwds)''' % (meth, meth) in dic
-        else:
-            exec '''def %s(self, *args, **kwds):
-            return self._callmethod(%r, args, kwds)''' % (meth, meth) in dic
+        exec '''def %s(self, *args, **kwds):
+        return self._callmethod(%r, args, kwds)''' % (meth, meth) in dic
 
     ProxyType = type(name, (BaseProxy,), dic)
     ProxyType._exposed_ = exposed
