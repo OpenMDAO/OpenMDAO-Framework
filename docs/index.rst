@@ -1,7 +1,7 @@
   
-====================================
-Welcome to OpenMDAO's Documentation. 
-====================================
+======================
+OpenMDAO Documentation
+======================
 
 Contents:
 
@@ -16,11 +16,12 @@ Contents:
    srcdocs/index
    licenses/index
    quick-ref/index
-  
-
+   
+   
 .. toctree::
    :hidden:
     
+   changeRecords.rst
    glossary
       
 

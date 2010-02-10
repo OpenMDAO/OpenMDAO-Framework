@@ -10,5 +10,5 @@ Plugin Developer Guide
    module_plugin
    extension_plugin
    filewrapper_plugin
-   changes
    
+
