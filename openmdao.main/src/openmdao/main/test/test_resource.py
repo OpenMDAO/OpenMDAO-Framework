@@ -19,7 +19,10 @@ class TestCase(unittest.TestCase):
     """ Test resources. """
 
     def setUp(self):
-        self.user = os.environ['USER']
+        try:
+            self.user = os.environ['USER']
+        except KeyError:
+            self.user = None  # Probably Windows...
         self.node = platform.node()
         self.name = self.node.replace('.', '_')
         self.python = find_python()
