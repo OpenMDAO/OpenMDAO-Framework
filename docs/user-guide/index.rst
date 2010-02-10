@@ -11,10 +11,5 @@ User's Guide
    example.rst
    userguide_script.rst
    userguide_GUI.rst
-   changes
  
-   
-   
-   
-   
 

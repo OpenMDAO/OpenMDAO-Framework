@@ -96,33 +96,11 @@ their name.
 	 drivers.rst
 	 factories.rst
 	 traits.rst
-	 changes
         
 
 As mentioned previously, it is not necessary to include the ".rst" suffix when adding a file to the
-index, but it does no harm. In this case, most of the files end in ".rst", but the file called 
-*changes* does not. 
+index, but it does no harm. 
 
-
-.. note::  
-   When you finish your documentation (e.g., complete a ticket and are ready to merge), you
-   should update the ``changes.rst`` file. If you forget or would prefer that the tech writer do
-   this, please email the tech writer and include the following: a summary of your changes, the
-   ticket number, and the date you merged your changes. The latest changes go at the top of
-   the list, for example:
-   
-::
-
-   **Updates 07/30/09**
-       - Updated a number of diagrams to better reflect current source
-       - Replaced Variable class diagram with TraitType class diagram
-       - Removed API section and instead point to classes and interfaces
-         in source code
-
-   **Updates 05/05/09**
-       - Made changes to geometry section since last updates
-       - Removed release info and date
-       - Added "seealso" directive; fixed bullets 
 
 .. index:: documentation; creating
 .. index:: documentation; updating
