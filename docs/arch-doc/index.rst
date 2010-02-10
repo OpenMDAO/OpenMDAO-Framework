@@ -1,4 +1,3 @@
-
 =====================
 Architecture Document
 =====================
@@ -11,10 +10,4 @@ Architecture Document
    concepts.rst
    classes.rst
    processes.rst
-   principles.rst
-   changeRecord.rst
-      
-
-
-
-
+   principles.rst 

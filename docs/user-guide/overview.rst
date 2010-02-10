@@ -10,6 +10,9 @@
 Overview of the OpenMDAO Framework
 ==================================
 
+The following section provides a brief overview of OpenMDAO and discusses some
+of its basic components.
+
 What is OpenMDAO?
 -----------------
 
