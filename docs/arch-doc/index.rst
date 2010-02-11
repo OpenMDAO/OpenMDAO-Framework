@@ -1,4 +1,3 @@
-
 =====================
 Architecture Document
 =====================
@@ -13,9 +12,3 @@ Architecture Document
    processes.rst
    principles.rst
    geometry.rst
-   changeRecord.rst
-      
-
-
-
-

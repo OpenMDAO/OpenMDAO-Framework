@@ -123,8 +123,9 @@ class TestCase(unittest.TestCase):
                 # User environment assumed OK.
                 for i in range(1, 6):
                     machines.append({'hostname':'gx%02d' % i, 'python':python})
-            elif self.local_ssh_available():
-                machines.append({'hostname':node, 'python':python})
+            # FIXME: this causes test to hang if someone has SSH config problems
+            #elif self.local_ssh_available():
+            #    machines.append({'hostname':node, 'python':python})
             if machines:
                 name = node.replace('.', '_')
                 cluster = ClusterAllocator(name, machines)

@@ -651,11 +651,10 @@ Assemblies
 Now that Python components representing the three vehicle subsystems have been created, they need to be
 connected so that they can be executed in sequence. In OpenMDAO, a component that contains a collection of
 other components is called an :term:`Assembly`. The assembly allows a set of components to be linked together by
-connecting their inputs and outputs. The data connections define an execution order based on the principle
-of lazy evaluation, where a component is triggered to run by an invalidation (i.e., a change) in any of
-its inputs. In addition, an assembly can also contain a driver, such as an optimizer or a design study.
+connecting their inputs and outputs. The data connections define an execution order based on their dependencies, i.e., components that are upstream in the data flow will be executed prior to those downstream so that input data to a component will always be valid with respect to the other parts of the workflow. Component execution is also lazy, meaning that a component will not execute if its inputs have not changed since its last execution.
+In addition, an assembly can also contain a driver, such as an optimizer or a design study.
 When an assembly does not explicitly contain a driver, the assembly executes the components based on the
-data connection.
+data connections.
 
 For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission,
 Engine, and Chassis components.
