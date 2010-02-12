@@ -1,7 +1,8 @@
 """
-An ObjServerFactory creates ObjServers which use the multiprocessing module
-for communication.  Note that the multiprocessing module is not a transparent
-distributed object protocol.  See the Python documentation for details.
+An :class:`ObjServerFactory` creates :class:`ObjServers` which use
+:mod:`multiprocessing` for communication.  Note that :mod:`multiprocessing`
+is not a transparent distributed object protocol.  See the Python
+documentation for details.
 """
 
 import logging
@@ -26,16 +27,21 @@ class ObjServerFactory(Factory):
 
     def create(self, typname, name='', version=None, server=None, 
                res_desc=None, **ctor_args):
+        """ Create :class:`ObjServer` for `name` and return proxy. """
         manager = managers.BaseManager()
         ObjServer.register(manager)
         manager.start()
-        logging.debug('ObjServerFactory: new server listening on %s',
-                      manager.address)
+        logging.debug("ObjServerFactory: new server for '%s' listening on %s",
+                      name, manager.address)
         return manager.ObjServer(name=name, host=platform.node())
 
     
 class ObjServer(object):
-    """ Object which knows how to load a model. """
+    """
+    Object which knows how to load a model.
+    Executes in a subdirectory of the startup directory.
+    All remote file accesses must be within the tree rooted there.
+    """
 
     def __init__(self, name='', host=''):
         self.host = host
@@ -93,7 +99,7 @@ class ObjServer(object):
         return self.tlo
 
     def open(self, filename, mode='r', bufsize=-1):
-        """ Open file. """
+        """ Open `filename`. """
         if os.path.isabs(filename):
             if not filename.startswith(self.root_dir):
                 raise RuntimeError("Can't open, %s doesn't start with %s",
@@ -106,7 +112,7 @@ class ObjServer(object):
             raise
 
     def chmod(self, path, mode):
-        """ Change file permissions. """
+        """ Change file permissions for `path` to `mode`. """
         if os.path.isabs(path):
             if not path.startswith(self.root_dir):
                 raise RuntimeError("Can't chmod, %s doesn't start with %s",
@@ -115,7 +121,10 @@ class ObjServer(object):
 
     @staticmethod
     def register(manager):
-        """ Register :class:`ObjServer` proxy info with `manager`. """
+        """
+        Register :class:`ObjServer` proxy info with `manager`.
+        Not typically called by user code.
+        """
         name = 'ObjServer'
         method_to_typeid = {
             'load_model': 'LoadedObject',

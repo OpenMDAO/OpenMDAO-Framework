@@ -1,10 +1,11 @@
 """
-Allocate servers from one or more resources (i.e. the local host, a cluster
-of remote hosts, etc.)
+Support for allocation of servers from one or more resources
+(i.e. the local host, a cluster of remote hosts, etc.)
 """
 
 import atexit
 import logging
+import multiprocessing
 import os
 import platform
 import Queue
@@ -23,6 +24,8 @@ class ResourceAllocationManager(object):
     The allocation manager maintains a list of allocators which are used
     to select the 'best fit' for a particular resource request.  The manager
     is initialized with a :class:`LocalAllocator` for the local host.
+    Additional allocators can be added and the manager will look for the
+    best fit across all the allocators.
     """
 
     _lock = threading.Lock()
@@ -145,7 +148,10 @@ class ResourceAllocationManager(object):
 
 
 class ResourceAllocator(ObjServerFactory):
-    """ Estimates suitability of a resource and can deploy on that resource. """
+    """
+    Base class for allocators. Allocators estimate the suitability of a
+    resource and can deploy on that resource.
+    """
 
     def __init__(self, name):
         super(ResourceAllocator, self).__init__()
@@ -153,19 +159,21 @@ class ResourceAllocator(ObjServerFactory):
         self._logger = logging.getLogger(name)
 
     def get_name(self):
-        """ Return :attr:`name`. """
+        """ Return this allocator's name. """
         return self.name
 
     def rate_resource(self, resource_desc):
         """
         Return a score indicating how well this resource allocator can satisfy
-        the `resource_desc` request.
+        the `resource_desc` request.  The score will be:
 
         - >0 for an estimate of walltime (seconds).
         -  0 for no estimate.
         - -1 for no resource at this time.
         - -2 for no support for `resource_desc`.
 
+        The returned criteria is a dictionary containing information related
+        to the score, such as load averages, unsupported resources, etc.
         """
         raise NotImplementedError
 
@@ -210,49 +218,72 @@ class ResourceAllocator(ObjServerFactory):
 
 
 class LocalAllocator(ResourceAllocator):
-    """ Purely local resource allocator. """
+    """
+    Purely local resource allocator. If `total_cpus` is >0, then that is
+    taken as the number of cpus/cores available.  Otherwise the number is
+    taken from :meth:`multiprocessing.cpu_count`.  The `max_load`
+    parameter specifies the maximum cpu-adjusted load allowed when determining
+    if another server may be started in :meth:`rate_resource`.
+    """
 
-    def __init__(self, name='LocalAllocator', total_cpus=1, max_load=2):
+    def __init__(self, name='LocalAllocator', total_cpus=0, max_load=2):
         super(LocalAllocator, self).__init__(name)
-        self.total_cpus = total_cpus
-        self.max_load = max_load
+        if total_cpus > 0:
+            self.total_cpus = total_cpus
+        else:
+            try:
+                self.total_cpus = multiprocessing.cpu_count()
+            except NotImplementedError:
+                self.total_cpus = 1
+        self.max_load = max(max_load, 0.5)  # Ensure > 0!
 
     def rate_resource(self, resource_desc):
         """
-        Return a score indicating how well this resource allocator can satisfy
-        the `resource_desc` request.
+        Return (score, criteria) indicating how well this allocator can satisfy
+        the `resource_desc` request.  The score will be:
 
         - >0 for an estimate of walltime (seconds).
         -  0 for no estimate.
         - -1 for no resource at this time.
         - -2 for no support for `resource_desc`.
 
+        The returned criteria is a dictionary containing information related
+        to the score, such as load averages, unsupported resources, etc.
         """
         for key, value in resource_desc.items():
             if key == 'localhost':
                 if not value:
-                    return (-2, {key : value})  # Specifically not localhost.
+                    self._logger.debug('Rating failed:' \
+                                       ' specifically not localhost.')
+                    return (-2, {key : value})
 
             elif key == 'n_cpus':
                 if value > self.total_cpus:
-                    return (-2, {key : value})  # Too many cpus.
+                    self._logger.debug('Rating failed: too many cpus.')
+                    return (-2, {key : value})
 
             elif key == 'required_distributions':
                 score, info = self.check_required_distributions(value)
                 if score < 0:
-                    return (score, info)  # Not found or version conflict.
+                    self._logger.debug('Rating failed:' \
+                                       ' not found or version conflict.')
+                    return (score, info)
 
             elif key == 'orphan_modules':
                 score, info = self.check_orphan_modules(value)
                 if score < 0:
-                    return (score, info)  # Can't import module(s).
+                    self._logger.debug("Rating failed: can't import module(s).")
+                    return (score, info)
 
             elif key == 'python_version':
                 if sys.version[:3] != value:
-                    return (-2, {key : value})  # Version mismatch.
+                    self._logger.debug('Rating failed: version mismatch.')
+                    return (-2, {key : value})
 
             else:
-                return (-2, {key : value})  # Unrecognized => unsupported.
+                self._logger.debug('Rating failed:' \
+                                   ' unrecognized => unsupported.')
+                return (-2, {key : value})
 
         # Check system load.
         try:
@@ -261,10 +292,15 @@ class LocalAllocator(ResourceAllocator):
             return (0, {})
         self._logger.debug('loadavgs %.2f, %.2f, %.2f, max_load %d',
                            loadavgs[0], loadavgs[1], loadavgs[2], self.max_load)
-        if loadavgs[0] < self.max_load:
-            return (0, {'loadavgs' : loadavgs, 'max_load' : self.max_load})
+        criteria = {
+            'loadavgs'   : loadavgs,
+            'total_cpus' : self.total_cpus,
+            'max_load'   : self.max_load
+        }
+        if (loadavgs[0] / self.total_cpus) < self.max_load:
+            return (0, criteria)
         else:
-            return (-1, {'loadavgs' : loadavgs, 'max_load' : self.max_load})
+            return (-1, criteria)  # Try again later.
 
     def deploy(self, name, resource_desc, criteria):
         """
@@ -275,7 +311,10 @@ class LocalAllocator(ResourceAllocator):
 
     @staticmethod
     def register(manager):
-        """ Register :class:`LocalAllocator` proxy info with `manager`. """
+        """
+        Register :class:`LocalAllocator` proxy info with `manager`.
+        Not typically called by user code.
+        """
         name = 'LocalAllocator'
         ObjServer.register(manager)
         method_to_typeid = {
@@ -311,7 +350,6 @@ class ClusterAllocator(object):
 
         hosts = []
         for machine in machines:
-            self._logger.debug('initializing %s', machine)
             host = mp_distributing.Host(machine['hostname'],
                                         python=machine['python'])
             LocalAllocator.register(host)
@@ -322,27 +360,24 @@ class ClusterAllocator(object):
         self._logger.debug('server listening on %s', self.cluster.address)
 
         for slot in self.cluster:
-            if slot.host.state != 'up':
-                self._logger.error('Host %s state is %s', slot.host.hostname,
-                                   slot.host.state)
-                continue
-
             manager = slot.host.manager
             try:
                 host = manager._name
             except AttributeError:
                 host = 'localhost'
                 host_ip = '127.0.0.1'
+                host_id = host_ip
             else:
                 # 'host' is 'Host-<ipaddr>:<port>
                 dash = host.index('-')
                 colon = host.index(':')
                 host_ip = host[dash+1:colon]
+                host_id = host[dash+1:]
 
             if host_ip not in self._allocators:
                 self._allocators[host_ip] = manager.LocalAllocator(host)
-                self._logger.debug('LocalAllocator for %s %s', host,
-                                   self._allocators[host_ip])
+                self._logger.debug('LocalAllocator for %s at %s',
+                                   slot.host.hostname, host_id)
 
     def __len__(self):
         """ Length of cluster is the number of allocators. """
@@ -351,15 +386,19 @@ class ClusterAllocator(object):
     def rate_resource(self, resource_desc):
         """
         Return a score indicating how well this resource allocator can satisfy
-        the `resource_desc` request.
+        the `resource_desc` request.  The score will be:
 
         - >0 for an estimate of walltime (seconds).
         -  0 for no estimate.
         - -1 for no resource at this time.
         - -2 for no support for `resource_desc`.
 
+        The returned criteria is a dictionary containing information related
+        to the score, such as load averages, unsupported resources, etc.
+
         This allocator polls each :class:`LocalAllocator` in the cluster
-        to find the best match and returns that.
+        to find the best match and returns that.  The best allocator is saved
+        in the returned criteria for a subsequent :meth:`deploy`.
         """
         best_score = -2
         best_criteria = None
@@ -392,7 +431,7 @@ class ClusterAllocator(object):
         for i in range(len(self._allocators)):
             worker_q, allocator, msg, score, criteria = self._score_q.get()
             try:
-                next_allocator = todo.pop()
+                next_allocator = todo.pop(0)
             except IndexError:
                 self._pool.release(worker_q)
             else:
@@ -429,7 +468,7 @@ class ClusterAllocator(object):
         return (best_score, best_criteria)
 
     def _service_loop(self, request_q):
-        """ Get score from an allocator and queue results. """
+        """ Get (score, criteria) from an allocator and queue result. """
         while True:
             allocator, resource_desc = request_q.get()
             if allocator is None:
@@ -459,6 +498,7 @@ class ClusterAllocator(object):
     def deploy(self, name, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
+        Uses allocator saved in `criteria`.
         Returns a proxy to the deployed server.
         """
         allocator = criteria['allocator']
@@ -471,7 +511,12 @@ class ClusterAllocator(object):
 
 
 class WorkerPool(object):
-    """ Pool of worker threads, grows as necessary. """
+    """
+    Pool of worker threads, grows as necessary.
+    Each worker thread executes `target`, which should have a signature
+    similar to `service_loop(self, request_q)`.  The `request_q` argument
+    is a :class:`Queue.Queue` object to receive work requests from.
+    """
 
     def __init__(self, target):
         self._target = target
@@ -490,7 +535,8 @@ class WorkerPool(object):
                 self._idle.remove(queue)
             except ValueError:
                 pass  # Never released due to some other issue...
-        self._workers.clear()
+        self.idle = []
+        self._workers = {}
 
     def get(self):
         """ Get a worker queue from the pool. """

@@ -1,6 +1,6 @@
 """
-Based on the 'distributing.py' file example which was (temporarily) posted
-with the multiprocessing module documentation.
+This module is based on the 'distributing.py' file example which was
+(temporarily) posted with the multiprocessing module documentation.
 """
 
 #
@@ -12,10 +12,12 @@ with the multiprocessing module documentation.
 # All rights reserved.
 #
 
+import atexit
 import copy
 import itertools
 import logging
 import os
+import Queue
 import shutil
 import socket
 import subprocess
@@ -49,6 +51,12 @@ else:
 #util.log_to_stderr(logging.DEBUG)
 #_LOGGER = util.get_logger()
 _LOGGER = logging.getLogger('mp_distributing')
+
+def _flush_logger():
+    """ Flush all handlers for _LOGGER """
+    return
+    for handler in _LOGGER.handlers:
+        handler.flush()
 
 
 class HostManager(managers.SyncManager):
@@ -135,10 +143,9 @@ HostManager.register('_RemoteProcess', RemoteProcess)
 
 class Cluster(managers.SyncManager):
     """
-    Represents collection of hosts.
-
-    `Cluster` is a subclass of `SyncManager` so it allows creation of
-    various types of shared objects.
+    Represents a collection of hosts. :class:`Cluster` is a subclass
+    of :class:`SyncManager` so it allows creation of various types of
+    shared objects.
     """
 
     def __init__(self, hostlist, modules):
@@ -152,6 +159,9 @@ class Cluster(managers.SyncManager):
             if filename.endswith(('.pyc', '.pyo')):
                 files[i] = filename[:-1]
         self._files = [os.path.abspath(filename) for filename in files]
+        self._reply_q = Queue.Queue()
+        self._pool = WorkerPool(self._service_loop) # Pool of worker threads.
+
 
     def start(self):
         """ Start this manager and all remote managers. """
@@ -171,13 +181,13 @@ class Cluster(managers.SyncManager):
         starter.start()
 
         # Accept callback connections from started managers.
-        more_to_go = 1
+        waiting = ['']
         retry = 0
-        while more_to_go:
-            more_to_go = 0
+        while waiting:
             host_processed = False
             for host in self._hostlist:
                 if host.state == 'started':
+                    # Accept conection from *any* host.
                     conn = listener.accept()
                     i, address = conn.recv()
                     conn.close()
@@ -188,16 +198,22 @@ class Cluster(managers.SyncManager):
                     other_host.state = 'up'
                     host_processed = True
                     _LOGGER.debug('Host %s is now up', other_host.hostname)
-                elif host.state == 'init':
-                    more_to_go += 1
-            if more_to_go:
+
+            # See if there are still hosts to wait for.
+            waiting = []
+            for host in self._hostlist:
+                if host.state == 'init' or host.state == 'started':
+                    waiting.append(host)
+            if waiting:
                 if not host_processed:
                     retry += 1
-                    if retry < 300:  # ~30 seconds.
+                    if retry < 600:  # ~60 seconds.
                         time.sleep(0.1)
                     else:
-                        _LOGGER.error('Cluster startup timeout,'
-                                      ' %d hosts never started', more_to_go)
+                        _LOGGER.warning('Cluster startup timeout, hosts not started:')
+                        for host in waiting:
+                            _LOGGER.warning('    %s (%s)', host.hostname, host.state)
+                        break
             else:
                 break
 
@@ -209,8 +225,49 @@ class Cluster(managers.SyncManager):
 
     def _start_hosts(self, address):
         """ Start host managers. """
+#        for i, host in enumerate(self._hostlist):
+#            host.start_manager(i, self._authkey, address, self._files)
+
+        # Start first set of hosts.
+        todo = []
+        max_workers = 5  # Somewhat related to listener backlog.
         for i, host in enumerate(self._hostlist):
-            host.start_manager(i, self._authkey, address, self._files)
+            if i < max_workers:
+                worker_q = self._pool.get()
+                _LOGGER.info('Starting host %s...', host.hostname)
+                worker_q.put((host, i, address))
+            else:
+                todo.append(host)
+
+        # Wait for worker, start next host.
+        for i in range(len(self._hostlist)):
+            worker_q, host = self._reply_q.get()
+            _LOGGER.debug('Host %s state %s', host.hostname, host.state)
+            try:
+                next_host = todo.pop(0)
+            except IndexError:
+                self._pool.release(worker_q)
+            else:
+                _LOGGER.info('Starting host %s...', next_host.hostname)
+                worker_q.put((next_host, i+max_workers, address))
+
+    def _service_loop(self, request_q):
+        """ Start one host manager. """
+        while True:
+            host, i, address = request_q.get()
+            if host is None:
+                request_q.task_done()
+                return  # Shutdown.
+
+            try:
+                host.start_manager(i, self._authkey, address, self._files)
+            except Exception, exc:
+                msg = '%s\n%s' % (exc, traceback.format_exc())
+                _LOGGER.error('starter for %s caught exception %s',
+                              host.hostname, msg)
+
+            request_q.task_done()
+            self._reply_q.put((request_q, host))
 
     def shutdown(self):
         """ Shut down all remote managers and then this one. """
@@ -222,6 +279,7 @@ class Cluster(managers.SyncManager):
 
     def Process(self, group=None, target=None, name=None,
                 args=None, kwargs=None):
+        """ Return a :class:`Process` object associated with a host.  """
         args = args or ()
         kwargs = kwargs or {}
         slot = self._slot_iterator.next()
@@ -239,6 +297,51 @@ class Cluster(managers.SyncManager):
         return iter(self._slotlist)
 
 
+class WorkerPool(object):
+    """
+    Pool of worker threads, grows as necessary.
+    Each worker thread executes `target`, which should have a signature
+    similar to `service_loop(self, request_q)`.  The `request_q` argument
+    is a :class:`Queue.Queue` object to receive work requests from.
+    """
+
+    def __init__(self, target):
+        self._target = target
+        self._idle = []     # Queues of idle workers.
+        self._workers = {}  # Maps queue to worker.
+        atexit.register(self.cleanup)
+
+    def cleanup(self):
+        """ Cleanup resources (worker threads). """
+        for queue in self._workers:
+            queue.put((None, None, None))
+            self._workers[queue].join(1)
+#            if self._workers[queue].is_alive():
+#                print 'Worker join timed-out.'
+            try:
+                self._idle.remove(queue)
+            except ValueError:
+                pass  # Never released due to some other issue...
+        self.idle = []
+        self._workers = {}
+
+    def get(self):
+        """ Get a worker queue from the pool. """
+        try:
+            return self._idle.pop()
+        except IndexError:
+            queue = Queue.Queue()
+            worker = threading.Thread(target=self._target, args=(queue,))
+            worker.daemon = True
+            worker.start()
+            self._workers[queue] = worker
+            return queue
+
+    def release(self, queue):
+        """ Release a worker queue back to the pool. """
+        self._idle.append(queue)
+
+
 class Slot(object):
     """ Class representing a notional cpu in the cluster. """
 
@@ -250,10 +353,10 @@ class Slot(object):
 class Host(object):
     """
     Represents a host to use as a node in a cluster.
-
-    `hostname` gives the name of the host.  ssh is used to log in to the host.
-    To log in as a different user use a host name of the form
-    "username@somewhere.org".
+    `hostname` gives the name of the host.
+    `python` is the path the the Python command to be used on `hostname`.
+    ssh is used to log in to the host. To log in as a different user use
+    a host name of the form: "username@somewhere.org".
     """
 
     def __init__(self, hostname, python=None):
