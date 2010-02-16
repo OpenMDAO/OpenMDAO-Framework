@@ -3,7 +3,6 @@ Support for allocation of servers from one or more resources
 (i.e. the local host, a cluster of remote hosts, etc.)
 """
 
-import atexit
 import logging
 import multiprocessing
 import os
@@ -17,6 +16,7 @@ import traceback
 from openmdao.main import mp_distributing
 from openmdao.main.objserverfactory import ObjServerFactory, ObjServer
 from openmdao.util.eggloader import check_requirements
+from openmdao.util.wrkpool import WorkerPool
 
 
 class ResourceAllocationManager(object):
@@ -346,7 +346,6 @@ class ClusterAllocator(object):
         self._last_deployed = None
         self._logger = logging.getLogger(name)
         self._score_q = Queue.Queue()
-        self._pool = WorkerPool(self._service_loop) # Pool of worker threads.
 
         hosts = []
         for machine in machines:
@@ -422,22 +421,29 @@ class ClusterAllocator(object):
         max_workers = 10
         for i, allocator in enumerate(self._allocators.values()):
             if i < max_workers:
-                worker_q = self._pool.get()
-                worker_q.put((allocator, resource_desc))
+                worker_q = WorkerPool.get()
+                worker_q.put((self._get_rating, (allocator, resource_desc),
+                              {}, self._score_q))
             else:
                 todo.append(allocator)
 
         # Process scores.
         for i in range(len(self._allocators)):
-            worker_q, allocator, msg, score, criteria = self._score_q.get()
+            worker_q, retval, exc, trace = self._score_q.get()
+            if exc:
+                self._logger.error(trace)
+                raise exc
+
             try:
                 next_allocator = todo.pop(0)
             except IndexError:
-                self._pool.release(worker_q)
+                WorkerPool.release(worker_q)
             else:
-                worker_q.put((next_allocator, resource_desc))
+                worker_q.put((self._get_rating, (next_allocator, resource_desc),
+                              {}, self._score_q))
 
-            if msg:
+            allocator, score, criteria = retval
+            if score is None:
                 continue
 
             if allocator is prev_allocator:
@@ -467,33 +473,25 @@ class ClusterAllocator(object):
             best_criteria['allocator'] = best_allocator
         return (best_score, best_criteria)
 
-    def _service_loop(self, request_q):
-        """ Get (score, criteria) from an allocator and queue result. """
-        while True:
-            allocator, resource_desc = request_q.get()
-            if allocator is None:
-                request_q.task_done()
-                return  # Shutdown.
+    def _get_rating(self, allocator, resource_desc):
+        """ Get (score, criteria) from an allocator. """
+        try:
+            score, criteria = allocator.rate_resource(resource_desc)
+            if score == 0:
+                self._logger.debug('allocator %s returned %g (%g)',
+                                   allocator.get_name(), score,
+                                   criteria['loadavgs'][0])
+            else:
+                self._logger.debug('allocator %s returned %g',
+                                   allocator.get_name(), score)
+        except Exception, exc:
+            msg = '%s\n%s' % (exc, traceback.format_exc())
+            self._logger.error('allocator %s caught exception %s',
+                               allocator.get_name(), msg)
+            score = None
+            criteria = None
 
-            msg = None
-            try:
-                score, criteria = allocator.rate_resource(resource_desc)
-                if score == 0:
-                    self._logger.debug('allocator %s returned %g (%g)',
-                                       allocator.get_name(), score,
-                                       criteria['loadavgs'][0])
-                else:
-                    self._logger.debug('allocator %s returned %g',
-                                       allocator.get_name(), score)
-            except Exception, exc:
-                msg = '%s\n%s' % (exc, traceback.format_exc())
-                self._logger.error('allocator %s caught exception %s',
-                                   allocator.get_name(), msg)
-                score = None
-                criteria = None
-
-            request_q.task_done()
-            self._score_q.put((request_q, allocator, msg, score, criteria))
+        return (allocator, score, criteria)
 
     def deploy(self, name, resource_desc, criteria):
         """
@@ -508,49 +506,4 @@ class ClusterAllocator(object):
     def shutdown(self):
         """ Shutdown, releasing resources. """
         self.cluster.shutdown()
-
-
-class WorkerPool(object):
-    """
-    Pool of worker threads, grows as necessary.
-    Each worker thread executes `target`, which should have a signature
-    similar to `service_loop(self, request_q)`.  The `request_q` argument
-    is a :class:`Queue.Queue` object to receive work requests from.
-    """
-
-    def __init__(self, target):
-        self._target = target
-        self._idle = []     # Queues of idle workers.
-        self._workers = {}  # Maps queue to worker.
-        atexit.register(self.cleanup)
-
-    def cleanup(self):
-        """ Cleanup resources (worker threads). """
-        for queue in self._workers:
-            queue.put((None, None))
-            self._workers[queue].join(1)
-            if self._workers[queue].is_alive():
-                print 'Worker join timed-out.'
-            try:
-                self._idle.remove(queue)
-            except ValueError:
-                pass  # Never released due to some other issue...
-        self.idle = []
-        self._workers = {}
-
-    def get(self):
-        """ Get a worker queue from the pool. """
-        try:
-            return self._idle.pop()
-        except IndexError:
-            queue = Queue.Queue()
-            worker = threading.Thread(target=self._target, args=(queue,))
-            worker.daemon = True
-            worker.start()
-            self._workers[queue] = worker
-            return queue
-
-    def release(self, queue):
-        """ Release a worker queue back to the pool. """
-        self._idle.append(queue)
 

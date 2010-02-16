@@ -12,7 +12,6 @@ This module is based on the 'distributing.py' file example which was
 # All rights reserved.
 #
 
-import atexit
 import copy
 import itertools
 import logging
@@ -34,8 +33,11 @@ except ImportError:
 
 from multiprocessing import Process, current_process
 from multiprocessing import util, connection, forking
+
 #from multiprocessing import managers
 import openmdao.main.mp_managers as managers
+
+from openmdao.util.wrkpool import WorkerPool
 
 __all__ = ['Cluster', 'Host', 'current_process']
 
@@ -160,7 +162,6 @@ class Cluster(managers.SyncManager):
                 files[i] = filename[:-1]
         self._files = [os.path.abspath(filename) for filename in files]
         self._reply_q = Queue.Queue()
-        self._pool = WorkerPool(self._service_loop) # Pool of worker threads.
 
 
     def start(self):
@@ -225,49 +226,45 @@ class Cluster(managers.SyncManager):
 
     def _start_hosts(self, address):
         """ Start host managers. """
-#        for i, host in enumerate(self._hostlist):
-#            host.start_manager(i, self._authkey, address, self._files)
-
         # Start first set of hosts.
         todo = []
         max_workers = 5  # Somewhat related to listener backlog.
         for i, host in enumerate(self._hostlist):
             if i < max_workers:
-                worker_q = self._pool.get()
+                worker_q = WorkerPool.get()
                 _LOGGER.info('Starting host %s...', host.hostname)
-                worker_q.put((host, i, address))
+                worker_q.put((self._start_manager, (host, i, address), {},
+                              self._reply_q))
             else:
                 todo.append(host)
 
         # Wait for worker, start next host.
         for i in range(len(self._hostlist)):
-            worker_q, host = self._reply_q.get()
+            worker_q, host, exc, trace = self._reply_q.get()
+            if exc:
+                _LOGGER.error(trace)
+                raise exc
+
             _LOGGER.debug('Host %s state %s', host.hostname, host.state)
             try:
                 next_host = todo.pop(0)
             except IndexError:
-                self._pool.release(worker_q)
+                WorkerPool.release(worker_q)
             else:
                 _LOGGER.info('Starting host %s...', next_host.hostname)
-                worker_q.put((next_host, i+max_workers, address))
+                worker_q.put((self._start_manager,
+                              (next_host, i+max_workers, address), {},
+                              self._reply_q))
 
-    def _service_loop(self, request_q):
+    def _start_manager(self, host, i, address):
         """ Start one host manager. """
-        while True:
-            host, i, address = request_q.get()
-            if host is None:
-                request_q.task_done()
-                return  # Shutdown.
-
-            try:
-                host.start_manager(i, self._authkey, address, self._files)
-            except Exception, exc:
-                msg = '%s\n%s' % (exc, traceback.format_exc())
-                _LOGGER.error('starter for %s caught exception %s',
-                              host.hostname, msg)
-
-            request_q.task_done()
-            self._reply_q.put((request_q, host))
+        try:
+            host.start_manager(i, self._authkey, address, self._files)
+        except Exception, exc:
+            msg = '%s\n%s' % (exc, traceback.format_exc())
+            _LOGGER.error('starter for %s caught exception %s',
+                          host.hostname, msg)
+        return host
 
     def shutdown(self):
         """ Shut down all remote managers and then this one. """
@@ -295,51 +292,6 @@ class Cluster(managers.SyncManager):
 
     def __iter__(self):
         return iter(self._slotlist)
-
-
-class WorkerPool(object):
-    """
-    Pool of worker threads, grows as necessary.
-    Each worker thread executes `target`, which should have a signature
-    similar to `service_loop(self, request_q)`.  The `request_q` argument
-    is a :class:`Queue.Queue` object to receive work requests from.
-    """
-
-    def __init__(self, target):
-        self._target = target
-        self._idle = []     # Queues of idle workers.
-        self._workers = {}  # Maps queue to worker.
-        atexit.register(self.cleanup)
-
-    def cleanup(self):
-        """ Cleanup resources (worker threads). """
-        for queue in self._workers:
-            queue.put((None, None, None))
-            self._workers[queue].join(1)
-#            if self._workers[queue].is_alive():
-#                print 'Worker join timed-out.'
-            try:
-                self._idle.remove(queue)
-            except ValueError:
-                pass  # Never released due to some other issue...
-        self.idle = []
-        self._workers = {}
-
-    def get(self):
-        """ Get a worker queue from the pool. """
-        try:
-            return self._idle.pop()
-        except IndexError:
-            queue = Queue.Queue()
-            worker = threading.Thread(target=self._target, args=(queue,))
-            worker.daemon = True
-            worker.start()
-            self._workers[queue] = worker
-            return queue
-
-    def release(self, queue):
-        """ Release a worker queue back to the pool. """
-        self._idle.append(queue)
 
 
 class Slot(object):

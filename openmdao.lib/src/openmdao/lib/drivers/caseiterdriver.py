@@ -281,12 +281,11 @@ class CaseIteratorDriver(Driver):
 
         request_queue = Queue.Queue()
 
-        self._server_lock.acquire()
-        self._servers[name] = server
-        self._server_info[name] = server_info
-        self._queues[name] = request_queue
-        self._in_use[name] = False
-        self._server_lock.release()
+        with self._server_lock:
+            self._servers[name] = server
+            self._server_info[name] = server_info
+            self._queues[name] = request_queue
+            self._in_use[name] = False
 
         self._reply_queue.put((name, True))  # ACK startup.
 
