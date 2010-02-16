@@ -187,8 +187,11 @@ class Cluster(managers.SyncManager):
         while waiting:
             host_processed = False
             for host in self._hostlist:
+                host.poll()
                 if host.state == 'started':
                     # Accept conection from *any* host.
+                    _LOGGER.debug('waiting for a connection, host %s',
+                                  host.hostname)
                     conn = listener.accept()
                     i, address = conn.recv()
                     conn.close()
@@ -203,6 +206,7 @@ class Cluster(managers.SyncManager):
             # See if there are still hosts to wait for.
             waiting = []
             for host in self._hostlist:
+                host.poll()
                 if host.state == 'init' or host.state == 'started':
                     waiting.append(host)
             if waiting:
@@ -211,9 +215,11 @@ class Cluster(managers.SyncManager):
                     if retry < 600:  # ~60 seconds.
                         time.sleep(0.1)
                     else:
-                        _LOGGER.warning('Cluster startup timeout, hosts not started:')
+                        _LOGGER.warning('Cluster startup timeout,'
+                                        ' hosts not started:')
                         for host in waiting:
-                            _LOGGER.warning('    %s (%s)', host.hostname, host.state)
+                            _LOGGER.warning('    %s (%s) in %s', host.hostname,
+                                            host.state, host.tempdir)
                         break
             else:
                 break
@@ -324,6 +330,8 @@ class Host(object):
         self.python = python or 'python'
         self.registry = {}
         self.state = 'init'
+        self.proc = None
+        self.tempdir = None
 
     def register(self, typeid, callable=None, method_to_typeid=None):
         """ Register proxy info to be sent to remote process. """
@@ -343,22 +351,41 @@ class Host(object):
             self.state = 'failed'
             return
 
-        tempdir = copy_to_remote(self.hostname, files)
-        _LOGGER.debug('startup files copied to %s:%s', self.hostname, tempdir)
+        self.tempdir = copy_to_remote(self.hostname, files)
+        _LOGGER.debug('startup files copied to %s:%s',
+                      self.hostname, self.tempdir)
         cmd = copy.copy(_SSH)
         cmd.extend([self.hostname, self.python, '-c',
-            '"import sys; sys.path.append(\'.\'); import os; os.chdir(\'%s\'); from mp_distributing import main; main()"' % tempdir])
-        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            '"import sys; sys.path.append(\'.\'); import os; os.chdir(\'%s\'); from mp_distributing import main; main()"' % self.tempdir])
+        self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
         data = dict(
             name='BoostrappingHost', index=index,
             dist_log_level=_LOGGER.getEffectiveLevel(),
-            dir=tempdir, authkey=str(authkey), parent_address=address,
+            dir=self.tempdir, authkey=str(authkey), parent_address=address,
             registry=self.registry
             )
-        pickle.dump(data, proc.stdin, pickle.HIGHEST_PROTOCOL)
-        proc.stdin.close()
-        self.state = 'started'
+        pickle.dump(data, self.proc.stdin, pickle.HIGHEST_PROTOCOL)
+        self.proc.stdin.close()
+        time.sleep(1)  # Give the proc time to register startup problems.
+        self.poll()
+        if self.state != 'failed':
+            self.state = 'started'
+
+    def poll(self):
+        """ Poll for process status. """
+#        _LOGGER.debug('polling %s', self.hostname)
+        if self.proc is not None and self.state != 'failed':
+            self.proc.poll()
+            if self.proc.returncode is not None:
+                _LOGGER.error('Host %s in %s exited, returncode %s',
+                              self.hostname, self.tempdir, self.proc.returncode)
+                for line in self.proc.stdout:
+                    _LOGGER.error('>    %s', line.rstrip())
+                for line in self.proc.stderr:
+                    _LOGGER.error('>>    %s', line.rstrip())
+                self.state = 'failed'
 
 
 def check_ssh(hostname):
