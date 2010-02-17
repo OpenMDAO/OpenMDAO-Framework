@@ -178,6 +178,7 @@ html_theme_options = {
      "footerbgcolor": "#640000",
      "footertextcolor": "gainsboro",
      "textcolor": "black",
+     "codebgcolor": "#FFFFCC",
      "linkcolor": "darkred",
     }
 

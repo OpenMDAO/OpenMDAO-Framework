@@ -210,7 +210,7 @@ The Geometry Object and its Query Interface
 OpenMDAO provides query access at the Python component level to the geometry object.
 
 
-Geometry Access
+Topology Access
 _______________
 
 *Required in Tools/Geometry/Interaction/07*
@@ -226,16 +226,14 @@ Returns the (x,y,z) coordinate for a node in the volume.
 
 **(trange, nodes) = GetEdge(vol, edge)**
 
-Returns the nodes associated with an edge in a given volume. (CAPRI question: Why
-return min and max parameter t? Wouldn't that just be (0,1)?)
+Returns the nodes associated with an edge in a given volume. trange returns the
+parameterization t in terms of the original curve coordinate (t).
 
 **(urange, nloop, loops, edges) = GetFace(vol, face)**
 
 Returns the edges assocated with a face in a given volume. **nloop** is the
 number of loops, **loops** is the edge loop lengths, and **edges** contains
-the edge indices and connectivity. (CAPRI question: Why return range for (u,v)
-parameterization? Wouldn't that just be (0,1; 0,1)?) (Note: more understanding needed
-on how loops work.)
+the edge indices and orientation.
 
 **(nface, faces, name) = GetBoundary(vol, bound)**
 
@@ -247,31 +245,11 @@ boundary name.
 Returns basic info for a volume, including its name, and the number of nodes,
 edges, faces, and boundaries that it includes.
 
-The following functions are required for entity query:
-
-**(ivec, data) = Curve2NURBS(vol, edge)**
-
-Returns information about the NURB associated with a given edge in the BRep.
-The vector *ivec* contains the NURB properties, and *data* contains the knots,
-control points, and weights associated with the NURB.
-
-**(ivec, data) = Surface2NURBS(vol, face)**
-
-Returns information about the NURB associated with a given face in the BRep.
-The vector *ivec* contains the NURB properties, and *data* contains the knots,
-control points, and weights associated with the NURB.
 
 Mesh Generation
 _______________
 
 *Required in Tools/Geometry/Grid Generation/01*
-
-**(point, du, dv, duu, duv, dvv) = PointOnFace(vol, face, uv, req_derivative)**
-
-Returns the cartesian coordinate of a point on a face given the point's coordinate in
-the local (u,v) parameter space used to mesh the face. First and second
-derivatives can also be returned if available using the req_derivative parameter
-(0 = no derivatives, 1 = 1st order, 2 = 2nd order.)
 
 **(point, d1, d2) = PointOnEdge(vol, edge, t, req_derivative)**
 
@@ -280,29 +258,47 @@ the local (t) parameter space used to mesh the edge. First and second
 derivatives can also be returned if available using the req_derivative parameter
 (0 = no derivatives, 1 = 1st order, 2 = 2nd order.)
 
+**(point, du, dv, duu, duv, dvv) = PointOnFace(vol, face, uv, req_derivative)**
+
+Returns the cartesian coordinate of a point on a face given the point's coordinate in
+the local (u,v) parameter space used to mesh the face. First and second
+derivatives can also be returned if available using the req_derivative parameter
+(0 = no derivatives, 1 = 1st order, 2 = 2nd order.)
+
+**(point_on_edge, t) = NearestOnEdge(vol, edge, coor, point, t_guess)**
+
+Returns the coordinate of the point on a given edge that lies the closest to the
+input point. Tge associated t parameter is also returned. Some kernels require
+an initial guess in the form of a point on the edge that is nearby.
+
+**(point_on_face, uv) = NearestOnFace(vol, face, coor, point, uv_guess)**
+
+Returns the coordinate of the point on a given edge that lies the closest to the
+input point. Tge associated t parameter is also returned. Some kernels require
+an initial guess in the form of a point on the face that is nearby.
+
+**status = InEdge(vol, edge, point)**
+
+Returns "True" if the given point lies on the edge.
+
+**status = InFace(vol, face, point)**
+
+Returns "True" if the given point lies on the face.
+
+
 Measurements
 ____________
 
 *All Required in Tools/Geometry/Interaction/08*
 
-**(distance) = Distance_Node_Node(vol1, edge1, node1, vol2, edge2, node2)**
-
-Returns the distance between two nodes in the boundary represenation given 
-their labels. Note, this isn't in CAPRI (or is it), but it's a simple calculation.
-
-[Are other distance measurements required? point to closest point on line? etc.]
-
-[Reqs also call out for measuring angle -- need to learn more about this.]
-
 **(length) = LengthOfEdge(vol, edge, t1, t2)**
 
 Returns the arc length for an edge. Parameters t1 and t2 can be used to return
-the length of a subsection of the edge. (CAPRI question. Isn't **t** a length based
-parameterization anyway?)
+the length of a subsection of the edge.
 
 **(arc_length, centroid, bounding_box) = EdgeProperties(vol, edge)**
 
-Returns the arc length and centroid coordinate for an edge in a given volume.
+Returns the arc length (for the full edge) and centroid coordinate for an edge in a given volume.
 
 **(area, centroid, inertia_matrix, bounding_box) = FaceProperties(vol, face)**
 
@@ -323,6 +319,15 @@ ___________
 A basic interface would require a volume label, a set of face labels, and a vector
 that defines the normal of the cutting plane. CAPRI suggests a more detailed
 interface that allows a few different types of cuts.
+
+Tesselation
+___________
+
+While not spelled out directly in the requirements, it is often useful to have the
+capability to generate a watertight descretized representation of the geometry
+for performing sanity checks.
+
+[Needs Functions]
 
 The Mesh Object
 ===============
