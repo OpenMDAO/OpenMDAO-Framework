@@ -3,11 +3,14 @@ Allocate servers from one or more resources (i.e. the local host, a cluster
 of remote hosts, etc.)
 """
 
+import atexit
 import logging
 import os
 import platform
+import Queue
 import sys
 import threading
+import time
 import traceback
 
 from openmdao.main import mp_distributing
@@ -79,7 +82,8 @@ class ResourceAllocationManager(object):
                 self._allocations += 1
                 name = 'Sim-%d' % self._allocations
                 self._logger.debug('deploying on %s', best_allocator.name)
-                server = best_allocator.deploy(name, resource_desc)
+                server = best_allocator.deploy(name, resource_desc,
+                                               best_criteria)
                 if server is not None:
                     server_info = {
                         'name':server.get_name(),
@@ -148,6 +152,10 @@ class ResourceAllocator(ObjServerFactory):
         self.name = name
         self._logger = logging.getLogger(name)
 
+    def get_name(self):
+        """ Return :attr:`name`. """
+        return self.name
+
     def rate_resource(self, resource_desc):
         """
         Return a score indicating how well this resource allocator can satisfy
@@ -192,9 +200,10 @@ class ResourceAllocator(ObjServerFactory):
             return (-2, {'orphan_modules' : not_found})
         return (0, None)
 
-    def deploy(self, resource_desc):
+    def deploy(self, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
+        `criteria` is the dictionary returned by :meth:`rate_resource`.
         Returns a proxy to the deployed server.
         """
         raise NotImplementedError
@@ -203,8 +212,8 @@ class ResourceAllocator(ObjServerFactory):
 class LocalAllocator(ResourceAllocator):
     """ Purely local resource allocator. """
 
-    def __init__(self, total_cpus=1, max_load=2):
-        super(LocalAllocator, self).__init__(name='LocalAllocator')
+    def __init__(self, name='LocalAllocator', total_cpus=1, max_load=2):
+        super(LocalAllocator, self).__init__(name)
         self.total_cpus = total_cpus
         self.max_load = max_load
 
@@ -257,7 +266,7 @@ class LocalAllocator(ResourceAllocator):
         else:
             return (-1, {'loadavgs' : loadavgs, 'max_load' : self.max_load})
 
-    def deploy(self, name, resource_desc):
+    def deploy(self, name, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
         Returns a proxy to the deployed server.
@@ -287,19 +296,23 @@ class ClusterAllocator(object):
     machine in the cluster.  At a minimum, each dictionary must specify a host
     address in 'hostname' and the path to the OpenMDAO python command in
     'python'.
+
+    We assume that machines in the cluster are similar enough that ranking
+    by load average is reasonable.
     """
 
     def __init__(self, name, machines):
         self.name = name
+        self._allocators = {}
+        self._last_deployed = None
         self._logger = logging.getLogger(name)
-        self._lock = threading.Lock()
-        self.machines = machines
-        self.local_allocators = {}
+        self._score_q = Queue.Queue()
+        self._pool = WorkerPool(self._service_loop) # Pool of worker threads.
 
         hosts = []
         for machine in machines:
             self._logger.debug('initializing %s', machine)
-            host = mp_distributing.Host(machine['hostname'], slots=1,
+            host = mp_distributing.Host(machine['hostname'],
                                         python=machine['python'])
             LocalAllocator.register(host)
             hosts.append(host)
@@ -307,6 +320,33 @@ class ClusterAllocator(object):
         self.cluster = mp_distributing.Cluster(hosts, [])
         self.cluster.start()
         self._logger.debug('server listening on %s', self.cluster.address)
+
+        for slot in self.cluster:
+            if slot.host.state != 'up':
+                self._logger.error('Host %s state is %s', slot.host.hostname,
+                                   slot.host.state)
+                continue
+
+            manager = slot.host.manager
+            try:
+                host = manager._name
+            except AttributeError:
+                host = 'localhost'
+                host_ip = '127.0.0.1'
+            else:
+                # 'host' is 'Host-<ipaddr>:<port>
+                dash = host.index('-')
+                colon = host.index(':')
+                host_ip = host[dash+1:colon]
+
+            if host_ip not in self._allocators:
+                self._allocators[host_ip] = manager.LocalAllocator(host)
+                self._logger.debug('LocalAllocator for %s %s', host,
+                                   self._allocators[host_ip])
+
+    def __len__(self):
+        """ Length of cluster is the number of allocators. """
+        return len(self._allocators)
 
     def rate_resource(self, resource_desc):
         """
@@ -318,31 +358,153 @@ class ClusterAllocator(object):
         - -1 for no resource at this time.
         - -2 for no support for `resource_desc`.
 
+        This allocator polls each :class:`LocalAllocator` in the cluster
+        to find the best match and returns that.
         """
-        return (0, None)
+        best_score = -2
+        best_criteria = None
+        best_allocator = None
+ 
+        # Prefer not to repeat use of just-used allocator.
+        prev_score = -2
+        prev_criteria = None
+        prev_allocator = self._last_deployed
+        self._last_deployed = None
 
-    def deploy(self, name, resource_desc):
+        # Drain _score_q.
+        while True:
+            try:
+                self._score_q.get_nowait()
+            except Queue.Empty:
+                break
+
+        # Get scores via worker threads.
+        todo = []
+        max_workers = 10
+        for i, allocator in enumerate(self._allocators.values()):
+            if i < max_workers:
+                worker_q = self._pool.get()
+                worker_q.put((allocator, resource_desc))
+            else:
+                todo.append(allocator)
+
+        # Process scores.
+        for i in range(len(self._allocators)):
+            worker_q, allocator, msg, score, criteria = self._score_q.get()
+            try:
+                next_allocator = todo.pop()
+            except IndexError:
+                self._pool.release(worker_q)
+            else:
+                worker_q.put((next_allocator, resource_desc))
+
+            if msg:
+                continue
+
+            if allocator is prev_allocator:
+                prev_score = score
+                prev_criteria = criteria
+            elif (best_score <= 0 and score > best_score) or \
+                 (best_score >  0 and score < best_score):
+                best_score = score
+                best_criteria = criteria
+                best_allocator = allocator
+            elif (best_score == 0 and score == 0):
+                best_load = best_criteria['loadavgs'][0]
+                load = criteria['loadavgs'][0]
+                if load < best_load:
+                    best_score = score
+                    best_criteria = criteria
+                    best_allocator = allocator
+
+        # If no alternative, repeat use of previous allocator.
+        if best_score < 0 and prev_score >= 0:
+            best_score = prev_score
+            best_criteria = prev_criteria
+            best_allocator = prev_allocator
+
+        # Save best allocator in criteria in case we're asked to deploy.
+        if best_criteria is not None:
+            best_criteria['allocator'] = best_allocator
+        return (best_score, best_criteria)
+
+    def _service_loop(self, request_q):
+        """ Get score from an allocator and queue results. """
+        while True:
+            allocator, resource_desc = request_q.get()
+            if allocator is None:
+                request_q.task_done()
+                return  # Shutdown.
+
+            msg = None
+            try:
+                score, criteria = allocator.rate_resource(resource_desc)
+                if score == 0:
+                    self._logger.debug('allocator %s returned %g (%g)',
+                                       allocator.get_name(), score,
+                                       criteria['loadavgs'][0])
+                else:
+                    self._logger.debug('allocator %s returned %g',
+                                       allocator.get_name(), score)
+            except Exception, exc:
+                msg = '%s\n%s' % (exc, traceback.format_exc())
+                self._logger.error('allocator %s caught exception %s',
+                                   allocator.get_name(), msg)
+                score = None
+                criteria = None
+
+            request_q.task_done()
+            self._score_q.put((request_q, allocator, msg, score, criteria))
+
+    def deploy(self, name, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
         Returns a proxy to the deployed server.
         """
-        manager = self.cluster.get_host_manager()
+        allocator = criteria['allocator']
+        self._last_deployed = allocator
+        return allocator.deploy(name, resource_desc, criteria)
+
+    def shutdown(self):
+        """ Shutdown, releasing resources. """
+        self.cluster.shutdown()
+
+
+class WorkerPool(object):
+    """ Pool of worker threads, grows as necessary. """
+
+    def __init__(self, target):
+        self._target = target
+        self._idle = []     # Queues of idle workers.
+        self._workers = {}  # Maps queue to worker.
+        atexit.register(self.cleanup)
+
+    def cleanup(self):
+        """ Cleanup resources (worker threads). """
+        for queue in self._workers:
+            queue.put((None, None))
+            self._workers[queue].join(1)
+            if self._workers[queue].is_alive():
+                print 'Worker join timed-out.'
+            try:
+                self._idle.remove(queue)
+            except ValueError:
+                pass  # Never released due to some other issue...
+        self._workers.clear()
+
+    def get(self):
+        """ Get a worker queue from the pool. """
         try:
-            host = manager._name
-        except AttributeError:
-            host = 'localhost'
-            host_ip = '127.0.0.1'
-        else:
-            # 'host' is 'Host-<ipaddr>:<port>
-            dash = host.index('-')
-            colon = host.index(':')
-            host_ip = host[dash+1:colon]
+            return self._idle.pop()
+        except IndexError:
+            queue = Queue.Queue()
+            worker = threading.Thread(target=self._target, args=(queue,))
+            worker.daemon = True
+            worker.start()
+            self._workers[queue] = worker
+            return queue
 
-        with self._lock:
-            if host_ip not in self.local_allocators:
-                self.local_allocators[host_ip] = manager.LocalAllocator()
-                self._logger.debug('LocalAllocator for %s %s', host,
-                                   self.local_allocators[host_ip])
-
-        return self.local_allocators[host_ip].deploy(name, resource_desc)
+    def release(self, queue):
+        """ Release a worker queue back to the pool. """
+        self._idle.append(queue)
 

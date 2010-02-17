@@ -5,14 +5,14 @@ distributed object protocol.  See the Python documentation for details.
 """
 
 import logging
-#from multiprocessing import managers, util
-from multiprocessing import util
 import os.path
 import platform
 import shutil
 
 from openmdao.main.api import Container, Factory, SimulationRoot
 
+from multiprocessing import util
+#from multiprocessing import managers
 from openmdao.main import mp_managers as managers
 
 __all__ = ('ObjServerFactory', 'ObjServer')

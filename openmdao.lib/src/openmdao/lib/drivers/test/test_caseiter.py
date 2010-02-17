@@ -12,13 +12,17 @@ import unittest
 
 import numpy.random
 
-from enthought.traits.api import Bool, Float, Array, TraitError
+from enthought.traits.api import Bool, Float, Int, Array, TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
+
+
+# Users who have ssh configured correctly for testing.
+SSH_USERS = ('setowns1',)
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -37,6 +41,7 @@ class DrivenComponent(Component):
 
     x = Array('d', value=[1., 1., 1., 1.], iostatus='in')
     y = Array('d', value=[1., 1., 1., 1.], iostatus='in')
+    correlation_key = Int(-1, iostatus='in')
     raise_error = Bool(False, iostatus='in')
     rosen_suzuki = Float(0., iostatus='out')
     sum_y = Float(0., iostatus='out')
@@ -80,6 +85,7 @@ class TestCase(unittest.TestCase):
             raise_error = force_errors and i%4 == 3
             inputs = [('x', None, numpy.random.normal(size=4)),
                       ('y', None, numpy.random.normal(size=10)),
+                      ('correlation_key', None, i),
                       ('raise_error', None, raise_error)]
             outputs = [('rosen_suzuki', None, None),
                        ('sum_y', None, None)]
@@ -115,17 +121,16 @@ class TestCase(unittest.TestCase):
         logging.debug('test_concurrent')
 
         if sys.platform != 'win32':
-            # Storm needs firewall changes.
+            # ssh server not typically available on Windows.
             machines = []
             node = platform.node()
             python = find_python()
             if node == 'gxterm3':
-                # User environment assumed OK.
-                for i in range(1, 6):
+                # User environment assumed OK on this GRC cluster front-end.
+                for i in range(55):
                     machines.append({'hostname':'gx%02d' % i, 'python':python})
-            # FIXME: this causes test to hang if someone has SSH config problems
-            #elif self.local_ssh_available():
-            #    machines.append({'hostname':node, 'python':python})
+            elif self.local_ssh_available():
+                machines.append({'hostname':node, 'python':python})
             if machines:
                 name = node.replace('.', '_')
                 cluster = ClusterAllocator(name, machines)
@@ -144,9 +149,12 @@ class TestCase(unittest.TestCase):
     @staticmethod
     def local_ssh_available():
         """ Return True if this user has an authorized key for this machine. """
-        node = platform.node()
         user = os.environ['USER']
+# Avoid problems with users who don't have a valid environment.
+        if user not in SSH_USERS:
+            return False
         home = os.environ['HOME']
+        node = platform.node()
         keyfile = os.path.join(home, '.ssh', 'authorized_keys')
         try:
             with open(keyfile, 'r') as keys:
@@ -169,7 +177,8 @@ class TestCase(unittest.TestCase):
 
         # Verify recorded results match expectations.
         self.assertEqual(len(results), len(self.cases))
-        for i, case in enumerate(results):
+        for case in results:
+            i = case.inputs[2][2]  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
                 if sequential:
