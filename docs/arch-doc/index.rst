@@ -10,4 +10,5 @@ Architecture Document
    concepts.rst
    classes.rst
    processes.rst
-   principles.rst 
+   principles.rst
+   geometry.rst
