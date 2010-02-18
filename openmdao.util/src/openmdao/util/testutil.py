@@ -46,3 +46,17 @@ def find_python():
 
     return pystr
 
+
+def make_protected_dir():
+    """
+    Returns the the absolute path of an inaccessible directory.
+    Files cannot be created in it, it can't be chdir() to, etc.
+    Not supported on Windows.
+    """
+    directory = '__protected__'
+    if os.path.exists(directory):
+        os.rmdir(directory)
+    os.mkdir(directory)
+    os.chmod(directory, 0)
+    return os.path.join(os.getcwd(), directory)
+

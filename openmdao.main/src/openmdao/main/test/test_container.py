@@ -1,5 +1,7 @@
 # pylint: disable-msg=C0111,C0103
 
+import os.path
+import sys
 import unittest
 import StringIO
 
@@ -7,6 +9,7 @@ from enthought.traits.api import Float, TraitError
 
 import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container
+from openmdao.util.testutil import make_protected_dir
 
 # Various Pickle issues arise only when this test runs as the main module.
 # This is used to detect when we're the main module or not.
@@ -179,14 +182,22 @@ class ContainerTestCase(unittest.TestCase):
             self.fail('Expected RuntimeError')
 
     def test_save_bad_filename(self):
+# TODO: get make_protected_dir() to work on Windows.
+        if sys.platform == 'win32':
+            return
+
         c1 = Container()
+        directory = make_protected_dir()
+        path = os.path.join(directory, 'illegal')
         try:
-            c1.save('/illegal')
+            c1.save(path)
         except IOError, exc:
-            msg = ": Can't save to '/illegal': Permission denied"
+            msg = ": Can't save to '%s': Permission denied" % path
             self.assertEqual(str(exc), msg)
         else:
-            self.fail('Expected RuntimeError')
+            self.fail('Expected IOError')
+        finally:
+            os.rmdir(directory)
 
     def test_save_bad_method(self):
         # This test exercises handling references to unbound methods defined
@@ -198,7 +209,7 @@ class ContainerTestCase(unittest.TestCase):
         try:
             c1.save(output)
         except RuntimeError, exc:
-            msg = ": IMHolder: <unbound method ContainerTestCase" \
+            msg = ": _pickle_method: <unbound method ContainerTestCase" \
                   ".test_save_bad_method> with module __main__ (None)"
             self.assertEqual(str(exc), msg)
         else:

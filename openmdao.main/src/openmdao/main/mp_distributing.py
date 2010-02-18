@@ -368,6 +368,7 @@ class Host(object):
             )
         pickle.dump(data, self.proc.stdin, pickle.HIGHEST_PROTOCOL)
         self.proc.stdin.close()
+# TODO: put timeout in accept() to avoid this hack.
         time.sleep(1)  # Give the proc time to register startup problems.
         self.poll()
         if self.state != 'failed':

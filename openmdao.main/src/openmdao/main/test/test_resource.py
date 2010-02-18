@@ -74,6 +74,12 @@ class TestCase(unittest.TestCase):
         else:
             self.assertEqual(len(self.cluster), len(self.machines))
 
+        n_servers = self.cluster.max_servers({'python_version':sys.version[:3]})
+        self.assertEqual(n_servers, len(self.cluster))
+
+        n_servers = self.cluster.max_servers({'python_version':'bad-version'})
+        self.assertEqual(n_servers, 0)
+
     def test_bad_host(self):
         logging.debug('')
         logging.debug('test_bad_host')
