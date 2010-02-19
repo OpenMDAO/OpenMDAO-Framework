@@ -120,6 +120,10 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_concurrent')
 
+        # Ensure we aren't held up by local host load problems.
+        local = ResourceAllocationManager.get_allocator(0)
+        local.max_load = 10
+
         if sys.platform != 'win32':
             # ssh server not typically available on Windows.
             machines = []

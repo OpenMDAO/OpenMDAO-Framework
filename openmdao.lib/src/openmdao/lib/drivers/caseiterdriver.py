@@ -28,7 +28,9 @@ class ServerError(Exception):
 class CaseIteratorDriver(Driver):
     """
     Run a set of cases provided by an :class:`ICaseIterator` in a manner similar
-    to the ROSE framework.
+    to the ROSE framework. Concurrent evaluation is supported, with the various
+    evaluations executed across servers obtained from the
+    :class:`ResourceAllocationManager`.
 
     - The `iterator` socket provides the cases to be evaluated.
     - The `model` socket provides the model to be executed.
@@ -40,6 +42,7 @@ class CaseIteratorDriver(Driver):
     .. parsed-literal::
 
         TODO: define interface for 'recorder'.
+        TODO: support stepping and resuming execution.
         TODO: improve response to a stop request.
 
     """
@@ -281,12 +284,11 @@ class CaseIteratorDriver(Driver):
 
         request_queue = Queue.Queue()
 
-        self._server_lock.acquire()
-        self._servers[name] = server
-        self._server_info[name] = server_info
-        self._queues[name] = request_queue
-        self._in_use[name] = False
-        self._server_lock.release()
+        with self._server_lock:
+            self._servers[name] = server
+            self._server_info[name] = server_info
+            self._queues[name] = request_queue
+            self._in_use[name] = False
 
         self._reply_queue.put((name, True))  # ACK startup.
 

@@ -3,6 +3,7 @@ Test saving and loading of simulations as eggs.
 """
 
 import cPickle
+import glob
 import logging
 import os.path
 import pkg_resources
@@ -21,7 +22,7 @@ from openmdao.main.filevar import FileMetadata, FileTrait
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
-from openmdao.util.testutil import find_python
+from openmdao.util.testutil import find_python, make_protected_dir
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
@@ -40,6 +41,15 @@ PY_DIR = pkg_resources.resource_filename('openmdao.main', 'test')
 
 # Observations made by observer().
 OBSERVATIONS = []
+
+# Version counter to ensure we know which egg we're dealing with.
+EGG_VERSION = 0
+
+def next_egg():
+    """ Return next egg version. """
+    global EGG_VERSION
+    EGG_VERSION += 1
+    return str(EGG_VERSION)
 
 
 class Source(Assembly):
@@ -287,8 +297,8 @@ class TestCase(unittest.TestCase):
         """ Called after each test in this class. """
         self.model.pre_delete()  # Paranoia.  Only needed by NPSS I think.
         self.model = None
-        if self.egg_name and os.path.exists(self.egg_name):
-            os.remove(self.egg_name)
+        for path in glob.glob('Egg_TestModel*.egg'):
+            os.remove(path)
         if os.path.exists('Egg'):
             shutil.rmtree('Egg')
 
@@ -320,10 +330,12 @@ class TestCase(unittest.TestCase):
         # Save to egg.
         global OBSERVATIONS
         OBSERVATIONS = []
-        egg_info = self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
-                                          fmt=fmt, child_objs=self.child_objs,
+        python = find_python()
+        egg_info = self.model.save_to_egg(self.model.name, next_egg(),
+                                          py_dir=PY_DIR, fmt=fmt,
+                                          child_objs=self.child_objs,
                                           use_setuptools=use_setuptools,
-                                          observer=observer)
+                                          observer=observer, python=python)
         self.egg_name = egg_info[0]
 
         # Check observations.
@@ -514,7 +526,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_save_bad_name')
         try:
-            self.model.save_to_egg('#%^&', '0', py_dir=PY_DIR)
+            self.model.save_to_egg('#%^&', next_egg(), py_dir=PY_DIR)
         except ValueError, exc:
             msg = 'Egg_TestModel: Egg name must be alphanumeric'
             self.assertEqual(str(exc), msg)
@@ -539,7 +551,7 @@ class TestCase(unittest.TestCase):
         # Set subcomponent directory outside model root.
         self.model.Oddball.directory = os.getcwd()
         try:
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
         except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Oddball.oddcomp" \
                   " directory"
@@ -550,17 +562,23 @@ class TestCase(unittest.TestCase):
     def test_save_bad_destination(self):
         logging.debug('')
         logging.debug('test_save_bad_destination')
+
+# TODO: get make_protected_dir() to work on Windows.
+        if sys.platform == 'win32':
+            return
+
+        directory = make_protected_dir()
         try:
             # Attempt to save to directory we aren't allowed to write to.
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
-                                   dst_dir='/')
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR,
+                                   dst_dir=directory)
         except IOError, exc:
-            #msg = "Egg_TestModel: Can't save to '/', no write permission"
-            #self.assertEqual(str(exc), msg)
             self.assertTrue('no write permission' in str(exc) or 
                             'Permission denied' in str(exc))
         else:
             self.fail('Expected IOError')
+        finally:
+            os.rmdir(directory)
 
     def test_save_bad_external(self):
         logging.debug('')
@@ -573,7 +591,7 @@ class TestCase(unittest.TestCase):
         metadata = self.model.Source.external_files[0]
         metadata.path = path
         try:
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
         except Exception, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source file"
             self.assertEqual(str(exc)[:len(msg)], msg)
@@ -593,7 +611,7 @@ class TestCase(unittest.TestCase):
         metadata = self.model.Source.external_files[0]
         metadata.path = path
         try:
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR,
                                    require_relpaths=False)
         finally:
             os.remove(path)
@@ -605,7 +623,7 @@ class TestCase(unittest.TestCase):
         # Set file trait path outside model root.
         self.model.Source.text_file.path = '/illegal'
         try:
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
         except ValueError, exc:
             msg = "Egg_TestModel: Can't save, Egg_TestModel.Source.text_file" \
                   " path"
@@ -618,7 +636,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_bad_format')
         try:
             # Attempt to save in unknown format.
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR,
                                    fmt='unknown')
         except RuntimeError, exc:
             self.assertEqual(str(exc),
@@ -633,7 +651,7 @@ class TestCase(unittest.TestCase):
         # Set reference to unpickleable function.
         self.model.Oddball.function_socket = observer
         try:
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
         except RuntimeError, exc:
             msg = "Egg_TestModel: Can't save: reference to function defined" \
                   " in main module"
@@ -649,7 +667,7 @@ class TestCase(unittest.TestCase):
         # Set reference to unpickleable static method.
         self.model.Oddball.method_socket = self.model.Oddball.static_method
         try:
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR)
         except RuntimeError, exc:
             msg = "Egg_TestModel: Can't save, 1 object cannot be pickled."
             self.assertEqual(str(exc), msg)
@@ -676,7 +694,8 @@ class TestCase(unittest.TestCase):
         try:
             try:
                 # This will fail due to code object.
-                self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR)
+                self.model.save_to_egg(self.model.name, next_egg(),
+                                       py_dir=PY_DIR)
             except cPickle.PicklingError, exc:
                 msg = "Egg_TestModel: Can't save to" \
                       " 'Egg_TestModel/Egg_TestModel.pickle': Can't pickle" \
@@ -700,7 +719,7 @@ class TestCase(unittest.TestCase):
         orphan = Component()
         try:
             # Try to include orphan as an entry point in egg.
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR,
                                    child_objs=[orphan])
         except RuntimeError, exc:
             self.assertEqual(str(exc), 'Entry point object has no parent!')
@@ -711,7 +730,7 @@ class TestCase(unittest.TestCase):
         badboy = orphan.add_container('badboy', Component())
         try:
             # Try to include non-member component as an entry point in egg.
-            self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+            self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR,
                                    child_objs=[badboy])
         except RuntimeError, exc:
             msg = 'Egg_TestModel: badboy is not a child of' \
@@ -725,8 +744,8 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_load_container')
 
         # Save to egg.
-        egg_info = self.model.Source.sub.save_to_egg(self.model.name, '0',
-                                                     py_dir=PY_DIR)
+        egg_info = self.model.Source.sub.save_to_egg(self.model.name,
+                                                     next_egg(), py_dir=PY_DIR)
         self.egg_name = egg_info[0]
 
         # Restore in test directory.
@@ -797,7 +816,8 @@ class TestCase(unittest.TestCase):
         logging.debug('    Using python: %s' % python)
 
         # Write to egg.
-        egg_info = self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+        egg_info = self.model.save_to_egg(self.model.name, next_egg(),
+                                          py_dir=PY_DIR,
                                           child_objs=self.child_objs)
         self.egg_name = egg_info[0]
 
@@ -935,7 +955,8 @@ comp.run()
         logging.debug('test_pkg_resources_factory')
 
         # Write to egg.
-        egg_info = self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
+        egg_info = self.model.save_to_egg(self.model.name, next_egg(),
+                                          py_dir=PY_DIR,
                                           child_objs=self.child_objs)
         self.egg_name = egg_info[0]
 

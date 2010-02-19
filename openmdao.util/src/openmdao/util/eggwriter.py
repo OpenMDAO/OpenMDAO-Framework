@@ -206,7 +206,8 @@ def _write_file(egg, path, observer, stats):
 
 
 def write_via_setuptools(name, version, doc, entry_map, src_files,
-                         distributions, modules, dst_dir, logger, observer):
+                         distributions, modules, dst_dir, logger, observer,
+                         python='python'):
     """ Write an egg via :mod:`setuptools`. Returns the egg's filename. """ 
     observer = eggobserver.EggObserver(observer, logger)
     egg_name = egg_filename(name, version)
@@ -220,7 +221,8 @@ def write_via_setuptools(name, version, doc, entry_map, src_files,
     # Use environment since 'python' might not recognize '-u'.
     env = os.environ.copy()
     env['PYTHONUNBUFFERED'] = '1'
-    proc = subprocess.Popen([sys.executable, 'setup.py', 'bdist_egg', '-d', dst_dir],
+    logger.debug('using %s', python)
+    proc = subprocess.Popen([python, 'setup.py', 'bdist_egg', '-d', dst_dir],
                             env=env, stdout=subprocess.PIPE,
                             stderr=subprocess.STDOUT)
     output = []
