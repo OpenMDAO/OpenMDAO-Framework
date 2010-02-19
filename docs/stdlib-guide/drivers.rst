@@ -18,7 +18,7 @@ minimization problems may also be solved, and the conjugate direction method
 of Fletcher and Reeves is used for this purpose.
 
 More information on CONMIN can be found in the `CONMIN User's Manual
-<file:../../../../contrib/conmin/CONMIN_user_manual.html>`_.
+<file:manuals/CONMIN_user_manual.html>`_.
 
 CONMIN has been included in the OpenMDAO standard library to provide users
 with a basic gradient-based optimization algorithm.
