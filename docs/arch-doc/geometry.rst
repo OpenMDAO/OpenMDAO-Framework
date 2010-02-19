@@ -151,7 +151,7 @@ for this has been worked out. The user must also be able to view the
 feature tree to choose parameters as design variables.
 
 *Python Component Level*
-____________________--__
+________________________
 
 At a lower level, the geometry manipulation component needs a set of functions
 to interact with the geometry object, making the above interface possible at 
