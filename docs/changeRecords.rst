@@ -39,7 +39,10 @@ Updates 09/30/08
 Changes to the User Guide
 =========================
 
+Updates 02/11/10
 
+	- Added new section on geometry
+	
 Updates 10/09
         - Added simple example problem
         - Added overview of the OpenMDAO framework
