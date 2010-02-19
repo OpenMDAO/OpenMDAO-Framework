@@ -1,3 +1,8 @@
+"""
+Based on the standard :mod:`multiprocessing.managers`.
+It contains minor fixes required to support OpenMDAO resource allocation.
+"""
+
 #
 # Module providing the `SyncManager` class for dealing
 # with shared objects

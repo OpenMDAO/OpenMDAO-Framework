@@ -21,7 +21,7 @@ from openmdao.main.filevar import FileMetadata, FileTrait
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
-from openmdao.util.testutil import find_python
+from openmdao.util.testutil import find_python, make_protected_dir
 
 # pylint: disable-msg=E1101,E1103
 # "Instance of <class> has no <attr> member"
@@ -550,17 +550,23 @@ class TestCase(unittest.TestCase):
     def test_save_bad_destination(self):
         logging.debug('')
         logging.debug('test_save_bad_destination')
+
+# TODO: get make_protected_dir() to work on Windows.
+        if sys.platform == 'win32':
+            return
+
+        directory = make_protected_dir()
         try:
             # Attempt to save to directory we aren't allowed to write to.
             self.model.save_to_egg(self.model.name, '0', py_dir=PY_DIR,
-                                   dst_dir='/')
+                                   dst_dir=directory)
         except IOError, exc:
-            #msg = "Egg_TestModel: Can't save to '/', no write permission"
-            #self.assertEqual(str(exc), msg)
             self.assertTrue('no write permission' in str(exc) or 
                             'Permission denied' in str(exc))
         else:
             self.fail('Expected IOError')
+        finally:
+            os.rmdir(directory)
 
     def test_save_bad_external(self):
         logging.debug('')

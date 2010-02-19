@@ -1,6 +1,6 @@
 """
-Based on the 'distributing.py' file example which was (temporarily) posted
-with the multiprocessing module documentation.
+This module is based on the 'distributing.py' file example which was
+(temporarily) posted with the multiprocessing module documentation.
 """
 
 #
@@ -16,6 +16,7 @@ import copy
 import itertools
 import logging
 import os
+import Queue
 import shutil
 import socket
 import subprocess
@@ -32,8 +33,11 @@ except ImportError:
 
 from multiprocessing import Process, current_process
 from multiprocessing import util, connection, forking
+
 #from multiprocessing import managers
 import openmdao.main.mp_managers as managers
+
+from openmdao.util.wrkpool import WorkerPool
 
 __all__ = ['Cluster', 'Host', 'current_process']
 
@@ -49,6 +53,12 @@ else:
 #util.log_to_stderr(logging.DEBUG)
 #_LOGGER = util.get_logger()
 _LOGGER = logging.getLogger('mp_distributing')
+
+def _flush_logger():
+    """ Flush all handlers for _LOGGER """
+    return
+    for handler in _LOGGER.handlers:
+        handler.flush()
 
 
 class HostManager(managers.SyncManager):
@@ -135,10 +145,9 @@ HostManager.register('_RemoteProcess', RemoteProcess)
 
 class Cluster(managers.SyncManager):
     """
-    Represents collection of hosts.
-
-    `Cluster` is a subclass of `SyncManager` so it allows creation of
-    various types of shared objects.
+    Represents a collection of hosts. :class:`Cluster` is a subclass
+    of :class:`SyncManager` so it allows creation of various types of
+    shared objects.
     """
 
     def __init__(self, hostlist, modules):
@@ -152,6 +161,8 @@ class Cluster(managers.SyncManager):
             if filename.endswith(('.pyc', '.pyo')):
                 files[i] = filename[:-1]
         self._files = [os.path.abspath(filename) for filename in files]
+        self._reply_q = Queue.Queue()
+
 
     def start(self):
         """ Start this manager and all remote managers. """
@@ -171,13 +182,16 @@ class Cluster(managers.SyncManager):
         starter.start()
 
         # Accept callback connections from started managers.
-        more_to_go = 1
+        waiting = ['']
         retry = 0
-        while more_to_go:
-            more_to_go = 0
+        while waiting:
             host_processed = False
             for host in self._hostlist:
+                host.poll()
                 if host.state == 'started':
+                    # Accept conection from *any* host.
+                    _LOGGER.debug('waiting for a connection, host %s',
+                                  host.hostname)
                     conn = listener.accept()
                     i, address = conn.recv()
                     conn.close()
@@ -188,16 +202,25 @@ class Cluster(managers.SyncManager):
                     other_host.state = 'up'
                     host_processed = True
                     _LOGGER.debug('Host %s is now up', other_host.hostname)
-                elif host.state == 'init':
-                    more_to_go += 1
-            if more_to_go:
+
+            # See if there are still hosts to wait for.
+            waiting = []
+            for host in self._hostlist:
+                host.poll()
+                if host.state == 'init' or host.state == 'started':
+                    waiting.append(host)
+            if waiting:
                 if not host_processed:
                     retry += 1
-                    if retry < 300:  # ~30 seconds.
+                    if retry < 600:  # ~60 seconds.
                         time.sleep(0.1)
                     else:
-                        _LOGGER.error('Cluster startup timeout,'
-                                      ' %d hosts never started', more_to_go)
+                        _LOGGER.warning('Cluster startup timeout,'
+                                        ' hosts not started:')
+                        for host in waiting:
+                            _LOGGER.warning('    %s (%s) in %s', host.hostname,
+                                            host.state, host.tempdir)
+                        break
             else:
                 break
 
@@ -209,8 +232,45 @@ class Cluster(managers.SyncManager):
 
     def _start_hosts(self, address):
         """ Start host managers. """
+        # Start first set of hosts.
+        todo = []
+        max_workers = 5  # Somewhat related to listener backlog.
         for i, host in enumerate(self._hostlist):
+            if i < max_workers:
+                worker_q = WorkerPool.get()
+                _LOGGER.info('Starting host %s...', host.hostname)
+                worker_q.put((self._start_manager, (host, i, address), {},
+                              self._reply_q))
+            else:
+                todo.append(host)
+
+        # Wait for worker, start next host.
+        for i in range(len(self._hostlist)):
+            worker_q, host, exc, trace = self._reply_q.get()
+            if exc:
+                _LOGGER.error(trace)
+                raise exc
+
+            _LOGGER.debug('Host %s state %s', host.hostname, host.state)
+            try:
+                next_host = todo.pop(0)
+            except IndexError:
+                WorkerPool.release(worker_q)
+            else:
+                _LOGGER.info('Starting host %s...', next_host.hostname)
+                worker_q.put((self._start_manager,
+                              (next_host, i+max_workers, address), {},
+                              self._reply_q))
+
+    def _start_manager(self, host, i, address):
+        """ Start one host manager. """
+        try:
             host.start_manager(i, self._authkey, address, self._files)
+        except Exception, exc:
+            msg = '%s\n%s' % (exc, traceback.format_exc())
+            _LOGGER.error('starter for %s caught exception %s',
+                          host.hostname, msg)
+        return host
 
     def shutdown(self):
         """ Shut down all remote managers and then this one. """
@@ -222,6 +282,7 @@ class Cluster(managers.SyncManager):
 
     def Process(self, group=None, target=None, name=None,
                 args=None, kwargs=None):
+        """ Return a :class:`Process` object associated with a host.  """
         args = args or ()
         kwargs = kwargs or {}
         slot = self._slot_iterator.next()
@@ -250,10 +311,10 @@ class Slot(object):
 class Host(object):
     """
     Represents a host to use as a node in a cluster.
-
-    `hostname` gives the name of the host.  ssh is used to log in to the host.
-    To log in as a different user use a host name of the form
-    "username@somewhere.org".
+    `hostname` gives the name of the host.
+    `python` is the path the the Python command to be used on `hostname`.
+    ssh is used to log in to the host. To log in as a different user use
+    a host name of the form: "username@somewhere.org".
     """
 
     def __init__(self, hostname, python=None):
@@ -269,6 +330,8 @@ class Host(object):
         self.python = python or 'python'
         self.registry = {}
         self.state = 'init'
+        self.proc = None
+        self.tempdir = None
 
     def register(self, typeid, callable=None, method_to_typeid=None):
         """ Register proxy info to be sent to remote process. """
@@ -288,22 +351,42 @@ class Host(object):
             self.state = 'failed'
             return
 
-        tempdir = copy_to_remote(self.hostname, files)
-        _LOGGER.debug('startup files copied to %s:%s', self.hostname, tempdir)
+        self.tempdir = copy_to_remote(self.hostname, files)
+        _LOGGER.debug('startup files copied to %s:%s',
+                      self.hostname, self.tempdir)
         cmd = copy.copy(_SSH)
         cmd.extend([self.hostname, self.python, '-c',
-            '"import sys; sys.path.append(\'.\'); import os; os.chdir(\'%s\'); from mp_distributing import main; main()"' % tempdir])
-        proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+            '"import sys; sys.path.append(\'.\'); import os; os.chdir(\'%s\'); from mp_distributing import main; main()"' % self.tempdir])
+        self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                                     stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE)
         data = dict(
             name='BoostrappingHost', index=index,
             dist_log_level=_LOGGER.getEffectiveLevel(),
-            dir=tempdir, authkey=str(authkey), parent_address=address,
+            dir=self.tempdir, authkey=str(authkey), parent_address=address,
             registry=self.registry
             )
-        pickle.dump(data, proc.stdin, pickle.HIGHEST_PROTOCOL)
-        proc.stdin.close()
-        self.state = 'started'
+        pickle.dump(data, self.proc.stdin, pickle.HIGHEST_PROTOCOL)
+        self.proc.stdin.close()
+# TODO: put timeout in accept() to avoid this hack.
+        time.sleep(1)  # Give the proc time to register startup problems.
+        self.poll()
+        if self.state != 'failed':
+            self.state = 'started'
+
+    def poll(self):
+        """ Poll for process status. """
+#        _LOGGER.debug('polling %s', self.hostname)
+        if self.proc is not None and self.state != 'failed':
+            self.proc.poll()
+            if self.proc.returncode is not None:
+                _LOGGER.error('Host %s in %s exited, returncode %s',
+                              self.hostname, self.tempdir, self.proc.returncode)
+                for line in self.proc.stdout:
+                    _LOGGER.error('>    %s', line.rstrip())
+                for line in self.proc.stderr:
+                    _LOGGER.error('>>    %s', line.rstrip())
+                self.state = 'failed'
 
 
 def check_ssh(hostname):
