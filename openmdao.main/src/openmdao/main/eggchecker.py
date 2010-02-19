@@ -49,10 +49,9 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
         env['OPENMDAO_INSTALL'] = '0'
         if logfile:
             stdout = open(logfile, 'w')
-            stderr = subprocess.STDOUT
         else:
             stdout = None
-            stderr = None
+        stderr = subprocess.STDOUT
 
         python = find_python()  # Returns just 'python' if no buildout.
         print '    python:', python
