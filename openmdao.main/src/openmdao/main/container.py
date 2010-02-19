@@ -891,7 +891,7 @@ class Container(HasTraits):
     def save_to_egg(self, name, version, py_dir=None, src_dir=None,
                     src_files=None, child_objs=None, dst_dir=None,
                     fmt=SAVE_CPICKLE, proto=-1, use_setuptools=False,
-                    observer=None):
+                    observer=None, python='python'):
         """Save state and other files to an egg.  Typically used to copy all or
         part of a simulation to another user or machine.  By specifying child
         containers in `child_objs`, it will be possible to create instances of
@@ -908,6 +908,7 @@ class Container(HasTraits):
         - `fmt` and `proto` are passed to eggsaver.save().
         - 'use_setuptools` is passed to eggsaver.save_to_egg().
         - `observer` will be called via an EggObserver.
+        - `python` is the interpreter to use if using setuptools.
 
         After collecting entry point information, calls eggsaver.save_to_egg().
         Returns (egg_filename, required_distributions, orphan_modules).
@@ -945,7 +946,8 @@ class Container(HasTraits):
             return eggsaver.save_to_egg(entry_pts, version, py_dir,
                                         src_dir, src_files, dst_dir,
                                         fmt, proto, self._logger,
-                                        use_setuptools, observer.observer)
+                                        use_setuptools, observer.observer,
+                                        python)
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
         finally:

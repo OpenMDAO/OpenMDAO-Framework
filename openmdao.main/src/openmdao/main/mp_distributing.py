@@ -56,6 +56,7 @@ _LOGGER = logging.getLogger('mp_distributing')
 
 def _flush_logger():
     """ Flush all handlers for _LOGGER """
+# Is this helpful on any platform?
     return
     for handler in _LOGGER.handlers:
         handler.flush()
@@ -356,7 +357,12 @@ class Host(object):
                       self.hostname, self.tempdir)
         cmd = copy.copy(_SSH)
         cmd.extend([self.hostname, self.python, '-c',
-            '"import sys; sys.path.append(\'.\'); import os; os.chdir(\'%s\'); from mp_distributing import main; main()"' % self.tempdir])
+                   '"import sys;'
+                   ' sys.path.append(\'.\');'
+                   ' import os;'
+                   ' os.chdir(\'%s\');'
+                   ' from mp_distributing import main;'
+                   ' main()"' % self.tempdir])
         self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                      stdout=subprocess.PIPE,
                                      stderr=subprocess.PIPE)

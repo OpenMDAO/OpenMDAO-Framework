@@ -6,7 +6,6 @@ Support for allocation of servers from one or more resources
 import logging
 import multiprocessing
 import os
-import platform
 import Queue
 import sys
 import threading
@@ -38,9 +37,14 @@ class ResourceAllocationManager(object):
         self._alloc_index = 0
         self._allocators.append(LocalAllocator())
 
+    def __getitem__(self, i):
+        return self._allocators[i]
+
     def __iter__(self):
-        """ Return an iterator over the allocators. """
-        return RAMIterator(self._allocators)
+        return iter(self._allocators)
+
+    def __len__(self):
+        return len(self._allocators)
 
     @staticmethod
     def get_instance():
@@ -72,7 +76,7 @@ class ResourceAllocationManager(object):
             return ram._allocators[index]
 
     @staticmethod
-    def max_servers(resource_dsc):
+    def max_servers(resource_desc):
         """
         Returns the maximum number of servers compatible with 'resource_desc`.
         This shouyld be considered an upper limit on the number of concurrent
@@ -173,25 +177,10 @@ class ResourceAllocationManager(object):
                 ram._logger.warning('caught exception during cleanup of %s: %s',
                                     name, trace)
             except Exception:
-                print >>sys.stderr, \
+                print >> sys.stderr, \
                       'RAM: caught exception logging cleanup of %s: %s', \
                       name, trace
         del server
-
-
-class RAMIterator(object):
-    """ Iterates over the manager's allocators. """
-
-    def __init__(self, allocators):
-        self._allocators = []
-        self._allocators.extend(allocators)
-
-    def __iter__(self):
-        return self._next_allocator()
-
-    def _next_allocator(self):
-        while self._allocators:
-            yield self._allocators.pop(0)
 
 
 class ResourceAllocator(ObjServerFactory):
@@ -264,7 +253,7 @@ class ResourceAllocator(ObjServerFactory):
             return (-2, {'orphan_modules' : not_found})
         return (0, None)
 
-    def deploy(self, resource_desc, criteria):
+    def deploy(self, name, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
         `criteria` is the dictionary returned by :meth:`rate_resource`.
@@ -464,8 +453,13 @@ class ClusterAllocator(object):
                 self._logger.debug('LocalAllocator for %s at %s',
                                    slot.host.hostname, host_id)
 
+    def __getitem__(self, i):
+        return self._allocators[i]
+
+    def __iter__(self):
+        return iter(self._allocators)
+
     def __len__(self):
-        """ Length of cluster is the number of allocators. """
         return len(self._allocators)
 
     def max_servers(self, resource_desc):
