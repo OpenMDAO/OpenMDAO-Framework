@@ -1,10 +1,3 @@
-"""
-An :class:`ObjServerFactory` creates :class:`ObjServers` which use
-:mod:`multiprocessing` for communication.  Note that :mod:`multiprocessing`
-is not a transparent distributed object protocol.  See the Python
-documentation for details.
-"""
-
 import logging
 import os.path
 import platform
@@ -20,17 +13,23 @@ __all__ = ('ObjServerFactory', 'ObjServer')
 
 
 class ObjServerFactory(Factory):
-    """ Creates :class:`ObjServer`. """
+    """
+    An :class:`ObjServerFactory` creates :class:`ObjServers` which use
+    :mod:`multiprocessing` for communication.  Note that :mod:`multiprocessing`
+    is not a transparent distributed object protocol.  See the Python
+    documentation for details.
+    """
 
     def __init__(self):
         super(ObjServerFactory, self).__init__()
 
-    def create(self, typname, name='', version=None, server=None, 
+    def create(self, typname, version=None, server=None,
                res_desc=None, **ctor_args):
-        """ Create :class:`ObjServer` for `name` and return proxy. """
+        """ Create an :class:`ObjServer` and return a proxy for it. """
         manager = managers.BaseManager()
         ObjServer.register(manager)
         manager.start()
+        name = ctor_args.get('name', '')
         logging.debug("ObjServerFactory: new server for '%s' listening on %s",
                       name, manager.address)
         return manager.ObjServer(name=name, host=platform.node())

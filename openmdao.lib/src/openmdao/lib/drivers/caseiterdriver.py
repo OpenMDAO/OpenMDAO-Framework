@@ -28,7 +28,9 @@ class ServerError(Exception):
 class CaseIteratorDriver(Driver):
     """
     Run a set of cases provided by an :class:`ICaseIterator` in a manner similar
-    to the ROSE framework.
+    to the ROSE framework. Concurrent evaluation is supported, with the various
+    evaluations executed across servers obtained from the
+    :class:`ResourceAllocationManager`.
 
     - The `iterator` socket provides the cases to be evaluated.
     - The `model` socket provides the model to be executed.
@@ -40,6 +42,7 @@ class CaseIteratorDriver(Driver):
     .. parsed-literal::
 
         TODO: define interface for 'recorder'.
+        TODO: support stepping and resuming execution.
         TODO: improve response to a stop request.
 
     """
