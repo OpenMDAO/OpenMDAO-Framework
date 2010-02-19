@@ -4,6 +4,7 @@ Test resource allocation.
 
 import glob
 import logging
+import multiprocessing
 import os
 import platform
 import shutil
@@ -75,7 +76,11 @@ class TestCase(unittest.TestCase):
             self.assertEqual(len(self.cluster), len(self.machines))
 
         n_servers = self.cluster.max_servers({'python_version':sys.version[:3]})
-        self.assertEqual(n_servers, len(self.cluster))
+        try:
+            n_cpus = multiprocessing.cpu_count()
+        except AttributeError:
+            n_cpus = 1
+        self.assertEqual(n_servers, len(self.cluster)*n_cpus)
 
         n_servers = self.cluster.max_servers({'python_version':'bad-version'})
         self.assertEqual(n_servers, 0)
