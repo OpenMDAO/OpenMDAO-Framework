@@ -17,8 +17,8 @@ efficient solution of constrained problems, unconstrained function
 minimization problems may also be solved, and the conjugate direction method
 of Fletcher and Reeves is used for this purpose.
 
-More information on CONMIN can be found in the `CONMIN User's Manual
-<file:manuals/CONMIN_user_manual.html>`_.
+More information on CONMIN can be found in `The CONMIN User's Manual
+<file:../../../plugin-guide/CONMIN_user_manual.html>`_.
 
 CONMIN has been included in the OpenMDAO standard library to provide users
 with a basic gradient-based optimization algorithm.
@@ -283,7 +283,7 @@ iprint = 101  All of above plus a dump of the arguments passed to
 ~~~~~~~~~~~~~~~~~~
 The following options exercise some of the more advanced capabilities of CONMIN.
 The details given here briefly summarize the effects of these parameters; more
-info is available in the `CONMIN User's Manual <file:../../../../contrib/conmin/CONMIN_user_manual.html>`_.
+info is available in the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_.
 
 
 **icndir** -- Conjugate direction restart parameter. For an unconstrained problem
