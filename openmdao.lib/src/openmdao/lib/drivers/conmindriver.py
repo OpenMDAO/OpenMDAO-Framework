@@ -268,8 +268,6 @@ class CONMINdriver(Driver):
             if self._stop:
                 self.raise_exception('Stop requested', RunStopped)
 
-            self.iter_count += 1 
-                        
             # calculate objective
             try:
                 self.cnmn1.obj = numarray.array(self.objective.evaluate())
@@ -307,6 +305,11 @@ class CONMINdriver(Driver):
             # common blocks are saved before, and loaded after execution
             self._save_common_blocks()
             
+            # Iteration count comes from CONMIN. You can't just count over the
+            # loop because some cycles do other things (e.g., numerical
+            # gradient calculation)
+            self.iter_count = self.cnmn1.iter 
+                        
             # update the design variables in the model
             dvals = [float(val) for val in self.design_vals[:-2]]
             for var,val in zip(self.design_vars, dvals):

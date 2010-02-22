@@ -285,6 +285,24 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.top.comp.opt_objective, 
                                self.top.driver.objective.evaluate(), places=3)
 
+    def test_max_iteration(self):
+        
+        self.top.driver.objective = 'comp.result'
+        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
+                                             'comp.x[2]', 'comp.x[3]']
+        self.top.driver.lower_bounds = [-10, -10, -10, -10]
+        self.top.driver.upper_bounds = [99, 99, 99, 99]
+        self.top.driver.scal = [10.0, 10.0, 10.0, 10.0]
+        self.top.driver.nscal = -1
+        
+        self.top.driver.itmax = 2
+        
+        # pylint: disable-msg=C0301
+        self.top.run()
+        
+        # pylint: disable-msg=E1101
+        self.assertEqual(self.top.driver.iter_count,2)
+
         
 if __name__ == "__main__":
     unittest.main()
