@@ -178,7 +178,7 @@ to the value at the previous step. Note that dabfun has a hard-wired minimum of
 .. testcode:: CONMIN_show
 
         self.driver.dabfun = .001
-        self.driver.dabfun = .1
+        self.driver.delfun = .1
 
 All of these convergence checks are always active during optimization. The 
 tests are performed in the following sequence:
