@@ -29,7 +29,9 @@ The contents of this bundle are:
 |  `-- setup                 --> contains files needed to bootstrap the 
 |                                buildout environment
 `-- docs
-   `-- index.html            --> point your browser here to view OpenMDAO docs
+   `--_build
+      `-- html
+          `-- index.html     --> OpenMDAO html docs start here
 
 
 
@@ -37,9 +39,12 @@ GETTING STARTED
 ===============   
 
 To view the OpenMDAO docs (from the top of the untarred distribution), 
-open docs/index.html in your browser, for example:
+open docs/_build/html/index.html in your browser, for example:
 
-    firefox docs/index.html
+    firefox docs/_build/html/index.html
+    
+Once you've run the buildout, you can also access the docs by running
+buildout/bin/docs.
 
 
 To install and test OpenMDAO, follow these steps:
@@ -56,6 +61,8 @@ To install and test OpenMDAO, follow these steps:
 4. Test the installation.
      bin/test --all -v
      
+5. View the docs.
+     bin/docs
      
 After you've run bin/buildout (in step 3), the installed distributions will
 be found under the buildout/eggs directory. The OpenMDAO source
@@ -64,6 +71,7 @@ openmdao.main-0.1-py2.6.egg/openmdao/main directory.
 
 The source code for the engine design tutorial found in the User Guide
 can be found under 
-openmdao.examples.engine_design-0.1.0-py2.6-????.egg/openmdao/examples/engine_design, where ????? differs based on the platform you're using.
+openmdao.examples.engine_design-0.1.0-py2.6-????.egg/openmdao/examples/engine_design, 
+where ???? differs based on the platform you're using.
 
 

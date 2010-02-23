@@ -1,6 +1,6 @@
 
-Building a Plugin Using a Python Extension
-------------------------------------------
+Building a Plugin Containing a Python Extension
+-----------------------------------------------
 
 ::
 

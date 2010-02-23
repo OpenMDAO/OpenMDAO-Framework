@@ -1,7 +1,7 @@
 
 
-Building a Plugin Using a File Wrapper
---------------------------------------
+Building a Plugin Containing a File Wrapper
+-------------------------------------------
 
 ::
 

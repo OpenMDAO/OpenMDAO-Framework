@@ -11,6 +11,7 @@ import urllib2
 
 import zc.buildout
 import setuptools
+import pkg_resources
 
 from subprocess import Popen, PIPE, STDOUT
 
@@ -131,7 +132,7 @@ class Bundler(object):
                         f.write('%s\n' % proj)
                 f.write('\n\n')
             elif sect not in self.excludeparts:
-                f.write('\n[%s]\n' % sect)
+                f.write('\n\n[%s]\n' % sect)
                 f.write('recipe = %s\n\n' % opts['recipe'])
                 for opt, val in opts.items():
                     if opt not in boexcludes:
@@ -142,7 +143,7 @@ class Bundler(object):
                                     f.write('  %s\n' % line)
                         else:
                             f.write('%s = %s\n\n' % (opt, val))
-                    
+
 
     def _build_dev_eggs(self, startdir):
         """Build real eggs out of all of the develop eggs."""
@@ -156,7 +157,7 @@ class Bundler(object):
                 shutil.rmtree('build')
             
             pkgname = os.path.basename(degg)
-            build_type = 'sdist' if degg in self.src_dists else 'bdist_egg'
+            build_type = 'sdist' if pkgname in self.src_dists else 'bdist_egg'
             cmd = '%s setup.py %s -d %s' % (self.buildout['buildout']['executable'],
                                                   build_type, self.bundle_cache)
             p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
@@ -174,12 +175,15 @@ class Bundler(object):
                 raise RuntimeError("Must have a single match for distrib %s in cache but found %s" %
                                   (dist.project_name, matches))
                         
-    def _tarfile_name(self):
+    def _tarfile_name(self, has_extensions=True):
         """ Returns name of tar file to be created. """
-        return os.path.join(self.bundledir, '%s-bundle-%s-py%s.tar.gz' % 
+        pyver = 'py%s' % sys.version[:3]
+        if has_extensions:
+            pyver = pyver + '-%s' % pkg_resources.get_supported_platform()
+        return os.path.join(self.bundledir, '%s-bundle-%s-%s.tar.gz' % 
                                             (self.bundle_name,
                                              self.bundle_version,
-                                             sys.version[:3]))
+                                             pyver))
 
     def install(self):
         startdir = os.getcwd()
@@ -190,7 +194,7 @@ class Bundler(object):
         if os.path.exists(self.bundle_cache):
             shutil.rmtree(self.bundle_cache)
             
-        os.makedirs(os.path.join(self.bundledir, 'buildout', 'eggs'))            
+        os.makedirs(os.path.join(self.bundledir, 'buildout', 'eggs'))
         os.makedirs(self.bundle_cache)
         
         try:
@@ -234,9 +238,10 @@ class Bundler(object):
                 self._check_url(link)
 
         failed_downloads = 0
-        bundle_env = Environment([self.bundle_cache])
+        devs = set([os.path.basename(x) for x in self.develop])
         for dist in self.dists:
-            if dist.project_name in bundle_env:
+            rep = dist.project_name.replace('-','_')
+            if rep in devs: # skip develop eggs we've already included
                 continue
             self.logger.info('processing %s...', dist.as_requirement())
             newloc = os.path.join(eggdir, os.path.basename(dist.location))
