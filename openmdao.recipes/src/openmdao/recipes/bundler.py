@@ -2,16 +2,16 @@
 import os
 import sys
 import shutil
-from pkg_resources import Environment, WorkingSet, Requirement
-from setuptools.package_index import PackageIndex
+from distutils.util import get_platform
 import tarfile
 import logging
 import fnmatch
 import urllib2
 
+from pkg_resources import Environment, WorkingSet, Requirement, get_supported_platform
+from setuptools.package_index import PackageIndex
 import zc.buildout
 import setuptools
-import pkg_resources
 
 from subprocess import Popen, PIPE, STDOUT
 
@@ -179,7 +179,7 @@ class Bundler(object):
         """ Returns name of tar file to be created. """
         pyver = 'py%s' % sys.version[:3]
         if has_extensions:
-            pyver = pyver + '-%s' % pkg_resources.get_supported_platform()
+            pyver = pyver + '-%s' % get_supported_platform()
         return os.path.join(self.bundledir, '%s-bundle-%s-%s.tar.gz' % 
                                             (self.bundle_name,
                                              self.bundle_version,

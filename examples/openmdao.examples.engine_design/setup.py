@@ -1,8 +1,9 @@
 import os, sys
+import fnmatch
 
 # pylint: disable-msg=F0401
 
-#from setuptools import setup, find_packages
+from distutils.util import get_platform
 from setuptools import find_packages
 from numpy.distutils.core import setup
 from numpy.distutils.misc_util import Configuration
@@ -54,6 +55,9 @@ kwds = { 'name':'openmdao.examples.engine_design',
          'include_package_data': True,
          'test_suite':'nose.collector',
          'zip_safe': False,
+         'setup_requires': [
+             'numpy'
+             ],
          'install_requires':[
              'setuptools',
              'openmdao.lib',

@@ -23,8 +23,7 @@ The contents of this bundle are:
 |  |                             as well as locally built ones after the 
 |  |                             buildout has run
 |  |-- distrib-cache
-|  |   `-- dist              --> dependent distributions requiring local
-|  |                             compilation are found here
+|  |   `-- dist              --> dependent distributions are found here
 |  |-- isolated_bootstrap.py --> sets up the buildout environment
 |  `-- setup                 --> contains files needed to bootstrap the 
 |                                buildout environment
@@ -45,6 +44,11 @@ open docs/_build/html/index.html in your browser, for example:
     
 Once you've run the buildout, you can also access the docs by running
 buildout/bin/docs.
+
+Currently, you must have f2py installed on your system in order to
+build certain distributions in the bundle.  f2py is part
+of numpy.  If you don't already have it installed, you can find it
+at http://sourceforge.net/projects/numpy/files.
 
 
 To install and test OpenMDAO, follow these steps:
