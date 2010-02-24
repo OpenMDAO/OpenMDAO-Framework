@@ -14,6 +14,7 @@ $Id$
 
 import os, shutil, sys, tempfile #, urllib2
 import fnmatch
+from subprocess import check_call
 
 bodir = os.getcwd()
 setupdir = os.path.join(bodir,'setup')
@@ -67,14 +68,16 @@ else:
 
 cmd = "import sys; sys.path.insert(0,r'%s'); from setuptools.command.easy_install import main; main()" % os.path.join(bodir, 'setup', stoolsname)
 
-assert os.spawnle(
-    os.P_WAIT, sys.executable, quote (sys.executable),
-    '-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
-    quote (setupdir), 'zc.buildout',
-    dict(os.environ,
-         PYTHONPATH=setupdir
-         ),
-    ) == 0
+check_call([sys.executable, '-c', quote(cmd), '-H', 'None', '-f', setupdir, '-maqNxd',
+            quote(setupdir), 'zc.buildout'], env=dict(os.environ,PYTHONPATH=setupdir))
+#assert os.spawnle(
+    #os.P_WAIT, sys.executable, quote (sys.executable),
+    #'-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
+    #quote (setupdir), 'zc.buildout',
+    #dict(os.environ,
+         #PYTHONPATH=setupdir
+         #),
+    #) == 0
 
 ws  = pkg_resources.working_set
 dist = pkg_resources.Environment([setupdir]).best_match(

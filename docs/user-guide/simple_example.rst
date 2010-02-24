@@ -35,10 +35,19 @@ point. Finally, both the driver and the component are contained in an
 :term:`assembly` which maintains the connections between the driver and the
 component, and knows how to run the system.
 
-The Python code for this example problem can be found here:
+It is assumed that the user has some familiarity with Python and the basic concepts of object-oriented
+programming, and has either installed an official distribution bundle, or has access to the OpenMDAO
+source tree. The following instructions will help the user locate the directory containing the pieces
+needed for the model relative to the install directory:
+
+If you have a branch from the source repository:
 
 	``examples/openmdao.examples.simple/openmdao/examples/simple``
+	
+If you have a distribution bundle:
 
+	``buildout/eggs/openmdao.examples.simple-x.x.x-xxxxxx.egg/openmdao/examples/simple``
+	
 Building a Simple Component - Paraboloid
 -----------------------------------------
 

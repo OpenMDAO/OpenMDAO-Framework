@@ -390,10 +390,21 @@ its performance. These models have all been implemented as OpenMDAO components w
 section will examine these components.
 
 It is assumed that the user has some familiarity with Python and the basic concepts of object-oriented
-programming, and has access to the OpenMDAO source tree. From the top of the tree, the following directory
-contains the pieces needed for the model:
+programming, and has either installed an official distribution bundle, or has access to the OpenMDAO
+source tree. The following instructions will help the user locate the directory containing the pieces
+needed for the model relative to the install directory:
+
+If you have a branch from the source repository:
 
 	``examples/openmdao.examples.engine_design/openmdao/examples/engine_design``
+	
+If you have a distribution bundle:
+
+	``buildout/eggs/openmdao.examples.engine_design-x.x.x-xxxxxx.egg/openmdao/examples/engine_design``
+	
+where the x's denote the OpenMDAO version number, the Python version, and the Operating System
+description string. This will vary depending on your system and version, but there will only be
+one engine_design egg in your bundle.
 
 The three engine models have been implemented in transmission.py, engine.py, and chassis.py. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
