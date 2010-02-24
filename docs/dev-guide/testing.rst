@@ -373,7 +373,6 @@ The following output indicates a successful test:
 If any tests fail, they will also be noted in this summary, and specific tracebacks
 will be given for each failure earlier in the output.
 
-Ultimately, the document testing will become part of bin/test, but until it does
-keep using bin/testdocs.
+The document testing is also part of the full testing process, and is executed as part of the normal bin/test.
 
 

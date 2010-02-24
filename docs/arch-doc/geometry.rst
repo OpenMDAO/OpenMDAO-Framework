@@ -1,4 +1,4 @@
-.. index:: geometry_details
+.. index:: geometry interfaces
 
 Geometry Interfaces in OpenMDAO (Working Document)
 --------------------------------------------------
@@ -6,23 +6,25 @@ Geometry Interfaces in OpenMDAO (Working Document)
 .. figure:: ../images/arch-doc/top_level.png
    :align: center
 
-   An OpenMDAO process model that integrates CFD & FEM based on a common
+   An OpenMDAO process model that integrates :term:`CFD` & :term:`FEM` based on a common
    geometry model into an optimization problem
+
+.. index:: pair: geometry manipulation; interface
 
 Geometry Manipulation Interface
 ===============================
 
-OpenMDAO Level
-______________
+*OpenMDAO Level*
+________________
 
 **(Constructor)**
 
-The constructor, instantiates the geometry manipulator as an OpenMDAO
-component. There are several specific things that have to be done once this
-component is instantiated, but before it can be used in a process model:
+The constructor instantiates the geometry manipulator as an OpenMDAO
+component. Several specific things have to be done after this
+component is instantiated but before it can be used in a process model:
 
 * Instantiate the Geometry object
-* Connect to the modeller
+* Connect to the modeler
 * Load the geometry
 * Load the feature tree
 * Query for list of all available parameters and suppression states
@@ -31,11 +33,11 @@ component is instantiated, but before it can be used in a process model:
 
 **(Setting Parameters and Suppression States)**
 
-*Required in Tools/Geometry/Interaction/01 and Tools/Geometry/Interaction/02*
+*Needed for requirements: Tools/Geometry/Interaction/01 and Tools/Geometry/Interaction/02*
 
 Parameters are set the same way as any other OpenMDAO input variable. For
 example, consider a cylinder with two parameters: radius and height. If we 
-have a geometry manipulator called geo_manipulator, the geometry parameters
+have a geometry manipulator called *geo_manipulator,* the geometry parameters
 can be directly set:
 
 .. testsetup:: parameter_interface
@@ -92,11 +94,11 @@ to a model.
 	self.driver.lower_bounds = [3.0, 6.5]
 	self.driver.upper_bounds = [12, 25]
 
-Here, self is the top level assembly that contains an optimizer, the geometry
+Here, *self* is the top level assembly that contains an optimizer, the geometry
 manipulator, and some kind of process model such as the one pictured above.
 
 The suppression of features (suppression states) can also be treated the same way
-at the component level. Here, the Boolean variable fillet1 is set to False to
+at the component level. Here, the Boolean variable *fillet1* is set to *False* to
 suppress the feature fillet1.
 
 .. testcode:: parameter_interface
@@ -111,10 +113,10 @@ regeneration of the model.
 
 Note that if no parameters or suppression states change, there is no reason to 
 regenerate the geometry or to invalidate any reference to this geometry object,
-which would trigger the execution of any components that depend on it (meshers
+which would trigger the execution of any components that depend on it (meshers, 
 etc.) 
 
-Note also that if the geometry is capable of providing analytical sensitivies
+Note also that if the geometry is capable of providing analytical sensitivities
 to the parameters, then these would be calculated here.
 
 **save_to_egg()**
@@ -135,26 +137,26 @@ states, and tags, from a saved egg.
 
 **tag_node(node_label, tag_name, tag_description)**
 
-*Required in Tools/Geometry/Interaction/07*
+*Needed for the requirement: Tools/Geometry/Interaction/07*
 
 Associates a geometric entity with some metadata. This is useful for marking
-an entity for later use by an analysis tool (e.g. marking loads and boundary
+an entity for later use by an analysis tool (e.g., marking loads and boundary
 conditions.) The most straightforward way to implement the tags' storage would
-be to create each tag as an OpenMDAO variable, accessed via its tag_name.
+be to create each tag as an OpenMDAO variable, accessed via its **tag_name.**
 
 **(Visualization)**
 
 The requirements call for the ability to visualize the geometry. No interface
-for this has been worked out. The user also needs to be able to view the 
-feature tree, in order to choose parameters as design variables.
+for this has been worked out. The user must also be able to view the 
+feature tree to choose parameters as design variables.
 
-Python Component Level
-______________________
+*Python Component Level*
+________________________
 
 At a lower level, the geometry manipulation component needs a set of functions
 to interact with the geometry object, making the above interface possible at 
-the OpenMDAO level. These functions are used in the geometry manipulator, and
-will not be commonly seen or used by users who build or run models.
+the OpenMDAO level. These functions are used in the geometry manipulator and
+will not commonly be seen or used by users who build or run models.
 
 **status = initialize(modeler)**
 
@@ -165,7 +167,7 @@ that occurs.
 
 **load_model(filename)**
 
-Loads the geometry from *filename* into the model.
+Loads the geometry from **filename** into the model.
 
 **parameters = get_parameters()**
 
@@ -180,19 +182,19 @@ states in the model.
 **feature_tree = get_feature_tree()**
 
 Returns a data structure containing the feature tree. The format of this data
-structure is not currently known. This info can be used to give the component
+structure is not currently known. This information can be used to give the component
 user a way to "visualize" the parametric model. Note that technically the
-parameters and suppression_states can also be extracted from here instead of
+parameters and suppression states can also be extracted from here instead of
 using the given functions above.
 
 **set_parameter(id, value)**
 
-Sets a new value for a parameter in the model. Model must be rebuilt for the
+Sets a new value for a parameter in the model. The model must be rebuilt for the
 effect of the new parameter to be realized.
 
 **set_suppression_state(id, boolean)**
 
-Sets a new value for a suppression state in the model. Model must be rebuilt
+Sets a new value for a suppression state in the model. The model must be rebuilt
 for the effect of the new suppression state to be realized.
 
 **status = rebuild_model()**
@@ -202,20 +204,20 @@ status is returned that indicates whether the regeneration was successful.
 
 **terminate()**
 
-Shuts down the geometry modeler, and performs any necessary cleanup.
+Shuts down the geometry modeler and performs any necessary cleanup.
 
 The Geometry Object and its Query Interface
 ===========================================
 
-OpenMDAO provides query access at the Python component level to the geometry object.
+OpenMDAO provides query access to the geometry object at the Python component level.
 
 
-Topology Access
-_______________
+*Topology Access*
+_________________
 
-*Required in Tools/Geometry/Interaction/07*
+*Needed for requirement: Tools/Geometry/Interaction/07*
 
-Geometry access for query includes entity query and evalution, traversal of 
+Geometry access for query includes entity query and evaluation, traversal of 
 topology, and tag query.
 
 The following functions comprise traversal of the Boundary Representation topology.
@@ -226,12 +228,12 @@ Returns the (x,y,z) coordinate for a node in the volume.
 
 **(trange, nodes) = GetEdge(vol, edge)**
 
-Returns the nodes associated with an edge in a given volume. trange returns the
-parameterization t in terms of the original curve coordinate (t).
+Returns the nodes associated with an edge in a given volume. **trange** returns the
+parameterization *t* in terms of the original curve coordinate (*t*).
 
 **(urange, nloop, loops, edges) = GetFace(vol, face)**
 
-Returns the edges assocated with a face in a given volume. **nloop** is the
+Returns the edges associated with a face in a given volume. **nloop** is the
 number of loops, **loops** is the edge loop lengths, and **edges** contains
 the edge indices and orientation.
 
@@ -242,59 +244,59 @@ boundary name.
 
 **(nnode, nedge, nface, nbound, name) = GetVolume(vol)**
 
-Returns basic info for a volume, including its name, and the number of nodes,
+Returns basic information for a volume, including its name and the number of nodes,
 edges, faces, and boundaries that it includes.
 
 
-Mesh Generation
-_______________
+*Mesh Generation*
+_________________
 
-*Required in Tools/Geometry/Grid Generation/01*
+*Needed for requirement: Tools/Geometry/Grid Generation/01*
 
 **(point, d1, d2) = PointOnEdge(vol, edge, t, req_derivative)**
 
-Returns the cartesian coordinate of a point on an edge given the point's coordinate in
-the local (t) parameter space used to mesh the edge. First and second
-derivatives can also be returned if available using the req_derivative parameter
-(0 = no derivatives, 1 = 1st order, 2 = 2nd order.)
+Returns the Cartesian coordinate of a point on an edge given the point's coordinate in
+the local (**t**) parameter space used to mesh the edge. First and second
+derivatives can also be returned if available using the **req_derivative parameter**
+(0 = no derivatives, 1 = 1st order, 2 = 2nd order).
 
 **(point, du, dv, duu, duv, dvv) = PointOnFace(vol, face, uv, req_derivative)**
 
-Returns the cartesian coordinate of a point on a face given the point's coordinate in
-the local (u,v) parameter space used to mesh the face. First and second
-derivatives can also be returned if available using the req_derivative parameter
+Returns the Cartesian coordinate of a point on a face given the point's coordinate in
+the local (**u,v**) parameter space used to mesh the face. First and second
+derivatives can also be returned if available using the **req_derivative** parameter
 (0 = no derivatives, 1 = 1st order, 2 = 2nd order.)
 
 **(point_on_edge, t) = NearestOnEdge(vol, edge, coor, point, t_guess)**
 
 Returns the coordinate of the point on a given edge that lies the closest to the
-input point. Tge associated t parameter is also returned. Some kernels require
+input point. The associated **t** parameter is also returned. Some kernels require
 an initial guess in the form of a point on the edge that is nearby.
 
 **(point_on_face, uv) = NearestOnFace(vol, face, coor, point, uv_guess)**
 
 Returns the coordinate of the point on a given edge that lies the closest to the
-input point. Tge associated t parameter is also returned. Some kernels require
+input point. The associated **t** parameter is also returned. Some kernels require
 an initial guess in the form of a point on the face that is nearby.
 
 **status = InEdge(vol, edge, point)**
 
-Returns "True" if the given point lies on the edge.
+Returns *True* if the given point lies on the edge.
 
 **status = InFace(vol, face, point)**
 
-Returns "True" if the given point lies on the face.
+Returns *True* if the given point lies on the face.
 
 
-Measurements
-____________
+*Measurements*
+______________
 
-*All Required in Tools/Geometry/Interaction/08*
+*Needed for all requirements in: Tools/Geometry/Interaction/08*
 
 **(length) = LengthOfEdge(vol, edge, t1, t2)**
 
-Returns the arc length for an edge. Parameters t1 and t2 can be used to return
-the length of a subsection of the edge.
+Returns the arc length for an edge. Parameters **t1** and **t2** can be used to
+return the length of a subsection of the edge.
 
 **(arc_length, centroid, bounding_box) = EdgeProperties(vol, edge)**
 
@@ -309,10 +311,10 @@ Returns the area, centroid coordinate, and inertia matrix for a face in a given 
 Returns the mass properties for a given volume. These include volume, wetted area,
 center of gravity, inertia matrix, and mass.
 
-Planar Cuts
-___________
+*Planar Cuts*
+_____________
 
-*Required in Tools/Geometry/Interaction/10*
+*Needed for requirements in: Tools/Geometry/Interaction/10*
 
 **(nsec, ivec, data) = VolumeSection(vol, face, type, isvec, idata)**
 
@@ -320,8 +322,8 @@ A basic interface would require a volume label, a set of face labels, and a vect
 that defines the normal of the cutting plane. CAPRI suggests a more detailed
 interface that allows a few different types of cuts.
 
-Tesselation
-___________
+*Tesselation*
+_____________
 
 While not spelled out directly in the requirements, it is often useful to have the
 capability to generate a watertight descretized representation of the geometry

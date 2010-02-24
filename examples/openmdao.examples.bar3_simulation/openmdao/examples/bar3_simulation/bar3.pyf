@@ -1,0 +1,31 @@
+!    -*- f90 -*-
+! Note: the context of this file is case sensitive.
+
+python module bar3 ! in 
+    interface  ! in :bar3
+        subroutine runbar3truss(px,py,m0,a1,a2,a3,e,el,rho,force1,force2,force3,s1,s2,s3,u,v,ff,obj) ! in :bar3:bar3.f
+            double precision intent(in) :: px
+            double precision intent(in) :: py
+            double precision :: m0
+            double precision intent(in) :: a1
+            double precision intent(in) :: a2
+            double precision intent(in) :: a3
+            double precision intent(in) :: e
+            double precision intent(in) :: el
+            double precision intent(in) :: rho
+            double precision intent(out) :: force1
+            double precision intent(out) :: force2
+            double precision intent(out) :: force3
+            double precision intent(out) :: s1
+            double precision intent(out) :: s2
+            double precision intent(out) :: s3
+            double precision intent(out) :: u
+            double precision intent(out) :: v
+            double precision intent(out) :: ff
+            double precision intent(out) :: obj
+        end subroutine runbar3truss
+    end interface 
+end python module bar3
+
+! This file was auto-generated with f2py (version:2).
+! See http://cens.ioc.ee/projects/f2py2e/

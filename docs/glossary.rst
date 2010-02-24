@@ -165,6 +165,13 @@ Glossary
         via import and remotely via an ObjServer.
 
 
+      **FEM**
+	Finite Element Method. A numerical technique for finding approximate
+	solutions of partial differential equations (PDE) as well as of integral
+	equations. A structural analysis method which discretizes a continuum model of a
+	complex structure to a discrete model of a finite number of degrees of freedom.
+
+
       **FormEncode**
         An HTML form validation, generation, and conversion package.
 

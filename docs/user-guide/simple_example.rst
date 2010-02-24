@@ -35,10 +35,19 @@ point. Finally, both the driver and the component are contained in an
 :term:`assembly` which maintains the connections between the driver and the
 component, and knows how to run the system.
 
-The Python code for this example problem can be found here:
+It is assumed that the user has some familiarity with Python and the basic concepts of object-oriented
+programming, and has either installed an official distribution bundle, or has access to the OpenMDAO
+source tree. The following instructions will help the user locate the directory containing the pieces
+needed for the model relative to the install directory:
+
+If you have a branch from the source repository:
 
 	``examples/openmdao.examples.simple/openmdao/examples/simple``
+	
+If you have a distribution bundle:
 
+	``buildout/eggs/openmdao.examples.simple-x.x.x-xxxxxx.egg/openmdao/examples/simple``
+	
 Building a Simple Component - Paraboloid
 -----------------------------------------
 
@@ -401,7 +410,35 @@ accessible even from outside the Top Level Assembly.
 
 Building a Simple Model - Constrained Optimization using CONMIN
 ---------------------------------------------------------------
-Coming Soon.
+
+Usually, an optimization problem also contains a number of constraints on the
+design space. 
+
+*Constraints* are equations (or inequalities) that are expressed as functions
+of the design variables. They are constructed much like the objective functions
+using the available OpenMDAO variables build into an expression with Python
+mathematical syntax. For CONMIN, the constraints parameter is a list of inequalities that
+are defined to be satisfied when they return a negative value or zero, and violated
+when they return positive value. A constraint can be added to our existing 
+model by adding another line to the init function:
+
+.. testcode:: simple_model_Unconstrained_pieces
+
+        # CONMIN Constraints
+        self.driver.constraints = ['paraboloid.y-paraboloid.x+15.0']
+
+Here, the constraint (y-x+15)<0 is added to the problem. The unconstrained
+minumum actually violates this constraint, so a new minimum must be found.
+The optimizer will now return the minumum solution that does not violate
+this constraint. 
+
+When this is executed, it should produce the output:
+
+.. testoutput:: simple_model_Constrained_run
+
+    Minimum found at (7.175775, -7.824225)
+
+
 
 Afterword
 ---------
