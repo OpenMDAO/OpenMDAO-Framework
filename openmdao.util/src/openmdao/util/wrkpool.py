@@ -2,6 +2,7 @@ import atexit
 import logging
 import Queue
 import threading
+import traceback
 
 
 class WorkerPool(object):
@@ -90,6 +91,7 @@ class WorkerPool(object):
 
             exc = None
             trace = None
+            retval = None
             try:
                 retval = callable(*args, **kwargs)
             except Exception, exc:

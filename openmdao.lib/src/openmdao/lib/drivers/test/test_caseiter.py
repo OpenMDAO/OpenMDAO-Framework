@@ -140,14 +140,14 @@ class TestCase(unittest.TestCase):
                 cluster = ClusterAllocator(name, machines)
                 ResourceAllocationManager.insert_allocator(0, cluster)
 
-        self.run_cases(sequential=False, n_servers=5)
+        self.run_cases(sequential=False)
         self.assertEqual(glob.glob('Sim-*'), [])
 
         logging.debug('')
         logging.debug('test_concurrent_errors')
         self.generate_cases(force_errors=True)
         self.model.driver._call_execute = True
-        self.run_cases(sequential=False, n_servers=5, forced_errors=True)
+        self.run_cases(sequential=False, forced_errors=True)
         self.assertEqual(glob.glob('Sim-*'), [])
 
     @staticmethod
@@ -169,10 +169,9 @@ class TestCase(unittest.TestCase):
         except IOError:
             return False
 
-    def run_cases(self, sequential, n_servers=0, forced_errors=False):
-        """ Evaluate cases, either sequentially or across n_servers. """
+    def run_cases(self, sequential, forced_errors=False):
+        """ Evaluate cases, either sequentially or across  multiple servers. """
         self.model.driver.sequential = sequential
-        self.model.driver._n_servers = n_servers
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = []
         self.model.driver.recorder = results
