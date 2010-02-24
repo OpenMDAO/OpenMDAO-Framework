@@ -70,14 +70,6 @@ cmd = "import sys; sys.path.insert(0,r'%s'); from setuptools.command.easy_instal
 
 check_call([sys.executable, '-c', quote(cmd), '-H', 'None', '-f', setupdir, '-maqNxd',
             quote(setupdir), 'zc.buildout'], env=dict(os.environ,PYTHONPATH=setupdir))
-#assert os.spawnle(
-    #os.P_WAIT, sys.executable, quote (sys.executable),
-    #'-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
-    #quote (setupdir), 'zc.buildout',
-    #dict(os.environ,
-         #PYTHONPATH=setupdir
-         #),
-    #) == 0
 
 ws  = pkg_resources.working_set
 dist = pkg_resources.Environment([setupdir]).best_match(
@@ -102,14 +94,8 @@ eggdir = buildout['buildout']['eggs-directory']
 #zc.buildout.buildout.main(sys.argv[1:] + ['bootstrap'])
 
 # make sure we have zc.recipe.egg
-assert os.spawnle(
-    os.P_WAIT, sys.executable, quote (sys.executable),
-    '-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
-    quote (eggdir), 'zc.recipe.egg',
-    dict(os.environ,
-         PYTHONPATH=setupdir
-         ),
-    ) == 0
+check_call([sys.executable, '-c', quote(cmd), '-H', 'None', '-f', setupdir, '-maqNxd',
+            quote(eggdir), 'zc.recipe.egg'], env=dict(os.environ,PYTHONPATH=setupdir))
 
 # now modify the bin/buildout script to isolate it
 
