@@ -29,7 +29,7 @@ config.add_extension('openmdao.examples.engine_design.engineC', \
                      include_dirs=include_dirs,
                      library_dirs=library_dirs)
 
-kwds = { 'name':'openmdao.examples.engine_design',
+kwds = { 'name':'openmdao.examples.engine-design',
          'version':version,
          'description':"OpenMDAO examples - Engine Design Problem",
          'long_description':"""\
