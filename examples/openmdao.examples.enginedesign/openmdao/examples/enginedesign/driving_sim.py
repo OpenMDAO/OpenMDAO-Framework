@@ -17,7 +17,7 @@ from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly
 from openmdao.lib.traits.unitsfloat import UnitsFloat
 
-from openmdao.examples.engine_design.vehicle import Vehicle
+from openmdao.examples.enginedesign.vehicle import Vehicle
 
 
 # Settings for the EPA profile simulation
@@ -191,7 +191,7 @@ class DrivingSim(Assembly):
         
         for profilename in profilenames:
             
-            profile_stream = resource_stream('openmdao.examples.engine_design',
+            profile_stream = resource_stream('openmdao.examples.enginedesign',
                                              profilename)
             profile_reader = reader(profile_stream, delimiter=',')
             

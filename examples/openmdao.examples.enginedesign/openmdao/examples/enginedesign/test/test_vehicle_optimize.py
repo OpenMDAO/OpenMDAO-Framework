@@ -4,7 +4,7 @@
 
 import unittest
 
-from openmdao.examples.engine_design.engine_optimization import EngineOptimization
+from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
 
 
 class EngineOptimizationTestCase(unittest.TestCase):

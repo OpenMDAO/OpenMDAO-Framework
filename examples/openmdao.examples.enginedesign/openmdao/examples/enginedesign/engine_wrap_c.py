@@ -14,7 +14,7 @@ from enthought.traits.api import Float, Int, Range
 from openmdao.main.api import Component
 from openmdao.lib.traits.unitsfloat import UnitsFloat
 
-from openmdao.examples.engine_design.engineC import RunEngineCycle
+from openmdao.examples.enginedesign.engineC import RunEngineCycle
 
 class Engine(Component):
     """ Model of a piston engine - C Implementation."""

@@ -8,8 +8,8 @@ from openmdao.main.api import Assembly
 from openmdao.lib.traits.unitsfloat import UnitsFloat
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-#from openmdao.examples.bar3_simulation.bar3 import Bar3Truss
-from openmdao.examples.bar3_simulation.bar3_wrap_f import Bar3Truss
+#from openmdao.examples.bar3simulation.bar3 import Bar3Truss
+from openmdao.examples.bar3simulation.bar3_wrap_f import Bar3Truss
 
 class Bar3Optimization(Assembly):
     """ Top level assembly for optimizing a three bar truss. """

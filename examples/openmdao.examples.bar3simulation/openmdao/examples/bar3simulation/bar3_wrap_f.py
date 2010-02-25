@@ -10,7 +10,7 @@ from enthought.traits.api import Float, Int
 from openmdao.main.api import Component
 from openmdao.lib.traits.unitsfloat import UnitsFloat
 
-from openmdao.examples.bar3_simulation.bar3 import runbar3truss, forces
+from openmdao.examples.bar3simulation.bar3 import runbar3truss, forces
 
 class Bar3Truss(Component):
     """ Model of a three bar truss - Fortran Implementation."""

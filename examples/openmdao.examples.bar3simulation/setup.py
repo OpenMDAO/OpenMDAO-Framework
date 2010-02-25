@@ -22,13 +22,13 @@ else:
     library_dirs = []
     
 config = Configuration()
-config.add_extension('openmdao.examples.bar3_simulation.bar3', \
-                     sources=['openmdao/examples/bar3_simulation/bar3.pyf', \
-                              'openmdao/examples/bar3_simulation/bar3.f'],
+config.add_extension('openmdao.examples.bar3simulation.bar3', \
+                     sources=['openmdao/examples/bar3simulation/bar3.pyf', \
+                              'openmdao/examples/bar3simulation/bar3.f'],
                      include_dirs=include_dirs,
                      library_dirs=library_dirs)
 
-kwds = { 'name':'openmdao.examples.bar3_simulation',
+kwds = { 'name':'openmdao.examples.bar3simulation',
          'version':version,
          'description':"OpenMDAO examples - Bar3 Truss Simulation Problem",
          'long_description':"""\
@@ -48,9 +48,9 @@ kwds = { 'name':'openmdao.examples.bar3_simulation',
          'url':'',
          'license':'NASA Open Source Agreement 1.3',
          'namespace_packages':["openmdao", "openmdao.examples"],
-         #'package_dir':{'': 'openmdao/examples/bar3_simulation'},
+         #'package_dir':{'': 'openmdao/examples/bar3simulation'},
          'packages':find_packages(), #['openmdao','openmdao.examples'],
-         'package_data': {'openmdao.examples.bar3_simulation': ['*.csv']},
+         'package_data': {'openmdao.examples.bar3simulation': ['*.csv']},
          'include_package_data': True,
          'test_suite':'nose.collector',
          'zip_safe': False,
