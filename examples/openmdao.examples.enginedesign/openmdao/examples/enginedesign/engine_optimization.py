@@ -8,7 +8,7 @@ from openmdao.main.api import Assembly
 
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-from openmdao.examples.engine_design.driving_sim import DrivingSim
+from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
 class EngineOptimization(Assembly):
     """ Top level assembly for optimizing a vehicle. """

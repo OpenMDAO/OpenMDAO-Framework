@@ -10,7 +10,7 @@ import shutil
 import subprocess
 import unittest
 
-from openmdao.examples.engine_design.engine_optimization import EngineOptimization
+from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
 import openmdao.util.testutil
 
 
@@ -35,7 +35,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.itmax = 1
 
         # Set local dir in case we're running in a different directory.
-        py_dir = pkg_resources.resource_filename('openmdao.examples.engine_design',
+        py_dir = pkg_resources.resource_filename('openmdao.examples.enginedesign',
                                                  'test')
         python = openmdao.util.testutil.find_python()
         name = self.model.name or self.model.get_default_name(self)

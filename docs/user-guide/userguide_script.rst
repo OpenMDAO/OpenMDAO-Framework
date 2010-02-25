@@ -12,21 +12,6 @@ Creating New Components
 *The Component API*
 ~~~~~~~~~~~~~~~~~~~
 
-*Wrapping an Application*
-~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Python
-+++++++
-
-F2PY
-++++
-
-SWIG
-++++
-
-File Wrapping
-+++++++++++++
-   
 *Special Plug-ins*
 ~~~~~~~~~~~~~~~~~~
 
