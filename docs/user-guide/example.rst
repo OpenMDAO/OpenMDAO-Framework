@@ -1,6 +1,8 @@
 
 .. index:: tutorial problem
 
+.. _The-OpenMDAO-tutorial-problem:
+
 The OpenMDAO Tutorial Problem
 =============================
 
@@ -363,7 +365,7 @@ simulation also has to make sure the engine RPM lies within the its min and max 
 
 Once the gear is determined, a bisection method is used to find the throttle position that matches the
 required acceleration within a small tolerance. This solution method converges reasonably quickly, especially
-when applied over a linear range of a torque curve. However, the EPA profiles are long, with many calculation
+when applied over a linear range of the torque curve. However, the EPA profiles are long, with many calculation
 points, so simulating these driving profiles consumes much more CPU time than the acceleration test.
 
 Using OpenMDAO
@@ -392,7 +394,7 @@ section will examine these components.
 It is assumed that the user has some familiarity with Python and the basic concepts of object-oriented
 programming, and has either installed an official distribution bundle, or has access to the OpenMDAO
 source tree. The following instructions will help the user locate the directory containing the pieces
-needed for the model relative to the install directory:
+needed for the model relative to the install directory.
 
 If you have a branch from the source repository:
 
@@ -880,6 +882,8 @@ same way using the set and get functions.
 
 .. index:: F2PY
 .. index:: SWIG
+
+.. _Wrapping-an-External-Module-Using-F2PY:
 
 Wrapping an External Module Using F2PY
 --------------------------------------

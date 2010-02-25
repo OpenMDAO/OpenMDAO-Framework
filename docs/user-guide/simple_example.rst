@@ -38,7 +38,7 @@ component, and knows how to run the system.
 It is assumed that the user has some familiarity with Python and the basic concepts of object-oriented
 programming, and has either installed an official distribution bundle, or has access to the OpenMDAO
 source tree. The following instructions will help the user locate the directory containing the pieces
-needed for the model relative to the install directory:
+needed for the model relative to the install directory.
 
 If you have a branch from the source repository:
 
