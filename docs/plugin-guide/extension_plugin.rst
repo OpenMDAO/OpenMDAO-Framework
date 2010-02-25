@@ -63,15 +63,15 @@ needed for the model relative to the install directory:
 
 If you have a branch from the source repository:
 
-	``examples/openmdao.examples.engine_design/openmdao/examples/engine_design``
+	``examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation``
 	
 If you have a distribution bundle:
 
-	``buildout/eggs/openmdao.examples.engine_design-x.x.x-xxxxxx.egg/openmdao/examples/engine_design``
+	``buildout/eggs/openmdao.examples.bar3simulation-x.x.x-xxxxxx.egg/openmdao/examples/bar3simulation``
 	
 where the x's denote the OpenMDAO version number, the Python version, and the Operating System
 description string. This will vary depending on your system and version, but there will only be
-one engine_design egg in your bundle.
+one bar3simulation egg in your bundle.
 
 It should also be noted that a FORTRAN compiler is required. The instructions presented here are
 applicable to the Unix and Mac OSX environments. There may be some differences on the Windows
@@ -89,7 +89,7 @@ for a three bar truss with the following specific geometry:
 The inputs to the problem are the components of the body force acting on node 1 (2d array pvec),
 the cross-sectional areas of all three structural elements (a1, a2, a3), the lumped mass at node 1 (mo),
 the length of bar 2 (el: this essentially scales the problem), and some material properties for the 
-bars (e -- Young's Modulous, and rho - material density). The outputs of interest are the stresses 
+bars (e -- Young's Modulus, and rho - material density). The outputs of interest are the stresses 
 in each bar (s1, s2, s3), the displacement at node 1 (u, v), the frequency of the first mode of
 vibration (ff), and the total weight of the structure (obj). The objective of this example is
 to be able to use this Fortran subroutine to locate the optimum dimensions of the three bars that
@@ -168,7 +168,7 @@ be imported into Python just like any Python file:
 
 .. testsetup:: bar3_wrap
 
-    from openmdao.examples.bar3_simulation.bar3_wrap_f import Bar3Truss
+    from openmdao.examples.bar3simulation.bar3_wrap_f import Bar3Truss
     import numpy.numarray as numarray
     
     self = Bar3Truss()
@@ -186,7 +186,7 @@ be imported into Python just like any Python file:
 
 .. testcode:: bar3_wrap
 
-    from openmdao.examples.bar3_simulation.bar3 import runbar3truss, forces
+    from openmdao.examples.bar3simulation.bar3 import runbar3truss, forces
 
 Note that the namespace comes from OpenMDAO's structure. Here, we import both the function
 *runbar3truss* and the common block *forces*. Calling into this function is similar to
@@ -208,7 +208,7 @@ on the right hand side.
 F2PY automatically also generates a docstring for this function. This can be examined by
 opening OpenMDAO's local python environment:
 
-    >>> from openmdao.examples.bar3_simulation.bar3 import runbar3truss, forces
+    >>> from openmdao.examples.bar3simulation.bar3 import runbar3truss, forces
     >>> print runbar3truss.__doc__
     runbar3truss - Function signature:
       s1,s2,s3,u,v,ff,obj = runbar3truss(pvec,m0,a1,a2,a3,e,el,rho)
@@ -293,7 +293,9 @@ Creating an Extension with SWIG
     
 
 TODO - C Example
+
 TODO - C++ Example
+
 TODO - Java Example
         
 

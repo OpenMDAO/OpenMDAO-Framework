@@ -398,15 +398,15 @@ needed for the model relative to the install directory.
 
 If you have a branch from the source repository:
 
-	``examples/openmdao.examples.engine_design/openmdao/examples/engine_design``
+	``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``
 	
 If you have a distribution bundle:
 
-	``buildout/eggs/openmdao.examples.engine_design-x.x.x-xxxxxx.egg/openmdao/examples/engine_design``
+	``buildout/eggs/openmdao.examples.enginedesign-x.x.x-xxxxxx.egg/openmdao/examples/enginedesign``
 	
 where the x's denote the OpenMDAO version number, the Python version, and the Operating System
 description string. This will vary depending on your system and version, but there will only be
-one engine_design egg in your bundle.
+one enginedesign egg in your bundle.
 
 The three engine models have been implemented in transmission.py, engine.py, and chassis.py. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
@@ -592,7 +592,7 @@ but it is still a good way to demonstrate these components.
 
 An instance of the class Engine can be created by typing the following:
 
-	>>> from openmdao.examples.engine_design.engine import Engine
+	>>> from openmdao.examples.enginedesign.engine import Engine
 	>>> my_engine = Engine("new_engine")
 
 The object MyEngine is an engine created with default values for all of its inputs. We can interact with the
@@ -681,9 +681,9 @@ Engine, and Chassis components.
 	from openmdao.main.api import Assembly
 	from openmdao.lib.traits.unitsfloat import UnitsFloat
 
-	from openmdao.examples.engine_design.engine import Engine
-	from openmdao.examples.engine_design.transmission import Transmission
-	from openmdao.examples.engine_design.chassis import Chassis
+	from openmdao.examples.enginedesign.engine import Engine
+	from openmdao.examples.enginedesign.transmission import Transmission
+	from openmdao.examples.enginedesign.chassis import Chassis
 	
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
@@ -701,7 +701,7 @@ Engine, and Chassis components.
 	        self.add_container('chassis', Chassis())
 
 The Engine, Transmission, and Chassis components are imported the same way as they were in the
-Python shell, using ``openmdao.examples.engine_design`` name-space. In creating a new class, the main
+Python shell, using ``openmdao.examples.enginedesign`` name-space. In creating a new class, the main
 difference between a component and an assembly is that an assembly inherits from the Assembly class
 instead of the Component class. This gives it the ability to contain other components, and to manage their
 data flow.
@@ -724,9 +724,9 @@ Now that the components are instantiated in the assembly, they need to be hooked
 	from openmdao.main.api import Assembly
 	from openmdao.lib.traits.unitsfloat import UnitsFloat
 
-	from openmdao.examples.engine_design.engine import Engine
-	from openmdao.examples.engine_design.transmission import Transmission
-	from openmdao.examples.engine_design.chassis import Chassis
+	from openmdao.examples.enginedesign.engine import Engine
+	from openmdao.examples.enginedesign.transmission import Transmission
+	from openmdao.examples.enginedesign.chassis import Chassis
 	
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
@@ -817,9 +817,9 @@ Now these input are available to connect to the components.
 	from openmdao.main.api import Assembly
 	from openmdao.lib.traits.unitsfloat import UnitsFloat
 
-	from openmdao.examples.engine_design.engine import Engine
-	from openmdao.examples.engine_design.transmission import Transmission
-	from openmdao.examples.engine_design.chassis import Chassis
+	from openmdao.examples.enginedesign.engine import Engine
+	from openmdao.examples.enginedesign.transmission import Transmission
+	from openmdao.examples.enginedesign.chassis import Chassis
 	
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
@@ -863,7 +863,7 @@ above. As inputs, the Vehicle takes a commanded Velocity, Throttle Position, a G
 a set of vehicle design parameters, and returns the vehicles instantaneous acceleration and rate of fuel
 burn. 
 
-	>>> from openmdao.examples.engine_design.vehicle import Vehicle
+	>>> from openmdao.examples.enginedesign.vehicle import Vehicle
 	>>> my_car = Vehicle("new_car")
 	>>> my_car.set("velocity",25)
 	>>> my_car.set("current_gear",3)
@@ -912,7 +912,7 @@ data types not native to C.
 The main algorithm in engine.py was rewritten in C as engine.C. A wrapped shared object of engine.C was
 created using F2Py; this tool can also be used to generate wrappers for C code provided that the
 signature file engine.pyf is manually created. This file engine.pyf defines the interface for the
-functions found in engine.C, and can be viewed in ``examples/openmdao.examples.engine_design/openmdao/examples/engine_design``. The
+functions found in engine.C, and can be viewed in ``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``. The
 C code has been placed in a function called RunEngineCycle that takes the design and simulation
 variables as inputs. 
 
@@ -923,7 +923,7 @@ function RunEngineCycle. The function can be imported and used just like any Pyt
 
 .. _Code8: 
 
-.. literalinclude:: ../../examples/openmdao.examples.engine_design/openmdao/examples/engine_design/engine_wrap_c.py
+.. literalinclude:: ../../examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engine_wrap_c.py
    :start-after: engine_weight = 0.0
    :end-before: # end engine.py
    :language: python
@@ -1006,7 +1006,7 @@ was created and a SimVehicle and CONMINdriver were instantiated:
 
 	from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-	from openmdao.examples.engine_design.driving_sim import DrivingSim
+	from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
 	class EngineOptimization(Assembly):
 	    """ Top level assembly for optimizing a vehicle. """
@@ -1032,7 +1032,7 @@ driver requires some initialization and connecting before it can be used:
 
 	from openmdao.lib.drivers.conmindriver import CONMINdriver
 
-	from openmdao.examples.engine_design.driving_sim import DrivingSim
+	from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
 	class EngineOptimization(Assembly):
 	    """ Top level assembly for optimizing a vehicle. """

@@ -4,7 +4,7 @@
 
 import unittest
 
-from openmdao.examples.bar3_simulation.bar3_optimization import Bar3Optimization
+from openmdao.examples.bar3simulation.bar3_optimization import Bar3Optimization
 
 
 class Bar3OptimizationTestCase(unittest.TestCase):

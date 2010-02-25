@@ -125,12 +125,12 @@ def do_fix(repo_path, options):
         'buildout/html',
         'buildout/parts',
         'docs/_build',
-        'examples/openmdao.examples.engine_design/build',
-        'examples/openmdao.examples.engine_design/openmdao.examples.engine_design.egg-info',
+        'examples/openmdao.examples.enginedesign/build',
+        'examples/openmdao.examples.enginedesign/openmdao.examples.enginedesign.egg-info',
     )
     files = (
-        'examples/openmdao.examples.engine_design/openmdao/examples/engine_design/engineCmodule.c',
-        'examples/openmdao.examples.engine_design/openmdao/examples/engine_design/engineC.so',
+        'examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engineCmodule.c',
+        'examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engineC.so',
     )
     for relpath in directories:
         directory = os.path.join(repo_path, relpath)

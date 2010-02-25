@@ -22,13 +22,13 @@ else:
     library_dirs = []
     
 config = Configuration()
-config.add_extension('openmdao.examples.engine_design.engineC', \
-                     sources=['openmdao/examples/engine_design/engineC.pyf', \
-                              'openmdao/examples/engine_design/engineC.c'],
+config.add_extension('openmdao.examples.enginedesign.engineC', \
+                     sources=['openmdao/examples/enginedesign/engineC.pyf', \
+                              'openmdao/examples/enginedesign/engineC.c'],
                      include_dirs=include_dirs,
                      library_dirs=library_dirs)
 
-kwds = { 'name':'openmdao.examples.engine_design',
+kwds = { 'name':'openmdao.examples.enginedesign',
          'version':version,
          'description':"OpenMDAO examples - Engine Design Problem",
          'long_description':"""\
@@ -48,9 +48,9 @@ kwds = { 'name':'openmdao.examples.engine_design',
          'url':'',
          'license':'NASA Open Source Agreement 1.3',
          'namespace_packages':["openmdao", "openmdao.examples"],
-         #'package_dir':{'': 'openmdao/examples/engine_design'},
+         #'package_dir':{'': 'openmdao/examples/enginedesign'},
          'packages':find_packages(), #['openmdao','openmdao.examples'],
-         'package_data': {'openmdao.examples.engine_design': ['*.csv']},
+         'package_data': {'openmdao.examples.enginedesign': ['*.csv']},
          'include_package_data': True,
          'test_suite':'nose.collector',
          'zip_safe': False,

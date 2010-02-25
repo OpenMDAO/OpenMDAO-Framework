@@ -5,7 +5,7 @@
 import unittest
 
 from openmdao.main.api import Assembly, set_as_top
-from openmdao.examples.engine_design.vehicle import Vehicle
+from openmdao.examples.enginedesign.vehicle import Vehicle
 
 
 class VehicleTestCase(unittest.TestCase):

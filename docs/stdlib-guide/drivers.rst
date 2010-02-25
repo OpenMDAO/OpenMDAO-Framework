@@ -74,7 +74,7 @@ these is given below.
 	
 .. testsetup:: CONMIN_show
 
-	from openmdao.examples.engine_design.engine_optimization import EngineOptimization
+	from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
 	
 	# Note: This block of code does not display in the documentation.
 	# This is a trick to get around a limitation in Sphinx's doctest, where
