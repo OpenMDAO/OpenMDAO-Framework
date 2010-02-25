@@ -4,16 +4,15 @@ C WITH STRESS, DISPACEMENT AND FREQUENCY
 C---------------------------------------
 C
 
-      SUBROUTINE runbar3truss(PX, PY, M0, A1,A2,A3,E,EL,RHO,
-     *                        FORCE1,FORCE2,FORCE3,
-     *                        S1, S2,S3, U,V,FF,OBJ) 
+      SUBROUTINE runbar3truss(PVEC,M0,A1,A2,A3,E,EL,RHO,
+     *                        S1,S2,S3,U,V,FF,OBJ) 
 C
       IMPLICIT None
 
       Integer mxndv, mxcon
       PARAMETER (MXNDV = 150, MXCON = 400)
 
-      Double Precision px, py,m0
+      Double Precision px, py, Pvec, m0
       Double Precision a1,a2,a3
       Double Precision E, EL, RHO 
 
@@ -21,9 +20,12 @@ C
       Double Precision S1, S2, S3
       Double Precision U, V, FF 
       Double Precision obj
+      
+      Dimension Pvec(2)
+      
+      COMMON /Forces/ FORCE1, FORCE2, FORCE3
 
-Cf2py intent(in) px  
-Cf2py intent(in) py
+Cf2py intent(in) pvec
 Cf2py intent(in) mo
 Cf2py intent(in) a1 
 Cf2py intent(in) a2  
@@ -31,9 +33,6 @@ Cf2py intent(in) a3
 Cf2py intent(in) e
 Cf2py intent(in) el
 Cf2py intent(in) rho
-Cf2py intent(out) force1
-Cf2py intent(out) force2
-Cf2py intent(out) force3
 Cf2py intent(out) s1
 Cf2py intent(out) s2 
 Cf2py intent(out) s3    
@@ -68,6 +67,9 @@ C
 C   CALCULATION OF STRESSES
 C   THE PARAMETERS ARE AS SPECIFIED
 
+      PX = PVEC(1)
+      PY = PVEC(2)
+      
       Q = DSQRT(2.0D0)
       PI = 3.1415926535D0
       ABOT = A1 * A2 +  A2 * A3  + Q * A1 * A3

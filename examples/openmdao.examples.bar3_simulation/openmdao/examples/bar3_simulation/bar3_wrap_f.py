@@ -4,12 +4,13 @@
 """
 
 from math import pi
+import numpy.numarray as numarray
 
 from enthought.traits.api import Float, Int
 from openmdao.main.api import Component
 from openmdao.lib.traits.unitsfloat import UnitsFloat
 
-from openmdao.examples.bar3_simulation.bar3 import runbar3truss
+from openmdao.examples.bar3_simulation.bar3 import runbar3truss, forces
 
 class Bar3Truss(Component):
     """ Model of a three bar truss - Fortran Implementation."""
@@ -103,8 +104,10 @@ class Bar3Truss(Component):
             Force, Stress, Displacement,Frequency and Weight are returned at the Bar3Truss output.
             """
 
-        load_x_dir = self.load_x_dir
-        load_y_dir = self.load_y_dir
+        load = numarray.zeros(2,'d')
+        load[0] = self.load_x_dir
+        load[1] = self.load_y_dir
+        
         lumped_mass = self.lumped_mass
         bar1_area = self.bar1_area
         bar2_area = self.bar2_area
@@ -126,13 +129,18 @@ class Bar3Truss(Component):
   
         # Call the Fortran model and pass it what it needs.
 
-        (self.bar1_force, self.bar2_force, self.bar3_force, self.bar1_stress, self.bar2_stress, self.bar3_stress, 
-        self.displacement_x_dir, self.displacement_y_dir, self.frequency_Hz, self.weight) = runbar3truss(
-                    load_x_dir, load_y_dir, lumped_mass, 
+        (self.bar1_stress, self.bar2_stress, self.bar3_stress, 
+         self.displacement_x_dir, self.displacement_y_dir, 
+         self.frequency_Hz, self.weight) \
+         = runbar3truss(
+                    load, lumped_mass, 
                     bar1_area,bar2_area,bar3_area,
                     Youngs_Modulus, bar2_Length, weight_density)
 
-        # Interogate results of bar3 simulation and store.
+        # Pull value of Forces from the COMMON block Forces.
+        self.bar1_force = float(forces.force1)
+        self.bar2_force = float(forces.force2)
+        self.bar3_force = float(forces.force3)
 
 #end Bar3Truss
     
