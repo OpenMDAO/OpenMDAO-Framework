@@ -80,7 +80,7 @@ ws.require('zc.buildout')
 import zc.buildout.buildout
 
 # instead of calling zc.buildout.buildout.main, we create a Buildout
-# object ourselves so we can figure out where the eggs-directory is                                
+# object ourselves so we can figure out where the eggs-directory is
 try:
     command = 'bootstrap'
     buildout = zc.buildout.buildout.Buildout('buildout.cfg', cloptions=[],
