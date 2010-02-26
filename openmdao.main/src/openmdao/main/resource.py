@@ -34,7 +34,6 @@ class ResourceAllocationManager(object):
         self._logger = logging.getLogger('RAM')
         self._allocations = 0
         self._allocators = []
-        self._alloc_index = 0
         self._allocators.append(LocalAllocator())
 
     def __getitem__(self, i):
@@ -143,7 +142,7 @@ class ResourceAllocationManager(object):
             elif best_score != -1:
                 return (None, None)
             else:
-                time.sleep(1)
+                time.sleep(1)  # Wait a bit between retries.
 
     def _get_scores(self, resource_desc):
         """ Return best (score, criteria, allocator). """
@@ -195,7 +194,7 @@ class ResourceAllocator(ObjServerFactory):
         self._logger = logging.getLogger(name)
 
     def get_name(self):
-        """ Return this allocator's name. """
+        """ Returns this allocator's name. """
         return self.name
 
     def max_servers(self, resource_desc):
@@ -209,8 +208,8 @@ class ResourceAllocator(ObjServerFactory):
 
     def rate_resource(self, resource_desc):
         """
-        Return a score indicating how well this resource allocator can satisfy
-        the `resource_desc` request.  The score will be:
+        Return (score, criteria) indicating how well this resource allocator
+        can satisfy the `resource_desc` request.  The score will be:
 
         - >0 for an estimate of walltime (seconds).
         -  0 for no estimate.
@@ -284,10 +283,8 @@ class LocalAllocator(ResourceAllocator):
 
     def max_servers(self, resource_desc):
         """
-        Return the maximum number of servers which could be deployed for
-        `resource_desc`.  The value needn't be exact, but performance may
-        suffer if it overestimates.  The value is used to limit the number
-        of concurrent evaluations.
+        Returns `total_cpus` * `max_load` if `resource_desc` is supported,
+        otherwise zero.
         """
         score, criteria = self._check_compatibility(resource_desc, False)
         if score < 0:
@@ -296,7 +293,7 @@ class LocalAllocator(ResourceAllocator):
 
     def rate_resource(self, resource_desc):
         """
-        Return (score, criteria) indicating how well this allocator can satisfy
+        Returns (score, criteria) indicating how well this allocator can satisfy
         the `resource_desc` request.  The score will be:
 
         - >0 for an estimate of walltime (seconds).
@@ -464,10 +461,8 @@ class ClusterAllocator(object):
 
     def max_servers(self, resource_desc):
         """
-        Return the maximum number of servers which could be deployed for
-        `resource_desc`.  The value needn't be exact, but performance may
-        suffer if it overestimates.  The value is used to limit the number
-        of concurrent evaluations.
+        Returns the total of :meth:`max_servers` across all
+        :class:`LocalAllocator` in the cluster.
         """
         with self._lock:
             # Drain _reply_q.
@@ -522,8 +517,8 @@ class ClusterAllocator(object):
 
     def rate_resource(self, resource_desc):
         """
-        Return a score indicating how well this resource allocator can satisfy
-        the `resource_desc` request.  The score will be:
+        Returns (score, criteria) indicating how well this resource allocator
+        can satisfy the `resource_desc` request.  The score will be:
 
         - >0 for an estimate of walltime (seconds).
         -  0 for no estimate.
@@ -636,7 +631,7 @@ class ClusterAllocator(object):
     def deploy(self, name, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
-        Uses allocator saved in `criteria`.
+        Uses the allocator saved in `criteria`.
         Returns a proxy to the deployed server.
         """
         with self._lock:
