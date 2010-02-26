@@ -14,7 +14,7 @@ need to function properly as an OpenMDAO component.
 
 .. _plugin_overview_Code1: 
 
-::
+.. testcode::plugin_example
 
     from enthought.traits.api import Float
     

@@ -12,13 +12,13 @@ from enthought.traits.api import implements, Interface
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.traits.unitsfloat import UnitsFloat
 
-from openmdao.examples.engine_design.transmission import Transmission
-from openmdao.examples.engine_design.chassis import Chassis
-from openmdao.examples.engine_design.engine_wrap_c import Engine
+from openmdao.examples.enginedesign.transmission import Transmission
+from openmdao.examples.enginedesign.chassis import Chassis
+from openmdao.examples.enginedesign.engine_wrap_c import Engine
 #try:
-#    from openmdao.examples.engine_design.engine_wrap_c import Engine
+#    from openmdao.examples.enginedesign.engine_wrap_c import Engine
 #except:
-#    from openmdao.examples.engine_design.engine import Engine
+#    from openmdao.examples.enginedesign.engine import Engine
 
     
 class IVehicle(Interface):

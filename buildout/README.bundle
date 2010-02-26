@@ -64,6 +64,6 @@ openmdao.main-0.1-py2.6.egg/openmdao/main directory.
 
 The source code for the engine design tutorial found in the User Guide
 can be found under 
-openmdao.examples.engine_design-0.1.0-py2.6-????.egg/openmdao/examples/engine_design, where ????? differs based on the platform you're using.
+openmdao.examples.enginedesign-0.1.0-py2.6-????.egg/openmdao/examples/enginedesign, where ????? differs based on the platform you're using.
 
 
