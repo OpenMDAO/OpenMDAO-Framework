@@ -134,7 +134,8 @@ def _dist_from_eggfile(filename, install, logger, observer):
             total_bytes = 0.
             for info in archive.infolist():
                 fname = info.filename
-                if not fname.startswith(name) and not fname.startswith('EGG-INFO'):
+                if not fname.startswith(name) and \
+                   not fname.startswith('EGG-INFO'):
                     continue
                 if fname.endswith('.pyc') or fname.endswith('.pyo'):
                     continue  # Don't assume compiled OK for this platform.
@@ -148,7 +149,8 @@ def _dist_from_eggfile(filename, install, logger, observer):
         size = 0.
         for info in archive.infolist():
             fname = info.filename
-            if not fname.startswith(name) and not fname.startswith('EGG-INFO'):
+            if not fname.startswith(name) and \
+               not fname.startswith('EGG-INFO'):
                 continue
             if fname.endswith('.pyc') or fname.endswith('.pyo'):
                 continue  # Don't assume compiled OK for this platform.

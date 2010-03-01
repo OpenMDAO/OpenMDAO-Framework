@@ -1,3 +1,4 @@
+import atexit
 import os.path
 import Queue
 import sys
@@ -9,8 +10,8 @@ from enthought.traits.api import Range, Bool, Instance
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.main.util import filexfer
 from openmdao.main.resource import ResourceAllocationManager as RAM
+from openmdao.util.filexfer import filexfer
 
 __all__ = ('CaseIteratorDriver',)
 
@@ -69,6 +70,7 @@ class CaseIteratorDriver(Driver):
         self._egg_file = None
         self._egg_required_distributions = None
         self._egg_orphan_modules = None
+        self._eggs_used = []
 
         # Unpickleable objects.
         self._reply_queue = None
@@ -86,6 +88,18 @@ class CaseIteratorDriver(Driver):
 
         self._orphans = []  # Cases assigned to servers that wouldn't start.
         self._rerun = []    # Cases that failed and should be retried.
+
+        atexit.register(self._cleanup_eggs)
+
+    def _cleanup_eggs(self):
+        """
+        Cleanup any egg files still in existence at shutdown.
+        This is needed because on @#$%^& Windows sometimes a closed ZipFile
+        doesn't actually get released by the process.
+        """
+        for egg in self._eggs_used:
+            if os.path.exists(egg):
+                os.remove(egg)
 
     def execute(self):
         """ Run each case in iterator and record results in recorder. """
@@ -136,6 +150,7 @@ class CaseIteratorDriver(Driver):
                 version = 'replicant.%d' % (self._replicants)
                 egg_info = self.model.save_to_egg(self.model.name, version)
                 self._egg_file = egg_info[0]
+                self._eggs_used.append(egg_info[0])
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
 
@@ -216,7 +231,12 @@ class CaseIteratorDriver(Driver):
     def _cleanup(self):
         """ Cleanup egg file if necessary. """
         if self._egg_file and os.path.exists(self._egg_file):
-            os.remove(self._egg_file)
+            try:
+                os.remove(self._egg_file)
+            except WindowsError:
+                # Closed ZipFile sometimes isn't released.
+                # It should be removed at shutdown by _cleanup_eggs()
+                pass
             self._egg_file = None
 
     def _server_ready(self, server):

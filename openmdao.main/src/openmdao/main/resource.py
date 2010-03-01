@@ -34,7 +34,7 @@ class ResourceAllocationManager(object):
         self._logger = logging.getLogger('RAM')
         self._allocations = 0
         self._allocators = []
-        self._allocators.append(LocalAllocator())
+        self._allocators.append(LocalAllocator('LocalHost'))
 
     def __getitem__(self, i):
         return self._allocators[i]
