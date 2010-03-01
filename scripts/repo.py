@@ -52,8 +52,11 @@ def main():
         else:
             parser.print_help()
             sys.exit(1)
-    if not repository and os.environ['OPENMDAO_REPO']:
-        repository = os.environ['OPENMDAO_REPO']
+    if not repository:
+        try:
+            repository = os.environ['OPENMDAO_REPO']
+        except KeyError:
+            pass
 
     this_user = get_username()
     path = find_repository(repository, this_user)
