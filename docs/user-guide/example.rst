@@ -870,9 +870,9 @@ burn.
 	>>> my_car.set("throttle",.5)
 	>>> my_car.run()
 	>>> my_car.get("acceleration")
-	1.1086409681485778
-	>>> my_car.get("fuel_burn") # doctest: +ELLIPSIS
-	0.0027991856504909...
+	1.1086409681...
+	>>> my_car.get("fuel_burn") 
+	0.0027991856...
 
 When the Vehicle is run, we are essentially performing a simple multidisciplinary analysis via the
 OpenMDAO framework. Try setting the simulation variables to other values, including ones that should

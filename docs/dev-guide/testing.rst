@@ -349,10 +349,10 @@ More detail on the literalinclude directive can be found at http://sphinx.pocoo.
 
 * Be wary of including code by line number. If the source file is changed, and lines are added or removed, then the included code might not be what was intended.
 
-* To include a numerical example in a doctest block, use the "# doctest: +ELLIPSIS" directive after a command, coupled with elipses, if you want to match to a specific tolerance. For example, this block of text passes: 
+* To include a numerical example in a doctest block, you can use elipses in order to match just to a specific tolerance. For example, this block of text passes: 
 
     >>> import numpy
-    >>> numpy.pi # doctest: +ELLIPSIS
+    >>> numpy.pi 
     3.14...
 	
 *Running the Tests*
