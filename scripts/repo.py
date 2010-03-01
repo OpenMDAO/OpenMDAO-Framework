@@ -29,7 +29,8 @@ def main():
    check  -- check for lock
    lock   -- lock repository
    unlock -- unlock repository
-   set    -- set this as current repository (OPENMDAO_REPO environment variable)
+   set    -- set this as current repository
+             (sets OPENMDAO_REPO environment variable and starts a new shell)
    fix    -- fix permissions and remove generated directories
    rmpyc  -- remove 'orphan' .pyc files"""
 
@@ -272,7 +273,8 @@ def find_bzr(path=None):
     if not os.path.exists(path):
         return None
     while path:
-        if os.path.exists(os.path.join(path, '.bzr')):
+        if os.path.exists(os.path.join(path, '.bzr')) or \
+           os.path.exists(os.path.join(path, '.bzrignore')):
             return os.path.abspath(path)
         else:
             pth = path
