@@ -144,10 +144,14 @@ def do_fix(repo_path, options):
         'examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engineC.so',
     )
     for relpath in directories:
+        if sys.platform == 'win32':
+            relpath.replace('/', '\\')
         directory = os.path.join(repo_path, relpath)
         if os.path.exists(directory):
             shutil.rmtree(directory)
     for relpath in files:
+        if sys.platform == 'win32':
+            relpath.replace('/', '\\')
         filename = os.path.join(repo_path, relpath)
         if os.path.exists(filename):
             os.remove(filename)
@@ -278,6 +282,7 @@ def find_bzr(path=None):
     if not os.path.exists(path):
         return None
     while path:
+        print 'find_bzr', path
         if os.path.exists(os.path.join(path, '.bzr')) or \
            os.path.exists(os.path.join(path, '.bzrignore')):
             return os.path.abspath(path)
