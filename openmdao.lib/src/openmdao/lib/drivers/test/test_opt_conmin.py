@@ -238,9 +238,17 @@ class CONMINdriverTestCase(unittest.TestCase):
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
         self.top.run()
+
+        from platform import architecture
+        
+        if architecture()[0] == '32bit':
+            accuracy_objective = 2
+        else:
+            accuracy_objective = 3
+        
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.objective.evaluate(), places=3)
+                               self.top.driver.objective.evaluate(), places=accuracy_objective)
         
     def test_gradient_step_size_large(self):
         # Test that a larger value of fd step-size is less acurate
@@ -260,9 +268,16 @@ class CONMINdriverTestCase(unittest.TestCase):
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
         self.top.run()
         
+        from platform import architecture
+        
+        if architecture()[0] == '32bit':
+            expected_objective = -.0033
+        else:
+            expected_objective = -.0180
+        
         error = self.top.comp.opt_objective - self.top.driver.objective.evaluate()
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(error, -.0180, places=2)
+        self.assertAlmostEqual(1.0-error, 1.0-expected_objective, places=3)
         
     def test_scaling(self):
         
@@ -281,9 +296,16 @@ class CONMINdriverTestCase(unittest.TestCase):
             '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
         self.top.run()
         
+        from platform import architecture
+        
+        if architecture()[0] == '32bit':
+            accuracy_objective = 2
+        else:
+            accuracy_objective = 3
+            
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.objective.evaluate(), places=3)
+                               self.top.driver.objective.evaluate(), places=accuracy_objective)
 
     def test_max_iteration(self):
         

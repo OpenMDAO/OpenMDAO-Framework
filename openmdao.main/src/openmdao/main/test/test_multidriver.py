@@ -136,6 +136,16 @@ class MultiDriverTestCase(unittest.TestCase):
         drv.upper_bounds = [99]
         drv.constraints = ['driver1.objective.evaluate()'] # this just forces driver1 to run first
         self.top.run()
+        
+        from platform import architecture
+        
+        if architecture()[0] == '32bit':
+            accuracy_objective = 3
+            accuracy_x = 3
+        else:
+            accuracy_objective = 4
+            accuracy_x = 4
+            
         self.assertAlmostEqual(self.opt_objective, 
                                self.top.driver1.objective.evaluate(), places=2)
         self.assertAlmostEqual(self.opt_design_vars[0], 
@@ -147,9 +157,10 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(self.opt_design_vars[3], 
                                self.top.comp4.x, places=1)
         self.assertAlmostEqual(-6.2498054387439232, 
-                               self.top.driver1a.objective.evaluate(), places=5)
+                               self.top.driver1a.objective.evaluate(), 
+                               places=accuracy_objective)
         self.assertAlmostEqual(2.4860514783551508, 
-                               self.top.comp1a.x, places=5)
+                               self.top.comp1a.x, places=accuracy_x)
 
         
     def test_2_nested_drivers(self):

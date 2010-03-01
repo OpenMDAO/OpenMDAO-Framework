@@ -348,6 +348,12 @@ More detail on the literalinclude directive can be found at http://sphinx.pocoo.
 * Care should be taken to assure that each block of code is being tested. One way to do this is to purposefully introduce an error into a block to verify that it is caught.
 
 * Be wary of including code by line number. If the source file is changed, and lines are added or removed, then the included code might not be what was intended.
+
+* To include a numerical example in a doctest block, use the "# doctest: +ELLIPSIS" directive after a command, coupled with elipses, if you want to match to a specific tolerance. For example, this block of text passes: 
+
+    >>> import numpy
+    >>> numpy.pi # doctest: +ELLIPSIS
+    3.14...
 	
 *Running the Tests*
 +++++++++++++++++++
