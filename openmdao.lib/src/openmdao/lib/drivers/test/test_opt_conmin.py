@@ -299,7 +299,7 @@ class CONMINdriverTestCase(unittest.TestCase):
         from platform import architecture
         
         if architecture()[0] == '32bit':
-            accuracy_objective = 2
+            accuracy_objective = 1
         else:
             accuracy_objective = 3
             

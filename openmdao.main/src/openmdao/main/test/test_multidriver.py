@@ -140,8 +140,8 @@ class MultiDriverTestCase(unittest.TestCase):
         from platform import architecture
         
         if architecture()[0] == '32bit':
-            accuracy_objective = 3
-            accuracy_x = 3
+            accuracy_objective = 2
+            accuracy_x = 1
         else:
             accuracy_objective = 4
             accuracy_x = 4
