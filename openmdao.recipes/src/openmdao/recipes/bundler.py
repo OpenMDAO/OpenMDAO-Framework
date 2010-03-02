@@ -4,10 +4,14 @@ import sys
 import shutil
 from distutils.util import get_platform
 import tarfile
+import zipfile
 import logging
 import fnmatch
 import urllib2
+import tempfile
+from subprocess import check_call
 
+import pkg_resources
 from pkg_resources import Environment, WorkingSet, Requirement, get_supported_platform
 from setuptools.package_index import PackageIndex
 import zc.buildout
@@ -27,6 +31,16 @@ def rm(path):
         shutil.rmtree(path)
     else:
         os.remove(path)
+
+if sys.platform == 'win32':
+    def quote(c):
+        if ' ' in c:
+            return '"%s"' % c # work around spawn lamosity on windows
+        else:
+            return c
+else:
+    def quote (c):
+        return c
 
 class Bundler(object):
     """Collect all of the eggs that are used in the current
@@ -261,6 +275,9 @@ class Bundler(object):
                         self.logger.info("DIR FOUND: %s" % fetched)
                     else:
                         shutil.copy(fetched, bpath)
+                if not fetched.endswith('.egg') and dist.project_name not in self.src_dists:
+                    # it's a source dist that we have to make into a bdist_egg
+                    self.sdist_to_bdist_egg(bpath, delete=True)
             else:
                 self.logger.error('    download failed')
                 failed_downloads += 1
@@ -324,6 +341,48 @@ class Bundler(object):
             msg = "Can't contact egg server at '%s': %s" % (url, exc)
             raise zc.buildout.UserError(msg)
 
-
+    def sdist_to_bdist_egg(self, sdist_path, delete=False):
+        """Take an sdist and replace it with a bdist_egg"""
+        self.logger.info("Converting sdist %s to a bdist_egg" % sdist_path)
+        tmpdir = tempfile.mkdtemp()
+        cdir = os.getcwd()
+        try:
+            # unpack the sdist
+            if sdist_path.endswith('.tar.gz') or sdist_path.endswith('.tar'):
+                tarf = tarfile.open(sdist_path)
+                tarf.extractall(path=tmpdir)
+            elif sdist_path.endswith('.zip'):
+                zfile = zipfile.ZipFile(sdist_path, 'r')
+                zfile.extractall(tmpdir)
+            else:
+                raise RuntimeError("Don't know how to unpack file %s" % sdist_path)
+            os.chdir(tmpdir)
+            dirs = os.listdir(tmpdir)
+            if len(dirs) == 1:
+                os.chdir(dirs[0])
+            setupnames = ['setup_egg.py', 'setupegg.py', 'setup.py']
+            for name in setupnames:
+                if os.path.isfile(name):
+                    setup = name
+                    break
+            else:
+                setup = None
+            if not setup:
+                raise RuntimeError("Can't find setup.py file in %s" % os.getcwd())
+            try:
+                check_call([sys.executable, 
+                            'setup.py', 'bdist_egg', '-d', '%s' % os.path.dirname(sdist_path)], 
+                           env=os.environ)
+            except:
+                # may not support bdist_egg, so try just bdist
+                check_call([sys.executable, 
+                            'setup.py', 'bdist', '-d', '%s' % os.path.dirname(sdist_path)], 
+                           env=os.environ)
+            if delete:
+                os.remove(sdist_path)
+        finally:
+            shutil.rmtree(tmpdir)
+            os.chdir(cdir)
+    
     update = install
 
