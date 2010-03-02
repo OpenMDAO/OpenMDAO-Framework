@@ -99,7 +99,10 @@ class CaseIteratorDriver(Driver):
         """
         for egg in self._eggs_used:
             if os.path.exists(egg):
-                os.remove(egg)
+                try:
+                    os.remove(egg)
+                except WindowsError, exc:
+                    print 'Warning: unable to remove %s: %s' % (egg, exc)
 
     def execute(self):
         """ Run each case in iterator and record results in recorder. """
