@@ -13,10 +13,11 @@ __all__ = ('check_save_load',)
 
 def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
                     fmt=SAVE_CPICKLE, logfile=None):
-    """Convenience routine to check that saving & reloading work.
+    """Convenience routine to check that saving & reloading `comp` works.
+
     It will create an egg in the current directory, unpack it in `test_dir`
     via a separate process, and then load and run the component in
-    another subprocess.  Returns first non-zero subprocess exit code,
+    another subprocess.  Returns the first non-zero subprocess exit code,
     or zero if everything succeeded.
     """
     assert isinstance(comp, Component)

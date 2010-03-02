@@ -108,8 +108,7 @@ copy_reg.pickle(types.MethodType, _pickle_method, _unpickle_method)
 
 def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                 src_files=None, dst_dir=None, fmt=SAVE_CPICKLE, proto=-1,
-                logger=None, use_setuptools=False, observer=None,
-                python='python'):
+                logger=None, use_setuptools=False, observer=None):
     """
     Save state and other files to an egg. Analyzes the objects saved for
     distribution dependencies.  Modules not found in any distribution are
@@ -127,7 +126,6 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
     - If 'use_setuptools` is True, then :func:`eggwriter.write_via_setuptools` \
       is called rather than :func:`eggwriter.write`.
     - `observer` will be called via an :class:`EggObserver` intermediary.
-    - `python` is the interpreter to invoke if using setuptools.
 
     Returns (egg_filename, required_distributions, orphan_modules).
     """
@@ -272,7 +270,7 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
                                                entry_map, src_files,
                                                required_distributions,
                                                orphans, dst_dir, logger,
-                                               observer.observer, python)
+                                               observer.observer)
             else:
                 eggwriter.write(name, version, doc, entry_map,
                                 src_files, required_distributions,

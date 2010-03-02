@@ -1,8 +1,3 @@
-#public symbols
-#__all__ = []
-
-
-
 from enthought.traits.api import implements
 
 from openmdao.main.interfaces import ICaseIterator
@@ -10,15 +5,15 @@ from openmdao.main.interfaces import ICaseIterator
 
 class Case(object):
     """Contains all information necessary to specify an input 'case', i.e., a
-    list of name, index, value tuples for all inputs to the case, and all outputs
+    list of name, index, value tuples for all inputs to the case, all outputs
     collected after running the case, an indicator of the exit status of the
-    case, and a string containing error messages associated  with the running of
-    the case. The value entry of output triples should be set to None prior to
-    executing the case.
+    case, a string containing error messages associated with the running of
+    the case, and an optional case identifier. The value entry of output tuples
+    should be set to None prior to executing the case.
 
     """
     def __init__(self, inputs=None, outputs=None, max_retries=None,
-                 retries=None, msg=None):
+                 retries=None, msg=None, ident=''):
         """If inputs or outputs are supplied to the constructor, each must be an
         iterator that returns (name,index,value) tuples. 
         
@@ -31,14 +26,15 @@ class Case(object):
         self.retries = retries          # times case was retried
         self.msg = msg                  # If non-null, error message.
                                         # Implies outputs are invalid.  
+        self.ident = ident
                                         
     def __str__(self):
-        return 'Case:\n' \
+        return 'Case %s:\n' \
                '    inputs: %s\n' \
                '    outputs: %s\n' \
                '    max_retries: %s, retries: %s\n' \
                '    msg: %s' % \
-               (self.inputs, self.outputs,
+               (self.ident, self.inputs, self.outputs,
                 self.max_retries, self.retries, self.msg)
 
     def apply(self, scope):
@@ -48,16 +44,16 @@ class Case(object):
 
 
 class FileCaseIterator(object):
-    """An iterator that returns Case objects from a file having the simple
-    format below, where a blank line indicates a separation between two cases.
-    Whitespace outside of quotes is ignored.  Outputs are indicated
+    """An iterator that returns :class:`Case` objects from a file having the
+    simple format below, where a blank line indicates a separation between two
+    cases.  Whitespace outside of quotes is ignored.  Outputs are indicated
     by the lack of an assignment.
     
-    TODO: convert value strings to appropriate type
-    
-    TODO: allow multi-line values (strings, arrays, etc.) on right hand side
-    
-    TODO: allow array indexing for inputs, outputs, or RHS values
+    .. parsed-literal::
+
+       TODO: convert value strings to appropriate type
+       TODO: allow multi-line values (strings, arrays, etc.) on right hand side
+       TODO: allow array indexing for inputs, outputs, or RHS values
     
     .. parsed-literal::
     
@@ -83,6 +79,7 @@ class FileCaseIterator(object):
             self.inp = fname
         self.scope = scope
         self.line_number = 0
+        self.ident = 0
     
     def __iter__(self):
         return self._next_case()
@@ -98,7 +95,8 @@ class FileCaseIterator(object):
                 continue
             if line == '':  # blank line
                 if len(inputs) > 0:
-                    newcase = Case(inputs, outputs)
+                    self.ident += 1
+                    newcase = Case(inputs, outputs, ident=str(self.ident))
                     inputs = []
                     outputs = []
                     yield newcase
@@ -112,15 +110,17 @@ class FileCaseIterator(object):
                     outputs.append((parts[0].strip(), None, None))
                     
         if len(inputs) > 0:
-            newcase = Case(inputs, outputs)
+            self.ident += 1
+            newcase = Case(inputs, outputs, ident=str(self.ident))
             inputs = []
             outputs = []
             yield newcase
                     
 
 class ListCaseIterator(object):                
-    """ An iterator that returns Case objects from a passed-in list of cases.
-    This can be useful for runtime-generated cases from an optimizer, etc.
+    """An iterator that returns :class:`Case` objects from a passed-in list
+    of cases. This can be useful for runtime-generated cases from an
+    optimizer, etc.
 
     """
 

@@ -330,12 +330,11 @@ class TestCase(unittest.TestCase):
         # Save to egg.
         global OBSERVATIONS
         OBSERVATIONS = []
-        python = find_python()
         egg_info = self.model.save_to_egg(self.model.name, next_egg(),
                                           py_dir=PY_DIR, fmt=fmt,
                                           child_objs=self.child_objs,
                                           use_setuptools=use_setuptools,
-                                          observer=observer, python=python)
+                                          observer=observer)
         self.egg_name = egg_info[0]
 
         # Check observations.
