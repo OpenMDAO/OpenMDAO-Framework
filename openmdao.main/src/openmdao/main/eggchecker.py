@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import sys
 import time
+
 from openmdao.main.api import Component
 from openmdao.util.log import LOG_DEBUG
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -21,9 +22,6 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
     or zero if everything succeeded.
     """
     assert isinstance(comp, Component)
-    if sys.platform == 'win32':
-        print '\ncheck_save_load() unsupported on win32 at this time.'
-        return 0  # Enable once openmdao.util.testutil.find_python works.
 
     old_level = comp.log_level
     comp.log_level = LOG_DEBUG
