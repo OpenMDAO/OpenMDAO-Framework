@@ -4,14 +4,22 @@ import sys
 import shutil
 import tempfile
 from subprocess import check_call
+import pkg_resources
+import copy
 
 from openmdao.main.api import PkgResourcesFactory
 import openmdao.util.mod2egg
 from openmdao.util.testutil import find_python
 
+orig_path = copy.copy(pkg_resources.working_set.entries)
+
 class mod2eggTestCase(unittest.TestCase):
     
     def setUp(self):
+        # make a new pkg_resources.working_set and sys.path each time so that
+        # later tests don't benefit from something an earlier test added
+        sys.path = copy.copy(orig_path)
+        pkg_resources.working_set = pkg_resources.WorkingSet()
         self.pudir = tempfile.mkdtemp()
         self.version = '1.999'
         self.mod2egg = openmdao.util.mod2egg.__file__.replace('.pyc','.py')
@@ -31,9 +39,11 @@ class mod2eggTestCase(unittest.TestCase):
         foo.run()
         self.assertEqual(foo.y, 8.)
         
-        del sys.modules[foo.__class__.__module__]
+        # do some cleaning up here so that later tests won't accidentally pass
+        dist = pkg_resources.working_set.find(pkg_resources.Requirement.parse('doubler==%s' % self.version))
+        del sys.modules['doubler']
         for name in sys.path:
-            if (foo.__class__.__module__+self.version) in name:
+            if dist.location in name:
                 sys.path.remove(name)
                 if os.path.isfile(name):
                     os.remove(name)
@@ -45,7 +55,7 @@ class mod2eggTestCase(unittest.TestCase):
         check_call([self.python, 
                     self.mod2egg, 
                     self.srcfile,
-                    '-v',self.version,'-z','-i',self.pudir])        
+                    '-v',self.version,'-z','-i',self.pudir])
         self.use_egg()
         
     def test_mod2egg(self):
