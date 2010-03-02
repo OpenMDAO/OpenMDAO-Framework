@@ -122,6 +122,9 @@ def do_set(path, user):
         print 'Moving to', path
         os.chdir(path)
     os.environ['OPENMDAO_REPO'] = path
+    os.environ['PATH'] = os.path.join(path, 'buildout', 'bin') \
+                       + os.pathsep + os.path.join(path, 'scripts') \
+                       + os.pathsep + os.environ['PATH']
     if sys.platform == 'win32':
         sys.exit(subprocess.call(os.environ['ComSpec']))
     else:
@@ -254,7 +257,10 @@ def find_repository(repository, user):
 
     if not repository:
         path = find_bzr()
-        if not path or not path.startswith('/OpenMDAO'):
+        if sys.platform != 'win32' and not path.startswith('/OpenMDAO'):
+            # On UNIX use default search if not an OpenMDAO repository.
+            path = ''
+        if not path:
             # Use default if this user only has one.
             paths = glob.glob(os.path.join(user_base, '*'))
             if len(paths) == 1:
@@ -282,7 +288,6 @@ def find_bzr(path=None):
     if not os.path.exists(path):
         return None
     while path:
-        print 'find_bzr', path
         if os.path.exists(os.path.join(path, '.bzr')) or \
            os.path.exists(os.path.join(path, '.bzrignore')):
             return os.path.abspath(path)
