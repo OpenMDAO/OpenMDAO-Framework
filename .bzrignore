@@ -28,3 +28,4 @@ docs/srcdocs/packages/*.rst
 docs/srcdocs/modules/*.rst
 cobertura.xml
 nosetests.xml
+examples/openmdao.examples.bar3_simulation/openmdao/examples/bar3_simulation/bar3module.c

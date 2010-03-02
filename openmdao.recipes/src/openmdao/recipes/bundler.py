@@ -2,13 +2,14 @@
 import os
 import sys
 import shutil
-from pkg_resources import Environment, WorkingSet, Requirement, Distribution, DEVELOP_DIST
-from setuptools.package_index import PackageIndex
+from distutils.util import get_platform
 import tarfile
 import logging
 import fnmatch
 import urllib2
 
+from pkg_resources import Environment, WorkingSet, Requirement, get_supported_platform
+from setuptools.package_index import PackageIndex
 import zc.buildout
 import setuptools
 
@@ -50,6 +51,7 @@ class Bundler(object):
                                     'distrib-cache','dist')
         
         self.bundle_version = options['bundle_version']
+        self.bundle_name = options['bundle_name']
         self.configs = options.get('buildout_configs') or ['buildout.cfg']
         fix = options.get('pin_versions').strip().lower()
         if fix == 'false':
@@ -58,7 +60,7 @@ class Bundler(object):
             self.pin_versions = True
         self.readme = options.get('readme','').strip()
         if not self.readme:
-            self.logger.warning('No README file has been supplied to this recipe!')
+            self.logger.warning('No README file found!')
         
         self.excludeparts = [x for x in options['exclude_parts'].split() if x != '']
         self.parts = [x for x in buildout['buildout']['parts'].split() 
@@ -70,7 +72,10 @@ class Bundler(object):
         else:
             self.archive = True
             
-        extra_stuff = [x.strip() for x in options.get('extra_data', '').split('\n') if x.strip()]
+        self.src_dists = set([x.strip() for x in options.get('src_dists', '').split('\n') 
+                                 if x.strip()])
+        extra_stuff = [x.strip() for x in options.get('extra_data', '').split('\n') 
+                          if x.strip()]
         self.extra_stuff = []
         for stuff in extra_stuff:
             try:
@@ -124,10 +129,10 @@ class Bundler(object):
                     self.logger.debug('fixed version list:')
                     for proj in sorted(set(projs)):
                         self.logger.debug(proj)
-                        f.write('%s\n' % proj)                        
+                        f.write('%s\n' % proj)
                 f.write('\n\n')
             elif sect not in self.excludeparts:
-                f.write('\n[%s]\n' % sect)
+                f.write('\n\n[%s]\n' % sect)
                 f.write('recipe = %s\n\n' % opts['recipe'])
                 for opt, val in opts.items():
                     if opt not in boexcludes:
@@ -138,7 +143,7 @@ class Bundler(object):
                                     f.write('  %s\n' % line)
                         else:
                             f.write('%s = %s\n\n' % (opt, val))
-                    
+
 
     def _build_dev_eggs(self, startdir):
         """Build real eggs out of all of the develop eggs."""
@@ -151,8 +156,10 @@ class Bundler(object):
             if os.path.exists('build'):
                 shutil.rmtree('build')
             
-            cmd = '%s setup.py build bdist_egg -d %s' % (self.buildout['buildout']['executable'], 
-                                                         self.bundle_cache)
+            pkgname = os.path.basename(degg)
+            build_type = 'sdist' if pkgname in self.src_dists else 'bdist_egg'
+            cmd = '%s setup.py %s -d %s' % (self.buildout['buildout']['executable'],
+                                                  build_type, self.bundle_cache)
             p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
             out = p.communicate()[0]
             ret = p.returncode
@@ -167,27 +174,16 @@ class Bundler(object):
             if len(matches) != 1:
                 raise RuntimeError("Must have a single match for distrib %s in cache but found %s" %
                                   (dist.project_name, matches))
-            dist = Distribution.from_filename(matches[0])
-            if dist.platform is None:  # pure python distrib, so we can 'pre-install' it in eggs dir
-                self.logger.debug("unpacking archive %s to %s" %
-                                  (os.path.join(self.bundle_cache,matches[0]),
-                                   os.path.join(self.bundledir,'buildout','eggs',
-                                                matches[0])))
-                setuptools.archive_util.unpack_archive(os.path.join(self.bundle_cache,
-                                                                    matches[0]),
-                                                       os.path.join(self.bundledir,
-                                                                    'buildout','eggs',
-                                                                    matches[0]))
-                # get rid of the zipped egg we built
-                os.remove(os.path.join(self.bundle_cache, matches[0]))
-    
                         
-    def _tarfile_name(self):
+    def _tarfile_name(self, has_extensions=True):
         """ Returns name of tar file to be created. """
-        return os.path.join(self.bundledir, '%s-bundle-%s-py%s.tar.gz' % 
-                                            (self.options['bundle_name'],
+        pyver = 'py%s' % sys.version[:3]
+        if has_extensions:
+            pyver = pyver + '-%s' % get_supported_platform()
+        return os.path.join(self.bundledir, '%s-bundle-%s-%s.tar.gz' % 
+                                            (self.bundle_name,
                                              self.bundle_version,
-                                             sys.version[:3]))
+                                             pyver))
 
     def install(self):
         startdir = os.getcwd()
@@ -198,7 +194,7 @@ class Bundler(object):
         if os.path.exists(self.bundle_cache):
             shutil.rmtree(self.bundle_cache)
             
-        os.makedirs(os.path.join(self.bundledir, 'buildout', 'eggs'))            
+        os.makedirs(os.path.join(self.bundledir, 'buildout', 'eggs'))
         os.makedirs(self.bundle_cache)
         
         try:
@@ -207,29 +203,29 @@ class Bundler(object):
             os.chdir(startdir)
             
         eggdir = os.path.join(self.bundledir, 'buildout', 'eggs')
+        try:
+            spath = self.buildout['buildout']['extra-paths']
+            search_path = [x.strip() for x in spath.split('\n') if x.strip()]
+        except KeyError:
+            search_path = []
         env = Environment([self.buildout['buildout']['eggs-directory'], 
                            eggdir,
                            os.path.join(self.buildout['buildout']['directory'],
                                         'setup'),
-                           self.buildout['buildout']['develop-eggs-directory']])
+                           self.buildout['buildout']['develop-eggs-directory']]+search_path)
         reqs = [Requirement.parse(x.strip()) for x in self.options['eggs'].split()]
-        self.dists = WorkingSet().resolve(reqs, env)        
+        self.dists = WorkingSet().resolve(reqs, env)
         
         self._setup_buildout_dir()  
         
         # Check that we can contact the egg server.
         url = self.buildout['buildout'].get('index',
-                                            'http://pypi.python.org/pypi')
-        try:
-            spath = self.buildout['buildout']['extra-paths']
-            search_path = [x.strip() for x in spath.split('\n') if x.strip()]
-        except KeyError:
-            search_path = None
+                                            'http://pypi.python.org/simple')
         self.logger.info('using URL %s', url)
         self._check_url(url)
         self.logger.info('    search path %s', search_path)
 
-        index = PackageIndex(url, search_path=search_path)
+        index = PackageIndex(url, search_path=[])
         try:
             flinks = self.buildout['buildout']['find-links']
         except KeyError:
@@ -242,23 +238,32 @@ class Bundler(object):
                 self._check_url(link)
 
         failed_downloads = 0
+        devs = set([os.path.basename(x) for x in self.develop])
         for dist in self.dists:
+            rep = dist.project_name.replace('-','_')
+            if rep in devs: # skip develop eggs we've already included
+                continue
             self.logger.info('processing %s...', dist.as_requirement())
             newloc = os.path.join(eggdir, os.path.basename(dist.location))
-            if dist.platform is None:  # pure python
-                if dist.location != newloc and dist.precedence != DEVELOP_DIST:
-                    setuptools.archive_util.unpack_archive(dist.location, newloc)
-                    self.logger.info('    unpacked %s',
-                                     os.path.basename(dist.location))
-            else:  # not pure python, so put in distrib-cache and build when user runs buildout
-                fetched = index.download(dist.as_requirement(),
-                                         self.bundle_cache)
-                if fetched:
-                    self.logger.info('    downloaded %s',
-                                     fetched[len(self.bundle_cache)+1:])
-                else:
-                    self.logger.error('    download failed')
-                    failed_downloads += 1
+            if dist.project_name in self.src_dists:
+                src = True
+                self.logger.info('getting source distrib for project %s' % dist.project_name)
+            else:
+                src = False
+            fetched = getattr(index.fetch_distribution(dist.as_requirement(), self.bundle_cache, 
+                                               source=src, develop_ok=True, force_scan=True), 
+                              'location', None)
+            if fetched:
+                self.logger.info('    downloaded %s', fetched)
+                bpath = os.path.join(self.bundle_cache, os.path.basename(fetched))
+                if not os.path.exists(bpath):
+                    if os.path.isdir(fetched):
+                        self.logger.info("DIR FOUND: %s" % fetched)
+                    else:
+                        shutil.copy(fetched, bpath)
+            else:
+                self.logger.error('    download failed')
+                failed_downloads += 1
         if failed_downloads:
             raise zc.buildout.UserError('%d failed downloads'
                                         % failed_downloads)
@@ -291,7 +296,7 @@ class Bundler(object):
            
             tarf = tarfile.open(tarname, mode='w:gz')
             tarf.add(self.bundledir, arcname='%s-%s-py%s' %
-                                    (self.options['bundle_name'], 
+                                    (self.bundle_name, 
                                      self.bundle_version,
                                      sys.version[:3]))
             tarf.close()

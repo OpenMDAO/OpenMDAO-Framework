@@ -17,12 +17,19 @@ class Bar3OptimizationTestCase(unittest.TestCase):
         self.model.pre_delete()
         self.model = None
         
-    def test_runvehicle(self):
+    def test_bar3(self):
         
         self.model.run()
         
+        from platform import architecture
+        
+        if architecture()[0] == '32bit':
+            weight_expected = 83.4010088
+        else:
+            weight_expected = 83.3852245385
+                    
         self.assertAlmostEqual(self.model.bar3_truss.weight, 
-                               83.3852245385, places=5)
+                               weight_expected, places=5)
 
 if __name__ == "__main__":
     

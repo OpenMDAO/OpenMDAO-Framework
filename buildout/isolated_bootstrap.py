@@ -14,6 +14,7 @@ $Id$
 
 import os, shutil, sys, tempfile #, urllib2
 import fnmatch
+from subprocess import check_call
 
 bodir = os.getcwd()
 setupdir = os.path.join(bodir,'setup')
@@ -67,14 +68,8 @@ else:
 
 cmd = "import sys; sys.path.insert(0,r'%s'); from setuptools.command.easy_install import main; main()" % os.path.join(bodir, 'setup', stoolsname)
 
-assert os.spawnle(
-    os.P_WAIT, sys.executable, quote (sys.executable),
-    '-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
-    quote (setupdir), 'zc.buildout',
-    dict(os.environ,
-         PYTHONPATH=setupdir
-         ),
-    ) == 0
+check_call([sys.executable, '-c', quote(cmd), '-H', 'None', '-f', setupdir, '-maqNxd',
+            quote(setupdir), 'zc.buildout'], env=dict(os.environ,PYTHONPATH=setupdir))
 
 ws  = pkg_resources.working_set
 dist = pkg_resources.Environment([setupdir]).best_match(
@@ -85,7 +80,7 @@ ws.require('zc.buildout')
 import zc.buildout.buildout
 
 # instead of calling zc.buildout.buildout.main, we create a Buildout
-# object ourselves so we can figure out where the eggs-directory is                                
+# object ourselves so we can figure out where the eggs-directory is
 try:
     command = 'bootstrap'
     buildout = zc.buildout.buildout.Buildout('buildout.cfg', cloptions=[],
@@ -99,14 +94,8 @@ eggdir = buildout['buildout']['eggs-directory']
 #zc.buildout.buildout.main(sys.argv[1:] + ['bootstrap'])
 
 # make sure we have zc.recipe.egg
-assert os.spawnle(
-    os.P_WAIT, sys.executable, quote (sys.executable),
-    '-c', quote (cmd), '-H', 'None', '-f', setupdir, '-maqNxd', 
-    quote (eggdir), 'zc.recipe.egg',
-    dict(os.environ,
-         PYTHONPATH=setupdir
-         ),
-    ) == 0
+check_call([sys.executable, '-c', quote(cmd), '-H', 'None', '-f', setupdir, '-maqNxd',
+            quote(eggdir), 'zc.recipe.egg'], env=dict(os.environ,PYTHONPATH=setupdir))
 
 # now modify the bin/buildout script to isolate it
 
