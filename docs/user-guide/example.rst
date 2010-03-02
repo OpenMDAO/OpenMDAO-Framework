@@ -1022,7 +1022,7 @@ was created and a SimVehicle and CONMINdriver were instantiated:
 	        # Create CONMIN Optimizer instance
         	self.add_container('driver', CONMINdriver())
 
-Note that the syntax for instantiated the CONMIN driver is the same as for any other component or subassembly. The CONMIN 
+Note that the syntax for instantiating the CONMIN driver is the same as for any other component or subassembly. The CONMIN 
 driver requires some initialization and connecting before it can be used:
 
         
