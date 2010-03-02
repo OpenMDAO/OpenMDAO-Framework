@@ -28,14 +28,26 @@ class TestCase(unittest.TestCase):
         comp = AxodComp(input_filename=inp)
         comp.run()
 
+        from platform import architecture
+        
         # 'desired' from Linux, 'tolerance' for Windows/Mac.
-        assert_rel_error(self, comp.hpower, 3323.77880859375, 0.00015)
-        assert_rel_error(self, comp.tott[0], 757.75458, 0.001)
-        assert_rel_error(self, comp.totp[0], 8.223134, 0.0001)
-        assert_rel_error(self, comp.mflow[0], 4.9717932, 0.001)
-        assert_rel_error(self, comp.effs[0], 0.95300001, 0.000001)
-        assert_rel_error(self, comp.effr[0], 0.90600002, 0.000001)
+        if architecture()[0] == '32bit':
+            assert_rel_error(self, comp.hpower, 3323.77880859375, 0.00015)
+            assert_rel_error(self, comp.tott[0], 757.75458, 0.001)
+            assert_rel_error(self, comp.totp[0], 8.223134, 0.001)
+            assert_rel_error(self, comp.mflow[0], 4.9717932, 0.001)
+            assert_rel_error(self, comp.effs[0], 0.95300001, 0.0001)
+            assert_rel_error(self, comp.effr[0], 0.90600002, 0.0001)
+        else:
+            assert_rel_error(self, comp.hpower, 3323.77880859375, 0.00015)
+            assert_rel_error(self, comp.tott[0], 757.75458, 0.001)
+            assert_rel_error(self, comp.totp[0], 8.223134, 0.0001)
+            assert_rel_error(self, comp.mflow[0], 4.9717932, 0.001)
+            assert_rel_error(self, comp.effs[0], 0.95300001, 0.000001)
+            assert_rel_error(self, comp.effr[0], 0.90600002, 0.000001)
+            
         self.assertEqual(len(comp.results), 19773)
+
 
     def test_one_stage(self):
         inp = pkg_resources.resource_filename('openmdao.lib.components.test',

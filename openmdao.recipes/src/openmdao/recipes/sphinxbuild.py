@@ -133,7 +133,37 @@ def test_sphinx_docs(*args):
     OpenMDAO documentation.
     """
     
-    
+def gen_docs_script(buildout, bindir, idxpath, browser=''):
+    """Create a bin/docs script that displays docs in a browser"""
+    if sys.platform == 'win32':
+        scriptname = os.path.join(bindir, 'docs.py')
+        bat = open(os.path.join(bindir, 'docs.bat'), 'w')
+        bat.write("@echo off\npython %s" % scriptname)
+        bat.close()
+    else:
+        scriptname = os.path.join(bindir, 'docs')
+                                 
+    if browser != '':
+        browser = "'%s'" % browser
+        
+    script = open(scriptname, 'w')
+    script.write("""\
+#!%(python)s
+
+import webbrowser
+
+wb = webbrowser.get(%(browser)s)
+wb.open(r"%(index)s")
+    """ % dict(python=buildout['buildout']['executable'],
+               browser=browser,
+               index=idxpath))
+    script.close()
+    try:
+        os.chmod(scriptname, 0775)
+    except (AttributeError, os.error):
+        pass
+    return scriptname
+
 class SphinxBuild(object):
     """Build Sphinx documentation and create a script to bring up the
     documentation in a browser. This is specific to the OpenMDAO Sphinx docs and
@@ -182,7 +212,8 @@ class SphinxBuild(object):
         self.srcmods = options.get('srcmods', '')
         self.docdir = options.get('doc_dir', 'docs')
         self.builddir = options.get('build_dir', '_build')
-        self.build = options.get('build','true').strip().lower()
+        self.build = set([x.strip().lower() for x in options['build'].split('\n') 
+                                     if x.strip()])
         dev_egg_dir = buildout['buildout']['develop-eggs-directory']
         dev_eggs = fnmatch.filter(os.listdir(dev_egg_dir),'*.egg-link')
         # grab the first line of each dev egg link file
@@ -226,6 +257,7 @@ class SphinxBuild(object):
             f.close()
 
     def install(self):
+        scriptlist = []
         # build up a list of all egg dependencies resulting from our 'eggs' parameter
         env = Environment(self.dev_eggs+[self.buildout['buildout']['eggs-directory'],
                                          os.path.join(self.buildout['buildout']['directory'],
@@ -233,44 +265,48 @@ class SphinxBuild(object):
         reqs = [Requirement.parse(x.strip()) for x in self.options['eggs'].split()]
         self.depdists = WorkingSet().resolve(reqs, env)
         self.working_set = WorkingSet([d.location for d in self.depdists])
+        bindir = os.path.join(self.buildout['buildout']['directory'], 'bin')
     
         startdir = os.getcwd()
         if not os.path.isdir(self.docdir):
             self.docdir = os.path.join(self.branchdir, self.docdir)
         if not os.path.isdir(self.docdir):
             raise RuntimeError('doc directory '+self.docdir+' not found')
+        
+        if 'docs' in self.build:
+            self._write_src_docs()
+            os.chdir(self.docdir)
             
-        self._write_src_docs()            
-        os.chdir(self.docdir)        
-        
-        # make necessary directories if they aren't already there
-        if not os.path.isdir(os.path.join(self.builddir, 'html')):
-            os.makedirs(os.path.join(self.builddir, 'html'))
-        if not os.path.isdir(os.path.join(self.builddir, 'doctrees')):
-            os.makedirs(os.path.join(self.builddir, 'doctrees'))
-        
-        # create the sphinx-build script
-        bindir = os.path.join(self.buildout['buildout']['directory'], 'bin')
-        bspath = os.path.join(bindir, 'sphinx-build')
-         
-        bldscript = zc.buildout.easy_install.scripts(
-            ['Sphinx'], self.working_set, 
-            sys.executable, os.path.dirname(bspath), { 'sphinx-build': 'sphinx-build' },
-            arguments= "argv=['-P', '-b', 'html', '-d', r'%s', r'%s', r'%s']" %
-                        (os.path.abspath(os.path.join(self.builddir, "doctrees")),
-                         os.path.abspath(self.docdir), 
-                         os.path.abspath(os.path.join(self.builddir, "html"))))        
+            # make necessary directories if they aren't already there
+            if not os.path.isdir(os.path.join(self.builddir, 'html')):
+                os.makedirs(os.path.join(self.builddir, 'html'))
+            if not os.path.isdir(os.path.join(self.builddir, 'doctrees')):
+                os.makedirs(os.path.join(self.builddir, 'doctrees'))
+            
+            # create the sphinx-build script
+            bspath = os.path.join(bindir, 'sphinx-build')
+            
+            bldscript = zc.buildout.easy_install.scripts(
+                ['Sphinx'], self.working_set, 
+                sys.executable, os.path.dirname(bspath), { 'sphinx-build': 'sphinx-build' },
+                arguments= "argv=['-P', '-b', 'html', '-d', r'%s', r'%s', r'%s']" %
+                            (os.path.abspath(os.path.join(self.builddir, "doctrees")),
+                             os.path.abspath(self.docdir), 
+                             os.path.abspath(os.path.join(self.builddir, "html"))))
+            scriptlist.extend(bldscript)
 
-        # create the testdocs script
-        tstscript = zc.buildout.easy_install.scripts(
-            ['Sphinx'], self.working_set, 
-            sys.executable, os.path.dirname(bspath), { 'sphinx-build': 'testdocs' },
-            arguments= "argv=['-P', '-b', 'doctest', '-d', r'%s', r'%s', r'%s']" %
-                        (os.path.abspath(os.path.join(self.builddir, "doctrees")),
-                         os.path.abspath(self.docdir), 
-                         os.path.abspath(os.path.join(self.builddir, "html"))))      
+        if 'test' in self.build:
+            # create the testdocs script
+            tstscript = zc.buildout.easy_install.scripts(
+                ['Sphinx'], self.working_set, 
+                sys.executable, os.path.dirname(bspath), { 'sphinx-build': 'testdocs' },
+                arguments= "argv=['-P', '-b', 'doctest', '-d', r'%s', r'%s', r'%s']" %
+                            (os.path.abspath(os.path.join(self.builddir, "doctrees")),
+                             os.path.abspath(self.docdir), 
+                             os.path.abspath(os.path.join(self.builddir, "html"))))
+            scriptlist.extend(tstscript)
 
-        if self.build == 'true':
+        if 'docs' in self.build:
             # build the docs using Sphinx
             try:
                 p = Popen(bspath, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
@@ -288,49 +324,22 @@ class SphinxBuild(object):
             finally:
                 os.chdir(startdir)
         
-        # create a bin/docs script that displays docs in a browser
-        if sys.platform == 'win32':
-            scriptname = os.path.join(bindir, 'docs.py')
-            bat = open(os.path.join(bindir, 'docs.bat'), 'w')
-            bat.write("@echo off\npython %s" % scriptname)
-            bat.close()
-            #browser = self.options.get('browser') or 'windows-default'
-        else:
-            scriptname = os.path.join(bindir, 'docs')
-                                     
-        browser = self.options.get('browser', '')
-        if browser != '':
-            browser = "'%s'" % browser
-            
-        script = open(scriptname, 'w')
+        if 'docs' in self.build or 'docscript' in self.build:
+            idxpath = os.path.join(self.branchdir, self.docdir, self.builddir,
+                                   'html','index.html')
+            scriptname = gen_docs_script(self.buildout, bindir, idxpath, 
+                                         self.options.get('browser', ''))
+            scriptlist.append(scriptname)
         
-        idxpath = os.path.join(self.branchdir, self.docdir, self.builddir,
-                               'html','index.html')
-        script.write("""\
-#!%(python)s
-
-import webbrowser
-
-wb = webbrowser.get(%(browser)s)
-wb.open(r"%(index)s")
-        """ % dict(python=self.executable,
-                   browser=browser,
-                   index=idxpath))
-        script.close()
-        try:
-            os.chmod(scriptname, 0775)
-        except (AttributeError, os.error):
-            pass
-        
-        
-        # create a unit test for the source code found in the docs
-        utdir = os.path.join(self.buildout['buildout']['directory'],
-                             'parts', self.name)
-        if not os.path.exists(utdir):
-            os.makedirs(utdir)
-        utname = os.path.join(utdir,'test_docs.py')
-        utest = open(utname, 'w')
-        utest.write("""
+        if 'test' in self.build:
+            # create a unit test for the source code found in the docs
+            utdir = os.path.join(self.buildout['buildout']['directory'],
+                                 'parts', self.name)
+            if not os.path.exists(utdir):
+                os.makedirs(utdir)
+            utname = os.path.join(utdir,'test_docs.py')
+            utest = open(utname, 'w')
+            utest.write("""
 import unittest
 import os
 from os.path import join
@@ -343,11 +352,11 @@ class SphinxDocsTestCase(unittest.TestCase):
         retval = p.returncode
         if not output.strip().endswith('build succeeded.'):
             self.fail('problem in documentation source code examples:\\n'+output)
-        """ % os.path.join(bindir, 'testdocs')
-        )
+            """ % os.path.join(bindir, 'testdocs')
+            )
+            scriptlist.append(utname)
         
-        return [scriptname, utname]+bldscript+tstscript 
-
+        return scriptlist
 
     update = install
         

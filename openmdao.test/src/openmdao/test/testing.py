@@ -17,6 +17,8 @@ def run_openmdao_suite(*pargs, **kwargs):
     """
     
     args = sys.argv[:]
+    args.append('--exe') # by default, nose will skip any .py files that are
+                         # executable. --exe prevents this behavior
         
     tlist = ['openmdao']
     

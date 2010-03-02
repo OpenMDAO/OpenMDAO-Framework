@@ -189,12 +189,15 @@ def mod2egg(argv, groups= { 'openmdao.component': Component,
 
     # create the entry point dict
     entrypts = {}
+    classnames = set()
     try:
         for group,pulist in plugins.items():
             if len(pulist) > 0:
-                if group not in entrypts: entrypts[group] = []
+                if group not in entrypts: 
+                    entrypts[group] = []
                 for pu in pulist:
                     entrypts[group].append('%s = %s:%s' % (pu,modname,pu))
+                    classnames.add(pu)
  
         setup_template = '''
 from setuptools import setup
@@ -228,7 +231,7 @@ setup(
         shutil.copy(os.path.join(orig_dir,args[0]), 
                     os.path.join(pkgdir, modname, modname, os.path.basename(args[0])))
         f = open(os.path.join(pkgdir, modname, modname, '__init__.py'), 'w')
-        f.write(' ')
+        f.write('from %s import %s' % (modname, ','.join(classnames)))
         f.close()
         
         # build the egg (and if a zipped egg, put in install_dir)
@@ -245,10 +248,11 @@ setup(
                 logging.info('installed %s (zipped) in %s' % (eggname, idir_abs))
             else:
                 check_call([sys.executable, 
-                            'setup.py', qstr, 'bdist_egg', '-d', destdir])        
+                            'setup.py', qstr, 'bdist_egg', '-d', destdir])
+                eggname = _find_egg([destdir], modname, options.version)
+                logging.info('created egg %s in %s' % (eggname, destdir))
                 if idir_abs:
                     # find the egg we just built
-                    eggname = _find_egg([destdir], modname, options.version)
                     if not eggname:
                         raise RuntimeError("ERROR: cannot locate egg file")
                 
@@ -257,8 +261,8 @@ setup(
                         optstr = '-mN'
                     else:
                         optstr = '-mNq'
-                        setuptools.command.easy_install.main(
-                            argv=['-d','.',optstr,'%s' % os.path.join(destdir, eggname)])
+                    setuptools.command.easy_install.main(
+                        argv=['-d','.',optstr,'%s' % os.path.join(destdir, eggname)])
                 
                     logging.info('installed %s in %s' % (eggname, idir_abs)) 
             shutil.rmtree(os.path.join(pkgdir, modname, 'build'))
