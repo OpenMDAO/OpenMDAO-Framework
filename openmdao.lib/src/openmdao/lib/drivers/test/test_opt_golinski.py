@@ -243,16 +243,24 @@ class GolinskiTestCase(unittest.TestCase):
             # print 'Obj FUNCTION Val = ', self.top.comp.result 
             iter = iter +1
 
+        from platform import architecture
+        
+        if architecture()[0] == '32bit':
+            accuracy = 1
+        else:
+            accuracy = 2
+            
         #print 'Obj FUNCTION Val = ', self.top.comp.result 
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
-                               self.top.driver.objective.evaluate(), places=2)
+                               self.top.driver.objective.evaluate(), \
+                               places=accuracy)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
                                self.top.comp.x[1], places=1)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
-                               self.top.comp.x[2], places=2)
+                               self.top.comp.x[2], places=accuracy)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
-                               self.top.comp.x[3], places=2)
+                               self.top.comp.x[3], places=accuracy)
         self.assertAlmostEqual(self.top.comp.opt_design_vars[4], 
                                self.top.comp.x[4], places=1)
 
