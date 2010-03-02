@@ -7,33 +7,32 @@ import copy
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
-from pkg_resources import working_set, get_entry_map, get_distribution
+import pkg_resources
+from pkg_resources import get_entry_map, get_distribution
 from pkg_resources import Environment, Requirement, DistributionNotFound
     
 from openmdao.main.factory import Factory
 
 def import_version(modname, req, env=None):
-    """Import the specified module from the package specified in the Requirement 
-    req, if it can
-    be found in the current WorkingSet or in the specified Environment. If a
-    conflicting version already exists in the WorkingSet, a VersionConflict
-    will be raised. If a distrib cannot be found matching the requirement,
-    raise a DistributionNotFound.
+    """Import the specified module from the package specified in the
+    Requirement req, if it can be found in the current WorkingSet or in the
+    specified Environment. If a conflicting version already exists in the
+    WorkingSet, a VersionConflict will be raised. If a distrib cannot be found
+    matching the requirement, raise a DistributionNotFound.
     """
 
     # see if the requested distrib is available either in the current 
     # working_set or in the environment
     try:
-        needed = working_set.resolve([req], env)
+        needed = pkg_resources.working_set.resolve([req], env)
     except DistributionNotFound:
         raise DistributionNotFound('could not find distribution satisfying '+
                                    str(req))
 
     for dist in needed:
         # add required distribs to the real working set
-        if dist not in working_set:
-            working_set.add(dist, entry=None, insert=False)  
-            dist.activate()
+        pkg_resources.working_set.add(dist)
+        dist.activate()
                 
     __import__(modname)
 
@@ -90,7 +89,7 @@ class PkgResourcesFactory(Factory):
         """
         if server is not None or res_desc is not None:
             return None
-        
+
         try:
             if version is None:
                 # TODO: make sure this always creates the newest version
