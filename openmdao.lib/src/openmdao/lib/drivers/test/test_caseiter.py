@@ -41,7 +41,6 @@ class DrivenComponent(Component):
 
     x = Array('d', value=[1., 1., 1., 1.], iostatus='in')
     y = Array('d', value=[1., 1., 1., 1.], iostatus='in')
-    correlation_key = Int(-1, iostatus='in')
     raise_error = Bool(False, iostatus='in')
     rosen_suzuki = Float(0., iostatus='out')
     sum_y = Float(0., iostatus='out')
@@ -52,9 +51,7 @@ class DrivenComponent(Component):
     def execute(self):
         """ Compute results from input vector. """
         self.rosen_suzuki = rosen_suzuki(self.x)
-        self.sum_y = 0
-        for i in range(len(self.y)):
-            self.sum_y += self.y[i]
+        self.sum_y = sum(self.y)
         if self.raise_error:
             self.raise_exception('Forced error', RuntimeError)
 
@@ -85,11 +82,10 @@ class TestCase(unittest.TestCase):
             raise_error = force_errors and i%4 == 3
             inputs = [('x', None, numpy.random.normal(size=4)),
                       ('y', None, numpy.random.normal(size=10)),
-                      ('correlation_key', None, i),
                       ('raise_error', None, raise_error)]
             outputs = [('rosen_suzuki', None, None),
                        ('sum_y', None, None)]
-            self.cases.append(Case(inputs, outputs))
+            self.cases.append(Case(inputs, outputs, ident=i))
 
     def tearDown(self):
         self.model.pre_delete()
@@ -181,7 +177,7 @@ class TestCase(unittest.TestCase):
         # Verify recorded results match expectations.
         self.assertEqual(len(results), len(self.cases))
         for case in results:
-            i = case.inputs[2][2]  # Correlation key.
+            i = case.ident  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
                 if sequential:

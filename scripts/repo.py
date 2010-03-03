@@ -9,6 +9,7 @@ but requires some discipline :-(
 import glob
 import optparse
 import os.path
+import platform
 import shutil
 import stat
 import subprocess
@@ -257,8 +258,9 @@ def find_repository(repository, user):
 
     if not repository:
         path = find_bzr()
-        if sys.platform != 'win32' and not path.startswith('/OpenMDAO'):
-            # On UNIX use default search if not an OpenMDAO repository.
+        if platform.node() == 'torpedo.grc.nasa.gov' and \
+           not path.startswith('/OpenMDAO'):
+            # On OpenMDAO home use default search if not an OpenMDAO repository.
             path = ''
         if not path:
             # Use default if this user only has one.
