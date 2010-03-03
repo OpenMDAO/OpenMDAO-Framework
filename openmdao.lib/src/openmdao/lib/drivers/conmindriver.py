@@ -1,3 +1,7 @@
+"""
+    conmindriver.py - Driver for the CONMIN optimizer.
+"""
+
 # pylint: disable-msg=C0103
 
 #public symbols
@@ -5,11 +9,10 @@ __all__ = ['CONMINdriver']
 
 
 
-from copy import copy
 import numpy.numarray as numarray
 import numpy
 
-from enthought.traits.api import Int, Array, List, on_trait_change, \
+from enthought.traits.api import Int, Array, on_trait_change, \
                                  TraitError, Float
 import conmin.conmin as conmin
 
@@ -18,7 +21,8 @@ from openmdao.main.exceptions import RunStopped
 
 
 class _cnmn1(object):
-    """Just a primitive data structure for storing common block data"""
+    """Just a primitive data structure for storing cnmnl common block data"""
+    
     def __init__(self):
         self.clear()
 
@@ -26,6 +30,7 @@ class _cnmn1(object):
     # "cleared" values. The true default values (as denoted in the corresponding
     # traits) are assigned later.
     def clear(self):
+        """ Clear values. """
         self.ndv = 0
         self.ncon = 0
         self.nside = 0
@@ -56,10 +61,13 @@ class _cnmn1(object):
         self.itmax = 0
  
 class _consav(object):
+    """Just a primitive data structure for storing consav common block data"""
+    
     def __init__(self):
         self.clear()
     
     def clear(self):
+        """ Clear values. """
         self.dm1 = 0.0
         self.dm2 = 0.0
         self.dm3 = 0.0
@@ -198,10 +206,10 @@ class CONMINdriver(Driver):
     phi = Float(5.0, iostatus='in', desc='Participation coefficient - penalty \
                       parameter that pushes designs towards the feasible \
                       region.')
-    delfun = Float(0.001, iostatus='in', low=0.0001, desc='Relative convergence \
-                      tolerance')
-    dabfun = Float(0.001, iostatus='in', low=1.0e-10, desc='Absolute convergence \
-                      tolerance')
+    delfun = Float(0.001, iostatus='in', low=0.0001, desc='Relative \
+                      convergence tolerance')
+    dabfun = Float(0.001, iostatus='in', low=1.0e-10, desc='Absolute \
+                      convergence tolerance')
     linobj = Int(0, iostatus='in', desc='Linear objective function flag')
     itrm = Int(3, iostatus='in', desc='Number of consecutive iterations to \
                       indicate convergence (relative or absolute)')
@@ -256,7 +264,7 @@ class CONMINdriver(Driver):
             self.design_vals[i] = val.evaluate()
 
         # update constraint value array
-        for i,v in enumerate(self.constraints):
+        for i, v in enumerate(self.constraints):
             self.constraint_vals[i] = v.evaluate()
         #self.debug('%s: new iteration' % self.get_pathname())
         #self.debug('objective = %s' % self.objective)
@@ -312,7 +320,7 @@ class CONMINdriver(Driver):
                         
             # update the design variables in the model
             dvals = [float(val) for val in self.design_vals[:-2]]
-            for var,val in zip(self.design_vars, dvals):
+            for var, val in zip(self.design_vars, dvals):
                 var.set(val)
             
             # calculate objective and constraints
@@ -322,7 +330,7 @@ class CONMINdriver(Driver):
                 self.run_iteration()
             
                 # update constraint value array
-                for i,v in enumerate(self.constraints):
+                for i, v in enumerate(self.constraints):
                     self.constraint_vals[i] = v.evaluate()
                 #self.debug('constraints = %s'%self.constraint_vals)
                     
@@ -353,7 +361,7 @@ class CONMINdriver(Driver):
         self.cnmn1.clear()
         self.consav.clear()
         
-        if not isinstance(self.objective,basestring):
+        if not isinstance(self.objective, basestring):
             self.raise_exception('no objective specified', RuntimeError)
         
         # size arrays based on number of design variables
@@ -369,12 +377,12 @@ class CONMINdriver(Driver):
             if len(self.lower_bounds) != num_dvs:
                 msg = 'size of new lower bound array (%d) does not match ' + \
                       'number of design vars (%d)'
-                self.raise_exception(msg % (len(self.lower_bounds),num_dvs), \
+                self.raise_exception(msg % (len(self.lower_bounds), num_dvs), \
                                      ValueError)
             for i, lb in enumerate(self.lower_bounds):
                 self._lower_bounds[i] = lb
         else:
-            self._lower_bounds = numarray.array(([-1.e99]*num_dvs)+[0.,0.])
+            self._lower_bounds = numarray.array(([-1.e99]*num_dvs) + [0., 0.])
             
             
         # create upper bounds numarray
@@ -383,16 +391,16 @@ class CONMINdriver(Driver):
             if len(self.upper_bounds) != num_dvs:
                 msg = 'size of new upper bound array (%d) does not match ' + \
                       'number of design vars (%d)'
-                self.raise_exception(msg % (len(self.upper_bounds),num_dvs), \
+                self.raise_exception(msg % (len(self.upper_bounds), num_dvs), \
                                      ValueError)
             
             for i, ub in enumerate(self.upper_bounds):
                 self._upper_bounds[i] = ub
         else:
-            self._upper_bounds = numarray.array(([1.e99]*num_dvs)+[0.,0.])
+            self._upper_bounds = numarray.array(([1.e99]*num_dvs) + [0., 0.])
 
         # Check if the upper and lower bounds are swapped    
-        for i,val in enumerate(self._lower_bounds):
+        for i, val in enumerate(self._lower_bounds):
             if val > self._upper_bounds[i]:
                 self.raise_exception('lower bound greater than upper bound ' + \
                     'for design variable (%s)'%self.design_vars[i], ValueError)
@@ -404,7 +412,7 @@ class CONMINdriver(Driver):
             if len(self.scal) != num_dvs:
                 msg = 'size of scale factor array (%d) does not match ' + \
                       'number of design vars (%d)'
-                self.raise_exception(msg % (len(self.scal),num_dvs), \
+                self.raise_exception(msg % (len(self.scal), num_dvs), \
                                      ValueError)
             
             for i, scale_factor in enumerate(self.scal):
@@ -482,24 +490,29 @@ class CONMINdriver(Driver):
 
     @on_trait_change('objective') 
     def _refvar_changed(self, obj, name, old, new):
+        """ Check objective on change"""
+        
         expr = getattr(obj, name)
         try:
             # force checking for existence of vars referenced in expression
             expr.refs_valid()  
         except (AttributeError, RuntimeError), err:
             msg = "invalid value '%s' for input ref variable '%s': %s"
-            self.raise_exception( msg % (str(expr),name,err), TraitError)
+            self.raise_exception( msg % (str(expr), name, err), TraitError)
         
     @on_trait_change('constraints, design_vars') 
     def _refvar_array_changed(self, obj, name, old, new):
+        """ Check constraints and design variables on change"""
+
         exprevals = getattr(obj, name)
-        for i,expr in enumerate(exprevals):
+        for i, expr in enumerate(exprevals):
             try:
                 # force checking for existence of vars referenced in expression
                 expr.refs_valid()  
             except (AttributeError, RuntimeError), err:
                 msg = "invalid value '%s' for input ref variable '%s[%d]': %s"
-                self.raise_exception( msg % (str(expr),name,i,err), TraitError)
+                self.raise_exception( msg % \
+                    (str(expr), name, i, err), TraitError)
         
     def _load_common_blocks(self):
         """ Reloads the common blocks using the intermediate info saved in the
