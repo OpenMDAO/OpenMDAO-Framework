@@ -276,7 +276,7 @@ class Bundler(object):
                     else:
                         shutil.copy(fetched, bpath)
                 if not fetched.endswith('.egg') and dist.project_name not in self.src_dists:
-                    # it's a source dist that we have to make into a bdist_egg
+                    # it's a source dist that we have to make into a bdist_egg or bdist
                     self.sdist_to_bdist_egg(bpath, delete=True)
             else:
                 self.logger.error('    download failed')
@@ -302,7 +302,6 @@ class Bundler(object):
                 shutil.copytree(src, dest) 
             else:
                 self.logger.error('%s is not a file or directory' % src)
-                    
         
         if self.readme:
             shutil.copy(self.readme, os.path.join(self.bundledir, 'README.txt'))
