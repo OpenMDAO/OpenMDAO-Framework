@@ -181,7 +181,7 @@ be imported into Python just like any Python file:
     bar2_area = 1.0
     bar3_area = 1.0
     Youngs_Modulus = 30000.0
-    bar2_Length = 100.0
+    bar2_length = 100.0
     weight_density = 0.1
 
 .. testcode:: bar3_wrap
@@ -199,11 +199,11 @@ on the right hand side.
 
         (self.bar1_stress, self.bar2_stress, self.bar3_stress, 
          self.displacement_x_dir, self.displacement_y_dir, 
-         self.frequency_Hz, self.weight) \
+         self.frequency, self.weight) \
          = runbar3truss(
                     load, lumped_mass, 
                     bar1_area,bar2_area,bar3_area,
-                    Youngs_Modulus, bar2_Length, weight_density)
+                    Youngs_Modulus, bar2_length, weight_density)
 
 F2PY automatically also generates a docstring for this function. This can be examined by
 opening OpenMDAO's local python environment:
@@ -288,7 +288,7 @@ Creating an Extension with SWIG
 ::
 
     Wrapper Utility: SWIG
-    Source Languages: C, C++, C#, Common Lisp (CLISP, Allegro CL, CFFI, UFFI), Java, Lua, Modula-3, OCAML, Octave, R
+    Source Languages: C, C++
     Documentation: http://www.swig.org/doc.html
     
 
@@ -296,8 +296,19 @@ TODO - C Example
 
 TODO - C++ Example
 
+
+Creating an Extension with JCC
+------------------------------
+
+::
+
+    Wrapper Utility: JCC
+    Source Languages: Java
+    Documentation: http://pypi.python.org/pypi/JCC/1.5
+
+    
 TODO - Java Example
-        
+
 
 Creating an Extension using Python's ctypes
 -------------------------------------------
