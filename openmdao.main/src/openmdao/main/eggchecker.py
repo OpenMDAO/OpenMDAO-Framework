@@ -56,7 +56,7 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
         out = open(unpacker, 'w')
         out.write("""\
 from openmdao.main.api import Component
-Component.load_from_eggfile('%s', install=False)
+Component.load_from_eggfile(r'%s', install=False)
 """ % egg_path)
         out.close()
         args = [python, unpacker]

@@ -56,20 +56,10 @@ sys.path.insert(0, os.path.join(bodir, 'setup', stoolsname))
 
 import pkg_resources
 
-if sys.platform == 'win32':
-    def quote(c):
-        if ' ' in c:
-            return '"%s"' % c # work around spawn lamosity on windows
-        else:
-            return c
-else:
-    def quote (c):
-        return c
-
 cmd = "import sys; sys.path.insert(0,r'%s'); from setuptools.command.easy_install import main; main()" % os.path.join(bodir, 'setup', stoolsname)
 
-check_call([sys.executable, '-c', quote(cmd), '-H', 'None', '-f', setupdir, '-maqNxd',
-            quote(setupdir), 'zc.buildout'], env=dict(os.environ,PYTHONPATH=setupdir))
+check_call([sys.executable, '-c', cmd, '-H', 'None', '-f', setupdir, '-maqNxd',
+            setupdir, 'zc.buildout'], env=dict(os.environ,PYTHONPATH=setupdir))
 
 ws  = pkg_resources.working_set
 dist = pkg_resources.Environment([setupdir]).best_match(
@@ -94,8 +84,8 @@ eggdir = buildout['buildout']['eggs-directory']
 #zc.buildout.buildout.main(sys.argv[1:] + ['bootstrap'])
 
 # make sure we have zc.recipe.egg
-check_call([sys.executable, '-c', quote(cmd), '-H', 'None', '-f', setupdir, '-maqNxd',
-            quote(eggdir), 'zc.recipe.egg'], env=dict(os.environ,PYTHONPATH=setupdir))
+check_call([sys.executable, '-c', cmd, '-H', 'None', '-f', setupdir, '-maqNxd',
+            eggdir, 'zc.recipe.egg'], env=dict(os.environ,PYTHONPATH=setupdir))
 
 # now modify the bin/buildout script to isolate it
 
