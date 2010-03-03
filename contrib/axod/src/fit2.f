@@ -98,7 +98,7 @@ C
 C        STATION    0        STATOR  INLET
 C                              
 C                                                     
-10    STTT0(L)=TT0(I,K)
+      STTT0(L)=TT0(I,K)
       STPT0(L)=PTP(I,K)
       STVZ0(L)=VZ0(I,K)
       STVU0(L)=VU0(I,K)*R1
@@ -230,20 +230,20 @@ C        STATION    2        ROTOR    EXIT
       DBARS(L )=DRBARS+HBRSH*(STDP1(L )-DR(2,K))*2.0
       HBRS=H1(I  ,K)*HBRSH*2.
       HBRR=H2(I  ,K)*HBRRH*2.
-C array index error here 12/10/03 RWC
-	
 
+C array index error here 12/10/03 RWC
       if (k.eq.1) then
-	  ll=l
-	  if(l.gt.6) then 
-	    ll=1
-	  endif
+          ll=l
+          if(l.gt.6) then 
+            ll=1
+          endif
         cat0=cos(atan(tang0(ll)))
       else
-	  ll=l
-	  if(l.gt.6) ll=1
+          ll=l
+          if(l.gt.6) ll=1
         cat0=cos(atan(tangm2(ll,k-1)))
       end if
+
       cat1=cos(atan(tangm1(ll,k)))
       cat2=cos(atan(tangm2(ll,k)))
       FAXS(L )=((STPS0(L )-STPS1(L ))*(ANN1(I  ,K) +ANN0(I  ,K))*72.

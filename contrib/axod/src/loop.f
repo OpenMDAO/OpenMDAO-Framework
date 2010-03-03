@@ -65,15 +65,17 @@ C           = 2 FOR ROTOR
 C     CHOKE HAS OCURRED
 8     IF(ICHOKE)80,80,13
 80    J=(IBRC-2*(KN-1)-1)*8+KN
+
 c error in index calculation above
-	if (j.gt.8) then
-	 WRITE(16,801)IBRC,PTrs2(IP,J-8)
-	 else
-      WRITE(16,801)IBRC,PT0PS1(IP,J)
-	endif
+      if (j.gt.8) then
+        WRITE(16,801)IBRC,PTrs2(IP,J-8)
+      else
+        WRITE(16,801)IBRC,PT0PS1(IP,J)
+      endif
+
 801   FORMAT(16X,10HBLADE ROW ,I3,8H CHOKED ,4X,5HPTPS=,F10.5)
 C     TEST SINGLE CALCULATION POINT
-9     IF (DELC)18,18,10
+      IF (DELC)18,18,10
 C     TEST PREVIOUS CHOKE
 10    IF (IPC)11,11,12
 C     SAVE COMBINATIONS PRIOR FIRST CHOKE

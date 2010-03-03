@@ -61,7 +61,7 @@ C
       cat1=cos(atan(tangm1(i,k)))
       EX=(GAM(2,K)-1.)/GAM(2,K)
 C        COMPUTE ISENTROPIC STATOR TEMPERATURE RATIO
-7     PHI1(I,K)=PT0PS1(I,K)**EX
+      PHI1(I,K)=PT0PS1(I,K)**EX
 C        TEST FOR LOSS COEFFICIENT INPUT
       IF (OMEGAS(1,1))2,2,1
 1     CALL LOSS1(I,K,EX)
@@ -119,12 +119,12 @@ C   PRESSURE RATIO ABOVE CRITICAL
       WG1(I,K)=RHOS1C     *V1C     *ANN1(I,K)*CScyl
      & *cat1*cfs(i,k)*xcf
       if (ando(1,k).gt.0.0) wg1(i,k)=wg1(i,k)/cfs(i,k)/xcf
-13    CScyle     =WG1(I,K)/(RHOS1(I,K)*V1(I,K)*ANN1(I,K))
+      CScyle     =WG1(I,K)/(RHOS1(I,K)*V1(I,K)*ANN1(I,K))
      & /cat1/cfs(i,k)/xcf
       if (ando(1,k).gt.0.0) cscyle=cscyle*cfs(i,k)*xcf
       csal1e=sqrt(1./(1.+(1./cscyle**2-1.)*cat1**2))
 C     EFFECTIVE STATOR EXIT ANGLE
-14    ALF1E(I,K)=ATAN2(SQRT(1.-CSAL1E     *CSAL1E     ),
+      ALF1E(I,K)=ATAN2(SQRT(1.-CSAL1E     *CSAL1E     ),
      1CSAL1E)
       GO TO 16
 C   PRESSURE RATIO LESS THAN CRITICAL
