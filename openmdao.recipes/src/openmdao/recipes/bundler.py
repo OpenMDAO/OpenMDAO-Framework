@@ -359,7 +359,7 @@ class Bundler(object):
             dirs = os.listdir(tmpdir)
             if len(dirs) == 1:
                 os.chdir(dirs[0])
-            setupnames = ['setup_egg.py', 'setupegg.py', 'setup.py']
+            setupnames = ['setupegg.py', 'setup_egg.py', 'setup.py']
             for name in setupnames:
                 if os.path.isfile(name):
                     setup = name
@@ -370,12 +370,34 @@ class Bundler(object):
                 raise RuntimeError("Can't find setup.py file in %s" % os.getcwd())
             try:
                 check_call([sys.executable, 
-                            'setup.py', 'bdist_egg', '-d', '%s' % os.path.dirname(sdist_path)], 
+                            setup, 'bdist_egg', '-d', '%s' % os.path.dirname(sdist_path)], 
                            env=os.environ)
             except:
-                # may not support bdist_egg, so try just bdist
+                # could be an old school distutils setup.py file. Try tricking it into
+                # using setuptools.setup so we can build an egg
+                setups = [' setup ',' setup,', ',setup ', ',setup,']
+                with open(setup, 'r') as fin:
+                    with open('___setup.py', 'w') as fout:
+                        found = False
+                        for line in fin:
+                            if not found:
+                                if line.startswith('import ') or ' import ' in line:
+                                    for s in setups:
+                                        if s in line:
+                                            found = True
+                                            indent = line.find('from')
+                                            if indent < 0:
+                                                indent = line.find('import')
+                                fout.write(line+'\n')
+                                if found:
+                                    fout.write(' '*indent)
+                                    fout.write('from setuptools import setup\n')
+                            else:
+                                fout.write(line+'\n')
+                
                 check_call([sys.executable, 
-                            'setup.py', 'bdist', '-d', '%s' % os.path.dirname(sdist_path)], 
+                            '___setup.py', 'bdist_egg', '-d', '%s' % 
+                                 os.path.dirname(sdist_path)], 
                            env=os.environ)
             if delete:
                 os.remove(sdist_path)
