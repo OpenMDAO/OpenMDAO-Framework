@@ -14,17 +14,20 @@ from openmdao.examples.bar3simulation.bar3_wrap_f import Bar3Truss
 class Bar3Optimization(Assembly):
     """ Top level assembly for optimizing a three bar truss. """
     # Constraint allowables
-    bar1_stress_allowable = UnitsFloat(20., iostatus='in', units='lb/(inch*inch)',
+    bar1_stress_allowable = UnitsFloat(20., iostatus='in',
+                        units='lb/(inch*inch)',
                         desc='Stress allowable in bar 1')
-    bar2_stress_allowable = UnitsFloat(20., iostatus='in', units='lb/(inch*inch)',
+    bar2_stress_allowable = UnitsFloat(20., iostatus='in',
+                        units='lb/(inch*inch)',
                         desc='Stress allowable in bar 2')
-    bar3_stress_allowable = UnitsFloat(20., iostatus='in', units='lb/(inch*inch)',
+    bar3_stress_allowable = UnitsFloat(20., iostatus='in', 
+                        units='lb/(inch*inch)',
                         desc='Stress allowable in bar 3')
     displacement_x_dir_allowable = UnitsFloat(0.20, iostatus='in', units='inch',
                        desc='Displacement limitation in x-direction')
     displacement_y_dir_allowable = UnitsFloat(0.05, iostatus='in', units='inch',
                         desc='Displacement limitation in y-direction')
-    frequency_Hz_allowable = UnitsFloat(14.1421, iostatus='in', units='Hz',
+    frequency_allowable = UnitsFloat(14.1421, iostatus='in', units='Hz',
                         desc='Frequency limitation in Hertz')
     
     def __init__(self, directory=''):
@@ -66,14 +69,16 @@ class Bar3Optimization(Assembly):
         bar3_stress_allowable = self.bar3_stress_allowable
         displacement_x_dir_allowable = self.displacement_x_dir_allowable
         displacement_y_dir_allowable = self.displacement_y_dir_allowable
-        frequency_Hz_allowable = self.frequency_Hz_allowable
+        frequency_allowable = self.frequency_allowable
 
-        self.driver.constraints = ['(bar3_truss.bar1_stress/bar1_stress_allowable)-1.0',
-                                   '(bar3_truss.bar2_stress/bar2_stress_allowable)-1.0',
-                                   '(bar3_truss.bar3_stress/bar3_stress_allowable)-1.0',
-                                   '(bar3_truss.displacement_x_dir/displacement_x_dir_allowable)-1.0',
-                                   '(bar3_truss.displacement_y_dir/displacement_y_dir_allowable)-1.0',
-                                   '(frequency_Hz_allowable*frequency_Hz_allowable)/(bar3_truss.frequency_Hz*bar3_truss.frequency_Hz) - 1.0']
+        self.driver.constraints = [ \
+            '(bar3_truss.bar1_stress/bar1_stress_allowable)-1.0',
+            '(bar3_truss.bar2_stress/bar2_stress_allowable)-1.0',
+            '(bar3_truss.bar3_stress/bar3_stress_allowable)-1.0',
+            '(bar3_truss.displacement_x_dir/displacement_x_dir_allowable)-1.0',
+            '(bar3_truss.displacement_y_dir/displacement_y_dir_allowable)-1.0',
+            '(frequency_allowable*frequency_allowable)/ \
+             (bar3_truss.frequency*bar3_truss.frequency) - 1.0']
  
 
 if __name__ == "__main__": # pragma: no cover         
@@ -98,18 +103,18 @@ if __name__ == "__main__": # pragma: no cover
         print 'Con3: Bar3_stress = ', opt_bar3.bar3_truss.bar3_stress
         print 'Con4: Displ_u = ', opt_bar3.bar3_truss.displacement_x_dir
         print 'Con5: Displ_v = ', opt_bar3.bar3_truss.displacement_y_dir
-        print 'Con6: Frequency = ', opt_bar3.bar3_truss.frequency_Hz
+        print 'Con6: Frequency = ', opt_bar3.bar3_truss.frequency
         print '\n'
     
 
     opt_bar3.bar3_truss.run()
     prz('Old Design')
 
-    tt = time.time()
+    time1 = time.time()
     opt_bar3.run()
     prz('New Design')
     print "CONMIN Iterations: ", opt_bar3.driver.get("iter_count")
     print ""
-    print "Elapsed time: ", time.time()-tt
+    print "Elapsed time: ", time.time()-time1
     
 # end bar3_optimization.py

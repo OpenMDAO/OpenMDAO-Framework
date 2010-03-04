@@ -11,9 +11,10 @@ import numpy
 from enthought.traits.api import Float, Array, TraitError
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.lib.drivers.conmindriver import CONMINdriver
+from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.eggchecker import check_save_load
+from openmdao.util.testutil import assert_rel_error
 
 
 class OptGolinskiComponent(Component):
@@ -130,14 +131,8 @@ class OptGolinskiComponent(Component):
         # self.x = numpy.array([3.3,0.589999970,25.0,7.9,7.5999999,3.0,5.09999999],dtype=float)
         # self.x = numpy.array([3.5,0.700,17.0,7.3,7.7153201,3.50215,5.2866545],dtype=float)
         
-        from platform import architecture
-        
-        if architecture()[0] == '32bit':
-            self.opt_objective = 0.29916e+04
-            self.opt_design_vars = [3.3,0.7,17.0,7.3,7.59,3.35020,5.2865]
-        else:
-            self.opt_objective = 0.29851384e+04
-            self.opt_design_vars = [3.3,0.7,17.0,7.3,7.3,3.35020,5.2865]
+        self.opt_objective = 0.29851384e+04
+        self.opt_design_vars = [3.3,0.7,17.0,7.3,7.3,3.35020,5.2865]
 
     def execute(self):
         """calculate the new objective value"""
@@ -249,20 +244,18 @@ class GolinskiTestCase(unittest.TestCase):
             # print 'Obj FUNCTION Val = ', self.top.comp.result 
             iter = iter +1
 
-        accuracy = 2    
         #print 'Obj FUNCTION Val = ', self.top.comp.result 
         # pylint: disable-msg=E1101
-        self.assertAlmostEqual(self.top.comp.opt_objective*0.001, 
-                               self.top.driver.objective.evaluate()*0.001, \
-                               places=accuracy)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[1], 
-                               self.top.comp.x[1], places=1)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[2], 
-                               self.top.comp.x[2], places=accuracy)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[3], 
-                               self.top.comp.x[3], places=accuracy)
-        self.assertAlmostEqual(self.top.comp.opt_design_vars[4], 
-                               self.top.comp.x[4], places=1)
+        assert_rel_error(self, self.top.comp.opt_objective, \
+                               self.top.driver.objective.evaluate(), 0.01)
+        assert_rel_error(self, self.top.comp.opt_design_vars[1], \
+                               self.top.comp.x[1], 0.1)
+        assert_rel_error(self, self.top.comp.opt_design_vars[2], \
+                               self.top.comp.x[2], 0.01)
+        assert_rel_error(self, self.top.comp.opt_design_vars[3], \
+                               self.top.comp.x[3], 0.01)
+        assert_rel_error(self, self.top.comp.opt_design_vars[4], \
+                               self.top.comp.x[4], 0.05)
 
         
     def test_save_load(self):

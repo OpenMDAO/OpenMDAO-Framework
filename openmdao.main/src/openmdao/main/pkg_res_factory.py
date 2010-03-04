@@ -31,8 +31,9 @@ def import_version(modname, req, env=None):
 
     for dist in needed:
         # add required distribs to the real working set
-        pkg_resources.working_set.add(dist)
-        dist.activate()
+        if dist not in pkg_resources.working_set:
+            pkg_resources.working_set.add(dist)
+            dist.activate()
                 
     __import__(modname)
 

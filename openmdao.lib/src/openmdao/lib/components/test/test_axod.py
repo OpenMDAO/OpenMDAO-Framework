@@ -31,20 +31,12 @@ class TestCase(unittest.TestCase):
         from platform import architecture
         
         # 'desired' from Linux, 'tolerance' for Windows/Mac.
-        if architecture()[0] == '32bit':
-            assert_rel_error(self, comp.hpower, 3323.77880859375, 0.00015)
-            assert_rel_error(self, comp.tott[0], 757.75458, 0.001)
-            assert_rel_error(self, comp.totp[0], 8.223134, 0.001)
-            assert_rel_error(self, comp.mflow[0], 4.9717932, 0.001)
-            assert_rel_error(self, comp.effs[0], 0.95300001, 0.0001)
-            assert_rel_error(self, comp.effr[0], 0.90600002, 0.0001)
-        else:
-            assert_rel_error(self, comp.hpower, 3323.77880859375, 0.00015)
-            assert_rel_error(self, comp.tott[0], 757.75458, 0.001)
-            assert_rel_error(self, comp.totp[0], 8.223134, 0.0001)
-            assert_rel_error(self, comp.mflow[0], 4.9717932, 0.001)
-            assert_rel_error(self, comp.effs[0], 0.95300001, 0.000001)
-            assert_rel_error(self, comp.effr[0], 0.90600002, 0.000001)
+        assert_rel_error(self, comp.hpower, 3323.77880859375, 0.00015)
+        assert_rel_error(self, comp.tott[0], 757.75458, 0.001)
+        assert_rel_error(self, comp.totp[0], 8.223134, 0.001)
+        assert_rel_error(self, comp.mflow[0], 4.9717932, 0.001)
+        assert_rel_error(self, comp.effs[0], 0.95300001, 0.0001)
+        assert_rel_error(self, comp.effr[0], 0.90600002, 0.0001)
             
         self.assertEqual(len(comp.results), 19773)
 
@@ -56,12 +48,12 @@ class TestCase(unittest.TestCase):
         comp.run()
 
         # 'desired' from Linux, 'tolerance' for Windows.
-        assert_rel_error(self, comp.hpower, 696.33050537109375, 0.00001)
+        assert_rel_error(self, comp.hpower, 696.33050537109375, 0.0001)
         assert_rel_error(self, comp.tott[0], 430.1795, 0.001)
         assert_rel_error(self, comp.totp[0], 7.0516329, 0.0001)
         assert_rel_error(self, comp.mflow[0], 7.3931241, 0.0001)
-        assert_rel_error(self, comp.effs[0], 0.96280003, 0.000001)
-        assert_rel_error(self, comp.effr[0],  0.92559999, 0.000001)
+        assert_rel_error(self, comp.effs[0], 0.96280003, 0.00001)
+        assert_rel_error(self, comp.effr[0],  0.92559999, 0.00001)
         self.assertEqual(len(comp.results), 3196)
 
     def test_no_input(self):

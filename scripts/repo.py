@@ -9,12 +9,15 @@ but requires some discipline :-(
 import glob
 import optparse
 import os.path
-import pwd
+import platform
 import shutil
 import stat
 import subprocess
 import sys
 import time
+
+if sys.platform != 'win32':
+    import pwd
 
 LOCKFILE = 'repo_lock'
 
@@ -28,6 +31,7 @@ def main():
    lock   -- lock repository
    unlock -- unlock repository
    set    -- set this as current repository
+             (sets OPENMDAO_REPO environment variable and starts a new shell)
    fix    -- fix permissions and remove generated directories
    rmpyc  -- remove 'orphan' .pyc files"""
 
@@ -49,8 +53,13 @@ def main():
         else:
             parser.print_help()
             sys.exit(1)
+    if not repository:
+        try:
+            repository = os.environ['OPENMDAO_REPO']
+        except KeyError:
+            pass
 
-    this_user = pwd.getpwuid(os.getuid()).pw_name
+    this_user = get_username()
     path = find_repository(repository, this_user)
     if not path:
         print 'Cannot find repository!'
@@ -101,7 +110,7 @@ def do_unlock(path, options):
     if user is None:
         print 'Repository is not locked'
         sys.exit(1)
-    elif user == pwd.getpwuid(os.getuid()).pw_name or options.force:
+    elif user == get_username() or options.force:
         remove_lockfile(path)
         sys.exit(0)
     else:
@@ -114,7 +123,13 @@ def do_set(path, user):
         print 'Moving to', path
         os.chdir(path)
     os.environ['OPENMDAO_REPO'] = path
-    sys.exit(subprocess.call(os.environ['SHELL']))
+    os.environ['PATH'] = os.path.join(path, 'buildout', 'bin') \
+                       + os.pathsep + os.path.join(path, 'scripts') \
+                       + os.pathsep + os.environ['PATH']
+    if sys.platform == 'win32':
+        sys.exit(subprocess.call(os.environ['ComSpec']))
+    else:
+        sys.exit(subprocess.call(os.environ['SHELL']))
 
 def do_fix(repo_path, options):
     """ Check/fix permissions and remove generated directories. """
@@ -133,10 +148,14 @@ def do_fix(repo_path, options):
         'examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engineC.so',
     )
     for relpath in directories:
+        if sys.platform == 'win32':
+            relpath.replace('/', '\\')
         directory = os.path.join(repo_path, relpath)
         if os.path.exists(directory):
             shutil.rmtree(directory)
     for relpath in files:
+        if sys.platform == 'win32':
+            relpath.replace('/', '\\')
         filename = os.path.join(repo_path, relpath)
         if os.path.exists(filename):
             os.remove(filename)
@@ -173,7 +192,7 @@ def do_fix(repo_path, options):
                     os.chmod(path, fixup)
                 except OSError, exc:
                     print '    %s' % exc
-                    print '    (owner %s)' % pwd.getpwuid(info.st_uid).pw_name
+                    print '    (owner %s)' % get_username(info.st_uid)
 
 def do_rmpyc(repo_path):
     """ Remove 'orphan' .pyc files. """
@@ -239,7 +258,11 @@ def find_repository(repository, user):
 
     if not repository:
         path = find_bzr()
-        if not path or not path.startswith('/OpenMDAO'):
+        if platform.node() == 'torpedo.grc.nasa.gov' and \
+           not path.startswith('/OpenMDAO'):
+            # On OpenMDAO home use default search if not an OpenMDAO repository.
+            path = ''
+        if not path:
             # Use default if this user only has one.
             paths = glob.glob(os.path.join(user_base, '*'))
             if len(paths) == 1:
@@ -267,7 +290,8 @@ def find_bzr(path=None):
     if not os.path.exists(path):
         return None
     while path:
-        if os.path.exists(os.path.join(path, '.bzr')):
+        if os.path.exists(os.path.join(path, '.bzr')) or \
+           os.path.exists(os.path.join(path, '.bzrignore')):
             return os.path.abspath(path)
         else:
             pth = path
@@ -286,7 +310,7 @@ def check_lockfile(path):
             print 'Cannot access lockfile:', exc
             sys.exit(1)
         else:
-            user = pwd.getpwuid(info.st_uid).pw_name
+            user = get_username(info.st_uid)
             mtime = time.asctime(time.localtime(info.st_mtime))
             return (user, mtime)
     else:
@@ -309,6 +333,20 @@ def remove_lockfile(path):
     except OSError, exc:
         print 'Cannot remove lockfile:', exc
         sys.exit(1)
+
+
+def get_username(uid=None):
+    """ Return username for `uid`, or current username if `uid` is None. """
+    if uid:
+        if sys.platform == 'win32':
+            return 'unknown-%s' % uid
+        else:
+            return pwd.getpwuid(uid).pw_name
+    else:
+        if sys.platform == 'win32':
+            return os.environ['USERNAME']
+        else:
+            return pwd.getpwuid(os.getuid()).pw_name
 
 
 if __name__ == '__main__':

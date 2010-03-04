@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import sys
 import time
+
 from openmdao.main.api import Component
 from openmdao.util.log import LOG_DEBUG
 from openmdao.util.eggsaver import SAVE_CPICKLE
@@ -13,16 +14,14 @@ __all__ = ('check_save_load',)
 
 def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
                     fmt=SAVE_CPICKLE, logfile=None):
-    """Convenience routine to check that saving & reloading work.
+    """Convenience routine to check that saving & reloading `comp` works.
+
     It will create an egg in the current directory, unpack it in `test_dir`
     via a separate process, and then load and run the component in
-    another subprocess.  Returns first non-zero subprocess exit code,
+    another subprocess.  Returns the first non-zero subprocess exit code,
     or zero if everything succeeded.
     """
     assert isinstance(comp, Component)
-    if sys.platform == 'win32':
-        print '\ncheck_save_load() unsupported on win32 at this time.'
-        return 0  # Enable once openmdao.util.testutil.find_python works.
 
     old_level = comp.log_level
     comp.log_level = LOG_DEBUG
@@ -57,7 +56,7 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
         out = open(unpacker, 'w')
         out.write("""\
 from openmdao.main.api import Component
-Component.load_from_eggfile('%s', install=False)
+Component.load_from_eggfile(r'%s', install=False)
 """ % egg_path)
         out.close()
         args = [python, unpacker]

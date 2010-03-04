@@ -28,7 +28,7 @@ __all__ = ('load', 'load_from_eggfile', 'load_from_eggpkg',
            'check_requirements')
 
 
-def load_from_eggfile(filename, entry_group, entry_name, install=True,
+def load_from_eggfile(filename, entry_group, entry_name, install=False,
                       logger=None, observer=None):
     """
     Extract files in egg to a subdirectory matching the saved object name.
@@ -124,43 +124,49 @@ def _dist_from_eggfile(filename, install, logger, observer):
 
     # Extract files.
     archive = zipfile.ZipFile(filename, 'r', allowZip64=True)
-    name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
-    logger.debug("    name '%s'", name)
+    try:
+        name = archive.read('EGG-INFO/top_level.txt').split('\n')[0]
+        logger.debug("    name '%s'", name)
 
-    if observer.observer is not None:
-        # Collect totals.
-        total_files = 0.
-        total_bytes = 0.
+        if observer.observer is not None:
+            # Collect totals.
+            total_files = 0.
+            total_bytes = 0.
+            for info in archive.infolist():
+                fname = info.filename
+                if not fname.startswith(name) and \
+                   not fname.startswith('EGG-INFO'):
+                    continue
+                if fname.endswith('.pyc') or fname.endswith('.pyo'):
+                    continue  # Don't assume compiled OK for this platform.
+                total_files += 1
+                total_bytes += info.file_size
+        else:
+            total_files = 1.  # Avoid divide-by-zero.
+            total_bytes = 1.
+
+        files = 0.
+        size = 0.
         for info in archive.infolist():
             fname = info.filename
-            if not fname.startswith(name) and not fname.startswith('EGG-INFO'):
+            if not fname.startswith(name) and \
+               not fname.startswith('EGG-INFO'):
                 continue
             if fname.endswith('.pyc') or fname.endswith('.pyo'):
                 continue  # Don't assume compiled OK for this platform.
-            total_files += 1
-            total_bytes += info.file_size
-    else:
-        total_files = 1.  # Avoid divide-by-zero.
-        total_bytes = 1.
 
-    files = 0.
-    size = 0.
-    for info in archive.infolist():
-        fname = info.filename
-        if not fname.startswith(name) and not fname.startswith('EGG-INFO'):
-            continue
-        if fname.endswith('.pyc') or fname.endswith('.pyo'):
-            continue  # Don't assume compiled OK for this platform.
+            observer.extract(fname, files/total_files, size/total_bytes)
+            dirname = os.path.dirname(fname)
+            if dirname == 'EGG-INFO':
+                # Extract EGG-INFO as subdirectory.
+                archive.extract(fname, name)
+            else:
+                archive.extract(fname)
+            files += 1
+            size += info.file_size
 
-        observer.extract(fname, files/total_files, size/total_bytes)
-        dirname = os.path.dirname(fname)
-        if dirname == 'EGG-INFO':
-            # Extract EGG-INFO as subdirectory.
-            archive.extract(fname, name)
-        else:
-            archive.extract(fname)
-        files += 1
-        size += info.file_size
+    finally:
+        archive.close()
 
     # Create distribution from extracted files.
     location = os.getcwd()
