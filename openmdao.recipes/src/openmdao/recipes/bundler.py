@@ -116,6 +116,9 @@ class Bundler(object):
         # now create the buildout.cfg file
         bo = self.buildout
         
+        if 'sphinxbuild' in bo:
+            bo['sphinxbuild']['build'] = 'docscript'
+        
         boexcludes = set(['recipe', 'bin-directory', 'executable',
                           'eggs-directory', 'develop-eggs-directory',
                           '_e', '_d', '_b', '__buildout_signature__', 'index'])
