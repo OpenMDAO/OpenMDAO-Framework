@@ -74,7 +74,7 @@ C
       SUMLP=0.0
       WGT2A(K)=WR*WGT2(K)
 12    VU2A(I,K)=VU2(I,K)*DP2(I,K)/DP2A(I,K)
-11    IF (I-IP)28,24,28
+      IF (I-IP)28,24,28
 24    IF (GAMF)25,25,26
 25    TAS(K)=.5*(TA1(K)+TA2(K))
       PAS(K)=PT0(IP,K)
@@ -152,7 +152,7 @@ c  ** DELHVD is per unit of primary flow entering the rotor **
 17    STT0(K+1)=TTBAR(K)
       SPT0(K+1)=PTBAR(K)
       DO 23 I=1,ISECT
-29    SI(I,K+1)=ALF2A(I,K)- RADSD(I,K+1)
+      SI(I,K+1)=ALF2A(I,K)- RADSD(I,K+1)
       IF(SI(I,K+1).GT. 1.5707) SI(I,K+1)= 1.5707
       IF(SI(I,K+1).LT.(-1.5707)) SI(I,K+1)=(-1.5707)
       IF(OMEGAS(I,K))8,8,7

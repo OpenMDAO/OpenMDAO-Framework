@@ -7,12 +7,12 @@ class EggObserver(object):
     Provides a convenient API for calling an observer of egg operations.
     `observer` will be called with:
 
-    - ('analyze', filename, -1, -1) during module analysis.
-    - ('add', filename, file_fraction, byte_fraction) while writing files.
-    - ('copy', filename, file_fraction, byte_fraction) while copying files.
-    - ('extract', filename, file_fraction, byte_fraction) while extracting files.
-    - ('complete', egg_name, 1, 1) when complete.
-    - ('except', message, -1, -1) when an exception occurs.
+    - ``('analyze', filename, -1, -1)`` during module analysis.
+    - ``('add', filename, file_fraction, byte_fraction)`` while writing files.
+    - ``('copy', filename, file_fraction, byte_fraction)`` while copying files.
+    - ``('extract', filename, file_fraction, byte_fraction)`` while extracting files.
+    - ``('complete', egg_name, 1, 1)`` when complete.
+    - ``('except', message, -1, -1)`` when an exception occurs.
     """
 
     def __init__(self, observer, logger):
@@ -88,7 +88,7 @@ class EggObserver(object):
                     raise RuntimeError('Aborted by observer.')
 
     def complete(self, path):
-        """ Observations complete. """
+        """ Observe operation complete. """
         if self.observer is not None:
             try:
                 self.observer('complete', path, 1, 1)

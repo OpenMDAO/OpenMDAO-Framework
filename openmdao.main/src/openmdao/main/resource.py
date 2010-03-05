@@ -36,15 +36,6 @@ class ResourceAllocationManager(object):
         self._allocators = []
         self._allocators.append(LocalAllocator('LocalHost'))
 
-    def __getitem__(self, i):
-        return self._allocators[i]
-
-    def __iter__(self):
-        return iter(self._allocators)
-
-    def __len__(self):
-        return len(self._allocators)
-
     @staticmethod
     def get_instance():
         """ Return singleton instance. """
@@ -69,7 +60,7 @@ class ResourceAllocationManager(object):
 
     @staticmethod
     def get_allocator(index):
-        """ Insert an allocator into the list of resource allocators. """
+        """ Return allocator at `index`. """
         ram = ResourceAllocationManager.get_instance()
         with ResourceAllocationManager._lock:
             return ram._allocators[index]
@@ -208,7 +199,7 @@ class ResourceAllocator(ObjServerFactory):
 
     def rate_resource(self, resource_desc):
         """
-        Return (score, criteria) indicating how well this resource allocator
+        Return ``(score, criteria)`` indicating how well this resource allocator
         can satisfy the `resource_desc` request.  The score will be:
 
         - >0 for an estimate of walltime (seconds).
@@ -293,8 +284,8 @@ class LocalAllocator(ResourceAllocator):
 
     def rate_resource(self, resource_desc):
         """
-        Returns (score, criteria) indicating how well this allocator can satisfy
-        the `resource_desc` request.  The score will be:
+        Returns ``(score, criteria)`` indicating how well this allocator can
+        satisfy the `resource_desc` request.  The score will be:
 
         - >0 for an estimate of walltime (seconds).
         -  0 for no estimate.
@@ -328,7 +319,7 @@ class LocalAllocator(ResourceAllocator):
     def _check_compatibility(self, resource_desc, log_failure):
         """
         Check compatibility against `resource_desc`.
-        Returns (score, criteria), where `score` >= 0 implies compatibility.
+        Returns ``(score, criteria)``, where `score` >= 0 implies compatibility.
         """
         for key, value in resource_desc.items():
             if key == 'localhost':
@@ -517,7 +508,7 @@ class ClusterAllocator(object):
 
     def rate_resource(self, resource_desc):
         """
-        Returns (score, criteria) indicating how well this resource allocator
+        Returns ``(score, criteria)`` indicating how well this allocator
         can satisfy the `resource_desc` request.  The score will be:
 
         - >0 for an estimate of walltime (seconds).
