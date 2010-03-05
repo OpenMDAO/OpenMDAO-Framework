@@ -12,7 +12,7 @@ import tempfile
 from subprocess import check_call
 
 import pkg_resources
-from pkg_resources import Environment, WorkingSet, Requirement, get_supported_platform
+from pkg_resources import Environment, WorkingSet, Distribution, Requirement, get_supported_platform
 from setuptools.package_index import PackageIndex
 import zc.buildout
 import setuptools
@@ -86,7 +86,7 @@ class Bundler(object):
         else:
             self.archive = True
             
-        self.src_dists = set([x.strip() for x in options.get('src_dists', '').split('\n') 
+        self.bdists = set([x.strip() for x in options.get('bdists', '').split('\n') 
                                  if x.strip()])
         extra_stuff = [x.strip() for x in options.get('extra_data', '').split('\n') 
                           if x.strip()]
@@ -161,41 +161,66 @@ class Bundler(object):
                         else:
                             f.write('%s = %s\n\n' % (opt, val))
 
+    def _pre_install(self, distloc):
+        self.logger.info("pre-installing %s" % os.path.basename(distloc))
+        if distloc.endswith('.egg'):
+            self.logger.debug("unpacking archive %s to %s" %
+                              (os.path.join(self.bundle_cache, distloc),
+                               os.path.join(self.bundledir,'buildout','eggs',
+                                            distloc)))
+            setuptools.archive_util.unpack_archive(distloc,
+                                                   os.path.join(self.bundledir,
+                                                                'buildout','eggs',
+                                                                os.path.basename(distloc)))
+        else:
+            cmd = "from setuptools.command.easy_install import main; main()"
+            check_call([sys.executable, '-c', cmd, 
+                        '-H', 'None', '-maqNxd',
+                        os.path.join(self.bundledir,'buildout','eggs'), 
+                        distloc], env=os.environ)
+        # get rid of the distribution archive
+        os.remove(os.path.join(self.bundle_cache, distloc))
 
+    def _build_dist(self, build_type):
+        cmd = '%s setup.py %s -d %s' % (self.buildout['buildout']['executable'],
+                                              build_type, self.bundle_cache)
+        p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+        out = p.communicate()[0]
+        ret = p.returncode
+        if ret != 0:
+            self.logger.error(out)
+            raise zc.buildout.UserError(
+                 'error while building egg in %s (return code=%d)'
+                  % (os.getcwd(), ret))
+    
     def _build_dev_eggs(self, startdir):
         """Build real eggs out of all of the develop eggs."""
+        env = Environment()
         for degg in self.develop:
             os.chdir(startdir)
             absegg = os.path.abspath(degg)
-            self.logger.info('building egg in %s' % degg)
+            self.logger.debug('building egg in %s' % degg)
             os.chdir(degg)
             # clean up any old builds
             if os.path.exists('build'):
                 shutil.rmtree('build')
             
-            pkgname = os.path.basename(degg)
-            build_type = 'sdist' if pkgname in self.src_dists else 'bdist_egg'
-            cmd = '%s setup.py %s -d %s' % (self.buildout['buildout']['executable'],
-                                                  build_type, self.bundle_cache)
-            p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
-            out = p.communicate()[0]
-            ret = p.returncode
-            if ret != 0:
-                self.logger.error(out)
-                raise zc.buildout.UserError(
-                     'error while building egg in %s (return code=%d)' 
-                      % (degg,ret))
-            
-            matches = fnmatch.filter(os.listdir(self.bundle_cache), 
-                                     os.path.basename(absegg)+'-*')
-            if len(matches) != 1:
-                raise RuntimeError("Must have a single match for distrib %s in cache but found %s" %
-                                  (dist.project_name, matches))
+            self._build_dist('bdist_egg')
+            dist = Environment([self.bundle_cache])[os.path.basename(degg)][0]
+            if dist.platform is None:  # pure python distrib. 'pre-install' it in eggs dir
+                self._pre_install(os.path.join(self.bundle_cache, dist.location))
+            else:
+                if dist.project_name in self.bdists:
+                    self.is_binary = True
+                else:
+                    os.remove(dist.location)
+                    self._build_dist('sdist')
+
                         
-    def _tarfile_name(self, has_extensions=True):
+    def _tarfile_name(self):
         """ Returns name of tar file to be created. """
         pyver = 'py%s' % sys.version[:3]
-        if has_extensions:
+        if self.is_binary:
             pyver = pyver + '-%s' % get_supported_platform()
         return os.path.join(self.bundledir, '%s-bundle-%s-%s.tar.gz' % 
                                             (self.bundle_name,
@@ -203,6 +228,7 @@ class Bundler(object):
                                              pyver))
 
     def install(self):
+        self.is_binary = False
         startdir = os.getcwd()
         if os.path.exists(self.bundledir):
             self.logger.debug('removing old bundle directory %s' % self.bundledir)
@@ -238,9 +264,9 @@ class Bundler(object):
         # Check that we can contact the egg server.
         url = self.buildout['buildout'].get('index',
                                             'http://pypi.python.org/simple')
-        self.logger.info('using URL %s', url)
+        self.logger.debug('using URL %s', url)
         self._check_url(url)
-        self.logger.info('    search path %s', search_path)
+        self.logger.debug('    search path %s', search_path)
 
         index = PackageIndex(url, search_path=[])
         try:
@@ -250,7 +276,7 @@ class Bundler(object):
         else:
             findlinks = [x.strip() for x in flinks.split('\n') if x.strip()]
             index.add_find_links(findlinks)
-            self.logger.info('    find-links %s', findlinks)
+            self.logger.debug('    find-links %s', findlinks)
             for link in findlinks:
                 self._check_url(link)
 
@@ -262,24 +288,30 @@ class Bundler(object):
                 continue
             self.logger.info('processing %s...', dist.as_requirement())
             newloc = os.path.join(eggdir, os.path.basename(dist.location))
-            if dist.project_name in self.src_dists:
-                src = True
-                self.logger.info('getting source distrib for project %s' % dist.project_name)
-            else:
+            if dist.platform is None:  # pure python
                 src = False
+            else:
+                src = True
+                self.logger.debug('getting source distrib for project %s' % dist.project_name)
             fetched = getattr(index.fetch_distribution(dist.as_requirement(), self.bundle_cache, 
                                                source=src, develop_ok=True, force_scan=True), 
                               'location', None)
+                
             if fetched:
-                self.logger.info('    downloaded %s', fetched)
+                self.logger.debug('    downloaded %s', fetched)
                 bpath = os.path.join(self.bundle_cache, os.path.basename(fetched))
                 if not os.path.exists(bpath):
                     if os.path.isdir(fetched):
-                        self.logger.info("DIR FOUND: %s" % fetched)
+                        self.logger.debug("DIR FOUND: %s" % fetched)
                     else:
                         shutil.copy(fetched, bpath)
-                if not fetched.endswith('.egg') and dist.project_name not in self.src_dists:
-                    # it's a source dist that we have to make into a bdist_egg or bdist
+                if dist.platform is None:  # pure python
+                    if not os.path.exists(os.path.join(self.bundledir, 
+                                                       'buildout', 
+                                                       'eggs',os.path.basename(fetched))):
+                        self._pre_install(bpath)
+                elif dist.project_name in self.bdists:
+                    # it's a source dist that we have to make into a bdist_egg
                     self.sdist_to_bdist_egg(bpath, delete=True)
             else:
                 self.logger.error('    download failed')
@@ -345,7 +377,8 @@ class Bundler(object):
 
     def sdist_to_bdist_egg(self, sdist_path, delete=False):
         """Take an sdist and replace it with a bdist_egg"""
-        self.logger.info("Converting sdist %s to a bdist_egg" % sdist_path)
+        self.is_binary = True
+        self.logger.debug("Converting sdist %s to a bdist_egg" % sdist_path)
         tmpdir = tempfile.mkdtemp()
         cdir = os.getcwd()
         try:
