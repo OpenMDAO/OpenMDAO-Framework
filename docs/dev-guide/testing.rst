@@ -214,7 +214,7 @@ how to develop new components and plugins. Thus, it is imperative that any code
 examples included in the documentation (particularly the User Guide and the
 Developer Guide) be tested to ensure that the code is error-free. 
 
-Fortunately,there are tools built into the Sphinx restructured text processor that
+Fortunately, there are tools built into the Sphinx restructured text processor that
 make the process of testing code samples much easier. Sphinx includes a builder
 called "doctest" as a plug-in in its standard library. Instead of building a
 readable document as is done by the HTML builder, the doctest builder scans the
@@ -349,7 +349,7 @@ More detail on the literalinclude directive can be found at http://sphinx.pocoo.
 
 * Be wary of including code by line number. If the source file is changed, and lines are added or removed, then the included code might not be what was intended.
 
-* To include a numerical example in a doctest block, you can use elipses in order to match just to a specific tolerance. For example, this block of text passes: 
+* To include a numerical example in a doctest block, you can use elipses in order to match the output to a specific tolerance. For example, this block of text passes: 
 
     >>> import numpy
     >>> numpy.pi 

@@ -268,8 +268,8 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.run()
         baseerror = abs(self.top.comp.opt_objective - self.top.driver.objective.evaluate())
         
-        self.top.driver.fdch = .1
-        self.top.driver.fdchm = .1
+        self.top.driver.fdch = .3
+        self.top.driver.fdchm = .3
         self.top.comp.x = numpy.array([1., 1., 1., 1.], dtype=float)
         self.top.run()
         newerror = abs(self.top.comp.opt_objective - self.top.driver.objective.evaluate())

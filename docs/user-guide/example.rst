@@ -439,10 +439,11 @@ the base class Component. A very simple component is shown here:
 
 This new Transmission component does nothing yet. It does have the two functions that all components must have.
 The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
-constants. It is also where the inputs and outputs will be declared. The super call is always required so that the
+constants. It is also where the inputs and outputs will be declared. The super() call is always required so that the
 __init__ function of the base class is executed. Similarly, the execute function runs the model. There are some
 other functions defined in the Component API, but these two are the only ones needed for this part of the tutorial. Note
-that if your __init__ or execute function does nothing, it does not need to be declared in the component.
+that if your __init__ or execute function does nothing (as in this case), then it does not need to be 
+declared in the component.
 
 The next step is to add the inputs and outputs that are defined in our model description above.
 
