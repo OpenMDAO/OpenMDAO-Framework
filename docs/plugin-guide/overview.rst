@@ -133,13 +133,3 @@ SimpleAdder plugin is an OpenMDAO Component.
 
    TODO: need to work with team to determine standard openmdao metadata
       
-
-
-Python Extension
-----------------
-
-
-File Wrapper
-------------
-
-

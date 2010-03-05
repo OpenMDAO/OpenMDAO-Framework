@@ -11,6 +11,7 @@ Developer's Guide
    intro
    working
    testing
+   guidelines
    distributions
    grc-users
 
