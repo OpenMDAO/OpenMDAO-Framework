@@ -175,7 +175,7 @@ class Bundler(object):
         else:
             cmd = "from setuptools.command.easy_install import main; main()"
             check_call([sys.executable, '-c', cmd, 
-                        '-H', 'None', '-maqNxd',
+                        '-maqNxd',
                         os.path.join(self.bundledir,'buildout','eggs'), 
                         distloc], env=os.environ)
         # get rid of the distribution archive
