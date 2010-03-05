@@ -40,7 +40,7 @@ C
       cat2=cos(atan(tangm2(i,k)))
       EX=(GAM(4,K)-1.)/GAM(4,K)
 C        ISENTROPIC ROTOR RELATIVE TEMPERATURE RATIO
-10    PHI2(I,K)= PTRS2(I,K)**EX
+      PHI2(I,K)= PTRS2(I,K)**EX
       IF(OMEGAR(1,1))2,2,1
 1     CALL LOSS2(I,K)
 C        EXIT TEMPERATURES
@@ -97,7 +97,7 @@ C        TEST CRITICAL PRESSURE RATIO
      & *cat2*cfr(i,k)*xcf
       if (andor(1,k).gt.0.0) wg2(i,k)=wg2(i,k)/cfr(i,k)/xcf
 C   OVEREXPANSION
-14    Cscyle     =WG2(I,K)/(RHOS2(I,K)*R2(I,K)*ANN2(I,K))
+      Cscyle     =WG2(I,K)/(RHOS2(I,K)*R2(I,K)*ANN2(I,K))
      & /cat2/cfr(i,k)/xcf
       if (andor(1,k).gt.0.0) cscyle=cscyle*cfr(i,k)*xcf
       cbet2e=sqrt(1./(1.+(1./cscyle**2-1.)*cat2**2))

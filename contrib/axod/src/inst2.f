@@ -99,7 +99,7 @@ C
 C
       DATA DOR/57.29578/
 C                              
-28    LJ=1
+      LJ=1
       kj=1
       if (isect.eq.1) kj=3
       IF(ISECT.EQ.2) GO TO 20
@@ -157,7 +157,7 @@ c     go to 46
       IF(ISECT.EQ.3) GO TO 8
       IF(ISECT.EQ.5) GO TO 8
       IF(ISECT.EQ.1) GO TO 75
-51    I=ISECT/2
+      I=ISECT/2
       IF(ISECT-4)52,52,53
 52    L=I+2
       GO TO 54
@@ -225,7 +225,7 @@ c     go to 46
       slopd2(iw,k)=atan(tangm2(iw,k))*dor
       if (k.eq.1) slopd0(iw)=atan(tang0(iw))*dor
   210 continue
-117   WRITE(16,1000) XNAME,TITLE,ICASE,ISCASE
+      WRITE(16,1000) XNAME,TITLE,ICASE,ISCASE
 1000  FORMAT(1H1,20X,29H     TURBINE COMPUTER PROGRAM/
      16X,20A4/6X,20A4/30X,5HCASE ,I3,1H.,I3/24X,
      223HINTER-STAGE PERFORMANCE/ )
@@ -248,7 +248,7 @@ c     go to 46
       WRITE(16,310) (Y(KW,10),KW=lj,jj,kj)
       WRITE(16,311) (Y(KW,11),KW=lj,jj,kj)
       WRITE(16,312) (Y(KW,12),KW=lj,jj,kj)
-140   WRITE(16,1010)
+      WRITE(16,1010)
 1010  FORMAT(/5X,5HSTA 1,2X,11HSTATOR EXIT )
       WRITE(16,313) (Y(KW,13),KW=lj,jj,kj)
       write(16,1313) (slopd1(kw,k),kw=1,isect)
@@ -265,7 +265,7 @@ c     go to 46
       WRITE(16,323) (Y(KW,23),KW=lj,jj,kj)
       WRITE(16,324) (Y(KW,24),KW=lj,jj,kj)
       WRITE(16,325) (Y(KW,25),KW=lj,jj,kj)
-145   WRITE(16,2000)
+      WRITE(16,2000)
 2000  FORMAT(/12X,13HSTATOR FORCES )
       WRITE(16,2005) (DBARS(I),I=lj,jj,kj)
 2005  FORMAT(1X,7HAVG DIA,7F9.3)
@@ -277,7 +277,7 @@ c     go to 46
 2008  FORMAT(1X,7H FAX/IN,7F9.1)
       WRITE(16,2009) FAXTS,FAXDHS,FAXDTS
 2009  FORMAT(31X,4HF AX,F9.1/2X,6HF DRUM,F9.1,45X,F9.1)
-150   WRITE(16,1000)XNAME,TITLE,ICASE,ISCASE
+      WRITE(16,1000)XNAME,TITLE,ICASE,ISCASE
       WRITE(16,1015) K
 1015  FORMAT(4X,6HSTA 1A,2X,11HROTOR INLET,10X,5HSTAGE,I3 )
       WRITE(16,326) (Y(KW,26),KW=lj,jj,kj)
@@ -291,7 +291,7 @@ c     go to 46
       WRITE(16,332) (Y(KW,32),KW=lj,jj,kj)
       WRITE(16,333) (Y(KW,33),KW=lj,jj,kj)
       WRITE(16,334) (Y(KW,34),KW=lj,jj,kj)
-160   WRITE(16,1020)
+      WRITE(16,1020)
 1020  FORMAT(/5X,5HSTA 2,2X,10HROTOR EXIT )
       WRITE(16,335) (Y(KW,35),KW=lj,jj,kj)
       write(16,1335)(slopd2(kw,k),kw=1,isect)
@@ -310,7 +310,7 @@ c     go to 46
       WRITE(16,347) (Y(KW,47),KW=lj,jj,kj)
       WRITE(16,348) (Y(KW,48),KW=lj,jj,kj)
       WRITE(16,349) (Y(KW,49),KW=lj,jj,kj)
-165   WRITE(16,2010)
+      WRITE(16,2010)
 2010  FORMAT(/12X,12HROTOR FORCES )
       WRITE(16,2005) (DBARR(I),I=lj,jj,kj)
       WRITE(16,2006) (FTANR(I),I=lj,jj,kj)

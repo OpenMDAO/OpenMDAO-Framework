@@ -347,12 +347,12 @@ class Host(object):
     def start_manager(self, index, authkey, address, files):
         """ Launch remote manager process. """
         try:
-            check_ssh(self.hostname)
+            _check_ssh(self.hostname)
         except Exception:
             self.state = 'failed'
             return
 
-        self.tempdir = copy_to_remote(self.hostname, files)
+        self.tempdir = _copy_to_remote(self.hostname, files, self.python)
         _LOGGER.debug('startup files copied to %s:%s',
                       self.hostname, self.tempdir)
         cmd = copy.copy(_SSH)
@@ -395,7 +395,7 @@ class Host(object):
                 self.state = 'failed'
 
 
-def check_ssh(hostname):
+def _check_ssh(hostname):
     """ Check basic communication with `hostname`. """
     cmd = copy.copy(_SSH)
     cmd.extend([hostname, 'date'])
@@ -443,10 +443,10 @@ tf = tarfile.open(fileobj=sys.stdin, mode='r|gz')
 tf.extractall()
 print tempdir"'''
 
-def copy_to_remote(hostname, files):
+def _copy_to_remote(hostname, files, python):
     """ Copy files to remote directory, returning name of directory. """
     cmd = copy.copy(_SSH)
-    cmd.extend([hostname, 'python', '-c', _UNZIP_CODE.replace("\n", ';')])
+    cmd.extend([hostname, python, '-c', _UNZIP_CODE.replace("\n", ';')])
     proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stdin=subprocess.PIPE,
                             stderr=subprocess.PIPE)
     archive = tarfile.open(fileobj=proc.stdin, mode='w|gz')

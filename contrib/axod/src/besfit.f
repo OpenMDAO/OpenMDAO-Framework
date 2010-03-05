@@ -56,20 +56,20 @@ C     WRITE(16,29) IAF
 2     YP=YP+Y(I)*P1(I)
       S(J+1)=YP/C1
       SSR=S(J+1)**2*C1
-23    RES(J+1)=RES(J)-SSR
+      RES(J+1)=RES(J)-SSR
       IF(RES(J+1).GT.0.) GO TO 13
-12    K=J
+      K=J
       IF(RES(J).LT.ABS(RES(J+1))) K=J-1
       LL=K+1
-C  43 WRITE(16,14) K
-43    CONTINUE
+C     WRITE(16,14) K
+      CONTINUE
       GO TO 4
 13    A(J+1)=XPP/C1
       B(J+1)=C1/C0
       C0=C1
       LL=J+1
       IF(IF.GT.0) IF(LL-IF) 3,3,4
-15    NDEG=NDEG-1
+      NDEG=NDEG-1
       RMS=RES(J+1)/FLOAT(NDEG)
 C     ISUB=MIN0(NDEG,20)
       ISUB=MIN0(NDEG, 6)
@@ -78,13 +78,13 @@ C array index error here - 11/25/03 RWC
 	if (ISUB.LT.1) ISUB=1
 
       IF(T.LE.TAB(ISUB)) GO TO 17
-22    KT=0
+      KT=0
       GO TO 3
 17    S(J+1)=0.
       RES(J+1)=RES(J)
       NDEG=NDEG+1
       IF(KT.EQ.1) GO TO 18
-21    KT=1
+      KT=1
       GO TO 3
 18    LL=J-1
       K=J-2

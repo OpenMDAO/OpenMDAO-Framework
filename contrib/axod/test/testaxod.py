@@ -1,32 +1,25 @@
-# testaxod.py
-
-import sys
-import numpy
-import subprocess
 import shutil
-import os
+import sys
 
-if '.' not in sys.path:
-    sys.path.append('.')
-
-
-import axod.axod as axod
+sys.path.append('../src')
+import axod
 
 print axod.__doc__
 print axod.axod.__doc__
-loop = 1
-while  loop < 10:
-    print 'loop =',loop
-    n = loop % 2
-    if n == 0: shutil.copy('one_stage.inp','axod.inp')
-    if n == 1: shutil.copy('eee_hpt.inp','axod.inp')
-    axod.axod(n)
-    print 'loop =',loop,'  After AXOD  in testaxod.py****'
-    axod1 = 'axod.out'+ str(loop)
-    shutil.copy('axod.out',axod1)
-    loop = loop + 1
-
-print ' COMPLETE ********'
 print dir('axod')
 
+loop = 1
+while  loop < 10:
+    if loop % 2:
+        input = 'eee_hpt.inp'
+    else:
+        input = 'one_stage.inp'
+    print 'Running AXOD with', input
+    shutil.copy(input, 'axod.inp')
+
+    axod.axod()
+
+    axod1 = 'axod.out'+ str(loop)
+    shutil.copy('axod.out', input+'.out%d' % loop)
+    loop = loop + 1
 

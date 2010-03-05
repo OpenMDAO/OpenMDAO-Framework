@@ -30,6 +30,7 @@ import time
 import zipfile
 
 from openmdao.util import eggobserver
+from openmdao.util.testutil import find_python
 
 __all__ = ('egg_filename', 'write', 'write_via_setuptools')
 
@@ -218,21 +219,7 @@ def write_via_setuptools(name, version, doc, entry_map, src_files,
     observer.add('write-via-setuptools', 0, 0)
 
     # Find OpenMDAO python command.
-    path = sys.modules[__name__].__file__
-    while path:
-        if os.path.exists(os.path.join(path, 'buildout')):
-            break
-        path = os.path.dirname(path)
-    if path:
-        python = os.path.join(path, 'buildout', 'bin', 'python')
-        if sys.platform == 'win32':
-            python += '.exe'
-        if not os.path.exists(python):
-            raise RuntimeError("Can't find OpenMDAO python command,"
-                               " needed to use setuptools.")
-    else:
-        raise RuntimeError("Can't find OpenMDAO buildout directory,"
-                           " needed to use setuptools.")
+    python = find_python()
 
     # Use environment since 'python' might not recognize '-u'.
     env = os.environ.copy()

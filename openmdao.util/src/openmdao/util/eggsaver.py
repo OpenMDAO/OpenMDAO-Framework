@@ -122,12 +122,12 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
       It defaults to the current directory.
     - `src_dir` is the root of all (relative) `src_files`.
     - `dst_dir` is the directory to write the egg in.
-    - `fmt` and `proto` are passed to save().
-    - If 'use_setuptools` is True, then :func:`eggwriter.write_via_setuptools` \
+    - `fmt` and `proto` are passed to :meth:`save`.
+    - If `use_setuptools` is True, then :func:`eggwriter.write_via_setuptools` \
       is called rather than :func:`eggwriter.write`.
     - `observer` will be called via an :class:`EggObserver` intermediary.
 
-    Returns (egg_filename, required_distributions, orphan_modules).
+    Returns ``(egg_filename, required_distributions, orphan_modules)``.
     """
     root, name, group = entry_pts[0]
     logger = logger or NullLogger()
@@ -721,7 +721,7 @@ def _write_state_file(dst_dir, root, name, fmt, proto, logger, observer):
 
     state_path = os.path.join(dst_dir, state_name)
     try:
-        save(root, state_path, fmt, proto, logger, fix_im=False)
+        save(root, state_path, fmt, proto, logger)
     except Exception, exc:
         msg = "Can't save to '%s': %s" % (state_path, exc)
         observer.exception(msg)
@@ -806,14 +806,13 @@ def _create_entry_map(entry_pts):
     return entry_map
 
 
-def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None, fix_im=True):
+def save(root, outstream, fmt=SAVE_CPICKLE, proto=-1, logger=None):
     """
     Save the state of `root` and its children to an output stream (or filename).
     If `outstream` is a string, then it is used as a filename.
     The format can be supplied in case something other than :mod:`cPickle`
     is needed.  For the :mod:`pickle` formats, a `proto` of -1 means use the
-    highest protocol.  Set `fix_im` False if no instance method objects need
-    to be fixed.
+    highest protocol.
     """
     logger = logger or NullLogger()
 

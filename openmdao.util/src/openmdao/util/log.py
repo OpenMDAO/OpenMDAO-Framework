@@ -170,7 +170,10 @@ class Logger(object):
 
 
 class NullLogger(object):
-    """ Can be useful when no logger has been supplied to a routine. """
+    """
+    Can be useful when no logger has been supplied to a routine.
+    It produces no output.
+    """
 
     def debug(self, msg, *args, **kwargs):
         pass

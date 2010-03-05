@@ -50,7 +50,7 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
             stdout = None
         stderr = subprocess.STDOUT
 
-        python = find_python()  # Returns just 'python' if no buildout.
+        python = find_python()
         print '    python:', python
         unpacker = 'unpack.py'
         out = open(unpacker, 'w')
