@@ -1,4 +1,3 @@
-import atexit
 import os.path
 import Queue
 import sys
@@ -68,7 +67,6 @@ class CaseIteratorDriver(Driver):
         self._egg_file = None
         self._egg_required_distributions = None
         self._egg_orphan_modules = None
-        self._eggs_used = []
 
         # Unpickleable objects.
         self._reply_queue = None
@@ -86,23 +84,6 @@ class CaseIteratorDriver(Driver):
 
         self._todo = []   # Cases grabbed during server startup.
         self._rerun = []  # Cases that failed and should be retried.
-
-        atexit.register(self._cleanup_eggs)
-
-    def _cleanup_eggs(self):
-        """
-        Cleanup any egg files still in existence at shutdown.
-        This is needed because on @#$%^& Windows sometimes a closed ZipFile
-        doesn't actually get released by the process.
-        This appears to be related to concurrent startup, serializing has
-        reduced (eliminated?) the problem.
-        """
-        for egg in self._eggs_used:
-            if os.path.exists(egg):
-                try:
-                    os.remove(egg)
-                except WindowsError, exc:
-                    print 'Warning: unable to remove egg:', exc
 
     def execute(self):
         """ Runs each case in `iterator` and records results in `recorder`. """
@@ -153,7 +134,6 @@ class CaseIteratorDriver(Driver):
                 version = 'replicant.%d' % (self._replicants)
                 egg_info = self.model.save_to_egg(self.model.name, version)
                 self._egg_file = egg_info[0]
-                self._eggs_used.append(egg_info[0])
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
 
@@ -193,13 +173,7 @@ class CaseIteratorDriver(Driver):
                 server_thread.daemon = True
                 server_thread.start()
 
-                if sys.platform == 'win32':
-                    # Serialize startup, otherwise we have egg removal issues.
-                    name, result = self._reply_queue.get()
-                    if self._servers[name] is None:
-                        self.debug('server startup failed for %s', name)
-                        self._in_use[name] = False
-                else:
+                if sys.platform != 'win32':
                     # Process any pending events.
                     while self._busy():
                         try:
@@ -214,6 +188,14 @@ class CaseIteratorDriver(Driver):
                                 self._in_use[name] = self._server_ready(name)
 
             if sys.platform == 'win32':
+                # Don't start server processing until all servers are started,
+                # otherwise we have egg removal issues.
+                for name in self._in_use.keys():
+                    name, result = self._reply_queue.get()
+                    if self._servers[name] is None:
+                        self.debug('server startup failed for %s', name)
+                        self._in_use[name] = False
+
                 # Kick-off serialized servers.
                 for name in self._in_use.keys():
                     if self._in_use[name]:
@@ -244,12 +226,7 @@ class CaseIteratorDriver(Driver):
     def _cleanup(self):
         """ Cleanup egg file if necessary. """
         if self._egg_file and os.path.exists(self._egg_file):
-            try:
-                os.remove(self._egg_file)
-            except WindowsError:
-                # Closed ZipFile sometimes isn't released.
-                # We'll try again at shutdown in _cleanup_eggs()
-                pass
+            os.remove(self._egg_file)
             self._egg_file = None
 
     def _server_ready(self, server):

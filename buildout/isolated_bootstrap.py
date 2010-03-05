@@ -17,7 +17,8 @@ import fnmatch
 from subprocess import check_call
 
 if float(sys.version[:3]) < 2.6:
-    sys.stderr.write('OpenMDAO requires python >= 2.6, this is %s' % sys.version)
+    sys.stderr.write('OpenMDAO requires python >= 2.6, this is:\n%s\n' \
+                     % sys.version)
     sys.exit(-1)
 
 bodir = os.getcwd()
