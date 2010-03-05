@@ -12,7 +12,7 @@ import unittest
 
 import numpy.random
 
-from enthought.traits.api import Bool, Float, Int, Array, TraitError
+from enthought.traits.api import Bool, Float, Array, TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator

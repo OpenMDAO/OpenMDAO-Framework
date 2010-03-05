@@ -62,7 +62,7 @@ Cf2py intent(out) EFFR
 
       OPEN(15,FILE='axod.inp',STATUS='OLD')
       OPEN(16,FILE='axod.out',STATUS='UNKNOWN')
-c	open(10,file='etaout',status='UNKNOWN')
+c      open(10,file='etaout',status='UNKNOWN')
 
       WRITE (16,'(///,A,/,A,/,A)') 
      .'     Conceptual Analysis for Axial-flow Turbines (AXOD)',
@@ -278,7 +278,7 @@ c         Array error mod here RWC 12/9/03
 c            PT0PS1(IP,JL-8)=(PFIND-TRY1)/(TRY2-TRY1)*(PTRY2-PTRY1)+PTRY1
           else
             PT0PS1(IP,JL)=(PFIND-TRY1)/(TRY2-TRY1)*(PTRY2-PTRY1)+PTRY1
-          endif	
+          endif
 
           VCTD=1.0
           THSSIT=THSSIT+1.0

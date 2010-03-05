@@ -906,11 +906,12 @@ class Container(HasTraits):
         - `child_objs` is a list of child objects for additional entry points.
         - `dst_dir` is the directory to write the egg in.
         - `fmt` and `proto` are passed to eggsaver.save().
-        - 'use_setuptools` is passed to eggsaver.save_to_egg().
-        - `observer` will be called via an EggObserver.
+        - `use_setuptools` is passed to :meth:`eggsaver.save_to_egg`.
+        - `observer` will be called via an :class:`EggObserver`.
 
-        After collecting entry point information, calls eggsaver.save_to_egg().
-        Returns (egg_filename, required_distributions, orphan_modules).
+        After collecting entry point information, calls
+        :meth:`eggsaver.save_to_egg`.
+        Returns ``(egg_filename, required_distributions, orphan_modules)``.
         """
         assert name and isinstance(name, basestring)
         assert version and isinstance(version, basestring)
@@ -968,11 +969,11 @@ class Container(HasTraits):
             self.parent = parent
 
     @staticmethod
-    def load_from_eggfile(filename, install=True, observer=None):
+    def load_from_eggfile(filename, install=False, observer=None):
         """Extract files in egg to a subdirectory matching the saved object
         name, optionally install distributions the egg depends on, and then
-        load object graph state. `observer` will be called via an EggObserver.
-        Returns the root object.
+        load object graph state. `observer` will be called via an
+        :class:`EggObserver`. Returns the root object.
         """
         # Load from file gets everything.
         entry_group = 'openmdao.top'
@@ -985,7 +986,8 @@ class Container(HasTraits):
                          observer=None):
         """Load object graph state by invoking the given package entry point.
         If specified, the root object is renamed to `instance_name`.
-        `observer` will be called via an EggObserver. Returns the root object.
+        `observer` will be called via an :class:`EggObserver`. Returns the
+        root object.
         """
         entry_group = 'openmdao.component'
         if not entry_name:

@@ -1,6 +1,7 @@
 import os.path
 import sys
 
+
 def assertRaisesError(test_case_instance, code, err_type, err_msg):
     """ Determine that `code` raises `err_type` with `err_msg`. """
     try:
@@ -23,34 +24,28 @@ def assert_rel_error(test_case_instance, actual, desired, tolerance):
 
 
 def find_python():
-    """
-    Return path to python in buildout/bin. Assumes it is somewhere
-    in the current directory tree.  Returns just 'python' if not found.
-    """
-    if sys.platform == 'win32':
-        pystr = 'python.exe'
-    else:
-        pystr = 'python'
-        
-    cwd = os.getcwd()
-    if cwd.endswith('buildout'):
-        return os.path.join(cwd, 'bin', pystr)
-
-    index = cwd.rfind(os.sep)
-    while index > 0:
-        python = os.path.join(cwd[:index], 'buildout', 'bin', pystr)
+    """ Return path to the OpenMDAO python command in buildout/bin. """
+    path = sys.modules[__name__].__file__
+    while path:
+        if os.path.exists(os.path.join(path, 'buildout')):
+            break
+        path = os.path.dirname(path)
+    if path:
+        python = os.path.join(path, 'buildout', 'bin', 'python')
+        if sys.platform == 'win32':
+            python += '.exe'
         if os.path.exists(python):
             return python
-        end = index - 1
-        index = cwd.rfind(os.sep, 0, end)
-
-    return pystr
+        else:
+            raise RuntimeError("Can't find OpenMDAO python command.")
+    else:
+        raise RuntimeError("Can't find OpenMDAO buildout directory.")
 
 
 def make_protected_dir():
     """
     Returns the the absolute path of an inaccessible directory.
-    Files cannot be created in it, it can't be chdir() to, etc.
+    Files cannot be created in it, it can't be :meth:`os.chdir` to, etc.
     Not supported on Windows.
     """
     directory = '__protected__'

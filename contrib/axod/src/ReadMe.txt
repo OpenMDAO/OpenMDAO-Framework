@@ -1,11 +1,10 @@
 Following modifications were made to get output data to python environment.
 
-
 1.  Added a common block  DATTRF in subroutines axod, tempdata,inst2
 
       COMMON /DATTRF/HP1, TT123(48), PT123(48), WG123(48), ETAS(48), ETAR(48), KS
 
-             HP1 = Turbne Power
+             HP1 = Turbine Power
              TT123 = Total Temperature
              PT123 = Total Pressure
              WG123 = Total Mass flow
@@ -17,13 +16,14 @@ Following modifications were made to get output data to python environment.
 
 3.   Modified routines axodm.f, ovrall.f, inst2.f
 
-4.   Module  axodn.so is prepared as:
+4.   Module axod.so is prepared as:
 
-     f2py -c -m axodn --f77flags='-g -fno-automatic'  *.f
+     make f2py
 
-5.   program was executed as:
+5.   This can be tested by:
 
-      python axod_comp2.py
+     cd ../test
+     python testaxod.py
 
-      The input file used "hpt.inp" is for G90 engine.
-      Output file is axod.out
+     This will display AXOD internals, then run eee_hpt and one_stage
+     input files multiple times.

@@ -1,5 +1,7 @@
 .. index:: simple example
 
+.. _Getting-Started-with-OpenMDAO:
+
 Getting Started with OpenMDAO: A Simple Example Problem
 =======================================================
 
@@ -387,12 +389,18 @@ the shell. So, the final lines in this file are:
 	    print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.get("x"), \
                                                  opt_problem.paraboloid.get("y"))
 						 
-This can be executed in the shell by going to the
-``examples/openmdao.examples.simple/openmdao/examples/simple`` directory, and typing:
+This fragment of code really does just three things. In the first statement, an
+instance of the class Optimization_Unconstrained is created with the name 
+opt_problem. In the second statement, opt_problem is told to run, which executes
+the model until the optimizer's termination criteria is reached. Finally, the 
+third statement prints the results.
+
+This script can be executed in the shell by going to the
+``...../openmdao/examples/simple`` directory, and typing:
 
 ::
 
-        ../../../../../bin/python optimization_unconstrained.py
+        [Path to your OpenMDAO install]/buildout/bin/python optimization_unconstrained.py
 	
 This should produce the output:
 

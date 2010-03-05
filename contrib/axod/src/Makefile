@@ -1,41 +1,21 @@
 
 .SUFFIXES: .f .o
 
-ifdef NPSS_CONFIG
-
-EXE   = axod.$(NPSS_CONFIG)
-ODIR  = O.$(NPSS_CONFIG)
-VPATH = $(ODIR)
-
-ifeq ($(NPSS_CONFIG),hp)
-FTN = f90 +ppu -K +DAportable -g
+# Select a default Fortran compiler.
+ifndef fortran
+  fortran=gfortran
 endif
 
-ifeq ($(NPSS_CONFIG),linux)
-FTN = g77 -fno-automatic -finit-local-zero -fno-second-underscore -g
-endif
-
-ifeq ($(NPSS_CONFIG),sgi)
-FTN = gfortran -static -O -g3 -trapuv
-endif
-
-ifeq ($(NPSS_CONFIG),sun)
-FTN = f90 -ftrap=%none -g # -O
-endif
-
-%.o: %.f
-	$(FTN) -c -o $(ODIR)/$*.o $*.f
-
+ifeq ($(fortran),gfortran)
+  FTN = gfortran -g -fno-automatic -fno-second-underscore
 else
-
-EXE  = axod
-ODIR = .
-FTN  = gfortran -g -fno-automatic
+ifeq ($(fortran),g77)
+  FTN = g77 -g -fno-automatic -finit-local-zero -fno-second-underscore
+endif
+endif
 
 .f.o:
 	$(FTN) -c -o $*.o $*.f
-
-endif
 
 SRC = axod.f axodm.f besfit.f cpa.f cpf.f cpw.f diagt.f etacf.f etapr.f \
 	fit1.f fit2.f flow1.f flow2.f gama.f icommon.f init.f input.f inst2.f \
@@ -44,27 +24,26 @@ SRC = axod.f axodm.f besfit.f cpa.f cpf.f cpw.f diagt.f etacf.f etapr.f \
 
 OBJ = $(SRC:.f=.o)
 
-default: $(ODIR) $(EXE)
+default: axod
 
+# Create Python wrapper.
 f2py: $(SRC)
-	f2py -c -m axodm --f77flags=' -g -fno-automatic' $(SRC)
+	f2py -c -m axod --f77flags=' -g -fno-automatic' $(SRC)
 
+# Build standalone executable.
+axod: $(OBJ)
+	$(FTN) -o $@ $(OBJ)
 
-$(EXE): $(OBJ)
-	$(FTN) -o $@ $(patsubst %,$(ODIR)/%,$(OBJ))
-
-$(ODIR):
-	mkdir $(ODIR)
-
+# Check against coding standards.
 ftnchek:
 	ftnchek $(SRC) | \
 	sed -e '/0 syntax errors detected/d' >ftnchek.out
 
 # Remove all intermediate build files.
 clean:
-	/bin/rm -f $(ODIR)/*.o ftnchek.out
+	/bin/rm -f *.o ftnchek.out
 
 # Remove all build files.
 clobber: clean
-	/bin/rm -f $(EXE)
+	/bin/rm -f axod
 
