@@ -151,7 +151,7 @@ Glossary
 
 	
       **F2PY**
-        FORTRAN to Python interface generator.
+        Fortran to Python interface generator.
 
      
       **Factory**

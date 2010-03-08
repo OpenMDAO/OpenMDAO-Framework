@@ -6,8 +6,8 @@
 The OpenMDAO Tutorial Problem
 =============================
 
-To help new users understand how to use OpenMDAO, an example problem is presented here, somewhat in the
-form of a tutorial. The developers felt that the example needed to be chosen carefully to ensure that the
+To help you understand how to use OpenMDAO, an example problem is presented here, somewhat in the
+form of a tutorial. We felt that the example needed to be chosen carefully to ensure that the
 design problem could be understood intuitively regardless of background. This precluded the use of an
 aircraft aerodynamics-structural design problem as an example, even though the developers had the
 expertise. Additionally, the example problem needed to include enough model complexity to allow a full
@@ -17,10 +17,10 @@ these requirements.
 One important thing should be noted: OpenMDAO is currently under development, and there are a number of
 features that haven't been implemented, including a graphical interface (GUI). Interacting with the
 framework architecture is done by writing Python code. While the tutorial problem was designed to teach
-the user to utilize the framework via all available interfaces, it is difficult to construct a tutorial
+you to utilize the framework via all available interfaces, it is difficult to construct a tutorial
 that achieves the same level of interactivity for a scripting interface as for a graphical one. 
 
-This tutorial assumes that the user has already created a local copy of the code repository. Please see
+This tutorial assumes that you have already created a local copy of the code repository. Please see
 the OpenMDAO :ref:`Developer's-Guide` for details on how to do this.
 
 Problem Overview

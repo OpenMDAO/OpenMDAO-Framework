@@ -147,6 +147,21 @@ Use italics for the following:
 Capitalization 
 ---------------
 
+*Class Names*
++++++++++++++
+
+Always capitalize class names (e.g., Component, Assembly, Driver, Engine, etc.).
+Sometimes, a  class represents a concept having the same name. In that case, the name
+of the concept would generally *not* be capitalized. 
+
+*Fortran*
++++++++++
+
+Capitalize only the first letter of *Fortran* unless you are
+referring to a version earlier than Fortran 90, when it was known as FORTRAN (e.g.,
+FORTRAN 77).
+
+
 *Python* 
 ++++++++
 
@@ -156,14 +171,6 @@ OpenMDAO path name, script name, command, part of a URL, etc., that is lower cas
 
 This rule also applies to other programming languages or software programs; for example,
 *Enthought, Inc.* is capitalized, but *enthoughts.traits.api* is not. 
-
-
-*Class Names*
-+++++++++++++
-
-Always capitalize class names (e.g., Component, Assembly, Driver, Engine, etc.).
-Sometimes, a  class represents a concept having the same name. In that case, the name
-of the concept would generally *not* be capitalized. 
 
 
 Numbers

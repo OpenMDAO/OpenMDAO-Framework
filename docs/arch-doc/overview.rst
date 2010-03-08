@@ -86,7 +86,7 @@ the framework will be Python modules. A Python module can be either a text file
 written in pure Python code or an extension module, which is a shared library
 that conforms to the Python C-API. Because Python is an interpreted language and
 is not as fast as compiled languages, numerically intensive components will
-typically be implemented using a compiled language, such as C, C++, or FORTRAN,
+typically be implemented using a compiled language, such as C, C++, or Fortran,
 and will be wrapped as a Python extension module or wrapped using file I/O.
 
 .. _python: http://www.python.org
