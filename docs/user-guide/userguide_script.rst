@@ -90,7 +90,8 @@ this module can be obtained using the dir() command in Python:
     plugin_path
     set_as_top
 
-Most of these items are explained elsewhere in the user guide. 
+Most of these items are explained elsewhere in the user guide. These can all be
+imported from openmdao.main.api.
 
 Note that there is some overhead associated with importing things into the Python
 environment. Thus, it is important to only import what will be used in the
@@ -107,7 +108,8 @@ module. Never import an entire library when only a subset is needed.
     # GOOD
     from openmdao.main.api import Component, Assembly, StringRef, Driver
 
-Unused imports are one of the problems that pylint will find.
+Unused imports are one of the problems that pylint can find, so it always pays
+to use it.
 
 Creating New Components
 -----------------------

@@ -8,7 +8,7 @@ Drivers
 The CONMIN Driver
 -----------------
 
-:term:`CONMIN` is a FORTRAN program written in subroutine form for the solution of
+:term:`CONMIN` is a Fortran program written in subroutine form for the solution of
 linear or nonlinear constrained optimization problems. The basic optimization
 algorithm is the Method of Feasible Directions. If analytic gradients of the
 objective or constraint functions are not available, this information is

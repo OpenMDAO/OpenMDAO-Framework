@@ -1,5 +1,8 @@
 .. index:: SimpleAdder
 
+.. index:: pair: plugin; building from a Python Module
+
+
 Building a Plugin from a Python Module
 ======================================
 
@@ -31,7 +34,7 @@ need to function properly as an OpenMDAO component.
 
 The code defines the class *SimpleAdder*, which inherits from the
 Component class defined in ``openmdao.main.api``, so we have to import it from
-there. The function in our domponent that performs a computation is called
+there. The function in our component that performs a computation is called
 ``execute()``, and there we define *c* as the sum of *a* and *b*.
 The *self* object that is passed as an argument to ``execute()`` represents an
 instance of our *SimpleAdder* class.
@@ -60,9 +63,9 @@ At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply
 import the module containing it and use it in a model; but we want more than
 that. By packaging our plugin in a Python :term:`egg`, we can make it more usable by
 others in the OpenMDAO community. We can give our egg a version identifier and
-other :term:`metadata` that will help prospective users determine if our egg will meet
-their needs. We can also upload our egg to a package index so that others can
-install it via ``easy_install`` or ``zc.buildout``.
+other :term:`metadata` that will help you determine if our egg will meet
+your needs. We can also upload our egg to a package index so that it can be
+installed via ``easy_install`` or ``zc.buildout``.
 
 .. index:: egg; creation
 
@@ -170,7 +173,7 @@ within the OpenMDAO framework:
     point is specified by its name, followed by an equals sign, followed by
     dotted module path (dotted path you would use to import the module in
     Python), followed by a colon and the name of the plugin class. The value
-    of *entry_points* should be a string in INI file format, or a dictionary. 
+    of *entry_points* should be a string in INI file format or a dictionary. 
     
         
     For example:
@@ -204,6 +207,8 @@ Python 2.6, our egg will be named ``simple_adder-1.0-py2.6.egg``.  If our packag
 compiled code, then our egg name would also include the name of the platform we're on, but
 since simple_adder is nothing but pure Python code, that's not necessary.
 
+
+.. index:: mod2egg
 
 Egg Creation for the Lazy
 --------------------------
