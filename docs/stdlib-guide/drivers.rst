@@ -323,3 +323,11 @@ is only used for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
+
+PyEvolve
+--------
+
+
+The Case Iterator
+-----------------
+

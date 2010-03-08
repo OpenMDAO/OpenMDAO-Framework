@@ -19,8 +19,8 @@ the examples in :ref:`Getting-Started-with-OpenMDAO` and :ref:`The-OpenMDAO-tuto
 OpenMDAO Fundamentals
 ---------------------
 
-The OpenMDAO Namespace
-~~~~~~~~~~~~~~~~~~~~~~
+*The OpenMDAO Namespace*
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 The namespace is a Python concept that provides a structure for organizing
 variables and functions in a logical hierarchical fashion. Namespaces allow the
@@ -117,17 +117,19 @@ to be familiar with how to create and execute them. The concept of the component
 and the place it holds in the OpenMDAO architecture is given in :ref:`Overview-of-the-OpenMDAO-Framework`.
 
 Presumably the user has his own components to implement in OpenMDAO as part of 
-a larger model or process. 
+a larger model or process. This implementation will usually require the creation
+of an OpenMDAO Python component based on the Component class and conforming to the
+Component API.
 
 *The Component API*
 ~~~~~~~~~~~~~~~~~~~
 
-.. testcode:: simple_component_Paraboloid
+.. testcode:: simple_component_Equation
 
     from enthought.traits.api import Float
     from openmdao.main.api import Component
     
-    class Paraboloid(Component):
+    class Equation(Component):
         """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """
     
 	# Component Input 
@@ -137,7 +139,11 @@ a larger model or process.
 	# Component Output
         f_xy = Float(0.0, iostatus='out', desc='F(x,y)')        
 
-        
+	# Initialization function (technically not needed here)
+	def __init__(self, doc=None, directory=''):
+	    super(Equation, self).__init__(doc, directory)        
+	
+	# Executes when component is run
 	def execute(self):
 	    """ Solve (x-3)^2 + xy + (y+4)^2 = 3
 	        Optimal solution (minimum): x = 6.6667; y = -7.3333
@@ -305,14 +311,14 @@ Managing Simulation Data
 Multi-Threaded Computation
 --------------------------
 
-*Publishing a Component*
-------------------------
+Publishing a Component
+----------------------
 
-Eggs
-~~~~
+*Eggs*
+~~~~~~
 
-Adding a New Component to your Local Library
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*Adding a New Component to your Local Library*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Geometry in OpenMDAO
 --------------------
