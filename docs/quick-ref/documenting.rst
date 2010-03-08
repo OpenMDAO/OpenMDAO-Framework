@@ -17,7 +17,8 @@ their directory names in the Sphinx OpenMDAO Documentation project:
 * Architecture Document -- ``arch-doc``
 * User's Guide -- ``user-guide``
 * Guide to the OpenMDAO Standard Library -- ``stdlib-guide``
-* Plugin Developer's Guide -- ``plugin-guide``
+* Plugin Developer Guide -- ``plugin-guide``
+* Developer's Guide -- ``dev-guide``
 * Source Documentation -- ``srcdocs``
 * Licenses -- ``licenses``
 * Quick Reference Guide	for Working in OpenMDAO -- ``quick-ref``
@@ -205,6 +206,7 @@ text, Sphinx doesn't seem to mind.
 	dev-guide/index
 	srcdocs/index
 	licenses/index
+	quick-ref/index
 
    | Add ``new-guide/index`` in the desired location in the list of documents and save the file. 
 

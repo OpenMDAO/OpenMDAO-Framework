@@ -17,7 +17,7 @@ System Configuration
 
 Some steps of the development process, e.g., downloading a branch of the source
 repository and downloading Python eggs, require network access.  If you're
-behind an http proxy, you'll have to set the **http_proxy** environment variable
+behind an http proxy, you'll have to set the *http_proxy* environment variable
 on your system in order for bazaar and zc.buildout to function properly.
 
 In these early stages of the project, we are developing mostly on linux,

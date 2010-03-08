@@ -6,8 +6,8 @@
 The OpenMDAO Tutorial Problem
 =============================
 
-To help new users understand how to use OpenMDAO, an example problem is presented here, somewhat in the
-form of a tutorial. The developers felt that the example needed to be chosen carefully to ensure that the
+To help you understand how to use OpenMDAO, an example problem is presented here, somewhat in the
+form of a tutorial. We felt that the example needed to be chosen carefully to ensure that the
 design problem could be understood intuitively regardless of background. This precluded the use of an
 aircraft aerodynamics-structural design problem as an example, even though the developers had the
 expertise. Additionally, the example problem needed to include enough model complexity to allow a full
@@ -17,10 +17,10 @@ these requirements.
 One important thing should be noted: OpenMDAO is currently under development, and there are a number of
 features that haven't been implemented, including a graphical interface (GUI). Interacting with the
 framework architecture is done by writing Python code. While the tutorial problem was designed to teach
-the user to utilize the framework via all available interfaces, it is difficult to construct a tutorial
+you to utilize the framework via all available interfaces, it is difficult to construct a tutorial
 that achieves the same level of interactivity for a scripting interface as for a graphical one. 
 
-This tutorial assumes that the user has already created a local copy of the code repository. Please see
+This tutorial assumes that you have already created a local copy of the code repository. Please see
 the OpenMDAO :ref:`Developer's-Guide` for details on how to do this.
 
 Problem Overview
@@ -306,7 +306,8 @@ acceleration	   Vehicle instantaneous acceleration		m/(s*s)
 _________________________________________
 
 
-	"I saw this in a movie about a bus that had to **speed** around a city, keeping its **speed** over fifty and if its **speed** dropped, it would explode! I think it was called ... *The Bus That Couldn't Slow Down.*" 
+	"I saw this in a movie about a bus that had to **speed** around a city, keeping its **speed** over fifty and if its
+	**speed** dropped, it would explode! I think it was called ... *The Bus That Couldn't Slow Down.*" 
 						-- Homer Simpson
 
 
@@ -368,17 +369,19 @@ required acceleration within a small tolerance. This solution method converges r
 when applied over a linear range of the torque curve. However, the EPA profiles are long, with many calculation
 points, so simulating these driving profiles consumes much more CPU time than the acceleration test.
 
+.. index:: OpenMDAO; using
+
 Using OpenMDAO
 --------------
-OpenMDAO provides two interfaces through which the user interacts to build and execute models -- a graphical user interface and a scripting/command line interface. The graphical interface is currently
+OpenMDAO provides two interfaces through which you interact to build and execute models -- a graphical user interface and a scripting/command line interface. The graphical interface is currently
 under developed and is not covered here. This tutorial describes how to build and run models using
 the scripting interface, or more specifically, how to write Python scripts to interact with the OpenMDAO
 framework and components.
 
-This tutorial will also introduce the user to using the Python shell for creating and interacting with
-components and models. The shell is a good environment for playing around with some of the concepts
-learned here without having to edit files and run models at the operating system's command prompt. It is, however,
-not the way that most users would ultimately run OpenMDAO to perform any real-world analysis. Most work
+This tutorial will also introduce you to using the Python shell for creating and interacting with
+components and models. The shell is a good environment for playing around with some of the concepts learned
+here without having to edit files and run models at the operating system's command prompt. It is, however,
+not the way that most of you would ultimately run OpenMDAO to perform any real-world analysis. Most work
 will be done using the graphical interface or the scripting interface. 
 
 
@@ -391,9 +394,9 @@ In the previous section, three component models were given that comprise a vehic
 its performance. These models have all been implemented as OpenMDAO components written in Python. This
 section will examine these components.
 
-It is assumed that the user has some familiarity with Python and the basic concepts of object-oriented
-programming, and has either installed an official distribution bundle, or has access to the OpenMDAO
-source tree. The following instructions will help the user locate the directory containing the pieces
+We assume that you are familiar with Python and the basic concepts of object-oriented
+programming and have either installed an official distribution bundle or has access to the OpenMDAO
+source tree. The following instructions will help you locate the directory containing the pieces
 needed for the model relative to the install directory.
 
 If you have a branch from the source repository:
@@ -404,12 +407,12 @@ If you have a distribution bundle:
 
 	``buildout/eggs/openmdao.examples.enginedesign-x.x.x-xxxxxx.egg/openmdao/examples/enginedesign``
 	
-where the x's denote the OpenMDAO version number, the Python version, and the Operating System
+where the "x"s denote the OpenMDAO version number, the Python version, and the Operating System
 description string. This will vary depending on your system and version, but there will only be
 one enginedesign egg in your bundle.
 
-The three engine models have been implemented in transmission.py, engine.py, and chassis.py. It will
-be useful to browse these files as you learn some of the basic concepts in this tutorial.
+The three engine models have been implemented in ``transmission.py, engine.py,`` and ``chassis.py``. It
+will be useful to browse these files as you learn some of the basic concepts in this tutorial.
 
 **Building a Python Component**
 
@@ -438,11 +441,11 @@ the base class Component. A very simple component is shown here:
 	            """
 
 This new Transmission component does nothing yet. It does have the two functions that all components must have.
-The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
+The *__init__* function is run once before the model is executed. This is a convenient place to set up simulation
 constants. It is also where the inputs and outputs will be declared. The super call is always required so that the
-__init__ function of the base class is executed. Similarly, the execute function runs the model. There are some
+*__init__* function of the base class is executed. Similarly, the execute function runs the model. There are some
 other functions defined in the Component API, but these two are the only ones needed for this part of the tutorial. Note
-that if your __init__ or execute function does nothing, it does not need to be declared in the component.
+that if your *__init__* or execute function does nothing, it does not need to be declared in the component.
 
 The next step is to add the inputs and outputs that are defined in our model description above.
 
@@ -486,7 +489,7 @@ two lines. It is important to import only those features that you need from the 
 instead of loading everything into the workspace. 
 
 
-.. Index: Data Object
+.. index: Data Object, Variable, Traits
 
 A component's inputs and outputs are called :term:`Data Objects` (name subject to possible change) in OpenMDAO. An often-used
 synonym for this is :term:`Variable`, though the more general term *data object* reflects the ability to pass more
@@ -502,28 +505,30 @@ be specified.
 
 .. index:: PEP 8
 
-The Data Object is given a name by assigning it to a Python variable (i.e. the left hand side argument when calling the 
+The Data Object is given a name by assigning it to a Python variable (i.e., the left-hand side argument when calling the 
 constructor.) As a Python variable, this name needs to follow Python's standard for variable names,
 so it must begin with a letter or underscore and should consist of only alphanumeric characters and the
 underscore. Keep in mind that a leading underscore is generally used for private data or functions. Also,
 spaces cannot be used in a variable name. Generally, we've tried to follow the PEP 8 standard for component
-instance names (http://www.python.org/dev/peps/pep-0008/) as well as Python variable names, which proscribes the use of lower case names with words
+instance name (http://www.python.org/dev/peps/pep-0008/) as well as Python variable names, which proscribes the use of lower case names with words
 separated by underscores. 
 
 The first parameter is the required default value for the data object.
 
-The parameter "iostatus" marks this Data Object as either an input (in) or an output (out) to the parent component. The parameter "desc"
-gives a documentation string describes this data object. This should be used to provide an adequate explanation for
-each input and output on a component.
+.. index:: iostatus, units
 
-The parameter "units" is used to specify the units for this Data Object. OpenMDAO utilizes the units capability
+The parameter *iostatus* marks this Data Object as either an input (in) or an output (out) to the parent component. The
+parameter *desc* gives a documentation string describes this data object. This should be used to provide an adequate
+explanation for each input and output on a component.
+
+The parameter *units* is used to specify the units for this Data Object. OpenMDAO utilizes the units capability
 which is part of the Scientific Python package. This allows for unit checking and conversion when connecting
 the outputs and inputs of components. The units are defined using the definitions given in Scientific Python,
 which can be found at http://dsnra.jpl.nasa.gov/software/Python/python-modules/Scientific/. If a
-Data Object is dimensionless, the units should be set to "None."
+Data Object is dimensionless, the units should be set to *None.*
 
-There are a couple more parameters of interest that can be seen by inspecting the __init__ function in
-engine.py.
+There are a couple more parameters of interest that can be seen by inspecting the *__init__* function in
+``engine.py``.
 
 .. _Code3: 
 
@@ -649,10 +654,10 @@ Now, run the engine and examine the power and torque at 2500 RPM.
 	>>> my_engine.get("power")
 	53.397448354811743
 	
-The component is executed by calling the run function, which runs the _pre_execute (which determines if the
+The component is executed by calling the run function, which runs the *_pre_execute* (which determines if the
 component needs to be executed), execute (which is the function we created in the Engine class above), and
-_post_execute (which validates the outputs.) These _pre_execute and _post_execute functions are private
-functions, as denoted by the leading underscore, and are not intended for users to redefine in their
+*_post_execute* (which validates the outputs.) These *_pre_execute* and *_post_execute* functions are private
+functions, as denoted by the leading underscore, and are not intended for you to redefine in your
 components. The thing to remember is that a component is always executed by calling ``run()``.
 
 
@@ -891,16 +896,16 @@ Wrapping an External Module Using F2PY
 As the most computationally intensive component, the engine model in engine.py is the main performance
 bottleneck during repeated execution. As an interpreted language, Python is not the ideal choice for the
 implementation of a numerical algorithm, particularly where performance is important. Much can be gained by
-implementing the engine model in a compiled language like C or FORTRAN.
+implementing the engine model in a compiled language like C or Fortran.
 
 One of the most important characteristics of Python is that it was designed to be smoothly integrated
-with other languages, in particular C (in which Python was written) and related languages (FORTRAN and
+with other languages, in particular C (in which Python was written) and related languages (Fortran and
 C++). This is particularly important for a scripting language, where code execution is generally slower,
 and it is often necessary to use a compiled language like C for implementing computationally intensive
 functions. On top of this native integration ability, the community has developed some excellent tools,
-such as F2PY (http://cens.ioc.ee/projects/f2py2e/) (FORTRAN to Python) and :term:`SWIG` (Simplified Wrapper and
+such as F2PY (http://cens.ioc.ee/projects/f2py2e/) (Fortran to Python) and :term:`SWIG` (Simplified Wrapper and
 Interface Generator), that simplify the process of building the wrapper for a code. As the name implies,
-F2PY is a Python utility that takes a FORTRAN source code file and compiles and generates a wrapped
+F2PY is a Python utility that takes a Fortran source code file and compiles and generates a wrapped
 object callable from Python. F2PY is actually part of the numerical computing package NumPy. SWIG has a
 broader application and can be used to generate wrappers for C and C++ functions for execution in a
 variety of different target languages, including Python. For the most general case, Python has the
@@ -930,7 +935,7 @@ function RunEngineCycle. The function can be imported and used just like any Pyt
 
 
 Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first
-element (element zero.) This is not typically needed for return values from FORTRAN codes compiled with
+element (element zero.) This is not typically needed for return values from Fortran codes compiled with
 F2PY, but it seems to be needed for C codes for which the signature file is manually created. This is
 something that might be fixable and will be investigated.
 
@@ -960,7 +965,7 @@ simulations were implemented in a single Component instead. However, this leads 
 To investigate designs, a Vehicle class was defined as an assembly in OpenMDAO. This class has a set of specific inputs and outputs
 that include the design variables for the engine, transmission, and chassis, and the simulation
 variables velocity, gear position and throttle position. These inputs and outputs comprise an interface
-for the Vehicle class. In the future, the user might want to replace the current vehicle model with a new model. This new model
+for the Vehicle class. In the future, you might want to replace the current vehicle model with a new model. This new model
 will be compatible provided that it has the same interface as the current vehicle model. The interface checking is 
 facilitated by the creation of a Socket in the vehicle simulation assembly.
 
@@ -991,7 +996,7 @@ variables to minimize the 0-60 acceleration time. The chosen design variables ar
 of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second variable cannot
 be optimized by mere inspection. 
 
-The optimization will be handled by CONMIN, which is a gradient based algorithm written in FORTRAN, and developed at NASA in
+The optimization will be handled by CONMIN, which is a gradient based algorithm written in Fortran, and developed at NASA in
 the 1970s. The source code is in the public domain, and a Python wrapped CONMIN component has been included in the OpenMDAO
 standard library.
 
@@ -1082,8 +1087,8 @@ multiple design variables, and these are stored in a list. The upper and lower b
 using lower_bounds and upper_bounds respectively.
 
 The CONMIN driver can actually handle more sophisticated objective expressions that are functions of multiple simulation variables
-using the StringRef. For example, if the user wants to maximize accel_time instead of minimizing it, this can be done by
-negating the expression:
+using the StringRef. For example, if you want to maximize *accel_time* instead of minimizing it, you can
+do it by negating the expression:
 
 .. _Code11: 
 
