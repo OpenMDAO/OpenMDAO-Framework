@@ -97,7 +97,7 @@ class CaseIteratorDriver(Driver):
         try:
             if self.sequential:
                 self.info('Start sequential evaluation.')
-                while self._iter:
+                while self._iter is not None:
                     if self._stop:
                         break
                     try:
@@ -288,7 +288,7 @@ class CaseIteratorDriver(Driver):
                 in_use = False
 
             # Select case to run.
-            if self._todo:
+            elif self._todo:
                 self.debug('    run startup case')
                 self._run_case(self._todo.pop(0), server)
             elif self._rerun:
