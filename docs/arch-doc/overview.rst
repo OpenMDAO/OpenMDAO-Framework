@@ -27,6 +27,14 @@ to be :term:`plugins` to the framework.
 Framework Layers
 ================
 
+.. note::
+        The following section describes the possibility of having a wxPython GUI
+        and a web based GUI.  Due to limited programming resources, it is more likely
+        that there will be only one type of GUI, at least in the next few years. The
+        GUI will probably be web based, although a final decision has not been made
+        yet.
+
+        
 The framework's capabilities can be viewed as a number of layers supporting
 component interactions between other components and the user. The diagram below,
 `Framework Layers`_, shows a simulation consisting of three components, one of
@@ -117,10 +125,11 @@ The current package layout of the project is as follows:
     standard library of OpenMDAO plugins
     
 ``openmdao.recipes``
-    OpenMDAO specific recipes for zc.buildout_
+    OpenMDAO-specific recipes for zc.buildout_
 
 ``openmdao.util``
-    OpenMDAO utility routines for file handling, subprocess execution, etc.
+    OpenMDAO utility routines for file handling, subprocess execution, etc. These
+    can be used independently of the rest of OpenMDAO.
 
 ``openmdao.test``
     Classes and utilities that are specific to testing various aspects
@@ -165,7 +174,8 @@ completed, the user will have a complete version of the OpenMDAO framework.
 Another possibility is to bundle all of the necessary eggs into a large archive,
 either a tar file or a zip file, and the user can obtain the archive and run
 the buildout as mentioned above. This option is attractive for those who have no
-network access.
+network access or for transfer of models containing proprietary components that 
+are not available over the network.
 
 For Windows users, a self-extracting installer file will most likely be
 provided, and this installer will perform the needed buildout steps for the
@@ -176,7 +186,7 @@ some sort  of model, a configuration of plugin components that work together to
 solve some sort of problem. A complex OpenMDAO model may depend upon a large
 number of eggs.  Some of those eggs will be found in  the OpenMDAO standard
 library, but others will not. Downloading all of those eggs from a package index
-every time a new buildout is created could cause unwanted delays and waste
+every time a new buildout is created could cause unwanted delays and could waste
 space, so configuring the system to avoid unnecessary copying of distributions
 is important. The easiest way to do this is for users to set the
 *eggs-directory* attribute in their buildout default configuration file (in

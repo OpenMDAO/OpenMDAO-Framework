@@ -42,17 +42,16 @@ Note that components within OpenMDAO can be as simple or complex as necessary.
 The inputs and outputs to a Component are Python objects, so they are not limited
 to being simple types like float or int.
 
-An :term:`Assembly` is a special kind of Component that contains other components.
-When an Assembly is executed, it runs the components it contains in the order
-determined by its Workflow object. A :term:`Workflow` is simply an object that
-determines execution order for a group of components. The default type of
-Workflow in an Assembly is a Dataflow, which orders the components
-according to the direction the data flow between them, i.e., such that any
-Component that supplies input values to another Component will always run
-*before* that Component.
+An :term:`Assembly` is a special kind of Component that contains other
+components. When an Assembly is executed, it runs the components it contains
+in the order determined by a Workflow object. A :term:`Workflow` is simply an
+object that determines execution order for a group of components. The workflow
+orders the components according to the direction the data flow between them,
+i.e., such that any Component that supplies input values to another Component
+will always run *before* that Component.
 
 A Driver is another special kind of Component. Drivers are designed to iterate
-over a set of components until some condition is met. Some examples of Drivers
+over a Workflow until some condition is met. Some examples of Drivers
 are optimizers, solvers, and design space explorers.
 
 .. seealso:: :ref:`Execution` and :ref:`Workflow-View`

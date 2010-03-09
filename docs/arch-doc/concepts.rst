@@ -94,7 +94,7 @@ part while others will need, for example, the :term:`OML` of an entire assembly
 of parts. The source of the underlying geometry could be one of any number of
 tools, from external full featured  :term:`CAD` programs like Pro/Engineer and
 Catia, to more aircraft specific codes like :term:`VSP`, to open source geometry
-kernels like OpenCASCADE_ or open source CAD packages like BRL-CAD_.
+kernels like OpenCASCADE_.
 
 .. _OpenCASCADE: http://www.opencascade.org
 
@@ -181,6 +181,21 @@ not work through CAPRI because CAPRI does not support geometry creation.
 
 Component Publishing
 ====================
+
+.. note::
+    The current state of packaging in the Python community is in a state of flux, so
+    the remainder of this section will have to be rewritten at some point.
+    *setuptools* has been forked into a package called *distribute*, and apparently
+    based on discussions at PyCon 2010, the plan is that eventually, *distribute*
+    and *distutils* will go away and be replaced by *distutils2* which will be 
+    part of the standard library.  Much of the functionality of *setuptools/distribute*
+    will be incorporated into *distutils2*, and *distutils2* will break backward
+    compatibility with *distutils*.  Eggs are apparently going away as well, but 
+    the assumption is that packaged distributions created by *distutils2* will
+    be usable in a way similar to eggs.  If *distutils2* does in fact become part
+    of the standard library and it provides the same functionality that we require
+    from *setuptools*, we will switch over to it.  Stay tuned.
+
 
 Because increasing the number of available framework components will make the
 framework more useful, one of our goals is to make the process of publishing a
@@ -290,20 +305,19 @@ near future.
 
 .. _jquery: http://jquery.com
 
-.. index:: view	
+.. index:: view
 
 Views
 =====
 
 
-There are a number of visual representations of the system that the user will be
-able to interact with through the GUI. These visual representations are called
-*views.* All views are based on the same underlying data model, so changes in one
-view will typically result in changes to other views. For example, if a tool is
-added to the dataflow view, it will also appear in the tree view. However,
-some objects will be visible only in a single view. For example, :term:`Workflow`
-objects will only be visible in a workflow view. The rest of this section
-describes the different views that will be available to a user of the GUI.
+There are a number of visual representations of the system that the user will
+be able to interact with through the GUI. These visual representations are
+called *views.* All views are based on the same underlying data model, so
+changes in one view will typically result in changes to other views. For
+example, if a tool is added to the dataflow view, it will also appear in the
+tree view. The rest of this section describes the different views that will be
+available to a user of the GUI.
 
 .. index:: N squared form
 .. index:: free form
@@ -349,36 +363,28 @@ as shown below.
 *Workflow View*
 _______________
 
-This view shows the execution ordering of the components within an 
-:term:`Assembly`. A :term:`Workflow` can include other Workflows, and a number
-of different Workflows will be available, e.g., conditional (if,else if,else),
-concurrent execution, and sequential execution. (See the figure below showing
-`Types of Workflows`_.) The default workflow in an :term:`Assembly` is
-`sequential workflow`_.
 
+The existing implementation doesn't support any type of workflow beyond sequential
+data flow. However, a new type of workflow that allows both data flow and control 
+flow is being developed.  This new workflow will support concurrent execution and 
+conditional branching.  The current plan is to replace Assembly's single workflow
+object with two workflow objects.  One would be a concurrent workflow containing
+only Components, and the other would be a sequential workflow containing only
+Drivers.  Both workflows would support conditional branching.  Each Driver in the
+driver workflow would execute in turn, and as part of its execution it would 
+iteratively execute the component workflow.
+    
 
-.. _`Types of Workflows`:
+.. _`control flow`:
 
-.. figure:: ../generated_images/WorkflowTypes.png
+.. figure:: ../generated_images/ControlFlow.png
    :align: center
 
-   Types of Workflows
+   Notional View of an Assembly with Driver Flow and Control Flow
 
-
------------------
-
-|
-
-.. _`sequential workflow`:
-
-
-.. figure:: ../generated_images/WorkflowView.png
-   :align: center
-
-   Workflow View Showing an Iterative Workflow with a Driver Iterating Over a
-   Sequence
 
 .. index:: pair: problem formulation; view
+
 
 *Data-driven Problem Formulation View*
 ______________________________________
@@ -409,7 +415,7 @@ components repeatedly until some condition is satisfied.
    Problem Formulation View
 
 
-.. index:: pair: view; N-squared dataflow	
+.. index:: pair: view; N-squared dataflow
 
 
 This view shows the `N-squared`_ dataflow view that corresponds to the previous
@@ -462,6 +468,12 @@ interface.
 Security
 ========
 
+.. note::
+   The entire section on security will most likely have to be revisited based on
+   discussions with potential users in industry.  They want the ability to control
+   access to certain data within a component based on the identity of the person
+   attempting to access it.  This differs from the *all or nothing* approach 
+   described below.
 
 For any system, the security mechanisms employed are determined by the types of
 threats to be protected against.  
