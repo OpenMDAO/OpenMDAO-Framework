@@ -6,8 +6,8 @@
 The OpenMDAO Tutorial Problem
 =============================
 
-To help new users understand how to use OpenMDAO, an example problem is presented here, somewhat in the
-form of a tutorial. The developers felt that the example needed to be chosen carefully to ensure that the
+To help you understand how to use OpenMDAO, an example problem is presented here, somewhat in the
+form of a tutorial. We felt that the example needed to be chosen carefully to ensure that the
 design problem could be understood intuitively regardless of background. This precluded the use of an
 aircraft aerodynamics-structural design problem as an example, even though the developers had the
 expertise. Additionally, the example problem needed to include enough model complexity to allow a full
@@ -17,10 +17,10 @@ these requirements.
 One important thing should be noted: OpenMDAO is currently under development, and there are a number of
 features that haven't been implemented, including a graphical interface (GUI). Interacting with the
 framework architecture is done by writing Python code. While the tutorial problem was designed to teach
-the user to utilize the framework via all available interfaces, it is difficult to construct a tutorial
+you to utilize the framework via all available interfaces, it is difficult to construct a tutorial
 that achieves the same level of interactivity for a scripting interface as for a graphical one. 
 
-This tutorial assumes that the user has already created a local copy of the code repository. Please see
+This tutorial assumes that you have already created a local copy of the code repository. Please see
 the OpenMDAO :ref:`Developer's-Guide` for details on how to do this.
 
 Problem Overview
@@ -439,10 +439,11 @@ the base class Component. A very simple component is shown here:
 
 This new Transmission component does nothing yet. It does have the two functions that all components must have.
 The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
-constants. It is also where the inputs and outputs will be declared. The super call is always required so that the
+constants. It is also where the inputs and outputs will be declared. The super() call is always required so that the
 __init__ function of the base class is executed. Similarly, the execute function runs the model. There are some
 other functions defined in the Component API, but these two are the only ones needed for this part of the tutorial. Note
-that if your __init__ or execute function does nothing, it does not need to be declared in the component.
+that if your __init__ or execute function does nothing (as in this case), then it does not need to be 
+declared in the component.
 
 The next step is to add the inputs and outputs that are defined in our model description above.
 

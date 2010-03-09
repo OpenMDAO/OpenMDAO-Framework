@@ -2,8 +2,8 @@
 .. index:: egg
 .. index:: pair: package distributions; creating and updating
 
-Creating and Updating Package Distributions
--------------------------------------------
+Creating and Updating Distributions
+-----------------------------------
 
 Sometimes the changes you make on your branch will result in the 
 modification of an existing package or the creation of a new one. In
@@ -37,7 +37,7 @@ in the current directory by typing:
 ::
 
    python setup.py sdist -d .
-   
+
 A gzipped tar file will be generated with the version number of the package
 embedded in the filename, e.g., ``openmdao.recipes-0.1dev.tar.gz``
 
