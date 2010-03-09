@@ -15,6 +15,7 @@ import numpy.random
 from enthought.traits.api import Bool, Float, Array, TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.main.eggchecker import check_save_load
@@ -42,6 +43,7 @@ class DrivenComponent(Component):
     x = Array('d', value=[1., 1., 1., 1.], iostatus='in')
     y = Array('d', value=[1., 1., 1., 1.], iostatus='in')
     raise_error = Bool(False, iostatus='in')
+    stop_exec = Bool(False, iostatus='in')
     rosen_suzuki = Float(0., iostatus='out')
     sum_y = Float(0., iostatus='out')
         
@@ -54,6 +56,10 @@ class DrivenComponent(Component):
         self.sum_y = sum(self.y)
         if self.raise_error:
             self.raise_exception('Forced error', RuntimeError)
+        if self.stop_exec:
+            self.parent.stop()  # Only valid if sequential!
+#FIXME: for some reason the above doesn't call stop() on the driver...
+            self.parent._stop = True
 
 
 class MyModel(Assembly):
@@ -82,7 +88,8 @@ class TestCase(unittest.TestCase):
             raise_error = force_errors and i%4 == 3
             inputs = [('x', None, numpy.random.normal(size=4)),
                       ('y', None, numpy.random.normal(size=10)),
-                      ('raise_error', None, raise_error)]
+                      ('raise_error', None, raise_error),
+                      ('stop_exec', None, False)]
             outputs = [('rosen_suzuki', None, None),
                        ('sum_y', None, None)]
             self.cases.append(Case(inputs, outputs, ident=i))
@@ -109,6 +116,38 @@ class TestCase(unittest.TestCase):
         self.generate_cases(force_errors=True)
         self.model.driver._call_execute = True
         self.run_cases(sequential=True, forced_errors=True)
+
+    def test_run_stop_step_resume(self):
+        logging.debug('')
+        logging.debug('test_run_stop_step_resume')
+
+        self.generate_cases()
+        stop_case = self.cases[1]  # Stop after 2 cases run.
+        stop_case.inputs[3] = ('stop_exec', None, True)
+        self.model.driver.iterator = ListCaseIterator(self.cases)
+        results = []
+        self.model.driver.recorder = results
+        self.model.driver.sequential = True
+
+        try:
+            self.model.run()
+        except RunStopped:
+            self.assertEqual(len(results), 2)
+            self.verify_results()
+        else:
+            self.fail('Expected RunStopped')
+
+        self.model.driver.step()
+        self.assertEqual(len(results), 3)
+        self.verify_results()
+
+        self.model.driver.step()
+        self.assertEqual(len(results), 4)
+        self.verify_results()
+
+        self.model.driver.resume()
+        self.assertEqual(len(results), len(self.cases))
+        self.verify_results()
 
     def test_concurrent(self):
         # This can always test using a LocalAllocator (forked processes).
@@ -174,13 +213,16 @@ class TestCase(unittest.TestCase):
 
         self.model.run()
 
-        # Verify recorded results match expectations.
         self.assertEqual(len(results), len(self.cases))
-        for case in results:
+        self.verify_results(forced_errors)
+
+    def verify_results(self, forced_errors=False):
+        """ Verify recorded results match expectations. """
+        for case in self.model.driver.recorder:
             i = case.ident  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
-                if sequential:
+                if self.model.driver.sequential:
                     self.assertEqual(case.msg, 'driver.model: Forced error')
                 else:
                     self.assertEqual(case.msg, 'model: Forced error')

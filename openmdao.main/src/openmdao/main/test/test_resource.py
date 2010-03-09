@@ -80,7 +80,11 @@ class TestCase(unittest.TestCase):
             n_cpus = multiprocessing.cpu_count()
         except AttributeError:
             n_cpus = 1
-        self.assertEqual(n_servers, len(self.cluster)*n_cpus)
+        if self.node == 'gxterm3':
+            # GX front-end n_cpus doesn't imply node n_cpus.
+            self.assertTrue(n_servers >= len(self.cluster))
+        else:
+            self.assertEqual(n_servers, len(self.cluster)*n_cpus)
 
         n_servers = self.cluster.max_servers({'python_version':'bad-version'})
         self.assertEqual(n_servers, 0)
