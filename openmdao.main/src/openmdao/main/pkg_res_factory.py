@@ -1,9 +1,10 @@
 
 #public symbols
-__all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory']
+__all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory', 'plugin_path' ]
 
 import logging
 import copy
+import os.path
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
@@ -11,7 +12,25 @@ import pkg_resources
 from pkg_resources import get_entry_map, get_distribution
 from pkg_resources import Environment, Requirement, DistributionNotFound
     
-from openmdao.main.factory import Factory
+import openmdao.main.factory 
+Factory = openmdao.main.factory.Factory
+
+def _parse_plugin_path(pathstr):
+    if pathstr is None:
+        return []
+    if ';' in pathstr or ':\\' in pathstr:
+        return pathstr.split(';')
+    else:
+        return pathstr.split(':')
+
+_builtin_plugin_path = os.path.join(
+                        os.path.basename(
+                          os.path.basename(
+                              os.path.basename(
+                                  os.path.basename(
+                                      os.path.basename(openmdao.main.factory.__file__))))),'plugins')
+
+plugin_path = _parse_plugin_path(os.environ.get('OPENMDAO_PLUGIN_PATH')).append(_builtin_plugin_path)
 
 def import_version(modname, req, env=None):
     """Import the specified module from the package specified in the
@@ -73,9 +92,15 @@ class PkgResourcesFactory(Factory):
     """
     
     def __init__(self, groups, search_path=None):
+        global plugin_path
+        
         super(PkgResourcesFactory, self).__init__()
         self._groups = copy.copy(groups)
-        self.update_search_path(search_path)
+        
+        if search_path is None:
+            self.update_search_path(plugin_path)
+        else:
+            self.update_search_path(search_path)
     
     def update_search_path(self, search_path):
         self.env = Environment(search_path)
