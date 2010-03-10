@@ -473,7 +473,8 @@ The next step is to add the inputs and outputs that are defined in our model des
 	    tire_circ = UnitsFloat(75.0, iostatus='in', units='inch', 
 	             desc='Circumference of tire (inches)')
 
-	    current_gear = Int(0, iostatus='in', desc='Current Gear')
+	    current_gear = Int(0, iostatus='in', low=1, high=5, \
+                          desc='Current Gear')
 	    velocity = UnitsFloat(0., iostatus='in', units='mi/h',
 	             desc='Current Velocity of Vehicle')
 
@@ -487,23 +488,23 @@ two lines. It is important to import only those features that you need from the 
 instead of loading everything into the workspace. 
 
 
-.. Index: Data Object
+.. Index: Public Variables
 
-A component's inputs and outputs are called :term:`Data Objects` (name subject to possible change) in OpenMDAO. An often-used
-synonym for this is :term:`Variable`, though the more general term *data object* reflects the ability to pass more
-generalized objects such as data structures or geometries. A Data Object is a wrapper for data passed between framework components,
-containing a value, a default value, optional min/max values, and units. Data Objects can also perform their own validation
-when being assigned to another Data Object. OpenMDAO's Data Objects are implemented using Traits, an open-source extension to Python
-authored by Enthought, Inc. Traits provide a way to apply explicit typing to the normally untyped Python variables.
+A component's inputs and outputs are called :term:`Public Variables` (name subject to possible change) in OpenMDAO. The term
+'Public' contrasts these with Internal Variables, which are only valid inside of a component. At times, the term :term:`Variable`
+or Framework Variable may also be used to refer to Public Variables. One could think of them in a more general sense as a data object,
+which reflects the ability to pass more generalized objects such as data structures or geometries. A Public Variable is a wrapper for
+data passed between framework components, containing a value, a default value, optional min/max values, and units. Public Variables can
+also perform their own validation when being assigned to another Public Variable.
 
 The Float and Int constructors are used to create the inputs and outputs on a component for floating point
 and integer input respectively. String variables and arrays are also possible using the String and Array
-constructors. The Data Object constructors require the first two inputs but also allow several optional parameters to
+constructors. The Public Variable constructors require the first two inputs but also allow several optional parameters to
 be specified.
 
 .. index:: PEP 8
 
-The Data Object is given a name by assigning it to a Python variable (i.e. the left hand side argument when calling the 
+The Public Variable is given a name by assigning it to a Python variable (i.e. the left hand side argument when calling the 
 constructor.) As a Python variable, this name needs to follow Python's standard for variable names,
 so it must begin with a letter or underscore and should consist of only alphanumeric characters and the
 underscore. Keep in mind that a leading underscore is generally used for private data or functions. Also,
@@ -513,15 +514,14 @@ separated by underscores.
 
 The first parameter is the required default value for the data object.
 
-The parameter "iostatus" marks this Data Object as either an input (in) or an output (out) to the parent component. The parameter "desc"
-gives a documentation string describes this data object. This should be used to provide an adequate explanation for
+The parameter "iostatus" marks this Public Variable as either an input (in) or an output (out) to the parent component. The parameter "desc"
+contains a documentation string that describes this variable. This should be used to provide an adequate explanation for
 each input and output on a component.
 
-The parameter "units" is used to specify the units for this Data Object. OpenMDAO utilizes the units capability
-which is part of the Scientific Python package. This allows for unit checking and conversion when connecting
-the outputs and inputs of components. The units are defined using the definitions given in Scientific Python,
-which can be found at http://dsnra.jpl.nasa.gov/software/Python/python-modules/Scientific/. If a
-Data Object is dimensionless, the units should be set to "None."
+The parameter "units" is used to specify the units for this Public Variable. OpenMDAO contains a units capability
+that is based on part of the Scientific Python package. This Units module allows for unit checking and conversion when connecting
+the outputs and inputs of components. The units are defined based on the definitions given in Scientific Python,
+which can be found at :ref:`Summary-of-Units`. If a Public Variable is dimensionless, no unit should be assigned.
 
 There are a couple more parameters of interest that can be seen by inspecting the __init__ function in
 engine.py.
@@ -569,7 +569,7 @@ the input and output variables to perform a calculation.
 Inputs and Outputs are objects in our component, so they are accessed using ``self.variablename``, where the
 variablename is the name given to the variable's constructor. Note that a local copy of some of the inputs is
 created here (e.g. gear Vs. self.current_gear.) Since we already know the data types and the units that are used in
-these calculations, we don't need the explicit typing or unit checking provided by the Data Objects, so we can bypass any overhead that is
+these calculations, we don't need the explicit typing or unit checking provided by the Public Variables, so we can bypass any overhead that is
 normally associated with them by assigning their values to an ordinary untyped Python variable. In general this
 should be more efficient, though for simple calculations like this the difference would not be noticeable. The
 type checking and unit checking are absolutely necessary outside of the component boundary, where components are
@@ -1074,7 +1074,7 @@ enables or disables the printing of diagnostics internal to CONMIN, while the it
 of iterations for the optimization loop. Both of these have a default value (itmax is 40), so setting them here is not required.
 
 The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which were chosen
-as bore and spark angle. Both the objective and the design variables are assigned using a type of Data Object called a StringRef.
+as bore and spark angle. Both the objective and the design variables are assigned using a type of Public Variable called a StringRef.
 Instead of containing a variable value, the StringRef contains a string that gives the OpenMDAO path pointing to the variable
 that the StringRef references. This path is always relative to the driver's parent, so here we use "driving_sim.accel_time"
 instead of "self.driving_sim.accel_time". StringRefs are primarily used to connect the inputs and outputs of drivers (e.g., 
