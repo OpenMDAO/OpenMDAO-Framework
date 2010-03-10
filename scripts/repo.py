@@ -146,7 +146,7 @@ def do_fix(repo_path, options):
     files = (
         'examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engineCmodule.c',
         'examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign/engineC.so',
-        'examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3-f2pywrappers.f'
+        'examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3-f2pywrappers.f',
         'examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3module.c'
     )
     for relpath in directories:

@@ -111,8 +111,8 @@ module. Never import an entire library when only a subset is needed.
 Unused imports are one of the problems that pylint can find, so it always pays
 to use it.
 
-*The Data Tree*
-~~~~~~~~~~~~~~~
+*The Model Hierarchy*
+~~~~~~~~~~~~~~~~~~~~~
 
 Creating New Components
 -----------------------
