@@ -17,7 +17,7 @@ efficient solution of constrained problems, unconstrained function
 minimization problems may also be solved, and the conjugate direction method
 of Fletcher and Reeves is used for this purpose.
 
-More information on CONMIN can be found in `The CONMIN User's Manual
+More information on CONMIN can be found in the `CONMIN User's Manual
 <file:../../../plugin-guide/CONMIN_user_manual.html>`_.
 
 CONMIN has been included in the OpenMDAO standard library to provide users
@@ -67,9 +67,9 @@ follows:
 
 This first section of code defines an assembly called *EngineOptimization.* This
 assembly contains a DrivingSim component and a CONMIN driver, both of which are
-created and added inside the __init__ function with add_container(). The 
-objective function, design variables, constraints, and any CONMIN parameters
-are also assigned in the __init__ function. The specific syntax for all of 
+created and added inside the *__init__* function with *add_container()*. The 
+objective function, design variables, onstraints, and any CONMIN parameters
+are also assigned in the *__init__* function. The specific syntax for all of 
 these is given below.
 	
 .. testsetup:: CONMIN_show
@@ -122,14 +122,14 @@ The equation must be constructed using valid Python operators. All variables in
 the function are expressed in the scope of the local assembly that contains the
 CONMIN driver.
 
-.. index:: constraints
+.. index:: pair: constraints; CONMIN
 
 More realistically, optimization problems usually have constraints. There are
 two types of constrains in CONMIN -- *ordinary* constraints, which are expressed
 as functions of the design variables, and *side* constraints, which are used to
 bound the design space (i.e., specify a range for each design variable).
 
-Side constraints are defined using the lower_bounds and upper_bounds parameters:
+Side constraints are defined using the *lower_bounds* and *upper_bounds* parameters:
 
 .. testcode:: CONMIN_show
 
@@ -144,7 +144,7 @@ than the lower bound for each design variable.
 they are also constructed from the available OpenMDAO variables using Python
 mathematical syntax. The constraints parameter is a list of inequalities that
 are defined to be satisfied when they return a negative value or zero, and violated
-when they return positive value.
+when they return a positive value.
 
 .. testcode:: CONMIN_show
 
@@ -161,19 +161,19 @@ The CONMIN driver allows the user to control both the number of iterations
 before termination as well as the convergence tolerance (both absolute and
 relative).
 
-The maximum number of iterations is specified by setting the itmax parameter.
+The maximum number of iterations is specified by setting the *itmax* parameter.
 The default value is 10.
 
 .. testcode:: CONMIN_show
 
         self.driver.itmax = 30
 
-The convergence tolerance is controlled with delfun and dabfun. *Delfun* is the
+The convergence tolerance is controlled with *delfun* and *dabfun*. *Delfun* is the
 absolute change in the objective function to indicate convergence (i.e., if the
-objective function changes by less than delfun, then the problem is converged).
+objective function changes by less than *delfun*, then the problem is converged).
 Similarly, *dabfun* is the relative change of the objective function with respect
-to the value at the previous step. Note that dabfun has a hard-wired minimum of 
-1e-10 in the Fortran code, and delfun has a minimum of 0.0001.
+to the value at the previous step. Note that *dabfun* has a hard-wired minimum of 
+1e-10 in the Fortran code, and *delfun* has a minimum of 0.0001.
 
 .. testcode:: CONMIN_show
 
@@ -252,7 +252,7 @@ output.
 
        	self.driver.iprint = 0
 	
-Higher positive values of iprint turn on the display of more levels of output, as summarized below.
+Higher positive values of *iprint* turn on the display of more levels of output, as summarized below.
 
 ============  ========================================================
 *Value*	      *Result*	
@@ -265,11 +265,11 @@ iprint = 2    Debug level 1: All of the above plus control parameters
 ------------  --------------------------------------------------------
 iprint = 3    Debug level 2: All of the above plus all constraint
 	      values, number of active/violated constraints, direction
-	      vectors, move parameters, and miscellaneous info
+	      vectors, move parameters, and miscellaneous information
 ------------  --------------------------------------------------------
 iprint = 4    Complete debug: All of the above plus objective function
               gradients, active and violated constraint gradients, and
-	      misc info
+	      miscellaneous information
 ------------  --------------------------------------------------------
 iprint = 5    All of above plus each proposed design vector, objective
               and constraints during the one-dimensional search
@@ -283,12 +283,12 @@ iprint = 101  All of above plus a dump of the arguments passed to
 ~~~~~~~~~~~~~~~~~~
 The following options exercise some of the more advanced capabilities of CONMIN.
 The details given here briefly summarize the effects of these parameters; more
-info is available in the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_.
+information is available in the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_.
 
 
 **icndir** -- Conjugate direction restart parameter. For an unconstrained problem
 (no side constraints either), Fletcher-Reeves conjugate direction method will
-be restarted with a steepest descent direction every ICNDIR iterations.  If 
+be restarted with the steepest descent direction every ICNDIR iterations.  If 
 ICNDIR = 1, only the steepest descent will be used. Default value is the number of
 design variables + 1.
 
@@ -313,10 +313,10 @@ from the active constraints into the feasible region. The default value is
 usually adequate. This is only used for constrained problems.
 
 **phi** -- Participation coefficient, used if a design is infeasible (i.e.,
-one or more violated constraints). Phi is a measure of how hard the design
+one or more violated constraints). *Phi* is a measure of how hard the design
 will be "pushed" towards the feasible region and is, in effect, a penalty
 parameter. If in a given problem, a feasible solution cannot be obtained with
-the default value, phi should be increased, and the problem run again. If a
+the default value, *phi* should be increased, and the problem run again. If a
 feasible solution cannot be obtained with phi = 100, it is probable that no
 feasible solution exists. The default value of 5.0 is usually adequate. This
 is only used for constrained problems.

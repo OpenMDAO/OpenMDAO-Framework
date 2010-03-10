@@ -26,7 +26,7 @@ their calculations.
 
 
 The following figure gives a conceptual view of what a simple Component might
-look like. This Component has two inputs (a, b) and one output (c. The
+look like. This Component has two inputs (*a, b*) and one output (*c*). The
 calculation that it performs is to add the two inputs to produce the output.
 
 .. _`Conceptual-View-of-a-Simple-Component`:

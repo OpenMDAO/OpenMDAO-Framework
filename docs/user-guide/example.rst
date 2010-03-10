@@ -85,7 +85,7 @@ There are two tasks that the transmission model must perform:
 2. Calculate the engine RPM
 
 The transmission modeled here is a 5-speed manual. Shifting is assumed to occur instantaneously when the
-simulation input CurrentGear is given a new value. When the clutch is engaged, there is a direct linkage
+simulation input *CurrentGear* is given a new value. When the clutch is engaged, there is a direct linkage
 between the wheel rotation and the engine rotation via the current gear ratio and the differential ratio,
 so the engine RPM can be calculated given the velocity. However, this direct linkage would cause the
 engine RPM to go to zero as the vehicle stops, so the transmission model assumes that the clutch is
@@ -147,7 +147,7 @@ There are two pieces of information that the engine model must provide:
 1. Torque seen by the transmission
 2. Fuel burn under current load
 
-There are quite a few simple models in the literature, but the one published in the Master's Thesis by S.
+There are quite a few simple models in the literature, but the one published in a master's thesis by S.
 Sitthiracha (`1`_) appeared to be the best choice for use in the tutorial problem. Sitthiracha presents a
 physics-based model of the Otto cycle in a 4-stroke spark-ignition internal combustion engine. The
 mathematical model allows the construction of a parametrized engine model with 10 design inputs covering
@@ -404,11 +404,11 @@ If you have a distribution bundle:
 
 	``buildout/eggs/openmdao.examples.enginedesign-x.x.x-xxxxxx.egg/openmdao/examples/enginedesign``
 	
-where the x's denote the OpenMDAO version number, the Python version, and the Operating System
+where the *x*'s denote the OpenMDAO version number, the Python version, and the Operating System
 description string. This will vary depending on your system and version, but there will only be
 one enginedesign egg in your bundle.
 
-The three engine models have been implemented in transmission.py, engine.py, and chassis.py. It will
+The three engine models have been implemented in ``transmission.py, engine.py,`` and ``chassis.py``. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
 
 **Building a Python Component**
@@ -438,11 +438,11 @@ the base class Component. A very simple component is shown here:
 	            """
 
 This new Transmission component does nothing yet. It does have the two functions that all components must have.
-The __init__ function is run once before the model is executed. This is a convenient place to set up simulation
+The *__init__* function is run once before the model is executed. This is a convenient place to set up simulation
 constants. It is also where the inputs and outputs will be declared. The super() call is always required so that the
-__init__ function of the base class is executed. Similarly, the execute function runs the model. There are some
+*__init__* function of the base class is executed. Similarly, the execute function runs the model. There are some
 other functions defined in the Component API, but these two are the only ones needed for this part of the tutorial. Note
-that if your __init__ or execute function does nothing (as in this case), then it does not need to be 
+that if your *__init__* or execute function does nothing (as in this case), then it does not need to be 
 declared in the component.
 
 The next step is to add the inputs and outputs that are defined in our model description above.
@@ -513,18 +513,18 @@ separated by underscores.
 
 The first parameter is the required default value for the data object.
 
-The parameter "iostatus" marks this Data Object as either an input (in) or an output (out) to the parent component. The parameter "desc"
-gives a documentation string describes this data object. This should be used to provide an adequate explanation for
-each input and output on a component.
+The parameter *iostatus* marks this Data Object as either an input (*in*) or an output (*out*) to the parent component.
+The parameter *desc* contains a documentation string that describes this data object. This should be used to provide an
+adequate explanation for each input and output on a component.
 
-The parameter "units" is used to specify the units for this Data Object. OpenMDAO utilizes the units capability
+The parameter *units* is used to specify the units for this Data Object. OpenMDAO utilizes the units capability
 which is part of the Scientific Python package. This allows for unit checking and conversion when connecting
 the outputs and inputs of components. The units are defined using the definitions given in Scientific Python,
 which can be found at http://dsnra.jpl.nasa.gov/software/Python/python-modules/Scientific/. If a
-Data Object is dimensionless, the units should be set to "None."
+Data Object is dimensionless, the units should be set to *None.*
 
-There are a couple more parameters of interest that can be seen by inspecting the __init__ function in
-engine.py.
+There are a couple more parameters of interest that can be seen by inspecting the *__init__* function in
+``engine.py``.
 
 .. _Code3: 
 
@@ -533,12 +533,12 @@ engine.py.
         	RPM = UnitsFloat(1000.0, low=1000., high=6000., iostatus='in', 
                      units='1/min',  desc='Engine RPM')		      
 
-Here, a minimum and maximum limit have been set for the engine input RPM using the arguments "low" and "high". If the engine 
+Here, a minimum and maximum limit have been set for the engine input RPM using the arguments *low* and *high*. If the engine 
 component is commanded to operate outside of the limits on this input, a TraitError exception will be raised. This
 exception can be caught elsewhere so that some kind of recovery behavior can be defined (e.g., shifting the gear
 in the transmission component to lower the engine RPM.)
 
-Finally, transmission.py needs to actually do something when it is executed. This code illustrates how to use
+Finally, ``transmission.py`` needs to actually do something when it is executed. This code illustrates how to use
 the input and output variables to perform a calculation. 
 
 .. _Code4: 
@@ -568,7 +568,7 @@ the input and output variables to perform a calculation.
 	    
 Inputs and Outputs are objects in our component, so they are accessed using ``self.variablename``, where the
 variablename is the name given to the variable's constructor. Note that a local copy of some of the inputs is
-created here (e.g. gear Vs. self.current_gear.) Since we already know the data types and the units that are used in
+created here (e.g., *gear* vs. *self.current_gear*.) Since we already know the data types and the units that are used in
 these calculations, we don't need the explicit typing or unit checking provided by the Data Objects, so we can bypass any overhead that is
 normally associated with them by assigning their values to an ordinary untyped Python variable. In general this
 should be more efficient, though for simple calculations like this the difference would not be noticeable. The
@@ -579,7 +579,7 @@ connected to each other.
 Executing a Component in the Python Shell
 -----------------------------------------
 
-The Python implementations of the three component models (engine.py, transmission.py, chassis.py) should all make sense now. This next section will demonstrate how to instantiate and use these components in the Python shell. From the top level directory in your OpenMDAO source tree, go to the ``buildout`` directory. From here, the Python shell can be launched by typing the following at the Unix prompt:
+The Python implementations of the three component models (``engine.py, transmission.py, chassis.py``) should all make sense now. This next section will demonstrate how to instantiate and use these components in the Python shell. From the top level directory in your OpenMDAO source tree, go to the ``buildout`` directory. From here, the Python shell can be launched by typing the following at the Unix prompt:
 
 .. _Prompt1: 
 
@@ -611,7 +611,7 @@ Note that we can also access the value of the input directly:
 
 While this is perfectly valid, it should be noted that some things may be bypassed by not calling the get function.
 In particular, the direct access may not be able to find the value of the input if some objects are executing on
-remote servers. In such a case, the get() function will be able to find the input value.
+remote servers. In such a case, the *get()* function will be able to find the input value.
 	
 Let's change the engine speed from its default value (1000 RPM) to 2500 RPM.
 
@@ -650,11 +650,11 @@ Now, run the engine and examine the power and torque at 2500 RPM.
 	>>> my_engine.get("power")
 	53.397448354811743
 	
-The component is executed by calling the run function, which runs the _pre_execute (which determines if the
-component needs to be executed), execute (which is the function we created in the Engine class above), and
-_post_execute (which validates the outputs.) These _pre_execute and _post_execute functions are private
+The component is executed by calling the run function, which runs the *_pre_execute* (which determines if the
+component needs to be executed), *execute* (which is the function we created in the Engine class above), and
+*_post_execute* (which validates the outputs.) These _pre_execute and _post_execute functions are private
 functions, as denoted by the leading underscore, and are not intended for users to redefine in their
-components. The thing to remember is that a component is always executed by calling ``run()``.
+components. The thing to remember is that a component is always executed by calling *run()*.
 
 
 .. index:: Assembly
@@ -996,7 +996,7 @@ The optimization will be handled by CONMIN, which is a gradient based algorithm 
 the 1970s. The source code is in the public domain, and a Python wrapped CONMIN component has been included in the OpenMDAO
 standard library.
 
-In openMDAO, the top level assembly is always derived from Assembly. In engine_optimization.py, the class EngineOptimization 
+In openMDAO, the top level assembly is always derived from Assembly. In ``engine_optimization.py``, the class EngineOptimization 
 was created and a SimVehicle and CONMINdriver were instantiated:
 
 .. _Code9: 
@@ -1069,21 +1069,21 @@ driver requires some initialization and connecting before it can be used:
         	self.driver.lower_bounds = [-50, 65]
 	        self.driver.upper_bounds = [10, 100]
 
-In self.driver.iprint, driver refers to the title that the CONMIN driver is given when it is created above. The iprint flag
-enables or disables the printing of diagnostics internal to CONMIN, while the itmax parameter specifies the maximum number
-of iterations for the optimization loop. Both of these have a default value (itmax is 40), so setting them here is not required.
+In ``self.driver.iprint``, driver refers to the title that the CONMIN driver is given when it is created above. The *iprint* flag
+enables or disables the printing of diagnostics internal to CONMIN, while the *itmax* parameter specifies the maximum number
+of iterations for the optimization loop. Both of these have a default value (*itmax* is 40), so setting them here is not required.
 
 The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which were chosen
 as bore and spark angle. Both the objective and the design variables are assigned using a type of Data Object called a StringRef.
 Instead of containing a variable value, the StringRef contains a string that gives the OpenMDAO path pointing to the variable
-that the StringRef references. This path is always relative to the driver's parent, so here we use "driving_sim.accel_time"
-instead of "self.driving_sim.accel_time". StringRefs are primarily used to connect the inputs and outputs of drivers (e.g., 
+that the StringRef references. This path is always relative to the driver's parent, so here we use *driving_sim.accel_time*
+instead of *self.driving_sim.accel_time*. StringRefs are primarily used to connect the inputs and outputs of drivers (e.g., 
 optimizers, solvers, etc.) CONMIN is a single objective optimizer, so there can only be one objective. However, there can be
 multiple design variables, and these are stored in a list. The upper and lower bounds for all the design variables are set 
-using lower_bounds and upper_bounds respectively.
+using *lower_bounds* and *upper_bounds* respectively.
 
 The CONMIN driver can actually handle more sophisticated objective expressions that are functions of multiple simulation variables
-using the StringRef. For example, if the user wants to maximize accel_time instead of minimizing it, this can be done by
+using the StringRef. For example, if the user wants to maximize *accel_time* instead of minimizing it, this can be done by
 negating the expression:
 
 .. _Code11: 
