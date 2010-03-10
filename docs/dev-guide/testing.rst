@@ -155,17 +155,17 @@ The ``unittest.TestCase`` class provides a number of functions to
 test output during a test function.  For example:
 
 ``self.assertTrue(expr[,msg])``
-    Test will fail if expr does not evaluate to True.
+    Test will fail if *expr* does not evaluate to True.
     
 ``self.assertEqual(val1,val2)``
-    Test will fail if val1 != val2
+    Test will fail if *val1* != *val2*
         
 ``self.assertNotEqual(val1,val2)``
-    Test will fail if val1 == val2
+    Test will fail if *val1* == *val2*
         
 ``self.assertAlmostEqual(val1,val2[,places=7])``
-    Test will fail if val1 differs from val2 by more than a small
-    amount of decimal places.
+    Test will fail if *val1* differs from *val2* by more than a small
+    number of decimal places.
     
 ``self.fail([msg])``
     Test will fail and display the given message.
@@ -174,9 +174,9 @@ Often in a test you will want to make sure that a specific exception is raised
 when a certain thing happens, and usually you want to verify that the error
 message contains certain information.  The unittest_ framework provides an
 ``assertRaises`` function that does part of this job, but it does not allow
-you to check the error message, so the preferred way to test exceptions is
+you to check the error message. So the preferred way to test exceptions is
 shown in the code below. In this example, we will assume that the exception
-we are interested in is a ``ValueError``, and note that we would place our
+we are interested in is a ``ValueError``. Note that we would place our
 test function inside of our ``unittest.TestCase`` derived class.
 
 .. parsed-literal::
@@ -189,9 +189,9 @@ test function inside of our ``unittest.TestCase`` derived class.
         else:
             self.fail('expected a ValueError')
 
-Note that the ``else`` block after the ``except`` is important because we
-want the test to fail if no exception is raised at all.  Without the else
-block, the test would pass if no exception were raised.
+Note that the *else* block after the *except* is important because we want the
+test to fail if no exception is raised at all. Without the *else*  block, the
+test would pass if no exception were raised.
 
 
 *Test File Locations*
@@ -211,14 +211,14 @@ Testing Code in the Documentation
 The OpenMDAO documentation includes quite a few examples of Python code. These
 examples are used to explain how to use features of the OpenMDAO API as well as
 how to develop new components and plugins. Thus, it is imperative that any code
-examples included in the documentation (particularly the User Guide and the
-Developer Guide) be tested to ensure that the code is error-free. 
+examples included in the documentation (particularly the *User's Guide* and the
+*Developer's Guide*) be tested to ensure that the code is error-free. 
 
-Fortunately, there are tools built into the Sphinx restructured text processor that
+Fortunately, there are tools built into the Sphinx reStructuredText processor that
 make the process of testing code samples much easier. Sphinx includes a builder
-called "doctest" as a plug-in in its standard library. Instead of building a
+called *doctest* as a plug-in in its standard library. Instead of building a
 readable document as is done by the HTML builder, the doctest builder scans the
-documentation files for code blocks, and tests them. 
+documentation files for code blocks and tests them. 
 
 There are two types of code examples found in the documentation. The first type 
 is a block of code as would be found in a Python script:
@@ -235,10 +235,10 @@ The second type of code example is a copy of an interactive shell session:
     >>> print "Hello!"
     Hello!
     
-Both of these types of code samples must be tested, though the way to accomplish
-this differs slightly. Unlike the doctest module built into Python, which can 
-only handle shell session blocks, the doctest builder included with Sphinx can
-handle both of these code sample types.
+Both of these types of code samples must be tested, although the way to
+accomplish this differs slightly. Unlike the doctest module built into Python,
+which can handle only shell session blocks, the doctest builder included with
+Sphinx can handle both of these code sample types.
 
 
 *Testing Code Blocks*
@@ -247,9 +247,9 @@ handle both of these code sample types.
 The doctest builder in Sphinx provides a flexible environment to easily and
 effectively test blocks of code using a set of directives. The test code
 directive is used to mark a block of text that should be tested and treated
-as Python code. It is not always possible to execute standalone block of
+as Python code. It is not always possible to execute a standalone block of
 Python code without first executing some preliminary code containing any
-prerequisites (e.g. imports.) The testsetup block makes it possible to run
+prerequisites (e.g., imports.) The testsetup block makes it possible to run
 the preliminary code. This block is hidden by default, so it does not show
 up in the generated HTML documentation. Additionally, there is a testoutput
 block, where any output that is generated by the testcode block should be
@@ -273,15 +273,15 @@ A simple example of how to implement these three blocks is shown here:
 	# If your code block outputs anything when executed, then that output
 	# needs to go in this block.
 
-Group1 is a label that we've given this set of blocks. Note that you can have
-multiple labels in your documents. Note also that the testsetup and testoutput
-blocks are both optional; some code examples don't need either. You can have
-multiple testcode blocks for a single testsetup block. The environment is
-preserved across all of the testcode blocks in a given group, so that the
-code executed in the first testcode block in Group1 affects all later blocks
-in Group1.
+*Group1* is a label that we've given this set of blocks. Note that you can have
+multiple labels in your documents. Note also that the testsetup and
+testoutput blocks are both optional; some code examples don't need either.
+You can have multiple testcode blocks for a single testsetup block. The
+environment is preserved across all of the testcode blocks in a given group, so
+that the code executed in the first testcode block in Group1 affects all later
+blocks in Group1.
 
-The label is optional, and defaults to "default" when not explicitly defined.
+The label is optional, and defaults to *default* when not explicitly defined.
 
 There is one other directive of note. The doctest directive is used to mark
 blocks of interactive shell Python code. Note that if the directive is omitted,
@@ -294,9 +294,9 @@ still good form to include it.
     
 	>>> # This code is tested
 	
-The doctest blocks share their workspace in a similar manner as the testcode blocks.
-There are other options that can be enabled for the doctest blocks, but so far
-the default ones have been fine.
+The doctest blocks share their workspace in a similar manner as the testcode
+blocks.  There are other options that can be enabled for the doctest blocks, but
+so far the default ones have been fine.
 
 More details on using the doctest builder can be found here: http://sphinx.pocoo.org/ext/doctest.html
 
@@ -307,7 +307,7 @@ More details on using the doctest builder can be found here: http://sphinx.pocoo
 +++++++++++++++++++++++++++++++++++++++++
 
 There are times that it is more efficient to directly include code from a source
-file. There is a directive built into Sphinx that enables this -- the literalinclude
+file. There is a directive built into Sphinx that enables this -- the *literalinclude*
 block:
 
 ::
@@ -318,12 +318,12 @@ block:
        :language: python
        
 The first line contains the relative path location of the file that is to be 
-included. Since one rarely wants to include an entire file, the options
-"start-after" and "end-before" can be used to define the bookends that
+included. Since you rarely wants to include an entire file, the options
+*start-after* and *end-before* can be used to define the bookends that
 bound the block of text to be included. 
        
 Sometimes, it makes more sense to grab specific lines from a file. This can
-also be done with the "lines" option.
+also be done with the *lines* option.
 
 ::
 
@@ -331,12 +331,15 @@ also be done with the "lines" option.
        :lines: 3,7-12,45
        :language: python
 
-More detail on the literalinclude directive can be found at http://sphinx.pocoo.org/markup/code.html       
+More details on the *literalinclude* directive can be found at http://sphinx.pocoo.org/markup/code.html.       
        
 *Helpful Tips*
 ++++++++++++++
 
-* Indentation is not preserved between code blocks in the same group. This means that all functions and class definitions effectively close when the block ends. If you need to show code from the middle of a function class, you may have to get creative in what you place in your testsetup block (e.g. defining "self" as something.)
+* Indentation is not preserved between code blocks in the same group. This means that all functions and
+  class definitions effectively close when the block ends. If you need to show code from the middle of a
+  function class, you may have to get creative in what you place in your testsetup block (e.g., defining
+  *self* as something.)
 
 * Tracebacks don't have to be accurately reproduced (and they can't be anyway.) Handle these the same way they are in doctest, that is:
 
@@ -345,11 +348,14 @@ More detail on the literalinclude directive can be found at http://sphinx.pocoo.
 	    ...
 	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but attempted value is 7500
 	
-* Care should be taken to assure that each block of code is being tested. One way to do this is to purposefully introduce an error into a block to verify that it is caught.
+* Care should be taken to assure that each block of code is being tested. One way to do this is to
+  purposefully introduce an error into a block to verify that it is caught.
 
-* Be wary of including code by line number. If the source file is changed, and lines are added or removed, then the included code might not be what was intended.
+* Be wary of including code by line number. If the source file is changed, and lines are added or
+  removed, then the included code might not be what was intended.
 
-* To include a numerical example in a doctest block, you can use elipses in order to match the output to a specific tolerance. For example, this block of text passes: 
+* To include a numerical example in a doctest block, you can use elipses to match the output to a
+  specific tolerance. For example, this block of text passes: 
 
     >>> import numpy
     >>> numpy.pi 
@@ -359,7 +365,7 @@ More detail on the literalinclude directive can be found at http://sphinx.pocoo.
 +++++++++++++++++++
 
 The buildout procedure currently generates a script for testing the code in the
-documents. This can be run by going to the buildout folder, and running:
+documents. This can be run by going to the ``buildout`` folder, and running:
 
 ::
 
@@ -379,6 +385,7 @@ The following output indicates a successful test:
 If any tests fail, they will also be noted in this summary, and specific tracebacks
 will be given for each failure earlier in the output.
 
-The document testing is also part of the full testing process, and is executed as part of the normal bin/test.
+The document testing is also part of the full testing process, and is executed as part of the normal
+``bin/test``.
 
 

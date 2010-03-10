@@ -18,11 +18,11 @@ System Configuration
 Some steps of the development process, e.g., downloading a branch of the source
 repository and downloading Python eggs, require network access.  If you're
 behind an http proxy, you'll have to set the *http_proxy* environment variable
-on your system in order for bazaar and zc.buildout to function properly.
+on your system in order for Bazaar and zc.buildout to function properly.
 
 In these early stages of the project, we are developing mostly on linux,
 with occasional testing on Windows, but in the near term we plan to start
-full testing on linux, Windows, and OS X.
+full testing on Linux, Windows, and OS X.
 
 
 Getting Started
@@ -35,7 +35,7 @@ two tools: `Bazaar, <http://bazaar-vcs.org>`_ to configuration manage your
 source code, and  `zc.buildout, <http://pypi.python.org/pypi/zc.buildout>`_ to
 keep track  of all  of the Python packages that your code depends on. For a
 gentle video introduction to zc.buildout, check out
-http://rhodesmill.org/brandon/buildout Note that the sound does not work on the
+http://rhodesmill.org/brandon/buildout. Note that the sound does not work on the
 local GRC machine called *torpedo*, so GRC users should view the buildout video
 intro from another machine. 
 
@@ -48,10 +48,10 @@ intro from another machine.
 
 Prior to running any buildouts, you should set up a default config file that
 specifies the location of a directory where installed distributions can be kept.
-If you don't do this, each buildout that you build will have its own copy of 
+If you don't do this, each time you do a buildout, your buildout will have its own copy of 
 all of the distributions that the buildout depends on, and running the buildout 
 will take longer because each distribution will have to be downloaded and
-installed in the buildout/eggs directory.
+installed in the ``buildout/eggs`` directory.
 
 To create your default buildout config file, start by making a ``.buildout`` 
 directory under your home directory.  Within that directory, create a file
@@ -98,10 +98,9 @@ to a :term:`repository` on that machine.
 *Code Location*
 +++++++++++++++
     
-
-The bazaar repository for the OpenMDAO source code is currently only available
+The Bazaar repository for the OpenMDAO source code is currently only available
 to users with sftp access to the GRC host named *torpedo* because the OpenMDAO
-public website is not yet active.  If you have sftp access, either directly or
+public website is not yet active. If you have sftp access, either directly or
 through a VPN, you can get a copy of the repository as follows:
 
 ::
@@ -109,9 +108,9 @@ through a VPN, you can get a copy of the repository as follows:
     bzr branch sftp://yourusername@torpedo.grc.nasa.gov/OpenMDAO/trunk <your_branch_name>
 
 
-When the web site is eventually activated, read-only access will be available to
-anyone from ``openmdao.org/source/trunk`` and patches will be submittable in
-the form of bazaar merge directives sent via email to ``patches@openmdao.org``.
+When the website is activated, read-only access will be available to
+anyone from ``openmdao.org/source/trunk``, and patches will be submittable in
+the form of Bazaar merge directives sent via email to ``patches@openmdao.org``.
 
 
 .. index:: source repository
@@ -210,9 +209,8 @@ Creating Your Branch
 ____________________
 
 
-As of this writing, the ``openmdao.org`` web site is not active, so
-the URI bzr://openmdao.org/source/trunk is not available yet.  Until the web
-site becomes active, if you have sftp access to torpedo.grc.nasa.gov, you can
+As of this writing, the ``openmdao.org`` website is not active, so
+the URI ``bzr://openmdao.org/source/trunk`` is not available yet.  Until the website becomes active, if you have sftp access to torpedo.grc.nasa.gov, you can
 create a branch using the command:
 
 ::
@@ -229,14 +227,14 @@ a branch using the following command:
 
    bzr branch bzr://openmdao.org/source/trunk <branch_name>
    
-where ``<branch_name>`` is the name your are giving to the top level directory
-of your branch repository.  The name should reflect the purpose of the branch in
-order to avoid confusion in the case where you have multiple branches active at
-the same time. If you do not supply ``<branch_name>``, the name by default will
-be the last part of the source repository URI, which in this case is ``trunk``.
+where ``<branch_name>`` is the name you are giving to the top level directory
+of your branch repository.  The name should reflect the purpose of the branch to
+avoid confusion in the case where you have multiple branches active at the same time.
+If you do not supply ``<branch_name>``, the name by default will be the last part of
+the source repository URI, which in this case is ``trunk``.
 
 
-At GRC, we name branches based on ticket numbers in the bug tracker, and we use
+At Glenn Research Center (GRC), we name branches based on ticket numbers in the bug tracker, and we use
 the form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug tracker
 ticket number and ``<desc>`` is a short description of the branch. For example,
 ``T0029-workflow_fix``.
@@ -253,11 +251,11 @@ and run:
 where ``<python>`` is the specific version of Python you want to use for the
 branch, for example, ``python2.6``.  Whatever version of Python you use for this
 command will be *hard-wired* into all of the buildout-generated scripts. Note
-that isolated_bootstrap.py is a modified version of bootstrap.py, which can be
-found in the <branch_name>/misc/branch_config directory. Using
-isolated_bootstrap.py will isolate your buildout from the system level python
-install, while using the regular bootstrap.py will allow use of distributions
-from the system level.
+that ``isolated_bootstrap.py`` is a modified version of ``bootstrap.py``, which can be
+found in the ``<branch_name>/misc/branch_config`` directory. Using
+``isolated_bootstrap.py`` will isolate your buildout from the system level Python
+install, while using the regular ``bootstrap.py`` will allow use of distributions from
+the system level.
 
 
 At this point, your ``buildout`` directory should contain the following
@@ -280,7 +278,7 @@ subdirectories:
 
 
 If you see an ``eggs`` directory under your ``buildout`` directory, then
-that means that you have not specified **eggs-directory** in your
+that means that you have not specified *eggs-directory* in your
 ``default.cfg`` file and you'll be getting a full copy of all dependent
 distributions into your buildout. This is generally NOT what you want. See
 the earlier discussion in 

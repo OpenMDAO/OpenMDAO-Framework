@@ -31,7 +31,7 @@ e.g.,  ``conmin-1.0-py2.5-win32.egg``.
 Regardless of the contents of the package, you should also produce a source 
 distribution of it. If your package has compiled code as mentioned above, you
 will have to use the ``sdist`` command to generate a source tarball. Assuming
-your setup.py file is written correctly, you can generate a source distribution
+your ``setup.py file`` is written correctly, you can generate a source distribution
 in the current directory by typing:
 
 ::
@@ -47,7 +47,7 @@ to generate a source egg, which will have a name containing the package version
 information and the Python version, e.g., ``openmdao.recipes-0.1-py2.5.egg``.
 
 
-- TODO: describe needed metadata in setup.py file
+- TODO: describe needed metadata in ``setup.py`` file
 - TODO: describe entry points used by the framework    
 
 

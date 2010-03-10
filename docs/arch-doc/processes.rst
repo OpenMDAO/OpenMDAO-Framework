@@ -62,7 +62,7 @@ the create message, via a proxy, to the :term:`ObjServerFactory` object on the r
 server. (See the figure `Creation Process for a Distributed Component`_.) The
 :term:`ObjServerFactory` will spawn a separate process containing an :term:`ObjServer`
 that will create the requested object within its process. A proxy in the local process
-will communicate with the remote object through the :term:`ObjServer` . Another figure
+will communicate with the remote object through the :term:`ObjServer`. Another figure
 shows a more `detailed creation process`_ for a distributed component. 
 
 
@@ -144,7 +144,7 @@ To solve these problems, a special Loader object will be serialized along with t
 other objects in the model. It will be serialized (and restored) before any of the
 other objects by serializing a list, e.g., [loader, obj], where *obj* is the top level
 object of the model or submodel being serialized. By overriding the loader's
-__setstate__ and __getstate__ functions, the loader can collect a list of all
+_*_setstate__* and *__getstate__* functions, the loader can collect a list of all
 dependent modules and their versions at save time, and later, at load time, can
 force early importing of the correct versions of all of the dependent modules before
 any of the other serialized objects are loaded into memory.
