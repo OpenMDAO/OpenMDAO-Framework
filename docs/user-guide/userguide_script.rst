@@ -87,7 +87,6 @@ this module can be obtained using the dir() command in Python:
     create
     get_available_types
     logger
-    plugin_path
     set_as_top
 
 Most of these items are explained elsewhere in the user guide. 

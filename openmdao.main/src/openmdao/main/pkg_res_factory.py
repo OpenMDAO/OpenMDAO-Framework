@@ -1,6 +1,6 @@
 
 #public symbols
-__all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory', 'plugin_path' ]
+__all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory' ]
 
 import logging
 import copy
@@ -14,29 +14,6 @@ from pkg_resources import Environment, Requirement, DistributionNotFound
     
 import openmdao.main.factory 
 Factory = openmdao.main.factory.Factory
-
-def _parse_plugin_path(pathstr):
-    if pathstr is None:
-        return []
-    if ';' in pathstr or ':\\' in pathstr:
-        return pathstr.split(';')
-    else:
-        return pathstr.split(':')
-
-# find the default plugins directory (it's in different places relative to
-# openmdao.main.factory.__file__ depending on whether this is a bundle
-# or a source distribution.
-_plugin_base = os.path.dirname(
-                 os.path.dirname(
-                   os.path.dirname(openmdao.main.factory.__file__)))
-_builtin_plugin_path = os.path.join(_plugin_base, 'plugins')
-if not os.path.isdir(_builtin_plugin_path):
-    _plugin_base = os.path.dirname(os.path.dirname(_plugin_base))
-    _builtin_plugin_path = os.path.join(_plugin_base, 'plugins')
-
-plugin_path = _parse_plugin_path(os.environ.get('OPENMDAO_PLUGIN_PATH'))
-if os.path.isdir(_builtin_plugin_path):
-    plugin_path.append(_builtin_plugin_path)
 
 def import_version(modname, req, env=None):
     """Import the specified module from the package specified in the
@@ -98,19 +75,13 @@ class PkgResourcesFactory(Factory):
     """
     
     def __init__(self, groups, search_path=None):
-        global plugin_path
-        
         super(PkgResourcesFactory, self).__init__()
         self._groups = copy.copy(groups)
         
-        if search_path is None:
-            self.update_search_path(plugin_path)
-        else:
-            self.update_search_path(search_path)
+        self.update_search_path(search_path)
     
     def update_search_path(self, search_path):
-        path = search_path + pkg_resources.working_set.entries
-        self.env = Environment(path)
+        self.env = Environment(search_path)
         self._loaders = {}
         for group in self._groups:
             self._get_plugin_info(self.env, group)
