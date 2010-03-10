@@ -23,14 +23,20 @@ def _parse_plugin_path(pathstr):
     else:
         return pathstr.split(':')
 
-_builtin_plugin_path = os.path.join(
-                        os.path.basename(
-                          os.path.basename(
-                              os.path.basename(
-                                  os.path.basename(
-                                      os.path.basename(openmdao.main.factory.__file__))))),'plugins')
+# find the default plugins directory (it's in different places relative to
+# openmdao.main.factory.__file__ depending on whether this is a bundle
+# or a source distribution.
+_plugin_base = os.path.dirname(
+                 os.path.dirname(
+                   os.path.dirname(openmdao.main.factory.__file__)))
+_builtin_plugin_path = os.path.join(_plugin_base, 'plugins')
+if not os.path.isdir(_builtin_plugin_path):
+    _plugin_base = os.path.dirname(os.path.dirname(_plugin_base))
+    _builtin_plugin_path = os.path.join(_plugin_base, 'plugins')
 
-plugin_path = _parse_plugin_path(os.environ.get('OPENMDAO_PLUGIN_PATH')).append(_builtin_plugin_path)
+plugin_path = _parse_plugin_path(os.environ.get('OPENMDAO_PLUGIN_PATH'))
+if os.path.isdir(_builtin_plugin_path):
+    plugin_path.append(_builtin_plugin_path)
 
 def import_version(modname, req, env=None):
     """Import the specified module from the package specified in the
@@ -103,7 +109,8 @@ class PkgResourcesFactory(Factory):
             self.update_search_path(search_path)
     
     def update_search_path(self, search_path):
-        self.env = Environment(search_path)
+        path = search_path + pkg_resources.working_set.entries
+        self.env = Environment(path)
         self._loaders = {}
         for group in self._groups:
             self._get_plugin_info(self.env, group)
