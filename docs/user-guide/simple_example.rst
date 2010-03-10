@@ -155,15 +155,13 @@ by adding these lines:
 
 
 .. index:: Traits
-	
-OpenMDAO implements framework variables using a Python add-on called :term:`Traits`.
-This is an open-source extension to Python that was put out by a company called
-Enthought. Traits provide a way to apply explicit typing to the normally untyped
-Python variables. They also provide the capability to add some other features to
-the framework variables, including unit checking and conversion, default values,
-minima and maxima, and a way to create callback functions.
 
-Here we are using a trait called *Float,* which was imported above, that creates
+There are two kinds of variables in OpenMDAO: internal variables and Public Variables.
+Internal variables are variables that are used internally to a component, but that cannot
+be seen outside fo that component's scope. Public Variables are variables that are 
+publically visible (and manupulatable if they are inputs) in the framework.
+
+Here we are using a Public Variable called *Float,* which was imported above, that creates
 a floating point variable available to the framework. The constructor contains
 a default value (set to 0 for these), an iostatus (which declares this 
 variable as an input or an output), and a description (just a string of text
@@ -429,9 +427,9 @@ Building a Simple Model - Constrained Optimization using CONMIN
 Usually, an optimization problem also contains a number of constraints on the
 design space. 
 
-*Constraints* are equations (or inequalities) that are expressed as functions
-of the design variables. They are constructed much like the objective functions
-using the available OpenMDAO variables build into an expression with Python
+*Constraints* are equations (generally inequalities) that are expressed as functions
+of the design variables. In OpenMDAO, they are constructed much like the objective functions
+using the available framework variables to build an expression with Python
 mathematical syntax. For CONMIN, the constraints parameter is a list of inequalities that
 are defined to be satisfied when they return a negative value or zero, and violated
 when they return positive value. A constraint can be added to our existing 
@@ -459,5 +457,5 @@ Afterword
 ---------
 
 This concludes a simple introduction to component creation and execution in
-OpenMDAO. The next tutorial section presents a problem with more complexity and
-presents some more of the features.
+OpenMDAO. The next tutorial section introduces a problem with more complexity and
+presents some more of the features of the framework.

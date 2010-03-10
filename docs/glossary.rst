@@ -97,15 +97,6 @@ Glossary
         A Python module that measures code coverage during test execution.
 	
 
-      **Data Objects** 
-        A component's inputs and outputs. A Data Object is a wrapper for data
-        containing a value, a default value, optional min/max values, and units
-        that is passed between framework components. Data Objects can also
-        perform their own validation when being assigned to another Data Object.
-        OpenMDAO's Data Objects are implemented using Traits, an open source
-        extension to Python authored by Enthought, Inc.
-
-	
       **decorator**
         A Python module that aims to simplify the usage of decorators for the average
         programmer and to popularize decorators by showing various non-trivial examples. A
@@ -301,6 +292,14 @@ Glossary
 	A pluggable command-line frontend, including commands to setup package file layouts
 
 
+      **PID**
+        Process id
+
+
+      **PIL**
+        Python Imaging Library
+	
+      
       **plugin**
         A computer program that interacts with a host aplication to
         provide specific functionality without changing the host application.
@@ -310,14 +309,17 @@ Glossary
         See :term:`plugin`
 
 	
-      **PID**
-        Process id
+      **Public Variables** 
+        A component's inputs and outputs. They are called "Public" variables
+	because they are exposed to the framework; inputs can be set and
+	outputs can be read by other framework components. In general, a
+	Public Variable is a wrapper for some set of data and metadate that
+	can include a value, a default value, optional min/max values, and units. 
+	Public Variables can also perform their own validation when being assigned 
+	to another Public Variable. OpenMDAO's Public Variables are implemented using 
+	Traits, an open source extension to Python authored by Enthought, Inc.
 
-
-      **PIL**
-        Python Imaging Library
 	
-      
       **Pyevolve**
         A complete Python genetic algorithm framework
 	
