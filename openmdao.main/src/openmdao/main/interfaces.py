@@ -56,18 +56,32 @@ class IResourceAllocator (Interface):
     """An object responsible for allocating CPU/disk resources for a particular
     host, cluster, load balancer, etc."""
 
-    def time_estimate (resource_desc):
-        """Return the estimated time (wall clock) to perform the specified
-        computation. A return of -1 indicates that the computation cannot
-        be performed using this resource. A return of 0 indicates that
-        the computation can be performed, but there is no time estimate."""
+    def max_servers (resource_desc):
+        """Return the maximum number of servers which could be deployed for
+        `resource_desc`.  The value needn't be exact, but performance may
+        suffer if it overestimates.  The value is used to limit the number
+        of concurrent evaluations."""
 
-    def deploy (resource_desc):
-        """Execute the process described in the resource description on the
-        computing resource associated with this object."""
+    def time_estimate (resource_desc):
+        """Return ``(estimate, criteria)`` indicating how well this resource
+        allocator can satisfy the `resource_desc` request.  The estimate will
+        be:
+
+        - >0 for an estimate of walltime (seconds).
+        -  0 for no estimate.
+        - -1 for no resource at this time.
+        - -2 for no support for `resource_desc`.
+
+        The returned criteria is a dictionary containing information related
+        to the estimate, such as load averages, unsupported resources, etc."""
+
+    def deploy (name, resource_desc, criteria):
+        """Deploy a server suitable for `resource_desc`.
+        `criteria` is the dictionary returned by :meth:`time_estimate`.
+        Returns a proxy to the deployed server."""
 
     def list_allocated_components ():
-        """Return a list of tuples (hostname, pid, component_name) for each
+        """Return a list of tuples ``(hostname, pid, component_name)`` for each
         Component currently allocated by this allocator."""
 
     

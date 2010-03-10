@@ -19,7 +19,7 @@ OpenMDAO source. Developers cannot write directly to this version.  Writing
 to the trunk can be done only by the configuration manager.  To make changes
 to the code, a developer must first create a :term:`branch`, make  and test
 changes, and then make the branch available to the configuration manager 
-who will then merge the changes back into the trunk.
+who will then merge the changes back to the trunk.
 
 .. index:: pair: OpenMDAO; directory structure
 
@@ -32,12 +32,13 @@ The overall directory structure for OpenMDAO looks like this:
     Release version of the code
 
 ``/OpenMDAO/dev/<username>``
-    Shared repository where all active branches for user ``<username>`` are
+    Shared repository where all active branches for a specific user (identified by ``<username>``) are
     located
 
 ``/OpenMDAO/dev/<username>/T<ticket number>-<desc>``
-    Top level directory of an active branch for :term:`ticket` ``<ticket number>``
-    with description ``<desc>`` and owned by user ``<username>``
+    Top level directory of an active branch owned by a specific user (identified by ``<username>``) for a
+    specific :term:`ticket`.  The branch name typically includes the ``<ticket number>`` and a very brief description
+    (``<desc>``) of the ticket.
     
 ``/OpenMDAO/dev/shared``
     Directory for repositories shared between developers.
@@ -60,8 +61,8 @@ Creating a Branch
 A Python script, called ``mkbranch.py`` located in the ``util`` directory of the
 trunk will help create and configure your development branch for you.  It will
 create your branch and bootstrap a buildout for you on the branch. Internally,
-the script is simply talking to Bazaar and zc.buildout. You could perform these
-tasks manually, but you should use the script in order to keep your branch
+the script is simply talking to Bazaar and ``zc.buildout``. You could perform these
+tasks manually, but you should use the script to keep your branch
 consistent with others in OpenMDAO.  This will make it easier for the
 configuration manager to locate and merge your branch, and it will also make it
 easier for other developers on the team to help you if you run into a problem.
@@ -88,7 +89,7 @@ where the following parameters are user specified:
    
 ``<description>``
    *(optional)* A short description  of the purpose of the branch. The description
-   should be less than 15 characters in length. 
+   should be fewer than 15 characters in length. 
    
 ``<source repository>``
    *(optional)* The top directory of the repository you want to branch from. If
@@ -96,13 +97,13 @@ where the following parameters are user specified:
    
 ``<user name>``
    *(optional)* This should be your username on *torpedo*.  This is set 
-   automatically for you based on the LOGNAME environment variable, so 
+   automatically for you based on the *LOGNAME* environment variable, so 
    generally you should not have to set this one.
    
 
-As an example, if I wanted to create a branch off of the trunk to fix a bug in
-the unit conversion code based on ticket 321 in the bug tracker and wanted to
-use version 2.6 of Python, I could issue the following command:
+As an example, if you wanted to create a branch off of the trunk to fix a bug in
+the unit conversion code based on ticket #321 in the bug tracker and wanted to
+use version 2.6 of Python, you could issue the following command:
 
 ::
 
@@ -111,7 +112,7 @@ use version 2.6 of Python, I could issue the following command:
 
 After the script runs, change your directory to
 ``/OpenMDAO/dev/<username>`` directory, where ``<username>`` is your
-user name on *torpedo*.  For example, since my user name is *bnaylor*, my branch
+user name on *torpedo*.  For example, for user name *bnaylor*, the branch
 from the command above would be created in 
 ``/OpenMDAO/dev/bnaylor/T321-units_fix``. Branches are named using the
 following form:
@@ -137,14 +138,14 @@ To run Wing for your buildout, type:
 
     bin/wing
     
-from your buildout directory. If the eggs used in your buildout change and you
-re-run your buildout while wing is still running, you will be notified by Wing
-that your project settings have changed. Select ``Discard Changes and Reload``
-if your Wing path needs to be updated. Otherwise, select ``Don't Reload`` to
-keep your existing project file. If your wing project seems to not be working
-properly after this happens, you can remove the wing project file
+from your ``buildout`` directory. If the eggs used in your buildout change and you
+re-run your buildout while Wing is still running, you will be notified by Wing
+that your project settings have changed. Select *Discard Changes and Reload*
+if your Wing path needs to be updated. Otherwise, select *Don't Reload* to
+keep your existing project file. If your Wing project seems to not be working
+properly after this happens, you can remove the Wing project file
 (``<buildout_dir>/parts/wingproj/wingproj.wpr``) and re-run the buildout to
-create a new one.
+create a new one. 
 
 
 .. index:: repo.py
@@ -152,7 +153,7 @@ create a new one.
 Repository Utility
 ==================
 
-``repo.py`` is a utility script for manipulating and navigating in repositories.
+The script ``repo.py`` is a utility script for manipulating and navigating in repositories.
 
 ::
 
@@ -168,29 +169,29 @@ Repository Utility
       -f, --force    forced unlock
       -v, --verbose  print info messages
 
-Repository is a directory under ``/OpenMDAO/dev/<username>`` or
+*Repository* is a directory under ``/OpenMDAO/dev/<username>`` or
 ``/OpenMDAO/dev/shared``.
 
-The ``check``, ``lock``, and ``unlock`` operations can be used to avoid
+The *check, lock*, and *unlock* operations can be used to avoid
 more than one developer trying to update a shared repository at the same time.
-Before making changes, do a ``lock``.  If that succeeds, then proceed with
-your changes and when complete, do an ``unlock``.  If the ``lock`` fails, then
-you'll know who to wait for.  The ``check`` operation will test for a locked
+Before making changes, do a *lock*.  If that succeeds, then proceed with
+your changes and when complete, do an *unlock.*  If the *lock* fails, then
+you'll know who to wait for.  The *check* operation will test for a locked
 repository.  Note that no enforcement is done.  Locking/unlocking merely
 sets a flag.  If people ignore this convention, then they can potentially
 interfere with each other's changes to the shared repository.
 
-The ``set`` operation sets the given repository directory as your current
+The *set* operation sets the given repository directory as your current
 repository.  This will start a new shell process with the ``OPENMDAO_REPO``
 environment variable set to the full path of the repository.  The local
-system scripts will use this to update your ``PATH`` so the ``buildout/bin``
+system scripts will use this to update your *PATH* so the ``buildout/bin``
 and ``scripts`` directories are at the beginning.  You will also get some
 convenient aliases for navigating around in the repository directory
 structure.  Finally, if the repository is under ``/OpenMDAO/dev/shared``,
-your umask will be set to 002, allowing others in the ``mdao`` group to
+your umask will be set to 002, allowing others in the *mdao* group to
 update files you own.
 
-The ``fix`` operation is used to fix file permissions in shared repositories.
+The *fix* operation is used to fix file permissions in shared repositories.
 It will traverse the directory tree and try to ensure all operations enabled
 for owner are also enabled for group.  If you don't own the file,
 the operation will fail and the owner's user id will be reported.

@@ -17,8 +17,7 @@ Identification
 This initial architecture is based on the MDAO requirements submitted in January
 2008 and prioritized in subsequent months. The requirements prioritization was
 completed in mid-September 2008. The requirements leading to the OS MDAO
-framework design can be found in the MDAO *Software Requirements Specification*
-and the MDAO Functional Requirements database. Note however that the
+framework design can be found in the MDAO *Software Requirements Specification*. Note however that the
 requirements mentioned there cover not only the framework but also a number of
 engineering tools meant to be integrated into the framework. Since the OS MDAO
 framework is under development, only a document ID (MDAO-Architecture) exists at
@@ -83,7 +82,7 @@ N/A	     	     FAP Multidisciplinary Analysis and Optimization
 ==================  ================================================
 
 
-For those with access to the Glenn Research Center's eRoom, the MDAO Glossary
+For those with access to the NASA Glenn Research Center's eRoom, the MDAO Glossary
 contains definitions of acronyms, terms, and software tools relevant to the MDAO
 capability. This glossary is located at:
 https://collaboration.grc.nasa.gov/eRoom/NASAc1f1/MDAOActivityWorkspace/0_fa294
