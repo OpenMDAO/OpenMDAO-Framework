@@ -24,9 +24,9 @@ need to function properly as an OpenMDAO component.
     from openmdao.main.api import Component
 
     class SimpleAdder(Component):
-        a = Float(0.0, iostatus='in')
-        b = Float(0.0, iostatus='in')
-        c = Float(0.0, iostatus='out')
+        a = Float(0.0, iotype='in')
+        b = Float(0.0, iotype='in')
+        c = Float(0.0, iotype='out')
     
         def execute(self):
              self.c = self.a + self.b
@@ -41,8 +41,8 @@ instance of our *SimpleAdder* class.
 
 *SimpleAdder* has three traits of type *Float* with the names *a*, *b*, and
 *c*. All three attributes have a default value of 0.0. Attributes *a* and *b*
-are inputs, so we specify that they have an *iostatus* of *'in'*. Attribute
-*c* is an output, so it has an *iostatus* of *'out'*.
+are inputs, so we specify that they have an *iotype* of *'in'*. Attribute
+*c* is an output, so it has an *iotype* of *'out'*.
 
 .. index:: traits
 

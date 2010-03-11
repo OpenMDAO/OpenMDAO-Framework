@@ -4,12 +4,12 @@ __all__ = ["UnitsFloat", "convert_units"]
 
 
 
-from enthought.traits.api import TraitType, Float, Range, TraitError
+from sys import float_info
 
+from enthought.traits.api import TraitType, Float, Range, TraitError
 from units import PhysicalQuantity
 
 from openmdao.main.tvalwrapper import TraitValMetaWrapper
-
 
 def convert_units(value, units, convunits):
     """Return the given value (given in units) converted 
@@ -26,6 +26,8 @@ class UnitsFloat(TraitType):
     
     def __init__(self, default_value = None, low=None, high=None,
                  exclude_low=False, exclude_high=False, **metadata):
+        
+        # Determine defalt_value if unspecified
         if default_value is None:
             if low is None and high is None:
                 default_value = 0.0
@@ -33,16 +35,17 @@ class UnitsFloat(TraitType):
                 default_value = high
             else:
                 default_value = low
-            
+
+        # The Range trait must be used if High or Low is set
         if low is None and high is None:
             self._validator = Float(default_value, **metadata)
         else:
             if low is None:
-                low = -1.e99
+                low = -float_info.max
             else:
                 self.low = low
             if high is None:
-                high = 1.e99
+                high = float_info.max
             else:
                 self.high = high
             self._validator = Range(low=low, high=high, value=default_value,
@@ -57,6 +60,7 @@ class UnitsFloat(TraitType):
             except:
                 raise TraitError("Units of '%s' are invalid" %
                                  metadata['units'])
+            
         super(UnitsFloat, self).__init__(default_value=default_value,
                                          **metadata)
 
@@ -73,8 +77,12 @@ class UnitsFloat(TraitType):
 
     def error(self, object, name, value):
         """Returns a string describing the type handled by UnitsFloat."""
+        
         if self.low is None and self.high is None:
-            info = "a float having units compatible with '%s'" % self.units
+            if self.units:
+                info = "a float having units compatible with '%s'" % self.units
+            else:
+                info = "a float"
         elif self.low is not None and self.high is not None:
             right = ']'
             left = '['
@@ -88,6 +96,7 @@ class UnitsFloat(TraitType):
             info = "a float with a value > %s"% self.low
         else: # self.high is not None
             info = "a float with a value < %s"% self.high
+            
         object.raise_exception("Trait '%s' must be %s but attempted value is %s" %
                                (name, info, value), TraitError)
 

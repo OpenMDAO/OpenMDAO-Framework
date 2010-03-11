@@ -16,19 +16,19 @@ __all__ = ('AxodComp',)
 class AxodComp(Component):
     """ OpenMDAO component wrapper for AXOD. """
 
-    input_filename = Str(iostatus='in')
+    input_filename = Str(iotype='in')
     results = []
 
-    hpower = Float(iostatus='out')
+    hpower = Float(iotype='out')
 
     # 'float32' here could be just 'float', but AXOD is single-precision
     # so it just takes more space.  Not an issue with such small arrays,
     # but for larger data it may be important.
-    tott  = Array(dtype=numpy.float32, shape=(48,), iostatus='out')
-    totp  = Array(dtype=numpy.float32, shape=(48,), iostatus='out')
-    mflow = Array(dtype=numpy.float32, shape=(48,), iostatus='out')
-    effs  = Array(dtype=numpy.float32, shape=(48,), iostatus='out')
-    effr  = Array(dtype=numpy.float32, shape=(48,), iostatus='out')
+    tott  = Array(dtype=numpy.float32, shape=(48,), iotype='out')
+    totp  = Array(dtype=numpy.float32, shape=(48,), iotype='out')
+    mflow = Array(dtype=numpy.float32, shape=(48,), iotype='out')
+    effs  = Array(dtype=numpy.float32, shape=(48,), iotype='out')
+    effr  = Array(dtype=numpy.float32, shape=(48,), iotype='out')
 
     def __init__(self, doc=None, directory='', input_filename=''):
         super(AxodComp, self).__init__(doc, directory)

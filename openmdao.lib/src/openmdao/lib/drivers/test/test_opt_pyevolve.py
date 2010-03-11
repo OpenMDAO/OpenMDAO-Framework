@@ -19,8 +19,8 @@ from openmdao.main.eggchecker import check_save_load
 
 
 class SphereFunction(Component):
-    total = Float(0., iostatus='out')
-    points = Array(value=[], iostatus='in')
+    total = Float(0., iotype='out')
+    points = Array(value=[], iotype='in')
     
     def __init__(self, desc=None):
         super(SphereFunction, self).__init__(desc)
@@ -50,7 +50,7 @@ class TestCase(unittest.TestCase):
         self.top = None
     
     #def test_weirdVariableNameProblem(self):
-        #x = Float("PopulationSize",self.top.driver,iostatus='in',default=80)
+        #x = Float("PopulationSize",self.top.driver,iotype='in',default=80)
         #self.assertEqual(x.get_value(),80)
     
     #basic test to make sure optmizer is working 

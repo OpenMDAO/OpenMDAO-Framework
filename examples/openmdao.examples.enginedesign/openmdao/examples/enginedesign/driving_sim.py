@@ -32,17 +32,17 @@ class DrivingSim(Assembly):
     """ Simulation of vehicle performance."""
     
     # Simulation Parameters
-    end_speed = UnitsFloat(60.0, iostatus='in', units='m/h',
+    end_speed = UnitsFloat(60.0, iotype='in', units='m/h',
                            desc='Simulation final speed')
-    timestep = UnitsFloat(0.1, iostatus='in', units='s', 
+    timestep = UnitsFloat(0.1, iotype='in', units='s', 
                           desc='Simulation final speed')
     
     # Outputs
-    accel_time = UnitsFloat(0., iostatus='out', units='s', 
+    accel_time = UnitsFloat(0., iotype='out', units='s', 
                             desc='Time to reach Endspeed starting from rest')
-    EPA_city = UnitsFloat(0., iostatus='out', units='mi/galUS', 
+    EPA_city = UnitsFloat(0., iotype='out', units='mi/galUS', 
                           desc='EPA Fuel economy - City')
-    EPA_highway = UnitsFloat(0., iostatus='out', units='mi/galUS', 
+    EPA_highway = UnitsFloat(0., iotype='out', units='mi/galUS', 
                              desc='EPA Fuel economy - Highway')
         
     def __init__(self, doc=None, directory=''):

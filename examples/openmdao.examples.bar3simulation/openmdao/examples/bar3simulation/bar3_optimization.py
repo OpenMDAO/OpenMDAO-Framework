@@ -14,20 +14,20 @@ from openmdao.examples.bar3simulation.bar3_wrap_f import Bar3Truss
 class Bar3Optimization(Assembly):
     """ Top level assembly for optimizing a three bar truss. """
     # Constraint allowables
-    bar1_stress_allowable = UnitsFloat(20., iostatus='in',
+    bar1_stress_allowable = UnitsFloat(20., iotype='in',
                         units='lb/(inch*inch)',
                         desc='Stress allowable in bar 1')
-    bar2_stress_allowable = UnitsFloat(20., iostatus='in',
+    bar2_stress_allowable = UnitsFloat(20., iotype='in',
                         units='lb/(inch*inch)',
                         desc='Stress allowable in bar 2')
-    bar3_stress_allowable = UnitsFloat(20., iostatus='in', 
+    bar3_stress_allowable = UnitsFloat(20., iotype='in', 
                         units='lb/(inch*inch)',
                         desc='Stress allowable in bar 3')
-    displacement_x_dir_allowable = UnitsFloat(0.20, iostatus='in', units='inch',
+    displacement_x_dir_allowable = UnitsFloat(0.20, iotype='in', units='inch',
                        desc='Displacement limitation in x-direction')
-    displacement_y_dir_allowable = UnitsFloat(0.05, iostatus='in', units='inch',
+    displacement_y_dir_allowable = UnitsFloat(0.05, iotype='in', units='inch',
                         desc='Displacement limitation in y-direction')
-    frequency_allowable = UnitsFloat(14.1421, iostatus='in', units='Hz',
+    frequency_allowable = UnitsFloat(14.1421, iotype='in', units='Hz',
                         desc='Frequency limitation in Hertz')
     
     def __init__(self, directory=''):

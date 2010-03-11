@@ -18,35 +18,35 @@ class Engine(Component):
     # set up interface to the framework  
     # pylint: disable-msg=E1101
     # "Instance of <class> has no <attr> member"        
-    stroke = UnitsFloat(78.8, iostatus='in', units='mm', desc='Cylinder Stroke')
-    bore = UnitsFloat(82.0, iostatus='in', units='mm',  desc='Cylinder Bore')
-    conrod = UnitsFloat(115.0, iostatus='in', units='mm',
+    stroke = UnitsFloat(78.8, iotype='in', units='mm', desc='Cylinder Stroke')
+    bore = UnitsFloat(82.0, iotype='in', units='mm',  desc='Cylinder Bore')
+    conrod = UnitsFloat(115.0, iotype='in', units='mm',
                    desc='Connecting Rod Length')
-    comp_ratio = Float(9.3, iostatus='in', desc='Compression Ratio')
-    spark_angle = UnitsFloat(-37.0, iostatus='in', units='deg',
+    comp_ratio = Float(9.3, iotype='in', desc='Compression Ratio')
+    spark_angle = UnitsFloat(-37.0, iotype='in', units='deg',
                     desc = 'Spark Angle with respect to TDC (Top Dead Center)')
-    ncyl = Int(6, iostatus='in', desc = 'Number of Cylinders')
-    IVO = UnitsFloat(11.0, iostatus='in', units='deg',
+    ncyl = Int(6, iotype='in', desc = 'Number of Cylinders')
+    IVO = UnitsFloat(11.0, iotype='in', units='deg',
                      desc = 'Intake Valve Open before TDC (Top Dead Center)')
-    IVC = UnitsFloat(53.0, iostatus='in', units='deg', 
+    IVC = UnitsFloat(53.0, iotype='in', units='deg', 
                      desc = 'Intake Valve Open after BDC (Bottom Dead Center)')
-    L_v = UnitsFloat(8.0, iostatus='in', units='mm',
+    L_v = UnitsFloat(8.0, iotype='in', units='mm',
                      desc='Maximum Valve Lift')
-    D_v = UnitsFloat(41.2, iostatus='in', units='mm',
+    D_v = UnitsFloat(41.2, iotype='in', units='mm',
                      desc='Inlet Valve Diameter')
 
-    RPM = UnitsFloat(1000.0, low=1000., high=6000., iostatus='in', 
+    RPM = UnitsFloat(1000.0, low=1000., high=6000., iotype='in', 
                      units='1/min',  desc='Engine RPM')
-    throttle = Range(low=0.01, high=1.0, value=1.0, iostatus='in', 
+    throttle = Range(low=0.01, high=1.0, value=1.0, iotype='in', 
                      desc='Throttle position (from low idle to wide open)')
 
-    power = UnitsFloat(0.0, iostatus='out', units='kW', 
+    power = UnitsFloat(0.0, iotype='out', units='kW', 
                        desc='Power at engine output')
-    torque = UnitsFloat(0.0, iostatus='out', units='N*m', 
+    torque = UnitsFloat(0.0, iotype='out', units='N*m', 
                         desc='Torque at engine output')
-    fuel_burn = UnitsFloat(0.0, iostatus='out', units='l/s', 
+    fuel_burn = UnitsFloat(0.0, iotype='out', units='l/s', 
                            desc='Fuel Burn Rate')
-    engine_weight = UnitsFloat(0.0, iostatus='out', units='kg', 
+    engine_weight = UnitsFloat(0.0, iotype='out', units='kg', 
                                desc='Engine weight estimation')
         
     #def __init__(self, desc=None, directory=''):

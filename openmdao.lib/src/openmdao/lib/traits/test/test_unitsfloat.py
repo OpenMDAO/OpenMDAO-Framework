@@ -15,12 +15,12 @@ class UnitsFloatTestCase(unittest.TestCase):
         self.hobj = Container()
         self.hobj.add_trait('float1', 
                             UnitsFloat(98.9, low=0., high=99.,
-                                  iostatus='in', units='ft'))
+                                  iotype='in', units='ft'))
         self.hobj.add_trait('float2', 
-                            UnitsFloat(13.2, iostatus='out', units='inch'))
+                            UnitsFloat(13.2, iotype='out', units='inch'))
         self.hobj.add_trait('float3', 
                             UnitsFloat(low=0., high=99.,
-                                       iostatus='in', units='kg'))
+                                       iotype='in', units='kg'))
         
         self.hobj.float1 = 3.1415926
         self.hobj.float2 = 42.
@@ -34,7 +34,7 @@ class UnitsFloatTestCase(unittest.TestCase):
     def test_set_to_default(self):
         self.assertEqual(3.1415926, self.hobj.float1)
         self.hobj.add_trait('float4',
-                            UnitsFloat(iostatus='in', units='kg'))
+                            UnitsFloat(iotype='in', units='kg'))
         self.assertEqual(0., self.hobj.float4)
         self.hobj.float4 = 6.5
         self.assertEqual(6.5, self.hobj.float4)
@@ -75,7 +75,7 @@ class UnitsFloatTestCase(unittest.TestCase):
         
     def test_bogus_units(self):
         try:
-            uf = UnitsFloat(0., iostatus='in', units='bogus')
+            uf = UnitsFloat(0., iotype='in', units='bogus')
         except TraitError, err:
             self.assertEqual(str(err), 
                              "Units of 'bogus' are invalid")

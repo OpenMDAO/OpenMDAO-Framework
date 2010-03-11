@@ -157,11 +157,11 @@ A simple component that implements an equation with two inputs is shown below:
         """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """
     
 	# Component Input 
-	x = Float(0.0, iostatus='in', desc='The variable y')
-        y = Float(0.0, iostatus='in', desc='The variable x')
+	x = Float(0.0, iotype='in', desc='The variable y')
+        y = Float(0.0, iotype='in', desc='The variable x')
 
 	# Component Output
-        f_xy = Float(0.0, iostatus='out', desc='F(x,y)')        
+        f_xy = Float(0.0, iotype='out', desc='F(x,y)')        
 
 	# Initialization function (technically not needed here)
 	def __init__(self, doc=None, directory=''):

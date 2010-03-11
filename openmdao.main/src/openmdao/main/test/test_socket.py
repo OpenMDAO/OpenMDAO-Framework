@@ -8,7 +8,7 @@ from openmdao.main.interfaces import ICaseIterator
 
 class SocketComp(Assembly):
     iterator = Instance(ICaseIterator, allow_none=False, desc='cases to evaluate')
-    num_cases = Int(0, iostatus='out')
+    num_cases = Int(0, iotype='out')
     
     def __init__(self):
         super(SocketComp, self).__init__('SocketComp')

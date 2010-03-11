@@ -14,11 +14,11 @@ from openmdao.main.api import Component
 class Model_A2d(Component):
     """ Wrapper for M4 Model_A2d. """
 
-    x = Float(0., iostatus='in', desc='X input value.')
-    y = Float(0., iostatus='in', desc='Y input value.')
+    x = Float(0., iotype='in', desc='X input value.')
+    y = Float(0., iotype='in', desc='Y input value.')
 
-    z1 = Float(0., iostatus='out', desc='exp(x) + exp(y)')
-    z2 = Float(0., iostatus='out', 
+    z1 = Float(0., iotype='out', desc='exp(x) + exp(y)')
+    z2 = Float(0., iotype='out', 
                desc='10.0*(x-2.0)**2 + 10.0*(y-1.5)**2 + 10.0')
         
     #name='Model_A2d', 
@@ -38,10 +38,10 @@ class Model_A2d(Component):
 class Model_B2d(Component):
     """ Wrapper for M4 Model_B2d. """
 
-    x = Float(0., iostatus='in', desc='X input value.')
-    y = Float(0., iostatus='in', desc='Y input value.')
+    x = Float(0., iotype='in', desc='X input value.')
+    y = Float(0., iotype='in', desc='Y input value.')
 
-    z = Float(0., iostatus='out', desc='24.*x+24.*y')
+    z = Float(0., iotype='out', desc='24.*x+24.*y')
         
     #name='Model_B2d'
     def __init__(self, *args, **kwargs):

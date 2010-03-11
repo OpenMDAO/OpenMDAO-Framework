@@ -92,24 +92,24 @@ class pyevolvedriver(Driver):
     """
 
     # inputs
-    objective = StringRef(iostatus='in',
+    objective = StringRef(iotype='in',
                           desc='A string containing the objective function'
                                ' expression.')
-    freq_stats = Int(0, iostatus='in')
-    seed = Float(0., iostatus='in')
-    population_size = Int(Consts.CDefGAPopulationSize, iostatus='in')
+    freq_stats = Int(0, iotype='in')
+    seed = Float(0., iotype='in')
+    population_size = Int(Consts.CDefGAPopulationSize, iotype='in')
     
-    sort_type = CBool(Consts.sortType["scaled"], iostatus='in',
+    sort_type = CBool(Consts.sortType["scaled"], iotype='in',
                       desc='use Consts.sortType["raw"] or Consts.sortType["scaled"]') # can accept
-    mutation_rate = Float(Consts.CDefGAMutationRate, iostatus='in')
-    crossover_rate = Float(Consts.CDefGACrossoverRate, iostatus='in')
-    generations = Int(Consts.CDefGAGenerations, iostatus='in')
-    mini_max = CBool(Consts.minimaxType["minimize"], iostatus='in',
+    mutation_rate = Float(Consts.CDefGAMutationRate, iotype='in')
+    crossover_rate = Float(Consts.CDefGACrossoverRate, iotype='in')
+    generations = Int(Consts.CDefGAGenerations, iotype='in')
+    mini_max = CBool(Consts.minimaxType["minimize"], iotype='in',
                     desc='use Consts.minimaxType["minimize"] or Consts.minimaxType["maximize"]')
-    elitism = CBool(True, iostatus='in', desc='True of False')
+    elitism = CBool(True, iotype='in', desc='True of False')
     
     #outputs
-    best_individual = Any(GenomeBase.GenomeBase(), iostatus='out')
+    best_individual = Any(GenomeBase.GenomeBase(), iotype='out')
         
     def __init__(self, doc=None): 
         super(pyevolvedriver,self).__init__(doc)

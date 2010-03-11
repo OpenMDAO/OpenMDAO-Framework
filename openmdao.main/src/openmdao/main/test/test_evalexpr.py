@@ -25,11 +25,11 @@ from openmdao.main.expreval import translate_expr, ExprEvaluator
 from openmdao.main.api import Assembly, Container, Component, set_as_top
 
 class A(Container):
-    b = Array(iostatus='in')
+    b = Array(iotype='in')
     
 class Comp(Component):
-    x = Float(iostatus='in')
-    y = Float(iostatus='in')
+    x = Float(iotype='in')
+    y = Float(iotype='in')
     
 class ExprEvalTestCase(unittest.TestCase):
     def setUp(self):

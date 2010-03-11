@@ -10,19 +10,19 @@ from enthought.traits.api import Float, Array, List
 from openmdao.main.api import Component, Assembly
 
 class MyDefComp(Component):
-    f_in = Float(3.14, iostatus='in')
-    f_out = Float(iostatus='out')
-    arr_in = Array(dtype=numpy.float, value=numpy.array([1.,2.,3.]), iostatus='in')
-    list_in = List(value=['a','b','c'], iostatus='in')
+    f_in = Float(3.14, iotype='in')
+    f_out = Float(iotype='out')
+    arr_in = Array(dtype=numpy.float, value=numpy.array([1.,2.,3.]), iotype='in')
+    list_in = List(value=['a','b','c'], iotype='in')
     
     def execute(self):
         self.f_out = self.f_in + 1.
         
 class MyNoDefComp(Component):
-    f_in = Float(iostatus='in')
-    f_out = Float(iostatus='out')
-    arr_in = Array(dtype=numpy.float, iostatus='in')
-    list_in = List(iostatus='in')
+    f_in = Float(iotype='in')
+    f_out = Float(iotype='out')
+    arr_in = Array(dtype=numpy.float, iotype='in')
+    list_in = List(iotype='in')
     
     def execute(self):
         self.f_out = self.f_in + 1.

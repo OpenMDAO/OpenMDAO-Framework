@@ -29,10 +29,10 @@ class Vehicle(Assembly):
     
     implements(IVehicle)
     
-    tire_circumference = UnitsFloat(75.0, iostatus='in', units='inch', 
+    tire_circumference = UnitsFloat(75.0, iotype='in', units='inch', 
                                     desc='Circumference of tire (inches)')
     
-    velocity = UnitsFloat(75.0, iostatus='in', units='mi/h', 
+    velocity = UnitsFloat(75.0, iotype='in', units='mi/h', 
                 desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
     def __init__(self, directory=''):

@@ -65,9 +65,9 @@ class Component (Container):
 
     create_instance_dir = Bool(False, desc='If True, create a unique'
                                ' per-instance execution directory',
-                               iostatus='in')
+                               iotype='in')
     directory = Str('', desc='If non-blank, the directory to execute in.', 
-                    iostatus='in')
+                    iotype='in')
     external_files = List(FileMetadata)
         
     def __init__(self, doc=None, directory=''):
@@ -606,7 +606,7 @@ class Component (Container):
             for fvarname, fvar, ftrait in fvars:
                 path = fvar.path
                 if path:
-                    is_input = ftrait.iostatus == 'in'
+                    is_input = ftrait.iotype == 'in'
                     self._list_files(path, package, rel_path, is_input, False,
                                      ftrait.binary, file_list, from_egg)
 

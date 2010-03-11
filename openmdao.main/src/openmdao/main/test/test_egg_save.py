@@ -58,9 +58,9 @@ class Source(Assembly):
     in relation to handling external files and file variables.
     """
 
-    write_files = Bool(True, iostatus='in')
-    text_data = Str(iostatus='in')
-    text_file = FileTrait(path='source.txt', iostatus='out')
+    write_files = Bool(True, iotype='in')
+    text_data = Str(iotype='in')
+    text_file = FileTrait(path='source.txt', iotype='out')
 
     def __init__(self, *args, **kwargs):
         super(Source, self).__init__(*args, **kwargs)
@@ -141,9 +141,9 @@ class Source(Assembly):
 class Subcontainer(Container):
     """ Just a subcontainer for Source. """
 
-    binary_data = Array('d', value=[], iostatus='in')
+    binary_data = Array('d', value=[], iotype='in')
     binary_file = FileTrait(path=os.path.join('..', 'sub', 'source.bin'),
-                            iostatus='out', binary=True)
+                            iotype='out', binary=True)
         
 
 class DataObj(object):
@@ -156,11 +156,11 @@ class DataObj(object):
 class Sink(Component):
     """ Consumes files. """
 
-    text_data = Str(iostatus='out')
-    binary_data = Array('d', value=[], iostatus='out')
-    text_file = FileTrait(iostatus='in')
-    binary_file = FileTrait(iostatus='in')
-    executions = Int(0, iostatus='in',
+    text_data = Str(iotype='out')
+    binary_data = Array('d', value=[], iotype='out')
+    text_file = FileTrait(iotype='in')
+    binary_file = FileTrait(iotype='in')
+    executions = Int(0, iotype='in',
                      desc='Count of Oddball instance_method() calls.')
 
     def __init__(self, *args, **kwargs):
@@ -192,7 +192,7 @@ class Oddball(Assembly):
     #                           desc='Just something to call.', required=False)
     #method_socket = Instance(Callable, none_allowed=True,
     #                         desc='Just something to call.', required=False)
-    executions = Int(0, iostatus='out', desc='Counts instance_method() calls.')
+    executions = Int(0, iotype='out', desc='Counts instance_method() calls.')
 
     def __init__(self, *args, **kwargs):
         super(Oddball, self).__init__(*args, **kwargs)

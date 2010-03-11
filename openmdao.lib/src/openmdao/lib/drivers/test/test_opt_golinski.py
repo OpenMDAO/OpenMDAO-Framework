@@ -121,8 +121,8 @@ class OptGolinskiComponent(Component):
          X = (3.5,0.7,17.0,7.3,7.3,3.35,5.286518)
     """
     
-    x = Array(iostatus='in',dtype=numpy.float)
-    result = Float(0., iostatus='out')
+    x = Array(iotype='in',dtype=numpy.float)
+    result = Float(0., iotype='out')
         
     # pylint: disable-msg=C0103
     def __init__(self, desc=None):

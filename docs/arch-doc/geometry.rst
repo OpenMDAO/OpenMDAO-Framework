@@ -50,11 +50,11 @@ can be directly set:
 	
 	class GeoMan(Component):
 
-	    radius = UnitsFloat(7.0, low=1., high=20.0, iostatus='in', 
+	    radius = UnitsFloat(7.0, low=1., high=20.0, iotype='in', 
                      units='m',  desc='radius')		
-	    height = UnitsFloat(10.0, low=1., high=50.0, iostatus='in', 
+	    height = UnitsFloat(10.0, low=1., high=50.0, iotype='in', 
                      units='m',  desc='height')	
-	    fillet1 = Bool(True, iostatus='in')	
+	    fillet1 = Bool(True, iotype='in')	
 	
 	    def __init__(self, directory=''):
 	        """ Creates a new Vehicle Assembly object """

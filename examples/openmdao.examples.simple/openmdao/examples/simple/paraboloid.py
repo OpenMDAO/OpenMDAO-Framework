@@ -12,10 +12,10 @@ class Paraboloid(Component):
     
     # set up interface to the framework  
     # Pylint: disable-msg=E1101
-    x = Float(0.0, iostatus='in', desc='The variable y')
-    y = Float(0.0, iostatus='in', desc='The variable x')
+    x = Float(0.0, iotype='in', desc='The variable y')
+    y = Float(0.0, iotype='in', desc='The variable x')
 
-    f_xy = Float(0.0, iostatus='out', desc='F(x,y)')        
+    f_xy = Float(0.0, iotype='out', desc='F(x,y)')        
 
         
     def execute(self):

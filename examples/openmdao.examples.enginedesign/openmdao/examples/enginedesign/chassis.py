@@ -18,25 +18,25 @@ class Chassis(Component):
     
     # set up interface to the framework  
     # Pylint: disable-msg=E1101
-    mass_vehicle = UnitsFloat(1200.0, iostatus='in', units='kg', 
+    mass_vehicle = UnitsFloat(1200.0, iotype='in', units='kg', 
                               desc='Vehicle Mass')
-    Cf = Float(0.035, iostatus='in', #units=None,
+    Cf = Float(0.035, iotype='in', #units=None,
                     desc='Friction Coefficient (proportional to W)')
-    Cd = Float(0.3, iostatus='in', #units=None, 
+    Cd = Float(0.3, iotype='in', #units=None, 
                desc='Drag Coefficient (proportional to V**2)')
-    area = UnitsFloat(2.164, iostatus='in', units='m**2', 
+    area = UnitsFloat(2.164, iotype='in', units='m**2', 
                       desc='Frontal area')
-    engine_torque = UnitsFloat(200.0, iostatus='in', units='N*m', 
+    engine_torque = UnitsFloat(200.0, iotype='in', units='N*m', 
                                desc='Torque at engine output')
-    mass_engine = UnitsFloat(200.0, iostatus='in', units='kg',
+    mass_engine = UnitsFloat(200.0, iotype='in', units='kg',
                              desc='Engine weight estimation')
-    velocity = UnitsFloat(0., iostatus='in', units='m/s', 
+    velocity = UnitsFloat(0., iotype='in', units='m/s', 
                           desc='Current Velocity of Vehicle')
-    torque_ratio = Float(0., iostatus='in', #units=None, 
+    torque_ratio = Float(0., iotype='in', #units=None, 
                          desc='Ratio of output torque to engine torque')        
-    tire_circ = UnitsFloat(1.905, iostatus='in', units='m', 
+    tire_circ = UnitsFloat(1.905, iotype='in', units='m', 
                            desc='Circumference of tire')
-    acceleration = UnitsFloat(0., iostatus='out', units='m/(s*s)', 
+    acceleration = UnitsFloat(0., iotype='out', units='m/(s*s)', 
                               desc='Calculated vehicle acceleration ')    
         
             ## Design parameters

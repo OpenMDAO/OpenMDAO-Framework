@@ -9,10 +9,10 @@ from openmdao.main.api import Assembly, Component, set_as_top
 
         
 class Simple(Component):
-    a = Int(iostatus='in')
-    b = Int(iostatus='in')
-    c = Int(iostatus='out')
-    d = Int(iostatus='out')
+    a = Int(iotype='in')
+    b = Int(iotype='in')
+    c = Int(iotype='out')
+    d = Int(iotype='out')
     
     def __init__(self):
         super(Simple, self).__init__()
