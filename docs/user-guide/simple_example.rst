@@ -66,8 +66,8 @@ The Python code for the Paraboloid component is as follows:
 
 .. testcode:: simple_component_Paraboloid
 
-    from enthought.traits.api import Float
     from openmdao.main.api import Component
+    from openmdao.lib.api import Float
     
     class Paraboloid(Component):
         """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """
@@ -99,14 +99,15 @@ this component will be discussed later in this tutorial.
 Python is a very extensible language and comes with a convenient way to manage
 and load add-ons and extensions. The OpenMDAO source was also structured to
 allow its functions and classes to follow a namespace convention (i.e., dotted
-paths that compartmentalize the functions). Additionally, a special namespace
-called ``openmdao.main.api`` was added, which contains some of the more commonly
-used functions.
+paths that compartmentalize the functions). Additionally, two special namespaces
+called ``openmdao.main.api`` and ``openmdao.lib.api`` were added; the former contains
+some of the more commonly used infrastructure functions, while the later includes
+commonly used plugins from the OpenMDAO Standard Library.
 
 .. testcode:: simple_component_Paraboloid_pieces
 
-    from enthought.traits.api import Float
     from openmdao.main.api import Component
+    from openmdao.lib.api import Float
     
 These first two lines in the Paraboloid component contain the two inputs that
 are used here: *Float* and *Component.* One guideline that should always be followed
@@ -214,7 +215,7 @@ the Python file ``optimization_unconstrained.py``:
 .. testcode:: simple_model_Unconstrained
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.drivers.conmindriver import CONMINdriver
+	from openmdao.lib.api import CONMINdriver
 	from openmdao.examples.simple.paraboloid import Paraboloid
 
 	class Optimization_Unconstrained(Assembly):
@@ -264,7 +265,7 @@ of Component. This gives it access to the management functions mentioned above.
 .. testsetup:: simple_model_Unconstrained_pieces
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.drivers.conmindriver import CONMINdriver
+	from openmdao.lib.api import CONMINdriver
 	from openmdao.examples.simple.paraboloid import Paraboloid
 	from openmdao.examples.simple.optimization_unconstrained import Optimization_Unconstrained
 	
@@ -321,7 +322,7 @@ The objective function is defined using the concept of a StringRef variable:
 	        # CONMIN Objective 
 	        self.driver.objective = 'paraboloid.f_xy'
 		
-A *StringRef* is a special kind of trait that contains a string that points to
+A *StringRef* is a special kind of Public Variable that contains a string that points to
 some location in the OpenMDAO variable tree. This string is analogous to the
 path name in a file system, using the "." as a separator. This allows for two
 components to have the same variable name while still assuring they'll be

@@ -1,6 +1,6 @@
-from enthought.traits.api import Float
 
 from openmdao.main.api import Component
+from openmdao.lib.api import Float
 
 class Box(Component):
     # set up interface to the framework

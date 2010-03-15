@@ -42,17 +42,14 @@ can be directly set:
 
 .. testsetup:: parameter_interface
 
-	from openmdao.main.api import Component
-	from openmdao.main.api import Assembly
-	from openmdao.lib.drivers.conmindriver import CONMINdriver
-	from openmdao.lib.traits.unitsfloat import UnitsFloat
-	from enthought.traits.api import Bool
+	from openmdao.main.api import Component, Assembly
+	from openmdao.lib.api import Float, Bool, CONMINdriver
 	
 	class GeoMan(Component):
 
-	    radius = UnitsFloat(7.0, low=1., high=20.0, iotype='in', 
+	    radius = Float(7.0, low=1., high=20.0, iotype='in', 
                      units='m',  desc='radius')		
-	    height = UnitsFloat(10.0, low=1., high=50.0, iotype='in', 
+	    height = Float(10.0, low=1., high=50.0, iotype='in', 
                      units='m',  desc='height')	
 	    fillet1 = Bool(True, iotype='in')	
 	

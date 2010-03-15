@@ -1,8 +1,8 @@
 
 import unittest
 
-from enthought.traits.api import Float, Instance
 from openmdao.main.api import Container, Component, Assembly, set_as_top
+from openmdao.lib.api import Float, Instance
 
 class DumbContainer2(Container):
     x = Float(1., iotype='in')

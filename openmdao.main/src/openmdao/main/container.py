@@ -1196,7 +1196,8 @@ def _get_entry_group(obj):
     """Return entry point group for given object type."""
     if _get_entry_group.group_map is None:
         # Fill-in here to avoid import loop.
-        from openmdao.main.api import Component, Driver
+        from openmdao.main.component import Component
+        from openmdao.main.driver import Driver
 
         # Entry point definitions taken from plugin-guide.
         # Order should be from most-specific to least.

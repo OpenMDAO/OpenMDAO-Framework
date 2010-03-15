@@ -8,12 +8,12 @@ import sys
 import unittest
 import numpy
 
-from enthought.traits.api import Float, Array, TraitError
+from enthought.traits.api import TraitError
 
 # pylint: disable-msg=F0401,E0611
-from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.main.api import Component, Assembly, set_as_top
 from openmdao.main.eggchecker import check_save_load
+from openmdao.lib.api import Float, Array, CONMINdriver
 from openmdao.util.testutil import assert_rel_error
 
 

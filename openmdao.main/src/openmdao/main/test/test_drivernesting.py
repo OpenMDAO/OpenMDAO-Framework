@@ -4,11 +4,9 @@ import unittest
 import logging
 from math import sqrt
 
-from enthought.traits.api import Float, Int, Str
-
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
 from openmdao.main.stringref import StringRef
-from openmdao.lib.drivers.conmindriver import CONMINdriver
+from openmdao.lib.api import Float, Int, Str, CONMINdriver
 
 exec_order = []
 

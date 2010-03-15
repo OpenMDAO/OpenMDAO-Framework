@@ -5,10 +5,11 @@ import sys
 import unittest
 import StringIO
 
-from enthought.traits.api import Float, TraitError
+from enthought.traits.api import TraitError
 
 import openmdao.util.eggsaver as constants
 from openmdao.main.container import Container
+from openmdao.lib.api import Float
 from openmdao.util.testutil import make_protected_dir
 
 # Various Pickle issues arise only when this test runs as the main module.

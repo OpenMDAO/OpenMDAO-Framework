@@ -4,9 +4,8 @@ import unittest
 import logging
 from math import sqrt
 
-from enthought.traits.api import Float, Str
-
 from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.lib.api import Float, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 class Adder(Component):

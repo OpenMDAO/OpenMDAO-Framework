@@ -5,7 +5,7 @@ __all__ = ['StringRef', 'StringRefArray']
 from enthought.traits.api import BaseStr, List, TraitError
 from enthought.traits.trait_handlers import NoDefaultSpecified
 
-from openmdao.main.api import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator
 
 class DumbDefault(object):
     def __getattr__(self, name):

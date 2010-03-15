@@ -11,7 +11,7 @@ from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
-from openmdao.main.api import Assembly
+from openmdao.main.assembly import Assembly
 from openmdao.main.stringref import StringRef, StringRefArray
 from openmdao.main.drivertree import DriverForest, create_labeled_graph
 

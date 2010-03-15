@@ -2,8 +2,9 @@
 
 import unittest
 
-from enthought.traits.api import Float, Str, Instance, TraitError
+from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.lib.api import Float, Str, Instance
 
 class Multiplier(Component):
     rval_in = Float(iotype='in')

@@ -5,9 +5,8 @@
 # This openMDAO component contains a simple transmission model
 # Transmission is a 5-speed manual.
 
-from enthought.traits.api import Float, Int, Range
 from openmdao.main.api import Component
-from openmdao.lib.traits.unitsfloat import UnitsFloat
+from openmdao.lib.api import Float, Int
 
 class Transmission(Component):
     """ A simple transmission model."""
@@ -26,15 +25,15 @@ class Transmission(Component):
                    desc='Gear ratio in Fifth Gear')
     final_drive_ratio = Float(2.8, iotype='in', 
                               desc='Final Drive Ratio')
-    tire_circ = UnitsFloat(75.0, iotype='in', units='inch', 
+    tire_circ = Float(75.0, iotype='in', units='inch', 
                            desc='Circumference of tire (inches)')
 
-    current_gear = Range(value=0, iotype='in', low=0, high=5, \
+    current_gear = Int(0, iotype='in', low=0, high=5, \
                           desc='Current Gear')
-    velocity = UnitsFloat(0., iotype='in', units='mi/h',
+    velocity = Float(0., iotype='in', units='mi/h',
                      desc='Current Velocity of Vehicle')
 
-    RPM = UnitsFloat(1000., iotype='out', units='1/min',
+    RPM = Float(1000., iotype='out', units='1/min',
                      desc='Engine RPM')        
     torque_ratio = Float(0., iotype='out',
                          desc='Ratio of output torque to engine torque')        

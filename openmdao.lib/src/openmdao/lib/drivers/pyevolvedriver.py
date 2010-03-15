@@ -4,8 +4,7 @@
 
 import random
 
-from enthought.traits.api import Int, Float, CBool, Any, \
-                                 on_trait_change, TraitError
+from enthought.traits.api import Any, on_trait_change, TraitError, CBool
 
 from pyevolve import G1DList, G1DBinaryString, G2DList, GAllele, GenomeBase
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
@@ -17,6 +16,8 @@ except ImportError:
     logging.warning('No pyevolve.DBAdaptors available.')
 
 from openmdao.main.api import Driver, StringRef
+from openmdao.lib.traits.int import Int
+from openmdao.lib.traits.float import Float
 
 def G1DListCrossOverRealHypersphere(genome, **args):
     """ A genome reproduction algorithm, developed by Tristan Hearn at 

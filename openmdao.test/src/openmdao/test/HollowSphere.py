@@ -1,18 +1,18 @@
 
 from openmdao.main.api import Component
-from openmdao.lib.traits.unitsfloat import UnitsFloat
+from openmdao.lib.api import Float
 from math import pi
 
 class HollowSphere(Component):
 
     # set up interface to the framework
-    radius       = UnitsFloat(1.0,  iotype='in', units='cm')
-    thickness    = UnitsFloat(0.05, iotype='in', units='cm')
+    radius       = Float(1.0,  iotype='in', units='cm')
+    thickness    = Float(0.05, iotype='in', units='cm')
         
-    inner_volume = UnitsFloat(0., iotype='out', units='cm**3')
-    volume       = UnitsFloat(0., iotype='out', units='cm**3')
-    solid_volume = UnitsFloat(0., iotype='out', units='cm**3')
-    surface_area = UnitsFloat(0., iotype='out', units='cm**2')
+    inner_volume = Float(0., iotype='out', units='cm**3')
+    volume       = Float(0., iotype='out', units='cm**3')
+    solid_volume = Float(0., iotype='out', units='cm**3')
+    surface_area = Float(0., iotype='out', units='cm**2')
 
     def __init__(self, doc=None, directory=''):
         super(HollowSphere, self).__init__(doc, directory) 

@@ -3,7 +3,7 @@
 __all__ = ['Assembly']
 
 
-from enthought.traits.api import Array, List, Instance, TraitError
+from enthought.traits.api import List, Instance, TraitError
 from enthought.traits.api import TraitType, Undefined
 from enthought.traits.trait_base import not_none
 

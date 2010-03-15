@@ -451,9 +451,8 @@ The next step is to add the inputs and outputs that are defined in our model des
 
 .. testcode:: Code2
 
-	from enthought.traits.api import Float, Int
 	from openmdao.main.api import Component
-	from openmdao.lib.traits.unitsfloat import UnitsFloat
+	from openmdao.lib.api import Float, Int
 
 	class Transmission(Component):
 	    """ A simple transmission model."""
@@ -470,15 +469,15 @@ The next step is to add the inputs and outputs that are defined in our model des
 	             desc='Gear ratio in Fifth Gear')
 	    final_drive_ratio = Float(2.8, iotype='in', 
 	             desc='Final Drive Ratio')
-	    tire_circ = UnitsFloat(75.0, iotype='in', units='inch', 
+	    tire_circ = Float(75.0, iotype='in', units='inch', 
 	             desc='Circumference of tire (inches)')
 
 	    current_gear = Int(0, iotype='in', low=1, high=5, \
                           desc='Current Gear')
-	    velocity = UnitsFloat(0., iotype='in', units='mi/h',
+	    velocity = Float(0., iotype='in', units='mi/h',
 	             desc='Current Velocity of Vehicle')
 
-	    RPM = UnitsFloat(1000., iotype='out', units='1/min',
+	    RPM = Float(1000., iotype='out', units='1/min',
 	             desc='Engine RPM')        
 	    torque_ratio = Float(0., iotype='out',
 	             desc='Ratio of output torque to engine torque')    
@@ -490,7 +489,7 @@ instead of loading everything into the workspace.
 
 .. Index: Public Variables
 
-A component's inputs and outputs are called :term:`Public Variables` (name subject to possible change) in OpenMDAO. The term
+A component's inputs and outputs are called :term:`Public Variables` in OpenMDAO. The term
 'Public' contrasts these with Internal Variables, which are only valid inside of a component. At times, the term :term:`Variable`
 or Framework Variable may also be used to refer to Public Variables. One could think of them in a more general sense as a data object,
 which reflects the ability to pass more generalized objects such as data structures or geometries. A Public Variable is a wrapper for
@@ -530,7 +529,7 @@ There are a couple more parameters of interest that can be seen by inspecting th
 
 .. testcode:: Code2
 
-        	RPM = UnitsFloat(1000.0, low=1000., high=6000., iotype='in', 
+        	RPM = Float(1000.0, low=1000., high=6000., iotype='in', 
                      units='1/min',  desc='Engine RPM')		      
 
 Here, a minimum and maximum limit have been set for the engine input RPM using the arguments *low* and *high*. If the engine 
@@ -680,10 +679,10 @@ Engine, and Chassis components.
 
 .. testcode:: Code5
 
-	from enthought.traits.api import implements, Interface, Float, Int
+	from enthought.traits.api import implements, Interface
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.traits.unitsfloat import UnitsFloat
+	from openmdao.lib.api import Float, Int
 
 	from openmdao.examples.enginedesign.engine import Engine
 	from openmdao.examples.enginedesign.transmission import Transmission
@@ -723,10 +722,10 @@ Now that the components are instantiated in the assembly, they need to be hooked
 
 	# Note: This block of code does not display in the documentation.
 
-	from enthought.traits.api import implements, Interface, Float, Int
+	from enthought.traits.api import implements, Interface
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.traits.unitsfloat import UnitsFloat
+	from openmdao.lib.api import Float, Int
 
 	from openmdao.examples.enginedesign.engine import Engine
 	from openmdao.examples.enginedesign.transmission import Transmission
@@ -806,20 +805,20 @@ accomplish this, the inputs must be declared in the class header:
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
     
-	    tire_circumference = UnitsFloat(75.0, iotype='in', units='inch', 
+	    tire_circumference = Float(75.0, iotype='in', units='inch', 
                                 desc='Circumference of tire (inches)')
     
-	    velocity = UnitsFloat(75.0, iotype='in', units='mi/h', 
+	    velocity = Float(75.0, iotype='in', units='mi/h', 
                        desc='Vehicle velocity needed to determine engine RPM (mi/h)')
 
 Now these input are available to connect to the components.
 
 .. testsetup:: Code7b
 
-	from enthought.traits.api import implements, Interface, Float, Int
+	from enthought.traits.api import implements, Interface
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.traits.unitsfloat import UnitsFloat
+	from openmdao.lib.api import Float, Int
 
 	from openmdao.examples.enginedesign.engine import Engine
 	from openmdao.examples.enginedesign.transmission import Transmission
@@ -828,10 +827,10 @@ Now these input are available to connect to the components.
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
     
-	    tire_circumference = UnitsFloat(75.0, iotype='in', units='inch', 
+	    tire_circumference = Float(75.0, iotype='in', units='inch', 
                                     desc='Circumference of tire (inches)')
     
-	    velocity = UnitsFloat(75.0, iotype='in', units='mi/h', 
+	    velocity = Float(75.0, iotype='in', units='mi/h', 
                 desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
 	    def __init__(self, directory=''):
@@ -1007,8 +1006,7 @@ was created and a SimVehicle and CONMINdriver were instantiated:
 .. testcode:: Code9
 
 	from openmdao.main.api import Assembly
-
-	from openmdao.lib.drivers.conmindriver import CONMINdriver
+	from openmdao.lib.api import CONMINdriver
 
 	from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
@@ -1033,8 +1031,7 @@ driver requires some initialization and connecting before it can be used:
 .. testsetup:: Code10
 
 	from openmdao.main.api import Assembly
-
-	from openmdao.lib.drivers.conmindriver import CONMINdriver
+	from openmdao.lib.api import CONMINdriver
 
 	from openmdao.examples.enginedesign.driving_sim import DrivingSim
 

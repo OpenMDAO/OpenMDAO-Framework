@@ -7,10 +7,8 @@ on the first execution, then on subsequent executions the corrected result
 is directly calculated.
 """
 
-from enthought.traits.api import Float, Range
-
 from openmdao.main.api import Assembly, set_as_top
-from openmdao.lib.traits.unitsfloat import UnitsFloat
+from openmdao.lib.api import Float
 
 from m4.doe import DOE
 from m4.mid_fidelity import MidFidelity 
@@ -52,8 +50,8 @@ class VarFi(MidFidelity):
     """ Example variable fidelity component. """
 
     # Inputs.
-    x = Range(value=0., low=0., high=5., iotype='in', desc='X input value.')
-    y = UnitsFloat(default_value=0., low=0., high=5., units='m', iotype='in',
+    x = Float(value=0., low=0., high=5., iotype='in', desc='X input value.')
+    y = Float(default_value=0., low=0., high=5., units='m', iotype='in',
                    desc='Y input value.')
 
     # Outputs.

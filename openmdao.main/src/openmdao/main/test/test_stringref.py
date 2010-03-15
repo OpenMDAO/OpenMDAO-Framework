@@ -2,10 +2,11 @@
 
 import unittest
 
-from enthought.traits.api import Float, Array, TraitError
+from enthought.traits.api import TraitError
 
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Assembly, Component, StringRef, StringRefArray, set_as_top
+from openmdao.lib.api import Float, Array
 
 class RefComp(Component):   
     desvar = StringRef(iotype='out')
@@ -95,7 +96,7 @@ class StringRefTestCase(unittest.TestCase):
             self.comp1.desvar.set(None)
         except TraitError, err:
             self.assertEqual(str(err), 
-                "The 'y' trait of a SimpleComp instance must be a float, but a value of None <type 'NoneType'> was specified.")
+                "comp2: Trait 'y' must be a float but attempted value is None")
         else:
             self.fail('expected TraitError')
         

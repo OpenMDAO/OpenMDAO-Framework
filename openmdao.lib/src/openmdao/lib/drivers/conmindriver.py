@@ -14,12 +14,14 @@ from sys import float_info
 import numpy.numarray as numarray
 import numpy
 
-from enthought.traits.api import Int, Array, on_trait_change, \
-                                 TraitError, Float
+from enthought.traits.api import on_trait_change, TraitError, Array
+                                 
 import conmin.conmin as conmin
 
 from openmdao.main.api import Driver, StringRef, StringRefArray
 from openmdao.main.exceptions import RunStopped
+from openmdao.lib.traits.float import Float
+from openmdao.lib.traits.int import Int
 
 
 class _cnmn1(object):

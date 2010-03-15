@@ -3,12 +3,13 @@ import Queue
 import sys
 import threading
 
-from enthought.traits.api import Range, Bool, Instance
+from enthought.traits.api import Bool, Instance
 
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.resource import ResourceAllocationManager as RAM
+from openmdao.lib.traits.int import Int
 from openmdao.util.filexfer import filexfer
 
 __all__ = ('CaseIteratorDriver',)
@@ -53,7 +54,7 @@ class CaseIteratorDriver(Driver):
     reload_model = Bool(True, iotype='in',
                         desc='Reload model between executions.')
 
-    max_retries = Range(value=1, low=0, iotype='in',
+    max_retries = Int(1, low=0, iotype='in',
                         desc='Number of times to retry a case.')
 
     def __init__(self, *args, **kwargs):

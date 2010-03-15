@@ -5,8 +5,7 @@
 # Perform an unconstrained optimization on our paraboloid using CONMIN.
 
 from openmdao.main.api import Assembly
-
-from openmdao.lib.drivers.conmindriver import CONMINdriver
+from openmdao.lib.api import CONMINdriver
 
 from openmdao.examples.simple.paraboloid import Paraboloid
 

@@ -6,14 +6,13 @@ Interfaces for the OpenMDAO project.
 # pylint: disable-msg=E0213,E0211,W0232
 
 #public symbols
-__all__ = ['IFactory',
-           'IGeomQueryObject', 'IGeomModifier', 'IResourceAllocator',
+__all__ = ['IFactory', 'IResourceAllocator',
            'ICaseIterator']
 
 
 
 
-from enthought.traits.api import Interface, Int
+from enthought.traits.api import Interface
 
 # to check if an interface is provided, you can call
 # validate_implements(value,klass) from enthought.traits.trait_types
@@ -31,26 +30,26 @@ class IFactory (Interface):
         to it if it resides in another process."""
 
 
-class IGeomQueryObject (Interface):
-    """A Component representing an object having physical dimensions and
-    shape that can be queried for geometric information like surfaces, curves,
-    etc.
+#class IGeomQueryObject (Interface):
+    #"""A Component representing an object having physical dimensions and
+    #shape that can be queried for geometric information like surfaces, curves,
+    #etc.
     
-    The exact API is still to be determined, but will probably be based 
-    largely on the querying portion of the CAPRI API.
+    #The exact API is still to be determined, but will probably be based 
+    #largely on the querying portion of the CAPRI API.
     
-    """
+    #"""
 
-    modelID = Int(desc="Identifies an assembly or a part.")
+    #modelID = Int(desc="Identifies an assembly or a part.")
 
 
 
-class IGeomModifier (Interface):
-    """An interface to a geometry kernel that allows new geometry to be
-    created and modified.
+#class IGeomModifier (Interface):
+    #"""An interface to a geometry kernel that allows new geometry to be
+    #created and modified.
     
-    The API is still to be determined.
-    """
+    #The API is still to be determined.
+    #"""
     
 class IResourceAllocator (Interface):
     """An object responsible for allocating CPU/disk resources for a particular

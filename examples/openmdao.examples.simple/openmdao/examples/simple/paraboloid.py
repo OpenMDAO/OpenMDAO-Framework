@@ -3,9 +3,8 @@
 """
 
 
-from enthought.traits.api import Float
-
 from openmdao.main.api import Component
+from openmdao.lib.api import Float
 
 class Paraboloid(Component):
     """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """

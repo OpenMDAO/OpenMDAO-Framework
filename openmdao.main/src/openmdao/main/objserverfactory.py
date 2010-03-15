@@ -3,7 +3,9 @@ import os.path
 import platform
 import shutil
 
-from openmdao.main.api import Container, Factory, SimulationRoot
+from openmdao.main.container import Container
+from openmdao.main.component import SimulationRoot
+from openmdao.main.factory import Factory
 
 from multiprocessing import util
 #from multiprocessing import managers

@@ -1,3 +1,7 @@
+"""
+    axod_comp.py - axod component.
+"""
+
 import os.path
 import shutil
 
@@ -5,12 +9,11 @@ import numpy
 
 import axod.axod as axod
 
-from enthought.traits.api import Array, Float, Str
-
 from openmdao.main.api import Component
-from openmdao.lib.traits.unitsfloat import UnitsFloat
+from openmdao.lib.api import Float, Array, Str
 
 __all__ = ('AxodComp',)
+
 
 
 class AxodComp(Component):

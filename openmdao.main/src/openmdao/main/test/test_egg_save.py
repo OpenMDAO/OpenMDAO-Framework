@@ -12,8 +12,7 @@ import subprocess
 import sys
 import unittest
 
-from enthought.traits.api import Bool, List, Str, Array, Int, \
-                                 Instance, Callable, TraitError
+from enthought.traits.api import Callable, TraitError
 
 from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, \
                               SAVE_CPICKLE, set_as_top
@@ -22,6 +21,7 @@ from openmdao.main.filevar import FileMetadata, FileTrait
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
+from openmdao.lib.api import Int, Bool, List, Str, Array, Instance
 from openmdao.util.testutil import find_python, make_protected_dir
 
 # pylint: disable-msg=E1101,E1103

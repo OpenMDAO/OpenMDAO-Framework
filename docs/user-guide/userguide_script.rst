@@ -43,7 +43,7 @@ same syntax as loading any other Python module:
 .. testcode:: namespace
 
     from openmdao.main.api import Component, Assembly
-    from openmdao.lib.drivers.conmindriver import CONMINdriver
+    from openmdao.lib.api import CONMINdriver
     
 Here, the fundamental OpenMDAO component classes Component and Assembly are
 loaded from openmdao.main, along with the CONMIN driver from openmdao.lib.
@@ -150,8 +150,8 @@ A simple component that implements an equation with two inputs is shown below:
 
 .. testcode:: simple_component_Equation
 
-    from enthought.traits.api import Float
     from openmdao.main.api import Component
+    from openmdao.lib.api import Float
     
     class Equation(Component):
         """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """
@@ -248,6 +248,8 @@ Trait Project page (http://code.enthought.com/projects/traits/).
 *Built-in Variable Types*
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+
+
 StringRef
 +++++++++
 
@@ -268,17 +270,16 @@ StringRefs to specify their objective function, design variables, and constraint
 Conditional branching components use StringRefs to specify boolean expressions that
 determine if a given branch should be executed.
 
-Unitsfloat and Unit Conversions
-+++++++++++++++++++++++++++++++
+Unit Conversions with Float
++++++++++++++++++++++++++++
 
-OpenMDAO also supports variables with explicitly defined units using the UnitsFloat
-variable type. UnitsFloat is a custom Trait that is included as part of the Standard
-Library. This variable type provides some specific useful effects when utilized 
-in the framework:
+OpenMDAO also supports variables with explicitly defined units using the Float
+variable type, which is included as part of the Standard Library. This variable 
+type provides some specific useful effects when utilized in the framework:
 
 - Automatically converts a value passed from an output to an input with compatible units (e.g., 'in' and 'm')
 - Raises an exception when attempting to pass a value from an output to an input having incompatible units (e.g., 'kg' and 'm')
-- Permits connection between UnitsFloat and Float variables without additional restrictions
+- Allows values to be passed between unitless variable and variables with units
 
 A complete list of the available units is given in :ref:`Summary-of-Units`. The
 unit conversion code and the base set of units come from the Physical Quantities

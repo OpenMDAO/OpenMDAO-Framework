@@ -8,13 +8,12 @@ and was written by someone without much 'mool' knowledge.
 __all__ = ('MidFidelity',)
 
 
-from enthought.traits.api import Float, Array, Int, Str, Instance, Range, \
-                                 TraitError
+from enthought.traits.api import TraitError
 
 import mool.Optimization.MidFiModel
 
 from openmdao.main.api import Assembly, Component
-from openmdao.lib.traits.unitsfloat import UnitsFloat
+from openmdao.lib.api import Float, Int, Array, Str, Instance
 
 import wrapper
 
@@ -33,14 +32,14 @@ class MidFidelity(Assembly):
     doe_type = Str('lhs', iotype='in', 
                    desc='Type of DOE used to generate response surface.')
     rs_type = Str('quadratic', iotype='in', desc='Type of response surface.')
-    n_samples = Range(value=1, low=1, iotype='in', desc='Number of samples.')
+    n_samples = Int(value=1, low=1, iotype='in', desc='Number of samples.')
     tolerance = Float(1.0e10, iotype='in', desc='?')
     correction_function = Int(1, iotype='in',
                               desc='Type of correction function.')
     w_h = Float(0.5, iotype='in', desc='?')
     accuracy_test_type = Int(2, iotype='in', 
                              desc='Method for testing accuracy of response.')
-    n_samples_test = Range(value=10, low=1, iotype='in',
+    n_samples_test = Int(value=10, low=1, iotype='in',
                            desc='Number of additional samples for additional-points test.')
     ntheta = Int(3, iotype='in', 
                  desc='For Kriging method, ntheta=1(SA),2(Cobyla),3(BFGS)')
@@ -182,10 +181,10 @@ class MidFidelity(Assembly):
             xub = []
             for i, mapping in enumerate(self.input_mappings):
                 trait = self.trait(mapping[0]).trait_type
-                if isinstance(trait, Range):
-                    low = trait._low
-                    high = trait._high
-                elif isinstance(trait, UnitsFloat):
+                if isinstance(trait, Int):
+                    low = trait.low
+                    high = trait.high
+                elif isinstance(trait, Float):
                     low = trait.low
                     high = trait.high
                 else:

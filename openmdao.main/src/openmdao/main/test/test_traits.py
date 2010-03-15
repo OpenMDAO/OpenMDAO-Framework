@@ -6,7 +6,8 @@ about how these things work.
 
 import unittest
 
-from enthought.traits.api import HasTraits, TraitType, Int, Instance
+from enthought.traits.api import HasTraits, TraitType
+from openmdao.lib.api import Int, Instance
 
 class MyClass(object):
     def __init__(self):

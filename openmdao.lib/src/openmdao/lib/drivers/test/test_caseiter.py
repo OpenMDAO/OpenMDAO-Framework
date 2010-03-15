@@ -12,11 +12,12 @@ import unittest
 
 import numpy.random
 
-from enthought.traits.api import Bool, Float, Array, TraitError
+from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
+from openmdao.lib.api import Float, Bool, Array
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
