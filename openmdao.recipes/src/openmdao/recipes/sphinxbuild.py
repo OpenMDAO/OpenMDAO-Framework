@@ -20,7 +20,7 @@ def _mod_sphinx_info(mod, outfile, show_undoc=False):
     modbase = short.split('.').pop()
     
     outfile.write('.. index:: %s.py\n\n'%modbase)
-    outfile.write('.. _%s.py:\n\n'%modbase)
+    outfile.write('.. _%s.py:\n\n'%short)
     outfile.write('%s.py\n' % modbase)
     outfile.write('_'*(3+len(short.split('.').pop()))+'\n\n')
     outfile.write('.. automodule:: %s\n' % short)

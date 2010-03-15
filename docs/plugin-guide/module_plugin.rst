@@ -19,14 +19,14 @@ need to function properly as an OpenMDAO component.
 
 .. testcode::plugin_example
 
-    from enthought.traits.api import Float
+    from openmdao.lib.api import Float
     
     from openmdao.main.api import Component
 
     class SimpleAdder(Component):
-        a = Float(0.0, iostatus='in')
-        b = Float(0.0, iostatus='in')
-        c = Float(0.0, iostatus='out')
+        a = Float(0.0, iotype='in')
+        b = Float(0.0, iotype='in')
+        c = Float(0.0, iotype='out')
     
         def execute(self):
              self.c = self.a + self.b
@@ -39,24 +39,24 @@ there. The function in our component that performs a computation is called
 The *self* object that is passed as an argument to ``execute()`` represents an
 instance of our *SimpleAdder* class.
 
-*SimpleAdder* has three traits of type *Float* with the names *a*, *b*, and
+*SimpleAdder* has three Public Variables of type *Float* with the names *a*, *b*, and
 *c*. All three attributes have a default value of 0.0. Attributes *a* and *b*
-are inputs, so we specify that they have an *iostatus* of *'in'*. Attribute
-*c* is an output, so it has an *iostatus* of *'out'*.
+are inputs, so we specify that they have an *iotype* of *'in'*. Attribute
+*c* is an output, so it has an *iotype* of *'out'*.
 
-.. index:: traits
-
-The *Float* trait is defined in the package ``enthought.traits.api``, so we have
-to import it from there before we can use it. The ``enthought.traits.api``
+The *Float* variable is defined in the package ``openmdao.lib.api``, so we have
+to import it from there before we can use it. This 
 package defines a wide variety of traits, including basic types like *Int*,
-*Str*, and *Bool*; containers like *List* and *Dictionary*; and many others.
+*Str*, and *Bool*; containers like *List* and *Dictionary*; and many others. Public Variables
+are actually based off of Enthought's Traits, and a larger selection of less commonly-used
+traits are available by importing from the package ``enthought.traits.api``.
 To learn more about traits, you may want to look at the 
 `Traits User Manual <http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_
 and the list of 
 `available traits <http://code.enthought.com/projects/files/ETS32_API/enthought.traits.api.html>`_.
 
 OpenMDAO also supplies some special-purpose traits as well, e.g.,
-*UnitsFloat*, a floating point attribute with units. OpenMDAO traits can be
+*Float*, which is actually a floating point attribute with units. OpenMDAO traits can be
 found in ``openmdao.lib.traits``. 
 
 At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply

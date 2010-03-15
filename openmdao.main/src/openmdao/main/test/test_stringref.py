@@ -2,23 +2,24 @@
 
 import unittest
 
-from enthought.traits.api import Float, Array, TraitError
+from enthought.traits.api import TraitError
 
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Assembly, Component, StringRef, StringRefArray, set_as_top
+from openmdao.lib.api import Float, Array
 
 class RefComp(Component):   
-    desvar = StringRef(iostatus='out')
-    desvars = StringRefArray(iostatus='out')
-    objective = StringRef(iostatus='in')
-    z = Float(99.9, iostatus='out')
+    desvar = StringRef(iotype='out')
+    desvars = StringRefArray(iotype='out')
+    objective = StringRef(iotype='in')
+    z = Float(99.9, iotype='out')
             
 class SimpleComp(Component):
-    x = Float(99.9, iostatus='out')
-    y = Float(99.9, iostatus='in')
-    d1 = Float(42., iostatus='in')
-    d1out = Float(11., iostatus='out')
-    array = Array(value=[1., 2., 3.], iostatus='in')
+    x = Float(99.9, iotype='out')
+    y = Float(99.9, iotype='in')
+    d1 = Float(42., iotype='in')
+    d1out = Float(11., iotype='out')
+    array = Array(value=[1., 2., 3.], iotype='in')
         
 class StringRefTestCase(unittest.TestCase):
 
@@ -95,7 +96,7 @@ class StringRefTestCase(unittest.TestCase):
             self.comp1.desvar.set(None)
         except TraitError, err:
             self.assertEqual(str(err), 
-                "The 'y' trait of a SimpleComp instance must be a float, but a value of None <type 'NoneType'> was specified.")
+                "comp2: Trait 'y' must be a float but attempted value is None")
         else:
             self.fail('expected TraitError')
         
@@ -110,11 +111,11 @@ class StringRefTestCase(unittest.TestCase):
 
     def test_novar_expr(self):
         asm = set_as_top(Assembly())
-        asm.add_trait('ref', StringRef(iostatus='in'))
+        asm.add_trait('ref', StringRef(iotype='in'))
         asm.ref = '1+2'
         self.assertEqual(asm.ref.evaluate(), 3)
         
-        asm.add_trait('refout', StringRef(iostatus='out'))
+        asm.add_trait('refout', StringRef(iotype='out'))
         try:
             asm.refout = '2'
         except TraitError, err:

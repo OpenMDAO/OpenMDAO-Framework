@@ -39,12 +39,12 @@ the framework are listed below:
 .. index:: pair: TraitType; plugin base class
 
 
-:ref:`Component<component.py>` - base class of an engineering tool or some 
-sort of calculation. It inherits from :ref:`Container<container.py>`.
+:ref:`Component<openmdao.main.component.py>` - base class of an engineering tool or some 
+sort of calculation. It inherits from :ref:`Container<openmdao.main.container.py>`.
 
-:ref:`Driver<driver.py>` - base class for optimizers, solvers, 
+:ref:`Driver<openmdao.main.driver.py>` - base class for optimizers, solvers, 
 parameter studies, and other objects that iterate over a set of components. 
-It inherits from :ref:`Component<component.py>`.
+It inherits from :ref:`Component<openmdao.main.component.py>`.
 
 TraitType_ - base class used to validate and possibly convert data objects that are
 passed between linked components. 
@@ -54,7 +54,7 @@ passed between linked components.
 
 
 The plugin interfaces available to extend the framework are listed below, and
-their source documentation can be found in :ref:`interfaces.py<interfaces.py>`.
+their source documentation can be found in :ref:`interfaces.py<openmdao.main.interfaces.py>`.
 
 
 .. index:: pair: IGeomQueryObject; plugin interface

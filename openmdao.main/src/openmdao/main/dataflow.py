@@ -102,7 +102,7 @@ class Dataflow(Workflow):
                 yield getattr(self.scope, n)
         elif len(drivers) == 1:  # one driver, so add its output ref edges, sort and go
             graph = self._no_ref_graph.copy()
-            graph.add_edges_from(drivers[0].get_ref_graph(iostatus='out').edges_iter())
+            graph.add_edges_from(drivers[0].get_ref_graph(iotype='out').edges_iter())
             for n in nx.topological_sort(graph):
                 yield getattr(self.scope, n)
         else:  # multiple drivers

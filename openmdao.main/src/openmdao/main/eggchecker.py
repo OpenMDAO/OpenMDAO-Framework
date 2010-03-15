@@ -4,7 +4,7 @@ import subprocess
 import sys
 import time
 
-from openmdao.main.api import Component
+from openmdao.main.component import Component
 from openmdao.util.log import LOG_DEBUG
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.testutil import find_python

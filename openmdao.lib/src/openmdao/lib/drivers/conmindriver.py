@@ -9,15 +9,19 @@ __all__ = ['CONMINdriver']
 
 
 
+from sys import float_info
+
 import numpy.numarray as numarray
 import numpy
 
-from enthought.traits.api import Int, Array, on_trait_change, \
-                                 TraitError, Float
+from enthought.traits.api import on_trait_change, TraitError, Array
+                                 
 import conmin.conmin as conmin
 
 from openmdao.main.api import Driver, StringRef, StringRefArray
 from openmdao.main.exceptions import RunStopped
+from openmdao.lib.traits.float import Float
+from openmdao.lib.traits.int import Int
 
 
 class _cnmn1(object):
@@ -152,66 +156,66 @@ class CONMINdriver(Driver):
             
     """
     
-    design_vars = StringRefArray(iostatus='out',
+    design_vars = StringRefArray(iotype='out',
        desc='An array of design variable names. These names can include array \
              indexing.')
     
-    constraints = StringRefArray(iostatus='in',
+    constraints = StringRefArray(iotype='in',
             desc= 'An array of expression strings indicating constraints.'+
             ' A value of < 0 for the expression indicates that the constraint '+
             'is violated.')
     
-    objective = StringRef(iostatus='in',
+    objective = StringRef(iotype='in',
                       desc= 'A string containing the objective function \
                             expression.')
     
-    upper_bounds = Array(dtype=numpy.float, iostatus='in',
+    upper_bounds = Array(dtype=numpy.float, iotype='in',
         desc='Array of constraints on the maximum value of each design \
               variable.')
     
-    lower_bounds = Array(dtype=numpy.float, iostatus='in', 
+    lower_bounds = Array(dtype=numpy.float, iotype='in', 
         desc='Array of constraints on the minimum value of each design \
               variable.')
 
-    scal = Array(dtype=numpy.float, iostatus='in', 
+    scal = Array(dtype=numpy.float, iotype='in', 
         desc='Array of scaling factors for the design variables.')
 
     # Control parameters for CONMIN.
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution. 
     
-    iprint = Int(0, iostatus='in', desc='Print information during CONMIN \
+    iprint = Int(0, iotype='in', desc='Print information during CONMIN \
                     solution. Higher values are more verbose')
-    itmax = Int(10, iostatus='in', desc='Maximum number of iterations before \
+    itmax = Int(10, iotype='in', desc='Maximum number of iterations before \
                     termination')
-    fdch = Float(.01, iostatus='in', desc='Relative change in design variables \
+    fdch = Float(.01, iotype='in', desc='Relative change in design variables \
                       when calculating finite difference gradients')
-    fdchm = Float(.01, iostatus='in', desc='Minimum absolute step in finite \
+    fdchm = Float(.01, iotype='in', desc='Minimum absolute step in finite \
                       difference gradient calculations')
-    icndir = Float(0, iostatus='in', desc='Conjugate gradient restart \
+    icndir = Float(0, iotype='in', desc='Conjugate gradient restart \
                       parameter')
-    nscal = Float(0, iostatus='in', desc='Scaling control parameter -- \
+    nscal = Float(0, iotype='in', desc='Scaling control parameter -- \
                       controls scaling of decision variables')
-    nfdg = Float(0, iostatus='in', desc='User-defined gradient flag (not yet \
+    nfdg = Float(0, iotype='in', desc='User-defined gradient flag (not yet \
                       supported)')
-    ct = Float(-0.1, iostatus='in', desc='Constraint thickness parameter.')
-    ctmin = Float(0.004, iostatus='in', desc='Minimum absoluate value of ct \
+    ct = Float(-0.1, iotype='in', desc='Constraint thickness parameter.')
+    ctmin = Float(0.004, iotype='in', desc='Minimum absoluate value of ct \
                       used in optimization.')
-    ctl = Float(-0.01, iostatus='in', desc='Constraint thickness parameter for \
+    ctl = Float(-0.01, iotype='in', desc='Constraint thickness parameter for \
                       linear and side constraints.')
-    ctlmin = Float(0.001, iostatus='in', desc='Minimum absoluate value of ctl \
+    ctlmin = Float(0.001, iotype='in', desc='Minimum absoluate value of ctl \
                       used in optimization.')
-    theta = Float(1.0, iostatus='in', desc='Mean value of the push-off factor \
+    theta = Float(1.0, iotype='in', desc='Mean value of the push-off factor \
                       in the method of feasible directions.')
-    phi = Float(5.0, iostatus='in', desc='Participation coefficient - penalty \
+    phi = Float(5.0, iotype='in', desc='Participation coefficient - penalty \
                       parameter that pushes designs towards the feasible \
                       region.')
-    delfun = Float(0.001, iostatus='in', low=0.0001, desc='Relative \
+    delfun = Float(0.001, iotype='in', low=0.0001, desc='Relative \
                       convergence tolerance')
-    dabfun = Float(0.001, iostatus='in', low=1.0e-10, desc='Absolute \
+    dabfun = Float(0.001, iotype='in', low=1.0e-10, desc='Absolute \
                       convergence tolerance')
-    linobj = Int(0, iostatus='in', desc='Linear objective function flag')
-    itrm = Int(3, iostatus='in', desc='Number of consecutive iterations to \
+    linobj = Int(0, iotype='in', desc='Linear objective function flag')
+    itrm = Int(3, iotype='in', desc='Number of consecutive iterations to \
                       indicate convergence (relative or absolute)')
     
     def __init__(self, doc=None):
@@ -382,7 +386,8 @@ class CONMINdriver(Driver):
             for i, lb in enumerate(self.lower_bounds):
                 self._lower_bounds[i] = lb
         else:
-            self._lower_bounds = numarray.array(([-1.e99]*num_dvs) + [0., 0.])
+            self._lower_bounds = numarray.array(([-float_info.max]*num_dvs) + \
+                                                 [0., 0.])
             
             
         # create upper bounds numarray
@@ -397,7 +402,8 @@ class CONMINdriver(Driver):
             for i, ub in enumerate(self.upper_bounds):
                 self._upper_bounds[i] = ub
         else:
-            self._upper_bounds = numarray.array(([1.e99]*num_dvs) + [0., 0.])
+            self._upper_bounds = numarray.array(([float_info.max]*num_dvs) + \
+                                                 [0., 0.])
 
         # Check if the upper and lower bounds are swapped    
         for i, val in enumerate(self._lower_bounds):

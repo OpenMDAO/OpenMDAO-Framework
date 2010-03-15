@@ -34,10 +34,16 @@ those that are more likely to be used by an expert user.
 For the simplest possible unconstrained optimization problem, CONMIN needs just
 an objective function and one or more decision variables (design variables)
 
-The OpenMDAO CONMIN driver can be loaded by importing the CONMINdriver component
-from the standard library drivers namespace.
+The OpenMDAO CONMIN driver can be from ``openmdao.main.api``.
 
 .. testcode:: CONMIN_load
+
+	from openmdao.lib.api import CONMINdriver
+
+Note that it can also be loaded by importing the CONMINdriver component
+from the standard library drivers namespace.
+
+.. testcode:: CONMIN_load2
 
 	from openmdao.lib.drivers.conmindriver import CONMINdriver
 
@@ -49,7 +55,7 @@ follows:
 .. testcode:: CONMIN_load
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.drivers.conmindriver import CONMINdriver
+	from openmdao.lib.api import CONMINdriver
 
 	class EngineOptimization(Assembly):
 	    """ Top level assembly for optimizing a vehicle. """

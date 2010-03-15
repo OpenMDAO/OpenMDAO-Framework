@@ -12,11 +12,12 @@ import unittest
 
 import numpy.random
 
-from enthought.traits.api import Bool, Float, Array, TraitError
+from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
+from openmdao.lib.api import Float, Bool, Array
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
@@ -40,12 +41,12 @@ def rosen_suzuki(x):
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
-    x = Array('d', value=[1., 1., 1., 1.], iostatus='in')
-    y = Array('d', value=[1., 1., 1., 1.], iostatus='in')
-    raise_error = Bool(False, iostatus='in')
-    stop_exec = Bool(False, iostatus='in')
-    rosen_suzuki = Float(0., iostatus='out')
-    sum_y = Float(0., iostatus='out')
+    x = Array('d', value=[1., 1., 1., 1.], iotype='in')
+    y = Array('d', value=[1., 1., 1., 1.], iotype='in')
+    raise_error = Bool(False, iotype='in')
+    stop_exec = Bool(False, iotype='in')
+    rosen_suzuki = Float(0., iotype='out')
+    sum_y = Float(0., iotype='out')
         
     def __init__(self, *args, **kwargs):
         super(DrivenComponent, self).__init__(*args, **kwargs)
