@@ -444,7 +444,7 @@ class Container(HasTraits):
                 self.raise_exception("required plugin '%s' is not present" %
                                      name, TraitError)                
         
-    def add_container(self, name, obj):
+    def add_container(self, name, obj, **kw_args):
         """Add a Container object to this Container.
         Returns the added Container object.
         """
@@ -661,15 +661,15 @@ class Container(HasTraits):
                 return getattr(obj, tup[1], Missing) is not Missing
         return False
     
-    def create(self, type_name, name, version=None, server=None, 
-               res_desc=None):
+    def create(self, type_name, name, version=None, server=None,
+               res_desc=None, **kw_args):
         """Create a new object of the specified type inside of this
         Container.
         
         Returns the new object.        
         """
         obj = fmcreate(type_name, version, server, res_desc)
-        self.add_container(name, obj)
+        self.add_container(name, obj, **kw_args)
         return obj
 
     def invoke(self, path, *args, **kwargs):
