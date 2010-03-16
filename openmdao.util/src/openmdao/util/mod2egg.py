@@ -44,7 +44,7 @@ def mod2egg(argv, groups= { 'openmdao.component': Component,
                             'openmdao.driver': Driver,
                             #'openmdao.case_iterator': CaseIterator,
                             #'openmdao.resource_allocator': ResourceAllocator,
-                            'openmdao.trait': TraitType
+                            'openmdao.variable': TraitType
                             }):
     parser = OptionParser()
     parser.usage = "mod2egg.py [options] <module_name>"

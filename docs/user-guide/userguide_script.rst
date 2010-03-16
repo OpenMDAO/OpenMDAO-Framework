@@ -8,7 +8,7 @@ The OpenMDAO Scripting Interface
 OpenMDAO provides a programmatic interface that allows a user to write a python
 script that describes the struture of the model and provides the ability to
 interact with objects in the framework. Other interfaces are planned, including
-both graphical and a command line. Everything that can be done in OpenMDAO, can
+both graphical and a command line. Everything that can be done in OpenMDAO can
 be done using this scripting interface.
 
 This goal of this section of the user guide is to explain and demonstrate every
@@ -87,7 +87,6 @@ this module can be obtained using the dir() command in Python:
     create
     get_available_types
     logger
-    plugin_path
     set_as_top
 
 Most of these items are explained elsewhere in the user guide. These can all be

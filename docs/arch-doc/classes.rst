@@ -24,7 +24,7 @@ of the components. The components have attributes that can be linked to
 attributes on other components. An Assembly is a Component, which means that it
 can be contained within another :term:`Assembly`. This allows for the creation
 of hierarchical models with many levels of nested Assemblies. A :term:`Driver`
-is an Assembly that repeatedly executes its workflow until some condition is
+is a Component that repeatedly executes a workflow until some condition is
 met.
 
 
@@ -45,16 +45,14 @@ Classes for Validation and Conversion of Component Attributes
 =============================================================
 
 Validation and conversion of Component attributes is done using the Traits_
-package.  There are a large number of built-in trait types to choose from, 
-including Int, Float, Str, Array, List, and many others.  You can also define
+package. There are a large number of built-in trait types to choose from,
+including Int, Float, Str, Array, List, and many others. You can also define
 your own custom traits by inheriting from TraitType and overriding the
-``validate()`` function. :term:`Traits` also has built-in support for creation of
-graphical editors for each trait when running with a wxPython GUI, but it's not
-clear at this point whether this functionality will be useful in the context of
-a web GUI. The documentation claims that traits uses something called pyface,
-to provide a sort of generalized UI layer that can be tied to various GUI
-libraries on the back end. However, it appears that wxPython may be the only
-functioning back end at the moment.
+``validate()`` function. :term:`Traits` also has built-in support for creation
+of graphical editors for each trait. The documentation claims that traits uses
+something called pyface to provide a sort of generalized UI layer that can be
+tied to various GUI libraries on the back end but it's not clear at this point
+whether this functionality will work in the context of a web GUI.
 
 
 .. _Traits: http://code.enthought.com/projects/traits/documentation.php
@@ -77,7 +75,7 @@ framework will create the object. This creation process could involve spawning a
 remote process, instantiating a remote version of the object, and creating a
 local proxy to represent the remote object, or it could be a simple import and a
 constructor call. To the caller, it makes no difference. The call returns a
-local python object, and the true location of the object requested does not
+local python object, and the true location of the object requested doesn't
 matter.
 
 

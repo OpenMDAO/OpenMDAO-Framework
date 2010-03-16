@@ -86,7 +86,7 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add_container(self, name, obj):
+    def add_container(self, name, obj, add_to_workflow=True):
         """Update dependency graph and call base class add_container.
         Returns the added Container object.
         """
@@ -96,7 +96,8 @@ class Assembly (Component):
             # added to us, wait to collect its io_graph until we need it
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
-            self.workflow.add_node(obj.name)
+            if add_to_workflow:
+                self.workflow.add_node(obj.name)
         try:
             self.drivers.append(obj)  # will fail if it's not an IDriver
         except TraitError:
@@ -126,7 +127,8 @@ class Assembly (Component):
                 drv.graph_regen_needed()
                 
         return super(Assembly, self).remove_container(name)
-    
+
+
     def create_passthrough(self, pathname, alias=None):
         """Creates a PassthroughTrait that uses the trait indicated by
         pathname for validation (if it's not a property trait), adds it to

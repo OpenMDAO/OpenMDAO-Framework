@@ -43,12 +43,13 @@ setup(name='openmdao.test',
           'nose',
           'nose_coverage2',
       ],
-      entry_points="""
-      [openmdao.component]
-      openmdao.test.HollowSphere.HollowSphere = openmdao.test.HollowSphere:HollowSphere
-      openmdao.test.Box.Box = openmdao.test.Box:Box
-      
-      [console_scripts]
-      openmdaotest = openmdao.test.testing:run_openmdao_suite
-      """,
+      entry_points={
+      'openmdao.component': [
+          'openmdao.test.HollowSphere = openmdao.test.HollowSphere:HollowSphere',
+          'openmdao.test.Box = openmdao.test.Box:Box'
+      ],
+      "console_scripts": [
+          'openmdaotest = openmdao.test.testing:run_openmdao_suite'
+          ]
+      },
       )

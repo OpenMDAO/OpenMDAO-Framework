@@ -13,6 +13,7 @@ Contents:
    stdlib-guide/index
    plugin-guide/index
    dev-guide/index
+   install-guide/index
    srcdocs/index
    licenses/index
    quick-ref/index
