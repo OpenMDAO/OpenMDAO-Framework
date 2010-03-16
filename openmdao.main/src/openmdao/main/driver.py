@@ -11,7 +11,7 @@ from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
-from openmdao.main.api import Assembly
+from openmdao.main.assembly import Assembly
 from openmdao.main.stringref import StringRef, StringRefArray
 from openmdao.main.drivertree import DriverForest, create_labeled_graph
 
@@ -45,7 +45,7 @@ class Driver(Assembly):
             super(Driver, self)._pre_execute()
             return
         
-        refnames = self.get_refvar_names(iostatus='in')
+        refnames = self.get_refvar_names(iotype='in')
         
         if not all(self.get_valids(refnames)):
             self._call_execute = True
@@ -118,7 +118,7 @@ class Driver(Assembly):
                             for nested in dtree.children: # collapse immediate children
                                 nested.collapse_graph(subgraph)
                             subgraph.remove_edges_from(
-                                self.get_ref_graph(iostatus='in').edges_iter())
+                                self.get_ref_graph(iotype='in').edges_iter())
                             sorted = nx.topological_sort(subgraph)
                             for comp in sorted:
                                 if comp != self.name:
@@ -135,31 +135,31 @@ class Driver(Assembly):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration
 
-    def get_refvar_names(self, iostatus=None):
+    def get_refvar_names(self, iotype=None):
         """Return a list of names of all StringRef and StringRefArray traits
         in this instance.
         """
-        if iostatus is None:
+        if iotype is None:
             checker = not_none
         else:
-            checker = iostatus
+            checker = iotype
         
-        return [n for n,v in self._traits_meta_filter(iostatus=checker).items() 
+        return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
                     if v.is_trait_type(StringRef) or 
                        v.is_trait_type(StringRefArray)]
         
-    def get_referenced_comps(self, iostatus=None):
+    def get_referenced_comps(self, iotype=None):
         """Return a set of names of Components that we reference based on the 
-        contents of our StringRefs and StringRefArrays.  If iostatus is
+        contents of our StringRefs and StringRefArrays.  If iotype is
         supplied, return only component names that are referenced by ref
-        variables with matching iostatus.
+        variables with matching iotype.
         """
-        if self._ref_comps[iostatus] is None:
+        if self._ref_comps[iotype] is None:
             comps = set()
         else:
-            return self._ref_comps[iostatus]
+            return self._ref_comps[iotype]
     
-        for name in self.get_refvar_names(iostatus):
+        for name in self.get_refvar_names(iotype):
             obj = getattr(self, name)
             if isinstance(obj, list):
                 for entry in obj:
@@ -167,27 +167,27 @@ class Driver(Assembly):
             else:
                 comps.update(obj.get_referenced_compnames())
                 
-        self._ref_comps[iostatus] = comps
+        self._ref_comps[iotype] = comps
         return comps
         
-    def get_ref_graph(self, iostatus=None):
+    def get_ref_graph(self, iotype=None):
         """Returns the dependency graph for this Driver based on
         StringRefs and StringRefArrays.
         """
-        if self._ref_graph[iostatus] is not None:
-            return self._ref_graph[iostatus]
+        if self._ref_graph[iotype] is not None:
+            return self._ref_graph[iotype]
         
-        self._ref_graph[iostatus] = nx.DiGraph()
+        self._ref_graph[iotype] = nx.DiGraph()
         name = self.name
         
-        if iostatus == 'out' or iostatus is None:
-            self._ref_graph[iostatus].add_edges_from([(name,rv) 
-                                  for rv in self.get_referenced_comps(iostatus='out')])
+        if iotype == 'out' or iotype is None:
+            self._ref_graph[iotype].add_edges_from([(name,rv) 
+                                  for rv in self.get_referenced_comps(iotype='out')])
             
-        if iostatus == 'in' or iostatus is None:
-            self._ref_graph[iostatus].add_edges_from([(rv, name) 
-                                  for rv in self.get_referenced_comps(iostatus='in')])
-        return self._ref_graph[iostatus]
+        if iotype == 'in' or iotype is None:
+            self._ref_graph[iotype].add_edges_from([(rv, name) 
+                                  for rv in self.get_referenced_comps(iotype='in')])
+        return self._ref_graph[iotype]
     
     def _get_simple_iteration_subgraph(self):
         """Return a graph of our iteration loop (ourself plus all components we

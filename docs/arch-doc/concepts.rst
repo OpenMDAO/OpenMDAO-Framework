@@ -39,12 +39,12 @@ the framework are listed below:
 .. index:: pair: TraitType; plugin base class
 
 
-:ref:`Component<component.py>` - base class of an engineering tool or some 
-sort of calculation. It inherits from :ref:`Container<container.py>`.
+:ref:`Component<openmdao.main.component.py>` - base class of an engineering tool or some 
+sort of calculation. It inherits from :ref:`Container<openmdao.main.container.py>`.
 
-:ref:`Driver<driver.py>` - base class for optimizers, solvers, 
+:ref:`Driver<openmdao.main.driver.py>` - base class for optimizers, solvers, 
 parameter studies, and other objects that iterate over a set of components. 
-It inherits from :ref:`Component<component.py>`.
+It inherits from :ref:`Component<openmdao.main.component.py>`.
 
 TraitType_ - base class used to validate and possibly convert data objects that are
 passed between linked components. 
@@ -54,7 +54,7 @@ passed between linked components.
 
 
 The plugin interfaces available to extend the framework are listed below, and
-their source documentation can be found in :ref:`interfaces.py<interfaces.py>`.
+their source documentation can be found in :ref:`interfaces.py<openmdao.main.interfaces.py>`.
 
 
 .. index:: pair: IGeomQueryObject; plugin interface
@@ -63,17 +63,17 @@ their source documentation can be found in :ref:`interfaces.py<interfaces.py>`.
 .. index:: pair: IFactory; plugin interface
 
 
-IGeomQueryObject - interface to objects with geometry.
+*IGeomQueryObject* - interface to objects with geometry.
 Geometric properties of the object can be queried.
 
-IGeomModifier - interface to a geometry kernel that allows
+*IGeomModifier* - interface to a geometry kernel that allows
 creation of new geometry and modification of existing geometry.
 
-IResourceAllocator - interface to objects that
+*IResourceAllocator* - interface to objects that
 allocate memory and disk resources, sometimes on specific servers, based on a
 resource description.
 
-IFactory - interface to an object that creates other objects
+*IFactory* - interface to an object that creates other objects
 used by the framework. This creation may involve the creation of a remote
 instance of an object and a  proxy to represent it in the local process.
 
@@ -245,7 +245,7 @@ sides of the connection, these *incompatible* components can coexist within a
 model.
 
 In OpenMDAO, this will be done by setting up an :term:`ObjServerFactory` in a
-self-contained Python environment that was created using zc.buildout and having
+self-contained Python environment that was created using ``zc.buildout`` and having
 each :term:`ObjServer` spawned from that factory use that factory's environment.
 Each buildout environment can run a different Python version and can also
 have its own set of modules installed.
@@ -292,7 +292,7 @@ that is not compatible with OpenMDAO, although the next version will have an
 LGPL license, which is compatible. It is assumed that PyQt, the python wrapper
 for Qt will have a similar license to Qt, but this is not certain. 
 
-If a web based interface is used, there are questions about the richness of the
+If a web-based interface is used, there are questions about the richness of the
 interface relative to a traditional GUI. There are a number of javascript
 libraries like jquery_ and dojo_ for example that are still relatively immature,
 but they offer the promise of a browser based application with interactivity

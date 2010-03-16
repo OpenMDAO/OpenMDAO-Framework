@@ -52,7 +52,8 @@ apps or packages are not already installed:
 
 
 On **OS X**, make sure to install *Xcode*. It's included on the OS X install
-disk. Next, download and run the following installers if they're not already
+disk, and installing it will give you access to *gcc* and *gfortran*.
+Next, download and run the following installers if they're not already
 installed:
 
     - `Python 2.6`__
@@ -77,6 +78,9 @@ a 'bleeding edge' version, then you can obtain the source by the following:
 ::
 
     bzr branch lp:openmdao <your_branch_name>
+
+
+.. _Building:
 
 
 Building
@@ -117,10 +121,10 @@ To run the buildout, type
 
     bin/buildout
     
-or ``bin\buildout`` on Windows,
+or ``bin\buildout`` on Windows.
 
 
-From the ``buildout`` directory.  This could take a while depending upon whether
+This could take a while depending upon whether
 it's your first OpenMDAO buildout and whether you have an installed egg cache.
 
 

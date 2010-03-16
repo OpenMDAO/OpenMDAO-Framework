@@ -147,6 +147,28 @@ Use italics for the following:
 Capitalization 
 ---------------
 
+*Class Names*
++++++++++++++
+
+Always capitalize class names (e.g., Component, Assembly, Driver, Engine, etc.).
+Sometimes, a  class represents a concept having the same name. In that case, the name
+of the concept would generally *not* be capitalized. 
+
+*Fortran*
++++++++++
+
+Capitalize only the first letter of *Fortran* unless you are
+referring to a version earlier than Fortran 90, when it was known as FORTRAN (e.g.,
+FORTRAN 77).
+
+
+*HTML*
+++++++
+
+This initialism stands for *HyperText Markup Language* and should be typed in
+all caps.
+
+
 *Python* 
 ++++++++
 
@@ -158,15 +180,28 @@ This rule also applies to other programming languages or software programs; for 
 *Enthought, Inc.* is capitalized, but *enthoughts.traits.api* is not. 
 
 
-*Class Names*
-+++++++++++++
+*reStructuredText*
+++++++++++++++++++
 
-Always capitalize class names (e.g., Component, Assembly, Driver, Engine, etc.).
-Sometimes, a  class represents a concept having the same name. In that case, the name
-of the concept would generally *not* be capitalized. 
+Please capitlaize the appropriate letters and type it as one word:
+reStructuredText.
 
 
-Numbers
+*website*
++++++++++
+
+In our OpenMDAO documents, we will not capitalize *website* but use all lower case letters
+(one word). Please **do not** use any of the following variants: *Web site, web site,* or
+*Website.* Not only is *website* easier to type, but in 2003, in a survey of over 150 WordBiz Report
+subscribers, 65% of those surveyed preferred *website* -- even those who thought *Web site*
+was correct. And as noted in *The American Heritage Dictionary,* 4th ed., the use of
+*website* reflects the trend of other technological expressions which have moved to
+unhyphenated forms as they become more familiar (e.g., email, online). The main thing is
+consistency, so please be consistent and use *website.* 
+
+
+
+Numbers 
 -------
 
 *  Write out numbers between zero and nine (0--9) when they are modifiers (two

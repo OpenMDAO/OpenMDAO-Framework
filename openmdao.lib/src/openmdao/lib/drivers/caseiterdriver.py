@@ -3,12 +3,13 @@ import Queue
 import sys
 import threading
 
-from enthought.traits.api import Range, Bool, Instance
+from enthought.traits.api import Bool, Instance
 
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.resource import ResourceAllocationManager as RAM
+from openmdao.lib.traits.int import Int
 from openmdao.util.filexfer import filexfer
 
 __all__ = ('CaseIteratorDriver',)
@@ -40,8 +41,6 @@ class CaseIteratorDriver(Driver):
     .. parsed-literal::
 
        TODO: define interface for 'recorder'.
-       TODO: support stepping and resuming execution.
-       TODO: improve response to a stop request.
 
     """
 
@@ -49,19 +48,19 @@ class CaseIteratorDriver(Driver):
     recorder = Instance(object, desc='Something to append() to.', required=True)
     model = Instance(Component, desc='Model to be executed.', required=True)
     
-    sequential = Bool(True, iostatus='in',
+    sequential = Bool(True, iotype='in',
                       desc='Evaluate cases sequentially.')
 
-    reload_model = Bool(True, iostatus='in',
+    reload_model = Bool(True, iotype='in',
                         desc='Reload model between executions.')
 
-    max_retries = Range(value=1, low=0, iostatus='in',
+    max_retries = Int(1, low=0, iotype='in',
                         desc='Number of times to retry a case.')
 
     def __init__(self, *args, **kwargs):
         super(CaseIteratorDriver, self).__init__(*args, **kwargs)
 
-        self._iter = None
+        self._iter = None  # Set to None when iterator is empty.
         self._replicants = 0
 
         self._egg_file = None
@@ -87,20 +86,57 @@ class CaseIteratorDriver(Driver):
 
     def execute(self):
         """ Runs each case in `iterator` and records results in `recorder`. """
+        self._setup()
+        self.resume()
+
+    def resume(self):
+        """ Resume execution. """
+        self._stop = False
+        if self._iter is None:
+            self.raise_exception('Run already complete', RuntimeError)
+
         try:
-            self._start()
+            if self.sequential:
+                self.info('Start sequential evaluation.')
+                while self._iter is not None:
+                    if self._stop:
+                        break
+                    try:
+                        self.step()
+                    except StopIteration:
+                        break
+            else:
+                self.info('Start concurrent evaluation.')
+                self._start()
         finally:
             self._cleanup()
-        if self._stop:
-            self.raise_exception(RunStopped)
 
-    def _start(self, replicate=True):
+        if self._stop:
+            self.raise_exception('Run stopped', RunStopped)
+
+    def step(self):
+        """ Evaluate the next case. """
+        self._stop = False
+        if self._iter is None:
+            self._setup()
+
+        try:
+            self._todo.append(self._iter.next())
+        except StopIteration:
+            if not self._rerun:
+                self._iter = None
+                raise
+
+        self._server_cases[None] = None
+        self._server_states[None] = _EMPTY
+        while self._server_ready(None, stepping=True):
+            pass
+
+    def _setup(self, replicate=True):
         """
-        Start evaluating cases. If `replicate`, then replicate the model
+        Setup to begin new run. If `replicate`, then replicate the model
         and save to an egg file first.
         """
-
-        # Clear server data.
         self._servers = {}
         self._top_levels = {}
         self._queues = {}
@@ -114,19 +150,7 @@ class CaseIteratorDriver(Driver):
 
         self._iter = self.iterator.__iter__()
 
-        if self.sequential:
-            self.info('Start sequential evaluation.')
-            try:
-                self._todo.append(self._iter.next())
-            except StopIteration:
-                pass
-            else:
-                self._server_cases[None] = None
-                self._server_states[None] = _EMPTY
-                while self._server_ready(None):
-                    pass
-        else:
-            self.info('Start concurrent evaluation.')
+        if not self.sequential:
             if replicate or self._egg_file is None:
                 # Save model to egg.
                 # Must do this before creating any locks or queues.
@@ -137,87 +161,97 @@ class CaseIteratorDriver(Driver):
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
 
-            # Determine maximum number of servers available.
-            resources = {
-                'required_distributions':self._egg_required_distributions,
-                'orphan_modules':self._egg_orphan_modules,
-                'python_version':sys.version[:3]}
-            max_servers = RAM.max_servers(resources)
-            self.debug('max_servers %d', max_servers)
-            if max_servers <= 0:
-                msg = 'No servers supporting required resources %s' % resources
-                self.raise_exception(msg, RuntimeError)
+    def _start(self):
+        """ Start evaluating cases concurrently. """
 
-            # Kick off initial wave of cases.
-            self._server_lock = threading.Lock()
-            self._reply_queue = Queue.Queue()
-            n_servers = 0
-            while n_servers < max_servers:
-                # Get next case. Limits servers started if max_servers > cases.
-                try:
-                    self._todo.append(self._iter.next())
-                except StopIteration:
-                    if not self._rerun:
-                        break
+        # Determine maximum number of servers available.
+        resources = {
+            'required_distributions':self._egg_required_distributions,
+            'orphan_modules':self._egg_orphan_modules,
+            'python_version':sys.version[:3]}
+        max_servers = RAM.max_servers(resources)
+        self.debug('max_servers %d', max_servers)
+        if max_servers <= 0:
+            msg = 'No servers supporting required resources %s' % resources
+            self.raise_exception(msg, RuntimeError)
 
-                # Start server worker thread.
-                n_servers += 1
-                name = '%s_%d' % (self.name, n_servers)
-                self.debug('starting worker for %s', name)
-                self._servers[name] = None
-                self._in_use[name] = True
-                self._server_cases[name] = None
-                self._server_states[name] = _EMPTY
-                server_thread = threading.Thread(target=self._service_loop,
-                                                 args=(name, resources))
-                server_thread.daemon = True
-                server_thread.start()
+        # Kick off initial wave of cases.
+        self._server_lock = threading.Lock()
+        self._reply_queue = Queue.Queue()
+        n_servers = 0
+        while n_servers < max_servers:
+            if self._stop:
+                break
 
-                if sys.platform != 'win32':
-                    # Process any pending events.
-                    while self._busy():
-                        try:
-                            name, result = self._reply_queue.get(True, 0.1)
-                        except Queue.Empty:
-                            break  # Timeout.
+            if self._iter is None:
+                break
+
+            # Get next case. Limits servers started if max_servers > cases.
+            try:
+                self._todo.append(self._iter.next())
+            except StopIteration:
+                if not self._rerun:
+                    self._iter = None
+                    break
+
+            # Start server worker thread.
+            n_servers += 1
+            name = '%s_%d' % (self.name, n_servers)
+            self.debug('starting worker for %s', name)
+            self._servers[name] = None
+            self._in_use[name] = True
+            self._server_cases[name] = None
+            self._server_states[name] = _EMPTY
+            server_thread = threading.Thread(target=self._service_loop,
+                                             args=(name, resources))
+            server_thread.daemon = True
+            server_thread.start()
+
+            if sys.platform != 'win32':
+                # Process any pending events.
+                while self._busy():
+                    try:
+                        name, result = self._reply_queue.get(True, 0.1)
+                    except Queue.Empty:
+                        break  # Timeout.
+                    else:
+                        if self._servers[name] is None:
+                            self.debug('server startup failed for %s', name)
+                            self._in_use[name] = False
                         else:
-                            if self._servers[name] is None:
-                                self.debug('server startup failed for %s', name)
-                                self._in_use[name] = False
-                            else:
-                                self._in_use[name] = self._server_ready(name)
+                            self._in_use[name] = self._server_ready(name)
 
-            if sys.platform == 'win32':
-                # Don't start server processing until all servers are started,
-                # otherwise we have egg removal issues.
-                for name in self._in_use.keys():
-                    name, result = self._reply_queue.get()
-                    if self._servers[name] is None:
-                        self.debug('server startup failed for %s', name)
-                        self._in_use[name] = False
-
-                # Kick-off serialized servers.
-                for name in self._in_use.keys():
-                    if self._in_use[name]:
-                        self._in_use[name] = self._server_ready(name)
-
-            # Continue until no servers are busy.
-            while self._busy():
+        if sys.platform == 'win32':
+            # Don't start server processing until all servers are started,
+            # otherwise we have egg removal issues.
+            for name in self._in_use.keys():
                 name, result = self._reply_queue.get()
-                self._in_use[name] = self._server_ready(name)
+                if self._servers[name] is None:
+                    self.debug('server startup failed for %s', name)
+                    self._in_use[name] = False
 
-            # Shut-down (started) servers.
-            for queue in self._queues.values():
-                queue.put(None)
-            for i in range(len(self._queues)):
-                try:
-                    name, status = self._reply_queue.get(True, 1)
-                except Queue.Empty:
-                    self.warning('Timeout waiting for %s to shut-down.', name)
+            # Kick-off started servers.
+            for name in self._in_use.keys():
+                if self._in_use[name]:
+                    self._in_use[name] = self._server_ready(name)
 
-            # Clean up unpickleables.
-            self._reply_queue = None
-            self._server_lock = None
+        # Continue until no servers are busy.
+        while self._busy():
+            name, result = self._reply_queue.get()
+            self._in_use[name] = self._server_ready(name)
+
+        # Shut-down (started) servers.
+        for queue in self._queues.values():
+            queue.put(None)
+        for i in range(len(self._queues)):
+            try:
+                name, status = self._reply_queue.get(True, 1)
+            except Queue.Empty:
+                self.warning('Timeout waiting for %s to shut-down.', name)
+
+        # Clean up unpickleables.
+        self._reply_queue = None
+        self._server_lock = None
 
     def _busy(self):
         """ Return True while at least one server is in use. """
@@ -229,10 +263,11 @@ class CaseIteratorDriver(Driver):
             os.remove(self._egg_file)
             self._egg_file = None
 
-    def _server_ready(self, server):
+    def _server_ready(self, server, stepping=False):
         """
         Responds to asynchronous callbacks during :meth:`execute` to run cases
         retrieved from `iterator`.  Results are processed by `recorder`.
+        If `stepping`, then we don't grab any new cases.
         Returns True if this server is still in use.
         """
         state = self._server_states[server]
@@ -254,18 +289,24 @@ class CaseIteratorDriver(Driver):
                 in_use = False
 
             # Select case to run.
-            if self._todo:
+            elif self._todo:
                 self.debug('    run startup case')
                 self._run_case(self._todo.pop(0), server)
             elif self._rerun:
                 self.debug('    rerun case')
                 self._run_case(self._rerun.pop(0), server, rerun=True)
+            elif self._iter is None:
+                self.debug('    no more cases')
+                in_use = False
+            elif stepping:
+                in_use = False
             else:
                 try:
                     case = self._iter.next()
                 except StopIteration:
                     self.debug('    no more cases')
                     in_use = False
+                    self._iter = None
                 else:
                     self.debug('    run next case')
                     self._run_case(case, server)

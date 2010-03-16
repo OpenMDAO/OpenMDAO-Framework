@@ -20,10 +20,10 @@ from openmdao.util.wrkpool import WorkerPool
 
 class ResourceAllocationManager(object):
     """
-    The allocation manager maintains a list of allocators which are used
-    to select the 'best fit' for a particular resource request.  The manager
-    is initialized with a :class:`LocalAllocator` for the local host.
-    Additional allocators can be added and the manager will look for the
+    The allocation manager maintains a list of :class:`ResourceAllocator`
+    which are used to select the 'best fit' for a particular resource request.
+    The manager is initialized with a :class:`LocalAllocator` for the local
+    host. Additional allocators can be added and the manager will look for the
     best fit across all the allocators.
     """
 
@@ -69,7 +69,7 @@ class ResourceAllocationManager(object):
     def max_servers(resource_desc):
         """
         Returns the maximum number of servers compatible with 'resource_desc`.
-        This shouyld be considered an upper limit on the number of concurrent
+        This should be considered an upper limit on the number of concurrent
         allocations attempted.
         """
         ram = ResourceAllocationManager.get_instance()
@@ -91,7 +91,7 @@ class ResourceAllocationManager(object):
         """
         Determine best resource for `resource_desc` and deploy.
         In the case of a tie, the first allocator in the allocators list wins.
-        Returns (proxy-object, server-dict).
+        Returns ``(proxy-object, server-dict)``.
         """
         for handler in logging._handlerList:
             handler.flush()  # Try to keep log messages sane.
@@ -103,11 +103,11 @@ class ResourceAllocationManager(object):
     def _allocate(self, resource_desc):
         """ Do the allocation. """
         deployment_retries = 0
-        best_score = -1
-        while best_score == -1:
-            best_score, best_criteria, best_allocator = \
-                self._get_scores(resource_desc)
-            if best_score >= 0:
+        best_estimate = -1
+        while best_estimate == -1:
+            best_estimate, best_criteria, best_allocator = \
+                self._get_estimates(resource_desc)
+            if best_estimate >= 0:
                 self._allocations += 1
                 name = 'Sim-%d' % self._allocations
                 self._logger.debug('deploying on %s', best_allocator.name)
@@ -129,30 +129,30 @@ class ResourceAllocationManager(object):
                         self._logger.error('deployment failed too many times.')
                         return (None, None)
                     self._logger.warning('deployment failed, retrying.')
-                    best_score = -1
-            elif best_score != -1:
+                    best_estimate = -1
+            elif best_estimate != -1:
                 return (None, None)
             else:
                 time.sleep(1)  # Wait a bit between retries.
 
-    def _get_scores(self, resource_desc):
-        """ Return best (score, criteria, allocator). """
-        best_score = -2
+    def _get_estimates(self, resource_desc):
+        """ Return best (estimate, criteria, allocator). """
+        best_estimate = -2
         best_criteria = None
         best_allocator = None
 
         for allocator in self._allocators:
-            score, criteria = allocator.rate_resource(resource_desc)
+            estimate, criteria = allocator.time_estimate(resource_desc)
             self._logger.debug('allocator %s returned %g',
-                               allocator.name, score)
-            if (best_score == -2 and score >= -1) or \
-               (best_score == 0  and score >  0) or \
-               (best_score >  0  and score < best_score):
-                best_score = score
+                               allocator.name, estimate)
+            if (best_estimate == -2 and estimate >= -1) or \
+               (best_estimate == 0  and estimate >  0) or \
+               (best_estimate >  0  and estimate < best_estimate):
+                best_estimate = estimate
                 best_criteria = criteria
                 best_allocator = allocator
 
-        return (best_score, best_criteria, best_allocator)
+        return (best_estimate, best_criteria, best_allocator)
 
     @staticmethod
     def release(server):
@@ -197,10 +197,11 @@ class ResourceAllocator(ObjServerFactory):
         """
         raise NotImplementedError
 
-    def rate_resource(self, resource_desc):
+    def time_estimate(self, resource_desc):
         """
-        Return ``(score, criteria)`` indicating how well this resource allocator
-        can satisfy the `resource_desc` request.  The score will be:
+        Return ``(estimate, criteria)`` indicating how well this resource
+        allocator can satisfy the `resource_desc` request.  The estimate will
+        be:
 
         - >0 for an estimate of walltime (seconds).
         -  0 for no estimate.
@@ -208,7 +209,7 @@ class ResourceAllocator(ObjServerFactory):
         - -2 for no support for `resource_desc`.
 
         The returned criteria is a dictionary containing information related
-        to the score, such as load averages, unsupported resources, etc.
+        to the estimate, such as load averages, unsupported resources, etc.
         """
         raise NotImplementedError
 
@@ -246,7 +247,7 @@ class ResourceAllocator(ObjServerFactory):
     def deploy(self, name, resource_desc, criteria):
         """
         Deploy a server suitable for `resource_desc`.
-        `criteria` is the dictionary returned by :meth:`rate_resource`.
+        `criteria` is the dictionary returned by :meth:`time_estimate`.
         Returns a proxy to the deployed server.
         """
         raise NotImplementedError
@@ -258,7 +259,7 @@ class LocalAllocator(ResourceAllocator):
     taken as the number of cpus/cores available.  Otherwise the number is
     taken from :meth:`multiprocessing.cpu_count`.  The `max_load`
     parameter specifies the maximum cpu-adjusted load allowed when determining
-    if another server may be started in :meth:`rate_resource`.
+    if another server may be started in :meth:`time_estimate`.
     """
 
     def __init__(self, name='LocalAllocator', total_cpus=0, max_load=1.0):
@@ -277,15 +278,15 @@ class LocalAllocator(ResourceAllocator):
         Returns `total_cpus` * `max_load` if `resource_desc` is supported,
         otherwise zero.
         """
-        score, criteria = self._check_compatibility(resource_desc, False)
-        if score < 0:
+        estimate, criteria = self._check_compatibility(resource_desc, False)
+        if estimate < 0:
             return 0  # Incompatible with resource_desc.
         return max(int(self.total_cpus * self.max_load), 1)
 
-    def rate_resource(self, resource_desc):
+    def time_estimate(self, resource_desc):
         """
-        Returns ``(score, criteria)`` indicating how well this allocator can
-        satisfy the `resource_desc` request.  The score will be:
+        Returns ``(estimate, criteria)`` indicating how well this allocator can
+        satisfy the `resource_desc` request.  The estimate will be:
 
         - >0 for an estimate of walltime (seconds).
         -  0 for no estimate.
@@ -293,11 +294,11 @@ class LocalAllocator(ResourceAllocator):
         - -2 for no support for `resource_desc`.
 
         The returned criteria is a dictionary containing information related
-        to the score, such as load averages, unsupported resources, etc.
+        to the estimate, such as load averages, unsupported resources, etc.
         """
-        score, criteria = self._check_compatibility(resource_desc, True)
-        if score < 0:
-            return (score, criteria)
+        estimate, criteria = self._check_compatibility(resource_desc, True)
+        if estimate < 0:
+            return (estimate, criteria)
 
         # Check system load.
         try:
@@ -319,7 +320,8 @@ class LocalAllocator(ResourceAllocator):
     def _check_compatibility(self, resource_desc, log_failure):
         """
         Check compatibility against `resource_desc`.
-        Returns ``(score, criteria)``, where `score` >= 0 implies compatibility.
+        Returns ``(estimate, criteria)``, where `estimate` >= 0 implies
+        compatibility.
         """
         for key, value in resource_desc.items():
             if key == 'localhost':
@@ -336,20 +338,20 @@ class LocalAllocator(ResourceAllocator):
                     return (-2, {key : value})
 
             elif key == 'required_distributions':
-                score, info = self.check_required_distributions(value)
-                if score < 0:
+                estimate, info = self.check_required_distributions(value)
+                if estimate < 0:
                     if log_failure:
                         self._logger.debug('Rating failed:' \
                                            ' not found or version conflict.')
-                    return (score, info)
+                    return (estimate, info)
 
             elif key == 'orphan_modules':
-                score, info = self.check_orphan_modules(value)
-                if score < 0:
+                estimate, info = self.check_orphan_modules(value)
+                if estimate < 0:
                     if log_failure:
                         self._logger.debug("Rating failed:" \
                                            " can't import module(s).")
-                    return (score, info)
+                    return (estimate, info)
 
             elif key == 'python_version':
                 if sys.version[:3] != value:
@@ -506,10 +508,10 @@ class ClusterAllocator(object):
                                allocator.get_name(), msg)
         return count
 
-    def rate_resource(self, resource_desc):
+    def time_estimate(self, resource_desc):
         """
-        Returns ``(score, criteria)`` indicating how well this allocator
-        can satisfy the `resource_desc` request.  The score will be:
+        Returns ``(estimate, criteria)`` indicating how well this allocator
+        can satisfy the `resource_desc` request.  The estimate will be:
 
         - >0 for an estimate of walltime (seconds).
         -  0 for no estimate.
@@ -517,19 +519,19 @@ class ClusterAllocator(object):
         - -2 for no support for `resource_desc`.
 
         The returned criteria is a dictionary containing information related
-        to the score, such as load averages, unsupported resources, etc.
+        to the estimate, such as load averages, unsupported resources, etc.
 
         This allocator polls each :class:`LocalAllocator` in the cluster
         to find the best match and returns that.  The best allocator is saved
         in the returned criteria for a subsequent :meth:`deploy`.
         """
         with self._lock:
-            best_score = -2
+            best_estimate = -2
             best_criteria = None
             best_allocator = None
  
             # Prefer not to repeat use of just-used allocator.
-            prev_score = -2
+            prev_estimate = -2
             prev_criteria = None
             prev_allocator = self._last_deployed
             self._last_deployed = None
@@ -541,18 +543,19 @@ class ClusterAllocator(object):
                 except Queue.Empty:
                     break
 
-            # Get scores via worker threads.
+            # Get estimates via worker threads.
             todo = []
             max_workers = 10
             for i, allocator in enumerate(self._allocators.values()):
                 if i < max_workers:
                     worker_q = WorkerPool.get()
-                    worker_q.put((self._get_rating, (allocator, resource_desc),
+                    worker_q.put((self._get_estimate,
+                                  (allocator, resource_desc),
                                   {}, self._reply_q))
                 else:
                     todo.append(allocator)
 
-            # Process scores.
+            # Process estimates.
             for i in range(len(self._allocators)):
                 worker_q, retval, exc, trace = self._reply_q.get()
                 if exc:
@@ -564,60 +567,60 @@ class ClusterAllocator(object):
                 except IndexError:
                     WorkerPool.release(worker_q)
                 else:
-                    worker_q.put((self._get_rating,
+                    worker_q.put((self._get_estimate,
                                   (next_allocator, resource_desc),
                                   {}, self._reply_q))
 
-                allocator, score, criteria = retval
-                if score is None:
+                allocator, estimate, criteria = retval
+                if estimate is None:
                     continue
 
                 if allocator is prev_allocator:
-                    prev_score = score
+                    prev_estimate = estimate
                     prev_criteria = criteria
-                elif (best_score <= 0 and score > best_score) or \
-                     (best_score >  0 and score < best_score):
-                    best_score = score
+                elif (best_estimate <= 0 and estimate > best_estimate) or \
+                     (best_estimate >  0 and estimate < best_estimate):
+                    best_estimate = estimate
                     best_criteria = criteria
                     best_allocator = allocator
-                elif (best_score == 0 and score == 0):
+                elif (best_estimate == 0 and estimate == 0):
                     best_load = best_criteria['loadavgs'][0]
                     load = criteria['loadavgs'][0]
                     if load < best_load:
-                        best_score = score
+                        best_estimate = estimate
                         best_criteria = criteria
                         best_allocator = allocator
 
             # If no alternative, repeat use of previous allocator.
-            if best_score < 0 and prev_score >= 0:
-                best_score = prev_score
+            if best_estimate < 0 and prev_estimate >= 0:
+                best_estimate = prev_estimate
                 best_criteria = prev_criteria
                 best_allocator = prev_allocator
 
             # Save best allocator in criteria in case we're asked to deploy.
             if best_criteria is not None:
                 best_criteria['allocator'] = best_allocator
-            return (best_score, best_criteria)
+            return (best_estimate, best_criteria)
 
-    def _get_rating(self, allocator, resource_desc):
-        """ Get (score, criteria) from an allocator. """
+    def _get_estimate(self, allocator, resource_desc):
+        """ Get (estimate, criteria) from an allocator. """
         try:
-            score, criteria = allocator.rate_resource(resource_desc)
-            if score == 0:
+            estimate, criteria = allocator.time_estimate(resource_desc)
+            if estimate == 0:
                 self._logger.debug('allocator %s returned %g (%g)',
-                                   allocator.get_name(), score,
+                                   allocator.get_name(), estimate,
                                    criteria['loadavgs'][0])
             else:
                 self._logger.debug('allocator %s returned %g',
-                                   allocator.get_name(), score)
+                                   allocator.get_name(), estimate)
         except Exception, exc:
             msg = '%s\n%s' % (exc, traceback.format_exc())
             self._logger.error('allocator %s caught exception %s',
                                allocator.get_name(), msg)
-            score = None
+            estimate = None
             criteria = None
 
-        return (allocator, score, criteria)
+        return (allocator, estimate, criteria)
 
     def deploy(self, name, resource_desc, criteria):
         """

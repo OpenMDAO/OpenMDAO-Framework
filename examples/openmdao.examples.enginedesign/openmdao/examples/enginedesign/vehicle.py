@@ -10,15 +10,11 @@
 from enthought.traits.api import implements, Interface
 
 from openmdao.main.api import Assembly, set_as_top
-from openmdao.lib.traits.unitsfloat import UnitsFloat
+from openmdao.lib.api import Float
 
 from openmdao.examples.enginedesign.transmission import Transmission
 from openmdao.examples.enginedesign.chassis import Chassis
 from openmdao.examples.enginedesign.engine_wrap_c import Engine
-#try:
-#    from openmdao.examples.enginedesign.engine_wrap_c import Engine
-#except:
-#    from openmdao.examples.enginedesign.engine import Engine
 
     
 class IVehicle(Interface):
@@ -29,10 +25,10 @@ class Vehicle(Assembly):
     
     implements(IVehicle)
     
-    tire_circumference = UnitsFloat(75.0, iostatus='in', units='inch', 
+    tire_circumference = Float(75.0, iotype='in', units='inch', 
                                     desc='Circumference of tire (inches)')
     
-    velocity = UnitsFloat(75.0, iostatus='in', units='mi/h', 
+    velocity = Float(75.0, iotype='in', units='mi/h', 
                 desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
     def __init__(self, directory=''):

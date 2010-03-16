@@ -1,5 +1,8 @@
 .. index:: SimpleAdder
 
+.. index:: pair: plugin; building from a Python Module
+
+
 Building a Component Plugin from a Python Module
 ================================================
 
@@ -16,14 +19,14 @@ need to function properly as an OpenMDAO component.
 
 .. testcode::plugin_example
 
-    from enthought.traits.api import Float
+    from openmdao.lib.api import Float
     
     from openmdao.main.api import Component
 
     class SimpleAdder(Component):
-        a = Float(0.0, iostatus='in')
-        b = Float(0.0, iostatus='in')
-        c = Float(0.0, iostatus='out')
+        a = Float(0.0, iotype='in')
+        b = Float(0.0, iotype='in')
+        c = Float(0.0, iotype='out')
     
         def execute(self):
              self.c = self.a + self.b
@@ -31,38 +34,34 @@ need to function properly as an OpenMDAO component.
 
 The code defines the class *SimpleAdder*, which inherits from the
 Component class defined in ``openmdao.main.api``, so we have to import it from
-there. The function in our domponent that performs a computation is called
+there. The function in our component that performs a computation is called
 ``execute()``, and there we define *c* as the sum of *a* and *b*.
 The *self* object that is passed as an argument to ``execute()`` represents an
 instance of our *SimpleAdder* class.
 
-*SimpleAdder* has three traits of type *Float* with the names *a*, *b*, and
+*SimpleAdder* has three Public Variables of type *Float* with the names *a*, *b*, and
 *c*. All three attributes have a default value of 0.0. Attributes *a* and *b*
-are inputs, so we specify that they have an *iostatus* of *'in'*. Attribute
-*c* is an output, so it has an *iostatus* of *'out'*.
+are inputs, so we specify that they have an *iotype* of *'in'*. Attribute
+*c* is an output, so it has an *iotype* of *'out'*.
 
-.. index:: traits
-
-The *Float* trait is defined in the package ``enthought.traits.api``, so we have
-to import it from there before we can use it. The ``enthought.traits.api``
+The *Float* variable is defined in the package ``openmdao.lib.api``, so we have
+to import it from there before we can use it. This 
 package defines a wide variety of traits, including basic types like *Int*,
-*Str*, and *Bool*; containers like *List* and *Dictionary*; and many others.
+*Str*, and *Bool*; containers like *List* and *Dictionary*; and many others. Public Variables
+are actually based off of Enthought's Traits, and a larger selection of less commonly-used
+traits are available by importing from the package ``enthought.traits.api``.
 To learn more about traits, you may want to look at the 
 `Traits User Manual <http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_
 and the list of 
 `available traits <http://code.enthought.com/projects/files/ETS32_API/enthought.traits.api.html>`_.
 
-OpenMDAO also supplies some special-purpose traits as well, e.g.,
-*UnitsFloat*, a floating point attribute with units. OpenMDAO traits can be
-found in ``openmdao.lib.traits``. 
-
 At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply
 import the module containing it and use it in a model; but we want more than
 that. By packaging our plugin in a Python :term:`egg`, we can make it more usable by
 others in the OpenMDAO community. We can give our egg a version identifier and
-other :term:`metadata` that will help prospective users determine if our egg will meet
-their needs. We can also upload our egg to a package index so that others can
-install it via ``easy_install`` or ``zc.buildout``.
+other :term:`metadata` that will help you determine if our egg will meet
+your needs. We can also upload our egg to a package index so that it can be
+installed via ``easy_install`` or ``zc.buildout``.
 
 .. index:: egg; creation
 
@@ -170,7 +169,7 @@ within the OpenMDAO framework:
     point is specified by its name, followed by an equals sign, followed by
     dotted module path (dotted path you would use to import the module in
     Python), followed by a colon and the name of the plugin class. The value
-    of *entry_points* should be a string in INI file format, or a dictionary. 
+    of *entry_points* should be a string in INI file format or a dictionary. 
     
         
     For example:
@@ -184,7 +183,7 @@ within the OpenMDAO framework:
         [openmdao.drivers]
         MyDriver = mydriver:MyDriver
         """
-        
+   
     or
      
     :: 
@@ -205,6 +204,8 @@ compiled code, then our egg name would also include the name of the platform we'
 since simple_adder is nothing but pure Python code, that's not necessary.
 
 
+.. index:: mod2egg
+
 Egg Creation for the Lazy
 --------------------------
 
@@ -219,7 +220,6 @@ of the egg and the module to use to generate the egg.  For example, the command
    
    
 will generate the same egg that we built manually earlier in this example.
-
 
 Building a Variable Plugin from a Python Module
 ===============================================

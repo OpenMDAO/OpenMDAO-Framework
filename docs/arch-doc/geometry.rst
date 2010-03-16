@@ -42,19 +42,16 @@ can be directly set:
 
 .. testsetup:: parameter_interface
 
-	from openmdao.main.api import Component
-	from openmdao.main.api import Assembly
-	from openmdao.lib.drivers.conmindriver import CONMINdriver
-	from openmdao.lib.traits.unitsfloat import UnitsFloat
-	from enthought.traits.api import Bool
+	from openmdao.main.api import Component, Assembly
+	from openmdao.lib.api import Float, Bool, CONMINdriver
 	
 	class GeoMan(Component):
 
-	    radius = UnitsFloat(7.0, low=1., high=20.0, iostatus='in', 
+	    radius = Float(7.0, low=1., high=20.0, iotype='in', 
                      units='m',  desc='radius')		
-	    height = UnitsFloat(10.0, low=1., high=50.0, iostatus='in', 
+	    height = Float(10.0, low=1., high=50.0, iotype='in', 
                      units='m',  desc='height')	
-	    fillet1 = Bool(True, iostatus='in')	
+	    fillet1 = Bool(True, iotype='in')	
 	
 	    def __init__(self, directory=''):
 	        """ Creates a new Vehicle Assembly object """
@@ -142,7 +139,7 @@ states, and tags, from a saved egg.
 Associates a geometric entity with some metadata. This is useful for marking
 an entity for later use by an analysis tool (e.g., marking loads and boundary
 conditions.) The most straightforward way to implement the tags' storage would
-be to create each tag as an OpenMDAO variable, accessed via its **tag_name.**
+be to create each tag as an OpenMDAO variable, accessed via its *tag_name.*
 
 **(Visualization)**
 
@@ -167,7 +164,7 @@ that occurs.
 
 **load_model(filename)**
 
-Loads the geometry from **filename** into the model.
+Loads the geometry from *filename* into the model.
 
 **parameters = get_parameters()**
 
@@ -228,13 +225,13 @@ Returns the (x,y,z) coordinate for a node in the volume.
 
 **(trange, nodes) = GetEdge(vol, edge)**
 
-Returns the nodes associated with an edge in a given volume. **trange** returns the
+Returns the nodes associated with an edge in a given volume. *trange* returns the
 parameterization *t* in terms of the original curve coordinate (*t*).
 
 **(urange, nloop, loops, edges) = GetFace(vol, face)**
 
-Returns the edges associated with a face in a given volume. **nloop** is the
-number of loops, **loops** is the edge loop lengths, and **edges** contains
+Returns the edges associated with a face in a given volume. *nloop* is the
+number of loops, *loops* is the edge loop lengths, and *edges* contains
 the edge indices and orientation.
 
 **(nface, faces, name) = GetBoundary(vol, bound)**
@@ -256,27 +253,27 @@ _________________
 **(point, d1, d2) = PointOnEdge(vol, edge, t, req_derivative)**
 
 Returns the Cartesian coordinate of a point on an edge given the point's coordinate in
-the local (**t**) parameter space used to mesh the edge. First and second
-derivatives can also be returned if available using the **req_derivative parameter**
+the local (*t*) parameter space used to mesh the edge. First and second
+derivatives can also be returned if available using the *req_derivative* parameter
 (0 = no derivatives, 1 = 1st order, 2 = 2nd order).
 
 **(point, du, dv, duu, duv, dvv) = PointOnFace(vol, face, uv, req_derivative)**
 
 Returns the Cartesian coordinate of a point on a face given the point's coordinate in
-the local (**u,v**) parameter space used to mesh the face. First and second
-derivatives can also be returned if available using the **req_derivative** parameter
+the local (*u,v*) parameter space used to mesh the face. First and second
+derivatives can also be returned if available using the *req_derivative* parameter
 (0 = no derivatives, 1 = 1st order, 2 = 2nd order.)
 
 **(point_on_edge, t) = NearestOnEdge(vol, edge, coor, point, t_guess)**
 
 Returns the coordinate of the point on a given edge that lies the closest to the
-input point. The associated **t** parameter is also returned. Some kernels require
+input point. The associated *t* parameter is also returned. Some kernels require
 an initial guess in the form of a point on the edge that is nearby.
 
 **(point_on_face, uv) = NearestOnFace(vol, face, coor, point, uv_guess)**
 
 Returns the coordinate of the point on a given edge that lies the closest to the
-input point. The associated **t** parameter is also returned. Some kernels require
+input point. The associated *t* parameter is also returned. Some kernels require
 an initial guess in the form of a point on the face that is nearby.
 
 **status = InEdge(vol, edge, point)**
@@ -295,7 +292,7 @@ ______________
 
 **(length) = LengthOfEdge(vol, edge, t1, t2)**
 
-Returns the arc length for an edge. Parameters **t1** and **t2** can be used to
+Returns the arc length for an edge. Parameters *t1* and *t2* can be used to
 return the length of a subsection of the edge.
 
 **(arc_length, centroid, bounding_box) = EdgeProperties(vol, edge)**

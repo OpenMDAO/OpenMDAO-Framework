@@ -14,10 +14,10 @@ if sys.platform == 'win32':
 else:
     SIGKILL = signal.SIGKILL
 
-from enthought.traits.api import Bool, Str, Any
+from enthought.traits.api import Any, Bool, Str
 
 from openmdao.main.api import Component
-from openmdao.lib.traits.unitsfloat import UnitsFloat
+from openmdao.lib.traits.float import Float
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 
 
@@ -46,16 +46,16 @@ class ExternalCode(Component):
     PIPE   = subprocess.PIPE
     STDOUT = subprocess.STDOUT
 
-    command = Str('', iostatus='in',
+    command = Str('', iotype='in',
                   desc='Command to be executed.')
 
-    timeout = UnitsFloat(0., low=0., iostatus='in', units='s',
+    timeout = Float(0., low=0., iotype='in', units='s',
                          desc='Max time to wait for command completion.')
 
-    timed_out = Bool(False, iostatus='out',
+    timed_out = Bool(False, iotype='out',
                      desc='True if command timed-out.')
 
-    return_code = Any(0, iostatus='out',
+    return_code = Any(0, iotype='out',
                       desc='Return code from command.')
 
     def __init__(self, doc=None, directory=''):
