@@ -102,7 +102,6 @@ sys.path[2:] = [  prefx+'.zip',
                  prefx,
                  os.path.join(prefx,'lib-dynload'),
                  os.path.join(prefx,'plat-'+sys.platform),
-                 '%s'
                ]
               
 import zc.buildout.buildout
@@ -136,16 +135,15 @@ if 'OPENMDAO_REPO' in os.environ:
     zc.buildout.easy_install._script = _script
     zc.buildout.easy_install._pyscript = _pyscript
     
-""" % os.path.join(bodir, 'plugins')
+"""
 new_sp_win = """
 import os.path
 prefx = os.path.join(sys.prefix,'Lib')
 sys.path[2:] = [  prefx,
                  os.path.join(sys.prefix,'DLLs'),
-                 '%s'
                ]
 import zc.buildout.buildout
-""" % os.path.join(bodir, 'plugins')
+"""
 
 if sys.platform == 'win32':
     new_sp = new_sp_win
