@@ -10,6 +10,8 @@ __all__ = [ "create", "register_factory", "get_available_types" ]
 
 import os
 
+from pkg_resources import parse_version
+
 from openmdao.main.importfactory import ImportFactory
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
@@ -41,8 +43,16 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
 def register_factory(fct):
     """Add a Factory to the factory list."""
     if fct not in _factories:
-        _factories.append(fct)      
-          
+        _factories.append(fct)
+
+def _cmp(tup1, tup2):
+    s1 = tup1[0].lower()
+    s2 = tup2[0].lower()
+    if s1 < s2: return -1
+    elif s1 > s2: return 1
+    else: # s1 == s2
+        return cmp(parse_version(tup1[1]), parse_version(tup2[1]))
+
 def get_available_types(groups=None):
     """Return a set of tuples of the form (typename, dist_version), one
     for each available plugin type in the given entry point groups.
@@ -53,7 +63,7 @@ def get_available_types(groups=None):
     types = []
     for fct in _factories:
         types.extend(fct.get_available_types(groups))
-    return types
+    return sorted(types, _cmp)
 
 
 # register factory that loads plugins via pkg_resources

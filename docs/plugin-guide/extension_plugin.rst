@@ -98,7 +98,7 @@ displacement of node 1, and the frequency of the first mode.
    
 The `F2PY Users Guide <http://cens.ioc.ee/projects/f2py2e/usersguide/index.html>`_ describes three
 ways to use F2PY to generate the Python-callable object. "The Quick Way" is to just run f2py on the
-FORTRAN file, which produces a shared object that containing a function (or functions) that can be
+FORTRAN file, which produces a shared object that contains a function (or functions) that can be
 called from Python. This works for the simplest case, but breaks down when F2PY doesn't know which
 function argumements are inputs and which are outputs. In "The Smart Way", the user specifies the
 input/output intent of each function in the signature file (extension .pyf). Finally, in the

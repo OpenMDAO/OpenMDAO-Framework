@@ -1,7 +1,7 @@
 .. index:: SimpleAdder
 
-Building a Plugin from a Python Module
-======================================
+Building a Component Plugin from a Python Module
+================================================
 
 For this example we'll build a plugin for the component shown in the figure
 :ref:`Conceptual-View-of-a-Simple-Component` (from the *User's Guide*).  This component
@@ -184,7 +184,7 @@ within the OpenMDAO framework:
         [openmdao.drivers]
         MyDriver = mydriver:MyDriver
         """
-	   
+        
     or
      
     :: 
@@ -219,4 +219,97 @@ of the egg and the module to use to generate the egg.  For example, the command
    
    
 will generate the same egg that we built manually earlier in this example.
+
+
+Building a Variable Plugin from a Python Module
+===============================================
+
+Sometimes it's necessary to create a new type of variable that can be passed 
+between OpenMDAO components.  This section describes how to do this using a 
+pure Python OpenMDAO plugin.
+
+Let's assume we want to have a variable that represents a set of cartesian 
+coordinates, with the value of the variable being a 3-tuple of floating point
+values representing the x, y, and z position.  We'll start by creating a 
+file called ``coord.py`` and put the following code in it:
+
+::
+
+    from enthought.traits.api import TraitType
+    
+    class Coordinates(TraitType):
+    
+        def __init__(self, default_value = (0.,0.,0.), **metadata):
+            super(Coordinates, self).__init__(default_value=default_value,
+                                             **metadata)
+    
+        def validate(self, object, name, value):
+            if isinstance(value, tuple) and len(value) == 3 and \
+               all([isinstance(val,float) or isinstance(val,int) for val in value]):
+                return value
+            else:
+                self.error(object, name, value)
+
+
+OpenMDAO uses the *Traits* package from Enthought to implement component
+variables. The base class for custom traits is ``TraitType``, so that's the
+base class for our coordinates variable. If a component or a component class
+contains a TraitType object and that object has a metadata attribute called
+*iostatus*, then that object is exposed to the framework as a variable whose
+value can be passed between components.  One thing to note that can be a 
+little confusing to people first using Traits is that the Trait object itself
+is just a validator and possibly a converter.  The object that actually gets
+passed around between components is the *value* that the trait corresponds to
+and not the trait itself.  For example, if we had a component named *wheel* that 
+contained one of our Coordinates traits named *center_location*, then the value
+of *wheel.center_location* would be a 3-tuple, not a Coordinates object.
+
+We override the base class constructor so we can supply a default value of
+(0.,0.,0.) if the caller doesn't supply one. After that, the only function we
+need to supply is the ``validate`` function, which will be called with the
+following arguments:
+
+    **object**
+        The object that contains the value of our coordinates variable
+    
+    **name**
+        The name of our coordinates variable
+    
+    **value**
+        The value that our current value is being replaced with
+
+
+Our validate function should test that the value we've been called with is
+valid. In this particular case, we just need to verify that the value is a
+3-tuple and it has float or int entries. If the value is acceptable, then we
+just return it. We don't need to do it in this case, but in other custom
+traits, we could convert the value before returning it. If the value
+is not acceptable, then we call the error function, which will generate an
+exception.
+
+That's all of the source code required to make our coordinates variable 
+functional.  The next step is to turn our module into a package and define
+an entry point for our new class.  This is very similar to what we did in the
+section earlier where we made a component plugin, except this time we use
+a different entry point group name.
+
+
+::
+
+
+    from setuptools import setup, find_packages
+    
+    setup(
+        name='coord',
+        version='1.0',
+        packages=find_packages(),
+        install_requires=['Traits>=3.1.0'],
+        entry_points={
+          'openmdao.variable': ['Coordinates = coord:Coordinates']
+        }
+    )
+
+We can create this file by hand or generate it using ``mod2egg`` as we showed in the earlier
+section.
+
 

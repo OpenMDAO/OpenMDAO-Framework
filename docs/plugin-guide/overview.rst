@@ -56,7 +56,7 @@ plugins within a distribution:
 ====================  ================================
 Component             openmado.component 
 --------------------  --------------------------------
-TraitType             openmdao.trait
+TraitType             openmdao.variable
 --------------------  --------------------------------
 Driver                openmdao.driver
 --------------------  --------------------------------
@@ -103,9 +103,8 @@ SimpleAdder plugin is an OpenMDAO Component.
 *Installing an OpenMDAO Plugin*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-
     - TODO: tell how to use easy_install to install plugin 
-          (easy_install -mNq -f http://...  -d <plugin_dir> where <plugin_dir> must be on Python path)
+          (easy_install -mxNq -f http://...  -d <plugin_dir> where <plugin_dir> must be on Python path)
           When we install a plugin, it's dependencies will also be installed and must be on the
           Python path to be used by the system. We may need to write our own plugin installer in 
           order to put plugins in the expected place and to prevent the installation of dependencies

@@ -1201,7 +1201,7 @@ def _get_entry_group(obj):
         # Entry point definitions taken from plugin-guide.
         # Order should be from most-specific to least.
         _get_entry_group.group_map = [
-            (TraitType,          'openmdao.trait'),
+            (TraitType,          'openmdao.variable'),
             (Driver,             'openmdao.driver'),
             (ICaseIterator,      'openmdao.case_iterator'),
             (IResourceAllocator, 'openmdao.resource_allocator'),

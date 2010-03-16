@@ -11,6 +11,10 @@ from pkg_resources import DistributionNotFound, VersionConflict
 from pkg_resources import Requirement, Environment, working_set
 
 from openmdao.main.pkg_res_factory import import_version, PkgResourcesFactory
+from openmdao.main.api import Component, get_available_types
+
+class CoordComp(Component):
+    pass
 
 
 # pylint: disable-msg=C0103
@@ -73,7 +77,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         dist = working_set.find(Requirement.parse('openmdao.test'))
         fact = PkgResourcesFactory(['openmdao.component'], None)
         
-        comp = fact.create('openmdao.test.Box.Box')
+        comp = fact.create('openmdao.test.Box')
         comp.run()
         
     def test_load_version(self):
@@ -130,6 +134,12 @@ class PkgResFactoryTestCase(unittest.TestCase):
         mybar = dumb_loaders[0].create(None)
         self.assertEqual(mybar.version, '1.0')
         
+    def test_get_available_types(self):
+        types = [x[0] for x in get_available_types()]
+        self.assertEqual(types, ['openmdao.lib.CONMINdriver',
+                                 'openmdao.lib.pyevolvedriver',
+                                 'openmdao.test.Box',
+                                 'openmdao.test.HollowSphere'])
         
 if __name__ == "__main__":
     unittest.main()
