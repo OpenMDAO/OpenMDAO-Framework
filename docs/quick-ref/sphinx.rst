@@ -102,7 +102,9 @@ Hyperlinks
 
 **- External links**
 
-Use ```Link text <http://target>`_`` for inline Web links. 
+|  ** *Hyperlink to a specific web address*
+
+Use ```Link text <http://target>`_`` for inline web links. 
 
 For example, typing:
 	 ```Python  2.2.1 <http://www.python.org/download/releases/2.1.1/license/>`_``
@@ -117,8 +119,50 @@ link/mailing address in the text.
 For example, typing:
 	``http://www.python.org/download/releases/2.1.1/license/`` 
 	
-will result in this link:
+will result in this hyperlink:
 	http://www.python.org/download/releases/2.1.1/license/
+
+
+|  ** *Anonymous hyperlinks to more than one web address*
+
+On occasion you may want to use identical text as the hyperlink to different web
+addresses. In such a case, you must create anonymous hyperlinks. No text label precedes
+the web address; however, a double underscore is required after the text link
+(i.e., ```reStructuredTest`__`` in the example that follows) and before the
+web address (e.g., ``.. __: http://docutils.sourceforge.net/rst.html``). 
+
+This is an example where *reStructuredText* acts as the hyperlink to two different web
+addresses. 
+
+You type this:
+    
+:: 
+
+  `reStructuredText`__
+
+  .. __: http://docutils.sourceforge.net/docs/user/rst/quickstart.html
+
+
+to go to the reStructuredText Primer:
+
+`reStructuredText`__
+
+  .. __: http://docutils.sourceforge.net/docs/user/rst/quickstart.html
+
+And you type the same link text but a slightly different web address:
+
+::
+
+  `reStructuredText`__
+
+  .. __: http://docutils.sourceforge.net/docs/user/rst/cheatsheet.txt
+  
+
+to take you to the reStructuredText Cheat Sheet:
+
+`reStructuredText`__
+
+  .. __: http://docutils.sourceforge.net/docs/user/rst/cheatsheet.txt
 
 
 **- Internal links** (to a section title)
