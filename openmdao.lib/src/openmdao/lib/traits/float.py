@@ -25,8 +25,9 @@ class Float(TraitType):
        specified range of values.
        """
     
-    def __init__(self, default_value = None, low=None, high=None,
-                 exclude_low=False, exclude_high=False, **metadata):
+    def __init__(self, default_value=None, iotype=None, desc=None, \
+                 low=None, high=None, exclude_low=False, exclude_high=False, \
+                 units=None, **metadata):
         
         # Determine defalt_value if unspecified
         if default_value is None:
@@ -40,7 +41,19 @@ class Float(TraitType):
         # excludes must be saved locally because we override error()
         self.exclude_low = exclude_low
         self.exclude_high = exclude_high
-
+        
+        # Put units in the metadata dictionary
+        if iotype is not None:
+            metadata['iotype'] = iotype
+            
+        # Put units in the metadata dictionary
+        if desc is not None:
+            metadata['desc'] = desc
+            
+        # Put units in the metadata dictionary
+        if units is not None:
+            metadata['units'] = units
+            
         # The Range trait must be used if High or Low is set
         if low is None and high is None:
             self._validator = TraitFloat(default_value, **metadata)
@@ -65,6 +78,7 @@ class Float(TraitType):
             except:
                 raise TraitError("Units of '%s' are invalid" %
                                  metadata['units'])
+            
             
         super(Float, self).__init__(default_value=default_value,
                                          **metadata)

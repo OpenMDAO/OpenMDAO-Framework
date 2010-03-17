@@ -12,9 +12,9 @@ class Int(Range):
        specified range of values.
        """
     
-    def __init__(self, default_value = None, low=None, high=None,
-                 exclude_low=False, exclude_high=False, **metadata):
-
+    def __init__(self, default_value=None, iotype=None, desc=None, \
+                 low=None, high=None, exclude_low=False, exclude_high=False, \
+                 **metadata):
 
         # Range trait didn't seem to handle "None" correctly when passed on
         # the  command line.
@@ -40,6 +40,14 @@ class Int(Range):
         if not isinstance(high, int):
             raise TraitError("Upper bounds for an Int must be an integer.")
         
+        # Put units in the metadata dictionary
+        if iotype is not None:
+            metadata['iotype'] = iotype
+            
+        # Put units in the metadata dictionary
+        if desc is not None:
+            metadata['desc'] = desc
+            
         super(Int, self).__init__(value=default_value, low=low,
                                   high=high, exclude_low=exclude_low,
                                   exclude_high=exclude_high, **metadata)

@@ -19,9 +19,20 @@ class StringRef(BaseStr):
     variables.
     """
     
-    def __init__(self, default_value=NoDefaultSpecified, **metadata):
+    def __init__(self, default_value=NoDefaultSpecified, iotype=None, \
+                 desc=None, **metadata):
+        
         if default_value is NoDefaultSpecified:
             default_value = DumbDefault()
+            
+        # Put iotype in the metadata dictionary
+        if iotype is not None:
+            metadata['iotype'] = iotype
+            
+        # Put units in the metadata dictionary
+        if desc is not None:
+            metadata['desc'] = desc
+            
         super(StringRef, self).__init__(default_value, **metadata)
 
     def validate(self, object, name, value):
