@@ -45,14 +45,18 @@ Classes for Validation and Conversion of Component Attributes
 =============================================================
 
 Validation and conversion of Component attributes is done using the Traits_
-package. There are a large number of built-in trait types to choose from,
-including Int, Float, Str, Array, List, and many others. You can also define
-your own custom traits by inheriting from TraitType and overriding the
-``validate()`` function. :term:`Traits` also has built-in support for creation
-of graphical editors for each trait. The documentation claims that traits uses
-something called pyface to provide a sort of generalized UI layer that can be
-tied to various GUI libraries on the back end but it's not clear at this point
-whether this functionality will work in the context of a web GUI.
+package. You can define your own custom traits by inheriting from TraitType
+and overriding the ``validate()`` function. :term:`Traits` also has built-in
+support for creation of graphical editors for each trait. The documentation
+claims that traits uses something called pyface to provide a sort of
+generalized UI layer that can be tied to various GUI libraries on the back end
+but it's not clear at this point whether this functionality will work in the
+context of a web GUI.  
+
+In the class diagram below, classes that are part of the enthought.traits
+package are gray, and our custom traits are white. Notice that there are two
+*Float* classes. One is enthought's and one is our version, which includes
+units and range checking.
 
 
 .. _Traits: http://code.enthought.com/projects/traits/documentation.php
