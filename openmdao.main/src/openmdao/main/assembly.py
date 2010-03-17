@@ -29,7 +29,8 @@ class PassthroughTrait(TraitType):
 
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
-    and outputs between its children and how to run a Workflow.
+    and outputs between its children.  When executed, it runs the components
+    in its Workflow.
     """
     drivers = List(IDriver)
     workflow = Instance(Workflow)
@@ -105,7 +106,7 @@ class Assembly (Component):
         return obj
         
     def remove_container(self, name):
-        """Remove the named object from this container."""
+        """Remove the named container object from this container."""
         trait = self.trait(name)
         if trait is not None:
             obj = getattr(self, name)
@@ -342,7 +343,7 @@ class Assembly (Component):
         return False
 
     def execute (self):
-        """By default, run child components in data flow order."""
+        """Runs the components in its workflow."""
         self.workflow.run()
         self._update_boundary_vars()
         

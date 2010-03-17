@@ -23,6 +23,7 @@ class Dataflow(Workflow):
         self._no_ref_graph = nx.DiGraph()
         
     def run(self):
+        """Execute this entire workflow."""
         try:
             super(Dataflow, self).run()
         finally:
