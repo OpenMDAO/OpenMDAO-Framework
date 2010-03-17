@@ -75,7 +75,7 @@ class MetadataTable(object):
                 try:
                     mvalue[name] = dist.get_metadata('EGG-INFO/%s.txt' % name)
                 except:
-                    mvalues[name] = message.get(name, 'UNKNOWN')
+                    mvalues[name] = message.get(name, '')
             meta[dist.project_name] = mvalues
         return meta
     

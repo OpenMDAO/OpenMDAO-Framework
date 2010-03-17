@@ -1,9 +1,10 @@
 
 #public symbols
-__all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory']
+__all__ = ['import_version', 'EntryPtLoader', 'PkgResourcesFactory' ]
 
 import logging
 import copy
+import os.path
 
 # these fail to find pkg_resources when run from pylint
 # pylint: disable-msg=F0401
@@ -11,7 +12,8 @@ import pkg_resources
 from pkg_resources import get_entry_map, get_distribution
 from pkg_resources import Environment, Requirement, DistributionNotFound
     
-from openmdao.main.factory import Factory
+import openmdao.main.factory 
+Factory = openmdao.main.factory.Factory
 
 def import_version(modname, req, env=None):
     """Import the specified module from the package specified in the
@@ -69,12 +71,13 @@ class PkgResourcesFactory(Factory):
     """A Factory that loads plugins using the pkg_resources API, which means
     it searches through egg info of distributions in order to find any entry
     point groups corresponding to openmdao plugin types, e.g.,
-    openmdao.component, openmdao.trait, etc.
+    openmdao.component, openmdao.variable, etc.
     """
     
     def __init__(self, groups, search_path=None):
         super(PkgResourcesFactory, self).__init__()
         self._groups = copy.copy(groups)
+        
         self.update_search_path(search_path)
     
     def update_search_path(self, search_path):
