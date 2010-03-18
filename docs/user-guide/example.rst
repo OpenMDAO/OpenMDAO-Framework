@@ -370,7 +370,8 @@ points, so simulating these driving profiles consumes much more CPU time than th
 
 Using OpenMDAO
 --------------
-OpenMDAO provides two interfaces through which the user interacts to build and execute models -- a graphical user interface and a scripting/command line interface. The graphical interface is currently
+OpenMDAO provides two interfaces through which the user interacts to build and execute 
+models -- a graphical user interface and a scripting/command line interface. The graphical interface is currently
 under developed and is not covered here. This tutorial describes how to build and run models using
 the scripting interface, or more specifically, how to write Python scripts to interact with the OpenMDAO
 framework and components.
@@ -482,9 +483,9 @@ The next step is to add the inputs and outputs that are defined in our model des
 	    torque_ratio = Float(0., iotype='out',
 	             desc='Ratio of output torque to engine torque')    
 
-Note that the addition of inputs and outputs for this component requires several more imports in the first
-two lines. It is important to import only those features that you need from the framework base classes
-instead of loading everything into the workspace. 
+Note that the addition of inputs and outputs for this component requires a couple more imports in the first
+two lines. It is important to import only those features that you need from each framework library rather than
+loading everything into the workspace. 
 
 
 .. Index: Public Variables
@@ -497,9 +498,10 @@ data passed between framework components, containing a value, a default value, o
 also perform their own validation when being assigned to another Public Variable.
 
 The Float and Int constructors are used to create the inputs and outputs on a component for floating point
-and integer input respectively. String variables and arrays are also possible using the String and Array
-constructors. The Public Variable constructors require the first two inputs but also allow several optional parameters to
-be specified.
+and integer inputs respectively. String variables and arrays are also possible using the Str and Array Public
+Variables, which are also found in ``openmdao.lib.api``. Generally, each of these constructors takes several arguments,
+many of which are optional. The only argument that can be unnamed is the default value, which must be the first item
+in the function call if it is unnamed.
 
 .. index:: PEP 8
 
@@ -511,7 +513,7 @@ spaces cannot be used in a variable name. Generally, we've tried to follow the P
 instance names (http://www.python.org/dev/peps/pep-0008/) as well as Python variable names, which proscribes the use of lower case names with words
 separated by underscores. 
 
-The first parameter is the required default value for the data object.
+The first parameter is the default value for the variable.
 
 The parameter *iotype* marks this Public Variable as either an input (*in*) or an output (*out*) to the parent component.
 The parameter *desc* contains a documentation string that describes this variable. This should be used to provide an 
@@ -522,20 +524,18 @@ that is based on part of the Scientific Python package. This Units module allows
 the outputs and inputs of components. The units are defined based on the definitions given in Scientific Python,
 which can be found at :ref:`Summary-of-Units`. If a Public Variable is dimensionless, no unit should be assigned.
 
-There are a couple more parameters of interest that can be seen by inspecting the *__init__* function in
-``engine.py``.
+There are a couple more named arguments that are needed for the Transmission component.
 
 .. _Code3: 
 
 .. testcode:: Code2
 
-        	RPM = Float(1000.0, low=1000., high=6000., iotype='in', 
-                     units='1/min',  desc='Engine RPM')		      
+        current_gear = Int(0, iotype='in', low=0, high=5, \
+                       desc='Current Gear')	      
 
-Here, a minimum and maximum limit have been set for the engine input RPM using the arguments *low* and *high*. If the engine 
+Here, a minimum and maximum limit have been set for the current gear position using the arguments *low* and *high*. If the transmission 
 component is commanded to operate outside of the limits on this input, a TraitError exception will be raised. This
-exception can be caught elsewhere so that some kind of recovery behavior can be defined (e.g., shifting the gear
-in the transmission component to lower the engine RPM.)
+exception can be caught elsewhere so that some kind of recovery behavior can be defined.
 
 Finally, ``transmission.py`` needs to actually do something when it is executed. This code illustrates how to use
 the input and output variables to perform a calculation. 
@@ -570,7 +570,7 @@ variablename is the name given to the variable's constructor. Note that a local 
 created here (e.g., *gear* Vs. *self.current_gear*.) Since we already know the data types and the units that are used in
 these calculations, we don't need the explicit typing or unit checking provided by the Public Variables, so we can bypass any overhead that is
 normally associated with them by assigning their values to an ordinary untyped Python variable. In general this
-should be more efficient, though for simple calculations like this the difference would not be noticeable. The
+should be more efficient, though for simple calculations like this the difference may not be noticeable. The
 type checking and unit checking are absolutely necessary outside of the component boundary, where components are
 connected to each other.
 
@@ -611,7 +611,7 @@ Note that we can also access the value of the input directly:
 	>>> my_engine.bore
 	82.0
 
-While this is perfectly valid, it should be noted that some things may be bypassed by not calling the get function.
+While this is perfectly valid, it should be noted that some things are bypassed by not calling the get function.
 In particular, the direct access may not be able to find the value of the input if some objects are executing on
 remote servers. In such a case, the *get()* function will be able to find the input value.
 	
@@ -668,8 +668,8 @@ Now that Python components representing the three vehicle subsystems have been c
 connected so that they can be executed in sequence. In OpenMDAO, a component that contains a collection of
 other components is called an :term:`Assembly`. The assembly allows a set of components to be linked together by
 connecting their inputs and outputs. The data connections define an execution order based on their dependencies, i.e., components that are upstream in the data flow will be executed prior to those downstream so that input data to a component will always be valid with respect to the other parts of the workflow. Component execution is also lazy, meaning that a component will not execute if its inputs have not changed since its last execution.
-In addition, an assembly can also contain a driver, such as an optimizer or a design study.
-When an assembly does not explicitly contain a driver, the assembly executes the components based on the
+In addition, an assembly can also contain a driver, such as an optimizer or a design of experiments.
+When an assembly does not explicitly contain a driver, the assembly executes the components sequentially based on the
 data connections.
 
 For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission,
@@ -678,8 +678,6 @@ Engine, and Chassis components.
 .. _Code5: 
 
 .. testcode:: Code5
-
-	from enthought.traits.api import implements, Interface
 
 	from openmdao.main.api import Assembly
 	from openmdao.lib.api import Float, Int
@@ -713,16 +711,11 @@ Notice here that an instance of the Transmission, Engine, and Chassis are create
 parent set to "self," which in this context is Vehicle. This way, these components are created as part
 of the assembly, and are accessible through ``Vehicle.Transmission``, etc.
 
-The implements function defines an interface for this object. This will be explained in more detail in the
-section Sockets and Interfaces (??? needs section link).
-
 Now that the components are instantiated in the assembly, they need to be hooked up:
 
 .. testsetup:: Code5
 
 	# Note: This block of code does not display in the documentation.
-
-	from enthought.traits.api import implements, Interface
 
 	from openmdao.main.api import Assembly
 	from openmdao.lib.api import Float, Int
@@ -791,8 +784,9 @@ output of the Vehicle component. This can be done by creating passthroughs in th
 		
 Now, the Vehicle assembly has its own inputs and outputs and can be accessed just like in any other
 component. As the name implies, these passthroughs purely pass data from the assembly input to the contained 
-component inputs. As such, there is no unit conversion as this would not be computationally efficient. The
-engine example problem actually contains components that expects inputs to be in English units (Engine and 
+component inputs. As such, there is no unit conversion as this would not be computationally efficient. 
+
+However, the engine example problem actually contains components that expects inputs to be in English units (Engine and 
 Transmission) as well as a component that expects inputs to be in metric (Chassis). There are two inputs that
 are required by components with units that differ from the assembly level -- velocity and tire_circumference. 
 Unit conversion must be performed on these, so they need to be handled by regular component connections. To
@@ -856,7 +850,8 @@ Now these input are available to connect to the components.
         self.connect('tire_circumference', 'transmission.tire_circ')
 
 This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chassis and 
-Transmission components.
+Transmission components. On the surface, this might seem confusing or perhaps redundant, but it demonstrates
+a way that Assemblies can be used to define a more consistant external interface 
 
 Executing the Vehicle Assembly
 ------------------------------
@@ -967,7 +962,7 @@ for the Vehicle class. In the future, the user might want to replace the current
 will be compatible provided that it has the same interface as the current vehicle model. The interface checking is 
 facilitated by the creation of a Socket in the vehicle simulation assembly.
 
-[???? - Need to add the socket stuff to the driving_sim.py]
+TODO - Define an interface for Vehicle, and add more info on that to this part of the tutorial
 
 **SimVehicle - Outputs:**
 
@@ -988,7 +983,13 @@ EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 Setting up an Optimization Problem
 ----------------------------------
 
-The final step is the creation of a top level assembly which defines the problem using DrivingSim and the vehicle assembly.
+The final step is the creation of a Top Level Assembly which defines the problem using DrivingSim and the vehicle assembly.
+The Top Level Assembly is a container that can be thought of as the workspace where the model is built, or the container that
+ulimately contains the entire model. Functionally, it's no different than an assembly such as Vehicle.py; this implies that
+any OpenMDAO model can be packaged up and inserted into some other model as a component. Generally, the Top Level Assembly
+contains one or more Components or Assemblies. It may also contain a solution Driver, or it may just rely on sequential
+exeuction based on the data flow.
+
 The first problem we would like to solve is a single objective optimization problem where we adjust some subset of the design
 variables to minimize the 0-60 acceleration time. The chosen design variables are the bore and spark angle; the optimal value
 of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second variable cannot
@@ -1093,7 +1094,7 @@ negating the expression:
 	        # CONMIN Objective = Maximize accel_time 
         	self.driver.objective = '-driving_sim.accel_time'
 		
-Expressions can be built up from any number of OpenMDAO variables using Python's mathematical syntax:
+Expressions can be built up from any number of OpenMDAO Public Variables using Python's mathematical syntax:
 
 .. _Code12: 
 
@@ -1104,10 +1105,7 @@ Expressions can be built up from any number of OpenMDAO variables using Python's
 
 Here, a weighted sum of the EPA city and highway fuel economy estimates is used as the objective in a maximization problem.
 
-Solving an Optimization Problem
--------------------------------
+Solving the Optimization Problem
+-------------------------------~
 
-Multiobjective Optimization 
----------------------------
-
-Plugins for this feature are not ready yet, but they are coming soon.
+The Top Level Assembly described in ``engine_optimization.py`` can be executed just like any component or assembly.
