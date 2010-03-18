@@ -18,11 +18,11 @@ Model Composition Classes
 
 The figure `Class Diagram of Core Classes`_ shows the classes that are the
 building blocks of a *model*. A model is a hierarchical structure with an
-:term:`Assembly` at its root. Within the :term:`Assembly` is some number of
+:term:`Assembly` at its root. Within the Assembly is some number of
 :term:`components`, and a :term:`Workflow`, which controls the execution order
 of the components. The components have attributes that can be linked to
 attributes on other components. An Assembly is a Component, which means that it
-can be contained within another :term:`Assembly`. This allows for the creation
+can be contained within another Assembly. This allows for the creation
 of hierarchical models with many levels of nested Assemblies. A :term:`Driver`
 is a Component that repeatedly executes a workflow until some condition is
 met.
@@ -92,12 +92,11 @@ matter.
 Server Classes
 ==============
 
-Simulations are run in one or more :term:`ObjServer` processes, possibly distributed
-among multiple hosts. :term:`ObjServer` processes are created by
-:term:`ObjServerFactory`, either dynamically when a particular component type is
-needed which is not supported in the main simulation server, by the user when starting
-a new simulation via the ServerManager, which acts as a portal, or by the user from
-the command line.
+Simulations are run in one or more :term:`ObjServer` processes, possibly distributed among
+multiple hosts. ObjServer processes are created by :term:`ObjServerFactory`, either dynamically
+when a particular component type is needed which is not supported in the main simulation server,
+by the user when starting a new simulation via the ServerManager, which acts as a portal, or by
+the user from the command line.
 
 The base Server class provides a common mechanism for configuring network
 protocols and services, while the Simulation class contains the top-level

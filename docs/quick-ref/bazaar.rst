@@ -151,7 +151,6 @@ plus (+) or minus (-) sign in front of the changed lines.
 *Viewing the Revision Log*
 ++++++++++++++++++++++++++
 
-
 You can see the history of your branch by browsing its log. To see a complete list of revisions on the current branch
 beginning with the first revision and displaying the most recent revision last, type: 
 
@@ -174,8 +173,12 @@ displayed last, and you will have to scroll up to view the most recent revisions
 
 .. index:: branch; creating
 
+
+
 Creating a Branch from working_main
 -------------------------------------
+
+.. note:: Update for branching from launchpad
 
 You need to be in your OpenMDAO working directory (e.g., pziegfel, ktmoore1), so type:
 
@@ -221,6 +224,8 @@ If you are in your home directory, type:
 
 Merging working_main to Your Branch
 ------------------------------------
+
+.. note:: Update for pulling from launchpad
 
 As you work on your branch, you may want to periodically update it from ``working_main`` to avoid conflicts
 when you merge back. In the example that follows, first we go to ``working_main`` and display the log to see what
@@ -272,6 +277,8 @@ conflict <if-you-have-a-conflict>`. After you have resolved any conflicts or if 
 
 Merging Your Branch to working_main
 ------------------------------------
+
+.. note:: Update for pushing back to launchpad
 
 You need to commit your changes to your local repository before merging your branch to ``working_main``. When
 you commit changes, you must add comments about the revision. If you forget to add "-m" and/or the commit message,
@@ -339,6 +346,9 @@ occurred. See the following example:
 In the above example the "+N" indicates new files or directories. The "M" indicates modified files or
 directories. If a file or directory is deleted, "-D" appears before its name.
 
+.. note:: The graphical interface is not part of Bazaar and is available only to
+   developers at Glenn Research Center (GRC). 
+
 To bring up a graphical interface for displaying the conflicts, type the following:
 
 :: 
@@ -367,7 +377,6 @@ Conflicts will be displayed in colored text across all three files. See the foll
    
    GUI Showing Versions of a File in Conflict
  
-|
   
 In the above example, a new index entry ``CONMIN driver`` shows up in the ``.OTHER`` file (blue background
 and red text). In the ``.THIS`` file on the right, the text with the green background is new. 
@@ -425,3 +434,83 @@ good idea to see what files will be removed, so type:
   %bzr revert		(Reverts to the previous revision.)
   
   
+.. index:: branch; working on
+
+|
+
+.. note:: The next two sections (*Editing/Debugging Source Code* and *Repository
+   Utility*) pertain only to developers at GRC.
+
+
+Editing/Debugging Source Code
+-----------------------------
+
+Wing is a very nice integrated editor and debugger for Python that is available to
+local OpenMDAO developers.  OpenMDAO comes with a buildout recipe called 
+``openmdao.recipes:wingproj`` that will create a Wing project file with
+Python path and executable settings that will make it work with the buildout.
+
+To run Wing for your buildout, type:
+
+::
+
+    bin/wing
+    
+from your ``buildout`` directory. If the eggs used in your buildout change and you
+re-run your buildout while Wing is still running, you will be notified by Wing
+that your project settings have changed. Select *Discard Changes and Reload*
+if your Wing path needs to be updated. Otherwise, select *Don't Reload* to
+keep your existing project file. If your Wing project seems to not be working
+properly after this happens, you can remove the Wing project file
+(``<buildout_dir>/parts/wingproj/wingproj.wpr``) and re-run the buildout to
+create a new one. 
+
+
+.. index:: repo.py
+
+Repository Utility
+------------------
+
+The script ``repo.py`` is a utility script for manipulating and navigating in repositories.
+
+::
+
+    Usage: repo.py OP [options] repository, where OP may be:
+       check  -- check for lock
+       lock   -- lock repository
+       unlock -- unlock repository
+       set    -- set this as current repository
+       fix    -- fix permissions
+
+    Options:
+      -h, --help     show this help message and exit
+      -f, --force    forced unlock
+      -v, --verbose  print info messages
+
+*Repository* is a directory under ``/OpenMDAO/dev/<username>`` or
+``/OpenMDAO/dev/shared``.
+
+The *check, lock*, and *unlock* operations can be used to avoid
+more than one developer trying to update a shared repository at the same time.
+Before making changes, do a *lock*.  If that succeeds, then proceed with
+your changes and when complete, do an *unlock.*  If the *lock* fails, then
+you'll know who to wait for.  The *check* operation will test for a locked
+repository.  Note that no enforcement is done.  Locking/unlocking merely
+sets a flag.  If people ignore this convention, then they can potentially
+interfere with each other's changes to the shared repository.
+
+The *set* operation sets the given repository directory as your current
+repository.  This will start a new shell process with the ``OPENMDAO_REPO``
+environment variable set to the full path of the repository.  The local
+system scripts will use this to update your *PATH* so the ``buildout/bin``
+and ``scripts`` directories are at the beginning.  You will also get some
+convenient aliases for navigating around in the repository directory
+structure.  Finally, if the repository is under ``/OpenMDAO/dev/shared``,
+your umask will be set to 002, allowing others in the *mdao* group to
+update files you own.
+
+The *fix* operation is used to fix file permissions in shared repositories.
+It will traverse the directory tree and try to ensure all operations enabled
+for owner are also enabled for group.  If you don't own the file,
+the operation will fail and the owner's user id will be reported.
+
