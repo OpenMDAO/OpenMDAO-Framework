@@ -40,11 +40,11 @@ class Int(Range):
         if not isinstance(high, int):
             raise TraitError("Upper bounds for an Int must be an integer.")
         
-        # Put units in the metadata dictionary
+        # Put iotype in the metadata dictionary
         if iotype is not None:
             metadata['iotype'] = iotype
             
-        # Put units in the metadata dictionary
+        # Put desc in the metadata dictionary
         if desc is not None:
             metadata['desc'] = desc
             

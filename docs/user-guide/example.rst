@@ -370,7 +370,8 @@ points, so simulating these driving profiles consumes much more CPU time than th
 
 Using OpenMDAO
 --------------
-OpenMDAO provides two interfaces through which the user interacts to build and execute models -- a graphical user interface and a scripting/command line interface. The graphical interface is currently
+OpenMDAO provides two interfaces through which the user interacts to build and execute 
+models -- a graphical user interface and a scripting/command line interface. The graphical interface is currently
 under developed and is not covered here. This tutorial describes how to build and run models using
 the scripting interface, or more specifically, how to write Python scripts to interact with the OpenMDAO
 framework and components.

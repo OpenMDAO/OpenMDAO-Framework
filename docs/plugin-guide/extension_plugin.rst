@@ -97,12 +97,12 @@ for a three-bar truss with the following specific geometry:
    The 3-Bar Truss Geometry
    
 The inputs to the problem are the components of the body force acting on node 1 (2d array pvec); the
-cross-sectional areas of all three structural elements (a1, a2, a3); the lumped mass at node 1 (mo);
+initial cross-sectional areas of all three structural elements (a1, a2, a3); the lumped mass at node 1 (mo);
 the length of bar 2 (el: this essentially scales the problem); and some material properties for the 
-bars (e -- Young's Modulus, and rho - material density). The outputs of interest are the stresses 
+bars (e; Young's Modulus, and rho: material density). The outputs of interest are the stresses 
 in each bar (s1, s2, s3); the displacement at node 1 (u, v); the frequency of the first mode of
 vibration (ff); and the total weight of the structure (obj). The objective of this example is to use
-this Fortran subroutine to locate the optimum dimensions of the three bars that minimize the total
+this Fortran subroutine to calculate the optimal cross-sectional areas of the three bars that minimize the total
 weight of the structure while satisfying constraints on the bar stresses, the displacement of node
 1, and the frequency of the first mode.
    
@@ -128,7 +128,7 @@ Subroutine *runbar3truss* has the following interface:
 
 ::
 
-      SUBROUTINE runbar3truss(PX,PY,M0,A1,A2,A3,E,EL,RHO,
+      SUBROUTINE runbar3truss(PVEC,M0,A1,A2,A3,E,EL,RHO,
      *                        S1,S2,S3,U,V,FF,OBJ) 
      
 The inputs and outputs are described above. To tell F2PY which of these variables are
@@ -137,6 +137,7 @@ comments are prefaced with *Cf2py*:
      
 ::
 
+          ...
           Double Precision S1, S2, S3
           Double Precision U, V, FF 
           Double Precision obj

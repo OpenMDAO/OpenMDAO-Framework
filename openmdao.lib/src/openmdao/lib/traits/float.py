@@ -42,11 +42,11 @@ class Float(TraitType):
         self.exclude_low = exclude_low
         self.exclude_high = exclude_high
         
-        # Put units in the metadata dictionary
+        # Put iotype in the metadata dictionary
         if iotype is not None:
             metadata['iotype'] = iotype
             
-        # Put units in the metadata dictionary
+        # Put desc in the metadata dictionary
         if desc is not None:
             metadata['desc'] = desc
             

@@ -313,6 +313,9 @@ Use a hyphen (-) for the following:
     
 * Two-word numbers less than a hundred  (twenty-nine)
 
+.. note:: Do not put a hyphen in the word *plugin.* While *plug-in* is a correct
+   variation, we must be consistent, and we chose to omit the hyphen. (This
+   follows the trend of omitting hyphens in technological terminology.)
 
 **- En dash:**
 
