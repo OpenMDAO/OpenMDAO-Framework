@@ -3,8 +3,6 @@
 __all__ = ["ImportFactory"]
 
 
-
-
 from openmdao.main.factory import Factory
 from openmdao.util.log import logger
    

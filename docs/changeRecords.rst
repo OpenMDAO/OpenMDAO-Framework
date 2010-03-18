@@ -56,6 +56,26 @@ Updates 08-03-09
 
 Updates 05-06-09
        - Example file and changes file were added to the User Guide
+       
+Updates 03-15-10
+
+	- Terminology: framework variables are now called Public Variables
+	- The attribute *iostatus* was renamed *iotype*
+	- *Unitsfloat* was removed. *Float* can now optionally have units. *Int* and
+	  *Float* are now part of 11openmdao.lib``. This will affect existing
+	  components. 
+	- New pseudo-package ``openmdao.lib.api`` contains commonly-used Public 
+	  Variables (Traits) and Drivers. The pseudo-package is a concept that lets
+	  you combine a bunch of imports from different places into one *package* to
+	  make the imports more convenient. This new pseudo-package encapsulates the
+	  most commonly-used variables and drivers from the Standard Library.
+	  **Important:** Be careful about circular imports when using this. If you
+	  are developing a driver that will eventually be in ``openmdao.lib.api``,
+	  then don't import anything from ``openmdao.lib.api``. Import from the
+	  source libraries instead (e.g., from ``openmdao.lib.traits.float`` import
+	  Float). 
+	- Added a section to the *User's Guide* on the scripting interface
+	
 
 ---------------------------------------------------------------------
 

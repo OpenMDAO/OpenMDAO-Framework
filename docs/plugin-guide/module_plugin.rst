@@ -3,8 +3,8 @@
 .. index:: pair: plugin; building from a Python Module
 
 
-Building a Plugin from a Python Module
-======================================
+Building a Component Plugin from a Python Module
+================================================
 
 For this example we'll build a plugin for the component shown in the figure
 :ref:`Conceptual-View-of-a-Simple-Component` (from the *User's Guide*).  This component
@@ -19,14 +19,14 @@ need to function properly as an OpenMDAO component.
 
 .. testcode::plugin_example
 
-    from enthought.traits.api import Float
+    from openmdao.lib.api import Float
     
     from openmdao.main.api import Component
 
     class SimpleAdder(Component):
-        a = Float(0.0, iostatus='in')
-        b = Float(0.0, iostatus='in')
-        c = Float(0.0, iostatus='out')
+        a = Float(0.0, iotype='in')
+        b = Float(0.0, iotype='in')
+        c = Float(0.0, iotype='out')
     
         def execute(self):
              self.c = self.a + self.b
@@ -39,25 +39,21 @@ there. The function in our component that performs a computation is called
 The *self* object that is passed as an argument to ``execute()`` represents an
 instance of our *SimpleAdder* class.
 
-*SimpleAdder* has three traits of type *Float* with the names *a*, *b*, and
+*SimpleAdder* has three Public Variables of type *Float* with the names *a*, *b*, and
 *c*. All three attributes have a default value of 0.0. Attributes *a* and *b*
-are inputs, so we specify that they have an *iostatus* of *'in'*. Attribute
-*c* is an output, so it has an *iostatus* of *'out'*.
+are inputs, so we specify that they have an *iotype* of *'in'*. Attribute
+*c* is an output, so it has an *iotype* of *'out'*.
 
-.. index:: traits
-
-The *Float* trait is defined in the package ``enthought.traits.api``, so we have
-to import it from there before we can use it. The ``enthought.traits.api``
+The *Float* variable is defined in the package ``openmdao.lib.api``, so we have
+to import it from there before we can use it. This 
 package defines a wide variety of traits, including basic types like *Int*,
-*Str*, and *Bool*; containers like *List* and *Dictionary*; and many others.
+*Str*, and *Bool*; containers like *List* and *Dictionary*; and many others. Public Variables
+are actually based off of Enthought's Traits, and a larger selection of less commonly-used
+traits are available by importing from the package ``enthought.traits.api``.
 To learn more about traits, you may want to look at the 
 `Traits User Manual <http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_
 and the list of 
 `available traits <http://code.enthought.com/projects/files/ETS32_API/enthought.traits.api.html>`_.
-
-OpenMDAO also supplies some special-purpose traits as well, e.g.,
-*UnitsFloat*, a floating point attribute with units. OpenMDAO traits can be
-found in ``openmdao.lib.traits``. 
 
 At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply
 import the module containing it and use it in a model; but we want more than
@@ -187,7 +183,7 @@ within the OpenMDAO framework:
         [openmdao.drivers]
         MyDriver = mydriver:MyDriver
         """
-	   
+   
     or
      
     :: 
@@ -224,4 +220,96 @@ of the egg and the module to use to generate the egg.  For example, the command
    
    
 will generate the same egg that we built manually earlier in this example.
+
+Building a Variable Plugin from a Python Module
+===============================================
+
+Sometimes it's necessary to create a new type of variable that can be passed 
+between OpenMDAO components.  This section describes how to do this using a 
+pure Python OpenMDAO plugin.
+
+Let's assume we want to have a variable that represents a set of cartesian 
+coordinates, with the value of the variable being a 3-tuple of floating point
+values representing the x, y, and z position.  We'll start by creating a 
+file called ``coord.py`` and put the following code in it:
+
+::
+
+    from enthought.traits.api import TraitType
+    
+    class Coordinates(TraitType):
+    
+        def __init__(self, default_value = (0.,0.,0.), **metadata):
+            super(Coordinates, self).__init__(default_value=default_value,
+                                             **metadata)
+    
+        def validate(self, object, name, value):
+            if isinstance(value, tuple) and len(value) == 3 and \
+               all([isinstance(val,float) or isinstance(val,int) for val in value]):
+                return value
+            else:
+                self.error(object, name, value)
+
+
+OpenMDAO uses the *Traits* package from Enthought to implement component
+variables. The base class for custom traits is ``TraitType``, so that's the
+base class for our coordinates variable. If a component or a component class
+contains a TraitType object and that object has a metadata attribute called
+*iostatus*, then that object is exposed to the framework as a variable whose
+value can be passed between components.  One thing to note that can be a 
+little confusing to people first using Traits is that the Trait object itself
+is just a validator and possibly a converter.  The object that actually gets
+passed around between components is the *value* that the trait corresponds to
+and not the trait itself.  For example, if we had a component named *wheel* that 
+contained one of our Coordinates traits named *center_location*, then the value
+of *wheel.center_location* would be a 3-tuple, not a Coordinates object.
+
+We override the base class constructor so we can supply a default value of
+(0.,0.,0.) if the caller doesn't supply one. After that, the only function we
+need to supply is the ``validate`` function, which will be called with the
+following arguments:
+
+    **object**
+        The object that contains the value of our coordinates variable
+    
+    **name**
+        The name of our coordinates variable
+    
+    **value**
+        The value that our current value is being replaced with
+
+
+Our validate function should test that the value we've been called with is
+valid. In this particular case, we just need to verify that the value is a
+3-tuple and it has float or int entries. If the value is acceptable, then we
+just return it. We don't need to do it in this case, but in other custom
+traits, we could convert the value before returning it. If the value
+is not acceptable, then we call the error function, which will generate an
+exception.
+
+That's all of the source code required to make our coordinates variable 
+functional.  The next step is to turn our module into a package and define
+an entry point for our new class.  This is very similar to what we did in the
+section earlier where we made a component plugin, except this time we use
+a different entry point group name.
+
+
+::
+
+
+    from setuptools import setup, find_packages
+    
+    setup(
+        name='coord',
+        version='1.0',
+        packages=find_packages(),
+        install_requires=['Traits>=3.1.0'],
+        entry_points={
+          'openmdao.variable': ['Coordinates = coord:Coordinates']
+        }
+    )
+
+We can create this file by hand or generate it using ``mod2egg`` as we showed in the earlier
+section.
+
 

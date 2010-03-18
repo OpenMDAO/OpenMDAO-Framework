@@ -141,7 +141,7 @@ class PathProperty(TraitType):
 
     def set(self, obj, name, value):
         """Set the value of the referenced attribute."""
-        if self.iostatus == 'out':
+        if self.iotype == 'out':
             raise TraitError('%s is an output trait and cannot be set' % name)
         
         if self.trait:
@@ -197,11 +197,11 @@ class Container(HasTraits):
             if isinstance(obj, FileRef):
                 setattr(self, name, obj.copy(owner=self))
 
-        # Call _io_trait_changed if any trait having 'iostatus' metadata is
+        # Call _io_trait_changed if any trait having 'iotype' metadata is
         # changed. We originally used the decorator @on_trait_change for this,
         # but it failed to be activated properly when our objects were
         # unpickled.
-        self.on_trait_change(self._io_trait_changed, '+iostatus')
+        self.on_trait_change(self._io_trait_changed, '+iotype')
         
         # keep track of modifications to our parent
         self.on_trait_change(self._parent_modified, 'parent')
@@ -290,8 +290,8 @@ class Container(HasTraits):
         self.__dict__.update(state)
         
         # restore call to _io_trait_changed to catch changes to any trait
-        # having 'iostatus' metadata
-        self.on_trait_change(self._io_trait_changed, '+iostatus')
+        # having 'iotype' metadata
+        self.on_trait_change(self._io_trait_changed, '+iotype')
         
         # restore dynamically added traits, since they don't seem
         # to get restored automatically
@@ -342,13 +342,13 @@ class Container(HasTraits):
         return super(Container, self).trait_get(*names, **metadata)
     
         
-    # call this if any trait having 'iostatus' metadata is changed    
-    #@on_trait_change('+iostatus') 
+    # call this if any trait having 'iotype' metadata is changed    
+    #@on_trait_change('+iotype') 
     def _io_trait_changed(self, obj, name, old, new):
         # setting old to Undefined is a kludge to bypass the destination check
         # when we call this directly from Assembly as part of setting this
         # attribute from an existing connection.
-        if self.trait(name).iostatus == 'in':
+        if self.trait(name).iotype == 'in':
             if old is not Undefined and name in self._sources:
                 # bypass the callback here and set it back to the old value
                 self._trait_change_notify(False)
@@ -405,7 +405,7 @@ class Container(HasTraits):
         valid = self._valid_dict.get(name, Missing)
         if valid is Missing:
             trait = self.trait(name)
-            if trait and trait.iostatus:
+            if trait and trait.iotype:
                 self._valid_dict[name] = False
                 return False
             else:
@@ -426,7 +426,7 @@ class Container(HasTraits):
             self._valid_dict[name] = valid
         else:
             trait = self.trait(name)
-            if trait and trait.iostatus:
+            if trait and trait.iotype:
                 self._valid_dict[name] = valid
             else:
                 self.raise_exception(
@@ -444,7 +444,7 @@ class Container(HasTraits):
                 self.raise_exception("required plugin '%s' is not present" %
                                      name, TraitError)                
         
-    def add_container(self, name, obj):
+    def add_container(self, name, obj, **kw_args):
         """Add a Container object to this Container.
         Returns the added Container object.
         """
@@ -520,19 +520,19 @@ class Container(HasTraits):
             
     def revert_to_defaults(self, recurse=True):
         """Sets the values of all of the inputs to their default values."""
-        self.reset_traits(iostatus='in')
+        self.reset_traits(iotype='in')
         if recurse:
             for cname in self.list_containers():
                 getattr(self, cname).revert_to_defaults(recurse)
             
     def dump(self, recurse=False, stream=None):
-        """Print all items having iostatus metadata and
+        """Print all items having iotype metadata and
         their corresponding values to the given stream. If the stream
         is not supplied, it defaults to sys.stdout.
         """
         pprint.pprint(dict([(n,str(v)) 
                         for n,v in self.items(recurse=recurse, 
-                                              iostatus=not_none)]),
+                                              iotype=not_none)]),
                       stream)
     
     def items(self, recurse=False, **metadata):
@@ -564,7 +564,7 @@ class Container(HasTraits):
         the the list will contain names of inputs with matching validity.
         """
         if self._input_names is None:
-            self._input_names = self.keys(iostatus='in')
+            self._input_names = self.keys(iotype='in')
             
         if valid is None:
             return self._input_names
@@ -577,7 +577,7 @@ class Container(HasTraits):
         the the list will contain names of outputs with matching validity.
         """
         if self._output_names is None:
-            self._output_names = self.keys(iostatus='out')
+            self._output_names = self.keys(iotype='out')
             
         if valid is None:
             return self._output_names
@@ -641,7 +641,7 @@ class Container(HasTraits):
                     if isinstance(obj, Container):
                         if not recurse:
                             yield (name, obj)
-                    elif trait.iostatus is not None:
+                    elif trait.iotype is not None:
                         yield (name, obj)
 
     
@@ -661,15 +661,15 @@ class Container(HasTraits):
                 return getattr(obj, tup[1], Missing) is not Missing
         return False
     
-    def create(self, type_name, name, version=None, server=None, 
-               res_desc=None):
+    def create(self, type_name, name, version=None, server=None,
+               res_desc=None, **kw_args):
         """Create a new object of the specified type inside of this
         Container.
         
         Returns the new object.        
         """
         obj = fmcreate(type_name, version, server, res_desc)
-        self.add_container(name, obj)
+        self.add_container(name, obj, **kw_args)
         return obj
 
     def invoke(self, path, *args, **kwargs):
@@ -765,7 +765,7 @@ class Container(HasTraits):
             src = self._sources.get(name, None)
         trait = self.trait(name)
         if trait:
-            if trait.iostatus != 'in' and src is not None and src != srcname:
+            if trait.iotype != 'in' and src is not None and src != srcname:
                 self.raise_exception(
                     "'%s' is not an input trait and cannot be set" %
                     name, TraitError)
@@ -1031,8 +1031,8 @@ class Container(HasTraits):
             self._io_graph = nx.DiGraph()
             io_graph = self._io_graph
             name = self.name
-            ins = ['.'.join([name, v]) for v in self.keys(iostatus='in')]
-            outs = ['.'.join([name, v]) for v in self.keys(iostatus='out')]
+            ins = ['.'.join([name, v]) for v in self.keys(iotype='in')]
+            outs = ['.'.join([name, v]) for v in self.keys(iotype='out')]
             
             # add nodes for all of the variables
             io_graph.add_nodes_from(ins)
@@ -1043,18 +1043,18 @@ class Container(HasTraits):
                 io_graph.add_edges_from([(invar, o) for o in outs])
         return self._io_graph
     
-    def _build_trait(self, pathname, iostatus=None, trait=None):
+    def _build_trait(self, pathname, iotype=None, trait=None):
         """Asks the component to dynamically create a trait for the 
         attribute given by ref_name, based on whatever knowledge the
         component has of that attribute.
         """
         objtrait, value = self._find_trait_and_value(pathname)
-        if iostatus is None and objtrait is not None:
-            iostatus = objtrait.iostatus
+        if iotype is None and objtrait is not None:
+            iotype = objtrait.iotype
         if trait is None:
             trait = objtrait
         # if we make it to here, object specified by ref_name exists
-        return PathProperty(ref_name=pathname, iostatus=iostatus, 
+        return PathProperty(ref_name=pathname, iotype=iotype, 
                             trait=trait)
     
     def _find_trait_and_value(self, pathname):
@@ -1076,14 +1076,14 @@ class Container(HasTraits):
         else:
             return (None, None)
 
-    def create_io_traits(self, obj_info, iostatus='in'):
+    def create_io_traits(self, obj_info, iotype='in'):
         """Create io trait(s) specified by the contents of obj_info. Calls
         _build_trait(), which can be overridden by subclasses, to create each
         trait.
         
         obj_info is assumed to be either a string, a tuple, or an iterator
         that returns strings or tuples. Tuples must contain a name and an
-        alias, and my optionally contain an iostatus and a validation trait.
+        alias, and my optionally contain an iotype and a validation trait.
         
         For example, the following are valid calls:
 
@@ -1098,7 +1098,7 @@ class Container(HasTraits):
             lst = obj_info
 
         for entry in lst:
-            iostat = iostatus
+            iostat = iotype
             trait = None
             
             if isinstance(entry, basestring):
@@ -1108,7 +1108,7 @@ class Container(HasTraits):
                 name = entry[0]  # wrapper name
                 ref_name = entry[1] or name # internal name
                 try:
-                    iostat = entry[2] # optional iostatus
+                    iostat = entry[2] # optional iotype
                     trait = entry[3]  # optional validation trait
                 except IndexError:
                     pass
@@ -1119,7 +1119,7 @@ class Container(HasTraits):
                            self._build_trait(ref_name, iostat, trait))
         
 
-    def get_dyn_trait(self, name, iostatus=None):
+    def get_dyn_trait(self, name, iotype=None):
         """Retrieves the named trait, attempting to create it on-the-fly if
         it doesn't already exist.
         """
@@ -1127,7 +1127,7 @@ class Container(HasTraits):
         if trait:
             return trait
         try:
-            return self.create_alias(name, iostatus)
+            return self.create_alias(name, iotype)
         except AttributeError:
             self.raise_exception("Cannot locate trait named '%s'" %
                                  name, NameError)
@@ -1144,7 +1144,7 @@ class Container(HasTraits):
             alias = path
         oldtrait = self.trait(alias)
         if oldtrait is None:
-            newtrait = self._build_trait(path, iostatus=io_status, trait=trait)
+            newtrait = self._build_trait(path, iotype=io_status, trait=trait)
             self.add_trait(alias, newtrait)
             return newtrait
         else:
@@ -1196,12 +1196,13 @@ def _get_entry_group(obj):
     """Return entry point group for given object type."""
     if _get_entry_group.group_map is None:
         # Fill-in here to avoid import loop.
-        from openmdao.main.api import Component, Driver
+        from openmdao.main.component import Component
+        from openmdao.main.driver import Driver
 
         # Entry point definitions taken from plugin-guide.
         # Order should be from most-specific to least.
         _get_entry_group.group_map = [
-            (TraitType,          'openmdao.trait'),
+            (TraitType,          'openmdao.variable'),
             (Driver,             'openmdao.driver'),
             (ICaseIterator,      'openmdao.case_iterator'),
             (IResourceAllocator, 'openmdao.resource_allocator'),

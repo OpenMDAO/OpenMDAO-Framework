@@ -125,10 +125,10 @@ class FileTrait(TraitType):
         if default_value is not None:
             if not isinstance(default_value, FileRef):
                 raise TraitError('FileTrait default value must be a FileRef.')
-        if 'iostatus' not in metadata:
-            raise TraitError("FileTrait must have 'iostatus' defined.")
-        iostatus = metadata['iostatus']
-        if iostatus == 'out':
+        if 'iotype' not in metadata:
+            raise TraitError("FileTrait must have 'iotype' defined.")
+        iotype = metadata['iotype']
+        if iotype == 'out':
             if default_value is None:
                 if 'path' not in metadata:
                     raise TraitError("Output FileTrait must have 'path' defined.")
@@ -138,7 +138,7 @@ class FileTrait(TraitType):
                     raise TraitError("'local_path' invalid for output FileTrait.")
                 meta = metadata.copy()
                 path = metadata['path']
-                for name in ('path', 'legal_types', 'local_path', 'iostatus'):
+                for name in ('path', 'legal_types', 'local_path', 'iotype'):
                     if name in meta:
                         del meta[name]
                 default_value = FileRef(path, **meta)
@@ -154,8 +154,8 @@ class FileTrait(TraitType):
 #
 #    def make_default(self, obj):
 #        """ Make a default value for obj. """
-#        iostatus = self._metadata['iostatus']
-#        if iostatus == 'out':
+#        iotype = self._metadata['iotype']
+#        if iotype == 'out':
 #            default = self.default_value.copy(obj)
 #        else:
 #            default = None
@@ -182,8 +182,8 @@ class FileTrait(TraitType):
         """
         if value is None:
             return
-        iostatus = self._metadata.get('iostatus')
-        if iostatus != 'in':
+        iotype = self._metadata.get('iotype')
+        if iotype != 'in':
             return
         path = self._metadata.get('local_path', None)
         if not path:

@@ -5,8 +5,7 @@
 # Optimize an engine disign using the driving_sim component.
 
 from openmdao.main.api import Assembly
-
-from openmdao.lib.drivers.conmindriver import CONMINdriver
+from openmdao.lib.api import CONMINdriver
 
 from openmdao.examples.enginedesign.driving_sim import DrivingSim
 

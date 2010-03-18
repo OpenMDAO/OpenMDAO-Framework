@@ -5,11 +5,11 @@ Test the CONMIN optimizer component
 import unittest
 import numpy
 
-from enthought.traits.api import Float, Array, TraitError
+from enthought.traits.api import TraitError
 
 # pylint: disable-msg=F0401,E0611
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.drivers.conmindriver import CONMINdriver
+from openmdao.lib.api import Float, Array, CONMINdriver
 from openmdao.util.testutil import assert_rel_error
 
 class OptRosenSuzukiComponent(Component):
@@ -38,8 +38,8 @@ class OptRosenSuzukiComponent(Component):
          X = (0.0, 1.0, 2.0, -1.0)
     """
     
-    x = Array(iostatus='in')
-    result = Float(iostatus='out')
+    x = Array(iotype='in')
+    result = Float(iotype='out')
     
     # pylint: disable-msg=C0103
     def __init__(self, doc=None):

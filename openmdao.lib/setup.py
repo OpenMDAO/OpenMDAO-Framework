@@ -39,8 +39,8 @@ Component, Driver, and TraitType plugins for OpenMDAO
           'axod',
           ],
       entry_points="""
-      [openmdao.drivers]
-      conmindrv = openmdao.lib.drivers.conmindriver.CONMINdriver
-      pyevolvedrv = openmdao.lib.drivers.pyevolvedriver.pyevolvedriver
+      [openmdao.driver]
+      openmdao.lib.CONMINdriver = openmdao.lib.drivers.conmindriver:CONMINdriver
+      openmdao.lib.pyevolvedriver = openmdao.lib.drivers.pyevolvedriver:pyevolvedriver
       """,
       )

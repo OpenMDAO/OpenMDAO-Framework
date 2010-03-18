@@ -5,7 +5,7 @@ __all__ = ['StringRef', 'StringRefArray']
 from enthought.traits.api import BaseStr, List, TraitError
 from enthought.traits.trait_handlers import NoDefaultSpecified
 
-from openmdao.main.api import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator
 
 class DumbDefault(object):
     def __getattr__(self, name):
@@ -13,8 +13,8 @@ class DumbDefault(object):
             
 class StringRef(BaseStr):
     """A trait that references, via a pathname, another trait in the
-    framework. If it has iostatus of 'out', then the string may only be the pathname of
-    a single variable (with optional array indexing), but if iostatus is 'in',
+    framework. If it has iotype of 'out', then the string may only be the pathname of
+    a single variable (with optional array indexing), but if iotype is 'in',
     it may be any valid expression and may reference any number of other
     variables.
     """
@@ -27,13 +27,13 @@ class StringRef(BaseStr):
     def validate(self, object, name, value):
         s = super(StringRef, self).validate(object, name, value) # normal string validation
         try:
-            if self.iostatus == 'out':
+            if self.iotype == 'out':
                 s = ExprEvaluator(s, object, single_name=True)
             else:
                 s = ExprEvaluator(s, object)
             s._parse()
         except RuntimeError:
-            raise TraitError("invalid %sput ref variable value '%s'"%(self.iostatus,
+            raise TraitError("invalid %sput ref variable value '%s'"%(self.iotype,
                                                                         str(value)))
         return s
     
@@ -42,7 +42,7 @@ class StringRefArray(List):
     """A List of StringRef traits."""
     
     def __init__(self, **metadata):
-        self.iostatus = metadata.get('iostatus', 'in')
-        super(StringRefArray, self).__init__(trait=StringRef(iostatus=self.iostatus), 
+        self.iotype = metadata.get('iotype', 'in')
+        super(StringRefArray, self).__init__(trait=StringRef(iotype=self.iotype), 
                                              **metadata)
     

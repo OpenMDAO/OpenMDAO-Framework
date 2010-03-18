@@ -7,7 +7,7 @@
 import numpy.numarray as numarray
 
 from openmdao.main.api import Component
-from openmdao.lib.traits.unitsfloat import UnitsFloat
+from openmdao.lib.api import Float
 
 from openmdao.examples.bar3simulation.bar3 import runbar3truss, forces
 
@@ -18,55 +18,55 @@ class Bar3Truss(Component):
     # pylint: disable-msg=E1101
     # "Instance of <class> has no <attr> member"
 
-    load_x_dir = UnitsFloat(50.0, iostatus='in', units='lb',
+    load_x_dir = Float(50.0, iotype='in', units='lb',
                         desc='Load in X direction')
 
-    load_y_dir = UnitsFloat(100.0, iostatus='in', units='lb',
+    load_y_dir = Float(100.0, iotype='in', units='lb',
                         desc='Load in Y direction')
 
-    bar1_area  = UnitsFloat(1.0, low=0.0009, high=10000.,
-                        iostatus='in', units='inch*inch',
+    bar1_area  = Float(1.0, low=0.0009, high=10000.,
+                        iotype='in', units='inch*inch',
                         desc='Cross-sectional area for bar 1')
-    bar2_area  = UnitsFloat(1.0, low=0.0009, high=10000.,
-                        iostatus='in', units='inch*inch',
+    bar2_area  = Float(1.0, low=0.0009, high=10000.,
+                        iotype='in', units='inch*inch',
                         desc='Cross-sectional area for bar 2')
-    bar3_area  = UnitsFloat(1.0, low=0.0009, high=10000.,
-                        iostatus='in', units='inch*inch',
+    bar3_area  = Float(1.0, low=0.0009, high=10000.,
+                        iotype='in', units='inch*inch',
                         desc='Cross-sectional area for bar 3')
 
-    Youngs_Modulus = UnitsFloat(30000.0, iostatus='in',
+    Youngs_Modulus = Float(30000.0, iotype='in',
                         units='1000.0*lb/(inch*inch)',
                         desc='Youngs Modulus')
 
-    bar2_length = UnitsFloat(100.0, iostatus='in', units='inch',
+    bar2_length = Float(100.0, iotype='in', units='inch',
                         desc='Length of bar 2 and horizontal distance between \
                         nodes')
 
-    weight_density = UnitsFloat(0.100, iostatus='in', units='lb/(inch**3)',
+    weight_density = Float(0.100, iotype='in', units='lb/(inch**3)',
                         desc='weight density of all bars')
 
-    lumped_mass = UnitsFloat(0.68005, iostatus='in', units='lb*s*s/inch',
+    lumped_mass = Float(0.68005, iotype='in', units='lb*s*s/inch',
                         desc='Lumped Mass at the free node')
 
-    bar1_force = UnitsFloat(0., iostatus='out', units='lb',
+    bar1_force = Float(0., iotype='out', units='lb',
                         desc='Force in bar 1')
-    bar2_force = UnitsFloat(0., iostatus='out', units='lb',
+    bar2_force = Float(0., iotype='out', units='lb',
                         desc='Force in bar 2')
-    bar3_force = UnitsFloat(0., iostatus='out', units='lb',
+    bar3_force = Float(0., iotype='out', units='lb',
                         desc='Force in bar 3')
-    bar1_stress = UnitsFloat(0., iostatus='out', units='lb/(inch*inch)',
+    bar1_stress = Float(0., iotype='out', units='lb/(inch*inch)',
                         desc='Stress in bar 1')
-    bar2_stress = UnitsFloat(0., iostatus='out', units='lb/(inch*inch)',
+    bar2_stress = Float(0., iotype='out', units='lb/(inch*inch)',
                         desc='Stress in bar 2')
-    bar3_stress = UnitsFloat(0., iostatus='out', units='lb/(inch*inch)',
+    bar3_stress = Float(0., iotype='out', units='lb/(inch*inch)',
                         desc='Stress in bar 3')
-    displacement_x_dir = UnitsFloat(0., iostatus='out', units='inch',
+    displacement_x_dir = Float(0., iotype='out', units='inch',
                         desc='Displacement in x-direction')
-    displacement_y_dir = UnitsFloat(0., iostatus='out', units='inch',
+    displacement_y_dir = Float(0., iotype='out', units='inch',
                         desc='Displacement in y-direction')
-    frequency = UnitsFloat(0., iostatus='out', units='Hz',
+    frequency = Float(0., iotype='out', units='Hz',
                         desc='Frequency in Hertz')
-    weight = UnitsFloat(0., iostatus='out', units='lb',
+    weight = Float(0., iotype='out', units='lb',
                         desc='Weight of the structure')
 
     #def __init__(self, desc=None, directory=''):

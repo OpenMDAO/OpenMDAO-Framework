@@ -4,17 +4,16 @@ import unittest
 import logging
 from math import sqrt
 
-from enthought.traits.api import Float, Str
-
 from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.lib.api import Float, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 class Adder(Component):
     """Outputs the sum of its two inputs."""
     
-    x1 = Float(0., iostatus='in')
-    x2 = Float(0., iostatus='in')
-    sum = Float(0., iostatus='out')
+    x1 = Float(0., iotype='in')
+    x2 = Float(0., iotype='in')
+    sum = Float(0., iotype='out')
     
     def __init__(self):
         super(Adder, self).__init__()
@@ -27,9 +26,9 @@ class Adder(Component):
 class ExprComp(Component):
     """Evaluates an expression based on the input x and assigns it to f_x"""
     
-    x = Float(0., iostatus='in')
-    f_x = Float(0., iostatus='out')
-    expr = Str('', iostatus='in')
+    x = Float(0., iotype='in')
+    f_x = Float(0., iotype='out')
+    expr = Str('', iotype='in')
     
     def __init__(self, expr='x'):
         super(ExprComp, self).__init__()
@@ -44,10 +43,10 @@ class ExprComp(Component):
 class ExprComp2(Component):
     """Evaluates an expression based on the inputs x & y and assigns it to f_xy"""
     
-    x = Float(0., iostatus='in')
-    y = Float(0., iostatus='in')
-    f_xy = Float(0., iostatus='out')
-    expr = Str('', iostatus='in')
+    x = Float(0., iotype='in')
+    y = Float(0., iotype='in')
+    f_xy = Float(0., iotype='out')
+    expr = Str('', iotype='in')
     
     def __init__(self, expr='x'):
         super(ExprComp2, self).__init__()

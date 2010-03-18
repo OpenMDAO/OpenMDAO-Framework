@@ -98,19 +98,17 @@ to a :term:`repository` on that machine.
 *Code Location*
 +++++++++++++++
     
-The Bazaar repository for the OpenMDAO source code is currently only available
-to users with sftp access to the GRC host named *torpedo* because the OpenMDAO
-public website is not yet active. If you have sftp access, either directly or
-through a VPN, you can get a copy of the repository as follows:
+
+The bazaar repository for the OpenMDAO source code is available on Launchpad.
+You can get a copy of the repository as follows:
 
 ::
 
-    bzr branch sftp://yourusername@torpedo.grc.nasa.gov/OpenMDAO/trunk <your_branch_name>
+    bzr branch lp:openmdao <your_branch_name>
 
 
-When the website is activated, read-only access will be available to
-anyone from ``openmdao.org/source/trunk``, and patches will be submittable in
-the form of Bazaar merge directives sent via email to ``patches@openmdao.org``.
+Read-only access is available to anyone from ``<put src URL here>`` and patches can be submitted in
+the form of bazaar merge directives to ``patches@openmdao.org``.
 
 
 .. index:: source repository

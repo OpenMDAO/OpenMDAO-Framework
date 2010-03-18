@@ -1,27 +1,27 @@
 
 import unittest
 
-from enthought.traits.api import Float, Instance
 from openmdao.main.api import Container, Component, Assembly, set_as_top
+from openmdao.lib.api import Float, Instance
 
 class DumbContainer2(Container):
-    x = Float(1., iostatus='in')
-    y = Float(2., iostatus='in')
-    z = Float(3., iostatus='in')
+    x = Float(1., iotype='in')
+    y = Float(2., iotype='in')
+    z = Float(3., iotype='in')
     
 class DumbContainer(Container):
-    v1 = Float(1., iostatus='in')
-    v2 = Float(2., iostatus='in')
-    v3 = Float(3., iostatus='in')
+    v1 = Float(1., iotype='in')
+    v2 = Float(2., iotype='in')
+    v3 = Float(3., iotype='in')
     def __init__(self, *args, **kwargs):
         super(DumbContainer, self).__init__(*args, **kwargs)
         self.add_container('cont', DumbContainer2())
     
     
 class SimpleComp(Component):
-    cont_in = Instance(DumbContainer, iostatus='in')
-    cont_out = Instance(DumbContainer, iostatus='out')
-    mult = Float(1., iostatus='in')
+    cont_in = Instance(DumbContainer, iotype='in')
+    cont_out = Instance(DumbContainer, iotype='out')
+    mult = Float(1., iotype='in')
     
     def __init__(self, *args, **kwargs):
         super(SimpleComp, self).__init__(*args, **kwargs)

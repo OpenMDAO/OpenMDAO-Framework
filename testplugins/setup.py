@@ -24,5 +24,7 @@ setup(name='testplugins',
       entry_points="""
       [openmdao.component]
       testplugins.components.dumb.DumbComponent = testplugins.components.dumb:DumbComponent
+      [openmdao.variable]
+      testplugins.traits.coord.Coordinates = testplugins.traits.coord:Coordinates
       """,
       )

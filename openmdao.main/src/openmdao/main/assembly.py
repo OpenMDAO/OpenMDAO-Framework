@@ -3,7 +3,7 @@
 __all__ = ['Assembly']
 
 
-from enthought.traits.api import Array, List, Instance, TraitError
+from enthought.traits.api import List, Instance, TraitError
 from enthought.traits.api import TraitType, Undefined
 from enthought.traits.trait_base import not_none
 
@@ -48,7 +48,7 @@ class Assembly (Component):
         
         # add any Variables we may have inherited from our base classes
         # to our _var_graph..
-        for v in self.keys(iostatus=not_none):
+        for v in self.keys(iotype=not_none):
             if v not in self._var_graph:
                 self._var_graph.add_node(v)
         
@@ -86,7 +86,7 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add_container(self, name, obj):
+    def add_container(self, name, obj, add_to_workflow=True):
         """Update dependency graph and call base class add_container.
         Returns the added Container object.
         """
@@ -96,7 +96,8 @@ class Assembly (Component):
             # added to us, wait to collect its io_graph until we need it
             self._child_io_graphs[obj.name] = None
             self._need_child_io_update = True
-            self.workflow.add_node(obj.name)
+            if add_to_workflow:
+                self.workflow.add_node(obj.name)
         try:
             self.drivers.append(obj)  # will fail if it's not an IDriver
         except TraitError:
@@ -126,7 +127,8 @@ class Assembly (Component):
                 drv.graph_regen_needed()
                 
         return super(Assembly, self).remove_container(name)
-    
+
+
     def create_passthrough(self, pathname, alias=None):
         """Creates a PassthroughTrait that uses the trait indicated by
         pathname for validation (if it's not a property trait), adds it to
@@ -152,7 +154,7 @@ class Assembly (Component):
         if not trait:
             self.raise_exception("the trait named '%s' can't be found" %
                                  pathname, TraitError)
-        iostatus = trait.iostatus
+        iotype = trait.iotype
         # the trait.trait_type stuff below is for the case where the trait is actually
         # a ctrait (very common). In that case, trait_type is the actual underlying
         # trait object
@@ -160,28 +162,28 @@ class Assembly (Component):
             getattr(trait.trait_type, 'get') or getattr(trait.trait_type,'set')):
             trait = None  # not sure how to validate using a property
                           # trait without setting it, so just don't use it
-        newtrait = PassthroughTrait(iostatus=iostatus, validation_trait=trait)
+        newtrait = PassthroughTrait(iotype=iotype, validation_trait=trait)
         self.add_trait(newname, newtrait)
         setattr(self, newname, val)
 
-        if iostatus == 'in':
+        if iotype == 'in':
             self.connect(newname, pathname)
         else:
             self.connect(pathname, newname)
 
         return newtrait
 
-    def get_dyn_trait(self, pathname, iostatus=None):
+    def get_dyn_trait(self, pathname, iotype=None):
         """Retrieves the named trait, attempting to create a Passthrough trait
         on-the-fly if the specified trait doesn't exist.
         """
         trait = self.trait(pathname)
         if trait is None:
             newtrait = self.create_passthrough(pathname)
-            if iostatus is not None and iostatus != newtrait.iostatus:
+            if iotype is not None and iotype != newtrait.iotype:
                 self.raise_exception(
-                    "new trait has iostatus of '%s' but '%s' was expected" %
-                    (newtrait.iostatus, iostatus), TraitError)
+                    "new trait has iotype of '%s' but '%s' was expected" %
+                    (newtrait.iotype, iotype), TraitError)
         return trait
 
     def split_varpath(self, path):
@@ -211,12 +213,12 @@ class Assembly (Component):
                                  (srcpath, destpath), RuntimeError)
         if srccomp is not self and destcomp is not self:
             # it's not a passthrough, so must connect input to output
-            if srctrait.iostatus != 'out':
+            if srctrait.iotype != 'out':
                 self.raise_exception(
                     '.'.join([srccomp.get_pathname(),srcvarname])+
                     ' must be an output variable',
                     RuntimeError)
-            if desttrait.iostatus != 'in':
+            if desttrait.iotype != 'in':
                 self.raise_exception(
                     '.'.join([destcomp.get_pathname(),destvarname])+
                     ' must be an input variable',
@@ -242,7 +244,7 @@ class Assembly (Component):
         vgraph.add_edge(srcpath, destpath)
             
         # invalidate destvar if necessary
-        if destcomp is self and desttrait.iostatus == 'out': # boundary output
+        if destcomp is self and desttrait.iotype == 'out': # boundary output
             if destcomp.get_valid(destvarname) and \
                srccomp.get_valid(srcvarname) is False:
                 if self.parent:
@@ -252,7 +254,7 @@ class Assembly (Component):
                     # the parent scope.
                     self.parent.invalidate_deps([destpath], True)
             self.set_valid(destpath, False)
-        elif srccomp is self and srctrait.iostatus == 'in': # boundary input
+        elif srccomp is self and srctrait.iotype == 'in': # boundary input
             self.set_valid(srcpath, False)
         else:
             destcomp.set_valid(destvarname, False)
@@ -465,7 +467,7 @@ class Assembly (Component):
             for vname in succ.get(name, []):
                 tup = vname.split('.', 1)
                 if len(tup) == 1:  #boundary var or Component
-                    if self.trait(vname).iostatus == 'out':
+                    if self.trait(vname).iotype == 'out':
                         # it's an output boundary var
                         outs.append(vname)
                 else:  # a var from a child component 

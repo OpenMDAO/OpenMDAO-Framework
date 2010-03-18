@@ -53,11 +53,11 @@ if os.path.basename(bodir) != 'buildout':
     sys.stderr.write('You must run this script from the buildout directory\n')
     sys.exit(-1)
 
-# add paths for builtin python stuff (but no site-packages)                   
+# add paths for builtin python stuff (but no site-packages)
 sys.path = [x for x in sys.path if 'site-packages' not in x]
 
 # put setuptools on sys.path so we can import pkg_resources
-sys.path.insert(0, os.path.join(bodir, 'setup', stoolsname))
+sys.path.insert(0, os.path.join(setupdir, stoolsname))
 
 import pkg_resources
 
@@ -102,6 +102,7 @@ sys.path[2:] = [  prefx+'.zip',
                  prefx,
                  os.path.join(prefx,'lib-dynload'),
                  os.path.join(prefx,'plat-'+sys.platform),
+                 '%s'
                ]
               
 import zc.buildout.buildout
@@ -135,15 +136,16 @@ if 'OPENMDAO_REPO' in os.environ:
     zc.buildout.easy_install._script = _script
     zc.buildout.easy_install._pyscript = _pyscript
     
-"""
+""" % os.path.join(bodir, 'plugins')
 new_sp_win = """
 import os.path
 prefx = os.path.join(sys.prefix,'Lib')
 sys.path[2:] = [  prefx,
                  os.path.join(sys.prefix,'DLLs'),
+                 '%s'
                ]
 import zc.buildout.buildout
-"""
+""" % os.path.join(bodir, 'plugins')
 
 if sys.platform == 'win32':
     new_sp = new_sp_win

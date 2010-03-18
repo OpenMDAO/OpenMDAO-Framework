@@ -10,7 +10,6 @@ import zc.buildout
 from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
 
-
 def _mod_sphinx_info(mod, outfile, show_undoc=False):
     """Write out enough info for Sphinx to autodocument
     a module.
@@ -20,7 +19,7 @@ def _mod_sphinx_info(mod, outfile, show_undoc=False):
     modbase = short.split('.').pop()
     
     outfile.write('.. index:: %s.py\n\n'%modbase)
-    outfile.write('.. _%s.py:\n\n'%modbase)
+    outfile.write('.. _%s.py:\n\n'%short)
     outfile.write('%s.py\n' % modbase)
     outfile.write('_'*(3+len(short.split('.').pop()))+'\n\n')
     outfile.write('.. automodule:: %s\n' % short)
@@ -305,6 +304,30 @@ class SphinxBuild(object):
                              os.path.abspath(self.docdir), 
                              os.path.abspath(os.path.join(self.builddir, "html"))))
             scriptlist.extend(tstscript)
+            
+            # create a unit test for the source code found in the docs
+            utdir = os.path.join(self.buildout['buildout']['directory'],
+                                 'parts', self.name)
+            if not os.path.exists(utdir):
+                os.makedirs(utdir)
+            utname = os.path.join(utdir,'test_docs.py')
+            utest = open(utname, 'w')
+            utest.write("""
+import unittest
+import os
+from os.path import join
+from subprocess import Popen, PIPE, STDOUT
+
+class SphinxDocsTestCase(unittest.TestCase):
+    def test_docs(self):
+        p = Popen(r'%s', stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+        output = p.communicate()[0]
+        retval = p.returncode
+        if not output.strip().endswith('build succeeded.'):
+            self.fail('problem in documentation source code examples:\\n'+output)
+            """ % os.path.join(bindir, 'testdocs')
+            )
+            scriptlist.append(utname)
 
         if 'docs' in self.build:
             # build the docs using Sphinx
@@ -331,30 +354,6 @@ class SphinxBuild(object):
                                          self.options.get('browser', ''))
             scriptlist.append(scriptname)
         
-        if 'test' in self.build:
-            # create a unit test for the source code found in the docs
-            utdir = os.path.join(self.buildout['buildout']['directory'],
-                                 'parts', self.name)
-            if not os.path.exists(utdir):
-                os.makedirs(utdir)
-            utname = os.path.join(utdir,'test_docs.py')
-            utest = open(utname, 'w')
-            utest.write("""
-import unittest
-import os
-from os.path import join
-from subprocess import Popen, PIPE, STDOUT
-
-class SphinxDocsTestCase(unittest.TestCase):
-    def test_docs(self):
-        p = Popen(r'%s', stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
-        output = p.communicate()[0]
-        retval = p.returncode
-        if not output.strip().endswith('build succeeded.'):
-            self.fail('problem in documentation source code examples:\\n'+output)
-            """ % os.path.join(bindir, 'testdocs')
-            )
-            scriptlist.append(utname)
         
         return scriptlist
 

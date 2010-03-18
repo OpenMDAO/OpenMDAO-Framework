@@ -2,13 +2,14 @@
 
 import unittest
 
-from enthought.traits.api import Float, Str, Instance, TraitError
+from enthought.traits.api import TraitError
 from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.lib.api import Float, Str, Instance
 
 class Multiplier(Component):
-    rval_in = Float(iostatus='in')
-    rval_out = Float(iostatus='out')
-    mult = Float(iostatus='in')
+    rval_in = Float(iotype='in')
+    rval_out = Float(iotype='out')
+    mult = Float(iotype='in')
     
     def __init__(self):
         super(Multiplier, self).__init__()
@@ -23,10 +24,10 @@ class Multiplier(Component):
         
 class Simple(Component):
     
-    a = Float(iostatus='in')
-    b = Float(iostatus='in')
-    c = Float(iostatus='out')
-    d = Float(iostatus='out')
+    a = Float(iotype='in')
+    b = Float(iotype='in')
+    c = Float(iotype='out')
+    d = Float(iotype='out')
     
     def __init__(self):
         super(Simple, self).__init__()
@@ -43,15 +44,15 @@ class Simple(Component):
 
 class DummyComp(Component):
     
-    r = Float(iostatus='in')
-    r2 = Float(iostatus='in')
-    s = Str(iostatus='in')
-    rout = Float(iostatus='out')
-    r2out = Float(iostatus='out')
-    sout = Str(iostatus='out')
+    r = Float(iotype='in')
+    r2 = Float(iotype='in')
+    s = Str(iotype='in')
+    rout = Float(iotype='out')
+    r2out = Float(iotype='out')
+    sout = Str(iotype='out')
     
-    dummy_in = Instance(Component, iostatus='in')
-    dummy_out = Instance(Component, iostatus='out')
+    dummy_in = Instance(Component, iotype='in')
+    dummy_out = Instance(Component, iotype='out')
     
     def __init__(self):
         super(DummyComp, self).__init__()
@@ -192,6 +193,16 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.run()
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
+        
+    def test_add_container_no_workflow(self):
+        self.asm.add_container('comp_nw1', DummyComp(), add_to_workflow=False)
+        self.assertTrue(self.asm.workflow.has_node('comp1'))
+        self.assertFalse(self.asm.workflow.has_node('comp_nw1'))
+    
+    def test_create_no_workflow(self):
+        self.asm.create('openmdao.lib.api.CONMINdriver', 'd_nw1', add_to_workflow=False)
+        self.assertTrue(self.asm.workflow.has_node('comp1'))
+        self.assertFalse(self.asm.workflow.has_node('d_nw1'))
     
     def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)
