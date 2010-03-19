@@ -31,8 +31,7 @@ Framework Layers
         The following section describes the possibility of having a wxPython GUI
         and a web based GUI.  Due to limited programming resources, it is more likely
         that there will be only one type of GUI, at least in the next few years. The
-        GUI will probably be web based, although a final decision has not been made
-        yet.
+        GUI will probably be web based, although a final decision has not been made.
 
         
 The framework's capabilities can be viewed as a number of layers supporting
@@ -146,6 +145,14 @@ The current package layout of the project is as follows:
 Deployment
 ==========
 
+.. note:: Our packaging and deployment methods are likely to change in the future due
+    to changes that are happening to Python's overall packaging strategy. When
+    the Python community decides on a packaging *standard*, we will adopt it.
+    We are currently using a strategy based on *setuptools* and *zc.buildout*,
+    but it appears that a new package, *distutils2*, along with *pip*, will 
+    become the standard.
+    
+
 Each OpenMDAO package will be distributable as a python egg, and each package's
 egg will have its own version number. Each specific version of an OpenMDAO
 package will also depend on a number specific versions of third party packages,
@@ -159,10 +166,10 @@ are all compatible with each other.
 In order to assemble a complete working version of OpenMDAO, the following
 steps are performed:
 
-    1. bootstrap a buildout using the appropriate python version, e.g.,
-         ``python2.6 bootstrap.py``
-    2. obtain a buildout configuration file from the OpenMDAO website, e.g.,
+    1. obtain a buildout configuration file from the OpenMDAO website, e.g.,
           ``wget http://openmdao.org/releases/1.0.3/buildout.cfg``
+    2. bootstrap a buildout using the appropriate python version, e.g.,
+         ``python2.6 bootstrap.py``
     3. execute the buildout using that configuration file, e.g.,
           ``bin/buildout``
     
