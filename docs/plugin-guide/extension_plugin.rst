@@ -4,8 +4,8 @@
 .. index:: wrapping; file
 .. index:: wrapping; code
 
-Building a Plugin Using a Python Extension
-==========================================
+Building a Plugin that Contains a Python Extension
+==================================================
 
 It will often be the case that there is some existing application, written in some language 
 other than Python, that needs to be turned into an openMDAO component. This section and the one 

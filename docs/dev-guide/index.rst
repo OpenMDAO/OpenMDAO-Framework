@@ -13,6 +13,6 @@ Developer's Guide
    testing
    guidelines
    distributions
-   grc-users
+  
 
 

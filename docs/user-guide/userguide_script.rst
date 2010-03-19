@@ -144,6 +144,8 @@ Most of these items are also explained elsewhere in the *User's Guide.*
 *The Model Hierarchy*
 ~~~~~~~~~~~~~~~~~~~~~
 
+TODO: Talk about the model hierarchy
+
 .. index:: Component
 
 Creating New Components
@@ -377,6 +379,9 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 +------------------+----------------------------------------------------------+
 | Bool             | Bool( [*value* = None, *desc* = None, *iotype* = None] ) | 
 +------------------+----------------------------------------------------------+
+| Complex          | Complex( [*value* = None, *desc* = None,                 |
+|                  | *iotype* = None] )                                       | 
++------------------+----------------------------------------------------------+
 | Float            | Float( [*default_value* = None, *iotype* = None,         | 
 |                  | *desc* = None, *low* = None, *high* = None,              |
 |                  | *exclude_low* = False, *exclude_high* = False,           |
@@ -390,6 +395,8 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 | Int              | Int( [*default_value* = None, *iotype* = None,           |
 |                  | *desc* = None, *low* = None, *high* = None,              |
 |                  | *exclude_low* = False, *exclude_high* = False] )         |
++------------------+----------------------------------------------------------+
+| Range            | Deprecated. Use OpenMDAO's Int or Float.                 |
 +------------------+----------------------------------------------------------+
 | Str              | Str( [*value* = None, *desc* = None, *iotype* = None] )  |
 +------------------+----------------------------------------------------------+
@@ -461,9 +468,10 @@ general-purpose n-dimensional array class. A 2-dimensional array is assigned as
 the default value for the Public Variable named *z*. 
 
 The *dtype* parameter defines the type of variable that is in the array. For
-example, using a string (*str*) for a dtype would give an array of strings.
-Note that the alternate *typecode* is also supported for non-Numpy arrays 
-(e.g., typecode='I' for unsigned integers.)
+example, using a string (*str*) for a dtype would give an array of strings. Any
+of Python's standard types and NumPy's additional types should be valid for the
+*dtype parameter. Note that the alternate *typecode* is also supported for 
+non-Numpy arrays (e.g., typecode='I' for unsigned integers.)
 
 The *shape* parameter is not a required attribute; the Array will default to
 the dimensions of the array that is given as the value. However, it is often
@@ -511,8 +519,6 @@ can also be accesssed using brackets.
 Instance Traits
 +++++++++++++++
 
-.. index:: StringRef
-
 An Instance is a special type of Public Variable that allows an object to be
 passed between components. Essentially, any object can be passed through the
 use of an Instance. The first argument in the constructor is always the type of
@@ -532,6 +538,19 @@ this type will generate an exception.
 	                    iotype='in', required=True)
         model = Instance(Component, desc='Model to be executed.', \
 	                    iotype='in', required=True)
+			    
+In this example, we have two inputs that are Instances. The one called model
+is of type *Component*, which means that this component actually takes another
+Component as input. Similarly, the one called recorder is of type *object*. In
+Python, object is the ultimate base class for any object, so this input can
+actually take anything. (Note: it is still possible to create a class that doesn't
+inherit from *object* as its base class, but this is not considered good form.)
+
+The attribute *required* is used to indicate whether the object that plugs into
+this input is required. If *required* is True, then an exception will be raised
+if the object is not present.
+
+.. index:: StringRef
 
 StringRef
 +++++++++
@@ -627,6 +646,17 @@ the function *convert_units*.
     >>> convert_units(33,'m','ft')
     108.267...
 
+Coercion and Casting
+++++++++++++++++++++
+
+OpenMDAO variables have a certain pre-defined behavior when a value from a
+variable of a different type is assigned. Generally, widening coercions are
+permitted (e.g., int -> float32 -> float64 -> string), while assignments
+that would result in loss of precision generate a TraitError exception.
+More details can be found in the `Traits 3 User Manual`__.
+
+.. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
+
 *Creating Custom Variable Types*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -636,6 +666,9 @@ For an example of a user-created Public Variable, see :ref:`Building-a-Variable-
 Building a Simulation Model
 ---------------------------
 
+*The Top Level Assembly*
+~~~~~~~~~~~~~~~~~~~~~~~~
+
 *Connecting Components*
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -644,9 +677,6 @@ Building a Simulation Model
 
 *Sockets & Interfaces*
 ~~~~~~~~~~~~~~~~~~~~~~
-
-*The Top Level Assembly*
-~~~~~~~~~~~~~~~~~~~~~~~~
 
 Drivers
 -------
@@ -663,14 +693,18 @@ Drivers
 CONMIN
 ++++++
 
-NEWSUMT
+Idesign
 +++++++
+
+Currently under development and should be avilable soon.
 
 PyEvolve
 ++++++++
 
 Newton Solver
 +++++++++++++
+
+No capability at present, but it is part of our requirements.
 
 *Adding new Optimizers*
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -698,6 +732,8 @@ Data Flow and WorkFlow
 
 *Building a WorkFlow*
 ~~~~~~~~~~~~~~~~~~~~~
+
+Custom workflow capability is currently under development and should be avilable soon.
 
 Looping
 +++++++
@@ -741,9 +777,15 @@ Advanced MDAO
 *Multi-Fidelity Optimization*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+No capability at present, but it is part of our requirements.
+
 *Surrogate Modeling*
 ~~~~~~~~~~~~~~~~~~~~~
+
+No capability at present, but it is part of our requirements.
 
 *Uncertainty*
 ~~~~~~~~~~~~~
  
+No capability at present, but it is part of our requirements.
+

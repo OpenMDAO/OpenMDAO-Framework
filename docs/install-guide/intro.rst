@@ -1,4 +1,16 @@
 
+Introduction
+------------
+
+There are currently two ways you can install OpenMDAO on your system. You can 
+install from *source* or install from a *bundle*. Both are based on
+``zc.buildout``, so they both result in an installation of OpenMDAO and its
+dependent packages that should not interfere with the system level Python
+install. It is **not** recommended that you use ``easy_install`` to install
+OpenMDAO into the system level Python packages directory, because OpenMDAO has
+a fairly large number of dependencies, and doing so would likely cause version
+conflicts with existing packages.
+
 
 System Requirements
 -------------------
@@ -36,7 +48,7 @@ On **Ubuntu**, the .deb package names are:
     
 
 On **Windows**, download and run the following installers if the corresponding
-apps or packages are not already installed:
+applications or packages are not already installed:
 
     - `Python 2.6`__
     - `setuptools`__
@@ -72,13 +84,12 @@ Official releases of OpenMDAO will have downloadable source tar files available
 on Launchpad at ``<put src tar URL here>``.  Once you've downloaded the tar file,
 untar it in the desired location.
 
-If you happen to have *bazaar* installed on your system or you want to obtain 
-a 'bleeding edge' version, then you can obtain the source by the following:
+If you happen to have Bazaar installed on your system or you want to obtain a
+"bleeding edge" version, you can obtain the source via the following command:
 
 ::
 
     bzr branch lp:openmdao <your_branch_name>
-
 
 .. _Building:
 
@@ -87,7 +98,7 @@ Building
 ++++++++
 
 You should now have a copy of the OpenMDAO source, whether you obtained it via
-bazaar or by untarring a source distribution.  Inside of the top level directory
+Bazaar or by untarring a source distribution. Inside of the top level directory
 of the distribution is the ``buildout`` directory.  Go to that directory and
 execute the following command:
 
@@ -95,7 +106,7 @@ execute the following command:
 
     python isolated_bootstrap.py
 
-This should give you output similar to:
+This should give you output similar to the following:
 
 ::
 
@@ -104,18 +115,18 @@ This should give you output similar to:
     Creating directory '/myopenmdao_v1.2.3/buildout/develop-eggs'.
     Generated script '/myopenmdao_v1.2.3/buildout/bin/buildout'.
 
-Note that on systems with more than one install of python, you may have
-to include the python version number to get the correct version.  OpenMDAO
+Note that on systems with more than one install of Python, you may have
+to include the Python version number to get the correct version.  OpenMDAO
 requires Python 2.6, so using ``python2.6`` instead of just ``python`` in the 
 command above may be necessary.
 
-Once the bootstrapping is complete, it's time to run the buildout.
-This will install all of the required python packages into the
-buildout's ``eggs`` directory or into another directory of your choosing if
-you've specified the buildout *eggs-directory* in your ``default.cfg`` file.
+Once the bootstrapping is complete, it's time to run the buildout. This will
+install all of the required Python packages into the buildout's ``eggs`` directory
+or into another directory of your choosing if you've specified the buildout
+*eggs-directory* in your ``default.cfg`` file.
 See :ref:`Setting-Up-a-Local-Cache-of-Installed-Distributions` for details.
 
-To run the buildout, type
+To run the buildout, type:
 
 ::
 
@@ -124,14 +135,15 @@ To run the buildout, type
 or ``bin\buildout`` on Windows.
 
 
-This could take a while depending upon whether
-it's your first OpenMDAO buildout and whether you have an installed egg cache.
+This could take a while depending upon whether it's your first OpenMDAO buildout
+and whether you have an installed egg cache.
 
 
-.. note:: Currently, buildout will fail on Windows if the OpenMDAO install directory has a 
-          pathname that contains spaces.
-          
-At this point, your OpenMDAO install should be ready to use. You can test it by typing
+.. note:: Currently, buildout will fail on Windows if the OpenMDAO install
+	  directory has a pathname that contains spaces.
+
+At this point, your OpenMDAO install should be ready to use. You can test it by
+typing:
 
 ::
 
@@ -143,11 +155,11 @@ This will run all of the OpenMDAO unit tests.
 Installing a Bundle
 -------------------
 
-An OpenMDAO bundle is an archive file containing all of the OpenMDAO python 
-packages and any additional third party packages that OpenMDAO depends upon. It also
-contains a buildout configuration file.  To use a bundle, you must first untar
-it in the desired location.  As mentioned earlier, on Windows the destination path
-should not contain spaces in it or the buildout will fail.
+An OpenMDAO *bundle* is an archive file containing all of the OpenMDAO Python 
+packages and any additional third-party packages that OpenMDAO depends upon. It
+also contains a buildout configuration file.  To use a bundle, you must first
+untar it in the desired location.  As mentioned earlier, on Windows the
+destination path should not contain spaces in it or the buildout will fail.
 
 After untarring the bundle, the remaining steps are identical to those in the 
 :ref:`Building` section above.
