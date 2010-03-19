@@ -15,15 +15,18 @@ setup(name='openmdao',
       author_email='',
       url='',
       license='NOSA',
-      packages=[], #find_packages(exclude=['ez_setup']),
+      packages=find_packages(exclude=['ez_setup']),
       namespace_packages=['openmdao'],
       include_package_data=True,
       zip_safe=False,
       install_requires=[
           'setuptools',
+          'zc.buildout',
           'pip',
       ],
-      entry_points="""
-      # -*- Entry points: -*-
-      """,
+      entry_points={
+      "console_scripts": [
+          'openmdao_quickstart = openmdao.quickstart:run'
+          ]
+      },
       )
