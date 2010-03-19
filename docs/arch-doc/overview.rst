@@ -27,12 +27,11 @@ to be :term:`plugins` to the framework.
 Framework Layers
 ================
 
-.. note::
-        The following section describes the possibility of having a wxPython GUI
-        and a web based GUI.  Due to limited programming resources, it is more likely
-        that there will be only one type of GUI, at least in the next few years. The
-        GUI will probably be web based, although a final decision has not been made
-        yet.
+.. note:: The following section describes the possibility of having a wxPython GUI
+   and a web-based GUI.  Due to limited programming resources, it is more likely
+   that there will be only one type of GUI, at least in the next few years. The
+   GUI will probably be web based, although a final decision has not been made
+   yet.
 
         
 The framework's capabilities can be viewed as a number of layers supporting
