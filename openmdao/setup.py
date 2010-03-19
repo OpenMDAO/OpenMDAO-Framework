@@ -26,7 +26,7 @@ setup(name='openmdao',
       ],
       entry_points={
       "console_scripts": [
-          'openmdao_quickstart = openmdao.quickstart:run'
+          'openmdao_quickstart = openmdao.quickstart.quickstart:run'
           ]
       },
       )
