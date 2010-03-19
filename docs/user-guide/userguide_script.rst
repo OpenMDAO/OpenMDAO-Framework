@@ -34,7 +34,7 @@ namespace are separated by a period (".").
 The OpenMDAO namespace includes several packages, all of which are by 
 "openmdao.":
 
-- ``penmdao.main`` -- Core infrastructure for the framework
+- ``openmdao.main`` -- Core infrastructure for the framework
 - ``openmdao.lib`` -- OpenMDAO's standard library, containing some important plugins (drivers, traits, etc.) that are available to users of the framework
 - ``openmdao.examples`` -- Tutorials and example problems for learning OpenMDAO
 - ``openmdao.util`` -- Utilities used by OpenMDAO, but are not dependent on it
@@ -53,7 +53,7 @@ Here, the fundamental OpenMDAO component classes *Component* and *Assembly* are
 loaded from ``openmdao.main``, along with the CONMIN driver from ``openmdao.lib``.
 
 To simplify the imports, a selection of the most commonly used imports was
-placed in ``openmdao.main.api``. You can obtain a complete listing of what is
+placed in the pseudo-package ``openmdao.main.api``. You can obtain a complete listing of what is
 available in this module by using the *dir()* command in Python:
 
     >>> import openmdao.main.api
@@ -113,6 +113,33 @@ module. Never import an entire library when only a subset is needed.
 
 Unused imports are one of the problems that Pylint can find, so it always pays
 to use it.
+
+A pseudo-package was also created to house some of the most commonly-used imports
+from the standard library. In general, it contains Public Variables and Drivers.
+Most of these items are also explained elsewhere in the *User's Guide.*
+
+    >>> import openmdao.lib.api
+    >>> items = dir(openmdao.lib.api)
+    >>> for item in items:
+    ...     print(item)
+    Array
+    Bool
+    CBool
+    CONMINdriver
+    CaseIteratorDriver
+    Complex
+    Enum
+    Float
+    Instance
+    Int
+    List
+    Str
+    __builtins__
+    __doc__
+    __file__
+    __name__
+    __package__
+    pyevolvedriver
 
 *The Model Hierarchy*
 ~~~~~~~~~~~~~~~~~~~~~
@@ -242,6 +269,81 @@ candidate.
 Public Variables
 ----------------
 
+In OpenMDAO, a Public Variable is a variable that can be seen or manipulated by
+other entities in the framework. Any data that is passed between components in a
+model must use Public Variables to declare the inputs and output for each
+component.
+
+There are two ways to create a public variable for a component. The first is to
+declare it in the component's class definition of the as shown in the example 
+given in :ref:`Getting-Started-with-OpenMDAO`. A simple component that takes
+a floating point number as an input and provides a floating point number as an
+output would look like this:
+
+.. testcode:: creating_public_variables_1
+
+    from openmdao.main.api import Component
+    from openmdao.lib.api import Float
+    
+    class Simple(Component):
+        """ A simple multiplication """
+    
+	# set up interface to the framework  
+	x = Float(1.0, iotype='in', desc='The input x')
+        y = Float(0.0, iotype='out', desc='The output y')        
+
+	def execute(self):
+	    """ y = 3*x """
+	    
+	    self.y = 3.0*self.x
+
+The example above shows the way the majority of users will create Public Variables.
+An alternative way to declare them is to use the *add_trait* function that is part of the
+*Component* public interface.
+	    
+.. testcode:: creating_public_variables_2
+
+    from openmdao.main.api import Component
+    from openmdao.lib.api import Int
+    
+    class Simple(Component):
+        """ A simple multiplication """
+    
+	def __init__(self, doc=None, directory=''):
+	
+	    self.add_trait('x',Float(1.0, iotype='in', desc='The input x'))
+	    self.add_trait('y',Float(0.0, iotype='out', desc='The output y'))
+	    
+	    super(Simple, self).__init__(doc, directory)
+	    
+	def execute(self):
+	    """ y = 3*x """
+	    
+	    self.y = 3.0*self.x
+	    
+Note that *add_trait* is called in the constructor (i.e, the __init__ function),
+so a local copy was created that overloads the one in the parent *Component* 
+class. In most of the examples shown so far, we did not need to declare a
+constructor because the one in *Component* was adequate. 
+
+There isn't a real advantage to creating a Public Variable in this manner. However,
+the primary use of add_trait is to create a Public Variable dynamically at some
+point after the component has been created (possibly during execution).
+
+    >>> from openmdao.examples.simple.paraboloid import Paraboloid
+    >>> from openmdao.lib.api import Int
+    >>> test=Paraboloid()
+    >>> test.z
+    Traceback (most recent call last):
+    ...
+    AttributeError: 'Paraboloid' object has no attribute 'z
+    >>> test.add_trait('z',Int(7777, iotype='out', desc='An Int'))
+    >>> test.z
+    7777
+
+There are some more specialized components that will make use of the ability to create
+Public Variables on the fly, but it won't be used for most general components.
+
 .. index:: Traits
 
 *Traits*
@@ -263,8 +365,173 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 *Built-in Variable Types*
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
+.. index:: Public Variable Types
+    
+**Summary of Public Variable Types**
+
++------------------+----------------------------------------------------------+
+| Name             | Callable Signature                                       |
++==================+==========================================================+
+| Array            | Array( [*dtype* = None, *shape* = None, *value* = None,  |
+|                  | *typecode* = None, *iotype* = None, *desc* = None] )     |
++------------------+----------------------------------------------------------+
+| Bool             | Bool( [*value* = None, *desc* = None, *iotype* = None] ) | 
++------------------+----------------------------------------------------------+
+| Float            | Float( [*default_value* = None, *iotype* = None,         | 
+|                  | *desc* = None, *low* = None, *high* = None,              |
+|                  | *exclude_low* = False, *exclude_high* = False,           |
+|                  | *units* = None] )                                        |
++------------------+----------------------------------------------------------+
+| Instance         | Instance( [*klass* = None, *desc* = None, *iotype* =     |
+|                  | None, *factory* = None, *args* = None, *kw* = None,      |
+|                  | *allow_none* = True, *adapt* = None, *module* = None,    |
+|                  | *required* = False] )                                    | 
++------------------+----------------------------------------------------------+
+| Int              | Int( [*default_value* = None, *iotype* = None,           |
+|                  | *desc* = None, *low* = None, *high* = None,              |
+|                  | *exclude_low* = False, *exclude_high* = False] )         |
++------------------+----------------------------------------------------------+
+| Str              | Str( [*value* = None, *desc* = None, *iotype* = None] )  |
++------------------+----------------------------------------------------------+
+| StringRef        | StringRef( [*desc* = None, *iotype* = None,              |
+|                  | *default_value* = NoDefaultSpecified] )                  |
++------------------+----------------------------------------------------------+
+| StringRefArray   | StringRefArray( [*desc* = None, *iotype* = None,         |
+|                  | *default_value* = NoDefaultSpecified] )                  |
++------------------+----------------------------------------------------------+
+
+Note: a more detailed list of Enthought's Traits is given in their `documentation`__.
+These are also available for use as Public Variables in the framework, though
+no examples are presented here for some of the more esoteric ones. If you need
+to use one, remember that *iotype* and *desc* should be added to the arguements
+when one of these is instantiated. The Traits use \*\*metadata to store these
+user-definied attributes.
+
+.. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#other-predefined-traits
+
+A Public Variable is declared with a number of arguments, many of which are
+optional.
+
+The *iotype* attribute is required for all Public Variables regardless of type.
+It's sole function is to tell the framework whether the variable should be
+treated as an input or an output. Presently, the only two options for this
+attribute are 'in' and 'out'.
+
+**Summary of iotypes**
+
+============  =====================
+**iotype**    **Description**
+------------  ---------------------
+iotype='in'   Component input
+------------  ---------------------
+iotype='out'  Component output
+============  =====================
+
+The *desc* attribute is a concise description of the Public Variable -- one or
+two sentences should be fine. While nothing in the framework requires this
+description, it would be wise to include one for every input and output of your
+components. The GUI will use these descriptions to provide information that will
+aid simulation builders in connecting components.
+
+.. index:: Array
+
+Array
++++++
+
+It is possible to use an array as a Public Variable through use of the *Array*
+trait. The value for an Array can be expressed as either a Python array or a NumPy
+array. NumPy arrays are particularly useful because of the built-in mathematical
+capabilities. Either array can be n-dimensional and of potentially any type.
+
+Constructing an Array variable requires a couple of additional parameters that
+are illustrated in the following example:
+
+    >>> from openmdao.lib.api import Array
+    >>> from numpy import array
+    >>> from numpy import float as numpy_float
+    >>> z = Array(dtype=numpy_float, shape=(2,2), value=array([[1.0,2.0],[3.0,5.0]]), iotype='in')
+    >>> z.default_value
+    array([[ 1.,  2.],
+           [ 3.,  5.]])
+    >>> z.default_value[0][1]
+    2.0
+
+Here, we import the *Array* Public Variable, and the NumPy *array*, which is a
+general-purpose n-dimensional array class. A 2-dimensional array is assigned as
+the default value for the Public Variable named *z*. 
+
+The *dtype* parameter defines the type of variable that is in the array. For
+example, using a string (*str*) for a dtype would give an array of strings.
+Note that the alternate *typecode* is also supported for non-Numpy arrays 
+(e.g., typecode='I' for unsigned integers.)
+
+The *shape* parameter is not a required attribute; the Array will default to
+the dimensions of the array that is given as the value. However, it is often
+useful to specify the size explicitly, so that an exception is generated if an
+array of a different size or shape is passed into it. If the size if an array is not
+determined until runtime (e.g., a driver that takes an array of constraint
+equations as an input), then the *shape* should be left blank.
+
+Below is an example of a simple component that takes two Arrays as inputs,
+and calculates their dot product as an output.
+
+.. testcode:: array_example
+
+    from numpy import array, sum, float   
+    
+    from openmdao.main.api import Component
+    from openmdao.lib.api import Array, Float
+    
+    class Dot(Component):
+        """ A component that outputs a dot product of two arrays"""
+    
+	# set up interface to the framework  
+	x1 = Array(dtype=float, desc = "Input 1", \
+	           value=array([1.0,2.0]), iotype='in')
+	x2 = Array(dtype=float, desc = "Input 2", \
+	           value=array([7.0,8.0]), iotype='in')
+		   
+	y = Float(0.0, iotype='out', desc = "Dot Product")
+
+	def execute(self):
+	    """ calculate dot product """
+	    
+	    # Note: array multiplication is element by element
+	    self.y = sum(self.x1*self.x2)
+	    
+	    # print the first element of x1
+	    print x1[0]
+
+Multiplication of a NumPy array is element by element, so *sum* is used to
+complete the calculation of the dot product. Individual elements of the aray
+can also be accesssed using brackets.
+
+.. index:: Instance Traits
+
+Instance Traits
++++++++++++++++
 
 .. index:: StringRef
+
+An Instance is a special type of Public Variable that allows an object to be
+passed between components. Essentially, any object can be passed through the
+use of an Instance. The first argument in the constructor is always the type of
+object that is required. Attempting to assign an object that does not match
+this type will generate an exception.
+
+
+.. testcode:: instance_example
+
+    from openmdao.main.api import Component
+    from openmdao.lib.api import Instance
+    
+    class Fred(Component):
+        """ A component that takes a class as an input """
+	
+	recorder = Instance(object, desc='Something to append() to.', \
+	                    iotype='in', required=True)
+        model = Instance(Component, desc='Model to be executed.', \
+	                    iotype='in', required=True)
 
 StringRef
 +++++++++
@@ -286,6 +553,48 @@ StringRefs to specify their objective function, design variables, and constraint
 Conditional branching components use StringRefs to specify boolean expressions that
 determine if a given branch should be executed.
 
+Here is an example of declaring a StringRef as an input, as it would be used to
+create a variable to hold the objective function of an optimizer, which is
+inherently a function of variables in the framework.
+
+.. testcode:: StringRef_example
+
+    from openmdao.main.api import Driver, StringRef
+    
+    class MyDriver(Driver):
+        """ A component that outputs a dot product of two arrays"""
+	
+        objective = StringRef(iotype='in', \
+                    desc= 'A string containing the objective function \
+                    expression.')
+			    
+Note that it makes little sense to give a default value to a StringRef, since
+its value will usually depend on the component names. Stringrefs are most
+likely to be assigned their value in the higher-level container: typically the
+top level assembly. Also, note that StringRef is imported from
+``openmdao.main.api`` instead of ``openmdao.lib.api``. This is because a
+StringRef is a special class of Public Variables that is an integral part of
+the framework infrastructure.
+
+There is also a *StringRefArray* variable which can be used to hold multiple
+string expressions. For example, an optimizer might take as input a list
+containing some number of constraints that are built from these string
+expressions.
+
+.. testcode:: StringRefArray_example
+
+    from openmdao.main.api import Driver, StringRefArray
+    
+    class MyDriver(Driver):
+        """ A component that outputs a dot product of two arrays"""
+	
+	constraints = StringRefArray(iotype='in',
+		desc= 'An array of expression strings indicating constraints.'+
+		' A value of < 0 for the expression indicates that the constraint '+
+		'is violated.')
+
+Again, no default is needed.		
+		
 .. index:: Float; unit conversion with
 .. index:: unit conversion; with Float
 
@@ -311,9 +620,18 @@ readable text file called ``unitLibdefault.ini``. More information on customizat
 (i.e., adding new units) of the Units package can be found in the OpenMDAO 
 Standard Library Guide.
 
+This units library can also be used to convert internal variables by importing
+the function *convert_units*.
+
+    >>> from openmdao.lib.traits.float import convert_units
+    >>> convert_units(33,'m','ft')
+    108.267...
 
 *Creating Custom Variable Types*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is possible to create new types of Public Variables to use in your models. 
+For an example of a user-created Public Variable, see :ref:`Building-a-Variable-Plugin`.
 
 Building a Simulation Model
 ---------------------------

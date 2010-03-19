@@ -221,6 +221,8 @@ of the egg and the module to use to generate the egg.  For example, the command
    
 will generate the same egg that we built manually earlier in this example.
 
+.. _Building-a-Variable-Plugin:
+
 Building a Variable Plugin from a Python Module
 ===============================================
 
