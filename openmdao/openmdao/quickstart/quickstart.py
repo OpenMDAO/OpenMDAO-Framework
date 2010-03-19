@@ -20,6 +20,6 @@ def run(install_dir=None):
                                     'buildout.cfg')
         os.chdir(path)
         shutil.copy(bconfigfname, os.path.join(path, 'buildout.cfg'))
-        check_call([sys.executable, ' %s' % bstrapfname])
+        check_call([sys.executable, bstrapfname])
     finally:
         os.chdir(startdir)

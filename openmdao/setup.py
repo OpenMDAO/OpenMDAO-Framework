@@ -17,6 +17,7 @@ setup(name='openmdao',
       license='NOSA',
       packages=find_packages(exclude=['ez_setup']),
       namespace_packages=['openmdao'],
+      package_data={'openmdao': ['*.cfg']},
       include_package_data=True,
       zip_safe=False,
       install_requires=[
