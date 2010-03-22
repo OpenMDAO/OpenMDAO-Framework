@@ -30,6 +30,10 @@ Some Basics
 
 * Use two asterisks for strong emphasis (**boldface**) ``**text**`` 
 
+* When numbering items (such as steps in a task or process), DO NOT indent the numbers -- put them
+  flush left. When numbers are indented, they do not display correctly in Internet Explorer (although
+  they look fine in Firefox and Safari).
+
 * All text in headings (level one, level two, level three, etc.)
   must be underlined. (In OpenMDAO documents, generally the title is overlined
   and underlined, while the other headings are underlined only. All levels must
@@ -40,6 +44,7 @@ Some Basics
   wrapped and confused Sphinx. In this case, try pulling the text up to the previous line even
   if it extends out past the margin of your window. Or, you could press **Enter** to go to the next
   line, but be sure to indent the text on the new line.  
+  
 
 .. index:: literal text
 
