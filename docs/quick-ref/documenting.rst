@@ -208,7 +208,9 @@ text, Sphinx doesn't seem to mind.
 	licenses/index
 	quick-ref/index
 
-   | Add ``new-guide/index`` in the desired location in the list of documents and save the file. 
+|
+   
+ | Add ``new-guide/index`` in the desired location in the list of documents and save the file. 
 
 5. If you have not done so, add any new files to Bazaar using ``bzr add``. Also remember to commit your
    changes when ready.

@@ -3,6 +3,8 @@
 OpenMDAO Documentation
 ======================
 
+Current version: |version|
+
 Contents:
 
 .. toctree::
