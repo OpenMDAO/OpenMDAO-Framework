@@ -521,7 +521,7 @@ def _findUnit(unit):
             unit = _unit_cache[name]
         except KeyError:
             try: 
-                unit = eval(name, _unitLib.unit_table)
+                unit = eval(name, {'__builtins__':None}, _unitLib.unit_table)
             except: 
                 #check for single letter prefix before unit
                 if(name[0] in _unitLib.prefixes and name[1:] in _unitLib.unit_table):
@@ -533,11 +533,8 @@ def _findUnit(unit):
                 else:
                     raise ValueError, "no unit named '%s' is defined"%name
             
-                unit = eval(name, _unitLib.unit_table)
+                unit = eval(name, {'__builtins__':None}, _unitLib.unit_table)
         
-            for cruft in ['__builtins__', '__args__']:
-                try: del _unitLib.unit_table[cruft]
-                except: pass
             _unit_cache[name] = unit
 
     if not isinstance(unit,PhysicalUnit):
@@ -569,10 +566,7 @@ def addUnit(name, unit, comment=''):
     if comment:
       _unitLib.help.append((name, comment, unit))
     if isinstance(unit,str):
-      unit = eval(unit, _unitLib.unit_table)
-      for cruft in ['__builtins__', '__args__']:
-        try: del _unitLib.unit_table[cruft]
-        except: pass
+      unit = eval(unit, {'__builtins__':None}, _unitLib.unit_table)
     unit.setName(name)
     if _unitLib.unit_table.has_key(name):
       if (_unitLib.unit_table[name].factor!=unit.factor or _unitLib.unit_table[name].powers!=unit.powers):

@@ -55,7 +55,7 @@ class CaseIteratorDriver(Driver):
                         desc='Reload model between executions.')
 
     max_retries = Int(1, low=0, iotype='in',
-                        desc='Number of times to retry a case.')
+                      desc='Number of times to retry a case.')
 
     def __init__(self, *args, **kwargs):
         super(CaseIteratorDriver, self).__init__(*args, **kwargs)
@@ -67,9 +67,8 @@ class CaseIteratorDriver(Driver):
         self._egg_required_distributions = None
         self._egg_orphan_modules = None
 
-        # Unpickleable objects.
-        self._reply_queue = None
-        self._server_lock = None
+        self._reply_queue = None  # Replies from server threads.
+        self._server_lock = None  # Lock for server data.
 
         # Various per-server data keyed by server name.
         self._servers = {}
@@ -87,9 +86,9 @@ class CaseIteratorDriver(Driver):
     def execute(self):
         """ Runs each case in `iterator` and records results in `recorder`. """
         self._setup()
-        self.resume()
+        self.resume(remove_egg=True)
 
-    def resume(self):
+    def resume(self, remove_egg=False):
         """ Resume execution. """
         self._stop = False
         if self._iter is None:
@@ -109,7 +108,7 @@ class CaseIteratorDriver(Driver):
                 self.info('Start concurrent evaluation.')
                 self._start()
         finally:
-            self._cleanup()
+            self._cleanup(remove_egg)
 
         if self._stop:
             self.raise_exception('Run stopped', RunStopped)
@@ -137,18 +136,7 @@ class CaseIteratorDriver(Driver):
         Setup to begin new run. If `replicate`, then replicate the model
         and save to an egg file first.
         """
-        self._servers = {}
-        self._top_levels = {}
-        self._queues = {}
-        self._in_use = {}
-        self._server_states = {}
-        self._server_cases = {}
-        self._exceptions = {}
-
-        self._todo = []
-        self._rerun = []
-
-        self._iter = self.iterator.__iter__()
+        self._cleanup(remove_egg=replicate)
 
         if not self.sequential:
             if replicate or self._egg_file is None:
@@ -160,6 +148,8 @@ class CaseIteratorDriver(Driver):
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
+
+        self._iter = self.iterator.__iter__()
 
     def _start(self):
         """ Start evaluating cases concurrently. """
@@ -257,8 +247,23 @@ class CaseIteratorDriver(Driver):
         """ Return True while at least one server is in use. """
         return any(self._in_use.values())
 
-    def _cleanup(self):
+    def _cleanup(self, remove_egg=True):
         """ Cleanup egg file if necessary. """
+        self._reply_queue = None
+        self._server_lock = None
+
+        self._servers = {}
+        self._top_levels = {}
+        self._server_info = {}
+        self._queues = {}
+        self._in_use = {}
+        self._server_states = {}
+        self._server_cases = {}
+        self._exceptions = {}
+
+        self._todo = []
+        self._rerun = []
+
         if self._egg_file and os.path.exists(self._egg_file):
             os.remove(self._egg_file)
             self._egg_file = None
