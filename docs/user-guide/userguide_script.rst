@@ -666,8 +666,14 @@ For an example of a user-created Public Variable, see :ref:`Building-a-Variable-
 Building a Simulation Model
 ---------------------------
 
+A model is a collection of components (which can include assemblies and drivers)
+that can be executed in the framework. The entity that contains this model is
+called the Top Level Assembly, which behaves functionally as an Assembly.
+
 *The Top Level Assembly*
 ~~~~~~~~~~~~~~~~~~~~~~~~
+
+
 
 *Connecting Components*
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -696,7 +702,10 @@ CONMIN
 Idesign
 +++++++
 
-Currently under development and should be avilable soon.
+Idesign, which stands for Interactive Design Optimization of Engineering Systems,
+is another gradient optimization package for problems with inequality and
+equality constraints. It is currently being integrated into OpenMDAO,
+and should be avilable soon.
 
 PyEvolve
 ++++++++
