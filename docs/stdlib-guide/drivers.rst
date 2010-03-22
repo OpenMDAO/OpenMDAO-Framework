@@ -189,10 +189,10 @@ to the value at the previous step. Note that *dabfun* has a hard-wired minimum o
 All of these convergence checks are always active during optimization. The 
 tests are performed in the following sequence:
 
-	1. Check number of iterations
-	2. Check absolute change in objective
-	3. Check relative change in objective
-	4. Reduce constraint thickness for slow convergence
+1. Check number of iterations
+2. Check absolute change in objective
+3. Check relative change in objective
+4. Reduce constraint thickness for slow convergence
 
 There is also a parameter to control how many iterations the convergence
 tolerance should be checked before terminating the loop. This is done with the 

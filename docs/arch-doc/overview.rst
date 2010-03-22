@@ -158,12 +158,15 @@ are all compatible with each other.
 In order to assemble a complete working version of OpenMDAO, the following
 steps are performed:
 
-    1. bootstrap a buildout using the appropriate python version, e.g.,
-         ``python2.6 bootstrap.py``
-    2. obtain a buildout configuration file from the OpenMDAO website, e.g.,
-          ``wget http://openmdao.org/releases/1.0.3/buildout.cfg``
-    3. execute the buildout using that configuration file, e.g.,
-          ``bin/buildout``
+
+1.  bootstrap a buildout using the appropriate python version, e.g.,
+    ``python2.6 bootstrap.py``
+	 
+2.  obtain a buildout configuration file from the OpenMDAO website, e.g.,
+    ``wget http://openmdao.org/releases/1.0.3/buildout.cfg``
+	  
+3.  execute the buildout using that configuration file, e.g.,
+    ``bin/buildout``
     
 Any needed eggs will be downloaded from the web by the buildout script,
 either from the Python Package Index, from OpenMDAO's own package index, or from
