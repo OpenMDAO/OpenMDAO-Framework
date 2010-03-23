@@ -3,17 +3,19 @@
 OpenMDAO Documentation
 ======================
 
+Current version: |version|
+
 Contents:
 
 .. toctree::
    :maxdepth: 2
    
+   install-guide/index
    arch-doc/index
    user-guide/index
-   stdlib-guide/index
    plugin-guide/index
    dev-guide/index
-   install-guide/index
+   stdlib-guide/index
    srcdocs/index
    licenses/index
    quick-ref/index
@@ -21,10 +23,8 @@ Contents:
    
 .. toctree::
    :hidden:
-    
-   changeRecords.rst
+        
    glossary
-      
 
 Glossary and Index
 ==================

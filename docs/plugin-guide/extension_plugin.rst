@@ -4,8 +4,8 @@
 .. index:: wrapping; file
 .. index:: wrapping; code
 
-Building a Plugin Using a Python Extension
-==========================================
+Building a Plugin that Contains a Python Extension
+==================================================
 
 It will often be the case that there is some existing application, written in some language 
 other than Python, that needs to be turned into an openMDAO component. This section and the one 
@@ -97,12 +97,12 @@ for a three-bar truss with the following specific geometry:
    The 3-Bar Truss Geometry
    
 The inputs to the problem are the components of the body force acting on node 1 (2d array pvec); the
-cross-sectional areas of all three structural elements (a1, a2, a3); the lumped mass at node 1 (mo);
+initial cross-sectional areas of all three structural elements (a1, a2, a3); the lumped mass at node 1 (mo);
 the length of bar 2 (el: this essentially scales the problem); and some material properties for the 
-bars (e -- Young's Modulus, and rho - material density). The outputs of interest are the stresses 
+bars (e; Young's Modulus, and rho: material density). The outputs of interest are the stresses 
 in each bar (s1, s2, s3); the displacement at node 1 (u, v); the frequency of the first mode of
 vibration (ff); and the total weight of the structure (obj). The objective of this example is to use
-this Fortran subroutine to locate the optimum dimensions of the three bars that minimize the total
+this Fortran subroutine to calculate the optimal cross-sectional areas of the three bars that minimize the total
 weight of the structure while satisfying constraints on the bar stresses, the displacement of node
 1, and the frequency of the first mode.
    
@@ -128,7 +128,7 @@ Subroutine *runbar3truss* has the following interface:
 
 ::
 
-      SUBROUTINE runbar3truss(PX,PY,M0,A1,A2,A3,E,EL,RHO,
+      SUBROUTINE runbar3truss(PVEC,M0,A1,A2,A3,E,EL,RHO,
      *                        S1,S2,S3,U,V,FF,OBJ) 
      
 The inputs and outputs are described above. To tell F2PY which of these variables are
@@ -137,6 +137,7 @@ comments are prefaced with *Cf2py*:
      
 ::
 
+          ...
           Double Precision S1, S2, S3
           Double Precision U, V, FF 
           Double Precision obj
@@ -297,16 +298,113 @@ Build with Signature foo.pyf  f2py foo.pyf foo.f -c
 Creating an Extension with SWIG
 --------------------------------
 
+The Simplified Wrapper and Interface Generator (SWIG) is a tool that simplifies
+the creation of extensions from C an C++ functions for use in a variety of
+target languages including Python. In order to use SWIG, the most recent
+version needs to be downloaded and installed at the system level.
+
 ::
 
     Wrapper Utility: SWIG
     Source Languages: C, C++
     Documentation: http://www.swig.org/doc.html
+
+SWIG is a bit more complicated than f2py, so you are strongly encouraged to read
+their documentation and experiment with their `example problem`__ before
+attempting to wrap your own C or C++ codes.
+
+The first step to create a Python extension is to create the interface file for
+the C functions that are to be wrapped. The interface file is analogous to the
+signature file that f2py uses, though its format is more like C. For example,
+consider the engine simulation as described in the :ref:`The-OpenMDAO-tutorial-problem`.
+There is one function with inputs and outputs effectively passed as arguments. The
+corresponding interface file would look like this:
+
+.. __: http://www.swig.org/tutorial.html
+
+::
+
+    /* engineC_SWIG.i */
+ 
+    %module engineC_SWIG_wrap
+ 
+    %{
+        /* Put header files here or function declarations like below */
+         void RunEngineCycle(double stroke, double bore, double conrod, double compRatio, double sparkAngle,
+                          int nCyl, double IVO, double IVC, double Liv, double Div, double k,
+                          double R, double Ru, double Hu, double Tw, double AFR, double Pexth,
+                          double Tamb, double Pamb, double Air_Density, double MwAir, double MwFuel,
+                          double RPM, double Throttle, double thetastep, double Fuel_Density,
+                          double *Power, double *Torque, double *FuelBurn, double *EngineWeight);
+    %}
+
+    void RunEngineCycle(double stroke, double bore, double conrod, double compRatio, double sparkAngle,
+                        int nCyl, double IVO, double IVC, double Liv, double Div, double k,
+                        double R, double Ru, double Hu, double Tw, double AFR, double Pexth,
+                        double Tamb, double Pamb, double Air_Density, double MwAir, double MwFuel,
+                        double RPM, double Throttle, double thetastep, double Fuel_Density,
+                        double *OUTPUT, double *OUTPUT, double *OUTPUT, double *OUTPUT);
+
+Notice that the variables Power, Torque, FuelBurn, and EngineWeight are 
+declared as outputs. Inputs don't have to be explicitly declared, although the keyword INPUT
+should be used whenver a pointer is actually a single input value. If a variable
+functions as both an input and an output, use the keyword BOTH in the interface file.
+
+Generating the importable shared object from this interface is a 4 step process.
+
+    1. Run swig on the interface file, using Python as the target.
+    2. Compile the original C function on your system. (Not needed if you already have a library that contains this function.)
+    3. Compile the code generated in step 1.
+    4. Link the libraries from step 2 and 3 (along with any other required externals) to create the shared object.
+
+For the engine example, on a unix environment with GCC as the compiler, these 
+steps look like this:
     
+::
 
-TODO - C Example
+    swig -python engineC_SWIG.i
 
+    gcc -fPIC -c engineC.c -I/usr/local/include/python2.6
+    gcc -fPIC -c engineC_SWIG_wrap.c -I/usr/local/include/python2.6
+
+    gcc -shared engineC.o engineC_SWIG_wrap.o -lGLU -lGL -lX11 -lXext -lpthread /usr/lib64/libstdc++.so.6 -lm -o _engineC_SWIG_wrap.so
+
+One common mistake is to give the interface file and the shared object the same name. 
+Python needs to be able to import them independently, so name collision should
+be avoided (i.e., z.py and z.so in the same namespace). In this case, an 
+underscore was prepended to the name of the shared object in the link command
+to avoid this problem.
+    
+On the Python side, interaction with this object differs little from the one we
+created with f2py:
+
+::
+
+    from engineC_SWIG_wrap import RunEngineCycle
+    ...
+    # Call the C model and pass it what it needs.
+        
+    (power, torque, fuel_burn, engine_weight) = RunEngineCycle(
+                stroke, bore, conrod, comp_ratio, spark_angle,
+                n_cyl, IVO, IVC, L_v, D_v, k,
+                R, Ru, Hu, Tw, AFR, P_exth,
+                T_amb, P_amb, air_density, mw_air, mw_fuel,
+                RPM, throttle, thetastep, fuel_density)
+        
+    # Interogate results of engine simulation and store.
+        
+    self.power = power
+    self.torque = torque
+    self.fuel_burn = fuel_burn
+    self.engine_weight = engine_weight
+
+The only difference here is that the outputs are returned as single value
+variables instead of the zero-dimensional lists that f2py returnes whenever
+it generates the interface for a C function.    
+    
 TODO - C++ Example
+
+TODO - SWIG helpful hints
 
 
 Creating an Extension with JCC

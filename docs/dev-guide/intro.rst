@@ -18,9 +18,9 @@ System Configuration
 Some steps of the development process, e.g., downloading a branch of the source
 repository and downloading Python eggs, require network access.  If you're
 behind an http proxy, you'll have to set the *http_proxy* environment variable
-on your system in order for Bazaar and zc.buildout to function properly.
+on your system in order for Bazaar and ``zc.buildout`` to function properly.
 
-In these early stages of the project, we are developing mostly on linux,
+In these early stages of the project, we are developing mostly on Linux,
 with occasional testing on Windows, but in the near term we plan to start
 full testing on Linux, Windows, and OS X.
 
@@ -34,7 +34,7 @@ the Python modules you will need.  To accomplish these things, you will be using
 two tools: `Bazaar, <http://bazaar-vcs.org>`_ to configuration manage your
 source code, and  `zc.buildout, <http://pypi.python.org/pypi/zc.buildout>`_ to
 keep track  of all  of the Python packages that your code depends on. For a
-gentle video introduction to zc.buildout, check out
+gentle video introduction to ``zc.buildout``, check out
 http://rhodesmill.org/brandon/buildout. Note that the sound does not work on the
 local GRC machine called *torpedo*, so GRC users should view the buildout video
 intro from another machine. 
@@ -99,7 +99,7 @@ to a :term:`repository` on that machine.
 +++++++++++++++
     
 
-The bazaar repository for the OpenMDAO source code is available on Launchpad.
+The Bazaar repository for the OpenMDAO source code is available on Launchpad.
 You can get a copy of the repository as follows:
 
 ::

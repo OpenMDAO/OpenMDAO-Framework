@@ -183,12 +183,12 @@ Component Publishing
 ====================
 
 .. note::
-    The current state of packaging in the Python community is in a state of flux, so
+    Currently packaging in the Python community is in a state of flux, so
     the remainder of this section will have to be rewritten at some point.
-    *setuptools* has been forked into a package called *distribute*, and apparently
-    based on discussions at PyCon 2010, the plan is that eventually, *distribute*
-    and *distutils* will go away and be replaced by *distutils2* which will be 
-    part of the standard library.  Much of the functionality of *setuptools/distribute*
+    *setuptools* has been forked into a package called *distribute*, and 
+    based on discussions at PyCon 2010, apparently the plan is that eventually, *distribute*
+    and *distutils* will go away and be replaced by *distutils2*, which will be 
+    part of the standard library. Much of the functionality of *setuptools/distribute*
     will be incorporated into *distutils2*, and *distutils2* will break backward
     compatibility with *distutils*.  Eggs are apparently going away as well, but 
     the assumption is that packaged distributions created by *distutils2* will
@@ -443,9 +443,9 @@ for an object within a :term:`Component` that has a name and  provides a
 particular  interface. In other words, it is a location for a plugin within a
 Component. Because any object placed in a Socket must have the interface specified
 by the Socket, the enclosing Component will know how to interact with that object.
-Adding Sockets to a :term:`Component` class gives the :term:`Component` developer
-a way to allow a user to easily customize the behavior of a :term:`Component` at
-runtime simply by dragging and dropping objects onto the :term:`Component`.
+Adding Sockets to a Component class gives the component developer
+a way to allow a user to easily customize the behavior of a Component at
+runtime simply by dragging and dropping objects onto the Component.
 
 .. _`plugin view`:
 

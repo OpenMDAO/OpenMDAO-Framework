@@ -1,5 +1,5 @@
-
-.. _Plugin-Developer's-Guide:
+ 
+.. _Plugin-Developer-Guide:
 
 ====================== 
 Plugin Developer Guide 

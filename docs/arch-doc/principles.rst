@@ -4,7 +4,7 @@ Design Principles
 -----------------
 
 This section provides a brief outline of some of our requirements and the
-general approaches we intend to use in order to meet them. Some of the  specific
+general approaches we intend to use to meet them. Some of the  specific
 libraries and tools mentioned may change as the design of the framework evolves.
 
 
