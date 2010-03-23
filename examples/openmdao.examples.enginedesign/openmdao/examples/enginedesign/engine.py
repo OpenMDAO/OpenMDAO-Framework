@@ -94,8 +94,8 @@ class Engine(Component):
 
     def execute(self):
         """ Simulates the Otto cycle for an internal combustion engine.
-            Power and Torque are returned at the engine output.
-            """
+        Power and Torque are returned at the engine output.
+        """
 
         # These Constants are all hard-coded for Gasoline.
         # Eventually, we'll move them to the input so that they can be tweaked.

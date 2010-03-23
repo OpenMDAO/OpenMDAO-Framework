@@ -228,6 +228,7 @@ class Bundler(object):
                                              pyver))
 
     def install(self):
+        """ Install method for thie recipe -- creates the part."""
         self.is_binary = False
         startdir = os.getcwd()
         if os.path.exists(self.bundledir):

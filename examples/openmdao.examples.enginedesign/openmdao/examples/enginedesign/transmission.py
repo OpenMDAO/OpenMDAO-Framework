@@ -65,8 +65,8 @@ class Transmission(Component):
         
     def execute(self):
         """ The 5-speed manual transmission is simulated by determining the
-            torque output and engine RPM via the gear ratios.
-            """
+        torque output and engine RPM via the gear ratios.
+        """
         #print '%s.execute()' % self.get_pathname()
         ratios = [0.0, self.ratio1, self.ratio2, self.ratio3, self.ratio4,
                   self.ratio5]
