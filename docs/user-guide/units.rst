@@ -5,4 +5,4 @@ Appendix: Summary of Units
 
 The following units are defined in the OpenMDAO units package:
 
-.. literalinclude:: ../../contrib/units/units/unitLibdefault.ini
+.. literalinclude:: ../../openmdao.units/openmdao/units/unitLibdefault.ini

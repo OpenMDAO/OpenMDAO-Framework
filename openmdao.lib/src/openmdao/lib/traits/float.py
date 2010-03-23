@@ -8,7 +8,7 @@ from sys import float_info
 
 from enthought.traits.api import TraitType, Range, TraitError
 from enthought.traits.api import Float as TraitFloat
-from units import PhysicalQuantity
+from openmdao.units import PhysicalQuantity
 
 from openmdao.main.tvalwrapper import TraitValMetaWrapper
 
