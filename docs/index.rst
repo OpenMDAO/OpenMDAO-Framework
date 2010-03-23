@@ -11,8 +11,8 @@ Contents:
    :maxdepth: 2
    
    install-guide/index
-   arch-doc/index
    user-guide/index
+   arch-doc/index
    plugin-guide/index
    dev-guide/index
    stdlib-guide/index

@@ -18,10 +18,10 @@ Component Creation
 The :term:`FactoryManager` object manages the creation process for all
 :term:`Component` and :term:`Container` types in the framework. The creation process
 begins with a request to create a specific type, along with an optional dictionary of
-attributes describing desired resources, being passed to the :term:`FactoryManager`.
+attributes describing desired resources, being passed to the FactoryManager.
 The resource description dictionary can include attributes that specify version,
-server location, memory and disk requirements, etc. The :term:`FactoryManager` then
-passes the create call on to a list of :term:`Factory` objects until one of them
+server location, memory and disk requirements, etc. The FactoryManager then
+passes the create call on to a list of Factory objects until one of them
 successfully creates the object and returns a reference to it. That reference is
 returned to the original caller.
 
@@ -35,9 +35,9 @@ ______________________________
 
 When a new object is requested and the module containing the requested type is
 local, *and* no version or other resource description is specified, then the
-create call is passed to the ImportFactory, which first uses the normal Python
-import mechanism to import the module and then executes the constructor for the
-requested type.
+create call is passed to the ImportFactory. The ImportFactory first uses the
+normal Python import mechanism to import the module and then executes the
+constructor for the requested type.
 
 
 .. figure:: ../generated_images/LocalCreate.png
@@ -60,9 +60,9 @@ import, either because the type cannot be located locally or because the resourc
 description is incompatible with the local copy, the :term:`FactoryManager` will pass
 the create message, via a proxy, to the :term:`ObjServerFactory` object on the remote
 server. (See the figure `Creation Process for a Distributed Component`_.) The
-:term:`ObjServerFactory` will spawn a separate process containing an :term:`ObjServer`
+ObjServerFactory will spawn a separate process containing an ObjServer
 that will create the requested object within its process. A proxy in the local process
-will communicate with the remote object through the :term:`ObjServer`. Another figure
+will communicate with the remote object through the ObjServer. Another figure
 shows a more `detailed creation process`_ for a distributed component. 
 
 
@@ -144,7 +144,7 @@ To solve these problems, a special Loader object will be serialized along with t
 other objects in the model. It will be serialized (and restored) before any of the
 other objects by serializing a list, e.g., [loader, obj], where *obj* is the top level
 object of the model or submodel being serialized. By overriding the loader's
-_*_setstate__* and *__getstate__* functions, the loader can collect a list of all
+*__setstate__* and *__getstate__* functions, the loader can collect a list of all
 dependent modules and their versions at save time, and later, at load time, can
 force early importing of the correct versions of all of the dependent modules before
 any of the other serialized objects are loaded into memory.
@@ -194,14 +194,14 @@ Each Component in the system has a *run()* function which handles updating of
 necessary inputs, executing the Component, and updating outputs.  An
 :term:`Assembly` is a Component that contains other Components within an object
 called a :term:`Workflow`. When an Assembly is run, it runs its
-:term:`Workflow`, which in turn runs all of the Components within it in the
-order specified by the :term:`Workflow` object.  A :term:`Driver` is an
-:term:`Assembly` that performs some kind of iteration over its :term:`Workflow`,
-iterating until some condition is met. A :term:`Driver` that is an optimizer,
-for example, would iterate over its :term:`Workflow` until it satisfies some
+Workflow, which in turn runs all of the Components within it in the
+order specified by the Workflow object. A :term:`Driver` is an
+Assembly that performs some kind of iteration over its Workflow,
+iterating until some condition is met. A Driver that is an optimizer,
+for example, would iterate over its Workflow until it satisfies some
 convergence criteria or reaches its maximum allowed number of iterations.  A
-CaseIterDriver, which is a :term:`Driver` that runs input cases that come from a
-:term:`CaseIterator`, will iterate over its :term:`Workflow` until it uses up
+CaseIterDriver, which is a Driver that runs input cases that come from a
+:term:`CaseIterator`, will iterate over its Workflow until it uses up
 all of the cases in the CaseIterator.
 
 
@@ -219,7 +219,7 @@ remote, the :term:`ResourceAllocator` for the remote location will return a refe
 to an :term:`ObjServer` with a :term:`CommandLineWrapper` as its top level object. The 
 ResourceAllocator that created the ObjServer will specify the 
 ResourceAllocators that the remote CommandLineWrapper will have access to for
-further resource searches. Generally, only the local :term:`ResourceAllocator` will be 
+further resource searches. Generally, only the local ResourceAllocator will be 
 available, except in the case of clusters and load balancers.
 
 Resource allocation is required whenever the system needs to run a new process.
