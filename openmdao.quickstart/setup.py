@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 import os
 
-setup(name='openmdao',
+setup(name='openmdao.quickstart',
       version='0.1',
       description="",
       long_description="",
@@ -15,18 +15,18 @@ setup(name='openmdao',
       author_email='',
       url='',
       license='NOSA',
-      #packages=find_packages(exclude=['ez_setup']),
-      #namespace_packages=['openmdao'],
-      namespace_packages=[],
-      packages = [],
-      #py_modules = ['nothing'],
+      packages=find_packages(exclude=['ez_setup']),
+      namespace_packages=['openmdao'],
+      package_data={'openmdao': ['*.cfg']},
+      include_package_data=True,
       zip_safe=False,
       install_requires=[
           'setuptools',
-          'openmdao.lib',
-          'openmdao.test',
-          'openmdao.recipes',
+          'zc.buildout',
       ],
       entry_points={
+      "console_scripts": [
+          'openmdao_quickstart = openmdao.quickstart.quickstart:run'
+          ]
       },
       )

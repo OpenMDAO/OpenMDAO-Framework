@@ -12,7 +12,7 @@ import tempfile
 from subprocess import check_call
 
 import pkg_resources
-from pkg_resources import Environment, WorkingSet, Distribution, Requirement, get_supported_platform
+from pkg_resources import Environment, WorkingSet, Requirement, get_supported_platform
 from setuptools.package_index import PackageIndex
 import zc.buildout
 import setuptools
@@ -188,7 +188,6 @@ class Bundler(object):
         env = Environment()
         for degg in self.develop:
             os.chdir(startdir)
-            absegg = os.path.abspath(degg)
             self.logger.debug('building egg in %s' % degg)
             os.chdir(degg)
             # clean up any old builds
