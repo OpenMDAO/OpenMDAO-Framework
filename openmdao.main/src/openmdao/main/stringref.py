@@ -13,10 +13,10 @@ class DumbDefault(object):
             
 class StringRef(BaseStr):
     """A trait that references, via a pathname, another trait in the
-    framework. If it has iotype of 'out', then the string may only be the pathname of
-    a single variable (with optional array indexing), but if iotype is 'in',
-    it may be any valid expression and may reference any number of other
-    variables.
+    framework. If it has iotype of 'out', then the string may only be the
+    pathname of a single variable (with optional array indexing), but if
+    iotype is 'in', it may be any valid expression and may reference any
+    number of other variables.
     """
     
     def __init__(self, default_value=NoDefaultSpecified, iotype=None, \
@@ -36,6 +36,11 @@ class StringRef(BaseStr):
         super(StringRef, self).__init__(default_value, **metadata)
 
     def validate(self, object, name, value):
+        """ Validates that a specified value is valid for this trait.
+        
+        Note: The 'fast validator' version performs this check in C.
+        """
+        
         s = super(StringRef, self).validate(object, name, value) # normal string validation
         try:
             if self.iotype == 'out':

@@ -230,7 +230,7 @@ class Container(HasTraits):
         self._name = name
         self._logger.rename(self._name)
         
-    name = property(_get_name, _set_name)
+    name = property(_get_name, _set_name, doc="Name of the Container")
     
     def findname(self, obj):
         """Return the object within this object's dict that has the given name.

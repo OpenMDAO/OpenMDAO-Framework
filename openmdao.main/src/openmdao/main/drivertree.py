@@ -15,7 +15,7 @@ def create_labeled_graph(parent_graph):
 
 class DriverForest(object):
     """Inserting drivers into this object will result in the drivers
-    being arranged in a forrest structure indicating which drivers are 
+    being arranged in a forest structure indicating which drivers are 
     nested within others.  
     """
     def __init__(self, drivers):
@@ -24,6 +24,7 @@ class DriverForest(object):
             self.insert(drv)
 
     def insert(self, driver):
+        """ Inserts a Driver into this DriverForest."""
         if len(self.trees) == 0:
             self.trees.append(DriverTree(driver))
         else:
@@ -39,6 +40,7 @@ class DriverForest(object):
             self.trees.append(dtree)
             
     def drivers_iter(self):
+        """ Driver Iterator."""
         for tree in self.trees:
             for drv in tree.drivers_iter():
                 yield drv
@@ -73,6 +75,7 @@ class DriverTree(object):
         self.children = []
 
     def locate(self, driver):
+        """ Find a driver in this DriverTree or its children."""
         if self.data is driver:
             return self
         for child in self.children:
@@ -180,6 +183,7 @@ class DriverTree(object):
         
         
     def drivers_iter(self):
+        """ Driver Iterator."""
         yield self.data
         for child in self.children:
             for drv in child.drivers_iter():

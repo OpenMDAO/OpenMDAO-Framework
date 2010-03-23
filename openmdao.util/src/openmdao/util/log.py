@@ -176,20 +176,26 @@ class NullLogger(object):
     """
 
     def debug(self, msg, *args, **kwargs):
+        """ Log a debug message. """
         pass
 
     def info(self, msg, *args, **kwargs):
+        """ Log an information message. """
         pass
 
     def warning(self, msg, *args, **kwargs):
+        """ Log a warning message. """
         pass
 
     def error(self, msg, *args, **kwargs):
+        """ Log an error message. """
         pass
 
     def critical(self, msg, *args, **kwargs):
+        """ Log a critical message. """
         pass
 
     def log(self, msg, *args, **kwargs):
+        """ Log a message at a specified level. """
         pass
 

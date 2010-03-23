@@ -256,6 +256,7 @@ class SphinxBuild(object):
             f.close()
 
     def install(self):
+        """ Install method for thie recipe -- creates the part."""
         scriptlist = []
         # build up a list of all egg dependencies resulting from our 'eggs' parameter
         env = Environment(self.dev_eggs+[self.buildout['buildout']['eggs-directory'],
