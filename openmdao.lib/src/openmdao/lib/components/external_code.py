@@ -19,8 +19,8 @@ class ExternalCode(Component):
     Run an external code as a component.
 
     - `command` is the command to be executed.
-    - `poll_delay` is the delay between polling for command completion. \
-      A value <= zero will use an internally computed default.
+    - `poll_delay` is the delay between polling for command completion \
+      (seconds). A value <= zero will use an internally computed default.
     - `timeout` is the maximum time to wait for command completion (seconds). \
       A value <= zero implies an infinite wait.
     - `return_code` is the value returned by the command.
@@ -54,7 +54,7 @@ class ExternalCode(Component):
         """
         Removes existing output (but not in/out) files,
         expands `command` user and environment variables,
-        and then launches a process with resulting command line.
+        and then launches a process with the resulting command line.
         Polls for command completion or timeout.
         """
         for metadata in self.external_files:

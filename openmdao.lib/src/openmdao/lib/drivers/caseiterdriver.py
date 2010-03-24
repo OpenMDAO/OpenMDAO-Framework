@@ -85,11 +85,14 @@ class CaseIteratorDriver(Driver):
 
     def execute(self):
         """ Runs each case in `iterator` and records results in `recorder`. """
-        self._setup()
+        self.setup()
         self.resume(remove_egg=True)
 
     def resume(self, remove_egg=False):
-        """ Resume execution. """
+        """
+        Resume execution. If `remove_egg` is True, then the egg file created
+        for concurrent evaluation is removed at the end of the run.
+        """
         self._stop = False
         if self._iter is None:
             self.raise_exception('Run already complete', RuntimeError)
@@ -117,7 +120,7 @@ class CaseIteratorDriver(Driver):
         """ Evaluate the next case. """
         self._stop = False
         if self._iter is None:
-            self._setup()
+            self.setup()
 
         try:
             self._todo.append(self._iter.next())
@@ -131,10 +134,10 @@ class CaseIteratorDriver(Driver):
         while self._server_ready(None, stepping=True):
             pass
 
-    def _setup(self, replicate=True):
+    def setup(self, replicate=True):
         """
         Setup to begin new run. If `replicate`, then replicate the model
-        and save to an egg file first.
+        and save to an egg file first (for concurent evaluation).
         """
         self._cleanup(remove_egg=replicate)
 
