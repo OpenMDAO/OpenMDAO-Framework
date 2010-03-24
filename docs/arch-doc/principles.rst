@@ -15,11 +15,11 @@ libraries and tools mentioned may change as the design of the framework evolves.
     - Plugins (easy to obtain and distribute via a package index e.g., PyPI)
 
 **Portability**
-    - use of Python
+    - Use of Python
 
 **100% open source infrastructure**
     - Python's many open source libraries
 
 **Location transparency**
     - Abstract Factory design pattern
-    - proxy objects
+    - Proxy objects
