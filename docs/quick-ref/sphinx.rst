@@ -32,7 +32,8 @@ Some Basics
 
 * When numbering items (such as steps in a task or process), DO NOT indent the numbers -- put them
   flush left. When numbers are indented, they do not display correctly in Internet Explorer (although
-  they look fine in Firefox and Safari).
+  they look fine in Firefox and Safari). If the numbered item is long and you wrap it, it could also
+  cause display issues in IE.
 
 * All text in headings (level one, level two, level three, etc.)
   must be underlined. (In OpenMDAO documents, generally the title is overlined

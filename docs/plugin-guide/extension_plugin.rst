@@ -82,7 +82,7 @@ description string. This will vary depending on your system and version, but the
 one *bar3simulation* egg in your bundle.
 
 It should also be noted that a Fortran compiler is required. The instructions presented here are
-applicable to the Unix and Mac OSX environments. There may be some differences on the Windows
+applicable to the UNIX and Mac OSX environments. There may be some differences on the Windows
 platform.
 
 .. index:: three-bar truss
@@ -294,14 +294,15 @@ Only Make Signature File      f2py -m foo -h foo.pyf foo.f
 Build with Signature foo.pyf  f2py foo.pyf foo.f -c
 ============================ =============================
 
+.. index:: SWIG
 
 Creating an Extension with SWIG
 --------------------------------
 
 The Simplified Wrapper and Interface Generator (SWIG) is a tool that simplifies
-the creation of extensions from C an C++ functions for use in a variety of
-target languages including Python. In order to use SWIG, the most recent
-version needs to be downloaded and installed at the system level.
+the creation of extensions from C and C++ functions for use in a variety of
+target languages, including Python. To use SWIG, you must download and install the most recent
+version at the system level.
 
 ::
 
@@ -309,13 +310,13 @@ version needs to be downloaded and installed at the system level.
     Source Languages: C, C++
     Documentation: http://www.swig.org/doc.html
 
-SWIG is a bit more complicated than f2py, so you are strongly encouraged to read
-their documentation and experiment with their `example problem`__ before
+SWIG is a bit more complicated than F2PY, so you are strongly encouraged to read
+the documentation and experiment with their `example problem`__ before
 attempting to wrap your own C or C++ codes.
 
-The first step to create a Python extension is to create the interface file for
+The first step in creating a Python extension is to create the interface file for
 the C functions that are to be wrapped. The interface file is analogous to the
-signature file that f2py uses, though its format is more like C. For example,
+signature file that F2PY uses, though its format is more like C. For example,
 consider the engine simulation as described in the :ref:`The-OpenMDAO-tutorial-problem`.
 There is one function with inputs and outputs effectively passed as arguments. The
 corresponding interface file would look like this:
@@ -345,19 +346,19 @@ corresponding interface file would look like this:
                         double RPM, double Throttle, double thetastep, double Fuel_Density,
                         double *OUTPUT, double *OUTPUT, double *OUTPUT, double *OUTPUT);
 
-Notice that the variables Power, Torque, FuelBurn, and EngineWeight are 
-declared as outputs. Inputs don't have to be explicitly declared, although the keyword INPUT
-should be used whenver a pointer is actually a single input value. If a variable
-functions as both an input and an output, use the keyword BOTH in the interface file.
+Notice that the variables *Power, Torque, FuelBurn,* and *EngineWeight* are 
+declared as outputs. Inputs don't have to be explicitly declared, although the keyword *INPUT*
+should be used whenever a pointer is actually a single input value. If a variable
+functions as both an input and an output, use the keyword *BOTH* in the interface file.
 
-Generating the importable shared object from this interface is a 4 step process.
+Generating the importable shared object from this interface is a 4-step process.
 
-    1. Run swig on the interface file, using Python as the target.
-    2. Compile the original C function on your system. (Not needed if you already have a library that contains this function.)
-    3. Compile the code generated in step 1.
-    4. Link the libraries from step 2 and 3 (along with any other required externals) to create the shared object.
+1. Run SWIG on the interface file, using Python as the target.
+2. Compile the original C function on your system. (Not needed if you already have a library that contains this function.)
+3. Compile the code generated in step 1.
+4. Link the libraries from steps 2 and 3 (along with any other required externals) to create the shared object.
 
-For the engine example, on a unix environment with GCC as the compiler, these 
+For the engine example, on a UNIX environment with GCC as the compiler, these 
 steps look like this:
     
 ::
@@ -370,13 +371,13 @@ steps look like this:
     gcc -shared engineC.o engineC_SWIG_wrap.o -lGLU -lGL -lX11 -lXext -lpthread /usr/lib64/libstdc++.so.6 -lm -o _engineC_SWIG_wrap.so
 
 One common mistake is to give the interface file and the shared object the same name. 
-Python needs to be able to import them independently, so name collision should
-be avoided (i.e., z.py and z.so in the same namespace). In this case, an 
+Python must be able to import them independently, so name collision should
+be avoided (i.e., ``z.py`` and ``z.so`` in the same namespace). In this case, an 
 underscore was prepended to the name of the shared object in the link command
 to avoid this problem.
     
 On the Python side, interaction with this object differs little from the one we
-created with f2py:
+created with F2PY:
 
 ::
 
@@ -399,7 +400,7 @@ created with f2py:
     self.engine_weight = engine_weight
 
 The only difference here is that the outputs are returned as single value
-variables instead of the zero-dimensional lists that f2py returnes whenever
+variables instead of the zero-dimensional lists that F2PY returnes whenever
 it generates the interface for a C function.    
     
 TODO - C++ Example

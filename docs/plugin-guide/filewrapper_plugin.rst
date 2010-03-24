@@ -1,8 +1,8 @@
 
 .. _Building-a-Plugin-Using-a-File-Wrapper:
 
-Building a Plugin Containing a File Wrapper
--------------------------------------------
+Building a Plugin that Contains a File Wrapper
+----------------------------------------------
 
 The file wrapping library is not yet implemented.
 

@@ -14,11 +14,12 @@ All documentation is located in the ``docs/`` directory on your branch. There ar
 directories for each user document. The following is a recent list of documents and
 their directory names in the Sphinx OpenMDAO Documentation project: 
 
-* Architecture Document -- ``arch-doc``
+* Installation Guide  -- ``install-guide``
 * User's Guide -- ``user-guide``
-* Guide to the OpenMDAO Standard Library -- ``stdlib-guide``
+* Architecture Document -- ``arch-doc``
 * Plugin Developer Guide -- ``plugin-guide``
 * Developer's Guide -- ``dev-guide``
+* Guide to the OpenMDAO Standard Library -- ``stdlib-guide``
 * Source Documentation -- ``srcdocs``
 * Licenses -- ``licenses``
 * Quick Reference Guide	for Working in OpenMDAO -- ``quick-ref``
@@ -199,11 +200,12 @@ text, Sphinx doesn't seem to mind.
      .. toctree::
 	:maxdepth: 2
 
-	arch-doc/index
+	install-guide/index
 	user-guide/index
-	stdlib-guide/index
+	arch-doc/index
 	plugin-guide/index
 	dev-guide/index
+	stdlib-guide/index
 	srcdocs/index
 	licenses/index
 	quick-ref/index

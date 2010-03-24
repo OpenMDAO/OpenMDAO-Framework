@@ -688,7 +688,7 @@ Building a Simulation Model
 
 A model is a collection of components (which can include assemblies and drivers)
 that can be executed in the framework. The entity that contains this model is
-called the Top Level Assembly, which behaves functionally as an Assembly.
+called the top level Assembly, which behaves functionally as an Assembly.
 
 .. testsetup:: simple_model_Unconstrained_pieces
 

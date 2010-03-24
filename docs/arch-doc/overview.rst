@@ -145,58 +145,52 @@ The current package layout of the project is as follows:
 Deployment
 ==========
 
-Each OpenMDAO package will be distributable as a python egg, and each package's
+Each OpenMDAO package will be distributable as a Python egg, and each package's
 egg will have its own version number. Each specific version of an OpenMDAO
-package will also depend on a number specific versions of third party packages,
-and all of these will have to be obtained in order to assemble a complete
-working application.  This is accomplished by using zc.buildout_ to construct a
-python environment containing all of the necessary packages.  A buildout
+package will also depend on a number of specific versions of third-party packages,
+and a user will have to obtain all of these to assemble a complete
+working application.  A user accomplishes this by using zc.buildout_ to construct a
+Python environment containing all of the necessary packages.  A buildout
 configuration file will be created for each *official* OpenMDAO release, and
 that configuration file will be pinned to a specific set of versioned eggs that
 are all compatible with each other. 
 
-In order to assemble a complete working version of OpenMDAO, the following
-steps are performed:
+To assemble a complete working version of OpenMDAO, a user must perform the following
+steps:
 
 
-1.  bootstrap a buildout using the appropriate python version, e.g.,
-    ``python2.6 bootstrap.py``
+1.  bootstrap a buildout using the appropriate Python version, e.g., ``python2.6 bootstrap.py``
 	 
-2.  obtain a buildout configuration file from the OpenMDAO website, e.g.,
-    ``wget http://openmdao.org/releases/1.0.3/buildout.cfg``
+2.  obtain a buildout configuration file from the OpenMDAO website, e.g., ``wget http://openmdao.org/releases/1.0.3/buildout.cfg``
 	  
-3.  execute the buildout using that configuration file, e.g.,
-    ``bin/buildout``
+3.  execute the buildout using that configuration file, e.g., ``bin/buildout``
     
-Any needed eggs will be downloaded from the web by the buildout script,
-either from the Python Package Index, from OpenMDAO's own package index, or from
-some other package index or from a local download cache. Once this process is
-completed, the user will have a complete version of the OpenMDAO framework.
+Any needed eggs will be downloaded from the web by the buildout script from one of the following: the
+Python Package Index, OpenMDAO's own package index, some other package index, or from a
+local download cache. Once this process is completed, a user will have a complete version of the
+OpenMDAO framework.
 
 Another possibility is to bundle all of the necessary eggs into a large archive,
-either a tar file or a zip file, and the user can obtain the archive and run
+either a tar file or a zip file; the user would obtain the archive and run
 the buildout as mentioned above. This option is attractive for those who have no
-network access or for transfer of models containing proprietary components that 
+network access or for transfering models containing proprietary components that 
 are not available over the network.
 
 For Windows users, a self-extracting installer file will most likely be
-provided, and this installer will perform the needed buildout steps for the
-user.
+provided, and this installer will perform the needed buildout steps.
 
-Once the user has installed the framework, the next step is to build or import
+Once a user has installed the framework, the next step is to build or import
 some sort  of model, a configuration of plugin components that work together to
 solve some sort of problem. A complex OpenMDAO model may depend upon a large
-number of eggs.  Some of those eggs will be found in  the OpenMDAO standard
+number of eggs.  Some of those eggs will be found in the OpenMDAO standard
 library, but others will not. Downloading all of those eggs from a package index
 every time a new buildout is created could cause unwanted delays and could waste
-space, so configuring the system to avoid unnecessary copying of distributions
-is important. The easiest way to do this is for users to set the
-*eggs-directory* attribute in their buildout default configuration file (in
-``$HOME/.buildout/default.cfg``).  After *eggs-directory* is set, all eggs needed
-by any buildout run by the user will be installed in that directory, and if
-a needed egg is found in that directory, it doesn't have to be downloaded.
-Multiple versions of the same egg can be present in the ``eggs-directory``
-since all of their filenames will be unique.
+space, so it is important to configure the system to avoid unnecessary copying of distributions. The
+easiest way to do this is for users to set the *eggs-directory* attribute in their buildout default
+configuration file (in ``$HOME/.buildout/default.cfg``).  After *eggs-directory* is set, all eggs
+needed by any buildout that the user runs will be installed in that directory, and if a needed egg is
+found in that directory, it doesn't have to be downloaded. Multiple versions of the same egg can be
+present in the ``eggs-directory`` since all of the filenames will be unique.
 
 
 

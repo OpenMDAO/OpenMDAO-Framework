@@ -439,7 +439,7 @@ ______________
 
 The figure below shows an example of a `plugin view`_, which shows any Sockets
 existing in a particular :term:`Component`. A  :term:`Socket` is just a placeholder
-for an object within a :term:`Component` that has a name and  provides a
+for an object within a `Component` that has a name and  provides a
 particular  interface. In other words, it is a location for a plugin within a
 Component. Because any object placed in a Socket must have the interface specified
 by the Socket, the enclosing Component will know how to interact with that object.
