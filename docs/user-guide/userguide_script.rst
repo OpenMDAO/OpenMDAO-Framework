@@ -144,6 +144,22 @@ Most of these items are also explained elsewhere in the *User's Guide.*
 *The Model Hierarchy*
 ~~~~~~~~~~~~~~~~~~~~~
 
+TODO: Talk about the model hierarchy
+
+*Naming Conventions*
+~~~~~~~~~~~~~~~~~~~~
+
+Components and Public Variables that are instantiated into the OpenMDAO Model 
+Hierarchy must follow the same naming syntax as variables in the Python
+language. Summarized, this means that they can only include alphanumeric
+characters and the underscore, and that the lead character cannot be a number.
+Any attempt to create a component or a Public Variable that does not comform
+to Python's syntax should result in an exception. This restriction was required
+because these entities essentially exist as Python variables. One unfortunate
+side-effect is that names with spaces are not allowed.
+
+TODO: Talk about naming conventions
+
 .. index:: Component
 
 Creating New Components
@@ -377,6 +393,9 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 +------------------+----------------------------------------------------------+
 | Bool             | Bool( [*value* = None, *desc* = None, *iotype* = None] ) | 
 +------------------+----------------------------------------------------------+
+| Complex          | Complex( [*value* = None, *desc* = None,                 |
+|                  | *iotype* = None] )                                       | 
++------------------+----------------------------------------------------------+
 | Float            | Float( [*default_value* = None, *iotype* = None,         | 
 |                  | *desc* = None, *low* = None, *high* = None,              |
 |                  | *exclude_low* = False, *exclude_high* = False,           |
@@ -390,6 +409,8 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 | Int              | Int( [*default_value* = None, *iotype* = None,           |
 |                  | *desc* = None, *low* = None, *high* = None,              |
 |                  | *exclude_low* = False, *exclude_high* = False] )         |
++------------------+----------------------------------------------------------+
+| Range            | Deprecated. Use OpenMDAO's Int or Float.                 |
 +------------------+----------------------------------------------------------+
 | Str              | Str( [*value* = None, *desc* = None, *iotype* = None] )  |
 +------------------+----------------------------------------------------------+
@@ -461,9 +482,10 @@ general-purpose n-dimensional array class. A 2-dimensional array is assigned as
 the default value for the Public Variable named *z*. 
 
 The *dtype* parameter defines the type of variable that is in the array. For
-example, using a string (*str*) for a dtype would give an array of strings.
-Note that the alternate *typecode* is also supported for non-Numpy arrays 
-(e.g., typecode='I' for unsigned integers.)
+example, using a string (*str*) for a dtype would give an array of strings. Any
+of Python's standard types and NumPy's additional types should be valid for the
+*dtype parameter. Note that the alternate *typecode* is also supported for 
+non-Numpy arrays (e.g., typecode='I' for unsigned integers.)
 
 The *shape* parameter is not a required attribute; the Array will default to
 the dimensions of the array that is given as the value. However, it is often
@@ -511,8 +533,6 @@ can also be accesssed using brackets.
 Instance Traits
 +++++++++++++++
 
-.. index:: StringRef
-
 An Instance is a special type of Public Variable that allows an object to be
 passed between components. Essentially, any object can be passed through the
 use of an Instance. The first argument in the constructor is always the type of
@@ -532,6 +552,19 @@ this type will generate an exception.
 	                    iotype='in', required=True)
         model = Instance(Component, desc='Model to be executed.', \
 	                    iotype='in', required=True)
+			    
+In this example, we have two inputs that are Instances. The one called model
+is of type *Component*, which means that this component actually takes another
+Component as input. Similarly, the one called recorder is of type *object*. In
+Python, object is the ultimate base class for any object, so this input can
+actually take anything. (Note: it is still possible to create a class that doesn't
+inherit from *object* as its base class, but this is not considered good form.)
+
+The attribute *required* is used to indicate whether the object that plugs into
+this input is required. If *required* is True, then an exception will be raised
+if the object is not present.
+
+.. index:: StringRef
 
 StringRef
 +++++++++
@@ -627,6 +660,23 @@ the function *convert_units*.
     >>> convert_units(33,'m','ft')
     108.267...
 
+Coercion and Casting
+++++++++++++++++++++
+
+OpenMDAO variables have a certain pre-defined behavior when a value from a
+variable of a different type is assigned. Public Variables were created
+using the Casting traits as opposed to the Coercion traits. This means that
+most mis-assignements in variable connections (i.e., a float connected to
+a string) should generate a TraitError exception. However, certain widening
+coercions seem to be permitted (e.g., Int->Float, Bool->Int, Bool->Float). No
+coercion from or to Str is allowed. If the user needs to apply different
+coercion behavior, it should be fairly simple to create a Python component to
+do the type translation.
+
+More details can be found in the `Traits 3 User Manual`__.
+
+.. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
+
 *Creating Custom Variable Types*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -636,6 +686,29 @@ For an example of a user-created Public Variable, see :ref:`Building-a-Variable-
 Building a Simulation Model
 ---------------------------
 
+A model is a collection of components (which can include assemblies and drivers)
+that can be executed in the framework. The entity that contains this model is
+called the Top Level Assembly, which behaves functionally as an Assembly.
+
+.. testsetup:: simple_model_Unconstrained_pieces
+
+	from openmdao.main.api import Assembly
+	from openmdao.lib.api import CONMINdriver
+	from openmdao.examples.simple.paraboloid import Paraboloid
+	from openmdao.examples.simple.optimization_unconstrained import Optimization_Unconstrained
+	
+	self = Optimization_Unconstrained()
+	
+.. testcode:: simple_model_Unconstrained_pieces
+
+	        # Create Paraboloid component instances
+	        self.add_container('paraboloid', Paraboloid())
+
+	        # Create CONMIN Optimizer instance
+	        self.add_container('driver', CONMINdriver())
+		
+
+
 *Connecting Components*
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -644,9 +717,6 @@ Building a Simulation Model
 
 *Sockets & Interfaces*
 ~~~~~~~~~~~~~~~~~~~~~~
-
-*The Top Level Assembly*
-~~~~~~~~~~~~~~~~~~~~~~~~
 
 Drivers
 -------
@@ -663,14 +733,34 @@ Drivers
 CONMIN
 ++++++
 
-NEWSUMT
+CONMIN, which stands for CONstraint MINimization, is a gradient descent optimization
+algorithm based on the Method of Feasible Directions. It was developed at
+NASA in the 1970s, and is  currently in the public domain. It hasbeen  included
+in OpenMDAO's Standard Library to provide users with a basic gradient algorithm.
+The interface for CONMIN is full detailed in :ref:`CONMIN-driver`.
+
+Idesign
 +++++++
+
+Idesign, which stands for Interactive Design Optimization of Engineering Systems,
+is another gradient optimization package useable for problems with inequality and
+equality constraints. It is currently being integrated into OpenMDAO,
+and should be available soon.
 
 PyEvolve
 ++++++++
 
+PyEvolve is complete genetic algorithm framework written in pure python. It was
+developed and is actively maintained by Christian S. Perone.
+
+Documentation for the PyEvolve package can be found at `<http://pyevolve.sourceforge.net/>`_.
+
+Documentation for the OpenMDAO driver is forthcoming, pending some reworking.
+
 Newton Solver
 +++++++++++++
+
+No capability at present, but it is part of our requirements.
 
 *Adding new Optimizers*
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -693,17 +783,45 @@ Running OpenMDAO
 Data Flow and WorkFlow
 ----------------------
 
+The execution order for components in a model can either be determined 
+automatically by OpenMDAO, or specified explicitly  by the user. This
+distinction can be made at the assembly level, so for example, a model can have
+some assemblies with user-specified workflow, while other assemblies are
+left to automatic determination. In addition, a driver workflow can also be
+specified by the user. All three of these scenarios are discussed below.
+
 *Data Flow & Lazy Evaluation*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*Building a WorkFlow*
-~~~~~~~~~~~~~~~~~~~~~
+The 'default' workflow for a model is inferred from the data flow connections.
+This means that a component is available to run once its inputs become valid,
+which occurs when the components that supply those inputs are valid. Since
+direct circular connections (algebraic loops for those familiar with Simulink)
+are not permitted, there will always be an execution order that can be
+determined from the connections. OpenMDAO uses the *networkx* package to find
+loops and solve for the execution order. Note that this order isn't always
+unique.
 
-Looping
-+++++++
+A bit more on the technical details: every component contains a dictionary of
+its input Public Variables coupled with a validity flag. When any input is
+invalid, the component is essentially invalid and therefore will be executed during the
+next run. If the component is valid (i.e., has no invalid inputs), it does
+not need to execute when the model is run. This is the principal of Lazy 
+Evaluation. It should be noted that when a component's inputs become invalidated,
+the effect is propagated downstream to all components that depend on it. Also,
+when a model is instantiated, all inputs are invalid, which ensures that
+the whole model always executes the first time it is run.
 
-Branching
-+++++++++
+*Custom WorkFlow*
+~~~~~~~~~~~~~~~~~
+
+Custom workflow capability is currently under development and should be available soon.
+
+*Custom Driver Workflow*
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Custom driver workflow capability is currently under development and should be
+available in the near future.
 
 Design Tools
 ------------
@@ -711,17 +829,26 @@ Design Tools
 *Design of Experiments*
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+No capability at present, but it is part of our requirements.
+
 *Multi-objective Optimization and Pareto Frontiers*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+No capability at present, but it is part of our requirements.
+
 *Sensitivity Analysis*
 ~~~~~~~~~~~~~~~~~~~~~~
+
+No capability at present, but it is part of our requirements.
 
 Managing Simulation Data
 ------------------------
 
 Multi-Threaded Computation
 --------------------------
+
+No capability at present, but it is part of our requirements, and is
+currently being implemented.
 
 Publishing a Component
 ----------------------
@@ -741,9 +868,15 @@ Advanced MDAO
 *Multi-Fidelity Optimization*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+No capability at present, but it is part of our requirements.
+
 *Surrogate Modeling*
 ~~~~~~~~~~~~~~~~~~~~~
+
+No capability at present, but it is part of our requirements.
 
 *Uncertainty*
 ~~~~~~~~~~~~~
  
+No capability at present, but it is part of our requirements.
+

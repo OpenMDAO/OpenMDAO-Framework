@@ -81,6 +81,8 @@ class PkgResourcesFactory(Factory):
         self.update_search_path(search_path)
     
     def update_search_path(self, search_path):
+        """ Updates the plugin search path."""
+        
         self.env = Environment(search_path)
         self._loaders = {}
         for group in self._groups:

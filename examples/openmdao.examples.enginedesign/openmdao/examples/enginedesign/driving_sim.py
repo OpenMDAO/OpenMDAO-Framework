@@ -48,15 +48,15 @@ class DrivingSim(Assembly):
     def __init__(self, doc=None, directory=''):
         """ Creates a new DrivingSim object
         
-            # Simulation inputs
-            end_speed          # Simulation ending speed in mph.
-            timestep           # Simulation time step in sec.
+        # Simulation inputs
+        end_speed          # Simulation ending speed in mph.
+        timestep           # Simulation time step in sec.
             
-            # Outputs
-            accel_time        # Time to reach 60 mph from start
-            EPA_city          # Fuel economy for city driving
-            EPA_highway       # Fuel economy for highway driving
-            """
+        # Outputs
+        accel_time        # Time to reach 60 mph from start
+        EPA_city          # Fuel economy for city driving
+        EPA_highway       # Fuel economy for highway driving
+        """
         
         super(DrivingSim, self).__init__(doc, directory)    
 
@@ -95,6 +95,7 @@ class DrivingSim(Assembly):
         
     def execute(self):
         """ Simulate the vehicle model at full throttle."""
+        
         #--------------------------------------------------------------------
         # Simulate acceleration time from 0 to end_speed
         #--------------------------------------------------------------------
@@ -158,11 +159,10 @@ class DrivingSim(Assembly):
         fuel_economy = []
         
         def findgear():
+            """ Finds the nearest gear in the appropriate range for the
+            currently commanded velocity. 
+            This is intended to be called recursively.
             """
-               Finds the nearest gear in the appropriate range for the
-               currently commanded velocity. 
-               This is intended to be called recursively.
-               """
             # Note, shifts gear if RPM is too low or too high
             try:
                 self.vehicle.run()
@@ -319,6 +319,7 @@ class DrivingSim(Assembly):
     
 def test_it(): # pragma: no cover    
     """simple testing"""
+    
     import time
     ttime = time.time()
     

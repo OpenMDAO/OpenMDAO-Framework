@@ -19,8 +19,8 @@ class Paraboloid(Component):
         
     def execute(self):
         """ Solve (x-3)^2 + xy + (y+4)^2 = 3
-            Optimal solution (minimum): x = 6.6667; y = -7.3333
-            """
+        Optimal solution (minimum): x = 6.6667; y = -7.3333
+        """
         
         x = self.x
         y = self.y

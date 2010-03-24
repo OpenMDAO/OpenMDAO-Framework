@@ -132,6 +132,7 @@ class WingProj(object):
 
  
     def install(self):        
+        """ Install method for thie recipe -- creates the part."""
         # build up a list of all egg dependencies resulting from our 'eggs' parameter
         env = Environment(self.dev_eggs+[self.buildout['buildout']['eggs-directory'],
                                          os.path.join(self.buildout['buildout']['directory'],

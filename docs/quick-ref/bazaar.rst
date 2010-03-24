@@ -1,9 +1,17 @@
+Useful Commands
+===============
+
+This section contains commands that developers would use on a regular basis when performing 
+everyday tasks (such as branching and merging). Most of them are Bazaar commands; a few are scripts
+or commands for local NASA Glenn developers only.
+
+
 .. index:: Bazaar; commands
 
 .. _Bazaar-Commands:
 
 Bazaar Commands 
-===============
+---------------
 
 Please note that the OpenMDAO *Developer's Guide* contains everything you need to get started working,
 including information on Bazaar setup, code location, and how to create your branch. The information here is a
@@ -24,8 +32,8 @@ References:
 
 .. index Bazaar commands
 
-Common Bazaar Commands
-----------------------
+*Common Bazaar Commands*
+++++++++++++++++++++++++
 
 To use these commands, type ``bzr <command_name>``, for example ``bzr add``.
 
@@ -44,14 +52,14 @@ Note that all files on your branch are available to be changed. By running the `
 command, you can see all of the uncommitted changes on your branch. 
 
   
-Managing Files
---------------
+*Managing Files*
++++++++++++++++++
 
 This section discusses some of the commands used to manage your files.
 
 
-*Creating a Directory*
-++++++++++++++++++++++
+Creating a Directory
+~~~~~~~~~~~~~~~~~~~~
 
 If you want to create a new versioned directory, type the following:
 
@@ -60,8 +68,8 @@ If you want to create a new versioned directory, type the following:
   %bzr mkdir <directory_name>
   
   
-*Adding a File*
-+++++++++++++++
+Adding a File
+~~~~~~~~~~~~~
 
 To add a file or directory to the Bazaar repository on your branch, type:
 
@@ -82,8 +90,8 @@ After you type ``bzr add``, Bazaar will display a list of the files and director
 
 
 
-*Removing a File or Directory*
-++++++++++++++++++++++++++++++
+Removing a File or Directory
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Bazaar's ``remove`` command is similar to the UNIX command, and either can be used to remove a file.
 
@@ -104,8 +112,8 @@ However, to remove a directory, it's easier to use the UNIX remove command (``rm
 .. index:: renaming a file/directory
 
 
-*Moving or Renaming a File*
-+++++++++++++++++++++++++++
+Moving or Renaming a File
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The move command (``bzr mv``) is used to rename or move a file, depending on the arguments you
 provide. When moving a file, you must provide the path to the new location. When you
@@ -133,8 +141,8 @@ the appropriate command. See the examples that follow:
 
 .. index:: diff command
 
-*Viewing Changes in a File*
-+++++++++++++++++++++++++++
+Viewing Changes in a File
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you have edited a file and want to see what you have done, type:
 
@@ -148,8 +156,8 @@ plus (+) or minus (-) sign in front of the changed lines.
 
 .. index:: log command
 
-*Viewing the Revision Log*
-++++++++++++++++++++++++++
+Viewing the Revision Log
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can see the history of your branch by browsing its log. To see a complete list of revisions on the current branch
 beginning with the first revision and displaying the most recent revision last, type: 
@@ -175,8 +183,8 @@ displayed last, and you will have to scroll up to view the most recent revisions
 
 
 
-Creating a Branch from working_main
--------------------------------------
+*Creating a Branch from working_main*
+++++++++++++++++++++++++++++++++++++++
 
 .. note:: Update for branching from launchpad
 
@@ -200,8 +208,8 @@ your branch, all unadded directories and files will be added.
 
 .. _Building-on-Your-Branch:
 
-Building on Your Branch
------------------------
+*Building on Your Branch*
++++++++++++++++++++++++++
 
 If you are in your home directory, type:
 
@@ -222,8 +230,8 @@ If you are in your home directory, type:
 
 .. index:: branch; merging to
 
-Merging working_main to Your Branch
-------------------------------------
+*Merging working_main to Your Branch*
+++++++++++++++++++++++++++++++++++++++
 
 .. note:: Update for pulling from launchpad
 
@@ -275,8 +283,8 @@ conflict <if-you-have-a-conflict>`. After you have resolved any conflicts or if 
 .. index:: branch; merging from
  
 
-Merging Your Branch to working_main
-------------------------------------
+*Merging Your Branch to working_main*
++++++++++++++++++++++++++++++++++++++
 
 .. note:: Update for pushing back to launchpad
 
@@ -415,8 +423,8 @@ commit your changes. Type:
 
 .. _`Canceling-a-Merge-and-Reverting-Changes`:
 
-Canceling a Merge and Reverting Changes
-----------------------------------------
+*Canceling a Merge and Reverting Changes*
++++++++++++++++++++++++++++++++++++++++++
 
 If you encounter a problem when merging and the issue cannot be resolved quickly, you can cancel the
 merge by using the ``revert`` command. Type:
@@ -438,12 +446,13 @@ good idea to see what files will be removed, so type:
 
 |
 
-.. note:: The next two sections (*Editing/Debugging Source Code* and *Repository
-   Utility*) pertain only to developers at GRC.
+.. note:: The next two sections pertain only to developers at GRC.
 
+Non-Bazaar Commands (for GRC Users)
+-----------------------------------
 
-Editing/Debugging Source Code
------------------------------
+*Editing/Debugging Source Code*
+++++++++++++++++++++++++++++++++
 
 Wing is a very nice integrated editor and debugger for Python that is available to
 local OpenMDAO developers.  OpenMDAO comes with a buildout recipe called 
@@ -468,8 +477,8 @@ create a new one.
 
 .. index:: repo.py
 
-Repository Utility
-------------------
+*Repository Utility*
++++++++++++++++++++++
 
 The script ``repo.py`` is a utility script for manipulating and navigating in repositories.
 

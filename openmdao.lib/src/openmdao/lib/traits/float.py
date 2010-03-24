@@ -22,8 +22,8 @@ def convert_units(value, units, convunits):
     
 class Float(TraitType):
     """A Public Variable wrapper for floating point number valid within a
-       specified range of values.
-       """
+    specified range of values.
+    """
     
     def __init__(self, default_value=None, iotype=None, desc=None, \
                  low=None, high=None, exclude_low=False, exclude_high=False, \
@@ -84,6 +84,9 @@ class Float(TraitType):
                                          **metadata)
 
     def validate(self, object, name, value):
+        """ Validates that a specified value is valid for this trait.
+        Units are converted as needed.
+        """
         
         # If both source and target have units, we need to process differently
         if isinstance(value, TraitValMetaWrapper):
