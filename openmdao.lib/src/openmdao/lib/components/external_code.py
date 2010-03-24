@@ -153,7 +153,7 @@ class ExternalCode(Component):
 
             et = time.time() - start_time
             if et >= 60:
-                self.info('elapsed time: %f sec.', et)
+                self.debug('elapsed time: %f sec.', et)
 
             if self._stop:
                 self.raise_exception('Run stopped', RunStopped)
