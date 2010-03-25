@@ -46,6 +46,7 @@ def main():
     openmdao_packages = { 'openmdao.main': '', 
                           'openmdao.lib': '', 
                           'openmdao.util': '', 
+                          'openmdao.units': '', 
                           'openmdao.recipes': '',
                           'openmdao.test': '', 
                           'openmdao.examples.simple': 'examples',
