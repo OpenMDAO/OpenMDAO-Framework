@@ -251,7 +251,7 @@ the Python file ``optimization_unconstrained.py``:
 .. index:: top level assembly
  		
 In OpenMDAO parlance, we usually describe this as the *top level Assembly.* An 
-Assembly is a container that can hold some number of components, drivers, and 
+:term:`Assembly` is a container that can hold some number of components, drivers, and 
 other assemblies. An Assembly also manages the interconnections between the
 components and assemblies that it owns, and it has its own workflow, which it
 uses to execute the components and drivers in the correct order. For our

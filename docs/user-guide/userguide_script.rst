@@ -188,7 +188,7 @@ internal private variables that need to be saved between runs, but aren't
 needed by other components in the framework.
 
 One important note: at present, a component has to be derived from Component
-to run in openMDAO. However, there has been some discussion recently
+to run in OpenMDAO. However, there has been some discussion recently
 about changing the implementation to remove this requirement. In such a case,
 a component would merely need to conform to the specified interface. There
 are quite a few other functions in the Component API that haven't been mentioned
@@ -421,7 +421,7 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 |                  | *default_value* = NoDefaultSpecified] )                  |
 +------------------+----------------------------------------------------------+
 
-Note: a more detailed list of Enthought's Traits is given in their `documentation`__.
+Note: a more detailed list of Enthought's `Traits`__ is given in their documentation.
 These are also available for use as Public Variables in the framework, though
 no examples are presented here for some of the more esoteric ones. If you need
 to use one, remember that *iotype* and *desc* should be added to the arguements

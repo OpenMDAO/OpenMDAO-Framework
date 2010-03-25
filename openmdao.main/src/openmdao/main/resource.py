@@ -1,6 +1,6 @@
 """
 Support for allocation of servers from one or more resources
-(i.e. the local host, a cluster of remote hosts, etc.)
+(i.e., the local host, a cluster of remote hosts, etc.)
 """
 
 import logging
@@ -21,7 +21,7 @@ from openmdao.util.wrkpool import WorkerPool
 class ResourceAllocationManager(object):
     """
     The allocation manager maintains a list of :class:`ResourceAllocator`
-    which are used to select the 'best fit' for a particular resource request.
+    which are used to select the "best fit" for a particular resource request.
     The manager is initialized with a :class:`LocalAllocator` for the local
     host. Additional allocators can be added and the manager will look for the
     best fit across all the allocators.
