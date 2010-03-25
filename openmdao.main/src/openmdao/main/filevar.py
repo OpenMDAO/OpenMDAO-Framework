@@ -64,6 +64,13 @@ class FileMetadata(object):
             del data['owner']
         return pprint.pformat(data).replace('\n', '')
 
+    def get(self, attr, default):
+        """ Return `attr` value, or default if `attr` has not been defined. """
+        try:
+            return getattr(self, attr)
+        except AttributeError:
+            return default
+
 
 class FileRef(FileMetadata):
     """
