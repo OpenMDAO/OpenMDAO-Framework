@@ -70,11 +70,13 @@ def main():
     script_str = """
 
 def after_install(options, home_dir):
+    global logger
     reqs = %(reqs)s
+    cmds = %(cmds)s
     for req in reqs:
-        subprocess.check_call([join(home_dir, 'bin', 'easy_install'),
-                              '-f', 'http://openmdao.org/dists',
-                              req])
+        cmdline = [join(home_dir, 'bin', 'easy_install')] + cmds+[req]
+        logger.debug("running command: %%s" %% ' '.join(cmdline))
+        subprocess.check_call(cmdline)
 
     """
     parser = OptionParser()
@@ -87,10 +89,17 @@ def after_install(options, home_dir):
         raise RuntimeError("a requirements file was not specified")
     
     reqf = open(options.req, 'r')
-    reqs = [s.strip() for s in reqf.read().split('\n') if s.strip()]
+    lines = [s.strip() for s in reqf.read().split('\n') if s.strip()]
+    reqs = []
+    cmds = []
+    for line in lines:
+        if line.startswith('-'):
+            cmds.extend(line.split(' '))
+        else:
+            reqs.append(line)
     
-    
-    print virtualenv.create_bootstrap_script(script_str % {'reqs':reqs}, '2.6')
+    optdict = {'reqs':reqs, 'cmds':cmds}
+    print virtualenv.create_bootstrap_script(script_str % optdict, '2.6')
 
 
 if __name__ == '__main__':
