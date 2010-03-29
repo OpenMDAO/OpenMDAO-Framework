@@ -46,8 +46,8 @@ including the engine, the transmission, and the rear differential. In addition, 
 the vehicle is needed. A logical way to compartmentalize the vehicle model is to break it into component
 models matching each of these subsystems: engine, transmission, and chassis (which includes the
 rear differential ratio). In a typical problem, each of these component models will be a completely
-separate implementation, possibly with different authors or vendors. Each of these component models also
-requires a set of design variables which are detailed below.
+separate implementation, possibly with different authors or vendors, and will require a set of design variables which are
+detailed below.
 
 So a vehicle contains an engine, a transmission, and a chassis component. In addition to the
 design variables, there are three simulation variables: throttle position, gear, and velocity. These
@@ -581,13 +581,13 @@ Executing a Component in the Python Shell
 The Python implementations of the three component models (``engine.py, transmission.py, chassis.py``) should 
 all make sense now. This next section will demonstrate how to instantiate and use these components in the 
 Python shell. From the top level directory in your OpenMDAO source tree, go to the ``buildout`` directory. 
-From here, the Python shell can be launched by typing the following at the Unix prompt:
+From here, the Python shell can be launched by typing the following at the UNIX prompt:
 
 .. _Prompt1: 
 
 ::
 
-	[unix_prompt]$ bin/python
+	[UNIX_prompt]$ bin/python
 
 The Python environment in buildout/bin is a special one that has all of the OpenMDAO site packages installed,
 including the tutorial problem. The user interface for the default Python shell leaves a lot to be desired,
@@ -666,10 +666,10 @@ Assemblies
 
 Now that Python components representing the three vehicle subsystems have been created, they need to be
 connected so that they can be executed in sequence. In OpenMDAO, a component that contains a collection of
-other components is called an :term:`Assembly`. The assembly allows a set of components to be linked together by
+other components is called an :term:`Assembly`. The Assembly allows a set of components to be linked together by
 connecting their inputs and outputs. The data connections define an execution order based on their dependencies, i.e., components that are upstream in the data flow will be executed prior to those downstream so that input data to a component will always be valid with respect to the other parts of the workflow. Component execution is also lazy, meaning that a component will not execute if its inputs have not changed since its last execution.
-In addition, an assembly can also contain a driver, such as an optimizer or a design of experiments.
-When an assembly does not explicitly contain a driver, the assembly executes the components sequentially based on the
+In addition, an Assembly can also contain a Driver, such as an optimizer or a design of experiments.
+When an Assembly does not explicitly contain a driver, the assembly executes the components sequentially based on the
 data connections.
 
 For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission,
@@ -857,8 +857,8 @@ Executing the Vehicle Assembly
 ------------------------------
 
 We can manipulate the Vehicle Assembly in the Python shell in the same manner as the engine component
-above. As inputs, the Vehicle takes a commanded Velocity, Throttle Position, a Gear Shift position, and
-a set of vehicle design parameters, and returns the vehicles instantaneous acceleration and rate of fuel
+above. As inputs, the Vehicle takes a commanded velocity, throttle position, a gear Shift position, and
+a set of vehicle design parameters, and returns the vehicle's instantaneous acceleration and rate of fuel
 burn. 
 
 	>>> from openmdao.examples.enginedesign.vehicle import Vehicle
@@ -894,7 +894,7 @@ implementing the engine model in a compiled language like C or Fortran.
 One of the most important characteristics of Python is that it was designed to be smoothly integrated
 with other languages, in particular C (in which Python was written) and related languages (Fortran and
 C++). This is particularly important for a scripting language, where code execution is generally slower,
-and it is often necessary to use a compiled language like C for implementing computationally intensive
+and it is often necessary to use a compiled language like C for implementing computationally intensiv
 functions. On top of this native integration ability, the community has developed some excellent tools,
 such as `F2PY <http://cens.ioc.ee/projects/f2py2e/>`_ (Fortran to Python) and :term:`SWIG` (Simplified Wrapper and
 Interface Generator), that simplify the process of building the wrapper for a code. As the name implies,
@@ -928,7 +928,7 @@ function *RunEngineCycle*. We can import and use the function just like any Pyth
 
 
 Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first
-element (element zero.) This is not typically needed for return values from FORTRAN codes compiled with
+element (element zero.) This is not typically needed for return values from Fortran codes compiled with
 F2PY, but it seems to be needed for C codes for which the signature file is manually created. This is
 something that might be fixable and will be investigated.
 
@@ -939,7 +939,7 @@ something that might be fixable and will be investigated.
 Sockets and Interfaces
 ----------------------
 
-Now that we have a functional (and reasonably quick) vehicle component, we need to complete the problem
+Now that we have a functional (and reasonably quick) Vehicle component, we need to complete the problem
 by providing a way to simulate the acceleration and the EPA fuel economy estimates. The acceleration test
 requires an integration in time with the vehicle component being executed at each time step to produce
 the instantaneous acceleration. The EPA fuel economy tests are a bit more tricky and require an
@@ -954,7 +954,7 @@ mentioned only as an attribute of assemblies, and they will be more thoroughly t
 Implementing the vehicle simulation as a driver might be a bit confusing for your first exposure to
 drivers, particularly since it involves nesting the simulation driver with an optimizer, so the vehicle
 simulations were implemented in a single Component instead. However, this leads to the concept of
-:term:`Sockets`, which require the implementation to be an Assembly instead of just a Component.
+:term:`Sockets`, which requires the implementation to be an Assembly instead of just a Component.
 
 To investigate designs, a Vehicle class was defined as an Assembly in OpenMDAO. This class has a set of specific inputs and outputs
 that include the design variables for the engine, transmission, and chassis, and the simulation
@@ -984,10 +984,10 @@ EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 Setting up an Optimization Problem
 ----------------------------------
 
-The final step is the creation of a Top Level Assembly which defines the problem using DrivingSim and the vehicle assembly.
-The Top Level Assembly is a container that can be thought of as the workspace where the model is built, or the container that
+The final step is the creation of a top level Assembly which defines the problem using DrivingSim and the vehicle assembly.
+The top level Assembly is a container that can be thought of as the workspace where the model is built, or the container that
 ulimately contains the entire model. Functionally, it's no different than an assembly such as Vehicle.py; this implies that
-any OpenMDAO model can be packaged up and inserted into some other model as a component. Generally, the Top Level Assembly
+any OpenMDAO model can be packaged up and inserted into some other model as a component. Generally, the top level Assembly
 contains one or more Components or Assemblies. It may also contain a solution Driver, or it may just rely on sequential
 exeuction based on the data flow.
 
@@ -996,7 +996,7 @@ variables to minimize the 0-60 acceleration time. The chosen design variables ar
 of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second variable cannot
 be optimized by mere inspection. 
 
-The optimization will be handled by CONMIN, which is a gradient based algorithm written in FORTRAN, and developed at NASA in
+The optimization will be handled by CONMIN, which is a gradient based algorithm written in Fortran, and developed at NASA in
 the 1970s. The source code is in the public domain, and a Python wrapped CONMIN component has been included in the OpenMDAO
 standard library.
 

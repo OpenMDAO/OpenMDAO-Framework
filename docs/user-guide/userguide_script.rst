@@ -146,6 +146,35 @@ Most of these items are also explained elsewhere in the *User's Guide.*
 
 TODO: Talk about the model hierarchy
 
+*Naming Conventions*
+~~~~~~~~~~~~~~~~~~~~
+
+Components and Public Variables that are instantiated into the OpenMDAO Model 
+Hierarchy must follow the same naming syntax as variables in the Python
+language. Summarized, this means that they can only include alphanumeric
+characters and the underscore, and that the lead character cannot be a number.
+Any attempt to create a component or a Public Variable that does not comform
+to Python's syntax should result in an exception. This restriction was required
+because these entities essentially exist as Python variables. One unfortunate
+side-effect is that names with spaces are not allowed. OpenMDAO checks for
+compliance when a Public Variable or Component instance is created:
+
+    >>> from openmdao.main.api import Assembly
+    >>> from openmdao.examples.enginedesign.chassis import Chassis
+    >>> top = Assembly('top')
+    >>> top.add_container('chassis1',Chassis())
+    <openmdao.examples.enginedesign.chassis.Chassis object at ...
+    >>> top.add_container('the chassis',Chassis())
+    Traceback (most recent call last):
+    ...
+    NameError: name 'the chassis' contains illegal characters
+
+Additionally, we've tried to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_
+standard at all levels, including component instance names and Public Variable 
+names. For all variable names, PEP 8 proscribes the use of lower case names 
+with words separated by underscores. Naturally, PEP 8 compliance is not a
+requirement that will be forced on the user, but merely a good style guideline.
+
 .. index:: Component
 
 Creating New Components
@@ -174,7 +203,7 @@ internal private variables that need to be saved between runs, but aren't
 needed by other components in the framework.
 
 One important note: at present, a component has to be derived from Component
-to run in openMDAO. However, there has been some discussion recently
+to run in OpenMDAO. However, there has been some discussion recently
 about changing the implementation to remove this requirement. In such a case,
 a component would merely need to conform to the specified interface. There
 are quite a few other functions in the Component API that haven't been mentioned
@@ -225,6 +254,7 @@ One additional function that may need to be defined in certain cases is
 directories to be packed with it. These kinds of things can be taken care of in
 *save_to_egg().* It is important not to forget to call the *save_to_egg()* for the base
 class.
+
 
 TODO: save_to_egg example
 
@@ -407,7 +437,7 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 |                  | *default_value* = NoDefaultSpecified] )                  |
 +------------------+----------------------------------------------------------+
 
-Note: a more detailed list of Enthought's Traits is given in their `documentation`__.
+Note: a more detailed list of Enthought's `Traits`__ is given in their documentation.
 These are also available for use as Public Variables in the framework, though
 no examples are presented here for some of the more esoteric ones. If you need
 to use one, remember that *iotype* and *desc* should be added to the arguements
@@ -639,6 +669,35 @@ readable text file called ``unitLibdefault.ini``. More information on customizat
 (i.e., adding new units) of the Units package can be found in the OpenMDAO 
 Standard Library Guide.
 
+As an example, consider a component that calculates a pressure (in Pascals) given
+a known force (in Newtons) applied to a known area (in square meters). Such a
+component would look like this:
+
+.. testcode:: units_delcare
+
+    from openmdao.main.api import Component
+    from openmdao.lib.api import Float
+    
+    class Pressure(Component):
+        """Simple component to calculate pressure given force and area"""
+    
+	# set up interface to the framework  
+	force = Float(1.0, iotype='in', desc='force', units='N')
+        area = Float(1.0, iotype='in', low=0.0, exclude_low=True, desc='m*m')        
+
+        pressure = Float(1.0, iotype='out', desc='Pa')        
+
+	def execute(self):
+	    """calculate pressure"""
+	    
+	    self.pressure = self.force/self.area
+
+Note that some additional parameters in the declaration of *area* prevent a
+value of zero from being assigned (and thus a division error.) Of course you
+could still get very large values for *pressure* if *area* is near machine
+zero. You could also change the output from 'Pa' to 'atm' (standard atmosphere)
+and the result will be converted to this specification.
+
 This units library can also be used to convert internal variables by importing
 the function *convert_units*.
 
@@ -650,9 +709,15 @@ Coercion and Casting
 ++++++++++++++++++++
 
 OpenMDAO variables have a certain pre-defined behavior when a value from a
-variable of a different type is assigned. Generally, widening coercions are
-permitted (e.g., int -> float32 -> float64 -> string), while assignments
-that would result in loss of precision generate a TraitError exception.
+variable of a different type is assigned. Public Variables were created
+using the Casting traits as opposed to the Coercion traits. This means that
+most mis-assignements in variable connections (i.e., a float connected to
+a string) should generate a TraitError exception. However, certain widening
+coercions seem to be permitted (e.g., Int->Float, Bool->Int, Bool->Float). No
+coercion from Str or to Str is allowed. If the user needs to apply different
+coercion behavior, it should be fairly simple to create a Python component to
+do the type translation.
+
 More details can be found in the `Traits 3 User Manual`__.
 
 .. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
@@ -668,21 +733,170 @@ Building a Simulation Model
 
 A model is a collection of components (which can include assemblies and drivers)
 that can be executed in the framework. The entity that contains this model is
-called the Top Level Assembly, which behaves functionally as an Assembly.
+called the top level Assembly, which behaves functionally the same as an
+Assembly. There is no way to distinguish it from any other assembly, other
+than in how it is used -- it is instatiated on its own instead of adding it
+to another assembly. Therefore, it has no parent, and it sits at the top of
+the Model Hierarchy. Executing the top level Assembly executes the model.
 
-*The Top Level Assembly*
-~~~~~~~~~~~~~~~~~~~~~~~~
+Consider the top level assembly that was created for :ref:`Getting-Started-with-OpenMDAO`.
 
+.. testcode:: simple_model_Unconstrained_pieces
 
+	from openmdao.main.api import Assembly
+	from openmdao.lib.api import CONMINdriver
+	from openmdao.examples.simple.paraboloid import Paraboloid
 
-*Connecting Components*
-~~~~~~~~~~~~~~~~~~~~~~~
+	class Optimization_Unconstrained(Assembly):
+    	    """ Top level assembly for optimizing a vehicle. """
+    
+    	    def __init__(self, directory=''):
+                """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+        
+	        super(Optimization_Unconstrained, self).__init__(directory)
+
+	        # Create Paraboloid component instances
+	        self.add_container('paraboloid', Paraboloid())
+
+	        # Create CONMIN Optimizer instance
+	        self.add_container('driver', CONMINdriver())
+		
+We can see here that components that comprise the top level of this model are
+declared in the constructor. Note that the base class constructor is called
+(with the *super* function) before anything is added to the empty assembly. This
+is important to ensure that functions that are defined in the base classes are
+avaiable for use, such as *add_container*. 
+
+The function *add_container*, takes a valid OpenMDAO name and a constructor as
+its arguments. This function call creates a new instance of the Component, and 
+adds it to the OpenMDAO model hierarchy using the given name. In this case then,
+the CONMIN driver is accessible anywhere in this assembly via *self.driver*.
+Likewise, the Parabaloid is accessed via *self.parabaloid*.
+
+Note that in the Graphical Interface, the analog to *add_container* is dragging
+a component into some workspace or tableau.
+
+A Component can also be removed from an Assembly using *remove_container*,
+though it is not expected to be needed except in rare cases.
 
 *Assemblies*
 ~~~~~~~~~~~~
 
+An Assembly is a special type of Component with the following characteristics:
+
+- Contains some number of other components (some of which may be assemblies)
+- Contains a workflow (essentially an execution order)
+- Contains a driver that operates on the workflow
+
+An Assembly retains the Component API (i.e, it can be executed, added to
+models, and exists in the Model Hierarchy), but it also extends the API to
+include functions that support the above-listed characteristics.
+
+*Connecting Components*
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Consider once again the top level assembly that was created for 
+:ref:`Getting-Started-with-OpenMDAO`. We would like to create a few
+instances of the Parabaloid function, and connect them together in series.
+
+.. testcode:: connect_components
+
+	from openmdao.main.api import Assembly
+	from openmdao.examples.simple.paraboloid import Paraboloid
+
+	class ConnectingComponents(Assembly):
+    	    """ Top level assembly for optimizing a vehicle. """
+    
+    	    def __init__(self, directory=''):
+                """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+		
+		self.add_container("par1",Paraboloid())
+		self.add_container("par2",Paraboloid())
+		self.add_container("par3",Paraboloid())
+		
+		self.connect("par1.f_xy","par2.x")
+		self.connect("par2.f_xy","par3.y")
+
+Components are connected by using the *connect* function built into the
+assembly. Connect takes two arguments, the first of which must be a component
+output, and the second of which must be a component input. These are expressed
+using their locations in the OpenMDAO model hierarchy with respece to the scope
+of the top level assembly. Note that an input can be connected to another input,
+but an output cannot be connected to another output. Additionally, only one output can
+be connected to any input. The violation of any of these rules generates a
+RuntimeError. On the other hand, it is perfectly fine to connect multiple
+inputs to an output.
+		
+A Public Variable is not required to be connected to anything. Most typical 
+components will have numerous inputs, and many of these will contain values
+that are set by the user, or are perfectly fine at their defaults.
+
+Variables in an assembly also must be able to be connected to the assembly
+boundary, so that outside components can link to them. They can be declared
+explicitly, however this does create additional overhead as data is passed 
+through an intermediary variable in the Assembly. A more efficient way to
+accomplish this is to create a passthrough using the *create_passthrough*
+function in an Assembly.
+
+Consider a similar assembly as shown above, except that we want to promote the
+remaining unconnected variables to the assembly boundary, so that they can be
+linked at that level.
+
+.. testcode:: passthroughs
+
+	from openmdao.main.api import Assembly
+	from openmdao.examples.simple.paraboloid import Paraboloid
+
+	class ConnectingComponents(Assembly):
+    	    """ Top level assembly for optimizing a vehicle. """
+    
+    	    def __init__(self, directory=''):
+                """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+		
+		self.add_container("par1",Paraboloid())
+		self.add_container("par2",Paraboloid())
+		
+		self.connect("par1.f_xy","par2.x")
+		
+		self.create_passthrough('par1.x')
+		self.create_passthrough('par1.y')
+		self.create_passthrough('par2.y')
+		self.create_passthrough('par2.f_xy')
+
+The *create_passthrough* creates a Public Variable on the assembly. This new
+variable has the same name, iotype, default value, units, description, and range
+characteristics as the original variable on the subcomponent. If it is desired
+that any of these be different in the interface presented external to the
+assembly (and there are valid reasons to change some of these, particuarly the
+units), then a passthrough cannot be used. Instead, the desired Public Variables
+must be manually created and connected just like the normal ones. Howerver, at
+present, this will only work with inputs, because inputs can be connected to
+other inputs, but outputs cannot be connected to ohter outputs. A more
+detailed example is given in :ref:`The-OpenMDAO-tutorial-problem`. Fortunately,
+the passthroughs are sufficient for most needs.
+
+Assemblies also include a way to break variable connections. The *disconnect*
+function can be called to break the connection between an input and an output,
+or to break all connections to an input or output.
+
+    >>> from openmdao.examples.enginedesign.vehicle import Vehicle
+    >>> my_car = Vehicle("new_car")
+    >>>
+    >>> # Disconnect all connections to tire_circumference (total:2)
+    >>> my_car.disconnect('tire_circumference')
+    >>>
+    >>> # Disconnect a specific connection
+    >>> my_car.disconnect('velocity','transmission.velocity')
+
+The opportunity to use the *disconnect* in the scripting interface should be
+fairly uncommon, though it is recognized that some specialized assemblies of
+components might need to reconfigure their connections during run-time, so it
+is available. 
+
 *Sockets & Interfaces*
 ~~~~~~~~~~~~~~~~~~~~~~
+
+TODO: Discuss sockets and interfaces
 
 Drivers
 -------
@@ -696,24 +910,46 @@ Drivers
 *Solution Drivers*
 ~~~~~~~~~~~~~~~~~~
 
+Solution drivers are generally iterative solvers that operate on their respective
+workflow until some conditions are met. Optimizers and solvers fall under this
+classification. OpenMDAO comes with several solution drivers that were 
+distributable (i.e., either open-source or public domain.)
+
 CONMIN
 ++++++
+
+CONMIN, which stands for CONstraint MINimization, is a gradient descent optimization
+algorithm based on the Method of Feasible Directions. It was developed at
+NASA in the 1970s, and is  currently in the public domain. It hasbeen  included
+in OpenMDAO's Standard Library to provide users with a basic gradient algorithm.
+The interface for CONMIN is full detailed in :ref:`CONMIN-driver`.
 
 Idesign
 +++++++
 
+NOTE: License classification for Idesign is under review.
+
 Idesign, which stands for Interactive Design Optimization of Engineering Systems,
-is another gradient optimization package for problems with inequality and
+is another gradient optimization package useable for problems with inequality and
 equality constraints. It is currently being integrated into OpenMDAO,
-and should be avilable soon.
+and should be available soon.
 
 PyEvolve
 ++++++++
 
+PyEvolve is complete genetic algorithm framework written in pure python. It was
+developed and is actively maintained by Christian S. Perone.
+
+Documentation for the PyEvolve package can be found at `<http://pyevolve.sourceforge.net/>`_.
+
+Documentation for the OpenMDAO driver is forthcoming, pending some reworking.
+
 Newton Solver
 +++++++++++++
 
-No capability at present, but it is part of our requirements.
+No capability at present, but it is part of our requirements. Scientific Python
+includes a Newton solver; this may serve as a starting point for the OpenMDAO
+driver.
 
 *Adding new Optimizers*
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -723,6 +959,10 @@ Running OpenMDAO
 
 *Executing Models*
 ~~~~~~~~~~~~~~~~~~
+
+TODO: Running a model
+
+TODO: Reset to Defaults
 
 *Error Logging & Debugging*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -736,19 +976,45 @@ Running OpenMDAO
 Data Flow and WorkFlow
 ----------------------
 
+The execution order for components in a model can either be determined 
+automatically by OpenMDAO, or specified explicitly  by the user. This
+distinction can be made at the assembly level, so for example, a model can have
+some assemblies with user-specified workflow, while other assemblies are
+left to automatic determination. In addition, a driver workflow can also be
+specified by the user. All three of these scenarios are discussed below.
+
 *Data Flow & Lazy Evaluation*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-*Building a WorkFlow*
-~~~~~~~~~~~~~~~~~~~~~
+The 'default' workflow for a model is inferred from the data flow connections.
+This means that a component is available to run once its inputs become valid,
+which occurs when the components that supply those inputs are valid. Since
+direct circular connections (algebraic loops for those familiar with Simulink)
+are not permitted, there will always be an execution order that can be
+determined from the connections. OpenMDAO uses the *networkx* package to find
+loops and solve for the execution order. Note that this order isn't always
+unique.
 
-Custom workflow capability is currently under development and should be avilable soon.
+A bit more on the technical details: every component contains a dictionary of
+its input Public Variables coupled with a validity flag. When any input is
+invalid, the component is essentially invalid and therefore will be executed during the
+next run. If the component is valid (i.e., has no invalid inputs), it does
+not need to execute when the model is run. This is the principal of Lazy 
+Evaluation. It should be noted that when a component's inputs become invalidated,
+the effect is propagated downstream to all components that depend on it. Also,
+when a model is instantiated, all inputs are invalid, which ensures that
+the whole model always executes the first time it is run.
 
-Looping
-+++++++
+*Custom WorkFlow*
+~~~~~~~~~~~~~~~~~
 
-Branching
-+++++++++
+Custom workflow capability is currently under development and should be available soon.
+
+*Custom Driver Workflow*
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+Custom driver workflow capability is currently under development and should be
+available in the near future.
 
 Design Tools
 ------------
@@ -756,17 +1022,26 @@ Design Tools
 *Design of Experiments*
 ~~~~~~~~~~~~~~~~~~~~~~~
 
+No capability at present, but it is part of our requirements.
+
 *Multi-objective Optimization and Pareto Frontiers*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+No capability at present, but it is part of our requirements.
+
 *Sensitivity Analysis*
 ~~~~~~~~~~~~~~~~~~~~~~
+
+No capability at present, but it is part of our requirements.
 
 Managing Simulation Data
 ------------------------
 
 Multi-Threaded Computation
 --------------------------
+
+No capability at present, but it is part of our requirements, and is
+currently being implemented.
 
 Publishing a Component
 ----------------------

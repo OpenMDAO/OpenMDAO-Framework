@@ -14,7 +14,7 @@ def assert_dict_or_none(dist, attr, value):
     
     
 def write_openmdao_meta(cmd, basename, filename):
-    """Write openmdao_metadata setup arg to a file.
+    """Write *openmdao_metadata* setup arg to a file.
     Currently it's just pretty-printed, but this may change...
     """
     argname = os.path.splitext(basename)[0]

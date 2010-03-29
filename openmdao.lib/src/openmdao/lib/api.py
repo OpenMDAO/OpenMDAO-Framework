@@ -1,5 +1,5 @@
 """ 
-Pseudo package containing commonly-used functions from the OpenMDAO Standard
+Pseudo package containing commonly used functions from the OpenMDAO Standard
 Library.
 """
 

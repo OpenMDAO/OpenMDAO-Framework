@@ -374,8 +374,8 @@ order listed here:
 
 .. note::
 
-   When you are merging to ``working_main``, your file will be ``.OTHER`` and ``working_main`` will be ``THIS``.
-   However, if you are merging out from ``working_main`` to update your branch, ``.OTHER`` will be ``working_main``,
+   When you are merging to ``trunk``, your file will be ``.OTHER`` and ``trunk`` will be ``THIS``.
+   However, if you are merging out from ``trunk`` to update your branch, ``.OTHER`` will be ``trunk``,
    and ``.THIS`` will be your branch.
 
 Conflicts will be displayed in colored text across all three files. See the following example:

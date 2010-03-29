@@ -7,10 +7,10 @@ from openmdao.main.factory import Factory
 from openmdao.util.log import logger
    
 class ImportFactory(Factory):
-    """Creates objects using the standard Python __import__ mechanism. The 
+    """Creates objects using the standard Python *__import__* mechanism. The 
     object must have a ctor with the same name as the module, minus the file 
     extension.  For example, to create a MyComp object, the module must be 
-    named MyComp.py (or .pyc or .pyo). This factory does not support specific 
+    named *MyComp.py* (or *.pyc* or *.pyo*). This factory does not support specific 
     version creation or creation on a remote server."""
 
     def __init__(self):
@@ -48,4 +48,5 @@ class ImportFactory(Factory):
         return self._ctors[typ](**ctor_args)
 
     def get_available_types(self, groups=None):
+        """Does nothing but included to adhere to the Factory interface."""
         return []

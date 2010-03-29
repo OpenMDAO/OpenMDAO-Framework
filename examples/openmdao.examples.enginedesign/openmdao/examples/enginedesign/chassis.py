@@ -56,8 +56,8 @@ class Chassis(Component):
         
         
     def execute(self):
-        """ Calculates the instantaneous acceleration for the vehicle.       
-            """        
+        """ Calculates the instantaneous acceleration for the vehicle. """
+        
         torque = self.engine_torque*self.torque_ratio
         tire_radius = self.tire_circ/(2.0*pi)
         

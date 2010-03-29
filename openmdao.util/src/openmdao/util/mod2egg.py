@@ -46,6 +46,16 @@ def mod2egg(argv, groups= { 'openmdao.component': Component,
                             #'openmdao.resource_allocator': ResourceAllocator,
                             'openmdao.variable': TraitType
                             }):
+    """Utility to simplify the packaging of a single module containing OpenMDAO
+    plugin classes into an egg.
+    
+    Use mod2egg -h to see all of the options.
+    
+    The only required options are the desired version of the egg and the module
+    to use to generate the egg.  For example:
+
+    mod2egg -v 1.0 simple_adder.py    
+    """
     parser = OptionParser()
     parser.usage = "mod2egg.py [options] <module_name>"
     parser.add_option("-v","--version", action="store", type="string", dest="version",

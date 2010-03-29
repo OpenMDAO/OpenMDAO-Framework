@@ -23,7 +23,7 @@ class Dataflow(Workflow):
         self._no_ref_graph = nx.DiGraph()
         
     def run(self):
-        """Execute this entire workflow."""
+        """ Run this Dataflow."""
         try:
             super(Dataflow, self).run()
         finally:
@@ -76,7 +76,7 @@ class Dataflow(Workflow):
         
     def disconnect(self, comp1name, comp2name):
         """Decrement the ref count for the edge in the dependency graph 
-        between the two components, or remove the edge if the ref count
+        between the two components or remove the edge if the ref count
         reaches 0.
         """
         refcount = self._no_ref_graph[comp1name][comp2name]['refcount'] - 1

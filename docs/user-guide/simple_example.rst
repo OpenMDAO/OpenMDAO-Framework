@@ -30,11 +30,11 @@ This graphical view of the problem also helps in understanding how to map the
 problem onto the OpenMDAO framework. The CONMIN optimizer is the :term:`Driver`,
 and its job is to manipulate the two design variables (*x* and *y*) to 
 minimize the output of the paraboloid function (*f*). The objective equation fits
-into the OpenMDAO process as a :term:`component`. More specifically, this 
+into the OpenMDAO process as a :term:`Component`. More specifically, this 
 Paraboloid component contains an execute function which takes the inputs 
 (*x* and *y*) and returns the value of the function (*f*) evaluated at that design 
 point. Finally, both the driver and the component are contained in an 
-:term:`assembly` which maintains the connections between the driver and the
+:term:`Assembly` which maintains the connections between the driver and the
 component, and knows how to run the system.
 
 We assume that you are familiar with Python and the basic concepts of object-oriented
@@ -125,7 +125,7 @@ The very next line creates a class called Paraboloid:
 At this point, it is essential that, as a component developer, you have a clear
 understanding of the distinction between classes and functions. On the surface
 it would appear that we merely need a function that can take two inputs and
-return an output, and for an example this simple, such a case could be made.
+return an output, and for such a simple example, this might be the case.
 However, object-oriented programming allows much more complicated systems to be
 described without increasing the complexity of the framework code. A flexible
 framework like OpenMDAO probably could not be implemented without objects, and
@@ -251,7 +251,7 @@ the Python file ``optimization_unconstrained.py``:
 .. index:: top level assembly
  		
 In OpenMDAO parlance, we usually describe this as the *top level Assembly.* An 
-Assembly is a container that can hold some number of components, drivers, and 
+:term:`Assembly` is a container that can hold some number of components, drivers, and 
 other assemblies. An Assembly also manages the interconnections between the
 components and assemblies that it owns, and it has its own workflow, which it
 uses to execute the components and drivers in the correct order. For our
@@ -456,6 +456,6 @@ When this is executed, it should produce the output:
 Afterword
 ---------
 
-This concludes a simple introduction to component creation and execution in
+This concludes an introduction to a simple problem of component creation and execution in
 OpenMDAO. The next tutorial section introduces a problem with more complexity and
 presents some more of the features of the framework.

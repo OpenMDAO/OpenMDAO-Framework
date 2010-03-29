@@ -230,7 +230,7 @@ class Container(HasTraits):
         self._name = name
         self._logger.rename(self._name)
         
-    name = property(_get_name, _set_name)
+    name = property(_get_name, _set_name, doc="Name of the Container")
     
     def findname(self, obj):
         """Return the object within this object's dict that has the given name.
@@ -256,7 +256,7 @@ class Container(HasTraits):
         
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
-        rel_to_scope. If rel_to_scope is None, return the full pathname.
+        *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
         """
         path = []
         obj = self
@@ -307,7 +307,7 @@ class Container(HasTraits):
                 setattr(self, name, val) # force def of implicit trait
 
     def add_trait(self, name, *trait):
-        """Overrides HasTraits definition of add_trait in order to
+        """Overrides HasTraits definition of *add_trait* in order to
         keep track of dynamically added traits for serialization.
         """
         if len( trait ) == 0:
@@ -377,7 +377,7 @@ class Container(HasTraits):
         """If the named trait can return a TraitValMetaWrapper, then this
         function will return that, with the value set to the current
         value of the named attribute. Otherwise, it functions like
-        getattr, just returning the named attribute. Raises an exception
+        *getattr*, just returning the named attribute. Raises an exception
         if the named trait cannot be found.
         """
         trait = self.trait(name)
@@ -435,9 +435,9 @@ class Container(HasTraits):
 
     def check_config (self):
         """Verify that the configuration of this component is correct. This
-        function is called once prior to the first execution of this Assembly,
+        function is called once prior to the first execution of this Assembly
         and prior to execution if any children are added or removed, or if
-        self._call_check_config is True.
+        *self._call_check_config* is True.
         """
         for name, value in self._traits_meta_filter(required=True).items():
             if value.is_trait_type(Instance) and getattr(self, name) is None:
@@ -528,7 +528,7 @@ class Container(HasTraits):
     def dump(self, recurse=False, stream=None):
         """Print all items having iotype metadata and
         their corresponding values to the given stream. If the stream
-        is not supplied, it defaults to sys.stdout.
+        is not supplied, it defaults to *sys.stdout*.
         """
         pprint.pprint(dict([(n,str(v)) 
                         for n,v in self.items(recurse=recurse, 

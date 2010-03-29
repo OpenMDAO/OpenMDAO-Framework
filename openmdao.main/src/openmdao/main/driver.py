@@ -38,7 +38,7 @@ class Driver(Assembly):
         self._driver_tree = None
         
     def _pre_execute (self):
-        """Call base class _pre_execute after determining if we have any invalid
+        """Call base class *_pre_execute* after determining if we have any invalid
         ref variables, which will cause us to have to regenerate our ref dependency graph.
         """
         if self._call_execute:
@@ -74,8 +74,8 @@ class Driver(Assembly):
                 
     def execute(self):
         """ Iterate over a collection of Components until some condition
-        is met. If you don't want to structure your driver to use pre_iteration,
-        post_iteration, etc., just override this function. As a result, none
+        is met. If you don't want to structure your driver to use *pre_iteration*,
+        *post_iteration*, etc., just override this function. As a result, none
         of the <start/pre/post/continue>_iteration() functions will be called.
         """
         self.start_iteration()
@@ -171,7 +171,7 @@ class Driver(Assembly):
         return comps
         
     def get_ref_graph(self, iotype=None):
-        """Returns the dependency graph for this Driver based on
+        """Return the dependency graph for this Driver based on
         StringRefs and StringRefArrays.
         """
         if self._ref_graph[iotype] is not None:
@@ -228,7 +228,7 @@ class Driver(Assembly):
         return self._simple_iteration_set
         
     def _get_driver_tree(self):
-        """Returns the DriverTree object corresponding to this Driver from the 
+        """Return the DriverTree object corresponding to this Driver from the 
         DriverTree hierarchy in the parent Assembly."""
         if not self._driver_tree:
             self._driver_tree = DriverForest(self.parent.drivers).locate(self)

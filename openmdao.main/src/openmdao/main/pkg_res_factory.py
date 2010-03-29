@@ -17,7 +17,7 @@ Factory = openmdao.main.factory.Factory
 
 def import_version(modname, req, env=None):
     """Import the specified module from the package specified in the
-    Requirement req, if it can be found in the current WorkingSet or in the
+    Requirement *req*, if it can be found in the current WorkingSet or in the
     specified Environment. If a conflicting version already exists in the
     WorkingSet, a VersionConflict will be raised. If a distrib cannot be found
     matching the requirement, raise a DistributionNotFound.
@@ -81,6 +81,8 @@ class PkgResourcesFactory(Factory):
         self.update_search_path(search_path)
     
     def update_search_path(self, search_path):
+        """ Updates the plugin search path."""
+        
         self.env = Environment(search_path)
         self._loaders = {}
         for group in self._groups:
