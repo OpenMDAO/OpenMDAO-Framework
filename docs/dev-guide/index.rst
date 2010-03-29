@@ -9,6 +9,7 @@ Developer's Guide
    :maxdepth: 3
    
    intro
+   accessing
    working
    testing
    guidelines
