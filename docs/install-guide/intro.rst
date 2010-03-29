@@ -140,7 +140,7 @@ and whether you have an installed egg cache.
 
 
 .. note:: Currently, buildout will fail on Windows if the OpenMDAO install
-	  directory has a pathname that contains spaces.
+      directory has a pathname that contains spaces.
 
 At this point, your OpenMDAO install should be ready to use. You can test it by
 typing:
