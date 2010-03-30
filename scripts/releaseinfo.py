@@ -4,7 +4,7 @@
 
 from datetime import date
 
-__version__ = '0.1.7'
-# fix this later
+__version__ = '0.1.0'
+# TODO: get the revision info from bzr automagically
 __revision__ = None
 __date__ = date.today().isoformat()
