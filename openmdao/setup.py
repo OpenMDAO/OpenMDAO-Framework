@@ -1,8 +1,18 @@
 from setuptools import setup, find_packages
-import os
+import os,sys
+
+here = os.path.dirname(os.path.realpath(__file__))
+sdir = os.path.join(here, '..', 'scripts')
+sdir = os.path.normpath(sdir)
+if os.path.isdir(sdir):
+    sys.path.insert(0, sdir)
+
+import releaseinfo
+
+version = releaseinfo.__version__
 
 setup(name='openmdao',
-      version='0.1',
+      version=version,
       description="",
       long_description="",
       # Get more strings from http://www.python.org/pypi?%3Aaction=list_classifiers
@@ -19,13 +29,12 @@ setup(name='openmdao',
       #namespace_packages=['openmdao'],
       namespace_packages=[],
       packages = [],
-      #py_modules = ['nothing'],
       zip_safe=False,
       install_requires=[
           'setuptools',
-          'openmdao.lib',
-          'openmdao.test',
-          'openmdao.recipes',
+          'openmdao.lib=='+version,
+          'openmdao.test=='+version,
+          'openmdao.recipes=='+version,
       ],
       entry_points={
       },
