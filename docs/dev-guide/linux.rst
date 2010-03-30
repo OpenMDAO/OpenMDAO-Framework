@@ -1,5 +1,5 @@
-Instructions for Accessing OpenMDAO Code on Launchpad
-=====================================================
+Accessing OpenMDAO Code on Launchpad (Linux)
+============================================
 
 If you are behind a proxy (this applies to GRC team members), you must create SSH keys for
 each platform you want to use before you can push a branch to Launchpad. If you are not
@@ -57,7 +57,7 @@ commands:
 
 1. ``cd  ~/.bazaar``.
 2. ``ls``
-3. If you do not see the  ``authentication.conf`` file, use a text editor of your choice to
+3. If you do not see the ``authentication.conf`` file, use a text editor of your choice to
    create it.  
 4. In the blank file that you just created, type:
 
@@ -126,3 +126,11 @@ This option makes your branch the latest revision on the trunk.
   bzr push lp:~userid/openmdao/branch_name 
 
 This option does not merge your branch to the trunk.  
+
+
+TODO:
+  * Add details about how developers without commit privileges request taht a branch be merged and
+    where it goes when sent to openmdao. 
+  * Add a section on how outside developers use Trac to submit, track, and transition their bugs or
+    enhancements. This section probably goes on the website, but we need a link from here to that
+    information (when it is available).

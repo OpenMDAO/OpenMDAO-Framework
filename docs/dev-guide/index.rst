@@ -9,7 +9,8 @@ Developer's Guide
    :maxdepth: 3
    
    intro
-   accessing
+   linux
+   windows
    working
    testing
    guidelines
