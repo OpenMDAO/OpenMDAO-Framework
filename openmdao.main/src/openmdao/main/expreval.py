@@ -250,22 +250,22 @@ class ExprEvaluator(str):
     """A class that translates an expression string into a new string containing
     any necessary framework access functions, e.g., set, get. The compiled
     bytecode is stored within the object so that it doesn't have to be reparsed
-    during later evaluations.  A scoping object is required at construction time
+    during later evaluations.  A scoping object is required at construction time,
     and that object determines the form of the  translated expression based on scope. 
     Variables that are local to the scoping object do not need to be translated,
     whereas variables from other objects must  be accessed using the appropriate
-    set() or get() call.  Array entry access and function invocation are also
+    *set()* or *get()* call.  Array entry access and function invocation are also
     translated in a similar way.  For example, the expression "a+b[2]-comp.y(x)"
     for a scoping object that contains attributes a and b, but not comp,x or y,
     would translate to 
     "a+b[2]-self.parent.invoke('comp.y',self.parent.get('x'))".
     
-    If lazy_check is False, any objects referenced in the expression must exist
+    If *lazy_check* is False, any objects referenced in the expression must exist
     at creation time (or any time later that text is set to a different value)
-    or a RuntimeError will be raised.  If lazy_check is True, error reporting will
+    or a RuntimeError will be raised.  If *lazy_check* is True, error reporting will
     be delayed until the expression is evaluated.
     
-    If single_name is True, the expression can only be the name of one object, with
+    If *single_name* is True, the expression can only be the name of one object, with
     optional array indexing, but general expressions are not allowed because the
     expression is intended to be on the LHS of an assignment statement.
     """
@@ -380,7 +380,7 @@ class ExprEvaluator(str):
         
     def get_referenced_varpaths(self):
         """Return a set of source or dest Variable pathnames relative to
-        self.parent and based on the names of Variables referenced in our 
+        *self.parent* and based on the names of Variables referenced in our 
         reference string. 
         """
         if self._text != self:  # text has changed

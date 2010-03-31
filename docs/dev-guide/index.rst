@@ -9,6 +9,8 @@ Developer's Guide
    :maxdepth: 3
    
    intro
+   linux
+   windows
    working
    testing
    guidelines

@@ -1,3 +1,4 @@
+#README.bundle
 
 This bundle contains an early distribution of OpenMDAO, the open source
 multidisciplinary analysis and optimization framework.
@@ -8,7 +9,6 @@ yet.
 
 This version requires python 2.6.  There are no plans to move to python 3.x
 until at least 2012.
-
 
 
 CONTENTS

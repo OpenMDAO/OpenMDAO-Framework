@@ -33,11 +33,19 @@ returned to the original caller.
 ______________________________
 
 
+Local components can simply be imported and instantiated if the package containing
+them is on the python search path.  The *create* function can be used to 
+instantiate them if there are openmdao plugin entry points registered for them.
+
 When a new object is requested and the module containing the requested type is
-local, *and* no version or other resource description is specified, then the
-create call is passed to the ImportFactory. The ImportFactory first uses the
-normal Python import mechanism to import the module and then executes the
-constructor for the requested type.
+local, *and* no server or other resource description is specified, the request
+is passed to the PkgResourcesFactory, which attempts to locate and load an
+entry point that matches the desired type.
+
+If the PkgResourcesFactory cannot locate the desired instance factory and
+there is no version specified, then the create call is passed to the
+ImportFactory, which first uses the normal Python import mechanism to import
+the module and then executes the constructor for the requested type.
 
 
 .. figure:: ../generated_images/LocalCreate.png
@@ -203,6 +211,30 @@ convergence criteria or reaches its maximum allowed number of iterations.  A
 CaseIterDriver, which is a Driver that runs input cases that come from a
 :term:`CaseIterator`, will iterate over its Workflow until it uses up
 all of the cases in the CaseIterator.
+
+In the current implementation, an Assembly runs its workflow directly, and that
+workflow may contain one or more drivers.  When executed, the workflow determines
+how many drivers it contains and what their respective iteration sets are. A driver's
+iteration set is just the set of Components that must be executed on each iteration
+of the driver.  This approach has a couple of problems. The algorithm to
+determine iteration sets is somewhat complex, and there are a number of component/driver
+topologies where the proper order of driver loop execution cannot be unambiguously 
+determined.  
+
+As a result of these problems a new design is being considered, where an
+Assembly has a component workflow and a driver workflow. When the assembly
+runs, it simply runs the driver workflow. Each Driver will then be executed 
+in the order determined by the driver workflow.  As each Driver executes, 
+it will iteratively execute the component workflow until it reaches some
+termination condition.  Then the next Driver in the driver workflow will
+begin iterating over the same component workflow.  This continues until
+all of the Drivers in the driver workflow have completed their execution.
+
+This design will allow a user to handle simple cases, e.g., a single optimizer,
+as well as cases requiring multiple drivers, e.g., cascade optimizers.
+
+The following figure describes how a single Driver interacts with a Workflow
+during execution.
 
 
 .. figure:: ../generated_images/RunInteraction.png

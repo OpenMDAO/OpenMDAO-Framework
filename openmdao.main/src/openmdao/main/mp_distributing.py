@@ -1,5 +1,5 @@
 """
-This module is based on the 'distributing.py' file example which was
+This module is based on the *distributing.py* file example which was
 (temporarily) posted with the multiprocessing module documentation.
 """
 

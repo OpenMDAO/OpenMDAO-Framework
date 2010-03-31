@@ -1,4 +1,4 @@
-"""A pyevolve based driver for OpenMDAO"""
+"""A Pyevolve-based driver for OpenMDAO"""
 
 
 
@@ -76,16 +76,16 @@ def G1DListCrossOverRealHypersphere(genome, **args):
 
 
 class pyevolvedriver(Driver):
-    """OpenMDAO wrapper for the pyevolve genetic algorithm framework. The 
+    """OpenMDAO wrapper for the Pyevolve genetic algorithm framework. The 
     wrapper uses two attributes to configure the optmization: 
     
-    The wrapper conforms to the pyevolve API for configuring the GA. It makes use 
-    of two attributes which map to pyevolve objects: genome and GA. The default 
-    selection for genome is G1DList. By default the wrapper uses the GsimpleGA engine 
-    from pyevolve with all its default settings. Currently, only the default configuration for the 
+    The wrapper conforms to the Pyevolve API for configuring the GA. It makes use 
+    of two attributes which map to Pyevolve objects: *genome* and *GA.* The default 
+    selection for genome is *G1DList*. By default the wrapper uses the GsimpleGA engine 
+    from Pyevolve with all its default settings. Currently, only the default configuration for the 
     genome is supported. 
 
-    The standard pyevolve library is provided:
+    The standard Pyevolve library is provided:
         G1Dlist,G1DBinaryString,G2dList,GAllele
         GsimpleGA,Initializators,Mutators,Consts,DBadapters
 
@@ -152,7 +152,7 @@ class pyevolvedriver(Driver):
         self.run_iteration()
         return self.objective.evaluate()
 
-    def verify(self):
+    def _verify(self):
         #genome verify
         if not isinstance(self.genome, GenomeBase.GenomeBase):
             self.raise_exception("genome provided is not valid."
@@ -172,7 +172,7 @@ class pyevolvedriver(Driver):
 
     def execute(self):
         """Perform the optimization"""
-        self.verify()
+        self._verify()
         #configure the evaluator function of the genome
         self.genome.evaluator.set(self.evaluate)
         

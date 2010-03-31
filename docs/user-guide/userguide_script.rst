@@ -445,7 +445,7 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 |                  | *default_value* = NoDefaultSpecified] )                  |
 +------------------+----------------------------------------------------------+
 
-Note: a more detailed list of Enthought's Traits is given in their `documentation`__.
+Note: a more detailed list of Enthought's `Traits`__ is given in their documentation.
 These are also available for use as Public Variables in the framework, though
 no examples are presented here for some of the more esoteric ones. If you need
 to use one, remember that *iotype* and *desc* should be added to the arguments

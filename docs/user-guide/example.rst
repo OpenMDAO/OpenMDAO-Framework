@@ -46,8 +46,8 @@ including the engine, the transmission, and the rear differential. In addition, 
 the vehicle is needed. A logical way to compartmentalize the vehicle model is to break it into component
 models matching each of these subsystems: engine, transmission, and chassis (which includes the
 rear differential ratio). In a typical problem, each of these component models will be a completely
-separate implementation, possibly with different authors or vendors. Each of these component models also
-requires a set of design variables which are detailed below.
+separate implementation, possibly with different authors or vendors, and will require a set of design variables which are
+detailed below.
 
 So a vehicle contains an engine, a transmission, and a chassis component. In addition to the
 design variables, there are three simulation variables: throttle position, gear, and velocity. These
@@ -581,13 +581,13 @@ Executing a Component in the Python Shell
 The Python implementations of the three component models (``engine.py, transmission.py, chassis.py``) should 
 all make sense now. This next section will demonstrate how to instantiate and use these components in the 
 Python shell. From the top level directory in your OpenMDAO source tree, go to the ``buildout`` directory. 
-From here, the Python shell can be launched by typing the following at the Unix prompt:
+From here, the Python shell can be launched by typing the following at the UNIX prompt:
 
 .. _Prompt1: 
 
 ::
 
-	[unix_prompt]$ bin/python
+	[UNIX_prompt]$ bin/python
 
 The Python environment in buildout/bin is a special one that has all of the OpenMDAO site packages installed,
 including the tutorial problem. The user interface for the default Python shell leaves a lot to be desired,
@@ -666,10 +666,10 @@ Assemblies
 
 Now that Python components representing the three vehicle subsystems have been created, they need to be
 connected so that they can be executed in sequence. In OpenMDAO, a component that contains a collection of
-other components is called an :term:`Assembly`. The assembly allows a set of components to be linked together by
+other components is called an :term:`Assembly`. The Assembly allows a set of components to be linked together by
 connecting their inputs and outputs. The data connections define an execution order based on their dependencies, i.e., components that are upstream in the data flow will be executed prior to those downstream so that input data to a component will always be valid with respect to the other parts of the workflow. Component execution is also lazy, meaning that a component will not execute if its inputs have not changed since its last execution.
-In addition, an assembly can also contain a driver, such as an optimizer or a design of experiments.
-When an assembly does not explicitly contain a driver, the assembly executes the components sequentially based on the
+In addition, an Assembly can also contain a Driver, such as an optimizer or a design of experiments.
+When an Assembly does not explicitly contain a driver, the assembly executes the components sequentially based on the
 data connections.
 
 For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission,
@@ -857,8 +857,8 @@ Executing the Vehicle Assembly
 ------------------------------
 
 We can manipulate the Vehicle Assembly in the Python shell in the same manner as the engine component
-above. As inputs, the Vehicle takes a commanded Velocity, Throttle Position, a Gear Shift position, and
-a set of vehicle design parameters, and returns the vehicles instantaneous acceleration and rate of fuel
+above. As inputs, the Vehicle takes a commanded velocity, throttle position, a gear Shift position, and
+a set of vehicle design parameters, and returns the vehicle's instantaneous acceleration and rate of fuel
 burn. 
 
 	>>> from openmdao.examples.enginedesign.vehicle import Vehicle
@@ -939,7 +939,7 @@ something that might be fixable and will be investigated.
 Sockets and Interfaces
 ----------------------
 
-Now that we have a functional (and reasonably quick) vehicle component, we need to complete the problem
+Now that we have a functional (and reasonably quick) Vehicle component, we need to complete the problem
 by providing a way to simulate the acceleration and the EPA fuel economy estimates. The acceleration test
 requires an integration in time with the vehicle component being executed at each time step to produce
 the instantaneous acceleration. The EPA fuel economy tests are a bit more tricky and require an
@@ -954,7 +954,7 @@ mentioned only as an attribute of assemblies, and they will be more thoroughly t
 Implementing the vehicle simulation as a driver might be a bit confusing for your first exposure to
 drivers, particularly since it involves nesting the simulation driver with an optimizer, so the vehicle
 simulations were implemented in a single Component instead. However, this leads to the concept of
-:term:`Sockets`, which require the implementation to be an Assembly instead of just a Component.
+:term:`Sockets`, which requires the implementation to be an Assembly instead of just a Component.
 
 To investigate designs, a Vehicle class was defined as an Assembly in OpenMDAO. This class has a set of specific inputs and outputs
 that include the design variables for the engine, transmission, and chassis, and the simulation

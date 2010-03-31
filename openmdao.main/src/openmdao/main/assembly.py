@@ -29,7 +29,8 @@ class PassthroughTrait(TraitType):
 
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
-    and outputs between its children and how to run a Workflow.
+    and outputs between its children.  When executed, it runs the components
+    in its Workflow.
     """
     drivers = List(IDriver)
     workflow = Instance(Workflow)
@@ -87,7 +88,7 @@ class Assembly (Component):
         #return super(Assembly, self).get_io_graph()
     
     def add_container(self, name, obj, add_to_workflow=True):
-        """Update dependency graph and call base class add_container.
+        """Update dependency graph and call base class *add_container*.
         Returns the added Container object.
         """
         obj = super(Assembly, self).add_container(name, obj)
@@ -105,7 +106,7 @@ class Assembly (Component):
         return obj
         
     def remove_container(self, name):
-        """Remove the named object from this container."""
+        """Remove the named container object from this container."""
         trait = self.trait(name)
         if trait is not None:
             obj = getattr(self, name)
@@ -132,9 +133,9 @@ class Assembly (Component):
     def create_passthrough(self, pathname, alias=None):
         """Creates a PassthroughTrait that uses the trait indicated by
         pathname for validation (if it's not a property trait), adds it to
-        self, and creates a connection between the two. If alias is None,
-        the name of the 'promoted' trait will be the last entry in its
-        pathname.  This is different than the create_alias function because
+        self, and creates a connection between the two. If alias is *None,*
+        the name of the "promoted" trait will be the last entry in its
+        pathname.  This is different from the *create_alias* function because
         the new trait is only tied to the specified trait by a connection
         in the Assembly. This means that updates to the new trait value will
         not be reflected in the connected trait until the assembly executes.
@@ -342,7 +343,7 @@ class Assembly (Component):
         return False
 
     def execute (self):
-        """By default, run child components in data flow order."""
+        """Runs the components in its workflow."""
         self.workflow.run()
         self._update_boundary_vars()
         

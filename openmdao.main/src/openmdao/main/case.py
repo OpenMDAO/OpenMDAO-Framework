@@ -4,12 +4,12 @@ from openmdao.main.interfaces import ICaseIterator
 
 
 class Case(object):
-    """Contains all information necessary to specify an input 'case', i.e., a
+    """Contains all information necessary to specify an input *case*, i.e., a
     list of name, index, value tuples for all inputs to the case, all outputs
     collected after running the case, an indicator of the exit status of the
     case, a string containing error messages associated with the running of
     the case, and an optional case identifier. The value entry of output tuples
-    should be set to None prior to executing the case.
+    should be set to *None* prior to executing the case.
 
     """
     def __init__(self, inputs=None, outputs=None, max_retries=None,

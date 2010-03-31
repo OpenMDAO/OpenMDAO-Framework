@@ -12,7 +12,7 @@ import tempfile
 from subprocess import check_call
 
 import pkg_resources
-from pkg_resources import Environment, WorkingSet, Distribution, Requirement, get_supported_platform
+from pkg_resources import Environment, WorkingSet, Requirement, get_supported_platform
 from setuptools.package_index import PackageIndex
 import zc.buildout
 import setuptools
@@ -25,22 +25,12 @@ def _find_files(startdir):
             yield os.path.join(path, name)
             
             
-def rm(path):
+def _rm(path):
     """Delete a file or directory"""
     if os.path.isdir(path):
         shutil.rmtree(path)
     else:
         os.remove(path)
-
-if sys.platform == 'win32':
-    def quote(c):
-        if ' ' in c:
-            return '"%s"' % c # work around spawn lamosity on windows
-        else:
-            return c
-else:
-    def quote (c):
-        return c
 
 class Bundler(object):
     """Collect all of the eggs that are used in the current
@@ -198,7 +188,6 @@ class Bundler(object):
         env = Environment()
         for degg in self.develop:
             os.chdir(startdir)
-            absegg = os.path.abspath(degg)
             self.logger.debug('building egg in %s' % degg)
             os.chdir(degg)
             # clean up any old builds
@@ -334,7 +323,7 @@ class Bundler(object):
                 shutil.copy(src, dest)
             elif os.path.isdir(src):
                 if os.path.exists(dest):
-                    rm(dest)
+                    _rm(dest)
                 shutil.copytree(src, dest) 
             else:
                 self.logger.error('%s is not a file or directory' % src)
@@ -358,7 +347,7 @@ class Bundler(object):
                 pname = os.path.join(self.bundledir, name)
                 if pname != tarname:
                     try:
-                        rm(pname)
+                        _rm(pname)
                     except OSError, err:
                         self.logger.error(str(err))
             

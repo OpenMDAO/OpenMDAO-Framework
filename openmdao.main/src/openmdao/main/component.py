@@ -29,7 +29,7 @@ class SimulationRoot (object):
     @staticmethod
     def chroot (path):
         """Change to directory `path` and set the singleton's root.
-        Normally not called, but useful in special situations."""
+        Normally not called but useful in special situations."""
         os.chdir(path)
         SimulationRoot.__root = os.getcwd()
 
@@ -50,7 +50,7 @@ class SimulationRoot (object):
 
 class Component (Container):
     """This is the base class for all objects containing Traits that are \
-    accessible to the OpenMDAO framework and are 'runnable'.
+    accessible to the OpenMDAO framework and are "runnable."
 
     - If `create_instance_dir` is True, then this component needs a unique \
       per-instance execution directory.  The created directory is filled \
@@ -59,7 +59,7 @@ class Component (Container):
     - `directory` is a string specifying the directory to execute in. \
       If it is a relative path, it is relative to its parent's directory.
     - `external_files` is a list of :class:`FileMetadata` objects for external \
-      files used by the component.  The 'path' attribute can be a \
+      files used by the component.  The *path* attribute can be a \
       :mod:`glob`-style pattern.
     """
 
@@ -84,14 +84,14 @@ class Component (Container):
     def check_config (self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
-        component, and may be called explicitly at other times if desired. 
+        component and may be called explicitly at other times if desired. 
         Classes that override this function must still call the base class
-        version .
+        version.
         """
         super(Component, self).check_config()
     
     def tree_rooted(self):
-        """Calls the base class version of tree_rooted(), checks our
+        """Calls the base class version of *tree_rooted()*, checks our
         directory for validity, and creates the directory if it doesn't exist.
         """
         super(Component, self).tree_rooted()
@@ -140,8 +140,8 @@ class Component (Container):
                 self.check_path(path, check_dir=True)
 
     def _pre_execute (self):
-        """Prepares for execution by calling tree_rooted() and check_config() if
-        their 'dirty' flags are set, and by requesting that the parent Assembly
+        """Prepares for execution by calling *tree_rooted()* and *check_config()* if
+        their "dirty" flags are set, and by requesting that the parent Assembly
         update this Component's invalid inputs.
         
         Overrides of this function must call this version.
@@ -201,7 +201,7 @@ class Component (Container):
                 self.pop_dir()
  
     def add_container(self, name, obj):
-        """Override of base class version to force call to check_config after
+        """Override of base class version to force call to *check_config* after
         any child containers are added.
         Returns the added Container object.
         """
@@ -209,7 +209,7 @@ class Component (Container):
         return super(Component, self).add_container(name, obj)
         
     def remove_container(self, name):
-        """Override of base class version to force call to check_config after
+        """Override of base class version to force call to *check_config* after
         any child containers are removed.
         """
         obj = super(Component, self).remove_container(name)
@@ -218,7 +218,7 @@ class Component (Container):
 
     def add_trait(self, name, *trait):
         """Overrides base definition of add_trait in order to
-        force call to check_config prior to execution when new traits are
+        force call to *check_config* prior to execution when new traits are
         added.
         """
         self.config_changed()
@@ -226,7 +226,7 @@ class Component (Container):
         
     def remove_trait(self, name):
         """Overrides base definition of add_trait in order to
-        force call to check_config prior to execution when a trait is
+        force call to *check_config* prior to execution when a trait is
         removed.
         """
         self.config_changed()
@@ -234,7 +234,7 @@ class Component (Container):
 
     def config_changed(self):
         """Call this whenever the configuration of this Container changes,
-        for example, children added or removed.
+        for example, children are added or removed.
         """
         super(Component, self).config_changed()
         self._call_check_config = True
@@ -297,7 +297,7 @@ class Component (Container):
 
     def checkpoint (self, outstream, fmt=SAVE_CPICKLE):
         """Save sufficient information for a restart. By default, this
-        just calls save().
+        just calls *save()*.
         """
         self.save(outstream, fmt)
 
@@ -421,7 +421,7 @@ class Component (Container):
 
     def _fix_external_files(self, comp, comp_dir, root_dir, require_relpaths,
                             fixup_meta, src_files):
-        """Ensure external files for `comp` are in relative form, and update
+        """Ensure external files for `comp` are in relative form and update
         src_files to include all matches."""
         for metadata in comp.external_files:
             path = metadata.path
@@ -726,7 +726,7 @@ class Component (Container):
     def step (self):
         """For Components that run other components (e.g., Assembly or Drivers),
         this will run one Component and return. For simple components, it is
-        the same as run().
+        the same as *run()*.
         """
         self.run()
 
@@ -751,7 +751,7 @@ class Component (Container):
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.
-        For a simple Component, this will result in a run().
+        For a simple Component, this will result in a *run()*.
         """
         self.run()
         

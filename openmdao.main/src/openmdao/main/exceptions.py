@@ -23,12 +23,12 @@ class CircularDependencyError(RuntimeError):
         super(CircularDependencyError, self).__init__(msg)
         
 class RunInterrupted(RuntimeError):
-    """Raised when run() was interrupted, implying an inconsistent state."""
+    """Raised when *run()* was interrupted, implying an inconsistent state."""
     def __init__(self, msg):
         super(RunInterrupted, self).__init__(msg)
 
 class RunStopped(RuntimeError):
-    """Raised when run() was stopped, implying a consistent state but
+    """Raised when *run()* was stopped, implying a consistent state but
     not necessarily reflecting input values."""
     def __init__(self, msg):
         super(RunStopped, self).__init__(msg)

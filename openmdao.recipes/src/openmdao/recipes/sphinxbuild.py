@@ -132,7 +132,7 @@ def test_sphinx_docs(*args):
     OpenMDAO documentation.
     """
     
-def gen_docs_script(buildout, bindir, idxpath, browser=''):
+def _gen_docs_script(buildout, bindir, idxpath, browser=''):
     """Create a bin/docs script that displays docs in a browser"""
     if sys.platform == 'win32':
         scriptname = os.path.join(bindir, 'docs.py')
@@ -351,7 +351,7 @@ class SphinxDocsTestCase(unittest.TestCase):
         if 'docs' in self.build or 'docscript' in self.build:
             idxpath = os.path.join(self.branchdir, self.docdir, self.builddir,
                                    'html','index.html')
-            scriptname = gen_docs_script(self.buildout, bindir, idxpath, 
+            scriptname = _gen_docs_script(self.buildout, bindir, idxpath, 
                                          self.options.get('browser', ''))
             scriptlist.append(scriptname)
         

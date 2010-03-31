@@ -46,7 +46,7 @@ class DriverForest(object):
                 yield drv
 
     def collapse_graph(self, parent_graph):
-        """Take the given graph, and collapse driver loops into single driver
+        """Take the given graph and collapse driver loops into single driver
         nodes while maintaining all of the edges to nodes outside of the loop.
         If the given graph contains multiple driver loops, they must be nested
         or an exception will be raised.
@@ -91,7 +91,7 @@ class DriverTree(object):
         components is a strict subset of the other driver's set of iteration
         components.
         
-        Returns 1 if the driver was inserted in the tree, or -1 if this
+        Returns 1 if the driver was inserted in the tree, -1 if this
         driver is nested within the new driver, or 0 if neither driver is
         nested within the other.
         """
@@ -134,7 +134,7 @@ class DriverTree(object):
         return 0
         
     def collapse_graph(self, graph):
-        """Take the given graph, and collapse driver loops into single driver
+        """Take the given graph and collapse driver loops into single driver
         nodes while maintaining all of the edges to nodes outside of the loop.
         
         Modifies the graph in place, keeping pre-collapsed subgraphs nodes 

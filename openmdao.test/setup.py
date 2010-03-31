@@ -1,5 +1,6 @@
 
 # pylint: disable-msg=F0401
+import os,sys
 
 from distutils.errors import DistutilsExecError, DistutilsPlatformError
 
@@ -9,7 +10,15 @@ except ImportError, e:
     from distutils.core import setup
 
 
-version = '0.1.0'
+here = os.path.dirname(os.path.realpath(__file__))
+sdir = os.path.join(here, '..', 'scripts')
+sdir = os.path.normpath(sdir)
+if os.path.isdir(sdir):
+    sys.path.insert(0, sdir)
+
+import releaseinfo
+
+version = releaseinfo.__version__
 
 setup(name='openmdao.test',
       version=version,
@@ -41,7 +50,7 @@ setup(name='openmdao.test',
           'setuptools',
           'openmdao.lib',
           'nose',
-          'nose_coverage2',
+          'nosecoverage2',
       ],
       entry_points={
       'openmdao.component': [
