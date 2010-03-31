@@ -20,18 +20,18 @@ understanding the examples in :ref:`Getting-Started-with-OpenMDAO` and
 OpenMDAO Fundamentals
 ---------------------
 
-.. index:: namespace
+.. index:: package
 
-*The OpenMDAO Namespace*
-~~~~~~~~~~~~~~~~~~~~~~~~
+*The OpenMDAO Package Hierarchy*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The *namespace* is a Python concept that provides a structure for organizing
-variables and functions in a logical hierarchical fashion. Namespaces allow you to
+The *package* is a Python concept that provides a structure for organizing
+variables and functions in a logical hierarchical fashion. Packages allow you to
 import needed functions and class definitions into the Python environment while
 allowing those with the same name to co-exist. The branch levels in a
-namespace are separated by a period (".").
+package are separated by a period (".").
 
-The OpenMDAO namespace includes several packages, all of which are by 
+The OpenMDAO package hierarchy includes several subpackages, all of which are prefixed by 
 "openmdao.":
 
 - ``openmdao.main`` -- Core infrastructure for the framework
@@ -40,11 +40,11 @@ The OpenMDAO namespace includes several packages, all of which are by
 - ``openmdao.util`` -- Utilities used by OpenMDAO, but are not dependent on it
 - ``openmdao.test`` -- Functions and classes used strictly for unit testing
 
-You are likely to need only the first three of these (*main, lib,* and *examples*).
+As a component developer, you are likely to need only the first three of these (*main, lib,* and *examples*).
 Importing classes and functions from OpenMDAO's libraries is performed with the
 same syntax as loading any other Python module:
 
-.. testcode:: namespace
+.. testcode:: package
 
     from openmdao.main.api import Component, Assembly
     from openmdao.lib.api import CONMINdriver
@@ -72,7 +72,6 @@ available in this module by using the *dir()* command in Python:
     FileCaseIterator
     FileMetadata
     FileRef
-    FileTrait
     ListCaseIterator
     PkgResourcesFactory
     SAVE_CPICKLE
@@ -100,7 +99,7 @@ Note that there is some overhead associated with importing things into the Pytho
 environment. Thus, it is important to import only what will be used in the
 module. Never import an entire library when only a subset is needed.
 
-.. testcode:: namespace
+.. testcode:: package
 
     # BAD
     import openmdao.main.api
@@ -129,6 +128,7 @@ Most of these items are also explained elsewhere in the *User's Guide.*
     CaseIteratorDriver
     Complex
     Enum
+    File
     Float
     Instance
     Int
@@ -144,6 +144,9 @@ Most of these items are also explained elsewhere in the *User's Guide.*
 *The Model Hierarchy*
 ~~~~~~~~~~~~~~~~~~~~~
 
+Every item (Component, Assembly, public variable) that is publicly acessible
+to the framework is part of OpenMDAO's model hierarchy.
+
 TODO: Talk about the model hierarchy
 
 *Naming Conventions*
@@ -153,7 +156,7 @@ Components and Public Variables that are instantiated into the OpenMDAO Model
 Hierarchy must follow the same naming syntax as variables in the Python
 language. Summarized, this means that they can only include alphanumeric
 characters and the underscore, and that the lead character cannot be a number.
-Any attempt to create a component or a Public Variable that does not comform
+Any attempt to create a component or a Public Variable that does not conform
 to Python's syntax should result in an exception. This restriction was required
 because these entities essentially exist as Python variables. One unfortunate
 side-effect is that names with spaces are not allowed. OpenMDAO checks for
@@ -203,7 +206,7 @@ internal private variables that need to be saved between runs, but aren't
 needed by other components in the framework.
 
 One important note: at present, a component has to be derived from Component
-to run in openMDAO. However, there has been some discussion recently
+to run in OpenMDAO. However, there has been some discussion recently
 about changing the implementation to remove this requirement. In such a case,
 a component would merely need to conform to the specified interface. There
 are quite a few other functions in the Component API that haven't been mentioned
@@ -412,6 +415,11 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 | Complex          | Complex( [*value* = None, *desc* = None,                 |
 |                  | *iotype* = None] )                                       | 
 +------------------+----------------------------------------------------------+
+| File             | File( [*default_value* = None, *iotype* = None,          | 
+|                  | *desc* = None, *low* = None, *high* = None, *path* =     |
+|                  | None, *content_type* = None, *binary* = False,           |
+|                  | *local_path* = None                                      |
++------------------+----------------------------------------------------------+
 | Float            | Float( [*default_value* = None, *iotype* = None,         | 
 |                  | *desc* = None, *low* = None, *high* = None,              |
 |                  | *exclude_low* = False, *exclude_high* = False,           |
@@ -440,9 +448,9 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 Note: a more detailed list of Enthought's Traits is given in their `documentation`__.
 These are also available for use as Public Variables in the framework, though
 no examples are presented here for some of the more esoteric ones. If you need
-to use one, remember that *iotype* and *desc* should be added to the arguements
+to use one, remember that *iotype* and *desc* should be added to the arguments
 when one of these is instantiated. The Traits use \*\*metadata to store these
-user-definied attributes.
+user-defined attributes.
 
 .. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#other-predefined-traits
 
@@ -541,9 +549,33 @@ and calculates their dot product as an output.
 	    print x1[0]
 
 Multiplication of a NumPy array is element by element, so *sum* is used to
-complete the calculation of the dot product. Individual elements of the aray
-can also be accesssed using brackets.
+complete the calculation of the dot product. Individual elements of the array
+can also be accessed using brackets.
 
+.. index:: File Variables, File
+
+File Variables
+++++++++++++++
+
+The File variable contains a reference to an input or output file on disk. It
+is more than simply a text string that contains a path and filename; it is
+actually a file object that can be passed into other functions expecting such
+an object. As such, it has functions to open it for writing, reading, etc.
+
+.. testcode:: filevar_example
+
+    from openmdao.lib.api import File
+    
+    text_file = File(path='source.txt', iotype='out', content_type='txt')
+    binary_file = File(path='source.bin', iotype='out', binary=True,
+                            extra_stuff='Hello world!')
+
+Note that the *path* must be a descendant of the parent component's path, as
+explained in :ref:`Files-and-Directories`. The *binary* flag can be used to
+mark a file as binary. 
+
+TODO: Provide some examples to demonstrate the options.
+			    
 .. index:: Instance Traits
 
 Instance Traits
@@ -673,7 +705,7 @@ As an example, consider a component that calculates a pressure (in Pascals) give
 a known force (in Newtons) applied to a known area (in square meters). Such a
 component would look like this:
 
-.. testcode:: units_delcare
+.. testcode:: units_declare
 
     from openmdao.main.api import Component
     from openmdao.lib.api import Float
@@ -711,7 +743,7 @@ Coercion and Casting
 OpenMDAO variables have a certain pre-defined behavior when a value from a
 variable of a different type is assigned. Public Variables were created
 using the Casting traits as opposed to the Coercion traits. This means that
-most mis-assignements in variable connections (i.e., a float connected to
+most mis-assignments in variable connections (i.e., a float connected to
 a string) should generate a TraitError exception. However, certain widening
 coercions seem to be permitted (e.g., Int->Float, Bool->Int, Bool->Float). No
 coercion from Str or to Str is allowed. If the user needs to apply different
@@ -735,7 +767,7 @@ A model is a collection of components (which can include assemblies and drivers)
 that can be executed in the framework. The entity that contains this model is
 called the top level Assembly, which behaves functionally the same as an
 Assembly. There is no way to distinguish it from any other assembly, other
-than in how it is used -- it is instatiated on its own instead of adding it
+than in how it is used -- it is instantiated on its own instead of adding it
 to another assembly. Therefore, it has no parent, and it sits at the top of
 the Model Hierarchy. Executing the top level Assembly executes the model.
 
@@ -765,13 +797,13 @@ We can see here that components that comprise the top level of this model are
 declared in the constructor. Note that the base class constructor is called
 (with the *super* function) before anything is added to the empty assembly. This
 is important to ensure that functions that are defined in the base classes are
-avaiable for use, such as *add_container*. 
+available for use, such as *add_container*. 
 
 The function *add_container*, takes a valid OpenMDAO name and a constructor as
 its arguments. This function call creates a new instance of the Component, and 
 adds it to the OpenMDAO model hierarchy using the given name. In this case then,
 the CONMIN driver is accessible anywhere in this assembly via *self.driver*.
-Likewise, the Parabaloid is accessed via *self.parabaloid*.
+Likewise, the Paraboloid is accessed via *self.paraboloid*.
 
 Note that in the Graphical Interface, the analog to *add_container* is dragging
 a component into some workspace or tableau.
@@ -797,7 +829,7 @@ include functions that support the above-listed characteristics.
 
 Consider once again the top level assembly that was created for 
 :ref:`Getting-Started-with-OpenMDAO`. We would like to create a few
-instances of the Parabaloid function, and connect them together in series.
+instances of the Paraboloid function, and connect them together in series.
 
 .. testcode:: connect_components
 
@@ -820,7 +852,7 @@ instances of the Parabaloid function, and connect them together in series.
 Components are connected by using the *connect* function built into the
 assembly. Connect takes two arguments, the first of which must be a component
 output, and the second of which must be a component input. These are expressed
-using their locations in the OpenMDAO model hierarchy with respece to the scope
+using their locations in the OpenMDAO model hierarchy with respect to the scope
 of the top level assembly. Note that an input can be connected to another input,
 but an output cannot be connected to another output. Additionally, only one output can
 be connected to any input. The violation of any of these rules generates a
@@ -867,11 +899,11 @@ The *create_passthrough* creates a Public Variable on the assembly. This new
 variable has the same name, iotype, default value, units, description, and range
 characteristics as the original variable on the subcomponent. If it is desired
 that any of these be different in the interface presented external to the
-assembly (and there are valid reasons to change some of these, particuarly the
+assembly (and there are valid reasons to change some of these, particularly the
 units), then a passthrough cannot be used. Instead, the desired Public Variables
-must be manually created and connected just like the normal ones. Howerver, at
+must be manually created and connected just like the normal ones. However, at
 present, this will only work with inputs, because inputs can be connected to
-other inputs, but outputs cannot be connected to ohter outputs. A more
+other inputs, but outputs cannot be connected to other outputs. A more
 detailed example is given in :ref:`The-OpenMDAO-tutorial-problem`. Fortunately,
 the passthroughs are sufficient for most needs.
 
@@ -893,6 +925,56 @@ fairly uncommon, though it is recognized that some specialized assemblies of
 components might need to reconfigure their connections during run-time, so it
 is available. 
 
+.. _Files-and-Directories:
+
+*Interacting with Files and Directories*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Many components will need to read from and write to files in the file system during
+model execution. For example, a component might need to generate input files
+for and parse output files from an external application. In order to write
+components such as these, it is important to understand how objects in OpenMDAO
+interact with the file system.
+
+The top assembly in the OpenMDAO model hierarchy contains the root path. This
+path is actually not known until after the assembly is instantiated (to learn
+how to set the root path, see :ref:`Setting-the-Top-Level-Assembly`.) All 
+components that are part of an assembly with a valid absolute directory have
+the same absolute directory.
+
+It is possible to change the absolute path of the working directory for any
+component on instantiation by setting the *directory* attribute in the
+constructor. For example, given the simple optimization model, we can specify
+a new working directory for the Paraboloid component when it is instantiated.
+    
+.. testcode:: simple_model_component_directory
+
+	from openmdao.main.api import Assembly
+	from openmdao.lib.api import CONMINdriver
+	from openmdao.examples.simple.paraboloid import Paraboloid
+
+	class Optimization_Unconstrained(Assembly):
+    	    """ Top level assembly for optimizing a vehicle. """
+    
+    	    def __init__(self, directory=''):
+                """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+        
+	        super(Optimization_Unconstrained, self).__init__(directory)
+
+	        # Create Paraboloid component instances
+	        self.add_container('paraboloid', Paraboloid(directory='folder/subfolder'))
+
+Notice that this is a relative path. **All components in the model hierarchy
+must operate in a directory that is a sub-directory of the top level assembly's
+absolute path.** An attempt to give a component an absolute path that is not a
+descendant of the top assembly's absolute path will result in a ValueError
+exception. This is a restriction that may be changed in the future depending
+on user feedback, but is accurate at present. If two components need to
+operate in directories disparate from the top path in hierarchy (e.g., one
+component in the model needs to run on a scratch disc), then this can be
+accomplished with by using multiprocessing, wherein each process has its own
+top level.
+		
 *Sockets & Interfaces*
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -903,9 +985,6 @@ Drivers
 
 *The Driver Interface*
 ~~~~~~~~~~~~~~~~~~~~~~
-
-*Case Iterator*
-~~~~~~~~~~~~~~~
 
 *Solution Drivers*
 ~~~~~~~~~~~~~~~~~~
@@ -920,7 +999,7 @@ CONMIN
 
 CONMIN, which stands for CONstraint MINimization, is a gradient descent optimization
 algorithm based on the Method of Feasible Directions. It was developed at
-NASA in the 1970s, and is  currently in the public domain. It hasbeen  included
+NASA in the 1970s, and is  currently in the public domain. It has been  included
 in OpenMDAO's Standard Library to provide users with a basic gradient algorithm.
 The interface for CONMIN is full detailed in :ref:`CONMIN-driver`.
 
@@ -951,11 +1030,46 @@ No capability at present, but it is part of our requirements. Scientific Python
 includes a Newton solver; this may serve as a starting point for the OpenMDAO
 driver.
 
-*Adding new Optimizers*
-~~~~~~~~~~~~~~~~~~~~~~~
+*The Case Iterator*
+~~~~~~~~~~~~~~~~~~~
+
+*Adding new Drivers*
+~~~~~~~~~~~~~~~~~~~~
 
 Running OpenMDAO
 -----------------
+
+.. _Setting-the-Top-Level-Assembly:
+
+*Setting the Top Level Assembly*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+When a Component or Assembly is instantiated as a standalone object, it is not
+aware of the directory where it resides. Any component added to such an assembly
+also does not know its path. The function *set_as_top* is available to denote an
+assembly as the top level assembly in the framework. Once an assembly is set
+as the top level assembly, it gains an absolute path which can be assessed
+through the function *get_abs_directory*.
+
+The path that is set by *set_as_top* is always the current working directory 
+in the Python environment.
+
+    >>> from openmdao.main.api import Assembly, set_as_top   
+    >>> z1 = Assembly()
+    >>> z1.get_abs_directory()
+    Traceback (most recent call last):
+    ...
+    RuntimeError: : can't call get_abs_directory before hierarchy is defined
+    >>>
+    >>> set_as_top(z1)
+    <openmdao.main.assembly.Assembly object at ...>
+    >>> z1.get_abs_directory()
+    '.../buildout/'
+
+Note that the output in this example depends on your local directory structure.
+All components added into this assembly will have this same absolute path. If a 
+component or assembly does not have a valid absolute directory, then File 
+variables will not be able to read, write, or even open their target files.
 
 *Executing Models*
 ~~~~~~~~~~~~~~~~~~
@@ -1037,6 +1151,10 @@ No capability at present, but it is part of our requirements.
 Managing Simulation Data
 ------------------------
 
+There is presently no specific capability to help the user manage simulation
+data (in potentially large amounts), but it has been identified as an important
+need. More work will be done in this area in the future.
+
 Multi-Threaded Computation
 --------------------------
 
@@ -1054,6 +1172,9 @@ Publishing a Component
 
 Geometry in OpenMDAO
 --------------------
+
+An API to provided a unified geometry interface is currently being investigated.
+More information on the notional prototype can be found in :ref:`Geometry-Interfaces-in-OpenMDAO`.
  
 Advanced MDAO 
 -------------

@@ -4,7 +4,7 @@
 
 # Optimize the bar3 design using the driving_sim component.
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.api import Float, CONMINdriver
 
 #from openmdao.examples.bar3simulation.bar3 import Bar3Truss
@@ -85,7 +85,8 @@ if __name__ == "__main__": # pragma: no cover
     import time
 
     opt_bar3 = Bar3Optimization("Top")
- 
+    set_as_top(opt_bar3)
+
     def prz(title):
         """ Print before and after"""
         

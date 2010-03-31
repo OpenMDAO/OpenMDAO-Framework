@@ -1,5 +1,7 @@
 .. index:: geometry interfaces
 
+.. _Geometry-Interfaces-in-OpenMDAO:
+
 Geometry Interfaces in OpenMDAO (Working Document)
 --------------------------------------------------
 

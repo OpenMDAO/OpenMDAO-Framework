@@ -380,6 +380,7 @@ the shell. So, the final lines in this file are:
 
 .. testsetup:: simple_model_Unconstrained_run
 
+	from openmdao.main.api import set_as_top
 	from openmdao.examples.simple.optimization_unconstrained import Optimization_Unconstrained
 	__name__ = "__main__"
 
@@ -388,16 +389,18 @@ the shell. So, the final lines in this file are:
 	if __name__ == "__main__": 
 
 	    opt_problem = Optimization_Unconstrained("Top")
+	    set_as_top(opt_problem)
 	    opt_problem.run()
 
 	    print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.get("x"), \
                                                  opt_problem.paraboloid.get("y"))
 						 
-This fragment of code really does just three things. In the first statement, an
+This fragment of code really does just four things. In the first statement, an
 instance of the class *Optimization_Unconstrained* is created with the name 
-*opt_problem.* In the second statement, *opt_problem* is told to run, which executes
+*opt_problem.* In the second statement, *opt_problem* is set as the top assembly in
+the model hierarchy. In the third statement, *opt_problem* is told to run, which executes
 the model until the optimizer's termination criteria are reached. Finally, the 
-third statement prints the results.
+fourth statement prints the results.
 
 This script can be executed in the shell by going to the
 ``...../openmdao/examples/simple`` directory, and typing:

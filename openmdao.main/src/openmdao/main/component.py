@@ -447,7 +447,7 @@ class Component (Container):
 
     def _fix_file_vars(self, comp, comp_dir, root_dir, require_relpaths,
                        fixup_fvar, src_files):
-        """Ensure FileTraits for `comp` are in relative form and add to
+        """Ensure File traits for `comp` are in relative form and add to
         src_files."""
         for fvarname, fvar, ftrait in comp.get_file_vars():
             if fvar.owner is not comp:
@@ -476,7 +476,7 @@ class Component (Container):
                              path, root_dir)
 
     def get_file_vars(self):
-        """Return list of (filevarname,filevarvalue,filetrait) owned by this
+        """Return list of (filevarname,filevarvalue,file trait) owned by this
         component."""
 
         def _recurse_get_file_vars(container, file_vars, visited, scope):

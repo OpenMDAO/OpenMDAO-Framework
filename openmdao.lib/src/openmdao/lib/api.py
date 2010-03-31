@@ -6,6 +6,7 @@ Library.
 # Traits that we've modified
 from openmdao.lib.traits.int import Int
 from openmdao.lib.traits.float import Float
+from openmdao.lib.traits.file import File
 
 # Traits from Enthought
 from enthought.traits.api import Array, Bool, List, Str, Enum, Instance, \
