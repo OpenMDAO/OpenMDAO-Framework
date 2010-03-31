@@ -1,17 +1,18 @@
 import glob
 import os.path
 import shutil
-import signal
-import stat
 import subprocess
-import sys
+import stat
 import time
+
+from enthought.traits.api import Dict
 
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
+from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.lib.api import Bool, Float, Int, Str
-
-__all__ = ('ExternalCode',)
+from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
+from openmdao.util.shellproc import ShellProc
 
 
 class ExternalCode(Component):
@@ -19,6 +20,8 @@ class ExternalCode(Component):
     Run an external code as a component.
 
     - `command` is the command to be executed.
+    - `env_vars` is a dictionary of environment variables for `command`.
+    - `resources` is a dictionary of resources required to run this component.
     - `poll_delay` is the delay between polling for command completion \
       (seconds). A value <= zero will use an internally computed default.
     - `timeout` is the maximum time to wait for command completion (seconds). \
@@ -31,6 +34,10 @@ class ExternalCode(Component):
 
     command = Str('', iotype='in',
                   desc='Command to be executed.')
+    env_vars = Dict({}, iotype='in',
+                    desc='Environment variables.')
+    resources = Dict({}, iotype='in',
+                     desc='Resources required to run this component.')
     poll_delay = Float(0., units='s', io_type='in',
                        desc='Delay between polling for command completion.')
     timeout = Float(0., low=0., iotype='in', units='s',
@@ -40,23 +47,26 @@ class ExternalCode(Component):
     return_code = Int(0, iotype='out',
                       desc='Return code from command.')
 
-    def __init__(self, doc=None, directory=''):
-        super(ExternalCode, self).__init__(doc, directory)
+    def __init__(self, *args, **kwargs):
+        super(ExternalCode, self).__init__(*args, **kwargs)
 
-        self.stdin   = None
-        self.stdout  = None
-        self.stderr  = None
+        self.stdin  = None
+        self.stdout = None
+        self.stderr = None
 
-        self._env     = None
         self._process = None
+        self._server = None
 
     def execute(self):
         """
         Removes existing output (but not in/out) files,
-        expands `command` user and environment variables,
-        and then launches a process with the resulting command line.
-        Polls for command completion or timeout.
+        If `resources` have been specified, then an appropriate server
+        is allocated and the command is run on that server.
+        Otherwise runs the command locally.
         """
+        self.return_code = -12345678
+        self.timed_out = False
+
         for metadata in self.external_files:
             if metadata.get('output', False) and \
                not metadata.get('input', False):
@@ -64,125 +74,148 @@ class ExternalCode(Component):
                     if os.path.exists(path):
                         os.remove(path)
 
-        cmd = self.command
-        cmd = os.path.expanduser(cmd)
-        cmd = os.path.expandvars(cmd)
-        if not cmd:
+        if not self.command:
             self.raise_exception('Null command line', ValueError)
 
-        # If using a shell, args should be the command line.
-        # Otherwise, args needs to be the split up arguments.
-        shell = True
-        if shell:
-            args = cmd
-        else:
-            args = cmd.split()
-
-        env = self._env
-        executable = None
-
-        # Directory setting is Component push_dir/pop_dir.
-        cwd = None
-
-        # If streams are strings, open corresponding files.
-        if isinstance(self.stdin, basestring):
-            stdin = open(self.stdin, 'r')
-        else:
-            stdin = self.stdin
-
-        if isinstance(self.stdout, basestring):
-            stdout = open(self.stdout, 'w')
-        else:
-            stdout = self.stdout
-
-        if isinstance(self.stderr, basestring):
-            stderr = open(self.stderr, 'w')
-        else:
-            stderr = self.stderr
-
         return_code = None
+        error_msg = ''
         try:
-            bufsize = 0
-            close_fds = False
-            universal_newlines = False
-
-            preexec_fn = None
-
-            startup_info = None  # For Windows.
-            creation_flags = 0   # For Windows.
-
-            self.timed_out = False
-            self._process = None
-
-            try:
-                self.debug("executing '%s'...", cmd)
-                self._process = subprocess.Popen(args, bufsize, executable,
-                                                 stdin, stdout, stderr,
-                                                 preexec_fn, close_fds,
-                                                 shell, cwd, env,
-                                                 universal_newlines,
-                                                 startup_info, creation_flags)
-            except Exception, exc:
-                self.raise_exception('Exception creating process: %s' % exc,
-                                     RuntimeError)
-
-            start_time = time.time()
-            self.debug('PID = %d', self._process.pid)
-
-            if self.poll_delay <= 0:
-                poll_delay = max(0.1, self.timeout/100.)
-                poll_delay = min(10., poll_delay)
+            if self.resources:
+                return_code, error_msg = self._execute_remote()
             else:
-                poll_delay = self.poll_delay
-            npolls = int(self.timeout / poll_delay) + 1
-
-            time.sleep(poll_delay)
-            return_code = self._process.poll()
-            while return_code is None:
-                npolls -= 1
-                if (self.timeout > 0) and (npolls < 0):
+                return_code, error_msg = self._execute_local()
+        except Exception as exc:
+            self.raise_exception('%s' % exc, type(exc))
+        else:
+            if return_code is None:
+                if self._stop:
+                    self.raise_exception('Run stopped', RunStopped)
+                else:
                     self.timed_out = True
-                    return_code = None
-                    self._process.terminate()
                     self.raise_exception('Timed out', RunInterrupted)
-                time.sleep(poll_delay)
-                try:
-                    return_code = self._process.poll()
-                except AttributeError:
-                    break  # self._process became None, maybe due to control-C
-
-            et = time.time() - start_time
-            if et >= 60:
-                self.debug('elapsed time: %f sec.', et)
-
-            if self._stop:
-                self.raise_exception('Run stopped', RunStopped)
-
-            if return_code:
-                reason = ''
-                if return_code > 0:
-                    reason = ': %s' % os.strerror(return_code)
-                elif return_code < 0:
-                    sig = -return_code
-                    if sig < signal.NSIG:
-                        for item in signal.__dict__.keys():
-                            if item.startswith('SIG'):
-                                if getattr(signal, item) == sig:
-                                    reason = ': %s' % item
-                                    break
-                self.raise_exception('return_code = %d%s '% \
-                                     (return_code, reason), RuntimeError)
+            elif return_code:
+                self.raise_exception('return_code = %d%s' \
+                                     % (return_code, error_msg), RuntimeError)
         finally:
-            self._process = None
             self.return_code = -999999 if return_code is None else return_code
 
-            # If streams are strings, close corresponding files.
-            if isinstance(self.stdin, basestring):
-                stdin.close()
-            if isinstance(self.stdout, basestring):
-                stdout.close()
-            if isinstance(self.stderr, basestring):
-                stderr.close()
+    def _execute_local(self):
+        """ Run command. """
+        self.info("executing '%s'...", self.command)
+        start_time = time.time()
+
+        self._process = \
+            ShellProc(self.command, self.stdin, self.stdout, self.stderr,
+                      self.env_vars)
+        self.debug('PID = %d', self._process.pid)
+
+        try:
+            return_code, error_msg = \
+                self._process.wait(self.poll_delay, self.timeout)
+        finally:
+            self._process.close_files()
+            self._process = None
+
+        et = time.time() - start_time
+        if et >= 60:
+            self.info('elapsed time: %f sec.', et)
+
+        return (return_code, error_msg)
+
+    def _execute_remote(self):
+        """
+        Allocate a server based on required resources, send inputs,
+        run command, and retrieve results.
+        """
+        # Allocate server.
+        self._server, server_info = RAM.allocate(self.resources)
+        if self._server is None:
+            self.raise_exception('Server allocation failed :-(')
+
+        return_code = -88888888
+        error_msg = ''
+        try:
+            # Send inputs.
+            patterns = []
+            for metadata in self.external_files:
+                if metadata.get('input', False):
+                    patterns.append(metadata.path)
+            if patterns:
+                self._send_inputs(patterns)
+            else:
+                self.debug("No input metadata paths")
+
+            # Run command.
+            self.info("executing '%s'...", self.command)
+            start_time = time.time()
+            return_code, error_msg = \
+                self._server.execute_command(self.command, self.stdin,
+                                             self.stdout, self.stderr,
+                                             self.env_vars, self.poll_delay,
+                                             self.timeout)
+            et = time.time() - start_time
+            if et >= 60:
+                self.info('elapsed time: %f sec.', et)
+
+            # Retrieve results.
+            patterns = []
+            for metadata in self.external_files:
+                if metadata.get('output', False):
+                    patterns.append(metadata.path)
+            if patterns:
+                self._retrieve_results(patterns)
+            else:
+                self.debug("No output metadata paths")
+
+        finally:
+            RAM.release(self._server)
+            self._server = None
+
+        return (return_code, error_msg)
+
+    def _send_inputs(self, patterns):
+        """ Sends input files matching `patterns`. """
+        self.info('sending inputs...')
+        start_time = time.time()
+
+        filename = 'inputs.zip'
+        pfiles, pbytes = pack_zipfile(patterns, filename, self._logger)
+        try:
+            filexfer(None, filename, self._server, filename, 'b')
+            ufiles, ubytes = self._server.unpack_zipfile(filename)
+        finally:
+            os.remove(filename)
+
+        if ufiles != pfiles or ubytes != pbytes:
+            msg = 'Results xfer error: %d:%d vs. %d:%d' \
+                  % (ufiles, ubytes, pfiles, pbytes)
+            self.raise_exception(msg, RuntimeError)
+
+        et = time.time() - start_time
+        if et >= 60:
+            self.info('elapsed time: %f sec.', et)
+
+    def _retrieve_results(self, patterns):
+        """ Retrieves result files matching `patterns`. """
+        self.info('retrieving results...')
+        start_time = time.time()
+
+        filename = 'outputs.zip'
+        pfiles, pbytes = self._server.pack_zipfile(tuple(patterns), filename)
+        try:
+            filexfer(self._server, filename, None, filename, 'b')
+            ufiles, ubytes = unpack_zipfile(filename, self._logger)
+        finally:
+            os.remove(filename)
+
+        if ufiles != pfiles or ubytes != pbytes:
+            msg = 'Results xfer error: %d:%d vs. %d:%d' \
+                  % (ufiles, ubytes, pfiles, pbytes)
+            self.raise_exception(msg, RuntimeError)
+
+        et = time.time() - start_time
+        if et >= 60:
+            self.info('elapsed time: %f sec.', et)
 
     def stop(self):
         """ Stop the external code. """

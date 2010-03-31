@@ -1,4 +1,4 @@
-import openmdao.units
+import openmdao.units as units
 import unittest
 import numpy
 

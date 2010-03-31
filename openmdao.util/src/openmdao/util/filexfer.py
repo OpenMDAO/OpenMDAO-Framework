@@ -1,4 +1,10 @@
+import glob
 import os
+import sys
+import zipfile
+
+from openmdao.util.log import NullLogger
+
 
 def filexfer(src_server, src_path, dst_server, dst_path, mode=''):
     """
@@ -48,4 +54,50 @@ def filexfer(src_server, src_path, dst_server, dst_path, mode=''):
         os.chmod(dst_path, mode)
     else:
         dst_server.chmod(dst_path, mode)
+
+
+def pack_zipfile(patterns, filename, logger=NullLogger):
+    """
+    Create 'zip' file `filename` of files in `patterns`.
+    Returns ``(nfiles, nbytes)``.
+    """
+    nfiles = 0
+    nbytes = 0
+    zipped = zipfile.ZipFile(filename, 'w')
+    try:
+        for pattern in patterns:
+            for path in glob.glob(pattern):
+                size = os.path.getsize(path)
+                logger.debug("packing '%s' (%d)...", path, size)
+                zipped.write(path)
+                nfiles += 1
+                nbytes += size
+    finally:
+        zipped.close()
+    return (nfiles, nbytes)
+
+
+def unpack_zipfile(filename, logger=NullLogger):
+    """
+    Unpack 'zip' file `filename`.
+    Returns ``(nfiles, nbytes)``.
+    """
+    nfiles = 0
+    nbytes = 0
+    zipped = zipfile.ZipFile(filename, 'r')
+    try:
+        for info in zipped.infolist():
+            size = info.file_size
+            logger.debug("unpacking '%s' (%d)...", info.filename, size)
+            if float(sys.version[:3]) >= 2.6:
+                zipped.extract(info)
+            else:
+                out = open(info.filename, 'wb')
+                out.write(zipped.read(info.filename))
+                out.close()
+            nfiles += 1
+            nbytes += size
+    finally:
+        zipped.close()
+    return (nfiles, nbytes)
 

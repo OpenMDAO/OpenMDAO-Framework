@@ -7,6 +7,7 @@ import logging
 import multiprocessing
 import os
 import Queue
+import socket
 import sys
 import threading
 import time
@@ -135,7 +136,33 @@ class ResourceAllocationManager(object):
             else:
                 time.sleep(1)  # Wait a bit between retries.
 
-    def _get_estimates(self, resource_desc):
+    @staticmethod
+    def get_hostnames(resource_desc):
+        """
+        Determine best resource for `resource_desc` and return hostnames.
+        In the case of a tie, the first allocator in the allocators list wins.
+        Typically used by parallel code wrappers which have MPI or something
+        similar for process deployment.
+        """
+        ram = ResourceAllocationManager.get_instance()
+        with ResourceAllocationManager._lock:
+            return ram._get_hostnames(resource_desc)
+
+    def _get_hostnames(self, resource_desc):
+        """ Get the hostnames. """
+        best_score = -1
+        while best_score == -1:
+            best_score, best_criteria, best_allocator = \
+                self._get_estimates(resource_desc, need_hostnames=True)
+            if best_score >= 0:
+                self._logger.debug('using %s', best_criteria['hostnames'])
+                return best_criteria['hostnames']
+            elif best_score != -1:
+                return None
+            else:
+                time.sleep(1)  # Wait a bit between retries.
+
+    def _get_estimates(self, resource_desc, need_hostnames=False):
         """ Return best (estimate, criteria, allocator). """
         best_estimate = -2
         best_criteria = None
@@ -148,9 +175,13 @@ class ResourceAllocationManager(object):
             if (best_estimate == -2 and estimate >= -1) or \
                (best_estimate == 0  and estimate >  0) or \
                (best_estimate >  0  and estimate < best_estimate):
-                best_estimate = estimate
-                best_criteria = criteria
-                best_allocator = allocator
+                if need_hostnames and not 'hostnames' in criteria:
+                    self.log_debug("allocator %s is missing 'hostnames'",
+                                   allocator._name)
+                else:
+                    best_estimate = estimate
+                    best_criteria = criteria
+                    best_allocator = allocator
 
         return (best_estimate, best_criteria, best_allocator)
 
@@ -209,7 +240,8 @@ class ResourceAllocator(ObjServerFactory):
         - -2 for no support for `resource_desc`.
 
         The returned criteria is a dictionary containing information related
-        to the estimate, such as load averages, unsupported resources, etc.
+        to the estimate, such as hostnames, load averages, unsupported
+        resources, etc.
         """
         raise NotImplementedError
 
@@ -294,7 +326,8 @@ class LocalAllocator(ResourceAllocator):
         - -2 for no support for `resource_desc`.
 
         The returned criteria is a dictionary containing information related
-        to the estimate, such as load averages, unsupported resources, etc.
+        to the estimate, such as hostnames, load averages, unsupported
+        resources, etc.
         """
         estimate, criteria = self._check_compatibility(resource_desc, True)
         if estimate < 0:
@@ -308,6 +341,7 @@ class LocalAllocator(ResourceAllocator):
         self._logger.debug('loadavgs %.2f, %.2f, %.2f, max_load %d',
                            loadavgs[0], loadavgs[1], loadavgs[2], self.max_load)
         criteria = {
+            'hostnames'  : [socket.gethostname()],
             'loadavgs'   : loadavgs,
             'total_cpus' : self.total_cpus,
             'max_load'   : self.max_load
@@ -519,12 +553,19 @@ class ClusterAllocator(object):
         - -2 for no support for `resource_desc`.
 
         The returned criteria is a dictionary containing information related
-        to the estimate, such as load averages, unsupported resources, etc.
+        to the estimate, such as hostnames, load averages, unsupported
+        resources, etc.
 
         This allocator polls each :class:`LocalAllocator` in the cluster
         to find the best match and returns that.  The best allocator is saved
         in the returned criteria for a subsequent :meth:`deploy`.
         """
+        n_cpus = resource_desc.get('n_cpus', 0)
+        if n_cpus:
+            # Spread across LocalAllocators.
+            resource_desc = resource_desc.copy()
+            resource_desc['n_cpus'] = 1
+
         with self._lock:
             best_estimate = -2
             best_criteria = None
@@ -556,6 +597,7 @@ class ClusterAllocator(object):
                     todo.append(allocator)
 
             # Process estimates.
+            host_loads = []  # Sorted list of (hostname, load)
             for i in range(len(self._allocators)):
                 worker_q, retval, exc, trace = self._reply_q.get()
                 if exc:
@@ -575,6 +617,21 @@ class ClusterAllocator(object):
                 if estimate is None:
                     continue
 
+                # Update loads.
+                if estimate >= 0 and n_cpus:
+                    load = criteria['loadavgs'][0]
+                    new_info = (criteria['hostnames'][0], load)
+                    if host_loads:
+                        for i, info in enumerate(host_loads):
+                            if load < info[1]:
+                                host_loads.insert(i, new_info)
+                                break
+                        else:
+                            host_loads.append(new_info)
+                    else:
+                        host_loads.append(new_info)
+
+                # Update best estimate.
                 if allocator is prev_allocator:
                     prev_estimate = estimate
                     prev_criteria = criteria
@@ -600,6 +657,12 @@ class ClusterAllocator(object):
             # Save best allocator in criteria in case we're asked to deploy.
             if best_criteria is not None:
                 best_criteria['allocator'] = best_allocator
+
+                # Save n_cpus hostnames in criteria.
+                best_criteria['hostnames'] = \
+                    [host_loads[i][0] \
+                     for i in range(min(n_cpus, len(host_loads)))]
+
             return (best_estimate, best_criteria)
 
     def _get_estimate(self, allocator, resource_desc):
