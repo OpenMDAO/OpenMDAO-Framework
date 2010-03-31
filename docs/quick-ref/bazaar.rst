@@ -183,19 +183,18 @@ displayed last, and you will have to scroll up to view the most recent revisions
 
 
 
-*Creating a Branch from working_main*
-++++++++++++++++++++++++++++++++++++++
-
-.. note:: Update for branching from launchpad
+*Creating a Branch from openmdao on Launchpad*
+++++++++++++++++++++++++++++++++++++++++++++++
 
 You need to be in your OpenMDAO working directory (e.g., pziegfel, ktmoore1), so type:
 
 ::
 
-  %cd /OpenMDAO/dev/<your_working_directory>  				   (Takes you to your working_directory.)
-  %bzr branch /OpenMDAO/dev/shared/working_main/ T<ticket#>-<branch_name>  (Creates branch from "working_main.)
+  %cd /OpenMDAO/dev/<your_working_directory>  	     (Takes you to your working_directory.)
+  %bzr branch lp:openmdao <branchname>               (Creates branch from openmdao on Launchpad.)
   Example:
-  %bzr branch /OpenMDAO/dev/shared/working_main/ T30-user_guide_updates	   (Creates branch: "T30-user_guide_updates.")
+  %bzr branch lp:openmdao T30-user_guide_updates     (Creates branch: "T30-user_guide_updates" where "T30" is 
+                                                     the Trac ticket number.)
 
 Your Trac ticket number and branch number should correspond. When working on your branch, be sure
 to add any new files that you create using the ``bzr add`` command. You can use the command to
@@ -215,57 +214,47 @@ If you are in your home directory, type:
 
 ::
 
-  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>  (Takes you to your branch.)
-  %cd /buildout			                         (Takes you to the "buildout" directory.) 
-  %python2.6 isolated_bootstrap.py                       (Runs the script needed before you can build the first time.)
-  %bin/buildout			                         (Builds on your branch.)		
-  %bin/docs			                         (Displays the documentation.)  			
-  %bin/test --all		                         (Runs the test suite.)
-
-.. note:: You must run the ``python2.6 isolated_bootstrap.py`` script the first time you build on
-   a branch. However, for subsequent builds, only ``bin/buildout`` is required. 
-   
-   The test suite includes tests for code snippets in the documentation.
+  %cd /OpenMDAO/dev/<your_working_directory>/<branchname>  (Takes you to your branch.)
+  %cd /buildout			                           (Takes you to the "buildout" directory.) 
+  %repo.py fix					           (Cleans up permissions and files after branching from openmdao
+							   trunk on Launchpad.)
+  %python2.6 isolated_bootstrap.py                         (Runs the script needed before you can build the first time.)
+  %bin/buildout			                           (Builds on your branch.)		
+  %bin/docs			                           (Displays the documentation.)  			
+  
+.. note:: As mentioned above, you should run ``repoy.py fix" after you branch from Launchpad. Before building the first time
+   on your branch, you must run the ``python2.6 isolated_bootstrap.py`` script. However, for subsequent builds, only
+   ``bin/buildout`` is required  (or ``bin/sphinx-build`` to update just the documents.) 
 
 
 .. index:: branch; merging to
 
-*Merging working_main to Your Branch*
-++++++++++++++++++++++++++++++++++++++
+*Merging openmdao to Your Branch*
++++++++++++++++++++++++++++++++++
 
-.. note:: Update for pulling from launchpad
-
-As you work on your branch, you may want to periodically update it from ``working_main`` to avoid conflicts
-when you merge back. In the example that follows, first we go to ``working_main`` and display the log to see what
-was recently committed. You can then decide if you want to merge to your branch. Type:
+As you work on your branch, you may want to update it from openmdao ``trunk`` on Launchpad to avoid conflicts
+when you push back the trunk. Type:
 
 ::
 
-  %cd /OpenMDAO/dev/shared/working_main
-  %bzr log --forward 	  (Checks the log for recent activity.) 
-  %bzr status		  (Checks to make sure there is no pending merge by another team member. If there is, check later.)
- 		
-You decide to merge out from ``working_main``, so go to your branch.
-
-::
-  
-  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>
+  %cd /OpenMDAO/dev/<branchname>   (Takes you to the branch you want to merge to.)
   Example:
   %cd /OpenMDAO/dev/pziegfel/T30-user_guide_updates
   
-  %bzr status		  (Checks your branch for uncommitted changes; you cannot merge if you have any.)
+  %bzr status		  	   (Checks your branch for uncommitted changes; you cannot merge if you have any.)
   
 If you have uncommitted changes, use the ``bzr commit`` command. If you have no uncommitted changes, go
 straight to the ``buildout`` directory.
 
 ::
   
-  %bzr commit -m "<commit_message>"  (Commits changes and allows you to add commit message. [Or, you can use NEdit].)
+  %bzr commit -m "<commit_message>"  (Commits changes and allows you to add a commit message. [You may omit the "-m" and press "Enter." 
+                                      NEdit will opens a file where you can add the commit message.])
   %cd buildout 		             (Takes you to your "buildout" directory.)
-  %bin/buildout		             (Makes sure branch builds before you merge to it [and after your commit, if applicable].)
+  %bin/buildout		             (Makes sure your branch builds before you merge to it [and after your commit, if applicable].)
   %bin/docs 		             (Checks that docs display correctly. Optional if no doc changes.)	
-  %bin/test --all 	             (Runs test suite; all tests should pass before you merge.)
-  %bzr merge /OpenMDAO/dev/shared/working_main  (Merges from working_main to your branch.)
+  %bin/test --all 	             (Runs the test suite; all tests should pass before you merge.)
+  %bzr merge lp:openmdao             (Merges from openmdao on Launchpad to your branch.)
 
 You must resolve any conflicts that come up during the merge. If conflicts arise, see :ref:`if you have a
 conflict <if-you-have-a-conflict>`. After you have resolved any conflicts or if you had none, type:
@@ -275,16 +264,16 @@ conflict <if-you-have-a-conflict>`. After you have resolved any conflicts or if 
   %bin/buildout    		       (Makes sure you can build on the branch after the merge.)
   %bin/test --all		       (Makes sure the tests pass after merging and before committing the changes.)
   %bzr status			       (Lists pending changes & merges, since merged files have not yet been committed.)
-  %bzr commit -m "<commit_message>"    (Commits changes from the merge and allows you to add required commit message. 
-                                        You can also omit the "-m" and write the message using the NEdit text editor.)
-  %bzr python2.6 isolated_bootstrap.py (Runs rerquired script before first build after committing changes.)
+  %bzr commit                          (Commits changes from the merge and allows you to add the REQUIRED commit message.) 
+  %repo.py fix			       (Runs the cleanup script on your branch. Run this after merging or branching from Launchpad.)
+  %bzr python2.6 isolated_bootstrap.py (Runs required script before first build after the merge.)
   %bin/buildout    		       (Builds on the branch after the merge.)
   
 .. index:: branch; merging from
  
 
-*Merging Your Branch to working_main*
-+++++++++++++++++++++++++++++++++++++
+*Merging Your Branch to openmdao on Launchpad*
+++++++++++++++++++++++++++++++++++++++++++++++
 
 .. note:: Update for pushing back to launchpad
 
