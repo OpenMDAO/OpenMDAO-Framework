@@ -2,8 +2,9 @@ Accessing OpenMDAO Code on Launchpad (Linux)
 ============================================
 
 If you are behind a proxy (this applies to GRC team members), you must create SSH keys for
-each platform you want to use before you can push a branch to Launchpad. If you are not
-behind a proxy, you may omit this step.
+each platform you want to use before you can merge from openmdao to your branch or push a branch back
+to openmdao on Launchpad. (An SSH key  is not needed create a branch.) If you are not behind a proxy,
+you may omit this step.
 
 These instructions assume that you already have a Launchpad account. If you do not, please go
 to https://launchpad.net and register for an account. Go ahead and log in to your Launchpad
@@ -40,8 +41,8 @@ You need to register and upload the *public* portion of your SSH key to Launchpa
 Notifying Launchpad of Your Userid
 ----------------------------------
 	
-You need to provide Launchpad with your userid before you can push a branch to openmdao. (Anyone can pull
-a branch from openmdao.) In your home directory on your Linux machine, type: 
+You need to provide Launchpad with your userid before you can merge from openmdao to your branch or
+push a branch back to openmdao. In your home directory on your Linux machine, type: 
 
 ::
 
