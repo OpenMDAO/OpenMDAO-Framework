@@ -1,9 +1,18 @@
 
 # pylint: disable-msg=F0401
 
+import os,sys
 from setuptools import setup, find_packages
 
-version = '0.1.0'
+here = os.path.dirname(os.path.realpath(__file__))
+sdir = os.path.join(here, '..', 'scripts')
+sdir = os.path.normpath(sdir)
+if os.path.isdir(sdir):
+    sys.path.insert(0, sdir)
+
+import releaseinfo
+
+version = releaseinfo.__version__
 
 setup(name='openmdao.util',
       version=version,

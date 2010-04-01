@@ -4,7 +4,7 @@
 
 # Optimize an engine disign using the driving_sim component.
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.api import CONMINdriver
 
 from openmdao.examples.enginedesign.driving_sim import DrivingSim
@@ -59,6 +59,8 @@ if __name__ == "__main__": # pragma: no cover
     #import profile
     
     z = EngineOptimization("Top")
+    set_as_top(z)
+
     
     z.driving_sim.run()
     prz('Old Design')

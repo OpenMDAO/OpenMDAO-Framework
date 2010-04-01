@@ -1,5 +1,5 @@
 """
-Test of FileTraits.
+Test of File traits.
 """
 
 import cPickle
@@ -12,8 +12,8 @@ from numpy.testing import assert_equal
 
 from enthought.traits.api import Bool, Array, Str, TraitError
 
-from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.main.filevar import FileTrait, FileRef
+from openmdao.main.api import Assembly, Component, set_as_top, FileRef
+from openmdao.lib.api import File
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -25,8 +25,8 @@ class Source(Component):
     write_files = Bool(True, iotype='in')
     text_data = Str(iotype='in')
     binary_data = Array('d', iotype='in')
-    text_file = FileTrait(path='source.txt', iotype='out', content_type='txt')
-    binary_file = FileTrait(path='source.bin', iotype='out', binary=True,
+    text_file = File(path='source.txt', iotype='out', content_type='txt')
+    binary_file = File(path='source.bin', iotype='out', binary=True,
                             extra_stuff='Hello world!')
 
     def execute(self):
@@ -43,11 +43,11 @@ class Source(Component):
 
 class Passthrough(Component):
     """ Copies input files (implicitly via local_path) to output. """
-    text_in = FileTrait(iotype='in', local_path='tout',
+    text_in = File(iotype='in', local_path='tout',
                         legal_types=['xyzzy', 'txt'])
-    binary_in = FileTrait(iotype='in', local_path='bout')
-    text_out = FileTrait(path='tout', iotype='out')
-    binary_out = FileTrait(path='bout', iotype='out', binary=True)
+    binary_in = File(iotype='in', local_path='bout')
+    text_out = File(path='tout', iotype='out')
+    binary_out = File(path='bout', iotype='out', binary=True)
 
     def execute(self):
         """ File copies are performed implicitly. """
@@ -77,8 +77,8 @@ class Sink(Component):
     bogus_path = Str('', iotype='in')
     text_data = Str(iotype='out')
     binary_data = Array('d', iotype='out')
-    text_file = FileTrait(iotype='in')
-    binary_file = FileTrait(iotype='in')
+    text_file = File(iotype='in')
+    binary_file = File(iotype='in')
 
     def execute(self):
         """ Read test data from files. """
@@ -126,7 +126,7 @@ class Model(Assembly):
 
 
 class TestCase(unittest.TestCase):
-    """ Test of FileTraits. """
+    """ Test of Files. """
 
     def setUp(self):
         """ Called before each test in this class. """
@@ -260,50 +260,50 @@ class TestCase(unittest.TestCase):
         logging.debug('test_bad_trait')
 
         try:
-            FileTrait(42)
+            File(42)
         except TraitError, exc:
             self.assertEqual(str(exc),
-                             'FileTrait default value must be a FileRef.')
+                             'File default value must be a FileRef.')
         else:
             self.fail('Expected TraitError')
 
         try:
-            FileTrait()
+            File()
         except TraitError, exc:
             self.assertEqual(str(exc),
-                             "FileTrait must have 'iotype' defined.")
+                             "File must have 'iotype' defined.")
         else:
             self.fail('Expected TraitError')
 
         try:
-            FileTrait(iotype='out')
+            File(iotype='out')
         except TraitError, exc:
             self.assertEqual(str(exc),
-                             "Output FileTrait must have 'path' defined.")
+                             "Output File must have 'path' defined.")
         else:
             self.fail('Expected TraitError')
 
         try:
-            FileTrait(iotype='out', path='xyzzy', legal_types=42)
+            File(iotype='out', path='xyzzy', legal_types=42)
         except TraitError, exc:
             self.assertEqual(str(exc),
-                             "'legal_types' invalid for output FileTrait.")
+                             "'legal_types' invalid for output File.")
         else:
             self.fail('Expected TraitError')
 
         try:
-            FileTrait(iotype='out', path='xyzzy', local_path=42)
+            File(iotype='out', path='xyzzy', local_path=42)
         except TraitError, exc:
             self.assertEqual(str(exc),
-                             "'local_path' invalid for output FileTrait.")
+                             "'local_path' invalid for output File.")
         else:
             self.fail('Expected TraitError')
 
         try:
-            FileTrait(iotype='in', path='xyzzy')
+            File(iotype='in', path='xyzzy')
         except TraitError, exc:
             self.assertEqual(str(exc),
-                             "'path' invalid for input FileTrait.")
+                             "'path' invalid for input File.")
         else:
             self.fail('Expected TraitError')
 

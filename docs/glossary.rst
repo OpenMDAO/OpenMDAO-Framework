@@ -239,7 +239,7 @@ Glossary
         A unittest extension offering automatic test suite discovery and easy test
         authoring.
 
-      **nose-coverage2**
+      **nosecoverage2**
         A nose plugin that exposes some features of version 3.2 of the **coverage**
         package, including html output and cobertura output.
             
@@ -299,6 +299,13 @@ Glossary
       **PIL**
         Python Imaging Library
 	
+	
+      **pip**
+	pip installs Python packages. It is a replacement for ``easy_install`` and uses mostly
+	the same techniques for finding packages, so packages that were made easy_installable
+	should be pip-installable as well.
+
+
       
       **plugin**
         A computer program that interacts with a host aplication to

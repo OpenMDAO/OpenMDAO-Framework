@@ -4,9 +4,20 @@ import os, sys
 
 from setuptools import setup, find_packages
 
+here = os.path.dirname(os.path.realpath(__file__))
+sdir = os.path.join(here, '..', 'scripts')
+sdir = os.path.normpath(sdir)
+if os.path.isdir(sdir):
+    sys.path.insert(0, sdir)
+else:
+    raise RuntimeError('%s is not a directory' % sdir)
+
+import releaseinfo
+
+version = releaseinfo.__version__
 
 setup(name='openmdao.main',
-      version='0.1',
+      version=version,
       description="OpenMDAO framework infrastructure",
       long_description="""\
 """,
@@ -37,7 +48,7 @@ setup(name='openmdao.main',
           'PyYAML',
           'networkx==1.0.1',
           'Traits>=3.0',
-          'units',
+          'openmdao.units',
           'openmdao.util',
       ],
       entry_points = {

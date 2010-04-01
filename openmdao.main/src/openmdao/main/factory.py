@@ -8,7 +8,7 @@ __all__ = ["Factory"]
 class Factory(object):
     """Base class for objects that know how to create other objects
     based on a type argument and several optional arguments (version,
-    server id, resource description, and name).
+    server id, and resource description).
     """
     def __init__(self):
         pass

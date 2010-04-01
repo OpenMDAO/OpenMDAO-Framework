@@ -107,8 +107,15 @@ You can get a copy of the repository as follows:
     bzr branch lp:openmdao <your_branch_name>
 
 
-Read-only access is available to anyone from ``<put src URL here>`` and patches can be submitted in
-the form of Bazaar merge directives to ``patches@openmdao.org``.
+Patches can be submitted in the form of bazaar merge directives to
+``patches@openmdao.org``.  To create a merge directive, type the following
+from inside of your repository:
+
+::
+
+    bzr send -o <my_merge_directive_filename>
+    
+Then just take the file you created and email it to ``patches@openmdao.org``.
 
 
 .. index:: source repository
@@ -207,29 +214,18 @@ Creating Your Branch
 ____________________
 
 
-As of this writing, the ``openmdao.org`` website is not active, so
-the URI ``bzr://openmdao.org/source/trunk`` is not available yet.  Until the website becomes active, if you have sftp access to torpedo.grc.nasa.gov, you can
-create a branch using the command:
+To create a branch, use the command:
 
 ::
 
-   bzr branch sftp://yourusername@torpedo.grc.nasa.gov/OpenMDAO/trunk <branch_name>
+   bzr branch lp:openmdao <branch_name>
    
-You will be prompted for your password after entering the command.
-
-
-Once the ``openmdao.org`` website is active, you should be able to create
-a branch using the following command:
-
-::
-
-   bzr branch bzr://openmdao.org/source/trunk <branch_name>
    
 where ``<branch_name>`` is the name you are giving to the top level directory
 of your branch repository.  The name should reflect the purpose of the branch to
 avoid confusion in the case where you have multiple branches active at the same time.
 If you do not supply ``<branch_name>``, the name by default will be the last part of
-the source repository URI, which in this case is ``trunk``.
+the source repository URI, which in this case is ``openmdao``.
 
 
 At Glenn Research Center (GRC), we name branches based on ticket numbers in the bug tracker, and we use
@@ -278,7 +274,7 @@ subdirectories:
 If you see an ``eggs`` directory under your ``buildout`` directory, then
 that means that you have not specified *eggs-directory* in your
 ``default.cfg`` file and you'll be getting a full copy of all dependent
-distributions into your buildout. This is generally NOT what you want. See
+distributions into your buildout. This may not be what you want. See
 the earlier discussion in 
 :ref:`Setting-Up-a-Local-Cache-of-Installed-Distributions` for how to set up
 your  ``default.cfg`` file.

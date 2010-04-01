@@ -152,7 +152,7 @@ class pyevolvedriver(Driver):
         self.run_iteration()
         return self.objective.evaluate()
 
-    def verify(self):
+    def _verify(self):
         #genome verify
         if not isinstance(self.genome, GenomeBase.GenomeBase):
             self.raise_exception("genome provided is not valid."
@@ -172,7 +172,7 @@ class pyevolvedriver(Driver):
 
     def execute(self):
         """Perform the optimization"""
-        self.verify()
+        self._verify()
         #configure the evaluator function of the genome
         self.genome.evaluator.set(self.evaluate)
         

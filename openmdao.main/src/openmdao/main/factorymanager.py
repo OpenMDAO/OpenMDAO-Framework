@@ -5,7 +5,7 @@ Manages the creation of framework objects, either locally or remotely.
 
 
 #public symbols
-__all__ = [ "create", "register_factory", "get_available_types" ]
+__all__ = [ "create", "register_class_factory", "get_available_types" ]
 
 
 import os
@@ -28,7 +28,7 @@ _container_groups = [ 'openmdao.container',
 
 
 def create(typname, version=None, server=None, res_desc=None, **ctor_args):
-    """Create and return an object specified by the given type, name,
+    """Create and return an object specified by the given type,
     version, etc.
     """
     obj = None
@@ -40,7 +40,7 @@ def create(typname, version=None, server=None, res_desc=None, **ctor_args):
     raise NameError("unable to create object of type '"+typname+"'")
 
 
-def register_factory(fct):
+def register_class_factory(fct):
     """Add a Factory to the factory list."""
     if fct not in _factories:
         _factories.append(fct)
@@ -68,7 +68,7 @@ def get_available_types(groups=None):
 
 # register factory that loads plugins via pkg_resources
 _pkg_res_factory = PkgResourcesFactory(groups=_container_groups)   
-register_factory(_pkg_res_factory)
+register_class_factory(_pkg_res_factory)
 
 # register factory for simple imports
-register_factory(ImportFactory())
+register_class_factory(ImportFactory())
