@@ -4,7 +4,7 @@
 
 # Perform an constrained optimization on our paraboloid using CONMIN.
 
-from openmdao.main.api import Assembly
+from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.api import CONMINdriver
 
 from openmdao.examples.simple.paraboloid import Paraboloid
@@ -47,7 +47,8 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
     
-    opt_problem = Optimization_Constrained("Top")
+    opt_problem = set_as_top(Optimization_Constrained("Top"))
+    set_as_top(opt_problem)
     
     tt = time.time()
     opt_problem.run()

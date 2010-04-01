@@ -1,12 +1,29 @@
+.. index:: standard library guide overview
+.. index:: Components
+.. index:: Drivers
+.. index:: Factories
+.. index:: Traits
+
+OpenMDAO Standard Library
+=========================
+
+The OpenMDAO standard library contains an assortment of useful plugins to the
+framework sorted into four catgories: components, drivers, factories, and traits.
+
+.. index:: standard library components
+
+Components
+----------
 .. index:: standard library drivers, CONMIN driver
 
+
 Drivers
-=======
+--------
 
 .. _CONMIN-driver:
 
-The CONMIN Driver
------------------
+*The CONMIN Driver*
++++++++++++++++++++
 
 :term:`CONMIN` is a Fortran program written in subroutine form for the solution of
 linear or nonlinear constrained optimization problems. The basic optimization
@@ -23,8 +40,8 @@ More information on CONMIN can be found in the `CONMIN User's Manual
 CONMIN has been included in the OpenMDAO standard library to provide users
 with a basic gradient-based optimization algorithm.
 
-*Basic Interface*
-~~~~~~~~~~~~~~~~~
+Basic Interface
+~~~~~~~~~~~~~~~
 
 The CONMIN code contains a number of different parameters and switches that
 are useful for controlling the optimization process. These can be subdivided
@@ -159,8 +176,8 @@ when they return a positive value.
 Note that any equation can also be expressed as an inequality.
 
 
-*Controlling the Optimization*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Controlling the Optimization
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is often necessary to control the convergence criteria for an optimization.
 The CONMIN driver allows the user to control both the number of iterations
@@ -285,8 +302,8 @@ iprint = 101  All of above plus a dump of the arguments passed to
 ============  ========================================================
 
 	
-*Advanced Options*
-~~~~~~~~~~~~~~~~~~
+Advanced Options
+~~~~~~~~~~~~~~~~
 The following options exercise some of the more advanced capabilities of CONMIN.
 The details given here briefly summarize the effects of these parameters; more
 information is available in the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_.
@@ -330,10 +347,16 @@ is only used for constrained problems.
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
 
-PyEvolve
---------
+*PyEvolve*
+++++++++++
 
 
-The Case Iterator
------------------
+*The Case Iterator*
++++++++++++++++++++
+
+Factories
+---------
+
+Traits
+------
 

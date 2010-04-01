@@ -20,7 +20,7 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.exceptions import ConstraintError
 
 from openmdao.main.stringref import StringRef, StringRefArray
-from openmdao.main.filevar import FileMetadata, FileRef, FileTrait
+from openmdao.main.filevar import FileMetadata, FileRef
 
 from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
 

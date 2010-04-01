@@ -15,7 +15,8 @@ Creating Your Key on Linux
 1. You should be in your home directory on your Linux machine (for GRC users, it is torpedo). At
    the prompt, type: ``ssh-keygen -t rsa``. 
 2. When prompted, press ``Enter`` to accept the default file name for your key. 
-3. Enter, and then confirm, a password to protect your SSH key. Your key pair is stored in ``~/.ssh/
+3. Press "Enter" when prompted for a password and then press it again to
+   confirm that you are not entering a password. Your key pair is stored in ``~/.ssh/
    as id_rsa.pub`` (public key) and ``id_rsa`` (private key).
 
 .. note::  In the unusual event that the ``ssh-keygen`` command fails, you may need to install

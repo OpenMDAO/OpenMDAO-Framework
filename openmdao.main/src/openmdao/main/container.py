@@ -190,7 +190,7 @@ class Container(HasTraits):
 
         self._io_graph = None
 
-        # Create per-instance initial FileRefs for FileTraits. There ought
+        # Create per-instance initial FileRefs for File traits. There ought
         # to be a better way to not share default initial values, but
         # FileRef.get_default_value/make_default won't pickle.
         for name, obj in self.items():

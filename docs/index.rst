@@ -15,7 +15,6 @@ Contents:
    arch-doc/index
    plugin-guide/index
    dev-guide/index
-   stdlib-guide/index
    srcdocs/index
    licenses/index
    quick-ref/index
