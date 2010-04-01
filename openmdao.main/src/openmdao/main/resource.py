@@ -177,7 +177,7 @@ class ResourceAllocationManager(object):
                (best_estimate >  0  and estimate < best_estimate):
                 if need_hostnames and not 'hostnames' in criteria:
                     self._logger.debug("allocator %s is missing 'hostnames'",
-                                       allocator._name)
+                                       allocator.name)
                 else:
                     best_estimate = estimate
                     best_criteria = criteria
@@ -337,7 +337,12 @@ class LocalAllocator(ResourceAllocator):
         try:
             loadavgs = os.getloadavg()
         except AttributeError:
-            return (0, {})
+            criteria = {
+                'hostnames'  : [socket.gethostname()],
+                'total_cpus' : self.total_cpus,
+            }
+            return (0, criteria)
+
         self._logger.debug('loadavgs %.2f, %.2f, %.2f, max_load %d',
                            loadavgs[0], loadavgs[1], loadavgs[2], self.max_load)
         criteria = {
