@@ -4,6 +4,7 @@ Test ShellProc functions.
 
 import logging
 import os.path
+import sys
 import unittest
 
 from openmdao.util.shellproc import call, check_call, CalledProcessError
