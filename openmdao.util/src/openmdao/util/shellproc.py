@@ -9,7 +9,14 @@ STDOUT = subprocess.STDOUT
 
 class CalledProcessError(subprocess.CalledProcessError):
     """ :class:`subprocess.CalledProcessError` plus `errormsg` attribute. """
-    pass
+
+    def __init__(self, returncode, cmd, errormsg):
+        super(CalledProcessError, self).__init__(returncode, cmd)
+        self.errormsg = errormsg
+
+    def __str__(self):
+        return "Command '%s' returned non-zero exit status %d: %s" \
+                % (self.cmd, self.returncode, self.errormsg)
 
 
 class ShellProc(subprocess.Popen):
@@ -124,8 +131,5 @@ def check_call(args, stdin=None, stdout=None, stderr=None, env=None,
         process.close_files()
 
     if return_code:
-        exc = CalledProcessError()
-        exc.returncode = return_code
-        exc.error_msg = error_msg
-        raise exc
+        raise CalledProcessError(return_code, args, error_msg)
 
