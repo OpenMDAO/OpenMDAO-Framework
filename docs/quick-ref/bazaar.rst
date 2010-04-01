@@ -21,7 +21,7 @@ quick reference for some common tasks you will be doing.
    - In the examples, the percent sign (%) represents the command-line prompt. 
    - Text included in pointy brackets means you have to supply a name or other
      information. For example, ``/OpenMDAO/dev/<your_working_directory>`` requires you
-     to supply a name for the working directory, such as: ``/OpenMDAO/dev/pziegfel``.
+     to supply a name for the working directory, such as: ``pziegfel``.
    - The examples provided assume you are working on OpenMDAO's Linux server. 
 
 References:
@@ -41,7 +41,7 @@ To use these commands, type ``bzr <command_name>``, for example ``bzr add``.
   
   add 		(Adds files/directories to the Bazaar repository on your branch.)
   branch	(Creates a new copy of a branch.)
-  commit	(Commits changes into a new revision. You must add a commit message via "-m" or NEdit, a text editor.)
+  commit	(Commits changes into a new revision. You must add a commit message via "-m" or another text editor.)
   conflicts	(Lists files with conflicts.)
   log --forward	(Displays revisions on a branch. The "--forward" option means the most recent activity will be displayed last.)    
   merge		(Pulls in committed changes from another branch.)
@@ -222,7 +222,7 @@ If you are in your home directory, type:
   %bin/buildout			                           (Builds on your branch.)		
   %bin/docs			                           (Displays the documentation.)  			
   
-.. note:: As mentioned above, you should run ``repoy.py fix" after you branch from Launchpad. Before building the first time
+.. note:: As mentioned above, you should run ``repy.py fix`` after you branch from Launchpad. Before building the first time
    on your branch, you must run the ``python2.6 isolated_bootstrap.py`` script. However, for subsequent builds, only
    ``bin/buildout`` is required  (or ``bin/sphinx-build`` to update just the documents.) 
 
@@ -233,105 +233,45 @@ If you are in your home directory, type:
 +++++++++++++++++++++++++++++++++
 
 As you work on your branch, you may want to update it from openmdao ``trunk`` on Launchpad to avoid conflicts
-when you push back the trunk. Type:
+when you push back to the trunk (for those users who have permission to do this). Type:
 
 ::
 
-  %cd /OpenMDAO/dev/<branchname>   (Takes you to the branch you want to merge to.)
+  %cd /OpenMDAO/dev/<branchname>    (Takes you to the branch you want to merge to.)
   Example:
   %cd /OpenMDAO/dev/pziegfel/T30-user_guide_updates
   
-  %bzr status		  	   (Checks your branch for uncommitted changes; you cannot merge if you have any.)
+  %bzr status		  	    (Checks your branch for uncommitted changes; you cannot merge if you have any.)
   
-If you have uncommitted changes, use the ``bzr commit`` command. If you have no uncommitted changes, go
+If you have uncommitted changes, use the ``bzr commit`` command (below). If you have no uncommitted changes, go
 straight to the ``buildout`` directory.
 
 ::
   
-  %bzr commit -m "<commit_message>"  (Commits changes and allows you to add a commit message. [You may omit the "-m" and press "Enter." 
-                                      NEdit will opens a file where you can add the commit message.])
-  %cd buildout 		             (Takes you to your "buildout" directory.)
+  %bzr commit -m "<commit_message>"  (Commits changes and allows you to add a commit message on the command line. Omit the
+				     "-m" and press "Enter" to enter the required a message using your default text editor.)
+  %cd buildout 		             (Takes you to your "buildout" directory.])
   %bin/buildout		             (Makes sure your branch builds before you merge to it [and after your commit, if applicable].)
   %bin/docs 		             (Checks that docs display correctly. Optional if no doc changes.)	
   %bin/test --all 	             (Runs the test suite; all tests should pass before you merge.)
   %bzr merge lp:openmdao             (Merges from openmdao on Launchpad to your branch.)
 
-You must resolve any conflicts that come up during the merge. If conflicts arise, see :ref:`if you have a
-conflict <if-you-have-a-conflict>`. After you have resolved any conflicts or if you had none, type:
+*- If you have no conflicts,* you can continue. Type:
 
 ::
 
-  %bin/buildout    		       (Makes sure you can build on the branch after the merge.)
-  %bin/test --all		       (Makes sure the tests pass after merging and before committing the changes.)
-  %bzr status			       (Lists pending changes & merges, since merged files have not yet been committed.)
-  %bzr commit                          (Commits changes from the merge and allows you to add the REQUIRED commit message.) 
   %repo.py fix			       (Runs the cleanup script on your branch. Run this after merging or branching from Launchpad.)
   %bzr python2.6 isolated_bootstrap.py (Runs required script before first build after the merge.)
   %bin/buildout    		       (Builds on the branch after the merge.)
+  %bin/test --all		       (Confirms that all tests pass.)
   
-.. index:: branch; merging from
- 
+You may now continue working on your branch.
 
-*Merging Your Branch to openmdao on Launchpad*
-++++++++++++++++++++++++++++++++++++++++++++++
-
-.. note:: Update for pushing back to launchpad
-
-You need to commit your changes to your local repository before merging your branch to ``working_main``. When
-you commit changes, you must add comments about the revision. If you forget to add "-m" and/or the commit message,
-you will automatically go into a file in NEdit, a text editor. Enter your commit comments and save them when
-exiting.
-
-::
-
-  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>        (Takes you to the branch to be merged.) 
-  %bzr status			       (Checks for uncommitted changes. You cannot merge if there are any.)
-  %bzr commit -m "<commit_message>"    (Needed only if you have uncommitted changes.)       
-  %cd buildout			       (Takes you to the "buildout" directory.)
-  %bin/buildout 		       (Builds your branch. You should be able to build without errors or warnings.)
-  %bin/test --all	               (Runs the test suite. Tests should pass on your branch before you merge.)
-  %cd ../../shared/working_main	       (Takes you up two levels and then to "working_main."
-  %bzr status			       (Checks to make sure there are no pending merges.)
-  %bzr merge /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>  (Merges your branch to "working_main.")
-
-Bazaar will merge your branch to ``working_main`` and then list all added, removed, and modified files. It will
-also list any conflicts. 
-
-- If you have **NO** conflicts, you can build, commit, and fix permissions on ``working_main``. On
-  ``working_main``, type the following:
-
-::
-
-  %cd /buildout		             	
-  %python2.6 isolated_bootstrap.py    (Required script that must be run before building on "working_main.")
-  %bin/buildout 		      (Makes sure you can build on "working_main" after the merge.)
-  %bin/docs			      (Displays the documentation.)
-  %bin/test --all		      (Runs the test suite. All tests must pass before you can commit your  
-                                       changes to "working_main.")	
-  
-
-.. note::
-   If tests passed on your branch but do not pass on ``working_main``, you must revert the changes and contact
-   bret.a.naylor@nasa.gov to resolve any issues. See :ref:`Canceling a Merge and Reverting Changes
-   <Canceling-a-Merge-and-Reverting-Changes>`.
- 
-If all tests passed, you may continue with the merge process.
-   
-::
-
-  %bzr status			      (Lists pending changes & merges that have not yet been committed.)	
-  %bzr commit -m "<commit_message>"   (Commits changes from the merge to "working_main.")
-  %repo.py fix 	    		      (Always run this script after building on "working_main." It fixes any file 
-                                       permissions that may have gotten changed during the merge and cleans up 
-				       temporary files created during the buildout.) 
-				     
 
 .. _`if-you-have-a-conflict`:
 
-- If you **HAVE** a conflict, you must resolve it:
-
-Bazaar will display the changes in files or directories and will also indicate the number of conflicts and where they
-occurred. See the following example:
+*- If you HAVE a conflict,* you must resolve it before proceeding. Bazaar will display the changes in files or directories and
+will also indicate the number of conflicts and where they occurred. See the following example:
 
 
 .. figure:: ../images/quick-ref/merge_conflict.png
@@ -363,7 +303,7 @@ order listed here:
 
 .. note::
 
-   When you are merging to ``trunk``, your file will be ``.OTHER`` and ``trunk`` will be ``THIS``.
+   When you are pushing to ``trunk``, your file will be ``.OTHER`` and ``trunk`` will be ``THIS``.
    However, if you are merging out from ``trunk`` to update your branch, ``.OTHER`` will be ``trunk``,
    and ``.THIS`` will be your branch.
 
@@ -395,16 +335,56 @@ commit your changes. Type:
 ::
 
   %bzr conflicts    		     (Checks to see if there are still conflicts. Displays them if there are.)
-  %cd /buildout			     (Takes you to the "buildout" directory.)
-  %python2.6 isolated_bootstrap.py   (Required script that must be run before building on "working_main.")
+  %repo.py fix 	  		     (Runs the cleanup script on your branch. Run this after branching or merging from Launchpad.)
+  %python2.6 isolated_bootstrap.py   (Required script that must be run before building the first time after branching or merging
+                                     from Launchpad.)
+                                     merging to a branch.)
   %bin/buildout 		     (Builds the branch.)						
-  %bin/docs		             (Displays the documentation.)
+  %bin/docs		             (Displays the documentation [optional].)
   %bin/test --all		     (All tests should pass before you commit.)	
-  %bzr status			     (Shows all the merged files from "working_main" that have not yet been  
-                                      committed on your branch.)		
-  %bzr commit -m "<commit_message>"  (Commits merged files on your branch and allows you to enter a commit message.)
-  %repo.py fix 	  		     (Runs a script to fix file permissions that may have gotten changed when you 
-                                      did a buildout. Always run this script after building on "working_main.") 
+  
+You may now continue working on your branch.
+ 
+.. index:: branch; merging from
+ 
+
+*Pushing Your Branch to openmdao on Launchpad*
+++++++++++++++++++++++++++++++++++++++++++++++
+
+You need to commit your changes to your local repository before pushing your branch to openmdao. When you commit changes, you must
+add comments. The "-m" option (see below) allows you to enter comments (they must start and end with double quotation marks) from
+the command line. If you do not add "-m" and just press "Enter," your default text editor will automatically open a new file
+where you must enter a commit message.
+
+::
+
+  %cd /OpenMDAO/dev/<your_working_directory>/<branch_name>    (Takes you to the branch to be merged.) 
+  %bzr status			       (Checks for uncommitted changes. You cannot merge if there are any.)
+  %bzr commit -m "<commit_message>"    (Needed only if you have uncommitted changes.)       
+  %cd buildout			       (Takes you to the "buildout" directory.)
+  %bin/buildout 		       (Builds your branch. You should be able to build without errors or warnings.)
+  %bin/test --all	               (Runs the test suite. Tests should pass on your branch.)
+  
+Before you push your branch to the trunk, you must merge from openmdao to the branch you want to push.  
+
+:: 
+  
+  %bzr merge lp:openmdao	       (Merges openmdao trunk to your branch.)  
+  %cd buildout			       (Takes you to the "buildout" directory.)
+  %repo.py fix			       (Runs the cleanup script on your branch. Run this after merging or branching from Launchpad.)
+  %bzr python2.6 isolated_bootstrap.py (Runs the script required before you build.)
+  %bin/buildout    		       (Builds on the branch after the merge.)
+  %bin/test --all		       (Confirms that all tests pass.)
+  
+If you can build successfully and pass the tests after the merge, you may push your branch to openmdao. If you have any conflicts,
+you must resolve them. See :ref:`if you have a conflict <if-you-have-a-conflict>`. After you have resolved any conflicts or if you
+had none, type: 
+
+::
+  
+  bzr push lp:openmdao
+
+This option makes your branch the latest revision on the trunk.
 
 
 .. index:: merge; canceling
@@ -412,10 +392,11 @@ commit your changes. Type:
 
 .. _`Canceling-a-Merge-and-Reverting-Changes`:
 
+
 *Canceling a Merge and Reverting Changes*
 +++++++++++++++++++++++++++++++++++++++++
 
-If you encounter a problem when merging and the issue cannot be resolved quickly, you can cancel the
+If you encounter a problem when merging openmdao to your branch, and the issue cannot be resolved quickly, you can cancel the
 merge by using the ``revert`` command. Type:
 
 ::
