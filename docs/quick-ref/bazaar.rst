@@ -382,7 +382,8 @@ had none, type:
 
 ::
   
-  bzr push lp:openmdao
+  %cd ../                              (Takes you to the top of your branch.)
+  %bzr push lp:openmdao                (Pushes your changes to openmdao trunk.)
 
 This option makes your branch the latest revision on the trunk.
 
