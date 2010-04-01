@@ -48,7 +48,7 @@ The *Float* variable is defined in the package ``openmdao.lib.api``, so we have
 to import it from there before we can use it. This 
 package defines a wide variety of traits, including basic types like *Int*,
 *Str*, and *Bool*; containers like *List* and *Dictionary*; and many others. Public Variables
-are actually based off of Enthought's Traits, and a larger selection of less commonly-used
+are actually based off of Enthought's Traits, and a larger selection of less commonly used
 traits are available by importing from the package ``enthought.traits.api``.
 To learn more about traits, you may want to look at the 
 `Traits User Manual <http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_
@@ -88,7 +88,7 @@ as a package in an egg:
       `-- setup.py
       
 
-The ``__init__.py`` file is empty, and is only there because that is how
+The ``__init__.py`` file is empty and is only there because that is how
 Python determines that the directory ``simple_adder`` is a Python package. The
 only other file in the directory structure besides ``simple_adder.py`` is the
 ``setup.py`` file, which describes how to build an egg containing our module.
@@ -114,10 +114,10 @@ In this case, the ``setup.py`` file looks like this:
     )
 
     
-The ``setup()`` command has *many* options in addition to those shown above,
-e.g., author, author_email, maintainer, maintainer_email, url, license,
+The *setup()* command has *many* options in addition to those shown above,
+e.g., *author, author_email, maintainer, maintainer_email, url, license,
 description, long_description, keywords, platforms, fullname, contact,
-contact_email, classifiers, and download_url. If you supply any of these,
+contact_email, classifiers,* and *download_url.* If you supply any of these,
 their values will be stored as metadata in the egg. To keep things simple, we
 won't describe all of the options in detail, but if you're interested, you can
 go to  `<http://docs.python.org/distutils/apiref.html#module-distutils.core>`_ and
@@ -142,15 +142,15 @@ within the OpenMDAO framework:
     so changing that version could break their code. If, however, you update
     your distribution's version id, then users of your distribution have the
     option to either use the updated distribution and make whatever
-    modifications are necessary to their own code to make it work, or stick
+    modifications are necessary to their own code to make it work or stick
     with an older version that already works with their code. The value of
     *version* is specified as a string, e.g., '1.0.4'.
     
 **packages**
-    In the case where you have only one module there will be only one package, but
+    In the case where you have only one module, there will be only one package, but
     the egg format allows for the existence of multiple packages. You can specify
     *packages* as an explicit list of strings, but the easiest thing to do is to use
-    the ``find_packages()`` function from setuptools as shown in the example above.
+    the *find_packages()* function from setuptools as shown in the example above.
     
 **install_requires**  
     This specifies the packages that your egg depends upon. Note that you
@@ -230,7 +230,7 @@ Sometimes it's necessary to create a new type of variable that can be passed
 between OpenMDAO components.  This section describes how to do this using a 
 pure Python OpenMDAO plugin.
 
-Let's assume we want to have a variable that represents a set of cartesian 
+Let's assume we want to have a variable that represents a set of Cartesian 
 coordinates, with the value of the variable being a 3-tuple of floating point
 values representing the x, y, and z position.  We'll start by creating a 
 file called ``coord.py`` and put the following code in it:
@@ -253,8 +253,8 @@ file called ``coord.py`` and put the following code in it:
                 self.error(object, name, value)
 
 
-OpenMDAO uses the *Traits* package from Enthought to implement component
-variables. The base class for custom traits is ``TraitType``, so that's the
+OpenMDAO uses the Traits package from Enthought to implement component
+variables. The base class for custom traits is *TraitType*, so that's the
 base class for our coordinates variable. If a component or a component class
 contains a TraitType object and that object has a metadata attribute called
 *iostatus*, then that object is exposed to the framework as a variable whose
@@ -268,7 +268,7 @@ of *wheel.center_location* would be a 3-tuple, not a Coordinates object.
 
 We override the base class constructor so we can supply a default value of
 (0.,0.,0.) if the caller doesn't supply one. After that, the only function we
-need to supply is the ``validate`` function, which will be called with the
+need to supply is the *validate* function, which will be called with the
 following arguments:
 
     **object**
