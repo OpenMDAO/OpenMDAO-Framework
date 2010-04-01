@@ -3,7 +3,7 @@ Test the ExternalCode component.
 """
 
 import logging
-import os
+import os.path
 import pkg_resources
 import shutil
 import sys
@@ -92,7 +92,7 @@ class TestCase(unittest.TestCase):
         if os.path.exists(dummy):
             os.remove(dummy)
 
-        extcode = ExternalCode()
+        extcode = set_as_top(ExternalCode())
         extcode.timeout = 5
         extcode.command = 'python sleep.py 1 %s' % dummy
         extcode.env_vars = {'SLEEP_DATA': 'Hello world!'}
@@ -113,6 +113,47 @@ class TestCase(unittest.TestCase):
             self.assertEqual(data, extcode.env_vars['SLEEP_DATA'])
         finally:
             os.remove(dummy)
+
+    def test_bad_alloc(self):
+        logging.debug('')
+        logging.debug('test_remote')
+
+        extcode = set_as_top(ExternalCode())
+        extcode.command = 'python sleep.py'
+        extcode.resources = {'no_such_resource': 1}
+
+        try:
+            extcode.run()
+        except RuntimeError as exc:
+            self.assertEqual(str(exc), ': Server allocation failed :-(')
+        else:
+            self.fail('Exected RuntimeError')
+
+    def test_copy(self):
+        logging.debug('')
+        logging.debug('test_copy')
+
+        extcode = set_as_top(ExternalCode())
+
+        os.mkdir('Inputs')
+        try:
+            shutil.copy('sleep.py', os.path.join('Inputs', 'junk.inp'))
+            extcode.copy_inputs('Inputs', '*.inp')
+            self.assertEqual(os.path.exists('junk.inp'), True)
+        finally:
+            shutil.rmtree('Inputs')
+            if os.path.exists('junk.inp'):
+                os.remove('junk.inp')
+
+        os.mkdir('Outputs')
+        try:
+            shutil.copy('sleep.py', os.path.join('Outputs', 'junk.dat'))
+            extcode.copy_results('Outputs', '*.dat')
+            self.assertEqual(os.path.exists('junk.dat'), True)
+        finally:
+            shutil.rmtree('Outputs')
+            if os.path.exists('junk.dat'):
+                os.remove('junk.dat')
 
     def test_save_load(self):
         logging.debug('')

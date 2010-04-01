@@ -84,9 +84,7 @@ class ExternalCode(Component):
                 return_code, error_msg = self._execute_remote()
             else:
                 return_code, error_msg = self._execute_local()
-        except Exception as exc:
-            self.raise_exception('%s' % exc, type(exc))
-        else:
+
             if return_code is None:
                 if self._stop:
                     self.raise_exception('Run stopped', RunStopped)
@@ -130,7 +128,7 @@ class ExternalCode(Component):
         # Allocate server.
         self._server, server_info = RAM.allocate(self.resources)
         if self._server is None:
-            self.raise_exception('Server allocation failed :-(')
+            self.raise_exception('Server allocation failed :-(', RuntimeError)
 
         return_code = -88888888
         error_msg = ''
@@ -187,7 +185,7 @@ class ExternalCode(Component):
             os.remove(filename)
 
         if ufiles != pfiles or ubytes != pbytes:
-            msg = 'Results xfer error: %d:%d vs. %d:%d' \
+            msg = 'Inputs xfer error: %d:%d vs. %d:%d' \
                   % (ufiles, ubytes, pfiles, pbytes)
             self.raise_exception(msg, RuntimeError)
 
@@ -259,6 +257,9 @@ class ExternalCode(Component):
         Copies files from `directory` that match `patterns`
         to the current directory and ensures they are writable.
         """
+        if isinstance(patterns, basestring):
+            patterns = [patterns]
+
         for pattern in patterns:
             pattern = os.path.join(directory, pattern)
             for src_path in sorted(glob.glob(pattern)):

@@ -89,12 +89,7 @@ def unpack_zipfile(filename, logger=NullLogger):
         for info in zipped.infolist():
             size = info.file_size
             logger.debug("unpacking '%s' (%d)...", info.filename, size)
-            if float(sys.version[:3]) >= 2.6:
-                zipped.extract(info)
-            else:
-                out = open(info.filename, 'wb')
-                out.write(zipped.read(info.filename))
-                out.close()
+            zipped.extract(info)
             nfiles += 1
             nbytes += size
     finally:
