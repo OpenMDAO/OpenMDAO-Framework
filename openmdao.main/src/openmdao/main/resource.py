@@ -176,8 +176,8 @@ class ResourceAllocationManager(object):
                (best_estimate == 0  and estimate >  0) or \
                (best_estimate >  0  and estimate < best_estimate):
                 if need_hostnames and not 'hostnames' in criteria:
-                    self.log_debug("allocator %s is missing 'hostnames'",
-                                   allocator._name)
+                    self.debug("allocator %s is missing 'hostnames'",
+                               allocator._name)
                 else:
                     best_estimate = estimate
                     best_criteria = criteria
