@@ -84,9 +84,9 @@ class TestCase(unittest.TestCase):
         self.assertAlmostEqual(model.driving_sim.accel_time, 
                                5.5999999999999961, places=6)
         self.assertAlmostEqual(model.driving_sim.EPA_city, 
-                               25.15551809930237, places=4)
+                               25.203, places=3)
         self.assertAlmostEqual(model.driving_sim.EPA_highway, 
-                               32.800993976480768, places=4)
+                               32.8139, places=4)
                               
 if __name__ == '__main__':
     unittest.main()
