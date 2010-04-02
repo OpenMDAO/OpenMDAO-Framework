@@ -6,6 +6,7 @@
 
 import numpy.numarray as numarray
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
 from openmdao.lib.api import Float
 
@@ -16,8 +17,7 @@ class Bar3Truss(Component):
 
     # set up interface to the framework
     # pylint: disable-msg=E1101
-    # "Instance of <class> has no <attr> member"
-
+    
     load_x_dir = Float(50.0, iotype='in', units='lb',
                         desc='Load in X direction')
 

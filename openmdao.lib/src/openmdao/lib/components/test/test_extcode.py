@@ -3,19 +3,21 @@ Test the ExternalCode component.
 """
 
 import logging
-import os
+import os.path
 import pkg_resources
 import shutil
 import sys
 import unittest
 
 from openmdao.main.api import Assembly, FileMetadata, SimulationRoot, set_as_top
-from openmdao.main.exceptions import RunInterrupted
-from openmdao.lib.components.external_code import ExternalCode
 from openmdao.main.eggchecker import check_save_load
+from openmdao.main.exceptions import RunInterrupted
+from openmdao.main.resource import ResourceAllocationManager
+from openmdao.lib.components.external_code import ExternalCode
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
+
 # Directory where we can find sleep.py.
 DIRECTORY = pkg_resources.resource_filename('openmdao.lib.components', 'test')
 
@@ -57,25 +59,113 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_normal')
 
-        # Normal run should have no issues.
-        externp = set_as_top(ExternalCode())
-        externp.timeout = 5
-        externp.command = 'python sleep.py 1'
-        externp.run()
-        self.assertEqual(externp.return_code, 0)
-        self.assertEqual(externp.timed_out, False)
+        dummy = 'dummy_output'
+        if os.path.exists(dummy):
+            os.remove(dummy)
+
+        extcode = set_as_top(ExternalCode())
+        extcode.timeout = 5
+        extcode.command = 'python sleep.py 1 %s' % dummy
+        extcode.env_vars = {'SLEEP_DATA': 'Hello world!'}
+
+        extcode.run()
+
+        self.assertEqual(extcode.return_code, 0)
+        self.assertEqual(extcode.timed_out, False)
+        self.assertEqual(os.path.exists(dummy), True)
+        try:
+            with open(dummy, 'r') as inp:
+                data = inp.readline().rstrip()
+            self.assertEqual(data, extcode.env_vars['SLEEP_DATA'])
+        finally:
+            os.remove(dummy)
+
+    def test_remote(self):
+        logging.debug('')
+        logging.debug('test_remote')
+
+        # Ensure we aren't held up by local host load problems.
+        local = ResourceAllocationManager.get_allocator(0)
+        local.max_load = 10
+
+        dummy = 'dummy_output'
+        if os.path.exists(dummy):
+            os.remove(dummy)
+
+        extcode = set_as_top(ExternalCode())
+        extcode.timeout = 5
+        extcode.command = 'python sleep.py 1 %s' % dummy
+        extcode.env_vars = {'SLEEP_DATA': 'Hello world!'}
+        extcode.external_files.extend((
+            FileMetadata(path='sleep.py', input=True),
+            FileMetadata(path=dummy, output=True)
+        ))
+        extcode.resources = {'n_cpus': 1}
+
+        extcode.run()
+
+        self.assertEqual(extcode.return_code, 0)
+        self.assertEqual(extcode.timed_out, False)
+        self.assertEqual(os.path.exists(dummy), True)
+        try:
+            with open(dummy, 'r') as inp:
+                data = inp.readline().rstrip()
+            self.assertEqual(data, extcode.env_vars['SLEEP_DATA'])
+        finally:
+            os.remove(dummy)
+
+    def test_bad_alloc(self):
+        logging.debug('')
+        logging.debug('test_remote')
+
+        extcode = set_as_top(ExternalCode())
+        extcode.command = 'python sleep.py'
+        extcode.resources = {'no_such_resource': 1}
+
+        try:
+            extcode.run()
+        except RuntimeError as exc:
+            self.assertEqual(str(exc), ': Server allocation failed :-(')
+        else:
+            self.fail('Exected RuntimeError')
+
+    def test_copy(self):
+        logging.debug('')
+        logging.debug('test_copy')
+
+        extcode = set_as_top(ExternalCode())
+
+        os.mkdir('Inputs')
+        try:
+            shutil.copy('sleep.py', os.path.join('Inputs', 'junk.inp'))
+            extcode.copy_inputs('Inputs', '*.inp')
+            self.assertEqual(os.path.exists('junk.inp'), True)
+        finally:
+            shutil.rmtree('Inputs')
+            if os.path.exists('junk.inp'):
+                os.remove('junk.inp')
+
+        os.mkdir('Outputs')
+        try:
+            shutil.copy('sleep.py', os.path.join('Outputs', 'junk.dat'))
+            extcode.copy_results('Outputs', '*.dat')
+            self.assertEqual(os.path.exists('junk.dat'), True)
+        finally:
+            shutil.rmtree('Outputs')
+            if os.path.exists('junk.dat'):
+                os.remove('junk.dat')
 
     def test_save_load(self):
         logging.debug('')
         logging.debug('test_save_load')
 
-        externp = set_as_top(ExternalCode())
-        externp.name = 'ExternalCode'
-        externp.timeout = 5
-        externp.command = 'python sleep.py 1'
+        extcode = set_as_top(ExternalCode())
+        extcode.name = 'ExternalCode'
+        extcode.timeout = 5
+        extcode.command = 'python sleep.py 1'
 
         # Exercise check_save_load().
-        retcode = check_save_load(externp)
+        retcode = check_save_load(extcode)
         self.assertEqual(retcode, 0)
 
     def test_timeout(self):
@@ -83,14 +173,14 @@ class TestCase(unittest.TestCase):
         logging.debug('test_timeout')
 
         # Set timeout to less than execution time.
-        externp = set_as_top(ExternalCode())
-        externp.timeout = 1
-        externp.command = 'python sleep.py 5'
+        extcode = set_as_top(ExternalCode())
+        extcode.timeout = 1
+        extcode.command = 'python sleep.py 5'
         try:
-            externp.run()
-        except RunInterrupted, exc:
+            extcode.run()
+        except RunInterrupted as exc:
             self.assertEqual(str(exc), ': Timed out')
-            self.assertEqual(externp.timed_out, True)
+            self.assertEqual(extcode.timed_out, True)
         else:
             self.fail('Expected RunInterrupted')
 
@@ -99,44 +189,44 @@ class TestCase(unittest.TestCase):
         logging.debug('test_badcmd')
 
         # Set command to nonexistant path.
-        externp = set_as_top(ExternalCode())
-        externp.command = 'xyzzy'
-        externp.stdout = 'badcmd.out'
-        externp.stderr = ExternalCode.STDOUT
+        extcode = set_as_top(ExternalCode())
+        extcode.command = 'xyzzy'
+        extcode.stdout = 'badcmd.out'
+        extcode.stderr = ExternalCode.STDOUT
         try:
-            externp.run()
-        except RuntimeError, exc:
+            extcode.run()
+        except RuntimeError as exc:
             if sys.platform == 'win32':
                 self.assertTrue('Operation not permitted' in str(exc))
-                self.assertEqual(externp.return_code, 1)
+                self.assertEqual(extcode.return_code, 1)
             else:
                 msg = ': return_code = 127'
                 self.assertEqual(str(exc).startswith(msg), True)
-                self.assertEqual(externp.return_code, 127)
-            self.assertEqual(os.path.exists(externp.stdout), True)
+                self.assertEqual(extcode.return_code, 127)
+            self.assertEqual(os.path.exists(extcode.stdout), True)
         else:
             self.fail('Expected RuntimeError')
         finally:
-            if os.path.exists(externp.stdout):
-                os.remove(externp.stdout)
+            if os.path.exists(extcode.stdout):
+                os.remove(extcode.stdout)
 
     def test_nullcmd(self):
         logging.debug('')
         logging.debug('test_nullcmd')
 
         # Check response to no command set.
-        externp = set_as_top(ExternalCode())
-        externp.stdout = 'nullcmd.out'
-        externp.stderr = ExternalCode.STDOUT
+        extcode = set_as_top(ExternalCode())
+        extcode.stdout = 'nullcmd.out'
+        extcode.stderr = ExternalCode.STDOUT
         try:
-            externp.run()
-        except ValueError, exc:
+            extcode.run()
+        except ValueError as exc:
             self.assertEqual(str(exc), ': Null command line')
         else:
             self.fail('Expected ValueError')
         finally:
-            if os.path.exists(externp.stdout):
-                os.remove(externp.stdout)
+            if os.path.exists(extcode.stdout):
+                os.remove(extcode.stdout)
     
     def test_unique(self):
         logging.debug('')

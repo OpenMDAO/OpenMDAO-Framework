@@ -9,6 +9,7 @@
 
 from math import pi
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
 from openmdao.lib.api import Float, Int
 
@@ -29,7 +30,7 @@ class Engine(Component):
     comp_ratio = Float(9.3, iotype='in', 
                        desc='Compression Ratio')
     spark_angle = Float(-37.0, iotype='in', units='deg', 
-                        desc = 'Spark Angle with respect to TDC (Top Dead Center)')
+                    desc = 'Spark Angle with respect to TDC (Top Dead Center)')
     n_cyl = Int(6, iotype='in', desc = 'Number of Cylinders')
     IVO = Float(11.0, iotype='in', units='deg', 
                      desc = 'Intake Valve Open before TDC (Top Dead Center)')

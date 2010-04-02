@@ -1,9 +1,11 @@
+
 Accessing OpenMDAO Code on Launchpad (Linux)
 ============================================
 
 If you are behind a proxy (this applies to GRC team members), you must create SSH keys for
-each platform you want to use before you can push a branch to Launchpad. If you are not
-behind a proxy, you may omit this step.
+each platform you want to use before you can merge from openmdao to your branch or push a branch back
+to openmdao on Launchpad. (An SSH key  is not needed create a branch.) If you are not behind a proxy,
+you may omit this step.
 
 These instructions assume that you already have a Launchpad account. If you do not, please go
 to https://launchpad.net and register for an account. Go ahead and log in to your Launchpad
@@ -40,8 +42,8 @@ You need to register and upload the *public* portion of your SSH key to Launchpa
 Notifying Launchpad of Your Userid
 ----------------------------------
 	
-You need to provide Launchpad with your userid before you can push a branch to openmdao. (Anyone can pull
-a branch from openmdao.) In your home directory on your Linux machine, type: 
+You need to provide Launchpad with your userid before you can merge from openmdao to your branch or
+push a branch back to openmdao. In your home directory on your Linux machine, type: 
 
 ::
 
@@ -91,7 +93,7 @@ Pushing a Branch Back to Launchpad
 After you have finished making changes to your branch, you can then push those changes back up to
 the trunk. You must be logged into Launchpad to push a branch to openmdao.
 
-- If you have commit privileges (team members at GRC do) and want to push a branch to the trunk, you
+- If you have commit privileges and want to push a branch to the trunk, you
   must first merge out from the trunk. Go to the branch you want to push. (At GRC, that would be
   ``Openmdao/dev/<your_working_directory/<branch_name``.) 
 
@@ -119,19 +121,46 @@ Type:
 This option makes your branch the latest revision on the trunk.
 
 - If you do **not** have commit privileges, you need to upload your branch to your user area on Launchpad
-  and then submit a request for merge. In the following command, replace ``userid`` with your Launchpad id,
-  and replace ``branch_name`` with the name of the branch you want to push up to Launchpad.
+  and then submit a request for merge. In the following command, replace ``userid`` with your
+  hyphenated Launchpad user id and replace ``branch_name`` with the name of the branch you want to push up to
+  Launchpad.
 
 ::
 
   bzr push lp:~userid/openmdao/branch_name 
 
-This option does not merge your branch to the trunk.  
+This option does not merge your branch to the trunk. You must submit a proposal to have your branch
+merged. To do this, follow the instructuions below.
 
+1. Go to `OpenMDAO <https://launchpad.net/openmdao>`_ on Launchpad and log in if you are not logged in
+   already.
 
-TODO:
-  * Add details about how developers without commit privileges request taht a branch be merged and
-    where it goes when sent to openmdao. 
-  * Add a section on how outside developers use Trac to submit, track, and transition their bugs or
-    enhancements. This section probably goes on the website, but we need a link from here to that
-    information (when it is available).
+2. Click on *Branches* at the top of the page to take you the Bazaar branches of OpenMDAO. You will see the
+   openmdao trunk, which has a star by *Development*. Below that you should see any branches that have been uploaded
+   but are not on the trunk, including the branch that you just pushed up.
+
+3. Click on your branch. The command for pulling down your branch is displayed, in case you want to pull it down
+   and work on it or leave it up there for someone to review and possibly collaborate on. Note that you are the
+   owner of the branch and are the only one who can "push" to it. 
+
+4. Click on the *Merge Branch* button. You will see a new screen, *Proposal for Merging.* 
+
+5. Complete the description of the change. If your branch is associated with a Trac ticket, and you have already 
+   provided detailed information about your changes in Trac, you may want to refer to that ticket (e.g., "See
+   ticket 30 for details."). If you want to provide additional specific information about your changes to assist
+   the reviewer, you may do so. 
+
+6. When you have completed the description, click the *Propose Merge* button. In a short time, you will receive a
+   copy of an email that went to the OpenMDAO Devs group. (A member of this group will review
+   your request.) It will show you as the sender, and the subject will be the
+   ``[Merge]lp:~username/openmdao/branch_name  into lp:openmdao``. The email will contain an attachment
+   showing the differences in the trunk and your changes.
+
+After the proposal for merge is reviewed, you will get an email from the person who reviewed the branch
+indicating whether it was approved or needs to be reworked. 
+
+ * If your proposal for merge was approved, you will get an email from  ``noreply@launchpad.net`` after the
+   branch has been merged.
+
+ * If your proposal for merge was not approved, and you have to do additional work, you can continue working
+   on your branch. If you have a ticket open, it needs to be transitioned back to the WORKING state.

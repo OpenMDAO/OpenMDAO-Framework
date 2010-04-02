@@ -150,6 +150,13 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(results), len(self.cases))
         self.verify_results()
 
+        try:
+            self.model.driver.resume()
+        except RuntimeError as exc:
+            self.assertEqual(str(exc), 'driver: Run already complete')
+        else:
+            self.fail('Expected RuntimeError')
+
     def test_concurrent(self):
         # This can always test using a LocalAllocator (forked processes).
         # It can also use a ClusterAllocator if the environment looks OK.
@@ -307,7 +314,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.recorder = []
         try:
             self.model.run()
-        except TraitError, exc:
+        except TraitError as exc:
             msg = "driver: required plugin 'iterator' is not present"
             self.assertEqual(str(exc), msg)
         else:
@@ -321,7 +328,7 @@ class TestCase(unittest.TestCase):
         self.model.driver.iterator = ListCaseIterator([])
         try:
             self.model.run()
-        except TraitError, exc:
+        except TraitError as exc:
             msg = "driver: required plugin 'recorder' is not present"
             self.assertEqual(str(exc), msg)
         else:

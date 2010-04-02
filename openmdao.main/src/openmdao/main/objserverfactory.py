@@ -6,12 +6,12 @@ import shutil
 from openmdao.main.container import Container
 from openmdao.main.component import SimulationRoot
 from openmdao.main.factory import Factory
+from openmdao.util.filexfer import pack_zipfile, unpack_zipfile
+from openmdao.util.shellproc import ShellProc
 
 from multiprocessing import util
 #from multiprocessing import managers
 from openmdao.main import mp_managers as managers
-
-__all__ = ('ObjServerFactory', 'ObjServer')
 
 
 class ObjServerFactory(Factory):
@@ -87,38 +87,91 @@ class ObjServer(object):
         if os.path.exists(self.root_dir):
             shutil.rmtree(self.root_dir)
 
+    @staticmethod
+    def echo(*args):
+        """ Simply return our arguments. """
+        logging.debug("echo %s", args)
+        return args
+
+    def execute_command(self, command, stdin, stdout, stderr, env_vars,
+                        poll_delay, timeout):
+        """ Run `command`. """
+        logging.debug("execute_command '%s'", command)
+        for arg in (stdin, stdout, stderr):
+            if isinstance(arg, basestring):
+                self._check_path(arg, 'execute_command')
+        try:
+            process = ShellProc(command, stdin, stdout, stderr, env_vars)
+        except Exception as exc:
+            logging.error('exception creating process: %s', exc)
+            raise
+
+        logging.debug('    PID = %d', process.pid)
+        return_code, error_msg = process.wait(poll_delay, timeout)
+        process.close_files()
+        logging.debug('    returning %s', (return_code, error_msg))
+        return (return_code, error_msg)
+
     def load_model(self, egg_filename):
         """ Load model from `egg_filename`. """
         logging.debug('%s load_model %s', self.name, egg_filename)
-        if os.path.isabs(egg_filename):
-            if not egg_filename.startswith(self.root_dir):
-                raise RuntimeError("Can't load, %s doesn't start with %s",
-                                   egg_filename, self.root_dir)
+        self._check_path(egg_filename, 'load')
         if self.tlo:
             self.tlo.pre_delete()
         self.tlo = Container.load_from_eggfile(egg_filename, install=False)
         return self.tlo
 
-    def open(self, filename, mode='r', bufsize=-1):
-        """ Open `filename`. """
-        if os.path.isabs(filename):
-            if not filename.startswith(self.root_dir):
-                raise RuntimeError("Can't open, %s doesn't start with %s",
-                                   filename, self.root_dir)
+    def pack_zipfile(self, patterns, filename):
+        """ Create ZipFile `filename` of files matching `patterns`. """
+        logging.debug("%s pack_zipfile '%s'", self.name, filename)
+        self._check_path(filename, 'pack_zipfile')
+        return pack_zipfile(patterns, filename, logging.getLogger())
+
+    def unpack_zipfile(self, filename):
+        """ Unpack ZipFile `filename`. """
+        logging.debug("%s unpack_zipfile '%s'", self.name, filename)
+        self._check_path(filename, 'unpack_zipfile')
+        return unpack_zipfile(filename, logging.getLogger())
+
+    def chmod(self, path, mode):
+        """ Returns ``os.chmod(path, mode)``. """
+        logging.debug("%s chmod '%s' %s", self.name, path, mode)
+        self._check_path(path, 'chmod')
         try:
-            return open(filename, mode, bufsize)
+            return os.chmod(path, mode)
         except Exception as exc:
-            logging.debug('%s open %s %s in %s failed %s', self.name, filename,
+            logging.error('%s chmod %s %s in %s failed %s', self.name, path,
                           mode, os.getcwd(), exc)
             raise
 
-    def chmod(self, path, mode):
-        """ Change file permissions for `path` to `mode`. """
-        if os.path.isabs(path):
-            if not path.startswith(self.root_dir):
-                raise RuntimeError("Can't chmod, %s doesn't start with %s",
-                                   path, self.root_dir)
-        return os.chmod(path, mode)
+    def open(self, filename, mode='r', bufsize=-1):
+        """ Returns ``open(filename, mode, bufsize)``. """
+        logging.debug("%s open '%s' %s %s", self.name, filename, mode, bufsize)
+        self._check_path(filename, 'open')
+        try:
+            return open(filename, mode, bufsize)
+        except Exception as exc:
+            logging.error('%s open %s %s %s in %s failed %s', self.name,
+                          filename, mode, bufsize, os.getcwd(), exc)
+            raise
+
+    def stat(self, path):
+        """ Returns ``os.stat(path)``. """
+        logging.debug("%s stat '%s'", self.name, path)
+        self._check_path(path, 'stat')
+        try:
+            return os.stat(path)
+        except Exception as exc:
+            logging.error('%s stat %s in %s failed %s', self.name, path,
+                          os.getcwd(), exc)
+            raise
+
+    def _check_path(self, path, operation):
+        """ Check if path is allowed to be used. """
+        path = os.path.abspath(path)
+        if not path.startswith(self.root_dir):
+            raise RuntimeError("Can't %s, %s doesn't start with %s",
+                               operation, path, self.root_dir)
 
     @staticmethod
     def register(manager):

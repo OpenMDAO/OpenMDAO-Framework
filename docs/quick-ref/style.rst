@@ -140,6 +140,8 @@ Use italics for the following:
   computers and desktop publishing, italics could not be designated, so quotation marks
   were used. Now italics can easily be specified and, in general, should be used in place
   of quotes, for example, when discussing a parameter in a code sample.  
+ 
+* Function names (e.g., the *execute()* function)
 
 
 .. index:: Python; capitalization
@@ -200,7 +202,6 @@ unhyphenated forms as they become more familiar (e.g., email, online). The main 
 consistency, so please be consistent and use *website.* 
 
 
-
 Numbers 
 -------
 
@@ -224,7 +225,7 @@ situations; in OpenMDAO documentation please use it to designate the following:
   path names: 		``/OpenMDAO/dev/shared/working_main``
   directory names:   	``docs/dev-guide``
   api names: 	 	``openmdao.main.api``
-  Python packages	``openmdao.recipes``
+  Python packages:	``openmdao.recipes``
    
 which will result in text that looks like this:
 

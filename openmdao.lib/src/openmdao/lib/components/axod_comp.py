@@ -5,7 +5,8 @@
 import os.path
 import shutil
 
-import numpy
+# pylint: disable-msg=E0611,F0401
+from numpy import float32 as numpy_float32
 
 import axod.axod as axod
 
@@ -27,11 +28,11 @@ class AxodComp(Component):
     # 'float32' here could be just 'float', but AXOD is single-precision
     # so it just takes more space.  Not an issue with such small arrays,
     # but for larger data it may be important.
-    tott  = Array(dtype=numpy.float32, shape=(48,), iotype='out')
-    totp  = Array(dtype=numpy.float32, shape=(48,), iotype='out')
-    mflow = Array(dtype=numpy.float32, shape=(48,), iotype='out')
-    effs  = Array(dtype=numpy.float32, shape=(48,), iotype='out')
-    effr  = Array(dtype=numpy.float32, shape=(48,), iotype='out')
+    tott  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
+    totp  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
+    mflow = Array(dtype=numpy_float32, shape=(48,), iotype='out')
+    effs  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
+    effr  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
 
     def __init__(self, doc=None, directory='', input_filename=''):
         super(AxodComp, self).__init__(doc, directory)
@@ -41,7 +42,7 @@ class AxodComp(Component):
         """ Run AXOD. """
         if os.path.exists('axod.out'):
             os.remove('axod.out')
-        results = []
+        self.results = []
 
         self.debug('running')
         try:

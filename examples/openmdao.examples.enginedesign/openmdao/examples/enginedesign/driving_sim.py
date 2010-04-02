@@ -11,6 +11,7 @@
 
 from csv import reader
 
+# pylint: disable-msg=E0611,F0401
 from pkg_resources import resource_stream
 from enthought.traits.api import TraitError
 
@@ -61,7 +62,7 @@ class DrivingSim(Assembly):
         super(DrivingSim, self).__init__(doc, directory)    
 
         # set up interface to the framework  
-        # Pylint: disable-msg=E1101
+        # pylint: disable-msg=E1101
 
         self.add_container('vehicle', Vehicle())
         

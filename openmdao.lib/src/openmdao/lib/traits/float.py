@@ -1,11 +1,14 @@
+"""
+Trait for floating point variables, with optional min, max, and units
+"""
 
 #public symbols
 __all__ = ["Float", "convert_units"]
 
 
-
 from sys import float_info
 
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.api import TraitType, Range, TraitError
 from enthought.traits.api import Float as TraitFloat
 from openmdao.units import PhysicalQuantity
@@ -117,15 +120,16 @@ class Float(TraitType):
                 right = ')'
             if self.exclude_low is True:
                 left = '('
-            info = "a float in the range %s%s, %s%s"%\
+            info = "a float in the range %s%s, %s%s"% \
                    (left,self.low,self.high,right)
         elif self.low is not None:
             info = "a float with a value > %s"% self.low
         else: # self.high is not None
             info = "a float with a value < %s"% self.high
-            
-        object.raise_exception("Trait '%s' must be %s but attempted value is %s" %
-                               (name, info, value), TraitError)
+
+        msg = "Trait '%s' must be %s but attempted value is %s" % \
+                               (name, info, value)
+        object.raise_exception(msg, TraitError)
 
     def get_val_meta_wrapper(self):
         """Return a TraitValMetaWrapper object.  Its value attribute
@@ -142,8 +146,9 @@ class Float(TraitType):
         try:
             src_units = srcmeta['units']
         except KeyError:
-            raise TraitError("while setting value of %s: no 'units' metadata found."%
-                             name)
+            msg = "while setting value of %s: no 'units' metadata found."% \
+                             name
+            raise TraitError(msg)
 
         # Note: benchmarking showed that this check does speed things up -- KTM
         if src_units == dst_units:
@@ -164,8 +169,9 @@ class Float(TraitType):
             raise TraitError("undefined unit '%s' for attribute '%s'" %
                              (dst_units, name))
         except TypeError, err:
-            raise TraitError("%s: units '%s' are incompatible with assigning units of '%s'" %
-                             (name, src_units, dst_units))
+            msg = "%s: units '%s' are incompatible " % (name, src_units) + \
+                   "with assigning units of '%s'" % (dst_units)
+            raise TraitError(msg)
         
         try:
             return self._validator.validate(object, name, pq.value)
