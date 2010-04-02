@@ -1,15 +1,13 @@
-from setuptools import setup, find_packages
 import os,sys
+from setuptools import setup
 
 here = os.path.dirname(os.path.realpath(__file__))
-sdir = os.path.join(here, '..', 'scripts')
-sdir = os.path.normpath(sdir)
+sdir = os.path.normpath(here)
 if os.path.isdir(sdir):
     sys.path.insert(0, sdir)
 
-import releaseinfo
-
-version = releaseinfo.__version__
+import openmdao.releaseinfo
+version = openmdao.releaseinfo.__version__
 
 setup(name='openmdao',
       version=version,
@@ -25,8 +23,6 @@ setup(name='openmdao',
       author_email='',
       url='',
       license='NOSA',
-      #packages=find_packages(exclude=['ez_setup']),
-      #namespace_packages=['openmdao'],
       namespace_packages=[],
       packages = [],
       zip_safe=False,

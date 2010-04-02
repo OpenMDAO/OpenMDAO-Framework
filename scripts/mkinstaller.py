@@ -18,17 +18,44 @@ def adjust_options(options, args):
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
         print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %%s' %% sys.version.split(' ')[0]
         sys.exit(-1)
-    #options.use_distribute = True  # force use of distribute instead of setuptools
+    options.use_distribute = True  # force use of distribute instead of setuptools
     
+    
+def _single_install(cmds, req, bin_dir):
+    cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
+    #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
+    logger.debug("running command: %%s" %% ' '.join(cmdline))
+    subprocess.check_call(cmdline)
+
 def after_install(options, home_dir):
     global logger
     reqs = %(reqs)s
     cmds = %(cmds)s
+    etc = join(home_dir, 'etc')
+    ## TODO: this should all come from distutils
+    ## like distutils.sysconfig.get_python_inc()
+    if sys.platform == 'win32':
+        lib_dir = join(home_dir, 'Lib')
+        bin_dir = join(home_dir, 'Scripts')
+    elif is_jython:
+        lib_dir = join(home_dir, 'Lib')
+        bin_dir = join(home_dir, 'bin')
+    else:
+        lib_dir = join(home_dir, 'lib', py_version)
+        bin_dir = join(home_dir, 'bin')
+
+    if not os.path.exists(etc):
+        os.makedirs(etc)
+    # check for specific numpy version in reqs
+    reqnumpy = 'numpy'
     for req in reqs:
-        #cmdline = [join(home_dir, 'bin', 'easy_install')] + cmds + [req]
-        cmdline = [join(home_dir, 'bin', 'pip'), 'install'] + cmds + [req]
-        logger.debug("running command: %%s" %% ' '.join(cmdline))
-        subprocess.check_call(cmdline)
+        if req.startswith('numpy'):
+            reqs.remove(req)
+            reqnumpy = req
+            break
+    _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
+    for req in reqs:
+        _single_install(cmds, req, bin_dir)
 
     """
     parser = OptionParser()

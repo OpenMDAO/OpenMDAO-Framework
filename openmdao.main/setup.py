@@ -1,19 +1,15 @@
-import os, sys
-
 # pylint: disable-msg=F0401
 
+import os,sys
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
-sdir = os.path.join(here, '..', 'scripts')
-sdir = os.path.normpath(sdir)
-if os.path.isdir(sdir):
-    sys.path.insert(0, sdir)
-else:
-    raise RuntimeError('%s is not a directory' % sdir)
+sys.path.insert(0, os.path.normpath(os.path.join(here,
+                                                 'src',
+                                                 'openmdao',
+                                                 'main')))
 
 import releaseinfo
-
 version = releaseinfo.__version__
 
 setup(name='openmdao.main',

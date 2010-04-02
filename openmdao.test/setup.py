@@ -4,20 +4,15 @@ import os,sys
 
 from distutils.errors import DistutilsExecError, DistutilsPlatformError
 
-try:
-    from setuptools import setup
-except ImportError, e:
-    from distutils.core import setup
-
+from setuptools import setup
 
 here = os.path.dirname(os.path.realpath(__file__))
-sdir = os.path.join(here, '..', 'scripts')
-sdir = os.path.normpath(sdir)
-if os.path.isdir(sdir):
-    sys.path.insert(0, sdir)
+sys.path.insert(0, os.path.normpath(os.path.join(here,
+                                                 'src',
+                                                 'openmdao',
+                                                 'test')))
 
 import releaseinfo
-
 version = releaseinfo.__version__
 
 setup(name='openmdao.test',
