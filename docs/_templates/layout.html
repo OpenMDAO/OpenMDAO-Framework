@@ -1,0 +1,14 @@
+{% extends "basic/layout.html" %}
+
+{% block rootrellink %}
+  <li><a href="http://openmdao.org">OpenMDAO Home</a>{{ reldelim1 }}</li>
+  {{ super() }}
+{% endblock %}
+
+{% block sidebarlogo %}
+<a href="http://openmdao.org">
+ <img src="{{ pathto("_static/OpenMDAOLogo_200x56.png", 1) }}"
+border="0" alt="OpenMDAO Home"/>
+</a>
+{% endblock %}
+
