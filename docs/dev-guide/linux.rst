@@ -121,13 +121,13 @@ Type:
 This option makes your branch the latest revision on the trunk.
 
 - If you do **not** have commit privileges, you need to upload your branch to your user area on Launchpad
-  and then submit a request for merge. In the following command, replace ``launchpad-userid`` with your
-  hyphenated Launchpad id and replace ``branch_name`` with the name of the branch you want to push up to
+  and then submit a request for merge. In the following command, replace ``userid`` with your
+  hyphenated Launchpad user id and replace ``branch_name`` with the name of the branch you want to push up to
   Launchpad.
 
 ::
 
-  bzr push lp:~launchpad-userid/openmdao/branch_name 
+  bzr push lp:~userid/openmdao/branch_name 
 
 This option does not merge your branch to the trunk. You must submit a proposal to have your branch
 merged. To do this, follow the instructuions below.
@@ -152,8 +152,8 @@ merged. To do this, follow the instructuions below.
 
 6. When you have completed the description, click the *Propose Merge* button. In a short time, you will receive a
    copy of an email that went to the OpenMDAO Devs group. (A member of this group will review
-   your request.) It will show you as the sender, and the subject will be
-   the ``[Merge]lp:~user-name/openmdao/branch_name  into lp:openmdao``. The email will contain an attachment
+   your request.) It will show you as the sender, and the subject will be the
+   ``[Merge]lp:~username/openmdao/branch_name  into lp:openmdao``. The email will contain an attachment
    showing the differences in the trunk and your changes.
 
 After the proposal for merge is reviewed, you will get an email from the person who reviewed the branch
