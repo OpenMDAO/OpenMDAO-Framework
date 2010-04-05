@@ -11,6 +11,7 @@ from pkg_resources import working_set, Requirement, Environment, Distribution
 from subprocess import Popen, STDOUT, PIPE
 from datetime import date
 from optparse import OptionParser
+import tempfile
 
 
 # this should contain all of the openmdao subpackages
@@ -52,7 +53,7 @@ def create_releaseinfo_file(projname, version):
     opts = {}
     dirs = projname.split('.')
     os.chdir(os.path.join(*dirs))
-    print 'creating %s' % os.path.join(os.getcwd(), 'releaseinfo.py')
+    print 'creating releaseinfo.py for %s' % projname
     f = open('releaseinfo.py', 'w')
     try:
         opts['version'] = version
@@ -64,7 +65,6 @@ def create_releaseinfo_file(projname, version):
         f.close()
 
 def _build_dist(build_type, destdir):
-    print 'building %s' % os.path.basename(os.getcwd())
     cmd = '%s setup.py %s -d %s' % (sys.executable, build_type, destdir)
     p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
     out = p.communicate()[0]
@@ -93,6 +93,65 @@ def _find_top_dir():
         path = os.path.dirname(path)
     raise RuntimeError("Can't find top dir of repository starting at %s" % os.getcwd())
 
+    
+def _create_pseudo_egg(version, destination):
+    """This makes the top level openmdao egg that depends on all of the
+    openmdao namespace packages.
+    """
+    
+    setup_template = """
+from setuptools import setup
+
+setup(name='openmdao',
+      version=%(version)s,
+      description="A framework for multidisciplinary analysis and optimization.",
+      long_description="",
+      classifiers=[
+        "Programming Language :: Python :: 2.6",
+        "Development Status :: 2 - Pre-Alpha",
+        "Topic :: Scientific/Engineering",
+        "Intended Audience :: Science/Research",
+        "License :: OSI Approved",
+        "Natural Language :: English",
+        "Operating System :: OS Independent",
+        ],
+      keywords='multidisciplinary optimization',
+      url='http://openmdao.org',
+      license='NOSA',
+      namespace_packages=[],
+      packages = [],
+      zip_safe=False,
+      install_requires=[
+          'setuptools',
+          'openmdao.lib==%(version)s',
+          'openmdao.main==%(version)s',
+          'openmdao.util==%(version)s',
+          'openmdao.test==%(version)s',
+          'openmdao.recipes==%(version)s',
+      ],
+      )
+    """
+    startdir = os.getcwd()
+    tdir = tempfile.mkdtemp()
+    os.chdir(tdir)
+    try:
+        with open('setup.py','wb') as f:
+            f.write(setup_template % { 'version': version })
+        os.mkdir('openmdao')
+        with open(os.path.join('openmdao', '__init__.py'), 'wb') as f:
+            f.write("""
+# See http://peak.telecommunity.com/DevCenter/setuptools#namespace-packages
+try:
+    __import__('pkg_resources').declare_namespace(__name__)
+except ImportError:
+    from pkgutil import extend_path
+    __path__ = extend_path(__path__, __name__)""")
+    
+        _build_sdist(tdir, destination)
+    finally:
+        os.chdir(startdir)
+        shutil.rmtree(tdir)
+    
 def main():
     parser = OptionParser()
     parser.add_option("-d", "--destination", action="store", type="string", dest="destdir",
@@ -121,7 +180,10 @@ def main():
             else:
                 os.chdir(pdir)
             create_releaseinfo_file(project_name, options.version)
+            print 'building %s' % project_name
             _build_sdist(pdir, destdir)
+        print 'building openmdao'    
+        _create_pseudo_egg(options.version, destdir)
     finally:
         os.chdir(startdir)
     
