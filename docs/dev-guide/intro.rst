@@ -106,7 +106,7 @@ You can get a copy of the repository as follows:
     bzr branch lp:openmdao <your_branch_name>
 
 To submit patches you must upload your branch to the openmdao repository on Launchpad
-and request that it be merged. Please see :ref:`Pushing-a-Branch_Back-to-Launchpad`
+and request that it be merged. Please see :ref:`Pushing-a-Branch-Back-to-Launchpad`
 
 
 .. index:: source repository
