@@ -122,7 +122,7 @@ must resolve them before you can continue. (See :ref:`if you have a conflict <if
   bzr merge lp:openmdao	               (Merges openmdao trunk to your branch.)  
   cd buildout			       (Takes you to the "buildout" directory.)
   repo.py fix			       (Runs the cleanup script on your branch. Run this after merging or branching from Launchpad.)
-  bzr python2.6 isolated_bootstrap.py  (Runs the script required before you build the first time after merging.)
+  python2.6 isolated_bootstrap.py  (Runs the script required before you build the first time after merging.)
   bin/buildout    		       (Builds on the branch after the merge.)
   bin/test --all		       (Confirms that all tests pass.)
   

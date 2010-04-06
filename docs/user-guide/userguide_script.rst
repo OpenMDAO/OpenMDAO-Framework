@@ -779,13 +779,13 @@ Consider the top level assembly that was created for :ref:`Getting-Started-with-
 	from openmdao.lib.api import CONMINdriver
 	from openmdao.examples.simple.paraboloid import Paraboloid
 
-	class Optimization_Unconstrained(Assembly):
+	class OptimizationUnconstrained(Assembly):
     	    """ Top level assembly for optimizing a vehicle. """
     
     	    def __init__(self, directory=''):
                 """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
-	        super(Optimization_Unconstrained, self).__init__(directory)
+	        super(OptimizationUnconstrained, self).__init__(directory)
 
 	        # Create Paraboloid component instances
 	        self.add_container('paraboloid', Paraboloid())
@@ -953,13 +953,13 @@ a new working directory for the Paraboloid component when it is instantiated.
 	from openmdao.lib.api import CONMINdriver
 	from openmdao.examples.simple.paraboloid import Paraboloid
 
-	class Optimization_Unconstrained(Assembly):
+	class OptimizationUnconstrained(Assembly):
     	    """ Top level assembly for optimizing a vehicle. """
     
     	    def __init__(self, directory=''):
                 """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
-	        super(Optimization_Unconstrained, self).__init__(directory)
+	        super(OptimizationUnconstrained, self).__init__(directory)
 
 	        # Create Paraboloid component instances
 	        self.add_container('paraboloid', Paraboloid(directory='folder/subfolder'))

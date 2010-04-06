@@ -2,7 +2,7 @@
     paraboloid.py - Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3
 """
 
-
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
 from openmdao.lib.api import Float
 
@@ -10,7 +10,7 @@ class Paraboloid(Component):
     """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """
     
     # set up interface to the framework  
-    # Pylint: disable-msg=E1101
+    # pylint: disable-msg=E1101
     x = Float(0.0, iotype='in', desc='The variable y')
     y = Float(0.0, iotype='in', desc='The variable x')
 

@@ -4,6 +4,7 @@
 
 # Optimize an engine disign using the driving_sim component.
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.api import CONMINdriver
 
@@ -17,6 +18,8 @@ class EngineOptimization(Assembly):
         
         super(EngineOptimization, self).__init__(directory)
 
+        # pylint: disable-msg=E1101
+        
         # Create DrivingSim component instances
         self.add_container('driving_sim', DrivingSim())
 
@@ -40,6 +43,8 @@ class EngineOptimization(Assembly):
 
 if __name__ == "__main__": # pragma: no cover         
 
+    # pylint: disable-msg=E1101
+
     def prz(title):
         """ Print before and after"""
         
@@ -60,7 +65,6 @@ if __name__ == "__main__": # pragma: no cover
     
     z = EngineOptimization("Top")
     set_as_top(z)
-
     
     z.driving_sim.run()
     prz('Old Design')

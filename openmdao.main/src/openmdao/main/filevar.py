@@ -5,8 +5,6 @@ import copy
 import os.path
 import pprint
 
-from enthought.traits.api import TraitType, TraitError
-
 __all__ = ('FileMetadata', 'FileRef', '_get_valid_owner')
 
 # Standard metadata and default values.

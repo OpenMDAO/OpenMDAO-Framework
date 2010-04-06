@@ -5,6 +5,7 @@
 # This openMDAO component contains a simple transmission model
 # Transmission is a 5-speed manual.
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
 from openmdao.lib.api import Float, Int
 
@@ -12,7 +13,7 @@ class Transmission(Component):
     """ A simple transmission model."""
     
     # set up interface to the framework  
-    # Pylint: disable-msg=E1101
+    # pylint: disable-msg=E1101
     ratio1 = Float(3.54, iotype='in', 
                    desc='Gear ratio in First Gear')
     ratio2 = Float(2.13, iotype='in', 

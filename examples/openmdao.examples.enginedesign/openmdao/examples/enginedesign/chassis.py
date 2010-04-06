@@ -7,6 +7,7 @@
 
 from math import pi
 
+# pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
 from openmdao.lib.api import Float
 
@@ -15,7 +16,7 @@ class Chassis(Component):
     """ A vehicle dynamics component - calculates acceleration."""
     
     # set up interface to the framework  
-    # Pylint: disable-msg=E1101
+    # pylint: disable-msg=E1101
     mass_vehicle = Float(1200.0, iotype='in', units='kg', 
                               desc='Vehicle Mass')
     Cf = Float(0.035, iotype='in', 

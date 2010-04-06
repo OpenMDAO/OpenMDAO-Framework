@@ -6,12 +6,11 @@ Support for files, either as :class:`File` or external files.
 __all__ = ['File']
 
 
-import copy
 import os.path
-import pprint
 
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.api import TraitType, TraitError
-from openmdao.main.filevar import FileMetadata, FileRef, _get_valid_owner
+from openmdao.main.filevar import FileRef, _get_valid_owner
 
 
 class File(TraitType):
