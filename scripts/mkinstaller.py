@@ -18,7 +18,8 @@ def adjust_options(options, args):
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
         print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %%s' %% sys.version.split(' ')[0]
         sys.exit(-1)
-    options.use_distribute = True  # force use of distribute instead of setuptools
+    ## setting use_distribute seems to force a local install even if package is already on sys.path
+    #options.use_distribute = True  # force use of distribute instead of setuptools
     
     
 def _single_install(cmds, req, bin_dir):
@@ -29,7 +30,6 @@ def _single_install(cmds, req, bin_dir):
 
 def after_install(options, home_dir):
     global logger
-    reqs = %(reqs)s
     cmds = %(cmds)s
     etc = join(home_dir, 'etc')
     ## TODO: this should all come from distutils
@@ -46,39 +46,31 @@ def after_install(options, home_dir):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
-    # check for specific numpy version in reqs
-    reqnumpy = 'numpy'
-    for req in reqs:
-        if req.startswith('numpy'):
-            reqs.remove(req)
-            reqnumpy = req
-            break
+    reqnumpy = 'numpy'   # TODO: grab openmdao dist and query its deps for specific numpy version
     _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
-    for req in reqs:
-        _single_install(cmds, req, bin_dir)
+    _single_install(cmds, 'openmdao', bin_dir)  # TODO: make this refer to specific openmdao version
 
     """
     parser = OptionParser()
-    parser.add_option("-r", "--requirement", action="store", type="string", dest='req', 
-                      help="requirements file") 
+    parser.add_option("-f", "--find-links", action="append", type="string", dest='flinks', 
+                      help="find-links options") 
     
     (options, args) = parser.parse_args()
     
-    if not options.req:
-        print "ERROR: a requirements file was not specified"
-        sys.exit(-1)
-    
-    reqf = open(options.req, 'r')
-    lines = [s.strip() for s in reqf.read().split('\n') if s.strip()]
+    #reqf = open(options.req, 'r')
+    #lines = [s.strip() for s in reqf.read().split('\n') if s.strip()]
     reqs = []
-    cmds = []
-    for line in lines:
-        if line.startswith('-'):
-            cmds.extend(line.split(' '))
-        else:
-            reqs.append(line)
+    if options.flinks is not None:
+        cmds = [ '-f %s' % x for x in options.flinks]
+    else:
+        cmds = []
+    #for line in lines:
+        #if line.startswith('-'):
+            #cmds.extend(line.split(' '))
+        #else:
+            #reqs.append(line)
     
-    optdict = {'reqs':reqs, 'cmds':cmds}
+    optdict = { 'reqs': reqs, 'cmds':cmds }
     print virtualenv.create_bootstrap_script(script_str % optdict)
 
 

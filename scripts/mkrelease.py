@@ -103,7 +103,7 @@ def _create_pseudo_egg(version, destination):
 from setuptools import setup
 
 setup(name='openmdao',
-      version=%(version)s,
+      version='%(version)s',
       description="A framework for multidisciplinary analysis and optimization.",
       long_description="",
       classifiers=[
@@ -120,6 +120,7 @@ setup(name='openmdao',
       license='NOSA',
       namespace_packages=[],
       packages = [],
+      dependency_links = [ 'http://openmdao.org/dists' ],
       zip_safe=False,
       install_requires=[
           'setuptools',
@@ -140,7 +141,6 @@ setup(name='openmdao',
         os.mkdir('openmdao')
         with open(os.path.join('openmdao', '__init__.py'), 'wb') as f:
             f.write("""
-# See http://peak.telecommunity.com/DevCenter/setuptools#namespace-packages
 try:
     __import__('pkg_resources').declare_namespace(__name__)
 except ImportError:
