@@ -1,3 +1,9 @@
+"""
+Generates a virtualenv bootstrapping script that will create a virtualenv with
+openmdao and all of its dependencies installed in it. The script is written to
+stdout.  The generated script will take an 'openmdaover' argument to allow the
+script user to install a specific openmdao version.
+"""
 
 import sys
 from optparse import OptionParser
@@ -6,21 +12,24 @@ import virtualenv
 
 
 def main():
-    """
-    Takes a file containing a list of requirements, one per line, and
-    generates an install script that makes a virtualenv with all of the
-    required packages based on the contents of the requirements file.
-    """
     
     script_str = """
 
+openmdaoreq = 'openmdao'
+
+def extend_parser(optparse_parser):
+    optparse_parser.add_option("", "--openmdaover", action="store", type="string", dest='openmdaover', 
+                      help="specify openmdao version (default is latest)")
+
 def adjust_options(options, args):
+    global openmdaoreq
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
         print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %%s' %% sys.version.split(' ')[0]
         sys.exit(-1)
     ## setting use_distribute seems to force a local install even if package is already on sys.path
     #options.use_distribute = True  # force use of distribute instead of setuptools
-    
+    if options.openmdaover:
+        openmdaoreq = 'openmdao==%%s' %% options.openmdaover
     
 def _single_install(cmds, req, bin_dir):
     cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
@@ -29,7 +38,9 @@ def _single_install(cmds, req, bin_dir):
     subprocess.check_call(cmdline)
 
 def after_install(options, home_dir):
-    global logger
+    global logger, openmdaoreq
+    reqs = %(reqs)s
+    reqs.append(openmdaoreq)
     cmds = %(cmds)s
     etc = join(home_dir, 'etc')
     ## TODO: this should all come from distutils
@@ -48,27 +59,24 @@ def after_install(options, home_dir):
         os.makedirs(etc)
     reqnumpy = 'numpy'   # TODO: grab openmdao dist and query its deps for specific numpy version
     _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
-    _single_install(cmds, 'openmdao', bin_dir)  # TODO: make this refer to specific openmdao version
+    for req in reqs:
+        _single_install(cmds, req, bin_dir)  
 
     """
     parser = OptionParser()
     parser.add_option("-f", "--find-links", action="append", type="string", dest='flinks', 
                       help="find-links options") 
+    parser.add_option("-r", "--requirement", action="append", type="string", dest='reqs', 
+                      help="add an additional required package (multiple are allowed)")
+    
     
     (options, args) = parser.parse_args()
     
-    #reqf = open(options.req, 'r')
-    #lines = [s.strip() for s in reqf.read().split('\n') if s.strip()]
-    reqs = []
+    reqs = options.reqs if options.reqs is not None else []
     if options.flinks is not None:
         cmds = [ '-f %s' % x for x in options.flinks]
     else:
         cmds = []
-    #for line in lines:
-        #if line.startswith('-'):
-            #cmds.extend(line.split(' '))
-        #else:
-            #reqs.append(line)
     
     optdict = { 'reqs': reqs, 'cmds':cmds }
     print virtualenv.create_bootstrap_script(script_str % optdict)
