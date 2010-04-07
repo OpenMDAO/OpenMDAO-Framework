@@ -167,7 +167,7 @@ class DrivingSim(Assembly):
             # Note, shifts gear if RPM is too low or too high
             try:
                 self.vehicle.run()
-            except TraitError, err:
+            except TraitError:
                 if self.vehicle.engine.RPM < self.vehicle.transmission.RPM:
                     
                     if self.vehicle.current_gear > 4:
