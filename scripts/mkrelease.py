@@ -1,18 +1,16 @@
 
 #
-# An automated release script for OpenMDAO.
-# For each openmdao subpackage, it creates a releaseinfo.py file and 
+# For each openmdao subpackage, this script creates a releaseinfo.py file and 
 # builds a source distribution.
 #
 import sys, os
 import shutil
 import logging
-from pkg_resources import working_set, Requirement, Environment, Distribution
-from subprocess import Popen, STDOUT, PIPE
+from subprocess import Popen, STDOUT, PIPE, check_call
 from datetime import date
 from optparse import OptionParser
 import tempfile
-
+import StringIO
 
 # this should contain all of the openmdao subpackages
 openmdao_packages = { 'openmdao.main': ('',''), 
@@ -47,8 +45,19 @@ def get_revision():
         lines = [x for x in out.split('\n') if not x.startswith('----------')
                                                and not x.startswith('Use --include-merges')]
         return '\n'.join(lines)
-    
-def create_releaseinfo_file(projname, version):
+
+def get_releaseinfo_str(version):
+    """Creates the content of the releaseinfo.py files"""
+    opts = {}
+    f = StringIO.StringIO()
+    opts['version'] = version
+    opts['date'] = date.today().isoformat()
+    opts['revision'] = get_revision()
+    f.write(relfile_template % opts)
+    return f.getvalue()
+
+
+def create_releaseinfo_file(projname, relinfo_str):
     """Creates a releaseinfo.py file in the current directory"""
     opts = {}
     dirs = projname.split('.')
@@ -56,11 +65,7 @@ def create_releaseinfo_file(projname, version):
     print 'creating releaseinfo.py for %s' % projname
     f = open('releaseinfo.py', 'w')
     try:
-        opts['version'] = version
-        opts['date'] = date.today().isoformat()
-        opts['revision'] = get_revision()
-        
-        f.write(relfile_template % opts)
+        f.write(relinfo_str)
     finally:
         f.close()
 
@@ -169,7 +174,17 @@ def main():
     if not os.path.exists(destdir):
         os.makedirs(destdir)
 
+    releaseinfo_str = get_releaseinfo_str(options.version)
     startdir = os.getcwd()
+    tarname = os.path.join(destdir, 
+                           'openmdao_src-%s.tar.gz' % options.version)
+    print 'exporting archive of repository to %s' % tarname
+    check_call(['bzr', 'export', '%s' % tarname])
+    
+    print 'creating bootstrapping installer script go-openmdao.py'
+    installer = os.path.join(os.path.dirname(__file__),'mkinstaller.py')
+    check_call([sys.executable, installer, '--version=%s' % options.version,
+                '-d', destdir, '-f', 'http://openmdao.org/dists'])
     try:
         for project_name in openmdao_packages:
             pdir = os.path.join(topdir, 
@@ -179,7 +194,7 @@ def main():
                 os.chdir(os.path.join(pdir, 'src'))
             else:
                 os.chdir(pdir)
-            create_releaseinfo_file(project_name, options.version)
+            create_releaseinfo_file(project_name, releaseinfo_str)
             print 'building %s' % project_name
             _build_sdist(pdir, destdir)
         print 'building openmdao'    

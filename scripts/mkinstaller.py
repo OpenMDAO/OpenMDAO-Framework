@@ -1,11 +1,10 @@
 """
 Generates a virtualenv bootstrapping script that will create a virtualenv with
 openmdao and all of its dependencies installed in it. The script is written to
-stdout.  The generated script will take an 'openmdaover' argument to allow the
-script user to install a specific openmdao version.
+a file called go-openmdao.py.
 """
 
-import sys
+import sys, os
 from optparse import OptionParser
 import virtualenv
 
@@ -17,9 +16,9 @@ def main():
 
 openmdaoreq = 'openmdao'
 
-def extend_parser(optparse_parser):
-    optparse_parser.add_option("", "--openmdaover", action="store", type="string", dest='openmdaover', 
-                      help="specify openmdao version (default is latest)")
+#def extend_parser(optparse_parser):
+    #optparse_parser.add_option("", "--openmdaover", action="store", type="string", dest='openmdaover', 
+                      #help="specify openmdao version (default is latest)")
 
 def adjust_options(options, args):
     global openmdaoreq
@@ -28,8 +27,8 @@ def adjust_options(options, args):
         sys.exit(-1)
     ## setting use_distribute seems to force a local install even if package is already on sys.path
     #options.use_distribute = True  # force use of distribute instead of setuptools
-    if options.openmdaover:
-        openmdaoreq = 'openmdao==%%s' %% options.openmdaover
+    #if options.openmdaover:
+        #openmdaoreq = 'openmdao==%%s' %% options.openmdaover
     
 def _single_install(cmds, req, bin_dir):
     cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
@@ -40,7 +39,7 @@ def _single_install(cmds, req, bin_dir):
 def after_install(options, home_dir):
     global logger, openmdaoreq
     reqs = %(reqs)s
-    reqs.append(openmdaoreq)
+    reqs.append('openmdao==%(version)s')
     cmds = %(cmds)s
     etc = join(home_dir, 'etc')
     ## TODO: this should all come from distutils
@@ -64,13 +63,22 @@ def after_install(options, home_dir):
 
     """
     parser = OptionParser()
+    # setuptools doesn't seem to support multiple find-links, but pip does
     parser.add_option("-f", "--find-links", action="append", type="string", dest='flinks', 
-                      help="find-links options") 
+                      help="find-links URL") 
     parser.add_option("-r", "--requirement", action="append", type="string", dest='reqs', 
                       help="add an additional required package (multiple are allowed)")
+    parser.add_option("", "--version", action="store", type="string", dest='version', 
+                      help="specify openmdao version that generated script will install")
+    parser.add_option("-d", "--destination", action="store", type="string", dest='dest', 
+                      help="specify destination directory", default='.')
     
     
     (options, args) = parser.parse_args()
+    
+    if not options.version:
+        print 'You must supply a version id'
+        sys.exit(-1)
     
     reqs = options.reqs if options.reqs is not None else []
     if options.flinks is not None:
@@ -78,8 +86,11 @@ def after_install(options, home_dir):
     else:
         cmds = []
     
-    optdict = { 'reqs': reqs, 'cmds':cmds }
-    print virtualenv.create_bootstrap_script(script_str % optdict)
+    optdict = { 'reqs': reqs, 'cmds':cmds, 'version': options.version }
+    
+    dest = os.path.abspath(options.dest)
+    with open(os.path.join(dest,'go-openmdao.py'), 'wb') as f:
+        f.write(virtualenv.create_bootstrap_script(script_str % optdict))
 
 
 if __name__ == '__main__':
