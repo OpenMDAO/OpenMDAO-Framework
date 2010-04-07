@@ -1,7 +1,6 @@
 """
 Generates a virtualenv bootstrapping script that will create a virtualenv with
-openmdao and all of its dependencies installed in it. The script is written to
-a file called go-openmdao.py.
+develop versions of all of the openmdao packages.
 """
 
 import sys, os
@@ -14,29 +13,32 @@ def main():
     
     script_str = """
 
-#openmdaoreq = 'openmdao'
-
-#def extend_parser(optparse_parser):
-    #optparse_parser.add_option("", "--openmdaover", action="store", type="string", dest='openmdaover', 
-                      #help="specify openmdao version (default is latest)")
+# list of openmdao packages to be installed as 'develop' eggs.
+# NOTE: Order matters here.  Any given package must appear
+#       before any other packages that depend on it.
+openmdao_packages = ['openmdao.util', 
+                     'openmdao.units', 
+                     'openmdao.main', 
+                     'openmdao.lib', 
+                     'openmdao.test', 
+                     os.path.join('examples','openmdao.examples.simple'),
+                     os.path.join('examples','openmdao.examples.bar3simulation'),
+                     os.path.join('examples','openmdao.examples.enginedesign'),
+                    ]
 
 def adjust_options(options, args):
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
         print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %%s' %% sys.version.split(' ')[0]
         sys.exit(-1)
-    ## setting use_distribute seems to force a local install even if package is already on sys.path
-    #options.use_distribute = True  # force use of distribute instead of setuptools
     
 def _single_install(cmds, req, bin_dir):
     cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
-    #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     logger.debug("running command: %%s" %% ' '.join(cmdline))
     subprocess.check_call(cmdline)
 
 def after_install(options, home_dir):
     global logger
     reqs = %(reqs)s
-    reqs.append('openmdao==%(version)s')
     cmds = %(cmds)s
     etc = join(home_dir, 'etc')
     ## TODO: this should all come from distutils
@@ -56,8 +58,19 @@ def after_install(options, home_dir):
     reqnumpy = 'numpy'   # TODO: grab openmdao dist and query its deps for specific numpy version
     _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
     for req in reqs:
-        _single_install(cmds, req, bin_dir)  
-
+        _single_install(cmds, req, bin_dir)
+    # now install dev eggs for all of the openmdao packages
+    startdir = os.getcwd()
+    absbin = os.path.abspath(bin_dir)
+    try:
+        for pkg in openmdao_packages:
+            print 'cd to %%s' %% os.path.normpath(join(os.path.dirname(os.path.abspath(__file__)),'..',pkg))
+            os.chdir(os.path.normpath(join(os.path.dirname(os.path.abspath(__file__)),'..',pkg)))
+            cmdline = [join(absbin, 'python'), 'setup.py', 'develop']
+            print 'cmd is %%s' %% cmdline
+            subprocess.check_call(cmdline)
+    finally:
+        os.chdir(startdir)
     """
     parser = OptionParser()
     # setuptools doesn't seem to support multiple find-links, but pip does
@@ -65,17 +78,8 @@ def after_install(options, home_dir):
                       help="find-links URL") 
     parser.add_option("-r", "--requirement", action="append", type="string", dest='reqs', 
                       help="add an additional required package (multiple are allowed)")
-    parser.add_option("", "--version", action="store", type="string", dest='version', 
-                      help="specify openmdao version that generated script will install")
-    parser.add_option("-d", "--destination", action="store", type="string", dest='dest', 
-                      help="specify destination directory", default='.')
-    
     
     (options, args) = parser.parse_args()
-    
-    if not options.version:
-        print 'You must supply a version id'
-        sys.exit(-1)
     
     reqs = options.reqs if options.reqs is not None else []
     if options.flinks is not None:
@@ -83,10 +87,9 @@ def after_install(options, home_dir):
     else:
         cmds = []
     
-    optdict = { 'reqs': reqs, 'cmds':cmds, 'version': options.version }
+    optdict = { 'reqs': reqs, 'cmds':cmds }
     
-    dest = os.path.abspath(options.dest)
-    with open(os.path.join(dest,'go-openmdao.py'), 'wb') as f:
+    with open('go-openmdao-dev.py', 'wb') as f:
         f.write(virtualenv.create_bootstrap_script(script_str % optdict))
 
 
