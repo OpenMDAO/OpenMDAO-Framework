@@ -84,9 +84,9 @@ class CaseIteratorDriver(Driver):
     def execute(self):
         """ Runs each case in `iterator` and records results in `recorder`. """
         self.setup()
-        self.resume(remove_egg=True)
+        self.resume()
 
-    def resume(self, remove_egg=False):
+    def resume(self, remove_egg=True):
         """
         Resume execution. If `remove_egg` is True, then the egg file created
         for concurrent evaluation is removed at the end of the run.
