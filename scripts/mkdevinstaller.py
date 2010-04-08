@@ -21,9 +21,9 @@ openmdao_packages = ['openmdao.util',
                      'openmdao.main', 
                      'openmdao.lib', 
                      'openmdao.test', 
-                     os.path.join('examples','openmdao.examples.simple'),
-                     os.path.join('examples','openmdao.examples.bar3simulation'),
-                     os.path.join('examples','openmdao.examples.enginedesign'),
+                     'examples/openmdao.examples.simple',
+                     'examples/openmdao.examples.bar3simulation',
+                     'examples/openmdao.examples.enginedesign',
                     ]
 
 def adjust_options(options, args):
@@ -36,6 +36,13 @@ def _single_install(cmds, req, bin_dir):
     logger.debug("running command: %%s" %% ' '.join(cmdline))
     subprocess.check_call(cmdline)
 
+def _find_repo_top():
+    location = os.getcwd()
+    while location:
+        if '.bzr' in os.listdir(location):
+            return location
+        location = os.path.dirname(location)
+    
 def after_install(options, home_dir):
     global logger
     reqs = %(reqs)s
@@ -60,14 +67,13 @@ def after_install(options, home_dir):
     for req in reqs:
         _single_install(cmds, req, bin_dir)
     # now install dev eggs for all of the openmdao packages
+    topdir = _find_repo_top()
     startdir = os.getcwd()
     absbin = os.path.abspath(bin_dir)
     try:
         for pkg in openmdao_packages:
-            print 'cd to %%s' %% os.path.normpath(join(os.path.dirname(os.path.abspath(__file__)),'..',pkg))
-            os.chdir(os.path.normpath(join(os.path.dirname(os.path.abspath(__file__)),'..',pkg)))
-            cmdline = [join(absbin, 'python'), 'setup.py', 'develop']
-            print 'cmd is %%s' %% cmdline
+            os.chdir(join(topdir, pkg))
+            cmdline = [join(absbin, 'python'), 'setup.py', 'develop'] + cmds
             subprocess.check_call(cmdline)
     finally:
         os.chdir(startdir)
