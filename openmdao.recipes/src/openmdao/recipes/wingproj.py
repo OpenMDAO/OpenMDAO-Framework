@@ -18,7 +18,6 @@ def _find_files_and_dirs(pat, startdir):
     for path, dirlist, filelist in os.walk(startdir):
         for name in fnmatch.filter(filelist+dirlist, pat):
             yield os.path.join(path, name)
-            
 
 def _find_files(pat, startdir):
     for path, dirlist, filelist in os.walk(startdir):

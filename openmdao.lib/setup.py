@@ -9,7 +9,6 @@ sys.path.insert(0, os.path.normpath(os.path.join(here,
                                                  'src',
                                                  'openmdao',
                                                  'lib')))
-
 import releaseinfo
 version = releaseinfo.__version__
 
