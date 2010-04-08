@@ -56,17 +56,19 @@ def release(version=None):
         
         run('mkdir ~/downloads/%s' % version)
         run('chmod 755 ~/downloads/%s' % version)
+        
+        # update the 'latest' link to point to the most recent version directory
         run('rm -f ~/downloads/latest')
         run('ln -s ~/downloads/%s ~/downloads/latest' % version)
         
         put(os.path.join(tmpdir, 'openmdao_src*.gz'), 
             '~/downloads/%s' % version, 
             mode=0644)
-        put(os.path.join(tmpdir, 'go-openmdao.py'), 
+        put(os.path.join(tmpdir, 'go-openmdao-%s.py' % version), 
             '~/downloads/%s' % version,
             mode=0755)
         
-        # update the index.html file on the server
+        # update the index.html for the dists directory on the server
         with cd('~/dists'):
             run('python2.6 mkegglistindex.py')
         

@@ -37,16 +37,20 @@ def _single_install(cmds, req, bin_dir):
     subprocess.check_call(cmdline)
 
 def _find_repo_top():
+    start = os.getcwd()
     location = os.getcwd()
     while location:
         if '.bzr' in os.listdir(location):
             return location
         location = os.path.dirname(location)
+    raise RuntimeError('ERROR: %%s is not inside of a bazaar repository' %% start)
     
 def after_install(options, home_dir):
     global logger
     reqs = %(reqs)s
     cmds = %(cmds)s
+    if not cmds:
+        cmds = ['-f','http://openmdao.org/dists']
     etc = join(home_dir, 'etc')
     ## TODO: this should all come from distutils
     ## like distutils.sysconfig.get_python_inc()
@@ -97,7 +101,7 @@ def after_install(options, home_dir):
     
     with open('go-openmdao-dev.py', 'wb') as f:
         f.write(virtualenv.create_bootstrap_script(script_str % optdict))
-
+    os.chmod('go-openmdao-dev.py', 0755)
 
 if __name__ == '__main__':
     main()
