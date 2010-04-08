@@ -8,6 +8,8 @@ import StringIO
 from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
 
+from openmdao.util.dumpdistmeta import get_dist_metadata
+
 # Put configuration info here
 src_mods = []
 
@@ -161,7 +163,7 @@ def _write_src_docs():
     for src in srcmods:
         with open(os.path.join(docdir, 'srcdocs', 'modules',
                               os.path.basename(src)+'.rst'), 'w') as f:
-            self.logger.info('creating autodoc file for %s' % src)
+            logger.info('creating autodoc file for %s' % src)
             _mod_sphinx_info(os.path.basename(src), f)
 
 def build_docs():
@@ -173,6 +175,7 @@ def build_docs():
         raise RuntimeError('doc directory '+docdir+' not found')
     
     _write_src_docs()
+    _make_license_table()
     
     os.chdir(docdir)
     try:
@@ -239,3 +242,78 @@ def view_docs(browser=None):
             #self.fail('problem in documentation source code examples:\\n'+output)
             #""" % os.path.join(bindir, 'testdocs')
     #)
+
+    
+def _get_border_line(numcols, colwidths, char):
+    parts = []
+    for i in range(numcols):
+        parts.append(char*colwidths[i])
+        parts.append(' ')
+    parts.append('\n')
+    return ''.join(parts)
+
+def _get_table_cell( data, colwidth):
+    return data+' '*(colwidth-len(data))
+    
+def _make_license_table(reqs=None):
+    """
+    Generates a file in docs/licenses/licenses_table.rst that
+    contains a restructured text table with the name, license, and home-page of
+    all distributions that openmdao depends on.
+    """
+    meta_names = ['name','license','home-page']
+    headers = ['**Distribs Used by OpenMDAO**',
+               '**License**',
+               '**Link**']
+    numcols = len(meta_names)
+    data_templates = ["%s", "%s", "%s"]
+    col_spacer = ' '
+    max_col_width = 80
+    excludes = [] #["openmdao.*"]
+    license_fname = os.path.join(docdir,'licenses','licenses_table.txt')
+    
+    if reqs is None:
+        reqs = [Requirement.parse(p) for p in packages]
+    dists = working_set.resolve(reqs)
+        
+    metadict = {}
+    for dist in dists:
+        metadict[dist.project_name] = get_dist_metadata(dist)
+    to_remove = set()
+    for pattern in excludes:
+        to_remove.update(fnmatch.filter(metadict.keys(), pattern))
+    for rem in to_remove:
+        del metadict[rem]
+    for meta in metadict.values():
+        for i,name in enumerate(meta_names):
+            meta[name] = data_templates[i] % str(meta[name])
+    # figure out sizes of table columns
+    colwidths = [len(s)+1 for s in headers]
+    for i,name in enumerate(meta_names):
+        sz = max([len(m[name]) for m in metadict.values()])+1
+        sz = min(sz, max_col_width)
+        colwidths[i] = max(colwidths[i], sz)
+    
+    with open(license_fname, 'wb') as outfile:
+        # write header
+        outfile.write(_get_border_line(numcols, colwidths, char='='))
+        for i,header in enumerate(headers):
+            outfile.write(header+' '*(colwidths[i]-len(header)))
+            outfile.write(col_spacer)
+        outfile.write('\n')
+        outfile.write(_get_border_line(numcols, colwidths, char='='))
+        
+        # write table data
+        tups = [(k,v) for k,v in metadict.items()]
+        tups = sorted(tups, lambda x,y: cmp(x[0].lower(), y[0].lower()))
+        for j,tup in enumerate(tups):
+            for i,name in enumerate(meta_names):
+                outfile.write(_get_table_cell(tup[1][name], colwidths[i]))
+                outfile.write(col_spacer)
+            outfile.write('\n')
+            if j<len(tups)-1:
+                outfile.write(_get_border_line(numcols, colwidths, char='-'))
+            
+        # bottom border
+        outfile.write(_get_border_line(numcols, colwidths, char='='))
+        outfile.write('\n')

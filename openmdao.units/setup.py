@@ -18,6 +18,7 @@ setup(name='openmdao.units',
       package_data = {'units': ['unitLibdefault.ini']},
       include_package_data=True,
       zip_safe=False,
+      url='http://openmdao.org',
       install_requires=[
           'setuptools',
       ],

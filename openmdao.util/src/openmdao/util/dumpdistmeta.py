@@ -97,7 +97,7 @@ def get_resource_files(dist, exList=None, incList=None, dirname=''):
                 yield respath
 
 
-def _getdist_metadata(dist, dirname=''):
+def get_dist_metadata(dist, dirname=''):
     """Retrieve metadata from within a distribution.
     Returns a dict.
     """
@@ -108,7 +108,7 @@ def _getdist_metadata(dist, dirname=''):
         else:
             path = name
         if dist.metadata_isdir(path):
-            for md in _getdist_metadata(dist, path):
+            for md in get_dist_metadata(dist, path):
                 metadata[md[0]] = md[1]
         elif name.endswith('.txt'):
             parse_txt(name, dist.get_metadata(path), metadata)
@@ -144,8 +144,6 @@ def _meta_from_tarfile(path):
                     metadata[k] = v                
             elif name.endswith('.txt'):
                 parse_txt(name, meta, metadata)
-                #metadata[metaname] = [x.strip() for x in 
-                #                     meta.splitlines() if x.strip() != '']
             elif name.endswith('/not-zip-safe'):
                 metadata['zip-safe'] = False
             elif name.endswith('/zip-safe'):
@@ -222,7 +220,7 @@ def get_metadata(path):
             raise RuntimeError('cannot process file %s: unknown file type' %
                                 path)
     else:
-        metadata = _getdist_metadata(dist)
+        metadata = get_dist_metadata(dist)
 
 
     metadata['py_version'] = dist.py_version
@@ -233,7 +231,7 @@ def get_metadata(path):
     for gname,group in get_entry_map(dist, group=None).items():
         metadata['entry_points'][gname] = [ep for ep in group]
     
-    return metadata    
+    return metadata
     
 if __name__ == '__main__':
     if len(sys.argv) > 2:
