@@ -20,7 +20,7 @@ def convert_units(value, units, convunits):
     to convunits.
     """
     pq = PhysicalQuantity(value, units)
-    pq.convertToUnit(convunits)
+    pq.convert_to_unit(convunits)
     return pq.value
     
 class Float(TraitType):
@@ -164,7 +164,7 @@ class Float(TraitType):
                              (src_units, name))
         
         try:
-            pq.convertToUnit(dst_units)
+            pq.convert_to_unit(dst_units)
         except NameError:
             raise TraitError("undefined unit '%s' for attribute '%s'" %
                              (dst_units, name))

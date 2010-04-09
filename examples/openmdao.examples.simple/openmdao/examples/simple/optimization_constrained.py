@@ -50,7 +50,7 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
     
-    opt_problem = set_as_top(OptimizationConstrained("Top"))
+    opt_problem = OptimizationConstrained("Top")
     set_as_top(opt_problem)
     
     tt = time.time()
