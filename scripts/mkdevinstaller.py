@@ -7,8 +7,6 @@ import sys, os
 from optparse import OptionParser
 import virtualenv
 
-
-
 def main():
     
     script_str = """
