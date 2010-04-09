@@ -26,16 +26,6 @@ openmdao_packages = ['openmdao.util',
                      'examples/openmdao.examples.enginedesign',
                     ]
 
-def adjust_options(options, args):
-    if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
-        print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %%s' %% sys.version.split(' ')[0]
-        sys.exit(-1)
-    
-def _single_install(cmds, req, bin_dir):
-    cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
-    logger.debug("running command: %%s" %% ' '.join(cmdline))
-    subprocess.check_call(cmdline)
-
 def _find_repo_top():
     start = os.getcwd()
     location = os.getcwd()
@@ -45,12 +35,32 @@ def _find_repo_top():
         location = os.path.dirname(location)
     raise RuntimeError('ERROR: %%s is not inside of a bazaar repository' %% start)
     
+def adjust_options(options, args):
+    if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
+        print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %%s' %% sys.version.split(' ')[0]
+        sys.exit(-1)
+    to_remove = []
+    for arg in args:
+        if not arg.startswith('-'):
+            print 'removing arg: %%s' %% arg
+            to_remove.append(arg)
+    for arg in to_remove:
+        args.remove(arg)
+    args.append(join(_find_repo_top(), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
+
+def _single_install(cmds, req, bin_dir):
+    cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
+    logger.debug("running command: %%s" %% ' '.join(cmdline))
+    subprocess.check_call(cmdline)
+
 def after_install(options, home_dir):
     global logger
     reqs = %(reqs)s
     cmds = %(cmds)s
-    if not cmds:
-        cmds = ['-f','http://openmdao.org/dists']
+    url = 'http://openmdao.org/dists'
+    found = [c for c in cmds if url in c]
+    if not found:
+        cmds.extend(['-f',url])
     etc = join(home_dir, 'etc')
     ## TODO: this should all come from distutils
     ## like distutils.sysconfig.get_python_inc()
@@ -81,6 +91,23 @@ def after_install(options, home_dir):
             subprocess.check_call(cmdline)
     finally:
         os.chdir(startdir)
+        
+    # copy the default wing project file into the virtualenv
+    # try to find the default.wpr file in the user's home directory
+    try:
+        if sys.platform == 'win32':
+            home = os.environ['HOMEDRIVE']+os.environ['HOMEPATH']
+        else:
+            home = os.environ['HOME']
+    except:
+        home = ''
+    
+    proj_template = join(home, '.wingide3', 'default.wpr')
+    if not os.path.isfile(proj_template):
+        proj_template = join(topdir,'config','wing_proj_template.wpr')
+    
+    shutil.copy(proj_template, 
+                join(os.path.abspath(home_dir),'etc','wingproj.wpr'))
     """
     parser = OptionParser()
     # setuptools doesn't seem to support multiple find-links, but pip does

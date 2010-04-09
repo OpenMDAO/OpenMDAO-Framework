@@ -38,6 +38,10 @@ def after_install(options, home_dir):
     reqs = %(reqs)s
     reqs.append('openmdao==%(version)s')
     cmds = %(cmds)s
+    url = 'http://openmdao.org/dists'
+    found = [c for c in cmds if url in c]
+    if not found:
+        cmds.extend(['-f',url])
     etc = join(home_dir, 'etc')
     ## TODO: this should all come from distutils
     ## like distutils.sysconfig.get_python_inc()
@@ -65,8 +69,8 @@ def after_install(options, home_dir):
                       help="find-links URL") 
     parser.add_option("-r", "--requirement", action="append", type="string", dest='reqs', 
                       help="add an additional required package (multiple are allowed)")
-    parser.add_option("", "--version", action="store", type="string", dest='version', 
-                      help="specify openmdao version that generated script will install")
+    parser.add_option("-v", "--version", action="store", type="string", dest='version', 
+                      help="specify openmdao version that the generated script will install")
     parser.add_option("-d", "--destination", action="store", type="string", dest='dest', 
                       help="specify destination directory", default='.')
     
@@ -75,6 +79,7 @@ def after_install(options, home_dir):
     
     if not options.version:
         print 'You must supply a version id'
+        parser.print_help()
         sys.exit(-1)
     
     reqs = options.reqs if options.reqs is not None else []

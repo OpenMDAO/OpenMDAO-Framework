@@ -138,7 +138,7 @@ class WingProj(object):
                                                       'setup')])
         reqs = [Requirement.parse(x.strip()) for x in self.options['eggs'].split()]
         self.depdists = WorkingSet().resolve(reqs, env)
-        self.working_set = WorkingSet([d.location for d in self.depdists])            
+        self.working_set = WorkingSet([d.location for d in self.depdists])
 
         if not os.path.isdir(os.path.join(self.partsdir,'wingproj')):
             os.makedirs(os.path.join(self.partsdir,'wingproj'))

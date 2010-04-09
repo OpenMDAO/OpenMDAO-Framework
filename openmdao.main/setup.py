@@ -51,6 +51,7 @@ setup(name='openmdao.main',
           "console_scripts": [
                 "build_docs=openmdao.util.build_docs:build_docs",
                 "docs=openmdao.util.build_docs:view_docs",
+                "wing=openmdao.util.wingproj:run_wing",
               ],
           },
     )
