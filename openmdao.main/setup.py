@@ -49,8 +49,8 @@ setup(name='openmdao.main',
       ],
       entry_points = {
           "console_scripts": [
-                "build_docs=openmdao.util.build_docs:build_docs",
-                "docs=openmdao.util.build_docs:view_docs",
+                "openmdao_build_docs=openmdao.util.build_docs:build_docs",
+                "openmdao_docs=openmdao.util.build_docs:view_docs",
                 "wing=openmdao.util.wingproj:run_wing",
               ],
           },
