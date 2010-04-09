@@ -116,7 +116,7 @@ class ExternalCode(Component):
 
         et = time.time() - start_time
         if et >= 60:
-            self.info('elapsed time: %f sec.', et)
+            self.info('elapsed time: %.1f sec.', et)
 
         return (return_code, error_msg)
 
@@ -264,7 +264,7 @@ class ExternalCode(Component):
             pattern = os.path.join(directory, pattern)
             for src_path in sorted(glob.glob(pattern)):
                 dst_path = os.path.basename(src_path)
-                self.debug('copy %s -> %s', src_path, dst_path)
+                self.debug('    %s', src_path)
                 shutil.copy(src_path, dst_path)
                 # Ensure writable.
                 mode = os.stat(dst_path).st_mode
