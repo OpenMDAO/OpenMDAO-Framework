@@ -123,6 +123,13 @@ def get_dist_metadata(dist, dirname=''):
             metadata['zip-safe'] = True
         else:
             metadata[path] = dist.get_metadata(path)
+    if len(metadata) == 0:
+        # look for .egg-info file at peer level
+        f = open(os.path.join(dist.location,
+                              '%s-%s.egg-info'%(dist.project_name,
+                                                dist.version)),'r')
+        message = rfc822.Message(f)
+        metadata = message
     return metadata
     
                 

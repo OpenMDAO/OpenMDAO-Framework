@@ -284,9 +284,14 @@ def _make_license_table(reqs=None):
         to_remove.update(fnmatch.filter(metadict.keys(), pattern))
     for rem in to_remove:
         del metadict[rem]
-    for meta in metadict.values():
+    for projname,meta in metadict.items():
         for i,name in enumerate(meta_names):
-            meta[name] = data_templates[i] % str(meta[name])
+            try:
+                meta[name] = data_templates[i] % str(meta[name])
+            except KeyError:
+                meta[name] = 'UNKNOWN'
+        if meta['name'] == 'UNKNOWN':
+            meta['name'] = projname
     # figure out sizes of table columns
     colwidths = [len(s)+1 for s in headers]
     for i,name in enumerate(meta_names):

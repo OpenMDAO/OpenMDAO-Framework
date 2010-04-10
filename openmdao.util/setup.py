@@ -35,6 +35,7 @@ setup(name='openmdao.util',
       zip_safe=False,
       install_requires=[
           'setuptools',
+          'Sphinx',
       ],
       entry_points = """
       [console_scripts]
