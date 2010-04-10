@@ -2,6 +2,7 @@
 import os
 import os.path
 import sys
+import shutil
 import fnmatch
 import logging
 import StringIO
@@ -179,11 +180,13 @@ def build_docs():
     
     os.chdir(docdir)
     try:
-        # make necessary directories if they aren't already there
-        if not os.path.isdir(os.path.join('_build', 'html')):
-            os.makedirs(os.path.join('_build', 'html'))
-        if not os.path.isdir(os.path.join('_build', 'doctrees')):
-            os.makedirs(os.path.join('_build', 'doctrees'))
+        # make necessary directories 
+        if os.path.isdir(os.path.join('_build', 'html')):
+            shutil.rmtree(os.path.join('_build','html'))
+        if os.path.isdir(os.path.join('_build', 'doctrees')):
+            shutil.rmtree(os.path.join('_build', 'doctrees'))
+        os.makedirs(os.path.join('_build', 'html'))
+        os.makedirs(os.path.join('_build', 'doctrees'))
     
         import sphinx
         sphinx.main(argv=['-P', '-b', 'html', '-d', 
@@ -322,3 +325,8 @@ def _make_license_table(reqs=None):
         # bottom border
         outfile.write(_get_border_line(numcols, colwidths, char='='))
         outfile.write('\n')
+
+if __name__ == '__main__':
+    build_docs()
+
+

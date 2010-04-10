@@ -26,6 +26,8 @@ def adjust_options(options, args):
         sys.exit(-1)
     ## setting use_distribute seems to force a local install even if package is already on sys.path
     #options.use_distribute = True  # force use of distribute instead of setuptools
+    if len(args) == 0:
+        args.append('openmdao-%%s' %% %(version)s)
     
 def _single_install(cmds, req, bin_dir):
     cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
@@ -91,9 +93,10 @@ def after_install(options, home_dir):
     optdict = { 'reqs': reqs, 'cmds':cmds, 'version': options.version }
     
     dest = os.path.abspath(options.dest)
-    with open(os.path.join(dest,'go-openmdao.py'), 'wb') as f:
+    scriptname = os.path.join(dest,'go-openmdao-%s.py' % options.version)
+    with open(scriptname, 'wb') as f:
         f.write(virtualenv.create_bootstrap_script(script_str % optdict))
-
+    os.chmod(scriptname, 0755)
 
 if __name__ == '__main__':
     main()
