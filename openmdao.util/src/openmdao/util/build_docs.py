@@ -6,26 +6,24 @@ import shutil
 import fnmatch
 import logging
 import StringIO
+import re
 from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
 
 from openmdao.util.dumpdistmeta import get_dist_metadata
+import openmdao.util.releaseinfo
 
-# Put configuration info here
-src_mods = []
+# Specify modules and packages to be included in the OpenMDAO documentation here
+srcmods = [
+]
 
-#def _get_entrypt_script_str(req, entry_pt_name, *args):
-    #return """
-##!%(exe)s
-## EASY-INSTALL-ENTRY-SCRIPT: '%(req)s','console_scripts','%(ep_name)s'
-#__requires__ = '%(req)s'
-#import sys
-#from pkg_resources import load_entry_point
+packages = [
+    'openmdao.main',
+    'openmdao.lib',
+    'openmdao.util',
+    'openmdao.units'
+]
 
-#sys.exit(
-   #load_entry_point('%(req)s', 'console_scripts', '%(ep_name)s')(*%(args)s)
-#)
-    #""" % { 'req':req, 'ep_name':entry_pt_name, 'args':args }
 
 def _find_repo_top():
     """Return the top of the current bazaar repo, or raise an
@@ -37,21 +35,19 @@ def _find_repo_top():
         if '.bzr' in os.listdir(location):
             return location
         location = os.path.dirname(location)
+        if len(location)==3 and location[1:]==':\\':
+            location = ''
     raise RuntimeError('ERROR: %s is not inside of a bazaar repository' % start)
 
-# set all of our global configuration parameters
-branchdir = _find_repo_top()
-docdir = os.path.join(branchdir, 'docs')
-bindir = os.path.dirname(sys.executable)
-srcmods = [
-]
+
 logger = logging.getLogger()
-packages = [
-    'openmdao.main',
-    'openmdao.lib',
-    'openmdao.util',
-    'openmdao.units'
-]
+
+# set all of our global configuration parameters
+def _get_dirnames():
+    branchdir = _find_repo_top()
+    docdir = os.path.join(branchdir, 'docs')
+    bindir = os.path.dirname(sys.executable)
+    return (branchdir, docdir, bindir)
 
 def _mod_sphinx_info(mod, outfile, show_undoc=False):
     """Write out enough info for Sphinx to autodocument
@@ -144,7 +140,7 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     #"""
     
 
-def _write_src_docs():
+def _write_src_docs(branchdir, docdir):
     # first, clean up the old stuff, if any
     pkgdir = os.path.join(docdir, 'srcdocs', 'packages')
     moddir = os.path.join(docdir, 'srcdocs', 'modules')
@@ -171,12 +167,14 @@ def build_docs():
     """An entry point (build_docs) points to this.  It generates the Sphinx
     documentation for openmdao.
     """
+    branchdir, docdir, bindir =_get_dirnames()
+
     startdir = os.getcwd()
     if not os.path.isdir(docdir):
         raise RuntimeError('doc directory '+docdir+' not found')
     
-    _write_src_docs()
-    _make_license_table()
+    _write_src_docs(branchdir, docdir)
+    _make_license_table(docdir)
     
     os.chdir(docdir)
     try:
@@ -187,7 +185,27 @@ def build_docs():
             shutil.rmtree(os.path.join('_build', 'doctrees'))
         os.makedirs(os.path.join('_build', 'html'))
         os.makedirs(os.path.join('_build', 'doctrees'))
-    
+        
+        # update conf.py with new version and release info
+        conf = os.path.join(docdir, 'conf.py')
+        f = open(conf, 'r')
+        contents = f.read()
+        f.close()
+        
+        ver_rgx = re.compile("version = '[^']*'")
+        rel_rgx = re.compile("release = '[^']*'")
+        shtitle_rgx = re.compile("html_short_title = '[^']*'")
+
+        version = openmdao.util.releaseinfo.__version__
+        contents = ver_rgx.sub("version = '%s'" % version, contents)
+        contents = rel_rgx.sub("release = '%s'" % version, contents)
+        contents = shtitle_rgx.sub(
+             "html_short_title = 'OpenMDAO Documentation v%s'" % version, contents)
+        
+        f = open(conf, 'w')
+        f.write(contents)
+        f.close()
+        
         import sphinx
         sphinx.main(argv=['-P', '-b', 'html', '-d', 
                           os.path.join(docdir, '_build', 'doctrees'), 
@@ -205,11 +223,19 @@ def view_docs(browser=None):
             if arg.startswith('--browser='):
                 browser = arg.split('=')[-1].strip()
                 
+    try:
+        branchdir, docdir, bindir =_get_dirnames()
+    except RuntimeError:
+        # look for docs online
+        version = openmdao.util.releaseinfo.__version__
+        idxpath = 'http://openmdao.org/downloads/%s/docs' % version
+    else:
+        idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
+        if not os.path.isfile(idxpath):
+            build_docs()
+    
     import webbrowser
     wb = webbrowser.get(browser)
-    idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
-    if not os.path.isfile(idxpath):
-        build_docs()
     wb.open(idxpath)
 
 
@@ -258,7 +284,7 @@ def _get_border_line(numcols, colwidths, char):
 def _get_table_cell( data, colwidth):
     return data+' '*(colwidth-len(data))
     
-def _make_license_table(reqs=None):
+def _make_license_table(docdir, reqs=None):
     """
     Generates a file in docs/licenses/licenses_table.rst that
     contains a restructured text table with the name, license, and home-page of

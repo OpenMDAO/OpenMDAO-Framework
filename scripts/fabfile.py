@@ -73,8 +73,11 @@ def release(version=None):
         put(join(tmpdir, 'openmdao_src*.gz'), 
             '~/downloads/%s' % version, 
             mode=0644)
+        
+        # for now, put the go-openmdao script up without the version
+        # id in the name
         put(join(tmpdir, 'go-openmdao-%s.py' % version), 
-            '~/downloads/%s' % version,
+            '~/downloads/%s/go-openmdao.py' % version,
             mode=0755)
 
         # build the docs
