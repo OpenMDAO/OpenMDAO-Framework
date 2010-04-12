@@ -4,18 +4,21 @@
 
 # Perform an constrained optimization on our paraboloid using CONMIN.
 
-from openmdao.main.api import Assembly
+# pylint: disable-msg=E0611,F0401
+from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.api import CONMINdriver
 
 from openmdao.examples.simple.paraboloid import Paraboloid
 
-class Optimization_Constrained(Assembly):
+class OptimizationConstrained(Assembly):
     """ Top level assembly for optimizing a vehicle. """
     
     def __init__(self, directory=''):
         """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
-        super(Optimization_Constrained, self).__init__(directory)
+        # pylint: disable-msg=E1101
+        
+        super(OptimizationConstrained, self).__init__(directory)
 
         # Create Paraboloid component instances
         self.add_container('paraboloid', Paraboloid())
@@ -47,7 +50,8 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
     
-    opt_problem = Optimization_Constrained("Top")
+    opt_problem = OptimizationConstrained("Top")
+    set_as_top(opt_problem)
     
     tt = time.time()
     opt_problem.run()

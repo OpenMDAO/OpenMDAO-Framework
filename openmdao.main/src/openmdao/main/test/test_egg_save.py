@@ -16,12 +16,12 @@ from enthought.traits.api import Callable, TraitError
 
 from openmdao.main.api import Assembly, Component, Container, SAVE_PICKLE, \
                               SAVE_CPICKLE, set_as_top
-from openmdao.main.filevar import FileMetadata, FileTrait
+from openmdao.main.filevar import FileMetadata
 
 from openmdao.main.pkg_res_factory import PkgResourcesFactory
 
 from openmdao.main.eggchecker import check_save_load
-from openmdao.lib.api import Int, Bool, List, Str, Array, Instance
+from openmdao.lib.api import Int, Bool, List, Str, Array, Instance, File
 from openmdao.util.testutil import find_python, make_protected_dir
 
 # pylint: disable-msg=E1101,E1103
@@ -60,7 +60,7 @@ class Source(Assembly):
 
     write_files = Bool(True, iotype='in')
     text_data = Str(iotype='in')
-    text_file = FileTrait(path='source.txt', iotype='out')
+    text_file = File(path='source.txt', iotype='out')
 
     def __init__(self, *args, **kwargs):
         super(Source, self).__init__(*args, **kwargs)
@@ -142,7 +142,7 @@ class Subcontainer(Container):
     """ Just a subcontainer for Source. """
 
     binary_data = Array('d', value=[], iotype='in')
-    binary_file = FileTrait(path=os.path.join('..', 'sub', 'source.bin'),
+    binary_file = File(path=os.path.join('..', 'sub', 'source.bin'),
                             iotype='out', binary=True)
         
 
@@ -158,8 +158,8 @@ class Sink(Component):
 
     text_data = Str(iotype='out')
     binary_data = Array('d', value=[], iotype='out')
-    text_file = FileTrait(iotype='in')
-    binary_file = FileTrait(iotype='in')
+    text_file = File(iotype='in')
+    binary_file = File(iotype='in')
     executions = Int(0, iotype='in',
                      desc='Count of Oddball instance_method() calls.')
 

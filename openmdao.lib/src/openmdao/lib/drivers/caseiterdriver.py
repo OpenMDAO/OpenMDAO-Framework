@@ -12,8 +12,6 @@ from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.lib.traits.int import Int
 from openmdao.util.filexfer import filexfer
 
-__all__ = ('CaseIteratorDriver',)
-
 _EMPTY    = 'empty'
 _READY    = 'ready'
 _COMPLETE = 'complete'
@@ -240,11 +238,11 @@ class CaseIteratorDriver(Driver):
             try:
                 name, status = self._reply_queue.get(True, 1)
             except Queue.Empty:
-                self.warning('Timeout waiting for %s to shut-down.', name)
-
-        # Clean up unpickleables.
-        self._reply_queue = None
-        self._server_lock = None
+                pass
+            else:
+                del self._queues[name]
+        for name in self._queues.keys():
+            self.warning('Timeout waiting for %s to shut-down.', name)
 
     def _busy(self):
         """ Return True while at least one server is in use. """
@@ -330,7 +328,7 @@ class CaseIteratorDriver(Driver):
                         try:
                             case.outputs[i] = (niv[0], niv[1],
                                 self._model_get(server, niv[0], niv[1]))
-                        except Exception, exc:
+                        except Exception as exc:
                             msg = "Exception getting '%s': %s" % (niv[0], exc)
                             case.msg = '%s: %s' % (self.get_pathname(), msg)
                 else:
@@ -380,12 +378,12 @@ class CaseIteratorDriver(Driver):
             for name, index, value in case.inputs:
                 try:
                     self._model_set(server, name, index, value)
-                except Exception, exc:
+                except Exception as exc:
                     msg = "Exception setting '%s': %s" % (name, exc)
                     self.raise_exception(msg, ServerError)
             self._model_execute(server)
             self._server_states[server] = _COMPLETE
-        except ServerError, exc:
+        except ServerError as exc:
             self._server_states[server] = _ERROR
             if case.retries < case.max_retries:
                 case.retries += 1
@@ -466,7 +464,7 @@ class CaseIteratorDriver(Driver):
         if server is None:
             try:
                 self.model.run()
-            except Exception, exc:
+            except Exception as exc:
                 self._exceptions[server] = exc
                 self.exception('Caught exception: %s' % exc)
         else:
@@ -476,7 +474,7 @@ class CaseIteratorDriver(Driver):
         """ Execute model in remote server. """
         try:
             self._top_levels[server].run()
-        except Exception, exc:
+        except Exception as exc:
             self._exceptions[server] = exc
             self.error('Caught exception from server %s, PID %d on %s: %s',
                        self._server_info[server]['name'],

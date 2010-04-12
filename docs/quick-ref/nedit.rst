@@ -22,15 +22,15 @@ that you wish to edit:
 
 ::
 
-%cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>/docs
-%cd <directory_name>    		(e.g., %cd user-guide)
-%nedit <file_name>  &                   (Brings up a file in NEdit and runs NEdit in the background.)
+  cd /OpenMDAO/dev/<your_working_directory>/<branch_name>/docs
+  cd <directory_name>    	  (e.g., cd user-guide)
+  nedit <file_name>  &            (Brings up a file in NEdit and runs NEdit in the background.)
 
 
 Using the *Fill Paragraph* Option
 ---------------------------------
 
-You can use the *Fill Paragraph* option on the *Edit* menu (or type ``Ctrl+J``) to fill text in
+You can use the *Fill Paragraph* option on the *Edit* menu (or type ``Ctrl+j``) to fill text in
 the paragraph:
   
 * Select a range of text and then chose *Fill Paragraph* (or type ``Ctrl+j``). All of the text in

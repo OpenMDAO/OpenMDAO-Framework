@@ -2,8 +2,8 @@ Useful Commands
 ===============
 
 This section contains commands that developers would use on a regular basis when performing 
-everyday tasks (such as branching and merging). Most of them are Bazaar commands; a few are scripts
-or commands for local NASA Glenn developers only.
+everyday tasks (such as branching). Most of them are Bazaar commands; a few are scripts
+or commands for local NASA Glenn developers only. 
 
 
 .. index:: Bazaar; commands
@@ -18,10 +18,9 @@ including information on Bazaar setup, code location, and how to create your bra
 quick reference for some common tasks you will be doing. 
 
 .. note::
-   - In the examples, the percent sign (%) represents the command-line prompt. 
    - Text included in pointy brackets means you have to supply a name or other
      information. For example, ``/OpenMDAO/dev/<your_working_directory>`` requires you
-     to supply a name for the working directory, such as: ``/OpenMDAO/dev/pziegfel``.
+     to supply a name for the working directory, such as: ``pziegfel``.
    - The examples provided assume you are working on OpenMDAO's Linux server. 
 
 References:
@@ -41,7 +40,7 @@ To use these commands, type ``bzr <command_name>``, for example ``bzr add``.
   
   add 		(Adds files/directories to the Bazaar repository on your branch.)
   branch	(Creates a new copy of a branch.)
-  commit	(Commits changes into a new revision. You must add a commit message via "-m" or NEdit, a text editor.)
+  commit	(Commits changes into a new revision. You must add a commit message via "-m" or another text editor.)
   conflicts	(Lists files with conflicts.)
   log --forward	(Displays revisions on a branch. The "--forward" option means the most recent activity will be displayed last.)    
   merge		(Pulls in committed changes from another branch.)
@@ -65,8 +64,10 @@ If you want to create a new versioned directory, type the following:
 
 ::
 
-  %bzr mkdir <directory_name>
+  bzr mkdir <directory_name>
   
+.. index:: Bazaar, adding a file
+.. index:: adding a file
   
 Adding a File
 ~~~~~~~~~~~~~
@@ -75,7 +76,7 @@ To add a file or directory to the Bazaar repository on your branch, type:
 
 ::
 
-  %bzr add
+  bzr add
   
 You can provide an argument with this command (i.e., a specific file name). If you add a
 file whose parent directory is not versioned, Bazaar will automatically add the parent
@@ -88,8 +89,6 @@ After you type ``bzr add``, Bazaar will display a list of the files and director
 
 .. index:: removing a file/directory
 
-
-
 Removing a File or Directory
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -97,15 +96,15 @@ Bazaar's ``remove`` command is similar to the UNIX command, and either can be us
 
 ::
 
-  %bzr remove <file_name>     (Bazaar "remove" command)
-  %rm <file_name> 	      (UNIX "remove" command)
+  bzr remove <file_name>     (Bazaar "remove" command)
+  rm <file_name> 	     (UNIX "remove" command)
     
 However, to remove a directory, it's easier to use the UNIX remove command (``rm``), as follows:
 
 
 ::
   
-  %rm -rf <directory_name>    (Removes a directory and recursively removes the files in it.)
+  rm -rf <directory_name>    (Removes a directory and recursively removes the files in it.)
 
 
 .. index:: moving a file/directory
@@ -124,14 +123,14 @@ the appropriate command. See the examples that follow:
 
 ::
 
-  %bzr mv <old_file_name> <new_file_name>                  (Renames a file)
+  bzr mv <old_file_name> <new_file_name>                  (Renames a file)
   Example:
-  %bzr mv test1.rst test2.rst                              (Renames "test1.rst" to "test2.rst")
+  bzr mv test1.rst test2.rst                              (Renames "test1.rst" to "test2.rst")
   
-  %bzr mv <file_to_move> <path_to_new_location><new_name>  (Moves and renames a file)
+  bzr mv <file_to_move> <path_to_new_location><new_name>  (Moves and renames a file)
   Examples: 
-  %bzr mv test1.rst ../user-guide/test2.rst                (Moves "test1.rst" to "user-guide" dir & renames it "test2.rst")   
-  %bzr mv test1.rst ../user-guide/.                        (Moves "test1.rst" to "user-guide" dir & keeps the same name)
+  bzr mv test1.rst ../user-guide/test2.rst                (Moves "test1.rst" to "user-guide" directory & renames it "test2.rst")   
+  bzr mv test1.rst ../user-guide/.                        (Moves "test1.rst" to "user-guide" directory & keeps the same name)
 
 
 .. note::
@@ -148,7 +147,7 @@ If you have edited a file and want to see what you have done, type:
 
 ::
 
-  %bzr diff <file_name>
+  bzr diff <file_name>
   
 Bazaar will display the name of the modified file (the name you specified) and then list the additions and deletions with a
 plus (+) or minus (-) sign in front of the changed lines.   	
@@ -164,7 +163,7 @@ beginning with the first revision and displaying the most recent revision last, 
 
 ::
 
-  %bzr log --forward 
+  bzr log --forward 
   
 Information will be provided about each revision, including:
 
@@ -182,19 +181,18 @@ displayed last, and you will have to scroll up to view the most recent revisions
 .. index:: branch; creating
 
 
-
 *Creating a Branch from openmdao on Launchpad*
 ++++++++++++++++++++++++++++++++++++++++++++++
 
-You need to be in your OpenMDAO working directory (e.g., pziegfel, ktmoore1), so type:
+From your working directory (e.g., pziegfel, ktmoore1), type:
 
 ::
 
-  %cd /OpenMDAO/dev/<your_working_directory>  	     (Takes you to your working_directory.)
-  %bzr branch lp:openmdao <branchname>               (Creates branch from openmdao on Launchpad.)
+  cd /OpenMDAO/dev/<your_working_directory>  	    (Takes you to your working_directory.)
+  bzr branch lp:openmdao <branchname>               (Creates branch from openmdao on Launchpad.)
   Example:
-  %bzr branch lp:openmdao T30-user_guide_updates     (Creates branch: "T30-user_guide_updates" where "T30" is 
-                                                     the Trac ticket number.)
+  bzr branch lp:openmdao T30-user_guide_updates     (Creates branch: "T30-user_guide_updates" where "T30" is 
+                                                    the Trac ticket number.)
 
 Your Trac ticket number and branch number should correspond. When working on your branch, be sure
 to add any new files that you create using the ``bzr add`` command. You can use the command to
@@ -203,9 +201,10 @@ latter case, everything in the current directory will be added. So, if you enter
 your branch, all unadded directories and files will be added.
 
 
-.. index:: branch; building on
+.. index:: branch; building 
 
 .. _Building-on-Your-Branch:
+
 
 *Building on Your Branch*
 +++++++++++++++++++++++++
@@ -214,124 +213,64 @@ If you are in your home directory, type:
 
 ::
 
-  %cd /OpenMDAO/dev/<your_working_directory>/<branchname>  (Takes you to your branch.)
-  %cd /buildout			                           (Takes you to the "buildout" directory.) 
-  %repo.py fix					           (Cleans up permissions and files after branching from openmdao
-							   trunk on Launchpad.)
-  %python2.6 isolated_bootstrap.py                         (Runs the script needed before you can build the first time.)
-  %bin/buildout			                           (Builds on your branch.)		
-  %bin/docs			                           (Displays the documentation.)  			
+  cd /OpenMDAO/dev/<your_working_directory>/<branchname>  (Takes you to your branch.)
+  cd /buildout			                          (Takes you to the "buildout" directory.) 
+  repo.py fix					          (Cleans up permissions and files after branching from openmdao trunk on Launchpad.)
+  python2.6 isolated_bootstrap.py                         (Runs the script needed before you can build the first time.)
+  bin/buildout			                          (Builds on your branch.)		
+  bin/docs			                          (Displays the documentation.)  			
   
-.. note:: As mentioned above, you should run ``repoy.py fix" after you branch from Launchpad. Before building the first time
+.. note:: As mentioned above, you should run ``repy.py fix`` after you branch from Launchpad. Before building the first time
    on your branch, you must run the ``python2.6 isolated_bootstrap.py`` script. However, for subsequent builds, only
-   ``bin/buildout`` is required  (or ``bin/sphinx-build`` to update just the documents.) 
+   ``bin/buildout`` is required (or ``bin/sphinx-build``, to update just the documents). 
 
 
 .. index:: branch; merging to
+
 
 *Merging openmdao to Your Branch*
 +++++++++++++++++++++++++++++++++
 
 As you work on your branch, you may want to update it from openmdao ``trunk`` on Launchpad to avoid conflicts
-when you push back the trunk. Type:
+when you push back to the trunk (for those users who have permission to do this). Type:
 
 ::
 
-  %cd /OpenMDAO/dev/<branchname>   (Takes you to the branch you want to merge to.)
+  cd /OpenMDAO/dev/<branchname>    (Takes you to the branch you want to merge to.)
   Example:
-  %cd /OpenMDAO/dev/pziegfel/T30-user_guide_updates
+  cd /OpenMDAO/dev/pziegfel/T30-user_guide_updates
   
-  %bzr status		  	   (Checks your branch for uncommitted changes; you cannot merge if you have any.)
+  bzr status		  	   (Checks your branch for uncommitted changes; you cannot merge if you have any.)
   
-If you have uncommitted changes, use the ``bzr commit`` command. If you have no uncommitted changes, go
+If you have uncommitted changes, use the ``bzr commit`` command (below). If you have no uncommitted changes, go
 straight to the ``buildout`` directory.
 
 ::
   
-  %bzr commit -m "<commit_message>"  (Commits changes and allows you to add a commit message. [You may omit the "-m" and press "Enter." 
-                                      NEdit will opens a file where you can add the commit message.])
-  %cd buildout 		             (Takes you to your "buildout" directory.)
-  %bin/buildout		             (Makes sure your branch builds before you merge to it [and after your commit, if applicable].)
-  %bin/docs 		             (Checks that docs display correctly. Optional if no doc changes.)	
-  %bin/test --all 	             (Runs the test suite; all tests should pass before you merge.)
-  %bzr merge lp:openmdao             (Merges from openmdao on Launchpad to your branch.)
+  bzr commit -m "<commit_message>"  (Commits changes and allows you to add a commit message on the command line. Omit the
+				    "-m" and press "Enter" to enter the required a message using your default text editor.)
+  cd buildout 		            (Takes you to your "buildout" directory.])
+  bin/buildout		            (Makes sure your branch builds before you merge to it [and after your commit, if applicable].)
+  bin/docs 		            (Checks that docs display correctly. Optional if no doc changes.)	
+  bin/test --all 	            (Runs the test suite; all tests should pass before you merge.)
+  bzr merge lp:openmdao             (Merges from openmdao on Launchpad to your branch.)
 
-You must resolve any conflicts that come up during the merge. If conflicts arise, see :ref:`if you have a
-conflict <if-you-have-a-conflict>`. After you have resolved any conflicts or if you had none, type:
+**- If you have no conflicts,** you can continue. Type:
 
 ::
 
-  %bin/buildout    		       (Makes sure you can build on the branch after the merge.)
-  %bin/test --all		       (Makes sure the tests pass after merging and before committing the changes.)
-  %bzr status			       (Lists pending changes & merges, since merged files have not yet been committed.)
-  %bzr commit                          (Commits changes from the merge and allows you to add the REQUIRED commit message.) 
-  %repo.py fix			       (Runs the cleanup script on your branch. Run this after merging or branching from Launchpad.)
-  %bzr python2.6 isolated_bootstrap.py (Runs required script before first build after the merge.)
-  %bin/buildout    		       (Builds on the branch after the merge.)
+  repo.py fix			       (Runs the cleanup script on your branch. Run this after merging or branching from Launchpad.)
+  bzr python2.6 isolated_bootstrap.py  (Runs required script before first build after the merge.)
+  bin/buildout    		       (Builds on the branch after the merge.)
+  bin/test --all		       (Confirms that all tests pass.)
   
-.. index:: branch; merging from
- 
+You may now continue working on your branch.
 
-*Merging Your Branch to openmdao on Launchpad*
-++++++++++++++++++++++++++++++++++++++++++++++
-
-.. note:: Update for pushing back to launchpad
-
-You need to commit your changes to your local repository before merging your branch to ``working_main``. When
-you commit changes, you must add comments about the revision. If you forget to add "-m" and/or the commit message,
-you will automatically go into a file in NEdit, a text editor. Enter your commit comments and save them when
-exiting.
-
-::
-
-  %cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>        (Takes you to the branch to be merged.) 
-  %bzr status			       (Checks for uncommitted changes. You cannot merge if there are any.)
-  %bzr commit -m "<commit_message>"    (Needed only if you have uncommitted changes.)       
-  %cd buildout			       (Takes you to the "buildout" directory.)
-  %bin/buildout 		       (Builds your branch. You should be able to build without errors or warnings.)
-  %bin/test --all	               (Runs the test suite. Tests should pass on your branch before you merge.)
-  %cd ../../shared/working_main	       (Takes you up two levels and then to "working_main."
-  %bzr status			       (Checks to make sure there are no pending merges.)
-  %bzr merge /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>  (Merges your branch to "working_main.")
-
-Bazaar will merge your branch to ``working_main`` and then list all added, removed, and modified files. It will
-also list any conflicts. 
-
-- If you have **NO** conflicts, you can build, commit, and fix permissions on ``working_main``. On
-  ``working_main``, type the following:
-
-::
-
-  %cd /buildout		             	
-  %python2.6 isolated_bootstrap.py    (Required script that must be run before building on "working_main.")
-  %bin/buildout 		      (Makes sure you can build on "working_main" after the merge.)
-  %bin/docs			      (Displays the documentation.)
-  %bin/test --all		      (Runs the test suite. All tests must pass before you can commit your  
-                                       changes to "working_main.")	
-  
-
-.. note::
-   If tests passed on your branch but do not pass on ``working_main``, you must revert the changes and contact
-   bret.a.naylor@nasa.gov to resolve any issues. See :ref:`Canceling a Merge and Reverting Changes
-   <Canceling-a-Merge-and-Reverting-Changes>`.
- 
-If all tests passed, you may continue with the merge process.
-   
-::
-
-  %bzr status			      (Lists pending changes & merges that have not yet been committed.)	
-  %bzr commit -m "<commit_message>"   (Commits changes from the merge to "working_main.")
-  %repo.py fix 	    		      (Always run this script after building on "working_main." It fixes any file 
-                                       permissions that may have gotten changed during the merge and cleans up 
-				       temporary files created during the buildout.) 
-				     
 
 .. _`if-you-have-a-conflict`:
 
-- If you **HAVE** a conflict, you must resolve it:
-
-Bazaar will display the changes in files or directories and will also indicate the number of conflicts and where they
-occurred. See the following example:
+**- If you HAVE a conflict,** Bazaar will display not only the changes in files or directories, but it will also indicate the number of
+conflicts and where they occur. See the following example:
 
 
 .. figure:: ../images/quick-ref/merge_conflict.png
@@ -340,17 +279,22 @@ occurred. See the following example:
    Example of Conflicts When Merging
 
 
-In the above example the "+N" indicates new files or directories. The "M" indicates modified files or
-directories. If a file or directory is deleted, "-D" appears before its name.
+In the above example, the "+N" indicates new files or directories. The "M" indicates modified files or directories.
+If a file or directory is deleted, "-D" appears before its name. In this example there are two conflicts that must
+be resolved before proceeding. 
 
-.. note:: The graphical interface is not part of Bazaar and is available only to
-   developers at Glenn Research Center (GRC). 
+If you have a conflict, please refer to `Resolving Conflicts <http://doc.bazaar.canonical.com/bzr.2.1/en/user-guide/resolving_conflicts.html>`_ in
+the *Bazaar User Guide.*
+
+.. note:: A graphical interface (not part of Bazaar) is available to developers at Glenn Research Center (GRC)
+	  who are working on the project's Linux server. The rest of this section discusses to how to use it to resolve
+	  conflicts.
 
 To bring up a graphical interface for displaying the conflicts, type the following:
 
 :: 
   			
-  %conrez.py
+  conrez.py
 
 Bazaar automatically creates three versions of the file in conflict, each with a
 different suffix. The files appear in columns across the screen, left to right, in the
@@ -363,7 +307,7 @@ order listed here:
 
 .. note::
 
-   When you are merging to ``trunk``, your file will be ``.OTHER`` and ``trunk`` will be ``THIS``.
+   When you are pushing to ``trunk``, your file will be ``.OTHER`` and ``trunk`` will be ``THIS``.
    However, if you are merging out from ``trunk`` to update your branch, ``.OTHER`` will be ``trunk``,
    and ``.THIS`` will be your branch.
 
@@ -394,41 +338,48 @@ commit your changes. Type:
 
 ::
 
-  %bzr conflicts    		     (Checks to see if there are still conflicts. Displays them if there are.)
-  %cd /buildout			     (Takes you to the "buildout" directory.)
-  %python2.6 isolated_bootstrap.py   (Required script that must be run before building on "working_main.")
-  %bin/buildout 		     (Builds the branch.)						
-  %bin/docs		             (Displays the documentation.)
-  %bin/test --all		     (All tests should pass before you commit.)	
-  %bzr status			     (Shows all the merged files from "working_main" that have not yet been  
-                                      committed on your branch.)		
-  %bzr commit -m "<commit_message>"  (Commits merged files on your branch and allows you to enter a commit message.)
-  %repo.py fix 	  		     (Runs a script to fix file permissions that may have gotten changed when you 
-                                      did a buildout. Always run this script after building on "working_main.") 
+  bzr conflicts    		     (Checks to see if there are still conflicts. Displays them if there are.)
+  repo.py fix 	  		     (Runs the cleanup script on your branch. Run this after branching or merging from Launchpad.)
+  python2.6 isolated_bootstrap.py    (Required script that must be run before building the first time after branching or merging
+                                     from Launchpad.)
+                                     merging to a branch.)
+  bin/buildout 		             (Builds the branch.)						
+  bin/docs		             (Displays the documentation [optional].)
+  bin/test --all		     (All tests should pass before you commit.)	
+  
+You may now continue working on your branch.
+ 
+ 
 
+*Pushing Your Branch to openmdao on Launchpad*
+++++++++++++++++++++++++++++++++++++++++++++++
+
+Please see the *Developer's Guide,* :ref:`Pushing-a-Branch-Back-to-Launchpad` for detailed instructions on how to push a branch back
+to Launchpad. 
 
 .. index:: merge; canceling
 .. index:: reverting changes
 
 .. _`Canceling-a-Merge-and-Reverting-Changes`:
 
+
 *Canceling a Merge and Reverting Changes*
 +++++++++++++++++++++++++++++++++++++++++
 
-If you encounter a problem when merging and the issue cannot be resolved quickly, you can cancel the
+If you encounter a problem when merging openmdao to your branch, and the issue cannot be resolved quickly, you can cancel the
 merge by using the ``revert`` command. Type:
 
 ::
 
-  %bzr revert		(Reverts to the previous revision and removes uncommitted changes.)
+  bzr revert		(Reverts to the previous revision and removes uncommitted changes.)
 
 You can also use this command if you do not want to commit changes you've made. In this case, it is a
 good idea to see what files will be removed, so type:
 
 ::
 
-  %bzr diff		(Shows differences [additions, deletions] between two files.)			      
-  %bzr revert		(Reverts to the previous revision.)
+  bzr diff		(Shows differences [additions, deletions] between two files.)			      
+  bzr revert		(Reverts to the previous revision.)
   
   
 .. index:: branch; working on
@@ -481,9 +432,9 @@ The script ``repo.py`` is a utility script for manipulating and navigating in re
        fix    -- fix permissions
 
     Options:
-      -h, --help     show this help message and exit
-      -f, --force    forced unlock
-      -v, --verbose  print info messages
+      -h, --help      show this help message and exit
+      -f, --force     forced unlock
+      -v, --verbose   print info messages
 
 *Repository* is a directory under ``/OpenMDAO/dev/<username>`` or
 ``/OpenMDAO/dev/shared``.

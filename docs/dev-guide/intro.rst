@@ -1,11 +1,10 @@
 Introduction to OpenMDAO Development Process
 --------------------------------------------
 
-This is the beginning of the documentation for OpenMDAO developers that
-attempts to explain the OpenMDAO development process and how to interact
-with the various tools the project uses for configuration management,
-testing, deployment, etc.  The source files for this tutorial can be found
-in the ``docs/dev-guide`` directory in the top level directory of your
+This documentation for OpenMDAO developers attempts to explain the OpenMDAO
+development process and how to interact with the various tools the project uses for
+configuration management, testing, deployment, etc.  The source files for this tutorial
+can be found in the ``docs/dev-guide`` directory in the top level directory of your
 OpenMDAO source :term:`branch`. 
 
 .. index:: zc.buildout
@@ -106,16 +105,8 @@ You can get a copy of the repository as follows:
 
     bzr branch lp:openmdao <your_branch_name>
 
-
-Patches can be submitted in the form of bazaar merge directives to
-``patches@openmdao.org``.  To create a merge directive, type the following
-from inside of your repository:
-
-::
-
-    bzr send -o <my_merge_directive_filename>
-    
-Then just take the file you created and email it to ``patches@openmdao.org``.
+To submit patches you must upload your branch to the openmdao repository on Launchpad
+and request that it be merged. Please see :ref:`Pushing-a-Branch-Back-to-Launchpad`
 
 
 .. index:: source repository

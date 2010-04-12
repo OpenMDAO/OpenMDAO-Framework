@@ -11,7 +11,7 @@ import shutil
 import sys
 import unittest
 
-from openmdao.main.resource import ClusterAllocator
+from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.util.testutil import find_python
 
 # Users who have ssh configured correctly for testing.
@@ -88,6 +88,40 @@ class TestCase(unittest.TestCase):
 
         n_servers = self.cluster.max_servers({'python_version':'bad-version'})
         self.assertEqual(n_servers, 0)
+
+    def test_hostnames(self):
+        logging.debug('')
+        logging.debug('test_hostnames')
+
+        # Ensure we aren't held up by local host load problems.
+        local = ResourceAllocationManager.get_allocator(0)
+        local.max_load = 10
+
+        hostnames = ResourceAllocationManager.get_hostnames({'n_cpus': 1})
+        self.assertEqual(hostnames[0], platform.node())
+        
+    def test_resources(self):
+        logging.debug('')
+        logging.debug('test_resources')
+
+        # Ensure we aren't held up by local host load problems.
+        local = ResourceAllocationManager.get_allocator(0)
+        local.max_load = 10
+
+        result = ResourceAllocationManager.allocate({'localhost':False})
+        self.assertEqual(result, (None, None))
+
+        result = ResourceAllocationManager.allocate({'n_cpus':1000000})
+        self.assertEqual(result, (None, None))
+
+        result = ResourceAllocationManager.allocate({'orphan_modules':'xyzzy'})
+        self.assertEqual(result, (None, None))
+
+        result = ResourceAllocationManager.allocate({'python_version':'xyzzy'})
+        self.assertEqual(result, (None, None))
+
+        result = ResourceAllocationManager.allocate({'xyzzy':None})
+        self.assertEqual(result, (None, None))
 
     def test_bad_host(self):
         logging.debug('')

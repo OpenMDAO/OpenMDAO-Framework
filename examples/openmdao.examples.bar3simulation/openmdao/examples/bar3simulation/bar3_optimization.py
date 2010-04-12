@@ -4,7 +4,8 @@
 
 # Optimize the bar3 design using the driving_sim component.
 
-from openmdao.main.api import Assembly
+# pylint: disable-msg=E0611,F0401
+from openmdao.main.api import Assembly, set_as_top
 from openmdao.lib.api import Float, CONMINdriver
 
 #from openmdao.examples.bar3simulation.bar3 import Bar3Truss
@@ -12,6 +13,10 @@ from openmdao.examples.bar3simulation.bar3_wrap_f import Bar3Truss
 
 class Bar3Optimization(Assembly):
     """ Top level assembly for optimizing a three bar truss. """
+
+    # set up interface to the framework  
+    # pylint: disable-msg=E1101
+    
     # Constraint allowables
     bar1_stress_allowable = Float(20., iotype='in',
                         units='lb/(inch*inch)',
@@ -84,8 +89,11 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
 
+    # pylint: disable-msg=E1101
+
     opt_bar3 = Bar3Optimization("Top")
- 
+    set_as_top(opt_bar3)
+
     def prz(title):
         """ Print before and after"""
         

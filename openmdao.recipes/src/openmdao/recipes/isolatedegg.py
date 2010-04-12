@@ -83,6 +83,12 @@ sys.path = [  prefx+'.zip',
                ]
                 """
             
+            new_sp += """
+if 'OPENMDAO_PATH' in os.environ:
+    for path in os.environ['OPENMDAO_PATH'].split(os.pathsep):
+        sys.path.append(path)
+"""
+
             self._script_template = zc.buildout.easy_install.script_template.replace(old_sp,new_sp)
             self._py_script_template = zc.buildout.easy_install.py_script_template.replace(old_sp,new_sp)
 

@@ -299,6 +299,13 @@ Glossary
       **PIL**
         Python Imaging Library
 	
+	
+      **pip**
+	pip installs Python packages. It is a replacement for ``easy_install`` and uses mostly
+	the same techniques for finding packages, so packages that were made easy_installable
+	should be pip-installable as well.
+
+
       
       **plugin**
         A computer program that interacts with a host aplication to

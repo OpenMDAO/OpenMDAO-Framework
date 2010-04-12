@@ -7,6 +7,7 @@
 # the velocity and commanded throttle/gear positions given a set of design.
 # parameters.
 
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.api import implements, Interface
 
 from openmdao.main.api import Assembly, set_as_top
@@ -134,23 +135,23 @@ class Vehicle(Assembly):
         
 if __name__ == "__main__": # pragma: no cover    
     top = set_as_top(Assembly())
-    z = top.add_container('Testing', Vehicle())      
-    z.current_gear = 1
-    z.velocity = 20.0*(26.8224/60.0)
-    #z.throttle = .2
+    our_vehicle = top.add_container('Testing', Vehicle())      
+    our_vehicle.current_gear = 1
+    our_vehicle.velocity = 20.0*(26.8224/60.0)
+    #our_vehicle.throttle = .2
     #for throttle in xrange(1,101,1):
-    #    z.throttle = throttle/100.0
-    z.throttle = 1.0
-    z.run()
-    print z.acceleration
+    #    our_vehicle.throttle = throttle/100.0
+    our_vehicle.throttle = 1.0
+    our_vehicle.run()
+    print our_vehicle.acceleration
     
-    def prz(zz):
+    def prz(vehicle):
         """ Printing the results"""
-        print "Accel = ", zz.acceleration
-        print "Fuelburn = ", zz.fuel_burn
-        print "(power, torque) ", zz.power, zz.torque
-        print "RPM = ", zz.engine.RPM
+        print "Accel = ", vehicle.acceleration
+        print "Fuelburn = ", vehicle.fuel_burn
+        print "(power, torque) ", vehicle.power, vehicle.torque
+        print "RPM = ", vehicle.engine.RPM
         
-#    prz(z)
+#    prz(our_vehicle)
 
 # End vehicle.py 

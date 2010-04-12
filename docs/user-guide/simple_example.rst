@@ -217,13 +217,13 @@ the Python file ``optimization_unconstrained.py``:
 	from openmdao.lib.api import CONMINdriver
 	from openmdao.examples.simple.paraboloid import Paraboloid
 
-	class Optimization_Unconstrained(Assembly):
+	class OptimizationUnconstrained(Assembly):
     	    """ Top level assembly for optimizing a vehicle. """
     
     	    def __init__(self, directory=''):
                 """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
-	        super(Optimization_Unconstrained, self).__init__(directory)
+	        super(OptimizationUnconstrained, self).__init__(directory)
 
 	        # Create Paraboloid component instances
 	        self.add_container('paraboloid', Paraboloid())
@@ -266,18 +266,18 @@ of Component. This gives it access to the management functions mentioned above.
 	from openmdao.main.api import Assembly
 	from openmdao.lib.api import CONMINdriver
 	from openmdao.examples.simple.paraboloid import Paraboloid
-	from openmdao.examples.simple.optimization_unconstrained import Optimization_Unconstrained
+	from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
 	
-	self = Optimization_Unconstrained()
+	self = OptimizationUnconstrained()
 	
 .. testcode:: simple_model_Unconstrained_pieces
 
-	class Optimization_Unconstrained(Assembly):
+	class OptimizationUnconstrained(Assembly):
     	    """ Top level assembly for optimizing a vehicle. """
     
 For the Paraboloid component, we created an execute function to tell it what to
 do when the component is run. This is not needed for the 
-*Optimization_Unconstrained* assembly because the Assembly class already has an
+*OptimizationUnconstrained* assembly because the Assembly class already has an
 execution function that should be usable for most cases. However, this assembly
 does need an initialize function to set parameters for the optimization. This
 is done using the *__init__* function.
@@ -287,7 +287,7 @@ is done using the *__init__* function.
     	    def __init__(self, directory=''):
                 """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
-	        super(Optimization_Unconstrained, self).__init__(directory)
+	        super(OptimizationUnconstrained, self).__init__(directory)
 
 .. index:: StringRef, constructor
 		
@@ -380,24 +380,27 @@ the shell. So, the final lines in this file are:
 
 .. testsetup:: simple_model_Unconstrained_run
 
-	from openmdao.examples.simple.optimization_unconstrained import Optimization_Unconstrained
+	from openmdao.main.api import set_as_top
+	from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
 	__name__ = "__main__"
 
 .. testcode:: simple_model_Unconstrained_run
 
 	if __name__ == "__main__": 
 
-	    opt_problem = Optimization_Unconstrained("Top")
+	    opt_problem = OptimizationUnconstrained("Top")
+	    set_as_top(opt_problem)
 	    opt_problem.run()
 
 	    print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.get("x"), \
                                                  opt_problem.paraboloid.get("y"))
 						 
-This fragment of code really does just three things. In the first statement, an
-instance of the class *Optimization_Unconstrained* is created with the name 
-*opt_problem.* In the second statement, *opt_problem* is told to run, which executes
+This fragment of code really does just four things. In the first statement, an
+instance of the class *OptimizationUnconstrained* is created with the name 
+*opt_problem.* In the second statement, *opt_problem* is set as the top assembly in
+the model hierarchy. In the third statement, *opt_problem* is told to run, which executes
 the model until the optimizer's termination criteria are reached. Finally, the 
-third statement prints the results.
+fourth statement prints the results.
 
 This script can be executed in the shell by going to the
 ``...../openmdao/examples/simple`` directory, and typing:
@@ -412,7 +415,7 @@ This should produce the output:
 
     Minimum found at (6.666309, -7.333026)
 
-An *Optimization_Unconstrained* top level Assembly is instantiated and given the
+An *OptimizationUnconstrained* top level Assembly is instantiated and given the
 name *opt_problem.* This created the problem and instantiates a Paraboloid and
 a CONMIN driver. The run function is used to run the model, which solves the
 optimization problem as set up above. And last, the final design variables are
