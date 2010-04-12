@@ -88,6 +88,7 @@ available in this module by using the *dir()* command in Python:
     __name__
     __package__
     create
+    enable_console
     get_available_types
     logger
     set_as_top
@@ -139,6 +140,7 @@ Most of these items are also explained elsewhere in the *User's Guide.*
     __file__
     __name__
     __package__
+    convert_units
     pyevolvedriver
 
 *The Model Hierarchy*
