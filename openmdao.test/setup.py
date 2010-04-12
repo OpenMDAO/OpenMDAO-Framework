@@ -53,7 +53,7 @@ setup(name='openmdao.test',
           'openmdao.test.Box = openmdao.test.Box:Box'
       ],
       "console_scripts": [
-          'openmdaotest = openmdao.test.testing:run_openmdao_suite'
+          'openmdao_test = openmdao.test.testing:run_openmdao_suite'
           ]
       },
       )
