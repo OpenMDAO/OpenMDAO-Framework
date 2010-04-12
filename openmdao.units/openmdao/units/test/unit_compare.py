@@ -16,7 +16,7 @@ t1 = time.time()
 
 for jj in xrange(n):
     pq = case1.PhysicalQuantity(5, 'mi/h')
-    pq.convertToUnit('m/s')
+    pq.convert_to_unit('m/s')
     pq2 = pq**2
     pq2 = pq**2
     pq2 = pq*pq
@@ -37,7 +37,7 @@ t2 = time.time()
 
 for jj in xrange(n):
     pq = case2.PhysicalQuantity(5, 'mi/h')
-    pq.convertToUnit('m/s')
+    pq.convert_to_unit('m/s')
     pq2 = pq**2
     pq2 = pq*pq
     pq2 = pq/pq
@@ -56,7 +56,7 @@ print "Justin -> Elapsed time: ", time.time()-t2
 stmt = """
 for jj in xrange(n):
     pq = case1.PhysicalQuantity(5, 'mi/h')
-    pq.convertToUnit('m/s')
+    pq.convert_to_unit('m/s')
     pq2 = pq**2
     pq2 = pq**2
     pq2 = pq*pq
@@ -75,7 +75,7 @@ cProfile.run(stmt)
 stmt = """
 for jj in xrange(n):
     pq = case2.PhysicalQuantity(5, 'mi/h')
-    pq.convertToUnit('m/s')
+    pq.convert_to_unit('m/s')
     pq2 = pq**2
     pq2 = pq*pq
     pq2 = pq/pq

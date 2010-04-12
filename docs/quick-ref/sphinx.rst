@@ -26,9 +26,9 @@ Some Basics
 * You need at least one space between words and after periods. Extra spaces are
   ignored. 
   
-* Use one asterisk for emphasis (*italics*): ``*text*`` 
+* Use one asterisk for emphasis (*italics*): ``*italics*`` 
 
-* Use two asterisks for strong emphasis (**boldface**) ``**text**`` 
+* Use two asterisks for strong emphasis (**boldface**) ``**boldface**`` 
 
 * When numbering items (such as steps in a task or process), DO NOT indent the numbers -- put them
   flush left. When numbers are indented, they do not display correctly in Internet Explorer (although

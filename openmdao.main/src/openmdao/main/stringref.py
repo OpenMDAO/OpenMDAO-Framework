@@ -1,13 +1,20 @@
+"""
+A public variable that references another member of the OpenMDAO model
+hierarchy.
+"""
+
 #public symbols
 __all__ = ['StringRef', 'StringRefArray']
 
 
+# pylint: disable-msg=E0611,F0401
 from enthought.traits.api import BaseStr, List, TraitError
 from enthought.traits.trait_handlers import NoDefaultSpecified
 
 from openmdao.main.expreval import ExprEvaluator
 
 class DumbDefault(object):
+    """Dummy object for default, when none is given."""
     def __getattr__(self, name):
         raise TraitError('StringRef: string reference is undefined')
             
@@ -40,8 +47,9 @@ class StringRef(BaseStr):
         
         Note: The 'fast validator' version performs this check in C.
         """
+        # normal string validation
+        s = super(StringRef, self).validate(object, name, value) 
         
-        s = super(StringRef, self).validate(object, name, value) # normal string validation
         try:
             if self.iotype == 'out':
                 s = ExprEvaluator(s, object, single_name=True)
@@ -49,8 +57,8 @@ class StringRef(BaseStr):
                 s = ExprEvaluator(s, object)
             s._parse()
         except RuntimeError:
-            raise TraitError("invalid %sput ref variable value '%s'"%(self.iotype,
-                                                                        str(value)))
+            raise TraitError("invalid %sput ref variable value '%s'" % \
+                             (self.iotype, str(value)))
         return s
     
     
@@ -59,6 +67,6 @@ class StringRefArray(List):
     
     def __init__(self, **metadata):
         self.iotype = metadata.get('iotype', 'in')
-        super(StringRefArray, self).__init__(trait=StringRef(iotype=self.iotype), 
-                                             **metadata)
+        super(StringRefArray, self).__init__(trait=StringRef( \
+                            iotype=self.iotype), **metadata)
     

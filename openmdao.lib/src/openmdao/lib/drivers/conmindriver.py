@@ -11,8 +11,10 @@ __all__ = ['CONMINdriver']
 
 from sys import float_info
 
+# pylint: disable-msg=E0611,F0401
 import numpy.numarray as numarray
-import numpy
+from numpy import ndarray
+from numpy import float as numpy_float
 
 from enthought.traits.api import on_trait_change, TraitError, Array
                                  
@@ -169,15 +171,15 @@ class CONMINdriver(Driver):
                       desc= 'A string containing the objective function \
                             expression.')
     
-    upper_bounds = Array(dtype=numpy.float, iotype='in',
+    upper_bounds = Array(dtype=numpy_float, iotype='in',
         desc='Array of constraints on the maximum value of each design \
               variable.')
     
-    lower_bounds = Array(dtype=numpy.float, iotype='in', 
+    lower_bounds = Array(dtype=numpy_float, iotype='in', 
         desc='Array of constraints on the minimum value of each design \
               variable.')
 
-    scal = Array(dtype=numpy.float, iotype='in', 
+    scal = Array(dtype=numpy_float, iotype='in', 
         desc='Array of scaling factors for the design variables.')
 
     # Control parameters for CONMIN.
@@ -538,14 +540,14 @@ class CONMINdriver(Driver):
         """
         common = self.cnmn1
         for name, value in common.__dict__.items():
-            if isinstance(value, numpy.ndarray):
+            if isinstance(value, ndarray):
                 setattr(common, name, getattr(conmin.cnmn1, name).copy())
             else:
                 setattr(common, name, type(value)(getattr(conmin.cnmn1, name)))
         
         consav = self.consav
         for name, value in consav.__dict__.items():
-            if isinstance(value, numpy.ndarray):
+            if isinstance(value, ndarray):
                 setattr(consav, name, getattr(conmin.consav, name).copy())
             else:
                 setattr(consav, name, type(value)(getattr(conmin.consav, name)))
