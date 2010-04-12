@@ -24,22 +24,8 @@ def assert_rel_error(test_case_instance, actual, desired, tolerance):
 
 
 def find_python():
-    """ Return path to the OpenMDAO python command in buildout/bin. """
-    path = sys.modules[__name__].__file__
-    while path:
-        if os.path.exists(os.path.join(path, 'buildout')):
-            break
-        path = os.path.dirname(path)
-    if path:
-        python = os.path.join(path, 'buildout', 'bin', 'python')
-        if sys.platform == 'win32':
-            python += '.exe'
-        if os.path.exists(python):
-            return python
-        else:
-            raise RuntimeError("Can't find OpenMDAO python command.")
-    else:
-        raise RuntimeError("Can't find OpenMDAO buildout directory.")
+    """ Return path to the OpenMDAO python command"""
+    return sys.executable
 
 
 def make_protected_dir():

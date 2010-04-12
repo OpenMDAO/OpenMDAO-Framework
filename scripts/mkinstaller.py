@@ -33,7 +33,7 @@ def _single_install(cmds, req, bin_dir):
     cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
     #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     logger.debug("running command: %%s" %% ' '.join(cmdline))
-    subprocess.check_call(cmdline)
+    subprocess.call(cmdline)
 
 def after_install(options, home_dir):
     global logger
