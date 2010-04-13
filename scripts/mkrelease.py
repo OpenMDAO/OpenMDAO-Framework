@@ -80,6 +80,24 @@ def _build_dist(build_type, destdir):
              'error while building egg in %s (return code=%d): %s'
               % (os.getcwd(), ret, out))
 
+def _has_checkouts():
+    cmd = 'bzr status -S'
+    p = Popen(cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
+    out = p.communicate()[0]
+    ret = p.returncode
+    if ret != 0:
+        logging.error(out)
+        raise RuntimeError(
+             'error while getting status of bzr repository from directory %s (return code=%d): %s'
+              % (os.getcwd(), ret, out))
+    for line in out.split('\n'):
+        # in the bzr status short output, any of the letters N,D,K, or M in the 2nd column
+        # indicate that an uncommitted change exists in the repository
+        # TODO: find a more robust way to do this
+        if line[1] in 'NDKM':
+            return True
+    return False
+
 def _build_sdist(projdir, destdir):
     """Build an sdist out of a develop egg."""
     os.chdir(projdir)
@@ -158,6 +176,24 @@ except ImportError:
         shutil.rmtree(tdir)
     
 def main():
+    """Create an OpenMDAO release, placing the following file in the specified destination
+    directory:
+    
+        - a tar file of the repository
+        - source distribs of all of the openmdao subpackages
+        - an openmdao empty top level distrib that does nothing but depend on
+          all of the openmdao subpackages (so someone can 'openmdao' and get
+          everything they need)
+        - an installer script for the released version of openmdao that will
+          create a virtualenv and populate it with all of the necessary
+          dependencies needed to use openmdao
+          
+    In order to run this, you must be in a bzr repository that has not changed since
+    the last commit, and in the process of running, a number of releaseinfo.py files
+    will be updated with new version information and will be commited with the 
+    comment 'updated revision info files'.
+        
+    """
     parser = OptionParser()
     parser.add_option("-d", "--destination", action="store", type="string", dest="destdir",
                       help="directory where distributions will be placed")
@@ -170,17 +206,19 @@ def main():
         sys.exit(-1)
         
     topdir = _find_top_dir()
+    
+    if _has_checkouts():
+        print 'ERROR: Creating a release requires that all changes have been committed'
+        sys.exit(-1)
+        
     destdir = os.path.realpath(options.destdir)
     if not os.path.exists(destdir):
         os.makedirs(destdir)
 
     releaseinfo_str = get_releaseinfo_str(options.version)
     startdir = os.getcwd()
-    tarname = os.path.join(destdir, 
+    tarname = os.path.join(destdir,
                            'openmdao_src-%s.tar.gz' % options.version)
-    print 'exporting archive of repository to %s' % tarname
-    check_call(['bzr', 'export', '%s' % tarname])
-    
     print 'creating bootstrapping installer script go-openmdao.py'
     installer = os.path.join(os.path.dirname(__file__),'mkinstaller.py')
     check_call([sys.executable, installer, '--version=%s' % options.version,
@@ -195,10 +233,25 @@ def main():
             else:
                 os.chdir(pdir)
             create_releaseinfo_file(project_name, releaseinfo_str)
+            
+        check_call(['bzr', 'commit', '-m', '"updating release info files"'])
+
+        for project_name in openmdao_packages:
+            pdir = os.path.join(topdir, 
+                                openmdao_packages[project_name][0], 
+                                project_name)
+            if 'src' in os.listdir(pdir):
+                os.chdir(os.path.join(pdir, 'src'))
+            else:
+                os.chdir(pdir)
             print 'building %s' % project_name
             _build_sdist(pdir, destdir)
-        print 'building openmdao'    
+        print 'building openmdao'
         _create_pseudo_egg(options.version, destdir)
+        
+        print 'exporting archive of repository to %s' % tarname
+        check_call(['bzr', 'export', '%s' % tarname])
+    
     finally:
         os.chdir(startdir)
     

@@ -27,7 +27,7 @@ def adjust_options(options, args):
     ## setting use_distribute seems to force a local install even if package is already on sys.path
     #options.use_distribute = True  # force use of distribute instead of setuptools
     if len(args) == 0:
-        args.append('openmdao-%%s' %% %(version)s)
+        args.append('openmdao-%%s' %% '%(version)s')
     
 def _single_install(cmds, req, bin_dir):
     cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
