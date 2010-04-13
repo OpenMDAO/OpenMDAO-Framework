@@ -70,7 +70,7 @@ def _match(name, inlist):
     return False
     
 
-def parse_txt(name, meta, metadata):
+def _parse_txt(name, meta, metadata):
     metaname = os.path.splitext(os.path.basename(name))[0]
     metadata[metaname] = [x.strip() for x in meta.splitlines() 
                           if x.strip() != '']
@@ -111,7 +111,7 @@ def get_dist_metadata(dist, dirname=''):
             for md in get_dist_metadata(dist, path):
                 metadata[md[0]] = md[1]
         elif name.endswith('.txt'):
-            parse_txt(name, dist.get_metadata(path), metadata)
+            _parse_txt(name, dist.get_metadata(path), metadata)
         elif name == 'PKG-INFO':
             instr = StringIO.StringIO(dist.get_metadata(name))
             message = rfc822.Message(instr)
@@ -150,7 +150,7 @@ def _meta_from_tarfile(path):
                 for k,v in message.items():
                     metadata[k] = v                
             elif name.endswith('.txt'):
-                parse_txt(name, meta, metadata)
+                _parse_txt(name, meta, metadata)
             elif name.endswith('/not-zip-safe'):
                 metadata['zip-safe'] = False
             elif name.endswith('/zip-safe'):
@@ -183,7 +183,7 @@ def _meta_from_zipped_egg(path):
                 for k,v in message.items():
                     metadata[k] = v
             elif name.endswith('.txt'):
-                parse_txt(name, meta, metadata)
+                _parse_txt(name, meta, metadata)
             elif name.endswith('/not-zip-safe'):
                 metadata['zip-safe'] = False
             elif name.endswith('/zip-safe'):
