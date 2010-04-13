@@ -20,9 +20,9 @@ class VersionError(RuntimeError):
     pass
 
 def _check_version(version):
+    fname = 'openmdao.main-%s.tar.gz' % version
     with hide('running', 'stdout'):
         result = run('ls ~/dists')
-    fname = 'openmdao.main-%s.tar.gz' % version
     if fname in result:
         raise VersionError('Version %s already exists. Please specify a different version' % version)
     return version
@@ -81,16 +81,18 @@ def release(version=None):
             mode=0755)
 
         # build the docs
-        local(sys.executable+' '+ join(util_dir,'build_docs.py'),
-              capture=False)
+        #local(sys.executable+' '+ join(util_dir,'build_docs.py'),
+        #      capture=False)
 
-        os.chdir(join(doc_dir, '_build'))
+        #os.chdir(join(doc_dir, '_build'))
+        os.chdir(join(tmpdir, '_build'))
         try:
             local('tar czf %s %s' % (join(tmpdir,'docs.tar.gz'), 
                                      'html'),
                   capture=False)
         finally:
             os.chdir(startdir)
+        
         # put the docs on the server
         put(join(tmpdir,'docs.tar.gz'), '~/downloads/%s' % version) 
         with cd('~/downloads/%s' % version):
@@ -98,8 +100,12 @@ def release(version=None):
             run('mv html docs')
             run('rm -f docs.tar.gz')
 
+        # FIXME: just generate the index.html locally and upload it instead
+        # of having a bunch of mkdlversionindex.py files lying around on the
+        # server
         put(join(scripts_dir,'mkdlversionindex.py'), 
             '~/downloads/%s' % version)
+        
         # update the index.html for the version download directory on the server
         with cd('~/downloads/%s' % version):
             run('python2.6 mkdlversionindex.py')

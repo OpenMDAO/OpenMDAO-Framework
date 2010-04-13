@@ -176,7 +176,7 @@ except ImportError:
         shutil.rmtree(tdir)
     
 def main():
-    """Create an OpenMDAO release, placing the following file in the specified destination
+    """Create an OpenMDAO release, placing the following files in the specified destination
     directory:
     
         - a tar file of the repository
@@ -188,10 +188,12 @@ def main():
           create a virtualenv and populate it with all of the necessary
           dependencies needed to use openmdao
           
+    The sphinx docs will also be built.
+          
     In order to run this, you must be in a bzr repository that has not changed since
     the last commit, and in the process of running, a number of releaseinfo.py files
-    will be updated with new version information and will be commited with the 
-    comment 'updated revision info files'.
+    and the sphinx conf.py file will be updated with new version information and will 
+    be commited with the comment 'updated revision info and conf.py files'.
         
     """
     parser = OptionParser()
@@ -234,6 +236,12 @@ def main():
                 os.chdir(pdir)
             create_releaseinfo_file(project_name, releaseinfo_str)
             
+        # build the docs
+        util_dir = os.path.join(topdir,'openmdao.util',
+                                'src','openmdao','util')
+        check_call([sys.executable, os.path.join(util_dir,'build_docs.py')])
+        shutil.move(os.path.join(topdir,'docs','_build'), 
+                    os.path.join(destdir,'_build'))
         check_call(['bzr', 'commit', '-m', '"updating release info files"'])
 
         for project_name in openmdao_packages:
