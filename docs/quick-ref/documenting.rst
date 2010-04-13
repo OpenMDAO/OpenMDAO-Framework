@@ -222,20 +222,21 @@ Add ``new-guide/index`` in the desired location in the list of documents and sav
 Building and Displaying Documents
 ----------------------------------
 
-You must be in the ``buildout`` directory: 
+Your openmdao virtual development environment has scripts for building the sphinx documentation
+as well as viewing it.
 
 ::
 
-  cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>/buildout  (Takes you to "buildout" dir.)
-  bin/buildout  	(Builds the documentation as well as code files on your branch.)
-  bin/docs     	        (Displays the documentation in HTML using the Firefox browser.) 
+  cd /OpenMDAO/dev/<your_working_directory>/T<ticket#>-<branch_name>/devenv  (Takes you to your virtual environment.)
+  bin/openmdao_build_docs        (Builds the sphinx documentation)
+  bin/openmdao_docs              (Displays the documentation in HTML using the default browser.) 
 
-The above example assumes that you have built at least once on your branch. If you haven't, you need to run
-the script  ``python2.6 isolatedbootstrap.py`` before running ``bin/buildout``. For more information, refer to the section on
+The above example assumes that you have already created your virtual environment on your branch. 
+If you haven't, you need to run ``python2.6 go-openmdao-dev.py`` from the top directory in your
+branch repository.  For more information, refer to the section on
 :ref:`Building-on-your-branch` under *Bazaar Commands*. Note that to build the documents only, you may type
-``bin/sphinx-build``.
+``bin/openmdao_build_docs``.
 
-	
 
 
 
