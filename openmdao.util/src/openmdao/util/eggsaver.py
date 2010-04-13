@@ -208,7 +208,8 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
             if src_dir:
                 if py_dir != src_dir or sys.platform == 'win32':
                     # Copy original directory to object name.
-                    shutil.copytree(src_dir, name)
+#                    shutil.copytree(src_dir, name)
+                     _copytree(src_dir, name)
                 else:
                     # Just link original directory to object name.
                     os.symlink(src_dir, name)
@@ -291,6 +292,25 @@ def save_to_egg(entry_pts, version=None, py_dir=None, src_dir=None,
         _restore_objects(fixup)
 
     return (egg_name, required_distributions, orphan_modules)
+
+
+def _copytree(src_dir, dst_dir):
+    """
+    Approximate shutil.copytree(), ignores exceptions.
+    Avoids problems with trying to copy files we don't actually use anyway.
+    """
+    names = os.listdir(src_dir)
+    os.makedirs(dst_dir)
+    for name in names:
+        srcname = os.path.join(src_dir, name)
+        dstname = os.path.join(dst_dir, name)
+        try:
+            if os.path.isdir(srcname):
+                _copytree(srcname, dstname)
+            else:
+                shutil.copy2(srcname, dstname)
+        except Exception:
+            pass
 
 
 def _get_objects(root, logger):
