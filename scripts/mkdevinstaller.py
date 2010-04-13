@@ -47,7 +47,8 @@ def adjust_options(options, args):
     args.append(join(_find_repo_top(), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
 
 def _single_install(cmds, req, bin_dir):
-    cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
+    #cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
+    cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     logger.debug("running command: %%s" %% ' '.join(cmdline))
     subprocess.check_call(cmdline)
 
@@ -74,7 +75,7 @@ def after_install(options, home_dir):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
-    reqnumpy = 'numpy'   # TODO: grab openmdao dist and query its deps for specific numpy version
+    reqnumpy = 'numpy==1.3.0'   # TODO: grab openmdao dist and query its deps for specific numpy version
     _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
     for req in reqs:
         _single_install(cmds, req, bin_dir)
