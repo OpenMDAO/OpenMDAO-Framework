@@ -284,7 +284,7 @@ class CONMINdriver(Driver):
 
             # calculate objective
             try:
-                self.cnmn1.obj = numarray.array(self.objective.evaluate())
+                self.cnmn1.obj = self.objective.evaluate()
             except:
                 self.raise_exception('objective function is not pointing to a \
                                       valid OpenMDAO Variable', RuntimeError)
@@ -358,6 +358,14 @@ class CONMINdriver(Driver):
             else:
                 self.raise_exception('Unexpected value for flag INFO returned \
                         from CONMIN', RuntimeError)
+
+        # After loop, calculate objective so that its value is valid for the
+        # current design variables.
+        try:
+            self.cnmn1.obj = self.objective.evaluate()
+        except:
+            self.raise_exception('objective function is not pointing to a \
+                                  valid OpenMDAO Variable', RuntimeError)
                 
 
     def _config_conmin(self):
