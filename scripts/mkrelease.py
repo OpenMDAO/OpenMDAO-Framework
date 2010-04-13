@@ -94,7 +94,7 @@ def _has_checkouts():
         # in the bzr status short output, any of the letters N,D,K, or M in the 2nd column
         # indicate that an uncommitted change exists in the repository
         # TODO: find a more robust way to do this
-        if line[1] in 'NDKM':
+        if len(line)>1 and line[1] in 'NDKM':
             return True
     return False
 
