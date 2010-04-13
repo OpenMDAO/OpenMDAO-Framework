@@ -22,9 +22,25 @@ def make_index(startdir = '.'):
     startdir = os.path.abspath(startdir)
     out = open('index.html', 'w')
     version = os.path.basename(os.path.dirname(os.path.abspath(__file__)))
-    out.write('<html>\n<title>OpenMDAO Version %s Downloads</title>\n' %
-              version)
-    out.write('<body>\nOpenMDAO Version %s Downloads\n' % version)
+    out.write('<html>\n\n')
+    out.write('<head>\n')
+    out.write('  <title>OpenMDAO Version %s Downloads</title>\n' % version)
+    out.write('  <link rel="stylesheet" href="/chrome/common/css/trac.css" type="text/css" />\n')
+    
+    out.write('  <div id="header">\n')
+    out.write('    <a id="logo" href="http://openmdao.org/">\n')
+    out.write('      <img src="/chrome/site/Feb2010_OpenMDAOLogo.png" alt="OpenMDAO Logo" height="93" width="334" />\n')
+    out.write('    </a>\n')
+    out.write('  </div>\n')
+    out.write('</head>\n\n')
+    out.write('<body>\n')
+    out.write('  <br><br><br>\n')
+    out.write('  <h1 class="blog-title" id="openmdao">\n')
+    out.write('    OpenMDAO Version %s Downloads\n' % version)
+    out.write('  </h1>\n')
+    out.write('  <ul>\n')
+    out.write('    <li><a href="http://openmdao.org/downloads">..</a>\n')
+
     files = []
     dirs = []
     for f in os.listdir(startdir):
@@ -37,14 +53,13 @@ def make_index(startdir = '.'):
 
     for d in dirs:
         lpath = os.path.join('http://openmdao.org/downloads/%s'%version, d)
-        out.write('<li><a href="%s">%s</a>\n' % (lpath, d))
+        out.write('    <li><a href="%s">%s</a>\n' % (lpath, d))
 
     for f in files:
         lpath = os.path.join('http://openmdao.org/downloads/%s'%version, f)
         checksum = file_md5(f)
-        out.write('<li><a href="%s#md5=%s">%s</a>\n'%(lpath, checksum, f))
-    out.write('</ul>\n')
-    out.write('<br><a href="http://openmdao.org">Return to openmdao.org</a>')
+        out.write('    <li><a href="%s#md5=%s">%s</a>\n'%(lpath, checksum, f))
+    out.write('  </ul>\n')
     out.write('</body>\n</html>')
     out.close()
     

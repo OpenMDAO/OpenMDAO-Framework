@@ -43,7 +43,7 @@ You need to register and upload the *public* portion of your SSH key to Launchpa
 
 Notifying Launchpad of Your Userid
 ----------------------------------
-	
+
 You need to provide Launchpad with your userid before you can merge from openmdao to your branch or
 push a branch back to openmdao. In your home directory on your Linux machine, type: 
 
@@ -102,39 +102,52 @@ Pushing a Branch Back to Launchpad
 ----------------------------------
 
 First, make sure all your changes are committed and that your your branch builds and passes all tests. Go to
-the branch you want to push. (At GRC, that would be ``Openmdao/dev/<your_working_directory/<branch_name``.)
+the branch you want to push. (At GRC, that would be ``Openmdao/dev/<your_working_directory/<branch_name>``.)
 Type:
 
 ::
 
   cd /OpenMDAO/dev/<your_working_directory>/<branch_name>    (Takes you to the branch to be merged.) 
-  bzr status			       (Checks for uncommitted changes. You cannot merge if there are any.)
-  bzr commit -m "<commit_message>"     (Needed only if you have uncommitted changes.)       
-  cd buildout			       (Takes you to the "buildout" directory.)
-  bin/buildout 		               (Builds your branch. You should be able to build without errors or warnings.)
-  bin/test --all	               (Runs the test suite. Tests should pass on your branch.)
-  
-Next, you must merge from the openmdao trunk to the branch you want to push. If you have any conflicts, you
-must resolve them before you can continue. (See :ref:`if you have a conflict <if-you-have-a-conflict>`.) 
+  bzr status                     (Checks for uncommitted changes. You cannot merge if there are any.)
+  deactivate                     (Deactivates your old virtual environment if it's active)
+  rm -rf devenv                  (Removes your old virtual environment)
+  python2.6 go-openmdao-dev.py   (Builds your new virtual environment in the devenv directory)
+  cd devenv                      (Goes to your new virtual environment.)
+  source bin/activate            (Activates your new virtual environment)
+  openmdao_test --all            (Runs the test suite. Tests should pass on your branch.)
+  bzr commit -m "<commit_message>"     (Needed only if you have uncommitted changes.)
+
+Your branch is now ready for merge.  If you have commit priveleges to the openmdao trunk on
+launchpad, then you must follow the instructions in the following section.  If not, you
+can simply push your branch up to launchpad as follows:
+
+
+Next, you must branch from the openmdao trunk, then merge your current branch to your copy of the
+trunk.  This is necessary because if you merge the other direction and then push to launchpad,
+it will mess up the log for the trunk, making it harder to find information about recent
+merges. If you have any conflicts, you must resolve them before you can continue. 
+(See :ref:`if you have a conflict <if-you-have-a-conflict>`.) 
 
 :: 
   
-  bzr merge lp:openmdao	               (Merges openmdao trunk to your branch.)  
-  cd buildout			       (Takes you to the "buildout" directory.)
-  repo.py fix			       (Runs the cleanup script on your branch. Run this after merging or branching from Launchpad.)
-  python2.6 isolated_bootstrap.py  (Runs the script required before you build the first time after merging.)
-  bin/buildout    		       (Builds on the branch after the merge.)
-  bin/test --all		       (Confirms that all tests pass.)
+  cd /OpenMDAO/dev/<your_working_directory>   (Takes you to your top level development directory.) 
+  bzr branch lp:openmdao                      (Gets a copy of the openmdao trunk.)
+  cd openmdao                                 (Takes you to the trunk copy)
+  bzr merge ../<your merging branch>          (Merges your branch to the trunk copy)
+  python2.6 g-openmdao-dev.py                 (Build virtual environment for trunk copy)
+  cd devenv                                   (Takes you to the virtual environment on the trunk copy.)
+  source bin/activate                         (Activates trunk copy's virtual environment)
+  test_openmdao --all                         (Confirms that all tests pass.)
+  bzr commit -m <comment>                     (Commits your merge changes to trunk copy (assuming tests pass)
   
-If you can build successfully and pass the tests after the merge, you may push your branch to openmdao. You
-must be logged into Launchpad to push a branch.
+If you can build successfully and pass the tests after the merge, you may push your branch to openmdao. 
+You must be logged into Launchpad to push a branch.
 
 **- If you have commit privileges** (you are a member of the *OpenMDAO Devs* group), type:
 
 ::
   
-  cd ../                               (Takes you to the top of your branch.)
-  bzr push lp:openmdao                 (Pushes your changes to openmdao trunk.)
+  bzr push lp:openmdao                 (Pushes your merged trunk copy to openmdao trunk.)
 
 Your branch becomes the latest revision of openmdao on Launchpad.
 

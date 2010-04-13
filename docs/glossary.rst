@@ -522,31 +522,22 @@ Glossary
       **WSGI**
         Web Server Gateway Interface. WSGI is a standard interface for Python Web
         applications to communicate with Web servers. 
-	
+
 
       **YAML**
         YAML is a data serialization format designed for human readability and interaction
         with scripting languages. 
       
       
-      **zc.buildout** 
-        System for managing development buildouts.
-	
-      
-      **zc.recipe.egg**
-        Recipe for installing Python package distributions as eggs.
-	
-	
       **Zope**
-	Zope is an open source application server for building content management
-	systems, intranets, portals, and custom applications. Zope is written in
-	Python, an object-oriented scripting language.
-	
+        Zope is an open source application server for building content management
+        systems, intranets, portals, and custom applications. Zope is written in
+        Python, an object-oriented scripting language.
+
       
       **zope.component**
         Zope Component Architecture
-	
-	
+
       **zope.deferredimport** 
         The zope.deferredimport package provided facilities for defining names in modules
         that will be imported from somewhere else when used.
@@ -559,14 +550,13 @@ Glossary
       
       **zope.event**
         A very basic event publishing system.
-	
+
       
       **zope.i18nmessageid**
         This package provides facilities for delaring  messages (which carry a
         translation source domain and possibly a default translation) within program
         source text; translation of the messages is the responsiblitiy of the "zope.i18n"
         package.
-	
 
       **zope.interface**
         A package that provides an implementation of object interfaces for Python. 
@@ -578,12 +568,12 @@ Glossary
         behavior of the wrapped object only when necessary to apply the policy (e.g.,
         access checking, location brokering, etc.) for which the proxy is responsible.
 
-	
+
       **zope.schema**
         zope.interface extension for defining data schemas
 
-	
+
       **ZopeSkel**
         ZopeSkel provides a collection of skeletons for quickstarting Zope and Plone
         projects.
-	
+

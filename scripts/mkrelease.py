@@ -151,7 +151,9 @@ setup(name='openmdao',
           'openmdao.main==%(version)s',
           'openmdao.util==%(version)s',
           'openmdao.test==%(version)s',
-          'openmdao.recipes==%(version)s',
+          'openmdao.examples.simple==%(version)s',
+          'openmdao.examples.bar3simulation==%(version)s',
+          'openmdao.examples.enginedesign==%(version)s',
       ],
       )
     """
