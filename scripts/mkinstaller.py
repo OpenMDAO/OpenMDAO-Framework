@@ -59,7 +59,7 @@ def after_install(options, home_dir):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
-    reqnumpy = 'numpy'   # TODO: grab openmdao dist and query its deps for specific numpy version
+    reqnumpy = 'numpy==1.3.0'   # FIXME: grab openmdao dist and query its deps for specific numpy version
     _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
     for req in reqs:
         _single_install(cmds, req, bin_dir)  
