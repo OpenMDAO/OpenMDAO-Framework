@@ -8,7 +8,8 @@ from numpy.distutils.fcompiler import get_default_fcompiler
 
 version = '0.1.0'
 
-if sys.platform == 'win32':
+    
+if sys.platform == 'win32': 
     sdkdir = os.environ.get('WindowsSdkDir')
     include_dirs = [os.path.join(sdkdir,'Include')]
     library_dirs = [os.path.join(sdkdir,'Lib')]

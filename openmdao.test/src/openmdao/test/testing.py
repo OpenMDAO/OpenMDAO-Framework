@@ -12,8 +12,9 @@ def dumexit(ret=0):
     sys.exit(ret)
     
 def run_openmdao_suite(*pargs, **kwargs):
-    """This function is exported as a script that is runnable from the buildout
-    as bin/test.  Add any directories to search for tests to tlist.
+    """This function is exported as a script that is runnable as part of
+    an OpenMDAO virtual environment as bin/openmdao_test.
+    Add any packages/directories to search for tests to tlist.
     """
     
     args = sys.argv[:]
@@ -51,9 +52,9 @@ def run_openmdao_suite(*pargs, **kwargs):
         args.extend(pargs)
         nose.run_exit(argv=args)
     elif '--help' in args or '-h' in args:
-        # TODO: find a better way to do this, maybe by messing with optparse?
+        # TODO: find a better way to do this.
         # since nose.run() immediately exits after printing its help info,
-        # we need to temporarily hijack the sys.exit function in order to 
+        # we temporarily hijack the sys.exit function in order to 
         # get our help info for --all to show up in the right spot.
         sys.exit=dumexit
         nose.run()

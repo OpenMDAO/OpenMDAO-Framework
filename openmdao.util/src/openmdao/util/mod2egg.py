@@ -21,7 +21,6 @@ import pkg_resources
 # easy install barfs without distutils import
 import distutils.command.build
 import setuptools.command.easy_install
-import zc.buildout
 from enthought.traits.api import TraitType
 
 from openmdao.main.api import Component, Driver # , ResourceAllocator, CaseIterator

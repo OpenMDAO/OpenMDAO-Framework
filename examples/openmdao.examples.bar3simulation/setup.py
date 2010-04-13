@@ -8,13 +8,12 @@ from numpy.distutils.core import setup
 from numpy.distutils.misc_util import Configuration
 
 here = os.path.dirname(os.path.realpath(__file__))
-sdir = os.path.join(here, '..', '..', 'scripts')
-sdir = os.path.normpath(sdir)
-if os.path.isdir(sdir):
-    sys.path.insert(0, sdir)
+sys.path.insert(0, os.path.normpath(os.path.join(here,
+                                                 'openmdao',
+                                                 'examples',
+                                                 'bar3simulation')))
 
 import releaseinfo
-
 version = releaseinfo.__version__
 
 if sys.platform == 'win32':

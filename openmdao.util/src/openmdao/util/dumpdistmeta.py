@@ -70,7 +70,7 @@ def _match(name, inlist):
     return False
     
 
-def parse_txt(name, meta, metadata):
+def _parse_txt(name, meta, metadata):
     metaname = os.path.splitext(os.path.basename(name))[0]
     metadata[metaname] = [x.strip() for x in meta.splitlines() 
                           if x.strip() != '']
@@ -97,7 +97,7 @@ def get_resource_files(dist, exList=None, incList=None, dirname=''):
                 yield respath
 
 
-def _getdist_metadata(dist, dirname=''):
+def get_dist_metadata(dist, dirname=''):
     """Retrieve metadata from within a distribution.
     Returns a dict.
     """
@@ -108,10 +108,10 @@ def _getdist_metadata(dist, dirname=''):
         else:
             path = name
         if dist.metadata_isdir(path):
-            for md in _getdist_metadata(dist, path):
+            for md in get_dist_metadata(dist, path):
                 metadata[md[0]] = md[1]
         elif name.endswith('.txt'):
-            parse_txt(name, dist.get_metadata(path), metadata)
+            _parse_txt(name, dist.get_metadata(path), metadata)
         elif name == 'PKG-INFO':
             instr = StringIO.StringIO(dist.get_metadata(name))
             message = rfc822.Message(instr)
@@ -123,6 +123,13 @@ def _getdist_metadata(dist, dirname=''):
             metadata['zip-safe'] = True
         else:
             metadata[path] = dist.get_metadata(path)
+    if len(metadata) == 0:
+        # look for .egg-info file at peer level
+        f = open(os.path.join(dist.location,
+                              '%s-%s.egg-info'%(dist.project_name,
+                                                dist.version)),'r')
+        message = rfc822.Message(f)
+        metadata = message
     return metadata
     
                 
@@ -143,9 +150,7 @@ def _meta_from_tarfile(path):
                 for k,v in message.items():
                     metadata[k] = v                
             elif name.endswith('.txt'):
-                parse_txt(name, meta, metadata)
-                #metadata[metaname] = [x.strip() for x in 
-                #                     meta.splitlines() if x.strip() != '']
+                _parse_txt(name, meta, metadata)
             elif name.endswith('/not-zip-safe'):
                 metadata['zip-safe'] = False
             elif name.endswith('/zip-safe'):
@@ -178,7 +183,7 @@ def _meta_from_zipped_egg(path):
                 for k,v in message.items():
                     metadata[k] = v
             elif name.endswith('.txt'):
-                parse_txt(name, meta, metadata)
+                _parse_txt(name, meta, metadata)
             elif name.endswith('/not-zip-safe'):
                 metadata['zip-safe'] = False
             elif name.endswith('/zip-safe'):
@@ -222,7 +227,7 @@ def get_metadata(path):
             raise RuntimeError('cannot process file %s: unknown file type' %
                                 path)
     else:
-        metadata = _getdist_metadata(dist)
+        metadata = get_dist_metadata(dist)
 
 
     metadata['py_version'] = dist.py_version
@@ -233,7 +238,7 @@ def get_metadata(path):
     for gname,group in get_entry_map(dist, group=None).items():
         metadata['entry_points'][gname] = [ep for ep in group]
     
-    return metadata    
+    return metadata
     
 if __name__ == '__main__':
     if len(sys.argv) > 2:

@@ -4,20 +4,15 @@ import os,sys
 
 from distutils.errors import DistutilsExecError, DistutilsPlatformError
 
-try:
-    from setuptools import setup
-except ImportError, e:
-    from distutils.core import setup
-
+from setuptools import setup
 
 here = os.path.dirname(os.path.realpath(__file__))
-sdir = os.path.join(here, '..', 'scripts')
-sdir = os.path.normpath(sdir)
-if os.path.isdir(sdir):
-    sys.path.insert(0, sdir)
+sys.path.insert(0, os.path.normpath(os.path.join(here,
+                                                 'src',
+                                                 'openmdao',
+                                                 'test')))
 
 import releaseinfo
-
 version = releaseinfo.__version__
 
 setup(name='openmdao.test',
@@ -37,7 +32,7 @@ setup(name='openmdao.test',
       keywords='testing',
       author='',
       author_email='',
-      url='',
+      url='http://openmdao.org',
       license='NASA Open Source Agreement 1.3',
       namespace_packages=["openmdao"],
       packages=['openmdao', 'openmdao.test'],
@@ -58,7 +53,7 @@ setup(name='openmdao.test',
           'openmdao.test.Box = openmdao.test.Box:Box'
       ],
       "console_scripts": [
-          'openmdaotest = openmdao.test.testing:run_openmdao_suite'
+          'openmdao_test = openmdao.test.testing:run_openmdao_suite'
           ]
       },
       )
