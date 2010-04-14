@@ -6,8 +6,10 @@ Working on Your Branch
 You must run ``python go-openmdao-dev.py`` from the top directory of your
 branch before you'll be able to execute OpenMDAO in any way. Running
 ``go-openmdao-dev.py`` populates your virtual python environment with all of
-the packages that OpenMDAO depends upon. You can also view the OpenMDAO Sphinx
-documentation, by typing ``bin/openmdao_docs``.
+the packages that OpenMDAO depends upon. and installs the openmdao namespace
+packages in your virtual python environment as 'develop' eggs so that you can
+make changes to the source code and immediately see the results. You can also 
+view the OpenMDAO Sphinx documentation, by typing ``bin/openmdao_docs``.
 
 After you virtual python environment has been activated, by running either ``source bin/activate``
 on linux or OS X, or by running ``Scripts\activate.bat`` on Windows, you can add new packages

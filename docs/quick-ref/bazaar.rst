@@ -251,10 +251,7 @@ straight to the ``devenv`` directory.
   bin/openmdao_docs             (Checks that docs display correctly. Optional if no doc changes.)
   bin/openmdao_test --all       (Runs the test suite; all tests should pass before you merge.)
 
-  cd /OpenMDAO/dev              (Go back to the top of your development area)
-  bzr branch lp:openmdao        (Get a copy of the trunk)
-  cd openmdao                   (Go to the trunk branch)
-  bzr merge ../<branchname>     (Merges your developement branch to the copy of the trunk)
+  bzr merge lp:openmdao         (Merge from the trunk)
 
 **- If you have no conflicts,** you can continue. Type:
 
@@ -269,8 +266,8 @@ You may now continue working on your branch.
 
 .. _`if-you-have-a-conflict`:
 
-**- If you HAVE a conflict,** Bazaar will display not only the changes in files or directories, but it will also indicate the number of
-conflicts and where they occur. See the following example:
+**- If you HAVE a conflict,** Bazaar will display not only the changes in files or directories, but it will 
+also indicate the number of conflicts and where they occur. See the following example:
 
 
 .. figure:: ../images/quick-ref/merge_conflict.png

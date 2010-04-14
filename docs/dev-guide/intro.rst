@@ -63,7 +63,7 @@ You can get a copy of the repository as follows:
 
     bzr branch lp:openmdao <your_branch_name>
 
-To submit patches you must upload your branch to the openmdao repository on Launchpad
+To submit patches you must upload your branch to the openmdao project on Launchpad
 and request that it be merged. Please see :ref:`Pushing-a-Branch-Back-to-Launchpad`
 
 
@@ -173,7 +173,8 @@ If you do not supply ``<branch_name>``, the name by default will be the last par
 the source repository URI, which in this case is ``openmdao``.
 
 
-At Glenn Research Center (GRC), we name branches based on ticket numbers in the bug tracker, and we use
+At Glenn Research Center (GRC), we name branches based on ticket numbers in the bug 
+tracker, and we use
 the form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug tracker
 ticket number and ``<desc>`` is a short description of the branch. For example,
 ``T0029-workflow_fix``.
@@ -198,7 +199,7 @@ Change your directory to ``devenv`` and run:
 
    source bin/activate
 
-or, on windows
+or, on Windows
 
 ::
 
