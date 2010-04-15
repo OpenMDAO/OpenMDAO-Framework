@@ -49,10 +49,6 @@ def release(version=None):
     tmpdir = tempfile.mkdtemp()
     startdir = os.getcwd()
     try:
-        # create the go-openmdao script
-        local(sys.executable+' '+ join(scripts_dir,'mkinstaller.py')+
-              ' -d %s' % tmpdir, capture=False)
-
         # build the release distrib (docs are built as part of this)
         local(sys.executable+' '+ join(scripts_dir,'mkrelease.py')+
               ' --version=%s -d %s' % (version, tmpdir), capture=False)

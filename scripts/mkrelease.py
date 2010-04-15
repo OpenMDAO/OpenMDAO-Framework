@@ -225,7 +225,7 @@ def main():
                            'openmdao_src-%s.tar.gz' % options.version)
     print 'creating bootstrapping installer script go-openmdao.py'
     installer = os.path.join(os.path.dirname(__file__),'mkinstaller.py')
-    check_call([sys.executable, installer, '--version=%s' % options.version,
+    check_call([sys.executable, installer,
                 '-d', destdir, '-f', 'http://openmdao.org/dists'])
     try:
         for project_name in openmdao_packages:
