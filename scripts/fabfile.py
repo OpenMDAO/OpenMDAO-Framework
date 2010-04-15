@@ -53,6 +53,15 @@ def release(version=None):
         local(sys.executable+' '+ join(scripts_dir,'mkrelease.py')+
               ' --version=%s -d %s' % (version, tmpdir), capture=False)
         
+        # tar up the docs so we can upload them to the server
+        os.chdir(join(tmpdir, '_build'))
+        try:
+            local('tar czf %s %s' % (join(tmpdir,'docs.tar.gz'), 
+                                     'html'),
+                  capture=False)
+        finally:
+            os.chdir(startdir)
+        
         # push new distribs up to the server
         put(join(tmpdir,'openmdao.*.tar.gz'), '~/dists', 
             mode=0644)
@@ -66,25 +75,18 @@ def release(version=None):
         run('rm -f ~/downloads/latest')
         run('ln -s ~/downloads/%s ~/downloads/latest' % version)
         
+        # upload the repo source tar
         put(join(tmpdir, 'openmdao_src*.gz'), 
             '~/downloads/%s' % version, 
             mode=0644)
         
         # for now, put the go-openmdao script up without the version
         # id in the name
-        put(join(tmpdir, 'go-openmdao-%s.py' % version), 
+        put(join(tmpdir, 'go-openmdao*.py'), 
             '~/downloads/%s/go-openmdao.py' % version,
             mode=0755)
 
-        os.chdir(join(tmpdir, '_build'))
-        try:
-            local('tar czf %s %s' % (join(tmpdir,'docs.tar.gz'), 
-                                     'html'),
-                  capture=False)
-        finally:
-            os.chdir(startdir)
-        
-        # put the docs on the server
+        # put the docs on the server and untar them
         put(join(tmpdir,'docs.tar.gz'), '~/downloads/%s' % version) 
         with cd('~/downloads/%s' % version):
             run('tar xzf docs.tar.gz')
