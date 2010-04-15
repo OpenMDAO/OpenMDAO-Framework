@@ -6,6 +6,7 @@ develop versions of all of the openmdao packages.
 import sys, os
 from optparse import OptionParser
 import virtualenv
+from pkg_resources import working_set, Requirement
 
 def main():
     
@@ -30,27 +31,36 @@ def _find_repo_top():
     while location:
         if '.bzr' in os.listdir(location):
             return location
+	tmp = location
         location = os.path.dirname(location)
+	if tmp == location:
+	    break
     raise RuntimeError('ERROR: %%s is not inside of a bazaar repository' %% start)
     
 def adjust_options(options, args):
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
         print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %%s' %% sys.version.split(' ')[0]
         sys.exit(-1)
-    to_remove = []
     for arg in args:
         if not arg.startswith('-'):
-            print 'removing arg: %%s' %% arg
-            to_remove.append(arg)
-    for arg in to_remove:
-        args.remove(arg)
+            print 'no args allowed that start without a dash (-)'
+            sys.exit(-1)
     args.append(join(_find_repo_top(), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
 
 def _single_install(cmds, req, bin_dir):
-    #cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
-    cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
-    logger.debug("running command: %%s" %% ' '.join(cmdline))
-    subprocess.check_call(cmdline)
+    import pkg_resources
+    try:
+        pkg_resources.working_set.resolve([pkg_resources.Requirement.parse(req)])
+    except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
+        # if package isn't currently installed, install it
+        # NOTE: we need to do our own check for already installed packages because
+        #       for some reason distribute always wants to install a package even if
+        #       it already is installed.
+        cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
+        # pip seems more robust than easy_install, but won't install from binary distribs :(
+        #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
+        logger.debug("running command: %%s" %% ' '.join(cmdline))
+        subprocess.call(cmdline)
 
 def after_install(options, home_dir):
     global logger
@@ -75,10 +85,19 @@ def after_install(options, home_dir):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
-    reqnumpy = 'numpy==1.3.0'   # TODO: grab openmdao dist and query its deps for specific numpy version
+    reqnumpy = 'numpy'
+    numpyidx = None
+    for i,req in enumerate(reqs):
+        if req.startswith('numpy') and len(req)>5 and req[5]=='=' or req[5]=='>':
+            reqnumpy = req
+            numpyidx = i
+            break
     _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
+    if numpyidx is not None:
+        reqs.remove(reqs[numpyidx])
     for req in reqs:
         _single_install(cmds, req, bin_dir)
+
     # now install dev eggs for all of the openmdao packages
     topdir = _find_repo_top()
     startdir = os.getcwd()
@@ -109,19 +128,29 @@ def after_install(options, home_dir):
                 join(os.path.abspath(home_dir),'etc','wingproj.wpr'))
     """
     parser = OptionParser()
-    # setuptools doesn't seem to support multiple find-links, but pip does
-    parser.add_option("-f", "--find-links", action="append", type="string", dest='flinks', 
-                      help="find-links URL") 
-    parser.add_option("-r", "--requirement", action="append", type="string", dest='reqs', 
-                      help="add an additional required package (multiple are allowed)")
     
     (options, args) = parser.parse_args()
     
-    reqs = options.reqs if options.reqs is not None else []
-    if options.flinks is not None:
-        cmds = [ '-f %s' % x for x in options.flinks]
-    else:
-        cmds = []
+    openmdao_pkgs = ['openmdao.util', 
+                     'openmdao.units', 
+                     'openmdao.main', 
+                     'openmdao.lib', 
+                     'openmdao.test', 
+                     'openmdao.examples.simple',
+                     'openmdao.examples.bar3simulation',
+                     'openmdao.examples.enginedesign',
+                    ]
+
+    cmds = []
+    reqs = []
+    dists = working_set.resolve([Requirement.parse(r) for r in openmdao_pkgs])
+    for dist in dists:
+        if dist.project_name == 'openmdao.main':
+            version = dist.version
+        if not dist.project_name.startswith('openmdao.'):
+            reqs.append('%s' % dist.as_requirement())  
+            
+    reqs = list(set(reqs))  # eliminate duplicates (numpy was in there twice somehow)
     
     optdict = { 'reqs': reqs, 'cmds':cmds }
     
