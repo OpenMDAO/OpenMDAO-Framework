@@ -359,14 +359,6 @@ class CONMINdriver(Driver):
                 self.raise_exception('Unexpected value for flag INFO returned \
                         from CONMIN', RuntimeError)
 
-        # After loop, calculate objective so that its value is valid for the
-        # current design variables.
-        try:
-            self.cnmn1.obj = self.objective.evaluate()
-        except:
-            self.raise_exception('objective function is not pointing to a \
-                                  valid OpenMDAO Variable', RuntimeError)
-                
 
     def _config_conmin(self):
         """Set up arrays for the FORTRAN conmin routine, and perform some
