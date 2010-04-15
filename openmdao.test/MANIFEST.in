@@ -1,0 +1,2 @@
+recursive-include src/openmdao/test/plugins *.egg
+
