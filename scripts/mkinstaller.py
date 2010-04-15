@@ -1,12 +1,13 @@
 """
-Generates a virtualenv bootstrapping script that will create a virtualenv with
-openmdao and all of its dependencies installed in it. The script is written to
-a file called go-openmdao.py.
+Generates a virtualenv bootstrapping script that will create a 
+virtualenv with openmdao and all of its dependencies installed in it.
+The script is written to a file called go-openmdao.py.
 """
 
 import sys, os
 from optparse import OptionParser
 import virtualenv
+from pkg_resources import working_set, Requirement
 
 
 
@@ -24,21 +25,29 @@ def adjust_options(options, args):
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
         print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %%s' %% sys.version.split(' ')[0]
         sys.exit(-1)
-    ## setting use_distribute seems to force a local install even if package is already on sys.path
-    #options.use_distribute = True  # force use of distribute instead of setuptools
+    options.use_distribute = True  # force use of distribute instead of setuptools
+    # name of virtualenv defaults to openmdao-<version>
     if len(args) == 0:
         args.append('openmdao-%%s' %% '%(version)s')
     
 def _single_install(cmds, req, bin_dir):
-    #cmdline = [join(bin_dir, 'easy_install')] + cmds + [req]
-    cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
-    logger.debug("running command: %%s" %% ' '.join(cmdline))
-    subprocess.call(cmdline)
+    import pkg_resources
+    try:
+        pkg_resources.working_set.resolve([pkg_resources.Requirement.parse(req)])
+    except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
+        # if package isn't currently installed, install it
+        # NOTE: we need to do our own check for already installed packages because
+        #       for some reason distribute always wants to install a package even if
+        #       it already is installed.
+        cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
+        # pip seems more robust than easy_install, but won't install from binary distribs :(
+        #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
+        logger.debug("running command: %%s" %% ' '.join(cmdline))
+        subprocess.call(cmdline)
 
 def after_install(options, home_dir):
     global logger
     reqs = %(reqs)s
-    reqs.append('openmdao==%(version)s')
     cmds = %(cmds)s
     url = 'http://openmdao.org/dists'
     found = [c for c in cmds if url in c]
@@ -59,41 +68,49 @@ def after_install(options, home_dir):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
-    reqnumpy = 'numpy==1.3.0'   # FIXME: grab openmdao dist and query its deps for specific numpy version
+    reqnumpy = 'numpy'
+    numpyidx = None
+    for i,req in enumerate(reqs):
+        if req.startswith('numpy') and len(req)>5 and req[5]=='=' or req[5]=='>':
+            reqnumpy = req
+            numpyidx = i
+            break
     _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
+    if numpyidx is not None:
+        reqs.remove(reqs[numpyidx])
     for req in reqs:
-        _single_install(cmds, req, bin_dir)  
-
+        _single_install(cmds, req, bin_dir)
     """
     parser = OptionParser()
-    # setuptools doesn't seem to support multiple find-links, but pip does
-    parser.add_option("-f", "--find-links", action="append", type="string", dest='flinks', 
-                      help="find-links URL") 
-    parser.add_option("-r", "--requirement", action="append", type="string", dest='reqs', 
-                      help="add an additional required package (multiple are allowed)")
-    parser.add_option("-v", "--version", action="store", type="string", dest='version', 
-                      help="specify openmdao version that the generated script will install")
     parser.add_option("-d", "--destination", action="store", type="string", dest='dest', 
                       help="specify destination directory", default='.')
     
     
     (options, args) = parser.parse_args()
     
-    if not options.version:
-        print 'You must supply a version id'
-        parser.print_help()
-        sys.exit(-1)
-    
-    reqs = options.reqs if options.reqs is not None else []
-    if options.flinks is not None:
-        cmds = [ '-f %s' % x for x in options.flinks]
-    else:
-        cmds = []
-    
-    optdict = { 'reqs': reqs, 'cmds':cmds, 'version': options.version }
+    openmdao_pkgs = ['openmdao.util', 
+                     'openmdao.units', 
+                     'openmdao.main', 
+                     'openmdao.lib', 
+                     'openmdao.test', 
+                     'openmdao.examples.simple',
+                     'openmdao.examples.bar3simulation',
+                     'openmdao.examples.enginedesign',
+                    ]
+
+    cmds = []
+    reqs = []
+    dists = working_set.resolve([Requirement.parse(r) for r in openmdao_pkgs])
+    for dist in dists:
+        if dist.project_name == 'openmdao.main':
+            version = dist.version
+        reqs.append('%s' % dist.as_requirement())  
+            
+    reqs = list(set(reqs))  # eliminate duplicates (numpy was in there twice somehow)
+    optdict = { 'reqs': reqs, 'cmds':cmds, 'version': version }
     
     dest = os.path.abspath(options.dest)
-    scriptname = os.path.join(dest,'go-openmdao-%s.py' % options.version)
+    scriptname = os.path.join(dest,'go-openmdao-%s.py' % version)
     with open(scriptname, 'wb') as f:
         f.write(virtualenv.create_bootstrap_script(script_str % optdict))
     os.chmod(scriptname, 0755)

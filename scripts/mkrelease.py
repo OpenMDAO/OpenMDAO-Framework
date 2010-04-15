@@ -13,15 +13,15 @@ import tempfile
 import StringIO
 
 # this should contain all of the openmdao subpackages
-openmdao_packages = { 'openmdao.main': ('',''), 
-                      'openmdao.lib': ('','components'), 
-                      'openmdao.util': ('',''), 
-                      'openmdao.units': ('',''), 
-                      'openmdao.recipes': ('',''),
-                      'openmdao.test': ('',''), 
-                      'openmdao.examples.simple': ('examples',''),
-                      'openmdao.examples.bar3simulation': ('examples',''),
-                      'openmdao.examples.enginedesign': ('examples',''),
+openmdao_packages = { 'openmdao.main': '', 
+                      'openmdao.lib': '', 
+                      'openmdao.util': '', 
+                      'openmdao.units': '', 
+                      'openmdao.recipes': '',
+                      'openmdao.test': '', 
+                      'openmdao.examples.simple': 'examples',
+                      'openmdao.examples.bar3simulation': 'examples',
+                      'openmdao.examples.enginedesign': 'examples',
                       }
 
 
@@ -230,7 +230,7 @@ def main():
     try:
         for project_name in openmdao_packages:
             pdir = os.path.join(topdir, 
-                                openmdao_packages[project_name][0], 
+                                openmdao_packages[project_name], 
                                 project_name)
             if 'src' in os.listdir(pdir):
                 os.chdir(os.path.join(pdir, 'src'))
@@ -248,7 +248,7 @@ def main():
 
         for project_name in openmdao_packages:
             pdir = os.path.join(topdir, 
-                                openmdao_packages[project_name][0], 
+                                openmdao_packages[project_name], 
                                 project_name)
             if 'src' in os.listdir(pdir):
                 os.chdir(os.path.join(pdir, 'src'))

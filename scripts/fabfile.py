@@ -53,7 +53,7 @@ def release(version=None):
         local(sys.executable+' '+ join(scripts_dir,'mkinstaller.py')+
               ' --version=%s -d %s' % (version, tmpdir), capture=False)
 
-        # build the release distrib
+        # build the release distrib (docs are built as part of this)
         local(sys.executable+' '+ join(scripts_dir,'mkrelease.py')+
               ' --version=%s -d %s' % (version, tmpdir), capture=False)
         
@@ -80,11 +80,6 @@ def release(version=None):
             '~/downloads/%s/go-openmdao.py' % version,
             mode=0755)
 
-        # build the docs
-        #local(sys.executable+' '+ join(util_dir,'build_docs.py'),
-        #      capture=False)
-
-        #os.chdir(join(doc_dir, '_build'))
         os.chdir(join(tmpdir, '_build'))
         try:
             local('tar czf %s %s' % (join(tmpdir,'docs.tar.gz'), 
