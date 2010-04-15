@@ -14,6 +14,10 @@ from pkg_resources import resource_string, resource_stream
 # the following class test each method in the NumberDict class
 
 class test_moduleLevelFunctions(unittest.TestCase):
+    def tearDown(self):
+        unitLib = resource_stream(units.__name__, 'unitLibdefault.ini')
+        units.import_library(unitLib)
+        
     def test_importlib(self):
         
         #check to make sure the import fucntion errors if not all required base_units are there
