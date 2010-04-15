@@ -51,7 +51,7 @@ def release(version=None):
     try:
         # create the go-openmdao script
         local(sys.executable+' '+ join(scripts_dir,'mkinstaller.py')+
-              ' --version=%s -d %s' % (version, tmpdir), capture=False)
+              ' -d %s' % tmpdir, capture=False)
 
         # build the release distrib (docs are built as part of this)
         local(sys.executable+' '+ join(scripts_dir,'mkrelease.py')+
