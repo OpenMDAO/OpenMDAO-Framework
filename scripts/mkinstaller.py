@@ -1,7 +1,7 @@
 """
 Generates a virtualenv bootstrapping script that will create a 
 virtualenv with openmdao and all of its dependencies installed in it.
-The script is written to a file called go-openmdao.py.
+The script is written to a file called go-openmdao-<version>.py.
 """
 
 import sys, os
@@ -100,10 +100,10 @@ def after_install(options, home_dir):
 
     cmds = []
     reqs = []
+    import openmdao.main.releaseinfo
+    version = openmdao.main.releaseinfo.__version__
     dists = working_set.resolve([Requirement.parse(r) for r in openmdao_pkgs])
     for dist in dists:
-        if dist.project_name == 'openmdao.main':
-            version = dist.version
         reqs.append('%s' % dist.as_requirement())  
             
     reqs = list(set(reqs))  # eliminate duplicates (numpy was in there twice somehow)
