@@ -215,7 +215,7 @@ If you are in your home directory, type:
 
   cd /OpenMDAO/dev/<your_working_directory>/<branchname>  (Takes you to your branch.)
   python2.6 go-openmdao-dev.py                            (Builds your virtual dev environment in devenv directory)
-  cd /devenv                                              (Takes you to your dev environment.)
+  cd devenv                                              (Takes you to your dev environment.)
   bin/openmdao_docs                                       (Displays the documentation, building first if necessary)
   
 .. note:: If you have a preexisting ``devenv`` directory in your branch directory, you should delete
