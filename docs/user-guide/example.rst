@@ -400,13 +400,14 @@ If you have a branch from the source repository:
 
 	``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``
 	
-If you have a distribution bundle:
+If you have downloaded the latest release version from the website:
 
-	``buildout/eggs/openmdao.examples.enginedesign-x.x.x-xxxxxx.egg/openmdao/examples/enginedesign``
+	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign``
 	
-where the *x*'s denote the OpenMDAO version number, the Python version, and the Operating System
-description string. This will vary depending on your system and version, but there will only be
-one *enginedesign* egg in your bundle.
+where X.X.X is the current OpenMDAO version, and ###### is a string that
+contains the Python version, and the Operating System description. This will
+vary depending on your system and version, but there will only be one
+*enginedesign* egg.
 
 The three engine models have been implemented in ``transmission.py, engine.py,`` and ``chassis.py``. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
@@ -578,20 +579,14 @@ connected to each other.
 Executing a Component in the Python Shell
 -----------------------------------------
 
-The Python implementations of the three component models (``engine.py, transmission.py, chassis.py``) should 
-all make sense now. This next section will demonstrate how to instantiate and use these components in the 
-Python shell. From the top level directory in your OpenMDAO source tree, go to the ``buildout`` directory. 
-From here, the Python shell can be launched by typing the following at the UNIX prompt:
-
-.. _Prompt1: 
-
-::
-
-	[UNIX_prompt]$ bin/python
-
-The Python environment in buildout/bin is a special one that has all of the OpenMDAO site packages installed,
-including the tutorial problem. The user interface for the default Python shell leaves a lot to be desired,
-but it is still a good way to demonstrate these components.
+The Python implementations of the three component models (``engine.py,
+transmission.py, chassis.py``) should all make sense now. This next section
+will demonstrate how to instantiate and use these components in the Python
+shell. Be sure to use the python link found in devenv/bin. This Python
+environment is a special one that has all of the OpenMDAO site packages
+installed, including the tutorial problem. The user interface for the default
+Python shell leaves a lot to be desired, but it is still a good way to
+demonstrate these components.
 
 An instance of the class Engine can be created by typing the following:
 
