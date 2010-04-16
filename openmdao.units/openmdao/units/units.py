@@ -458,8 +458,7 @@ class PhysicalUnit(object):
         """
         @param other: another unit
         @type other: L{PhysicalUnit}
-        @returns: the conversion factor and offset from this unit to
-                  another unit
+        @returns: the conversion factor and offset from this unit to another unit
         @rtype: (C{float}, C{float})
         @raises TypeError: if the units are not compatible
         """
@@ -490,8 +489,7 @@ class PhysicalUnit(object):
         """
         @param other: another unit
         @type other: L{PhysicalUnit}
-        @returns: C{True} if the units are compatible, i.e. if the powers of
-                  the base units are the same
+        @returns: C{True} if the units are compatible, i.e. if the powers of the base units are the same
         @rtype: C{bool}
         """
         return self.powers == other.powers
