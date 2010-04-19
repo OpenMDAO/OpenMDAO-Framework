@@ -83,9 +83,9 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.int1 = 3.1
         except TraitError, err:
-            errstring = ": Trait 'int1' must be 0 <= an integer <= 99, but a " + \
-                        "value of 3.1 was specified"
-            self.assertEqual(str(err)[0:90], errstring)
+            errstring = ": Trait 'int1' must be 0 <= an integer <= 99, but " + \
+                        "a value of 3.1 <type 'float'> was specified."
+            self.assertEqual(str(err), errstring)
         else:
             self.fail('TraitError expected')
 
@@ -109,7 +109,7 @@ class IntTestCase(unittest.TestCase):
         except TraitError, err:
             errstring = ": Trait 'int1' must be" + \
                       " 0 <= an integer <= 99, but a value of 124" + \
-                      " was specified"
+                      " <type 'int'> was specified."
             self.assertEqual(str(err), errstring)
         else:
             self.fail('TraitError expected')
@@ -118,7 +118,7 @@ class IntTestCase(unittest.TestCase):
         except TraitError, err:
             errstring = ": Trait 'int1' must be" + \
                       " 0 <= an integer <= 99, but a value of -3" + \
-                      " was specified"
+                      " <type 'int'> was specified."
             self.assertEqual(str(err), errstring)
         else:
             self.fail('TraitError exception')
@@ -147,7 +147,7 @@ class IntTestCase(unittest.TestCase):
         except TraitError, err:
             errstring = ": Trait 'int4' must be" + \
                       " 3 < an integer < 4, but a value of 3" + \
-                      " was specified"
+                      " <type 'int'> was specified."
             self.assertEqual(str(err), errstring)
         else:
             self.fail('TraitError expected')

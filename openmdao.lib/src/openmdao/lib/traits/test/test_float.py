@@ -70,7 +70,7 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float1 = self.hobj.get_wrapped_attr('float2')
         except TraitError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 100.0")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of 100.0 <type 'float'> was specified.")
         else:
             self.fail('ConstraintError expected')
         
@@ -117,14 +117,14 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float1 = 124
         except TraitError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 124")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of 124 <type 'int'> was specified.")
         else:
             self.fail('TraitError expected')
         try:
             self.hobj.float1 = -3
         except TraitError, err:
             self.assertEqual(str(err),
-                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is -3")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of -3 <type 'int'> was specified.")
         else:
             self.fail('TraitError exception')
 
@@ -176,7 +176,7 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float4 = 3.0
         except TraitError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float4' must be a float in the range (3.0, 4.0) but attempted value is 3.0")
+                ": Trait 'float4' must be a float in the range (3.0, 4.0), but a value of 3.0 <type 'float'> was specified.")
         else:
             self.fail('TraitError expected')
         

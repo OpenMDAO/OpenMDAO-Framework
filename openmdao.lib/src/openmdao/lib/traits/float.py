@@ -138,8 +138,9 @@ class Float(TraitType):
         else: # self.high is not None
             info = "a float with a value < %s"% self.high
 
-        msg = "Trait '%s' must be %s but attempted value is %s" % \
-                               (name, info, value)
+        vtype = type( value )
+        msg = "Trait '%s' must be %s, but a value of %s %s was specified." % \
+                               (name, info, value, vtype)
         object.raise_exception(msg, TraitError)
 
     def get_val_meta_wrapper(self):

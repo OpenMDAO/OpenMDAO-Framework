@@ -112,8 +112,7 @@ class VariableTestCase(unittest.TestCase):
             self.top.connect('oneout.ratio1','oneinp.ratio2')  # float to int   
             #self.top.run( )                                       
         except TraitError, err:
-            oldmsg = "a value of 12.0 <type 'float'> was specified"
-            msg = "a value of 12.0 was specified"
+            msg = "a value of 12.0 <type 'float'> was specified"
             self.assertTrue( msg in str(err))
         else:
             self.fail('TraitError Expected')
@@ -185,8 +184,7 @@ class VariableTestCase(unittest.TestCase):
             self.top.connect('oneout.ratio5','oneinp.ratio2')  # Str to int
             #self.top.run( ) 
         except TraitError, err:
-            oldmsg = "a value of '55555' <type 'str'> was specified"
-            msg = "a value of 55555 was specified"
+            msg = "a value of 55555 <type 'str'> was specified"
             self.assertTrue( msg in str(err))
         else:
             self.fail('TraitError Expected')
@@ -197,7 +195,8 @@ class VariableTestCase(unittest.TestCase):
             self.top.connect('oneout.ratio5','oneinp.ratio1')  # Str to Float
             #self.top.run( ) 
         except TraitError, err:
-            msg = "oneinp: Trait 'ratio1' must be a float but attempted value is 55555"
+            msg = "oneinp: Trait 'ratio1' must be a float, but a value of 55555" + \
+                      " <type 'str'> was specified."
             self.assertEqual(str(err), msg)
         else:
             self.fail('TraitError Expected')
