@@ -31,7 +31,11 @@ class Float(TraitType):
     def __init__(self, default_value=None, iotype=None, desc=None, \
                  low=None, high=None, exclude_low=False, exclude_high=False, \
                  units=None, **metadata):
-        
+        if low is not None:
+            low = float(low)
+        if high is not None:
+            high = float(high)
+
         # Determine defalt_value if unspecified
         if default_value is None:
             if low is None and high is None:

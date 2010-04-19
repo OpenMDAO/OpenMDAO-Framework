@@ -45,7 +45,6 @@ class FloatTestCase(unittest.TestCase):
         self.assertEqual(98.9, self.hobj.float1)
         self.assertEqual(0., self.hobj.float4)
 
-        
     def test_assignment(self):
         # check starting value
         self.assertEqual(3.1415926, self.hobj.float1)
@@ -166,7 +165,16 @@ class FloatTestCase(unittest.TestCase):
         else:
             self.fail('TraitError expected')
         
-            
+    def test_int_limits(self):
+        # Ensure limits that are ints don't cause something like this:
+        #     Trait 'symmetry_angle' must be a float in the range (0, 180]
+        #     but attempted value is 11.25
+        self.hobj.add_trait('symmetry_angle',
+                            Float(low=0, exclude_low=True, high=180))
+        self.hobj.symmetry_angle = 11.25
+        self.assertEqual(self.hobj.symmetry_angle, 11.25)
+
+
 if __name__ == "__main__":
     unittest.main()
 
