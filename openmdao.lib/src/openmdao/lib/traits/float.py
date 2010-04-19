@@ -82,7 +82,9 @@ class Float(TraitType):
                 raise TraitError("Units of '%s' are invalid" %
                                  metadata['units'])
             
-            
+        # Add low and high to the trait's dictionary so they can be accessed
+        metadata['low'] = low
+        metadata['high'] = high
         super(Float, self).__init__(default_value=default_value,
                                          **metadata)
 
