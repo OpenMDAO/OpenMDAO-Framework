@@ -69,6 +69,15 @@ class Float(TraitType):
                 high = float_info.max
             else:
                 self.high = high
+
+            if low > high:
+                raise TraitError("Lower bounds is greater than upper bounds.")
+        
+            # Range can be float or int, so we need to force these to be float.
+            low = float(low)
+            high = float(high)
+            default_value = float(default_value)
+                
             self._validator = Range(low=low, high=high, value=default_value,
                                           exclude_low=exclude_low,
                                         exclude_high=exclude_high,

@@ -45,18 +45,32 @@ class IntTestCase(unittest.TestCase):
         except TraitError, err:
             errstring = "Default value for an Int must be an integer."
             self.assertEqual(str(err), errstring)
+        else:
+            self.fail("Exception expected")
         
         try:
             self.hobj.add_trait('inta', Int(98, low=0.01, high=99, iotype='in'))
         except TraitError, err:
             errstring = "Lower bounds for an Int must be an integer."
             self.assertEqual(str(err), errstring)
+        else:
+            self.fail("Exception expected")
         
         try:
             self.hobj.add_trait('inta', Int(98, low=0, high=99.9, iotype='in'))
         except TraitError, err:
             errstring = "Upper bounds for an Int must be an integer."
             self.assertEqual(str(err), errstring)
+        else:
+            self.fail("Exception expected")
+        
+        try:
+            self.hobj.add_trait('badbounds', Int(98, low=100, high=0, iotype='in'))
+        except TraitError, err:
+            errstring = "Lower bounds is greater than upper bounds."
+            self.assertEqual(str(err), errstring)
+        else:
+            self.fail("Exception expected")
         
     def test_assignment(self):
         # check starting value
@@ -69,8 +83,8 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.int1 = 3.1
         except TraitError, err:
-            errstring = "The 'int1' trait of a Container instance must be" + \
-                      " 0 <= an integer <= 99, but a value of 3.1"
+            errstring = ": Trait 'int1' must be 0 <= an integer <= 99, but a " + \
+                        "value of 3.1 was specified"
             self.assertEqual(str(err)[0:90], errstring)
         else:
             self.fail('TraitError expected')
@@ -93,18 +107,18 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.int1 = 124
         except TraitError, err:
-            errstring = "The 'int1' trait of a Container instance must be" + \
+            errstring = ": Trait 'int1' must be" + \
                       " 0 <= an integer <= 99, but a value of 124" + \
-                      " <type 'int'> was specified."
+                      " was specified"
             self.assertEqual(str(err), errstring)
         else:
             self.fail('TraitError expected')
         try:
             self.hobj.int1 = -3
         except TraitError, err:
-            errstring = "The 'int1' trait of a Container instance must be" + \
+            errstring = ": Trait 'int1' must be" + \
                       " 0 <= an integer <= 99, but a value of -3" + \
-                      " <type 'int'> was specified."
+                      " was specified"
             self.assertEqual(str(err), errstring)
         else:
             self.fail('TraitError exception')
@@ -131,9 +145,9 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.int4 = 3
         except TraitError, err:
-            errstring = "The 'int4' trait of a Container instance must be" + \
+            errstring = ": Trait 'int4' must be" + \
                       " 3 < an integer < 4, but a value of 3" + \
-                      " <type 'int'> was specified."
+                      " was specified"
             self.assertEqual(str(err), errstring)
         else:
             self.fail('TraitError expected')
