@@ -1059,7 +1059,7 @@ in the Python environment.
     >>> z1.get_abs_directory()
     Traceback (most recent call last):
     ...
-    RuntimeError: : can't call get_abs_directory before hierarchy is defined
+    RuntimeError: can't call get_abs_directory before hierarchy is defined
     >>>
     >>> set_as_top(z1)
     <openmdao.main.assembly.Assembly object at ...>
