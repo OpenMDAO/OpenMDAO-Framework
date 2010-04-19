@@ -107,6 +107,11 @@ class FloatTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
         
+    def test_intvalues(self):
+        f1 = Float(3,low=2,high=4)
+        d1 = f1.default_value/2
+        self.assertAlmostEqual(d1, 1.5, places=4)
+        
     def test_constraint_violations(self):
         try:
             self.hobj.float1 = 124
@@ -123,6 +128,15 @@ class FloatTestCase(unittest.TestCase):
         else:
             self.fail('TraitError exception')
 
+    def test_attributes(self):
+        try:
+            self.hobj.add_trait('badbounds', Float(98.0, low=100.0, high=0.0, iotype='in'))
+        except TraitError, err:
+            errstring = "Lower bounds is greater than upper bounds."
+            self.assertEqual(str(err), errstring)
+        else:
+            self.fail("Exception expected")
+        
     def test_bad_connection(self):
         srcwrapper = self.hobj.get_wrapped_attr('float2')
         self.hobj.float1 = srcwrapper
