@@ -4,15 +4,15 @@
 Testing
 -------
 
-By default, your top level ``buildout/bin`` directory will contain a script
-called ``test`` that uses a Python package called `nose
+By default, your top level ``devenv/bin`` directory will contain a script
+called ``openmdao_test`` that uses a Python package called `nose
 <http://somethingaboutorange.com/mrl/projects/nose>`_ to run all of the unit
 tests for any package that you specify. For example, to run all of the unit
 tests in the openmdao namespace package, do the following:
 
 ::
 
-   bin/test openmdao
+   bin/openmdao_test openmdao
    
 which should generate output something like this:
 
@@ -30,13 +30,14 @@ other packages from contrib, type:
 
 ::
 
-    bin/test --all
+    bin/openmdao_test --all
     
     
-To get a list of options available with ``bin/test``, type ``bin/test --help``
-from the ``buildout`` directory.  The bin/test script uses the *nose* testing
+To get a list of options available with ``bin/openmdao_test``, type 
+``bin/openmdao_test --help``
+from the ``devenv`` directory.  The bin/openmdao_test script uses the *nose* testing
 framework internally, so all options available when running *nosetests*
-should also be available when using ``bin/test``.
+should also be available when using ``bin/openmdao_test``.
    
 .. index: test coverage
    
@@ -47,11 +48,11 @@ There is a Python package called  `coverage
 <http://nedbatchelder.com/code/modules/rees-coverage.html>`_ that is accessible
 through ``bin/test`` that makes it easy to determine if your tests cover every
 line of code in your source files.  To get a coverage report for the openmdao
-package, do the following from the ``buildout`` directory:
+package, do the following from the ``devenv`` directory:
 
 ::
 
-   bin/test openmdao --with-coverage --cover-package=openmdao
+   bin/openmdao_test openmdao --with-coverage --cover-package=openmdao
    
 The report should look something like this:
 
@@ -109,7 +110,7 @@ clear the coverage database by issuing the following command:
 
 ::
 
-   bin/test openmdao --cover-erase
+   bin/openmdao_test openmdao --cover-erase
 
 .. index: pair: tests; adding
 .. index: pair: tests; unit
@@ -360,32 +361,32 @@ More details on the *literalinclude* directive can be found at http://sphinx.poc
     >>> import numpy
     >>> numpy.pi 
     3.14...
-	
+
 *Running the Tests*
 +++++++++++++++++++
 
-The buildout procedure currently generates a script for testing the code in the
-documents. This can be run by going to the ``buildout`` folder, and running:
+The build procedure currently generates a script for testing the code in the
+documents. This can be run by going to the ``devenv`` folder, and running:
 
 ::
 
-	[unix_prompt]$ bin/testdocs
-	
+    [unix_prompt]$ bin/testdocs
+
 The following output indicates a successful test:
 
 ::
 
-	Doctest summary
-	===============
+    Doctest summary
+    ===============
         37 tests
         0 failures in tests
         0 failures in setup code
-	build succeeded.
+    build succeeded.
 
 If any tests fail, they will also be noted in this summary, and specific tracebacks
 will be given for each failure earlier in the output.
 
 The document testing is also part of the full testing process and is executed as part of the normal
-``bin/test``.
+``bin/openmdao_test``.
 
 

@@ -73,13 +73,14 @@ If you have a branch from the source repository:
 
 	``examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation``
 	
-If you have a distribution bundle:
+If you have downloaded the latest release version from the website:
 
-	``buildout/eggs/openmdao.examples.bar3simulation-x.x.x-xxxxxx.egg/openmdao/examples/bar3simulation``
+	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.bar3simulation-X.X.X-######.egg/openmdao/examples/bar3simulation``
 	
-where the "x"s denote the OpenMDAO version number, the Python version, and the Operating System
-description string. This will vary depending on your system and version, but there will only be
-one *bar3simulation* egg in your bundle.
+where X.X.X is the current OpenMDAO version, and ###### is a string that
+contains the Python version, and the Operating System description. This will
+vary depending on your system and version, but there will only be one
+*bar3simulation* egg.
 
 It should also be noted that a Fortran compiler is required. The instructions presented here are
 applicable to the UNIX and Mac OSX environments. There may be some differences on the Windows

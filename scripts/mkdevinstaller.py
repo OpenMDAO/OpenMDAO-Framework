@@ -1,7 +1,6 @@
 """
-Generates a virtualenv bootstrapping script that will create a 
-virtualenv with openmdao and all of its dependencies installed in it.
-The script is written to a file called go-openmdao-<version>.py.
+Generates a virtualenv bootstrapping script that will create a virtualenv with
+develop versions of all of the openmdao packages.
 """
 
 import sys, os
@@ -9,27 +8,45 @@ from optparse import OptionParser
 import virtualenv
 from pkg_resources import working_set, Requirement
 
-
-
 def main():
     
     script_str = """
 
-#openmdaoreq = 'openmdao'
+# list of openmdao packages to be installed as 'develop' eggs.
+# NOTE: Order matters here.  Any given package must appear
+#       before any other packages that depend on it.
+openmdao_packages = ['openmdao.util', 
+                     'openmdao.units', 
+                     'openmdao.main', 
+                     'openmdao.lib', 
+                     'openmdao.test', 
+                     'examples/openmdao.examples.simple',
+                     'examples/openmdao.examples.bar3simulation',
+                     'examples/openmdao.examples.enginedesign',
+                    ]
 
-#def extend_parser(optparse_parser):
-    #optparse_parser.add_option("", "--openmdaover", action="store", type="string", dest='openmdaover', 
-                      #help="specify openmdao version (default is latest)")
-
+def _find_repo_top():
+    start = os.getcwd()
+    location = os.getcwd()
+    while location:
+        if '.bzr' in os.listdir(location):
+            return location
+	tmp = location
+        location = os.path.dirname(location)
+	if tmp == location:
+	    break
+    raise RuntimeError('ERROR: %%s is not inside of a bazaar repository' %% start)
+    
 def adjust_options(options, args):
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
         print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %%s' %% sys.version.split(' ')[0]
         sys.exit(-1)
-    options.use_distribute = True  # force use of distribute instead of setuptools
-    # name of virtualenv defaults to openmdao-<version>
-    if len(args) == 0:
-        args.append('openmdao-%%s' %% '%(version)s')
-    
+    for arg in args:
+        if not arg.startswith('-'):
+            print 'no args allowed that start without a dash (-)'
+            sys.exit(-1)
+    args.append(join(_find_repo_top(), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
+
 def _single_install(cmds, req, bin_dir):
     import pkg_resources
     try:
@@ -80,11 +97,37 @@ def after_install(options, home_dir):
         reqs.remove(reqs[numpyidx])
     for req in reqs:
         _single_install(cmds, req, bin_dir)
+
+    # now install dev eggs for all of the openmdao packages
+    topdir = _find_repo_top()
+    startdir = os.getcwd()
+    absbin = os.path.abspath(bin_dir)
+    try:
+        for pkg in openmdao_packages:
+            os.chdir(join(topdir, pkg))
+            cmdline = [join(absbin, 'python'), 'setup.py', 'develop'] + cmds
+            subprocess.check_call(cmdline)
+    finally:
+        os.chdir(startdir)
+        
+    # copy the default wing project file into the virtualenv
+    # try to find the default.wpr file in the user's home directory
+    try:
+        if sys.platform == 'win32':
+            home = os.environ['HOMEDRIVE']+os.environ['HOMEPATH']
+        else:
+            home = os.environ['HOME']
+    except:
+        home = ''
+    
+    proj_template = join(home, '.wingide3', 'default.wpr')
+    if not os.path.isfile(proj_template):
+        proj_template = join(topdir,'config','wing_proj_template.wpr')
+    
+    shutil.copy(proj_template, 
+                join(os.path.abspath(home_dir),'etc','wingproj.wpr'))
     """
     parser = OptionParser()
-    parser.add_option("-d", "--destination", action="store", type="string", dest='dest', 
-                      help="specify destination directory", default='.')
-    
     
     (options, args) = parser.parse_args()
     
@@ -100,20 +143,20 @@ def after_install(options, home_dir):
 
     cmds = []
     reqs = []
-    import openmdao.main.releaseinfo
-    version = openmdao.main.releaseinfo.__version__
     dists = working_set.resolve([Requirement.parse(r) for r in openmdao_pkgs])
     for dist in dists:
-        reqs.append('%s' % dist.as_requirement())  
+        if dist.project_name == 'openmdao.main':
+            version = dist.version
+        if not dist.project_name.startswith('openmdao.'):
+            reqs.append('%s' % dist.as_requirement())  
             
     reqs = list(set(reqs))  # eliminate duplicates (numpy was in there twice somehow)
-    optdict = { 'reqs': reqs, 'cmds':cmds, 'version': version }
     
-    dest = os.path.abspath(options.dest)
-    scriptname = os.path.join(dest,'go-openmdao-%s.py' % version)
-    with open(scriptname, 'wb') as f:
+    optdict = { 'reqs': reqs, 'cmds':cmds }
+    
+    with open('go-openmdao-dev.py', 'wb') as f:
         f.write(virtualenv.create_bootstrap_script(script_str % optdict))
-    os.chmod(scriptname, 0755)
+    os.chmod('go-openmdao-dev.py', 0755)
 
 if __name__ == '__main__':
     main()

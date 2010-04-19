@@ -1,19 +1,15 @@
-import os, sys
-
 # pylint: disable-msg=F0401
 
+import os,sys
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
-sdir = os.path.join(here, '..', 'scripts')
-sdir = os.path.normpath(sdir)
-if os.path.isdir(sdir):
-    sys.path.insert(0, sdir)
-else:
-    raise RuntimeError('%s is not a directory' % sdir)
+sys.path.insert(0, os.path.normpath(os.path.join(here,
+                                                 'src',
+                                                 'openmdao',
+                                                 'main')))
 
 import releaseinfo
-
 version = releaseinfo.__version__
 
 setup(name='openmdao.main',
@@ -33,7 +29,7 @@ setup(name='openmdao.main',
       keywords='optimization multidisciplinary multi-disciplinary analysis',
       author='',
       author_email='',
-      url='',
+      url='http://openmdao.org',
       license='NASA Open Source Agreement 1.3',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
@@ -41,31 +37,24 @@ setup(name='openmdao.main',
       include_package_data=True,
       test_suite='nose.collector',
       zip_safe=False,
+      # TODO: get rid of our dependency on zc.buildout
       install_requires=[
           'setuptools',
+          'zc.buildout',
           'pyparsing>=1.5.2',
           'numpy>=1.3.0',
           'PyYAML',
           'networkx==1.0.1',
-          'Traits>=3.0',
+          'Traits==3.1.0',
+          'virtualenv',
           'openmdao.units',
           'openmdao.util',
       ],
       entry_points = {
-          ## This is how we add openmdao specific metadata that can be supplied by
-          ## a plugin as an argument to the setup() function.
-          ## NOTE: You can't do this in a plugin's setup.py file because the
-          ## distib that contains these entry points must already be on sys.path
-          ## at the time that the setup() function is running.
-          #"distutils.setup_keywords": [
-          ## give <keyword_name>=<validation_function> here
-          #    "openmdao_metadata=openmdao.main.dist:assert_dict_or_none",
-          #    "mylist=setuptools.dist:assert_string_list",
-          #    ],
-          #"egg_info.writers": [
-          ## give <keyword_name.txt>=<function_to_write_txt_file> here
-          #    "openmdao_metadata.txt=openmdao.main.dist:write_openmdao_meta",
-          #    "mylist.txt = setuptools.command.egg_info:overwrite_arg",
-          #    ],
+          "console_scripts": [
+                "openmdao_build_docs=openmdao.util.build_docs:build_docs",
+                "openmdao_docs=openmdao.util.build_docs:view_docs",
+                "wing=openmdao.util.wingproj:run_wing",
+              ],
           },
     )

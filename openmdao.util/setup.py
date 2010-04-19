@@ -5,13 +5,12 @@ import os,sys
 from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
-sdir = os.path.join(here, '..', 'scripts')
-sdir = os.path.normpath(sdir)
-if os.path.isdir(sdir):
-    sys.path.insert(0, sdir)
+sys.path.insert(0, os.path.normpath(os.path.join(here,
+                                                 'src',
+                                                 'openmdao',
+                                                 'util')))
 
 import releaseinfo
-
 version = releaseinfo.__version__
 
 setup(name='openmdao.util',
@@ -23,7 +22,7 @@ setup(name='openmdao.util',
       keywords='',
       author='',
       author_email='',
-      url='',
+      url='http://openmdao.org',
       license='NASA Open Source Agreement 1.3',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
@@ -36,6 +35,8 @@ setup(name='openmdao.util',
       zip_safe=False,
       install_requires=[
           'setuptools',
+          'Sphinx',
+          'Fabric>=0.9',
       ],
       entry_points = """
       [console_scripts]

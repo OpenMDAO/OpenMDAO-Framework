@@ -188,7 +188,7 @@ From your working directory (e.g., pziegfel, ktmoore1), type:
 
 ::
 
-  cd /OpenMDAO/dev/<your_working_directory>  	    (Takes you to your working_directory.)
+  cd /OpenMDAO/dev/<your_working_directory>         (Takes you to your working_directory.)
   bzr branch lp:openmdao <branchname>               (Creates branch from openmdao on Launchpad.)
   Example:
   bzr branch lp:openmdao T30-user_guide_updates     (Creates branch: "T30-user_guide_updates" where "T30" is 
@@ -214,16 +214,13 @@ If you are in your home directory, type:
 ::
 
   cd /OpenMDAO/dev/<your_working_directory>/<branchname>  (Takes you to your branch.)
-  cd /buildout			                          (Takes you to the "buildout" directory.) 
-  repo.py fix					          (Cleans up permissions and files after branching from openmdao trunk on Launchpad.)
-  python2.6 isolated_bootstrap.py                         (Runs the script needed before you can build the first time.)
-  bin/buildout			                          (Builds on your branch.)		
-  bin/docs			                          (Displays the documentation.)  			
+  python2.6 go-openmdao-dev.py                            (Builds your virtual dev environment in devenv directory)
+  cd devenv                                              (Takes you to your dev environment.)
+  bin/openmdao_docs                                       (Displays the documentation, building first if necessary)
   
-.. note:: As mentioned above, you should run ``repy.py fix`` after you branch from Launchpad. Before building the first time
-   on your branch, you must run the ``python2.6 isolated_bootstrap.py`` script. However, for subsequent builds, only
-   ``bin/buildout`` is required (or ``bin/sphinx-build``, to update just the documents). 
-
+.. note:: If you have a preexisting ``devenv`` directory in your branch directory, you should delete
+     it before running the ``go-openmdao-dev.py`` script. To rebuild the docs only, run
+     ``bin/openmdao_build_docs``.
 
 .. index:: branch; merging to
 
@@ -240,37 +237,37 @@ when you push back to the trunk (for those users who have permission to do this)
   Example:
   cd /OpenMDAO/dev/pziegfel/T30-user_guide_updates
   
-  bzr status		  	   (Checks your branch for uncommitted changes; you cannot merge if you have any.)
+  bzr status           (Checks your branch for uncommitted changes; you cannot merge if you have any.)
   
 If you have uncommitted changes, use the ``bzr commit`` command (below). If you have no uncommitted changes, go
-straight to the ``buildout`` directory.
+straight to the ``devenv`` directory.
 
 ::
   
   bzr commit -m "<commit_message>"  (Commits changes and allows you to add a commit message on the command line. Omit the
-				    "-m" and press "Enter" to enter the required a message using your default text editor.)
-  cd buildout 		            (Takes you to your "buildout" directory.])
-  bin/buildout		            (Makes sure your branch builds before you merge to it [and after your commit, if applicable].)
-  bin/docs 		            (Checks that docs display correctly. Optional if no doc changes.)	
-  bin/test --all 	            (Runs the test suite; all tests should pass before you merge.)
-  bzr merge lp:openmdao             (Merges from openmdao on Launchpad to your branch.)
+                                  "-m" and press "Enter" to enter the required a message using your default text editor.)
+  cd devenv                     (Takes you to your virtual development environment.])
+  source bin/activate           (Activates your virtual development environment (requires bash)
+  bin/openmdao_docs             (Checks that docs display correctly. Optional if no doc changes.)
+  bin/openmdao_test --all       (Runs the test suite; all tests should pass before you merge.)
+
+  bzr merge lp:openmdao         (Merge from the trunk)
 
 **- If you have no conflicts,** you can continue. Type:
 
 ::
 
-  repo.py fix			       (Runs the cleanup script on your branch. Run this after merging or branching from Launchpad.)
-  bzr python2.6 isolated_bootstrap.py  (Runs required script before first build after the merge.)
-  bin/buildout    		       (Builds on the branch after the merge.)
-  bin/test --all		       (Confirms that all tests pass.)
+  python2.6 go-openmdao-dev.py (Builds your virtual dev environment in the new branch.)
+  cd devenv
+  bin/openmdao_test --all      (Confirms that all tests pass.)
   
 You may now continue working on your branch.
 
 
 .. _`if-you-have-a-conflict`:
 
-**- If you HAVE a conflict,** Bazaar will display not only the changes in files or directories, but it will also indicate the number of
-conflicts and where they occur. See the following example:
+**- If you HAVE a conflict,** Bazaar will display not only the changes in files or directories, but it will 
+also indicate the number of conflicts and where they occur. See the following example:
 
 
 .. figure:: ../images/quick-ref/merge_conflict.png
@@ -287,13 +284,13 @@ If you have a conflict, please refer to `Resolving Conflicts <http://doc.bazaar.
 the *Bazaar User Guide.*
 
 .. note:: A graphical interface (not part of Bazaar) is available to developers at Glenn Research Center (GRC)
-	  who are working on the project's Linux server. The rest of this section discusses to how to use it to resolve
-	  conflicts.
+     who are working on the project's Linux server. The rest of this section discusses to how to use it to resolve
+     conflicts.
 
 To bring up a graphical interface for displaying the conflicts, type the following:
 
 :: 
-  			
+  
   conrez.py
 
 Bazaar automatically creates three versions of the file in conflict, each with a
@@ -301,15 +298,10 @@ different suffix. The files appear in columns across the screen, left to right, 
 order listed here:
 
 
-        | ``filename.BASE`` 	(original file)
-	| ``filename.OTHER``	(file being merged)
-	| ``filename.THIS``	(file you are merging to)
+        | ``filename.BASE``     (common ancestor file)
+        | ``filename.OTHER``    (file from the source branch)
+        | ``filename.THIS``     (file from the destination branch)
 
-.. note::
-
-   When you are pushing to ``trunk``, your file will be ``.OTHER`` and ``trunk`` will be ``THIS``.
-   However, if you are merging out from ``trunk`` to update your branch, ``.OTHER`` will be ``trunk``,
-   and ``.THIS`` will be your branch.
 
 Conflicts will be displayed in colored text across all three files. See the following example:
 
@@ -338,14 +330,15 @@ commit your changes. Type:
 
 ::
 
-  bzr conflicts    		     (Checks to see if there are still conflicts. Displays them if there are.)
-  repo.py fix 	  		     (Runs the cleanup script on your branch. Run this after branching or merging from Launchpad.)
-  python2.6 isolated_bootstrap.py    (Required script that must be run before building the first time after branching or merging
-                                     from Launchpad.)
-                                     merging to a branch.)
-  bin/buildout 		             (Builds the branch.)						
-  bin/docs		             (Displays the documentation [optional].)
-  bin/test --all		     (All tests should pass before you commit.)	
+  bzr conflicts                  (Checks to see if there are still conflicts. Displays them if there are.)
+  deactivate                     (Deactivate your current virtual environment.)
+  cd ..                          (Get out of the devenv directory.)
+  rm -rf devenv                  (Remove the old virtual dev environment.)
+  python2.6 go-openmdao-dev.py   (Built your new virtual dev environment.)
+  cd devenv                      (Go to your new virtual dev environment.)
+  source bin/activate            (Activate your new virtual dev environment.)
+  bin/openmdao_docs              (Displays the documentation [optional].)
+  bin/openmdao_test --all        (All tests should pass before you commit.)
   
 You may now continue working on your branch.
  
@@ -371,15 +364,15 @@ merge by using the ``revert`` command. Type:
 
 ::
 
-  bzr revert		(Reverts to the previous revision and removes uncommitted changes.)
+  bzr revert         (Reverts to the previous revision and removes uncommitted changes.)
 
 You can also use this command if you do not want to commit changes you've made. In this case, it is a
 good idea to see what files will be removed, so type:
 
 ::
 
-  bzr diff		(Shows differences [additions, deletions] between two files.)			      
-  bzr revert		(Reverts to the previous revision.)
+  bzr diff      (Shows differences [additions, deletions] between two files.)			      
+  bzr revert    (Reverts to the previous revision.)
   
   
 .. index:: branch; working on
@@ -395,24 +388,17 @@ Non-Bazaar Commands (for GRC Users)
 ++++++++++++++++++++++++++++++++
 
 Wing is a very nice integrated editor and debugger for Python that is available to
-local OpenMDAO developers.  OpenMDAO comes with a buildout recipe called 
-``openmdao.recipes:wingproj`` that will create a Wing project file with
-Python path and executable settings that will make it work with the buildout.
+local OpenMDAO developers.  OpenMDAO comes with a script called 
+``wing`` that will create a Wing project file with
+Python path and executable settings that will make it work in your virtual environment.
 
-To run Wing for your buildout, type:
+To run Wing for your virtual dev environment, type:
 
 ::
 
     bin/wing
     
-from your ``buildout`` directory. If the eggs used in your buildout change and you
-re-run your buildout while Wing is still running, you will be notified by Wing
-that your project settings have changed. Select *Discard Changes and Reload*
-if your Wing path needs to be updated. Otherwise, select *Don't Reload* to
-keep your existing project file. If your Wing project seems to not be working
-properly after this happens, you can remove the Wing project file
-(``<buildout_dir>/parts/wingproj/wingproj.wpr``) and re-run the buildout to
-create a new one. 
+from your ``devenv`` directory.
 
 
 .. index:: repo.py
@@ -422,13 +408,13 @@ create a new one.
 
 The script ``repo.py`` is a utility script for manipulating and navigating in repositories.
 
+
 ::
 
     Usage: repo.py OP [options] repository, where OP may be:
        check  -- check for lock
        lock   -- lock repository
        unlock -- unlock repository
-       set    -- set this as current repository
        fix    -- fix permissions
 
     Options:
@@ -447,16 +433,6 @@ you'll know who to wait for.  The *check* operation will test for a locked
 repository.  Note that no enforcement is done.  Locking/unlocking merely
 sets a flag.  If people ignore this convention, then they can potentially
 interfere with each other's changes to the shared repository.
-
-The *set* operation sets the given repository directory as your current
-repository.  This will start a new shell process with the ``OPENMDAO_REPO``
-environment variable set to the full path of the repository.  The local
-system scripts will use this to update your *PATH* so the ``buildout/bin``
-and ``scripts`` directories are at the beginning.  You will also get some
-convenient aliases for navigating around in the repository directory
-structure.  Finally, if the repository is under ``/OpenMDAO/dev/shared``,
-your umask will be set to 002, allowing others in the *mdao* group to
-update files you own.
 
 The *fix* operation is used to fix file permissions in shared repositories.
 It will traverse the directory tree and try to ensure all operations enabled

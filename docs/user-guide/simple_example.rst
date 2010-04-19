@@ -46,9 +46,14 @@ If you have a branch from the source repository:
 
 	``examples/openmdao.examples.simple/openmdao/examples/simple``
 	
-If you have a distribution bundle:
+If you have downloaded the latest release version from the website:
 
-	``buildout/eggs/openmdao.examples.simple-x.x.x-xxxxxx.egg/openmdao/examples/simple``
+	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.simple-X.X.X-######.egg/openmdao/examples/simple``
+	
+where X.X.X is the current OpenMDAO version, and ###### is a string that
+contains the Python version, and the Operating System description. This will
+vary depending on your system and version, but there will only be one
+*simple* egg.
 	
 .. index:: Component
 
@@ -407,7 +412,9 @@ This script can be executed in the shell by going to the
 
 ::
 
-        [Path to your OpenMDAO install]/buildout/bin/python optimization_unconstrained.py
+        python optimization_unconstrained.py
+	
+Make sure that you are using OpenMDAO's local python environment.
 	
 This should produce the output:
 

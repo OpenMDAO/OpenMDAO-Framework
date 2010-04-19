@@ -27,21 +27,6 @@ Please refer to NumPy's `Docstring Standard
 docstrings.
 
 
-.. index:: buildout recipes
-
-Buildout Recipes (Fonts)
-------------------------
-
-Buildout recipes have configuration parameters. Please follow these guidelines
-when specifying parameters in OpenMDAO buildout recipes:
-
-* **Required** parameters should be in boldface type, designated in reStructuredText
-  (reST) by double asterisks, for example, ``**parameter name**``, which results in
-  **parameter name**.  
-* *Optional* parameters should be in italics, designated by single asterisks, for
-  example, ``*parameter name*``, which results in *parameter name*.
- 
-
 .. index:: underlines in reST
 
 Underlines (and Overlines)
