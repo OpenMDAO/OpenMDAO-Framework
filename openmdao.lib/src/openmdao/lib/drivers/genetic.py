@@ -29,8 +29,9 @@ class Genetic(Driver):
         self._alleles = GAllele.GAlleles()
         
         
-    def add_des_var(self,ref):
-        self.design_vars.append(ref)
+    def add_des_var(self,ref,**kwargs):
+        """adds a design variable to the driver. [ref] is a string refering to the public variable the driver should vary during execution. any key word arguments given will override default public variable metadata values if available." 
+        self.design_vars.append(ref)"""
         
         #split up the ref string to be able to get the trait. 
         path = ".".join(ref.split(".")[0:-1]) #get the path to the object
@@ -41,11 +42,7 @@ class Genetic(Driver):
         t = obj.get_dyn_trait(target)
         
         if t.is_trait_type(Float): 
-            print t.desc
-            print t.low
-            print t.high
-            print t.units
-            obj.set(target,30)
+            allele = GAllele.GAlleleRange(begin=)
         
     def execute(self):
         """Perform the optimization"""
@@ -55,7 +52,7 @@ class Genetic(Driver):
 if __name__ == "__main__":
     import numpy
     class Rosenbrock(Component):
-        x = Float(3,low=-10,high=10,desc="just an abrbitrary variable",units="ft",iotype="in")
+        x = Float(3,low=-10,high=10,iotype="in")
         y = Float(low=-100.0,high=100.0,iotype="in")
         result = Float(iotype = 'out')
         
