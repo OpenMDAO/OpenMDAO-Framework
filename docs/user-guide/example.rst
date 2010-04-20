@@ -643,9 +643,9 @@ Now, run the engine and examine the power and torque at 2500 RPM.
 
 	>>> my_engine.run()
 	>>> my_engine.get("torque")
-	203.9632284998996
+	203.963228...
 	>>> my_engine.get("power")
-	53.397448354811743
+	53.3974483...
 	
 The component is executed by calling the run function, which runs the *_pre_execute* (which determines if the
 component needs to be executed), *execute* (which is the function we created in the Engine class above), and
