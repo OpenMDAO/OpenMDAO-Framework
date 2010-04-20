@@ -3,11 +3,12 @@ Parses the variable definition section of a Phoenix Integration ModelCenter
 component wrapper.
 """
 
-__all__ = ('parse_phoenixwrapper')
-           
 from pyparsing import Suppress, Word, alphanums, dictOf, oneOf, printables, \
                       removeQuotes, sglQuotedString, commaSeparatedList
 
+#public symbols
+__all__ = ["parse_phoenixwrapper"]
+           
 def _parse_phoenixline():
     """Parse a single line containing a variable definition"""
         
@@ -28,7 +29,7 @@ def _parse_phoenixgroup():
     
     return data
 
-phoenix2trait = {
+_phoenix2trait = {
     'boolean': ('Bool'),
     'double': ('Float'),
     'double[]': ('Array','float32'),
@@ -41,20 +42,20 @@ phoenix2trait = {
     'string[]': ('Array','str')
 }
 
-phoenix2default = {
+_phoenix2default = {
     'boolean': "False",
     'double': "0.0",
     'integer': "0",
     'string': "''",
 }
 
-phoenix2iotype = {
+_phoenix2iotype = {
     'input': ('in'),
     'output': ('out')
 }
 
 # Note these are direct replacemnts, for ones that are too risky to str replace
-phoenix2units = {
+_unit_full_replace = {
     'in': ('inch'),
     'in*in': ('inch*inch'),
     'R': ('degR'),
@@ -64,7 +65,7 @@ phoenix2units = {
 }
 
 # Note, these are string replacements, useful for formulas.
-phoenix_replace_units = {
+_unit_part_replace = {
     'mile': ('mi'),
     'hr': ('h'),
     'ft2': ('ft*ft'),
@@ -84,7 +85,8 @@ phoenix_replace_units = {
     'ft/s2': ('ft/(s*s)'),
 }
 
-phoenix2units_ignore = ('%', 'EPNdB', 'dB')
+# These units are replaced with unitless quantities.
+_unit_ignore = ('%', 'EPNdB', 'dB')
 
 def _gen_publicvar(data):
     """Generates the OpenMDAO public variable line given a dictionary of info.
@@ -96,12 +98,12 @@ def _gen_publicvar(data):
     name = data.name
     
     try:
-        trait = phoenix2trait[data.type]
+        trait = _phoenix2trait[data.type]
     except KeyError, err:
         raise KeyError('Unhandled Modelcenter input type - %s' % err)
     
     try:
-        iotype = "iotype='" + phoenix2iotype[data.iotype] + "'"
+        iotype = "iotype='" + _phoenix2iotype[data.iotype] + "'"
     except KeyError, err:
         raise KeyError('Invalid iotype - %s' % err)
     
@@ -126,8 +128,8 @@ def _gen_publicvar(data):
                 default = default.replace("true","True")
                 default = default.replace("false","False")
                 
-        elif data.type in phoenix2default:
-            default = phoenix2default[data.type] + sep
+        elif data.type in _phoenix2default:
+            default = _phoenix2default[data.type] + sep
 
     # Process Enums
     if data.enumValues:
@@ -139,7 +141,7 @@ def _gen_publicvar(data):
     if trait == "Array":
         var += sep + "dtype=numpy_" + dtype
         
-    if trait == "File" and phoenix2iotype[data.iotype] == 'out':
+    if trait == "File" and _phoenix2iotype[data.iotype] == 'out':
         var += sep + "path='Insert_Filename_Here'"
         
     if data.units:
@@ -147,11 +149,11 @@ def _gen_publicvar(data):
         unit = data.units
         unit = unit.strip("'")
         
-        if unit not in phoenix2units_ignore:
-            if unit in phoenix2units:
-                unit = phoenix2units[unit]
+        if unit not in _unit_ignore:
+            if unit in _unit_full_replace:
+                unit = _unit_full_replace[unit]
             else:
-                for unitMC, unitOP in phoenix_replace_units.iteritems():
+                for unitMC, unitOP in _unit_part_replace.iteritems():
                     unit = unit.replace(unitMC, unitOP)
                 
             var += sep + "units='" + unit + "'"
@@ -366,12 +368,4 @@ def parse_phoenixwrapper(infile, outfile, compname):
     
     print "Stats: %d groups, %d variables." % (len(groups), count_var)
     
-# pragma: no cover 
-if __name__ == "__main__":           
-        
-    infile = "flops.scriptWrapper"
-    outfile = "flops_wrapper_auto.py"
-    compname = "FlopsWrapper"
-    parse_phoenixwrapper(infile, outfile, compname)
 
-        

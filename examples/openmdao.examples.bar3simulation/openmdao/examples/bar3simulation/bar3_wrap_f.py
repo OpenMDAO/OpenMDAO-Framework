@@ -4,7 +4,7 @@
     truss example referenced in CometBoards
 """
 
-import numpy.numarray as numarray
+from numpy import zeros
 
 # pylint: disable-msg=E0611,F0401
 from openmdao.main.api import Component
@@ -107,7 +107,7 @@ class Bar3Truss(Component):
             the Bar3Truss output.
             """
 
-        load = numarray.zeros(2,'d')
+        load = zeros(2,'d')
         load[0] = self.load_x_dir
         load[1] = self.load_y_dir
         
