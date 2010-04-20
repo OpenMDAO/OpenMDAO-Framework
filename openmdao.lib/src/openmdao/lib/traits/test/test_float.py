@@ -188,6 +188,15 @@ class FloatTestCase(unittest.TestCase):
         self.hobj.symmetry_angle = 11.25
         self.assertEqual(self.hobj.symmetry_angle, 11.25)
 
+    def test_default_value_type(self):
+        try:
+            self.hobj.add_trait('bad_default',
+                                Float('Bad Wolf', low=3, high=4))
+        except TraitError, err:
+            self.assertEqual(str(err), 
+                "Default value should be a float.")
+        else:
+            self.fail('TraitError expected')
 
 if __name__ == "__main__":
     unittest.main()

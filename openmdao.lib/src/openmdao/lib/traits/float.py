@@ -31,10 +31,6 @@ class Float(TraitType):
     def __init__(self, default_value=None, iotype=None, desc=None, \
                  low=None, high=None, exclude_low=False, exclude_high=False, \
                  units=None, **metadata):
-        if low is not None:
-            low = float(low)
-        if high is not None:
-            high = float(high)
 
         # Determine defalt_value if unspecified
         if default_value is None:
@@ -44,7 +40,13 @@ class Float(TraitType):
                 default_value = high
             else:
                 default_value = low
-                
+        else:
+            if not isinstance(default_value, float):
+                if isinstance(default_value, int):
+                    default_value = float(default_value)
+                else:
+                    raise TraitError("Default value should be a float.")
+              
         # excludes must be saved locally because we override error()
         self.exclude_low = exclude_low
         self.exclude_high = exclude_high
@@ -68,23 +70,22 @@ class Float(TraitType):
             if low is None:
                 low = -float_info.max
             else:
-                self.low = low
+                low = float(low)
+                
             if high is None:
                 high = float_info.max
             else:
-                self.high = high
+                high = float(high)
 
             if low > high:
                 raise TraitError("Lower bounds is greater than upper bounds.")
         
             # Range can be float or int, so we need to force these to be float.
-            low = float(low)
-            high = float(high)
             default_value = float(default_value)
                 
             self._validator = Range(low=low, high=high, value=default_value,
                                           exclude_low=exclude_low,
-                                        exclude_high=exclude_high,
+                                          exclude_high=exclude_high,
                                           **metadata)
             
         # If there are units, test them by creating a physical quantity
