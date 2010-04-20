@@ -24,7 +24,7 @@ from openmdao.util.testutil import find_python
 
 
 # Users who have ssh configured correctly for testing.
-SSH_USERS = ('setowns1',)
+SSH_USERS = []
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -176,7 +176,7 @@ class TestCase(unittest.TestCase):
             machines = []
             node = platform.node()
             python = find_python()
-            if node == 'gxterm3':
+            if node.startswith('gxterm'):
                 # User environment assumed OK on this GRC cluster front-end.
                 for i in range(55):
                     machines.append({'hostname':'gx%02d' % i, 'python':python})
@@ -328,7 +328,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_norecorder')
 
-        # Check resoponse to no recorder set.
+        # Check response to no recorder set.
         self.model.driver.iterator = ListCaseIterator([])
         try:
             self.model.run()

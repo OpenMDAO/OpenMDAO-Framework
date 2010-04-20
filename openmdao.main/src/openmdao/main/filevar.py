@@ -34,7 +34,7 @@ class FileMetadata(object):
     - 'big_endian', boolean, default False. Only meaningful if binary.
     - 'single_precision', boolean, default False. Only meaningful if binary.
     - 'unformatted', boolean, default False. Only meaningful if binary.
-    - 'recordmark_8', boolean, default False. Only meaningful if binary.
+    - 'recordmark_8', boolean, default False. Only meaningful if unformatted.
 
     In addition, external files have defined behavior for:
 

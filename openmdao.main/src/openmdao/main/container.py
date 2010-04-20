@@ -514,6 +514,7 @@ class Container(HasTraits):
         
         This version calls tree_rooted() on all of its child Containers.
         """
+        self._logger.rename(self.get_pathname().replace('.', ','))
         self._call_tree_rooted = False
         for cont in self.list_containers():
             getattr(self, cont).tree_rooted()

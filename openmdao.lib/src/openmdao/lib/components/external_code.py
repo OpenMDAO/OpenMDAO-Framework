@@ -116,7 +116,7 @@ class ExternalCode(Component):
 
         et = time.time() - start_time
         if et >= 60:
-            self.info('elapsed time: %f sec.', et)
+            self.info('elapsed time: %.1f sec.', et)
 
         return (return_code, error_msg)
 
@@ -227,14 +227,11 @@ class ExternalCode(Component):
         This can be useful for resetting problem state.
         """
         self.info('copying initial inputs from %s...', inputs_dir)
-        self.push_dir()
-        try:
+        with self.dir_context:
             if not os.path.exists(inputs_dir):
                 self.raise_exception("inputs_dir '%s' does not exist" \
                                      % inputs_dir, RuntimeError)
             self.copy_files(inputs_dir, patterns)
-        finally:
-            self.pop_dir()
 
     def copy_results(self, results_dir, patterns):
         """
@@ -243,14 +240,11 @@ class ExternalCode(Component):
         code takes a long time to execute.
         """
         self.info('copying precomputed results from %s...', results_dir)
-        self.push_dir()
-        try:
+        with self.dir_context:
             if not os.path.exists(results_dir):
                 self.raise_exception("results_dir '%s' does not exist" \
                                      % results_dir, RuntimeError)
             self.copy_files(results_dir, patterns)
-        finally:
-            self.pop_dir()
 
     def copy_files(self, directory, patterns):
         """
@@ -264,7 +258,7 @@ class ExternalCode(Component):
             pattern = os.path.join(directory, pattern)
             for src_path in sorted(glob.glob(pattern)):
                 dst_path = os.path.basename(src_path)
-                self.debug('copy %s -> %s', src_path, dst_path)
+                self.debug('    %s', src_path)
                 shutil.copy(src_path, dst_path)
                 # Ensure writable.
                 mode = os.stat(dst_path).st_mode
