@@ -7,7 +7,6 @@ Quick Reference for Working in OpenMDAO
    
    bazaar
    documenting
-   nedit
    sphinx
    style
   

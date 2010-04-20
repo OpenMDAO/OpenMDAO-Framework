@@ -4,7 +4,7 @@ User's Guide
 ============ 
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 2
    
    overview.rst
    simple_example.rst

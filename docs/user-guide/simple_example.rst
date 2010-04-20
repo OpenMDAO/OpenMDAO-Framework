@@ -196,7 +196,7 @@ assigned here similarly via *self.f_xy.* This changes the value of the framework
 completes the component execution.
 
 It will often be the case that you will already have the code for evaluating the objective function,
-but it will be in some other language, such as Fortran or C/C++. The :ref:`Plugin-Developer-Guide` 
+but it will be in some other language, such as Fortran or C/C++. The :ref:`Plugin-Developer's-Guide` 
 gives some examples of how to incorporate these kinds of components into OpenMDAO.
 
 The Paraboloid component is now built and ready for inclusion in a model.

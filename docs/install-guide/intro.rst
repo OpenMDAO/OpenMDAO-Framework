@@ -11,14 +11,13 @@ it can be downloaded from:
 
     http://openmdao.org/downloads/<openmdao_version>/go-openmdao.py
     
-where *<openmdao_version>* is the version of openmdao you want to install. To
+where ``<openmdao_version>`` is the version of openmdao you want to install. To
 get the latest version, download
 
 ::
 
     http://openmdao.org/downloads/latest/go-openmdao.py
     
-
 
 System Requirements
 -------------------
@@ -27,7 +26,7 @@ OpenMDAO requires the following list of programs or packages to be installed
 at the system level.
 
     - Python 2.6
-    - bazaar (needed only if access to the OpenMDAO source repository is needed)
+    - Bazaar (needed only if access to the OpenMDAO source repository is needed)
     
 
 Specific Platform Requirements
@@ -71,41 +70,5 @@ installed:
 .. __: http://launchpad.net/bzr/2.1/2.1.0/+download/Bazaar-2.1.0-3.dmg
 
 
-Installing from Source
-----------------------
-
-Official releases of OpenMDAO will have downloadable source tar files available
-on Launchpad at ``http://openmdao.org/downloads/<version_id>/openmdao_src-<version_id>.tar.gz``.
-Once you've downloaded the tar file, untar it in the desired location.
-
-If you happen to have Bazaar installed on your system or you want to obtain a
-"bleeding edge" version, you can obtain the source via the following command:
-
-::
-
-    bzr branch lp:openmdao <your_branch_name>
-
-.. _Building:
-
-
-Building
-++++++++
-
-You should now have a copy of the OpenMDAO source, whether you obtained it via
-Bazaar or by untarring a source distribution. 
-
-.. note:: add explanation of bootstrapping script
-
-
-At this point, your OpenMDAO install should be ready to use. You can test it by
-typing:
-
-::
-
-    bin/nosetests openmdao
-    
-This will run all of the OpenMDAO unit tests.
-
-
-
-
+.. note:: If you wish to view the source files, please see the *Developer's Guide,*
+   :ref:`Installing-from-Source`. 

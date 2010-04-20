@@ -10,12 +10,6 @@
 Overview of the OpenMDAO Framework
 ==================================
 
-The following section provides a brief overview of OpenMDAO and discusses some
-of its basic components.
-
-What is OpenMDAO?
------------------
-
 MDAO stands for MultiDisciplinary Analysis and Optimization; OpenMDAO is
 an open source framework to analyze and solve MDAO problems. In OpenMDAO, a
 problem is represented by a system of objects called :term:`components`. These objects

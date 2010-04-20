@@ -1,27 +1,22 @@
-Useful Commands
-===============
-
-This section contains commands that developers would use on a regular basis when performing 
-everyday tasks (such as branching). Most of them are Bazaar commands; a few are scripts
-or commands for local NASA Glenn developers only. 
-
-
 .. index:: Bazaar; commands
 
 .. _Bazaar-Commands:
 
-Bazaar Commands 
----------------
 
-Please note that the OpenMDAO *Developer's Guide* contains everything you need to get started working,
-including information on Bazaar setup, code location, and how to create your branch. The information here is a
-quick reference for some common tasks you will be doing. 
+Bazaar Commands
+===============
+
+This section contains commands that developers would use on a regular basis when performing  everyday
+tasks. Most of them are Bazaar commands. Please note that the OpenMDAO *Developer's Guide*
+contains everything you need to get started working, including information on Bazaar setup, code location,
+and how to create your branch. The information here is a quick reference for some common tasks you will be
+doing. 
 
 .. note::
-   - Text included in pointy brackets means you have to supply a name or other
-     information. For example, ``/OpenMDAO/dev/<your_working_directory>`` requires you
-     to supply a name for the working directory, such as: ``pziegfel``.
-   - The examples provided assume you are working on OpenMDAO's Linux server. 
+   Text included in pointy brackets means you have to supply specific information (e.g.,
+   ``<file_name>``. Remember that the examples may include a ``/`` (Linux). Windows users must
+   make the appropriate change.
+   
 
 References:
 
@@ -31,8 +26,8 @@ References:
 
 .. index Bazaar commands
 
-*Common Bazaar Commands*
-++++++++++++++++++++++++
+Common Bazaar Commands
+++++++++++++++++++++++
 
 To use these commands, type ``bzr <command_name>``, for example ``bzr add``.
 
@@ -51,14 +46,14 @@ Note that all files on your branch are available to be changed. By running the `
 command, you can see all of the uncommitted changes on your branch. 
 
   
-*Managing Files*
-+++++++++++++++++
+Managing Files
++++++++++++++++
 
 This section discusses some of the commands used to manage your files.
 
 
-Creating a Directory
-~~~~~~~~~~~~~~~~~~~~
+*Creating a Directory*
+~~~~~~~~~~~~~~~~~~~~~~
 
 If you want to create a new versioned directory, type the following:
 
@@ -69,8 +64,8 @@ If you want to create a new versioned directory, type the following:
 .. index:: Bazaar, adding a file
 .. index:: adding a file
   
-Adding a File
-~~~~~~~~~~~~~
+*Adding a File*
+~~~~~~~~~~~~~~~
 
 To add a file or directory to the Bazaar repository on your branch, type:
 
@@ -89,8 +84,8 @@ After you type ``bzr add``, Bazaar will display a list of the files and director
 
 .. index:: removing a file/directory
 
-Removing a File or Directory
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*Removing a File or Directory*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Bazaar's ``remove`` command is similar to the UNIX command, and either can be used to remove a file.
 
@@ -111,8 +106,8 @@ However, to remove a directory, it's easier to use the UNIX remove command (``rm
 .. index:: renaming a file/directory
 
 
-Moving or Renaming a File
-~~~~~~~~~~~~~~~~~~~~~~~~~
+*Moving or Renaming a File*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The move command (``bzr mv``) is used to rename or move a file, depending on the arguments you
 provide. When moving a file, you must provide the path to the new location. When you
@@ -140,8 +135,8 @@ the appropriate command. See the examples that follow:
 
 .. index:: diff command
 
-Viewing Changes in a File
-~~~~~~~~~~~~~~~~~~~~~~~~~
+*Viewing Changes in a File*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 If you have edited a file and want to see what you have done, type:
 
@@ -155,8 +150,8 @@ plus (+) or minus (-) sign in front of the changed lines.
 
 .. index:: log command
 
-Viewing the Revision Log
-~~~~~~~~~~~~~~~~~~~~~~~~~
+*Viewing the Revision Log*
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 You can see the history of your branch by browsing its log. To see a complete list of revisions on the current branch
 beginning with the first revision and displaying the most recent revision last, type: 
@@ -178,174 +173,26 @@ displayed last, and you will have to scroll up to view the most recent revisions
 
  
 
-.. index:: branch; creating
+Creating a Branch from openmdao on Launchpad
+++++++++++++++++++++++++++++++++++++++++++++
+
+Please see the *Developer's Guide,* :ref:`Creating-a-Branch`. 
 
 
-*Creating a Branch from openmdao on Launchpad*
+Building on Your Branch
++++++++++++++++++++++++
+
+Please see the *Developer's Guide,* :ref:`Building-OpenMDAO-(openmdao)`. 
+
+
+Merging from openmdao to Your Branch
 ++++++++++++++++++++++++++++++++++++++++++++++
 
-From your working directory (e.g., pziegfel, ktmoore1), type:
-
-::
-
-  cd /OpenMDAO/dev/<your_working_directory>         (Takes you to your working_directory.)
-  bzr branch lp:openmdao <branchname>               (Creates branch from openmdao on Launchpad.)
-  Example:
-  bzr branch lp:openmdao T30-user_guide_updates     (Creates branch: "T30-user_guide_updates" where "T30" is 
-                                                    the Trac ticket number.)
-
-Your Trac ticket number and branch number should correspond. When working on your branch, be sure
-to add any new files that you create using the ``bzr add`` command. You can use the command to
-add a specific file or directory (``bzr add <filename>``), but it's easier to type it by itself. In the
-latter case, everything in the current directory will be added. So, if you enter the command at the top of
-your branch, all unadded directories and files will be added.
-
-
-.. index:: branch; building 
-
-.. _Building-on-Your-Branch:
-
-
-*Building on Your Branch*
-+++++++++++++++++++++++++
-
-If you are in your home directory, type:
-
-::
-
-  cd /OpenMDAO/dev/<your_working_directory>/<branchname>  (Takes you to your branch.)
-  python2.6 go-openmdao-dev.py                            (Builds your virtual dev environment in devenv directory)
-  cd devenv                                              (Takes you to your dev environment.)
-  bin/openmdao_docs                                       (Displays the documentation, building first if necessary)
-  
-.. note:: If you have a preexisting ``devenv`` directory in your branch directory, you should delete
-     it before running the ``go-openmdao-dev.py`` script. To rebuild the docs only, run
-     ``bin/openmdao_build_docs``.
-
-.. index:: branch; merging to
-
-
-*Merging openmdao to Your Branch*
-+++++++++++++++++++++++++++++++++
-
-As you work on your branch, you may want to update it from openmdao ``trunk`` on Launchpad to avoid conflicts
-when you push back to the trunk (for those users who have permission to do this). Type:
-
-::
-
-  cd /OpenMDAO/dev/<branchname>    (Takes you to the branch you want to merge to.)
-  Example:
-  cd /OpenMDAO/dev/pziegfel/T30-user_guide_updates
-  
-  bzr status           (Checks your branch for uncommitted changes; you cannot merge if you have any.)
-  
-If you have uncommitted changes, use the ``bzr commit`` command (below). If you have no uncommitted changes, go
-straight to the ``devenv`` directory.
-
-::
-  
-  bzr commit -m "<commit_message>"  (Commits changes and allows you to add a commit message on the command line. Omit the
-                                  "-m" and press "Enter" to enter the required a message using your default text editor.)
-  cd devenv                     (Takes you to your virtual development environment.])
-  source bin/activate           (Activates your virtual development environment (requires bash)
-  bin/openmdao_docs             (Checks that docs display correctly. Optional if no doc changes.)
-  bin/openmdao_test --all       (Runs the test suite; all tests should pass before you merge.)
-
-  bzr merge lp:openmdao         (Merge from the trunk)
-
-**- If you have no conflicts,** you can continue. Type:
-
-::
-
-  python2.6 go-openmdao-dev.py (Builds your virtual dev environment in the new branch.)
-  cd devenv
-  bin/openmdao_test --all      (Confirms that all tests pass.)
-  
-You may now continue working on your branch.
-
-
-.. _`if-you-have-a-conflict`:
-
-**- If you HAVE a conflict,** Bazaar will display not only the changes in files or directories, but it will 
-also indicate the number of conflicts and where they occur. See the following example:
-
-
-.. figure:: ../images/quick-ref/merge_conflict.png
-   :align: center
-   
-   Example of Conflicts When Merging
-
-
-In the above example, the "+N" indicates new files or directories. The "M" indicates modified files or directories.
-If a file or directory is deleted, "-D" appears before its name. In this example there are two conflicts that must
-be resolved before proceeding. 
-
-If you have a conflict, please refer to `Resolving Conflicts <http://doc.bazaar.canonical.com/bzr.2.1/en/user-guide/resolving_conflicts.html>`_ in
-the *Bazaar User Guide.*
-
-.. note:: A graphical interface (not part of Bazaar) is available to developers at Glenn Research Center (GRC)
-     who are working on the project's Linux server. The rest of this section discusses to how to use it to resolve
-     conflicts.
-
-To bring up a graphical interface for displaying the conflicts, type the following:
-
-:: 
-  
-  conrez.py
-
-Bazaar automatically creates three versions of the file in conflict, each with a
-different suffix. The files appear in columns across the screen, left to right, in the
-order listed here:
-
-
-        | ``filename.BASE``     (common ancestor file)
-        | ``filename.OTHER``    (file from the source branch)
-        | ``filename.THIS``     (file from the destination branch)
-
-
-Conflicts will be displayed in colored text across all three files. See the following example:
-
-.. figure:: ../images/quick-ref/gui_merge_conflict.png
-   :align: left
-   
-   GUI Showing Versions of a File in Conflict
- 
-  
-In the above example, a new index entry ``CONMIN driver`` shows up in the ``.OTHER`` file (blue background
-and red text). In the ``.THIS`` file on the right, the text with the green background is new. 
-
-In some cases, the difference may just be the way the text is formatted. You must look at the files and
-decide which version to send to ``filename.THIS`` or if the file is okay as it is. If the ``.THIS`` file is
-okay, you can keep scrolling down. However, if you have to update it, select the appropriate change and
-click on the arrow next to it. If you make a mistake, you can select *undo* from the menu bar at the top of the screen.
-
-You may have to scroll to the right to read each of the files. After you have reviewed the conflicts and
-made your selections, save your changes and click the "X" in the upper right corner to exit.
-
-When you exit you will be asked if you want to *Save Selected*. Assuming that you do, click that option
-and then click *Yes* when asked to save the file. 
-
-Make sure there are no more conflicts. If there are, resolve them as above. If there are none, you may build and
-commit your changes. Type: 
-
-::
-
-  bzr conflicts                  (Checks to see if there are still conflicts. Displays them if there are.)
-  deactivate                     (Deactivate your current virtual environment.)
-  cd ..                          (Get out of the devenv directory.)
-  rm -rf devenv                  (Remove the old virtual dev environment.)
-  python2.6 go-openmdao-dev.py   (Built your new virtual dev environment.)
-  cd devenv                      (Go to your new virtual dev environment.)
-  source bin/activate            (Activate your new virtual dev environment.)
-  bin/openmdao_docs              (Displays the documentation [optional].)
-  bin/openmdao_test --all        (All tests should pass before you commit.)
-  
-You may now continue working on your branch.
+Please see the *Developer's Guide,* :ref:`Merging-to-Your-Branch`. 
  
  
-
-*Pushing Your Branch to openmdao on Launchpad*
-++++++++++++++++++++++++++++++++++++++++++++++
+Pushing Your Branch to openmdao on Launchpad
++++++++++++++++++++++++++++++++++++++++++++++
 
 Please see the *Developer's Guide,* :ref:`Pushing-a-Branch-Back-to-Launchpad` for detailed instructions on how to push a branch back
 to Launchpad. 
@@ -356,8 +203,8 @@ to Launchpad.
 .. _`Canceling-a-Merge-and-Reverting-Changes`:
 
 
-*Canceling a Merge and Reverting Changes*
-+++++++++++++++++++++++++++++++++++++++++
+Canceling a Merge and Reverting Changes
+++++++++++++++++++++++++++++++++++++++++
 
 If you encounter a problem when merging openmdao to your branch, and the issue cannot be resolved quickly, you can cancel the
 merge by using the ``revert`` command. Type:
@@ -375,67 +222,3 @@ good idea to see what files will be removed, so type:
   bzr revert    (Reverts to the previous revision.)
   
   
-.. index:: branch; working on
-
-|
-
-.. note:: The next two sections pertain only to developers at GRC.
-
-Non-Bazaar Commands (for GRC Users)
------------------------------------
-
-*Editing/Debugging Source Code*
-++++++++++++++++++++++++++++++++
-
-Wing is a very nice integrated editor and debugger for Python that is available to
-local OpenMDAO developers.  OpenMDAO comes with a script called 
-``wing`` that will create a Wing project file with
-Python path and executable settings that will make it work in your virtual environment.
-
-To run Wing for your virtual dev environment, type:
-
-::
-
-    bin/wing
-    
-from your ``devenv`` directory.
-
-
-.. index:: repo.py
-
-*Repository Utility*
-+++++++++++++++++++++
-
-The script ``repo.py`` is a utility script for manipulating and navigating in repositories.
-
-
-::
-
-    Usage: repo.py OP [options] repository, where OP may be:
-       check  -- check for lock
-       lock   -- lock repository
-       unlock -- unlock repository
-       fix    -- fix permissions
-
-    Options:
-      -h, --help      show this help message and exit
-      -f, --force     forced unlock
-      -v, --verbose   print info messages
-
-*Repository* is a directory under ``/OpenMDAO/dev/<username>`` or
-``/OpenMDAO/dev/shared``.
-
-The *check, lock*, and *unlock* operations can be used to avoid
-more than one developer trying to update a shared repository at the same time.
-Before making changes, do a *lock*.  If that succeeds, then proceed with
-your changes and when complete, do an *unlock.*  If the *lock* fails, then
-you'll know who to wait for.  The *check* operation will test for a locked
-repository.  Note that no enforcement is done.  Locking/unlocking merely
-sets a flag.  If people ignore this convention, then they can potentially
-interfere with each other's changes to the shared repository.
-
-The *fix* operation is used to fix file permissions in shared repositories.
-It will traverse the directory tree and try to ensure all operations enabled
-for owner are also enabled for group.  If you don't own the file,
-the operation will fail and the owner's user id will be reported.
-

@@ -1003,15 +1003,6 @@ NASA in the 1970s, and is  currently in the public domain. It has been  included
 in OpenMDAO's Standard Library to provide users with a basic gradient algorithm.
 The interface for CONMIN is full detailed in :ref:`CONMIN-driver`.
 
-Idesign
-+++++++
-
-NOTE: License classification for Idesign is under review.
-
-Idesign, which stands for Interactive Design Optimization of Engineering Systems,
-is another gradient optimization package useable for problems with inequality and
-equality constraints. It is currently being integrated into OpenMDAO,
-and should be available soon.
 
 PyEvolve
 ++++++++

@@ -45,8 +45,11 @@ titles as shown in the following example:
   User's Guide
   ============
 
-The overline and underline must be the same length, or you will get an error and
-the build will fail. 
+The overline and underline must be the same length, or you will get an error and the
+build will fail. If you use just underline and it is shorter than the text, you will get
+a warning, but the documents will build. If you use just underline, and it is longer than
+the text, Sphinx doesn't seem to mind.
+
 
 **- File title:**
 

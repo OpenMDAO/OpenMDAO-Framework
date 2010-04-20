@@ -9,15 +9,17 @@ Contents:
 
 .. toctree::
    :maxdepth: 2
+   :numbered:
+ 
    
    install-guide/index
    user-guide/index
-   arch-doc/index
    plugin-guide/index
    dev-guide/index
    srcdocs/index
-   licenses/index
    quick-ref/index
+   licenses/index
+   arch-doc/index
    
    
 .. toctree::

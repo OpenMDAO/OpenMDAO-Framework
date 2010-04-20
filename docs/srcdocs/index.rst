@@ -1,11 +1,7 @@
-====================
-Source Documentation
-====================
+===============
+Source Packages
+===============
 
-
-
-Packages
---------
 
 .. toctree::
    :maxdepth: 3
