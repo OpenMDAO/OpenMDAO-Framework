@@ -188,7 +188,7 @@ def build_docs():
         
         # update conf.py with new version and release info
         conf = os.path.join(docdir, 'conf.py')
-        f = open(conf, 'r')
+        f = open(conf, 'rb')
         contents = f.read()
         f.close()
         
@@ -202,7 +202,7 @@ def build_docs():
         contents = shtitle_rgx.sub(
              "html_short_title = 'OpenMDAO Documentation v%s'" % version, contents)
         
-        f = open(conf, 'w')
+        f = open(conf, 'wb')
         f.write(contents)
         f.close()
         
