@@ -20,10 +20,10 @@ class VersionError(RuntimeError):
     pass
 
 def _check_version(version):
-    fname = 'openmdao.main-%s.tar.gz' % version
     with hide('running', 'stdout'):
-        result = run('ls ~/dists')
-    if fname in result:
+        result = run('ls ~/downloads')
+    lst = result.split(' ')
+    if version in lst:
         raise VersionError('Version %s already exists. Please specify a different version' % version)
     return version
 
