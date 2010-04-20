@@ -233,6 +233,30 @@ class CONMINdriver(Driver):
         
         self.iter_count = 0
 
+        # define the CONMINdriver's private variables
+        # note, these are all resized in config_conmin
+        
+        # basic stuff
+        self.design_vals = zeros(0,'d')
+        self._scal = zeros(0,'d')
+        self.cons_active_or_violated = zeros(0, 'i') 
+        
+        # gradient of objective w.r.t x[i]
+        self.df = zeros(0, 'd')
+
+        # move direction in the optimization space
+        self.s = zeros(0, 'd')
+        self.gradients = zeros(0, 'd')
+
+        # temp storage
+        self._b = zeros(0, 'd')
+        self._c = zeros(0, 'd')
+        self._ms1 = zeros(0, 'i')
+         
+        # temp storage for constraints
+        self.g1 = zeros(0,'d')
+        self.g2 = zeros(0,'d')
+
         
     def execute(self):
         """Perform the optimization."""
