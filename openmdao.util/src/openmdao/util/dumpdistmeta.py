@@ -123,13 +123,21 @@ def get_dist_metadata(dist, dirname=''):
             metadata['zip-safe'] = True
         else:
             metadata[path] = dist.get_metadata(path)
-    if len(metadata) == 0:
-        # look for .egg-info file at peer level
-        f = open(os.path.join(dist.location,
-                              '%s-%s.egg-info'%(dist.project_name,
-                                                dist.version)),'r')
-        message = rfc822.Message(f)
-        metadata = message
+    if not dirname and len(metadata) == 0:
+        # look for .egg-info file at peer level. Apparently, windows and linux use two 
+        # different naming conventions for egg_infos. Windows includes the python version
+        # in the name and linux (at least ubuntu) doesn't.
+        for pyver in ['-py%s.%s' % sys.version_info[:2], '']:
+            try:
+                f = open(os.path.join(dist.location,
+                                  '%s-%s%s.egg-info'%(dist.project_name,
+                                                      dist.version, pyver)),'r')
+                message = rfc822.Message(f)
+                metadata = message
+            except:
+                pass
+            else:
+                break
     return metadata
     
                 
