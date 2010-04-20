@@ -15,17 +15,12 @@ def main():
     
     script_str = """
 
-#openmdaoreq = 'openmdao'
-
-#def extend_parser(optparse_parser):
-    #optparse_parser.add_option("", "--openmdaover", action="store", type="string", dest='openmdaover', 
-                      #help="specify openmdao version (default is latest)")
-
 def adjust_options(options, args):
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
         print 'ERROR: python version must be >= 2.6 and <= 3.0. yours is %%s' %% sys.version.split(' ')[0]
         sys.exit(-1)
-    options.use_distribute = True  # force use of distribute instead of setuptools
+    # using distribute requires elevation on Vista, not sure why because setuptools doesn't...
+    #options.use_distribute = True  # force use of distribute instead of setuptools
     # name of virtualenv defaults to openmdao-<version>
     if len(args) == 0:
         args.append('openmdao-%%s' %% '%(version)s')
