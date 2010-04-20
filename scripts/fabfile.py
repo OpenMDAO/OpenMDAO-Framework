@@ -23,15 +23,15 @@ def _check_version(version):
     with hide('running', 'stdout'):
         result = run('ls ~/downloads')
     lst = [x.strip() for x in result.split('\n')]
-    print 'lst is %s' % lst
     if version in lst:
         raise VersionError('Version %s already exists. Please specify a different version' % version)
     return version
 
 
-def release(version=None):
+def release(version=None, test=False):
     """Creates source distributions of the current openmdao namespace packages,
     uploads them to openmdao.org/dists, and updates the index.html file there.
+    If the test flag is True, it will not actually make any changes to the server.
     """
     if version is not None:
         try:
@@ -63,58 +63,61 @@ def release(version=None):
         finally:
             os.chdir(startdir)
         
-        # push new distribs up to the server
-        put(join(tmpdir,'openmdao.*.tar.gz'), '~/dists', 
-            mode=0644)
-        put(join(tmpdir,'openmdao-*.tar.gz'), '~/dists',
-            mode=0644)
-        
-        run('mkdir ~/downloads/%s' % version)
-        run('chmod 755 ~/downloads/%s' % version)
-        
-        # update the 'latest' link to point to the most recent version directory
-        run('rm -f ~/downloads/latest')
-        run('ln -s ~/downloads/%s ~/downloads/latest' % version)
-        
-        # upload the repo source tar
-        put(join(tmpdir, 'openmdao_src*.gz'), 
-            '~/downloads/%s' % version, 
-            mode=0644)
-        
-        # for now, put the go-openmdao script up without the version
-        # id in the name
-        put(join(tmpdir, 'go-openmdao*.py'), 
-            '~/downloads/%s/go-openmdao.py' % version,
-            mode=0755)
+        if not test:
+            # push new distribs up to the server
+            put(join(tmpdir,'openmdao.*.tar.gz'), '~/dists', 
+                mode=0644)
+            put(join(tmpdir,'openmdao-*.tar.gz'), '~/dists',
+                mode=0644)
+            
+            run('mkdir ~/downloads/%s' % version)
+            run('chmod 755 ~/downloads/%s' % version)
+            
+            # update the 'latest' link to point to the most recent version directory
+            run('rm -f ~/downloads/latest')
+            run('ln -s ~/downloads/%s ~/downloads/latest' % version)
+            
+            # upload the repo source tar
+            put(join(tmpdir, 'openmdao_src*.gz'), 
+                '~/downloads/%s' % version, 
+                mode=0644)
+            
+            # for now, put the go-openmdao script up without the version
+            # id in the name
+            put(join(tmpdir, 'go-openmdao*.py'), 
+                '~/downloads/%s/go-openmdao.py' % version,
+                mode=0755)
+    
+            # put the docs on the server and untar them
+            put(join(tmpdir,'docs.tar.gz'), '~/downloads/%s' % version) 
+            with cd('~/downloads/%s' % version):
+                run('tar xzf docs.tar.gz')
+                run('mv html docs')
+                run('rm -f docs.tar.gz')
+    
+            # FIXME: just generate the index.html locally and upload it instead
+            # of having a bunch of mkdlversionindex.py files lying around on the
+            # server
+            put(join(scripts_dir,'mkdlversionindex.py'), 
+                '~/downloads/%s' % version)
+            
+            # update the index.html for the version download directory on the server
+            with cd('~/downloads/%s' % version):
+                run('python2.6 mkdlversionindex.py')
+    
+            # update the index.html for the dists directory on the server
+            with cd('~/dists'):
+                run('python2.6 mkegglistindex.py')
+    
+            # update the index.html for the downloads directory on the server
+            with cd('~/downloads'):
+                run('python2.6 mkdownloadindex.py')
 
-        # put the docs on the server and untar them
-        put(join(tmpdir,'docs.tar.gz'), '~/downloads/%s' % version) 
-        with cd('~/downloads/%s' % version):
-            run('tar xzf docs.tar.gz')
-            run('mv html docs')
-            run('rm -f docs.tar.gz')
-
-        # FIXME: just generate the index.html locally and upload it instead
-        # of having a bunch of mkdlversionindex.py files lying around on the
-        # server
-        put(join(scripts_dir,'mkdlversionindex.py'), 
-            '~/downloads/%s' % version)
-        
-        # update the index.html for the version download directory on the server
-        with cd('~/downloads/%s' % version):
-            run('python2.6 mkdlversionindex.py')
-
-        # update the index.html for the dists directory on the server
-        with cd('~/dists'):
-            run('python2.6 mkegglistindex.py')
-
-        # update the index.html for the downloads directory on the server
-        with cd('~/downloads'):
-            run('python2.6 mkdownloadindex.py')
-
-        
     finally:
-        shutil.rmtree(tmpdir)
+        if test:
+            print 'Files were placed in %s.' % tmpdir
+        else:
+            shutil.rmtree(tmpdir)
 
 
 def showpackages():
