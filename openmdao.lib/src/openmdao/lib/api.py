@@ -5,7 +5,7 @@ Library.
 
 # Traits that we've modified
 from openmdao.lib.traits.int import Int
-from openmdao.lib.traits.float import Float
+from openmdao.lib.traits.float import Float, convert_units
 from openmdao.lib.traits.file import File
 
 # Traits from Enthought
