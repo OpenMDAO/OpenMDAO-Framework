@@ -73,6 +73,15 @@ class Float(TraitType):
                 high = float_info.max
             else:
                 self.high = high
+
+            if low > high:
+                raise TraitError("Lower bounds is greater than upper bounds.")
+        
+            # Range can be float or int, so we need to force these to be float.
+            low = float(low)
+            high = float(high)
+            default_value = float(default_value)
+                
             self._validator = Range(low=low, high=high, value=default_value,
                                           exclude_low=exclude_low,
                                         exclude_high=exclude_high,
@@ -86,7 +95,9 @@ class Float(TraitType):
                 raise TraitError("Units of '%s' are invalid" %
                                  metadata['units'])
             
-            
+        # Add low and high to the trait's dictionary so they can be accessed
+        metadata['low'] = low
+        metadata['high'] = high
         super(Float, self).__init__(default_value=default_value,
                                          **metadata)
 
@@ -131,8 +142,9 @@ class Float(TraitType):
         else: # self.high is not None
             info = "a float with a value < %s"% self.high
 
-        msg = "Trait '%s' must be %s but attempted value is %s" % \
-                               (name, info, value)
+        vtype = type( value )
+        msg = "Trait '%s' must be %s, but a value of %s %s was specified." % \
+                               (name, info, value, vtype)
         object.raise_exception(msg, TraitError)
 
     def get_val_meta_wrapper(self):
