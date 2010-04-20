@@ -32,7 +32,7 @@ else:
 config = Configuration()
 
 kwds = { 'name':'openmdao.examples.simple',
-      	 'version':version,
+         'version':version,
          'description':"OpenMDAO examples - Simple Problem",
          'long_description':"""\
          """,

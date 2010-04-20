@@ -17,6 +17,7 @@ import releaseinfo
 version = releaseinfo.__version__
 
 if sys.platform == 'win32':
+    import openmdao.util.distutils_fix
     sdkdir = os.environ.get('WindowsSdkDir')
     include_dirs = [os.path.join(sdkdir,'Include')]
     library_dirs = [os.path.join(sdkdir,'Lib')]
