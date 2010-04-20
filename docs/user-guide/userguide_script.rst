@@ -754,6 +754,77 @@ More details can be found in the `Traits 3 User Manual`__.
 
 .. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
 
+*Variable Containers*
+~~~~~~~~~~~~~~~~~~~~~
+
+For components with many public variables, it is often useful to compartmentalize
+them into a hierarchy of containers to enhance readability and findability. This
+is particularly important when the user is submitting or connecting variables in
+a GUI, but it is also useful for the script interface.
+
+Variables in OpenMDAO can be compartmentalized by creating a container from the
+*Container* base class. This container merely contains variables or other 
+contatiners.
+
+Normally a variable is accessed in the data hierarchy as:
+
+``...component_name.var_name``
+
+but when it is in a container, it can be accessed as:
+
+``...component_name.container_name(.subcontainer_name.etc).var_name``
+
+Consider an example of an aircraft simulation that requires some values for
+three variables that define two flight conditions:
+
+.. testcode:: variable_containers
+
+    from openmdao.main.api import Component, Container
+    from openmdao.lib.api import Float
+
+    class FlightCondition(Container):
+        """Container of Public Variables"""
+    
+        airspeed = Float(120.0, iotype='in', units='nmi/h')
+        angle_of_attack = Float(0.0, iotype='in', units='deg')
+        sideslip_angle = Float(0.0, iotype='in', units='deg')
+
+    class AircraftSim(Component):
+        """This component contains variables in a container"""
+    
+        weight = Float(5400.0, iotype='in', units='kg')
+	# etc.
+	
+        def __init__(self, directory=''):
+            """Constructor"""
+
+            super(AircraftSim, self).__init__(directory)
+        
+	    # Instantiate our variable containers.
+            self.fcc1 = FlightCondition()
+            self.fcc2 = FlightCondition()
+	    
+        def execute(self):
+            """Do something."""
+	    
+	    self.fcc2.angle_of_attack = 2.0
+	    
+Here, the container FlightCondition was defined, containing 3 public variables.
+The component AircraftSim is also defined with a public variable *weight* and
+two variable containers *fcc1* and *fcc2*. We can access weight through *self.weight*; 
+likewise, we can access the airspeed of the second flight condition through
+*self.fcc2.airspeed*. Note that you can have containers in containers. There are
+no physical limitations to how deep you can go with containers, but for practical
+purposes, intricately deep hierarchies may introduce more overhead.
+
+There is one other interesting thing to note about this example. We've effectively
+implemented a kind of data structure with this container, and used it to create
+multple copies of a set of public variables. This can prove useful for blocks of
+variables that are repeated in a component. Note that at the framework level, 
+connections are still made by connecting individual variables. The next section also 
+presents a way to create a custom data structure, but one that the framework 
+sees as a single entity for connection purposes.
+
 *Creating Custom Variable Types*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -1059,7 +1130,7 @@ in the Python environment.
     >>> z1.get_abs_directory()
     Traceback (most recent call last):
     ...
-    RuntimeError: : can't call get_abs_directory before hierarchy is defined
+    RuntimeError: can't call get_abs_directory before hierarchy is defined
     >>>
     >>> set_as_top(z1)
     <openmdao.main.assembly.Assembly object at ...>

@@ -70,7 +70,7 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float1 = self.hobj.get_wrapped_attr('float2')
         except TraitError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 100.0")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of 100.0 <type 'float'> was specified.")
         else:
             self.fail('ConstraintError expected')
         
@@ -107,22 +107,36 @@ class FloatTestCase(unittest.TestCase):
         else:
             self.fail("Exception expected")
         
+    def test_intvalues(self):
+        f1 = Float(3,low=2,high=4)
+        d1 = f1.default_value/2
+        self.assertAlmostEqual(d1, 1.5, places=4)
+        
     def test_constraint_violations(self):
         try:
             self.hobj.float1 = 124
         except TraitError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 124")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of 124 <type 'int'> was specified.")
         else:
             self.fail('TraitError expected')
         try:
             self.hobj.float1 = -3
         except TraitError, err:
             self.assertEqual(str(err),
-                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is -3")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of -3 <type 'int'> was specified.")
         else:
             self.fail('TraitError exception')
 
+    def test_attributes(self):
+        try:
+            self.hobj.add_trait('badbounds', Float(98.0, low=100.0, high=0.0, iotype='in'))
+        except TraitError, err:
+            errstring = "Lower bounds is greater than upper bounds."
+            self.assertEqual(str(err), errstring)
+        else:
+            self.fail("Exception expected")
+        
     def test_bad_connection(self):
         srcwrapper = self.hobj.get_wrapped_attr('float2')
         self.hobj.float1 = srcwrapper
@@ -162,7 +176,7 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float4 = 3.0
         except TraitError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float4' must be a float in the range (3.0, 4.0) but attempted value is 3.0")
+                ": Trait 'float4' must be a float in the range (3.0, 4.0), but a value of 3.0 <type 'float'> was specified.")
         else:
             self.fail('TraitError expected')
         
