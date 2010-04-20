@@ -84,9 +84,8 @@ class Source(Assembly):
         self.directory = self.get_abs_directory()  # Force absolute.
         # Absolute external file that exists at time of save.
         path = os.path.join(self.directory, EXTERNAL_FILES[0])
-        out = open(path, 'w')
-        out.write('Twisty narrow passages.\n')
-        out.close()
+        with open(path, 'w') as out:
+            out.write('Twisty narrow passages.\n')
         self.external_files.append(FileMetadata(path=path, input=True,
                                    constant=True))
 
@@ -95,30 +94,25 @@ class Source(Assembly):
         leaf = os.path.dirname(path)
         if not os.path.exists(leaf):
             os.makedirs(leaf)
-        out = open(path, 'w')
-        out.write('Some external data.\n')
-        out.close()
+        with open(path, 'w') as out:
+            out.write('Some external data.\n')
         self.external_files.append(FileMetadata(path=path))
 
         # Relative external file that exists at time of save.
-        self.push_dir(self.get_abs_directory())
-        path = EXTERNAL_FILES[2]
-        out = open(path, 'w')
-        out.write('Hello world!\n')
-        out.close()
-        self.pop_dir()
+        with self.dir_context:
+            path = EXTERNAL_FILES[2]
+            with open(path, 'w') as out:
+                out.write('Hello world!\n')
         self.external_files.append(FileMetadata(path=path))
 
         # Relative external file that exists at time of save, in separate tree.
-        self.push_dir(self.get_abs_directory())
-        path = EXTERNAL_FILES[3]
-        leaf = os.path.dirname(path)
-        if not os.path.exists(leaf):
-            os.makedirs(leaf)
-        out = open(path, 'w')
-        out.write('Some more external data.\n')
-        out.close()
-        self.pop_dir()
+        with self.dir_context:
+            path = EXTERNAL_FILES[3]
+            leaf = os.path.dirname(path)
+            if not os.path.exists(leaf):
+                os.makedirs(leaf)
+            with open(path, 'w') as out:
+                out.write('Some more external data.\n')
         self.external_files.append(FileMetadata(path=path))
     
     def execute(self):
@@ -127,15 +121,13 @@ class Source(Assembly):
             cwd = os.getcwd()
             self.debug("opening file '%s' in %s" % 
                        (self.text_file.path, cwd))
-            out = open(self.text_file.path, 'w')
-            out.write(self.text_data)
-            out.close()
+            with open(self.text_file.path, 'w') as out:
+                out.write(self.text_data)
 
             self.debug("opening file '%s' in %s" % 
                        (self.sub.binary_file.path, cwd))
-            out = open(self.sub.binary_file.path, 'wb')
-            cPickle.dump(self.sub.binary_data, out, 2)
-            out.close()
+            with open(self.sub.binary_file.path, 'wb') as out:
+                cPickle.dump(self.sub.binary_data, out, 2)
 
 
 class Subcontainer(Container):
@@ -170,13 +162,11 @@ class Sink(Component):
 
     def execute(self):
         """ Read test data from files. """
-        inp = self.text_file.open()
-        self.text_data = inp.read()
-        inp.close()
+        with self.text_file.open() as inp:
+            self.text_data = inp.read()
 
-        inp = self.binary_file.open()
-        self.binary_data = cPickle.load(inp)
-        inp.close()
+        with self.binary_file.open() as inp:
+            self.binary_data = cPickle.load(inp)
 
 
 class Oddball(Assembly):

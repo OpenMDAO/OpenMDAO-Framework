@@ -24,7 +24,7 @@ from openmdao.util.testutil import find_python
 
 
 # Users who have ssh configured correctly for testing.
-SSH_USERS = ('Zsetowns1',)
+SSH_USERS = []
 
 # Capture original working directory so we can restore in tearDown().
 ORIG_DIR = os.getcwd()
@@ -328,7 +328,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_norecorder')
 
-        # Check resoponse to no recorder set.
+        # Check response to no recorder set.
         self.model.driver.iterator = ListCaseIterator([])
         try:
             self.model.run()
