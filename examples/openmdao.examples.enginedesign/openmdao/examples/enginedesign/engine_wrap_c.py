@@ -164,15 +164,19 @@ class Engine(Component):
 
 if __name__ == "__main__": # pragma: no cover    
     
-    z = Engine()
+    MyEngine = Engine("Testing")
     
     import time
-    t1 = time.time()
+    start_time = time.time()
     
-    for jj in xrange(1, 500):
-        z.run()
+    for jj in xrange(1, 50):
+        MyEngine.run()
 
-    print z.throttle, z.power, z.torque, z.fuel_burn, z.engine_weight
-        
-    print "Elapsed time: ", time.time()-t1
-
+    print "\n"
+    print 'Throttle Position: ', MyEngine.throttle
+    print 'Power: ', MyEngine.power
+    print 'Torque: ', MyEngine.torque
+    print 'Fuel Burn: ', MyEngine.fuel_burn
+    print 'Engine Weight: ', MyEngine.engine_weight
+    print '-----------------------------'    
+    print "Elapsed time: ", time.time()-start_time, 'seconds'
