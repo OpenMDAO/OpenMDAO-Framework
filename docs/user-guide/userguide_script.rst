@@ -415,6 +415,9 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 | Complex          | Complex( [*value* = None, *desc* = None,                 |
 |                  | *iotype* = None] )                                       | 
 +------------------+----------------------------------------------------------+
+| Enum             | Enum( [val1*[, *val2, ..., valN], *desc* = None,         |
+|                  | *iotype* = None, *alias* = aliases] )                    | 
++------------------+----------------------------------------------------------+
 | File             | File( [*default_value* = None, *iotype* = None,          | 
 |                  | *desc* = None, *low* = None, *high* = None, *path* =     |
 |                  | None, *content_type* = None, *binary* = False,           |
@@ -480,8 +483,8 @@ aid simulation builders in connecting components.
 
 .. index:: Array
 
-Array
-+++++
+Arrays
+++++++
 
 It is possible to use an array as a Public Variable through use of the *Array*
 trait. The value for an Array can be expressed as either a Python array or a NumPy
@@ -551,6 +554,88 @@ and calculates their dot product as an output.
 Multiplication of a NumPy array is element by element, so *sum* is used to
 complete the calculation of the dot product. Individual elements of the array
 can also be accessed using brackets.
+
+.. index:: Enum
+
+Enums
++++++
+
+It is possible to use an Enum (enumeration) type as a public variable in
+OpenMDAO. This is useful for cases where an input has certain fixed values
+that are possible. For example, consider a variable that can be one of three
+colors:
+
+.. testcode:: enum_example
+
+    from openmdao.lib.api import Enum
+    from openmdao.main.api import Component
+    
+    class TrafficLight(Component):
+        color = Enum(0, 1, 2, iotype='in', alias=["Red", "Yellow", "Green"])
+
+.. doctest:hide: 
+
+    >>> from openmdao.lib.api import Enum
+    >>> from openmdao.main.api import Component
+    >>> class TrafficLight(Component):
+    >>>     color = Enum(0, 1, 2, iotype='in', alias=["Red", "Yellow", "Green"])
+	
+Now, if we create an instance of this component, and try setting the Enum.
+
+    >>> test = TrafficLight()
+    >>> test.color=2
+    >>> test.color
+    2
+
+What if we set to an invalid value?
+
+    >>> test.color=4
+    Traceback (most recent call last):
+    ...
+    enthought.traits.trait_errors.TraitError: The 'color' trait of a TrafficLight instance must be 0 or 1 or 2, but a value of 4 <type 'int'> was specified.`
+
+We can also access the aliases directly from the trait.
+
+    >>> color_trait = test.get_dyn_trait('color')
+    >>> color_trait.alias
+    ['Red', 'Yellow', 'Green']
+    >>> color_trait.alias[test.color]
+    'Green'
+
+Note that the alias is not a required attribute. It will mostly be useful for
+display in the planned GUI, while the numerical value is probably passed on to
+some wrapped code. However, the Enum isn't required to be an integer. We could
+simplify this by using the color strings directly. If we define a new trait in
+our component above, as:
+
+.. testcode:: enum_example2
+
+    from openmdao.lib.api import Enum
+    from openmdao.main.api import Component
+    
+    class TrafficLight(Component):
+	color2 = Enum("Red", "Yellow", "Green", iotype='in')
+
+.. doctest:hide: 
+
+    >>> from openmdao.lib.api import Enum
+    >>> from openmdao.main.api import Component
+    >>> class TrafficLight(Component):
+    >>>     color2 = Enum("Red", "Yellow", "Green", iotype='in')
+	
+Then we can interact like this:
+
+    >>> test = TrafficLight()
+    >>> test.color2
+    'Red'
+    >>> test.color2=1
+    Traceback (most recent call last):
+    ...
+    enthought.traits.trait_errors.TraitError: The 'color2' trait of a TrafficLight instance must be 'Red' or 'Yellow' or 'Green', but a value of 1 <type 'int'> was specified.
+    >>> test.color2="Green"
+    >>> test.color2
+    'Green'
+
 
 .. index:: File Variables, File
 
