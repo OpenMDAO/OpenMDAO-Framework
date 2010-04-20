@@ -23,6 +23,7 @@ def _check_version(version):
     with hide('running', 'stdout'):
         result = run('ls ~/downloads')
     lst = result.split(' ')
+    print 'lst is %s' % lst
     if version in lst:
         raise VersionError('Version %s already exists. Please specify a different version' % version)
     return version
