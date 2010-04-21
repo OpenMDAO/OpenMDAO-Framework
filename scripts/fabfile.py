@@ -72,9 +72,9 @@ def release(version=None, test=False):
             for f in os.listdir(tmpdir):
                 if f.endswith('.tar.gz'):
                     if f.startswith('openmdao.') or f.startswith('openmdao-'):
-                        put(os.path.join(tmpdir,f), '~/dists', mode=0644)
+                        put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
                 elif f.endswith('.egg'):
-                    put(os.path.join(tmpdir,f), '~/dists', mode=0644)
+                    put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
             
             run('mkdir ~/downloads/%s' % version)
             run('chmod 755 ~/downloads/%s' % version)
@@ -84,18 +84,18 @@ def release(version=None, test=False):
             run('ln -s ~/downloads/%s ~/downloads/latest' % version)
             
             # upload the repo source tar
-            put(join(tmpdir, 'openmdao_src*.tar.gz'), 
-                '~/downloads/%s' % version, 
+            put(join(tmpdir, 'openmdao_src-%s.tar.gz' % version), 
+                '~/downloads/%s/%s' % (version,'openmdao_src-%s.tar.gz' % version), 
                 mode=0644)
             
             # for now, put the go-openmdao script up without the version
             # id in the name
-            put(join(tmpdir, 'go-openmdao*.py'), 
+            put(join(tmpdir, 'go-openmdao-%s.py' % version), 
                 '~/downloads/%s/go-openmdao.py' % version,
                 mode=0755)
     
             # put the docs on the server and untar them
-            put(join(tmpdir,'docs.tar.gz'), '~/downloads/%s' % version) 
+            put(join(tmpdir,'docs.tar.gz'), '~/downloads/%s/docs.tar.gz' % version) 
             with cd('~/downloads/%s' % version):
                 run('tar xzf docs.tar.gz')
                 run('mv html docs')
@@ -105,7 +105,7 @@ def release(version=None, test=False):
             # of having a bunch of mkdlversionindex.py files lying around on the
             # server
             put(join(scripts_dir,'mkdlversionindex.py'), 
-                '~/downloads/%s' % version)
+                '~/downloads/%s/mkdlversionindex.py' % version)
             
             # update the index.html for the version download directory on the server
             with cd('~/downloads/%s' % version):
