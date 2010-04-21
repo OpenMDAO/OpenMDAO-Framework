@@ -69,12 +69,12 @@ def release(version=None, test=False):
         
         if not test:
             # push new distribs up to the server
-            put(join(tmpdir,'openmdao.*.tar.gz'), '~/dists', 
-                mode=0644)
-            put(join(tmpdir,'openmdao-*.tar.gz'), '~/dists',
-                mode=0644)
-            put(join(tmpdir,'openmdao-*.egg'), '~/dists',
-                mode=0644)
+            for f in os.listdir(tmpdir):
+                if f.endswith('.tar.gz'):
+                    if f.startswith('openmdao.') or f.startswith('openmdao-'):
+                        put(os.path.join(tmpdir,f), '~/dists', mode=0644)
+                elif f.endswith('.egg'):
+                    put(os.path.join(tmpdir,f), '~/dists', mode=0644)
             
             run('mkdir ~/downloads/%s' % version)
             run('chmod 755 ~/downloads/%s' % version)
