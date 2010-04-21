@@ -44,7 +44,7 @@ setup(name='openmdao.examples.simple',
              ],
        entry_points="""
          # -*- Entry points: -*-
-         """,
-      }
+         """
+      )
 
 
