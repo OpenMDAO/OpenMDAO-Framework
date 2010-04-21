@@ -70,9 +70,12 @@ def release(version=None, test=False):
         if not test:
             # push new distribs up to the server
             for f in os.listdir(tmpdir):
-                if f.endswith('.tar.gz'):
-                    if f.startswith('openmdao.') or f.startswith('openmdao-'):
-                        put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
+                if f.startswith('openmdao_src'): 
+                    # upload the repo source tar
+                    put(os.path.join(tmpdir,f), '~/downloads/%s/%s' % (version, f), 
+                        mode=0644)
+                elif f.endswith('.tar.gz'):
+                    put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
                 elif f.endswith('.egg'):
                     put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
             
@@ -82,11 +85,6 @@ def release(version=None, test=False):
             # update the 'latest' link to point to the most recent version directory
             run('rm -f ~/downloads/latest')
             run('ln -s ~/downloads/%s ~/downloads/latest' % version)
-            
-            # upload the repo source tar
-            put(join(tmpdir, 'openmdao_src-%s.tar.gz' % version), 
-                '~/downloads/%s/%s' % (version,'openmdao_src-%s.tar.gz' % version), 
-                mode=0644)
             
             # for now, put the go-openmdao script up without the version
             # id in the name

@@ -164,7 +164,7 @@ def _write_src_docs(branchdir, docdir):
             _mod_sphinx_info(os.path.basename(src), f)
 
 def build_docs():
-    """An entry point (build_docs) points to this.  It generates the Sphinx
+    """A script (openmdao_build_docs) points to this.  It generates the Sphinx
     documentation for openmdao.
     """
     branchdir, docdir, bindir =_get_dirnames()
@@ -214,9 +214,13 @@ def build_docs():
         os.chdir(startdir)
 
 def view_docs(browser=None):
-    """An entry point (docs) points to this. It just pops up a browser to 
+    """A script (openmdao_docs) points to this. It just pops up a browser to 
     view the openmdao sphinx docs. If the docs are not already built, it
-    builds them first.
+    builds them before viewing, but if the docs already exist, it's not smart enough
+    to rebuild them if they've changed since the last build.
+    
+    If this is run from a non-developer install, i.e., there is no local copy of
+    the docs, it just looks for the docs on the openmdao.org website.
     """
     if not browser:
         for arg in sys.argv:
