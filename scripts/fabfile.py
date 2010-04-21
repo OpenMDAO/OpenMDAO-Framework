@@ -77,7 +77,7 @@ def release(version=None, test=False):
                     # upload the repo source tar
                     put(os.path.join(tmpdir,f), '~/downloads/%s/%s' % (version, f), 
                         mode=0644)
-                elif f.endswith('.tar.gz'):
+                elif f.endswith('.tar.gz') and f != 'docs.tar.gz':
                     put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
                 elif f.endswith('.zip'):
                     put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
