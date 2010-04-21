@@ -2,6 +2,7 @@
 
 import random
 
+from enthought.traits.api import Python
 
 from pyevolve import G1DList, G1DBinaryString, G2DList, GAllele, GenomeBase
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
@@ -21,7 +22,7 @@ class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO frameowork, based on the Pyevolve Genetic algorithm module. 
     """
     objective = StringRef(iotype='out',desc='A string containing the objective function expression') 
-    design_vars = StringRefArray(iotype='out', desc="An array of design variable names. These names can include array indexing")
+    _design_vars = StringRefArray(iotype='out', desc="An array of design variable names. These names can include array indexing")
     
     def __init__(self,doc=None):
         super(Genetic,self).__init__(doc)
@@ -29,9 +30,14 @@ class Genetic(Driver):
         self._alleles = GAllele.GAlleles()
         
         
-    def add_des_var(self,ref,**kwargs):
-        """adds a design variable to the driver. [ref] is a string refering to the public variable the driver should vary during execution. any key word arguments given will override default public variable metadata values if available." 
-        self.design_vars.append(ref)"""
+    def add_des_var(self,ref,low=None,high=None):
+        """adds a design variable to the driver. [ref] is a string refering to the public variable the driver should 
+        vary during execution. [low] and [high] refer to the minimum and maximum values allowed values for the optimizer to use. 
+        If neither are specified, the values will default to the values in the metadata of the public variable being referenced.
+        If they are not specified in the metadata and not provided as arguments, the values default to 0 and 100 repectively. 
+        """
+        self._design_vars.append(ref) #add it to the list of string refs
+        val = self._design_vars[-1].evaluate() #now grab the value 
         
         #split up the ref string to be able to get the trait. 
         path = ".".join(ref.split(".")[0:-1]) #get the path to the object
@@ -39,10 +45,20 @@ class Genetic(Driver):
         
         obj = getattr(self.parent,path)
        
-        t = obj.get_dyn_trait(target)
+        #TODO: check for None, throw error if no trait found
+        t = obj.trait(target) #get the trait
         
-        if t.is_trait_type(Float): 
-            allele = GAllele.GAlleleRange(begin=)
+        minimum = low or t.low or 0
+        maximum = high or t.high or 100
+        
+        print "TESTING"
+        if t.is_trait_type(Float) or (t.is_trait_type(Python) and isinstance(val,float)):
+            allele = GAllele.GAlleleRange(begin=minimum,end=maximum,real=True)
+            print "TEST"
+            
+        elif t.is_trait_type(Int):
+            allele = GAllele.GAlleleRange(begin=minimum,end=maximum,real=False)
+ 
         
     def execute(self):
         """Perform the optimization"""
@@ -53,13 +69,14 @@ if __name__ == "__main__":
     import numpy
     class Rosenbrock(Component):
         x = Float(3,low=-10,high=10,iotype="in")
-        y = Float(low=-100.0,high=100.0,iotype="in")
+        y = Int(low=-100,high=100,iotype="in")
         result = Float(iotype = 'out')
         
         def __init__(self, doc=None):
             super(Rosenbrock, self).__init__(doc)
             self.x = 10
             self.y = 10
+            self.z=10.0
             self.result = (1-self.x**2) + 100*(self.y - self.y**2)**2
         
 
@@ -71,5 +88,5 @@ if __name__ == "__main__":
     top.add_container("rosen",Rosenbrock())
     top.add_container("genetic",Genetic())
     
-    top.genetic.add_des_var("rosen.x")
+    top.genetic.add_des_var("rosen.z")
     
