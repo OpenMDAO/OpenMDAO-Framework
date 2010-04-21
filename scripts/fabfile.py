@@ -14,167 +14,113 @@ from os.path import join,dirname,normpath
 import tempfile
 import shutil
 import fnmatch
+import tarfile
 
 env.hosts = ['openmdao@web103.webfaction.com']
 
 class VersionError(RuntimeError):
     pass
 
-if sys.platform == 'win32':
-    import openmdao.util.releaseinfo
-    def _check_version(version):
-        if openmdao.util.releaseinfo.__version__ != version:
-            raise VersionError('Version %s does not match the version id in releaseinfo.py (%s)'
-                               % (version, openmdao.util.releaseinfo.__version__))
-        with hide('running', 'stdout'):
-            result = run('ls ~/downloads')
-        lst = [x.strip() for x in result.split('\n')]
-        if version not in lst:
-            raise VersionError('Version %s does not exist. Please specify a different version' % version)
-        return version
-
-    def release(version=None, test=False):
-        """Builds windows binary eggs for openmdao packages having extensions and
-        puts them on the server.
-        """
-        if version is not None:
-            try:
-                version = _check_version(version)
-            except VersionError, err:
-                print str(err),'\n'
-                version = None
-            
-        if version is None:
-            version = prompt('Enter version id:', validate=_check_version)
-    
-        dist_dir = normpath(join(dirname(__file__),'..'))
-        scripts_dir = join(dist_dir, 'scripts')
-        doc_dir = join(dist_dir, 'docs')
-        util_dir = join(dist_dir,'openmdao.util','src','openmdao','util')
-        tmpdir = tempfile.mkdtemp()
-        startdir = os.getcwd()
         
-        bin_egg_dirs = [
-            os.path.join(dist_dir, 'examples', 'openmdao.examples.enginedesign'),
-            os.path.join(dist_dir, 'examples', 'openmdao.examples.bar3simulation'),
-            ]
+        
+def _check_version(version):
+    with hide('running', 'stdout'):
+        result = run('ls ~/downloads')
+    lst = [x.strip() for x in result.split('\n')]
+    if version in lst:
+        raise VersionError('Version %s already exists. Please specify a different version' % version)
+    return version
+
+def release(version=None, test=False):
+    """Creates source distributions, docs, binary eggs, and install script for 
+    the current openmdao namespace packages, uploads them to openmdao.org/dists, 
+    and updates the index.html file there.
+    If the test flag is True, it will not upload anything to the server.
+    """
+    if version is not None:
         try:
-            for edir in bin_egg_dirs:
-                os.chdir(edir)
-                tmpdir = tempfile.mkdtemp()
-                
-                try:
-                    # build binary egg
-                    local(sys.executable+' setup.py bdist_egg -d %s' % tmpdir, capture=False)
-                    matches = fnmatch.filter(os.listdir(tmpdir), '*.egg')
-                    if matches:
-                        put(matches[0], '~/dists/'+os.path.basename(matches[0]), mode=0644)
-                    else:
-                        raise RuntimeError('binary egg not found')
-                finally:
-                    shutil.rmtree(tmpdir)
-            # update the index.html for the dists directory on the server
-            with cd('~/dists'):
-                run('python2.6 mkegglistindex.py')
+            version = _check_version(version)
+        except VersionError, err:
+            print str(err),'\n'
+            version = None
+        
+    if version is None:
+        version = prompt('Enter version id:', validate=_check_version)
+
+    dist_dir = normpath(join(dirname(__file__),'..'))
+    scripts_dir = join(dist_dir, 'scripts')
+    doc_dir = join(dist_dir, 'docs')
+    util_dir = join(dist_dir,'openmdao.util','src','openmdao','util')
+    tmpdir = tempfile.mkdtemp()
+    startdir = os.getcwd()
+    try:
+        # build the release distrib (docs are built as part of this)
+        local(sys.executable+' '+ join(scripts_dir,'mkrelease.py')+
+              ' --version=%s -d %s' % (version, tmpdir), capture=False)
+        
+        # tar up the docs so we can upload them to the server
+        os.chdir(join(tmpdir, '_build'))
+        try:
+            archive = tarfile.open(join(tmpdir,'docs.tar.gz'), 'w:gz')
+            archive.add('html')
+            archive.close()
         finally:
             os.chdir(startdir)
         
-else: # non-Windows platform
-    def _check_version(version):
-        with hide('running', 'stdout'):
-            result = run('ls ~/downloads')
-        lst = [x.strip() for x in result.split('\n')]
-        if version in lst:
-            raise VersionError('Version %s already exists. Please specify a different version' % version)
-        return version
+        if not test:
+            # push new distribs up to the server
+            put(join(tmpdir,'openmdao.*.tar.gz'), '~/dists', 
+                mode=0644)
+            put(join(tmpdir,'openmdao-*.tar.gz'), '~/dists',
+                mode=0644)
+            put(join(tmpdir,'openmdao-*.egg'), '~/dists',
+                mode=0644)
+            
+            run('mkdir ~/downloads/%s' % version)
+            run('chmod 755 ~/downloads/%s' % version)
+            
+            # update the 'latest' link to point to the most recent version directory
+            run('rm -f ~/downloads/latest')
+            run('ln -s ~/downloads/%s ~/downloads/latest' % version)
+            
+            # upload the repo source tar
+            put(join(tmpdir, 'openmdao_src*.tar.gz'), 
+                '~/downloads/%s' % version, 
+                mode=0644)
+            
+            # for now, put the go-openmdao script up without the version
+            # id in the name
+            put(join(tmpdir, 'go-openmdao*.py'), 
+                '~/downloads/%s/go-openmdao.py' % version,
+                mode=0755)
+    
+            # put the docs on the server and untar them
+            put(join(tmpdir,'docs.tar.gz'), '~/downloads/%s' % version) 
+            with cd('~/downloads/%s' % version):
+                run('tar xzf docs.tar.gz')
+                run('mv html docs')
+                run('rm -f docs.tar.gz')
+    
+            # FIXME: just generate the index.html locally and upload it instead
+            # of having a bunch of mkdlversionindex.py files lying around on the
+            # server
+            put(join(scripts_dir,'mkdlversionindex.py'), 
+                '~/downloads/%s' % version)
+            
+            # update the index.html for the version download directory on the server
+            with cd('~/downloads/%s' % version):
+                run('python2.6 mkdlversionindex.py')
+    
+            # update the index.html for the dists directory on the server
+            with cd('~/dists'):
+                run('python2.6 mkegglistindex.py')
+    
+            # update the index.html for the downloads directory on the server
+            with cd('~/downloads'):
+                run('python2.6 mkdownloadindex.py')
 
-    def release(version=None, test=False):
-        """Creates source distributions of the current openmdao namespace packages,
-        uploads them to openmdao.org/dists, and updates the index.html file there.
-        If the test flag is True, it will not actually make any changes to the server.
-        """
-        if version is not None:
-            try:
-                version = _check_version(version)
-            except VersionError, err:
-                print str(err),'\n'
-                version = None
-            
-        if version is None:
-            version = prompt('Enter version id:', validate=_check_version)
-    
-        dist_dir = normpath(join(dirname(__file__),'..'))
-        scripts_dir = join(dist_dir, 'scripts')
-        doc_dir = join(dist_dir, 'docs')
-        util_dir = join(dist_dir,'openmdao.util','src','openmdao','util')
-        tmpdir = tempfile.mkdtemp()
-        startdir = os.getcwd()
-        try:
-            # build the release distrib (docs are built as part of this)
-            local(sys.executable+' '+ join(scripts_dir,'mkrelease.py')+
-                  ' --version=%s -d %s' % (version, tmpdir), capture=False)
-            
-            # tar up the docs so we can upload them to the server
-            os.chdir(join(tmpdir, '_build'))
-            try:
-                local('tar czf %s %s' % (join(tmpdir,'docs.tar.gz'), 
-                                         'html'),
-                      capture=False)
-            finally:
-                os.chdir(startdir)
-            
-            if not test:
-                # push new distribs up to the server
-                put(join(tmpdir,'openmdao.*.tar.gz'), '~/dists', 
-                    mode=0644)
-                put(join(tmpdir,'openmdao-*.tar.gz'), '~/dists',
-                    mode=0644)
-                
-                run('mkdir ~/downloads/%s' % version)
-                run('chmod 755 ~/downloads/%s' % version)
-                
-                # update the 'latest' link to point to the most recent version directory
-                run('rm -f ~/downloads/latest')
-                run('ln -s ~/downloads/%s ~/downloads/latest' % version)
-                
-                # upload the repo source tar
-                put(join(tmpdir, 'openmdao_src*.gz'), 
-                    '~/downloads/%s' % version, 
-                    mode=0644)
-                
-                # for now, put the go-openmdao script up without the version
-                # id in the name
-                put(join(tmpdir, 'go-openmdao*.py'), 
-                    '~/downloads/%s/go-openmdao.py' % version,
-                    mode=0755)
-        
-                # put the docs on the server and untar them
-                put(join(tmpdir,'docs.tar.gz'), '~/downloads/%s' % version) 
-                with cd('~/downloads/%s' % version):
-                    run('tar xzf docs.tar.gz')
-                    run('mv html docs')
-                    run('rm -f docs.tar.gz')
-        
-                # FIXME: just generate the index.html locally and upload it instead
-                # of having a bunch of mkdlversionindex.py files lying around on the
-                # server
-                put(join(scripts_dir,'mkdlversionindex.py'), 
-                    '~/downloads/%s' % version)
-                
-                # update the index.html for the version download directory on the server
-                with cd('~/downloads/%s' % version):
-                    run('python2.6 mkdlversionindex.py')
-        
-                # update the index.html for the dists directory on the server
-                with cd('~/dists'):
-                    run('python2.6 mkegglistindex.py')
-        
-                # update the index.html for the downloads directory on the server
-                with cd('~/downloads'):
-                    run('python2.6 mkdownloadindex.py')
-    
-        finally:
-            if test:
-                print 'Files were placed in %s.' % tmpdir
-            else:
-                shutil.rmtree(tmpdir)
+    finally:
+        if test:
+            print 'Files were placed in %s.' % tmpdir
+        else:
+            shutil.rmtree(tmpdir)
