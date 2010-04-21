@@ -79,6 +79,8 @@ def release(version=None, test=False):
                         mode=0644)
                 elif f.endswith('.tar.gz'):
                     put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
+                elif f.endswith('.zip'):
+                    put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
                 elif f.endswith('.egg'):
                     put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
             
