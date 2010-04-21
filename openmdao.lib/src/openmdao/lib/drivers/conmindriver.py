@@ -12,9 +12,9 @@ __all__ = ['CONMINdriver']
 from sys import float_info
 
 # pylint: disable-msg=E0611,F0401
-import numpy.numarray as numarray
-from numpy import ndarray
+from numpy import ndarray, array, zeros, ones
 from numpy import float as numpy_float
+from numpy import int as numpy_int
 
 from enthought.traits.api import on_trait_change, TraitError, Array
                                  
@@ -158,6 +158,7 @@ class CONMINdriver(Driver):
             
     """
     
+    # pylint: disable-msg=E1101
     design_vars = StringRefArray(iotype='out',
        desc='An array of design variable names. These names can include array \
              indexing.')
@@ -171,17 +172,20 @@ class CONMINdriver(Driver):
                       desc= 'A string containing the objective function \
                             expression.')
     
-    upper_bounds = Array(dtype=numpy_float, iotype='in',
+    upper_bounds = Array(dtype=numpy_float, value=zeros(0,'d'), iotype='in',
         desc='Array of constraints on the maximum value of each design \
               variable.')
     
-    lower_bounds = Array(dtype=numpy_float, iotype='in', 
+    lower_bounds = Array(dtype=numpy_float, value=zeros(0,'d'), iotype='in',
         desc='Array of constraints on the minimum value of each design \
               variable.')
 
-    scal = Array(dtype=numpy_float, iotype='in', 
+    scal = Array(dtype=numpy_float, value=zeros(0,'d'), iotype='in', 
         desc='Array of scaling factors for the design variables.')
 
+    cons_is_linear = Array(dtype=numpy_int, value=zeros(0,'d'), iotype='in', 
+        desc='Array designating whether each constraint is linear.')
+                 
     # Control parameters for CONMIN.
     # CONMIN has quite a few parameters to give the user control over aspects
     # of the solution. 
@@ -228,32 +232,31 @@ class CONMINdriver(Driver):
         self.consav = _consav()
         
         self.iter_count = 0
-        self.design_vals = numarray.zeros(0,'d')
-        self.lower_bounds = numarray.zeros(0,'d')
-        self.upper_bounds = numarray.zeros(0,'d')
-        self.cons_active_or_violated  = numarray.zeros(0, 'i')
-        self.gradients = None
+
+        # define the CONMINdriver's private variables
+        # note, these are all resized in config_conmin
         
-        # vector of scaling parameters
-        self.scal = numarray.ones(0, 'd')
+        # basic stuff
+        self.design_vals = zeros(0,'d')
+        self._scal = zeros(0,'d')
+        self.cons_active_or_violated = zeros(0, 'i') 
         
         # gradient of objective w.r.t x[i]
-        self.df = numarray.zeros(2, 'd')
-        
+        self.df = zeros(0, 'd')
+
         # move direction in the optimization space
-        self.s = numarray.zeros(2, 'd')
-        self.gradients = numarray.zeros((2, 1), 'd')
-        
+        self.s = zeros(0, 'd')
+        self.gradients = zeros(0, 'd')
+
         # temp storage
-        self._b = numarray.zeros((1, 1), 'd')
-        self._c = numarray.zeros(1, 'd')
-        self._ms1 = numarray.zeros(2, 'i')
-        
+        self._b = zeros(0, 'd')
+        self._c = zeros(0, 'd')
+        self._ms1 = zeros(0, 'i')
+         
         # temp storage for constraints
-        self.g1 = numarray.zeros(0,'d')
-        self.g2 = numarray.zeros(0,'d')
-        self.cons_is_linear = numarray.zeros(0, 'i') 
-        
+        self.g1 = zeros(0,'d')
+        self.g2 = zeros(0,'d')
+
         
     def execute(self):
         """Perform the optimization."""
@@ -284,7 +287,7 @@ class CONMINdriver(Driver):
 
             # calculate objective
             try:
-                self.cnmn1.obj = numarray.array(self.objective.evaluate())
+                self.cnmn1.obj = self.objective.evaluate()
             except:
                 self.raise_exception('objective function is not pointing to a \
                                       valid OpenMDAO Variable', RuntimeError)
@@ -358,7 +361,7 @@ class CONMINdriver(Driver):
             else:
                 self.raise_exception('Unexpected value for flag INFO returned \
                         from CONMIN', RuntimeError)
-                
+
 
     def _config_conmin(self):
         """Set up arrays for the FORTRAN conmin routine, and perform some
@@ -372,14 +375,14 @@ class CONMINdriver(Driver):
         
         # size arrays based on number of design variables
         num_dvs = len(self.design_vars)
-        self.design_vals = numarray.zeros(num_dvs+2, 'd')
+        self.design_vals = zeros(num_dvs+2, 'd')
 
         if num_dvs < 1:
             self.raise_exception('no design variables specified', RuntimeError)
             
-        # create lower_bounds numarray
+        # create lower_bounds array
         if len(self.lower_bounds) > 0:
-            self._lower_bounds = numarray.zeros(len(self.lower_bounds)+2)
+            self._lower_bounds = zeros(len(self.lower_bounds)+2)
             if len(self.lower_bounds) != num_dvs:
                 msg = 'size of new lower bound array (%d) does not match ' + \
                       'number of design vars (%d)'
@@ -388,13 +391,13 @@ class CONMINdriver(Driver):
             for i, lb in enumerate(self.lower_bounds):
                 self._lower_bounds[i] = lb
         else:
-            self._lower_bounds = numarray.array(([-float_info.max]*num_dvs) + \
+            self._lower_bounds = array(([-float_info.max]*num_dvs) + \
                                                  [0., 0.])
             
             
-        # create upper bounds numarray
+        # create upper bounds array
         if len(self.upper_bounds) > 0:
-            self._upper_bounds = numarray.zeros(len(self.upper_bounds)+2)
+            self._upper_bounds = zeros(len(self.upper_bounds)+2)
             if len(self.upper_bounds) != num_dvs:
                 msg = 'size of new upper bound array (%d) does not match ' + \
                       'number of design vars (%d)'
@@ -404,7 +407,7 @@ class CONMINdriver(Driver):
             for i, ub in enumerate(self.upper_bounds):
                 self._upper_bounds[i] = ub
         else:
-            self._upper_bounds = numarray.array(([float_info.max]*num_dvs) + \
+            self._upper_bounds = array(([float_info.max]*num_dvs) + \
                                                  [0., 0.])
 
         # Check if the upper and lower bounds are swapped    
@@ -415,7 +418,7 @@ class CONMINdriver(Driver):
 
                 
         # create array for scaling of the design vars
-        self._scal = numarray.ones(num_dvs+2)
+        self._scal = ones(num_dvs+2)
         if len(self.scal) > 0:
             if len(self.scal) != num_dvs:
                 msg = 'size of scale factor array (%d) does not match ' + \
@@ -426,24 +429,24 @@ class CONMINdriver(Driver):
             for i, scale_factor in enumerate(self.scal):
                 self._scal[i] = scale_factor
             
-        self.df = numarray.zeros(num_dvs+2, 'd')
-        self.s = numarray.zeros(num_dvs+2, 'd')
+        self.df = zeros(num_dvs+2, 'd')
+        self.s = zeros(num_dvs+2, 'd')
         
         # size constraint related arrays
         length = len(self.constraints) + 2*num_dvs
-        self.constraint_vals = numarray.zeros(length, 'd')
+        self.constraint_vals = zeros(length, 'd')
         
         # temp storage of constraint and design vals
-        self.g1 = numarray.zeros(length, 'd') 
+        self.g1 = zeros(length, 'd') 
         
         # temp storage of constraint vals
-        self.g2 = numarray.zeros(length, 'd') 
+        self.g2 = zeros(length, 'd') 
         
         # if constraint i is known to be a linear function of design vars, 
         # the user can set cons_is_linear[i] to 1, otherwise set it to 0. This
         # is not essential and is for efficiency only.
         if len(self.cons_is_linear) == 0:
-            self.cons_is_linear = numarray.zeros(length, 'i') 
+            self.cons_is_linear = zeros(length, 'i') 
         else:
             if len(self.cons_is_linear) != length:
                 self.raise_exception('size of cons_is_linear (%d) does not \
@@ -466,14 +469,14 @@ class CONMINdriver(Driver):
         n5 = 2*n4
                 
         # array of active or violated constraints (ic in CONMIN)
-        self.cons_active_or_violated = numarray.zeros(n3, 'i')
-        self.gradients = numarray.zeros((int(n1), int(n3)), 'd')
+        self.cons_active_or_violated = zeros(n3, 'i')
+        self.gradients = zeros((int(n1), int(n3)), 'd')
         # temp storage
-        self._b = numarray.zeros((int(n3), int(n3)), 'd')
+        self._b = zeros((int(n3), int(n3)), 'd')
         # temp storage
-        self._c = numarray.zeros(n4, 'd')
+        self._c = zeros(n4, 'd')
         # temp storage
-        self._ms1 = numarray.zeros(n5, 'i')
+        self._ms1 = zeros(n5, 'i')
 
         # Load all of the user-changeable parameters into the common block
         

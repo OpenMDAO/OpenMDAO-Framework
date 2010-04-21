@@ -347,7 +347,7 @@ More details on the *literalinclude* directive can be found at http://sphinx.poc
 	>>> my_engine.set("RPM",7500)
 	Traceback (most recent call last):
 	    ...
-	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but attempted value is 7500
+	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of 7500 <type 'int'> was specified.
 	
 * Care should be taken to assure that each block of code is being tested. One way to do this is to
   purposefully introduce an error into a block to verify that it is caught.

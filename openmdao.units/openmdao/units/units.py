@@ -454,7 +454,8 @@ class PhysicalUnit(object):
     
         return self.factor/other.factor
 
-    def conversion_tuple_to(self, other): # added 1998/09/29 GPW
+    # added 1998/09/29 GPW
+    def conversion_tuple_to(self, other):
         """
         @param other: another unit
         @type other: L{PhysicalUnit}
@@ -485,7 +486,8 @@ class PhysicalUnit(object):
         offset = self.offset - (other.offset * other.factor / self.factor)
         return (factor, offset)
 
-    def is_compatible(self, other):     # added 1998/10/01 GPW
+    # added 1998/10/01 GPW
+    def is_compatible(self, other):
         """
         @param other: another unit
         @type other: L{PhysicalUnit}

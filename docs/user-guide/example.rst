@@ -628,14 +628,14 @@ Type and units checking all work fine:
 	>>> my_engine.RPM = "Hello"
 	Traceback (most recent call last):
 	    ...
-	TraitError: : Trait 'RPM' must be a float in the range [1000.0, 6000.0] but attempted value is Hello
+	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of Hello <type 'str'> was specified.
 	
 Now, let's try setting the engine speed to a value that exceeds the maximum, which is 6000 RPM.
 
 	>>> my_engine.set("RPM",7500)
 	Traceback (most recent call last):
 	    ...
-	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but attempted value is 7500
+	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of 7500 <type 'int'> was specified.
 
 The set function raises an exception indicating that the maximum value for RPM has been violated. This exception can be
 handled to provide some logical response to this condition; you will see this in the acceleration simulation.
@@ -643,9 +643,9 @@ Now, run the engine and examine the power and torque at 2500 RPM.
 
 	>>> my_engine.run()
 	>>> my_engine.get("torque")
-	203.9632284998996
+	203.963228...
 	>>> my_engine.get("power")
-	53.397448354811743
+	53.3974483...
 	
 The component is executed by calling the run function, which runs the *_pre_execute* (which determines if the
 component needs to be executed), *execute* (which is the function we created in the Engine class above), and

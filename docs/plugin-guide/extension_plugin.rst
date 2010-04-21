@@ -181,11 +181,11 @@ be imported into Python just like any Python file:
 .. testsetup:: bar3_wrap
 
     from openmdao.examples.bar3simulation.bar3_wrap_f import Bar3Truss
-    import numpy.numarray as numarray
+    from numpy import zeros
     
     self = Bar3Truss()
     
-    load = numarray.zeros(2,'d')
+    load = zeros(2,'d')
     load[0] = 50.0
     load[1] = 100.0
     lumped_mass = 0.68005
@@ -252,9 +252,9 @@ array (in this case, an array of floating point numbers):
 
 .. testcode:: bar3_wrap_array
 
-    import numpy.numarray as numarray
+    from numpy import zeros
     
-    load = numarray.zeros(2,'d')
+    load = zeros(2,'d')
     load[0] = 50.0
     load[1] = 100.0
 

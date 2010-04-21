@@ -45,7 +45,6 @@ class FloatTestCase(unittest.TestCase):
         self.assertEqual(98.9, self.hobj.float1)
         self.assertEqual(0., self.hobj.float4)
 
-        
     def test_assignment(self):
         # check starting value
         self.assertEqual(3.1415926, self.hobj.float1)
@@ -70,7 +69,7 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float1 = self.hobj.get_wrapped_attr('float2')
         except TraitError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 100.0")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of 100.0 <type 'float'> was specified.")
         else:
             self.fail('ConstraintError expected')
         
@@ -117,14 +116,14 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float1 = 124
         except TraitError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is 124")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of 124 <type 'int'> was specified.")
         else:
             self.fail('TraitError expected')
         try:
             self.hobj.float1 = -3
         except TraitError, err:
             self.assertEqual(str(err),
-                ": Trait 'float1' must be a float in the range [0.0, 99.0] but attempted value is -3")
+                ": Trait 'float1' must be a float in the range [0.0, 99.0], but a value of -3 <type 'int'> was specified.")
         else:
             self.fail('TraitError exception')
 
@@ -176,11 +175,29 @@ class FloatTestCase(unittest.TestCase):
             self.hobj.float4 = 3.0
         except TraitError, err:
             self.assertEqual(str(err), 
-                ": Trait 'float4' must be a float in the range (3.0, 4.0) but attempted value is 3.0")
+                ": Trait 'float4' must be a float in the range (3.0, 4.0), but a value of 3.0 <type 'float'> was specified.")
         else:
             self.fail('TraitError expected')
         
-            
+    def test_int_limits(self):
+        # Ensure limits that are ints don't cause something like this:
+        #     Trait 'symmetry_angle' must be a float in the range (0, 180]
+        #     but attempted value is 11.25
+        self.hobj.add_trait('symmetry_angle',
+                            Float(low=0, exclude_low=True, high=180))
+        self.hobj.symmetry_angle = 11.25
+        self.assertEqual(self.hobj.symmetry_angle, 11.25)
+
+    def test_default_value_type(self):
+        try:
+            self.hobj.add_trait('bad_default',
+                                Float('Bad Wolf', low=3, high=4))
+        except TraitError, err:
+            self.assertEqual(str(err), 
+                "Default value should be a float.")
+        else:
+            self.fail('TraitError expected')
+
 if __name__ == "__main__":
     unittest.main()
 

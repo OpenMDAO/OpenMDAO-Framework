@@ -10,6 +10,7 @@ import os.path
 from os.path import isabs, isdir, dirname, exists, join, normpath, relpath
 import pkg_resources
 import sys
+import weakref
 
 from enthought.traits.trait_base import not_event
 from enthought.traits.api import Bool, List, Str
@@ -48,6 +49,29 @@ class SimulationRoot (object):
         return path.startswith(SimulationRoot.__root)
     
 
+class DirectoryContext(object):
+    """Supports using the 'with' statement in place of try-finally for
+    :meth:`self.push_dir` and subsequent :meth:`self.pop_dir`."""
+
+    def __init__(self, component):
+        self.component = weakref.ref(component)
+
+    def __enter__(self):
+        return self.component().push_dir()
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.component().pop_dir()
+
+    def __getstate__(self):
+        state = self.__dict__.copy()
+        state['component'] = self.component()
+        return state
+
+    def __setstate__(self, state):
+        self.__dict__.update(state)
+        self.component = weakref.ref(self.component)
+
+
 class Component (Container):
     """This is the base class for all objects containing Traits that are \
     accessible to the OpenMDAO framework and are "runnable."
@@ -80,6 +104,14 @@ class Component (Container):
             self.directory = directory
         
         self._dir_stack = []
+        self._dir_context = None
+
+    @property
+    def dir_context(self):
+        """Returns the :class:`DirectoryContext` for this component."""
+        if self._dir_context is None:
+            self._dir_context = DirectoryContext(self)
+        return self._dir_context
 
     def check_config (self):
         """Verify that this component is fully configured to execute.
@@ -272,7 +304,7 @@ class Component (Container):
 
     def push_dir (self, directory=None):
         """Change directory to dir, remembering the current directory for a
-        later :meth:`pop_dir`."""
+        later :meth:`pop_dir`. Returns the new absolute directory path."""
         if not directory:
             directory = self.get_abs_directory()
         cwd = os.getcwd()
@@ -285,6 +317,7 @@ class Component (Container):
             self.raise_exception("Can't push_dir '%s': %s" % (directory, err),
                                  OSError)
         self._dir_stack.append(cwd)
+        return directory
 
     def pop_dir (self):
         """Return to previous directory saved by :meth:`push_dir`."""
@@ -587,9 +620,7 @@ class Component (Container):
     def _restore_files(self, package, rel_path, file_list, do_copy=True,
                        observer=None, from_egg=True):
         """Restore external files from installed egg or config directory."""
-        if self.directory:
-            self.push_dir()
-        try:
+        with self.dir_context:
             fvars = self.get_file_vars()
             if self.external_files or fvars:
                 self.info('Checking files in %s', os.getcwd())
@@ -609,7 +640,6 @@ class Component (Container):
                     is_input = ftrait.iotype == 'in'
                     self._list_files(path, package, rel_path, is_input, False,
                                      ftrait.binary, file_list, from_egg)
-
             if from_egg:
                 for component in [c for c in self.values(recurse=False)
                                           if isinstance(c, Component)]:
@@ -619,13 +649,9 @@ class Component (Container):
                         path += '/'+component.directory
                     component._restore_files(package, path, file_list,
                                              do_copy=False)
-
             if do_copy:
                 # Only copy once we've gotten the complete list.
                 self._copy_files(package, file_list, observer, from_egg)
-        finally:
-            if self.directory:
-                self.pop_dir()
 
     def _list_files(self, pattern, package, rel_path, is_input, const, binary,
                     file_list, from_egg):
