@@ -13,6 +13,7 @@ import os
 from os.path import join,dirname,normpath
 import tempfile
 import shutil
+import fnmatch
 
 env.hosts = ['openmdao@web103.webfaction.com']
 
@@ -60,10 +61,21 @@ if sys.platform == 'win32':
         try:
             for edir in bin_egg_dirs:
                 os.chdir(edir)
+                tmpdir = tempfile.mkdtemp()
                 
-                # build binary egg
-                local(sys.executable+' setup.py bdist_egg -d .', capture=False)
-                put(os.path.basename(edir)+'*.egg', '~/dists', mode=0644)
+                try:
+                    # build binary egg
+                    local(sys.executable+' setup.py bdist_egg -d %s' % tmpdir, capture=False)
+                    matches = fnmatch.filter(os.listdir(tmpdir), '*.egg')
+                    if matches:
+                        put(matches[0], '~/dists/'+os.path.basename(matches[0]), mode=0644)
+                    else:
+                        raise RuntimeError('binary egg not found')
+                finally:
+                    shutil.rmtree(tmpdir)
+            # update the index.html for the dists directory on the server
+            with cd('~/dists'):
+                run('python2.6 mkegglistindex.py')
         finally:
             os.chdir(startdir)
         

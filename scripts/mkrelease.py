@@ -241,6 +241,7 @@ def main():
         shutil.move(os.path.join(topdir,'docs','_build'), 
                     os.path.join(destdir,'_build'))
         check_call(['bzr', 'commit', '-m', '"updating release info files"'])
+        check_call(['bzr', 'tag', options.version])
 
         for project_name in openmdao_packages:
             pdir = os.path.join(topdir, 
