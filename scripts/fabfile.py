@@ -68,6 +68,9 @@ def release(version=None, test=False):
             os.chdir(startdir)
         
         if not test:
+            run('mkdir ~/downloads/%s' % version)
+            run('chmod 755 ~/downloads/%s' % version)
+            
             # push new distribs up to the server
             for f in os.listdir(tmpdir):
                 if f.startswith('openmdao_src'): 
@@ -78,9 +81,6 @@ def release(version=None, test=False):
                     put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
                 elif f.endswith('.egg'):
                     put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
-            
-            run('mkdir ~/downloads/%s' % version)
-            run('chmod 755 ~/downloads/%s' % version)
             
             # update the 'latest' link to point to the most recent version directory
             run('rm -f ~/downloads/latest')
