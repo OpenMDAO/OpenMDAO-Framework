@@ -3,7 +3,7 @@ import os, sys
 # pylint: disable-msg=F0401
 
 #from setuptools import setup, find_packages
-from setuptools import find_packages
+from setuptools import setup, find_packages
 
 here = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.normpath(os.path.join(here,
