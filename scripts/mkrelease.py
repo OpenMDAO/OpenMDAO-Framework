@@ -273,11 +273,9 @@ def main():
             if project_name in bin_projects:
                 _build_bdist_egg(pdir, destdir)
             
-                # update the index.html for the dists directory on the server
-                with cd('~/dists'):
-                    run('python2.6 mkegglistindex.py')
-            finally:
-                os.chdir(startdir)
+        # update the index.html for the dists directory on the server
+        with cd('~/dists'):
+            run('python2.6 mkegglistindex.py')
             
         print 'building openmdao'
         _create_pseudo_egg(options.version, destdir)
