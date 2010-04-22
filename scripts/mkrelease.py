@@ -292,8 +292,8 @@ def main():
             if project_name in bin_projects:
                 _build_bdist_egg(pdir, destdir)
             
-        print 'building openmdao'
-        _create_pseudo_egg(options.version, destdir)
+        #print 'building openmdao'
+        #_create_pseudo_egg(options.version, destdir)
         
         print 'exporting archive of repository to %s' % tarname
         check_call(['bzr', 'export', '%s' % tarname])
