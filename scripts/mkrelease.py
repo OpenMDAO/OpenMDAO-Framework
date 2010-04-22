@@ -115,7 +115,7 @@ def _build_sdist(projdir, destdir, version):
             shutil.rmtree('build')
         _build_dist('sdist', destdir)
         if os.path.exists('build'):
-            shutil.rmtree('build')
+            shutil.rmtree('build', ignore_errors=True)
         if sys.platform == 'win32':
             os.chdir(destdir)
             # turn .zip file into .tar.gz file so setuptools will find it on the server
