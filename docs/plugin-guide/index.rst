@@ -1,9 +1,9 @@
  
-.. _Plugin-Developer-Guide:
+.. _Plugin-Developer's-Guide:
 
-====================== 
-Plugin Developer Guide 
-====================== 
+======================== 
+Plugin Developer's Guide 
+======================== 
 
 .. toctree::
    

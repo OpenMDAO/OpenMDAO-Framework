@@ -1,4 +1,4 @@
-  
+ 
 ======================
 OpenMDAO Documentation
 ======================
@@ -8,26 +8,28 @@ Current version: |version|
 Contents:
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 1
+   :numbered:
+ 
    
-   install-guide/index
    user-guide/index
-   arch-doc/index
    plugin-guide/index
    dev-guide/index
    srcdocs/index
    licenses/index
-   quick-ref/index
+   resources/index
    
    
 .. toctree::
    :hidden:
         
    glossary
+   arch-doc/index
 
-Glossary and Index
-==================
+Appendix, Glossary, and Indexes
+================================
 
+* :ref:`appendix`
 * :ref:`glossary`
 * :ref:`genindex`
 * :ref:`modindex`

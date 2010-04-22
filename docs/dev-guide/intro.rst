@@ -155,9 +155,18 @@ this:
 .. index:: pair: branch; creating 
 
 
-Creating Your Branch
-____________________
+.. _Installing-from-Source:
 
+
+*Installing from Source*
++++++++++++++++++++++++++
+
+The first step in installing from source is to create a branch.
+
+.. _Creating-a-Branch:
+
+Creating a Branch
+_________________
 
 To create a branch, use the command:
 
@@ -172,26 +181,29 @@ avoid confusion in the case where you have multiple branches active at the same 
 If you do not supply ``<branch_name>``, the name by default will be the last part of
 the source repository URI, which in this case is ``openmdao``.
 
-
-At Glenn Research Center (GRC), we name branches based on ticket numbers in the bug 
-tracker, and we use
-the form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug tracker
-ticket number and ``<desc>`` is a short description of the branch. For example,
-``T0029-workflow_fix``.
+Branches are typically named based on ticket numbers in the bug  tracker, and we
+use the form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug
+tracker ticket number and ``<desc>`` is a short description of the branch. For
+example, ``T0029-workflow_fix``.
    
 
-After you've created your branch, run the following:
+Creating the ``devenv`` Directory and Installing Python Packages
+_________________________________________________________________
+
+
+After you've created your branch, run the following script from the top level of your branch
+directory:
 
 ::
 
    python2.6 go-openmdao-dev.py
    
-from the top level of your branch directory.  This will create
-a ``devenv`` directory in your current directory and will install all of the
-necessary python packages there.  The next step is to activate your
-virtual environment.  This requires that you are running the bash shell if you
-are on a linux or OS X machine. If you are not running the bash shell, just type 
-``bash`` before moving on to the next step.
+This will create a ``devenv`` directory in your current directory and will install all of the
+necessary Python packages there.  
+
+The next step is to activate your virtual environment.  This
+requires that you are running the bash shell if you are on a Linux or OS X machine. If you are
+not running the bash shell, just type  ``bash`` before moving on to the next step.
 
 Change your directory to ``devenv`` and run:
 
@@ -205,13 +217,12 @@ or, on Windows
 
    Scripts\activate.bat
 
-
 At this point, your ``devenv`` directory should contain the following
 subdirectories:
 
 ``bin``
     Contains python and a number of other scripts that are associated with
-    the python packages that are installed in the virtual environment. On
+    the Python packages that are installed in the virtual environment. On
     Windows, this directory is called *Scripts*
 
 ``lib``
@@ -222,3 +233,5 @@ subdirectories:
     
 ``etc``
     Contains miscellaneous files that don't fit in bin, lib, or include.
+
+
