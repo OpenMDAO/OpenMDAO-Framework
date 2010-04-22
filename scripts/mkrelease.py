@@ -126,7 +126,7 @@ def _build_sdist(projdir, destdir, version):
             archive = tarfile.open(tarname, 'w:gz')
             archive.add(os.path.basename(base))
             archive.close()
-            print 'listdirs = ', os.listdir()
+            print 'listdirs = ', os.listdir('.')
             print 'removing %s' % zipname
             os.remove(zipname)
             print 'removing tree of %s' % base
@@ -277,7 +277,6 @@ def main():
         shutil.move(os.path.join(topdir,'docs','_build'), 
                     os.path.join(destdir,'_build'))
         check_call(['bzr', 'commit', '-m', '"updating release info files"'])
-        check_call(['bzr', 'tag', options.version])
 
         for project_name in openmdao_packages:
             pdir = os.path.join(topdir, 
@@ -301,6 +300,9 @@ def main():
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(os.path.dirname(__file__),'mkinstaller.py')
         check_call([sys.executable, installer, '-d', destdir])
+        
+        # tag the current revision with the release version id
+        check_call(['bzr', 'tag', options.version])
     finally:
         os.chdir(startdir)
     
