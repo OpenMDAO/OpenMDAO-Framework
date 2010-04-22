@@ -114,9 +114,12 @@ def _build_sdist(projdir, destdir, version):
         if os.path.exists('build'):
             shutil.rmtree('build')
         _build_dist('sdist', destdir)
+        if os.path.exists('build'):
+            shutil.rmtree('build')
         if sys.platform == 'win32':
+            os.chdir(destdir)
             # turn .zip file into .tar.gz file so setuptools will find it on the server
-            base = os.path.join(destdir, os.path.basename(projdir)+'-%s' % version)
+            base = os.path.basename(projdir)+'-%s' % version
             zipname = base+'.zip'
             tarname = base+'.tar.gz'
             logging.debug('converting %s to %s' % (zipname, tarname))
@@ -124,15 +127,13 @@ def _build_sdist(projdir, destdir, version):
             zarch.extractall()
             zarch.close()
             archive = tarfile.open(tarname, 'w:gz')
-            archive.add(os.path.basename(base))
+            archive.add(base)
             archive.close()
             print 'listdirs = ', os.listdir('.')
             print 'removing %s' % zipname
             os.remove(zipname)
             print 'removing tree of %s' % base
             shutil.rmtree(base)
-        if os.path.exists('build'):
-            shutil.rmtree('build')
     finally:
         os.chdir(startdir)
 
