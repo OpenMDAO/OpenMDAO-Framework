@@ -126,7 +126,10 @@ def _build_sdist(projdir, destdir, version):
             archive = tarfile.open(tarname, 'w:gz')
             archive.add(os.path.basename(base))
             archive.close()
+            print 'listdirs = ', os.listdir()
+            print 'removing %s' % zipname
             os.remove(zipname)
+            print 'removing tree of %s' % base
             shutil.rmtree(base)
         if os.path.exists('build'):
             shutil.rmtree('build')
