@@ -58,7 +58,8 @@ If you add a file or directory to the repository by mistake, type:
    
 This will remove the file from the repository but will **not** delete it.
 
-.. index:: branch; building on
+
+..index:: branch; building
 
 .. _Building-OpenMDAO-(openmdao):
 
@@ -71,8 +72,7 @@ Go to the branch you want to build and type:
 
   python2.6 go-openmdao-dev.py               (Builds your virtual dev environment in devenv directory)
   cd devenv                                  (Takes you to your dev environment.)
-  bin/openmdao_docs                          (Displays the documentation. The first time you run this script on your branch,
-                                              it will also build the documents.)
+  bin/openmdao_docs                          (Displays the documentation.)
 
 .. note:: If you have a preexisting ``devenv`` directory in your branch directory, you should delete
    it before running the ``go-openmdao-dev.py`` script. To rebuild the docs only, run ``bin/openmdao_build_docs``.
@@ -104,8 +104,8 @@ You should be in the top level directory of your branch. Type:
   cd devenv                        (Takes you to your virtual development environment.) 
   source bin/activate              (Activates your virtual development environment [requires bash]
                                     On Windows: "Scripts\activate.bat")
-  bin/openmdao_docs                (Checks that docs display correctly. Optional if no doc changes.)
-  bin/openmdao_test --all          (Runs all openmdao unit tests. Once all tests pass, you may merge.) 
+  openmdao_docs                    (Checks that docs display correctly. Optional if no doc changes.)
+  openmdao_test --all              (Runs all openmdao unit tests. Once all tests pass, you may merge.) 
   bzr merge lp:openmdao            (Merges from the trunk)
 
 **- If you have no conflicts,** you can continue. Type:

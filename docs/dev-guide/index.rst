@@ -6,7 +6,7 @@ Developer's Guide
 =================
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    
    intro
    accessing
@@ -14,6 +14,8 @@ Developer's Guide
    testing
    guidelines
    distributions
+   bazaar
   
+   
 
 

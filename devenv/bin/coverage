@@ -1,0 +1,9 @@
+#!/OpenMDAO/dev/pziegfel/T53-fix_docs/devenv/bin/python
+# EASY-INSTALL-ENTRY-SCRIPT: 'coverage==3.3.1','console_scripts','coverage'
+__requires__ = 'coverage==3.3.1'
+import sys
+from pkg_resources import load_entry_point
+
+sys.exit(
+   load_entry_point('coverage==3.3.1', 'console_scripts', 'coverage')()
+)

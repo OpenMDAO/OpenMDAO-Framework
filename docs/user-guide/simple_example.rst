@@ -2,8 +2,8 @@
 
 .. _Getting-Started-with-OpenMDAO:
 
-Getting Started with OpenMDAO: A Simple Example Problem
-=======================================================
+Getting Started: A Simple Example Problem
+==========================================
 
 The purpose of this section is to teach the novice user how to set up and
 execute a simple optimization problem using the OpenMDAO script interface. This
@@ -52,8 +52,8 @@ If you have a distribution bundle:
 	
 .. index:: Component
 
-Building a Simple Component - Paraboloid
------------------------------------------
+Building a Component - Paraboloid
+---------------------------------
 
 At the highest level, a component is simply something that takes a set of
 inputs and operates on them, producing a set of outputs. In the OpenMDAO
@@ -202,8 +202,8 @@ gives some examples of how to incorporate these kinds of components into OpenMDA
 The Paraboloid component is now built and ready for inclusion in a model.
 
 
-Building a Simple Model - Unconstrained Optimization using CONMIN
-------------------------------------------------------------------
+Building a Model - Unconstrained Optimization using CONMIN
+-----------------------------------------------------------
 
 The next task is to build a model that finds the minimum objective value for the
 Paraboloid component described above. This model will contain the Paraboloid as well as
@@ -368,7 +368,7 @@ accuracy can be obtained in the calculated minimum because the default step
 size is too large for this problem.
 		
 Executing the Simple Optimization Problem
------------------------------------------
+------------------------------------------
 
 In the absence of an OpenMDAO GUI, we must take one other step to set up and execute
 this optimization problem. We have to create the top Level Assembly and tell it to run. One
@@ -424,8 +424,8 @@ accessible even from outside the top level Assembly.
 
 .. index:: contraints, CONMIN
 
-Building a Simple Model - Constrained Optimization using CONMIN
----------------------------------------------------------------
+Building a Model - Constrained Optimization using CONMIN
+---------------------------------------------------------
 
 Usually, an optimization problem also contains a number of constraints on the
 design space. 

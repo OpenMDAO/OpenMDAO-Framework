@@ -1,0 +1,9 @@
+#!/OpenMDAO/dev/pziegfel/T53-fix_docs/devenv/bin/python
+# EASY-INSTALL-ENTRY-SCRIPT: 'Sphinx==0.6.5','console_scripts','sphinx-build'
+__requires__ = 'Sphinx==0.6.5'
+import sys
+from pkg_resources import load_entry_point
+
+sys.exit(
+   load_entry_point('Sphinx==0.6.5', 'console_scripts', 'sphinx-build')()
+)

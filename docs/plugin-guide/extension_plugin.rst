@@ -35,7 +35,7 @@ it is not always a viable option. To learn how to file-wrap in OpenMDAO, see
 
 For the examples presented here, we assume that you are already familiar with the
 fundamentals of the OpenMDAO component API and also with creating Python components
-as outlined in the :ref:`The-OpenMDAO-tutorial-problem`.
+as outlined in the :ref:`A-More-Complex-Tutorial-Problem`.
 
 .. index:: extension; creating with F2PY
 .. index:: F2PY
@@ -317,7 +317,7 @@ attempting to wrap your own C or C++ codes.
 The first step in creating a Python extension is to create the interface file for
 the C functions that are to be wrapped. The interface file is analogous to the
 signature file that F2PY uses, though its format is more like C. For example,
-consider the engine simulation as described in the :ref:`The-OpenMDAO-tutorial-problem`.
+consider the engine simulation as described in the :ref:`A-More-Complex-Tutorial-Problem`.
 There is one function with inputs and outputs effectively passed as arguments. The
 corresponding interface file would look like this:
 
