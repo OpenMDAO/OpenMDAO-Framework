@@ -14,6 +14,8 @@ import StringIO
 import tarfile
 import zipfile
 
+# this module requires openmdao.devtools to be installed in the python environment
+
 # this should contain all of the openmdao subpackages
 openmdao_packages = { 'openmdao.main': '', 
                       'openmdao.lib': '', 
@@ -150,65 +152,65 @@ def _find_top_dir():
     raise RuntimeError("Can't find top dir of repository starting at %s" % os.getcwd())
 
     
-def _create_pseudo_egg(version, destination):
-    """This makes the top level openmdao egg that depends on all of the
-    openmdao namespace packages.
-    """
+#def _create_pseudo_egg(version, destination):
+    #"""This makes the top level openmdao egg that depends on all of the
+    #openmdao namespace packages.
+    #"""
     
-    setup_template = """
-from setuptools import setup
+    #setup_template = """
+#from setuptools import setup
 
-setup(name='openmdao',
-      version='%(version)s',
-      description="A framework for multidisciplinary analysis and optimization.",
-      long_description="",
-      classifiers=[
-        "Programming Language :: Python :: 2.6",
-        "Development Status :: 2 - Pre-Alpha",
-        "Topic :: Scientific/Engineering",
-        "Intended Audience :: Science/Research",
-        "License :: OSI Approved",
-        "Natural Language :: English",
-        "Operating System :: OS Independent",
-        ],
-      keywords='multidisciplinary optimization',
-      url='http://openmdao.org',
-      license='NOSA',
-      namespace_packages=[],
-      packages = [],
-      dependency_links = [ 'http://openmdao.org/dists' ],
-      zip_safe=False,
-      install_requires=[
-          'setuptools',
-          'openmdao.lib==%(version)s',
-          'openmdao.main==%(version)s',
-          'openmdao.util==%(version)s',
-          'openmdao.test==%(version)s',
-          'openmdao.examples.simple==%(version)s',
-          'openmdao.examples.bar3simulation==%(version)s',
-          'openmdao.examples.enginedesign==%(version)s',
-      ],
-      )
-    """
-    startdir = os.getcwd()
-    tdir = tempfile.mkdtemp()
-    os.chdir(tdir)
-    try:
-        with open('setup.py','wb') as f:
-            f.write(setup_template % { 'version': version })
-        os.mkdir('openmdao')
-        with open(os.path.join('openmdao', '__init__.py'), 'wb') as f:
-            f.write("""
-try:
-    __import__('pkg_resources').declare_namespace(__name__)
-except ImportError:
-    from pkgutil import extend_path
-    __path__ = extend_path(__path__, __name__)""")
+#setup(name='openmdao',
+      #version='%(version)s',
+      #description="A framework for multidisciplinary analysis and optimization.",
+      #long_description="",
+      #classifiers=[
+        #"Programming Language :: Python :: 2.6",
+        #"Development Status :: 2 - Pre-Alpha",
+        #"Topic :: Scientific/Engineering",
+        #"Intended Audience :: Science/Research",
+        #"License :: OSI Approved",
+        #"Natural Language :: English",
+        #"Operating System :: OS Independent",
+        #],
+      #keywords='multidisciplinary optimization',
+      #url='http://openmdao.org',
+      #license='NOSA',
+      #namespace_packages=[],
+      #packages = [],
+      #dependency_links = [ 'http://openmdao.org/dists' ],
+      #zip_safe=False,
+      #install_requires=[
+          #'setuptools',
+          #'openmdao.lib==%(version)s',
+          #'openmdao.main==%(version)s',
+          #'openmdao.util==%(version)s',
+          #'openmdao.test==%(version)s',
+          #'openmdao.examples.simple==%(version)s',
+          #'openmdao.examples.bar3simulation==%(version)s',
+          #'openmdao.examples.enginedesign==%(version)s',
+      #],
+      #)
+    #"""
+    #startdir = os.getcwd()
+    #tdir = tempfile.mkdtemp()
+    #os.chdir(tdir)
+    #try:
+        #with open('setup.py','wb') as f:
+            #f.write(setup_template % { 'version': version })
+        #os.mkdir('openmdao')
+        #with open(os.path.join('openmdao', '__init__.py'), 'wb') as f:
+            #f.write("""
+#try:
+    #__import__('pkg_resources').declare_namespace(__name__)
+#except ImportError:
+    #from pkgutil import extend_path
+    #__path__ = extend_path(__path__, __name__)""")
     
-        _build_sdist(tdir, destination, version)
-    finally:
-        os.chdir(startdir)
-        shutil.rmtree(tdir)
+        #_build_sdist(tdir, destination, version)
+    #finally:
+        #os.chdir(startdir)
+        #shutil.rmtree(tdir)
     
 def main():
     """Create an OpenMDAO release, placing the following files in the specified destination
@@ -216,9 +218,7 @@ def main():
     
         - a tar file of the repository
         - source distribs of all of the openmdao subpackages
-        - an openmdao empty top level distrib that does nothing but depend on
-          all of the openmdao subpackages (so someone can 'openmdao' and get
-          everything they need)
+        - binary eggs for openmdao subpackages with compiled code
         - an installer script for the released version of openmdao that will
           create a virtualenv and populate it with all of the necessary
           dependencies needed to use openmdao
@@ -268,12 +268,12 @@ def main():
             create_releaseinfo_file(project_name, releaseinfo_str)
             
         # build the docs
-        util_dir = os.path.join(topdir,'openmdao.util',
-                                'src','openmdao','util')
-        check_call([sys.executable, os.path.join(util_dir,'build_docs.py')])
+        devtools_dir = os.path.join(topdir,'openmdao.devtools',
+                                    'src','openmdao','devtools')
+        check_call([sys.executable, os.path.join(devtools_dir,'build_docs.py')])
         shutil.move(os.path.join(topdir,'docs','_build'), 
                     os.path.join(destdir,'_build'))
-        check_call(['bzr', 'commit', '-m', '"updating release info files"'])
+        check_call(['bzr', 'commit', '-m', '"updating release info and sphinx config files"'])
 
         for project_name in openmdao_packages:
             pdir = os.path.join(topdir, 

@@ -21,7 +21,8 @@ packages = [
     'openmdao.main',
     'openmdao.lib',
     'openmdao.util',
-    'openmdao.units'
+    'openmdao.units',
+    'openmdao.devtools',
 ]
 
 
@@ -34,9 +35,10 @@ def _find_repo_top():
     while location:
         if '.bzr' in os.listdir(location):
             return location
+        tmp = location
         location = os.path.dirname(location)
-        if len(location)==3 and location[1:]==':\\':
-            location = ''
+        if tmp == location:
+            break
     raise RuntimeError('ERROR: %s is not inside of a bazaar repository' % start)
 
 
@@ -227,16 +229,10 @@ def view_docs(browser=None):
             if arg.startswith('--browser='):
                 browser = arg.split('=')[-1].strip()
                 
-    try:
-        branchdir, docdir, bindir =_get_dirnames()
-    except RuntimeError:
-        # look for docs online
-        version = openmdao.util.releaseinfo.__version__
-        idxpath = 'http://openmdao.org/downloads/%s/docs' % version
-    else:
-        idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
-        if not os.path.isfile(idxpath):
-            build_docs()
+    branchdir, docdir, bindir =_get_dirnames()
+    idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
+    if not os.path.isfile(idxpath):
+        build_docs()
     
     import webbrowser
     wb = webbrowser.get(browser)

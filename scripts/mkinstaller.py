@@ -26,19 +26,19 @@ def adjust_options(options, args):
         args.append('openmdao-%%s' %% '%(version)s')
     
 def _single_install(cmds, req, bin_dir):
-    import pkg_resources
-    try:
-        pkg_resources.working_set.resolve([pkg_resources.Requirement.parse(req)])
-    except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
-        # if package isn't currently installed, install it
-        # NOTE: we need to do our own check for already installed packages because
-        #       for some reason distribute always wants to install a package even if
-        #       it already is installed.
-        cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
+    #import pkg_resources
+    #try:
+        #pkg_resources.working_set.resolve([pkg_resources.Requirement.parse(req)])
+    #except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
+        ## if package isn't currently installed, install it
+        ## NOTE: we need to do our own check for already installed packages because
+        ##       for some reason distribute always wants to install a package even if
+        ##       it already is installed.
+    cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
         # pip seems more robust than easy_install, but won't install from binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
-        logger.debug("running command: %%s" %% ' '.join(cmdline))
-        subprocess.check_call(cmdline)
+    logger.debug("running command: %%s" %% ' '.join(cmdline))
+    subprocess.check_call(cmdline)
 
 def after_install(options, home_dir):
     global logger
@@ -98,8 +98,10 @@ def after_install(options, home_dir):
     import openmdao.main.releaseinfo
     version = openmdao.main.releaseinfo.__version__
     dists = working_set.resolve([Requirement.parse(r) for r in openmdao_pkgs])
+    excludes = set(['setuptools', 'distribute'])
     for dist in dists:
-        reqs.append('%s' % dist.as_requirement())  
+        if dist.project_name not in excludes:
+            reqs.append('%s' % dist.as_requirement())  
             
     reqs = list(set(reqs))  # eliminate duplicates (numpy was in there twice somehow)
     optdict = { 'reqs': reqs, 'cmds':cmds, 'version': version }
