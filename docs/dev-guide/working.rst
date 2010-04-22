@@ -5,25 +5,12 @@
 Working on Your Branch
 ======================
 
-You must run ``python go-openmdao-dev.py`` from the top directory of your
-branch before you'll be able to execute OpenMDAO in any way. Running
-``go-openmdao-dev.py`` populates your virtual python environment with all of
-the packages that OpenMDAO depends upon and installs the openmdao namespace
-packages in your virtual python environment as "develop" eggs so that you can
-make changes to the source code and immediately see the results. You can also 
-view the OpenMDAO Sphinx documentation, by typing ``bin/openmdao_docs``.
+Before you can execut OpenMDAO in any way, you must build and activate the virtual development
+environment. If you have not done this, please see :ref:`Installing-from-Source`.
 
-After you virtual python environment has been activated, by running either
-``source bin/activate`` on linux or OS X, or by running ``Scripts\activate.bat``
-on Windows, you can add new packages you need to the environment by using
-easy_install or pip in the same manner that you would  add packages to the system
-level python.  If you make doc changes and need to rebuild the docs, you can run
-``openmdao_build_docs``.
 
-.. seealso:: :ref:`Installing-from-Source`
-
-.. note::  In general the examples provided in this document are written from the
-   Linux perspective. Windows users need to replace the ``/`` with a ``\``.
+.. note::  In some cases the examples are written from the Linux perspective. Windows users
+   need to replace the ``/`` with a ``\``.
 
 .. index:: pair: source code; editing and debugging
 .. index:: pair: source files; adding
@@ -58,25 +45,6 @@ If you add a file or directory to the repository by mistake, type:
    
 This will remove the file from the repository but will **not** delete it.
 
-
-..index:: branch; building
-
-.. _Building-OpenMDAO-(openmdao):
-
-Building OpenMDAO (openmdao)
-----------------------------
-
-Go to the branch you want to build and type:
-
-::
-
-  python2.6 go-openmdao-dev.py               (Builds your virtual dev environment in devenv directory)
-  cd devenv                                  (Takes you to your dev environment.)
-  bin/openmdao_docs                          (Displays the documentation.)
-
-.. note:: If you have a preexisting ``devenv`` directory in your branch directory, you should delete
-   it before running the ``go-openmdao-dev.py`` script. To rebuild the docs only, run ``bin/openmdao_build_docs``.
-  
 
 Running Tests
 -------------
@@ -190,19 +158,18 @@ Your branch becomes the latest revision of openmdao on Launchpad.
 
 **- If you do NOT have commit privileges** (you are a member of the *Contrib* group only)
 
-You push your branch up to the openmdao repository, but the changes do not become a part of the development trunk until
-one of the reviewers merges it. 
+You will push your branch up to the openmdao repository, but the changes do not become a part of the
+development trunk until one of the reviewers merges it. 
 
-To push your branch to Launchpad (e.g., you have changes to contribute), type the following
-command, replacing ``userid`` with your hyphenated Launchpad userid and replacing
-``branch_name`` with the name of the branch you want to push.
+You need to be somewhere on the branch to be pushed. Then type the following command, replacing ``userid``
+with your Launchpad userid and replacing ``branch_name`` with the name of the branch you are pushing.
 
 ::
 
   bzr push lp:~userid/openmdao/branch_name 
 
-Now that your branch is in on Launchpad, you must request that it be merged. Please follow the instructions
-below.
+Now that your branch is in on Launchpad, you must request that it be merged. Please follow the
+instructions below.
 
 1. Go to `OpenMDAO <https://launchpad.net/openmdao>`_ on Launchpad and log in if you are not logged in
    already.

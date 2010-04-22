@@ -56,8 +56,9 @@ push a branch back to openmdao. In your home directory on your Linux machine, ty
 
 .. note:: If you do not know your userid, log in to Launchpad and click on your name in the upper
    right-hand corner. This takes you to an *Overview* page. In the first column, under *User Information*, 
-   you should see **OpenID login**. The web address should contain your userid. (In *most* cases
-   this will be a hyphenated name, such as  ``john-j-smith``.)
+   you should see **OpenID login**. The web address should contain your userid. (In some cases
+   this may be a hyphenated name, such as  ``john-j-smith``; in other cases, it may be a first initial
+   and last name, such as ``jsmith``.)
 
 If the above command failed, you may be missing an ``authentication.conf`` file or have incomplete
 information in your ``bazaar.conf`` file. To check whether you have these files, type the following
@@ -74,7 +75,7 @@ commands:
      [Launchpad]
      host = .launchpad.net
      scheme = ssh
-     user = launchpad-username    (e.g., john-j-smith)
+     user = <launchpad-username>    (e.g., john-j-smith)
   
 5. Save and exit the ``authentication.conf`` file.
 6. Use your text editor to open the ``bazaar.conf`` file. Make sure your Launchpad username is in the
@@ -162,8 +163,10 @@ push a branch back to openmdao. In your home directory on your Windows machine, 
 
 .. note:: If you do not know your userid, log in to Launchpad and click on your name in the upper
    right-hand corner. This takes you to an *Overview* page. In the first column, under *User Information*, 
-   you should see **OpenID login**. The web address should contain your userid. (In *most* cases
-   this will be a hyphenated name, such as ``john-j-smith``.)
+   you should see **OpenID login**. The web address should contain your userid. (In some cases
+   this may be a hyphenated name, such as  ``john-j-smith``; in other cases, it may be a first initial
+   and last name, such as ``jsmith``.)
+
 
 
 .. seealso:: For information on creating a branch, building, and pushing a branch to openmdao on Launchpad, see
