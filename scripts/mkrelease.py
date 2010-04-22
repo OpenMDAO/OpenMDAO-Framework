@@ -11,6 +11,8 @@ from datetime import date
 from optparse import OptionParser
 import tempfile
 import StringIO
+import tarfile
+import zipfile
 
 # this should contain all of the openmdao subpackages
 openmdao_packages = { 'openmdao.main': '', 
@@ -87,7 +89,7 @@ def _has_checkouts():
     for line in out.split('\n'):
         # in the bzr status short output, any of the letters N,D,K, or M in the 2nd column
         # indicate that an uncommitted change exists in the repository
-        # TODO: find a more robust way to do this
+        # FIXME: find a more robust way to do this
         if len(line)>1 and line[1] in 'NDKM':
             return True
     return False
@@ -103,7 +105,7 @@ def _build_dist(build_type, destdir):
              'error while building %s in %s (return code=%d): %s'
               % (build_type, os.getcwd(), ret, out))
 
-def _build_sdist(projdir, destdir):
+def _build_sdist(projdir, destdir, version):
     """Build an sdist out of a develop egg."""
     startdir = os.getcwd()
     try:
@@ -112,6 +114,19 @@ def _build_sdist(projdir, destdir):
         if os.path.exists('build'):
             shutil.rmtree('build')
         _build_dist('sdist', destdir)
+        if sys.platform == 'win32':
+            # turn .zip file into .tar.gz file so setuptools will find it on the server
+            base = os.path.join(destdir,os.path.basename(projdir))
+            zipname = base+'-%s.zip' % version
+            tarname = base+'-%s.tar.gz' % version
+            logging.debug('converting %s to %s' % (zipname, tarname))
+            zarch = zipfile.ZipFile(zipname, 'r')
+            zarch.extractall()
+            archive = tarfile.open(tarname, 'w:gz')
+            archive.add(os.path.basename(base))
+            archive.close()
+            os.remove(zipname)
+            shutil.rmtree(base)
         if os.path.exists('build'):
             shutil.rmtree('build')
     finally:
@@ -189,7 +204,7 @@ except ImportError:
     from pkgutil import extend_path
     __path__ = extend_path(__path__, __name__)""")
     
-        _build_sdist(tdir, destination)
+        _build_sdist(tdir, destination, version)
     finally:
         os.chdir(startdir)
         shutil.rmtree(tdir)
@@ -269,7 +284,7 @@ def main():
             else:
                 os.chdir(pdir)
             print 'building %s' % project_name
-            _build_sdist(pdir, destdir)
+            _build_sdist(pdir, destdir, options.version)
             if project_name in bin_projects:
                 _build_bdist_egg(pdir, destdir)
             

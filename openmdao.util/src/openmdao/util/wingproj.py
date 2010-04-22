@@ -44,7 +44,7 @@ def run_wing():
             projpath = arg.split('=')[1]
     if not wingpath:
         if sys.platform == 'win32':
-            wingpath = r'C:\Program Files\Wing IDE 3.2\bin\wing.exe'
+            wingpath = 'wing.exe'
         elif sys.platform == 'darwin':
             wingpath = '/Applications/Wing/WingIDE.app/Contents/MacOS/wing'
         else:

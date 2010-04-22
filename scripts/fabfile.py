@@ -79,14 +79,8 @@ def release(version=None, test=False):
                         mode=0644)
                 elif f.endswith('.tar.gz') and f != 'docs.tar.gz':
                     put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
-                elif f.endswith('.zip'):
-                    put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
                 elif f.endswith('.egg'):
                     put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
-            
-            # update the 'latest' link to point to the most recent version directory
-            run('rm -f ~/downloads/latest')
-            run('ln -s ~/downloads/%s ~/downloads/latest' % version)
             
             # for now, put the go-openmdao script up without the version
             # id in the name
@@ -101,9 +95,10 @@ def release(version=None, test=False):
                 run('mv html docs')
                 run('rm -f docs.tar.gz')
     
-            # FIXME: just generate the index.html locally and upload it instead
-            # of having a bunch of mkdlversionindex.py files lying around on the
-            # server
+            # FIXME: change to a single version of mkdlversionindex.py that sits
+            # in the downloads dir and takes an arg indicating the destination
+            # directory, so we won't have a separate copy of mkdlversionindex.py
+            # in every download/<version> directory.
             put(join(scripts_dir,'mkdlversionindex.py'), 
                 '~/downloads/%s/mkdlversionindex.py' % version)
             
@@ -119,6 +114,11 @@ def release(version=None, test=False):
             with cd('~/downloads'):
                 run('python2.6 mkdownloadindex.py')
 
+            # if everything went well update the 'latest' link to point to the 
+            # most recent version directory
+            run('rm -f ~/downloads/latest')
+            run('ln -s ~/downloads/%s ~/downloads/latest' % version)
+            
     finally:
         if test:
             print 'Files were placed in %s.' % tmpdir
