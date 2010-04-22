@@ -28,8 +28,8 @@ class Float(TraitType):
     specified range of values.
     """
     
-    def __init__(self, default_value=None, iotype=None, desc=None, \
-                 low=None, high=None, exclude_low=False, exclude_high=False, \
+    def __init__(self, default_value=None, iotype=None, desc=None, 
+                 low=None, high=None, exclude_low=False, exclude_high=False, 
                  units=None, **metadata):
 
         # Determine defalt_value if unspecified
@@ -107,6 +107,7 @@ class Float(TraitType):
         Units are converted as needed.
         """
         
+        # pylint: disable-msg=E1101
         # If both source and target have units, we need to process differently
         if isinstance(value, TraitValMetaWrapper):
             if self.units:
@@ -124,6 +125,7 @@ class Float(TraitType):
     def error(self, object, name, value):
         """Returns a string describing the type handled by Float."""
         
+        # pylint: disable-msg=E1101
         if self.low is None and self.high is None:
             if self.units:
                 info = "a float having units compatible with '%s'" % self.units
@@ -152,6 +154,7 @@ class Float(TraitType):
         """Return a TraitValMetaWrapper object.  Its value attribute
         will be filled in by the caller.
         """
+        # pylint: disable-msg=E1101
         return TraitValMetaWrapper(units=self.units)
             
     def _validate_with_metadata(self, object, name, value, srcmeta):
@@ -159,6 +162,7 @@ class Float(TraitType):
         the source trait.
         """
         
+        # pylint: disable-msg=E1101
         dst_units = self.units
         try:
             src_units = srcmeta['units']
@@ -185,7 +189,7 @@ class Float(TraitType):
         except NameError:
             raise TraitError("undefined unit '%s' for attribute '%s'" %
                              (dst_units, name))
-        except TypeError, err:
+        except TypeError:
             msg = "%s: units '%s' are incompatible " % (name, src_units) + \
                    "with assigning units of '%s'" % (dst_units)
             raise TraitError(msg)

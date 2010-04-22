@@ -7,7 +7,7 @@
 
 import unittest
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.api import Float, Int, Str, Bool
+from openmdao.lib.api import Float, Int, Str, Bool, Enum
 from enthought.traits.api import TraitError
 
 
@@ -25,6 +25,7 @@ class Oneout(Component):
                    desc='Float variable ',units='cm')
     ratio5 = Str('05678', iotype='out', 
                    desc='string variable')
+    ratio6 = Enum(27, (0,3,9,27), iotype='out', desc='some enum')
 
     def __init__(self, doc=None, directory=''):
         
@@ -50,6 +51,7 @@ class Oneinp(Component):
                    desc='Float variable ',units='ft')
     ratio5 = Str('01234', iotype='in', 
                    desc='string variable')
+    ratio6 = Enum(0, (0,3,11,27), iotype='in', desc='some enum')
 
     def __init__(self, doc=None, directory=''):
         
@@ -79,12 +81,14 @@ class VariableTestCase(unittest.TestCase):
         self.top.connect('oneout.ratio3','oneinp.ratio3')      # Bool  to Bool
         self.top.connect('oneout.ratio4','oneinp.ratio4')      # float with units to float with unit
         self.top.connect('oneout.ratio5','oneinp.ratio5')      # Str   to Str
+        self.top.connect('oneout.ratio6','oneinp.ratio6')      # Enum  to Enum (int valued)
         self.top.run()
         self.assertEqual(3.54,self.top.oneinp.ratio1)
         self.assertEqual(9 ,self.top.oneinp.ratio2)
         self.assertEqual(True,self.top.oneinp.ratio3)
         self.assertAlmostEqual(0.033792,self.top.oneinp.ratio4,5)
         self.assertEqual('05678',self.top.oneinp.ratio5)
+        self.assertEqual(27,self.top.oneinp.ratio6)
     
         #print  'top dict =',self.top.__dict__
 
@@ -94,9 +98,11 @@ class VariableTestCase(unittest.TestCase):
         self.top.connect('oneout.ratio2','oneinp.ratio1')      # int  to  Float 
         self.top.oneout.ratio3 = True
         self.top.connect('oneout.ratio3','oneinp.ratio2')      # Bool to  int    
+        self.top.connect('oneout.ratio2','oneinp.ratio6')      # Int  to  Enum (int valued)
         self.top.run()
         self.assertEqual(11.0,self.top.oneinp.ratio1)
         self.assertEqual(True,self.top.oneinp.ratio2)
+        self.assertEqual(11,self.top.oneinp.ratio6)
 
     def test_var3(self):
         self.top.oneout.ratio3 = False
@@ -105,6 +111,11 @@ class VariableTestCase(unittest.TestCase):
         self.top.run()
         self.assertEqual(0.0,self.top.oneinp.ratio1)
         self.assertEqual(False,self.top.oneinp.ratio2)
+        
+    def test_var3a(self):
+        self.top.connect('oneout.ratio6','oneinp.ratio2')      # Enum  to Int
+        self.top.run()
+        self.assertEqual(27,self.top.oneinp.ratio2)
 
     def test_var4(self):
         self.top.oneout.ratio1 = 12.0   
