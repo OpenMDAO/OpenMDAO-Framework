@@ -1,5 +1,6 @@
 import sys
 
+
 def view_docs(browser=None):
     """A script (openmdao_docs) points to this. It just pops up a browser to 
     view the openmdao sphinx docs. If the docs are not already built, it
@@ -17,6 +18,7 @@ def view_docs(browser=None):
         import openmdao.devtools.build_docs
     except ImportError:
         # look for docs online
+        import openmdao.util.releaseinfo
         version = openmdao.util.releaseinfo.__version__
         idxpath = 'http://openmdao.org/downloads/%s/docs' % version
         
