@@ -134,7 +134,7 @@ def _gen_publicvar(data):
     # Process Enums
     if data.enumValues:
         trait = "Enum"
-        default = data.enumValues + ", "
+        default = "(" +data.enumValues + "), "
         
     var = name + " = " + trait + "(" + default + iotype
     
@@ -177,7 +177,7 @@ def _gen_publicvar(data):
         for i,v in enumerate(aliases):
             aliases[i] = aliases[i].strip("'")
             
-        var += sep + "alias=" + str(aliases)
+        var += sep + "alias_values=" + str(tuple(aliases))
             
     var += ")\n"
     

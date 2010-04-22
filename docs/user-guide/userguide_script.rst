@@ -417,8 +417,8 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 | Complex          | Complex( [*value* = None, *desc* = None,                 |
 |                  | *iotype* = None] )                                       | 
 +------------------+----------------------------------------------------------+
-| Enum             | Enum( [val1*[, *val2, ..., valN], *desc* = None,         |
-|                  | *iotype* = None, *alias* = aliases] )                    | 
+| Enum             | Enum( [*default_value*, *index_values* = (),             |
+|                  | *desc* = None, *iotype* = None, *alias_values* = ()] )   |
 +------------------+----------------------------------------------------------+
 | File             | File( [*default_value* = None, *iotype* = None,          | 
 |                  | *desc* = None, *low* = None, *high* = None, *path* =     |
@@ -563,7 +563,7 @@ Enums
 +++++
 
 It is possible to use an Enum (enumeration) type as a public variable in
-OpenMDAO. This is useful for cases where an input has certain fixed values
+OpenMDAO. This is useful for cases where an input has just a set of certain fixed values
 that are possible. For example, consider a variable that can be one of three
 colors:
 
@@ -573,14 +573,14 @@ colors:
     from openmdao.main.api import Component
     
     class TrafficLight(Component):
-        color = Enum(0, 1, 2, iotype='in', alias=["Red", "Yellow", "Green"])
+        color = Enum(0, (0, 1, 2), iotype='in', alias_values=("Red", "Yellow", "Green"))
 
 .. doctest:hide: 
 
     >>> from openmdao.lib.api import Enum
     >>> from openmdao.main.api import Component
     >>> class TrafficLight(Component):
-    >>>     color = Enum(0, 1, 2, iotype='in', alias=["Red", "Yellow", "Green"])
+    >>>     color = Enum(0, (0, 1, 2), iotype='in', alias_values=("Red", "Yellow", "Green"))
 	
 Now, if we create an instance of this component, and try setting the Enum.
 
@@ -594,14 +594,16 @@ What if we set to an invalid value?
     >>> test.color=4
     Traceback (most recent call last):
     ...
-    enthought.traits.trait_errors.TraitError: The 'color' trait of a TrafficLight instance must be 0 or 1 or 2, but a value of 4 <type 'int'> was specified.`
+    enthought.traits.trait_errors.TraitError: Trait 'color' must be in (0, 1, 2), but a value of 4 <type 'int'> was specified.`
 
-We can also access the aliases directly from the trait.
+We can also access the list of indices and the list of aliases directly from the trait.
 
-    >>> color_trait = test.get_dyn_trait('color')
-    >>> color_trait.alias
-    ['Red', 'Yellow', 'Green']
-    >>> color_trait.alias[test.color]
+    >>> color_trait = test.trait('color')
+    >>> color_trait.alias_values
+    ('Red', 'Yellow', 'Green')
+    >>> color_trait.index_values
+    (0, 1, 2)
+    >>> color_trait.alias_values[test.color]
     'Green'
 
 Note that the alias is not a required attribute. It will mostly be useful for
@@ -616,14 +618,14 @@ our component above, as:
     from openmdao.main.api import Component
     
     class TrafficLight(Component):
-	color2 = Enum("Red", "Yellow", "Green", iotype='in')
+	color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
 
 .. doctest:hide: 
 
     >>> from openmdao.lib.api import Enum
     >>> from openmdao.main.api import Component
     >>> class TrafficLight(Component):
-    >>>     color2 = Enum("Red", "Yellow", "Green", iotype='in')
+    >>>     color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
 	
 Then we can interact like this:
 
@@ -633,12 +635,14 @@ Then we can interact like this:
     >>> test.color2=1
     Traceback (most recent call last):
     ...
-    enthought.traits.trait_errors.TraitError: The 'color2' trait of a TrafficLight instance must be 'Red' or 'Yellow' or 'Green', but a value of 1 <type 'int'> was specified.
+    enthought.traits.trait_errors.TraitError: Trait 'color2' must be in ('Red', 'Yellow', 'Green'), but a value of 1 <type 'int'> was specified.
     >>> test.color2="Green"
     >>> test.color2
     'Green'
 
-
+However, if the Enum is being used to select the input for an old code, then you will
+most likely need to feed it integers, not strings, so the aliases will be useful.
+    
 .. index:: File Variables, File
 
 File Variables
