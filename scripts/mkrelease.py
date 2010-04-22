@@ -127,6 +127,7 @@ def _build_sdist(projdir, destdir, version):
             archive.add(os.path.basename(base))
             archive.close()
             os.remove(zipname)
+            blah = raw_input("waiting... ")
             shutil.rmtree(base)
         if os.path.exists('build'):
             shutil.rmtree('build')
