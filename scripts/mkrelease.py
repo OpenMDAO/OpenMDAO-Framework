@@ -122,6 +122,7 @@ def _build_sdist(projdir, destdir, version):
             logging.debug('converting %s to %s' % (zipname, tarname))
             zarch = zipfile.ZipFile(zipname, 'r')
             zarch.extractall()
+            zarch.close()
             archive = tarfile.open(tarname, 'w:gz')
             archive.add(os.path.basename(base))
             archive.close()
