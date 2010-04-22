@@ -266,7 +266,7 @@ def main():
             else:
                 os.chdir(pdir)
             create_releaseinfo_file(project_name, releaseinfo_str)
-            
+
         # build the docs
         devtools_dir = os.path.join(topdir,'openmdao.devtools',
                                     'src','openmdao','devtools')
@@ -295,7 +295,7 @@ def main():
         check_call(['bzr', 'export', '%s' % tarname])
     
         print 'creating bootstrapping installer script go-openmdao.py'
-        installer = os.path.abspath(os.path.join(os.path.dirname(__file__),'mkinstaller.py'))
+        installer = os.path.join(topdir, 'scripts','mkinstaller.py')
         check_call([sys.executable, installer, '-d', destdir])
         
         # tag the current revision with the release version id
