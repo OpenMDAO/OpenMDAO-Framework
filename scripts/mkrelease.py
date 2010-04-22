@@ -295,7 +295,7 @@ def main():
         check_call(['bzr', 'export', '%s' % tarname])
     
         print 'creating bootstrapping installer script go-openmdao.py'
-        installer = os.path.join(os.path.dirname(__file__),'mkinstaller.py')
+        installer = os.path.abspath(os.path.join(os.path.dirname(__file__),'mkinstaller.py'))
         check_call([sys.executable, installer, '-d', destdir])
         
         # tag the current revision with the release version id
