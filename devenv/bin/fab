@@ -1,9 +1,0 @@
-#!/OpenMDAO/dev/pziegfel/T53-fix_docs/devenv/bin/python
-# EASY-INSTALL-ENTRY-SCRIPT: 'Fabric==0.9.0','console_scripts','fab'
-__requires__ = 'Fabric==0.9.0'
-import sys
-from pkg_resources import load_entry_point
-
-sys.exit(
-   load_entry_point('Fabric==0.9.0', 'console_scripts', 'fab')()
-)

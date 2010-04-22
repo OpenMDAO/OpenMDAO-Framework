@@ -1,9 +1,0 @@
-#!/OpenMDAO/dev/pziegfel/T53-fix_docs/devenv/bin/python
-# EASY-INSTALL-ENTRY-SCRIPT: 'openmdao.main==0.0.9','console_scripts','wing'
-__requires__ = 'openmdao.main==0.0.9'
-import sys
-from pkg_resources import load_entry_point
-
-sys.exit(
-   load_entry_point('openmdao.main==0.0.9', 'console_scripts', 'wing')()
-)
