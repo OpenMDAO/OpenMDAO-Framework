@@ -118,21 +118,17 @@ def _build_sdist(projdir, destdir, version):
             shutil.rmtree('build', ignore_errors=True)
         if sys.platform == 'win32':
             os.chdir(destdir)
-            # turn .zip file into .tar.gz file so setuptools will find it on the server
+            # unzip the .zip file and tar it up so setuptools will find it on the server
             base = os.path.basename(projdir)+'-%s' % version
             zipname = base+'.zip'
             tarname = base+'.tar.gz'
-            logging.debug('converting %s to %s' % (zipname, tarname))
             zarch = zipfile.ZipFile(zipname, 'r')
             zarch.extractall()
             zarch.close()
             archive = tarfile.open(tarname, 'w:gz')
             archive.add(base)
             archive.close()
-            print 'listdirs = ', os.listdir('.')
-            print 'removing %s' % zipname
             os.remove(zipname)
-            print 'removing tree of %s' % base
             shutil.rmtree(base)
     finally:
         os.chdir(startdir)
