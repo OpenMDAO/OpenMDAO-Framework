@@ -88,6 +88,7 @@ available in this module by using the *dir()* command in Python:
     __name__
     __package__
     create
+    enable_console
     get_available_types
     logger
     set_as_top
@@ -139,6 +140,7 @@ Most of these items are also explained elsewhere in the *User's Guide.*
     __file__
     __name__
     __package__
+    convert_units
     pyevolvedriver
 
 *The Model Hierarchy*
@@ -415,6 +417,9 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 | Complex          | Complex( [*value* = None, *desc* = None,                 |
 |                  | *iotype* = None] )                                       | 
 +------------------+----------------------------------------------------------+
+| Enum             | Enum( [val1*[, *val2, ..., valN], *desc* = None,         |
+|                  | *iotype* = None, *alias* = aliases] )                    | 
++------------------+----------------------------------------------------------+
 | File             | File( [*default_value* = None, *iotype* = None,          | 
 |                  | *desc* = None, *low* = None, *high* = None, *path* =     |
 |                  | None, *content_type* = None, *binary* = False,           |
@@ -480,8 +485,8 @@ aid simulation builders in connecting components.
 
 .. index:: Array
 
-Array
-+++++
+Arrays
+++++++
 
 It is possible to use an array as a Public Variable through use of the *Array*
 trait. The value for an Array can be expressed as either a Python array or a NumPy
@@ -551,6 +556,88 @@ and calculates their dot product as an output.
 Multiplication of a NumPy array is element by element, so *sum* is used to
 complete the calculation of the dot product. Individual elements of the array
 can also be accessed using brackets.
+
+.. index:: Enum
+
+Enums
++++++
+
+It is possible to use an Enum (enumeration) type as a public variable in
+OpenMDAO. This is useful for cases where an input has certain fixed values
+that are possible. For example, consider a variable that can be one of three
+colors:
+
+.. testcode:: enum_example
+
+    from openmdao.lib.api import Enum
+    from openmdao.main.api import Component
+    
+    class TrafficLight(Component):
+        color = Enum(0, 1, 2, iotype='in', alias=["Red", "Yellow", "Green"])
+
+.. doctest:hide: 
+
+    >>> from openmdao.lib.api import Enum
+    >>> from openmdao.main.api import Component
+    >>> class TrafficLight(Component):
+    >>>     color = Enum(0, 1, 2, iotype='in', alias=["Red", "Yellow", "Green"])
+	
+Now, if we create an instance of this component, and try setting the Enum.
+
+    >>> test = TrafficLight()
+    >>> test.color=2
+    >>> test.color
+    2
+
+What if we set to an invalid value?
+
+    >>> test.color=4
+    Traceback (most recent call last):
+    ...
+    enthought.traits.trait_errors.TraitError: The 'color' trait of a TrafficLight instance must be 0 or 1 or 2, but a value of 4 <type 'int'> was specified.`
+
+We can also access the aliases directly from the trait.
+
+    >>> color_trait = test.get_dyn_trait('color')
+    >>> color_trait.alias
+    ['Red', 'Yellow', 'Green']
+    >>> color_trait.alias[test.color]
+    'Green'
+
+Note that the alias is not a required attribute. It will mostly be useful for
+display in the planned GUI, while the numerical value is probably passed on to
+some wrapped code. However, the Enum isn't required to be an integer. We could
+simplify this by using the color strings directly. If we define a new trait in
+our component above, as:
+
+.. testcode:: enum_example2
+
+    from openmdao.lib.api import Enum
+    from openmdao.main.api import Component
+    
+    class TrafficLight(Component):
+	color2 = Enum("Red", "Yellow", "Green", iotype='in')
+
+.. doctest:hide: 
+
+    >>> from openmdao.lib.api import Enum
+    >>> from openmdao.main.api import Component
+    >>> class TrafficLight(Component):
+    >>>     color2 = Enum("Red", "Yellow", "Green", iotype='in')
+	
+Then we can interact like this:
+
+    >>> test = TrafficLight()
+    >>> test.color2
+    'Red'
+    >>> test.color2=1
+    Traceback (most recent call last):
+    ...
+    enthought.traits.trait_errors.TraitError: The 'color2' trait of a TrafficLight instance must be 'Red' or 'Yellow' or 'Green', but a value of 1 <type 'int'> was specified.
+    >>> test.color2="Green"
+    >>> test.color2
+    'Green'
+
 
 .. index:: File Variables, File
 
@@ -753,6 +840,77 @@ do the type translation.
 More details can be found in the `Traits 3 User Manual`__.
 
 .. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#predefined-traits-for-simple-types
+
+*Variable Containers*
+~~~~~~~~~~~~~~~~~~~~~
+
+For components with many public variables, it is often useful to compartmentalize
+them into a hierarchy of containers to enhance readability and findability. This
+is particularly important when the user is submitting or connecting variables in
+a GUI, but it is also useful for the script interface.
+
+Variables in OpenMDAO can be compartmentalized by creating a container from the
+*Container* base class. This container merely contains variables or other 
+contatiners.
+
+Normally a variable is accessed in the data hierarchy as:
+
+``...component_name.var_name``
+
+but when it is in a container, it can be accessed as:
+
+``...component_name.container_name(.subcontainer_name.etc).var_name``
+
+Consider an example of an aircraft simulation that requires some values for
+three variables that define two flight conditions:
+
+.. testcode:: variable_containers
+
+    from openmdao.main.api import Component, Container
+    from openmdao.lib.api import Float
+
+    class FlightCondition(Container):
+        """Container of Public Variables"""
+    
+        airspeed = Float(120.0, iotype='in', units='nmi/h')
+        angle_of_attack = Float(0.0, iotype='in', units='deg')
+        sideslip_angle = Float(0.0, iotype='in', units='deg')
+
+    class AircraftSim(Component):
+        """This component contains variables in a container"""
+    
+        weight = Float(5400.0, iotype='in', units='kg')
+	# etc.
+	
+        def __init__(self, directory=''):
+            """Constructor"""
+
+            super(AircraftSim, self).__init__(directory)
+        
+	    # Instantiate our variable containers.
+            self.fcc1 = FlightCondition()
+            self.fcc2 = FlightCondition()
+	    
+        def execute(self):
+            """Do something."""
+	    
+	    self.fcc2.angle_of_attack = 2.0
+	    
+Here, the container FlightCondition was defined, containing 3 public variables.
+The component AircraftSim is also defined with a public variable *weight* and
+two variable containers *fcc1* and *fcc2*. We can access weight through *self.weight*; 
+likewise, we can access the airspeed of the second flight condition through
+*self.fcc2.airspeed*. Note that you can have containers in containers. There are
+no physical limitations to how deep you can go with containers, but for practical
+purposes, intricately deep hierarchies may introduce more overhead.
+
+There is one other interesting thing to note about this example. We've effectively
+implemented a kind of data structure with this container, and used it to create
+multple copies of a set of public variables. This can prove useful for blocks of
+variables that are repeated in a component. Note that at the framework level, 
+connections are still made by connecting individual variables. The next section also 
+presents a way to create a custom data structure, but one that the framework 
+sees as a single entity for connection purposes.
 
 *Creating Custom Variable Types*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -1050,7 +1208,7 @@ in the Python environment.
     >>> z1.get_abs_directory()
     Traceback (most recent call last):
     ...
-    RuntimeError: : can't call get_abs_directory before hierarchy is defined
+    RuntimeError: can't call get_abs_directory before hierarchy is defined
     >>>
     >>> set_as_top(z1)
     <openmdao.main.assembly.Assembly object at ...>

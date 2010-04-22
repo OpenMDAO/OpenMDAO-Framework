@@ -46,9 +46,14 @@ If you have a branch from the source repository:
 
 	``examples/openmdao.examples.simple/openmdao/examples/simple``
 	
-If you have a distribution bundle:
+If you have downloaded the latest release version from the website:
 
-	``buildout/eggs/openmdao.examples.simple-x.x.x-xxxxxx.egg/openmdao/examples/simple``
+	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.simple-X.X.X-######.egg/openmdao/examples/simple``
+	
+where X.X.X is the current OpenMDAO version, and ###### is a string that
+contains the Python version, and the Operating System description. This will
+vary depending on your system and version, but there will only be one
+*simple* egg.
 	
 .. index:: Component
 
@@ -70,19 +75,18 @@ The Python code for the Paraboloid component is as follows:
     from openmdao.lib.api import Float
     
     class Paraboloid(Component):
-        """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """
+	""" Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
 	# set up interface to the framework  
-	x = Float(0.0, iotype='in', desc='The variable y')
-        y = Float(0.0, iotype='in', desc='The variable x')
+	x = Float(0.0, iotype='in', desc='The variable x')
+        y = Float(0.0, iotype='in', desc='The variable y')
 
         f_xy = Float(0.0, iotype='out', desc='F(x,y)')        
 
         
 	def execute(self):
-	    """ Solve (x-3)^2 + xy + (y+4)^2 = 3
-	        Optimal solution (minimum): x = 6.6667; y = -7.3333
-	        """
+	    """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+            Minimum: x = 6.6667; y = -7.3333
         
 	    x = self.x
 	    y = self.y
@@ -407,7 +411,9 @@ This script can be executed in the shell by going to the
 
 ::
 
-        [Path to your OpenMDAO install]/buildout/bin/python optimization_unconstrained.py
+        python optimization_unconstrained.py
+	
+Make sure that you are using OpenMDAO's local python environment.
 	
 This should produce the output:
 

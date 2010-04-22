@@ -368,10 +368,16 @@ if __name__ == "__main__":
     MyEngine = Engine("Testing")
     
     import time
-    ttime = time.time()
+    start_time = time.time()
     
     for jj in xrange(1, 50):
         MyEngine.run()
         
-    print "Elapsed time: ", time.time()-ttime
-
+    print "\n"
+    print 'Throttle Position: ', MyEngine.throttle
+    print 'Power: ', MyEngine.power
+    print 'Torque: ', MyEngine.torque
+    print 'Fuel Burn: ', MyEngine.fuel_burn
+    print 'Engine Weight: ', MyEngine.engine_weight
+    print '-----------------------------'    
+    print "Elapsed time: ", time.time()-start_time, 'seconds'

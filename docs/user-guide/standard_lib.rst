@@ -266,7 +266,20 @@ used to scale the design variables.
         self.driver.nscal = -1
 	
 Note that there need to be as many scale values as there are design variables.
-	
+
+If your problem uses linear  constraints, you can improve the efficiency of the
+optimization process by designating those that are linear functions of the design
+variables as follows:
+
+.. testcode:: CONMIN_show
+
+	self.driver.constraints = ['driving_sim.stroke - driving_sim.bore',
+	                           '1.0 - driving_sim.stroke * driving_sim.bore']
+	self.cons_is_linear = [1, 0]
+
+If *cons_is_linear* is not specified, then all the constraints are assumed to be
+nonlinear. Note that the original CONMIN parameter for this is ISC.	
+
 Finally, the *iprint* parameter can be used to turn on the display of diagnostic
 messages inside of CONMIN. These messages are currently sent to the standard
 output.

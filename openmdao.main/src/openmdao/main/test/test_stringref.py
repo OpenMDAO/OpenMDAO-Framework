@@ -96,7 +96,7 @@ class StringRefTestCase(unittest.TestCase):
             self.comp1.desvar.set(None)
         except TraitError, err:
             self.assertEqual(str(err), 
-                "comp2: Trait 'y' must be a float but attempted value is None")
+                "comp2: Trait 'y' must be a float, but a value of None <type 'NoneType'> was specified.")
         else:
             self.fail('expected TraitError')
         
