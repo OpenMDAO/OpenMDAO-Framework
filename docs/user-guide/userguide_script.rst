@@ -1,8 +1,8 @@
 .. index:: user guide script interface
 
-.. _The-OpenMDAO-Scripting-Interface:
+.. _OpenMDAO-Scripting-Interface:
 
-The OpenMDAO Scripting Interface
+OpenMDAO Scripting Interface
 ================================
 
 OpenMDAO provides a programmatic interface that allows you to write a Python
@@ -15,14 +15,14 @@ The goal of this section of the *User's Guide* is to explain and demonstrate eve
 aspect of the OpenMDAO script interface. This section is intended primarily as a
 reference. If you are an inexperienced user, you would be best served by reading and
 understanding the examples in :ref:`Getting-Started-with-OpenMDAO` and
-:ref:`The-OpenMDAO-tutorial-problem`.
+:ref:`A-More-Complex-Tutorial-Problem`.
 
 OpenMDAO Fundamentals
 ---------------------
 
 .. index:: package
 
-*The OpenMDAO Package Hierarchy*
+*OpenMDAO Package Hierarchy*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The *package* is a Python concept that provides a structure for organizing
@@ -1062,7 +1062,7 @@ units), then a passthrough cannot be used. Instead, the desired Public Variables
 must be manually created and connected just like the normal ones. However, at
 present, this will only work with inputs, because inputs can be connected to
 other inputs, but outputs cannot be connected to other outputs. A more
-detailed example is given in :ref:`The-OpenMDAO-tutorial-problem`. Fortunately,
+detailed example is given in :ref:`A-More-Complex-Tutorial-Problem`. Fortunately,
 the passthroughs are sufficient for most needs.
 
 Assemblies also include a way to break variable connections. The *disconnect*
@@ -1161,15 +1161,6 @@ NASA in the 1970s, and is  currently in the public domain. It has been  included
 in OpenMDAO's Standard Library to provide users with a basic gradient algorithm.
 The interface for CONMIN is full detailed in :ref:`CONMIN-driver`.
 
-Idesign
-+++++++
-
-NOTE: License classification for Idesign is under review.
-
-Idesign, which stands for Interactive Design Optimization of Engineering Systems,
-is another gradient optimization package useable for problems with inequality and
-equality constraints. It is currently being integrated into OpenMDAO,
-and should be available soon.
 
 PyEvolve
 ++++++++
