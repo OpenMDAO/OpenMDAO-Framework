@@ -116,9 +116,9 @@ def _build_sdist(projdir, destdir, version):
         _build_dist('sdist', destdir)
         if sys.platform == 'win32':
             # turn .zip file into .tar.gz file so setuptools will find it on the server
-            base = os.path.join(destdir,os.path.basename(projdir))
-            zipname = base+'-%s.zip' % version
-            tarname = base+'-%s.tar.gz' % version
+            base = os.path.join(destdir, os.path.basename(projdir)+'-%s' % version)
+            zipname = base+'.zip'
+            tarname = base+'.tar.gz'
             logging.debug('converting %s to %s' % (zipname, tarname))
             zarch = zipfile.ZipFile(zipname, 'r')
             zarch.extractall()
