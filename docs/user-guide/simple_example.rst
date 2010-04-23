@@ -87,6 +87,7 @@ The Python code for the Paraboloid component is as follows:
 	def execute(self):
 	    """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
             Minimum: x = 6.6667; y = -7.3333
+	    """
         
 	    x = self.x
 	    y = self.y
