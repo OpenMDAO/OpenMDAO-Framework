@@ -298,7 +298,7 @@ def main():
         check_call([sys.executable, installer, '-d', destdir])
         
         # tag the current revision with the release version id
-        check_call(['bzr', 'tag', options.version])
+        check_call(['bzr', 'tag', '--force', options.version])
     finally:
         os.chdir(startdir)
     
