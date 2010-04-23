@@ -575,14 +575,9 @@ colors:
     class TrafficLight(Component):
         color = Enum(0, (0, 1, 2), iotype='in', alias_values=("Red", "Yellow", "Green"))
 
-.. doctest:hide: 
-
-    >>> from openmdao.lib.api import Enum
-    >>> from openmdao.main.api import Component
-    >>> class TrafficLight(Component):
-    >>>     color = Enum(0, (0, 1, 2), iotype='in', alias_values=("Red", "Yellow", "Green"))
-	
 Now, if we create an instance of this component, and try setting the Enum.
+
+.. doctest:: enum_example
 
     >>> test = TrafficLight()
     >>> test.color=2
@@ -591,12 +586,16 @@ Now, if we create an instance of this component, and try setting the Enum.
 
 What if we set to an invalid value?
 
+.. doctest:: enum_example
+
     >>> test.color=4
     Traceback (most recent call last):
     ...
-    enthought.traits.trait_errors.TraitError: Trait 'color' must be in (0, 1, 2), but a value of 4 <type 'int'> was specified.`
+    TraitError: : Trait 'color' must be in (0, 1, 2), but a value of 4 <type 'int'> was specified.`
 
 We can also access the list of indices and the list of aliases directly from the trait.
+
+.. doctest:: enum_example
 
     >>> color_trait = test.trait('color')
     >>> color_trait.alias_values
@@ -620,14 +619,9 @@ our component above, as:
     class TrafficLight(Component):
 	color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
 
-.. doctest:hide: 
-
-    >>> from openmdao.lib.api import Enum
-    >>> from openmdao.main.api import Component
-    >>> class TrafficLight(Component):
-    >>>     color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
-	
 Then we can interact like this:
+
+.. doctest:: enum_example2
 
     >>> test = TrafficLight()
     >>> test.color2
@@ -635,7 +629,7 @@ Then we can interact like this:
     >>> test.color2=1
     Traceback (most recent call last):
     ...
-    enthought.traits.trait_errors.TraitError: Trait 'color2' must be in ('Red', 'Yellow', 'Green'), but a value of 1 <type 'int'> was specified.
+    TraitError: : Trait 'color2' must be in ('Red', 'Yellow', 'Green'), but a value of 1 <type 'int'> was specified.
     >>> test.color2="Green"
     >>> test.color2
     'Green'
@@ -1217,7 +1211,7 @@ in the Python environment.
     >>> set_as_top(z1)
     <openmdao.main.assembly.Assembly object at ...>
     >>> z1.get_abs_directory()
-    '.../buildout/'
+    '...'
 
 Note that the output in this example depends on your local directory structure.
 All components added into this assembly will have this same absolute path. If a 
