@@ -5,7 +5,7 @@
 Working on Your Branch
 ======================
 
-Before you can execut OpenMDAO in any way, you must build and activate the virtual development
+Before you can execute OpenMDAO in any way, you must build and activate the virtual development
 environment. If you have not done this, please see :ref:`Installing-from-Source`.
 
 

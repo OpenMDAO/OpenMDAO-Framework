@@ -338,7 +338,7 @@ similar manner.
 Firewalls introduce the need to be able to *pull* values as well as *push.* (See the
 diagram `Transfer Through a Firewall`_.) This is because firewalls are typically
 configured one way. A client on the inside can initiate a transaction with a server on
-the outside but not vice-versa. So to set an output on a server from inside the
+the outside but not vice versa. So to set an output on a server from inside the
 firewall requires a *push* style of link. For an output on that server to be propagated
 back requires a *pull* style of link.  The default link style is *push,* but links may
 be configured to *pull* as necessary.

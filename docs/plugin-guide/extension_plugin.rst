@@ -393,7 +393,7 @@ created with F2PY:
                 T_amb, P_amb, air_density, mw_air, mw_fuel,
                 RPM, throttle, thetastep, fuel_density)
         
-    # Interogate results of engine simulation and store.
+    # Interrogate results of engine simulation and store.
         
     self.power = power
     self.torque = torque
@@ -401,7 +401,7 @@ created with F2PY:
     self.engine_weight = engine_weight
 
 The only difference here is that the outputs are returned as single value
-variables instead of the zero-dimensional lists that F2PY returnes whenever
+variables instead of the zero-dimensional lists that F2PY returns whenever
 it generates the interface for a C function.    
     
 TODO - C++ Example

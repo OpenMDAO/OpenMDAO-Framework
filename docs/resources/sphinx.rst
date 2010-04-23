@@ -151,7 +151,7 @@ a figure of it,
    
    ``.. _`process-model`:``
    
-So, clicking on th cross reference in the text file takes you to where the label was placed. In this case an  
+So, clicking on the cross reference in the text file takes you to where the label was placed. In this case an  
 arbitrary label was created rather than cross referencing to the figure title.
  
 

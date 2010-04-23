@@ -488,15 +488,15 @@ two lines. It is important to import only those features that you need from the 
 instead of loading everything into the workspace. 
 
 
-.. Index: Public Variables
+.. Index: public variables
 
-A component's inputs and outputs are called :term:`Public Variables` in OpenMDAO. The term *Public* contrasts 
-with *internal* variables, which are valid only inside of a component. At times, the term :term:`Variable` or *Framework
-Variable* may also be used to refer to Public Variables. You could think of them in a more general sense as a data
+A component's inputs and outputs are called :term:`public variables` in OpenMDAO. The term *Public* contrasts  with
+*internal* variables, which are valid only inside of a component. At times, the term :term:`Variable` or *Framework
+Variable* may also be used to refer to public variables. You could think of them in a more general sense as a data
 object, which reflects the ability to pass more generalized objects such as data structures or geometries. A Public
 Variable is a wrapper for data passed between framework components, containing a value, a default value, optional
-min/max values, and units. Public Variables can also perform their own validation when being assigned to another Public
-Variable.
+min/max values, and units. Public variables can also perform their own validation when being assigned to another
+public variable.
 
 The Float and Int constructors are used to create the inputs and outputs on a component for floating point
 and integer inputs respectively. String variables and arrays are also possible using the Str and Array Public
@@ -506,7 +506,7 @@ in the function call if it is unnamed.
 
 .. index:: PEP 8
 
-You give a Public Variable a name when it is assigned to a Python variable (i.e., the left-hand side argument when calling the 
+You give a public variable a name when it is assigned to a Python variable (i.e., the left-hand side argument when calling the 
 constructor.) As a Python variable, this name needs to follow Python's standard for variable names,
 so it must begin with a letter or underscore and should consist of only alphanumeric characters and the
 underscore. Keep in mind that a leading underscore is generally used for private data or functions. Also, spaces cannot be used
@@ -516,14 +516,14 @@ underscores.
 
 The first parameter is the default value for the variable.
 
-The parameter *iotype* marks this Public Variable as either an input (*in*) or an output (*out*) to the parent component.
+The parameter *iotype* marks this public variable as either an input (*in*) or an output (*out*) to the parent component.
 The parameter *desc* contains a documentation string that describes this variable. This should be used to provide an 
 adequate explanation for each input and output on a component.
 
-The parameter *units* is used to specify the units for this Public Variable. OpenMDAO contains a units capability
+The parameter *units* is used to specify the units for this public variable. OpenMDAO contains a units capability
 that is based on part of the Scientific Python package. This Units module allows for unit checking and conversion when connecting
 the outputs and inputs of components. The units are defined based on the definitions given in Scientific Python,
-which can be found at :ref:`Summary-of-Units`. If a Public Variable is dimensionless, no unit should be assigned.
+which can be found at :ref:`Summary-of-Units`. If a public variable is dimensionless, no unit should be assigned.
 
 There are a couple more named arguments that are needed for the Transmission component.
 
@@ -534,12 +534,13 @@ There are a couple more named arguments that are needed for the Transmission com
         current_gear = Int(0, iotype='in', low=0, high=5, \
                        desc='Current Gear')	      
 
-Here, a minimum and maximum limit have been set for the current gear position using the arguments *low* and *high*. If the transmission 
-component is commanded to operate outside of the limits on this input, a TraitError exception will be raised. This
-exception can be caught elsewhere so that some kind of recovery behavior can be defined.
+Here, a minimum and maximum limit have been set for the current gear position using the
+arguments *low* and *high*. If the transmission  component is commanded to operate outside of
+the limits on this input, a TraitError exception will be raised. This exception can be caught
+elsewhere so that some kind of recovery behavior can be defined.
 
-Finally, ``transmission.py`` needs to actually do something when it is executed. This code illustrates how to use
-the input and output variables to perform a calculation. 
+Finally, ``transmission.py`` needs to actually do something when it is executed. This code
+illustrates how to use the input and output variables to perform a calculation. 
 
 .. _Code4: 
 
@@ -566,14 +567,16 @@ the input and output variables to perform a calculation.
         if self.RPM < 1000.0 and self.current_gear == 1 :
             self.RPM = 1000.0
 	    
-Inputs and Outputs are objects in our component, so they are accessed using ``self.variablename``, where the
-variablename is the name given to the variable's constructor. Note that a local copy of some of the inputs is
-created here (e.g., *gear* vs. *self.current_gear*.) Since we already know the data types and the units that are used in
-these calculations, we don't need the explicit typing or unit checking provided by the Public Variables, so we can bypass any overhead that is
-normally associated with them by assigning their values to an ordinary untyped Python variable. In general this
-should be more efficient, though for simple calculations like this the difference may not be noticeable. The
-type checking and unit checking are absolutely necessary outside of the component boundary, where components are
-connected to each other.
+Inputs and Outputs are objects in our component, so they are accessed using
+``self.variablename``, where the variablename is the name given to the variable's constructor.
+Note that a local copy of some of the inputs is created here (e.g., *gear* vs.
+*self.current_gear*.) Since we already know the data types and the units that are used in
+these calculations, we don't need the explicit typing or unit checking provided by the public
+variables, so we can bypass any overhead that is normally associated with them by assigning
+their values to an ordinary untyped Python variable. In general this should be more efficient,
+though for simple calculations like this the difference may not be noticeable. The type
+checking and unit checking are absolutely necessary outside of the component boundary, where
+components are connected to each other.
 
 
 Executing a Component in the Python Shell
@@ -846,7 +849,7 @@ Now these input are available to connect to the components.
 
 This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chassis and 
 Transmission components. On the surface, this might seem confusing or perhaps redundant, but it demonstrates
-a way that Assemblies can be used to define a more consistant external interface 
+a way that Assemblies can be used to define a more consistent external interface 
 
 Executing the Vehicle Assembly
 ------------------------------
@@ -883,13 +886,13 @@ Wrapping an External Module Using F2PY
 
 As the most computationally intensive component, the engine model in ``engine.py`` is the main performance
 bottleneck during repeated execution. As an interpreted language, Python is not the ideal choice for
-implementating a numerical algorithm, particularly where performance is important. Much can be gained by
+implementing a numerical algorithm, particularly where performance is important. Much can be gained by
 implementing the engine model in a compiled language like C or Fortran.
 
 One of the most important characteristics of Python is that it was designed to be smoothly integrated
 with other languages, in particular C (in which Python was written) and related languages (Fortran and
 C++). This is particularly important for a scripting language, where code execution is generally slower,
-and it is often necessary to use a compiled language like C for implementing computationally intensiv
+and it is often necessary to use a compiled language like C for implementing computationally intensive
 functions. On top of this native integration ability, the community has developed some excellent tools,
 such as `F2PY <http://cens.ioc.ee/projects/f2py2e/>`_ (Fortran to Python) and :term:`SWIG` (Simplified Wrapper and
 Interface Generator), that simplify the process of building the wrapper for a code. As the name implies,
@@ -981,10 +984,10 @@ Setting up an Optimization Problem
 
 The final step is the creation of a top level Assembly which defines the problem using DrivingSim and the vehicle assembly.
 The top level Assembly is a container that can be thought of as the workspace where the model is built, or the container that
-ulimately contains the entire model. Functionally, it's no different than an assembly such as Vehicle.py; this implies that
+ultimately contains the entire model. Functionally, it's no different than an assembly such as Vehicle.py; this implies that
 any OpenMDAO model can be packaged up and inserted into some other model as a component. Generally, the top level Assembly
 contains one or more Components or Assemblies. It may also contain a solution Driver, or it may just rely on sequential
-exeuction based on the data flow.
+execution based on the data flow.
 
 The first problem we would like to solve is a single objective optimization problem where we adjust some subset of the design
 variables to minimize the 0-60 acceleration time. The chosen design variables are the bore and spark angle; the optimal value
@@ -1072,14 +1075,15 @@ of iterations for the optimization loop. Both of these have a default value (*it
 
 .. index:: StringRef
 
-The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which we chose as
-*bore* and *spark angle*. Both the objective and the design variables are assigned using a type of Public Variable called a
-*StringRef*. Instead of containing a variable value, the StringRef contains a string that gives the OpenMDAO path pointing to the
-variable that the StringRef references. This path is always relative to the driver's parent, so here we use
-*driving_sim.accel_time* instead of *self.driving_sim.accel_time*. StringRefs are primarily used to connect the inputs and
-outputs of drivers (e.g.,  optimizers, solvers, etc.) CONMIN is a single objective optimizer, so there can only be one
-objective. However, there can be multiple design variables, and these are stored in a list. The upper and lower bounds for all
-the design variables are set  using *lower_bounds* and *upper_bounds* respectively.
+The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which
+we chose as *bore* and *spark angle*. Both the objective and the design variables are assigned using a type of
+public variable called a *StringRef*. Instead of containing a variable value, the StringRef contains a string that
+gives the OpenMDAO path pointing to the variable that the StringRef references. This path is always relative to the
+driver's parent, so here we use *driving_sim.accel_time* instead of *self.driving_sim.accel_time*. StringRefs are
+primarily used to connect the inputs and outputs of drivers (e.g.,  optimizers, solvers, etc.) CONMIN is a single
+objective optimizer, so there can only be one objective. However, there can be multiple design variables, and these
+are stored in a list. The upper and lower bounds for all the design variables are set  using *lower_bounds* and
+*upper_bounds* respectively.
 
 The CONMIN driver can actually handle more sophisticated objective expressions that are functions of multiple simulation variables
 using the StringRef. For example, if you want to maximize *accel_time* instead of minimizing it, you can do this by
