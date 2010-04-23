@@ -102,9 +102,7 @@ class TestCase(unittest.TestCase):
         # Verify we didn't mess-up working directory.
         end_dir = os.getcwd()
         os.chdir(ORIG_DIR)
-        if sys.platform == 'win32':
-            end_dir = end_dir.lower()
-        if end_dir != self.directory:
+        if end_dir.lower() != self.directory.lower():
             self.fail('Ended in %s, expected %s' % (end_dir, self.directory))
 
     def test_sequential(self):
