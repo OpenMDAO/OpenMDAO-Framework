@@ -82,12 +82,6 @@ N/A	     	     FAP Multidisciplinary Analysis and Optimization
 ==================  ================================================
 
 
-For those with access to the NASA Glenn Research Center's eRoom, the MDAO Glossary
-contains definitions of acronyms, terms, and software tools relevant to the MDAO
-capability. This glossary is located at:
-https://collaboration.grc.nasa.gov/eRoom/NASAc1f1/MDAOActivityWorkspace/0_fa294
-
-
 **Other References:**
 
 - Clements, Paul, et al, *Documenting Software Architectures: Views and Beyond,* Addison-Wesley, Boston, 2003.

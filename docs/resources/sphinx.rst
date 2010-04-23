@@ -170,7 +170,7 @@ For example, typing this:
 
 results in:
 
-.. seealso:: :ref:`Bazaar-Commands`
+.. seealso:: :ref:`Helpful-Bazaar-Commands`
 
 
 You must also place a label before the section referred to, for example:
@@ -297,8 +297,8 @@ Driving Profile.*
      EPA City Driving Profile
 
 
-Adding Extra Lines/Maintaining Line Breaks
-------------------------------------------
+Add Lines/Maintain Line Break
+------------------------------
 
 If you want to add an extra line after a graphic or table, use the vertical bar ("|")
 found above the backslash on the keyboard. Put it on a line by itself.
@@ -558,8 +558,8 @@ For details on testing code in the documentation, please refer
 to :ref:`Testing-Code-in-the-Documentation` in the *Developer's Guide.*
 
 
-Including Code from the Source
-------------------------------
+Code from the Source
+---------------------
 
 See :ref:`Including-Code-Straight-from-the-Source` in the *Developer's Guide.*
 

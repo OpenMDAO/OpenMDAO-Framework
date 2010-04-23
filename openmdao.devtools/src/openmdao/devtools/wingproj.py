@@ -32,8 +32,9 @@ def _find_bzr(path=None):
     return None
 
 def run_wing():
-    """Runs the Wing IDE after first setting environment variables
-    necessary to locate shared libraries.
+    """Runs the Wing IDE after first setting up a profile containing
+    the files in the openmdao repository. It also adds all of our 
+    unit tests to the testing area.
     """
     wingpath = None
     projpath = ''

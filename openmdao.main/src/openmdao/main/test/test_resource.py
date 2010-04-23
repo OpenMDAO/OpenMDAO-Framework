@@ -37,7 +37,7 @@ class TestCase(unittest.TestCase):
             self.skip_ssh = False
 
         self.machines = []
-        if self.node == 'gxterm3':
+        if self.node.startswith('gxterm'):
             # User environment assumed OK on this GRC cluster front-end.
             for i in range(55):
                 self.machines.append({'hostname':'gx%02d' % i,
@@ -51,7 +51,7 @@ class TestCase(unittest.TestCase):
 #        if self.cluster is not None:
 #            self.cluster.shutdown()
 
-        if self.skip_ssh or self.node == 'gxterm3':
+        if self.skip_ssh or self.node.startswith('gxterm'):
             return
 
         # This cleanup *should* be OK, but it's not bulletproof.
@@ -69,7 +69,7 @@ class TestCase(unittest.TestCase):
             return
 
         self.cluster = ClusterAllocator(self.name, self.machines)
-        if self.node == 'gxterm3':
+        if self.node.startswith('gxterm'):
             # GX isn't particularly reliable for some reason.
             self.assertTrue(len(self.cluster) >= len(self.machines)*3/4)
         else:
@@ -80,7 +80,7 @@ class TestCase(unittest.TestCase):
             n_cpus = multiprocessing.cpu_count()
         except AttributeError:
             n_cpus = 1
-        if self.node == 'gxterm3':
+        if self.node.startswith('gxterm'):
             # GX front-end n_cpus doesn't imply node n_cpus.
             self.assertTrue(n_servers >= len(self.cluster))
         else:
@@ -133,7 +133,7 @@ class TestCase(unittest.TestCase):
         self.machines.append({'hostname':'xyzzy',
                               'python':self.python})
         self.cluster = ClusterAllocator(self.name, self.machines)
-        if self.node == 'gxterm3':
+        if self.node.startswith('gxterm'):
             # GX isn't particularly reliable for some reason.
             self.assertTrue(len(self.cluster) >= len(self.machines)*3/4)
         else:

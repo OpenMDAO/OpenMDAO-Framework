@@ -260,7 +260,7 @@ def find_repository(repository, user):
 
     if not repository:
         path = find_bzr()
-        if platform.node() == 'torpedo.grc.nasa.gov' and \
+        if path and platform.node() == 'torpedo.grc.nasa.gov' and \
            not path.startswith('/OpenMDAO'):
             # On OpenMDAO home use default search if not an OpenMDAO repository.
             path = ''

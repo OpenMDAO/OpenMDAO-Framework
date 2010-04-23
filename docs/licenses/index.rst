@@ -5,7 +5,7 @@ Licenses
 ========
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    
    OpenMDAO_license.rst
    OpenSourceLicenses.rst

@@ -220,9 +220,6 @@ def view_docs(browser=None):
     view the openmdao sphinx docs. If the docs are not already built, it
     builds them before viewing, but if the docs already exist, it's not smart enough
     to rebuild them if they've changed since the last build.
-    
-    If this is run from a non-developer install, i.e., there is no local copy of
-    the docs, it just looks for the docs on the openmdao.org website.
     """
     if not browser:
         for arg in sys.argv:
