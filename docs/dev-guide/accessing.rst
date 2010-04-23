@@ -1,8 +1,8 @@
 
 .. accessing Launchpad (Linux)::
 
-Accessing OpenMDAO Code on Launchpad 
-====================================
+Accessing OpenMDAO on Launchpad -- SSH Keys
+============================================
 
 If you are behind a proxy, you must create SSH keys for each platform you want to use
 before you can merge from openmdao to your branch or push a branch back to openmdao on
@@ -167,10 +167,6 @@ push a branch back to openmdao. In your home directory on your Windows machine, 
    this may be a hyphenated name, such as  ``john-j-smith``; in other cases, it may be a first initial
    and last name, such as ``jsmith``.)
 
-
-
-.. seealso:: For information on creating a branch, building, and pushing a branch to openmdao on Launchpad, see
-	     :ref:`Working-on-Your-Branch`.
 
 
  

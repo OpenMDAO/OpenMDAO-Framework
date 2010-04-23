@@ -311,8 +311,6 @@ a different entry point group name.
         }
     )
 
-We can create this file by hand or generate it using ``mod2egg`` as we showed in the earlier
-section.
+We can create this file by hand or generate it using ``mod2egg`` as we showed in
+an earlier section.
 
-
-F

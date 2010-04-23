@@ -1108,6 +1108,6 @@ You can build up expressions from any number of OpenMDAO variables by using Pyth
 Here, we used a weighted sum of the EPA city and highway fuel economy estimates as the objective in a maximization problem.
 
 Solving the Optimization Problem
--------------------------------~
+---------------------------------
 
 The top level Assembly described in ``engine_optimization.py`` can be executed just like any Component or Assembly.

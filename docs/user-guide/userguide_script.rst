@@ -1,6 +1,6 @@
 .. index:: user guide script interface
 
-.. _OpenMDAO-Scripting-Interface:
+.. _`OpenMDAO-scripting-interface`:
 
 OpenMDAO Scripting Interface
 ================================
@@ -249,8 +249,8 @@ A simple component that implements an equation with two inputs is shown below:
 
 In this example, the *__init__()* function doesn't do anything but call the
 equivalent in the base class, so technically it should be removed from this 
-class definition. More detail on framework variables is explained in 
-:ref:`Public-Variables`.
+class definition. Framework variables are explained in more detail in the section on
+:ref:`public variables <Public-Variables>`.
 
 .. index:: save_to_egg()
 
