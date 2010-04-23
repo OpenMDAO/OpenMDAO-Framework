@@ -1,6 +1,6 @@
 .. index:: user guide script interface
 
-.. _OpenMDAO-Scripting-Interface:
+.. _`OpenMDAO-scripting-interface`:
 
 OpenMDAO Scripting Interface
 ================================
@@ -115,7 +115,7 @@ Unused imports are one of the problems that Pylint can find, so it always pays
 to use it.
 
 A pseudo-package was also created to house some of the most commonly-used imports
-from the standard library. In general, it contains Public Variables and Drivers.
+from the standard library. In general, it contains public variables and Drivers.
 Most of these items are also explained elsewhere in the *User's Guide.*
 
     >>> import openmdao.lib.api
@@ -146,7 +146,7 @@ Most of these items are also explained elsewhere in the *User's Guide.*
 *The Model Hierarchy*
 ~~~~~~~~~~~~~~~~~~~~~
 
-Every item (Component, Assembly, public variable) that is publicly acessible
+Every item (Component, Assembly, public variable) that is publicly accessible
 to the framework is part of OpenMDAO's model hierarchy.
 
 TODO: Talk about the model hierarchy
@@ -154,15 +154,15 @@ TODO: Talk about the model hierarchy
 *Naming Conventions*
 ~~~~~~~~~~~~~~~~~~~~
 
-Components and Public Variables that are instantiated into the OpenMDAO Model 
+Components and public variables that are instantiated into the OpenMDAO Model 
 Hierarchy must follow the same naming syntax as variables in the Python
 language. Summarized, this means that they can only include alphanumeric
 characters and the underscore, and that the lead character cannot be a number.
-Any attempt to create a component or a Public Variable that does not conform
+Any attempt to create a component or a public variable that does not conform
 to Python's syntax should result in an exception. This restriction was required
 because these entities essentially exist as Python variables. One unfortunate
 side-effect is that names with spaces are not allowed. OpenMDAO checks for
-compliance when a Public Variable or Component instance is created:
+compliance when a public variable or Component instance is created:
 
     >>> from openmdao.main.api import Assembly
     >>> from openmdao.examples.enginedesign.chassis import Chassis
@@ -175,7 +175,7 @@ compliance when a Public Variable or Component instance is created:
     NameError: name 'the chassis' contains illegal characters
 
 Additionally, we've tried to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_
-standard at all levels, including component instance names and Public Variable 
+standard at all levels, including component instance names and public variable 
 names. For all variable names, PEP 8 proscribes the use of lower case names 
 with words separated by underscores. Naturally, PEP 8 compliance is not a
 requirement that will be forced on the user, but merely a good style guideline.
@@ -249,8 +249,8 @@ A simple component that implements an equation with two inputs is shown below:
 
 In this example, the *__init__()* function doesn't do anything but call the
 equivalent in the base class, so technically it should be removed from this 
-class definition. More detail on framework variables is explained in 
-:ref:`Public-Variables`.
+class definition. Framework variables are explained in more detail in the section on
+:ref:`public variables <Public-Variables>`.
 
 .. index:: save_to_egg()
 
@@ -306,9 +306,9 @@ candidate.
 Public Variables
 ----------------
 
-In OpenMDAO, a Public Variable is a variable that can be seen or manipulated by
+In OpenMDAO, a *public variable* is a variable that can be seen or manipulated by
 other entities in the framework. Any data that is passed between components in a
-model must use Public Variables to declare the inputs and output for each
+model must use public variables to declare the inputs and output for each
 component.
 
 There are two ways to create a public variable for a component. The first is to
@@ -334,7 +334,7 @@ output would look like this:
 	    
 	    self.y = 3.0*self.x
 
-The example above shows the way the majority of users will create Public Variables.
+The example above shows the way the majority of users will create public variables.
 An alternative way to declare them is to use the *add_trait* function that is part of the
 *Component* public interface.
 	    
@@ -363,8 +363,8 @@ so a local copy was created that overloads the one in the parent *Component*
 class. In most of the examples shown so far, we did not need to declare a
 constructor because the one in *Component* was adequate. 
 
-There isn't a real advantage to creating a Public Variable in this manner. However,
-the primary use of add_trait is to create a Public Variable dynamically at some
+There isn't a real advantage to creating a public variable in this manner. However,
+the primary use of add_trait is to create a public variable dynamically at some
 point after the component has been created (possibly during execution).
 
     >>> from openmdao.examples.simple.paraboloid import Paraboloid
@@ -379,14 +379,14 @@ point after the component has been created (possibly during execution).
     7777
 
 There are some more specialized components that will make use of the ability to create
-Public Variables on the fly, but it won't be used for most general components.
+public variables on the fly, but it won't be used for most general components.
 
 .. index:: Traits
 
 *Traits*
 ~~~~~~~~
 
-The underlying implementation of Public Variables in OpenMDAO was accomplished
+The underlying implementation of public variables in OpenMDAO was accomplished
 through a Python add-on called :term:`Traits`, which is an open-source extension 
 to Python that was developed by a company called Enthought. Traits provide a way to 
 apply explicit typing to the normally untyped Python variables. They also provide 
@@ -394,7 +394,7 @@ the capability to add some other features to the framework variables, including
 unit checking and conversion, default values, minima and maxima, and a way to create 
 callback functions that execute under specified conditions.
 
-Most of you won't need to worry about Traits or how Public Variables are implemented,
+Most of you won't need to worry about Traits or how public variables are implemented,
 but those of you who want to create custom datatypes will essentially need to
 create a new custom trait. More details on traits can be found on `Enthought's 
 Traits <http://code.enthought.com/projects/traits/>`_ project page.
@@ -402,7 +402,7 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 *Built-in Variable Types*
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. index:: Public Variable Types
+.. index:: public variable yypes
     
 **Summary of Public Variable Types**
 
@@ -417,8 +417,8 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 | Complex          | Complex( [*value* = None, *desc* = None,                 |
 |                  | *iotype* = None] )                                       | 
 +------------------+----------------------------------------------------------+
-| Enum             | Enum( [*default_value*, *index_values* = (),             |
-|                  | *desc* = None, *iotype* = None, *alias_values* = ()] )   |
+| Enum             | Enum( [*default_value*, *values* = (),                   |
+|                  | *desc* = None, *iotype* = None, *aliases* = ()] )        |
 +------------------+----------------------------------------------------------+
 | File             | File( [*default_value* = None, *iotype* = None,          | 
 |                  | *desc* = None, *low* = None, *high* = None, *path* =     |
@@ -451,7 +451,7 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 +------------------+----------------------------------------------------------+
 
 Note: a more detailed list of Enthought's `Traits`__ is given in their documentation.
-These are also available for use as Public Variables in the framework, though
+These are also available for use as public variables in the framework, though
 no examples are presented here for some of the more esoteric ones. If you need
 to use one, remember that *iotype* and *desc* should be added to the arguments
 when one of these is instantiated. The Traits use \*\*metadata to store these
@@ -459,10 +459,10 @@ user-defined attributes.
 
 .. __: http://code.enthought.com/projects/traits/docs/html/traits_user_manual/defining.html?highlight=cbool#other-predefined-traits
 
-A Public Variable is declared with a number of arguments, many of which are
+A public variable is declared with a number of arguments, many of which are
 optional.
 
-The *iotype* attribute is required for all Public Variables regardless of type.
+The *iotype* attribute is required for all public variables regardless of type.
 It's sole function is to tell the framework whether the variable should be
 treated as an input or an output. Presently, the only two options for this
 attribute are 'in' and 'out'.
@@ -477,7 +477,7 @@ iotype='in'   Component input
 iotype='out'  Component output
 ============  =====================
 
-The *desc* attribute is a concise description of the Public Variable -- one or
+The *desc* attribute is a concise description of the public variable -- one or
 two sentences should be fine. While nothing in the framework requires this
 description, it would be wise to include one for every input and output of your
 components. The GUI will use these descriptions to provide information that will
@@ -488,7 +488,7 @@ aid simulation builders in connecting components.
 Arrays
 ++++++
 
-It is possible to use an array as a Public Variable through use of the *Array*
+It is possible to use an array as a public variable through use of the *Array*
 trait. The value for an Array can be expressed as either a Python array or a NumPy
 array. NumPy arrays are particularly useful because of the built-in mathematical
 capabilities. Either array can be n-dimensional and of potentially any type.
@@ -506,9 +506,9 @@ are illustrated in the following example:
     >>> z.default_value[0][1]
     2.0
 
-Here, we import the *Array* Public Variable, and the NumPy *array*, which is a
+Here, we import the *Array* public variable, and the NumPy *array*, which is a
 general-purpose n-dimensional array class. A 2-dimensional array is assigned as
-the default value for the Public Variable named *z*. 
+the default value for the public variable named *z*. 
 
 The *dtype* parameter defines the type of variable that is in the array. For
 example, using a string (*str*) for a dtype would give an array of strings. Any
@@ -563,7 +563,7 @@ Enums
 +++++
 
 It is possible to use an Enum (enumeration) type as a public variable in
-OpenMDAO. This is useful for cases where an input has just a set of certain fixed values
+OpenMDAO. This is useful for cases where an input has certain fixed values
 that are possible. For example, consider a variable that can be one of three
 colors:
 
@@ -573,7 +573,7 @@ colors:
     from openmdao.main.api import Component
     
     class TrafficLight(Component):
-        color = Enum(0, (0, 1, 2), iotype='in', alias_values=("Red", "Yellow", "Green"))
+        color = Enum(0, (0, 1, 2), iotype='in', aliases=("Red", "Yellow", "Green"))
 
 Now, if we create an instance of this component, and try setting the Enum.
 
@@ -598,11 +598,11 @@ We can also access the list of indices and the list of aliases directly from the
 .. doctest:: enum_example
 
     >>> color_trait = test.trait('color')
-    >>> color_trait.alias_values
+    >>> color_trait.aliases
     ('Red', 'Yellow', 'Green')
-    >>> color_trait.index_values
+    >>> color_trait.values
     (0, 1, 2)
-    >>> color_trait.alias_values[test.color]
+    >>> color_trait.aliases[test.color]
     'Green'
 
 Note that the alias is not a required attribute. It will mostly be useful for
@@ -666,7 +666,7 @@ TODO: Provide some examples to demonstrate the options.
 Instance Traits
 +++++++++++++++
 
-An Instance is a special type of Public Variable that allows an object to be
+An Instance is a special type of public variable that allows an object to be
 passed between components. Essentially, any object can be passed through the
 use of an Instance. The first argument in the constructor is always the type of
 object that is required. Attempting to assign an object that does not match
@@ -739,7 +739,7 @@ its value will usually depend on the component names. Stringrefs are most
 likely to be assigned their value in the higher-level container: typically the
 top level assembly. Also, note that StringRef is imported from
 ``openmdao.main.api`` instead of ``openmdao.lib.api``. This is because a
-StringRef is a special class of Public Variables that is an integral part of
+StringRef is a special class of public variables that is an integral part of
 the framework infrastructure.
 
 There is also a *StringRefArray* variable which can be used to hold multiple
@@ -826,7 +826,7 @@ Coercion and Casting
 ++++++++++++++++++++
 
 OpenMDAO variables have a certain pre-defined behavior when a value from a
-variable of a different type is assigned. Public Variables were created
+variable of a different type is assigned. Public variables were created
 using the Casting traits as opposed to the Coercion traits. This means that
 most mis-assignments in variable connections (i.e., a float connected to
 a string) should generate a TraitError exception. However, certain widening
@@ -843,13 +843,13 @@ More details can be found in the `Traits 3 User Manual`__.
 ~~~~~~~~~~~~~~~~~~~~~
 
 For components with many public variables, it is often useful to compartmentalize
-them into a hierarchy of containers to enhance readability and findability. This
+them into a hierarchy of containers to enhance readability and "findability." This
 is particularly important when the user is submitting or connecting variables in
 a GUI, but it is also useful for the script interface.
 
 Variables in OpenMDAO can be compartmentalized by creating a container from the
 *Container* base class. This container merely contains variables or other 
-contatiners.
+containers.
 
 Normally a variable is accessed in the data hierarchy as:
 
@@ -868,7 +868,7 @@ three variables that define two flight conditions:
     from openmdao.lib.api import Float
 
     class FlightCondition(Container):
-        """Container of Public Variables"""
+        """Container of public variables"""
     
         airspeed = Float(120.0, iotype='in', units='nmi/h')
         angle_of_attack = Float(0.0, iotype='in', units='deg')
@@ -904,7 +904,7 @@ purposes, intricately deep hierarchies may introduce more overhead.
 
 There is one other interesting thing to note about this example. We've effectively
 implemented a kind of data structure with this container, and used it to create
-multple copies of a set of public variables. This can prove useful for blocks of
+multiple copies of a set of public variables. This can prove useful for blocks of
 variables that are repeated in a component. Note that at the framework level, 
 connections are still made by connecting individual variables. The next section also 
 presents a way to create a custom data structure, but one that the framework 
@@ -913,8 +913,8 @@ sees as a single entity for connection purposes.
 *Creating Custom Variable Types*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-It is possible to create new types of Public Variables to use in your models. 
-For an example of a user-created Public Variable, see :ref:`Building-a-Variable-Plugin`.
+It is possible to create new types of public variables to use in your models. 
+For an example of a user-created public variable, see :ref:`Building-a-Variable-Plugin`.
 
 Building a Simulation Model
 ---------------------------
@@ -1015,7 +1015,7 @@ be connected to any input. The violation of any of these rules generates a
 RuntimeError. On the other hand, it is perfectly fine to connect multiple
 inputs to an output.
 		
-A Public Variable is not required to be connected to anything. Most typical 
+A public variable is not required to be connected to anything. Most typical 
 components will have numerous inputs, and many of these will contain values
 that are set by the user, or are perfectly fine at their defaults.
 
@@ -1051,12 +1051,12 @@ linked at that level.
 		self.create_passthrough('par2.y')
 		self.create_passthrough('par2.f_xy')
 
-The *create_passthrough* creates a Public Variable on the assembly. This new
+The *create_passthrough* creates a public variable on the assembly. This new
 variable has the same name, iotype, default value, units, description, and range
 characteristics as the original variable on the subcomponent. If it is desired
 that any of these be different in the interface presented external to the
 assembly (and there are valid reasons to change some of these, particularly the
-units), then a passthrough cannot be used. Instead, the desired Public Variables
+units), then a passthrough cannot be used. Instead, the desired public variables
 must be manually created and connected just like the normal ones. However, at
 present, this will only work with inputs, because inputs can be connected to
 other inputs, but outputs cannot be connected to other outputs. A more
@@ -1257,7 +1257,7 @@ loops and solve for the execution order. Note that this order isn't always
 unique.
 
 A bit more on the technical details: every component contains a dictionary of
-its input Public Variables coupled with a validity flag. When any input is
+its input public variables coupled with a validity flag. When any input is
 invalid, the component is essentially invalid and therefore will be executed during the
 next run. If the component is valid (i.e., has no invalid inputs), it does
 not need to execute when the model is run. This is the principal of Lazy 

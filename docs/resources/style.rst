@@ -173,7 +173,7 @@ This rule also applies to other programming languages or software programs; for 
 *reStructuredText*
 ++++++++++++++++++
 
-Please capitlaize the appropriate letters and type it as one word:
+Please capitalize the appropriate letters and type it as one word:
 reStructuredText.
 
 

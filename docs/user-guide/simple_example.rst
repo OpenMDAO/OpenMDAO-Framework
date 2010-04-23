@@ -162,12 +162,12 @@ by adding these lines:
 
 .. index:: Traits
 
-There are two kinds of variables in OpenMDAO: *internal variables* and *Public Variables*.
+There are two kinds of variables in OpenMDAO: *internal variables* and *public variables*.
 Internal variables are variables that are used internally to a component but that cannot
-be seen outside of that component's scope. Public Variables are variables that are 
+be seen outside of that component's scope. Public variables are variables that are 
 publicly visible (and manipulatable if they are inputs) in the framework.
 
-Here we are using a Public Variable called *Float,* which was imported above, that creates
+Here we are using a public variable called *Float,* which was imported above, that creates
 a floating point variable available to the framework. The constructor contains
 a default value (set to 0 for these), an *iotype* (which declares this 
 variable as an input or an output), and a *desc*, or description (just a string of text
@@ -326,7 +326,7 @@ The objective function is defined using the concept of a StringRef variable:
 	        # CONMIN Objective 
 	        self.driver.objective = 'paraboloid.f_xy'
 		
-A *StringRef* is a special kind of Public Variable that contains a string that points to
+A *StringRef* is a special kind of public variable that contains a string that points to
 some location in the OpenMDAO variable tree. This string is analogous to the
 path name in a file system, using the "." as a separator. This allows for two
 components to have the same variable name while still assuring they'll be
@@ -469,3 +469,4 @@ Afterword
 This concludes an introduction to a simple problem of component creation and execution in
 OpenMDAO. The next tutorial section introduces a problem with more complexity and
 presents some more of the features of the framework.
+i

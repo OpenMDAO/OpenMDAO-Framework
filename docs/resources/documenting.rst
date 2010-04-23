@@ -107,7 +107,7 @@ See the example that follows.
    =========
 
    .. toctree::
-      :maxdepth: 3
+      :maxdepth: 2
 
       intro.rst
       file1.rst
@@ -154,10 +154,10 @@ Use your text editor to add ``new-guide/index`` to the desired location in the p
 Building and Displaying Documents
 ----------------------------------
 
-Your openmdao virtual development environment has scripts for building the sphinx documentation as
-well as viewing it. The following example assumes that you have already created your virtual
-environment on your branch. If you haven't, you must run ``python2.6 go-openmdao-dev.py`` from
-the top directory in your branch repository. 
+Your openmdao virtual development environment has scripts for building and displaying the Sphinx
+documentation. The following example assumes that you have already created
+your virtual environment on your branch. If you haven't, you must run ``python2.6
+go-openmdao-dev.py`` from the top directory in your branch repository. 
 
 ::
 
@@ -165,9 +165,9 @@ the top directory in your branch repository.
   bin/openmdao_build_docs        (Builds the Sphinx documentation)
   bin/openmdao_docs              (Displays the documentation in HTML using the default browser) 
 
-For more information, refer to the section on :ref:`Building-OpenMDAO-(openmdao)` under *Bazaar
-Commands*. If you activated ``bin``, you need type only ``openmdao_build_docs`` or
-``openmdao_docs``.
+.. note:: If you have a preexisting devenv directory in your branch directory, you should delete it
+   before running the go-openmdao-dev.py script. 
+
 
 
 

@@ -291,7 +291,7 @@ exception.
 
 That's all of the source code required to make our coordinates variable 
 functional.  The next step is to turn our module into a package and define
-an mentry point for our new class.  This is very similar to what we did in the
+an entry point for our new class.  This is very similar to what we did in the
 section earlier where we made a component plugin, except this time we use
 a different entry point group name.
 
@@ -311,7 +311,6 @@ a different entry point group name.
         }
     )
 
-We can create this file by hand or generate it using ``mod2egg`` as we showed in the earlier
-section.
-
+We can create this file by hand or generate it using ``mod2egg`` as we showed in
+an earlier section.
 
