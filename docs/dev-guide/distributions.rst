@@ -39,12 +39,12 @@ in the current directory by typing:
    python setup.py sdist -d .
 
 A gzipped tar file will be generated with the version number of the package
-embedded in the filename (e.g., ``openmdao.recipes-0.1dev.tar.gz``).
+embedded in the filename (e.g., ``openmdao.main-0.1dev.tar.gz``).
 
 However, if your package does **not** contain any compiled code, you can 
 simply use the ``python setup.py bdist_egg -d .`` command mentioned earlier 
 to generate a source egg. It will have a name containing the package version 
-information and the Python version (e.g., ``openmdao.recipes-0.1-py2.5.egg``). 
+information and the Python version (e.g., ``openmdao.main-0.1-py2.5.egg``). 
 
 
 - TODO: describe needed metadata in ``setup.py`` file
