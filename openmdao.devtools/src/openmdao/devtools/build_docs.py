@@ -236,7 +236,7 @@ def test_docs():
     A console script (testdocs) calls this.
     """
     branchdir, docdir, bindir =_get_dirnames()
-    sphinx.main(argv=['-P', '-b', 'dictest', '-d', 
+    sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
                       os.path.join(docdir, '_build', 'doctrees'), 
                       docdir, os.path.join(docdir, '_build', 'html')])
 
