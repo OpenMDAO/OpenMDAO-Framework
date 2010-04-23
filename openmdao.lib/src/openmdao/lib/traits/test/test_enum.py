@@ -50,7 +50,7 @@ class IntTestCase(unittest.TestCase):
             self.hobj.add_trait('out_of_bounds',
                             Enum(4,(1,2,3), iotype='in'))
         except TraitError, err:
-            errstring = "Default value not in index_values."
+            errstring = "Default value not in values."
             self.assertEqual(str(err), errstring)
         else:
             self.fail("Exception expected")
@@ -58,16 +58,16 @@ class IntTestCase(unittest.TestCase):
         try:
             self.hobj.add_trait('bad_alias_size',
                             Enum(3,(1,2,3), iotype='in',
-                                 alias_values=('a','b')))
+                                 aliases=('a','b')))
         except TraitError, err:
-            errstring = "Length of alias_values does not match length of index_values."
+            errstring = "Length of aliases does not match length of values."
             self.assertEqual(str(err), errstring)
         else:
             self.fail("Exception expected")
             
         self.hobj.add_trait('good_alias_size',
                         Enum(3,(1,2,3), iotype='in',
-                                alias_values=('a','b','c')))
+                                aliases=('a','b','c')))
         self.assertEqual(3, self.hobj.good_alias_size)
             
     def test_set_to_default(self):
