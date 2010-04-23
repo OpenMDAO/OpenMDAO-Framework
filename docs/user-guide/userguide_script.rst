@@ -417,8 +417,8 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 | Complex          | Complex( [*value* = None, *desc* = None,                 |
 |                  | *iotype* = None] )                                       | 
 +------------------+----------------------------------------------------------+
-| Enum             | Enum( [*default_value*, *index_values* = (),             |
-|                  | *desc* = None, *iotype* = None, *alias_values* = ()] )   |
+| Enum             | Enum( [*default_value*, *values* = (),                   |
+|                  | *desc* = None, *iotype* = None, *aliases* = ()] )        |
 +------------------+----------------------------------------------------------+
 | File             | File( [*default_value* = None, *iotype* = None,          | 
 |                  | *desc* = None, *low* = None, *high* = None, *path* =     |
@@ -573,14 +573,14 @@ colors:
     from openmdao.main.api import Component
     
     class TrafficLight(Component):
-        color = Enum(0, (0, 1, 2), iotype='in', alias_values=("Red", "Yellow", "Green"))
+        color = Enum(0, (0, 1, 2), iotype='in', aliases=("Red", "Yellow", "Green"))
 
 .. doctest:hide: 
 
     >>> from openmdao.lib.api import Enum
     >>> from openmdao.main.api import Component
     >>> class TrafficLight(Component):
-    >>>     color = Enum(0, (0, 1, 2), iotype='in', alias_values=("Red", "Yellow", "Green"))
+    >>>     color = Enum(0, (0, 1, 2), iotype='in', aliases=("Red", "Yellow", "Green"))
 	
 Now, if we create an instance of this component, and try setting the Enum.
 
@@ -599,11 +599,11 @@ What if we set to an invalid value?
 We can also access the list of indices and the list of aliases directly from the trait.
 
     >>> color_trait = test.trait('color')
-    >>> color_trait.alias_values
+    >>> color_trait.aliases
     ('Red', 'Yellow', 'Green')
-    >>> color_trait.index_values
+    >>> color_trait.values
     (0, 1, 2)
-    >>> color_trait.alias_values[test.color]
+    >>> color_trait.aliases[test.color]
     'Green'
 
 Note that the alias is not a required attribute. It will mostly be useful for

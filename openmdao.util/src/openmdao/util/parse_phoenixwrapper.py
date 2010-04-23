@@ -177,7 +177,7 @@ def _gen_publicvar(data):
         for i,v in enumerate(aliases):
             aliases[i] = aliases[i].strip("'")
             
-        var += sep + "alias_values=" + str(tuple(aliases))
+        var += sep + "aliases=" + str(tuple(aliases))
             
     var += ")\n"
     
