@@ -1,8 +1,8 @@
 .. index:: user guide script interface
 
-.. _The-OpenMDAO-Scripting-Interface:
+.. _OpenMDAO-Scripting-Interface:
 
-The OpenMDAO Scripting Interface
+OpenMDAO Scripting Interface
 ================================
 
 OpenMDAO provides a programmatic interface that allows you to write a Python
@@ -15,14 +15,14 @@ The goal of this section of the *User's Guide* is to explain and demonstrate eve
 aspect of the OpenMDAO script interface. This section is intended primarily as a
 reference. If you are an inexperienced user, you would be best served by reading and
 understanding the examples in :ref:`Getting-Started-with-OpenMDAO` and
-:ref:`The-OpenMDAO-tutorial-problem`.
+:ref:`A-More-Complex-Tutorial-Problem`.
 
 OpenMDAO Fundamentals
 ---------------------
 
 .. index:: package
 
-*The OpenMDAO Package Hierarchy*
+*OpenMDAO Package Hierarchy*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The *package* is a Python concept that provides a structure for organizing
@@ -417,8 +417,8 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 | Complex          | Complex( [*value* = None, *desc* = None,                 |
 |                  | *iotype* = None] )                                       | 
 +------------------+----------------------------------------------------------+
-| Enum             | Enum( [val1*[, *val2, ..., valN], *desc* = None,         |
-|                  | *iotype* = None, *alias* = aliases] )                    | 
+| Enum             | Enum( [*default_value*, *values* = (),                   |
+|                  | *desc* = None, *iotype* = None, *aliases* = ()] )        |
 +------------------+----------------------------------------------------------+
 | File             | File( [*default_value* = None, *iotype* = None,          | 
 |                  | *desc* = None, *low* = None, *high* = None, *path* =     |
@@ -563,7 +563,7 @@ Enums
 +++++
 
 It is possible to use an Enum (enumeration) type as a public variable in
-OpenMDAO. This is useful for cases where an input has certain fixed values
+OpenMDAO. This is useful for cases where an input has just a set of certain fixed values
 that are possible. For example, consider a variable that can be one of three
 colors:
 
@@ -573,14 +573,14 @@ colors:
     from openmdao.main.api import Component
     
     class TrafficLight(Component):
-        color = Enum(0, 1, 2, iotype='in', alias=["Red", "Yellow", "Green"])
+        color = Enum(0, (0, 1, 2), iotype='in', aliases=("Red", "Yellow", "Green"))
 
 .. doctest:hide: 
 
     >>> from openmdao.lib.api import Enum
     >>> from openmdao.main.api import Component
     >>> class TrafficLight(Component):
-    >>>     color = Enum(0, 1, 2, iotype='in', alias=["Red", "Yellow", "Green"])
+    >>>     color = Enum(0, (0, 1, 2), iotype='in', aliases=("Red", "Yellow", "Green"))
 	
 Now, if we create an instance of this component, and try setting the Enum.
 
@@ -594,14 +594,16 @@ What if we set to an invalid value?
     >>> test.color=4
     Traceback (most recent call last):
     ...
-    enthought.traits.trait_errors.TraitError: The 'color' trait of a TrafficLight instance must be 0 or 1 or 2, but a value of 4 <type 'int'> was specified.`
+    enthought.traits.trait_errors.TraitError: Trait 'color' must be in (0, 1, 2), but a value of 4 <type 'int'> was specified.`
 
-We can also access the aliases directly from the trait.
+We can also access the list of indices and the list of aliases directly from the trait.
 
-    >>> color_trait = test.get_dyn_trait('color')
-    >>> color_trait.alias
-    ['Red', 'Yellow', 'Green']
-    >>> color_trait.alias[test.color]
+    >>> color_trait = test.trait('color')
+    >>> color_trait.aliases
+    ('Red', 'Yellow', 'Green')
+    >>> color_trait.values
+    (0, 1, 2)
+    >>> color_trait.aliases[test.color]
     'Green'
 
 Note that the alias is not a required attribute. It will mostly be useful for
@@ -616,14 +618,14 @@ our component above, as:
     from openmdao.main.api import Component
     
     class TrafficLight(Component):
-	color2 = Enum("Red", "Yellow", "Green", iotype='in')
+	color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
 
 .. doctest:hide: 
 
     >>> from openmdao.lib.api import Enum
     >>> from openmdao.main.api import Component
     >>> class TrafficLight(Component):
-    >>>     color2 = Enum("Red", "Yellow", "Green", iotype='in')
+    >>>     color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
 	
 Then we can interact like this:
 
@@ -633,12 +635,14 @@ Then we can interact like this:
     >>> test.color2=1
     Traceback (most recent call last):
     ...
-    enthought.traits.trait_errors.TraitError: The 'color2' trait of a TrafficLight instance must be 'Red' or 'Yellow' or 'Green', but a value of 1 <type 'int'> was specified.
+    enthought.traits.trait_errors.TraitError: Trait 'color2' must be in ('Red', 'Yellow', 'Green'), but a value of 1 <type 'int'> was specified.
     >>> test.color2="Green"
     >>> test.color2
     'Green'
 
-
+However, if the Enum is being used to select the input for an old code, then you will
+most likely need to feed it integers, not strings, so the aliases will be useful.
+    
 .. index:: File Variables, File
 
 File Variables
@@ -1062,7 +1066,7 @@ units), then a passthrough cannot be used. Instead, the desired Public Variables
 must be manually created and connected just like the normal ones. However, at
 present, this will only work with inputs, because inputs can be connected to
 other inputs, but outputs cannot be connected to other outputs. A more
-detailed example is given in :ref:`The-OpenMDAO-tutorial-problem`. Fortunately,
+detailed example is given in :ref:`A-More-Complex-Tutorial-Problem`. Fortunately,
 the passthroughs are sufficient for most needs.
 
 Assemblies also include a way to break variable connections. The *disconnect*
@@ -1161,15 +1165,6 @@ NASA in the 1970s, and is  currently in the public domain. It has been  included
 in OpenMDAO's Standard Library to provide users with a basic gradient algorithm.
 The interface for CONMIN is full detailed in :ref:`CONMIN-driver`.
 
-Idesign
-+++++++
-
-NOTE: License classification for Idesign is under review.
-
-Idesign, which stands for Interactive Design Optimization of Engineering Systems,
-is another gradient optimization package useable for problems with inequality and
-equality constraints. It is currently being integrated into OpenMDAO,
-and should be available soon.
 
 PyEvolve
 ++++++++

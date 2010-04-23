@@ -24,9 +24,9 @@ in the current directory for the current platform, type the following:
 
    python setup.py bdist_egg -d .
    
-This will create in the current directory an egg file with a name that contains
-information about version of the package, platform, and the Python version,
-e.g.,  ``conmin-1.0-py2.5-win32.egg``. 
+This will create an egg file with a name that contains information about version
+of the package, platform, and the Python version, e.g., 
+``conmin-1.0-py2.5-win32.egg``. 
 
 Regardless of the contents of the package, you should also produce a source 
 distribution of it. If your package has compiled code as mentioned above, you
@@ -39,12 +39,12 @@ in the current directory by typing:
    python setup.py sdist -d .
 
 A gzipped tar file will be generated with the version number of the package
-embedded in the filename, e.g., ``openmdao.recipes-0.1dev.tar.gz``
+embedded in the filename (e.g., ``openmdao.recipes-0.1dev.tar.gz``).
 
 However, if your package does **not** contain any compiled code, you can 
 simply use the ``python setup.py bdist_egg -d .`` command mentioned earlier 
-to generate a source egg, which will have a name containing the package version 
-information and the Python version, e.g., ``openmdao.recipes-0.1-py2.5.egg``.
+to generate a source egg. It will have a name containing the package version 
+information and the Python version (e.g., ``openmdao.recipes-0.1-py2.5.egg``). 
 
 
 - TODO: describe needed metadata in ``setup.py`` file
