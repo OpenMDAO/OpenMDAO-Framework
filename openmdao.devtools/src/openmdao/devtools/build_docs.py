@@ -10,6 +10,8 @@ import re
 from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
 
+import sphinx
+
 from openmdao.util.dumpdistmeta import get_dist_metadata
 import openmdao.util.releaseinfo
 
@@ -136,12 +138,6 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
             _mod_sphinx_info(name, outfile, show_undoc=show_undoc)
 
 
-#def test_sphinx_docs(*args):
-    #"""Run the builtin source code (and doctest) stuff in sphinx for the
-    #OpenMDAO documentation.
-    #"""
-    
-
 def _write_src_docs(branchdir, docdir):
     # first, clean up the old stuff, if any
     pkgdir = os.path.join(docdir, 'srcdocs', 'packages')
@@ -208,7 +204,6 @@ def build_docs():
         f.write(contents)
         f.close()
         
-        import sphinx
         sphinx.main(argv=['-P', '-b', 'html', '-d', 
                           os.path.join(docdir, '_build', 'doctrees'), 
                           docdir, os.path.join(docdir, '_build', 'html')])
@@ -236,38 +231,14 @@ def view_docs(browser=None):
     wb.open(idxpath)
 
 
-#def test_docs():
-    ## create the testdocs script
-    #tstscript = zc.buildout.easy_install.scripts(
-        #['Sphinx'], working_set, 
-        #sys.executable, os.path.dirname(bspath), { 'sphinx-build': 'testdocs' },
-        #arguments= "argv=['-P', '-b', 'doctest', '-d', r'%s', r'%s', r'%s']" %
-                    #(os.path.abspath(os.path.join('_build', "doctrees")),
-                     #os.path.abspath(docdir), 
-                     #os.path.abspath(os.path.join('_build', "html"))))
-        
-    ## create a unit test for the source code found in the docs
-    #utdir = os.path.join(self.buildout['buildout']['directory'],
-                         #'parts', self.name)
-    #if not os.path.exists(utdir):
-        #os.makedirs(utdir)
-    #utname = os.path.join(utdir,'test_docs.py')
-    #utest = open(utname, 'w')
-    #utest.write("""
-#import unittest
-#import os
-#from os.path import join
-#from subprocess import Popen, PIPE, STDOUT
-
-#class SphinxDocsTestCase(unittest.TestCase):
-    #def test_docs(self):
-        #p = Popen(r'%s', stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
-        #output = p.communicate()[0]
-        #retval = p.returncode
-        #if not output.strip().endswith('build succeeded.'):
-            #self.fail('problem in documentation source code examples:\\n'+output)
-            #""" % os.path.join(bindir, 'testdocs')
-    #)
+def test_docs():
+    """Tests the openmdao sphinx documentation.  
+    A console script (testdocs) calls this.
+    """
+    branchdir, docdir, bindir =_get_dirnames()
+    sphinx.main(argv=['-P', '-b', 'dictest', '-d', 
+                      os.path.join(docdir, '_build', 'doctrees'), 
+                      docdir, os.path.join(docdir, '_build', 'html')])
 
     
 def _get_border_line(numcols, colwidths, char):
