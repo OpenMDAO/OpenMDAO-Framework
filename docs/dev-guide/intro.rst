@@ -126,7 +126,7 @@ OpenMDAO is large enough that it makes sense to split it up into multiple Python
 packages, but we want all of those packages to be under the umbrella of
 ``openmdao``. To do this in Python, we use what is called a *namespace*
 package.  Namespace  packages all have a similar directory layout.  Currently in
-OpenMDAO,  ``openmdao.main``, ``openmdao.lib``, ``openmdao.recipes``,
+OpenMDAO,  ``openmdao.main``, ``openmdao.lib``, ``openmdao.devtools``,
 ``openmdao.util`` and ``openmdao.test`` are all namespace
 packages that are in the ``openmdao`` namespace.  They all  have a layout like
 this:

@@ -1134,7 +1134,8 @@ openmdao_packages = ['openmdao.util',
                      'openmdao.units', 
                      'openmdao.main', 
                      'openmdao.lib', 
-                     'openmdao.test', 
+                     'openmdao.test',
+                     'openmdao.devtools',
                      'examples/openmdao.examples.simple',
                      'examples/openmdao.examples.bar3simulation',
                      'examples/openmdao.examples.enginedesign',
@@ -1146,10 +1147,10 @@ def _find_repo_top():
     while location:
         if '.bzr' in os.listdir(location):
             return location
-	tmp = location
+        tmp = location
         location = os.path.dirname(location)
-	if tmp == location:
-	    break
+        if tmp == location:
+            break
     raise RuntimeError('ERROR: %s is not inside of a bazaar repository' % start)
     
 def adjust_options(options, args):
@@ -1163,23 +1164,23 @@ def adjust_options(options, args):
     args.append(join(_find_repo_top(), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
 
 def _single_install(cmds, req, bin_dir):
-    import pkg_resources
-    try:
-        pkg_resources.working_set.resolve([pkg_resources.Requirement.parse(req)])
-    except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
-        # if package isn't currently installed, install it
-        # NOTE: we need to do our own check for already installed packages because
-        #       for some reason distribute always wants to install a package even if
-        #       it already is installed.
-        cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
+    #import pkg_resources
+    #try:
+        #pkg_resources.working_set.resolve([pkg_resources.Requirement.parse(req)])
+    #except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
+        ## if package isn't currently installed, install it
+        ## NOTE: we need to do our own check for already installed packages because
+        ##       for some reason distribute always wants to install a package even if
+        ##       it already is installed.
+    cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
         # pip seems more robust than easy_install, but won't install from binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
-        logger.debug("running command: %s" % ' '.join(cmdline))
-        subprocess.call(cmdline)
+    logger.debug("running command: %s" % ' '.join(cmdline))
+    subprocess.call(cmdline)
 
 def after_install(options, home_dir):
     global logger
-    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'coverage==3.3.1', 'pycrypto==2.0.1', 'numpy==1.3.0', 'PyYAML==3.09', 'conmin==1.0', 'Jinja2==2.4', 'virtualenv==1.4.6', 'zc.buildout==1.4.3', 'Fabric==0.9.0', 'Traits==3.1.0', 'nose==0.11.3', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'Pygments==1.3.1', 'Sphinx==0.6.3', 'setuptools==0.6c11', 'axod==0.1.0']
+    reqs = ['docutils==0.6', 'pyevolve==0.6', 'coverage==3.3.1', 'traits==3.2.0', 'pycrypto==2.0.1', 'numpy==1.3.0', 'pyyaml==3.09', 'conmin==1.0', 'jinja2==2.4', 'zc.buildout==1.4.3', 'fabric==0.9.0', 'sphinx==0.6.3', 'nose==0.11.3', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'pygments==1.3.1', 'axod==0.1.0']
     cmds = []
     url = 'http://openmdao.org/dists'
     found = [c for c in cmds if url in c]

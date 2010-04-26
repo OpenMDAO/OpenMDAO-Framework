@@ -404,7 +404,7 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 
 .. index:: public variable yypes
     
-**Summary of  Types**
+**Summary of Public Variable Types**
 
 +------------------+----------------------------------------------------------+
 | Name             | Callable Signature                                       |
@@ -506,7 +506,7 @@ are illustrated in the following example:
     >>> z.default_value[0][1]
     2.0
 
-Here, we import the *Array* Public Variable, and the NumPy *array*, which is a
+Here, we import the *Array* public variable, and the NumPy *array*, which is a
 general-purpose n-dimensional array class. A 2-dimensional array is assigned as
 the default value for the public variable named *z*. 
 
@@ -563,7 +563,7 @@ Enums
 +++++
 
 It is possible to use an Enum (enumeration) type as a public variable in
-OpenMDAO. This is useful for cases where an input has just a set of certain fixed values
+OpenMDAO. This is useful for cases where an input has certain fixed values
 that are possible. For example, consider a variable that can be one of three
 colors:
 
@@ -575,14 +575,9 @@ colors:
     class TrafficLight(Component):
         color = Enum(0, (0, 1, 2), iotype='in', aliases=("Red", "Yellow", "Green"))
 
-.. doctest:hide: 
-
-    >>> from openmdao.lib.api import Enum
-    >>> from openmdao.main.api import Component
-    >>> class TrafficLight(Component):
-    >>>     color = Enum(0, (0, 1, 2), iotype='in', aliases=("Red", "Yellow", "Green"))
-	
 Now, if we create an instance of this component, and try setting the Enum.
+
+.. doctest:: enum_example
 
     >>> test = TrafficLight()
     >>> test.color=2
@@ -591,12 +586,16 @@ Now, if we create an instance of this component, and try setting the Enum.
 
 What if we set to an invalid value?
 
+.. doctest:: enum_example
+
     >>> test.color=4
     Traceback (most recent call last):
     ...
-    enthought.traits.trait_errors.TraitError: Trait 'color' must be in (0, 1, 2), but a value of 4 <type 'int'> was specified.`
+    TraitError: : Trait 'color' must be in (0, 1, 2), but a value of 4 <type 'int'> was specified.`
 
 We can also access the list of indices and the list of aliases directly from the trait.
+
+.. doctest:: enum_example
 
     >>> color_trait = test.trait('color')
     >>> color_trait.aliases
@@ -620,14 +619,9 @@ our component above, as:
     class TrafficLight(Component):
 	color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
 
-.. doctest:hide: 
-
-    >>> from openmdao.lib.api import Enum
-    >>> from openmdao.main.api import Component
-    >>> class TrafficLight(Component):
-    >>>     color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
-	
 Then we can interact like this:
+
+.. doctest:: enum_example2
 
     >>> test = TrafficLight()
     >>> test.color2
@@ -635,7 +629,7 @@ Then we can interact like this:
     >>> test.color2=1
     Traceback (most recent call last):
     ...
-    enthought.traits.trait_errors.TraitError: Trait 'color2' must be in ('Red', 'Yellow', 'Green'), but a value of 1 <type 'int'> was specified.
+    TraitError: : Trait 'color2' must be in ('Red', 'Yellow', 'Green'), but a value of 1 <type 'int'> was specified.
     >>> test.color2="Green"
     >>> test.color2
     'Green'
@@ -874,7 +868,7 @@ three variables that define two flight conditions:
     from openmdao.lib.api import Float
 
     class FlightCondition(Container):
-        """Container of Public Variables"""
+        """Container of public variables"""
     
         airspeed = Float(120.0, iotype='in', units='nmi/h')
         angle_of_attack = Float(0.0, iotype='in', units='deg')
@@ -1217,7 +1211,7 @@ in the Python environment.
     >>> set_as_top(z1)
     <openmdao.main.assembly.Assembly object at ...>
     >>> z1.get_abs_directory()
-    '.../buildout/'
+    '...'
 
 Note that the output in this example depends on your local directory structure.
 All components added into this assembly will have this same absolute path. If a 
@@ -1347,4 +1341,3 @@ No capability at present, but it is part of our requirements.
  
 No capability at present, but it is part of our requirements.
 
-
