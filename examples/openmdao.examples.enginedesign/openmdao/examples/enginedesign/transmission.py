@@ -11,6 +11,24 @@ from openmdao.lib.api import Float, Int
 
 class Transmission(Component):
     """ A simple transmission model."""
+
+    # Design parameters:
+    #ratio1              # Gear ratio in First Gear
+    #ratio2              # Gear ratio in Second Gear
+    #ratio3              # Gear ratio in Third Gear
+    #ratio4              # Gear ratio in Fourth Gear
+    #ratio5              # Gear ratio in Fifth Gear
+    #final_drive_ratio   # Final Drive Ratio
+    #tire_circumference  # Circumference of tire (inches)
+    
+    # Simulation inputs:
+    #current_gear        # Gear Position
+    #velocity            # Vehicle velocity needed to determine engine
+                          #RPM (m/s)
+    
+    # Outputs:
+    #torque_ratio        # Ratio of output torque to engine torque
+    #RPM                 # RPM of the engine
     
     # set up interface to the framework  
     # pylint: disable-msg=E1101
@@ -39,36 +57,11 @@ class Transmission(Component):
     torque_ratio = Float(0., iotype='out',
                          desc='Ratio of output torque to engine torque')        
 
-    #def __init__(self, doc=None, directory=''):
-        #""" Creates a new Transmission object
-        
-            ## Design parameters
-            #ratio1              # Gear ratio in First Gear
-            #ratio2              # Gear ratio in Second Gear
-            #ratio3              # Gear ratio in Third Gear
-            #ratio4              # Gear ratio in Fourth Gear
-            #ratio5              # Gear ratio in Fifth Gear
-            #final_drive_ratio   # Final Drive Ratio
-            #tire_circumference  # Circumference of tire (inches)
-            
-            ## Simulation inputs
-            #current_gear        # Gear Position
-            #velocity            # Vehicle velocity needed to determine engine
-                                  #RPM (m/s)
-            
-            ## Outputs
-            #torque_ratio        # Ratio of output torque to engine torque
-            #RPM                 # RPM of the engine
-            #"""
-        
-        #super(Transmission, self).__init__(doc, directory)        
-        
         
     def execute(self):
         """ The 5-speed manual transmission is simulated by determining the
         torque output and engine RPM via the gear ratios.
         """
-        #print '%s.execute()' % self.get_pathname()
         ratios = [0.0, self.ratio1, self.ratio2, self.ratio3, self.ratio4,
                   self.ratio5]
         
