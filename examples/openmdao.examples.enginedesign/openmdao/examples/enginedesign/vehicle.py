@@ -125,7 +125,6 @@ class Vehicle(Assembly):
         self.create_passthrough('chassis.acceleration')
 
         # Hook it all up
-        
         self.connect('transmission.RPM','engine.RPM')
         self.connect('transmission.torque_ratio','chassis.torque_ratio')
         self.connect('engine.torque','chassis.engine_torque')
@@ -138,9 +137,6 @@ if __name__ == "__main__": # pragma: no cover
     our_vehicle = top.add_container('Testing', Vehicle())      
     our_vehicle.current_gear = 1
     our_vehicle.velocity = 20.0*(26.8224/60.0)
-    #our_vehicle.throttle = .2
-    #for throttle in xrange(1,101,1):
-    #    our_vehicle.throttle = throttle/100.0
     our_vehicle.throttle = 1.0
     our_vehicle.run()
     print our_vehicle.acceleration
@@ -152,6 +148,6 @@ if __name__ == "__main__": # pragma: no cover
         print "(power, torque) ", vehicle.power, vehicle.torque
         print "RPM = ", vehicle.engine.RPM
         
-#    prz(our_vehicle)
+    prz(our_vehicle)
 
 # End vehicle.py 

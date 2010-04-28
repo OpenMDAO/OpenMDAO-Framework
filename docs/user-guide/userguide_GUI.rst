@@ -3,6 +3,5 @@
 The OpenMDAO GUI
 ==================
 
-The GUI is currently under developement. Until this is implemented, the only way
-to interact with OpenMDAO is through the scripting interface. Please refer to
-:ref:`OpenMDAO-Scripting-Interface`.
+The GUI is currently being developed. Until it is implemented, you must interact with
+OpenMDAO through the :ref:`scripting interface <OpenMDAO-Scripting-Interface>`.

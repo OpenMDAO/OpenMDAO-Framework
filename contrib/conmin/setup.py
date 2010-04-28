@@ -6,6 +6,7 @@ from numpy.distutils.core import setup
 from numpy.distutils.misc_util import Configuration
 
 if sys.platform == 'win32':
+    import openmdao.util.distutils_fix
     sdkdir = os.environ.get('WindowsSdkDir')
     include_dirs = [os.path.join(sdkdir,'Include')]
     library_dirs = [os.path.join(sdkdir,'Lib')]

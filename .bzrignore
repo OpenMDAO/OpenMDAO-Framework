@@ -28,5 +28,6 @@ docs/srcdocs/packages/*.rst
 docs/srcdocs/modules/*.rst
 cobertura.xml
 nosetests.xml
-examples/openmdao.examples.bar3_simulation/openmdao/examples/bar3_simulation/bar3module.c
+examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3-f2pywrappers.f
+examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3module.c
 devenv

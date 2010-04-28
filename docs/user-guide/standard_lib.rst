@@ -8,7 +8,7 @@ OpenMDAO Standard Library
 =========================
 
 The OpenMDAO standard library contains an assortment of useful plugins to the
-framework sorted into four catgories: components, drivers, factories, and traits.
+framework sorted into four categories: components, drivers, factories, and traits.
 
 .. index:: standard library components
 
@@ -91,7 +91,7 @@ follows:
 This first section of code defines an assembly called *EngineOptimization.* This
 assembly contains a DrivingSim component and a CONMIN driver, both of which are
 created and added inside the *__init__* function with *add_container()*. The 
-objective function, design variables, onstraints, and any CONMIN parameters
+objective function, design variables, constraints, and any CONMIN parameters
 are also assigned in the *__init__* function. The specific syntax for all of 
 these is given below.
 	

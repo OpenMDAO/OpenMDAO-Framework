@@ -173,7 +173,7 @@ This rule also applies to other programming languages or software programs; for 
 *reStructuredText*
 ++++++++++++++++++
 
-Please capitlaize the appropriate letters and type it as one word:
+Please capitalize the appropriate letters and type it as one word:
 reStructuredText.
 
 
@@ -213,14 +213,14 @@ situations; in OpenMDAO documentation please use it to designate the following:
   path names: 		``/OpenMDAO/dev/shared/working_main``
   directory names:   	``docs/dev-guide``
   api names: 	 	``openmdao.main.api``
-  Python packages:	``openmdao.recipes``
+  Python packages:	``openmdao.lib``
    
 which will result in text that looks like this:
 
 * ``/OpenMDAO/dev/shared/working_main``
 * ``docs/dev-guide``
 * ``openmdao.main.api``
-* ``openmdao.recipes``
+* ``openmdao.lib``
  
 
 Abbreviations and Acronyms

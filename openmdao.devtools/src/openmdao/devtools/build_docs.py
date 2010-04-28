@@ -10,6 +10,8 @@ import re
 from subprocess import Popen, PIPE, STDOUT
 from pkg_resources import Environment, WorkingSet, Requirement, working_set
 
+import sphinx
+
 from openmdao.util.dumpdistmeta import get_dist_metadata
 import openmdao.util.releaseinfo
 
@@ -21,7 +23,8 @@ packages = [
     'openmdao.main',
     'openmdao.lib',
     'openmdao.util',
-    'openmdao.units'
+    'openmdao.units',
+    'openmdao.devtools',
 ]
 
 
@@ -34,9 +37,10 @@ def _find_repo_top():
     while location:
         if '.bzr' in os.listdir(location):
             return location
+        tmp = location
         location = os.path.dirname(location)
-        if len(location)==3 and location[1:]==':\\':
-            location = ''
+        if tmp == location:
+            break
     raise RuntimeError('ERROR: %s is not inside of a bazaar repository' % start)
 
 
@@ -134,12 +138,6 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
             _mod_sphinx_info(name, outfile, show_undoc=show_undoc)
 
 
-#def test_sphinx_docs(*args):
-    #"""Run the builtin source code (and doctest) stuff in sphinx for the
-    #OpenMDAO documentation.
-    #"""
-    
-
 def _write_src_docs(branchdir, docdir):
     # first, clean up the old stuff, if any
     pkgdir = os.path.join(docdir, 'srcdocs', 'packages')
@@ -164,7 +162,7 @@ def _write_src_docs(branchdir, docdir):
             _mod_sphinx_info(os.path.basename(src), f)
 
 def build_docs():
-    """An entry point (build_docs) points to this.  It generates the Sphinx
+    """A script (openmdao_build_docs) points to this.  It generates the Sphinx
     documentation for openmdao.
     """
     branchdir, docdir, bindir =_get_dirnames()
@@ -188,7 +186,7 @@ def build_docs():
         
         # update conf.py with new version and release info
         conf = os.path.join(docdir, 'conf.py')
-        f = open(conf, 'r')
+        f = open(conf, 'rb')
         contents = f.read()
         f.close()
         
@@ -202,11 +200,10 @@ def build_docs():
         contents = shtitle_rgx.sub(
              "html_short_title = 'OpenMDAO Documentation v%s'" % version, contents)
         
-        f = open(conf, 'w')
+        f = open(conf, 'wb')
         f.write(contents)
         f.close()
         
-        import sphinx
         sphinx.main(argv=['-P', '-b', 'html', '-d', 
                           os.path.join(docdir, '_build', 'doctrees'), 
                           docdir, os.path.join(docdir, '_build', 'html')])
@@ -214,63 +211,38 @@ def build_docs():
         os.chdir(startdir)
 
 def view_docs(browser=None):
-    """An entry point (docs) points to this. It just pops up a browser to 
+    """A script (openmdao_docs) points to this. It just pops up a browser to 
     view the openmdao sphinx docs. If the docs are not already built, it
-    builds them first.
+    builds them before viewing, but if the docs already exist, it's not smart enough
+    to rebuild them if they've changed since the last build.
     """
     if not browser:
         for arg in sys.argv:
             if arg.startswith('--browser='):
                 browser = arg.split('=')[-1].strip()
                 
-    try:
-        branchdir, docdir, bindir =_get_dirnames()
-    except RuntimeError:
-        # look for docs online
-        version = openmdao.util.releaseinfo.__version__
-        idxpath = 'http://openmdao.org/downloads/%s/docs' % version
-    else:
-        idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
-        if not os.path.isfile(idxpath):
-            build_docs()
+    branchdir, docdir, bindir =_get_dirnames()
+    idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
+    if not os.path.isfile(idxpath):
+        build_docs()
     
     import webbrowser
     wb = webbrowser.get(browser)
     wb.open(idxpath)
 
 
-#def test_docs():
-    ## create the testdocs script
-    #tstscript = zc.buildout.easy_install.scripts(
-        #['Sphinx'], working_set, 
-        #sys.executable, os.path.dirname(bspath), { 'sphinx-build': 'testdocs' },
-        #arguments= "argv=['-P', '-b', 'doctest', '-d', r'%s', r'%s', r'%s']" %
-                    #(os.path.abspath(os.path.join('_build', "doctrees")),
-                     #os.path.abspath(docdir), 
-                     #os.path.abspath(os.path.join('_build', "html"))))
-        
-    ## create a unit test for the source code found in the docs
-    #utdir = os.path.join(self.buildout['buildout']['directory'],
-                         #'parts', self.name)
-    #if not os.path.exists(utdir):
-        #os.makedirs(utdir)
-    #utname = os.path.join(utdir,'test_docs.py')
-    #utest = open(utname, 'w')
-    #utest.write("""
-#import unittest
-#import os
-#from os.path import join
-#from subprocess import Popen, PIPE, STDOUT
-
-#class SphinxDocsTestCase(unittest.TestCase):
-    #def test_docs(self):
-        #p = Popen(r'%s', stdout=PIPE, stderr=STDOUT, env=os.environ, shell=True)
-        #output = p.communicate()[0]
-        #retval = p.returncode
-        #if not output.strip().endswith('build succeeded.'):
-            #self.fail('problem in documentation source code examples:\\n'+output)
-            #""" % os.path.join(bindir, 'testdocs')
-    #)
+def test_docs():
+    """Tests the openmdao sphinx documentation.  
+    A console script (testdocs) calls this.
+    If the docs are not built, this will build them before testing.
+    """
+    branchdir, docdir, bindir =_get_dirnames()
+    idxpath = os.path.join(docdir, '_build', 'html', 'index.html')
+    if not os.path.isfile(idxpath):
+        build_docs()
+    sphinx.main(argv=['-P', '-b', 'doctest', '-d', 
+                      os.path.join(docdir, '_build', 'doctrees'), 
+                      docdir, os.path.join(docdir, '_build', 'html')])
 
     
 def _get_border_line(numcols, colwidths, char):

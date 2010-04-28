@@ -55,7 +55,7 @@ context of a web GUI.
 
 In the class diagram below, classes that are part of the enthought.traits
 package are gray, and our custom traits are white. Notice that there are two
-*Float* classes. One is enthought's and one is our version, which includes
+*Float* classes. One is Enthought's and one is our version, which includes
 units and range checking.
 
 

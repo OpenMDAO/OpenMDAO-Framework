@@ -4,7 +4,7 @@
 Building a Plugin that Contains a File Wrapper
 ----------------------------------------------
 
-The file wrapping library is not yet implemented.
+The file wrapping library has not yet been implemented.
 
 ::
 
