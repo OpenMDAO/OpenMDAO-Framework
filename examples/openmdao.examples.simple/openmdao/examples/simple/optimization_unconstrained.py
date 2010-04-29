@@ -11,14 +11,14 @@ from openmdao.lib.api import CONMINdriver
 from openmdao.examples.simple.paraboloid import Paraboloid
 
 class OptimizationUnconstrained(Assembly):
-    """ Top level assembly for optimizing a vehicle. """
+    """Unconstrained optimization of the Parabaloid with CONMIN."""
     
-    def __init__(self, directory=''):
+    def __init__(self):
         """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
         # pylint: disable-msg=E1101
         
-        super(OptimizationUnconstrained, self).__init__(directory)
+        super(OptimizationUnconstrained, self).__init__()
 
         # Create Paraboloid component instances
         self.add_container('paraboloid', Paraboloid())
@@ -47,16 +47,16 @@ if __name__ == "__main__": # pragma: no cover
 
     import time
     
-    opt_problem = OptimizationUnconstrained("Top")
+    opt_problem = OptimizationUnconstrained()
     set_as_top(opt_problem)
 
-    
     tt = time.time()
     opt_problem.run()
 
+    print "\n"
     print "CONMIN Iterations: ", opt_problem.driver.get("iter_count")
     print "Minimum found at (%f, %f)" % (opt_problem.paraboloid.get("x"), \
                                          opt_problem.paraboloid.get("y"))
-    print "Elapsed time: ", time.time()-tt
+    print "Elapsed time: ", time.time()-tt, "seconds"
     
 # end optimization_unconstrained.py

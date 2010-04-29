@@ -84,7 +84,7 @@ this:
     
 ``docs`` All Sphinx user documentation for OpenMDAO.  The documentation is broken up into
     several major documents, each found in a separate  subdirectory, e.g., ``user-guide``
-    contains the User's Guide, ``dev-guide`` contains the Developer's Guide, and so on.   
+    contains the User Guide, ``dev-guide`` contains the Developer's Guide, and so on.   
 
 ``openmdao.main``
     Python package containing all infrastructure source for OpenMDAO.

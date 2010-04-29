@@ -11,7 +11,7 @@ from openmdao.lib.api import CONMINdriver
 from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
 class EngineOptimization(Assembly):
-    """ Top level assembly for optimizing a vehicle. """
+    """Optimization of a Vehicle."""
     
     def __init__(self, directory=''):
         """ Creates a new Assembly containing a DrivingSim and an optimizer"""

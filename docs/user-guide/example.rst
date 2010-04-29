@@ -6,23 +6,6 @@
 A More Complex Tutorial Problem
 ================================
 
-To help you understand how to use OpenMDAO, an example problem is presented here, somewhat in the
-form of a tutorial. We felt that the example needed to be chosen carefully to ensure that the
-design problem could be understood intuitively regardless of background. This precluded the use of an
-aircraft aerodynamics-structural design problem as an example, even though the developers had the
-expertise. Additionally, the example problem needed to include enough model complexity to allow a full
-set of features to be demonstrated. The automotive design problem presented in the next section satisfied
-these requirements.
-
-One important thing should be noted: OpenMDAO is currently under development, and there are a number of
-features that haven't been implemented, including a graphical interface (GUI). Interacting with the
-framework architecture is done by writing Python code. While the tutorial problem was designed to teach
-you to utilize the framework via all available interfaces, it is difficult to construct a tutorial
-that achieves the same level of interactivity for a scripting interface as for a graphical one. 
-
-This tutorial assumes that you have already created a local copy of the code repository. (Add
-reference.)
-
 Problem Overview
 ----------------
 
@@ -49,7 +32,8 @@ rear differential ratio). In a typical problem, each of these component models w
 separate implementation, possibly with different authors or vendors, and will require a set of design variables which are
 detailed below.
 
-So a vehicle contains an engine, a transmission, and a chassis component. In addition to the
+So a vehicle contains an engine, a transmission, and a chassis component. Each of these subsystems is described
+by some kind of mathematical model that depends on a set of design variables (e.g., compression ratio.) In addition to the
 design variables, there are three simulation variables: throttle position, gear, and velocity. These
 variables, which are independent of any design, are used during simulation, where the vehicle model is
 essentially being "driven" to determine the desired test metrics. There are also a couple of
@@ -64,7 +48,7 @@ components in terms of the Data Flow: Transmission -> Engine -> Chassis.
 
 The full process model is shown below.
 
-.. figure:: ../images/user-guide/Process_Diagram4.png
+.. figure:: ../images/user-guide/Process_Diagram.png
    :align: center
 
    Process Model for Tutorial Problem
@@ -135,7 +119,7 @@ velocity	      Current vehicle velocity			   m/s
 torque_ratio	   Ratio of transmission output power to power 
                    at the wheel
 -----------------  -------------------------------------------  ------
-RPM    		   Engine rotational speed			rev/s
+RPM    		   Engine rotational speed			1/min
 =================  ===========================================  ======
 
   
@@ -144,17 +128,17 @@ __________________
 
 There are two pieces of information that the engine model must provide:
 
-1. Torque seen by the transmission
+1. Torque at engine output
 2. Fuel burn under current load
 
-There are quite a few simple models in the literature, but the one published in a master's thesis by S.
-Sitthiracha (`1`_) appeared to be the best choice for use in the tutorial problem. Sitthiracha presents a
+There are quite a few simple models in the literature, and we used the one published in a master's thesis by S.
+Sitthiracha (`1`_). Sitthiracha presents a
 physics-based model of the Otto cycle in a 4-stroke spark-ignition internal combustion engine. The
 mathematical model allows the construction of a parametrized engine model with 10 design inputs covering
 the engine mechanical design (cylinder bore, stroke, connecting rod length, and compression ratio), intake
 valve design (diameter and lift), and the cycle timing (for both intake and spark.) In the thesis, the
 model is implemented in Simulink and simulated using data from a family of Mercedes-Benz engines designed
-in 1969. The model is actually fairly comprehensive and includes the effects of burn duration, heat loss
+in 1969. The model includes the effects of burn duration, heat loss
 through the cylinder wall, losses due to friction and charge heating, and intake orifice flow. Some of
 these effects were derived from empirical data and are essentially valid over an engine speed ranging from
 1000 RPM to 6000 RPM.
@@ -165,9 +149,9 @@ simple, these parameters were set to values appropriate for gasoline and were no
 inputs for the engine model. It would not be difficult to modify the component code to allow any of these
 to be used as design variables, given what will be learned from the tutorial problem.
 
-It should be noted that, as is often the case, there were a couple of errors in the equations presented in
+There were a couple of errors in the equations presented in
 Sitthiracha's model and a couple of factors that needed to be adjusted to obtain reasonable results. The
-Sitthirach model also assumed wide-open throttle, so the effect of a throttle was added by assuming that it
+Sitthiracha model also assumed wide-open throttle, so the effect of a throttle was added by assuming that it
 acts as an additional restriction on the intake flow that premultiplies the orifice equation to give the mass
 flow into the cylinder. For simulation, relating the throttle position to an actual physical foot position is
 not important; all that is needed is a continuum of throttle settings between closed and wide open. The
@@ -233,7 +217,7 @@ power		   Power produced by engine			kW
 -----------------  -------------------------------------------  ------
 torque		   Torque produced by engine			N*m
 -----------------  -------------------------------------------  ------
-fuel_burn	   Fuel burn rate				li/sec
+fuel_burn	   Fuel burn rate				l/sec
 -----------------  -------------------------------------------  ------
 engine_weight	   Engine weight estimate			kg
 =================  ===========================================  ======
@@ -391,9 +375,7 @@ In the previous section, three component models were given that comprise a vehic
 its performance. These models have all been implemented as OpenMDAO components written in Python. This
 section will examine these components.
 
-We are assuming that you have some familiarity with Python and the basic concepts of object-oriented
-programming and have either installed an official distribution bundle or have access to the OpenMDAO
-source tree. The following instructions will help you locate the directory containing the pieces
+The following instructions will help you locate the directory containing the pieces
 needed for the model relative to the install directory.
 
 If you have a branch from the source repository:
@@ -405,7 +387,7 @@ If you have downloaded the latest release version from the website:
 	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign``
 	
 where X.X.X is the current OpenMDAO version, and ###### is a string that
-contains the Python version, and the Operating System description. This will
+contains the Python version and the operating system description. This will
 vary depending on your system and version, but there will only be one
 *enginedesign* egg.
 
@@ -414,8 +396,8 @@ be useful to browse these files as you learn some of the basic concepts in this 
 
 **Building a Python Component**
 
-At the highest level, a component is simply something that takes a set of inputs and operates on them,
-producing a set of outputs. In the OpenMDAO architecture, a class called :term:`Component` provides this
+A component is simply something that takes a set of inputs and operates on them to produce
+a set of outputs. In the OpenMDAO architecture, a class called :term:`Component` provides this
 behavior. Any component has inputs and outputs and has a function that executes the component, which operates
 on the inputs to produce the outputs. To create a new component, a new class is created that inherits from
 the base class Component. A very simple component is shown here:
@@ -982,10 +964,10 @@ EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 Setting up an Optimization Problem
 ----------------------------------
 
-The final step is the creation of a top level Assembly which defines the problem using DrivingSim and the vehicle assembly.
-The top level Assembly is a container that can be thought of as the workspace where the model is built, or the container that
+The final step is the creation of a *top level Assembly* which defines the problem using DrivingSim and the vehicle assembly.
+The *top level Assembly* is a container that can be thought of as the workspace where the model is built, or the container that
 ultimately contains the entire model. Functionally, it's no different than an assembly such as Vehicle.py; this implies that
-any OpenMDAO model can be packaged up and inserted into some other model as a component. Generally, the top level Assembly
+any OpenMDAO model can be packaged up and inserted into some other model as a component. Generally, the *top level Assembly*
 contains one or more Components or Assemblies. It may also contain a solution Driver, or it may just rely on sequential
 execution based on the data flow.
 
@@ -998,7 +980,7 @@ The optimization will be handled by CONMIN, which is a gradient based algorithm 
 the 1970s. The source code is in the public domain, and a Python wrapped CONMIN component has been included in the OpenMDAO
 standard library.
 
-In openMDAO, the top level Assembly is always derived from Assembly. In ``engine_optimization.py``, we created the class
+In openMDAO, the top level Assembly is always derived from Assembly. In ``engine_optimization.py``, we create the class
 EngineOptimization, and instantiated SimVehicle and CONMINdriver:
 
 .. _Code9: 
@@ -1011,7 +993,7 @@ EngineOptimization, and instantiated SimVehicle and CONMINdriver:
 	from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
 	class EngineOptimization(Assembly):
-	    """ Top level assembly for optimizing a vehicle. """
+	    """Optimization of a Vehicle."""
     
 	    def __init__(self, directory=''):
         	""" Creates a new Assembly containing a SimVehicle and an optimizer"""
@@ -1036,7 +1018,7 @@ driver requires some initialization and connecting before it can be used:
 	from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
 	class EngineOptimization(Assembly):
-	    """ Top level assembly for optimizing a vehicle. """
+	    """Optimization of a Vehicle."""
     
 	    def __init__(self, directory=''):
         	""" Creates a new Assembly containing a SimVehicle and an optimizer"""
