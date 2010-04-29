@@ -11,7 +11,7 @@ interact with objects in the framework. Other interfaces are planned, including
 both a graphical and a command line. Everything that can be done in OpenMDAO can
 be done using this scripting interface.
 
-The goal of this section of the *User's Guide* is to explain and demonstrate every
+The goal of this section of the *User Guide* is to explain and demonstrate every
 aspect of the OpenMDAO script interface. This section is intended primarily as a
 reference. If you are an inexperienced user, you would be best served by reading and
 understanding the examples in :ref:`Getting-Started-with-OpenMDAO` and
@@ -93,7 +93,7 @@ available in this module by using the *dir()* command in Python:
     logger
     set_as_top
 
-Most of these items are explained elsewhere in the *User's Guide.* These can all be
+Most of these items are explained elsewhere in the *User Guide.* These can all be
 imported from ``openmdao.main.api``.
 
 Note that there is some overhead associated with importing things into the Python
@@ -116,7 +116,7 @@ to use it.
 
 A pseudo-package was also created to house some of the most commonly-used imports
 from the standard library. In general, it contains public variables and Drivers.
-Most of these items are also explained elsewhere in the *User's Guide.*
+Most of these items are also explained elsewhere in the *User Guide.*
 
     >>> import openmdao.lib.api
     >>> items = dir(openmdao.lib.api)
@@ -249,7 +249,7 @@ A simple component that implements an equation with two inputs is shown below:
 
 In this example, the *__init__()* function doesn't do anything but call the
 equivalent in the base class, so technically it should be removed from this 
-class definition. Framework variables are explained in more detail in the section on
+class definition. Public variables are explained in more detail in the section on
 :ref:`public variables <Public-Variables>`.
 
 .. index:: save_to_egg()
@@ -390,7 +390,7 @@ The underlying implementation of public variables in OpenMDAO was accomplished
 through a Python add-on called :term:`Traits`, which is an open-source extension 
 to Python that was developed by a company called Enthought. Traits provide a way to 
 apply explicit typing to the normally untyped Python variables. They also provide 
-the capability to add some other features to the framework variables, including 
+the capability to add some other features to the public variables, including 
 unit checking and conversion, default values, minima and maxima, and a way to create 
 callback functions that execute under specified conditions.
 

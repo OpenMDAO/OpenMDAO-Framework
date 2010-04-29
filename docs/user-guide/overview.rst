@@ -34,13 +34,13 @@ calculation that it performs is to add the two inputs to produce the output.
 
 Note that components within OpenMDAO can be as simple or complex as necessary.
 The inputs and outputs to a Component are Python objects, so they are not limited
-to being simple types like float or int.
+to being simple types like floating point or integer.
 
 An :term:`Assembly` is a special kind of Component that contains other
 components. When an Assembly is executed, it runs the components it contains
-in the order determined by a Workflow object. A :term:`Workflow` is simply an
+in the order determined by its Workflow object. A :term:`Workflow` is simply an
 object that determines execution order for a group of components. The workflow
-orders the components according to the direction the data flow between them,
+orders the components according to the direction of the data flow between them,
 i.e., such that any Component that supplies input values to another Component
 will always run *before* that Component.
 

@@ -13,8 +13,8 @@ Glossary
 
 
       **Assembly**
-        The Assembly class is the primary building block of the system of 
-        systems aspect of OpenMDAO. Each assembly has a Workflow and a 
+        The Assembly class is the primary building block of the "system of 
+        systems" aspect of OpenMDAO. Each assembly has a Workflow and a 
         Driver, and acts as a container for Components. An assembly is also a
         component, so hierarchical structures of assemblies can be created.
       
