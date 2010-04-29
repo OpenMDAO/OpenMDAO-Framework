@@ -214,8 +214,7 @@ def translate_expr(text, exprobj, single_name=False):
     
     # set up the scope name translation here. Parse actions called from
     # pyparsing only take 3 args, so we wrap our function in a lambda function
-    # with extra arguments to specify the scope used for the translation,
-    # the validation flag, and the ExprEvaluator object.
+    # with an extra argument to specify the ExprEvaluator object.
     fancyname.setParseAction(
         lambda s,loc,tok: _trans_fancyname(s,loc,tok,exprobj))
 
@@ -224,7 +223,7 @@ def translate_expr(text, exprobj, single_name=False):
     boolop = equal | notequal | lesseq | less | greatereq | greater 
 
     factor = Forward()
-    atom = Combine(Optional("-") + (( number | fancyname) | (lpar+expr+rpar)))
+    atom = Combine(Optional("-") + (( number | fancyname) | (lpar+expr+rpar)), adjacent=False)
     factor << atom + ZeroOrMore( ( expop + factor ) )
     term = factor + ZeroOrMore( ( multop + factor ) )
     addterm = term + ZeroOrMore( ( addop + term ) )
