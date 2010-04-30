@@ -262,12 +262,13 @@ def _make_license_table(docdir, reqs=None):
     contains a restructured text table with the name, license, and home-page of
     all distributions that openmdao depends on.
     """
-    meta_names = ['name','license','home-page']
+    meta_names = ['name', 'version', 'license','home-page']
     headers = ['**Distribs Used by OpenMDAO**',
+               '**Version**',
                '**License**',
                '**Link**']
     numcols = len(meta_names)
-    data_templates = ["%s", "%s", "%s"]
+    data_templates = ["%s", "%s", "%s", "%s"]
     col_spacer = ' '
     max_col_width = 80
     excludes = [] #["openmdao.*"]
