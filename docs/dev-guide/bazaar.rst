@@ -3,8 +3,8 @@
 .. _Helpful-Bazaar-Commands:
 
 
-Appendix: Helpful Bazaar Commands
-=================================
+Appendix A: Helpful Bazaar Commands
+===================================
 
 This section contains commands that developers would use on a regular basis when performing  everyday
 tasks. Most of them are Bazaar commands. Please note that the OpenMDAO *Developer's Guide*
@@ -78,7 +78,9 @@ file whose parent directory is not versioned, Bazaar will automatically add the 
 directory and so on up to the root. 
 
 If you use this command without an argument, Bazaar will add everything under the current
-directory that has not yet been added to the repository.
+directory that has not yet been added to the repository. It is wise to use this command in the
+directory where you want to add files, so you don't add temporary files you do not want.
+
 
 After you type ``bzr add``, Bazaar will display a list of the files and directories that were added.
 

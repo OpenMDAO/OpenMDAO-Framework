@@ -404,9 +404,10 @@ The only difference here is that the outputs are returned as single value
 variables instead of the zero-dimensional lists that F2PY returns whenever
 it generates the interface for a C function.    
     
-TODO - C++ Example
 
-TODO - SWIG helpful hints
+.. todo:: C++ Example
+
+.. todo:: SWIG helpful hints
 
 
 Creating an Extension with JCC
@@ -419,10 +420,10 @@ Creating an Extension with JCC
     Documentation: http://pypi.python.org/pypi/JCC/1.5
 
     
-TODO - Java Example
+.. todo:: Java Example
 
 
 Creating an Extension using Python's ctypes
 -------------------------------------------
 
-TODO - Example wrap for an existing C dynamic link library
+.. todo:: Example wrap for an existing C dynamic link library

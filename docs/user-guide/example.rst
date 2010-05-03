@@ -951,17 +951,19 @@ implement the solution procedure as a driver (or two drivers if preferred). So f
 mentioned only as an attribute of assemblies, and they will be more thoroughly treated in the next section.
 Implementing the vehicle simulation as a driver might be a bit confusing for your first exposure to
 drivers, particularly since it involves nesting the simulation driver with an optimizer, so the vehicle
-simulations were implemented in a single Component instead. However, this leads to the concept of
-:term:`Sockets`, which requires the implementation to be an Assembly instead of just a Component.
+simulations were implemented in a single Component instead. However, this leads to the concept of 
+*Sockets,* which requires the implementation to be an Assembly instead of just a Component.
 
 To investigate designs, a Vehicle class was defined as an Assembly in OpenMDAO. This class has a set of specific inputs and outputs
 that include the design variables for the engine, transmission, and chassis, and the simulation
 variables velocity, gear position and throttle position. These inputs and outputs comprise an interface
 for the Vehicle class. In the future, the user might want to replace the current vehicle model with a new model. This new model
 will be compatible provided that it has the same interface as the current vehicle model. The interface checking is 
-facilitated by the creation of a Socket in the vehicle simulation assembly.
+facilitated by the creation of a :term:`Socket` in the vehicle simulation assembly.
 
-TODO - Define an interface for Vehicle, and add more info on that to this part of the tutorial
+.. todo::
+   
+	 Define an interface for Vehicle and add more info on that to this part of the tutorial
 
 **SimVehicle - Outputs:**
 

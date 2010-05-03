@@ -35,10 +35,9 @@ class CaseIteratorDriver(Driver):
     - If `sequential` is True, then the cases are evaluated sequentially.
     - If `reload_model` is True, the model is reloaded between executions.
     - `max_retries` sets the number of times to retry a failed case.
+    
 
-    .. parsed-literal::
-
-       TODO: define interface for 'recorder'.
+.. todo:: Define interface for "recorder."
 
     """
 

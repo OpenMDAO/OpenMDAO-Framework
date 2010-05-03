@@ -5,11 +5,10 @@ Overview of OpenMDAO Plugin Development
 =======================================
 
 Plugins provide a way to extend the functionality of an application without
-modifying the application itself.  This is possible because the :term:`plugins` must
-implement a particular interface that the framework knows how to interact with.
-This section will describe the types of plugins available to extend
-the functionality of OpenMDAO and will explain how to build them and how to make 
-them usable by the framework.
+modifying the application itself.  This is possible because the :term:`plugins` must  implement a particular interface that the framework knows how
+to interact with. This section will describe the types of plugins available to
+extend the functionality of OpenMDAO and will explain how to build them and how
+to make  them usable by the framework.
 
 .. index:: Component plugin
 
@@ -103,32 +102,30 @@ SimpleAdder plugin is an OpenMDAO Component.
 *Installing an OpenMDAO Plugin*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-- TODO: tell how to use easy_install to install plugin 
-  (easy_install -mxNq -f http://...  -d <plugin_dir> where <plugin_dir> must be on Python path)
-  When we install a plugin, it's dependencies will also be installed and must be on the
-  Python path to be used by the system. We may need to write our own plugin installer in 
-  order to put plugins in the expected place and to prevent the installation of dependencies
-  in the plugin directory when they are already a part of the distribution.
-- TODO: should we have a plugins directory, OPENMDAO_PLUGIN_PATH env var, ...
-- TODO: It seems like we need some kind of metadata to describe the plugin API version that
-  a given plugin is tied to, because over time there could be changes made to the various
-  plugin APIs that will break old plugins, and it would be nice if we could detect that and
-  either hide them from our library manager or (better) create an adapter for them on the 
-  fly and still be able to use them.
+.. todo:: Tell how to use easy_install to install plugin 
+   (easy_install -mxNq -f http://...  -d <plugin_dir> where <plugin_dir> must be on Python path)
+   When we install a plugin, it's dependencies will also be installed and must be on the
+   Python path to be used by the system. We may need to write our own plugin installer in 
+   order to put plugins in the expected place and to prevent the installation of dependencies
+   in the plugin directory when they are already a part of the distribution.
+	  
+.. todo:: Should we have a plugins directory, OPENMDAO_PLUGIN_PATH env var, ...?
+
+.. todo:: It seems like we need some kind of metadata to describe the plugin API version that
+   a given plugin is tied to, because over time there could be changes made to the various
+   plugin APIs that will break old plugins, and it would be nice if we could detect that and
+   either hide them from our library manager or (better) create an adapter for them on the 
+   fly and still be able to use them.
 
 
 *Making Your Plugin Available to Others*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
-::
-
-   TODO: uploading to a package index
+.. todo:: Uploading to a package index
    
    
 *Adding Custom Egg Metadata*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-::
-
-   TODO: need to work with team to determine standard openmdao metadata
+.. todo:: Need to work with team to determine standard openmdao metadata
       

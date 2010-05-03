@@ -25,7 +25,7 @@ simplify the task of scanning output files for values.
 
 Plugins must be *registered* with the framework before the framework can locate
 and activate them. In this framework, they will be registered by putting them in
-a directory or an :term:`egg` file that is in the search path of the
+a directory or an *egg* file that is in the search path of the
 :term:`FactoryManager` or in the search path of one of the ObjServerFactories
 that is itself registered with the FactoryManager.   
 
@@ -203,7 +203,7 @@ component for use by others as easy as possible.
 
 Python has a popular distribution tool called *setuptools* which packages
 modules and any associated data files and metadata into a single file
-called an :term:`egg`. The metadata found in an egg includes version
+called an *egg*. The metadata found in an egg includes version
 information, dependencies, license info, platform info, entry points, as well as
 other information.
 
@@ -438,8 +438,8 @@ problem formulation view.
 ______________
 
 The figure below shows an example of a `plugin view`_, which shows any Sockets
-existing in a particular :term:`Component`. A  :term:`Socket` is just a placeholder
-for an object within a `Component` that has a name and  provides a
+existing in a particular Component. :term:`Sockets` are just placeholders
+for an object within a Component that has a name and  provides a
 particular  interface. In other words, it is a location for a plugin within a
 Component. Because any object placed in a Socket must have the interface specified
 by the Socket, the enclosing Component will know how to interact with that object.
