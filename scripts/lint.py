@@ -44,7 +44,7 @@ def main():
         roots = (
             os.path.join(root, 'openmdao.lib'),
             os.path.join(root, 'openmdao.main'),
-            os.path.join(root, 'openmdao.recipes'),
+            os.path.join(root, 'openmdao.devtools'),
             os.path.join(root, 'openmdao.test'),
             os.path.join(root, 'openmdao.util'),
             os.path.join(root, 'contrib'),

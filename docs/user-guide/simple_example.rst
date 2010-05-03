@@ -2,8 +2,8 @@
 
 .. _Getting-Started-with-OpenMDAO:
 
-Getting Started with OpenMDAO: A Simple Example Problem
-=======================================================
+Getting Started: A Simple Example Problem
+==========================================
 
 The purpose of this section is to teach the novice user how to set up and
 execute a simple optimization problem using the OpenMDAO script interface. This
@@ -57,8 +57,8 @@ vary depending on your system and version, but there will only be one
 	
 .. index:: Component
 
-Building a Simple Component - Paraboloid
------------------------------------------
+Building a Component - Paraboloid
+---------------------------------
 
 At the highest level, a component is simply something that takes a set of
 inputs and operates on them, producing a set of outputs. In the OpenMDAO
@@ -75,19 +75,19 @@ The Python code for the Paraboloid component is as follows:
     from openmdao.lib.api import Float
     
     class Paraboloid(Component):
-        """ Evaluates the equation (x-3)^2 + xy + (y+4)^2 = 3 """
+	""" Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
 	# set up interface to the framework  
-	x = Float(0.0, iotype='in', desc='The variable y')
-        y = Float(0.0, iotype='in', desc='The variable x')
+	x = Float(0.0, iotype='in', desc='The variable x')
+        y = Float(0.0, iotype='in', desc='The variable y')
 
         f_xy = Float(0.0, iotype='out', desc='F(x,y)')        
 
         
 	def execute(self):
-	    """ Solve (x-3)^2 + xy + (y+4)^2 = 3
-	        Optimal solution (minimum): x = 6.6667; y = -7.3333
-	        """
+	    """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+            Minimum: x = 6.6667; y = -7.3333
+	    """
         
 	    x = self.x
 	    y = self.y
@@ -162,12 +162,12 @@ by adding these lines:
 
 .. index:: Traits
 
-There are two kinds of variables in OpenMDAO: *internal variables* and *Public Variables*.
+There are two kinds of variables in OpenMDAO: *internal variables* and *public variables*.
 Internal variables are variables that are used internally to a component but that cannot
-be seen outside of that component's scope. Public Variables are variables that are 
+be seen outside of that component's scope. Public variables are variables that are 
 publicly visible (and manipulatable if they are inputs) in the framework.
 
-Here we are using a Public Variable called *Float,* which was imported above, that creates
+Here we are using a public variable called *Float,* which was imported above, that creates
 a floating point variable available to the framework. The constructor contains
 a default value (set to 0 for these), an *iotype* (which declares this 
 variable as an input or an output), and a *desc*, or description (just a string of text
@@ -201,14 +201,14 @@ assigned here similarly via *self.f_xy.* This changes the value of the framework
 completes the component execution.
 
 It will often be the case that you will already have the code for evaluating the objective function,
-but it will be in some other language, such as Fortran or C/C++. The :ref:`Plugin-Developer-Guide` 
+but it will be in some other language, such as Fortran or C/C++. The :ref:`Plugin-Developer's-Guide` 
 gives some examples of how to incorporate these kinds of components into OpenMDAO.
 
 The Paraboloid component is now built and ready for inclusion in a model.
 
 
-Building a Simple Model - Unconstrained Optimization using CONMIN
-------------------------------------------------------------------
+Building a Model - Unconstrained Optimization using CONMIN
+-----------------------------------------------------------
 
 The next task is to build a model that finds the minimum objective value for the
 Paraboloid component described above. This model will contain the Paraboloid as well as
@@ -326,7 +326,7 @@ The objective function is defined using the concept of a StringRef variable:
 	        # CONMIN Objective 
 	        self.driver.objective = 'paraboloid.f_xy'
 		
-A *StringRef* is a special kind of Public Variable that contains a string that points to
+A *StringRef* is a special kind of public variable that contains a string that points to
 some location in the OpenMDAO variable tree. This string is analogous to the
 path name in a file system, using the "." as a separator. This allows for two
 components to have the same variable name while still assuring they'll be
@@ -373,7 +373,7 @@ accuracy can be obtained in the calculated minimum because the default step
 size is too large for this problem.
 		
 Executing the Simple Optimization Problem
------------------------------------------
+------------------------------------------
 
 In the absence of an OpenMDAO GUI, we must take one other step to set up and execute
 this optimization problem. We have to create the top Level Assembly and tell it to run. One
@@ -431,8 +431,8 @@ accessible even from outside the top level Assembly.
 
 .. index:: contraints, CONMIN
 
-Building a Simple Model - Constrained Optimization using CONMIN
----------------------------------------------------------------
+Building a Model - Constrained Optimization using CONMIN
+---------------------------------------------------------
 
 Usually, an optimization problem also contains a number of constraints on the
 design space. 
@@ -469,3 +469,4 @@ Afterword
 This concludes an introduction to a simple problem of component creation and execution in
 OpenMDAO. The next tutorial section introduces a problem with more complexity and
 presents some more of the features of the framework.
+i

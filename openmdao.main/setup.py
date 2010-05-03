@@ -45,16 +45,13 @@ setup(name='openmdao.main',
           'numpy>=1.3.0',
           'PyYAML',
           'networkx==1.0.1',
-          'Traits==3.1.0',
-          'virtualenv',
+          'Traits==3.2.0',
           'openmdao.units',
           'openmdao.util',
       ],
       entry_points = {
           "console_scripts": [
-                "openmdao_build_docs=openmdao.util.build_docs:build_docs",
-                "openmdao_docs=openmdao.util.build_docs:view_docs",
-                "wing=openmdao.util.wingproj:run_wing",
+                "openmdao_docs=openmdao.util.view_docs:view_docs",
               ],
           },
     )

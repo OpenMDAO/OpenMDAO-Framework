@@ -32,8 +32,9 @@ def _find_bzr(path=None):
     return None
 
 def run_wing():
-    """Runs the Wing IDE after first setting environment variables
-    necessary to locate shared libraries.
+    """Runs the Wing IDE after first setting up a profile containing
+    the files in the openmdao repository. It also adds all of our 
+    unit tests to the testing area.
     """
     wingpath = None
     projpath = ''
@@ -44,7 +45,7 @@ def run_wing():
             projpath = arg.split('=')[1]
     if not wingpath:
         if sys.platform == 'win32':
-            wingpath = r'C:\Program Files\Wing IDE 3.2\bin\wing.exe'
+            wingpath = 'wing.exe'
         elif sys.platform == 'darwin':
             wingpath = '/Applications/Wing/WingIDE.app/Contents/MacOS/wing'
         else:

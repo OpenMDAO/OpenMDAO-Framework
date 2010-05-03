@@ -166,23 +166,16 @@ def mod2egg(argv, groups= { 'openmdao.component': Component,
                     if issubclass(val, klass):
                         plugins[gname].append(name)
         if valmod is not None and valmod is not mod and valmod.__name__ is not None:
-            othermods.add(valmod.__name__)
+            othermods.add(valmod)
 
     # for each module imported by our module, find the distrib that contains it 
     depends = set()
     for omod in othermods:
         found = False
         for dist in pkg_resources.working_set:
-            path = omod.replace('.','/')
-            for ext in ['.py','.pyc','.pyd']:
-                fname = path+ext
-                try:
-                    if dist.has_resource(fname):
-                        depends.add(str(dist.as_requirement()))
-                        found = True
-                        break
-                except AttributeError:
-                    pass  # some stdlib dists barf when has_resource is called
+            if omod.__file__.startswith(dist.location):
+                found = True
+                break
             if found:
                 break
             

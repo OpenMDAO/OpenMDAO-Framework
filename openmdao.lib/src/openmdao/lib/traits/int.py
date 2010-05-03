@@ -16,8 +16,8 @@ class Int(TraitType):
        specified range of values.
        """
     
-    def __init__(self, default_value=None, iotype=None, desc=None, \
-                 low=None, high=None, exclude_low=False, exclude_high=False, \
+    def __init__(self, default_value=None, iotype=None, desc=None, 
+                 low=None, high=None, exclude_low=False, exclude_high=False, 
                  **metadata):
 
         # Range trait didn't seem to handle "None" correctly when passed on
@@ -57,13 +57,14 @@ class Int(TraitType):
 
         self._validator = Range(value=default_value, low=low,
                                   high=high, exclude_low=exclude_low,
-                                  exclude_high=exclude_high, **metadata)            
+                                  exclude_high=exclude_high, **metadata)
             
         # Add low and high to the trait's dictionary so they can be accessed
         metadata['low'] = low
         metadata['high'] = high
         metadata['exclude_low'] = exclude_low
         metadata['exclude_high'] = exclude_high
+        
         super(Int, self).__init__(default_value=default_value,
                                          **metadata)
 
@@ -78,6 +79,7 @@ class Int(TraitType):
     def error(self, object, name, value):
         """Returns a string describing the type handled by Int."""
         
+        # pylint: disable-msg=E1101
         right = left = '='
         if self.exclude_high is True:
             right = ''

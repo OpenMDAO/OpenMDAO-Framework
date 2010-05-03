@@ -10,14 +10,8 @@
 Overview of the OpenMDAO Framework
 ==================================
 
-The following section provides a brief overview of OpenMDAO and discusses some
-of its basic components.
-
-What is OpenMDAO?
------------------
-
-MDAO stands for MultiDisciplinary Analysis and Optimization; OpenMDAO is
-an open source framework to analyze and solve MDAO problems. In OpenMDAO, a
+MDAO stands for Multidisciplinary Analysis and Optimization; OpenMDAO is
+an open source framework for analyzing and solving MDAO problems. In OpenMDAO, a
 problem is represented by a system of objects called :term:`components`. These objects
 have input and output attributes and can perform some sort of calculation when
 they are executed. They can have their inputs and outputs connected to those
@@ -50,8 +44,7 @@ orders the components according to the direction the data flow between them,
 i.e., such that any Component that supplies input values to another Component
 will always run *before* that Component.
 
-A Driver is another special kind of Component. Drivers are designed to iterate
+A :term:`Driver` is another special kind of Component. Drivers are designed to iterate
 over a Workflow until some condition is met. Some examples of Drivers
 are optimizers, solvers, and design space explorers.
 
-.. seealso:: :ref:`Execution` and :ref:`Workflow-View`

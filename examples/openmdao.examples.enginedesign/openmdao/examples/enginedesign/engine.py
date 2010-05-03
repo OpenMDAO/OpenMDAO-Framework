@@ -13,6 +13,43 @@ from openmdao.lib.api import Float, Int
 
 class Engine(Component):
     """ Model of a piston engine - Python Implementation."""
+
+    # Design parameters:
+    #stroke = 78.8           # Stroke (mm)
+    #bore = 82.0             # Bore (mm)
+    #conrod = 115.0          # Connecting Rod (mm)
+    #comp_ratio = 9.3        # Compression Ratio
+    #spark_angle = -37.0     # Spark Angle ref TDC (degree)
+    #ncyl = 6                # Number of Cylinders
+    #IVO = 11.0              # Intake Valve Open before TDC (deg BTDC)
+    #IVC = 53.0              # Intake Valve Close after BDC (deg ABDC)
+    #L_v = 8.0               # Maximum Valve Lift (mm)
+    #D_v = 41.2              # Inlet Valve Dia (mm)
+
+    # Constants:
+    #k = 1.3                 # k (Specific heat ratio for Air)
+    #R = 287.0               # R (Gas constant for Air - J/kg/degK)
+    #Ru = 8.314              # R (Gas constant for Air - J/mole/degK)
+    #Hu = 44000.0            # Heating Value for gasoline (44000 kJ/kg)
+    #Tw = 400.0              # Tw (Combustion Wall Temperature 400 degK)
+    #AFR = 14.6              # Air Fuel Ratio for gasoline
+    #P_exth = 152            # Exhaust gas pressure
+    #P_amb = 101.325         # Ambient Pressure (kPa)
+    #T_amb = 298             # Ambient Temperature (deg K)
+    #air_density = 1.2       # Air Density (1.2 kg/m**2)
+    #mw_air = 28.97          # Molecular Weight of Air (g/mol)
+    #mw_fuel = 114           # Molecular Weight of Gasoline (g/mol)
+
+    # Simulation inputs:
+    #RPM = 1000.0            # RPM
+    #throttle = 1.0          # Throttle Position
+    #thetastep = 1.0         # Sim time stepsize (crank angle deg)
+
+    ## Outputs
+    #power                   # Power at engine output (KW)
+    #torque                  # Torque at engine output (N*m)
+    #fuel_burn               # Fuel burn rate (liters/sec)
+    #engine_weight           # Engine weight estimation (kg)
     
     # set up interface to the framework  
     # pylint: disable-msg=E1101
@@ -48,50 +85,6 @@ class Engine(Component):
     engine_weight = Float(0.0, iotype='out', units='kg', 
                                desc='Engine weight estimation')
         
-    #def __init__(self, desc=None, directory=''):
-        #""" Creates a new Engine object
-
-            ## Design parameters
-            #stroke = 78.8           # Stroke (mm)
-            #bore = 82.0             # Bore (mm)
-            #conrod = 115.0          # Connecting Rod (mm)
-            #comp_ratio = 9.3        # Compression Ratio
-            #spark_angle = -37.0     # Spark Angle ref TDC (degree)
-            #ncyl = 6                # Number of Cylinders
-            #IVO = 11.0              # Intake Valve Open before TDC (deg BTDC)
-            #IVC = 53.0              # Intake Valve Close after BDC (deg ABDC)
-            #L_v = 8.0               # Maximum Valve Lift (mm)
-            #D_v = 41.2              # Inlet Valve Dia (mm)
-
-            ## Constants
-            #k = 1.3                 # k (Specific heat ratio for Air)
-            #R = 287.0               # R (Gas constant for Air - J/kg/degK)
-            #Ru = 8.314              # R (Gas constant for Air - J/mole/degK)
-            #Hu = 44000.0            # Heating Value for gasoline (44000 kJ/kg)
-            #Tw = 400.0              # Tw (Combustion Wall Temperature 400 degK)
-            #AFR = 14.6              # Air Fuel Ratio for gasoline
-            #P_exth = 152            # Exhaust gas pressure
-            #P_amb = 101.325         # Ambient Pressure (kPa)
-            #T_amb = 298             # Ambient Temperature (deg K)
-            #air_density = 1.2       # Air Density (1.2 kg/m**2)
-            #mw_air = 28.97          # Molecular Weight of Air (g/mol)
-            #mw_fuel = 114           # Molecular Weight of Gasoline (g/mol)
-
-            ## Simulation inputs
-            #RPM = 1000.0            # RPM
-            #throttle = 1.0          # Throttle Position
-            #thetastep = 1.0         # Sim time stepsize (crank angle deg)
-
-            ## Outputs
-            #power                   # Power at engine output (KW)
-            #torque                  # Torque at engine output (N*m)
-            #fuel_burn               # Fuel burn rate (liters/sec)
-            #engine_weight           # Engine weight estimation (kg)
-            #"""
-
-        #super(Engine, self).__init__(desc, directory)        
-
-
 
     def execute(self):
         """ Simulates the Otto cycle for an internal combustion engine.
@@ -368,10 +361,16 @@ if __name__ == "__main__":
     MyEngine = Engine("Testing")
     
     import time
-    ttime = time.time()
+    start_time = time.time()
     
     for jj in xrange(1, 50):
         MyEngine.run()
         
-    print "Elapsed time: ", time.time()-ttime
-
+    print "\n"
+    print 'Throttle Position: ', MyEngine.throttle
+    print 'Power: ', MyEngine.power
+    print 'Torque: ', MyEngine.torque
+    print 'Fuel Burn: ', MyEngine.fuel_burn
+    print 'Engine Weight: ', MyEngine.engine_weight
+    print '-----------------------------'    
+    print "Elapsed time: ", time.time()-start_time, 'seconds'

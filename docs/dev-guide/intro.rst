@@ -82,13 +82,10 @@ this:
     the ``go-openmdao-dev.py`` script that sits at the top of the source
     repository.
     
-``docs``
-    All Sphinx user documentation for OpenMDAO.  The documentation
-    is broken up into several major documents, each found in a separate 
-    subdirectory, e.g., ``arch-doc`` contains the Architecture
-    Document, ``dev-guide`` contains the Developer's Guide, and ``user-guide``
-    contains the User's Guide.   
-    
+``docs`` All Sphinx user documentation for OpenMDAO.  The documentation is broken up into
+    several major documents, each found in a separate  subdirectory, e.g., ``user-guide``
+    contains the User's Guide, ``dev-guide`` contains the Developer's Guide, and so on.   
+
 ``openmdao.main``
     Python package containing all infrastructure source for OpenMDAO.
     
@@ -113,9 +110,9 @@ this:
 .. index:: egg
     
 ``contrib``
-    Contains source to be packaged into Python :term:`eggs` that are releasable
-    separately from OpenMDAO.  These eggs may or may not depend upon OpenMDAO. 
-    Eggs that have not yet been approved to be part of openmdao.lib can live
+    Contains source to be packaged into Python :term:`eggs` that can be released
+    separately from OpenMDAO. These eggs may or may not depend upon OpenMDAO. 
+    Eggs that have not yet been approved to be part of ``openmdao.lib`` can live
     here, as long as their license is compatible with NOSA. No proprietary code
     or GPL code can live in the OpenMDAO repository.
 
@@ -129,7 +126,7 @@ OpenMDAO is large enough that it makes sense to split it up into multiple Python
 packages, but we want all of those packages to be under the umbrella of
 ``openmdao``. To do this in Python, we use what is called a *namespace*
 package.  Namespace  packages all have a similar directory layout.  Currently in
-OpenMDAO,  ``openmdao.main``, ``openmdao.lib``, ``openmdao.recipes``,
+OpenMDAO,  ``openmdao.main``, ``openmdao.lib``, ``openmdao.devtools``,
 ``openmdao.util`` and ``openmdao.test`` are all namespace
 packages that are in the ``openmdao`` namespace.  They all  have a layout like
 this:
@@ -155,9 +152,18 @@ this:
 .. index:: pair: branch; creating 
 
 
-Creating Your Branch
-____________________
+.. _Installing-from-Source:
 
+
+*Installing from Source*
++++++++++++++++++++++++++
+
+The first step in installing from source is to create a branch.
+
+.. _Creating-a-Branch:
+
+Creating a Branch
+_________________
 
 To create a branch, use the command:
 
@@ -172,26 +178,30 @@ avoid confusion in the case where you have multiple branches active at the same 
 If you do not supply ``<branch_name>``, the name by default will be the last part of
 the source repository URI, which in this case is ``openmdao``.
 
-
-At Glenn Research Center (GRC), we name branches based on ticket numbers in the bug 
-tracker, and we use
-the form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug tracker
-ticket number and ``<desc>`` is a short description of the branch. For example,
-``T0029-workflow_fix``.
+Branches are typically named based on ticket numbers in the bug  tracker, and we
+use the form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug
+tracker ticket number and ``<desc>`` is a short description of the branch. For
+example, ``T0029-workflow_fix``.
    
 
-After you've created your branch, run the following:
+Creating and Activating the Virtual Dev Environment
+___________________________________________________
+
+
+After you've created your branch, you must run ``python go-openmdao-dev.py`` from the top
+directory of your branch before you'll be able to execute OpenMDAO in any way. 
 
 ::
 
    python2.6 go-openmdao-dev.py
    
-from the top level of your branch directory.  This will create
-a ``devenv`` directory in your current directory and will install all of the
-necessary python packages there.  The next step is to activate your
-virtual environment.  This requires that you are running the bash shell if you
-are on a linux or OS X machine. If you are not running the bash shell, just type 
-``bash`` before moving on to the next step.
+Running ``go-openmdao-dev.py`` populates your virtual Python environment with all of the packages that
+OpenMDAO depends upon and installs the openmdao namespace packages in your virtual Python
+environment as "develop" eggs so that you can make changes to the source code and immediately
+see the results. 
+
+The next step is to activate your virtual environment. This requires that you are running the
+bash shell if you are on a Linux or OS X machine.  
 
 Change your directory to ``devenv`` and run:
 
@@ -205,13 +215,12 @@ or, on Windows
 
    Scripts\activate.bat
 
-
 At this point, your ``devenv`` directory should contain the following
 subdirectories:
 
 ``bin``
     Contains python and a number of other scripts that are associated with
-    the python packages that are installed in the virtual environment. On
+    the Python packages that are installed in the virtual environment. On
     Windows, this directory is called *Scripts*
 
 ``lib``
@@ -222,3 +231,10 @@ subdirectories:
     
 ``etc``
     Contains miscellaneous files that don't fit in bin, lib, or include.
+
+
+You can add new packages you need to the environment by using *easy_install* or *pip* in the
+same manner that you would add packages to the system level Python.  
+
+If you make doc changes and need to rebuild the docs, you can run ``openmdao_build_docs``.
+Running ``openmdao_docs`` will display the documents in HTML in the default browser.

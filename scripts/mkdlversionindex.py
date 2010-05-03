@@ -44,7 +44,7 @@ def make_index(startdir = '.'):
     files = []
     dirs = []
     for f in os.listdir(startdir):
-        if f=='index.html' or f=='mkdlversionindex.py':
+        if f in ['index.html', 'mkdlversionindex.py'] or f.startswith('openmdao_src'):
             continue
         if os.path.isfile(f):
             files.append(f)

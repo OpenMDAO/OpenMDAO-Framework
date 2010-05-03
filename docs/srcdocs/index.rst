@@ -1,14 +1,10 @@
-====================
-Source Documentation
-====================
+===============
+Source Packages
+===============
 
-
-
-Packages
---------
 
 .. toctree::
-   :maxdepth: 3
+   :maxdepth: 2
    :glob:
    
    packages/*

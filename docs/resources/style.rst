@@ -45,8 +45,11 @@ titles as shown in the following example:
   User's Guide
   ============
 
-The overline and underline must be the same length, or you will get an error and
-the build will fail. 
+The overline and underline must be the same length, or you will get an error and the
+build will fail. If you use just underline and it is shorter than the text, you will get
+a warning, but the documents will build. If you use just underline, and it is longer than
+the text, Sphinx doesn't seem to mind.
+
 
 **- File title:**
 
@@ -170,7 +173,7 @@ This rule also applies to other programming languages or software programs; for 
 *reStructuredText*
 ++++++++++++++++++
 
-Please capitlaize the appropriate letters and type it as one word:
+Please capitalize the appropriate letters and type it as one word:
 reStructuredText.
 
 
@@ -210,14 +213,14 @@ situations; in OpenMDAO documentation please use it to designate the following:
   path names: 		``/OpenMDAO/dev/shared/working_main``
   directory names:   	``docs/dev-guide``
   api names: 	 	``openmdao.main.api``
-  Python packages:	``openmdao.recipes``
+  Python packages:	``openmdao.lib``
    
 which will result in text that looks like this:
 
 * ``/OpenMDAO/dev/shared/working_main``
 * ``docs/dev-guide``
 * ``openmdao.main.api``
-* ``openmdao.recipes``
+* ``openmdao.lib``
  
 
 Abbreviations and Acronyms
@@ -318,8 +321,8 @@ Use an en dash (--) for the following:
 
 In reST an en dash is formed by typing two hyphens (minus signs).
 
-Commas (Before "and" in a Compound Sentence)
---------------------------------------------
+Comma (in a Compound Sentence)
+-------------------------------
 
 * Use a comma before "and" when you have a compound sentence, for example:
 
