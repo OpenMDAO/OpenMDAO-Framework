@@ -5,17 +5,18 @@ Test resource allocation.
 import glob
 import logging
 import multiprocessing
-import os
+import os.path
 import platform
 import shutil
 import sys
+import tempfile
 import unittest
 
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.util.testutil import find_python
 
 # Users who have ssh configured correctly for testing.
-SSH_USERS = ('setowns1',)
+SSH_USERS = []
 
 
 class TestCase(unittest.TestCase):
@@ -39,7 +40,7 @@ class TestCase(unittest.TestCase):
         self.machines = []
         if self.node.startswith('gxterm'):
             # User environment assumed OK on this GRC cluster front-end.
-            for i in range(55):
+            for i in range(1, 55):
                 self.machines.append({'hostname':'gx%02d' % i,
                                       'python':self.python})
         else:
@@ -56,7 +57,8 @@ class TestCase(unittest.TestCase):
 
         # This cleanup *should* be OK, but it's not bulletproof.
         uid = os.getuid()
-        for path in glob.glob('/tmp/distrib-*'):
+        tempdir = tempfile.gettempdir()
+        for path in glob.glob(os.path.join(tempdir, 'distrib-*')):
             info = os.stat(path)
             if info.st_uid == uid:
                 shutil.rmtree(path)
@@ -97,7 +99,7 @@ class TestCase(unittest.TestCase):
         local = ResourceAllocationManager.get_allocator(0)
         local.max_load = 10
 
-        hostnames = ResourceAllocationManager.get_hostnames({'n_cpus': 1})
+        hostnames = ResourceAllocationManager.get_hostnames({'n_cpus':1})
         self.assertEqual(hostnames[0], platform.node())
         
     def test_resources(self):
@@ -130,8 +132,7 @@ class TestCase(unittest.TestCase):
         if self.skip_ssh:
             return
 
-        self.machines.append({'hostname':'xyzzy',
-                              'python':self.python})
+        self.machines.append({'hostname':'xyzzy', 'python':self.python})
         self.cluster = ClusterAllocator(self.name, self.machines)
         if self.node.startswith('gxterm'):
             # GX isn't particularly reliable for some reason.
@@ -146,8 +147,7 @@ class TestCase(unittest.TestCase):
         if self.skip_ssh:
             return
 
-        self.machines = [{'hostname':self.node,
-                          'python':'no-such-python'}]
+        self.machines = [{'hostname':self.node, 'python':'no-such-python'}]
         self.cluster = ClusterAllocator(self.name, self.machines)
         self.assertEqual(len(self.cluster), 0)
 
