@@ -1075,20 +1075,20 @@ In ``self.driver.iprint``, *driver* refers to the title that the CONMIN driver i
 enables or disables the printing of diagnostics internal to CONMIN, while the *itmax* parameter specifies the maximum number
 of iterations for the optimization loop. Both of these have a default value (*itmax* is 40), so setting them here is not required.
 
-.. index:: StringRef
+.. index:: Expression
 
 The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which
 we chose as *bore* and *spark angle*. Both the objective and the design variables are assigned using a type of
-public variable called a *StringRef*. Instead of containing a variable value, the StringRef contains a string that
-gives the OpenMDAO path pointing to the variable that the StringRef references. This path is always relative to the
-driver's parent, so here we use *driving_sim.accel_time* instead of *self.driving_sim.accel_time*. StringRefs are
+public variable called an *Expression*. Instead of containing a variable value, the Expression contains a string that
+gives the OpenMDAO path pointing to the variable that the Expression references. This path is always relative to the
+driver's parent, so here we use *driving_sim.accel_time* instead of *self.driving_sim.accel_time*. Expressions are
 primarily used to connect the inputs and outputs of drivers (e.g.,  optimizers, solvers, etc.) CONMIN is a single
 objective optimizer, so there can only be one objective. However, there can be multiple design variables, and these
 are stored in a list. The upper and lower bounds for all the design variables are set  using *lower_bounds* and
 *upper_bounds* respectively.
 
 The CONMIN driver can actually handle more sophisticated objective expressions that are functions of multiple simulation variables
-using the StringRef. For example, if you want to maximize *accel_time* instead of minimizing it, you can do this by
+using the Expression. For example, if you want to maximize *accel_time* instead of minimizing it, you can do this by
 negating the expression:
 
 .. _Code11: 

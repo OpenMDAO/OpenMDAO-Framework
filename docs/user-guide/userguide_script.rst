@@ -68,6 +68,8 @@ available in this module by using the *dir()* command in Python:
     Dataflow
     Driver
     ExprEvaluator
+    Expression
+    ExpressionList
     Factory
     FileCaseIterator
     FileMetadata
@@ -79,8 +81,6 @@ available in this module by using the *dir()* command in Python:
     SAVE_PICKLE
     SAVE_YAML
     SimulationRoot
-    StringRef
-    StringRefArray
     Workflow
     __builtins__
     __doc__
@@ -109,7 +109,7 @@ module. Never import an entire library when only a subset is needed.
     from openmdao.main.api import *
     
     # GOOD
-    from openmdao.main.api import Component, Assembly, StringRef, Driver
+    from openmdao.main.api import Component, Assembly, Expression, Driver
 
 Unused imports are one of the problems that Pylint can find, so it always pays
 to use it.
@@ -443,10 +443,10 @@ Traits <http://code.enthought.com/projects/traits/>`_ project page.
 +------------------+----------------------------------------------------------+
 | Str              | Str( [*value* = None, *desc* = None, *iotype* = None] )  |
 +------------------+----------------------------------------------------------+
-| StringRef        | StringRef( [*desc* = None, *iotype* = None,              |
+| Expression       | Expression( [*desc* = None, *iotype* = None,             |
 |                  | *default_value* = NoDefaultSpecified] )                  |
 +------------------+----------------------------------------------------------+
-| StringRefArray   | StringRefArray( [*desc* = None, *iotype* = None,         |
+| ExpressionList   | ExpressionList( [*desc* = None, *iotype* = None,         |
 |                  | *default_value* = NoDefaultSpecified] )                  |
 +------------------+----------------------------------------------------------+
 
@@ -697,65 +697,65 @@ The attribute *required* is used to indicate whether the object that plugs into
 this input is required. If *required* is True, then an exception will be raised
 if the object is not present.
 
-.. index:: StringRef
+.. index:: Expression
 
-StringRef
-+++++++++
+Expression
+++++++++++
 
-A *StringRef* is a special type of string variable that contains an expression to
+A *Expression* is a special type of string variable that contains an expression to
 be evaluated. The expression can reference variables and functions within the
 scope of its containing component, as well as within the scope of the component's
 parent Assembly.  A number of built-in functions and math functions may also be
-referenced within a StringRef expression.  For example, ``abs(math.sin(angle))``
-would be a valid StringRef expression, assuming that *angle* is an attribute of the
+referenced within an Expression.  For example, ``abs(math.sin(angle))``
+would be a valid Expression, assuming that *angle* is an attribute of the
 containing component. Note that *self* does not appear in the example expression.
-This is because the StringRef automatically determines the containing scope of
+This is because the Expression automatically determines the containing scope of
 attributes and functions referenced in an expression. This helps keep expressions
 from becoming too verbose by containing a bunch of *self* and *self.parent*
 references.
 
-StringRefs can be used in a variety of components. Many optimizer components use 
-StringRefs to specify their objective function, design variables, and constraints.
-Conditional branching components use StringRefs to specify boolean expressions that
+Expressions can be used in a variety of components. Many optimizer components use 
+Expressions to specify their objective function, design variables, and constraints.
+Conditional branching components use Expressions to specify boolean expressions that
 determine if a given branch should be executed.
 
-Here is an example of declaring a StringRef as an input, as it would be used to
+Here is an example of declaring an Expression as an input, as it would be used to
 create a variable to hold the objective function of an optimizer, which is
 inherently a function of variables in the framework.
 
-.. testcode:: StringRef_example
+.. testcode:: Expression_example
 
-    from openmdao.main.api import Driver, StringRef
+    from openmdao.main.api import Driver, Expression
     
     class MyDriver(Driver):
         """ A component that outputs a dot product of two arrays"""
 	
-        objective = StringRef(iotype='in', \
+        objective = Expression(iotype='in', \
                     desc= 'A string containing the objective function \
                     expression.')
 			    
-Note that it makes little sense to give a default value to a StringRef, since
+Note that it makes little sense to give a default value to an Expression, since
 its value will usually depend on the component names. Stringrefs are most
 likely to be assigned their value in the higher-level container: typically the
-top level assembly. Also, note that StringRef is imported from
+top level assembly. Also, note that Expression is imported from
 ``openmdao.main.api`` instead of ``openmdao.lib.api``. This is because a
-StringRef is a special class of public variables that is an integral part of
+Expression is a special class of public variables that is an integral part of
 the framework infrastructure.
 
-There is also a *StringRefArray* variable which can be used to hold multiple
+There is also a *ExpressionList* variable which can be used to hold multiple
 string expressions. For example, an optimizer might take as input a list
 containing some number of constraints that are built from these string
 expressions.
 
-.. testcode:: StringRefArray_example
+.. testcode:: ExpressionList_example
 
-    from openmdao.main.api import Driver, StringRefArray
+    from openmdao.main.api import Driver, ExpressionList
     
     class MyDriver(Driver):
         """ A component that outputs a dot product of two arrays"""
 	
-	constraints = StringRefArray(iotype='in',
-		desc= 'An array of expression strings indicating constraints.'+
+	constraints = ExpressionList(iotype='in',
+		desc= 'A list of expression strings indicating constraints.'+
 		' A value of < 0 for the expression indicates that the constraint '+
 		'is violated.')
 

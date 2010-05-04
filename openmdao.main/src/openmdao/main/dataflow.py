@@ -155,7 +155,7 @@ class Dataflow(Workflow):
                                # and it will run everything else
             yield drivers[0]
         else:   # nested drivers
-            subgraph = self._no_ref_graph.subgraph(nbunch=loopcomps) # this has no StringRef edges
+            subgraph = self._no_ref_graph.subgraph(nbunch=loopcomps) # this has no Expression edges
             self._drvsorter = DriverForest(drivers)
             collapsed_graph = self._drvsorter.collapse_graph(subgraph)
             for compname in nx.topological_sort(collapsed_graph):

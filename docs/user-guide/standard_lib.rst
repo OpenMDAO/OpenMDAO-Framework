@@ -108,8 +108,8 @@ these is given below.
 	self = EngineOptimization()
 	
 Both the objective function and the design variables are assigned via a
-:term:`StringRef` variable. A StringRef is a string that points to some other OpenMDAO
-variable in the variable tree. There is only one objective function, but there
+:term:`Expression` variable. An Expression is a string expression that references some other OpenMDAO
+variables in the variable tree. There is only one objective function, but there
 can be multiple design variables which are assigned as a Python list.
 
 .. testcode:: CONMIN_show
@@ -124,7 +124,7 @@ can be multiple design variables which are assigned as a Python list.
 Note that all input parameters for the CONMIN driver are assigned via 					       
 *self.driver.*
 
-These StringRef variables must point to something that can be seen in the scope
+These Expression variables must point to something that can be seen in the scope
 of the CONMIN driver. In other words, if an assembly contains a CONMIN driver,
 the objective function and design variables cannot be located outside of that
 assembly. Also, each design variable must point to a component input. During

@@ -12,7 +12,7 @@ from networkx.algorithms.traversal import strongly_connected_components
 from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
-from openmdao.main.stringref import StringRef, StringRefArray
+from openmdao.main.expression import Expression, ExpressionList
 from openmdao.main.drivertree import DriverForest, create_labeled_graph
 
     
@@ -57,7 +57,7 @@ class Driver(Assembly):
         super(Driver, self)._pre_execute()
         
         if not self._call_execute:
-            # force execution of the driver if any of its StringRefs reference
+            # force execution of the driver if any of its Expressions reference
             # invalid Variables
             for name in refnames:
                 rv = getattr(self, name)
@@ -136,7 +136,7 @@ class Driver(Assembly):
         self._continue = False  # by default, stop after one iteration
 
     def get_refvar_names(self, iotype=None):
-        """Return a list of names of all StringRef and StringRefArray traits
+        """Return a list of names of all Expression and ExpressionList traits
         in this instance.
         """
         if iotype is None:
@@ -145,12 +145,12 @@ class Driver(Assembly):
             checker = iotype
         
         return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
-                    if v.is_trait_type(StringRef) or 
-                       v.is_trait_type(StringRefArray)]
+                    if v.is_trait_type(Expression) or 
+                       v.is_trait_type(ExpressionList)]
         
     def get_referenced_comps(self, iotype=None):
         """Return a set of names of Components that we reference based on the 
-        contents of our StringRefs and StringRefArrays.  If iotype is
+        contents of our Expressions and ExpressionLists.  If iotype is
         supplied, return only component names that are referenced by ref
         variables with matching iotype.
         """
@@ -172,7 +172,7 @@ class Driver(Assembly):
         
     def get_ref_graph(self, iotype=None):
         """Return the dependency graph for this Driver based on
-        StringRefs and StringRefArrays.
+        Expressions and ExpressionLists.
         """
         if self._ref_graph[iotype] is not None:
             return self._ref_graph[iotype]
@@ -198,7 +198,7 @@ class Driver(Assembly):
         """
         if self._simple_iteration_subgraph is None:
             graph = self.parent.get_component_graph().copy()
-            # add all of our StringRef edges and find any strongly connected
+            # add all of our Expression edges and find any strongly connected
             # components (SCCs) that are created as a result
             graph.add_edges_from(self.get_ref_graph().edges_iter())
             strcons = strongly_connected_components(graph)

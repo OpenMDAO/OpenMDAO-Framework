@@ -294,7 +294,7 @@ is done using the *__init__* function.
         
 	        super(OptimizationUnconstrained, self).__init__(directory)
 
-.. index:: StringRef, constructor
+.. index:: Expression, constructor
 		
 This initialize function is actually a special function called a *constructor,*
 which is the function that instantiates an object. The double leading and
@@ -319,21 +319,21 @@ Here, a Paraboloid component is created and given the name *paraboloid.* Similar
 a CONMIN driver is created and given the name *driver.* As with other class
 members, these now become accessible via *self.paraboloid* and *self.driver.*
 		
-The objective function is defined using the concept of a StringRef variable:		
+The objective function is defined using the concept of an Expression variable:		
         
 .. testcode:: simple_model_Unconstrained_pieces
 
 	        # CONMIN Objective 
 	        self.driver.objective = 'paraboloid.f_xy'
 		
-A *StringRef* is a special kind of public variable that contains a string that points to
-some location in the OpenMDAO variable tree. This string is analogous to the
+A *Expression* is a special kind of public variable that contains a string that 
+references other public variables in the OpenMDAO variable tree. This string is analogous to the
 path name in a file system, using the "." as a separator. This allows for two
 components to have the same variable name while still assuring they'll be
 uniquely referable. Here, the *f_xy* output of the Paraboloid component is
 selected as the objective for minimization.
 
-StringRefs are also used to define the design variables (decision variables)
+Expressions are also used to define the design variables (decision variables)
 for the optimization problem. While CONMIN operates only on a single objective,
 it allows multiple design variables. These are assigned in a Python list:
         

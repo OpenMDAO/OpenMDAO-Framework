@@ -20,7 +20,7 @@ from enthought.traits.api import on_trait_change, TraitError, Array
                                  
 import conmin.conmin as conmin
 
-from openmdao.main.api import Driver, StringRef, StringRefArray
+from openmdao.main.api import Driver, Expression, ExpressionList
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.traits.float import Float
 from openmdao.lib.traits.int import Int
@@ -158,16 +158,16 @@ class CONMINdriver(Driver):
     """
     
     # pylint: disable-msg=E1101
-    design_vars = StringRefArray(iotype='out',
+    design_vars = ExpressionList(iotype='out',
        desc='An array of design variable names. These names can include array \
              indexing.')
     
-    constraints = StringRefArray(iotype='in',
-            desc= 'An array of expression strings indicating constraints.'+
+    constraints = ExpressionList(iotype='in',
+            desc= 'A list of expression strings indicating constraints.'+
             ' A value of < 0 for the expression indicates that the constraint '+
             'is violated.')
     
-    objective = StringRef(iotype='in',
+    objective = Expression(iotype='in',
                       desc= 'A string containing the objective function \
                             expression.')
     
