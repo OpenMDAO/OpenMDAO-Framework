@@ -120,18 +120,17 @@ Italics
 
 Use italics for the following:
 
-* Titles of books and our OpenMDAO documents (e.g., *Plugin Developer's Guide*)
+* Titles of books and our OpenMDAO documents (e.g., *User Guide*)
 
 * The first time you refer to a term  (". . . is called a *Component*.")
 
 * In place of quotation marks (in many cases). Before the widespread use of
   computers and desktop publishing, italics could not be designated, so quotation marks
   were used. Now italics can easily be specified and, in general, should be used in place
-  of quotes, for example, when discussing a parameter in a code sample.  
+  of quotes, for example, when discussing a parameter in a code sample.  (If it's a
+  long parameter, it might be better to use literal text.
  
-* Function names (e.g., the *execute()* function)
-
-
+f
 .. index:: Python; capitalization
 
 Capitalization 
@@ -214,6 +213,7 @@ situations; in OpenMDAO documentation please use it to designate the following:
   directory names:   	``docs/dev-guide``
   api names: 	 	``openmdao.main.api``
   Python packages:	``openmdao.lib``
+  file names		``example.rst``
    
 which will result in text that looks like this:
 

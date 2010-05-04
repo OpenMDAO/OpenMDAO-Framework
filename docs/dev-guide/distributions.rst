@@ -47,8 +47,9 @@ to generate a source egg. It will have a name containing the package version
 information and the Python version (e.g., ``openmdao.main-0.1-py2.5.egg``). 
 
 
-- TODO: describe needed metadata in ``setup.py`` file
-- TODO: describe entry points used by the framework    
+.. todo:: Describe needed metadata in ``setup.py`` file
+
+.. todo:: Describe entry points used by the framework    
 
 
 .. index: pair: package directory structure; creating

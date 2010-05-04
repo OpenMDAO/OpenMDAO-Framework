@@ -110,7 +110,7 @@ this:
 .. index:: egg
     
 ``contrib``
-    Contains source to be packaged into Python :term:`eggs` that can be released
+    Contains source to be packaged into Python eggs that can be released
     separately from OpenMDAO. These eggs may or may not depend upon OpenMDAO. 
     Eggs that have not yet been approved to be part of ``openmdao.lib`` can live
     here, as long as their license is compatible with NOSA. No proprietary code
