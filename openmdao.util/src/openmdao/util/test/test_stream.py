@@ -75,7 +75,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(os.path.getsize(self.filename), 80)
         with open(self.filename, 'rb') as inp:
             stream = Stream(inp, binary=True, integer_8=True)
-            new_data = stream.read_ints(data.size).reshape((5, 2))
+            new_data = stream.read_ints((5, 2))
         numpy.testing.assert_array_equal(new_data, arr2d)
 
         # Column-major.
@@ -85,7 +85,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(os.path.getsize(self.filename), 80)
         with open(self.filename, 'rb') as inp:
             stream = Stream(inp, binary=True, integer_8=True)
-            new_data = stream.read_ints(data.size).reshape((5, 2))
+            new_data = stream.read_ints((5, 2))
         try:
             numpy.testing.assert_array_equal(new_data, arr2d)
         except AssertionError:
@@ -94,8 +94,26 @@ class TestCase(unittest.TestCase):
             self.fail('Expected AssertionError')
         with open(self.filename, 'rb') as inp:
             stream = Stream(inp, binary=True, integer_8=True)
-            new_data = stream.read_ints(data.size).reshape((5, 2),
-                                                           order='Fortran')
+            new_data = stream.read_ints((5, 2), order='Fortran')
+        numpy.testing.assert_array_equal(new_data, arr2d)
+
+        # Text.
+        with open(self.filename, 'w') as out:
+            stream = Stream(out)
+            stream.write_ints(arr2d, order='Fortran', linecount=4)
+        with open(self.filename, 'r') as inp:
+            stream = Stream(inp)
+            new_data = stream.read_ints((5, 2))
+        try:
+            numpy.testing.assert_array_equal(new_data, arr2d)
+        except AssertionError:
+            pass
+        else:
+            self.fail('Expected AssertionError')
+        with open(self.filename, 'r') as inp:
+            stream = Stream(inp)
+            new_data = stream.read_ints((5, 2), order='Fortran')
+        numpy.testing.assert_array_equal(new_data, arr2d)
 
     def test_floats(self):
         logging.debug('')
@@ -152,7 +170,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(os.path.getsize(self.filename), 80)
         with open(self.filename, 'rb') as inp:
             stream = Stream(inp, binary=True)
-            new_data = stream.read_floats(data.size).reshape((5, 2))
+            new_data = stream.read_floats((5, 2))
         numpy.testing.assert_array_equal(new_data, arr2d)
 
         # Column-major.
@@ -162,7 +180,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(os.path.getsize(self.filename), 80)
         with open(self.filename, 'rb') as inp:
             stream = Stream(inp, binary=True)
-            new_data = stream.read_floats(data.size).reshape((5, 2))
+            new_data = stream.read_floats((5, 2))
         try:
             numpy.testing.assert_array_equal(new_data, arr2d)
         except AssertionError:
@@ -171,8 +189,26 @@ class TestCase(unittest.TestCase):
             self.fail('Expected AssertionError')
         with open(self.filename, 'rb') as inp:
             stream = Stream(inp, binary=True)
-            new_data = stream.read_floats(data.size).reshape((5, 2),
-                                                             order='Fortran')
+            new_data = stream.read_floats((5, 2), order='Fortran')
+        numpy.testing.assert_array_equal(new_data, arr2d)
+
+        # Text.
+        with open(self.filename, 'w') as out:
+            stream = Stream(out)
+            stream.write_floats(arr2d, order='Fortran', linecount=4)
+        with open(self.filename, 'r') as inp:
+            stream = Stream(inp)
+            new_data = stream.read_floats((5, 2))
+        try:
+            numpy.testing.assert_array_equal(new_data, arr2d)
+        except AssertionError:
+            pass
+        else:
+            self.fail('Expected AssertionError')
+        with open(self.filename, 'r') as inp:
+            stream = Stream(inp)
+            new_data = stream.read_floats((5, 2), order='Fortran')
+        numpy.testing.assert_array_equal(new_data, arr2d)
 
 
 if __name__ == '__main__':

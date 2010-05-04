@@ -38,81 +38,169 @@ class Stream(object):
             self.single_precision = False
             self.integer_8 = False
 
+    def close(self):
+        """ Close underlying file. """
+        return self.file.close()
+
+
+    ######## Input Operations ########
+
+
     def read_int(self):
         """ Returns next integer. """
         data = self.read_ints(1)[0]
         return data
 
-    def read_ints(self, count):
-        """ Returns next `count` integers as a :mod:`numpy` array. """
+    def read_ints(self, shape, order='C'):
+        """ Returns integers as a :mod:`numpy` array of `shape`. """
+        reshape = False
+        count = 1
+        try:
+            for size in shape:
+                count *= size
+            reshape = True
+        except TypeError:
+            count = shape
+
         sep = '' if self.binary else ' '
         dtype = numpy.int64 if self.integer_8 else numpy.int32
         data = numpy.fromfile(self.file, dtype=dtype, count=count, sep=sep)
         if self.big_endian:
             data.byteswap(True)
-        return data
+
+        return data.reshape(shape, order=order) if reshape else data
 
     def read_float(self):
         """ Returns next float. """
         data = self.read_floats(1)[0]
         return data
 
-    def read_floats(self, count):
-        """ Returns next `count` floats as a :mod:`numpy` array. """
+    def read_floats(self, shape, order='C'):
+        """ Returns floats as a :mod:`numpy` array of `shape`. """
+        reshape = False
+        count = 1
+        try:
+            for size in shape:
+                count *= size
+            reshape = True
+        except TypeError:
+            count = shape
+
         sep = '' if self.binary else ' '
         dtype = numpy.float32 if self.single_precision else numpy.float64
         data = numpy.fromfile(self.file, dtype=dtype, count=count, sep=sep)
         if self.big_endian:
             data.byteswap(True)
-        return data
 
-    def write_int(self, value):
+        return data.reshape(shape, order=order) if reshape else data
+
+
+    ######## Output Operations ########
+
+
+    def write_int(self, value, sep=' ', fmt='%s'):
         """ Writes an integer. """
         if self.binary:
             fmt = '>' if self.big_endian else '<'
             fmt += 'q' if self.integer_8 else 'i'
             self.file.write(struct.pack(fmt, value))
         else:
-            self.file.write('%d ' % value)
+            self.file.write(fmt % value)
+            self.file.write(sep)
 
-    def write_ints(self, data, order='C'):
+    def write_ints(self, data, order='C', sep=' ', fmt='%s', linecount=0):
         """
         Writes :mod:`numpy` integer array `data`.  If `order` is 'C', the data
         is written in row-major order.  If `order` is 'Fortran', the data is
-        written in column-major order.
+        written in column-major order. If `linecount` is > zero, then at most
+        `linecount` values are written per line.
         """
         if self.binary:
-# TODO: capability to write as different size than stored.
-            if self.big_endian:
-                data.byteswap(True)
-            self.file.write(data.tostring(order=order))
-            if self.big_endian:
-                data.byteswap(True)
-        else:
-            data.tofile(self.file, sep=' ')
+            arr = data
+            if self.integer_8:
+                if data.itemsize != _SZ_LONG:
+                    arr = numpy.array(data, dtype=numpy.int64)
+            elif data.itemsize != _SZ_INT:
+                arr = numpy.array(data, dtype=numpy.int32)
 
-    def write_float(self, value):
+            if self.big_endian:
+                arr.byteswap(True)
+            self.file.write(arr.tostring(order=order))
+            if self.big_endian:
+                arr.byteswap(True)
+        else:
+            self.write_array(data, order, sep, fmt, linecount)
+
+    def write_float(self, value, sep=' ', fmt='%s'):
         """ Writes a float. """
         if self.binary:
             fmt = '>' if self.big_endian else '<'
             fmt += 'f' if self.single_precision else 'd'
             self.file.write(struct.pack(fmt, value))
         else:
-            self.file.write('%g ' % value)
+            self.file.write(fmt % value)
+            self.file.write(sep)
 
-    def write_floats(self, data, order='C'):
+    def write_floats(self, data, order='C', sep=' ', fmt='%s', linecount=0):
         """
         Writes :mod:`numpy` float array `data`.  If `order` is 'C', the data
         is written in row-major order.  If `order` is 'Fortran', the data is
-        written in column-major order.
+        written in column-major order. If `linecount` is > zero, then at most
+        `linecount` values are written per line.
         """
         if self.binary:
-# TODO: capability to write as different size than stored.
+            arr = data
+            if self.single_precision:
+                if data.itemsize != _SZ_FLOAT:
+                    arr = numpy.array(data, dtype=numpy.float32)
+            elif data.itemsize != _SZ_DOUBLE:
+                arr = numpy.array(data, dtype=numpy.float64)
+
             if self.big_endian:
                 data.byteswap(True)
             self.file.write(data.tostring(order=order))
             if self.big_endian:
                 data.byteswap(True)
         else:
-            data.tofile(self.file, sep=' ')
+            self.write_array(data, order, sep, fmt, linecount)
+
+    def write_array(self, data, order='C', sep=' ', fmt='%s', linecount=0):
+        """
+        Writes :mod:`numpy` array `data` as text. If `order` is 'C', the data
+        is written in row-major order. If `order` is 'Fortran', the data is
+        written in column-major order.  If `linecount` is > zero, then at
+        most `linecount` values are written per line.
+        """
+        shape = data.shape
+        indices = [0 for i in shape]
+        item = data.item
+
+        if order == 'C':
+            # Row-major order.
+            sequence = range(len(shape))
+            sequence.reverse()
+        elif order == 'Fortran':
+            # Column-major order.
+            sequence = range(len(shape))
+        else:
+            raise ValueError("order must be 'C' or 'Fortran'")
+
+        count = 0
+        while True:
+            self.file.write(sep)
+            self.file.write(fmt % item(*indices))
+            if linecount > 0:
+                count += 1
+                if count >= linecount:
+                    self.file.write('\n')
+                    count = 0
+
+            for i in sequence:
+                indices[i] += 1
+                if indices[i] >= shape[i]:
+                    indices[i] = 0
+                else:
+                    break
+            else:
+                break
 
