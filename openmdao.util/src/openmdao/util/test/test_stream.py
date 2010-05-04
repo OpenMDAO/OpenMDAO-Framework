@@ -37,6 +37,26 @@ class TestCase(unittest.TestCase):
             new_data = stream.read_ints(data.size)
         numpy.testing.assert_array_equal(new_data, data)
 
+        # Unformatted.
+        data = numpy.arange(0, 10, dtype=numpy.int32)
+        with open(self.filename, 'wb') as out:
+            stream = Stream(out, binary=True, unformatted=True)
+            stream.write_ints(data, full_record=True)
+        self.assertEqual(os.path.getsize(self.filename), 48)
+        with open(self.filename, 'rb') as inp:
+            stream = Stream(inp, binary=True)
+            new_data = stream.read_ints(data.size)
+        try:
+            numpy.testing.assert_array_equal(new_data, data)
+        except AssertionError:
+            pass
+        else:
+            self.fail('Expected AssertionError')
+        with open(self.filename, 'rb') as inp:
+            stream = Stream(inp, binary=True, unformatted=True)
+            new_data = stream.read_ints(data.size, full_record=True)
+        numpy.testing.assert_array_equal(new_data, data)
+
         # Byteswapped.
         with open(self.filename, 'wb') as out:
             stream = Stream(out, binary=True, big_endian=True)
@@ -128,6 +148,28 @@ class TestCase(unittest.TestCase):
         with open(self.filename, 'rb') as inp:
             stream = Stream(inp, binary=True, single_precision=True)
             new_data = stream.read_floats(data.size)
+        numpy.testing.assert_array_equal(new_data, data)
+
+        # Unformatted.
+        data = numpy.arange(0, 10, dtype=numpy.float32)
+        with open(self.filename, 'wb') as out:
+            stream = Stream(out, binary=True, single_precision=True,
+                            unformatted=True)
+            stream.write_floats(data, full_record=True)
+        self.assertEqual(os.path.getsize(self.filename), 48)
+        with open(self.filename, 'rb') as inp:
+            stream = Stream(inp, binary=True, single_precision=True)
+            new_data = stream.read_floats(data.size)
+        try:
+            numpy.testing.assert_array_equal(new_data, data)
+        except AssertionError:
+            pass
+        else:
+            self.fail('Expected AssertionError')
+        with open(self.filename, 'rb') as inp:
+            stream = Stream(inp, binary=True, single_precision=True,
+                            unformatted=True)
+            new_data = stream.read_floats(data.size, full_record=True)
         numpy.testing.assert_array_equal(new_data, data)
 
         # Byteswapped.
