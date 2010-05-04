@@ -151,10 +151,9 @@ class _consav(object):
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 
         
-    .. parsed-literal::
     
-       TODO: make CONMIN's handling of user calculated gradients 
-             accessible through CONMINdriver
+.. todo:: Make CONMIN's handling of user calculated gradients 
+          accessible through CONMINdriver
             
     """
     
