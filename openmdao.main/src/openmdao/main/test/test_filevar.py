@@ -10,10 +10,10 @@ import unittest
 
 from numpy.testing import assert_equal
 
-from enthought.traits.api import Bool, Array, Str, TraitError
+from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Component, set_as_top, FileRef
-from openmdao.lib.api import File
+from openmdao.lib.api import Array, Bool, File, Str
 
 # pylint: disable-msg=E1101
 # "Instance of <class> has no <attr> member"
@@ -223,8 +223,9 @@ class TestCase(unittest.TestCase):
         logging.debug('test_formatting')
         msg = "{'big_endian': False, 'binary': True, 'content_type': ''," \
               " 'desc': '', 'extra_stuff': 'Hello world!'," \
-              " 'path': 'source.bin', 'recordmark_8': False," \
-              " 'single_precision': False, 'unformatted': False}"
+              " 'integer_8': False, 'path': 'source.bin'," \
+              " 'recordmark_8': False, 'single_precision': False," \
+              " 'unformatted': False}"
         self.assertEqual(str(self.model.source.binary_file), msg)
 
     def test_no_owner(self):
