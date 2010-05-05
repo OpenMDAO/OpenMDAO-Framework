@@ -52,9 +52,9 @@ OpenMDAO looks for the following entry point groups in order to find
 plugins within a distribution:
 
 ====================  ================================
-**Plugin Type**       **Entry Point Group**                                                                                              
+**Plugin Type**       **Entry Point Group**           
 ====================  ================================
-Component             openmado.component 
+Component             openmdao.component 
 --------------------  --------------------------------
 TraitType             openmdao.variable
 --------------------  --------------------------------

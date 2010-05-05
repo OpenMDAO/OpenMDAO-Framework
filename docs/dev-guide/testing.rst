@@ -9,52 +9,54 @@ Testing
 By default, your top level ``devenv/bin`` directory will contain a script
 called ``openmdao_test`` that uses a Python package called `nose
 <http://somethingaboutorange.com/mrl/projects/nose>`_ to run all of the unit
-tests for any package that you specify. For example, to run all of the unit
-tests in the openmdao namespace package, type the following:
+tests for any package that you specify. For example, to run the full set
+of openmdao unit tests, type:
 
 ::
 
-   bin/openmdao_test openmdao
+   openmdao_test
    
 which should generate output something like this:
 
 ::
 
-   ......................................................................
-   .................................................
-   ----------------------------------------------------------------------
-   Ran 119 tests in 0.888s
+    ........................................................................
+    ........................................................................
+    .....................................................................
+    ----------------------------------------------------------------------
+    Ran 293 tests in 142.846s
+    
+    OK
 
-   OK
 
-To run the full test suite, which includes the openmdao namespace package and
-other packages from contrib, type:
+To run units tests for only a package, for example ``openmdao.main``, type:
 
 ::
 
-    bin/openmdao_test --all
+    openmdao_test openmdao.main
     
     
-To get a list of options available with ``bin/openmdao_test``, type 
-``bin/openmdao_test --help``
-from the ``devenv`` directory.  The bin/openmdao_test script uses the *nose* testing
+To get a list of options available with ``openmdao_test``, type 
+``openmdao_test --help``
+from the ``devenv`` directory.  The openmdao_test script uses the *nose* testing
 framework internally, so all options available when running *nosetests*
-should also be available when using ``bin/openmdao_test``.
+should also be available when using ``openmdao_test``.
    
 .. index: test coverage
-   
+
+
 Test Coverage
 -------------
 
 There is a Python package called  `coverage
 <http://nedbatchelder.com/code/modules/rees-coverage.html>`_ that is accessible
-through ``bin/test`` that makes it easy to determine if your tests cover every
+through ``openmdao_test`` that makes it easy to determine if your tests cover every
 line of code in your source files.  To get a coverage report for the openmdao
 package, do the following from the ``devenv`` directory:
 
 ::
 
-   bin/openmdao_test openmdao --with-coverage --cover-package=openmdao
+   openmdao_test openmdao --with-coverage --cover-package=openmdao
    
 The report should look something like this:
 
@@ -112,7 +114,7 @@ clear the coverage database by issuing the following command:
 
 ::
 
-   bin/openmdao_test openmdao --cover-erase
+   openmdao_test openmdao --cover-erase
 
 .. index: pair: tests; adding
 .. index: pair: tests; unit
@@ -264,17 +266,17 @@ A simple example of how to implement these three blocks is shown here:
 
     .. testsetup:: Group1
     
-	# Put any preliminary code that needs to run before the sample code. 
-	# This block does not show up when Sphinx builds the HTML
+    # Put any preliminary code that needs to run before the sample code. 
+    # This block does not show up when Sphinx builds the HTML
     
     .. testcode:: Group1
 
-	# This is the sample code that shows up in your docs
+    # This is the sample code that shows up in your docs
     
     .. testoutput:: Group1
     
-	# If your code block outputs anything when executed, then that output
-	# needs to go in this block.
+    # If your code block outputs anything when executed, then that output
+    # needs to go in this block.
 
 *Group1* is a label that we've given this set of blocks. Note that you can have
 multiple labels in your documents. Note also that the testsetup and
@@ -295,8 +297,8 @@ still good form to include it.
 
     .. doctest:: Group2
     
-	>>> # This code is tested
-	
+    >>> # This code is tested
+
 The doctest blocks share their workspace in a similar manner as the testcode
 blocks.  There are other options that can be enabled for the doctest blocks, but
 so far the default ones have been fine.
@@ -305,7 +307,7 @@ More details on using the doctest builder can be found here: http://sphinx.pocoo
 
 
 .. _Including-Code-Straight-from-the-Source:
-	
+
 *Including Code Straight from the Source*
 +++++++++++++++++++++++++++++++++++++++++
 
@@ -346,11 +348,11 @@ More details on the *literalinclude* directive can be found at http://sphinx.poc
 
 * Tracebacks don't have to be accurately reproduced (and they can't be anyway). Handle these the same way they are in doctest, that is:
 
-	>>> my_engine.set("RPM",7500)
-	Traceback (most recent call last):
-	    ...
-	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of 7500 <type 'int'> was specified.
-	
+    >>> my_engine.set("RPM",7500)
+    Traceback (most recent call last):
+        ...
+    TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of 7500 <type 'int'> was specified.
+
 * Care should be taken to assure that each block of code is being tested. One way to do this is to
   purposefully introduce an error into a block to verify that it is caught.
 
@@ -368,13 +370,13 @@ More details on the *literalinclude* directive can be found at http://sphinx.poc
 +++++++++++++++++++
 
 The build procedure currently generates a script for testing the code in the
-documents. This can be run by going to the ``devenv`` folder, and running:
+documents. In an active openmdao virtual environment, type:
 
 ::
 
-    bin/testdocs
+    testdocs
 
-The following output indicates a successful test:
+If the output ends with "build succeeded", then the test was successful, e.g.,
 
 ::
 
@@ -389,6 +391,6 @@ If any tests fail, they will also be noted in this summary, and specific traceba
 will be given for each failure earlier in the output.
 
 The document testing is also part of the full testing process and is executed as part of the normal
-``bin/openmdao_test``.
+``openmdao_test``.
 
 

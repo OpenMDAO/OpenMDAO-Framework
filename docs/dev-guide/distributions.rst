@@ -26,13 +26,12 @@ in the current directory for the current platform, type the following:
    
 This will create an egg file with a name that contains information about version
 of the package, platform, and the Python version, e.g., 
-``conmin-1.0-py2.5-win32.egg``. 
+``conmin-1.0-py2.6-win32.egg``. 
 
-Regardless of the contents of the package, you should also produce a source 
-distribution of it. If your package has compiled code as mentioned above, you
-will have to use the ``sdist`` command to generate a source tarball. Assuming
-your ``setup.py file`` is written correctly, you can generate a source distribution
-in the current directory by typing:
+Regardless of the contents of the package, you should also produce a source
+distribution of it. To do this, use the ``sdist`` command to generate a source
+tarball. Assuming your ``setup.py file`` is written correctly, you can
+generate a source distribution in the current directory by typing:
 
 ::
 
@@ -40,15 +39,6 @@ in the current directory by typing:
 
 A gzipped tar file will be generated with the version number of the package
 embedded in the filename (e.g., ``openmdao.main-0.1dev.tar.gz``).
-
-However, if your package does **not** contain any compiled code, you can 
-simply use the ``python setup.py bdist_egg -d .`` command mentioned earlier 
-to generate a source egg. It will have a name containing the package version 
-information and the Python version (e.g., ``openmdao.main-0.1-py2.5.egg``). 
-
-
-- TODO: describe needed metadata in ``setup.py`` file
-- TODO: describe entry points used by the framework    
 
 
 .. index: pair: package directory structure; creating

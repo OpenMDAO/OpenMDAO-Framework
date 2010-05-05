@@ -42,9 +42,8 @@ applications or packages are not already installed:
 
 
 On **OS X**, make sure to install *Xcode*. It's included on the OS X install
-disk, and installing it will give you access to *gcc* and *gfortran*.
-Next, download and run the following installers if they're not already
-installed:
+disk, and installing it will give you access to *gcc*. Next, download and run
+the following installers if they're not already installed:
 
     - `Python 2.6`__
     - `bazaar`__
@@ -53,7 +52,9 @@ installed:
 .. __: http://launchpad.net/bzr/2.1/2.1.0/+download/Bazaar-2.1.0-3.dmg
 
 
-.. note:: If you wish to view the source files, please see :ref:`Installing-from-Source`. 
+.. todo: Determine the best way to install a fortran compiler on OS X
+
+
 
 Installing and Running the Script
 ----------------------------------
