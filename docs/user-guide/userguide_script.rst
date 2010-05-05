@@ -52,48 +52,12 @@ Here, the fundamental OpenMDAO component classes *Component* and *Assembly* are
 loaded from ``openmdao.main.api``, along with the CONMIN driver from ``openmdao.lib.api``.
 
 To simplify the imports, a selection of the most commonly used imports was
-placed in the pseudo-package ``openmdao.main.api``. You can obtain a complete listing of what is
-available in this module by using the *dir()* command in Python:
-
-    >>> import openmdao.main.api
-    >>> items = dir(openmdao.main.api)
-    >>> for item in items:
-    ...     print(item)
-    Assembly
-    Case
-    Component
-    ConstraintError
-    Container
-    Dataflow
-    Driver
-    ExprEvaluator
-    Factory
-    FileCaseIterator
-    FileMetadata
-    FileRef
-    ListCaseIterator
-    PkgResourcesFactory
-    SAVE_CPICKLE
-    SAVE_LIBYAML
-    SAVE_PICKLE
-    SAVE_YAML
-    SimulationRoot
-    StringRef
-    StringRefArray
-    Workflow
-    __builtins__
-    __doc__
-    __file__
-    __name__
-    __package__
-    create
-    enable_console
-    get_available_types
-    logger
-    set_as_top
-
-Most of these items are explained elsewhere in the *User Guide.* These can all be
-imported from ``openmdao.main.api``.
+placed in the pseudo-package ``openmdao.main.api``. You can obtain a complete
+listing of what is available in this module by using the *dir()* command in
+Python. Likewise, a pseudo-package was also created to house some of the most
+commonly used imports from the standard library. In general, it contains
+public variables and Drivers. Most of these items are also explained elsewhere
+in the *User Guide.*
 
 Importing more objects into the namespace of your module increases the
 likelihood of name collision, so you should only import the objects that you need.
@@ -110,35 +74,6 @@ from the given module into the current namespace."
     
     # GOOD
     from openmdao.main.api import Component, Assembly, StringRef, Driver
-
-A pseudo-package was also created to house some of the most commonly used imports
-from the standard library. In general, it contains public variables and Drivers.
-Most of these items are also explained elsewhere in the *User Guide.*
-
-    >>> import openmdao.lib.api
-    >>> items = dir(openmdao.lib.api)
-    >>> for item in items:
-    ...     print(item)
-    Array
-    Bool
-    CBool
-    CONMINdriver
-    CaseIteratorDriver
-    Complex
-    Enum
-    File
-    Float
-    Instance
-    Int
-    List
-    Str
-    __builtins__
-    __doc__
-    __file__
-    __name__
-    __package__
-    convert_units
-    pyevolvedriver
 
 *The Model Hierarchy*
 ~~~~~~~~~~~~~~~~~~~~~
