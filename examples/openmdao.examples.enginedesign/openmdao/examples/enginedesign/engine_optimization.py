@@ -13,14 +13,14 @@ from openmdao.examples.enginedesign.driving_sim import DrivingSim
 class EngineOptimization(Assembly):
     """Optimization of a Vehicle."""
     
-    def __init__(self, directory=''):
+    def __init__(self):
         """ Creates a new Assembly containing a DrivingSim and an optimizer"""
         
-        super(EngineOptimization, self).__init__(directory)
+        super(EngineOptimization, self).__init__()
 
         # pylint: disable-msg=E1101
         
-        # Create DrivingSim component instances
+        # Create DrivingSim instance
         self.add_container('driving_sim', DrivingSim())
 
         # Create CONMIN Optimizer instance
@@ -51,28 +51,28 @@ if __name__ == "__main__": # pragma: no cover
         print '---------------------------------'
         print title
         print '---------------------------------'
-        print 'Engine: Bore = ', z.driving_sim.bore
-        print 'Engine: Spark Angle = ', z.driving_sim.spark_angle
+        print 'Engine: Bore = ', opt_problem.driving_sim.bore
+        print 'Engine: Spark Angle = ', opt_problem.driving_sim.spark_angle
         print '---------------------------------'
-        print '0-60 Accel Time = ', z.driving_sim.accel_time
-        print 'EPA City MPG = ', z.driving_sim.EPA_city
-        print 'EPA Highway MPG = ', z.driving_sim.EPA_highway
+        print '0-60 Accel Time = ', opt_problem.driving_sim.accel_time
+        print 'EPA City MPG = ', opt_problem.driving_sim.EPA_city
+        print 'EPA Highway MPG = ', opt_problem.driving_sim.EPA_highway
         print '\n'
     
 
     import time
     #import profile
     
-    z = EngineOptimization("Top")
-    set_as_top(z)
+    opt_problem = EngineOptimization()
+    set_as_top(opt_problem)
     
-    z.driving_sim.run()
+    opt_problem.driving_sim.run()
     prz('Old Design')
 
     tt = time.time()
-    z.run()
+    opt_problem.run()
     prz('New Design')
-    print "CONMIN Iterations: ", z.driver.iter_count
+    print "CONMIN Iterations: ", opt_problem.driver.iter_count
     print ""
     print "Elapsed time: ", time.time()-tt
     

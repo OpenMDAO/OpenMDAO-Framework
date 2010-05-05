@@ -39,6 +39,7 @@ as outlined in the :ref:`A-More-Complex-Tutorial-Problem`.
 
 .. index:: extension; creating with F2PY
 .. index:: F2PY
+.. _Creating-an-Extension-with-F2PY:
 
 Creating an Extension with F2PY
 --------------------------------
@@ -82,7 +83,7 @@ contains the Python version, and the Operating System description. This will
 vary depending on your system and version, but there will only be one
 *bar3simulation* egg.
 
-It should also be noted that a Fortran compiler is required. The instructions presented here are
+Note that a Fortran compiler is required. The instructions presented here are
 applicable to the UNIX and Mac OSX environments. There may be some differences on the Windows
 platform.
 
@@ -270,10 +271,10 @@ the values of the bar forces in a common block as *force1, force2,* and *force3.
     bar2_force = float(forces.force2)
     bar3_force = float(forces.force3)
     
-There is one oddity here. Scalar variables in the common block get returned to Python as a
-zero-dimensional NumPy array. It is not entirely clear why this was done, but their values can be
-accessed by casting them as floats or int. Note also that values can also be input into the common
-block. In practice, the common block will probably be frequently used for passing variables as
+Note that scalar variables in the common block get returned to Python as a
+zero-dimensional NumPy array. Their values can be accessed by casting them as
+floats or int. We can also input values into the common block. In practice,
+the common block will probably be frequently used for passing variables as
 opposed to cluttering the function interface.
 
 Further examples of a more complicated wrap can be seen in the source for the OpenMDAO 

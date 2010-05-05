@@ -8,9 +8,8 @@
 # parameters.
 
 # pylint: disable-msg=E0611,F0401
-from enthought.traits.api import implements, Interface
 
-from openmdao.main.api import Assembly, set_as_top
+from openmdao.main.api import Assembly
 from openmdao.lib.api import Float
 
 from openmdao.examples.enginedesign.transmission import Transmission
@@ -18,13 +17,8 @@ from openmdao.examples.enginedesign.chassis import Chassis
 from openmdao.examples.enginedesign.engine_wrap_c import Engine
 
     
-class IVehicle(Interface):
-    """Vehicle Model interface"""
-    
 class Vehicle(Assembly):
     """ Vehicle assembly. """
-    
-    implements(IVehicle)
     
     tire_circumference = Float(75.0, iotype='in', units='inch', 
                                     desc='Circumference of tire (inches)')
@@ -32,7 +26,7 @@ class Vehicle(Assembly):
     velocity = Float(75.0, iotype='in', units='mi/h', 
                 desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
-    def __init__(self, directory=''):
+    def __init__(self):
         """ Creates a new Vehicle Assembly object
 
         # Design parameters promoted from Engine
@@ -75,7 +69,7 @@ class Vehicle(Assembly):
         acceleration               # Calculated vehicle acceleration (m/s^2)
         """
         
-        super(Vehicle, self).__init__(directory)
+        super(Vehicle, self).__init__()
 
         # Create component instances
         
@@ -133,6 +127,9 @@ class Vehicle(Assembly):
 
         
 if __name__ == "__main__": # pragma: no cover    
+    
+    from openmdao.main.api import set_as_top
+    
     top = set_as_top(Assembly())
     our_vehicle = top.add_container('Testing', Vehicle())      
     our_vehicle.current_gear = 1

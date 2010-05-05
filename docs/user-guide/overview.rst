@@ -10,7 +10,7 @@
 Overview of the OpenMDAO Framework
 ==================================
 
-MDAO stands for Multidisciplinary Analysis and Optimization; OpenMDAO is
+MDAO stands for Multidisciplinary Analysis and Optimization. OpenMDAO is
 an open source framework for analyzing and solving MDAO problems. In OpenMDAO, a
 problem is represented by a system of objects called :term:`components`. These objects
 have input and output attributes and can perform some sort of calculation when
@@ -32,7 +32,7 @@ calculation that it performs is to add the two inputs to produce the output.
    Conceptual View of a Simple Component
 
 
-Note that components within OpenMDAO can be as simple or complex as necessary.
+Components within OpenMDAO can be as simple or complex as necessary.
 The inputs and outputs to a Component are Python objects, so they are not limited
 to being simple types like floating point or integer.
 

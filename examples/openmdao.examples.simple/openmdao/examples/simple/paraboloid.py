@@ -14,7 +14,7 @@ class Paraboloid(Component):
     x = Float(0.0, iotype='in', desc='The variable x')
     y = Float(0.0, iotype='in', desc='The variable y')
 
-    f_xy = Float(0.0, iotype='out', desc='F(x,y)')        
+    f_xy = Float(iotype='out', desc='F(x,y)')        
 
         
     def execute(self):

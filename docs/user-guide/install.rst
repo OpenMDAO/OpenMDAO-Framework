@@ -77,7 +77,7 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 
 **Step 2)** Activate your virtual environment.
 
-Navigate into the folder that was just created by your install script; then type the following
+Navigate into the folder that was just created by your install script, and type the following
 command:
 
 ::
