@@ -5,14 +5,14 @@ Installing OpenMDAO
 System Requirements
 -------------------
 
-OpenMDAO requires the following list of programs or packages to be installed
+OpenMDAO requires the following programs or packages to be installed
 at the system level.
 
     - Python 2.6
     - Bazaar (needed only if access to the OpenMDAO source repository is needed)
     
 
-**Specific Platform Requirements**
+**Platform-Specific Requirements**
 
 
 On **Fedora**, the names of the needed RPM packages are:
@@ -77,7 +77,7 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 
 **Step 2)** Activate your virtual environment.
 
-Navigate into the folder that was just created by your install script; then type the following
+Navigate into the folder that was just created by your install script, and type the following
 command:
 
 ::
@@ -85,9 +85,14 @@ command:
   Linux: source bin/activate       (you must be running bash to do this)
 
   Windows: Scripts\activate.bat
+  
+Activating your virtual environment adds OpenMDAO's `devenv/bin` directory to your system
+path, so that when you launch Python, you have access to everything in OpenMDAO.
+
+Now you are ready to go with OpenMDAO!
 
 
-.. note:: If you need an earlier version of openmdao, it can be downloaded from:
+.. note:: If you need an earlier version of OpenMDAO, its bootstrap script can be downloaded from:
    ``http://openmdao.org/downloads/<openmdao_version>/go-openmdao.py`` where
-   where ``<openmdao_version>`` is the version of openmdao you want to install. 
+   where ``<openmdao_version>`` is the version of OpenMDAO you want to install. 
 

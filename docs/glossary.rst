@@ -13,8 +13,8 @@ Glossary
 
 
       **Assembly**
-        The Assembly class is the primary building block of the system of 
-        systems aspect of OpenMDAO. Each assembly has a Workflow and a 
+        The Assembly class is the primary building block of the "system of 
+        systems" aspect of OpenMDAO. Each assembly has a Workflow and a 
         Driver, and acts as a container for Components. An assembly is also a
         component, so hierarchical structures of assemblies can be created.
       
@@ -220,7 +220,11 @@ Glossary
         dataset or other resource. It describes context, content, and structure of the resource and its
         management through time. 
 
-      
+	
+      **Method of Feasible Directions**
+        A gradient descent optimization algorithm used in CONMIN.
+	
+	
       **model**
         A hierarchical structure with an :term:`Assembly` at its root.
        
@@ -317,14 +321,14 @@ Glossary
 
 	
       **Public Variables** 
-        A component's inputs and outputs. They are called "Public" variables
-	because they are exposed to the framework; inputs can be set and
-	outputs can be read by other framework components. In general, a
-	Public Variable is a wrapper for some set of data and metadate that
-	can include a value, a default value, optional min/max values, and units. 
-	Public Variables can also perform their own validation when being assigned 
-	to another Public Variable. OpenMDAO's Public Variables are implemented using 
-	Traits, an open source extension to Python authored by Enthought, Inc.
+      A component's inputs and outputs. They are called "public" variables because
+      they are exposed to the framework; inputs can be set and outputs can be read
+      by other framework components. In general, a public variable is a wrapper for
+      data passed between framework components. It has a value, a default value, and
+      may contain additional attributes like min/max values and units." Public
+      variables can also perform their own validation when being assigned to another
+      public variable. OpenMDAO's public variables are implemented using Traits, an
+      open source extension to Python authored by Enthought, Inc.
 
 	
       **Pyevolve**

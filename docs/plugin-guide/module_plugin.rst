@@ -7,7 +7,7 @@ Building a Component Plugin from a Python Module
 ================================================
 
 For this example we'll build a plugin for the component shown in the figure
-:ref:`Conceptual-View-of-a-Simple-Component` (from the *User's Guide*).  This component
+:ref:`Conceptual-View-of-a-Simple-Component` (from the *User Guide*).  This component
 simply computes the value of its single output by adding its two inputs.
 
 Our first step is to create our class. We want to inherit from

@@ -1,6 +1,6 @@
 
 ============ 
-User's Guide 
+User Guide 
 ============ 
 
 .. toctree::
@@ -11,7 +11,6 @@ User's Guide
    simple_example.rst
    example.rst
    userguide_script.rst
-   userguide_GUI.rst
    standard_lib
    units.rst
 

@@ -12,7 +12,7 @@ from openmdao.lib.api import Float, CONMINdriver
 from openmdao.examples.bar3simulation.bar3_wrap_f import Bar3Truss
 
 class Bar3Optimization(Assembly):
-    """ Top level assembly for optimizing a three bar truss. """
+    """ Optimization of a three bar truss. """
 
     # set up interface to the framework  
     # pylint: disable-msg=E1101
@@ -34,10 +34,10 @@ class Bar3Optimization(Assembly):
     frequency_allowable = Float(14.1421, iotype='in', units='Hz',
                         desc='Frequency limitation in Hertz')
     
-    def __init__(self, directory=''):
+    def __init__(self):
         """ Creates a new Assembly containing a Bar3_Truss and an optimizer"""
         
-        super(Bar3Optimization, self).__init__(directory)
+        super(Bar3Optimization, self).__init__()
 
         # Create Bar3_Truss component instances
         self.add_container('bar3_truss', Bar3Truss())
@@ -91,7 +91,7 @@ if __name__ == "__main__": # pragma: no cover
 
     # pylint: disable-msg=E1101
 
-    opt_bar3 = Bar3Optimization("Top")
+    opt_bar3 = Bar3Optimization()
     set_as_top(opt_bar3)
 
     def prz(title):
@@ -120,7 +120,7 @@ if __name__ == "__main__": # pragma: no cover
     time1 = time.time()
     opt_bar3.run()
     prz('New Design')
-    print "CONMIN Iterations: ", opt_bar3.driver.get("iter_count")
+    print "CONMIN Iterations: ", opt_bar3.driver.iter_count
     print ""
     print "Elapsed time: ", time.time()-time1
     
