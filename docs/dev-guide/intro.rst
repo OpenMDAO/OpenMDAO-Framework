@@ -1,13 +1,70 @@
-Introduction to OpenMDAO Development Process
---------------------------------------------
+Getting Started
+---------------
 
 This document attempts to explain the OpenMDAO development process and how a
 developer should interact with the various tools the project uses for
-configuration management, testing, deployment, etc. The source files for the
+version control, testing, deployment, etc. The source files for the
 Developer Guide can be found in the ``docs/dev-guide`` directory in the top
-level directory of your OpenMDAO source repository.
+level of your OpenMDAO source repository.
 
 .. index:: Bazaar
+
+System Requirements
+===================
+
+Working with OpenMDAO as a developer has some other system requirements in
+addition to those mentioned in the *System Requirements* section of the User
+Guide.  These requirements are described below.
+
+.. todo: replace *System Requirements* with a link
+
+**Bazaar**
+   We use Bazaar for version control.  You'll need it in order to access the OpenMDAO
+   source repository.  Installers for various platforms can be found `here`__
+    
+.. __: http://wiki.bazaar.canonical.com/Download
+
+**C/C++ and FORTRAN Compilers**
+   Certain packages used in OpenMDAO contain python extensions, meaning that they
+   contain non-python source code that must be compiled.  Packages currently in use require
+   either C/C++ or FORTRAN compilers.
+
+   - *Linux*:
+
+      - *gcc*
+      - *gfortran*
+    
+      If they are not already on your system, they should be easily installable using your package manager.
+
+      
+   - *OS X*:
+   
+      - *gcc*
+      
+        Is available as part of
+        *Xcode*, which can be found on the OS X distribution disks but typically not 
+        installed by default.  You can also download gcc and install it from source, although
+        this is more prone to installation problems.
+        
+      - *gfortran*
+   
+        Unfortunately, *gfortran* is not
+        part of Xcode.  It is installed on our OS X (leopard) system, but we need
+        to determine how it got there so we can recommend the best way to install it.
+
+   - *Windows*:
+   
+      - *Visual C++ 2008*
+      
+         The Express version is what we use, but others (Professional, Standard)
+         should work too.
+         
+      - *mingw32*   (for FORTRAN)
+      
+         Make sure to put the *bin* directory of the mingw32 install in your path.
+
+         
+.. todo:: provide instructions for installing gfortran on OS X
 
 
 System Configuration
@@ -17,14 +74,6 @@ Some steps of the development process, e.g., downloading a branch of the source
 repository and downloading Python distributions, require network access.  If you're
 behind an http proxy, you may have to set the *http_proxy* environment variable
 on your system in order for Bazaar and ``virtualenv`` to function properly.
-
-
-Getting Started
-===============
-
-Before you can start working on source code or running tests, you need to get
-your own copy of the source code. We use `Bazaar, <http://bazaar-vcs.org>`_ 
-for version control, so you'll need to have that installed on your system.
 
 
 *Bazaar User Setup*
@@ -76,15 +125,25 @@ tracker ticket number and ``<desc>`` is a short description of the branch. For
 example, ``T0029-workflow_fix``.
 
 
-.. _Creating-and-Activating-the Development-Environment:
+.. _Creating-the-Virtual-Environment:
 
 
-Creating and Activating the Development Environment
-___________________________________________________
+Creating the Virtual Environment
+________________________________
 
 
 After you've created your branch, run ``python go-openmdao-dev.py`` from the top
 directory of your branch to set up your development environment. 
+
+
+.. note:: On Windows, you need to run the installer from a command window that has
+   the Visual Studio environment variables set.  The easiest way to do this is to
+   select the *Visual Studio 2008 Command Prompt* from the *Visual Studio Tools* menu
+   under *Microsoft Visual C++ 2008 Express Edition* in the Start menu. If you're
+   using something other than the Express edition, then the name of the Start menu 
+   option will be slightly different, i.e., replace 'Express' with 'Professional' or
+   'Standard'.
+
 
 ::
 
@@ -95,10 +154,17 @@ OpenMDAO depends upon and installs the openmdao namespace packages in your virtu
 environment as "develop" eggs so that you can make changes to the source code and immediately
 see the results without having to rebuild any distributions.
 
-The next step is to activate your virtual environment. This requires that you are running the
-bash shell if you are on a Linux or OS X machine.  
 
+.. _Activating-the-Virtual-Environment:
+
+
+Activating the Virtual Environment
+__________________________________
+
+The next step is to activate your virtual python environment. 
 Change your directory to ``devenv`` and run:
+
+On Linux or OS X (must be running bash)
 
 ::
 
@@ -188,8 +254,8 @@ The directory structure of your repository should look like this:
     with NOSA. No proprietary code or GPL code can live in the OpenMDAO
     repository.
 
-
 .. index:: namespace package
+
 
 *Layout of a Namespace Package*
 +++++++++++++++++++++++++++++++

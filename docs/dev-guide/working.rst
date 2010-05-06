@@ -6,7 +6,10 @@ Working on Your Branch
 ======================
 
 You need to build and activate your virtual development environment before you
-can use OpenMDAO. If you have not done this, please see :ref:`Creating-and-Activating-the-Development-Environment`.
+can use OpenMDAO. If you have not done this, please see 
+*Activating the Virtual Environment*.
+
+.. todo:: turn *Activating the Virtual Environment* into a link.
 
 
 .. note::  In some cases the examples are written from the Linux perspective. Windows users
@@ -68,7 +71,7 @@ You should be in the top level directory of your branch. Type:
                                     On Windows: "Scripts\activate.bat")
   openmdao_build_docs              (Builds the docs from scratch. Optional if no doc changes.)
   openmdao_docs                    (Checks that docs display correctly. Optional if no doc changes.)
-  openmdao_test --all              (Runs all openmdao unit tests. Merge only if they all pass.) 
+  openmdao_test                    (Runs all openmdao unit tests. Merge only if they all pass.) 
   bzr merge lp:openmdao            (Merges from the trunk)
 
 **- If you have no conflicts,** you can continue. Type:
@@ -78,7 +81,7 @@ You should be in the top level directory of your branch. Type:
   rm -rf devenv                (Removes the old virtual dev environment)
   python2.6 go-openmdao-dev.py (Builds your new virtual dev environment)
   cd devenv
-  source bin/activate          (Activate the virtual dev environment [use Scripts/activate on Windows])
+  source bin/activate          (Activate the virtual dev environment [use Scripts\activate on Windows])
   openmdao_test                (Confirms that all tests still pass.)
   bzr commit -m "<commit_message>"  (Commit changes from merge to avoid mixing them up with any later
                                      changes you make)
@@ -116,7 +119,7 @@ in the *Bazaar User Guide.*
 Pushing a Branch Back to Launchpad
 -----------------------------------
 
-The following instructions are for both Linux and Windows. However, on
+The following instructions are for both Linux, OS X, and Windows. However, on
 Windows, depending on how you created your SSH keys, you may need to have
 Pageant running before you can merge to your branch or push it to Launchpad.
 
@@ -125,16 +128,16 @@ builds and passes all tests.
 
 **- If you have commit privileges** (you are a member of the *OpenMDAO Devs* group)
 
-You should be in the top level development directory. You must branch from the
-openmdao trunk, then merge your current branch to your copy of the trunk. This
-is necessary because if you merge in the other direction and then push to
-launchpad, it will overwrite the log for the trunk, making it hard to find
-information about recent merges.
+In order to avoid unexpected changes to recent revision numbers on the trunk,
+you should always merge your branch to the trunk instead of merging the trunk
+to your branch.  This is a little more work because you have to make a separate
+branch from the trunk, then merge your development branch to that one, then 
+merge your local version of the trunk up to the trunk on Launchpad.
 
-If you have any conflicts when merging, you must resolve them before you can continue. If you have a
-conflict, please refer to `Resolving Conflicts
-<http://doc.bazaar.canonical.com/bzr.2.1/en/user-guide/resolving_conflicts.html>`_ in the *Bazaar
-User Guide.* 
+If you have any conflicts when merging, you must resolve them before you can
+continue. If you have a conflict, please refer to `Resolving Conflicts
+<http://doc.bazaar.canonical.com/bzr.2.1/en/user-guide/resolving_conflicts.html>`_
+in the *Bazaar User Guide.*
 
 Type the following:
 
@@ -150,9 +153,10 @@ Type the following:
   openmdao_test                            (Confirms that all tests pass)
   bzr commit -m <comment>                  (Commits your merge changes to trunk copy [assuming tests pass])
   
-If you can build successfully and pass the tests after the merge, you may push your branch to openmdao. 
-You must have a Launchpad account and you must have your public SSH key registered with it in order
-to push a branch. Type:
+If you can build successfully and pass the tests after the merge, you may push
+your branch to the OpenMDAO trunk on Launchpad. You must have a Launchpad
+account and you must have your public SSH key registered with it in order to
+push a branch. Type:
 
 ::
   
@@ -166,15 +170,16 @@ Your branch becomes the latest revision of openmdao on Launchpad.
 You will push your branch up to the openmdao repository, but the changes do not become a part of the
 development trunk until one of the reviewers merges it. 
 
-You need to be somewhere on the branch to be pushed. Then type the following command, replacing ``userid``
-with your Launchpad userid and replacing ``branch_name`` with the name of the branch you are pushing.
+You need to be somewhere on the branch to be pushed. Then type the following
+command, replacing ``userid`` with your Launchpad userid and replacing
+``branch_name`` with the name of the branch you are pushing.
 
 ::
 
   bzr push lp:~userid/openmdao/branch_name 
 
-Now that your branch is in on Launchpad, you must request that it be merged. Please follow the
-instructions below.
+Now that your branch is in on Launchpad, you can request that it be merged by following 
+the instructions below.
 
 1. Go to `OpenMDAO <https://launchpad.net/openmdao>`_ on Launchpad and log in if you are not logged in
    already.

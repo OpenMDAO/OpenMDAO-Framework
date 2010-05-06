@@ -8,12 +8,12 @@ import pkg_resources
 import copy
 
 from openmdao.main.api import PkgResourcesFactory
-import openmdao.util.mod2egg
+import openmdao.util.mod2dist
 from openmdao.util.testutil import find_python
 
 orig_path = copy.copy(pkg_resources.working_set.entries)
 
-class mod2eggTestCase(unittest.TestCase):
+class mod2distTestCase(unittest.TestCase):
     
     def setUp(self):
         # make a new pkg_resources.working_set and sys.path each time so that
@@ -22,8 +22,8 @@ class mod2eggTestCase(unittest.TestCase):
         pkg_resources.working_set = pkg_resources.WorkingSet()
         self.pudir = tempfile.mkdtemp()
         self.version = '1.999'
-        self.mod2egg = openmdao.util.mod2egg.__file__.replace('.pyc','.py')
-        self.mod2egg = self.mod2egg.replace('.pyo','.py')
+        self.mod2dist = openmdao.util.mod2dist.__file__.replace('.pyc','.py')
+        self.mod2dist = self.mod2dist.replace('.pyo','.py')
         self.python = find_python()
         self.srcfile = os.path.join(os.path.dirname(__file__),'src','doubler.py')
     
@@ -51,16 +51,9 @@ class mod2eggTestCase(unittest.TestCase):
                     shutil.rmtree(name)
                 break
         
-    def test_mod2egg_zipped(self):
+    def test_mod2dist(self):
         check_call([self.python, 
-                    self.mod2egg, 
-                    self.srcfile,
-                    '-v',self.version,'-z','-i',self.pudir])
-        self.use_egg()
-        
-    def test_mod2egg(self):
-        check_call([self.python, 
-                    self.mod2egg, 
+                    self.mod2dist, 
                     self.srcfile,
                     '-v',self.version,'-d',self.pudir,
                     '-i',self.pudir])        
