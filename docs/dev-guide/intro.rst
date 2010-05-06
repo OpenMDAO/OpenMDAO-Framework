@@ -1,11 +1,11 @@
 Introduction to OpenMDAO Development Process
 --------------------------------------------
 
-This documentation for OpenMDAO developers attempts to explain the OpenMDAO
-development process and how to interact with the various tools the project uses for
-configuration management, testing, deployment, etc.  The source files for this tutorial
-can be found in the ``docs/dev-guide`` directory in the top level directory of your
-OpenMDAO source :term:`branch`. 
+This document attempts to explain the OpenMDAO development process and how a
+developer should interact with the various tools the project uses for
+configuration management, testing, deployment, etc. The source files for the
+Developer Guide can be found in the ``docs/dev-guide`` directory in the top
+level directory of your OpenMDAO source repository.
 
 .. index:: Bazaar
 
@@ -13,10 +13,11 @@ OpenMDAO source :term:`branch`.
 System Configuration
 ====================
 
-Some steps of the development process, e.g., downloading a branch of the source
-repository and downloading Python eggs, require network access.  If you're
-behind an http proxy, you may have to set the *http_proxy* environment variable
-on your system in order for Bazaar and ``virtualenv`` to function properly.
+Some steps of the development process, e.g., downloading a branch of the
+source repository and downloading Python distributions, require network
+access. If you're behind an http proxy, you may have to set the *http_proxy*
+environment variable on your system in order for Bazaar and ``virtualenv`` to
+function properly.
 
 
 Getting Started

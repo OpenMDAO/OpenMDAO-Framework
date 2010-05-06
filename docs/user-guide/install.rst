@@ -5,29 +5,37 @@ Installing OpenMDAO
 System Requirements
 -------------------
 
+These instructions assume that you intend to install OpenMDAO for normal use.
+You will not be hacking on the OpenMDAO infrastructure or standard library, or
+developing any plugins that require compilation. If you do intend to do
+OpenMDAO development of some kind, you should refer to the installation
+instructions in the Developer Guide, because the developer environment has
+some additional system requirements on certain platforms.
+
 OpenMDAO requires the following programs or packages to be installed
-at the system level.
+at the system level on all platforms.
 
     - Python 2.6
-    - Bazaar (needed only if access to the OpenMDAO source repository is needed)
     
 
 **Platform-Specific Requirements**
 
+**Linux:**
+
+Our current distribution for Linux is a source distribution, so in order to 
+use it, you must have compilers (C and fortran) on your system.
 
 On **Fedora**, the names of the needed RPM packages are:
 
     - python-devel
+    - numpy
     - gcc-gfortran
-    - bzr
-
 
 On **Ubuntu**, the .deb package names are:
 
     - python-dev
-    - gfortran
-    - bzr
-    
+    - python-numpy
+    - gfortran    
 
 On **Windows**, download and run the following installers if the corresponding
 applications or packages are not already installed:
