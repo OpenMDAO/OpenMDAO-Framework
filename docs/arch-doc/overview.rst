@@ -154,7 +154,7 @@ will have to obtain all of these to assemble a complete working application. A
 user accomplishes this by running the ``go-openmdao.py`` script to construct a
 Python environment containing all of the necessary packages. 
 
-When the ``go-openmdao.py`` script runs, any needed eggs will be downloaded
+When the ``go-openmdao.py`` script runs, any needed distributions will be downloaded
 from one of the following: the Python Package Index, OpenMDAO's own package
 directory (http://openmdao.org/dists), some other package index, or from a
 local directory. Once this process is completed, a user will have a complete

@@ -31,7 +31,7 @@ class mod2distTestCase(unittest.TestCase):
         if os.path.exists(self.pudir):
             shutil.rmtree(self.pudir)
     
-    def use_egg(self):
+    def use_distribution(self):
         factory = PkgResourcesFactory(['openmdao.component'],
                                            [self.pudir])
         foo = factory.create('Doubler')
@@ -57,7 +57,7 @@ class mod2distTestCase(unittest.TestCase):
                     self.srcfile,
                     '-v',self.version,'-d',self.pudir,
                     '-i',self.pudir])        
-        self.use_egg()
+        self.use_distribution()
       
         
 if __name__ == '__main__':

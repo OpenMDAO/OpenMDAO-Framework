@@ -118,7 +118,7 @@ The *setup()* command has *many* options in addition to those shown above,
 e.g., *author, author_email, maintainer, maintainer_email, url, license,
 description, long_description, keywords, platforms, fullname, contact,
 contact_email, classifiers,* and *download_url.* If you supply any of these,
-their values will be stored as metadata in the egg. To keep things simple, we
+their values will be stored as metadata in the distribution. To keep things simple, we
 won't describe all of the options in detail, but if you're interested, you can
 go to  `<http://docs.python.org/distutils/apiref.html#module-distutils.core>`_ and
 `<http://peak.telecommunity.com/DevCenter/setuptools#new-and-changed-setup-keywords>`_.
@@ -207,26 +207,26 @@ file shown, we can now build our distribution. From the ``simple_adder``
 directory, typing ``python setup.py sdist -d .`` will create the distribution
 in our current directory. The version of the distribution and the Python
 version will be included in the filename. For example, since the version we
-specified in our ``setup.py`` file was '1.0', and assuming we're using Python
-2.6, our distribution will be named ``simple_adder-1.0-py2.6.tar.gz``. 
+specified in our ``setup.py`` file was '1.0', our distribution will be named 
+``simple_adder-1.0.tar.gz``. 
 
 
-.. index:: mod2egg
+.. index:: mod2dist
 
 Egg Creation for the Lazy
 --------------------------
 
-A tool called ``mod2egg`` exists for those of us who don't want to create a package
+A tool called ``mod2dist`` exists for those of us who don't want to create a package
 directory structure and a setup.py file manually. It has a number of options that you
-can see if you run ``mod2egg -h``.  The only required options are the desired version
-of the egg and the module to use to generate the egg.  For example, the command
+can see if you run ``mod2dist -h``.  The only required options are the desired version
+of the distribution and the module to use to generate the distribution.  For example, the command
 
 ::
 
-   mod2egg -v 1.0 simple_adder.py
+   mod2dist -v 1.0 simple_adder.py
    
    
-will generate the same egg that we built manually earlier in this example.
+will generate the same distribution that we built manually earlier in this example.
 
 .. _Building-a-Variable-Plugin:
 
@@ -240,7 +240,7 @@ pure Python OpenMDAO plugin.
 Let's assume we want to have a variable that represents a set of Cartesian 
 coordinates, with the value of the variable being a 3-tuple of floating point
 values representing the x, y, and z position.  We'll start by creating a 
-file called ``coord.py`` and put the following code in it:
+file called ``coord.py`` and placing the following code in it:
 
 ::
 
@@ -260,11 +260,11 @@ file called ``coord.py`` and put the following code in it:
                 self.error(object, name, value)
 
 
-OpenMDAO uses the Traits package from Enthought to implement component
+OpenMDAO uses the Traits package from Enthought to implement public
 variables. The base class for custom traits is *TraitType*, so that's the
 base class for our coordinates variable. If a component or a component class
 contains a TraitType object and that object has a metadata attribute called
-*iostatus*, then that object is exposed to the framework as a variable whose
+*iotype*, then that object is exposed to the framework as a variable whose
 value can be passed between components.  One thing to note that can be a 
 little confusing to people first using Traits is that the Trait object itself
 is just a validator and possibly a converter.  The object that actually gets
@@ -293,7 +293,7 @@ valid. In this particular case, we just need to verify that the value is a
 3-tuple and it has float or int entries. If the value is acceptable, then we
 just return it. We don't need to do it in this case, but in other custom
 traits, we could convert the value before returning it. If the value
-is not acceptable, then we call the error function, which will generate an
+is not acceptable, then we call the error function, which will raise an
 exception.
 
 That's all of the source code required to make our coordinates variable 
@@ -318,6 +318,6 @@ a different entry point group name.
         }
     )
 
-We can create this file by hand or generate it using ``mod2egg`` as we showed in
+We can create this file by hand or generate it using ``mod2dist`` as we showed in
 an earlier section.
 
