@@ -1,6 +1,47 @@
 """ 
 Pseudo package containing all of the main classes/objects in the 
 openmdao.main API.
+
+Basic OpenMDAO API
+------------------
+Assembly
+Component
+Container
+Dataflow
+Driver
+SimulationRoot
+Workflow
+set_as_top
+
+Factories
+---------
+Factory
+PkgResourcesFactory
+create
+get_available_types
+
+Exceptions
+----------
+ConstraintError
+
+Data & File 
+-----------
+Case
+ExprEvaluator
+FileCaseIterator
+FileMetadata
+FileRef
+ListCaseIterator
+StringRef
+StringRefArray
+
+Utilities
+---------
+SAVE_CPICKLE
+SAVE_LIBYAML
+SAVE_PICKLE
+SAVE_YAML
+logger
 """
 
 from openmdao.util.log import logger, enable_console

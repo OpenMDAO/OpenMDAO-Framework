@@ -306,8 +306,10 @@ def parse_phoenixwrapper(infile, outfile, compname):
                 sep = "."
 
         childname = containers[-1]
-        text = tab + tab + "self." + childname + " = " + compname + "_" + \
-               container_name + "()\n"
+        #text = tab + tab + "self." + childname + " = " + compname + "_" + \
+        #       container_name + "()\n"
+        text = tab + tab + "self.add_container('" + childname + "',  " + compname + "_" + \
+               container_name + "())\n"
 
         try:
             constructs[parentname] += text

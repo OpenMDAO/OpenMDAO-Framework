@@ -1,6 +1,30 @@
 """ 
 Pseudo package containing commonly used functions from the OpenMDAO Standard
 Library.
+
+Public Variables
+----------------
+Array
+Bool
+CBool
+Complex
+Enum
+File
+Float
+Instance
+Int
+List
+Str
+
+Drivers
+-------
+CaseIteratorDriver
+CONMINdriver
+pyevolvedriver
+
+Functions
+---------
+convert_units
 """
 
 # Traits that we've modified
