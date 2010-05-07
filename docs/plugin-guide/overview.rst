@@ -102,20 +102,7 @@ SimpleAdder plugin is an OpenMDAO Component.
 *Installing an OpenMDAO Plugin*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. todo:: Tell how to use easy_install to install plugin 
-   (easy_install -mxNq -f http://...  -d <plugin_dir> where <plugin_dir> must be on Python path)
-   When we install a plugin, it's dependencies will also be installed and must be on the
-   Python path to be used by the system. We may need to write our own plugin installer in 
-   order to put plugins in the expected place and to prevent the installation of dependencies
-   in the plugin directory when they are already a part of the distribution.
-	  
-.. todo:: Should we have a plugins directory, OPENMDAO_PLUGIN_PATH env var, ...?
-
-.. todo:: It seems like we need some kind of metadata to describe the plugin API version that
-   a given plugin is tied to, because over time there could be changes made to the various
-   plugin APIs that will break old plugins, and it would be nice if we could detect that and
-   either hide them from our library manager or (better) create an adapter for them on the 
-   fly and still be able to use them.
+.. todo:: First, write an 'install_plugin' script, then talk about it here
 
 
 *Making Your Plugin Available to Others*
@@ -128,4 +115,4 @@ SimpleAdder plugin is an OpenMDAO Component.
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. todo:: Need to work with team to determine standard openmdao metadata
-      
+
