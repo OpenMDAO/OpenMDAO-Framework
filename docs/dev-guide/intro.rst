@@ -62,6 +62,10 @@ Guide.  These requirements are described below.
       - *mingw32*   (for FORTRAN)
       
          Make sure to put the *bin* directory of the mingw32 install in your path.
+         You can find mingw32 `here`__
+         
+         
+.. __: http://sourceforge.net/projects/mingw/files/Automated%20MinGW%20Installer/MinGW%205.1.6/MinGW-5.1.6.exe/download
 
          
 .. todo:: provide instructions for installing gfortran on OS X
@@ -164,17 +168,17 @@ __________________________________
 The next step is to activate your virtual python environment. 
 Change your directory to ``devenv`` and run:
 
-On Linux or OS X (must be running bash)
+On Linux or OS X (must be running bash, and don't forget the '.' in the command below):
 
 ::
 
-   source bin/activate
+   . bin/activate
 
-or, on Windows
+or, on Windows:
 
 ::
 
-   Scripts\activate.bat
+   Scripts\activate
 
 At this point, your ``devenv`` directory should contain the following
 subdirectories:

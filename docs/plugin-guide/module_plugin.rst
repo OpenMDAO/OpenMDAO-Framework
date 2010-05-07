@@ -47,7 +47,7 @@ are inputs, so we specify that they have an *iotype* of *'in'*. Attribute
 The *Float* variable is defined in the package ``openmdao.lib.api``, so we have
 to import it from there before we can use it. This 
 package defines a wide variety of traits, including basic types like *Int*,
-*Str*, and *Bool*; containers like *List* and *Dictionary*; and many others. Public Variables
+*Str*, and *Bool*; containers like *List* and *Dictionary*; and others. Public Variables
 are actually based off of Enthought's Traits, and a larger selection of less commonly used
 traits are available by importing from the package ``enthought.traits.api``.
 To learn more about traits, you may want to look at the 
@@ -57,11 +57,10 @@ and the list of
 
 At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply
 import the module containing it and use it in a model; but we want more than
-that. By packaging our plugin as a Python distribution, we can make it more usable by
+that. By packaging our plugin as a Python distribution, we can make it easy to share with
 others in the OpenMDAO community. We can give our distribution a version identifier and
 other :term:`metadata` that will help others determine if our plugin will meet
-their needs. We can also upload our distribution to a package index so that it can be
-installed via ``easy_install``, ``pip``, or ``zc.buildout``.
+their needs. 
 
 .. index:: creation
 
@@ -219,7 +218,8 @@ Egg Creation for the Lazy
 A tool called ``mod2dist`` exists for those of us who don't want to create a package
 directory structure and a setup.py file manually. It has a number of options that you
 can see if you run ``mod2dist -h``.  The only required options are the desired version
-of the distribution and the module to use to generate the distribution.  For example, the command
+of the distribution and the module to use to generate the distribution.  For example, 
+the command
 
 ::
 
@@ -227,6 +227,7 @@ of the distribution and the module to use to generate the distribution.  For exa
    
    
 will generate the same distribution that we built manually earlier in this example.
+
 
 .. _Building-a-Variable-Plugin:
 

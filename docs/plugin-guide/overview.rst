@@ -5,19 +5,25 @@ Overview of OpenMDAO Plugin Development
 =======================================
 
 Plugins provide a way to extend the functionality of an application without
-modifying the application itself.  This is possible because the :term:`plugins` must  implement a particular interface that the framework knows how
-to interact with. This section will describe the types of plugins available to
-extend the functionality of OpenMDAO and will explain how to build them and how
-to make  them usable by the framework.
+modifying the application itself. This is possible because the :term:`plugins`
+must implement a particular interface that the framework knows how to interact
+with. This section will describe the types of plugins available to extend the
+functionality of OpenMDAO and will explain how to build them and how to make
+them usable by the framework.
+
+The rest of this document assumes that you have already installed OpenMDAO.  If not, you
+can learn how to do that :ref:`here<Installing-OpenMDAO>`.
+
 
 .. index:: Component plugin
 
 Types of Plugins
 ----------------
 
-OpenMDAO supports a number of different plugin types, but the most common is the :term:`Component` plugin. The
-Component plugin, and other less common types of OpenMDAO plugins, are listed in the following table
-along with a description of their purpose.
+OpenMDAO supports a number of different plugin types, but the most common is
+the :term:`Component` plugin. The Component plugin, and other less common
+types of OpenMDAO plugins, are listed in the following table along with a
+description of their purpose.
 
 ===========================  =================================================================================================
 **Plugin Type**              **Purpose**                                                                                              
@@ -34,18 +40,26 @@ along with a description of their purpose.
 ===========================  =================================================================================================
 
 
-How Does OpenMDAO Find Plugins?
--------------------------------
+How Do I Put My Plugin into OpenMDAO?
+-------------------------------------
 
-When creating a distribution of a Python project, you can 
-associate a variety of metadata with that distribution.  A list of
-entry points is one piece of metadata that can be associated. An 
-entry point is a mapping of a name to some Python object, usually
-a class or a function, that exists within the distribution.  Each
-entry point must be a member of an entry point group. An application
-can look at the entry point groups that are defined to determine if
-any applicable plugins exist within a given distribution.
+Plugins within OpenMDAO are just python classes that provide an expected
+interface, so as long as your class provides the necessary interface and can
+be imported into your python script, you'll be able to use it as a plugin.
+But what if an OpenMDAO user wants to obtain a listing of all of the 
+plugins that are available in his environment?  To allow that to happen, 
+the plugin developer must provide metadata that specifies the name,
+plugin interface, and location within its package for each plugin that
+is intended to be discoverable by the framework.  The rest of this
+section describes the form of this metadata and how to add it to 
+a distribution.
 
+A list of entry points is one piece of metadata that can be associated with a
+distribution. An entry point is a mapping of a name to some Python object,
+usually a class or a function, that exists within the distribution. Each entry
+point must be a member of an entry point group. An application can look at the
+entry point groups that are defined to determine if any applicable plugins
+exist within a given distribution.
 
 OpenMDAO looks for the following entry point groups in order to find
 plugins within a distribution:
@@ -108,11 +122,13 @@ SimpleAdder plugin is an OpenMDAO Component.
 *Making Your Plugin Available to Others*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
    
-.. todo:: Uploading to a package index
+.. todo:: Talk about serving distributions over the web
+
+.. todo:: Look into providing a 'contrib' area on openmdao.org for contributed plugins
    
    
-*Adding Custom Egg Metadata*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*Adding Custom Distribution Metadata*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. todo:: Need to work with team to determine standard openmdao metadata
 
