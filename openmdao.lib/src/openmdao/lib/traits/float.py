@@ -109,8 +109,8 @@ class Float(TraitType):
         
         # pylint: disable-msg=E1101
         # If both source and target have units, we need to process differently
-        if isinstance(value, TraitValMetaWrapper):
-            if self.units:
+        if isinstance(value, TraitValMetaWrapper) and value.metadata.has_key('units'):
+            if self.units and value.metadata['units']:
                 return self._validate_with_metadata(object, name, 
                                                     value.value, 
                                                     value.metadata)
@@ -164,12 +164,7 @@ class Float(TraitType):
         
         # pylint: disable-msg=E1101
         dst_units = self.units
-        try:
-            src_units = srcmeta['units']
-        except KeyError:
-            msg = "while setting value of %s: no 'units' metadata found."% \
-                             name
-            raise TraitError(msg)
+        src_units = srcmeta['units']
 
         # Note: benchmarking showed that this check does speed things up -- KTM
         if src_units == dst_units:
