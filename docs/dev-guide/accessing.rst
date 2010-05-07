@@ -4,26 +4,36 @@
 Accessing OpenMDAO on Launchpad -- SSH Keys
 ============================================
 
-If you are behind a proxy, you must create SSH keys for each platform you want to use
-before you can merge from openmdao to your branch or push a branch back to openmdao on
-Launchpad. (An SSH key is not needed create a branch.) If you are not behind a proxy, you
-may omit this step.
+The source repository for OpenMDAO is read accessible to the public, so making
+a branch from it does not typically require that you have a Launchpad account.
+However if you are behind a proxy, you *may* need to not only have a Launchpad
+account, but also to register your public SSH key with your Launchpad account
+in order to *read* or *write* to the repository. If you require write access
+to the OpenMDAO project on Launchpad, either to push changes directly to the
+trunk or to push up personal branches for merge approval, you will need to
+have a Launchpad account and to register your public SSH key with that
+account, regardless of whether you are behind a proxy or not. The following
+section describes how to register your SSH key with Launchpad.
 
-These instructions assume that you already have a Launchpad account. If you do not, please go
-to https://launchpad.net and register for an account. Go ahead and log in to your Launchpad
-account, since you will need to be logged in to register your key. 
+These instructions assume that you already have a Launchpad account. If you do
+not, please go to https://launchpad.net and register for an account. Go ahead
+and log in to your Launchpad account, since you will need to be logged in to
+register your key.
 
-Linux Users
------------
+Linux or OS X Users
+-------------------
 
-Please follow these instructions for the SSH key creation/registration process if you use Linux.
+Please follow these instructions for the SSH key creation/registration process
+if you use Linux or OS X.
 
 *Creating Your Key on Linux*
 ++++++++++++++++++++++++++++
 
-1. You should be in your home directory on your Linux machine. At the prompt, type: ``ssh-keygen -t rsa``. 
-2. When prompted, press ``Enter`` to accept the default file name for your key. 
-3. Press "Enter" when prompted for a password and then press it again to
+1. First, check to see if you already have an SSH key.  Look for a file called ~/.ssh/id_rsa.pub.
+   If the file is there, skip to the next section and learn how to register your key with Launchpad.
+2. You should be in your home directory on your Linux machine. At the prompt, type: ``ssh-keygen -t rsa``. 
+3. When prompted, press ``Enter`` to accept the default file name for your key. 
+4. Press "Enter" when prompted for a password and then press it again to
    confirm that you are not entering a password. Your key pair is stored in ``~/.ssh/
    as id_rsa.pub`` (public key) and ``id_rsa`` (private key).
 
@@ -59,7 +69,7 @@ push a branch back to openmdao. In your home directory on your Linux machine, ty
    you should see **OpenID login**. The web address should contain your userid. (In some cases
    this may be a hyphenated name, such as  ``john-j-smith``; in other cases, it may be a first initial
    and last name, such as ``jsmith``.)
-
+   
 If the above command failed, you may be missing an ``authentication.conf`` file or have incomplete
 information in your ``bazaar.conf`` file. To check whether you have these files, type the following
 commands:
@@ -104,8 +114,7 @@ If you already have PuTTY installed on your machine, omit Step #1.
 
 2. Go to Putty and run ``puttygen.exe`` to bring up the PuTTY Key Generator. 
   
-3. Click on the *Generate* button. You must move your mouse around in the blank area, so PuTTYGen knows there is
-   a human behind the request.
+3. Click on the *Generate* button. You must move your mouse around in the blank area during key generation.
 
 4. Leave the *Key passphrase* and *Confirmation passphrase* boxes blank. Click *Save public key* and choose a
    location to save it. 
@@ -153,7 +162,7 @@ You need to register and upload the *public* portion of your SSH key to Launchpa
 
 *Notifying Launchpad of Your Userid*
 +++++++++++++++++++++++++++++++++++++
-	
+
 You need to provide Launchpad with your userid before you can merge from openmdao to your branch or
 push a branch back to openmdao. In your home directory on your Windows machine, type: 
 

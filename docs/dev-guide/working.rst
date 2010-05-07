@@ -5,8 +5,11 @@
 Working on Your Branch
 ======================
 
-Before you can execute OpenMDAO in any way, you must build and activate the virtual development
-environment. If you have not done this, please see :ref:`Installing-from-Source`.
+You need to build and activate your virtual development environment before you
+can use OpenMDAO. If you have not done this, please see 
+*Activating the Virtual Environment*.
+
+.. todo:: turn *Activating the Virtual Environment* into a link.
 
 
 .. note::  In some cases the examples are written from the Linux perspective. Windows users
@@ -46,12 +49,6 @@ If you add a file or directory to the repository by mistake, type:
 This will remove the file from the repository but will **not** delete it.
 
 
-Running Tests
--------------
-
-Some of the examples in the following sections include the script for tests. But for a complete
-explanation of testing, see the section on :ref:`Testing`.
-
 .. _Merging-to-Your-Branch:
 
 Merging to Your Branch
@@ -67,30 +64,36 @@ You should be in the top level directory of your branch. Type:
 
   bzr status                       (Checks branch for uncommitted changes; you cannot merge if you have any.) 
   bzr commit -m "<commit_message>" (Required only if you have uncommitted changes. You may add a message on the
-				    command line or omit the "-m" and press "Enter" to type the required message
-				    using your default text editor.) 				   
+                    command line or omit the "-m" and press "Enter" to type the required message
+                    using your default text editor.)
   cd devenv                        (Takes you to your virtual development environment.) 
   source bin/activate              (Activates your virtual development environment [requires bash]
                                     On Windows: "Scripts\activate.bat")
+  openmdao_build_docs              (Builds the docs from scratch. Optional if no doc changes.)
   openmdao_docs                    (Checks that docs display correctly. Optional if no doc changes.)
-  openmdao_test --all              (Runs all openmdao unit tests. Once all tests pass, you may merge.) 
+  openmdao_test                    (Runs all openmdao unit tests. Merge only if they all pass.) 
   bzr merge lp:openmdao            (Merges from the trunk)
 
 **- If you have no conflicts,** you can continue. Type:
 
 ::
 
-  python2.6 go-openmdao-dev.py (Builds your virtual dev environment in the new branch.)
+  rm -rf devenv                (Removes the old virtual dev environment)
+  python2.6 go-openmdao-dev.py (Builds your new virtual dev environment)
   cd devenv
-  bin/openmdao_test --all      (Confirms that all tests pass.)
+  source bin/activate          (Activate the virtual dev environment [use Scripts\activate on Windows])
+  openmdao_test                (Confirms that all tests still pass.)
+  bzr commit -m "<commit_message>"  (Commit changes from merge to avoid mixing them up with any later
+                                     changes you make)
   
-You may now continue working on your branch.
+You are now ready to continue development on your branch.
 
 
 .. _if-you-have-a-conflict:
 
-**- If you HAVE a conflict,** Bazaar will display not only the changes in files or directories, but it will 
-also indicate the number of conflicts and where they occur. See the following example:
+**- If you HAVE a conflict,** Bazaar will display not only the changes in
+files or directories, but it will also indicate the number of conflicts and
+where they occur. See the following example:
 
 
 .. figure:: ../images/quick-ref/merge_conflict.png
@@ -99,12 +102,14 @@ also indicate the number of conflicts and where they occur. See the following ex
    Example of Conflicts When Merging
 
 
-In the above example, the "+N" indicates new files or directories. The "M" indicates modified files or directories.
-If a file or directory is deleted, "-D" appears before its name. In this example there are two conflicts that must
-be resolved before proceeding. 
+In the above example, the "+N" indicates new files or directories. The "M"
+indicates modified files or directories. If a file or directory is deleted,
+"-D" appears before its name. In this example there are two conflicts that
+must be resolved before proceeding.
 
-If you have a conflict, please refer to `Resolving Conflicts <http://doc.bazaar.canonical.com/bzr.2.1/en/user-guide/resolving_conflicts.html>`_ in
-the *Bazaar User Guide.*
+If you have a conflict, please refer to `Resolving Conflicts
+<http://doc.bazaar.canonical.com/bzr.2.1/en/user-guide/resolving_conflicts.html>`_
+in the *Bazaar User Guide.*
 
 
 .. index:: branch; pushing to Launchpad
@@ -114,40 +119,44 @@ the *Bazaar User Guide.*
 Pushing a Branch Back to Launchpad
 -----------------------------------
 
-The following instructions are for both Linux and Windows. However, on Windows, depending on how you created
-your SSH keys, you may need to have Pageant running before you can merge to your branch or push it to
-Launchpad. 
+The following instructions are for both Linux, OS X, and Windows. However, on
+Windows, depending on how you created your SSH keys, you may need to have
+Pageant running before you can merge to your branch or push it to Launchpad.
 
-First, make sure all your changes are committed and that your your branch builds and passes all tests. 
+First, make sure all of your changes are committed and that your your branch
+builds and passes all tests.
 
 **- If you have commit privileges** (you are a member of the *OpenMDAO Devs* group)
 
-You should be in the top level development directory. You must branch from the openmdao trunk,
-then merge your current branch to your copy of the trunk. This is necessary because if you merge in
-the other direction and then push to launchpad, it will overwrite the log for the trunk, making it
-hard to find information about recent merges. 
+In order to avoid unexpected changes to recent revision numbers on the trunk,
+you should always merge your branch to the trunk instead of merging the trunk
+to your branch.  This is a little more work because you have to make a separate
+branch from the trunk, then merge your development branch to that one, then 
+merge your local version of the trunk up to the trunk on Launchpad.
 
-If you have any conflicts when merging, you must resolve them before you can continue. If you have a
-conflict, please refer to `Resolving Conflicts
-<http://doc.bazaar.canonical.com/bzr.2.1/en/user-guide/resolving_conflicts.html>`_ in the *Bazaar
-User Guide.* 
+If you have any conflicts when merging, you must resolve them before you can
+continue. If you have a conflict, please refer to `Resolving Conflicts
+<http://doc.bazaar.canonical.com/bzr.2.1/en/user-guide/resolving_conflicts.html>`_
+in the *Bazaar User Guide.*
 
 Type the following:
 
 :: 
   
-  bzr branch lp:openmdao              (Gets a copy of the openmdao trunk)
-  cd openmdao                         (Takes you to the trunk copy)
-  bzr merge ../<your_merging_branch>  (Merges your branch to the trunk copy)
-  python2.6 g-openmdao-dev.py         (Builds virtual environment for trunk copy)
-  cd devenv                           (Takes you to the virtual environment on the trunk copy)
-  source bin/activate                 (Activates trunk copy's virtual environment on Linux [requires bash]. 
-                                       On Windows: "Scripts\activate.bat")
-  openmdao_test --all                 (Confirms that all tests pass)
-  bzr commit -m <comment>             (Commits your merge changes to trunk copy [assuming tests pass])
+  bzr branch lp:openmdao                   (Gets a copy of the openmdao trunk)
+  cd openmdao                              (Takes you to the trunk copy)
+  bzr merge <path_to_your_merging_branch>  (Merges your branch to the trunk copy)
+  python2.6 g-openmdao-dev.py              (Builds virtual environment for trunk copy)
+  cd devenv                                (Takes you to the virtual environment on the trunk copy)
+  source bin/activate                      (Activates trunk copy's virtual environment on Linux or OS X [requires bash]. 
+                                            On Windows: "Scripts\activate")
+  openmdao_test                            (Confirms that all tests pass)
+  bzr commit -m <comment>                  (Commits your merge changes to trunk copy [assuming tests pass])
   
-If you can build successfully and pass the tests after the merge, you may push your branch to openmdao. 
-You must be logged into Launchpad to push a branch. Type:
+If you can build successfully and pass the tests after the merge, you may push
+your branch to the OpenMDAO trunk on Launchpad. You must have a Launchpad
+account and you must have your public SSH key registered with it in order to
+push a branch. Type:
 
 ::
   
@@ -161,15 +170,16 @@ Your branch becomes the latest revision of openmdao on Launchpad.
 You will push your branch up to the openmdao repository, but the changes do not become a part of the
 development trunk until one of the reviewers merges it. 
 
-You need to be somewhere on the branch to be pushed. Then type the following command, replacing ``userid``
-with your Launchpad userid and replacing ``branch_name`` with the name of the branch you are pushing.
+You need to be somewhere on the branch to be pushed. Then type the following
+command, replacing ``userid`` with your Launchpad userid and replacing
+``branch_name`` with the name of the branch you are pushing.
 
 ::
 
   bzr push lp:~userid/openmdao/branch_name 
 
-Now that your branch is in on Launchpad, you must request that it be merged. Please follow the
-instructions below.
+Now that your branch is in on Launchpad, you can request that it be merged by following 
+the instructions below.
 
 1. Go to `OpenMDAO <https://launchpad.net/openmdao>`_ on Launchpad and log in if you are not logged in
    already.

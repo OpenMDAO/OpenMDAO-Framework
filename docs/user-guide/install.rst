@@ -1,59 +1,64 @@
 
+.. _Installing-OpenMDAO:
+
 Installing OpenMDAO
 ===================
 
 System Requirements
 -------------------
 
+These instructions assume that you intend to install OpenMDAO for normal use.
+You will not be hacking on the OpenMDAO infrastructure or standard library, or
+developing any plugins that require compilation. If you do intend to do
+OpenMDAO development of some kind, you should refer to the installation
+instructions in the Developer Guide, because the developer environment has
+some additional system requirements on certain platforms.
+
 OpenMDAO requires the following programs or packages to be installed
-at the system level.
+at the system level on all platforms.
 
     - Python 2.6
-    - Bazaar (needed only if access to the OpenMDAO source repository is needed)
     
 
 **Platform-Specific Requirements**
 
+**Linux:**
+
+Our current OpenMDAO distribution for Linux is a source distribution, so in order to 
+use it, you must have compilers (C and fortran) on your system.
 
 On **Fedora**, the names of the needed RPM packages are:
 
     - python-devel
+    - numpy
     - gcc-gfortran
-    - bzr
-
 
 On **Ubuntu**, the .deb package names are:
 
     - python-dev
+    - python-numpy
     - gfortran
-    - bzr
-    
 
 On **Windows**, download and run the following installers if the corresponding
 applications or packages are not already installed:
 
     - `Python 2.6`__
-    - `mingw32`__
-    - `bazaar`__
     
 .. __: http://www.python.org/ftp/python/2.6.4/python-2.6.4.msi
-.. __: http://sourceforge.net/projects/mingw/files/Automated%20MinGW%20Installer/MinGW%205.1.6/MinGW-5.1.6.exe/download
-.. __: http://launchpad.net/bzr/2.1/2.1.0/+download/bzr-2.1.0-1.win32-py2.6.exe
 
 
 On **OS X**, make sure to install *Xcode*. It's included on the OS X install
-disk, and installing it will give you access to *gcc* and *gfortran*.
-Next, download and run the following installers if they're not already
-installed:
+disk, and installing it will give you access to *gcc*. Next, download and run
+the following installers if they're not already installed:
 
     - `Python 2.6`__
-    - `bazaar`__
 
 .. __: http://www.python.org/ftp/python/2.6.4/python-2.6.4_macosx10.3.dmg
-.. __: http://launchpad.net/bzr/2.1/2.1.0/+download/Bazaar-2.1.0-3.dmg
 
 
-.. note:: If you wish to view the source files, please see :ref:`Installing-from-Source`. 
+.. todo: Determine the best way to install a fortran compiler on OS X
+
+
 
 Installing and Running the Script
 ----------------------------------
@@ -80,12 +85,19 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 Navigate into the folder that was just created by your install script, and type the following
 command:
 
+On Linux or OS X (you must be running in the bash shell):
+
 ::
 
-  Linux: source bin/activate       (you must be running bash to do this)
+   source bin/activate
 
-  Windows: Scripts\activate.bat
-  
+On Windows:
+
+::
+
+   Scripts\activate
+
+
 Activating your virtual environment adds OpenMDAO's `devenv/bin` directory to your system
 path, so that when you launch Python, you have access to everything in OpenMDAO.
 
@@ -93,6 +105,6 @@ Now you are ready to go with OpenMDAO!
 
 
 .. note:: If you need an earlier version of OpenMDAO, its bootstrap script can be downloaded from:
-   ``http://openmdao.org/downloads/<openmdao_version>/go-openmdao.py`` where
+   ``http://openmdao.org/downloads/<openmdao_version>/go-openmdao.py`` 
    where ``<openmdao_version>`` is the version of OpenMDAO you want to install. 
 

@@ -1162,15 +1162,16 @@ variables will not be able to read, write, or even open their target files.
 Data Flow and Workflow
 ----------------------
 
-The execution order for components in a model can either be determined 
-automatically by OpenMDAO, or specified explicitly by defining a custom Workflow class. This
-distinction can be made at the assembly level, so for example, a model can have
-some assemblies with user-specified workflow, while other assemblies are
-left to automatic determination. In addition, a driver workflow can also be
-specified by the user. All three of these scenarios are discussed below.
+The execution order for components in a model can either be determined
+automatically by OpenMDAO, or specified explicitly by defining a custom
+Workflow class. This distinction can be made at the assembly level, so for
+example, a model can have some assemblies with user-specified workflow, while
+other assemblies are left to automatic determination. In addition, a driver
+workflow can also be specified by the user. All three of these scenarios are
+discussed below.
 
-*Data Flow & Lazy Evaluation*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*Data Flow*
+~~~~~~~~~~~
 
 The "default" workflow for a model is inferred from the data flow connections.
 This means that a component is available to run once its inputs become valid,
