@@ -1,6 +1,6 @@
 """
 The `domain` package provides a data structure for representing multi-zone
-meshes and their related data.  The goal is to be able to represent all
+meshes and their related data. The goal is to be able to represent all
 concepts from CGNS, though not necessarily in the same way.
 
 It also provides functions for reading and writing in various formats

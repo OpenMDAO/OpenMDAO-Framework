@@ -1,7 +1,5 @@
 import math
 
-import numpy
-
 _DEG2RAD = math.asin(1.) / 90.
 
 

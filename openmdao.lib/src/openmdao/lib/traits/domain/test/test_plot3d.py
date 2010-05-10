@@ -6,7 +6,7 @@ import logging
 import os.path
 import unittest
 
-from openmdao.lib.traits.domain import DomainObj, read_plot3d_q, write_plot3d_q
+from openmdao.lib.traits.domain import read_plot3d_q, write_plot3d_q
 from openmdao.lib.traits.domain.test.wedge import create_wedge_2d, \
                                                   create_wedge_3d
 

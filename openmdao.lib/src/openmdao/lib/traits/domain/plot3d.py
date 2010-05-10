@@ -183,11 +183,11 @@ def _read_plot3d_coords(zone, stream, dim, blanking, planes, logger):
         shape = (zone._imax, zone._jmax)
 
     if stream.unformatted:
-        reclen = stream.read_recordmark()
         if dim > 2:
             total = 3 * zone._imax * zone._jmax * zone._kmax
         else:
             total = 2 * zone._imax * zone._jmax
+        reclen = stream.read_recordmark()
         expected = stream.reclen_floats(total)
         if reclen != expected:
             logger.warning('unexpected coords recordlength'
@@ -209,8 +209,8 @@ def _read_plot3d_coords(zone, stream, dim, blanking, planes, logger):
     if stream.unformatted:
         reclen2 = stream.read_recordmark()
         if reclen2 != reclen:
-            logger.warning('mismatched coords recordlength'
-                           ' %d vs. %d', reclen2, reclen)
+            logger.warning('mismatched coords recordlength %d vs. %d',
+                           reclen2, reclen)
 
 
 def _read_plot3d_qscalars(zone, stream, logger):
@@ -306,25 +306,8 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
             # Write number of zones.
             stream.write_int(len(domain.zones), full_record=True)
 
-        # Zones must be all 2D or all 3D.
-        dim = 0
-        for zone in domain.zones:
-            name = domain.zone_name(zone)
-            shape = zone.shape
-            if not dim:
-                dim = len(shape)
-            elif dim != len(shape):
-                raise ValueError("zone '%s' is not %dD" % (name, dim))
-
-            if len(shape) > 2:
-                imax, jmax, kmax = shape
-                logger.debug('    %s: %dx%dx%d', name, imax, jmax, kmax)
-            else:
-                imax, jmax = shape
-                logger.debug('    %s: %dx%d', name, imax, jmax)
-
         # Write zone dimensions.
-        _write_plot3d_dims(domain, stream, dim)
+        _write_plot3d_dims(domain, stream, logger)
 
         # Write zone scalars and variables.
         for zone in domain.zones:
@@ -349,26 +332,8 @@ def write_plot3d_grid(domain, grid_file, planes=False, binary=True,
             # Write number of zones.
             stream.write_int(len(domain.zones), full_record=True)
 
-        # Zone must be all 2D or all 3D.
-        dim = 0
-        for zone in domain.zones:
-            name = domain.zone_name(zone)
-            shape = zone.shape
-            if not dim:
-                dim = len(shape)
-            elif dim != len(shape):
-                raise ValueError("zone '%s' is not %dD" % (name, dim))
-            if dim > 2:
-                imax, jmax, kmax = shape
-                logger.debug('    %s: %dx%dx%d', name, imax, jmax, kmax)
-            elif dim > 1:
-                imax, jmax = shape
-                logger.debug('    %s: %dx%d', name, imax, jmax)
-            else:
-                raise RuntimeError('domain must be at least 2D')
-
         # Write zone dimensions.
-        _write_plot3d_dims(domain, stream, dim)
+        _write_plot3d_dims(domain, stream, logger)
 
         # Write zone coordinates.
         for zone in domain.zones:
@@ -377,8 +342,26 @@ def write_plot3d_grid(domain, grid_file, planes=False, binary=True,
             _write_plot3d_coords(zone, stream, planes, logger)
 
 
-def _write_plot3d_dims(domain, stream, dim):
-    """ Write dimensions of each zone. """
+def _write_plot3d_dims(domain, stream, logger):
+    """ Write dimensions of each zone to Plot3D stream. """
+    # Zones must be all 2D or all 3D.
+    dim = 0
+    for zone in domain.zones:
+        name = domain.zone_name(zone)
+        shape = zone.shape
+        if not dim:
+            dim = len(shape)
+        elif dim != len(shape):
+            raise ValueError("zone '%s' is not %dD" % (name, dim))
+        if dim > 2:
+            imax, jmax, kmax = shape
+            logger.debug('    %s: %dx%dx%d', name, imax, jmax, kmax)
+        elif dim > 1:
+            imax, jmax = shape
+            logger.debug('    %s: %dx%d', name, imax, jmax)
+        else:
+            raise RuntimeError('domain must be at least 2D')
+
     if stream.unformatted:
         reclen = len(domain.zones) * stream.reclen_ints(dim)
         stream.write_recordmark(reclen)
@@ -411,7 +394,7 @@ def _write_plot3d_coords(zone, stream, planes, logger):
             total = 2 * imax * jmax
         reclen = stream.reclen_floats(total)
         stream.write_recordmark(reclen)
-    
+
     logger.debug('    x min %g, max %g',
                  zone.coords.x.min(), zone.coords.x.max())
     stream.write_floats(zone.coords.x, order='Fortran')

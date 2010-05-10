@@ -11,10 +11,10 @@ class DomainObj(object):
     """
 
     def __init__(self):
+        self.right_handed = True
         # Zones are kept in an explicit list to retain the order
         # that they were added.
-       self.right_handed = True
-       self.zones = []
+        self.zones = []
 
     @property
     def shape(self):
