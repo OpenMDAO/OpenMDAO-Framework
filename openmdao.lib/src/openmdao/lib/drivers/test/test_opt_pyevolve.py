@@ -230,7 +230,7 @@ class TestCase(unittest.TestCase):
             self.top.run()
         except TraitError, err: 
             self.assertEqual(str(err),
-                "StringRef: string reference is undefined")
+                "Expression: string reference is undefined")
         else: 
             self.fail("expecting TraitError")
         

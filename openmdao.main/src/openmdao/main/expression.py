@@ -4,7 +4,7 @@ hierarchy.
 """
 
 #public symbols
-__all__ = ['StringRef', 'StringRefArray']
+__all__ = ['Expression', 'ExpressionList']
 
 
 # pylint: disable-msg=E0611,F0401
@@ -16,9 +16,9 @@ from openmdao.main.expreval import ExprEvaluator
 class DumbDefault(object):
     """Dummy object for default, when none is given."""
     def __getattr__(self, name):
-        raise TraitError('StringRef: string reference is undefined')
+        raise TraitError('Expression: string reference is undefined')
             
-class StringRef(BaseStr):
+class Expression(BaseStr):
     """A trait that references, via a pathname, another trait in the
     framework. If it has iotype of 'out', then the string may only be the
     pathname of a single variable (with optional array indexing), but if
@@ -40,7 +40,7 @@ class StringRef(BaseStr):
         if desc is not None:
             metadata['desc'] = desc
             
-        super(StringRef, self).__init__(default_value, **metadata)
+        super(Expression, self).__init__(default_value, **metadata)
 
     def validate(self, object, name, value):
         """ Validates that a specified value is valid for this trait.
@@ -48,7 +48,7 @@ class StringRef(BaseStr):
         Note: The 'fast validator' version performs this check in C.
         """
         # normal string validation
-        s = super(StringRef, self).validate(object, name, value) 
+        s = super(Expression, self).validate(object, name, value) 
         
         try:
             if self.iotype == 'out':
@@ -62,11 +62,11 @@ class StringRef(BaseStr):
         return s
     
     
-class StringRefArray(List):
-    """A List of StringRef traits."""
+class ExpressionList(List):
+    """A List of Expression traits."""
     
     def __init__(self, **metadata):
         self.iotype = metadata.get('iotype', 'in')
-        super(StringRefArray, self).__init__(trait=StringRef( \
+        super(ExpressionList, self).__init__(trait=Expression( \
                             iotype=self.iotype), **metadata)
     
