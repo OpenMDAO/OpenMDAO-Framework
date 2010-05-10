@@ -25,7 +25,7 @@ class Driver(Assembly):
     def __init__(self, doc=None):
         super(Driver, self).__init__(doc=doc)
         self._expr_graph = { None: None, 'in': None, 'out': None }
-        self._ref_comps = { None: None, 'in': None, 'out': None }
+        self._expr_comps = { None: None, 'in': None, 'out': None }
         self.graph_regen_needed()
     
     def graph_regen_needed(self):
@@ -49,9 +49,9 @@ class Driver(Assembly):
         
         if not all(self.get_valids(exprnames)):
             self._call_execute = True
-            # force regeneration of _expr_graph, _ref_comps, _iteration_comps
+            # force regeneration of _expr_graph, _expr_comps, _iteration_comps
             self._expr_graph = { None: None, 'in': None, 'out': None } 
-            self._ref_comps = { None: None, 'in': None, 'out': None }
+            self._expr_comps = { None: None, 'in': None, 'out': None }
             self.graph_regen_needed()
             
         super(Driver, self)._pre_execute()
@@ -154,10 +154,10 @@ class Driver(Assembly):
         supplied, return only component names that are referenced by ref
         variables with matching iotype.
         """
-        if self._ref_comps[iotype] is None:
+        if self._expr_comps[iotype] is None:
             comps = set()
         else:
-            return self._ref_comps[iotype]
+            return self._expr_comps[iotype]
     
         for name in self.get_expr_names(iotype):
             obj = getattr(self, name)
@@ -167,7 +167,7 @@ class Driver(Assembly):
             else:
                 comps.update(obj.get_referenced_compnames())
                 
-        self._ref_comps[iotype] = comps
+        self._expr_comps[iotype] = comps
         return comps
         
     def get_expr_graph(self, iotype=None):
