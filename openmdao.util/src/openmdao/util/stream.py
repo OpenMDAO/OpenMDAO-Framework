@@ -47,10 +47,6 @@ class Stream(object):
             self.unformatted = False
             self.recordmark_8 = False
 
-    def close(self):
-        """ Close underlying file. """
-        return self.file.close()
-
     def reclen_ints(self, count):
         """ Returns record length for `count` ints. """
         if self.integer_8:
@@ -209,8 +205,8 @@ class Stream(object):
     def write_ints(self, data, order='C', sep=' ', fmt='%s', linecount=0,
                    full_record=False):
         """
-        Writes :mod:`numpy` integer array `data`.  If `order` is 'C', the data
-        is written in row-major order.  If `order` is 'Fortran', the data is
+        Writes :mod:`numpy` integer array `data`. If `order` is 'C', the data
+        is written in row-major order. If `order` is 'Fortran', the data is
         written in column-major order. If `linecount` is > zero, then at most
         `linecount` values are written per line. If `full_record`, then write
         surrounding recordmarks. Only meaningful if `unformatted`.
@@ -228,9 +224,11 @@ class Stream(object):
 
             if self.big_endian:
                 arr.byteswap(True)
-            self.file.write(arr.tostring(order=order))
-            if self.big_endian:
-                arr.byteswap(True)
+            try:
+                self.file.write(arr.tostring(order=order))
+            finally:
+                if self.big_endian:
+                    arr.byteswap(True)
 
             if full_record and self.unformatted:
                 self.write_recordmark(self.reclen_ints(data.size))
@@ -262,8 +260,8 @@ class Stream(object):
     def write_floats(self, data, order='C', sep=' ', fmt='%s', linecount=0,
                      full_record=False):
         """
-        Writes :mod:`numpy` float array `data`.  If `order` is 'C', the data
-        is written in row-major order.  If `order` is 'Fortran', the data is
+        Writes :mod:`numpy` float array `data`. If `order` is 'C', the data
+        is written in row-major order. If `order` is 'Fortran', the data is
         written in column-major order. If `linecount` is > zero, then at most
         `linecount` values are written per line. If `full_record`, then write
         surrounding recordmarks. Only meaningful if `unformatted`.
@@ -280,10 +278,12 @@ class Stream(object):
                 arr = numpy.array(data, dtype=numpy.float64)
 
             if self.big_endian:
-                data.byteswap(True)
-            self.file.write(data.tostring(order=order))
-            if self.big_endian:
-                data.byteswap(True)
+                arr.byteswap(True)
+            try:
+                self.file.write(arr.tostring(order=order))
+            finally:
+                if self.big_endian:
+                    arr.byteswap(True)
 
             if full_record and self.unformatted:
                 self.write_recordmark(self.reclen_floats(data.size))
@@ -299,7 +299,8 @@ class Stream(object):
         """
         shape = data.shape
         indices = [0 for i in shape]
-        item = data.item
+        _item = data.item
+        _write = self.file.write
 
         if order == 'C':
             # Row-major order.
@@ -313,12 +314,12 @@ class Stream(object):
 
         count = 0
         while True:
-            self.file.write(sep)
-            self.file.write(fmt % item(*indices))
+            _write(sep)
+            _write(fmt % _item(*indices))
+            count += 1
             if linecount > 0:
-                count += 1
                 if count >= linecount:
-                    self.file.write('\n')
+                    _write('\n')
                     count = 0
 
             for i in sequence:
@@ -329,6 +330,9 @@ class Stream(object):
                     break
             else:
                 break
+
+        if count:
+            _write('\n')
 
     def write_recordmark(self, length):
         """ Writes recordmark for `length` record. """
