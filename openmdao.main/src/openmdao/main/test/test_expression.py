@@ -70,12 +70,12 @@ class ExpressionTestCase(unittest.TestCase):
         self.assertEqual(-22., self.comp2.array[0])
         self.assertEqual(-777., self.comp2.array[2])
         
-    def test_ref_comps(self):
+    def test_expr_comps(self):
         self.comp1.objective = 'comp2.x+3*comp1.z'
         comps = self.comp1.objective.get_referenced_compnames()
         self.assertEqual(set(['comp2','comp1']), comps)
         
-    def test_array_ref_comps(self):
+    def test_exprlist_comps(self):
         self.comp1.desvars = ['comp2.x', 'comp4.y', 'comp4.d1']
         comps = reduce(lambda x,y: x.union(y.get_referenced_compnames()), 
                        self.comp1.desvars, set())

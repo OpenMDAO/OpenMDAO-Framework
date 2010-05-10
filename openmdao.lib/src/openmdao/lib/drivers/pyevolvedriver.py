@@ -140,7 +140,7 @@ class pyevolvedriver(Driver):
         slot.setRandomApply(RandomApply)
 
     @on_trait_change('objective') 
-    def _refvar_changed(self, obj, name, old, new):
+    def _expr_changed(self, obj, name, old, new):
         expr = getattr(obj, name)
         try:
             expr.refs_valid()  # force checking for existence of vars referenced in expression

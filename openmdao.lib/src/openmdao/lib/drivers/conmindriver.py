@@ -499,7 +499,7 @@ class CONMINdriver(Driver):
         
 
     @on_trait_change('objective') 
-    def _refvar_changed(self, obj, name, old, new):
+    def _expr_changed(self, obj, name, old, new):
         """ Check objective on change"""
         
         expr = getattr(obj, name)
@@ -511,7 +511,7 @@ class CONMINdriver(Driver):
             self.raise_exception( msg % (str(expr), name, err), TraitError)
         
     @on_trait_change('constraints, design_vars') 
-    def _refvar_array_changed(self, obj, name, old, new):
+    def _exprlist_changed(self, obj, name, old, new):
         """ Check constraints and design variables on change"""
 
         exprevals = getattr(obj, name)

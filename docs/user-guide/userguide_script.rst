@@ -662,10 +662,10 @@ inherently a function of variables in the framework.
     
     class MyDriver(Driver):
         """ A component that outputs a dot product of two arrays"""
-	
+
         objective = Expression(iotype='in', \
-                    desc= 'A string containing the objective function \
-                    expression.')
+                               desc= 'A string containing the objective function \
+                               expression.')
 
 It makes little sense to give a default value to an Expression, since
 its value will usually depend on the component names. Expressions are most
@@ -688,9 +688,9 @@ expressions.
         """ A component that outputs a dot product of two arrays"""
 
         constraints = ExpressionList(iotype='in',
-        desc= 'An array of expression strings indicating constraints.' \
-        ' A value of < 0 for the expression indicates that the constraint ' \
-        'is violated.')
+                                     desc= 'An array of expression strings indicating constraints.'
+                                           ' A value of < 0 for the expression indicates that the constraint '
+                                           'is violated.')
 
 Again, no default is needed.
 
