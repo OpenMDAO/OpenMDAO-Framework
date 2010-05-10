@@ -66,9 +66,9 @@ push a branch back to openmdao. In your home directory on your Linux machine, ty
 
 .. note:: If you do not know your userid, log in to Launchpad and click on your name in the upper
    right-hand corner. This takes you to an *Overview* page. In the first column, under *User Information*, 
-   you should see **OpenID login**. The web address should contain your userid. (In most cases
-   this be a hyphenated name, such as  ``john-j-smith``; in other cases, it may be a first initial
-   and last name, such as ``jsmith``.)
+   you should see **OpenID login**. The web address should contain your userid. In most cases
+   this will be a hyphenated name, e.g.,  ``john-j-smith, j-smith`` or ``smith-j``. It will depend on
+   the email address you provided.
    
 If the above command failed, you may be missing an ``authentication.conf`` file or have incomplete
 information in your ``bazaar.conf`` file. To check whether you have these files, type the following
@@ -172,9 +172,9 @@ push a branch back to openmdao. In your home directory on your Windows machine, 
 
 .. note:: If you do not know your userid, log in to Launchpad and click on your name in the upper
    right-hand corner. This takes you to an *Overview* page. In the first column, under *User Information*, 
-   you should see **OpenID login**. The web address should contain your userid. (In some cases
-   this may be a hyphenated name, such as  ``john-j-smith``; in other cases, it may be a first initial
-   and last name, such as ``jsmith``.)
+   you should see **OpenID login**. The web address should contain your userid. In most cases
+   this will be a hyphenated name, e.g.,  ``john-j-smith, j-smith`` or ``smith-j``. It will depend on
+   the email address you provided.
 
 
 
