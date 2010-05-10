@@ -59,8 +59,8 @@ At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply
 import the module containing it and use it in a model; but we want more than
 that. By packaging our plugin as a Python distribution, we can make it easy to share with
 others in the OpenMDAO community. We can give our distribution a version identifier and
-other :term:`metadata` that will help others determine if our plugin will meet
-their needs. 
+other :term:`metadata` that will allow the framework to discover our plugin and show users
+that it's available. 
 
 .. index:: creation
 
@@ -173,9 +173,9 @@ within the OpenMDAO framework:
     available within a distribution. Entry points are divided into groups, and each
     type of OpenMDAO plugin has a particular group. For example, Component
     plugins are found in the *openmdao.component* group. Each individual entry
-    point is specified by its name, followed by an equals sign, followed by
+    point is specified by its name, followed by an equals (**=**) sign, followed by
     dotted module path (dotted path you would use to import the module in
-    Python), followed by a colon and the name of the plugin class. The value
+    Python), followed by a colon (**:**) and the name of the plugin class. The value
     of *entry_points* should be a string in INI file format or a dictionary. 
     
         

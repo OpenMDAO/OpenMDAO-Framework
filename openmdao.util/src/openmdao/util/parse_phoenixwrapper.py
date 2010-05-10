@@ -192,7 +192,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
     variables and containers are placed in the new OpenMDAO component.
     
     infile  - ModelCenter scriptwrapper
-    outfile - OpenMDAO component shell
+    outfile - file containing new OpenMDAO component skeleton
     compname - Name for new component
     """
     

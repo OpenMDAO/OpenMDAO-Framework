@@ -7,7 +7,7 @@ from subprocess import check_call
 import pkg_resources
 import copy
 
-from openmdao.main.api import PkgResourcesFactory
+from openmdao.main.pkg_res_factory import PkgResourcesFactory
 import openmdao.util.mod2dist
 from openmdao.util.testutil import find_python
 

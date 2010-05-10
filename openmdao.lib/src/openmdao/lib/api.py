@@ -1,35 +1,30 @@
 """ 
-Pseudo package containing commonly used functions from the OpenMDAO Standard
-Library.
+Pseudo package containing plugins from the OpenMDAO Standard Library.
 
-Public Variables
-----------------
-Array
-Bool
-CBool
-Complex
-Enum
-File
-Float
-Instance
-Int
-List
-Str
+| *Public Variables*
+|
+|    Array
+|    Bool
+|    CBool
+|    Complex
+|    Enum
+|    File
+|    Float
+|    Instance
+|    Int
+|    List
+|    Str
 
-Drivers
--------
-CaseIteratorDriver
-CONMINdriver
-pyevolvedriver
-
-Functions
----------
-convert_units
+| *Drivers*
+|
+|    CaseIteratorDriver
+|    CONMINdriver
+|    pyevolvedriver
 """
 
 # Traits that we've modified
 from openmdao.lib.traits.enum import Enum
-from openmdao.lib.traits.float import Float, convert_units
+from openmdao.lib.traits.float import Float
 from openmdao.lib.traits.file import File
 from openmdao.lib.traits.int import Int
 

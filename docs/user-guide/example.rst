@@ -399,8 +399,8 @@ from its inputs. We must create the public variables that define these inputs an
 
 .. testcode:: Code2
 
-	from openmdao.main.api import Component
-	from openmdao.lib.api import Float, Int, Enum, convert_units
+	from openmdao.main.api import Component, convert_units
+	from openmdao.lib.api import Float, Int, Enum
 
 	class Transmission(Component):
 	    """ A simple transmission model."""

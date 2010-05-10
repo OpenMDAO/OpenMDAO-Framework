@@ -47,7 +47,7 @@ Plugins within OpenMDAO are just python classes that provide an expected
 interface, so as long as your class provides the necessary interface and can
 be imported into your python script, you'll be able to use it as a plugin.
 But what if an OpenMDAO user wants to obtain a listing of all of the 
-plugins that are available in his environment?  To allow that to happen, 
+plugins that are available in the environment?  To allow that to happen, 
 the plugin developer must provide metadata that specifies the name,
 plugin interface, and location within its package for each plugin that
 is intended to be discoverable by the framework.  The rest of this

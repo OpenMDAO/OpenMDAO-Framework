@@ -752,7 +752,7 @@ zero.
 This units library can also be used to convert internal variables by importing
 the function *convert_units* from openmdao.lib.api.
 
-    >>> from openmdao.lib.api import convert_units
+    >>> from openmdao.main.api import convert_units
     >>> convert_units(12.0,'inch','ft')
     1.0
 

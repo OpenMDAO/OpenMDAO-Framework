@@ -3,7 +3,7 @@ Trait for floating point variables, with optional min, max, and units
 """
 
 #public symbols
-__all__ = ["Float", "convert_units"]
+__all__ = ["Float"]
 
 
 from sys import float_info
@@ -15,14 +15,6 @@ from openmdao.units import PhysicalQuantity
 
 from openmdao.main.tvalwrapper import TraitValMetaWrapper
 
-def convert_units(value, units, convunits):
-    """Return the given value (given in units) converted 
-    to convunits.
-    """
-    pq = PhysicalQuantity(value, units)
-    pq.convert_to_unit(convunits)
-    return pq.value
-    
 class Float(TraitType):
     """A Public Variable wrapper for floating point number valid within a
     specified range of values.

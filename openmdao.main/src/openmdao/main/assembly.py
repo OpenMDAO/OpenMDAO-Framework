@@ -329,7 +329,7 @@ class Assembly (Component):
     def is_destination(self, varpath):
         """Return True if the Variable specified by varname is a destination
         according to our graph. This means that either it's an input connected
-        to an output, or it's the destination part of a passtru connection.
+        to an output, or it's the destination part of a passthrough connection.
         """
         tup = varpath.split('.',1)
         preds = self._var_graph.pred.get(varpath, {})
