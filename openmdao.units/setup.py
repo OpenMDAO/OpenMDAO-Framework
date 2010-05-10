@@ -21,6 +21,7 @@ setup(name='openmdao.units',
       url='http://openmdao.org',
       install_requires=[
           'setuptools',
+          'numpy',
       ],
       )
 

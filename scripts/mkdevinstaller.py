@@ -89,7 +89,7 @@ def after_install(options, home_dir):
     reqnumpy = 'numpy'
     numpyidx = None
     for i,req in enumerate(reqs):
-        if req.startswith('numpy') and len(req)>5 and req[5]=='=' or req[5]=='>':
+        if req.startswith('numpy') and len(req)>5 and (req[5]=='=' or req[5]=='>'):
             reqnumpy = req
             numpyidx = i
             break

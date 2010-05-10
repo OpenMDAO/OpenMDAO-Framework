@@ -10,7 +10,7 @@
 Overview of the OpenMDAO Framework
 ==================================
 
-MDAO stands for Multidisciplinary Analysis and Optimization; OpenMDAO is
+MDAO stands for Multidisciplinary Analysis and Optimization. OpenMDAO is
 an open source framework for analyzing and solving MDAO problems. In OpenMDAO, a
 problem is represented by a system of objects called :term:`components`. These objects
 have input and output attributes and can perform some sort of calculation when
@@ -32,15 +32,15 @@ calculation that it performs is to add the two inputs to produce the output.
    Conceptual View of a Simple Component
 
 
-Note that components within OpenMDAO can be as simple or complex as necessary.
+Components within OpenMDAO can be as simple or complex as necessary.
 The inputs and outputs to a Component are Python objects, so they are not limited
-to being simple types like float or int.
+to being simple types like floating point or integer.
 
 An :term:`Assembly` is a special kind of Component that contains other
 components. When an Assembly is executed, it runs the components it contains
-in the order determined by a Workflow object. A :term:`Workflow` is simply an
+in the order determined by its Workflow object. A :term:`Workflow` is simply an
 object that determines execution order for a group of components. The workflow
-orders the components according to the direction the data flow between them,
+orders the components according to the direction of the data flow between them,
 i.e., such that any Component that supplies input values to another Component
 will always run *before* that Component.
 

@@ -13,8 +13,8 @@ Glossary
 
 
       **Assembly**
-        The Assembly class is the primary building block of the system of 
-        systems aspect of OpenMDAO. Each assembly has a Workflow and a 
+        The Assembly class is the primary building block of the "system of 
+        systems" aspect of OpenMDAO. Each assembly has a Workflow and a 
         Driver, and acts as a container for Components. An assembly is also a
         component, so hierarchical structures of assemblies can be created.
       
@@ -23,10 +23,6 @@ Glossary
         Axial-Flow Turbine Off-Design. A a computer code used for
 	preliminary studies of the gas turbine system.
 	
-
-      **Beaker** 
-        A Session and Caching library with :term:`WSGI` Middleware. 
-	      
       
       **branch**
 	An ordered series of revisions (see :term:`revision` below) that describes the
@@ -85,7 +81,7 @@ Glossary
 	
 	
       **CONMIN**
-        An interface to the NASTRAN/NASA CONMIN optimization program.
+        An interface to the NASA CONMIN optimization program.
       
       
       **Container**
@@ -133,14 +129,7 @@ Glossary
       **eggs**
         See :term:`egg` above. 
 
-      
-      **Elixir**
-        A declarative layer on top of SQLAlchemy that provides the ability to create simple
-        Python classes that map directly to relational database tables. It provides many of
-        the benefits of traditional databases without losing the convenience of Python
-        objects.
-
-	
+      	
       **F2PY**
         Fortran to Python interface generator.
 
@@ -150,8 +139,7 @@ Glossary
 
 
       **FactoryManager**
-        All requests to create any type of Container must go through the
-        FactoryManager object. Multiple Factory derived objects can be registered with
+        Multiple Factory derived objects can be registered with
         the FactoryManager to allow creation of objects in various ways, e.g., locally
         via import and remotely via an ObjServer.
 
@@ -161,10 +149,6 @@ Glossary
 	solutions of partial differential equations (PDE) as well as of integral
 	equations. A structural analysis method which discretizes a continuum model of a
 	complex structure to a discrete model of a finite number of degrees of freedom.
-
-
-      **FormEncode**
-        An HTML form validation, generation, and conversion package.
 
 
       **GA**
@@ -205,11 +189,6 @@ Glossary
         Local Area Network. An interconnection of computers that are in relatively
         close proximity to each other, such as within a building. 
 
-
-      **Mako**
-        A template library written in Python that provides a familiar, non-XML syntax which
-        compiles into Python modules for maximum performance.
-
 	
       **MDAO**  
         Multi-disciplinary Analysis & Optimization
@@ -220,7 +199,11 @@ Glossary
         dataset or other resource. It describes context, content, and structure of the resource and its
         management through time. 
 
-      
+	
+      **Method of Feasible Directions**
+        A gradient descent optimization algorithm used in CONMIN.
+	
+	
       **model**
         A hierarchical structure with an :term:`Assembly` at its root.
        
@@ -317,14 +300,14 @@ Glossary
 
 	
       **Public Variables** 
-        A component's inputs and outputs. They are called "Public" variables
-	because they are exposed to the framework; inputs can be set and
-	outputs can be read by other framework components. In general, a
-	Public Variable is a wrapper for some set of data and metadate that
-	can include a value, a default value, optional min/max values, and units. 
-	Public Variables can also perform their own validation when being assigned 
-	to another Public Variable. OpenMDAO's Public Variables are implemented using 
-	Traits, an open source extension to Python authored by Enthought, Inc.
+        A component's inputs and outputs. They are called "public" variables because
+        they are exposed to the framework; inputs can be set and outputs can be read
+        by other framework components. In general, a public variable is a wrapper for
+        data passed between framework components. It has a value, a default value, and
+        may contain additional attributes like min/max values and units. Public
+        variables can also perform their own validation when being assigned to another
+        public variable. OpenMDAO's public variables are implemented using Traits, an
+        open source extension to Python authored by Enthought, Inc.
 
 	
       **Pyevolve**
@@ -471,17 +454,11 @@ Glossary
 
       
       **units**
-        An egg used by OpenMDAO that provides unit conversion capability for variables.
+        A package used by OpenMDAO that provides unit conversion capability for variables.
 	
 	
       **Variable**
-        A wrapper for data passed between framework components. Variables can contain
-        a value, a default value, optional min/max values, and units. Variables can
-        perform their own validation when being assigned to another Variable. To
-        extend the framework by creating a new data type to be passed between
-        Components, a developer would create a new Python class that inherits from
-        Variable. This Variable would have its own validation routine and could also
-        have a custom viewer/editor.
+        see :term:`Public Variables`
 
 
       **VSP**
@@ -538,41 +515,11 @@ Glossary
       **zope.component**
         Zope Component Architecture
 
-      **zope.deferredimport** 
-        The zope.deferredimport package provided facilities for defining names in modules
-        that will be imported from somewhere else when used.
-
-
-      **zope.deprecation** 
-        This package provides a simple function called "deprecated(names, reason)" to
-        deprecate Python objects.
-
-      
-      **zope.event**
-        A very basic event publishing system.
-
-      
-      **zope.i18nmessageid**
-        This package provides facilities for delaring  messages (which carry a
-        translation source domain and possibly a default translation) within program
-        source text; translation of the messages is the responsiblitiy of the "zope.i18n"
-        package.
 
       **zope.interface**
         A package that provides an implementation of object interfaces for Python. 
 
-
-      **zope.proxy**
-        Generic transparent proxies. Proxies are special objects which serve as
-        mostly transparent wrappers around another object, intervening in the apparent
-        behavior of the wrapped object only when necessary to apply the policy (e.g.,
-        access checking, location brokering, etc.) for which the proxy is responsible.
-
-
-      **zope.schema**
-        zope.interface extension for defining data schemas
-
-
+	
       **ZopeSkel**
         ZopeSkel provides a collection of skeletons for quickstarting Zope and Plone
         projects.

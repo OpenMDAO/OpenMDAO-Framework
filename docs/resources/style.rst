@@ -42,7 +42,7 @@ titles as shown in the following example:
 ::
 
   ============
-  User's Guide
+  User Guide
   ============
 
 The overline and underline must be the same length, or you will get an error and the
