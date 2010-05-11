@@ -121,11 +121,19 @@ def _pkg_sphinx_info(startdir, pkg, outfile, show_undoc=False,
     print >> outfile, underline*(len('Package ')+len(pkg))
     print >> outfile, '\n\n'
     
+    # this behaves strangely, maybe because we use namespace pkgs?
+    # mod points to module 'openmdao', not 'openmdao.whatever', so we
+    # have to access 'whatever' through the 'openmdao' module
+    mod = __import__(pkg)
+    docs = getattr(mod, pkg.split('.')[1]).__doc__
+    if docs:
+        print >> outfile, docs, '\n'
+    
     names = list(_get_resource_files(dist,
                                     ['*__init__.py','*setup.py','*/test/*.py'],
                                     ['*.py']))            
     names.sort()
-    
+    pkg
     exdirs = ['build', 'examples']
             
     for name in names:
@@ -262,12 +270,13 @@ def _make_license_table(docdir, reqs=None):
     contains a restructured text table with the name, license, and home-page of
     all distributions that openmdao depends on.
     """
-    meta_names = ['name','license','home-page']
+    meta_names = ['name', 'version', 'license','home-page']
     headers = ['**Distribs Used by OpenMDAO**',
+               '**Version**',
                '**License**',
                '**Link**']
     numcols = len(meta_names)
-    data_templates = ["%s", "%s", "%s"]
+    data_templates = ["%s", "%s", "%s", "%s"]
     col_spacer = ' '
     max_col_width = 80
     excludes = [] #["openmdao.*"]

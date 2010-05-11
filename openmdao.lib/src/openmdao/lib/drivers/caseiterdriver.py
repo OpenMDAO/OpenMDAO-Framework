@@ -3,13 +3,11 @@ import Queue
 import sys
 import threading
 
-from enthought.traits.api import Bool, Instance
-
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.resource import ResourceAllocationManager as RAM
-from openmdao.lib.traits.int import Int
+from openmdao.lib.api import Bool, Instance, Int
 from openmdao.util.filexfer import filexfer
 
 _EMPTY    = 'empty'
@@ -35,10 +33,9 @@ class CaseIteratorDriver(Driver):
     - If `sequential` is True, then the cases are evaluated sequentially.
     - If `reload_model` is True, the model is reloaded between executions.
     - `max_retries` sets the number of times to retry a failed case.
+    
 
-    .. parsed-literal::
-
-       TODO: define interface for 'recorder'.
+.. todo:: Define interface for "recorder."
 
     """
 

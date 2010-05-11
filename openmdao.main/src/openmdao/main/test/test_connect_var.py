@@ -26,11 +26,9 @@ class Oneout(Component):
     ratio5 = Str('05678', iotype='out', 
                    desc='string variable')
     ratio6 = Enum(27, (0,3,9,27), iotype='out', desc='some enum')
+    unit = Float(12.0, units='inch', iotype='out')
+    no_unit = Float(12.0, iotype='out')
 
-    def __init__(self, doc=None, directory=''):
-        
-        super(Oneout, self).__init__(doc, directory)        
-        
     def execute(self):
         """                                                                    
            execute
@@ -52,12 +50,8 @@ class Oneinp(Component):
     ratio5 = Str('01234', iotype='in', 
                    desc='string variable')
     ratio6 = Enum(0, (0,3,11,27), iotype='in', desc='some enum')
-
-    def __init__(self, doc=None, directory=''):
-        
-        super(Oneinp, self).__init__(doc, directory)        
-        
-
+    unit = Float(0.0, units='ft', iotype='in')
+    no_unit = Float(0.0, iotype='in')
 
     def execute(self):
         """                                                                    
@@ -74,6 +68,9 @@ class VariableTestCase(unittest.TestCase):
         self.top.add_container('oneinp', Oneinp())
         self.top.add_container('oneout', Oneout())
 
+    def tearDown(self):
+        self.top = None
+        
     def test_var1(self):
         #  connect to same type variables....
         self.top.connect('oneout.ratio1','oneinp.ratio1')      # float to float
@@ -224,7 +221,17 @@ class VariableTestCase(unittest.TestCase):
         else:
             self.fail('TraitError Expected')
 
+    def test_var13_units(self):
+        self.top.connect('oneout.unit','oneinp.no_unit')      # Bool to  Float 
+        self.top.connect('oneout.no_unit','oneinp.unit')      # Bool to  int    
+        self.top.run()
+        self.assertEqual(12.0,self.top.oneinp.no_unit)
+        self.assertEqual(12.0,self.top.oneinp.unit)
 
-if __name__ == "__main__":
-    unittest.main()
+
+if __name__ == '__main__':
+    import nose
+    import sys
+    sys.argv.append('--cover-package=openmdao.main')
+    nose.runmodule()
 

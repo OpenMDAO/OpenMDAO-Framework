@@ -3,25 +3,29 @@ import os
 
 import nose
 
-
-oldexit = sys.exit
-
-def dumexit(ret=0):
-    print '  --all                 Run all OpenMDAO related unit tests'
-    sys.exit = oldexit
-    sys.exit(ret)
-    
-def run_openmdao_suite(*pargs, **kwargs):
+def run_openmdao_suite():
     """This function is exported as a script that is runnable as part of
-    an OpenMDAO virtual environment as bin/openmdao_test.
-    Add any packages/directories to search for tests to tlist.
+    an OpenMDAO virtual environment as openmdao_test.
+    
+    This function wraps nosetests, so any valid nose args should also
+    work here.
     """
     
-    args = sys.argv[:]
+    #Add any default packages/directories to search for tests to tlist.
+    tlist = ['openmdao']
+    
+    break_check = ['--help', '-h', '--all']
+    
+    # check for args not starting with '-'
+    args = sys.argv[1:]
+    for arg in args:
+        if not arg.startswith('-') or arg in break_check:
+            break
+    else:  # no non '-' args, so assume they want to run the whole test suite
+        args.append('--all')
+        
     args.append('--exe') # by default, nose will skip any .py files that are
                          # executable. --exe prevents this behavior
-        
-    tlist = ['openmdao']
     
     # In case --with-coverage2 is used, default these options in.
     if '--with-coverage2' in args:
@@ -49,15 +53,7 @@ def run_openmdao_suite(*pargs, **kwargs):
     if '--all' in args:
         args.remove('--all')
         args.extend(tlist)
-        args.extend(pargs)
         nose.run_exit(argv=args)
-    elif '--help' in args or '-h' in args:
-        # TODO: find a better way to do this.
-        # since nose.run() immediately exits after printing its help info,
-        # we temporarily hijack the sys.exit function in order to 
-        # get our help info for --all to show up in the right spot.
-        sys.exit=dumexit
-        nose.run()
     else:
         nose.run_exit()
 

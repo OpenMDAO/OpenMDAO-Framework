@@ -6,7 +6,6 @@ Building a Plugin that Contains a File Wrapper
 
 The file wrapping library has not yet been implemented.
 
-::
-
-    TODO: file wrapping procedure
-    TODO: convenience functions (templating, locating data in a file, etc.)
+.. todo:: File wrapping procedure
+    
+.. todo:: Convenience functions (templating, locating data in a file, etc.)

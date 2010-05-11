@@ -114,14 +114,14 @@ file, or even a different document within the MDAO user documentation. However,
 label names must be unique.
 
 For example, if you are in the *Developer's Guide* and want to refer the user to
-the tutorial problem overview in the *User's Guide*, you would type
+the tutorial problem overview in the *User Guide*, you would type
 something like the following in the source file:
 
 ::
   
   Please see the tutorial problem, specifically the :ref:`Problem-Overview`.
 
-In the *User's Guide* you would place the label before the section title, as follows:
+In the *User Guide* you would place the label before the section title, as follows:
 
 ::
 

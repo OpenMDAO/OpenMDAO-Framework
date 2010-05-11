@@ -13,26 +13,28 @@ from openmdao.lib.api import Float
 
 
 class Chassis(Component):
-    """ A vehicle dynamics component - calculates acceleration."""
+    """ A vehicle dynamics component - calculates acceleration.
 
-    # Design parameters:
-    #mass_vehicle        # Vehicle Mass (kg)
-    #Cf                  # Friction coef (proportional to V)
-    #Cd                  # Drag coef (proportional to V**2)
-    #area                # Frontal area (for drag calc) (sq m)
+    Design parameters:
+    mass_vehicle        # Vehicle Mass (kg)
+    Cf                  # Friction coef (proportional to V)
+    Cd                  # Drag coef (proportional to V**2)
+    area                # Frontal area (for drag calc) (sq m)
     
-    # Simulation inputs:
-    #mass_engine         # Engine Mass (kg)
-    #velocity            # Vehicle velocity (m/s)
-    #engine_torque       # Engine Torque (Nm)
-    #torque_ratio        # Torque ratio due to Transmission
-    #tire_circ           # Circumference of tire (m)
+    Simulation inputs:
+    mass_engine         # Engine Mass (kg)
+    velocity            # Vehicle velocity (m/s)
+    engine_torque       # Engine Torque (Nm)
+    torque_ratio        # Torque ratio due to Transmission
+    tire_circ           # Circumference of tire (m)
     
-    # Outputs:
-    #acceleration        # Calculated vehicle acceleration (m/s^2)
+    Outputs:
+    acceleration        # Calculated vehicle acceleration (m/s^2)
+    """
     
     # set up interface to the framework  
     # pylint: disable-msg=E1101
+    
     mass_vehicle = Float(1200.0, iotype='in', units='kg', 
                               desc='Vehicle Mass')
     Cf = Float(0.035, iotype='in', 
@@ -52,7 +54,7 @@ class Chassis(Component):
     tire_circ = Float(1.905, iotype='in', units='m', 
                            desc='Circumference of tire')
     acceleration = Float(0., iotype='out', units='m/(s*s)', 
-                              desc='Calculated vehicle acceleration ')    
+                              desc='Vehicle acceleration ')    
         
         
     def execute(self):

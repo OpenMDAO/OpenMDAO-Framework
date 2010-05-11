@@ -6,91 +6,83 @@
 A More Complex Tutorial Problem
 ================================
 
-To help you understand how to use OpenMDAO, an example problem is presented here, somewhat in the
-form of a tutorial. We felt that the example needed to be chosen carefully to ensure that the
-design problem could be understood intuitively regardless of background. This precluded the use of an
-aircraft aerodynamics-structural design problem as an example, even though the developers had the
-expertise. Additionally, the example problem needed to include enough model complexity to allow a full
-set of features to be demonstrated. The automotive design problem presented in the next section satisfied
-these requirements.
-
-One important thing should be noted: OpenMDAO is currently under development, and there are a number of
-features that haven't been implemented, including a graphical interface (GUI). Interacting with the
-framework architecture is done by writing Python code. While the tutorial problem was designed to teach
-you to utilize the framework via all available interfaces, it is difficult to construct a tutorial
-that achieves the same level of interactivity for a scripting interface as for a graphical one. 
-
-This tutorial assumes that you have already created a local copy of the code repository. (Add
-reference.)
+This tutorial covers some of the more advanced capabilities of OpenMDAO. If you have not
+completed the :ref:`Getting-Started-with-OpenMDAO`, then you should read and understand
+that example before starting this one.
 
 Problem Overview
 ----------------
 
-The overall objective of the tutorial problem is to design an automobile that performs "well" as measured
+The objective of the tutorial problem is to design an automobile that performs "well" as measured
 by three metrics: 
 
 - The time to accelerate from rest to 60 mph
 - The fuel economy as measured by the EPA highway driving test
 - The fuel economy as measured by the EPA city driving test
 
-The automobile to be designed is a conventional one with a gasoline-fueled internal combustion engine and
-a 5-speed manual transmission. The scope of this problem is preliminary conceptual design, so the tools
-for simulating the vehicle should be chosen to have a relatively compact set of design variables and a
-reasonably quick execution time to allow exploration of the design space via multiple executions. Such
-tools were generally not available in the open literature or the open-source community in the form
-desired, but it was possible to develop them from scratch based on physical first principles. The
-mathematical model for the engine came from open literature.
+We will be designing a conventional automobile with a gasoline-fueled internal
+combustion engine and a 5-speed manual transmission. Our scope is preliminary
+conceptual design, so we need to choose simulation models with a compact set
+of design inputs and a quick execution time to allow exploration of the design
+space via multiple executions. An existing vehicle simulation was not
+available in the desired form, so we developed one based on physical first
+principles. The mathematical model for the engine came from open literature.
 
-The simulation of the desired performance metrics primarily requires a model of the vehicle's power-train,
-including the engine, the transmission, and the rear differential. In addition, the equation of motion for
-the vehicle is needed. A logical way to compartmentalize the vehicle model is to break it into component
-models matching each of these subsystems: engine, transmission, and chassis (which includes the
-rear differential ratio). In a typical problem, each of these component models will be a completely
-separate implementation, possibly with different authors or vendors, and will require a set of design variables which are
-detailed below.
+In order to simulate these performance metrics, we need a model of the
+vehicle's power-train, including the engine, the transmission, and the rear
+differential. We also need the equations of motion for driving the vehicle. A
+logical way to divide the vehicle model is to break it into component models
+matching each of these subsystems: engine, transmission, and chassis (which
+includes the rear differential ratio). In a typical problem, each of these
+component models will be a separate implementation, possibly with different
+authors or vendors. The design variables for each subsystem are detailed
+below.
 
-So a vehicle contains an engine, a transmission, and a chassis component. In addition to the
-design variables, there are three simulation variables: throttle position, gear, and velocity. These
-variables, which are independent of any design, are used during simulation, where the vehicle model is
-essentially being "driven" to determine the desired test metrics. There are also a couple of
-other simulation inputs, such as RPM and Power, that are required by the engine and chassis
-models. These are provided by other components in the vehicle. For example, the engine needs an RPM to
-calculate its power. This RPM is output by the transmission component, which determines it from the
-vehicle's velocity and gear position. These inter-dependencies define the connection order for vehicle
-components in terms of the Data Flow: Transmission -> Engine -> Chassis. 
-
+A vehicle contains an engine, a transmission, and a chassis component. Each of
+these subsystems is described by some kind of mathematical model that depends
+on a set of design variables (e.g., compression ratio.) There are also 3
+simulation variables: throttle position, gear, and velocity. These variables
+are independent of any design, and are used during simulation while the
+vehicle model is being "driven" to determine the metrics. There are also a
+couple of internal inputs, such as RPM and Power that are provided by other
+components in the vehicle. These inter-dependencies define the connection
+order for vehicle components in terms of the Data Flow: Transmission -> Engine
+-> Chassis.
 
 .. _`process-model`:
 
 The full process model is shown below.
 
-.. figure:: ../images/user-guide/Process_Diagram4.png
+.. figure:: ../images/user-guide/Process_Diagram.png
    :align: center
 
    Process Model for Tutorial Problem
 
 
-The process model includes a driving simulation component, which actually performs the simulations and calculates the performance metrics. A
-typical optimization problem would be to close the loop around the metrics and the design variables,
-driving some subset of them to minimize the 0-60 acceleration time and maximizing the EPA city and highway
-mileage.
+The process model includes a driving simulation component, which performs the
+simulations and calculates the performance metrics. A typical problem would be
+to close an optimization loop around the vehicle model, driving one or more
+design variables to minimize the 0-60 acceleration time and maximize the
+EPA city and highway mileage.
 
 
 *The Transmission Model*
 ________________________
 
-There are two tasks that the transmission model must perform:
+The transmission model must perform two tasks:
 
 1. Provide a transformation from engine output torque to torque at the wheels
 2. Calculate the engine RPM
 
-The transmission modeled here is a 5-speed manual. Shifting is assumed to occur instantaneously when the
-simulation input *CurrentGear* is given a new value. When the clutch is engaged, there is a direct linkage
-between the wheel rotation and the engine rotation via the current gear ratio and the differential ratio,
-so the engine RPM can be calculated given the velocity. However, this direct linkage would cause the
-engine RPM to go to zero as the vehicle stops, so the transmission model assumes that the clutch is
-partially disengaged for low speed operation (i.e., where the engine speed would drop below 1000 RPM) and
-sets the engine speed to 1000 RPM. This only occurs when the transmission is in first gear.
+The transmission modeled here is a 5-speed manual. Shifting occurs
+instantaneously when the simulation input *CurrentGear* is given a new value.
+When the clutch is engaged, the wheel rotation and the engine rotation are
+directly linked via the current gear ratio and the differential ratio, so the
+engine RPM can be calculated given the velocity. However, this direct linkage
+would cause the engine RPM to go to zero as the vehicle stops, so the clutch
+partially disengages for low speed operation (i.e., where the engine speed
+would drop below 1000 RPM) and sets the engine speed to 1000 RPM. This only
+occurs when the transmission is in first gear.
 
 
 **Transmission - Design Variables:**
@@ -135,53 +127,56 @@ velocity	      Current vehicle velocity			   m/s
 torque_ratio	   Ratio of transmission output power to power 
                    at the wheel
 -----------------  -------------------------------------------  ------
-RPM    		   Engine rotational speed			rev/s
+RPM    		   Engine rotational speed			1/min
 =================  ===========================================  ======
 
   
 *The Engine Model*
 __________________
 
-There are two pieces of information that the engine model must provide:
+The engine model must provide two pieces of information:
 
-1. Torque seen by the transmission
+1. Torque at engine output
 2. Fuel burn under current load
 
-There are quite a few simple models in the literature, but the one published in a master's thesis by S.
-Sitthiracha (`1`_) appeared to be the best choice for use in the tutorial problem. Sitthiracha presents a
-physics-based model of the Otto cycle in a 4-stroke spark-ignition internal combustion engine. The
-mathematical model allows the construction of a parametrized engine model with 10 design inputs covering
-the engine mechanical design (cylinder bore, stroke, connecting rod length, and compression ratio), intake
-valve design (diameter and lift), and the cycle timing (for both intake and spark.) In the thesis, the
-model is implemented in Simulink and simulated using data from a family of Mercedes-Benz engines designed
-in 1969. The model is actually fairly comprehensive and includes the effects of burn duration, heat loss
-through the cylinder wall, losses due to friction and charge heating, and intake orifice flow. Some of
-these effects were derived from empirical data and are essentially valid over an engine speed ranging from
-1000 RPM to 6000 RPM.
+We used a model published in a master's thesis by S. Sitthiracha (`1`_). It is
+a physics-based model of the Otto cycle in a 4-stroke spark-ignition internal
+combustion engine. This model allows the construction of a parametrized engine
+model with 10 design inputs covering the engine mechanical design (cylinder
+bore, stroke, connecting rod length, and compression ratio), intake valve
+design (diameter and lift), and the cycle timing (for both intake and spark.)
+In the thesis, the model is implemented in Simulink and simulated using data
+from a family of Mercedes-Benz engines designed in 1969. The model includes
+the effects of burn duration, heat loss through the cylinder wall, losses due
+to friction and charge heating, and intake orifice flow. Some of these effects
+were derived from empirical data and are essentially valid over an engine
+speed ranging from 1000 RPM to 6000 RPM.
 
-The model developed by Sitthiracha also includes the fuel type as another design variable. This generally
-introduces a half dozen parameters that are dependent on the fuel chemistry. To keep the model reasonably
-simple, these parameters were set to values appropriate for gasoline and were not provided as design
-inputs for the engine model. It would not be difficult to modify the component code to allow any of these
-to be used as design variables, given what will be learned from the tutorial problem.
+Sitthiracha's model also includes the fuel type as a design variable. This
+introduces a half dozen parameters that are dependent on the fuel chemistry.
+To keep our model simple, we set these parameters to values appropriate for
+gasoline and did not provide as design inputs for the engine model. It would
+not be difficult to modify the component code to allow any of these to be used
+as design variables, given what will be learned from the tutorial problem.
 
-It should be noted that, as is often the case, there were a couple of errors in the equations presented in
-Sitthiracha's model and a couple of factors that needed to be adjusted to obtain reasonable results. The
-Sitthirach model also assumed wide-open throttle, so the effect of a throttle was added by assuming that it
-acts as an additional restriction on the intake flow that premultiplies the orifice equation to give the mass
-flow into the cylinder. For simulation, relating the throttle position to an actual physical foot position is
-not important; all that is needed is a continuum of throttle settings between closed and wide open. The
-correct value for a closed throttle is currently an unresolved question. This model assumes that closed is
-1% of open, but the simulation currently drives it using a minimum of 7%, which seems to give a more
-realistic performance.
+There were a couple of errors in the equations presented in Sitthiracha's
+model and a couple of factors that needed to be adjusted to obtain good
+results. The Sitthiracha model also assumed wide-open throttle, so the effect
+of a throttle was modeled as an additional restriction on the intake flow into
+the cylinder. For simulation, relating the throttle position to an actual
+physical foot position is not important. All that is needed is a continuum of
+throttle settings between closed and wide open. This model assumes that closed
+is 1% of open, but the simulation currently drives it using a minimum of 7%,
+which gives a more realistic performance.
 
-The design variables in this problem allow for some significant modification to the engine design. This
-can strongly impact the engine weight; some estimate of weight is needed. There is a report by Shikida (`2`_)
-that contains some empirical data taken from a sampling of engines present in the Japanese market in 2000.
-This data maps engine displacement and weight vs power. Displacement is essentially a measurement of the
-engine size, and it can be calculated from the design parameters, so a linear fit between engine weight
-and displacement was determined. This equation is used by the engine model to estimate the engine weight
-and provide the output.
+The design variables in this problem allow for some significant modification
+to the engine design. This strongly affects the engine weight, so we need to
+estimate this. A report by Shikida (`2`_) contains some empirical data taken
+from a sampling of engines present in the Japanese market in 2000. This data
+maps engine displacement and weight vs power. Displacement is essentially a
+measurement of the engine size, and can be calculated from the design
+parameters, so a linear fit between engine weight and displacement is used by
+the engine model to estimate the engine weight and provide it as an output.
 
 
 **Engine - Design Variables:**
@@ -233,7 +228,7 @@ power		   Power produced by engine			kW
 -----------------  -------------------------------------------  ------
 torque		   Torque produced by engine			N*m
 -----------------  -------------------------------------------  ------
-fuel_burn	   Fuel burn rate				li/sec
+fuel_burn	   Fuel burn rate				l/sec
 -----------------  -------------------------------------------  ------
 engine_weight	   Engine weight estimate			kg
 =================  ===========================================  ======
@@ -251,8 +246,8 @@ Speed 2ZZ-GE Engine," SAE World Congress, March 6-9 2000, SAE 2000-01-0671.
 *The Chassis Model*
 ____________________________
 
-The chassis model must simply provide the vehicle acceleration given the torque produced by
-the engine and scaled by the transmission. The equation used for the model comes from summing the
+The chassis model must provide the vehicle acceleration given the torque produced by
+the engine and scaled by the transmission. The equation used for the model comes from summation of the
 forces acting on the vehicle in the forward direction. These forces include both the rolling friction
 associated with the tires and the vehicle drag which is proportional to the square of velocity.
 
@@ -310,15 +305,15 @@ _________________________________________
 						-- Homer Simpson
 
 
-The procedure for simulating the maximum acceleration is fairly straightforward. The vehicle is commanded at
+The procedure for simulating the maximum acceleration is straightforward. The vehicle is commanded at
 wide open throttle, and the resulting acceleration is integrated until the velocity reaches 60 mph. A time
 step of 0.1 seconds is used for simulation, which is small enough that a simple (and efficient) trapezoidal
 integration was adequate. Gears are shifted at the red line, which is the 6000 RPM limit of the engine model.
 
-It should be noted that shifting at the red line is not always optimal (though it is optimal for the default
-engine given here.) The optimal shifting RPMs are dependent on the engine's torque curve as well as the gear
+Shifting at the red line is not always optimal, though it is optimal for the default
+engine given here. The optimal shifting RPMs are dependent on the engine's torque curve as well as the gear
 ratios, so creating a generalized yet more optimal shifting procedure would be more numerically intensive. It
-would also be possible to promote the shift points as variables, and let an optimizer solve for their
+would also be possible to use the shift points as variables and let an optimizer solve for their
 locations.
 
 
@@ -330,7 +325,7 @@ that represents a particular class of driving, the two most well-known of which 
 driving and highway driving. These tests aren't actually performed on the open road but are instead done in
 the EPA testing garage with the tires on rollers and a hose connected to the exhaust pipe, measuring the 
 composition of the exhaust gasses. The test still uses a driver, who must follow a velocity profile given on
-a computer screen. The actual velocity profiles are available on the EPA website as the following gif files:
+a computer screen. The actual velocity profiles are available on the EPA website as follows:
 
 .. _`EPA City Driving Profile`:
 
@@ -347,16 +342,15 @@ a computer screen. The actual velocity profiles are available on the EPA website
    EPA Highway Driving Profile
 
 
-Note that this simulation will differ from the EPA test in that it actually simulates road conditions, albeit
-idealized ones. To simulate these tests, the vehicle model must follow the velocity profiles. That is, the time
+To simulate these tests, the vehicle model must follow the EPA velocity profiles. That is, the time
 history of the gear and throttle position must be found that allows the vehicle to follow these profiles. The
-fuel consumed is also captured over the profile so that the mileage estimate can be calculated. This can be
+fuel consumed is captured over the profile so that the mileage estimate can be calculated. This can be
 summarized by the following procedure:
 
 1. Determine acceleration required to reach next velocity point
 2. Determine correct gear
 3. Solve for throttle position that matches the required acceleration
-4. For that gear and throttle setting, save off the fuel burned
+4. For that gear and throttle setting, calculate fuel burn
 
 The trickiest part of the entire simulation is determining the right gear. The simulation has to test the
 acceleration at min and max throttle to determine if the required acceleration is possible in that gear. The
@@ -364,96 +358,49 @@ simulation also has to make sure the engine RPM lies within the its min and max 
 10 mph), the transmission is always set to first gear.
 
 Once the gear is determined, a bisection method is used to find the throttle position that matches the
-required acceleration within a small tolerance. This solution method converges reasonably quickly, especially
+required acceleration within a small tolerance. This solution method converges quickly, especially
 when applied over a linear range of the torque curve. However, the EPA profiles are long, with many calculation
 points, so simulating these driving profiles consumes much more CPU time than the acceleration test.
-
-Using OpenMDAO
---------------
-OpenMDAO provides two interfaces through which you interact to build and execute models -- a graphical user interface and a scripting/command line interface. The graphical interface is currently
-under developed and is not covered here. This tutorial describes how to build and run models using
-the scripting interface, or more specifically, how to write Python scripts to interact with the OpenMDAO
-framework and components.
-
-This tutorial will also introduce you to using the Python shell for creating and interacting with
-components and models. The shell is a good environment for playing around with some of the concepts
-learned here without having to edit files and run models at the operating system's command prompt. It is, however,
-not the way that most of you would ultimately run OpenMDAO to perform any real-world analysis. Most work
-will be done using the graphical interface or the scripting interface. 
 
 
 .. index:: Component
 
-Components
-----------
+Components and Public Variables
+-------------------------------
 
-In the previous section, three component models were given that comprise a vehicle model that can simulate
-its performance. These models have all been implemented as OpenMDAO components written in Python. This
+In the previous section, three component models were outlined that together form a vehicle model that can simulate
+performance. These models have all been implemented as OpenMDAO components written in Python. This
 section will examine these components.
 
-We are assuming that you have some familiarity with Python and the basic concepts of object-oriented
-programming and have either installed an official distribution bundle or have access to the OpenMDAO
-source tree. The following instructions will help you locate the directory containing the pieces
-needed for the model relative to the install directory.
+The following instructions will help you locate the directory containing the pieces
+needed for the model.
 
-If you have a branch from the source repository:
-
-	``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``
-	
 If you have downloaded the latest release version from the website:
 
 	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign``
 	
 where X.X.X is the current OpenMDAO version, and ###### is a string that
-contains the Python version, and the Operating System description. This will
+contains the Python version and the operating system description. This will
 vary depending on your system and version, but there will only be one
 *enginedesign* egg.
 
+If you are a developer and have a branch from the source repository:
+
+	``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``
+	
 The three engine models have been implemented in ``transmission.py, engine.py,`` and ``chassis.py``. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
 
 **Building a Python Component**
 
-At the highest level, a component is simply something that takes a set of inputs and operates on them,
-producing a set of outputs. In the OpenMDAO architecture, a class called :term:`Component` provides this
-behavior. Any component has inputs and outputs and has a function that executes the component, which operates
-on the inputs to produce the outputs. To create a new component, a new class is created that inherits from
-the base class Component. A very simple component is shown here:
-
-.. _Code1: 
-
-.. testcode:: Code1
-
-	from openmdao.main.api import Component
-
-	class Transmission(Component):
-	    """ A simple transmission model."""
-	
-    	    def __init__(self, doc=None, directory=''):
-        	""" Creates a new Transmission object """
-        	super(Transmission, self).__init__(doc, directory)        
-        
-	    def execute(self):
-	        """ The 5-speed manual transmission is simulated by determining the
-	            torque output and engine RPM via the gear ratios.
-	            """
-
-This new Transmission component does nothing yet. It does have the two functions that all components must have.
-The *__init__* function is run once before the model is executed. This is a convenient place to set up simulation
-constants. It is also where the inputs and outputs will be declared. The super() call is always required so that the
-*__init__* function of the base class is executed. Similarly, the execute function runs the model. There are some
-other functions defined in the Component API, but these two are the only ones needed for this part of the tutorial. Note
-that if your *__init__* or execute function does nothing (as in this case), then it does not need to be 
-declared in the component.
-
-The next step is to add the inputs and outputs that are defined in our model description above.
-
-.. _Code2: 
+The first thing we will do is create an OpenMDAO *Component* called Transmission. Recall
+that a *Component* contains inputs and outputs, and provides a method to calculate its outputs
+from its inputs. We must create the public variables that define these inputs and outputs.
 
 .. testcode:: Code2
 
-	from openmdao.main.api import Component
-	from openmdao.lib.api import Float, Int
+	from openmdao.main.api import Component, convert_units
+	from openmdao.lib.api import Float, Int, Enum
 
 	class Transmission(Component):
 	    """ A simple transmission model."""
@@ -473,76 +420,61 @@ The next step is to add the inputs and outputs that are defined in our model des
 	    tire_circ = Float(75.0, iotype='in', units='inch', 
 	             desc='Circumference of tire (inches)')
 
-	    current_gear = Int(0, iotype='in', low=1, high=5, \
-                          desc='Current Gear')
+	    current_gear = Enum(0, (0,1,2,3,4,5), iotype='in', desc='Current Gear',
+                        aliases=('N','1st','2nd','3rd','4th','5th'))
 	    velocity = Float(0., iotype='in', units='mi/h',
 	             desc='Current Velocity of Vehicle')
 
-	    RPM = Float(1000., iotype='out', units='1/min',
+	    RPM = Float(1000., iotype='out', units='RPM',
 	             desc='Engine RPM')        
 	    torque_ratio = Float(0., iotype='out',
 	             desc='Ratio of output torque to engine torque')    
 
-Note that the addition of inputs and outputs for this component requires several more imports in the first
-two lines. It is important to import only those features that you need from the framework base classes
-instead of loading everything into the workspace. 
-
-
-.. Index: public variables
-
-A component's inputs and outputs are called :term:`public variables` in OpenMDAO. The term *Public* contrasts  with
-*internal* variables, which are valid only inside of a component. At times, the term :term:`Variable` or *Framework
-Variable* may also be used to refer to public variables. You could think of them in a more general sense as a data
-object, which reflects the ability to pass more generalized objects such as data structures or geometries. A Public
-Variable is a wrapper for data passed between framework components, containing a value, a default value, optional
-min/max values, and units. Public variables can also perform their own validation when being assigned to another
-public variable.
-
-The Float and Int constructors are used to create the inputs and outputs on a component for floating point
-and integer inputs respectively. String variables and arrays are also possible using the Str and Array Public
-Variables, which are also found in ``openmdao.lib.api``. Generally, each of these constructors takes several arguments,
-many of which are optional. The only argument that can be unnamed is the default value, which must be the first item
-in the function call if it is unnamed.
+The *Int* and *Float* variable types were introduced in previous tutorials, but some new parameters are
+used here. The *Enum* type is also introduced.
 
 .. index:: PEP 8
 
-You give a public variable a name when it is assigned to a Python variable (i.e., the left-hand side argument when calling the 
-constructor.) As a Python variable, this name needs to follow Python's standard for variable names,
-so it must begin with a letter or underscore and should consist of only alphanumeric characters and the
-underscore. Keep in mind that a leading underscore is generally used for private data or functions. Also, spaces cannot be used
-in a variable name. Generally, we've tried to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ standard for
-component instance names as well as Python variable names, which proscribes the use of lower case names with words separated by
+In this example, we use some more complicated names for our public variables, so we should cover what makes a
+valid variable name. Public variables are also Python variables, so they must follow Python's standard
+naming convention. They must begin with a letter or underscore and should consist of only alphanumeric characters and the
+underscore. Keep in mind that a leading underscore is generally used for private data or functions. **Spaces cannot be used
+in a variable name.** Generally, we've tried to follow the `PEP 8 <http://www.python.org/dev/peps/pep-0008/>`_ standard for
+component instance names as well as Python variable names. PEP 8 prescribes the use of lower case names with words separated by
 underscores. 
 
-The first parameter is the default value for the variable.
+The required parameter *iotype*, the optional parameter *desc*, and the
+default value are covered in previous tutorials. The parameter *units* is
+introduced here and is used in a few of the public variables in Transmission. OpenMDAO contains a Units
+module that allows for unit checking and conversion between outputs and
+inputs of components. The units are defined based on the definitions given in
+Scientific Python, which can be found at :ref:`Summary-of-Units`. If an output and an
+input of the same unit class (e.g., length) are connected in the framework, the value is automatically
+converted as it is passed from the output to the input. If an output and an input
+of a different unit class are connected (e.g. length and time), an exception is
+raised. A variable with no units defined can be connected to a variable with units.
 
-The parameter *iotype* marks this public variable as either an input (*in*) or an output (*out*) to the parent component.
-The parameter *desc* contains a documentation string that describes this variable. This should be used to provide an 
-adequate explanation for each input and output on a component.
+**Only the Float type performs automatic unit conversion and checking.**
 
-The parameter *units* is used to specify the units for this public variable. OpenMDAO contains a units capability
-that is based on part of the Scientific Python package. This Units module allows for unit checking and conversion when connecting
-the outputs and inputs of components. The units are defined based on the definitions given in Scientific Python,
-which can be found at :ref:`Summary-of-Units`. If a public variable is dimensionless, no unit should be assigned.
-
-There are a couple more named arguments that are needed for the Transmission component.
-
-.. _Code3: 
+The Transmission component uses an enumerated list to define the valid gear positions.
 
 .. testcode:: Code2
 
-        current_gear = Int(0, iotype='in', low=0, high=5, \
-                       desc='Current Gear')	      
+        current_gear = Enum(0, (0,1,2,3,4,5), iotype='in', desc='Current Gear',
+                        aliases=('N','1st','2nd','3rd','4th','5th'))
 
-Here, a minimum and maximum limit have been set for the current gear position using the
-arguments *low* and *high*. If the transmission  component is commanded to operate outside of
-the limits on this input, a TraitError exception will be raised. This exception can be caught
-elsewhere so that some kind of recovery behavior can be defined.
+An enumeration is a discrete variable that has a finite number of valid states. This
+transmission is a 5-speed manual, so the valid states are gears 1 through 5 and neutral. The
+constructor begins with a default value, and a tuple containing all of the valid states. Sometimes
+it is beneficial to add as the *alias* parameter a second tuple containing a more descriptive
+tag. In this case, the alias "N" tells you that a value of "0" sets the gear to Neutral. The
+*Enum* is not type-restrictive. You could use the alias strings as the values, though typically
+the values are needed because you have some code that operates on an integer number. In our
+case, our simulation will upshift by adding 1 to the current gear, which it couldn't do to
+the strings. More information on *Enums* can be found in :ref:`Enums`.
 
-Finally, ``transmission.py`` needs to actually do something when it is executed. This code
+Finally, ``transmission.py`` needs to do something when it is executed. This code
 illustrates how to use the input and output variables to perform a calculation. 
-
-.. _Code4: 
 
 .. testcode:: Code2
 
@@ -557,141 +489,136 @@ illustrates how to use the input and output variables to perform a calculation.
         gear = self.current_gear
         differential = self.final_drive_ratio
         tire_circ = self.tire_circ
-        velocity = self.velocity
+        velocity = convert_units(self.velocity, 'mi/h', 'inch/min')
         
-        self.RPM = (ratios[gear]*differential*5280.0*12.0 \
-                    *velocity)/(60.0*tire_circ)
+        self.RPM = (ratios[gear]*differential*velocity)/(tire_circ)
         self.torque_ratio = ratios[gear]*differential
         
         # At low speeds, hold engine speed at 1000 RPM and partially engage the clutch
         if self.RPM < 1000.0 and self.current_gear == 1 :
             self.RPM = 1000.0
 	    
-Inputs and Outputs are objects in our component, so they are accessed using
-``self.variablename``, where the variablename is the name given to the variable's constructor.
-Note that a local copy of some of the inputs is created here (e.g., *gear* vs.
-*self.current_gear*.) Since we already know the data types and the units that are used in
-these calculations, we don't need the explicit typing or unit checking provided by the public
-variables, so we can bypass any overhead that is normally associated with them by assigning
-their values to an ordinary untyped Python variable. In general this should be more efficient,
-though for simple calculations like this the difference may not be noticeable. The type
-checking and unit checking are absolutely necessary outside of the component boundary, where
-components are connected to each other.
+Recall that inputs and outputs are attributes of our component, so they are accessed using
+``self.variablename``. It is generally a good idea to create a local copy of a public
+variable for doing calculations in the component for improved efficiency and ease of reading.
 
+We have also imported and used the *convert_units* function to convert the value of velocity
+from units of *mi/h* to units of *inch/min*. This makes the units consistent for the calculation
+of RPM. The *convert_units* function provides unit conversion capability for your internal
+variables. We could also change the definition of the velocity Float, specifying the *units*
+as 'inch/min', and then the *convert_units* call would not be needed.
+
+The transmission model is now complete, and the next section will show how to interact with
+it in the Python shell. The engine and chassis are created in a similar manner. However, the 
+engine's speed is only valid within a range 1000 to 6000 RPM. OpenMDAO's Float and Int
+variables allow you to specify an optional maximum and minimum value.
+
+.. testcode:: Code2
+
+    RPM = Float(1000.0, low=1000., high=6000., iotype='in', 
+                     units='RPM',  desc='Engine RPM')
+
+The *low* and *high* arguments are used to specify a minimum and maximum value
+for RPM. If the engine's RPM is set to a value outside of these limits, an
+exception will be raised. OpenMDAO execution is terminated unless this
+exception is caught elsewhere and some kind of recovery behavior is defined.
 
 Executing a Component in the Python Shell
 -----------------------------------------
 
 The Python implementations of the three component models (``engine.py,
-transmission.py, chassis.py``) should all make sense now. This next section
-will demonstrate how to instantiate and use these components in the Python
-shell. Be sure to use the python link found in devenv/bin. This Python
-environment is a special one that has all of the OpenMDAO site packages
-installed, including the tutorial problem. The user interface for the default
-Python shell leaves a lot to be desired, but it is still a good way to
-demonstrate these components.
+transmission.py, chassis.py``) should all make sense now. This section will
+demonstrate how to instantiate and use these components in the Python shell.
+Make sure that you have activated your Python environment before running the
+Python interpreter, so that you have access to OpenMDAO and the example problems.
 
 An instance of the class Engine can be created by typing the following:
 
 	>>> from openmdao.examples.enginedesign.engine import Engine
-	>>> my_engine = Engine("new_engine")
+	>>> my_engine = Engine()
 
-The object MyEngine is an engine created with default values for all of its inputs. We can interact with the
-inputs and outputs by using the get and set functions.
-
-	>>> my_engine.get("bore")
-	82.0
-	>>> my_engine.get("stroke")
-	78.799999999999997
-	
-Note that we can also access the value of the input directly:
+The object MyEngine is an engine model with default values for all of its inputs. We can interact with the
+inputs and outputs by direct inspection:
 
 	>>> my_engine.bore
 	82.0
 
-While this is perfectly valid, it should be noted that we can bypass some things by not calling the get function.
-In particular, the direct access may not be able to find the value of the input if some objects are executing on
-remote servers. In such a case, the *get()* function will be able to find the input value.
-	
 Let's change the engine speed from its default value (1000 RPM) to 2500 RPM.
-
-	>>> my_engine.set("RPM",2500)
-	>>> my_engine.get("RPM")
-	2500.0
-
-Similarly, we can also set these values directly:
 
 	>>> my_engine.RPM = 2500
 	>>> my_engine.RPM
 	2500.0
 
-Note that directly setting the input's value bypasses the check that normally prevents linked inputs from being changed.
-Type and units checking all work fine:
+The value of the engine RPM is now 2500. Let's see what happens if we try to
+set the RPM to something invalid.
 
 	>>> my_engine.RPM = "Hello"
 	Traceback (most recent call last):
 	    ...
 	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of Hello <type 'str'> was specified.
 	
-Now, let's try setting the engine speed to a value that exceeds the maximum, which is 6000 RPM.
+The value "Hello" is invalid because RPM expects a value of type Float. Now,
+let's try setting the engine speed to a value that exceeds the maximum, which
+is 6000 RPM.
 
-	>>> my_engine.set("RPM",7500)
+	>>> my_engine.RPM = 7500
 	Traceback (most recent call last):
 	    ...
 	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of 7500 <type 'int'> was specified.
 
-The set function raises an exception indicating that the maximum value for RPM has been violated. This exception can be
-handled to provide some logical response to this condition; you will see this in the acceleration simulation.
-Now, run the engine and examine the power and torque at 2500 RPM.
+OpenMDAO raises an exception indicating that the maximum value for RPM has
+been violated. This exception can be handled to provide some logical response
+to this situation. Now, run the engine and examine the power and torque at
+2500 RPM.
 
 	>>> my_engine.run()
-	>>> my_engine.get("torque")
+	>>> my_engine.torque
 	203.963228...
-	>>> my_engine.get("power")
+	>>> my_engine.power
 	53.3974483...
 	
-The component is executed by calling the run function, which runs the *_pre_execute* (which determines if the
-component needs to be executed), *execute* (which is the function we created in the Engine class above), and
-*_post_execute* (which validates the outputs.) These _pre_execute and _post_execute functions are private
-functions, as denoted by the leading underscore, and are not intended for you to redefine in your
-components. Remember that a component is always executed by calling *run()*.
-
+You run a component by calling the *run* method. Recall that you define an *execute* method when you
+create a component. The *run* method calls *execute*, but also does some other things. Always run your
+component with *run*.
 
 .. index:: Assembly
 
 Assemblies
 ----------
 
-Now that Python components representing the three vehicle subsystems have been created, they need to be
-connected so that they can be executed in sequence. In OpenMDAO, a component that contains a collection of
-other components is called an :term:`Assembly`. The Assembly allows a set of components to be linked together by
-connecting their inputs and outputs. The data connections define an execution order based on their dependencies, i.e., components that are upstream in the data flow will be executed prior to those downstream so that input data to a component will always be valid with respect to the other parts of the workflow. Component execution is also lazy, meaning that a component will not execute if its inputs have not changed since its last execution.
-In addition, an Assembly can also contain a Driver, such as an optimizer or a design of experiments.
-When an Assembly does not explicitly contain a driver, the assembly executes the components sequentially based on the
-data connections.
+Now that we've created Python components representing the three vehicle
+subsystems, we need to connect them so that they can be executed in sequence.
+Recall that an OpenMDAO component that contains a collection of other
+components is called an :term:`Assembly`. The Assembly allows a set of
+components to be linked together by connecting their inputs and outputs. The
+data connections define an execution order based on their dependencies, i.e.,
+components that are upstream in the data flow will be executed prior to those
+downstream so that input data to a component will always be valid with respect
+to the other parts of the workflow. A component will not execute if its inputs
+have not changed since its last execution. An Assembly can also contain a
+Driver, but this is not required. When an Assembly does not explicitly contain
+a driver, the components are executed sequentially based on their data
+connections.
 
 For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission,
 Engine, and Chassis components.
 
-.. _Code5: 
-
 .. testcode:: Code5
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.api import Float, Int
+	from openmdao.lib.api import Float
 
-	from openmdao.examples.enginedesign.engine import Engine
 	from openmdao.examples.enginedesign.transmission import Transmission
 	from openmdao.examples.enginedesign.chassis import Chassis
+	from openmdao.examples.enginedesign.engine_wrap_c import Engine
 	
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
 
-    
-	    def __init__(self, directory=''):
+	    def __init__(self):
 	        """ Creates a new Vehicle Assembly object """
 
-	        super(Vehicle, self).__init__(directory)
+	        super(Vehicle, self).__init__()
 
 	        # Create component instances
         
@@ -699,15 +626,12 @@ Engine, and Chassis components.
 	        self.add_container('engine', Engine())
 	        self.add_container('chassis', Chassis())
 
-The Engine, Transmission, and Chassis components are imported the same way as they were in the
-Python shell, using ``openmdao.examples.enginedesign`` name-space. In creating a new class, the main
-difference between a Component and an Assembly is that an Assembly inherits from the Assembly class
-instead of the Component class. This gives it the ability to contain other components, and to manage their
-data flow.
-
-Notice here that an instance of the Transmission, Engine, and Chassis are created, with the
-parent set to "self," which in this context is Vehicle. This way, these components are created as part
-of the assembly, and are accessible through ``Vehicle.Transmission``, etc.
+The Engine, Transmission, and Chassis components all need to be imported so
+their instances can be created, and so they can be added to the assembly
+with *add_container*. Please notice that an assembly inherits from Assembly
+instead of Component. When the instances of the Transmission, Engine, and
+Chassis are created, their members and data are internally accessible using
+self plus the instance name, e.g., `self.transmission`.
 
 Now that the components are instantiated in the assembly, they need to be hooked up:
 
@@ -716,7 +640,7 @@ Now that the components are instantiated in the assembly, they need to be hooked
 	# Note: This block of code does not display in the documentation.
 
 	from openmdao.main.api import Assembly
-	from openmdao.lib.api import Float, Int
+	from openmdao.lib.api import Float
 
 	from openmdao.examples.enginedesign.engine import Engine
 	from openmdao.examples.enginedesign.transmission import Transmission
@@ -725,10 +649,10 @@ Now that the components are instantiated in the assembly, they need to be hooked
 	class Vehicle(Assembly):
 	    """ Vehicle assembly. """
     
-	    def __init__(self, directory=''):
+	    def __init__(self):
 	        """ Creates a new Vehicle Assembly object """
 
-	        super(Vehicle, self).__init__(directory)
+	        super(Vehicle, self).__init__()
 
 	        # Create component instances
         
@@ -743,8 +667,6 @@ Now that the components are instantiated in the assembly, they need to be hooked
 	
 	self = Vehicle()
 
-.. _Code6: 
-
 .. testcode:: Code5
 
 	self.connect('transmission.RPM','engine.RPM')
@@ -752,20 +674,21 @@ Now that the components are instantiated in the assembly, they need to be hooked
         self.connect('engine.torque','chassis.engine_torque')
         self.connect('engine.engine_weight','chassis.mass_engine')
 	
-The first argument in the call to ``self.connect`` is the output variable, and the second argument is
-the input variable. For a connection to be valid, the units of the output and input must be of the same
-class (i.e., length, speed, etc.) If they differ within the same class (e.g., meters vs. inches), then
-the unit is converted to the correct unit before being sent from the output component to the input
-component.
+The first argument in the call to ``self.connect`` is the output variable of
+the source component instance, and the second argument is the input variable
+of the target component instance. For a connection to be valid, the units of
+the output and input must be of the same unit class (e.g., length, speed, etc.) If
+they differ within the same class (e.g., meters vs. inches), then the value is
+converted from the source unit to the target unit before setting the value at
+the input. If the classes are incompatible (e.g., meters vs. seconds), then an
+exception is raised during execution.
 
-The Vehicle assembly behaves like any other component when interacting with the external world. It has
-inputs and outputs, it can be hooked up to other components and included in other assemblies, and it can
-be run. For the Vehicle block to be connected to other components and used in a simulation or design
-study, the inputs and outputs have to be assigned. We essentially just want to promote the design and
-simulation variables from the Engine, Transmission, and Chassis components to the input and
-output of the Vehicle component. We can do this by creating passthroughs in the Vehicle assembly.
-
-.. _Code7: 
+The Vehicle assembly also has inputs and outputs, and it can be hooked up to
+other components and included in other assemblies once its public variables
+are defined. We would like to promote all of the design and simulation
+variables from the Engine, Transmission, and Chassis components to the input
+and output of the Vehicle assembly. OpenMDAO includes a shortcut for doing
+this quickly by creating passthroughs:
 
 .. testcode:: Code5
 
@@ -780,17 +703,18 @@ output of the Vehicle component. We can do this by creating passthroughs in the 
 	self.create_passthrough('chassis.mass_vehicle')
 	self.create_passthrough('chassis.Cf')
 		
-Now, the Vehicle assembly has its own inputs and outputs and can be accessed just like in any other
-component. As the name implies, these passthroughs purely pass data from the assembly input to the contained 
-component inputs. As such, there is no unit conversion as this would not be computationally efficient. 
+The *create_passthrough* function is a shortcut that creates an identical public variable
+in the assembly, and connects it to the corresponding component variable. So now, all of the
+design variables are available as public variables in any simulation that includes an instance
+of the vehicle model.
 
-However, the engine example problem actually contains components that expects inputs to be in English units (Engine and 
-Transmission) as well as a component that expects inputs to be in metric (Chassis). There are two inputs that
-are required by components with units that differ from the assembly level -- *velocity* and *tire_circumference*. 
-Unit conversion must be performed on these, so they need to be handled by regular component connections. To
-accomplish this, we must declare the inputs in the class header:
-
-.. _Code7a: 
+However, the engine tutorial throws you a curve ball here. The Engine
+and Chassis components are defined with SI units, but the Transmission
+component is defined with English units. We have two inputs -- the tire
+circumference and the vehicle velocity -- that are each used by two components
+with different units. The *create_passthrough* function creates an exact copy
+of the public variable, so we cannot use it here. Instead, we must connect them manually
+by declaring variables in our assembly.
 
 .. testcode:: Code5
 
@@ -803,7 +727,7 @@ accomplish this, we must declare the inputs in the class header:
 	    velocity = Float(75.0, iotype='in', units='mi/h', 
                        desc='Vehicle velocity needed to determine engine RPM (mi/h)')
 
-Now these input are available to connect to the components.
+Now these inputs are available to connect to the components, so we connect them manually.
 
 .. testsetup:: Code7b
 
@@ -825,10 +749,10 @@ Now these input are available to connect to the components.
 	    velocity = Float(75.0, iotype='in', units='mi/h', 
                 desc='Vehicle velocity needed to determine engine RPM (mi/h)')
     
-	    def __init__(self, directory=''):
+	    def __init__(self):
 	        """ Creates a new Vehicle Assembly object. """
         
-	        super(Vehicle, self).__init__(directory)
+	        super(Vehicle, self).__init__()
 
 	        # Create component instances
         
@@ -838,8 +762,6 @@ Now these input are available to connect to the components.
 		
 	self = Vehicle()
 
-.. _Code7b: 
-
 .. testcode:: Code7b
 
         self.connect('velocity', 'chassis.velocity')
@@ -848,36 +770,34 @@ Now these input are available to connect to the components.
         self.connect('tire_circumference', 'transmission.tire_circ')
 
 This ensures that the units for these inputs to the Vehicle are converted properly for use in the Chassis and 
-Transmission components. On the surface, this might seem confusing or perhaps redundant, but it demonstrates
-a way that Assemblies can be used to define a more consistent external interface 
+Transmission components. While this might seem redundant, it demonstrates
+a way that Assemblies can be used to define a more consistent external interface.
 
 Executing the Vehicle Assembly
 ------------------------------
 
-We can manipulate the Vehicle Assembly in the Python shell in the same manner as the engine component
-above. As inputs, the Vehicle takes a commanded velocity, throttle position, a gear Shift position, and
-a set of vehicle design parameters, and returns the vehicle's instantaneous acceleration and rate of fuel
+We can manipulate the Vehicle Assembly in the Python shell just like we did with the engine component
+above. As inputs, the Vehicle takes a commanded velocity, throttle position, a gear position, and
+a set of vehicle design parameters, and outputs the vehicle's instantaneous acceleration and rate of fuel
 burn. 
 
 	>>> from openmdao.examples.enginedesign.vehicle import Vehicle
-	>>> my_car = Vehicle("new_car")
-	>>> my_car.set("velocity",25)
-	>>> my_car.set("current_gear",3)
-	>>> my_car.set("throttle",.5)
+	>>> my_car = Vehicle()
+	>>> my_car.velocity = 25.0
+	>>> my_car.current_gear = 3
+	>>> my_car.throttle = .5
 	>>> my_car.run()
-	>>> my_car.get("acceleration")
+	>>> my_car.acceleration
 	1.1086409681...
-	>>> my_car.get("fuel_burn") 
+	>>> my_car.fuel_burn
 	0.0027991856...
 
-When we run the Vehicle, we are essentially performing a simple multidisciplinary analysis via the
+When we run the Vehicle, we are performing a simple multidisciplinary analysis via the
 OpenMDAO framework. Try setting the simulation variables to other values, including ones that should
 trigger an exception. (One way to do this is to command a high velocity in first gear, which should
-violate the maximum RPM that the engine allows.) Note that the we can also manipulate design variables the
-same way using the set and get functions.
+violate the maximum RPM that the engine allows.)
 
 .. index:: F2PY
-.. index:: SWIG
 
 .. _Wrapping-an-External-Module-Using-F2PY:
 
@@ -886,36 +806,45 @@ Wrapping an External Module Using F2PY
 
 As the most computationally intensive component, the engine model in ``engine.py`` is the main performance
 bottleneck during repeated execution. As an interpreted language, Python is not the ideal choice for
-implementing a numerical algorithm, particularly where performance is important. Much can be gained by
-implementing the engine model in a compiled language like C or Fortran.
+implementing a numerical algorithm, particularly where performance is important. The performance of
+the engine model can be improved by implementing it in a compiled language like C or Fortran.
 
-One of the most important characteristics of Python is that it was designed to be smoothly integrated
-with other languages, in particular C (in which Python was written) and related languages (Fortran and
-C++). This is particularly important for a scripting language, where code execution is generally slower,
-and it is often necessary to use a compiled language like C for implementing computationally intensive
-functions. On top of this native integration ability, the community has developed some excellent tools,
-such as `F2PY <http://cens.ioc.ee/projects/f2py2e/>`_ (Fortran to Python) and :term:`SWIG` (Simplified Wrapper and
-Interface Generator), that simplify the process of building the wrapper for a code. As the name implies,
-F2PY is a Python utility that takes a Fortran source code file and compiles and generates a wrapped
-object callable from Python. F2PY is actually part of the numerical computing package NumPy. SWIG has a
-broader application and can be used to generate wrappers for C and C++ functions for execution in a
-variety of different target languages, including Python. For the most general case, Python has the
-built-in capability to wrap any shared object or dynamically loadable library (DLL) written in any
-language. This *ctypes* package is a foreign function interface, and it allows an object to be wrapped
-without recompiling the library. Care must be taken when using ctypes to wrap a function that passes
-data types not native to C. 
+Python was designed to be smoothly integrated with other languages, in
+particular C and related languages Fortran and C++. This is important for a
+scripting language, where code execution is generally slower, and it is often
+necessary to use a compiled language like C to implement computationally
+intensive functions. To complement Python's native integration ability, the
+Python community has developed some excellent tools, such as `F2PY
+<http://cens.ioc.ee/projects/f2py2e/>`_ (Fortran to Python) and :term:`SWIG`
+(Simplified Wrapper and Interface Generator), that simplify the process of
+building the wrapper for a code. As the name implies, F2PY is a Python utility
+that takes a Fortran source code file and compiles and generates a wrapped
+object callable from Python. More information on getting your codes to run in
+Python can be found in :ref:`Plugin-Developer's-Guide`.
 
-The main algorithm in ``engine.py`` was rewritten in C as ``engine.C``. A wrapped shared object of ``engine.C``
-was created using F2Py; this tool can also be used to generate wrappers for C code provided that the signature
-file ``engine.pyf`` is manually created. This file ``engine.pyf`` defines the interface for the
-functions found in ``engine.C`` and can be viewed in ``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``. The
-C code has been placed in a function called *RunEngineCycle* that takes the design and simulation
-variables as inputs. 
+The main algorithm in ``engine.py`` was rewritten in C as ``engine.C``. A
+wrapped shared object of ``engine.C`` was created using F2Py; this tool can
+also be used to generate wrappers for C code provided that the signature file
+``engine.pyf`` is manually created. This file ``engine.pyf`` defines the
+interface for the functions found in ``engine.C``. The C code has been placed
+in a function called *RunEngineCycle* which can be imported and takes the design and simulation
+variables as inputs.
 
-The C function containing the engine simulation algorithm is called *RunEngineCycle*. A new Python
-component named ``engine_wrap_c.py`` was created to replace ``engine.py``. This component contains the same
-inputs and outputs as ``engine.py``, but replaces the engine internal calculations with a call to the C
-function *RunEngineCycle*. We can import and use the function just like any Python function:
+The intent of this exercise is not to teach you how to write a signature file. Some more
+information on this topic can be found in :ref:`Creating-an-Extension-with-F2PY`, and more
+extensive details can be found in `F2PY Users Guide <http://cens.ioc.ee/projects/f2py2e/usersguide/index.html>`_.
+
+The shared object can be generated using the existing signature file and C code by issuing the following command
+
+::
+
+    f2py engineC.pyf engineC.c -c
+
+A new Python component named ``engine_wrap_c.py`` was created to replace
+``engine.py``. This component contains the same inputs and outputs as
+``engine.py``, but replaces the engine internal calculations with a call to
+the C function *RunEngineCycle*. We can import and use this function just like
+any Python function:
 
 .. _Code8: 
 
@@ -926,9 +855,25 @@ function *RunEngineCycle*. We can import and use the function just like any Pyth
 
 
 Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first
-element (element zero.) This is not typically needed for return values from Fortran codes compiled with
-F2PY, but it seems to be needed for C codes for which the signature file is manually created. This is
-something that might be fixable and will be investigated.
+element (element zero.) This is not needed for return values from Fortran codes compiled with
+F2PY (arguments in Fortran functions are passed by reference), but it is needed for C codes.
+
+You can compare the execution time to see how much faster the C code runs on your hardware. To
+run the original Python implementation of Engine, type:
+
+::
+
+    python engine.py
+    
+and note the elapsed time, which is printed after the engine completes its run. Now type:
+    
+::
+
+    python engine_wrap_c.py
+    
+How much faster is the C implementation? We found it to be almost 10 times as fast as the Python
+implementation. Both of these scripts run the engine 50 times before termination.
+
 
 .. index:: Sockets and Interfaces
 .. index:: Interfaces
@@ -937,33 +882,28 @@ something that might be fixable and will be investigated.
 Sockets and Interfaces
 ----------------------
 
-Now that we have a functional (and reasonably quick) Vehicle component, we need to complete the problem
-by providing a way to simulate the acceleration and the EPA fuel economy estimates. The acceleration test
-requires an integration in time with the vehicle component being executed at each time step to produce
-the instantaneous acceleration. The EPA fuel economy tests are a bit more tricky and require an
-integration in time. The vehicle component must be executed while varying the throttle and gear
-position inputs to match a desired acceleration for the integration segment. Both of these solution
-procedures were implemented in a component called *DrivingSim,* which requires a Vehicle component to
-perform a simulation.
+Now that we have a functional and quick Vehicle assembly, we need
+to complete the problem by providing a way to simulate the acceleration and
+the EPA fuel economy estimates. The acceleration test requires an integration
+in time to match a specified velocity profile. The vehicle assembly is
+executed at each time step to produce the instantaneous acceleration. The EPA
+fuel economy tests are a bit more tricky and require an integration in time.
+The vehicle assembly must be executed while varying the throttle and gear
+position inputs to match a desired acceleration for the integration segment.
+Both of these solution procedures were implemented in a component called
+*DrivingSim,* which requires a Vehicle assembly to perform a simulation. This
+component is found in ``driving_sim.py.``
 
-At this point, we can implement this kind of problem in OpenMDAO in a couple of ways. One way is to
-implement the solution procedure as a driver (or two drivers if preferred). So far, drivers have been
-mentioned only as an attribute of assemblies, and they will be more thoroughly treated in the next section.
-Implementing the vehicle simulation as a driver might be a bit confusing for your first exposure to
-drivers, particularly since it involves nesting the simulation driver with an optimizer, so the vehicle
-simulations were implemented in a single Component instead. However, this leads to the concept of
-:term:`Sockets`, which requires the implementation to be an Assembly instead of just a Component.
+There are a couple of ways that we could implement this kind of problem in OpenMDAO. Here, it will
+be implemented as a :term:`Socket`.
 
-To investigate designs, a Vehicle class was defined as an Assembly in OpenMDAO. This class has a set of specific inputs and outputs
-that include the design variables for the engine, transmission, and chassis, and the simulation
-variables velocity, gear position and throttle position. These inputs and outputs comprise an interface
-for the Vehicle class. In the future, the user might want to replace the current vehicle model with a new model. This new model
-will be compatible provided that it has the same interface as the current vehicle model. The interface checking is 
-facilitated by the creation of a Socket in the vehicle simulation assembly.
+.. todo::
 
-TODO - Define an interface for Vehicle, and add more info on that to this part of the tutorial
+	Define an interface for Vehicle, and add more info on that to this part
+	of the tutorial. Sockets are not yet fully defined, so the vehicle instance
+	is currently stored directly in the DrivingSim class.
 
-**SimVehicle - Outputs:**
+**DrivingSim - Outputs:**
 
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
@@ -982,26 +922,22 @@ EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 Setting up an Optimization Problem
 ----------------------------------
 
-The final step is the creation of a top level Assembly which defines the problem using DrivingSim and the vehicle assembly.
-The top level Assembly is a container that can be thought of as the workspace where the model is built, or the container that
-ultimately contains the entire model. Functionally, it's no different than an assembly such as Vehicle.py; this implies that
-any OpenMDAO model can be packaged up and inserted into some other model as a component. Generally, the top level Assembly
-contains one or more Components or Assemblies. It may also contain a solution Driver, or it may just rely on sequential
+The final step is to create a *top level Assembly* that defines the problem using DrivingSim and the vehicle assembly.
+The *top level Assembly* is a container that can be thought of as the workspace where the model is built, or the container that
+ultimately contains the entire model. Functionally, it's no different than an assembly such as Vehicle.py. 
+Any OpenMDAO model can be packaged up and inserted into some other model as a component. Generally, the *top level Assembly*
+contains one or more Components or Assemblies. It may also contain a solution driver, or it may just rely on sequential
 execution based on the data flow.
 
-The first problem we would like to solve is a single objective optimization problem where we adjust some subset of the design
-variables to minimize the 0-60 acceleration time. The chosen design variables are the bore and spark angle; the optimal value
+The first problem we would like to solve is a single objective optimization problem where we adjust some of the design
+variables to minimize the 0-60 acceleration time. The chosen design variables are the *bore* and *spark angle*. The optimal value
 of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second variable cannot
 be optimized by mere inspection. 
 
-The optimization will be handled by CONMIN, which is a gradient based algorithm written in Fortran, and developed at NASA in
-the 1970s. The source code is in the public domain, and a Python wrapped CONMIN component has been included in the OpenMDAO
-standard library.
+The optimization will be handled by the gradient optimizer CONMIN.
 
-In openMDAO, the top level Assembly is always derived from Assembly. In ``engine_optimization.py``, we created the class
-EngineOptimization, and instantiated SimVehicle and CONMINdriver:
-
-.. _Code9: 
+In ``engine_optimization.py``, we define the class EngineOptimization, and
+create an instance of DrivingSim and CONMINdriver:
 
 .. testcode:: Code9
 
@@ -1011,23 +947,113 @@ EngineOptimization, and instantiated SimVehicle and CONMINdriver:
 	from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
 	class EngineOptimization(Assembly):
-	    """ Top level assembly for optimizing a vehicle. """
+	    """Optimization of a Vehicle."""
     
-	    def __init__(self, directory=''):
-        	""" Creates a new Assembly containing a SimVehicle and an optimizer"""
+	    def __init__(self):
+        	""" Creates a new Assembly containing a DrivingSim and an optimizer"""
         
-	        super(EngineOptimization, self).__init__(directory)
+	        super(EngineOptimization, self).__init__()
 
-	        # Create SimVehicle component instances
+	        # Create DrivingSim instance
         	self.add_container('driving_sim', Driving_Sim())
 
 	        # Create CONMIN Optimizer instance
         	self.add_container('driver', CONMINdriver())
 
-Note that the syntax for instantiating the CONMIN driver is the same as for any other component or subassembly. The CONMIN 
-driver requires some initialization and connecting before it can be used:
-
+	        # CONMIN Flags
+        	self.driver.iprint = 1
+	        self.driver.itmax = 30
         
+	        # CONMIN Objective 
+        	self.driver.objective = 'driving_sim.accel_time'
+        
+	        # CONMIN Design Variables 
+        	self.driver.design_vars = ['driving_sim.spark_angle', 
+                                           'driving_sim.bore' ]
+	        
+        	self.driver.lower_bounds = [-50, 65]
+	        self.driver.upper_bounds = [10, 100]
+
+Recall that the *iprint* flag enables or disables the printing of diagnostics
+internal to CONMIN, while the *itmax* parameter specifies the maximum number
+of iterations for the optimization loop.
+
+.. index:: StringRef
+
+The optimization objective is to minimize the 0-60 mph acceleration time by
+adjusting the design variables *bore* and *spark angle*. In the previous
+examples, we learned to use StringRefs to build expressions that point to
+locations in the data hierarchy. Whenever we declare multiple design
+variables, the StringRefs are placed in a list. The values for the lower and
+upper bounds are also defined in list.
+
+We are now ready to solve an optimization problem.
+
+Solving the Optimization Problem
+---------------------------------
+
+First, lets run the problem inside the Python shell. Load and create an instance of the
+EngineOptimization class, setting it as the top assembly.
+
+.. doctest:: optimization_fun
+
+	>>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+	>>> from openmdao.main.api import set_as_top
+	>>> prob = EngineOptimization()
+	>>> set_as_top(prob)
+	<openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at ...>
+
+The problem is set up like above. We could run it now, but first let's find out how
+the current design performs. We can do this by running the Vehicle component once,
+and printing the value of the acceleration time.
+
+.. doctest:: optimization_fun
+
+	>>> prob.driving_sim.run()
+	>>> prob.driving_sim.accel_time
+	7.499...
+	>>> prob.driving_sim.bore
+	82.0
+	>>> prob.driving_sim.spark_angle
+	-37.0	
+	
+The unit for this variable is seconds, so the default vehicle design can
+accelerate from 0 to 60 mph in seven and a half seconds. We've also printed
+the values of the two decision variables which will be changed by the
+optimizer. Next, we solve the optimization problem. This may take a while
+but should be finished in less than a minute.
+
+:: 
+
+	>>> prob.run()
+	...
+	>>> prob.driving_sim.accel_time
+	5.399...
+	>>> prob.driving_sim.bore
+	100.0
+	>>> prob.driving_sim.spark_angle
+	-28.965...
+
+The optimizer has found a new solution that has a much faster acceleration
+time -- 5.4 seconds vs 7.5. This was accomplished by increasing the bore to
+its maximum value, which makes the engine larger, and by optimizing the
+spark timing.
+
+You can run this same problem at the command prompt by typing:
+
+::
+
+	python engine_optimization.py
+	
+This script prints out a little more information than we've shown in this
+example. See :ref:`Getting-Started-with-OpenMDAO` for a refresher on how
+to set up a component to run at the command prompt.
+	
+The StringRef can be used to pose more sophisticated objective expressions
+that are functions of multiple simulation variables. For example, if you want
+to maximize *accel_time* instead of minimizing it, you can do this by negating
+the expression:
+
 .. testsetup:: Code10
 
 	from openmdao.main.api import Assembly
@@ -1036,69 +1062,27 @@ driver requires some initialization and connecting before it can be used:
 	from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
 	class EngineOptimization(Assembly):
-	    """ Top level assembly for optimizing a vehicle. """
+	    """Optimization of a Vehicle."""
     
-	    def __init__(self, directory=''):
+	    def __init__(self):
         	""" Creates a new Assembly containing a SimVehicle and an optimizer"""
         
-	        super(EngineOptimization, self).__init__(directory)
+	        super(EngineOptimization, self).__init__()
 
-	        # Create SimVehicle component instances
+	        # Create DrivingSim instance
         	self.add_container('driving_sim', DrivingSim())
 
 	        # Create CONMIN Optimizer instance
         	self.add_container('driver', CONMINdriver())
 
-	self = EngineOptimization()		
-		
-.. _Code10:
-
-.. testcode:: Code10
-
-	        # CONMIN Flags
-        	self.driver.iprint = 0
-	        self.driver.itmax = 30
-        
-	        # CONMIN Objective 
-        	self.driver.objective = 'driving_sim.accel_time'
-        
-	        # CONMIN Design Variables 
-        	self.driver.design_vars = ['driving_sim.spark_angle', 
-                                         'driving_sim.bore' ]
-	        
-        	self.driver.lower_bounds = [-50, 65]
-	        self.driver.upper_bounds = [10, 100]
-
-In ``self.driver.iprint``, *driver* refers to the title that the CONMIN driver is given when it is created above. The *iprint* flag
-enables or disables the printing of diagnostics internal to CONMIN, while the *itmax* parameter specifies the maximum number
-of iterations for the optimization loop. Both of these have a default value (*itmax* is 40), so setting them here is not required.
-
-.. index:: StringRef
-
-The optimization objective is to minimize the 0-60 mph acceleration time by adjusting the design variables, which
-we chose as *bore* and *spark angle*. Both the objective and the design variables are assigned using a type of
-public variable called a *StringRef*. Instead of containing a variable value, the StringRef contains a string that
-gives the OpenMDAO path pointing to the variable that the StringRef references. This path is always relative to the
-driver's parent, so here we use *driving_sim.accel_time* instead of *self.driving_sim.accel_time*. StringRefs are
-primarily used to connect the inputs and outputs of drivers (e.g.,  optimizers, solvers, etc.) CONMIN is a single
-objective optimizer, so there can only be one objective. However, there can be multiple design variables, and these
-are stored in a list. The upper and lower bounds for all the design variables are set  using *lower_bounds* and
-*upper_bounds* respectively.
-
-The CONMIN driver can actually handle more sophisticated objective expressions that are functions of multiple simulation variables
-using the StringRef. For example, if you want to maximize *accel_time* instead of minimizing it, you can do this by
-negating the expression:
-
-.. _Code11: 
-
+	self = EngineOptimization()
+	
 .. testcode:: Code10
 
 	        # CONMIN Objective = Maximize accel_time 
         	self.driver.objective = '-driving_sim.accel_time'
 		
-You can build up expressions from any number of OpenMDAO variables by using Python's mathematical syntax:
-
-.. _Code12: 
+You can build up more complicated expressions from any number of OpenMDAO variables using Python's mathematical syntax:
 
 .. testcode:: Code10
 
@@ -1106,8 +1090,33 @@ You can build up expressions from any number of OpenMDAO variables by using Pyth
         	self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
 
 Here, we used a weighted sum of the EPA city and highway fuel economy estimates as the objective in a maximization problem.
+Try solving the same optimization problem using this objective.
 
-Solving the Optimization Problem
----------------------------------
+::
 
-The top level Assembly described in ``engine_optimization.py`` can be executed just like any Component or Assembly.
+	>>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+	>>> from openmdao.main.api import set_as_top
+	>>> prob = EngineOptimization()
+	>>> set_as_top(prob)
+	<openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at 0xe80c3b0>
+	>>> prob.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+	>>> prob.driving_sim.spark_angle
+	-37.0
+	>>> prob.driving_sim.bore
+	82.0
+	>>> prob.driving_sim.run()
+	>>> prob.driving_sim.EPA_city
+	24.807...
+	>>> prob.driving_sim.EPA_highway
+	33.454...
+	>>> prob.run()
+	>>> prob.driving_sim.spark_angle
+	-7.225...
+	>>> prob.driving_sim.bore
+	90.581...
+	>>> prob.driving_sim.EPA_city
+	25.713...
+	>>> prob.driving_sim.EPA_highway
+	38.696...
+
+This concludes the more complex tutorial problem.

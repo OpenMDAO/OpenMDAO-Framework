@@ -38,6 +38,6 @@ setup(name='openmdao.util',
       ],
       entry_points = """
       [console_scripts]
-      mod2egg=openmdao.util.mod2egg:mod2egg
+      mod2dist=openmdao.util.mod2dist:mod2dist
       """
     )

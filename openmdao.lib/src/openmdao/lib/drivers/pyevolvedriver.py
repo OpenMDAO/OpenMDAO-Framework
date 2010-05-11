@@ -89,7 +89,8 @@ class pyevolvedriver(Driver):
         G1Dlist,G1DBinaryString,G2dList,GAllele
         GsimpleGA,Initializators,Mutators,Consts,DBadapters
 
-    TODO: Implement function-slots as sockets
+.. todo:: Implement function-slots as sockets
+
     """
 
     # inputs

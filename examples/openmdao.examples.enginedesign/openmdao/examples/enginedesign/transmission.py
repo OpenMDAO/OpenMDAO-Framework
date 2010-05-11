@@ -6,8 +6,8 @@
 # Transmission is a 5-speed manual.
 
 # pylint: disable-msg=E0611,F0401
-from openmdao.main.api import Component
-from openmdao.lib.api import Float, Int
+from openmdao.main.api import Component, convert_units
+from openmdao.lib.api import Float, Int, Enum
 
 class Transmission(Component):
     """ A simple transmission model."""
@@ -47,12 +47,12 @@ class Transmission(Component):
     tire_circ = Float(75.0, iotype='in', units='inch', 
                            desc='Circumference of tire (inches)')
 
-    current_gear = Int(0, iotype='in', low=0, high=5, \
-                          desc='Current Gear')
+    current_gear = Enum(0, (0,1,2,3,4,5), iotype='in', desc='Current Gear', \
+                        aliases=('N','1st','2nd','3rd','4th','5th'))
     velocity = Float(0., iotype='in', units='mi/h',
                      desc='Current Velocity of Vehicle')
 
-    RPM = Float(1000., iotype='out', units='1/min',
+    RPM = Float(1000., iotype='out', units='RPM',
                      desc='Engine RPM')        
     torque_ratio = Float(0., iotype='out',
                          desc='Ratio of output torque to engine torque')        
@@ -67,9 +67,11 @@ class Transmission(Component):
         
         gear = self.current_gear
         differential = self.final_drive_ratio
+        tire_circ = self.tire_circ
+        velocity = convert_units(self.velocity, 'mi/h', 'inch/min')
         
-        self.RPM = (ratios[gear]*differential*5280.0*12.0 \
-                    *self.velocity)/(60.0*self.tire_circ)
+        self.RPM = (ratios[gear]*differential \
+                    *velocity)/(tire_circ)
         self.torque_ratio = ratios[gear]*differential
             
         # At low speeds, hold engine speed at 1000 RPM and

@@ -3,19 +3,19 @@
 .. _Helpful-Bazaar-Commands:
 
 
-Appendix: Helpful Bazaar Commands
-=================================
+Appendix A: Helpful Bazaar Commands
+===================================
 
 This section contains commands that developers would use on a regular basis when performing  everyday
-tasks. Most of them are Bazaar commands. Please note that the OpenMDAO *Developer's Guide*
-contains everything you need to get started working, including information on Bazaar setup, code location,
+tasks. Most of them are Bazaar commands. Please note that earlier sections in this guide
+contain everything you need to get started working, including information on Bazaar setup, code location,
 and how to create your branch. The information here is a quick reference for some common tasks you will be
 doing. 
 
 .. note::
    Text included in pointy brackets means you have to supply specific information (e.g.,
-   ``<file_name>``. Remember that the examples may include a ``/`` (Linux). Windows users must
-   make the appropriate change.
+   ``<file_name>``. Remember that the examples may include a ``/`` (Linux). Windows users will
+   use a ``\`` instead.
    
 
 References:
@@ -33,14 +33,14 @@ To use these commands, type ``bzr <command_name>``, for example ``bzr add``.
 
 ::
   
-  add 		(Adds files/directories to the Bazaar repository on your branch.)
-  branch	(Creates a new copy of a branch.)
-  commit	(Commits changes into a new revision. You must add a commit message via "-m" or another text editor.)
-  conflicts	(Lists files with conflicts.)
-  log --forward	(Displays revisions on a branch. The "--forward" option means the most recent activity will be displayed last.)    
-  merge		(Pulls in committed changes from another branch.)
-  revert	(Cancels all changes since the last merge, so you revert to the previous revision.)
-  status	(Displays pending changes, if any; if no uncommitted changes are pending, it returns to the prompt.)
+  add       (Adds files/directories to the Bazaar repository on your branch.)
+  branch    (Creates a new copy of a branch.)
+  commit    (Commits changes into a new revision. You must add a commit message via "-m" or another text editor.)
+  conflicts (Lists files with conflicts.)
+  log --forward (Displays revisions on a branch. The "--forward" option means the most recent activity will be displayed last.)    
+  merge     (Pulls in committed changes from another branch.)
+  revert    (Cancels all changes since the last merge, so you revert to the previous revision.)
+  status    (Displays pending changes, if any; if no uncommitted changes are pending, it returns to the prompt.)
   
 Note that all files on your branch are available to be changed. By running the ``bzr status``
 command, you can see all of the uncommitted changes on your branch. 
@@ -78,7 +78,9 @@ file whose parent directory is not versioned, Bazaar will automatically add the 
 directory and so on up to the root. 
 
 If you use this command without an argument, Bazaar will add everything under the current
-directory that has not yet been added to the repository.
+directory that has not yet been added to the repository. It is wise to use this command in the
+directory where you want to add files, so you don't add temporary files you do not want.
+
 
 After you type ``bzr add``, Bazaar will display a list of the files and directories that were added.
 
@@ -92,10 +94,9 @@ Bazaar's ``remove`` command is similar to the UNIX command, and either can be us
 ::
 
   bzr remove <file_name>     (Bazaar "remove" command)
-  rm <file_name> 	     (UNIX "remove" command)
+  rm <file_name>             (UNIX "remove" command)
     
 However, to remove a directory, it's easier to use the UNIX remove command (``rm``), as follows:
-
 
 ::
   
@@ -106,8 +107,8 @@ However, to remove a directory, it's easier to use the UNIX remove command (``rm
 .. index:: renaming a file/directory
 
 
-*Moving or Renaming a File*
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+*Moving or Renaming a File or Directory*
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The move command (``bzr mv``) is used to rename or move a file, depending on the arguments you
 provide. When moving a file, you must provide the path to the new location. When you
@@ -129,8 +130,9 @@ the appropriate command. See the examples that follow:
 
 
 .. note::
-   If you need to move an entire directory, use the ``bzr mv`` command, NOT the UNIX command, to ensure that
-   the directory and all its files get moved correctly.
+   If you need to move an entire directory, use the ``bzr mv`` command, NOT
+   the UNIX command, to ensure that the bazaar understands that all of the versioned
+   files in the directory have moved.
 
 
 .. index:: diff command
@@ -145,7 +147,7 @@ If you have edited a file and want to see what you have done, type:
   bzr diff <file_name>
   
 Bazaar will display the name of the modified file (the name you specified) and then list the additions and deletions with a
-plus (+) or minus (-) sign in front of the changed lines.   	
+plus (+) or minus (-) sign in front of the changed lines.
 
 
 .. index:: log command
@@ -153,12 +155,12 @@ plus (+) or minus (-) sign in front of the changed lines.
 *Viewing the Revision Log*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can see the history of your branch by browsing its log. To see a complete list of revisions on the current branch
-beginning with the first revision and displaying the most recent revision last, type: 
+You can see the history of your branch by browsing its log. To see a list of
+the last 10 revisions, type:
 
 ::
 
-  bzr log --forward 
+  bzr log -r-10..
   
 Information will be provided about each revision, including:
 
@@ -168,8 +170,8 @@ Information will be provided about each revision, including:
   * Date/time the revision was committed
   * Commit message 
 
-If you do not use the ``--forward`` option and merely type ``bzr log``, the first revision will be
-displayed last, and you will have to scroll up to view the most recent revisions.
+If you'd prefer to see the most recent revision at the bottom, add the ``--forward`` option to
+the command above.
 
  
 .. index:: merge; canceling
@@ -181,8 +183,9 @@ displayed last, and you will have to scroll up to view the most recent revisions
 Canceling a Merge and Reverting Changes
 ++++++++++++++++++++++++++++++++++++++++
 
-If you encounter a problem when merging openmdao to your branch, and the issue cannot be resolved quickly, you can cancel the
-merge by using the ``revert`` command. Type:
+If you encounter a problem when merging to your branch, and things are messed
+up enough that you want to start over, you can cancel the merge by using the ``revert``
+command. Type:
 
 ::
 
@@ -193,7 +196,7 @@ good idea to see what files will be removed, so type:
 
 ::
 
-  bzr diff      (Shows differences [additions, deletions] between two files.)			      
+  bzr status    (Shows which files have been modified, deleted, or added.)
   bzr revert    (Reverts to the previous revision.)
   
   

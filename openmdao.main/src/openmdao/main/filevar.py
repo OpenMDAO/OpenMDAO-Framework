@@ -15,6 +15,7 @@ _FILEMETA = {
     'binary': False,
     'big_endian': False,
     'single_precision': False,
+    'integer_8': False,
     'unformatted': False,
     'recordmark_8': False,
 }
@@ -33,6 +34,7 @@ class FileMetadata(object):
     - 'binary', boolean, default False.
     - 'big_endian', boolean, default False. Only meaningful if binary.
     - 'single_precision', boolean, default False. Only meaningful if binary.
+    - 'integer_8', boolean, default False. Only meaningful if binary.
     - 'unformatted', boolean, default False. Only meaningful if binary.
     - 'recordmark_8', boolean, default False. Only meaningful if unformatted.
 
