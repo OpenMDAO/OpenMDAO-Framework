@@ -2,7 +2,6 @@ import sys
 import os
 
 import nose
-print 'nose version = ',nose.__version__
 
 def run_openmdao_suite():
     """This function is exported as a script that is runnable as part of
@@ -55,8 +54,6 @@ def run_openmdao_suite():
         args.remove('--all')
         args.extend(tlist)
         
-    print 'args = ',args
-    print 'sys.argv = ',sys.argv
     nose.run_exit(argv=args)
 
 
