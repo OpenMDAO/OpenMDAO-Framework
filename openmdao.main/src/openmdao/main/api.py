@@ -12,17 +12,20 @@ openmdao.main API.
 |     SimulationRoot
 |     Workflow
 |     set_as_top
-
+|
+|
 | *Factories*
 |
 |     Factory
 |     create
 |     get_available_types
-
+|
+|
 | *Exceptions*
 |
 |     ConstraintError
-
+|
+|
 | *Data & File*
 |
 |         Case
@@ -33,12 +36,14 @@ openmdao.main API.
 |         ListCaseIterator
 |         Expression
 |         ExpressionList
-
+|
+|
 | *Utilities*
 |
 |         convert_units
 |         logger
-
+|
+|
 | *Constants*
 |
 |         SAVE_CPICKLE

@@ -4,7 +4,7 @@
 Licenses
 ========
 
-OpenMDAO follows the NASA Open Source Agreement (:term:`NOSA`) Version 1.3. For a description of this
+OpenMDAO is released under the NASA Open Source Agreement (:term:`NOSA`) Version 1.3. For a description of this
 license, see the NOSA Open Source Initiative (:term:`OSI`) license `page <http://www.opensource.org/licenses/nasa1.3.php>`_.
 
 The following table provides a list of the distributions that are currently

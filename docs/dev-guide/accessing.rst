@@ -4,11 +4,11 @@
 Accessing OpenMDAO on Launchpad -- SSH Keys
 ============================================
 
-The source repository for OpenMDAO is read accessible to the public, so making
+The source repository for OpenMDAO is read-accessible to the public, so making
 a branch from it does not typically require that you have a Launchpad account.
-However if you are behind a proxy, you *may* need to not only have a Launchpad
-account, but also to register your public SSH key with your Launchpad account
-in order to *read* or *write* to the repository. If you require write access
+However, if you are behind a proxy, you *may* need to not only have a Launchpad
+account but also to register your public SSH key with your Launchpad account
+before you can *read* or *write* to the repository. If you require *write* access
 to the OpenMDAO project on Launchpad, either to push changes directly to the
 trunk or to push up personal branches for merge approval, you will need to
 have a Launchpad account and to register your public SSH key with that
@@ -33,7 +33,7 @@ if you use Linux or OS X.
    If the file is there, skip to the next section and learn how to register your key with Launchpad.
 2. You should be in your home directory on your Linux machine. At the prompt, type: ``ssh-keygen -t rsa``. 
 3. When prompted, press ``Enter`` to accept the default file name for your key. 
-4. Press "Enter" when prompted for a password and then press it again to
+4. Press ``Enter`` when prompted for a password and then press it again to
    confirm that you are not entering a password. Your key pair is stored in ``~/.ssh/
    as id_rsa.pub`` (public key) and ``id_rsa`` (private key).
 
@@ -66,9 +66,9 @@ push a branch back to openmdao. In your home directory on your Linux machine, ty
 
 .. note:: If you do not know your userid, log in to Launchpad and click on your name in the upper
    right-hand corner. This takes you to an *Overview* page. In the first column, under *User Information*, 
-   you should see **OpenID login**. The web address should contain your userid. (In some cases
-   this may be a hyphenated name, such as  ``john-j-smith``; in other cases, it may be a first initial
-   and last name, such as ``jsmith``.)
+   you should see **OpenID login**. The web address should contain your userid. In most cases
+   this will be a hyphenated name, e.g.,  ``john-j-smith, j-smith`` or ``smith-j``. It will depend on
+   the email address you provided.
    
 If the above command failed, you may be missing an ``authentication.conf`` file or have incomplete
 information in your ``bazaar.conf`` file. To check whether you have these files, type the following
@@ -172,9 +172,9 @@ push a branch back to openmdao. In your home directory on your Windows machine, 
 
 .. note:: If you do not know your userid, log in to Launchpad and click on your name in the upper
    right-hand corner. This takes you to an *Overview* page. In the first column, under *User Information*, 
-   you should see **OpenID login**. The web address should contain your userid. (In some cases
-   this may be a hyphenated name, such as  ``john-j-smith``; in other cases, it may be a first initial
-   and last name, such as ``jsmith``.)
+   you should see **OpenID login**. The web address should contain your userid. In most cases
+   this will be a hyphenated name, e.g.,  ``john-j-smith, j-smith`` or ``smith-j``. It will depend on
+   the email address you provided.
 
 
 
