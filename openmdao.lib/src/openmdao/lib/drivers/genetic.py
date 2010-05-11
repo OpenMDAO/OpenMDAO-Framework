@@ -15,21 +15,48 @@ except ImportError:
     import logging
     logging.warning('No pyevolve.DBAdaptors available.')
 
-from openmdao.main.api import Driver, StringRef, StringRefArray, set_as_top, Component, Assembly
-from openmdao.lib.api import Float, Int, Enum, Array
+from openmdao.main.api import Driver, ExprEvaluator, set_as_top, Component, Assembly,StringRef
+from openmdao.lib.api import Float, Int, Enum, Array,Bool, Instance
 
 array_test = re.compile("\[[0-9]+\]$")
-
 
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO frameowork, based on the Pyevolve Genetic algorithm module. 
     """
-    objective = StringRef(iotype='out',desc='A string containing the objective function expression') 
-    _design_vars = StringRefArray(iotype='out', desc="An array of design variable names. These names can include array indexing")
+    objective = StringRef(iotype='out',
+                          desc='A string containing the objective function expression to be optimized') 
+    
+    opt_type = Enum("minimize", values=["minimize","maximize"],
+                    iotype="in",
+                    desc="sets the optimization to either minimize or maximize the objective function")
+    seed = Int(None,iotype="in",
+               desc="Random seed for the optimizer. Set to a specific value for repeatable results, otherwise leave as None for truely random seeding")
+    generations = Int(Consts.CDefGAGenerations,iotype="in",
+                      desc="the maximum number of generations the algorithm will evolve to before stopping")
+    population_size = Int(Consts.CDefGAPopulationSize, iotype="in",
+                          desc = "the size of the population in each generation")
+    crossover_rate = Float(Consts.CDefGACrossoverRate, iotype="in",low=0.0,high=1.0,
+                           desc="the crossover rate used when two parent genomes repoduce to form a child genome")
+    mutation_rate = Float(Consts.CDefGAMutationRate, iotype="in",low=0.0,high=1.0,
+                           desc="the mutation rate applied to population members")
+    
+    selection_method = Enum("tournament",("roulette_wheel","tournament","rank","uniform"),
+                         desc="the selection method used to pick population members who will survive for breeding into the next generation",
+                         iotype="in")
+    #TODO: figure out how to set tournament size    
+    #tournament_size = Int(Consts.CDefTournamentPoolSize,iotype="in",desc="the number of populations members who compete in each tournament. Only used with 'tournament' selection.")
+    
+    _selection_mapping = {"roulette_wheel":Selectors.GRouletteWheel,"tournament":Selectors.GTournamentSelector,
+                         "rank":Selectors.GRankSelector,"uniform":Selectors.GUniformSelector}
+    
+    elitism = Bool(False,iotype="in",desc="controls the use of elitism in the createion of new generations.")
+    
+    best_individual = Instance(klass = GenomeBase.GenomeBase, iotype="out", desc="the genome with the best score from the optimization") 
     
     def __init__(self,doc=None):
         super(Genetic,self).__init__(doc)
         
+        self._design_vars = []
         self._des_var_ranges = dict()
     
     def _make_alleles(self): 
@@ -50,24 +77,29 @@ class Genetic(Driver):
             obj = getattr(self.parent,path)
            
             t = obj.trait(target) #get the trait
-            if t: 
-                                
-                if t.is_trait_type(Float) or ((t.is_trait_type(Python) or array_test.search(target)) and isinstance(val,float)):
-                    allele = GAllele.GAlleleRange(begin=low,end=high,real=True)
-                    alleles.add(allele)
+                                 
+            if (t and (t.is_trait_type(Float) or t.is_trait_type(Python))) or (array_test.search(target) and isinstance(val,float)):
+                allele = GAllele.GAlleleRange(begin=low,end=high,real=True)
+                alleles.add(allele)
                 
-                elif t.is_trait_type(Int) or ((t.is_trait_type(Python) or array_test.search(target)) and isinstance(val,int)):
-                    allele = GAllele.GAlleleRange(begin=low,end=high,real=False)
-                    alleles.add(allele)                
+            elif (t and (t.is_trait_type(Int) or t.is_trait_type(Python))) or (array_test.search(target) and isinstance(val,int)):
+                allele = GAllele.GAlleleRange(begin=low,end=high,real=False)
+                alleles.add(allele)                
                     
-                elif t.is_trait_type(Enum): 
-                    allele = GAllele.GAlleleList(t.values)
-                    alleles.add(allele)
-                    
+            elif t and t.is_trait_type(Enum): 
+                allele = GAllele.GAlleleList(t.values)
+                alleles.add(allele)
+                
             else:
                 self.raise_exception("Improper design variable type. Must be Float,Int or an element of an Array.",ValueError)
         
         return alleles
+    
+    def remove_des_var(self,ref):
+        i = [str(x) for x in self._design_vars].index(ref)
+        self._design_vars.pop(i)
+        self._des_var_ranges.pop(ref)
+        return True
     
     def add_des_var(self,ref,low=None,high=None):
         """adds a design variable to the driver. 'ref' is a string refering to the public variable the driver should 
@@ -76,7 +108,8 @@ class Genetic(Driver):
         If they are not specified in the metadata and not provided as arguments, the values default to 0 and 100 repectively. 
         """
         #indexed the same as self._allels
-        self._design_vars.append(ref) #add it to the list of string refs
+        expreval = ExprEvaluator(ref, self.parent, single_name=True)
+        self._design_vars.append(expreval) #add it to the list of string refs
         val = self._design_vars[-1].evaluate()
         if low and high: #use specified, overrides any trait defaults that would have been found
             self._des_var_ranges[ref] = (low,high)
@@ -111,43 +144,83 @@ class Genetic(Driver):
                 if not(isinstance(val,float) or isinstance(val,int)):
                     self.raise_exception("Only array values of type 'int' or 'float' are allowed as design variables")
                     
-                self.raise_exception("values for 'high' and 'low'' arguments are required when specifying an adding an Array element as a design variable",TypeError)
+                self.raise_exception("values for 'high' and 'low' arguments are required when specifying an Array element as a design variable. They were not given for '%s'"%ref,TypeError)
             else: 
                 self.raise_exception("Improper design variable type. Must be Float,Int, or an element of an Array.",ValueError)
-        
-        
+        return True
+            
     def execute(self):
         """Perform the optimization"""
-        print self._make_alleles()
+        alleles = self._make_alleles()
         
+        genome = G1DList.G1DList(len(alleles))
+        genome.setParams(allele=alleles)
+        genome.evaluator.set(self._run_model)
+        
+        genome.mutator.set(Mutators.G1DListMutatorAllele)
+        genome.initializator.set(Initializators.G1DListInitializatorAllele)
+        #TODO: fix tournament size settings        
+        #genome.setParams(tournamentPool=self.tournament_size)
+        
+        # Genetic Algorithm Instance
+        #print self.seed
+        
+        #configuring the iptions
+        ga = GSimpleGA.GSimpleGA(genome,interactiveMode = False, seed=self.seed)
+        ga.setMinimax(Consts.minimaxType[self.opt_type])
+        ga.setGenerations(self.generations)
+        ga.setMutationRate(self.mutation_rate)
+        ga.setCrossoverRate(self.crossover_rate)
+        ga.setPopulationSize(self.population_size)
+        ga.setElitism(self.elitism)
+        
+        #setting the selector for the algorithm
+        ga.selector.set(self._selection_mapping[self.selection_method])
+        
+        #GO
+        ga.evolve(freq_stats=0)
+        
+        self.best_individual = ga.bestIndividual()
+        print self.best_individual
 
-        
+    def _run_model(self,chromosome):
+        for i,value in enumerate(chromosome):
+            self._design_vars[i].set(value)
+        #    print i,value    
+        self.run_iteration()
+        #exit()        
+        return self.objective.evaluate()
+    
 if __name__ == "__main__":
     import numpy
-    class Rosenbrock(Component):
-        x = Float(3,low=-10,high=10,iotype="in")
-        y = Int(low=-100,high=100,iotype="in")
-        z = Array(dtype=float, value=[1.0,2.0,3.0,4.0], iotype="in")
-        a = Enum(default="test",values=(1,2,3,"TEST"),iotype="in")
-        result = Float(iotype = 'out')
-        
-        def __init__(self, doc=None):
-            super(Rosenbrock, self).__init__(doc)
-            self.x = 10
-            self.y = 10
-            self.result = (1-self.x**2) + 100*(self.y - self.y**2)**2
-        
-
-        def execute(self):
-            """calculate the new objective value"""
-            self.result = (1-self.x**2) + 100*(self.y - self.x**2)**2
+    import logging
+    class SphereFunction(Component):
+        total = Float(0., iotype='out')
+        x = Float(0, low=-5.12,high=5.13, iotype="in")
+        y = Float(0, low=-5.12,high=5.13, iotype="in")
+        z = Float(0, low=-5.12,high=5.13, iotype="in") 
     
-    top = set_as_top(Assembly())
-    top.add_container("rosen",Rosenbrock())
+        def __init__(self, desc=None):
+            super(SphereFunction, self).__init__(desc)
+                
+        def execute(self):
+            """ calculate the sume of the squares for the list of numbers """
+            self.total = self.x**2+self.y**2+self.z**2        
+        
+    top = Assembly()
+    top.add_container("comp",SphereFunction())
     top.add_container("genetic",Genetic())
     
-    top.genetic.add_des_var("rosen.a")
-    top.genetic.add_des_var("rosen.x")
+    top.genetic.seed = 123
+    top.genetic.generations = 10
+    #top.genetic.mutation_rate = .02
+    top.genetic.selection_method = "roulette_wheel"
     
+    top.genetic.add_des_var("comp.x")
+    top.genetic.add_des_var("comp.y")
+    top.genetic.add_des_var("comp.z")
+
+    
+    top.genetic.objective = "comp.total"
     top.genetic.execute()
     
