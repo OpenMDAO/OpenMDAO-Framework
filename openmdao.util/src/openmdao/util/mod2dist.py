@@ -257,7 +257,10 @@ setup(
                 print out
             elif options.verbose:
                 print out
-            distname = '%s-%s.tar.gz'%(modname,options.version)
+            if sys.platform == 'win32':
+                distname = '%s-%s.zip' % (modname, options.version)
+            else:
+                distname = '%s-%s.tar.gz' % (modname,options.version)
             logging.info('created distribution %s in %s' % (distname, destdir))
             if idir_abs:
                 # find the distribution we just built
