@@ -413,9 +413,9 @@ Glossary
         See :term:`Socket`.
 	
 
-      **StringRef**	
-	A special kind of trait that contains a string that points to some
-	location in the OpenMDAO variable tree. 
+      **Expression**	
+	A special kind of trait that contains a string expression that references public variables
+	in the framework. 
 
 
       **SWIG**

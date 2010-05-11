@@ -55,31 +55,31 @@ The OpenMDAO CONMIN driver can be imported from ``openmdao.lib.api``.
 
 .. testcode:: CONMIN_load
 
-	from openmdao.lib.api import CONMINdriver
+    from openmdao.lib.api import CONMINdriver
 
 Typically, CONMIN will be used as a driver in the top level assembly, though it
 can be also used in a subassembly as part of a nested driver scheme. Using the
 OpenMDAO script interface, a simple optimization problem can be set up as
 follows:
-	
+
 .. testcode:: CONMIN_load
 
-	from openmdao.main.api import Assembly
-	from openmdao.lib.api import CONMINdriver
+    from openmdao.main.api import Assembly
+    from openmdao.lib.api import CONMINdriver
 
-	class EngineOptimization(Assembly):
-	    """ Top level assembly for optimizing a vehicle. """
+    class EngineOptimization(Assembly):
+        """ Top level assembly for optimizing a vehicle. """
     
-	    def __init__(self):
-	        """ Creates a new Assembly containing a DrivingSim and an optimizer"""
+        def __init__(self):
+            """ Creates a new Assembly containing a DrivingSim and an optimizer"""
         
-	        super(EngineOptimization, self).__init__()
+            super(EngineOptimization, self).__init__()
 
-	        # Create DrivingSim component instances
-	        self.add_container('driving_sim', DrivingSim())
+            # Create DrivingSim component instances
+            self.add_container('driving_sim', DrivingSim())
 
-	        # Create CONMIN Optimizer instance
-	        self.add_container('driver', CONMINdriver())
+            # Create CONMIN Optimizer instance
+            self.add_container('driver', CONMINdriver())
 
 This first section of code defines an assembly called *EngineOptimization.* This
 assembly contains a DrivingSim component and a CONMIN driver, both of which are
@@ -87,34 +87,34 @@ created and added inside the *__init__* function with *add_container()*. The
 objective function, design variables, constraints, and any CONMIN parameters
 are also assigned in the *__init__* function. The specific syntax for all of 
 these is given below.
-	
+
 .. testsetup:: CONMIN_show
 
-	from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-	
-	# Note: This block of code does not display in the documentation.
-	# This is a trick to get around a limitation in Sphinx's doctest, where
-	# there is no way to preserve the indentation level between code
-	# blocks, and the concept of "self" is not defined when we fall
-	# out of the class scope.
-	
-	self = EngineOptimization()
-	
-Both the objective function and the design variables are assigned via a
-:term:`StringRef` variable. A StringRef is a string that points to some other OpenMDAO
+    from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+    
+    # Note: This block of code does not display in the documentation.
+    # This is a trick to get around a limitation in Sphinx's doctest, where
+    # there is no way to preserve the indentation level between code
+    # blocks, and the concept of "self" is not defined when we fall
+    # out of the class scope.
+    
+    self = EngineOptimization()
+
+Both the objective function and the design variables are assigned via an
+:term:`Expression` variable. An Expression is a string that points to some other OpenMDAO
 variable in the variable tree. There is only one objective function, but there
 can be multiple design variables which are assigned as a Python list.
 
 .. testcode:: CONMIN_show
         
-	# CONMIN Objective 
-	self.driver.objective = 'driving_sim.accel_time'
+    # CONMIN Objective 
+    self.driver.objective = 'driving_sim.accel_time'
         
-	# CONMIN Design Variables 
-	self.driver.design_vars = ['driving_sim.spark_angle', 
+    # CONMIN Design Variables 
+    self.driver.design_vars = ['driving_sim.spark_angle', 
                                                'driving_sim.bore' ]
-					       
-These StringRef variables must point to something that can be seen in the
+
+These Expression variables must point to something that can be seen in the
 scope of the asssembly that contains the CONMIN driver. In other words,
 if an assembly contains a CONMIN driver, the objective function and design
 variables cannot be located outside of that assembly. Also, each design
@@ -128,8 +128,8 @@ component or a function of available component outputs:
 
 .. testcode:: CONMIN_show
 
-	# CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
-	self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
+    # CONMIN Objective = Maximize weighted sum of EPA city and highway fuel economy 
+    self.driver.objective = '-(.93*driving_sim.EPA_city + 1.07*driving_sim.EPA_highway)'
 
 In this example, the objective is to maximize the weighted sum of two variables.
 The equation must be constructed using valid Python operators. All variables in
@@ -147,8 +147,8 @@ Side constraints are defined using the *lower_bounds* and *upper_bounds* paramet
 
 .. testcode:: CONMIN_show
 
-	self.driver.lower_bounds = [-50, 65]
-	self.driver.upper_bounds = [10, 100]
+    self.driver.lower_bounds = [-50, 65]
+    self.driver.upper_bounds = [10, 100]
 
 The size of these lists must be equal to the number of design variables or 
 OpenMDAO will raise an exception. Similarly, the upper bound must be greater
@@ -161,8 +161,8 @@ when they return a positive value**.
 
 .. testcode:: CONMIN_show
 
-	self.driver.constraints = ['driving_sim.stroke - driving_sim.bore']
-	    
+    self.driver.constraints = ['driving_sim.stroke - driving_sim.bore']
+
 Any equation can also be expressed as an inequality.
 
 
@@ -204,7 +204,7 @@ tests are performed in the following sequence:
 The number of successive iterations the convergence tolerance should be checked before
 terminating the loop can also be specified with the *itrm* parameter, whose
 default value is 3.
-	
+
 .. testcode:: CONMIN_show
 
         self.driver.itrm = 3
@@ -221,7 +221,7 @@ difference will use, and *fdch* is the step size relative to the design variable
 
         self.driver.fdch = .0001
         self.driver.fdchm = .0001
-	
+
 .. note::
    The default values of *fdch* and *fdchm* are set to 0.01. This may be too
    large for some problems and will manifest itself by converging to a value that
@@ -252,7 +252,7 @@ used to scale the design variables.
 
         self.driver.scal = [10.0, 10.0, 10.0, 10.0]
         self.driver.nscal = -1
-	
+
 There need to be as many scale values as there are design variables.
 
 If your problem uses linear  constraints, you can improve the efficiency of the
@@ -261,9 +261,9 @@ variables as follows:
 
 .. testcode:: CONMIN_show
 
-	self.driver.constraints = ['driving_sim.stroke - driving_sim.bore',
-	                           '1.0 - driving_sim.stroke * driving_sim.bore']
-	self.cons_is_linear = [1, 0]
+    self.driver.constraints = ['driving_sim.stroke - driving_sim.bore',
+                               '1.0 - driving_sim.stroke * driving_sim.bore']
+    self.cons_is_linear = [1, 0]
 
 If *cons_is_linear* is not specified, then all the constraints are assumed to be
 nonlinear. Note that the original CONMIN parameter for this is ISC.	
@@ -274,12 +274,12 @@ output.
 
 .. testcode:: CONMIN_show
 
-       	self.driver.iprint = 0
-	
+        self.driver.iprint = 0
+
 Higher positive values of *iprint* turn on the display of more levels of output, as summarized below.
 
 ============  ========================================================
-*Value*	      *Result*	
+*Value*       *Result*
 ------------  --------------------------------------------------------
 iprint = 0    All output is suppressed
 ------------  --------------------------------------------------------
@@ -288,12 +288,12 @@ iprint = 1    Print initial and final function information
 iprint = 2    Debug level 1: All of the above plus control parameters
 ------------  --------------------------------------------------------
 iprint = 3    Debug level 2: All of the above plus all constraint
-	      values, number of active/violated constraints, direction
-	      vectors, move parameters, and miscellaneous information
+              values, number of active/violated constraints, direction
+              vectors, move parameters, and miscellaneous information
 ------------  --------------------------------------------------------
 iprint = 4    Complete debug: All of the above plus objective function
               gradients, active and violated constraint gradients, and
-	      miscellaneous information
+              miscellaneous information
 ------------  --------------------------------------------------------
 iprint = 5    All of above plus each proposed design vector, objective
               and constraints during the one-dimensional search
@@ -302,7 +302,7 @@ iprint = 101  All of above plus a dump of the arguments passed to
               subroutine CONMIN
 ============  ========================================================
 
-	
+
 Advanced Options
 ~~~~~~~~~~~~~~~~
 The following options exercise some of the more advanced capabilities of CONMIN.

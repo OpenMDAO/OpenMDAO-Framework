@@ -978,13 +978,13 @@ Recall that the *iprint* flag enables or disables the printing of diagnostics
 internal to CONMIN, while the *itmax* parameter specifies the maximum number
 of iterations for the optimization loop.
 
-.. index:: StringRef
+.. index:: Expression
 
 The optimization objective is to minimize the 0-60 mph acceleration time by
 adjusting the design variables *bore* and *spark angle*. In the previous
-examples, we learned to use StringRefs to build expressions that point to
+examples, we learned to use Expressions to build expressions that point to
 locations in the data hierarchy. Whenever we declare multiple design
-variables, the StringRefs are placed in a list. The values for the lower and
+variables, the Expressions are placed in a list. The values for the lower and
 upper bounds are also defined in list.
 
 We are now ready to solve an optimization problem.
@@ -1043,13 +1043,13 @@ You can run this same problem at the command prompt by typing:
 
 ::
 
-	python engine_optimization.py
-	
+    python engine_optimization.py
+
 This script prints out a little more information than we've shown in this
 example. See :ref:`Getting-Started-with-OpenMDAO` for a refresher on how
 to set up a component to run at the command prompt.
-	
-The StringRef can be used to pose more sophisticated objective expressions
+
+The Expression can be used to pose more sophisticated objective expressions
 that are functions of multiple simulation variables. For example, if you want
 to maximize *accel_time* instead of minimizing it, you can do this by negating
 the expression:

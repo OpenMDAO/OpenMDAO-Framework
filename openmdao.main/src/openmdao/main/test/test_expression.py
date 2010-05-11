@@ -5,13 +5,13 @@ import unittest
 from enthought.traits.api import TraitError
 
 from openmdao.main.exceptions import ConstraintError
-from openmdao.main.api import Assembly, Component, StringRef, StringRefArray, set_as_top
+from openmdao.main.api import Assembly, Component, Expression, ExpressionList, set_as_top
 from openmdao.lib.api import Float, Array
 
 class RefComp(Component):   
-    desvar = StringRef(iotype='out')
-    desvars = StringRefArray(iotype='out')
-    objective = StringRef(iotype='in')
+    desvar = Expression(iotype='out')
+    desvars = ExpressionList(iotype='out')
+    objective = Expression(iotype='in')
     z = Float(99.9, iotype='out')
             
 class SimpleComp(Component):
@@ -21,7 +21,7 @@ class SimpleComp(Component):
     d1out = Float(11., iotype='out')
     array = Array(value=[1., 2., 3.], iotype='in')
         
-class StringRefTestCase(unittest.TestCase):
+class ExpressionTestCase(unittest.TestCase):
 
     def setUp(self):
         """this setup function will be called before each test in this class"""
@@ -70,12 +70,12 @@ class StringRefTestCase(unittest.TestCase):
         self.assertEqual(-22., self.comp2.array[0])
         self.assertEqual(-777., self.comp2.array[2])
         
-    def test_ref_comps(self):
+    def test_expr_comps(self):
         self.comp1.objective = 'comp2.x+3*comp1.z'
         comps = self.comp1.objective.get_referenced_compnames()
         self.assertEqual(set(['comp2','comp1']), comps)
         
-    def test_array_ref_comps(self):
+    def test_exprlist_comps(self):
         self.comp1.desvars = ['comp2.x', 'comp4.y', 'comp4.d1']
         comps = reduce(lambda x,y: x.union(y.get_referenced_compnames()), 
                        self.comp1.desvars, set())
@@ -111,11 +111,11 @@ class StringRefTestCase(unittest.TestCase):
 
     def test_novar_expr(self):
         asm = set_as_top(Assembly())
-        asm.add_trait('ref', StringRef(iotype='in'))
+        asm.add_trait('ref', Expression(iotype='in'))
         asm.ref = '1+2'
         self.assertEqual(asm.ref.evaluate(), 3)
         
-        asm.add_trait('refout', StringRef(iotype='out'))
+        asm.add_trait('refout', Expression(iotype='out'))
         try:
             asm.refout = '2'
         except TraitError, err:

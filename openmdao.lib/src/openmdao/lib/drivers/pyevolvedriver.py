@@ -15,7 +15,7 @@ except ImportError:
     import logging
     logging.warning('No pyevolve.DBAdaptors available.')
 
-from openmdao.main.api import Driver, StringRef
+from openmdao.main.api import Driver, Expression
 from openmdao.lib.traits.int import Int
 from openmdao.lib.traits.float import Float
 
@@ -94,7 +94,7 @@ class pyevolvedriver(Driver):
     """
 
     # inputs
-    objective = StringRef(iotype='in',
+    objective = Expression(iotype='in',
                           desc='A string containing the objective function'
                                ' expression.')
     freq_stats = Int(0, iotype='in')
@@ -140,7 +140,7 @@ class pyevolvedriver(Driver):
         slot.setRandomApply(RandomApply)
 
     @on_trait_change('objective') 
-    def _refvar_changed(self, obj, name, old, new):
+    def _expr_changed(self, obj, name, old, new):
         expr = getattr(obj, name)
         try:
             expr.refs_valid()  # force checking for existence of vars referenced in expression
