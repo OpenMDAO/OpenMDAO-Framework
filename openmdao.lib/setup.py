@@ -44,7 +44,6 @@ Component, Driver, and TraitType plugins for OpenMDAO
           'openmdao.main',
           'conmin',
           'Pyevolve',
-          'axod',
           ],
       entry_points="""
       [openmdao.driver]
