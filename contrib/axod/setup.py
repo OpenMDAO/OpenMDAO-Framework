@@ -8,7 +8,6 @@ from numpy.distutils.fcompiler import get_default_fcompiler
 
 version = '0.1.0'
 
-    
 if sys.platform == 'win32': 
     import openmdao.util.distutils_fix
     sdkdir = os.environ.get('WindowsSdkDir')

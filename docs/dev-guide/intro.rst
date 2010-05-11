@@ -47,10 +47,8 @@ Guide.  These requirements are described below.
         this is more prone to installation problems.
         
       - *gfortran*
-   
-        Unfortunately, *gfortran* is not
-        part of Xcode.  It is installed on our OS X (leopard) system, but we need
-        to determine how it got there so we can recommend the best way to install it.
+
+        Binaries for gfortran are available `here <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_
 
    - *Windows*:
    
@@ -66,9 +64,6 @@ Guide.  These requirements are described below.
          
          
 .. __: http://sourceforge.net/projects/mingw/files/Automated%20MinGW%20Installer/MinGW%205.1.6/MinGW-5.1.6.exe/download
-
-         
-.. todo:: provide instructions for installing gfortran on OS X
 
 
 System Configuration
