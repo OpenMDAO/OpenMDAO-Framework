@@ -6,6 +6,7 @@ class Zone(object):
 
     def __init__(self):
         self.coords = GridCoordinates()
+        self.arrays = []
         self.vectors = []
 
     @property
@@ -17,6 +18,14 @@ class Zone(object):
     def extent(self):
         """ Returns tuple of coordinate ranges. """
         return self.coords.extent
+
+    def add_array(self, name, array):
+        """ Add an array bound to `name`. Returns the added array. """
+        if hasattr(self, name):
+            raise ValueError("name '%s' is already bound" % name)
+        setattr(self, name, array)
+        self.arrays.append(array)
+        return array
 
     def add_vector(self, name, vector):
         """ Add a :class:`Vector` bound to `name`. Returns the added vector. """
@@ -35,13 +44,25 @@ class Zone(object):
         if not self.coords.is_equivalent(other.coords, logger):
             return False
 
-# TODO: check scalars and arrays.
+# TODO: check scalars.
+
+        for arr in self.arrays:
+            name = self.name_of_obj(arr)
+            if name is None:
+                raise AttributeError('cannot find array!')
+            try:
+                other_arr = getattr(other, name)
+            except AttributeError:
+                logger.debug("other is missing array '%s'", name)
+                return False
+            if (other_arr != arr).any():
+                logger.debug('%s values are not equal.', name)
+                return False
 
         for vector in self.vectors:
             name = self.name_of_obj(vector)
             if name is None:
                 raise AttributeError('cannot find vector!')
-
             try:
                 other_vector = getattr(other, name)
             except AttributeError:
@@ -49,6 +70,7 @@ class Zone(object):
                 return False
             if not vector.is_equivalent(other_vector, name, logger):
                 return False
+
         return True
 
     def name_of_obj(self, obj):
