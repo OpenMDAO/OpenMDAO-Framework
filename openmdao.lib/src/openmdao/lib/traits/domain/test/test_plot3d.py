@@ -7,7 +7,9 @@ import os.path
 import unittest
 
 from openmdao.lib.traits.domain import read_plot3d_q, write_plot3d_q, \
-                                       read_plot3d_f, write_plot3d_f
+                                       read_plot3d_f, write_plot3d_f, \
+                                       read_plot3d_shape
+
 from openmdao.lib.traits.domain.test.wedge import create_wedge_2d, \
                                                   create_wedge_3d
 
@@ -49,12 +51,16 @@ class TestCase(unittest.TestCase):
         self.assertTrue(domain.is_equivalent(wedge, logger=logger))
 
         # Multiblock.
-        wedge2 = create_wedge_3d((30, 20, 10), 5., 2.5, 4., 30.)
+        wedge2 = create_wedge_3d((29, 19, 9), 5., 2.5, 4., 30.)
         domain.add_domain(wedge2)
         write_plot3d_q(domain, 'unformatted.xyz', 'unformatted.q',
                        logger=logger)
         domain = read_plot3d_q('unformatted.xyz', 'unformatted.q',
                                logger=logger)
+
+        shape = read_plot3d_shape('unformatted.xyz', logger=logger)
+        self.assertEqual(shape, [(30, 20, 10), (29, 19, 9)])
+
         # Errors.
         try:
             read_plot3d_q('unformatted.xyz', 'unformatted.q', blanking=True,

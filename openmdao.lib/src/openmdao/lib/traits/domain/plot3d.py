@@ -64,7 +64,7 @@ def read_plot3d_q(grid_file, q_file, multiblock=True, dim=3, blanking=False,
                                ' %d vs. %d', reclen, expected)
         for zone in domain.zones:
             name = domain.zone_name(zone)
-            imax, jmax, kmax = _read_plot3d_dims(zone, stream, dim)
+            imax, jmax, kmax = _read_plot3d_dims(stream, dim)
             if dim > 2:
                 logger.debug('    %s: %dx%dx%d', name, imax, jmax, kmax)
                 zone_i, zone_j, zone_k = zone.shape
@@ -130,7 +130,7 @@ def read_plot3d_f(grid_file, f_file, varnames=None, multiblock=True, dim=3,
                                ' %d vs. %d', reclen, expected)
         for zone in domain.zones:
             name = domain.zone_name(zone)
-            imax, jmax, kmax, nvars = _read_plot3d_dims(zone, stream, dim, True)
+            imax, jmax, kmax, nvars = _read_plot3d_dims(stream, dim, True)
             if dim > 2:
                 logger.debug('    %s: %dx%dx%d %d',
                              name, imax, jmax, kmax, nvars)
@@ -174,48 +174,73 @@ def read_plot3d_grid(grid_file, multiblock=True, dim=3, blanking=False,
         logger.info("reading grid file '%s'", grid_file)
         stream = Stream(inp, binary, big_endian, single_precision, False,
                         unformatted, False)
-        if multiblock:
-            # Read number of zones.
-            nblocks = stream.read_int(full_record=True)
-            if nblocks < 1 or nblocks > 1000:
-                raise RuntimeError('bad nblocks %d' % nblocks)
-        else:
-            nblocks = 1
-        logger.debug('    nblocks %d', nblocks)
 
         # Read zone dimensions.
-        if unformatted:
-            reclen = stream.read_recordmark()
-            expected = stream.reclen_ints(dim * nblocks)
-            if reclen != expected:
-                logger.warning('unexpected dimensions recordlength'
-                               ' %d vs. %d', reclen, expected)
-        for i in range(nblocks):
+        shape = _read_plot3d_shape(stream, multiblock, dim, logger)
+
+        # Read zone coordinates.
+        for i in range(len(shape)):
             zone = domain.add_zone('', Zone())
             name = domain.zone_name(zone)
-            imax, jmax, kmax = _read_plot3d_dims(zone, stream, dim)
-            if dim > 2:
-                logger.debug('    %s: %dx%dx%d', name, imax, jmax, kmax)
-            else:
-                logger.debug('    %s: %dx%d', name, imax, jmax)
-
-        if unformatted:
-            reclen2 = stream.read_recordmark()
-            if reclen2 != reclen:
-                logger.warning('mismatched dimensions recordlength'
-                               ' %d vs. %d', reclen2, reclen)
-        # Read zone coordinates.
-        for zone in domain.zones:
-            name = domain.zone_name(zone)
             logger.debug('reading coordinates for %s', name)
-            _read_plot3d_coords(zone, stream, dim, blanking, planes, logger)
-
+            _read_plot3d_coords(zone, stream, shape[i], blanking, planes,
+                                logger)
     return domain
 
 
-def _read_plot3d_dims(zone, stream, dim, f_file=False):
+def read_plot3d_shape(grid_file, multiblock=True, dim=3, binary=True,
+                      big_endian=False, unformatted=True, logger=None):
+    """ Returns a list of zone dimensions from Plot3D `grid_file`. """
+    logger = logger or NullLogger()
+
+# TODO: automagically determine format.
+    mode = 'rb' if binary else 'r'
+    with open(grid_file, mode) as inp:
+        logger.info("reading grid file '%s'", grid_file)
+        stream = Stream(inp, binary, big_endian, True, False,
+                        unformatted, False)
+        return _read_plot3d_shape(stream, multiblock, dim, logger)
+
+
+def _read_plot3d_shape(stream, multiblock, dim, logger):
+    """ Returns a list of zone dimensions from Plot3D `stream`. """
+    if multiblock:
+        # Read number of zones.
+        nblocks = stream.read_int(full_record=True)
+        if nblocks < 1 or nblocks > 1000:
+            raise RuntimeError('bad nblocks %d' % nblocks)
+    else:
+        nblocks = 1
+    logger.debug('    nblocks %d', nblocks)
+
+    # Read zone dimensions.
+    if stream.unformatted:
+        reclen = stream.read_recordmark()
+        expected = stream.reclen_ints(dim * nblocks)
+        if reclen != expected:
+            logger.warning('unexpected dimensions recordlength'
+                           ' %d vs. %d', reclen, expected)
+    shape = []
+    for i in range(nblocks):
+        imax, jmax, kmax = _read_plot3d_dims(stream, dim)
+        if dim > 2:
+            shape.append((imax, jmax, kmax))
+            logger.debug('    block %d: %dx%dx%d', i+1, imax, jmax, kmax)
+        else:
+            shape.append((imax, jmax))
+            logger.debug('    block %d: %dx%d', i+1, imax, jmax)
+
+    if stream.unformatted:
+        reclen2 = stream.read_recordmark()
+        if reclen2 != reclen:
+            logger.warning('mismatched dimensions recordlength'
+                           ' %d vs. %d', reclen2, reclen)
+    return shape
+
+
+def _read_plot3d_dims(stream, dim, f_file=False):
     """
-    Reads dimensions from given Plot3D stream. `dim` is the expected
+    Reads dimensions for a zone from given Plot3D stream. `dim` is the expected
     dimensionality.  Returns ``(imax, jmax, kmax)``, kmax == 0 for 2D.
     If `f_file`, returns ``(imax, jmax, kmax, nvars)``.
     """
@@ -238,8 +263,6 @@ def _read_plot3d_dims(zone, stream, dim, f_file=False):
     else:
         raise ValueError("invalid dim parameter: '%s'" % dim)
 
-    zone._imax, zone._jmax, zone._kmax = imax, jmax, kmax
-
     if f_file:
         if nvars < 1:
             raise ValueError("invalid nvars: %d" % nvars)
@@ -248,7 +271,7 @@ def _read_plot3d_dims(zone, stream, dim, f_file=False):
         return (imax, jmax, kmax)
 
 
-def _read_plot3d_coords(zone, stream, dim, blanking, planes, logger):
+def _read_plot3d_coords(zone, stream, shape, blanking, planes, logger):
     """ Reads coordinates (& blanking) from given Plot3D stream. """
     if blanking:
         raise NotImplementedError('blanking not supported yet')
@@ -256,16 +279,13 @@ def _read_plot3d_coords(zone, stream, dim, blanking, planes, logger):
     if planes:
         raise NotImplementedError('planar format not supported yet')
 
-    if dim > 2:
-        shape = (zone._imax, zone._jmax, zone._kmax)
-    else:
-        shape = (zone._imax, zone._jmax)
+    dim = len(shape)
 
     if stream.unformatted:
         if dim > 2:
-            total = 3 * zone._imax * zone._jmax * zone._kmax
+            total = 3 * shape[0] * shape[1] * shape[2]
         else:
-            total = 2 * zone._imax * zone._jmax
+            total = 2 * shape[0] * shape[1]
         reclen = stream.read_recordmark()
         expected = stream.reclen_floats(total)
         if reclen != expected:
