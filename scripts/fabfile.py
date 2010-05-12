@@ -10,14 +10,14 @@
 from fabric.api import run, env, local, put, cd, prompt, hide, hosts
 import sys
 import os
-from os.path import join,dirname,normpath
+#from os.path import join,dirname,normpath
 import tempfile
 import shutil
 import fnmatch
 import tarfile
 
 
-class VersionError(RuntimeError):
+class _VersionError(RuntimeError):
     pass
 
         
@@ -27,7 +27,7 @@ def _check_version(version):
         result = run('ls ~/downloads')
     lst = [x.strip() for x in result.split('\n')]
     if version in lst:
-        raise VersionError('Version %s already exists. Please specify a different version' % version)
+        raise _VersionError('Version %s already exists. Please specify a different version' % version)
     return version
 
 
@@ -40,28 +40,28 @@ def _release(version=None, test=False):
     if version is not None:
         try:
             version = _check_version(version)
-        except VersionError, err:
+        except _VersionError, err:
             print str(err),'\n'
             version = None
         
     if version is None:
         version = prompt('Enter version id:', validate=_check_version)
 
-    dist_dir = normpath(join(dirname(__file__),'..'))
-    scripts_dir = join(dist_dir, 'scripts')
-    doc_dir = join(dist_dir, 'docs')
-    util_dir = join(dist_dir,'openmdao.util','src','openmdao','util')
+    dist_dir = os.path.normpath(os.path.join(os.path.dirname(__file__),'..'))
+    scripts_dir = os.path.join(dist_dir, 'scripts')
+    doc_dir = os.path.join(dist_dir, 'docs')
+    util_dir = os.path.join(dist_dir,'openmdao.util','src','openmdao','util')
     tmpdir = tempfile.mkdtemp()
     startdir = os.getcwd()
     try:
         # build the release distrib (docs are built as part of this)
-        local(sys.executable+' '+ join(scripts_dir,'mkrelease.py')+
+        local(sys.executable+' '+ os.path.join(scripts_dir,'mkrelease.py')+
               ' --version=%s -d %s' % (version, tmpdir), capture=False)
         
         # tar up the docs so we can upload them to the server
-        os.chdir(join(tmpdir, '_build'))
+        os.chdir(os.path.join(tmpdir, '_build'))
         try:
-            archive = tarfile.open(join(tmpdir,'docs.tar.gz'), 'w:gz')
+            archive = tarfile.open(os.path.join(tmpdir,'docs.tar.gz'), 'w:gz')
             archive.add('html')
             archive.close()
         finally:
@@ -84,12 +84,12 @@ def _release(version=None, test=False):
             
             # for now, put the go-openmdao script up without the version
             # id in the name
-            put(join(tmpdir, 'go-openmdao-%s.py' % version), 
+            put(os.path.join(tmpdir, 'go-openmdao-%s.py' % version), 
                 '~/downloads/%s/go-openmdao.py' % version,
                 mode=0755)
     
             # put the docs on the server and untar them
-            put(join(tmpdir,'docs.tar.gz'), '~/downloads/%s/docs.tar.gz' % version) 
+            put(os.path.join(tmpdir,'docs.tar.gz'), '~/downloads/%s/docs.tar.gz' % version) 
             with cd('~/downloads/%s' % version):
                 run('tar xzf docs.tar.gz')
                 run('mv html docs')
@@ -99,7 +99,7 @@ def _release(version=None, test=False):
             # in the downloads dir and takes an arg indicating the destination
             # directory, so we won't have a separate copy of mkdlversionindex.py
             # in every download/<version> directory.
-            put(join(scripts_dir,'mkdlversionindex.py'), 
+            put(os.path.join(scripts_dir,'mkdlversionindex.py'), 
                 '~/downloads/%s/mkdlversionindex.py' % version)
             
             # update the index.html for the version download directory on the server
