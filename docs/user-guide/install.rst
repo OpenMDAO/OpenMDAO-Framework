@@ -1,6 +1,9 @@
 
 .. _Installing-OpenMDAO:
 
+
+.. _System-Requirements:
+
 System Requirements
 ===================
 
@@ -78,7 +81,7 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 Navigate into the folder that was just created by your install script, and type the following
 command:
 
-On Linux or OS X (you must be running bash. If you're not, just type ``bash`` first):
+On Linux or OS X (You must be running bash. If you're not, just type ``bash`` first):
 
 ::
 

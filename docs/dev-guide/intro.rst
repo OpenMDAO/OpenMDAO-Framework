@@ -13,21 +13,20 @@ System Requirements
 ===================
 
 Working with OpenMDAO as a developer has some other system requirements in
-addition to those mentioned in the *System Requirements* section of the User
-Guide.  These requirements are described below.
+addition to those mentioned in the :ref:`System-Requirements` section of the *User
+Guide.*  These requirements are described below.
 
-.. todo: replace *System Requirements* with a link
 
 **Bazaar**
-   We use Bazaar for version control.  You'll need it in order to access the OpenMDAO
-   source repository.  Installers for various platforms can be found `here`__
+   We use Bazaar for version control.  You'll need it to access the OpenMDAO
+   source repository.  Installers for various platforms can be found `here`__.
     
 .. __: http://wiki.bazaar.canonical.com/Download
 
-**C/C++ and FORTRAN Compilers**
-   Certain packages used in OpenMDAO contain python extensions, meaning that they
-   contain non-python source code that must be compiled.  Packages currently in use require
-   either C/C++ or FORTRAN compilers.
+**C/C++ and Fortran Compilers**
+   Certain packages used in OpenMDAO contain Python extensions, meaning that they
+   contain non-python source code that must be compiled. Packages currently in use require
+   either C/C++ or Fortran compilers.
 
    - *Linux*:
 
@@ -42,7 +41,7 @@ Guide.  These requirements are described below.
       - *gcc*
       
         Is available as part of
-        *Xcode*, which can be found on the OS X distribution disks but typically not 
+        *Xcode*, which can be found on the OS X distribution disks but typically is not 
         installed by default.  You can also download gcc and install it from source, although
         this is more prone to installation problems.
         
@@ -54,13 +53,13 @@ Guide.  These requirements are described below.
    
       - *Visual C++ 2008*
       
-         The Express version is what we use, but others (Professional, Standard)
-         should work too.
+        The Express version is what we use, but others (Professional, Standard)
+        should work too.
          
       - *mingw32*   (for FORTRAN)
       
-         Make sure to put the *bin* directory of the mingw32 install in your path.
-         You can find mingw32 `here`__
+        Make sure to put the *bin* directory of the mingw32 install in your path.
+        You can find mingw32 `here`__.
          
          
 .. __: http://sourceforge.net/projects/mingw/files/Automated%20MinGW%20Installer/MinGW%205.1.6/MinGW-5.1.6.exe/download
@@ -72,7 +71,7 @@ System Configuration
 Some steps of the development process, e.g., downloading a branch of the source
 repository and downloading Python distributions, require network access.  If you're
 behind an http proxy, you may have to set the *http_proxy* environment variable
-on your system in order for Bazaar and ``virtualenv`` to function properly.
+on your system for Bazaar and ``virtualenv`` to function properly.
 
 
 *Bazaar User Setup*
@@ -140,8 +139,8 @@ directory of your branch to set up your development environment.
    select the *Visual Studio 2008 Command Prompt* from the *Visual Studio Tools* menu
    under *Microsoft Visual C++ 2008 Express Edition* in the Start menu. If you're
    using something other than the Express edition, then the name of the Start menu 
-   option will be slightly different, i.e., replace 'Express' with 'Professional' or
-   'Standard'.
+   option will be slightly different, i.e., replace "Express" with "Professional" or
+   "Standard."
 
 
 ::
@@ -155,7 +154,6 @@ see the results without having to rebuild any distributions.
 
 
 .. _Activating-the-Virtual-Environment:
-
 
 Activating the Virtual Environment
 __________________________________
@@ -216,7 +214,7 @@ The directory structure of your repository should look like this:
     
 ``docs`` All Sphinx user documentation for OpenMDAO.  The documentation is broken up into
     several major documents, each found in a separate  subdirectory, e.g., ``user-guide``
-    contains the User's Guide, ``dev-guide`` contains the Developer's Guide, and so on.
+    contains the *User Guide,* ``dev-guide`` contains the *Developer's Guide,* and so on.
 
 ``openmdao.main``
     Python package containing all infrastructure source for OpenMDAO.
@@ -231,7 +229,7 @@ The directory structure of your repository should look like this:
     
 ``openmdao.devtools``
     Python package containing scripts intended for developers and maintainers
-    of openmdao, to do things like build the sphinx docs or create a release.
+    of openmdao to do things like build the Sphinx docs or create a release.
     These scripts assume that the source repository is present, so this
     package is not distributed as part of an OpenMDAO release.
     
