@@ -7,7 +7,7 @@
 #        fab release:version_id
 #
 
-from fabric.api import run, env, local, put, cd, prompt, hide
+from fabric.api import run, env, local, put, cd, prompt, hide, hosts
 import sys
 import os
 from os.path import join,dirname,normpath
@@ -16,7 +16,6 @@ import shutil
 import fnmatch
 import tarfile
 
-env.hosts = ['openmdao@web103.webfaction.com']
 
 class VersionError(RuntimeError):
     pass
@@ -31,7 +30,8 @@ def _check_version(version):
         raise VersionError('Version %s already exists. Please specify a different version' % version)
     return version
 
-def release(version=None, test=False):
+
+def _release(version=None, test=False):
     """Creates source distributions, docs, binary eggs, and install script for 
     the current openmdao namespace packages, uploads them to openmdao.org/dists, 
     and updates the index.html file there.
@@ -124,3 +124,17 @@ def release(version=None, test=False):
             print 'Files were placed in %s.' % tmpdir
         else:
             shutil.rmtree(tmpdir)
+
+            
+#env.hosts = ['openmdao@web103.webfaction.com']
+
+@hosts('openmdao@web103.webfaction.com')
+def release(version=None):
+    _release(version)
+    
+
+@hosts('bnaylor@torpedo.grc.nasa.gov')
+def testrelease(version=None):
+    _release(version)
+    
+    
