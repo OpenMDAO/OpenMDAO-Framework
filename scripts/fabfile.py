@@ -35,7 +35,6 @@ def _release(version=None, test=False):
     """Creates source distributions, docs, binary eggs, and install script for 
     the current openmdao namespace packages, uploads them to openmdao.org/dists, 
     and updates the index.html file there.
-    If the test flag is True, it will not upload anything to the server.
     """
     if version is not None:
         try:
@@ -55,8 +54,12 @@ def _release(version=None, test=False):
     startdir = os.getcwd()
     try:
         # build the release distrib (docs are built as part of this)
+        if test:
+            teststr = '--test'
+        else:
+            teststr = ''
         local(sys.executable+' '+ os.path.join(scripts_dir,'mkrelease.py')+
-              ' --version=%s -d %s' % (version, tmpdir), capture=False)
+              ' --version=%s %s -d %s' % (version, teststr, tmpdir), capture=False)
         
         # tar up the docs so we can upload them to the server
         os.chdir(os.path.join(tmpdir, '_build'))
@@ -67,74 +70,68 @@ def _release(version=None, test=False):
         finally:
             os.chdir(startdir)
         
-        if not test:
-            run('mkdir ~/downloads/%s' % version)
-            run('chmod 755 ~/downloads/%s' % version)
-            
-            # push new distribs up to the server
-            for f in os.listdir(tmpdir):
-                if f.startswith('openmdao_src'): 
-                    # upload the repo source tar
-                    put(os.path.join(tmpdir,f), '~/downloads/%s/%s' % (version, f), 
-                        mode=0644)
-                elif f.endswith('.tar.gz') and f != 'docs.tar.gz':
-                    put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
-                elif f.endswith('.egg'):
-                    put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
-            
-            # for now, put the go-openmdao script up without the version
-            # id in the name
-            put(os.path.join(tmpdir, 'go-openmdao-%s.py' % version), 
-                '~/downloads/%s/go-openmdao.py' % version,
-                mode=0755)
-    
-            # put the docs on the server and untar them
-            put(os.path.join(tmpdir,'docs.tar.gz'), '~/downloads/%s/docs.tar.gz' % version) 
-            with cd('~/downloads/%s' % version):
-                run('tar xzf docs.tar.gz')
-                run('mv html docs')
-                run('rm -f docs.tar.gz')
-    
-            # FIXME: change to a single version of mkdlversionindex.py that sits
-            # in the downloads dir and takes an arg indicating the destination
-            # directory, so we won't have a separate copy of mkdlversionindex.py
-            # in every download/<version> directory.
-            put(os.path.join(scripts_dir,'mkdlversionindex.py'), 
-                '~/downloads/%s/mkdlversionindex.py' % version)
-            
-            # update the index.html for the version download directory on the server
-            with cd('~/downloads/%s' % version):
-                run('python2.6 mkdlversionindex.py')
-    
-            # update the index.html for the dists directory on the server
-            with cd('~/dists'):
-                run('python2.6 mkegglistindex.py')
-    
-            # update the index.html for the downloads directory on the server
-            with cd('~/downloads'):
-                run('python2.6 mkdownloadindex.py')
+        run('mkdir ~/downloads/%s' % version)
+        run('chmod 755 ~/downloads/%s' % version)
+        
+        # push new distribs up to the server
+        for f in os.listdir(tmpdir):
+            if f.startswith('openmdao_src'): 
+                # upload the repo source tar
+                put(os.path.join(tmpdir,f), '~/downloads/%s/%s' % (version, f), 
+                    mode=0644)
+            elif f.endswith('.tar.gz') and f != 'docs.tar.gz':
+                put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
+            elif f.endswith('.egg'):
+                put(os.path.join(tmpdir,f), '~/dists/%s' % f, mode=0644)
+        
+        # for now, put the go-openmdao script up without the version
+        # id in the name
+        put(os.path.join(tmpdir, 'go-openmdao-%s.py' % version), 
+            '~/downloads/%s/go-openmdao.py' % version,
+            mode=0755)
 
-            # if everything went well update the 'latest' link to point to the 
-            # most recent version directory
-            run('rm -f ~/downloads/latest')
-            run('ln -s ~/downloads/%s ~/downloads/latest' % version)
+        # put the docs on the server and untar them
+        put(os.path.join(tmpdir,'docs.tar.gz'), '~/downloads/%s/docs.tar.gz' % version) 
+        with cd('~/downloads/%s' % version):
+            run('tar xzf docs.tar.gz')
+            run('mv html docs')
+            run('rm -f docs.tar.gz')
+
+        # FIXME: change to a single version of mkdlversionindex.py that sits
+        # in the downloads dir and takes an arg indicating the destination
+        # directory, so we won't have a separate copy of mkdlversionindex.py
+        # in every download/<version> directory.
+        put(os.path.join(scripts_dir,'mkdlversionindex.py'), 
+            '~/downloads/%s/mkdlversionindex.py' % version)
+        
+        # update the index.html for the version download directory on the server
+        with cd('~/downloads/%s' % version):
+            run('python2.6 mkdlversionindex.py')
+
+        # update the index.html for the dists directory on the server
+        with cd('~/dists'):
+            run('python2.6 mkegglistindex.py')
+
+        # update the index.html for the downloads directory on the server
+        with cd('~/downloads'):
+            run('python2.6 mkdownloadindex.py')
+
+        # if everything went well update the 'latest' link to point to the 
+        # most recent version directory
+        run('rm -f ~/downloads/latest')
+        run('ln -s ~/downloads/%s ~/downloads/latest' % version)
             
     finally:
-        if test:
-            print 'Files were placed in %s.' % tmpdir
-        else:
-            shutil.rmtree(tmpdir)
+        shutil.rmtree(tmpdir)
 
             
-#env.hosts = ['openmdao@web103.webfaction.com']
-
 @hosts('openmdao@web103.webfaction.com')
-def release(version=None):
+def release(version=None, test=False):
     _release(version)
     
 
 @hosts('bnaylor@torpedo.grc.nasa.gov')
 def testrelease(version=None):
-    _release(version)
+    _release(version, test=True)
     
     

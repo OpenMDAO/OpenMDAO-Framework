@@ -44,11 +44,11 @@ def make_egglist_index(startdir = '.'):
     startdir = os.path.abspath(startdir)
     out = open('index.html', 'w')
     out.write('<html>\n<body>\n')
-    for f in find_files(["*.egg","*.tar.gz"], startdir):
+    for f in find_files(["*.egg", "*.tar.gz", "*.zip"], startdir):
         checksum = file_md5(f)
         basef = os.path.basename(f)
         lpath = os.path.join(FIND_LINKS_URL, basef)
-        out.write('<li><a href="%s#md5=%s">%s</a>\n'%(lpath, checksum, basef))
+        out.write('<li><a href="%s#md5=%s">%s</a>\n' % (lpath, checksum, basef))
     out.write('</ul>\n</body>\n</html>')
     out.close()
     
