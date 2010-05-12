@@ -192,7 +192,7 @@ def parse_phoenixwrapper(infile, outfile, compname):
     variables and containers are placed in the new OpenMDAO component.
     
     infile  - ModelCenter scriptwrapper
-    outfile - OpenMDAO component shell
+    outfile - file containing new OpenMDAO component skeleton
     compname - Name for new component
     """
     
@@ -306,8 +306,10 @@ def parse_phoenixwrapper(infile, outfile, compname):
                 sep = "."
 
         childname = containers[-1]
-        text = tab + tab + "self." + childname + " = " + compname + "_" + \
-               container_name + "()\n"
+        #text = tab + tab + "self." + childname + " = " + compname + "_" + \
+        #       container_name + "()\n"
+        text = tab + tab + "self.add_container('" + childname + "',  " + compname + "_" + \
+               container_name + "())\n"
 
         try:
             constructs[parentname] += text

@@ -607,7 +607,7 @@ class ClusterAllocator(object):
                 worker_q, retval, exc, trace = self._reply_q.get()
                 if exc:
                     self._logger.error(trace)
-                    raise exc
+                    retval = None
 
                 try:
                     next_allocator = todo.pop(0)
@@ -618,6 +618,8 @@ class ClusterAllocator(object):
                                   (next_allocator, resource_desc),
                                   {}, self._reply_q))
 
+                if retval is None:
+                    continue
                 allocator, estimate, criteria = retval
                 if estimate is None:
                     continue

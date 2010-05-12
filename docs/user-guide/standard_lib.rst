@@ -25,7 +25,7 @@ Drivers
 *The CONMIN Driver*
 +++++++++++++++++++
 
-:term:`CONMIN` is a Fortran program written in subroutine form for the solution of
+:term:`CONMIN` is a Fortran program written as a subroutine to solve
 linear or nonlinear constrained optimization problems. The basic optimization
 algorithm is the Method of Feasible Directions. If analytic gradients of the
 objective or constraint functions are not available, this information is
@@ -48,21 +48,14 @@ are useful for controlling the optimization process. These can be subdivided
 into those parameters that will be used in a typical optimization problem and
 those that are more likely to be used by an expert user.
 
-For the simplest possible unconstrained optimization problem, CONMIN needs just
+For the simplest possible unconstrained optimization problem, CONMIN just needs
 an objective function and one or more decision variables (design variables)
 
-The OpenMDAO CONMIN driver can be from ``openmdao.main.api``.
+The OpenMDAO CONMIN driver can be imported from ``openmdao.lib.api``.
 
 .. testcode:: CONMIN_load
 
 	from openmdao.lib.api import CONMINdriver
-
-Note that it can also be loaded by importing the CONMINdriver component
-from the standard library drivers namespace.
-
-.. testcode:: CONMIN_load2
-
-	from openmdao.lib.drivers.conmindriver import CONMINdriver
 
 Typically, CONMIN will be used as a driver in the top level assembly, though it
 can be also used in a subassembly as part of a nested driver scheme. Using the
@@ -77,10 +70,10 @@ follows:
 	class EngineOptimization(Assembly):
 	    """ Top level assembly for optimizing a vehicle. """
     
-	    def __init__(self, directory=''):
+	    def __init__(self):
 	        """ Creates a new Assembly containing a DrivingSim and an optimizer"""
         
-	        super(EngineOptimization, self).__init__(directory)
+	        super(EngineOptimization, self).__init__()
 
 	        # Create DrivingSim component instances
 	        self.add_container('driving_sim', DrivingSim())
@@ -121,16 +114,14 @@ can be multiple design variables which are assigned as a Python list.
 	self.driver.design_vars = ['driving_sim.spark_angle', 
                                                'driving_sim.bore' ]
 					       
-Note that all input parameters for the CONMIN driver are assigned via 					       
-*self.driver.*
-
-These StringRef variables must point to something that can be seen in the scope
-of the CONMIN driver. In other words, if an assembly contains a CONMIN driver,
-the objective function and design variables cannot be located outside of that
-assembly. Also, each design variable must point to a component input. During
-the optimization process, the design variables are modified, and the relevant
-portion of the model is executed to evaluate the new objective. Note that it
-is generally not possible to connect more than one driver to an available input.
+These StringRef variables must point to something that can be seen in the
+scope of the asssembly that contains the CONMIN driver. In other words,
+if an assembly contains a CONMIN driver, the objective function and design
+variables cannot be located outside of that assembly. Also, each design
+variable must point to a component input. During the optimization process, the
+design variables are modified, and the relevant portion of the model is
+executed to evaluate the new objective. It is generally not possible
+to connect more than one driver to an available input.
 
 Additionally, the objective function must always be either an output from a
 component or a function of available component outputs:
@@ -147,10 +138,10 @@ CONMIN driver.
 
 .. index:: pair: constraints; CONMIN
 
-More realistically, optimization problems usually have constraints. There are
-two types of constrains in CONMIN -- *ordinary* constraints, which are expressed
-as functions of the design variables, and *side* constraints, which are used to
-bound the design space (i.e., specify a range for each design variable).
+There are two types of constraints in CONMIN -- *ordinary* constraints, which
+are expressed as functions of the design variables, and *side* constraints,
+which are used to bound the design space (i.e., specify a range for each
+design variable).
 
 Side constraints are defined using the *lower_bounds* and *upper_bounds* parameters:
 
@@ -163,24 +154,23 @@ The size of these lists must be equal to the number of design variables or
 OpenMDAO will raise an exception. Similarly, the upper bound must be greater
 than the lower bound for each design variable.
 
-*Constraints* are equations (or inequalities) much like the objective function, so
-they are also constructed from the available OpenMDAO variables using Python
+*Constraints* are equations or inequalities that are constructed from the available OpenMDAO variables using Python
 mathematical syntax. The constraints parameter is a list of inequalities that
-are defined to be satisfied when they return a negative value or zero, and violated
-when they return a positive value.
+are defined to be **satisfied when they return a negative value or zero**, and **violated
+when they return a positive value**.
 
 .. testcode:: CONMIN_show
 
 	self.driver.constraints = ['driving_sim.stroke - driving_sim.bore']
 	    
-Note that any equation can also be expressed as an inequality.
+Any equation can also be expressed as an inequality.
 
 
 Controlling the Optimization
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 It is often necessary to control the convergence criteria for an optimization.
-The CONMIN driver allows the user to control both the number of iterations
+The CONMIN driver allows control over both the number of iterations
 before termination as well as the convergence tolerance (both absolute and
 relative).
 
@@ -191,12 +181,12 @@ The default value is 10.
 
         self.driver.itmax = 30
 
-The convergence tolerance is controlled with *delfun* and *dabfun*. *Delfun* is the
+The convergence tolerance is controlled with *dabfun* and *delfun*. *Dabfun* is the
 absolute change in the objective function to indicate convergence (i.e., if the
-objective function changes by less than *delfun*, then the problem is converged).
-Similarly, *dabfun* is the relative change of the objective function with respect
-to the value at the previous step. Note that *dabfun* has a hard-wired minimum of 
-1e-10 in the Fortran code, and *delfun* has a minimum of 0.0001.
+objective function changes by less than *dabfun*, then the problem is converged).
+Similarly, *delfun* is the relative change of the objective function with respect
+to the value at the previous step. Note that *delfun* has a hard-wired minimum of 
+1e-10 in the Fortran code, and *dabfun* has a minimum of 0.0001.
 
 .. testcode:: CONMIN_show
 
@@ -211,9 +201,9 @@ tests are performed in the following sequence:
 3. Check relative change in objective
 4. Reduce constraint thickness for slow convergence
 
-There is also a parameter to control how many iterations the convergence
-tolerance should be checked before terminating the loop. This is done with the 
-*itrm* parameter, whose default value is 3.
+The number of successive iterations the convergence tolerance should be checked before
+terminating the loop can also be specified with the *itrm* parameter, whose
+default value is 3.
 	
 .. testcode:: CONMIN_show
 
@@ -222,26 +212,24 @@ tolerance should be checked before terminating the loop. This is done with the
 CONMIN can calculate the gradient of both the objective functions and of the
 constraints using a finite difference approximation. This is the current
 default behavior of the OpenMDAO driver. The CONMIN code can also accept
-user-calculated gradients, but these are not yet supported in OpenMDAO. There
-are two parameters that control the step size used for numerically estimating
-the local gradient.
+user-calculated gradients, but these are not yet supported in OpenMDAO. Two
+parameters control the step size used for numerically estimating the local
+gradient: fdch and fdchm. The *fdchm* parameter is the minimum absolute step size that the finite
+difference will use, and *fdch* is the step size relative to the design variable.
 
 .. testcode:: CONMIN_show
 
         self.driver.fdch = .0001
         self.driver.fdchm = .0001
 	
-The *fdchm* parameter is the minimum absolute step size that the finite
-difference will use, and *fdch* is the step size relative to the design variable.
-
 .. note::
    The default values of *fdch* and *fdchm* are set to 0.01. This may be too
-   low for some problems and will manifest itself by converging to a value that
+   large for some problems and will manifest itself by converging to a value that
    is not the minimum. It is important to evaluate the scale of the objective
    function around the optimum so that these can be chosen well.
 
-For certain problems, it is desirable to scale the inputs. There are 
-several scaling options available, as summarized here:
+For certain problems, it is desirable to scale the inputs.
+Several scaling options are available, as summarized here:
 
 ============  ========================================================
 *Value*	      *Result*	
@@ -265,7 +253,7 @@ used to scale the design variables.
         self.driver.scal = [10.0, 10.0, 10.0, 10.0]
         self.driver.nscal = -1
 	
-Note that there need to be as many scale values as there are design variables.
+There need to be as many scale values as there are design variables.
 
 If your problem uses linear  constraints, you can improve the efficiency of the
 optimization process by designating those that are linear functions of the design
@@ -321,7 +309,6 @@ The following options exercise some of the more advanced capabilities of CONMIN.
 The details given here briefly summarize the effects of these parameters; more
 information is available in the `CONMIN User's Manual <file:../../../plugin-guide/CONMIN_user_manual.html>`_.
 
-
 **icndir** -- Conjugate direction restart parameter. For an unconstrained problem
 (no side constraints either), Fletcher-Reeves conjugate direction method will
 be restarted with the steepest descent direction every ICNDIR iterations.  If 
@@ -331,7 +318,7 @@ design variables + 1.
 **Constraint Thickness** -- CONMIN gives four parameters for controlling the 
 thickness of constraints -- *ct, ctmin, ctl,* and *ctlmin.* Using these parameters
 essentially puts a tolerance around a constraint surface. Note that *ct* is used
-for general constraints, and *ctl* is just used for linear constraints. A wide
+for general constraints, and *ctl* is only used for linear constraints. A wide
 initial value of the constraint thickness is desirable for highly nonlinear 
 problems so that when a constraint becomes active, it tends to remain active,
 thus reducing the zigzagging problem. The values of *ct* and *ctl* adapt as the
@@ -354,18 +341,21 @@ will be "pushed" towards the feasible region and is, in effect, a penalty
 parameter. If in a given problem, a feasible solution cannot be obtained with
 the default value, *phi* should be increased, and the problem run again. If a
 feasible solution cannot be obtained with phi = 100, it is probable that no
-feasible solution exists. The default value of 5.0 is usually adequate. This
-is only used for constrained problems.
+feasible solution exists. The default value of 5.0 is usually adequate. Phi is
+only used for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
 
-*PyEvolve*
+*Genetic*
 ++++++++++
 
+TODO: Genetic documentation
 
 *The Case Iterator*
 +++++++++++++++++++
+
+TODO: Case Iterator documentation
 
 Factories
 ---------

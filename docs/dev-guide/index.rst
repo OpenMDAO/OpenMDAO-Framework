@@ -13,9 +13,8 @@ Developer's Guide
    working
    testing
    guidelines
-   distributions
    bazaar
-  
+   todo
    
 
 

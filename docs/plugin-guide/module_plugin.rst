@@ -7,7 +7,7 @@ Building a Component Plugin from a Python Module
 ================================================
 
 For this example we'll build a plugin for the component shown in the figure
-:ref:`Conceptual-View-of-a-Simple-Component` (from the *User's Guide*).  This component
+:ref:`Conceptual-View-of-a-Simple-Component` (from the *User Guide*).  This component
 simply computes the value of its single output by adding its two inputs.
 
 Our first step is to create our class. We want to inherit from
@@ -47,7 +47,7 @@ are inputs, so we specify that they have an *iotype* of *'in'*. Attribute
 The *Float* variable is defined in the package ``openmdao.lib.api``, so we have
 to import it from there before we can use it. This 
 package defines a wide variety of traits, including basic types like *Int*,
-*Str*, and *Bool*; containers like *List* and *Dictionary*; and many others. Public Variables
+*Str*, and *Bool*; containers like *List* and *Dictionary*; and others. Public Variables
 are actually based off of Enthought's Traits, and a larger selection of less commonly used
 traits are available by importing from the package ``enthought.traits.api``.
 To learn more about traits, you may want to look at the 
@@ -57,24 +57,23 @@ and the list of
 
 At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply
 import the module containing it and use it in a model; but we want more than
-that. By packaging our plugin in a Python :term:`egg`, we can make it more usable by
-others in the OpenMDAO community. We can give our egg a version identifier and
-other :term:`metadata` that will help you determine if our egg will meet
-your needs. We can also upload our egg to a package index so that it can be
-installed via ``easy_install`` or ``zc.buildout``.
+that. By packaging our plugin as a Python distribution, we can make it easy to share with
+others in the OpenMDAO community. We can give our distribution a version identifier and
+other :term:`metadata` that will allow the framework to discover our plugin and show users
+that it's available. 
 
-.. index:: egg; creation
+.. index:: creation
 
-Egg Creation
-------------
+Distribution Creation
+---------------------
 
-Creating an egg out of a Python module is straightforward, but it does
-require the creation of a simple directory structure, because eggs are
+Creating a distribution out of a Python module is straightforward, but it does
+require the creation of a simple directory structure, because distributions are
 intended to contain Python packages, not just individual modules.
 
 For example, if our SimpleAdder class is in a file called ``simple_adder.py``, 
 we need a directory structure that looks like this to make it distributable
-as a package in an egg:
+as a package in a distribution:
 
 ::
 
@@ -91,7 +90,7 @@ as a package in an egg:
 The ``__init__.py`` file is empty and is only there because that is how
 Python determines that the directory ``simple_adder`` is a Python package. The
 only other file in the directory structure besides ``simple_adder.py`` is the
-``setup.py`` file, which describes how to build an egg containing our module.
+``setup.py`` file, which describes how to build a distribution containing our module.
 In this case, the ``setup.py`` file looks like this:
 
 
@@ -118,12 +117,12 @@ The *setup()* command has *many* options in addition to those shown above,
 e.g., *author, author_email, maintainer, maintainer_email, url, license,
 description, long_description, keywords, platforms, fullname, contact,
 contact_email, classifiers,* and *download_url.* If you supply any of these,
-their values will be stored as metadata in the egg. To keep things simple, we
+their values will be stored as metadata in the distribution. To keep things simple, we
 won't describe all of the options in detail, but if you're interested, you can
 go to  `<http://docs.python.org/distutils/apiref.html#module-distutils.core>`_ and
 `<http://peak.telecommunity.com/DevCenter/setuptools#new-and-changed-setup-keywords>`_.
 
-The following options are required for our egg to function properly
+The following options are required for our distribution to function properly
 within the OpenMDAO framework:
 
 **name**
@@ -135,40 +134,48 @@ within the OpenMDAO framework:
 **version**
     Packages tend to evolve over time, so providing a version id for a package
     is extremely important. You **must** update the version id of your package
-    prior to creating an egg (or any other type of distribution) out of it.
-    The assumption being that once a distribution is created from a particular
-    version of a package, that distribution should **never** change. People
-    may build things that depend on a particular version of your distribution,
-    so changing that version could break their code. If, however, you update
-    your distribution's version id, then users of your distribution have the
-    option to either use the updated distribution and make whatever
-    modifications are necessary to their own code to make it work or stick
-    with an older version that already works with their code. The value of
-    *version* is specified as a string, e.g., '1.0.4'.
+    prior to creating a distribution out of it. It is assumed that once a
+    distribution is created from a particular version of a package, that
+    distribution will **never** change. People may build things that depend on
+    a particular version of your distribution, so changing that version could
+    break their code. If, however, you update your distribution's version id,
+    then users of your distribution have the option to either use the updated
+    distribution and make whatever modifications are necessary to their own
+    code to make it work or stick with an older version that already works
+    with their code. The value of *version* is specified as a string, e.g.,
+    '1.0.4'.
     
 **packages**
-    In the case where you have only one module, there will be only one package, but
-    the egg format allows for the existence of multiple packages. You can specify
-    *packages* as an explicit list of strings, but the easiest thing to do is to use
-    the *find_packages()* function from setuptools as shown in the example above.
+    In the case where you have only one module, there will be only one
+    package, but the distribution format allows for the existence of multiple
+    packages. You can specify *packages* as an explicit list of strings, but
+    the easiest thing to do is to use the *find_packages()* function from
+    setuptools as shown in the example above.
     
 **install_requires**  
-    This specifies the packages that your egg depends upon. Note that you
-    need to include only *direct* dependencies in this list, i.e., if your package
-    depends on *package_A*, which in turn depends on *package_B*, you need to
-    include only *package_A*. Make sure not to leave out any direct dependencies
-    here, because doing so will result in failure to install needed dependent
-    distributions whenever your egg is installed.  The value of *install_requires*
-    should be a list of strings.
+    This specifies the distributions that your distribution depends upon. Note
+    that you need to include only *direct* dependencies in this list, i.e., if
+    your package depends on *package_A*, which in turn depends on *package_B*,
+    you need to include only *package_A*. Make sure not to leave out any
+    direct dependencies here, because doing so will result in failure to
+    install needed dependent distributions whenever your distribution is
+    installed. The value of *install_requires* should be a list of strings.
+    These strings can specify not only the name of a distribution, but also a
+    version or a range of versions. For example, 'numpy>=1.3.0', 'numpy<=1.5'
+    and 'numpy=='1.4.1' are all valid entries in *install_requires*. However,
+    it's usually best not to specify an exact version in *install_requires*
+    because it will make it harder to install your distribution in an
+    environment with other distributions that depend upon a different version
+    of some distribution that your package depends on.
 
 **entry_points**
     Entry points can be used by OpenMDAO to determine which plugins are
-    available within an egg. Entry points are divided into groups, and each
+    available within a distribution. Entry points are divided into groups, and each
     type of OpenMDAO plugin has a particular group. For example, Component
     plugins are found in the *openmdao.component* group. Each individual entry
-    point is specified by its name, followed by an equals sign, followed by
+    point is specified by its name, followed by an equals (**=**) sign, followed by
     dotted module path (dotted path you would use to import the module in
-    Python), followed by a colon and the name of the plugin class. The value
+    Python), followed by a colon (**:**) and the name of the plugin class. The value
     of *entry_points* should be a string in INI file format or a dictionary. 
     
         
@@ -194,32 +201,33 @@ within the OpenMDAO framework:
         }
 
         
-With the ``simple_adder`` directory structure shown above and the ``setup.py`` file shown,
-we can now build our egg.  From the ``simple_adder`` directory, typing
-``python setup.py bdist_egg -d .`` will create the egg in our current directory. The version
-of the egg and the Python version will be included in the filename of the egg. For example,
-since the version we specified in our ``setup.py`` file was '1.0', and assuming we're using
-Python 2.6, our egg will be named ``simple_adder-1.0-py2.6.egg``.  If our package had contained
-compiled code, then our egg name would also include the name of the platform we're on, but
-since simple_adder is nothing but pure Python code, that's not necessary.
+With the ``simple_adder`` directory structure shown above and the ``setup.py``
+file shown, we can now build our distribution. From the ``simple_adder``
+directory, typing ``python setup.py sdist -d .`` will create the distribution
+in our current directory. The version of the distribution and the Python
+version will be included in the filename. For example, since the version we
+specified in our ``setup.py`` file was '1.0', our distribution will be named 
+``simple_adder-1.0.tar.gz``. 
 
 
-.. index:: mod2egg
+.. index:: mod2dist
 
 Egg Creation for the Lazy
 --------------------------
 
-A tool called ``mod2egg`` exists for those of us who don't want to create a package
+A tool called ``mod2dist`` exists for those of us who don't want to create a package
 directory structure and a setup.py file manually. It has a number of options that you
-can see if you run ``mod2egg -h``.  The only required options are the desired version
-of the egg and the module to use to generate the egg.  For example, the command
+can see if you run ``mod2dist -h``.  The only required options are the desired version
+of the distribution and the module to use to generate the distribution.  For example, 
+the command
 
 ::
 
-   mod2egg -v 1.0 simple_adder.py
+   mod2dist -v 1.0 simple_adder.py
    
    
-will generate the same egg that we built manually earlier in this example.
+will generate the same distribution that we built manually earlier in this example.
+
 
 .. _Building-a-Variable-Plugin:
 
@@ -233,7 +241,7 @@ pure Python OpenMDAO plugin.
 Let's assume we want to have a variable that represents a set of Cartesian 
 coordinates, with the value of the variable being a 3-tuple of floating point
 values representing the x, y, and z position.  We'll start by creating a 
-file called ``coord.py`` and put the following code in it:
+file called ``coord.py`` and placing the following code in it:
 
 ::
 
@@ -253,11 +261,11 @@ file called ``coord.py`` and put the following code in it:
                 self.error(object, name, value)
 
 
-OpenMDAO uses the Traits package from Enthought to implement component
+OpenMDAO uses the Traits package from Enthought to implement public
 variables. The base class for custom traits is *TraitType*, so that's the
 base class for our coordinates variable. If a component or a component class
 contains a TraitType object and that object has a metadata attribute called
-*iostatus*, then that object is exposed to the framework as a variable whose
+*iotype*, then that object is exposed to the framework as a variable whose
 value can be passed between components.  One thing to note that can be a 
 little confusing to people first using Traits is that the Trait object itself
 is just a validator and possibly a converter.  The object that actually gets
@@ -286,7 +294,7 @@ valid. In this particular case, we just need to verify that the value is a
 3-tuple and it has float or int entries. If the value is acceptable, then we
 just return it. We don't need to do it in this case, but in other custom
 traits, we could convert the value before returning it. If the value
-is not acceptable, then we call the error function, which will generate an
+is not acceptable, then we call the error function, which will raise an
 exception.
 
 That's all of the source code required to make our coordinates variable 
@@ -311,6 +319,6 @@ a different entry point group name.
         }
     )
 
-We can create this file by hand or generate it using ``mod2egg`` as we showed in
+We can create this file by hand or generate it using ``mod2dist`` as we showed in
 an earlier section.
 

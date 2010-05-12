@@ -30,36 +30,37 @@ CONVERT_TO_MPHPS = 2.23693629
 
 
 class DrivingSim(Assembly):
-    """ Simulation of vehicle performance."""
+    """ Simulation of vehicle performance.
+        
+    # Simulation inputs
+    end_speed          # Simulation ending speed in mph.
+    timestep           # Simulation time step in sec.
+        
+    # Outputs
+    accel_time        # Time to reach 60 mph from start
+    EPA_city          # Fuel economy for city driving
+    EPA_highway       # Fuel economy for highway driving
+    """    
     
     # Simulation Parameters
     end_speed = Float(60.0, iotype='in', units='m/h',
                            desc='Simulation final speed')
     timestep = Float(0.1, iotype='in', units='s', 
-                          desc='Simulation final speed')
+                          desc='Simulation time step size')
     
     # Outputs
     accel_time = Float(0., iotype='out', units='s', 
-                            desc='Time to reach Endspeed starting from rest')
+                            desc='Time to reach end_speed starting from rest')
     EPA_city = Float(0., iotype='out', units='mi/galUS', 
                           desc='EPA Fuel economy - City')
     EPA_highway = Float(0., iotype='out', units='mi/galUS', 
                              desc='EPA Fuel economy - Highway')
         
-    def __init__(self, doc=None, directory=''):
-        """ Creates a new DrivingSim object
+    def __init__(self):
+        """ Creates a new DrivingSim object"""
+
         
-        # Simulation inputs
-        end_speed          # Simulation ending speed in mph.
-        timestep           # Simulation time step in sec.
-            
-        # Outputs
-        accel_time        # Time to reach 60 mph from start
-        EPA_city          # Fuel economy for city driving
-        EPA_highway       # Fuel economy for highway driving
-        """
-        
-        super(DrivingSim, self).__init__(doc, directory)    
+        super(DrivingSim, self).__init__()    
 
         # set up interface to the framework  
         # pylint: disable-msg=E1101
@@ -324,8 +325,8 @@ def test_it(): # pragma: no cover
     import time
     ttime = time.time()
     
-    toplevel = DrivingSim("new")  
-    toplevel.vehicle = Vehicle("test_vehicle")
+    toplevel = DrivingSim()  
+    toplevel.vehicle = Vehicle()
     toplevel.run()
     
     print "Time (0-60): ", toplevel.accel_time

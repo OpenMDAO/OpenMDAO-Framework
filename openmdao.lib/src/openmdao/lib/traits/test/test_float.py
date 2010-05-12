@@ -7,7 +7,7 @@ from enthought.traits.api import TraitError
 from openmdao.main.exceptions import ConstraintError
 from openmdao.main.api import Container
 from openmdao.lib.api import Float
-from openmdao.lib.traits.float import convert_units
+from openmdao.units import convert_units
 
 class FloatTestCase(unittest.TestCase):
 

@@ -19,6 +19,7 @@ personal libararies which can be saved and reused"""
 
 import re, ConfigParser
 import os.path
+
 import numpy as N
 
 # pylint: disable-msg=E0611,F0401, E1101
@@ -622,7 +623,7 @@ def add_unit(name, unit, comment=''):
 _unit_lib = ConfigParser.ConfigParser()
 
 def do_nothing(string):
-    """makes the ConfigParser case sensetive"""
+    """makes the ConfigParser case sensitive"""
     return string
 
 _unit_lib.optionxform = do_nothing
@@ -722,9 +723,19 @@ def import_library(libfilepointer):
               "they could not be resolved as a function of any other " + \
               "defined units:%s" % [x[0] for x in retry1]
 
+
+def convert_units(value, units, convunits):
+    """Return the given value (given in units) converted 
+    to convunits.
+    """
+    pq = PhysicalQuantity(value, units)
+    pq.convert_to_unit(convunits)
+    return pq.value
+    
+
 try:
     default_lib = resource_stream(__name__, 'unitLibdefault.ini')
-except NameError: #pck_resources was not imorted, try __file__
+except NameError: #pck_resources was not imported, try __file__
     default_lib = open(os.path.join(os.path.dirname(__file__), 
                                    'unitLibDefault.ini'))
 

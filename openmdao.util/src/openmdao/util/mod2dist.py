@@ -1,7 +1,7 @@
 """
-A script to package into an egg a single module containing OpenMDAO plugin
-classes. The script imports the module in order to determine its contents,
-so all dependencies must be on sys.path.
+A script to package into a distribution a single module containing 
+OpenMDAO plugin classes. The script imports the module in order to 
+determine its contents, so all dependencies must be on sys.path.
 """
 
 import sys
@@ -27,87 +27,86 @@ from openmdao.main.api import Component, Driver # , ResourceAllocator, CaseItera
 
 logging.basicConfig(level=logging.INFO)
 
-class Mod2EggError(RuntimeError):
+class Mod2DistError(RuntimeError):
     def __init__(self, msg, parser=None):
-        super(Mod2EggError, self).__init__(msg)
+        super(Mod2DistError, self).__init__(msg)
         self.parser = parser
 
-def _find_egg(path, pkgname, version):
+def _find_dist(path, pkgname, version):
     env = pkg_resources.Environment(path)
     for dist in env[pkgname]:
         if dist.version == version:
-            return dist.egg_name()+'.egg'
+            return dist.location        
     return None
 
-def mod2egg(argv, groups= { 'openmdao.component': Component,
+def mod2dist(argv=None, groups= { 'openmdao.component': Component,
                             'openmdao.driver': Driver,
                             #'openmdao.case_iterator': CaseIterator,
                             #'openmdao.resource_allocator': ResourceAllocator,
                             'openmdao.variable': TraitType
                             }):
     """Utility to simplify the packaging of a single module containing OpenMDAO
-    plugin classes into an egg.
+    plugin classes into a source distribution.
     
-    Use mod2egg -h to see all of the options.
+    Use mod2dist -h to see all of the options.
     
-    The only required options are the desired version of the egg and the module
-    to use to generate the egg.  For example:
+    The only required options are the desired version of the distribution and 
+    the module to use to generate the distribution.  For example:
 
-    mod2egg -v 1.0 simple_adder.py    
+    mod2dist -v 1.0 simple_adder.py    
     """
     parser = OptionParser()
-    parser.usage = "mod2egg.py [options] <module_name>"
+    parser.usage = "mod2dist.py [options] <module_name>"
     parser.add_option("-v","--version", action="store", type="string", dest="version",
-                      help="specify the version number (label) for the egg")
+                      help="specify the version number (label) for the distribution")
 
     parser.add_option("-d","--dest", action="store", type="string", dest="dest",
-                      help="specify the destination directory for the egg")
+                      help="specify the destination directory for the distribution")
 
     parser.add_option("","--desc", action="store", type="string", dest="desc",
-                      help="specify a description for the egg")
+                      help="specify a description for the distribution")
 
     parser.add_option("-a","--author", action="store", type="string", dest="author",
-                      help="specify the author of the egg")
+                      help="specify the author of the distribution")
     
     parser.add_option("-e","--email", action="store", type="string", dest="author_email",
-                      help="specify a contact email for the egg")
+                      help="specify a contact email for the distribution")
     
     parser.add_option("-i","--install_dir", action="store", type="string", dest="install_dir",
-                      help="install the egg in the specified directory")
+                      help="install the distribution in the specified directory")
     
     parser.add_option("-l","--license", action="store", type="string", dest="license",
-                      help="specify a license for all files in the egg")
+                      help="specify a license for all files in the distribution")
     
     parser.add_option("-u","--url", action="store", type="string", dest="url",
-                      help="specify URL of the web page for the egg")
-    
-    parser.add_option("-z","--zipped_egg", action="store_true", dest="zipped", default=False,
-                      help="egg is zip safe")
+                      help="specify URL of the web page for the distribution")
     
     parser.add_option("","--verbose", action="store_true", dest="verbose", default=False,
                       help="generate verbose output while building")
     
     parser.add_option("-k","--keep", action="store_true", dest="keep", default=False,
-                      help="keep the package directory structure used to build the egg")
+                      help="keep the package directory structure used to build the distribution")
     
-    parser.add_option("-n","--noegg", action="store_true", dest="noegg", default=False,
-                      help="don't actually build an egg")
+    parser.add_option("-n","", action="store_true", dest="nodist", default=False,
+                      help="don't actually build a distribution")
     
+    if not argv:
+        argv = sys.argv[1:]
     (options, args) = parser.parse_args(argv)
 
     if len(args) == 0:
-        raise Mod2EggError('No module specified', parser)
+        raise Mod2DistError('No module specified', parser)
     elif len(args) > 1:
-        raise Mod2EggError('Only one module is allowed', parser)
+        raise Mod2DistError('Only one module is allowed', parser)
 
     if not os.path.exists(args[0]):
-        raise Mod2EggError("module %s does not exist" % args[0], parser)
+        raise Mod2DistError("module %s does not exist" % args[0], parser)
         
     if not args[0].endswith('.py'):
-        raise Mod2EggError("%s is not a python module" % args[0], parser)
+        raise Mod2DistError("%s is not a python module" % args[0], parser)
 
     if not options.version:
-        raise Mod2EggError("distribution version has not been specified", 
+        raise Mod2DistError("distribution version has not been specified", 
                            parser)
         
     modname = os.path.basename(os.path.splitext(args[0])[0])
@@ -120,12 +119,12 @@ def mod2egg(argv, groups= { 'openmdao.component': Component,
     
     if options.install_dir:
         if not os.path.isdir(options.install_dir):
-            raise Mod2EggError("install directory %s does not exist\n" % options.install_dir)
-        ename = _find_egg([options.install_dir], modname, options.version)
-        # be a little extra paranoid about accidental overwriting of an
-        # egg without updating its version
+            raise Mod2DistError("install directory %s does not exist\n" % options.install_dir)
+        ename = _find_dist([options.install_dir], modname, options.version)
+        # be a little extra paranoid about accidental overwriting of a
+        # distribution without updating its version
         if ename:
-            raise Mod2EggError("egg %s already exists in directory %s" %\
+            raise Mod2DistError("distrib %s already exists in directory %s" %\
                   (ename, os.path.abspath(options.install_dir)))
         if os.path.isabs(options.install_dir):
             idir_abs = options.install_dir
@@ -141,11 +140,11 @@ def mod2egg(argv, groups= { 'openmdao.component': Component,
     else:
         pkgdir = tempfile.mkdtemp()
 
-    ename = _find_egg([destdir], modname, options.version)
-    # be a little extra paranoid about accidental overwriting of an
-    # egg without updating its version
+    ename = _find_dist([destdir], modname, options.version)
+    # be a little extra paranoid about accidental overwriting of a
+    # distribution without updating its version
     if ename:
-        raise Mod2EggError("egg %s already exists in directory %s" %\
+        raise Mod2DistError("distrib %s already exists in directory %s" %\
               (ename, os.path.abspath(destdir)))
         
     mod = __import__(modname)
@@ -227,47 +226,45 @@ setup(
                                    'license': options.license,
                                    'url': options.url,
                                    'entrypts': entrypts,
-                                   'zipped': options.zipped,
+                                   'zipped': False,
                                    'depends': list(depends) })
         f.close()
+        
         shutil.copy(os.path.join(orig_dir,args[0]), 
                     os.path.join(pkgdir, modname, modname, os.path.basename(args[0])))
         f = open(os.path.join(pkgdir, modname, modname, '__init__.py'), 'w')
         f.write('from %s import %s' % (modname, ','.join(classnames)))
         f.close()
         
-        # build the egg (and if a zipped egg, put in install_dir)
+        # build the distrib
         if options.verbose:
             qstr = '--verbose'
         else:
             qstr = '--quiet'
             
-        if not options.noegg:
-            if idir_abs and options.zipped:
-                check_call([sys.executable, 
-                            'setup.py', qstr, 'bdist_egg', '-d', idir_abs])
-                eggname = _find_egg([idir_abs], modname, options.version)
-                logging.info('installed %s (zipped) in %s' % (eggname, idir_abs))
-            else:
-                check_call([sys.executable, 
-                            'setup.py', qstr, 'bdist_egg', '-d', destdir])
-                eggname = _find_egg([destdir], modname, options.version)
-                logging.info('created egg %s in %s' % (eggname, destdir))
-                if idir_abs:
-                    # find the egg we just built
-                    if not eggname:
-                        raise RuntimeError("ERROR: cannot locate egg file")
-                
-                    os.chdir(idir_abs)
-                    if options.verbose:
-                        optstr = '-mN'
-                    else:
-                        optstr = '-mNq'
-                    setuptools.command.easy_install.main(
-                        argv=['-d','.',optstr,'%s' % os.path.join(destdir, eggname)])
-                
-                    logging.info('installed %s in %s' % (eggname, idir_abs)) 
-            shutil.rmtree(os.path.join(pkgdir, modname, 'build'))
+        if not options.nodist:
+            check_call([sys.executable, 
+                        'setup.py', qstr, 'sdist', '-d', destdir])
+            distname = '%s-%s.tar.gz'%(modname,options.version)
+            logging.info('created distribution %s in %s' % (distname, destdir))
+            if idir_abs:
+                # find the distribution we just built
+                if distname not in os.listdir(destdir):
+                    raise RuntimeError("ERROR: cannot locate distribution file")
+            
+                os.chdir(idir_abs)
+                if options.verbose:
+                    optstr = '-mN'
+                else:
+                    optstr = '-mNq'
+                setuptools.command.easy_install.main(
+                    argv=['-d','.',optstr,'%s' % os.path.join(destdir, distname)])
+            
+                logging.info('installed %s in %s' % (distname, idir_abs)) 
+            try:
+                shutil.rmtree(os.path.join(pkgdir, modname, 'build'))
+            except OSError:
+                pass
             shutil.rmtree(os.path.join(pkgdir, modname, modname+'.egg-info'))
     finally:
         os.chdir(orig_dir)
@@ -278,8 +275,8 @@ setup(
    
 if __name__ == "__main__":
     try:
-        sys.exit(mod2egg(sys.argv[1:]))
-    except Mod2EggError, err:
+        sys.exit(mod2dist(sys.argv[1:]))
+    except Mod2DistError, err:
         sys.stderr.write(str(err)+'\n')
         if err.parser:
             err.parser.print_help()

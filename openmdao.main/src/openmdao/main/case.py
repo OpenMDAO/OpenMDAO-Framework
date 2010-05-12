@@ -49,13 +49,13 @@ class FileCaseIterator(object):
     cases.  Whitespace outside of quotes is ignored.  Outputs are indicated
     by the lack of an assignment.
     
-    .. parsed-literal::
+.. todo:: Convert value strings to appropriate type
 
-       TODO: convert value strings to appropriate type
-       TODO: allow multi-line values (strings, arrays, etc.) on right hand side
-       TODO: allow array indexing for inputs, outputs, or RHS values
+.. todo:: Allow multi-line values (strings, arrays, etc.) on right hand side
+       
+.. todo:: Allow array indexing for inputs, outputs, or RHS values
     
-    .. parsed-literal::
+.. parsed-literal::
     
        # Example of an input file
     

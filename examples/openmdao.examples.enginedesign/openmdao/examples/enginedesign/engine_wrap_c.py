@@ -79,9 +79,8 @@ class Engine(Component):
     D_v = Float(41.2, iotype='in', units='mm', 
                      desc='Inlet Valve Diameter')
 
-    RPM = Float(1000.0, low=1000., high=6000., 
-                     iotype='in', units='1/min', 
-                     desc='Engine RPM')
+    RPM = Float(1000.0, low=1000., high=6000., iotype='in', 
+                     units='RPM',  desc='Engine RPM')
     throttle = Float(1.0, low=0.01, high=1.0, iotype='in', 
                      desc='Throttle position (from low idle to wide open)')
 
