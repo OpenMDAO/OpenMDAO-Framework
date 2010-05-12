@@ -12,7 +12,7 @@ from networkx.algorithms.traversal import strongly_connected_components
 from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
 from openmdao.main.assembly import Assembly
-from openmdao.main.stringref import StringRef, StringRefArray
+from openmdao.main.expression import Expression, ExpressionList
 from openmdao.main.drivertree import DriverForest, create_labeled_graph
 
     
@@ -24,8 +24,8 @@ class Driver(Assembly):
     
     def __init__(self, doc=None):
         super(Driver, self).__init__(doc=doc)
-        self._ref_graph = { None: None, 'in': None, 'out': None }
-        self._ref_comps = { None: None, 'in': None, 'out': None }
+        self._expr_graph = { None: None, 'in': None, 'out': None }
+        self._expr_comps = { None: None, 'in': None, 'out': None }
         self.graph_regen_needed()
     
     def graph_regen_needed(self):
@@ -45,21 +45,21 @@ class Driver(Assembly):
             super(Driver, self)._pre_execute()
             return
         
-        refnames = self.get_refvar_names(iotype='in')
+        exprnames = self.get_expr_names(iotype='in')
         
-        if not all(self.get_valids(refnames)):
+        if not all(self.get_valids(exprnames)):
             self._call_execute = True
-            # force regeneration of _ref_graph, _ref_comps, _iteration_comps
-            self._ref_graph = { None: None, 'in': None, 'out': None } 
-            self._ref_comps = { None: None, 'in': None, 'out': None }
+            # force regeneration of _expr_graph, _expr_comps, _iteration_comps
+            self._expr_graph = { None: None, 'in': None, 'out': None } 
+            self._expr_comps = { None: None, 'in': None, 'out': None }
             self.graph_regen_needed()
             
         super(Driver, self)._pre_execute()
         
         if not self._call_execute:
-            # force execution of the driver if any of its StringRefs reference
+            # force execution of the driver if any of its Expressions reference
             # invalid Variables
-            for name in refnames:
+            for name in exprnames:
                 rv = getattr(self, name)
                 if isinstance(rv, list):
                     for entry in rv:
@@ -110,7 +110,7 @@ class Driver(Assembly):
                 if len(dtree.children) > 0:  # we have nested drivers
                     graph = self.parent.get_component_graph().copy()
                     for drv in dtree.drivers_iter():
-                        graph.add_edges_from(drv.get_ref_graph().edges_iter())
+                        graph.add_edges_from(drv.get_expr_graph().edges_iter())
                     strongs = strongly_connected_components(graph)
                     for strong in strongs:
                         if self.name in strong:
@@ -118,7 +118,7 @@ class Driver(Assembly):
                             for nested in dtree.children: # collapse immediate children
                                 nested.collapse_graph(subgraph)
                             subgraph.remove_edges_from(
-                                self.get_ref_graph(iotype='in').edges_iter())
+                                self.get_expr_graph(iotype='in').edges_iter())
                             sorted = nx.topological_sort(subgraph)
                             for comp in sorted:
                                 if comp != self.name:
@@ -135,8 +135,8 @@ class Driver(Assembly):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration
 
-    def get_refvar_names(self, iotype=None):
-        """Return a list of names of all StringRef and StringRefArray traits
+    def get_expr_names(self, iotype=None):
+        """Return a list of names of all Expression and ExpressionList traits
         in this instance.
         """
         if iotype is None:
@@ -145,21 +145,21 @@ class Driver(Assembly):
             checker = iotype
         
         return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
-                    if v.is_trait_type(StringRef) or 
-                       v.is_trait_type(StringRefArray)]
+                    if v.is_trait_type(Expression) or 
+                       v.is_trait_type(ExpressionList)]
         
     def get_referenced_comps(self, iotype=None):
         """Return a set of names of Components that we reference based on the 
-        contents of our StringRefs and StringRefArrays.  If iotype is
+        contents of our Expressions and ExpressionLists.  If iotype is
         supplied, return only component names that are referenced by ref
         variables with matching iotype.
         """
-        if self._ref_comps[iotype] is None:
+        if self._expr_comps[iotype] is None:
             comps = set()
         else:
-            return self._ref_comps[iotype]
+            return self._expr_comps[iotype]
     
-        for name in self.get_refvar_names(iotype):
+        for name in self.get_expr_names(iotype):
             obj = getattr(self, name)
             if isinstance(obj, list):
                 for entry in obj:
@@ -167,27 +167,27 @@ class Driver(Assembly):
             else:
                 comps.update(obj.get_referenced_compnames())
                 
-        self._ref_comps[iotype] = comps
+        self._expr_comps[iotype] = comps
         return comps
         
-    def get_ref_graph(self, iotype=None):
+    def get_expr_graph(self, iotype=None):
         """Return the dependency graph for this Driver based on
-        StringRefs and StringRefArrays.
+        Expressions and ExpressionLists.
         """
-        if self._ref_graph[iotype] is not None:
-            return self._ref_graph[iotype]
+        if self._expr_graph[iotype] is not None:
+            return self._expr_graph[iotype]
         
-        self._ref_graph[iotype] = nx.DiGraph()
+        self._expr_graph[iotype] = nx.DiGraph()
         name = self.name
         
         if iotype == 'out' or iotype is None:
-            self._ref_graph[iotype].add_edges_from([(name,rv) 
+            self._expr_graph[iotype].add_edges_from([(name,rv) 
                                   for rv in self.get_referenced_comps(iotype='out')])
             
         if iotype == 'in' or iotype is None:
-            self._ref_graph[iotype].add_edges_from([(rv, name) 
+            self._expr_graph[iotype].add_edges_from([(rv, name) 
                                   for rv in self.get_referenced_comps(iotype='in')])
-        return self._ref_graph[iotype]
+        return self._expr_graph[iotype]
     
     def _get_simple_iteration_subgraph(self):
         """Return a graph of our iteration loop (ourself plus all components we
@@ -198,9 +198,9 @@ class Driver(Assembly):
         """
         if self._simple_iteration_subgraph is None:
             graph = self.parent.get_component_graph().copy()
-            # add all of our StringRef edges and find any strongly connected
+            # add all of our Expression edges and find any strongly connected
             # components (SCCs) that are created as a result
-            graph.add_edges_from(self.get_ref_graph().edges_iter())
+            graph.add_edges_from(self.get_expr_graph().edges_iter())
             strcons = strongly_connected_components(graph)
             # No cycles are allowed other than the one we possibly just
             # created, so our cycle must be the first SCC in the list. If there

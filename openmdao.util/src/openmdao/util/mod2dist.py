@@ -14,7 +14,7 @@ import shutil
 import tempfile
 import logging
 import copy
-from subprocess import check_call
+from subprocess import check_call, Popen, PIPE, STDOUT
 from optparse import OptionParser
 
 import pkg_resources
@@ -38,6 +38,16 @@ def _find_dist(path, pkgname, version):
         if dist.version == version:
             return dist.location        
     return None
+
+def _run_command(cmd):
+    """Run a command using Popen and return its output (stdout and stderr)
+    and its return code as a tuple. If the command is a python file, prepend
+    python to the command string. cmd should be a sequence of strings.
+    """
+    p = Popen(args=cmd, stdout=PIPE, stderr=STDOUT, env=os.environ, shell=False)
+    output = p.communicate()[0]
+    return (output, p.returncode)
+
 
 def mod2dist(argv=None, groups= { 'openmdao.component': Component,
                             'openmdao.driver': Driver,
@@ -237,15 +247,20 @@ setup(
         f.close()
         
         # build the distrib
-        if options.verbose:
-            qstr = '--verbose'
-        else:
-            qstr = '--quiet'
-            
         if not options.nodist:
-            check_call([sys.executable, 
-                        'setup.py', qstr, 'sdist', '-d', destdir])
-            distname = '%s-%s.tar.gz'%(modname,options.version)
+            cmdargs = [sys.executable, 
+                                    'setup.py', 'sdist', '-d', destdir]
+            out, ret = _run_command(cmd=cmdargs)
+            if ret:
+                logging.error('non-zero return code (%s) from command: %s' % 
+                              (ret,' '.join(cmdargs)))
+                print out
+            elif options.verbose:
+                print out
+            if sys.platform == 'win32':
+                distname = '%s-%s.zip' % (modname, options.version)
+            else:
+                distname = '%s-%s.tar.gz' % (modname,options.version)
             logging.info('created distribution %s in %s' % (distname, destdir))
             if idir_abs:
                 # find the distribution we just built

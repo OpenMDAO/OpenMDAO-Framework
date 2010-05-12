@@ -20,7 +20,7 @@ class Dataflow(Workflow):
     def __init__(self, scope=None):
         """ Create an empty flow. """
         super(Dataflow, self).__init__(scope=scope)
-        self._no_ref_graph = nx.DiGraph()
+        self._no_expr_graph = nx.DiGraph()
         
     def run(self):
         """ Run this Dataflow."""
@@ -33,26 +33,26 @@ class Dataflow(Workflow):
         """Return True if this Dataflow contains a Component with the
         given name.
         """
-        return name in self._no_ref_graph
+        return name in self._no_expr_graph
         
     def add_node(self, name):
         """Add the name of a Component to this Dataflow."""
-        self._no_ref_graph.add_node(name)
+        self._no_expr_graph.add_node(name)
         
     def remove_node(self, name):
         """Remove the name of a Component from this Dataflow."""
-        self._no_ref_graph.remove_node(name)
+        self._no_expr_graph.remove_node(name)
         
     def get_graph(self):
         """Return the Component graph for this Dataflow."""
-        return self._no_ref_graph
+        return self._no_expr_graph
         
     def connect(self, srccompname, destcompname, srcvarname, destvarname):
         """Add an edge to our Component graph from *srccompname* to *destcompname*.
         The *srcvarname* and *destvarname* args are for data reporting only.
         """
         # if an edge already exists between the two components, just increment the ref count
-        graph = self._no_ref_graph
+        graph = self._no_expr_graph
         try:
             graph[srccompname][destcompname]['refcount'] += 1
         except KeyError:
@@ -79,11 +79,11 @@ class Dataflow(Workflow):
         between the two components or remove the edge if the ref count
         reaches 0.
         """
-        refcount = self._no_ref_graph[comp1name][comp2name]['refcount'] - 1
+        refcount = self._no_expr_graph[comp1name][comp2name]['refcount'] - 1
         if refcount == 0:
-            self._no_ref_graph.remove_edge(comp1name, comp2name)
+            self._no_expr_graph.remove_edge(comp1name, comp2name)
         else:
-            self._no_ref_graph[comp1name][comp2name]['refcount'] = refcount
+            self._no_expr_graph[comp1name][comp2name]['refcount'] = refcount
 
             
     def _find_drivers(self, names):
@@ -99,20 +99,20 @@ class Dataflow(Workflow):
         self._drvsorter = None
         
         if len(drivers) == 0:  # no driver, so just sort and go
-            for n in nx.topological_sort(self._no_ref_graph):
+            for n in nx.topological_sort(self._no_expr_graph):
                 yield getattr(self.scope, n)
         elif len(drivers) == 1:  # one driver, so add its output ref edges, sort and go
-            graph = self._no_ref_graph.copy()
-            graph.add_edges_from(drivers[0].get_ref_graph(iotype='out').edges_iter())
+            graph = self._no_expr_graph.copy()
+            graph.add_edges_from(drivers[0].get_expr_graph(iotype='out').edges_iter())
             for n in nx.topological_sort(graph):
                 yield getattr(self.scope, n)
         else:  # multiple drivers
-            graph = self._no_ref_graph.copy()
+            graph = self._no_expr_graph.copy()
             
             # add all ReferenceVariable edges from all drivers to the graph 
             # (which will likely create one or more loops)
             for drv in drivers:
-                graph.add_edges_from(drv.get_ref_graph().edges_iter())
+                graph.add_edges_from(drv.get_expr_graph().edges_iter())
 
             # each loop is a strongly connected component (SCC)
             # NOTE: for nested drivers, multiple drivers will exist within
@@ -155,7 +155,7 @@ class Dataflow(Workflow):
                                # and it will run everything else
             yield drivers[0]
         else:   # nested drivers
-            subgraph = self._no_ref_graph.subgraph(nbunch=loopcomps) # this has no StringRef edges
+            subgraph = self._no_expr_graph.subgraph(nbunch=loopcomps) # this has no Expression edges
             self._drvsorter = DriverForest(drivers)
             collapsed_graph = self._drvsorter.collapse_graph(subgraph)
             for compname in nx.topological_sort(collapsed_graph):

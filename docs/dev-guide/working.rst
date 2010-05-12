@@ -6,10 +6,7 @@ Working on Your Branch
 ======================
 
 You need to build and activate your virtual development environment before you
-can use OpenMDAO. If you have not done this, please see 
-*Activating the Virtual Environment*.
-
-.. todo:: turn *Activating the Virtual Environment* into a link.
+can use OpenMDAO. If you have not done this, please see :ref:`Activating-the-Virtual-Environment`.
 
 
 .. note::  In some cases the examples are written from the Linux perspective. Windows users
@@ -49,12 +46,37 @@ If you add a file or directory to the repository by mistake, type:
 This will remove the file from the repository but will **not** delete it.
 
 
+.. index:: Committing changes
+
+Committing Changes 
+------------------
+
+After you make changes on your branch, you need to need to make sure those changes are
+*committed*, or recorded, to your local Bazaar repository. To see if you have uncommitted
+changes and to then commit them, type the following:
+
+::
+
+  bzr status                   (Checks for uncommitted changes. If there are any, the modified files will
+				be listed. Any files that were not added to the repository will be listed
+				as "unknown.") 
+  bzr commit                   (Commits changes and lets you add the required message on the command line. You
+				can omit the "-m" and just press "Enter." Your default text editor will open a
+				new file where you must type the commit message.)
+
+
+Running Tests
+-------------
+
+For detailed information on running tests on your branch, please see :ref:`Testing`.
+
+
 .. _Merging-to-Your-Branch:
 
 Merging to Your Branch
 -----------------------
 
-As you work on your branch, you may want to update it from openmdao ``trunk`` on
+As you work on your branch, you may want to update it from the OpenMDAO ``trunk`` on
 Launchpad to avoid conflicts when you push your branch back to the trunk (for
 developers who have this privilege). 
 
@@ -64,8 +86,8 @@ You should be in the top level directory of your branch. Type:
 
   bzr status                       (Checks branch for uncommitted changes; you cannot merge if you have any.) 
   bzr commit -m "<commit_message>" (Required only if you have uncommitted changes. You may add a message on the
-                    command line or omit the "-m" and press "Enter" to type the required message
-                    using your default text editor.)
+                    		    command line or just press "Enter" to type the required message
+                                    using your default text editor.)
   cd devenv                        (Takes you to your virtual development environment.) 
   source bin/activate              (Activates your virtual development environment [requires bash]
                                     On Windows: "Scripts\activate.bat")
@@ -78,13 +100,13 @@ You should be in the top level directory of your branch. Type:
 
 ::
 
-  rm -rf devenv                (Removes the old virtual dev environment)
-  python2.6 go-openmdao-dev.py (Builds your new virtual dev environment)
+  rm -rf devenv                    (Removes the old virtual dev environment)
+  python2.6 go-openmdao-dev.py     (Builds your new virtual dev environment)
   cd devenv
-  source bin/activate          (Activate the virtual dev environment [use Scripts\activate on Windows])
-  openmdao_test                (Confirms that all tests still pass.)
-  bzr commit -m "<commit_message>"  (Commit changes from merge to avoid mixing them up with any later
-                                     changes you make)
+  source bin/activate              (Activate the virtual dev environment [use Scripts\activate on Windows])
+  openmdao_test                    (Confirms that all tests still pass.)
+  bzr commit -m "<commit_message>" (Commit changes from merge to avoid mixing them up with any later
+                                    changes you make)
   
 You are now ready to continue development on your branch.
 
@@ -119,19 +141,19 @@ in the *Bazaar User Guide.*
 Pushing a Branch Back to Launchpad
 -----------------------------------
 
-The following instructions are for both Linux, OS X, and Windows. However, on
+The following instructions are for Linux, OS X, and Windows. However, on
 Windows, depending on how you created your SSH keys, you may need to have
 Pageant running before you can merge to your branch or push it to Launchpad.
 
 First, make sure all of your changes are committed and that your your branch
-builds and passes all tests.
+builds successfully and passes all tests.
 
 **- If you have commit privileges** (you are a member of the *OpenMDAO Devs* group)
 
-In order to avoid unexpected changes to recent revision numbers on the trunk,
+To avoid unexpected changes to recent revision numbers on the trunk,
 you should always merge your branch to the trunk instead of merging the trunk
 to your branch.  This is a little more work because you have to make a separate
-branch from the trunk, then merge your development branch to that one, then 
+branch from the trunk, merge your development branch to that it, and then
 merge your local version of the trunk up to the trunk on Launchpad.
 
 If you have any conflicts when merging, you must resolve them before you can
@@ -160,7 +182,7 @@ push a branch. Type:
 
 ::
   
-  bzr push lp:openmdao                (Pushes your merged trunk copy to openmdao trunk)
+  bzr push lp:openmdao                    (Pushes your merged trunk copy to openmdao trunk)
 
 Your branch becomes the latest revision of openmdao on Launchpad.
 
@@ -170,9 +192,8 @@ Your branch becomes the latest revision of openmdao on Launchpad.
 You will push your branch up to the openmdao repository, but the changes do not become a part of the
 development trunk until one of the reviewers merges it. 
 
-You need to be somewhere on the branch to be pushed. Then type the following
-command, replacing ``userid`` with your Launchpad userid and replacing
-``branch_name`` with the name of the branch you are pushing.
+On the branch to be pushed, type the following command, replacing ``userid`` with your
+Launchpad userid and replacing ``branch_name`` with the name of the branch you are pushing.
 
 ::
 

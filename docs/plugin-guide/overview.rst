@@ -4,15 +4,20 @@
 Overview of OpenMDAO Plugin Development
 =======================================
 
-Plugins provide a way to extend the functionality of an application without
-modifying the application itself. This is possible because the :term:`plugins`
-must implement a particular interface that the framework knows how to interact
+Plugins provide a way to extend the functionality of OpenMDAO without modifying
+OpenMDAO. This is possible because a :term:`plugin`
+implements a particular interface that the framework knows how to interact
 with. This section will describe the types of plugins available to extend the
 functionality of OpenMDAO and will explain how to build them and how to make
 them usable by the framework.
 
 The rest of this document assumes that you have already installed OpenMDAO.  If not, you
 can learn how to do that :ref:`here<Installing-OpenMDAO>`.
+
+.. note:: If you intend to develop a plugin on Windows that requires compilation, you
+          will need to have the necessary compiler(s) installed on your system. See the
+          Developer Guide installation instructions for Windows for help on installing
+          Visual C++ 2008 and mingw32.
 
 
 .. index:: Component plugin
