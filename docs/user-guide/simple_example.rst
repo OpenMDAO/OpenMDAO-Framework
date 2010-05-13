@@ -9,7 +9,7 @@ In this section, you are going to learn how to execute a simple optimization
 problem using the OpenMDAO script interface. To get the most out of this
 tutorial, you should be familiar (though you don't have to be proficient) with
 the Python language and the concepts presented in
-:ref:`Overview-of-the-OpenMDAO-Framework`. You should understand the terms
+:ref:`Introduction-to-the-OpenMDAO-Framework`. You should understand the terms
 :term:`Component`, :term:`Assembly`, and :term:`Driver`. If you don't have
 much experience with Python, we recommend trying `Dive into Python
 <http://diveintopython.org/>`_. It is an excellent introduction to Python that

@@ -90,7 +90,8 @@ def after_install(options, home_dir):
     numpyidx = None
     for i,req in enumerate(reqs):
         if req.startswith('numpy') and len(req)>5 and (req[5]=='=' or req[5]=='>'):
-            reqnumpy = req
+            # for now, just require 'numpy' instead of a specific version
+            #reqnumpy = req
             numpyidx = i
             break
     _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later

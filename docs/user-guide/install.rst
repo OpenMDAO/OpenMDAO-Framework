@@ -46,12 +46,29 @@ On **Windows**, you'll need `Python 2.6`__, and numpy can be found
 
 
 On **OS X**, make sure to install *Xcode*. It's included on the OS X install
-disk, and installing it will give you access to *gcc*. You'll need `Python 2.6`__
-and `numpy`__, and you can obtain gfortran binaries `here`__.
+disk, and installing it will give you access to *gcc*. You can also download a newer version
+from Apple, but you'll have to fill out a (free) registration to do it. 
 
-.. __: http://www.python.org/ftp/python/2.6.4/python-2.6.4_macosx10.3.dmg
+If you're running **Snow Leopard**, you'll need to install a version of Python 2.6 from python.org
+because the built-in version has a distutils bug that will cause some of the OpenMDAO tests
+to fail.  It's not clear exactly what release the fix first appeared in, but version `2.6.5`__
+definitely has the fix.
+
+.. __: http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg
+
+You'll also need gfortran.  You can get a version that goes with Xcode `here`__.
+
+.. __: http://r.research.att.com/gfortran-42-5646.pkg
+
+If you're running **Leopard**, you'll also need `Python 2.6`__ 
+and `numpy`__, and you can get gfortran `here`__.  Some other options for installing
+gfortran can be found on this `page`__.
+
+.. __: http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg
 
 .. __: http://sourceforge.net/projects/numpy/files/NumPy/1.4.1/numpy-1.4.1-py2.6-python.org.dmg/download
+
+.. __: http://openmdao.org/downloads/misc/gfortran-macosx-leopard-x86.dmg
 
 .. __: http://gcc.gnu.org/wiki/GFortranBinaries#MacOS
 
