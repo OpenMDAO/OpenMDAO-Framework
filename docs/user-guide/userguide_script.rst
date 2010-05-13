@@ -123,7 +123,7 @@ Creating New Components
 Components are the basic building block of the OpenMDAO model, so you need 
 to be familiar with how to create and execute them. The concept of the component
 and the place it holds in the OpenMDAO architecture is given in
-:ref:`Overview-of-the-OpenMDAO-Framework`.
+:ref:`Introduction-to-the-OpenMDAO-Framework`.
 
 Presumably you have your own components to implement in OpenMDAO as part of 
 a larger model or process. This implementation will usually require the creation
