@@ -350,7 +350,12 @@ only used for constrained problems.
 *Genetic*
 ++++++++++
 
-TODO: Genetic documentation
+:term:`Genetic` is a driver which performs optimization using a genetic algorithm based
+on the `Pyevolve <http://pyevolve.sourceforge.net/>`_. Genetic is a global optimzier, and 
+can is ideal for optimizing problems with integer or discrete design variables because 
+it is a non-derivative based optimization method. 
+
+
 
 *The Case Iterator*
 +++++++++++++++++++

@@ -154,6 +154,9 @@ Glossary
       **GA**
       	Genetic algorithm
 	
+      **Genetic**
+        OpenMDAO genetic algorithm optimizer, based on the Pyevovle genetic algorithm
+	
 	
       **GUI**
         Graphical User Interface. A computer operating system that is based upon icons
