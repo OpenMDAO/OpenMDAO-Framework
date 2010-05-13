@@ -152,9 +152,24 @@ class TestCase(unittest.TestCase):
         des_vars = self.top.driver.list_des_vars()
         self.assertEqual(des_vars,['comp.y'])  
         
-        self.top.driver.add_des_var('comp.y')
+        try: 
+            self.top.driver.remove_des_var('xyz')
+        except RuntimeError,err: 
+            self.assertEqual(str(err),"driver: Trying to remove design variable 'xyz', but it is not in the genetic driver")
+        else: 
+            self.fail('RuntimeError Expected')
+        
+        
+        self.top.driver.add_des_var('comp.x')
         self.top.driver.clear_des_vars()
         des_vars = self.top.driver.list_des_vars()
         self.assertEqual(des_vars,[])
         
+        self.top.driver.add_des_var('comp.y')
+        try: 
+            self.top.driver.add_des_var('comp.y')
+        except RuntimeError,err: 
+            self.assertEqual(str(err),"driver: Trying to add 'comp.y' to the genetic driver, but it is already in the driver")
+        else: 
+            self.fail('RuntimeError expected')
         

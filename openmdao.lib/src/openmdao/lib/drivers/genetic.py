@@ -89,7 +89,10 @@ class Genetic(Driver):
         return alleles
     
     def remove_des_var(self,ref):
-        i = [str(x) for x in self._design_vars].index(ref)
+        try:
+            i = [str(x) for x in self._design_vars].index(ref)
+        except ValueError:
+            self.raise_exception("Trying to remove design variable '%s', but it is not in the genetic driver"%ref,RuntimeError)
         self._design_vars.pop(i)
         self._des_var_ranges.pop(ref)
         return True
@@ -107,6 +110,15 @@ class Genetic(Driver):
         If neither are specified, the values will default to the values in the metadata of the public variable being referenced.
         If they are not specified in the metadata and not provided as arguments, the values default to 0 and 100 repectively. 
         """
+
+        #check to see if this ref is already in the driver
+        try: 
+            i = [str(x) for x in self._design_vars].index(ref)
+            #if found one, so it's already in there
+            self.raise_exception("Trying to add '%s' to the genetic driver, but it is already in the driver"%ref,RuntimeError)
+        except ValueError: #not in the list, so you're good to go!
+            pass
+
         #indexed the same as self._allels
         expreval = ExprEvaluator(ref, self.parent, single_name=True)
         self._design_vars.append(expreval) #add it to the list of string refs
