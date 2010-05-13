@@ -101,6 +101,12 @@ giving you access to everything in OpenMDAO.
 
 Now you are ready to start using OpenMDAO.
 
+When you are done using OpenMDAO, you can deactivate the environment by typing:
+
+""
+   deactivate
+   
+   
 
 .. note:: If you need an earlier version of OpenMDAO, its bootstrap script can be downloaded from:
    ``http://openmdao.org/downloads/<openmdao_version>/go-openmdao.py`` 

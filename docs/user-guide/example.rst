@@ -532,7 +532,7 @@ demonstrate how to instantiate and use these components in the Python shell.
 Make sure that you have activated your Python environment before running the
 Python interpreter, so that you have access to OpenMDAO and the example problems.
 
-An instance of the class Engine can be created by typing the following:
+Please enter the Python shell. Create an instance of the Engine class by typing the following:
 
 	>>> from openmdao.examples.enginedesign.engine import Engine
 	>>> my_engine = Engine()
@@ -922,12 +922,7 @@ EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 Setting up an Optimization Problem
 ----------------------------------
 
-The final step is to create a *top level Assembly* that defines the problem using DrivingSim and the vehicle assembly.
-The *top level Assembly* is a container that can be thought of as the workspace where the model is built, or the container that
-ultimately contains the entire model. Functionally, it's no different than an assembly such as Vehicle.py. 
-Any OpenMDAO model can be packaged up and inserted into some other model as a component. Generally, the *top level Assembly*
-contains one or more Components or Assemblies. It may also contain a solution driver, or it may just rely on sequential
-execution based on the data flow.
+The final step is to create our *top level Assembly* that defines the problem using DrivingSim and the vehicle assembly.
 
 The first problem we would like to solve is a single objective optimization problem where we adjust some of the design
 variables to minimize the 0-60 acceleration time. The chosen design variables are the *bore* and *spark angle*. The optimal value
