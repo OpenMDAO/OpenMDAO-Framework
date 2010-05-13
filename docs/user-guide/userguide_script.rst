@@ -73,7 +73,7 @@ from the given module into the current namespace."
     import openmdao.main.api
     
     # GOOD
-    from openmdao.main.api import Component, Assembly, StringRef, Driver
+    from openmdao.main.api import Component, Assembly, Expression, Driver
 
 *The Model Hierarchy*
 ~~~~~~~~~~~~~~~~~~~~~
@@ -360,10 +360,10 @@ page.
 +------------------+----------------------------------------------------------+
 | Str              | Str( [*value* = None, *desc* = None, *iotype* = None] )  |
 +------------------+----------------------------------------------------------+
-| StringRef        | StringRef( [*default_value* = NoDefaultSpecified,        |
+| Expression       | Expression( [*default_value* = NoDefaultSpecified,       |
 |                  | *desc* = None, *iotype* = None] )                        |
 +------------------+----------------------------------------------------------+
-| StringRefArray   | StringRefArray( [*default_value* = NoDefaultSpecified,   |
+| ExpressionList   | ExpressionList( [*default_value* = NoDefaultSpecified,   |
 |                  | *desc* = None, *iotype* = None] )                        |
 +------------------+----------------------------------------------------------+
 
@@ -632,68 +632,68 @@ The attribute *required* is used to indicate whether the object that plugs into
 this input is required. If *required* is True, then an exception will be raised
 if the object is not present.
 
-.. index:: StringRef
+.. index:: Expression
 
-StringRef
-+++++++++
+Expression
+++++++++++
 
-A *StringRef* is a special type of string variable that contains an expression to
+An *Expression* is a special type of string variable that contains an expression to
 be evaluated. The expression can reference variables and functions within the
 scope of its containing component, as well as within the scope of the component's
 parent Assembly. A number of built-in functions and math functions may also be
-referenced within a StringRef expression. For example, ``abs(math.sin(angle))``
-would be a valid StringRef expression, assuming that *angle* is an attribute of the
+referenced within an Expression. For example, ``abs(math.sin(angle))``
+would be a valid Expression, assuming that *angle* is an attribute of the
 containing component. Note that *self* does not appear in the example expression.
-This is because the StringRef automatically determines the containing scope of
+This is because the Expression automatically determines the containing scope of
 attributes and functions referenced in an expression. This helps keep expressions
 from becoming too verbose by containing a bunch of *self* and *self.parent*
 references.
 
-StringRefs can be used in a variety of components. Many optimizer components use 
-StringRefs to specify their objective function, design variables, and constraints.
+Expressions can be used in a variety of components. Many optimizer components use 
+Expressions to specify their objective function, design variables, and constraints.
 
-Here is an example of declaring a StringRef as an input, as it would be used to
+Here is an example of declaring an Expression as an input, as it would be used to
 create a variable to hold the objective function of an optimizer, which is
 inherently a function of variables in the framework.
 
-.. testcode:: StringRef_example
+.. testcode:: Expression_example
 
-    from openmdao.main.api import Driver, StringRef
+    from openmdao.main.api import Driver, Expression
     
     class MyDriver(Driver):
         """ A component that outputs a dot product of two arrays"""
-	
-        objective = StringRef(iotype='in', \
-                    desc= 'A string containing the objective function \
-                    expression.')
 
-It makes little sense to give a default value to a StringRef, since
-its value will usually depend on the component names. StringRefs are most
+        objective = Expression(iotype='in', \
+                               desc= 'A string containing the objective function \
+                               expression.')
+
+It makes little sense to give a default value to an Expression, since
+its value will usually depend on the component names. Expressions are most
 likely to be assigned their value in the higher-level container: typically the
-top level assembly. Also, StringRef is imported from
+top level assembly. Also, Expression is imported from
 ``openmdao.main.api`` instead of ``openmdao.lib.api``. This is because
-StringRef is a special class of public variables that is an integral part of
+Expression is a special class of public variables that is an integral part of
 the framework infrastructure.
 
-There is also a *StringRefArray* variable which can be used to hold multiple
+There is also an *ExpressionList* variable which can be used to hold multiple
 string expressions. For example, an optimizer might take as input a list
 containing some number of constraints that are built from these string
 expressions.
 
-.. testcode:: StringRefArray_example
+.. testcode:: ExpressionList_example
 
-    from openmdao.main.api import Driver, StringRefArray
+    from openmdao.main.api import Driver, ExpressionList
     
     class MyDriver(Driver):
         """ A component that outputs a dot product of two arrays"""
-	
-	constraints = StringRefArray(iotype='in',
-		desc= 'An array of expression strings indicating constraints.' \
-		' A value of < 0 for the expression indicates that the constraint ' \
-		'is violated.')
 
-Again, no default is needed.		
-		
+        constraints = ExpressionList(iotype='in',
+                                     desc= 'An array of expression strings indicating constraints.'
+                                           ' A value of < 0 for the expression indicates that the constraint '
+                                           'is violated.')
+
+Again, no default is needed.
+
 .. index:: Float; unit conversion with
 .. index:: unit conversion; with Float
 

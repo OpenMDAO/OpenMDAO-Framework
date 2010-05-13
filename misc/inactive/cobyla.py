@@ -7,7 +7,7 @@ __all__ = ["COBYLA"]
 
 from scipy.optimize.cobyla import fmin_cobyla
 
-from openmdao.main.api import Driver, StringRef, StringRefArray
+from openmdao.main.api import Driver, Expression, ExpressionList
 
 # if our globals dict doesn't contain __builtins__, python will 
 # copy current global dict into it
@@ -24,10 +24,10 @@ class COBYLA(Driver):
     maxiters = Int(iotype='in', desc='maximum number of function iterations')
     iprint = Int(iotype='in',
                  desc='print frequency: 0 (no output),1,2,3')
-    min_expr = StringRef(iotype='in', desc='expression to minimize')
-    constraint_exprs = StringRefArray(iotype='in',
+    min_expr = Expression(iotype='in', desc='expression to minimize')
+    constraint_exprs = ExpressionList(iotype='in',
                         desc='constraint expressions (must be >=0)')
-    design_vars = StringRefArray(iotype='in',
+    design_vars = ExpressionList(iotype='in',
                                  desc='list of design variable names')
         
     def __init__(self, desc=None):

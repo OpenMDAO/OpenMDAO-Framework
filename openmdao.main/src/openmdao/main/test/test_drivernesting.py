@@ -5,7 +5,7 @@ import logging
 from math import sqrt
 
 from openmdao.main.api import Assembly, Component, Driver, set_as_top
-from openmdao.main.stringref import StringRef
+from openmdao.main.expression import Expression
 from openmdao.lib.api import Float, Int, Str, CONMINdriver
 
 exec_order = []
@@ -14,8 +14,8 @@ class Summer(Driver):
     """Sums the objective over some number of iterations, feeding
     its current sum back into the specified design variable."""
     
-    objective = StringRef(iotype='in')
-    design = StringRef(iotype='out')
+    objective = Expression(iotype='in')
+    design = Expression(iotype='out')
     max_iterations = Int(1, iotype='in')
     sum = Float(iotype='out')
     

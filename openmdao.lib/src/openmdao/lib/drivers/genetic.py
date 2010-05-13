@@ -8,14 +8,7 @@ from enthought.traits.api import Python
 from pyevolve import G1DList, G1DBinaryString, G2DList, GAllele, GenomeBase
 from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 
-try:
-    from pyevolve import DBAdapters
-except ImportError:
-    # Apparently the egg doesn't record it's dependencies.
-    import logging
-    logging.warning('No pyevolve.DBAdaptors available.')
-
-from openmdao.main.api import Driver, ExprEvaluator, set_as_top, Component, Assembly,StringRef
+from openmdao.main.api import Driver, ExprEvaluator, set_as_top, Component, Assembly,Expression
 from openmdao.lib.api import Float, Int, Enum, Array,Bool, Instance
 
 array_test = re.compile("\[[0-9]+\]$")
@@ -23,7 +16,7 @@ array_test = re.compile("\[[0-9]+\]$")
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO frameowork, based on the Pyevolve Genetic algorithm module. 
     """
-    objective = StringRef(iotype='out',
+    objective = Expression(iotype='out',
                           desc='A string containing the objective function expression to be optimized') 
     
     opt_type = Enum("minimize", values=["minimize","maximize"],
@@ -101,6 +94,13 @@ class Genetic(Driver):
         self._des_var_ranges.pop(ref)
         return True
     
+    def list_des_vars(self):
+        return [str(x) for x in self._design_vars]
+    
+    def clear_des_vars(self):
+        self._design_vars = []
+        self._des_var_ranges = {}
+    
     def add_des_var(self,ref,low=None,high=None):
         """adds a design variable to the driver. 'ref' is a string refering to the public variable the driver should 
         vary during execution. 'low' and 'high' refer to the minimum and maximum values allowed values for the optimizer to use. 
@@ -130,14 +130,16 @@ class Genetic(Driver):
                 elif low: 
                     ranges[0] = low
                 else: 
-                    self.raise_exception("No value was specified for the 'low' argument, and no default was found in the public variable metadata",TypeError)
+                    self.raise_exception("No value was specified for the 'low' argument, "
+                                         "and no default was found in the public variable metadata",TypeError)
                 
                 if t.high:
                     ranges[1] = t.high
                 elif high: 
                     ranges[1] = high                
                 else: 
-                    self.raise_exception("No value was specified for the 'high' argument, and no default was found in the public variable metadata",TypeError)
+                    self.raise_exception("No value was specified for the 'high' argument, "
+                                         "and no default was found in the public variable metadata",TypeError)
                 self._des_var_ranges[ref] = tuple(ranges)
                 
             elif array_test.search(target): #can't figure out what the ranges should be
@@ -181,7 +183,6 @@ class Genetic(Driver):
         ga.evolve(freq_stats=0)
         
         self.best_individual = ga.bestIndividual()
-        print self.best_individual
 
     def _run_model(self,chromosome):
         for i,value in enumerate(chromosome):
@@ -190,37 +191,3 @@ class Genetic(Driver):
         self.run_iteration()
         #exit()        
         return self.objective.evaluate()
-    
-if __name__ == "__main__":
-    import numpy
-    import logging
-    class SphereFunction(Component):
-        total = Float(0., iotype='out')
-        x = Float(0, low=-5.12,high=5.13, iotype="in")
-        y = Float(0, low=-5.12,high=5.13, iotype="in")
-        z = Float(0, low=-5.12,high=5.13, iotype="in") 
-    
-        def __init__(self, desc=None):
-            super(SphereFunction, self).__init__(desc)
-                
-        def execute(self):
-            """ calculate the sume of the squares for the list of numbers """
-            self.total = self.x**2+self.y**2+self.z**2        
-        
-    top = Assembly()
-    top.add_container("comp",SphereFunction())
-    top.add_container("genetic",Genetic())
-    
-    top.genetic.seed = 123
-    top.genetic.generations = 10
-    #top.genetic.mutation_rate = .02
-    top.genetic.selection_method = "roulette_wheel"
-    
-    top.genetic.add_des_var("comp.x")
-    top.genetic.add_des_var("comp.y")
-    top.genetic.add_des_var("comp.z")
-
-    
-    top.genetic.objective = "comp.total"
-    top.genetic.execute()
-    

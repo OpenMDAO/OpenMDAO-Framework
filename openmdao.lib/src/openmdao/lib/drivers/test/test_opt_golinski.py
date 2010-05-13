@@ -313,7 +313,7 @@ class GolinskiTestCase(unittest.TestCase):
         try:
             x = self.top.driver.objective.evaluate()
         except TraitError, err:
-            self.assertEqual(str(err), "StringRef: string reference is undefined")
+            self.assertEqual(str(err), "Expression: string reference is undefined")
         else:
             self.fail('TraitError expected')
         self.top.driver.objective = 'comp.result'
