@@ -6,7 +6,6 @@ import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
 
 from openmdao.main.workflow import Workflow
-from openmdao.main.drivertree import DriverForest, create_labeled_graph
 
 __all__ = ['Dataflow']
 
@@ -22,13 +21,6 @@ class Dataflow(Workflow):
         super(Dataflow, self).__init__(scope=scope)
         self._no_expr_graph = nx.DiGraph()
         
-    def run(self):
-        """ Run this Dataflow."""
-        try:
-            super(Dataflow, self).run()
-        finally:
-            self._drvsorter = None
-            
     def has_node(self, name):
         """Return True if this Dataflow contains a Component with the
         given name.
@@ -51,7 +43,8 @@ class Dataflow(Workflow):
         """Add an edge to our Component graph from *srccompname* to *destcompname*.
         The *srcvarname* and *destvarname* args are for data reporting only.
         """
-        # if an edge already exists between the two components, just increment the ref count
+        # if an edge already exists between the two components, 
+        # just increment the ref count
         graph = self._no_expr_graph
         try:
             graph[srccompname][destcompname]['refcount'] += 1
@@ -86,77 +79,10 @@ class Dataflow(Workflow):
             self._no_expr_graph[comp1name][comp2name]['refcount'] = refcount
 
             
-    def _find_drivers(self, names):
-        """Returns a list of Drivers found in the given list of names."""
-        driverset = set([obj.name for obj in self.scope.drivers])
-        return [getattr(self.scope, n) for n in names if n in driverset]
-        
     def nodes_iter(self):
-        """Iterate through the nodes in dataflow order, allowing for multiple Driver
-        loops within the same Assembly.
-        """
+        """Iterate through the nodes in dataflow order."""
         drivers = self.scope.drivers
         self._drvsorter = None
         
-        if len(drivers) == 0:  # no driver, so just sort and go
-            for n in nx.topological_sort(self._no_expr_graph):
-                yield getattr(self.scope, n)
-        elif len(drivers) == 1:  # one driver, so add its output ref edges, sort and go
-            graph = self._no_expr_graph.copy()
-            graph.add_edges_from(drivers[0].get_expr_graph(iotype='out').edges_iter())
-            for n in nx.topological_sort(graph):
-                yield getattr(self.scope, n)
-        else:  # multiple drivers
-            graph = self._no_expr_graph.copy()
-            
-            # add all ReferenceVariable edges from all drivers to the graph 
-            # (which will likely create one or more loops)
-            for drv in drivers:
-                graph.add_edges_from(drv.get_expr_graph().edges_iter())
-
-            # each loop is a strongly connected component (SCC)
-            # NOTE: for nested drivers, multiple drivers will exist within
-            # the same SCC, and that SCC will have to be subdivided into sub SCCs
-            strongs = strongly_connected_components(graph)
-            
-            if len(strongs) > 0 and len(strongs[0]) == 1:
-                # no loops found (SCCs are returned largest to smallest), 
-                # so just sort and we're done. 
-                for compname in nx.topological_sort(graph):
-                    yield getattr(self.scope, compname)
-                return
-            
-            # we have at least one loop, so...
-            # create a new graph with SCCs collapsed down into
-            # nodes so that we can make the graph topologically sortable
-            strong_dict = {}
-            strong_graph = nx.DiGraph()
-            for i,strong in enumerate(strongs):
-                strong_graph.add_node(i)
-                for node in strong:
-                    strong_dict[node] = i # map nodes to their strongly connected comp
-            for node in graph.nodes():
-                for u,v in graph.edges_iter(node):
-                    if strong_dict[u] != strong_dict[v]:
-                        strong_graph.add_edge(strong_dict[u], strong_dict[v])
-            sorted_strongs = nx.topological_sort(strong_graph)
-            
-            for sccomp in sorted_strongs:
-                if len(strongs[sccomp]) == 1:  # no loop, just a single component
-                    yield getattr(self.scope, strongs[sccomp][0])
-                else:  # some kind of loop
-                    for comp in self._loop_iter(strongs[sccomp]):
-                        yield comp
-                    
-    def _loop_iter(self, loopcomps):
-        """Return components within the given loop in dataflow order."""
-        drivers = self._find_drivers(loopcomps) # find drivers in this loop
-        if len(drivers) == 1:  # only one driver in this loop. so just tell it to run
-                               # and it will run everything else
-            yield drivers[0]
-        else:   # nested drivers
-            subgraph = self._no_expr_graph.subgraph(nbunch=loopcomps) # this has no Expression edges
-            self._drvsorter = DriverForest(drivers)
-            collapsed_graph = self._drvsorter.collapse_graph(subgraph)
-            for compname in nx.topological_sort(collapsed_graph):
-                yield getattr(self.scope, compname)
+        for n in nx.topological_sort(self._no_expr_graph):
+            yield getattr(self.scope, n)

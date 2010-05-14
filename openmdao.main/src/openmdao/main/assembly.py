@@ -15,6 +15,53 @@ from openmdao.main.container import Container
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 
+def _filter_internal_edges(edges):
+    """Return a copy of the given list of edges with edges removed that are
+    connecting two variables on the same component.
+    """
+    return [(u,v) for u,v in edges
+                          if u.split('.', 1)[0] != v.split('.', 1)[0]]
+
+
+def _path_exists(G, source, target):
+    """Returns True if there is a path from source to target."""
+    # does BFS from both source and target and meets in the middle
+    if source is None or target is None:
+        raise nx.NetworkXException(\
+            "Bidirectional shortest path called without source or target")
+    if target == source:  return source in G.predecessors(source)
+
+    Gpred=G.predecessors_iter
+    Gsucc=G.successors_iter
+
+    # predecesssor and successors in search
+    pred={source:None}
+    succ={target:None}
+
+    # initialize fringes, start with forward
+    forward_fringe=[source] 
+    reverse_fringe=[target]  
+
+    while forward_fringe and reverse_fringe:
+        this_level=forward_fringe
+        forward_fringe=[]
+        for v in this_level:
+            for w in Gsucc(v):
+                if w not in pred:
+                    forward_fringe.append(w)
+                    pred[w]=v
+                if w in succ:  return True # found path
+        this_level=reverse_fringe
+        reverse_fringe=[]
+        for v in this_level:
+            for w in Gpred(v):
+                if w not in succ:
+                    succ[w]=v
+                    reverse_fringe.append(w)
+                if w in pred:  return True # found path
+
+    return False  # no path found
+
 
 class PassthroughTrait(TraitType):
     """A trait that can use another trait for validation, but otherwise is
@@ -92,17 +139,16 @@ class Assembly (Component):
         Returns the added Container object.
         """
         obj = super(Assembly, self).add_container(name, obj)
-        if isinstance(obj, Component):
-            # since the internals of the given Component can change after it's
-            # added to us, wait to collect its io_graph until we need it
-            self._child_io_graphs[obj.name] = None
-            self._need_child_io_update = True
-            if add_to_workflow:
-                self.workflow.add_node(obj.name)
         try:
             self.drivers.append(obj)  # will fail if it's not an IDriver
-        except TraitError:
-            pass
+        except TraitError:  # not an IDriver
+            if isinstance(obj, Component):
+                # since the internals of the given Component can change after it's
+                # added to us, wait to collect its io_graph until we need it
+                self._child_io_graphs[obj.name] = None
+                self._need_child_io_update = True
+                if add_to_workflow:
+                    self.workflow.add_node(obj.name)
         return obj
         
     def remove_container(self, name):
@@ -110,23 +156,20 @@ class Assembly (Component):
         trait = self.trait(name)
         if trait is not None:
             obj = getattr(self, name)
-            # if the named object is a Component, then assume it must
-            # be removed from our workflow
-            if isinstance(obj, Component):
-                self.workflow.remove_node(obj.name)
-                
-                if name in self._child_io_graphs:
-                    childgraph = self._child_io_graphs[name]
-                    if childgraph is not None:
-                        self._var_graph.remove_nodes_from(childgraph)
-                    del self._child_io_graphs[name]
-            
-                if obj in self.drivers:
-                    self.drivers.remove(obj)
+            if obj in self.drivers:
+                self.drivers.remove(obj)
+            else:
+                # if the named object is a Component, then assume it must
+                # be removed from our workflow
+                if isinstance(obj, Component):
+                    self.workflow.remove_node(obj.name)
                     
-            for drv in self.drivers:
-                drv.graph_regen_needed()
-                
+                    if name in self._child_io_graphs:
+                        childgraph = self._child_io_graphs[name]
+                        if childgraph is not None:
+                            self._var_graph.remove_nodes_from(childgraph)
+                        del self._child_io_graphs[name]
+                    
         return super(Assembly, self).remove_container(name)
 
 
@@ -343,8 +386,11 @@ class Assembly (Component):
         return False
 
     def execute (self):
-        """Runs the components in its workflow."""
-        self.workflow.run()
+        """Runs its driver, or its workflow if there is no driver."""
+        if len(self.drivers) > 0:
+            self.drivers[0].run()
+        else:
+            self.workflow.run()
         self._update_boundary_vars()
         
     def _update_boundary_vars (self):
