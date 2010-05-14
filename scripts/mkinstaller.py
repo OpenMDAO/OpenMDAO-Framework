@@ -44,7 +44,7 @@ def after_install(options, home_dir):
     global logger
     reqs = %(reqs)s
     cmds = %(cmds)s
-    url = %(url)s
+    url = '%(url)s'
     found = [c for c in cmds if url in c]
     if not found:
         cmds.extend(['-f',url])
