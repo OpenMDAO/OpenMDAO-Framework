@@ -5,10 +5,10 @@
 .. index:: Workflow
 .. index:: Assembly
 
-.. _Overview-of-the-OpenMDAO-Framework:
+.. _Introduction-to-the-OpenMDAO-Framework:
 
-Overview of the OpenMDAO Framework
-==================================
+Introduction to the OpenMDAO Framework
+======================================
 
 MDAO stands for Multidisciplinary Analysis and Optimization. OpenMDAO is
 an open source framework for analyzing and solving MDAO problems. In OpenMDAO, a

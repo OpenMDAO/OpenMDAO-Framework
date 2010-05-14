@@ -1180,7 +1180,7 @@ def _single_install(cmds, req, bin_dir):
 
 def after_install(options, home_dir):
     global logger
-    reqs = ['docutils==0.6', 'pyevolve==0.6', 'coverage==3.3.1', 'traits', 'pycrypto==2.0.1', 'numpy==1.3.0', 'pyyaml==3.09', 'conmin==1.0', 'jinja2==2.4', 'zc.buildout==1.4.3', 'fabric==0.9.0', 'sphinx==0.6.3', 'nose==0.11.3', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'pygments==1.3.1', 'axod==0.1.0']
+    reqs = ['docutils==0.6', 'pyevolve==0.6', 'coverage==3.3.1', 'traits', 'pycrypto==2.0.1', 'numpy', 'pyyaml==3.09', 'conmin==1.0', 'jinja2==2.4', 'zc.buildout==1.4.3', 'fabric==0.9.0', 'sphinx==0.6.3', 'nose==0.11.3', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'pygments==1.3.1', 'axod==0.1.0']
     cmds = []
     url = 'http://openmdao.org/dists'
     found = [c for c in cmds if url in c]
@@ -1205,7 +1205,8 @@ def after_install(options, home_dir):
     numpyidx = None
     for i,req in enumerate(reqs):
         if req.startswith('numpy') and len(req)>5 and (req[5]=='=' or req[5]=='>'):
-            reqnumpy = req
+            # for now, just require 'numpy' instead of a specific version
+            #reqnumpy = req
             numpyidx = i
             break
     _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
