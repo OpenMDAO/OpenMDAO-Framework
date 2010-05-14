@@ -39,6 +39,7 @@ setup(name='openmdao.devtools',
           'setuptools',
           'Sphinx',
           'Fabric>=0.9',
+          'virtualenv',
           'openmdao.lib',
       ],
       entry_points = {

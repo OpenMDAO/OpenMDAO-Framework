@@ -107,7 +107,8 @@ def after_install(options, home_dir):
             reqs.append('%s' % dist.as_requirement())  
             
     if options.test:
-        url = 'file:///home/bnaylor/dists'
+        home = os.environ['HOME']
+        url = 'file://%s/dists' % home
     else:
         url = 'http://openmdao.org/dists'
     reqs = list(set(reqs))  # eliminate duplicates (numpy was in there twice somehow)
