@@ -4,6 +4,9 @@
 .. index:: Factories
 .. index:: Traits
 
+
+.. _OpenMDAO-Standard-Library:
+
 OpenMDAO Standard Library
 =========================
 
@@ -31,7 +34,7 @@ algorithm is the Method of Feasible Directions. If analytic gradients of the
 objective or constraint functions are not available, this information is
 calculated by finite difference. While the program is intended primarily for
 efficient solution of constrained problems, unconstrained function
-minimization problems may also be solved, and the conjugate direction method
+minimization problems may also be solved. The conjugate direction method
 of Fletcher and Reeves is used for this purpose.
 
 More information on CONMIN can be found in the `CONMIN User's Manual
@@ -83,9 +86,9 @@ follows:
 
 This first section of code defines an assembly called *EngineOptimization.* This
 assembly contains a DrivingSim component and a CONMIN driver, both of which are
-created and added inside the *__init__* function with *add_container()*. The 
+created and added inside the __init__ function with add_container(). The 
 objective function, design variables, constraints, and any CONMIN parameters
-are also assigned in the *__init__* function. The specific syntax for all of 
+are also assigned in the __init__ function. The specific syntax for all of 
 these is given below.
 
 .. testsetup:: CONMIN_show
@@ -154,7 +157,7 @@ The size of these lists must be equal to the number of design variables or
 OpenMDAO will raise an exception. Similarly, the upper bound must be greater
 than the lower bound for each design variable.
 
-*Constraints* are equations or inequalities that are constructed from the available OpenMDAO variables using Python
+Constraints are equations or inequalities that are constructed from the available OpenMDAO variables using Python
 mathematical syntax. The constraints parameter is a list of inequalities that
 are defined to be **satisfied when they return a negative value or zero**, and **violated
 when they return a positive value**.
@@ -183,10 +186,10 @@ The default value is 10.
 
 The convergence tolerance is controlled with *dabfun* and *delfun*. *Dabfun* is the
 absolute change in the objective function to indicate convergence (i.e., if the
-objective function changes by less than *dabfun*, then the problem is converged).
+objective function changes by less than dabfun, then the problem is converged).
 Similarly, *delfun* is the relative change of the objective function with respect
-to the value at the previous step. Note that *delfun* has a hard-wired minimum of 
-1e-10 in the Fortran code, and *dabfun* has a minimum of 0.0001.
+to the value at the previous step. Note that delfun has a hard-wired minimum of 
+1e-10 in the Fortran code, and dabfun has a minimum of 0.0001.
 
 .. testcode:: CONMIN_show
 
@@ -201,7 +204,7 @@ tests are performed in the following sequence:
 3. Check relative change in objective
 4. Reduce constraint thickness for slow convergence
 
-The number of successive iterations the convergence tolerance should be checked before
+The number of successive iterations that the convergence tolerance should be checked before
 terminating the loop can also be specified with the *itrm* parameter, whose
 default value is 3.
 
@@ -214,7 +217,7 @@ constraints using a finite difference approximation. This is the current
 default behavior of the OpenMDAO driver. The CONMIN code can also accept
 user-calculated gradients, but these are not yet supported in OpenMDAO. Two
 parameters control the step size used for numerically estimating the local
-gradient: fdch and fdchm. The *fdchm* parameter is the minimum absolute step size that the finite
+gradient: *fdch* and *fdchm.* The *fdchm* parameter is the minimum absolute step size that the finite
 difference will use, and *fdch* is the step size relative to the design variable.
 
 .. testcode:: CONMIN_show
@@ -266,9 +269,9 @@ variables as follows:
     self.cons_is_linear = [1, 0]
 
 If *cons_is_linear* is not specified, then all the constraints are assumed to be
-nonlinear. Note that the original CONMIN parameter for this is ISC.	
+nonlinear. Note that the original CONMIN parameter for this is *ISC.*	
 
-Finally, the *iprint* parameter can be used to turn on the display of diagnostic
+Finally, the *iprint* parameter can be used to display diagnostic
 messages inside of CONMIN. These messages are currently sent to the standard
 output.
 
@@ -318,7 +321,7 @@ design variables + 1.
 **Constraint Thickness** -- CONMIN gives four parameters for controlling the 
 thickness of constraints -- *ct, ctmin, ctl,* and *ctlmin.* Using these parameters
 essentially puts a tolerance around a constraint surface. Note that *ct* is used
-for general constraints, and *ctl* is only used for linear constraints. A wide
+for general constraints, and *ctl* is used only for linear constraints. A wide
 initial value of the constraint thickness is desirable for highly nonlinear 
 problems so that when a constraint becomes active, it tends to remain active,
 thus reducing the zigzagging problem. The values of *ct* and *ctl* adapt as the
@@ -333,16 +336,16 @@ for G(J) = ct to 4.0*theta for G(J) = ABS(ct)``. A value of theta = 0.0 is used
 in the program for constraints which are identified by the user to be strictly
 linear. Theta is called a *push-off* factor because it pushes the design away
 from the active constraints into the feasible region. The default value is
-usually adequate. This is only used for constrained problems.
+usually adequate. This is used only for constrained problems.
 
 **phi** -- Participation coefficient, used if a design is infeasible (i.e.,
 one or more violated constraints). *Phi* is a measure of how hard the design
 will be "pushed" towards the feasible region and is, in effect, a penalty
 parameter. If in a given problem, a feasible solution cannot be obtained with
-the default value, *phi* should be increased, and the problem run again. If a
+the default value, phi should be increased, and the problem run again. If a
 feasible solution cannot be obtained with phi = 100, it is probable that no
 feasible solution exists. The default value of 5.0 is usually adequate. Phi is
-only used for constrained problems.
+used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 

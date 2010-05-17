@@ -80,9 +80,10 @@ Glossary
       	See :term:`Component` above.
 	
 	
-      **CONMIN**
-        An interface to the NASA CONMIN optimization program.
-      
+      **CONMIN**  
+        Stands for "CONstraint MINimization." It is a gradient descent optimization algorithm developed by
+	NASA.
+	
       
       **Container**
         A container of Variables and other Containers. The base class of all objects

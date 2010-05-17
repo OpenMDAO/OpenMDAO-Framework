@@ -1,6 +1,6 @@
-=========================
-Help Documenting OpenMDAO
-=========================
+===============================
+Updating OpenMDAO Documentation
+===============================
 
 .. toctree::
    :maxdepth: 2
