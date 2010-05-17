@@ -79,7 +79,8 @@ class Assembly (Component):
     and outputs between its children.  When executed, it runs the components
     in its Workflow.
     """
-    drivers = List(IDriver)
+    _drivertest = Instance(IDriver, allow_none=True)
+    driverflow = Instance(Workflow)
     workflow = Instance(Workflow)
     
     def __init__(self, doc=None, directory=''):
@@ -101,6 +102,7 @@ class Assembly (Component):
                 self._var_graph.add_node(v)
         
         self.workflow = Dataflow(scope=self)
+        self.driverflow = Dataflow(scope=self)
 
     def get_component_graph(self):
         """Retrieve the dataflow graph of child components."""
@@ -140,7 +142,7 @@ class Assembly (Component):
         """
         obj = super(Assembly, self).add_container(name, obj)
         try:
-            self.drivers.append(obj)  # will fail if it's not an IDriver
+            self._drivertest = obj  # will fail if it's not an IDriver
         except TraitError:  # not an IDriver
             if isinstance(obj, Component):
                 # since the internals of the given Component can change after it's
@@ -306,16 +308,6 @@ class Assembly (Component):
         
         self._io_graph = None
 
-        for drv in self.drivers:
-            drv.graph_regen_needed()
-
-    def _filter_internal_edges(self, edges):
-        """Return a copy of the given list of edges with edges removed that are
-        connecting two variables on the same component.
-        """
-        return [(u,v) for u,v in edges
-                              if u.split('.', 1)[0] != v.split('.', 1)[0]]
-    
     def disconnect(self, varpath, varpath2=None):
         """If varpath2 is supplied, remove the connection between varpath and
         varpath2. Otherwise, if varpath is the name of a trait, remove all
@@ -350,7 +342,7 @@ class Assembly (Component):
             to_remove.extend(vargraph.edges(varpath)) # outgoing edges
             to_remove.extend(vargraph.in_edges(varpath)) # incoming
         
-        for src,sink in self._filter_internal_edges(to_remove):
+        for src,sink in _filter_internal_edges(to_remove):
             vtup = sink.split('.', 1)
             if len(vtup) > 1:
                 getattr(self, vtup[0]).remove_source(vtup[1])
@@ -365,8 +357,6 @@ class Assembly (Component):
         
         # the io graph has changed, so have to remake it
         self._io_graph = None  
-        for drv in self.drivers:
-            drv.graph_regen_needed()
 
 
     def is_destination(self, varpath):
@@ -414,11 +404,11 @@ class Assembly (Component):
         """Return a list of tuples of the form (outvarname, invarname).
         """
         if show_passthrough:
-            return self._filter_internal_edges(self.get_var_graph().edges())
+            return _filter_internal_edges(self.get_var_graph().edges())
         else:
-            return self._filter_internal_edges([(outname,inname) for outname,inname in 
-                                                self.get_var_graph().edges_iter() 
-                                                if '.' in outname and '.' in inname])
+            return _filter_internal_edges([(outname,inname) for outname,inname in 
+                                           self.get_var_graph().edges_iter() 
+                                           if '.' in outname and '.' in inname])
 
     def update_inputs(self, varnames):
         """Transfer input data to input variables on the specified component.

@@ -44,7 +44,6 @@ class Driver(Component):
             # force regeneration of _expr_graph, _expr_comps, _iteration_comps
             self._expr_graph = { None: None, 'in': None, 'out': None } 
             self._expr_comps = { None: None, 'in': None, 'out': None }
-            self.graph_regen_needed()
             
         super(Driver, self)._pre_execute()
         

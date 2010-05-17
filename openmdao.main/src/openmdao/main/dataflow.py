@@ -21,7 +21,7 @@ class Dataflow(Workflow):
         super(Dataflow, self).__init__(scope=scope)
         self._no_expr_graph = nx.DiGraph()
         
-    def has_node(self, name):
+    def __contains__(self, name):
         """Return True if this Dataflow contains a Component with the
         given name.
         """
