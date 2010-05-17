@@ -108,11 +108,11 @@ class TestCase(unittest.TestCase):
 
         try:        
             self.top.driver.add_des_var('comp.x[0]')
-        except TypeError,err: 
+        except ValueError,err: 
             self.assertEqual(str(err),"driver: values for 'high' and 'low' arguments are required when specifying an "
                              "Array element as a design variable. They were not given for 'comp.x[0]'")
         else: 
-            self.fail('TypeError expected')
+            self.fail('ValueError expected')
     
     def test_optimizeSpherearray(self):
         self.top.add_container('comp', SphereFunctionArray())

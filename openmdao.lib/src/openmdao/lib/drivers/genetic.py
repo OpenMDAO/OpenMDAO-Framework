@@ -22,29 +22,36 @@ class Genetic(Driver):
     opt_type = Enum("minimize", values=["minimize","maximize"],
                     iotype="in",
                     desc="sets the optimization to either minimize or maximize the objective function")
-    seed = Int(None,iotype="in",
-               desc="Random seed for the optimizer. Set to a specific value for repeatable results, otherwise leave as None for truely random seeding")
+    
     generations = Int(Consts.CDefGAGenerations,iotype="in",
-                      desc="the maximum number of generations the algorithm will evolve to before stopping")
+                      desc="the maximum number of generations the algorithm will "
+                      "evolve to before stopping")
     population_size = Int(Consts.CDefGAPopulationSize, iotype="in",
                           desc = "the size of the population in each generation")
     crossover_rate = Float(Consts.CDefGACrossoverRate, iotype="in",low=0.0,high=1.0,
-                           desc="the crossover rate used when two parent genomes repoduce to form a child genome")
+                           desc="the crossover rate used when two parent genomes repoduce to form a "
+                           "child genome")
     mutation_rate = Float(Consts.CDefGAMutationRate, iotype="in",low=0.0,high=1.0,
                            desc="the mutation rate applied to population members")
     
-    selection_method = Enum("tournament",("roulette_wheel","tournament","rank","uniform"),
-                         desc="the selection method used to pick population members who will survive for breeding into the next generation",
+    selection_method = Enum("roulette_wheel",("roulette_wheel","tournament","rank","uniform"),
+                         desc="the selection method used to pick population members who will survive for "
+                         "breeding into the next generation",
                          iotype="in")
-    #TODO: figure out how to set tournament size    
-    #tournament_size = Int(Consts.CDefTournamentPoolSize,iotype="in",desc="the number of populations members who compete in each tournament. Only used with 'tournament' selection.")
+    _selection_mapping = {"roulette_wheel":Selectors.GRouletteWheel,
+                          "tournament":Selectors.GTournamentSelector,
+                          "rank":Selectors.GRankSelector,
+                          "uniform":Selectors.GUniformSelector}
     
-    _selection_mapping = {"roulette_wheel":Selectors.GRouletteWheel,"tournament":Selectors.GTournamentSelector,
-                         "rank":Selectors.GRankSelector,"uniform":Selectors.GUniformSelector}
+    elitism = Bool(False,iotype="in",desc="controls the use of elitism in the createion of new "
+                   "generations.")
     
-    elitism = Bool(False,iotype="in",desc="controls the use of elitism in the createion of new generations.")
+    best_individual = Instance(klass = GenomeBase.GenomeBase, iotype="out", desc="the genome with the "
+                               "best score from the optimization") 
     
-    best_individual = Instance(klass = GenomeBase.GenomeBase, iotype="out", desc="the genome with the best score from the optimization") 
+    seed = Int(None,iotype="in",
+               desc="Random seed for the optimizer. Set to a specific value for repeatable "
+               "results, otherwise leave as None for truely random seeding")
     
     def __init__(self,doc=None):
         super(Genetic,self).__init__(doc)
@@ -53,7 +60,8 @@ class Genetic(Driver):
         self._des_var_ranges = dict()
     
     def _make_alleles(self): 
-        """ Returns a GAllelle.Galleles instance with alleles corresponding to the design variables specified by the user"""
+        """ Returns a GAllelle.Galleles instance with alleles corresponding to 
+        the design variables specified by the user"""
         alleles = GAllele.GAlleles()
         for str_ref in self._design_vars:
             val = str_ref.evaluate() #now grab the value 
@@ -89,6 +97,9 @@ class Genetic(Driver):
         return alleles
     
     def remove_des_var(self,ref):
+        """removes the design variable, specified by 'ref', from the set of design variables. 
+        If not design variable is found matching the name given in 'ref' a ValueError is raised"""
+        
         try:
             i = [str(x) for x in self._design_vars].index(ref)
         except ValueError:
@@ -98,17 +109,20 @@ class Genetic(Driver):
         return True
     
     def list_des_vars(self):
+        """Returns a list of the names of the design variables currently in the genetic instance"""
         return [str(x) for x in self._design_vars]
     
     def clear_des_vars(self):
+        """Removes all design variables from the genetic instance"""
         self._design_vars = []
         self._des_var_ranges = {}
     
     def add_des_var(self,ref,low=None,high=None):
-        """adds a design variable to the driver. 'ref' is a string refering to the public variable the driver should 
-        vary during execution. 'low' and 'high' refer to the minimum and maximum values allowed values for the optimizer to use. 
-        If neither are specified, the values will default to the values in the metadata of the public variable being referenced.
-        If they are not specified in the metadata and not provided as arguments, the values default to 0 and 100 repectively. 
+        """adds a design variable to the driver. 'ref' is a string refering to the public variable the 
+        driver should vary during execution. 'low' and 'high' refer to the minimum and maximum allowed 
+        values for the optimizer to use. If neither are specified, the min and max will default to the 
+        values in the metadata of the public variable being referenced. If they are not specified in 
+        the metadata and not provided as arguments a ValueError is raised.
         """
 
         #check to see if this ref is already in the driver
@@ -143,7 +157,7 @@ class Genetic(Driver):
                     ranges[0] = low
                 else: 
                     self.raise_exception("No value was specified for the 'low' argument, "
-                                         "and no default was found in the public variable metadata",TypeError)
+                                         "and no default was found in the public variable metadata",ValueError)
                 
                 if t.high:
                     ranges[1] = t.high
@@ -151,16 +165,19 @@ class Genetic(Driver):
                     ranges[1] = high                
                 else: 
                     self.raise_exception("No value was specified for the 'high' argument, "
-                                         "and no default was found in the public variable metadata",TypeError)
+                                         "and no default was found in the public variable metadata",ValueError)
                 self._des_var_ranges[ref] = tuple(ranges)
                 
             elif array_test.search(target): #can't figure out what the ranges should be
                 if not(isinstance(val,float) or isinstance(val,int)):
-                    self.raise_exception("Only array values of type 'int' or 'float' are allowed as design variables")
+                    self.raise_exception("Only array values of type 'int' or 'float' are allowed as "
+                                         "design variables")
                     
-                self.raise_exception("values for 'high' and 'low' arguments are required when specifying an Array element as a design variable. They were not given for '%s'"%ref,TypeError)
+                self.raise_exception("values for 'high' and 'low' arguments are required when specifying "
+                                     "an Array element as a design variable. They were not given for '%s'"%ref,TypeError)
             else: 
-                self.raise_exception("Improper design variable type. Must be Float,Int, or an element of an Array.",ValueError)
+                self.raise_exception("Improper design variable type. Must be Float,Int, or an element of "
+                                     "an Array.",ValueError)
         return True
             
     def execute(self):

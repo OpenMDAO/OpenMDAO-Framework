@@ -355,7 +355,160 @@ on the `Pyevolve <http://pyevolve.sourceforge.net/>`_. Genetic is a global optim
 can is ideal for optimizing problems with integer or discrete design variables because 
 it is a non-derivative based optimization method. 
 
+Genetic can be used in any simulation by importing it from ``openmdao.lib.api``.
 
+.. testcode:: Genetic_load
+
+    from openmdao.lib.api import Genetic
+
+
+Design Variables
+~~~~~~~~~~~~~~~~
+Public variables are added to Genetic and become design variables. The set 
+of design variables is what Genetic will vary to search for an optimum.
+Genetic supports three public variable types: :term:Float, :term:Int, :Term:Enum. These 
+public variable types can be used as design variables in any optimization. 
+
+You add design varibles to genetic using the ``add_des_var`` method.
+
+.. testcode:: Genetic_add_des_var
+
+    from openmdao.main.api import Assembly,Component
+    from openmdao.lib.api import Genetic
+    from openmdao.main.api import Float,Int,Enum
+    
+    class SomeComp(Component):
+        """Arbitrary component with a few public variables, but which does not really do 
+	any calculations"""
+	
+	x = Float(0.0,low=0.0,high=100.0,iotype="in")
+	y = Int(10,low=10,high=100,iotype="in")
+	z = Enum([-10,-5,0,7],iotype="in")
+	
+    class Simulation(Assembly):
+	"""Top Level Assembly used for simulation"""
+	
+	def __init__(self):
+	    """Adds the Genetic driver to the assembly"""
+	    
+	    super(Simulation,self).__init__()
+	    
+	    self.add_container('optimizer',Genetic())
+	    self.add_container('comp',SomeComp())
+	    
+	    self.optimizer.add_des_var('comp.x')
+	    self.optimizer.add_des_var('comp.y')
+	    self.optimizer.add_des_var('comp.z')
+	    
+In the above example, three design variables were added to the optimizer. The optimizer 
+figures out for itself what type of variable it is and behaves approriately. In all three
+cases, since no `low' or `high` arguments were provided the optimzier will use the values
+from the metadata provided in the variable decleration. 
+
+For `comp.x` the optimizer will try floats between 0.0 and 100.0. For `comp.y' the 
+optimizer will try integers between 10 and 100. For `comp.z` the optimizer will pick from the
+list of allowed values, [-10,-5,0,7]. You can see that for `comp.z`. 
+
+It is possible to override the `low` and `high` values from the metadata, if you wanted to
+to tell the optimizer to use a different range instead of the default. 
+
+.. testcode:: Genetic_add_des_var_min_max
+
+    self.optimizer.add_des_var('comp.x',low=5.0,high=7.0)
+
+Now for `comp.x` the optimizer will only try values between 5.0 and 7.0. Not that `low` and `high`
+are only applicable to Float and Int public variables. For Enum public variables, `low` and `high`
+are not applicable.
+
+Configuration
+~~~~~~~~~~~~~
+
+When setting the `objective` attribute you can specify a single 
+public variable or a more complex function. 
+
+.. testcode:: Genetic_set_objective
+
+    top.optimizer.objective = "comp.x"
+    
+or 
+
+.. testcode:: Genetic_set_objective_2
+
+    top.optimzier.objective = "2*comp.x+comp.y+3*comp.z"
+
+In the second example above, a more complex objective was created where the overall objective was 
+a weighted combination of `comp.x`, `comp.y`, and `comp.z`. 
+
+To set the optimizer to either minmize or maximize your objective, you set the `opt_type` attribute 
+of the driver to "minimize" or "maximize".
+
+.. testcode:: Genetic_set_opt_type
+
+    top.optimizer.opt_type = "minimize"
+    
+You can control the size of the population in each generation and the maximum number of generations in 
+your optimization with the `population_size` and `generations` attributes. 
+    
+.. testcode:: Genetic_popsize_generations
+
+    top.optimzier.population_size = 80
+    top.optimizer.generations = 100
+    
+As you increase the population size, you are effectively adding diversity in to the gene pool of your
+optimization. A large population means that a larger number of individuals from a given generation will
+be chosen to provide genetic material for the next generation. So there is a better chance that individuals
+with a weaker fitness will pass on their genes. This diversity helps to ensure that your optimziation will 
+find a true global optimum within the allowed design space. However, it also serves to slow down the 
+optimziation because of the increased number of function evaluations necessary for each generation. 
+
+Picking an appropriate value for the maximum number of generations will depend highly on the specifics of 
+your problem. Setting this number too low will likely prevent the optimization from converging on a true 
+optimium. Setting it too high will help you find the true optimum, but you may end up wasting the computation
+time on later generations where the optimum has been found. 
+
+You can further control the behavior of the genetic algorithm by setting the `crossover_rate`, `mutation_rate`,
+`selection_method`, and `elitism` attributes. These settings will fine tune the convergence of your 
+optimization to achieve the desired result, however,for many optimziations the default values will work
+well and don't need to be changed. 
+
+The `crossover_rate` controls the rate at which the crossover operator gets applied to the genome of a
+set of individuals which are reproducing. The allowed values are between 0.0 and 1.0. A higher rate will mean 
+that more of the genes are swapped between parents, which will result in give a more uniform population and 
+better searching of the design space. If the rate is set too high, then it is likely that indivduals with high 
+fitness could be lost to churn. 
+
+.. testcode:: Genetic_crossover_rate
+
+    top.optimizer.crossover_rate = 0.9
+
+The `mutation_rate` controls how likely any particular gene is to experience a mutation. A low, but non-zero,
+mutation rate will help prevent stagnation in the gene pool by randomly moving the values of genes. If this 
+rate is set too high, the algorithm basically degrades into a random search through the design space. The
+allowed values are bewtween 0.0 and 1.0. 
+
+.. testcode:: Genetic_mutation_rate
+
+    top.optimizer.mutation_rate = .02
+
+In a pure genetic algorithm, it is possible that your best performing individual does not survive from one
+generation to the next due to competition, mutation, and crossover. If you want to ensure that the best 
+individual always survives in tact from one generation to the next, then turn on the `eltisim` flag for your
+optimization. This will ensure that the best individual is always copied to the next generation no matter what. 
+
+.. testcode:: Genetic_elitism
+
+    top.optimizer.elitism = True
+
+There are a number of different commonly used selection algorithms available. The default algorithm is the
+Roulette Wheel Algorithm. Also available are Tournamen Selection, Rank Selection, and Uniform Selection. 
+This feature is controlled by the `selection_method` attribute. Allowed values are "roulette_wheel", 
+"tournament", "rank", and "uniform". 
+
+.. testcode:: Genetic_selector
+    
+    top.optimizer.selection_method="rank"
+
+    
 
 *The Case Iterator*
 +++++++++++++++++++
