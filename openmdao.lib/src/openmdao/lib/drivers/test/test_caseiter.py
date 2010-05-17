@@ -155,45 +155,45 @@ class TestCase(unittest.TestCase):
         else:
             self.fail('Expected RuntimeError')
 
-    #def test_concurrent(self):
-        ## FIXME: temporarily disable this test on windows because it loops
-        ## over a set of tests forever when running under a virtualenv
-        #if sys.platform == 'win32':
-            #return
-        ## This can always test using a LocalAllocator (forked processes).
-        ## It can also use a ClusterAllocator if the environment looks OK.
-        #logging.debug('')
-        #logging.debug('test_concurrent')
+    def test_concurrent(self):
+        # FIXME: temporarily disable this test on windows because it loops
+        # over a set of tests forever when running under a virtualenv
+        if sys.platform == 'win32':
+            return
+        # This can always test using a LocalAllocator (forked processes).
+        # It can also use a ClusterAllocator if the environment looks OK.
+        logging.debug('')
+        logging.debug('test_concurrent')
 
-        ## Ensure we aren't held up by local host load problems.
-        #local = ResourceAllocationManager.get_allocator(0)
-        #local.max_load = 10
+        # Ensure we aren't held up by local host load problems.
+        local = ResourceAllocationManager.get_allocator(0)
+        local.max_load = 10
 
-        #if sys.platform != 'win32':
-            ## ssh server not typically available on Windows.
-            #machines = []
-            #node = platform.node()
-            #python = find_python()
-            #if node.startswith('gxterm'):
-                ## User environment assumed OK on this GRC cluster front-end.
-                #for i in range(55):
-                    #machines.append({'hostname':'gx%02d' % i, 'python':python})
-            #elif self.local_ssh_available():
-                #machines.append({'hostname':node, 'python':python})
-            #if machines:
-                #name = node.replace('.', '_')
-                #cluster = ClusterAllocator(name, machines)
-                #ResourceAllocationManager.insert_allocator(0, cluster)
+        if sys.platform != 'win32':
+            # ssh server not typically available on Windows.
+            machines = []
+            node = platform.node()
+            python = find_python()
+            if node.startswith('gxterm'):
+                # User environment assumed OK on this GRC cluster front-end.
+                for i in range(55):
+                    machines.append({'hostname':'gx%02d' % i, 'python':python})
+            elif self.local_ssh_available():
+                machines.append({'hostname':node, 'python':python})
+            if machines:
+                name = node.replace('.', '_')
+                cluster = ClusterAllocator(name, machines)
+                ResourceAllocationManager.insert_allocator(0, cluster)
 
-        #self.run_cases(sequential=False)
-        #self.assertEqual(glob.glob('Sim-*'), [])
+        self.run_cases(sequential=False)
+        self.assertEqual(glob.glob('Sim-*'), [])
 
-        #logging.debug('')
-        #logging.debug('test_concurrent_errors')
-        #self.generate_cases(force_errors=True)
-        #self.model.driver._call_execute = True
-        #self.run_cases(sequential=False, forced_errors=True)
-        #self.assertEqual(glob.glob('Sim-*'), [])
+        logging.debug('')
+        logging.debug('test_concurrent_errors')
+        self.generate_cases(force_errors=True)
+        self.model.driver._call_execute = True
+        self.run_cases(sequential=False, forced_errors=True)
+        self.assertEqual(glob.glob('Sim-*'), [])
 
     @staticmethod
     def local_ssh_available():
@@ -235,7 +235,7 @@ class TestCase(unittest.TestCase):
                 if self.model.driver.sequential:
                     self.assertEqual(case.msg, 'driven: Forced error')
                 else:
-                    self.assertEqual(case.msg, 'model: Forced error')
+                    self.assertEqual(case.msg, 'driven: Forced error')
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case.outputs[0][2],
