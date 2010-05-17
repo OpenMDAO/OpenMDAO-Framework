@@ -51,7 +51,7 @@ This will remove the file from the repository but will **not** delete it.
 Committing Changes 
 ------------------
 
-After you make changes on your branch, you need to need to make sure those changes are
+After you make changes on your branch, you need to make sure those changes are
 *committed*, or recorded, to your local Bazaar repository. To see if you have uncommitted
 changes and to then commit them, type the following:
 

@@ -172,6 +172,10 @@ test output during a test function.  For example:
     Test will fail if *val1* differs from *val2* by more than a small
     number of decimal places.
     
+``self.assert_rel_error(val1,val2,tolerance)``
+    Test will fail if *val1* differs from *val2* by more than the
+    percentage given as the tolerance.
+    
 ``self.fail([msg])``
     Test will fail and display the given message.
     
@@ -278,9 +282,9 @@ A simple example of how to implement these three blocks is shown here:
     # If your code block outputs anything when executed, then that output
     # needs to go in this block.
 
-*Group1* is a label that we've given this set of blocks. Note that you can have
-multiple labels in your documents. Note also that the testsetup and
-testoutput blocks are both optional; some code examples don't need either.
+*Group1* is a label that we've given this set of blocks. You can have
+multiple labels in your documents. Also, the testsetup and
+testoutput blocks are both optional. Some code examples don't need either.
 You can have multiple testcode blocks for a single testsetup block. The
 environment is preserved across all of the testcode blocks in a given group, so
 that the code executed in the first testcode block in Group1 affects all later
@@ -288,10 +292,10 @@ blocks in Group1.
 
 The label is optional, and defaults to *default* when not explicitly defined.
 
-There is one other directive of note. The *doctest* directive is used to mark
-blocks of interactive shell Python code. Note that if the directive is omitted,
-the doctest builder can often find the Python blocks by itself, but it is
-still good form to include it.
+The *doctest* directive is used to specify blocks of interactive shell Python
+code. If the directive is omitted, the doctest builder can often
+find the Python blocks by itself, but it is still a good idea to include it so
+that you can control the environment.
 
 ::
 
@@ -346,7 +350,8 @@ More details on the *literalinclude* directive can be found at http://sphinx.poc
   function class, you may have to get creative in what you place in your testsetup block (e.g., defining
   *self* as something.)
 
-* Tracebacks don't have to be accurately reproduced (and they can't be anyway). Handle these the same way they are in doctest, that is:
+* Tracebacks don't have to be accurately reproduced (and they can't be
+  anyway). Handle these by replacing the traceback with elipses:
 
     >>> my_engine.set("RPM",7500)
     Traceback (most recent call last):
@@ -366,11 +371,13 @@ More details on the *literalinclude* directive can be found at http://sphinx.poc
     >>> numpy.pi 
     3.14...
 
+* Sphinx automatically generates syntax highlighting for the code block, but it can get confused if you mix tabs and spaces.
+    
 *Running the Tests*
 +++++++++++++++++++
 
-The build procedure currently generates a script for testing the code in the
-documents. In an active openmdao virtual environment, type:
+The doctests are automatically run whenever you run ``openmdao_test``, but you can also run them separately.
+In an active openmdao virtual environment, type:
 
 ::
 
@@ -382,7 +389,7 @@ If the output ends with "build succeeded", then the test was successful, e.g.,
 
     Doctest summary
     ===============
-        37 tests
+      156 tests
         0 failures in tests
         0 failures in setup code
     build succeeded.
@@ -390,7 +397,6 @@ If the output ends with "build succeeded", then the test was successful, e.g.,
 If any tests fail, they will also be noted in this summary, and specific tracebacks
 will be given for each failure earlier in the output.
 
-The document testing is also part of the full testing process and is executed as part of the normal
-``openmdao_test``.
+.. note:: If you make changes to the docs, you must rebuild the docs by running openmdao_build_docs.
 
 

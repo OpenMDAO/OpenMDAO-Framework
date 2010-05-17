@@ -17,7 +17,7 @@ need to function properly as an OpenMDAO component.
 
 .. _plugin_overview_Code1: 
 
-.. testcode::plugin_example
+.. testcode:: plugin_example
 
     from openmdao.lib.api import Float
     
@@ -47,7 +47,7 @@ are inputs, so we specify that they have an *iotype* of *'in'*. Attribute
 The *Float* variable is defined in the package ``openmdao.lib.api``, so we have
 to import it from there before we can use it. This 
 package defines a wide variety of traits, including basic types like *Int*,
-*Str*, and *Bool*; containers like *List* and *Dictionary*; and others. Public Variables
+*Str*, and *Bool*; containers like *List* and *Dict*; and others. Public Variables
 are actually based off of Enthought's Traits, and a larger selection of less commonly used
 traits are available by importing from the package ``enthought.traits.api``.
 To learn more about traits, you may want to look at the 

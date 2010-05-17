@@ -272,7 +272,7 @@ shown below.
     create a distribution for the package.
     
 ``openmdao.<package>/src``
-    Contains all of the package source code.
+        Contains all of the package source code.
     
 ``openmdao.<package>/src/openmdao``
     Contains a special ``__init__.py`` file and a ``<package>``
@@ -283,3 +283,5 @@ shown below.
     is located.  There could be a standard Python package directory structure
     under this directory as well.
     
+``openmdao.<package>/src/openmdao/<package>/test``
+    Contains unit tests for this package. These are executed by openmdao_test.

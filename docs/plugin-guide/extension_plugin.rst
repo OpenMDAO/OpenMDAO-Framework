@@ -7,13 +7,13 @@
 Building a Plugin that Contains a Python Extension
 ==================================================
 
-It will often be the case that there is some existing application, written in some language 
+Many of you will have an existing application written in some language 
 other than Python, that needs to be turned into an openMDAO component. This section and the one 
-that follows present some examples illustrating this process. The process of building a Python
+that follows present some examples to show you how to do this. The process of building a Python
 extension to some external code is called *wrapping.* There are generally two ways to wrap an
 application: direct wrapping and file wrapping. In a direct wrap, data is passed directly into
-and out of the wrapped function through memory, while in a file wrap an intermediate data file
-is used.
+and out of the wrapped function through memory, while in a file wrap intermediate data files
+are used.
 
 When to direct wrap:
 
@@ -27,7 +27,7 @@ When to file wrap:
 
 - Source (or linkable library) is unavailable
 - Source passes data via file I/O
-- There are no resources to modify legacy code to pass data as arguments
+- You don't have the resources to modify a legacy code to pass data as arguments
 
 In general, a direct wrap should have better performance and should be less problematic, but
 it is not always a viable option. To learn how to file-wrap in OpenMDAO, see 
@@ -62,7 +62,7 @@ particularly with arrays, which are converted into NumPy's numerical arrays on t
 most attractive feature of F2PY is its simplicity--it can be quickly learned and used without
 understanding the details under the hood.
 
-Note that while F2PY was developed for use with Fortran, it can also wrap C functions with almost as 
+While F2PY was developed for use with Fortran, it can also wrap C functions with almost as 
 much ease. An example of wrapping a C function with F2PY can be found in :ref:`Wrapping-an-External-Module-Using-F2PY`
 in the OpenMDAO Tutorial.
 
@@ -70,10 +70,6 @@ To illustrate the creation of an OpenMDAO component from a Fortran function, we'
 tutorial. The following instructions will help you locate the directory containing the pieces
 needed for the model relative to the install directory:
 
-If you have a branch from the source repository:
-
-	``examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation``
-	
 If you have downloaded the latest release version from the website:
 
 	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.bar3simulation-X.X.X-######.egg/openmdao/examples/bar3simulation``
@@ -81,8 +77,12 @@ If you have downloaded the latest release version from the website:
 where X.X.X is the current OpenMDAO version, and ###### is a string that
 contains the Python version, and the Operating System description. This will
 vary depending on your system and version, but there will only be one
-*bar3simulation* egg.
+*bar3simulation* in your distribution.
 
+If you are a developer, and have a branch from the source repository:
+
+	``examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation``
+	
 Note that a Fortran compiler is required. The instructions presented here are
 applicable to the UNIX and Mac OSX environments. There may be some differences on the Windows
 platform.
@@ -120,10 +120,10 @@ comments.
 This example showcases the "quick and smart way." An example of the "smart way" can be found in 
 :ref:`Wrapping-an-External-Module-Using-F2PY`, where a signature file is included
 as part of the engine design tutorial. The "quick and smart way" should be fine for most cases,
-provided there are no objections to inserting new comments into the existing source code. For
-some cases, the extra flexibility of the signature file may be needed; one specific example
-would be a case where you only want to expose one function from a Fortran file that contains
-several. What you can do in this case is instruct F2PY to generate this signature file,
+provided there are no objections to inserting new comments into your existing source code. For
+some cases, the extra flexibility of the signature file may be needed. One specific example
+is a case where you only want to expose one function from a Fortran file that contains
+several functions. What you can do in this case is instruct F2PY to generate a signature file,
 after which you can edit it to your satisfaction.
 
 Subroutine *runbar3truss* has the following interface:
@@ -201,10 +201,10 @@ be imported into Python just like any Python file:
 
     from openmdao.examples.bar3simulation.bar3 import runbar3truss, forces
 
-Note that the namespace comes from OpenMDAO's structure. Here, we import both the function
-*runbar3truss* and the common block *forces*. Calling into this function is similar to
-calling a Python function; inputs are passed in as arguments, and outputs are returned
-on the right-hand side.
+Here, we import both the function *runbar3truss* and the common block
+*forces*. Calling into this function is similar to calling a Python function.
+Inputs are passed in as arguments, and outputs are returned on the right-hand
+side.
 
 .. testcode:: bar3_wrap
 
@@ -245,7 +245,7 @@ opening OpenMDAO's local Python environment:
     <BLANKLINE>    
 
 The docstring can be useful for figuring out the arguments and returns for the
-generated function. Note that most of the values passed here are floats, which
+generated function. Most of the values passed here are floats, which
 are analogous to Double Precision variables in Fortran. The load is stored in
 *pvec,* which is an array that contains the x and y components of the force. To
 pass this into the Fortran subroutine, it needs to be in the form of a NumPy
@@ -271,11 +271,11 @@ the values of the bar forces in a common block as *force1, force2,* and *force3.
     bar2_force = float(forces.force2)
     bar3_force = float(forces.force3)
     
-Note that scalar variables in the common block get returned to Python as a
+Scalar variables in the common block get returned to Python as a
 zero-dimensional NumPy array. Their values can be accessed by casting them as
 floats or int. We can also input values into the common block. In practice,
-the common block will probably be frequently used for passing variables as
-opposed to cluttering the function interface.
+the common block will sometimes be used for passing minor variables without
+cluttering the function interface.
 
 Further examples of a more complicated wrap can be seen in the source for the OpenMDAO 
 wrapper of the CONMIN optimizer (``conmindriver.py``).
