@@ -145,10 +145,10 @@ class Assembly (Component):
             if isinstance(obj, Component):
                 # since the internals of the given Component can change after it's
                 # added to us, wait to collect its io_graph until we need it
-                self._child_io_graphs[obj.name] = None
-                self._need_child_io_update = True
                 if add_to_workflow:
                     self.workflow.add_node(obj.name)
+        self._child_io_graphs[obj.name] = None
+        self._need_child_io_update = True
         return obj
         
     def remove_container(self, name):

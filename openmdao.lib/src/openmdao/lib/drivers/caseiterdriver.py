@@ -41,7 +41,7 @@ class CaseIteratorDriver(Driver):
 
     iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
     recorder = Instance(object, desc='Something to append() to.', required=True)
-    model = Instance(Component, desc='Model to be executed.', required=True)
+    #model = Instance(Component, desc='Model to be executed.', required=True)
     
     sequential = Bool(True, iotype='in',
                       desc='Evaluate cases sequentially.')
@@ -142,7 +142,13 @@ class CaseIteratorDriver(Driver):
                 # Must do this before creating any locks or queues.
                 self._replicants += 1
                 version = 'replicant.%d' % (self._replicants)
-                egg_info = self.model.save_to_egg(self.model.name, version)
+                drivers = self.parent.drivers
+                self.parent.drivers = []
+                try:
+                    #egg_info = self.model.save_to_egg(self.model.name, version)
+                    egg_info = self.parent.save_to_egg(self.name, version)
+                finally:
+                    self.parent.drivers = drivers
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
@@ -443,7 +449,7 @@ class CaseIteratorDriver(Driver):
     def _model_set(self, server, name, index, value):
         """ Set value in server's model. """
         if server is None:
-            self.model.set(name, value, index)
+            self.parent.set(name, value, index)
         else:
             self._top_levels[server].set(name, value, index)
         return True
@@ -451,7 +457,7 @@ class CaseIteratorDriver(Driver):
     def _model_get(self, server, name, index):
         """ Get value from server's model. """
         if server is None:
-            return self.model.get(name, index)
+            return self.parent.get(name, index)
         else:
             return self._top_levels[server].get(name, index)
 
@@ -460,7 +466,7 @@ class CaseIteratorDriver(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
-                self.model.run()
+                self.parent.workflow.run()
             except Exception as exc:
                 self._exceptions[server] = exc
                 self.exception('Caught exception: %s' % exc)
