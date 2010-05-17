@@ -6,19 +6,18 @@
 A More Complex Tutorial Problem
 ================================
 
-This tutorial covers some of the more advanced capabilities of OpenMDAO. If you have not
-completed the :ref:`Getting-Started-with-OpenMDAO`, then you should read and understand
-that example before starting this one.
+This tutorial covers some of the more advanced capabilities of OpenMDAO. You should read and understand
+the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` before starting this one.
 
 Problem Overview
 ----------------
 
-The objective of the tutorial problem is to design an automobile that performs "well" as measured
-by three metrics: 
+The objective of this tutorial problem is to design an automobile that performs "well" as measured
+by these three metrics: 
 
-- The time to accelerate from rest to 60 mph
-- The fuel economy as measured by the EPA highway driving test
-- The fuel economy as measured by the EPA city driving test
+- Time to accelerate from rest to 60 mph
+- Fuel economy as measured by the EPA highway driving test
+- Fuel economy as measured by the EPA city driving test
 
 We will be designing a conventional automobile with a gasoline-fueled internal
 combustion engine and a 5-speed manual transmission. Our scope is preliminary
@@ -28,7 +27,7 @@ space via multiple executions. An existing vehicle simulation was not
 available in the desired form, so we developed one based on physical first
 principles. The mathematical model for the engine came from open literature.
 
-In order to simulate these performance metrics, we need a model of the
+To simulate these performance metrics, we need a model of the
 vehicle's power-train, including the engine, the transmission, and the rear
 differential. We also need the equations of motion for driving the vehicle. A
 logical way to divide the vehicle model is to break it into component models
@@ -38,16 +37,16 @@ component models will be a separate implementation, possibly with different
 authors or vendors. The design variables for each subsystem are detailed
 below.
 
-A vehicle contains an engine, a transmission, and a chassis component. Each of
-these subsystems is described by some kind of mathematical model that depends
-on a set of design variables (e.g., compression ratio.) There are also 3
-simulation variables: throttle position, gear, and velocity. These variables
-are independent of any design, and are used during simulation while the
-vehicle model is being "driven" to determine the metrics. There are also a
-couple of internal inputs, such as RPM and Power that are provided by other
-components in the vehicle. These inter-dependencies define the connection
-order for vehicle components in terms of the Data Flow: Transmission -> Engine
--> Chassis.
+The engine, transmission, and chassis subsystems of a vehicle are each
+described by some kind of mathematical model that depends on a set of design
+variables (e.g., compression ratio.) There are also three  simulation
+variables: throttle position, gear, and velocity. These variables are
+independent of any design and are used during simulation while the vehicle
+model is being "driven" to determine the metrics. There are also a couple of
+internal inputs, such as RPM and Power, that are provided by other components
+in the vehicle. These inter-dependencies define the connection order for
+vehicle components in terms of the Data Flow: Transmission -> Engine ->
+Chassis.
 
 .. _`process-model`:
 
@@ -143,8 +142,8 @@ We used a model published in a master's thesis by S. Sitthiracha (`1`_). It is
 a physics-based model of the Otto cycle in a 4-stroke spark-ignition internal
 combustion engine. This model allows the construction of a parametrized engine
 model with 10 design inputs covering the engine mechanical design (cylinder
-bore, stroke, connecting rod length, and compression ratio), intake valve
-design (diameter and lift), and the cycle timing (for both intake and spark.)
+bore, stroke, connecting rod length, and compression ratio); intake valve
+design (diameter and lift); and the cycle timing (for both intake and spark).
 In the thesis, the model is implemented in Simulink and simulated using data
 from a family of Mercedes-Benz engines designed in 1969. The model includes
 the effects of burn duration, heat loss through the cylinder wall, losses due
@@ -155,28 +154,27 @@ speed ranging from 1000 RPM to 6000 RPM.
 Sitthiracha's model also includes the fuel type as a design variable. This
 introduces a half dozen parameters that are dependent on the fuel chemistry.
 To keep our model simple, we set these parameters to values appropriate for
-gasoline and did not provide as design inputs for the engine model. It would
-not be difficult to modify the component code to allow any of these to be used
-as design variables, given what will be learned from the tutorial problem.
+gasoline and did not provide them as design inputs for the engine model.
+However, it would not be difficult to modify the component code so any of
+these could be used as design variables.
 
-There were a couple of errors in the equations presented in Sitthiracha's
-model and a couple of factors that needed to be adjusted to obtain good
-results. The Sitthiracha model also assumed wide-open throttle, so the effect
-of a throttle was modeled as an additional restriction on the intake flow into
-the cylinder. For simulation, relating the throttle position to an actual
-physical foot position is not important. All that is needed is a continuum of
-throttle settings between closed and wide open. This model assumes that closed
-is 1% of open, but the simulation currently drives it using a minimum of 7%,
-which gives a more realistic performance.
+Sitthiracha's model contained a couple of errors in the equations, and a couple
+of factors needed to be adjusted to obtain good results. His model also assumed
+wide-open throttle, so the effect of a throttle was modeled as an additional
+restriction on the intake flow into the cylinder. For simulation, relating the
+throttle position to an actual physical foot position is not important. All that
+is needed is a continuum of throttle settings between closed and wide open. This
+model assumes that closed is 1% of open, but the simulation currently drives it
+using a minimum of 7%, which gives a more realistic performance.
 
-The design variables in this problem allow for some significant modification
-to the engine design. This strongly affects the engine weight, so we need to
-estimate this. A report by Shikida (`2`_) contains some empirical data taken
-from a sampling of engines present in the Japanese market in 2000. This data
-maps engine displacement and weight vs power. Displacement is essentially a
-measurement of the engine size, and can be calculated from the design
-parameters, so a linear fit between engine weight and displacement is used by
-the engine model to estimate the engine weight and provide it as an output.
+The design variables in this problem allow for some significant modification to
+the engine design. This strongly affects the engine weight, so we need to estimate
+this. A report by Shikida (`2`_) contains some empirical data taken from a
+sampling of engines present in the Japanese market in 2000. This data maps engine
+displacement and weight vs power. Displacement is essentially a measurement of the
+engine size and can be calculated from the design parameters, so the engine model
+uses a linear fit between engine weight and displacement to estimate the engine
+weight and provide it as an output.
 
 
 **Engine - Design Variables:**
@@ -246,10 +244,11 @@ Speed 2ZZ-GE Engine," SAE World Congress, March 6-9 2000, SAE 2000-01-0671.
 *The Chassis Model*
 ____________________________
 
-The chassis model must provide the vehicle acceleration given the torque produced by
-the engine and scaled by the transmission. The equation used for the model comes from summation of the
-forces acting on the vehicle in the forward direction. These forces include both the rolling friction
-associated with the tires and the vehicle drag which is proportional to the square of velocity.
+The chassis model must provide the vehicle acceleration given the torque
+produced by the engine and scaled by the transmission. The equation used for
+the model is tthe sum of the forces acting on the vehicle in the forward
+direction. These forces include both the rolling friction associated with the
+tires and the vehicle drag which is proportional to the square of velocity.
 
 
 
@@ -295,11 +294,12 @@ acceleration	   Vehicle instantaneous acceleration		m/(s*s)
 =================  ===========================================  ======
 
 |
-|
  
 *Simulating the Acceleration Test (0-60)*
 _________________________________________
 
+.. todo:  I am hiding this quote by using the todo directive without the last colon. When more humor is
+   ready to be injected, these lines can be deleted and the quote will show up.
 
 	"I saw this in a movie about a bus that had to **speed** around a city, keeping its **speed** over fifty and if its **speed** dropped, it would explode! I think it was called ... *The Bus That Couldn't Slow Down.*" 
 						-- Homer Simpson
@@ -320,12 +320,13 @@ locations.
 *Simulating the EPA Mileage Tests*
 __________________________________
 
-The EPA mileage tests give an estimate of the fuel consumed while driving a pre-determined velocity profile
-that represents a particular class of driving, the two most well-known of which represent typical city
-driving and highway driving. These tests aren't actually performed on the open road but are instead done in
-the EPA testing garage with the tires on rollers and a hose connected to the exhaust pipe, measuring the 
-composition of the exhaust gasses. The test still uses a driver, who must follow a velocity profile given on
-a computer screen. The actual velocity profiles are available on the EPA website as follows:
+The EPA mileage tests give an estimate of the fuel consumed while driving a pre-determined
+velocity profile that represents a particular class of driving, the two most well-known of
+which represent typical city driving and highway driving. These tests aren't actually
+performed on the open road but are instead done in the EPA testing garage with the tires on
+rollers and a hose connected to the exhaust pipe to measure the composition of the
+exhaust gases. The test still uses a driver who must follow a velocity profile given on a
+computer screen. The actual velocity profiles are available on the EPA website as follows:
 
 .. _`EPA City Driving Profile`:
 
@@ -354,7 +355,7 @@ summarized by the following procedure:
 
 The trickiest part of the entire simulation is determining the right gear. The simulation has to test the
 acceleration at min and max throttle to determine if the required acceleration is possible in that gear. The
-simulation also has to make sure the engine RPM lies within the its min and max values. For low speed (under
+simulation also has to make sure the engine RPM lies within its min and max values. For low speed (under
 10 mph), the transmission is always set to first gear.
 
 Once the gear is determined, a bisection method is used to find the throttle position that matches the
@@ -375,16 +376,17 @@ section will examine these components.
 The following instructions will help you locate the directory containing the pieces
 needed for the model.
 
-If you have downloaded the latest release version from the website:
+If you have downloaded the latest release version from the website, you should see something similar to
+this,
 
 	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign``
 	
 where X.X.X is the current OpenMDAO version, and ###### is a string that
-contains the Python version and the operating system description. This will
-vary depending on your system and version, but there will only be one
+contains the Python version and the operating system description. What you see will
+vary depending on your system and version, but there will be only one
 *enginedesign* egg.
 
-If you are a developer and have a branch from the source repository:
+If you are a developer and have a branch from the source repository, you will see:
 
 	``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``
 	
@@ -393,8 +395,8 @@ be useful to browse these files as you learn some of the basic concepts in this 
 
 **Building a Python Component**
 
-The first thing we will do is create an OpenMDAO *Component* called Transmission. Recall
-that a *Component* contains inputs and outputs, and provides a method to calculate its outputs
+The first thing we will do is create an OpenMDAO Component called *Transmission.* You may recall
+that a Component contains inputs and outputs and provides a method to calculate its outputs
 from its inputs. We must create the public variables that define these inputs and outputs.
 
 .. testcode:: Code2
@@ -430,12 +432,12 @@ from its inputs. We must create the public variables that define these inputs an
 	    torque_ratio = Float(0., iotype='out',
 	             desc='Ratio of output torque to engine torque')    
 
-The *Int* and *Float* variable types were introduced in previous tutorials, but some new parameters are
-used here. The *Enum* type is also introduced.
+The Int and Float variable types were introduced in previous tutorials, but some new parameters are
+used here, including the *Enum* type.
 
 .. index:: PEP 8
 
-In this example, we use some more complicated names for our public variables, so we should cover what makes a
+In this example, we use more complicated names for our public variables, so we should cover what makes a
 valid variable name. Public variables are also Python variables, so they must follow Python's standard
 naming convention. They must begin with a letter or underscore and should consist of only alphanumeric characters and the
 underscore. Keep in mind that a leading underscore is generally used for private data or functions. **Spaces cannot be used
@@ -447,31 +449,31 @@ The required parameter *iotype*, the optional parameter *desc*, and the
 default value are covered in previous tutorials. The parameter *units* is
 introduced here and is used in a few of the public variables in Transmission. OpenMDAO contains a Units
 module that allows for unit checking and conversion between outputs and
-inputs of components. The units are defined based on the definitions given in
-Scientific Python, which can be found at :ref:`Summary-of-Units`. If an output and an
+inputs of components. Our units definitions are based on the those given in
+Scientific Python and can be found the :ref:`Summary-of-Units`. If an output and an
 input of the same unit class (e.g., length) are connected in the framework, the value is automatically
 converted as it is passed from the output to the input. If an output and an input
-of a different unit class are connected (e.g. length and time), an exception is
+of a different unit class are connected (e.g., length and time), an exception is
 raised. A variable with no units defined can be connected to a variable with units.
 
 **Only the Float type performs automatic unit conversion and checking.**
 
-The Transmission component uses an enumerated list to define the valid gear positions.
+The Transmission component uses an enumerated list to define the valid gear positions:
 
 .. testcode:: Code2
 
         current_gear = Enum(0, (0,1,2,3,4,5), iotype='in', desc='Current Gear',
                         aliases=('N','1st','2nd','3rd','4th','5th'))
 
-An enumeration is a discrete variable that has a finite number of valid states. This
+An *enumeration* is a discrete variable that has a finite number of valid states. This
 transmission is a 5-speed manual, so the valid states are gears 1 through 5 and neutral. The
-constructor begins with a default value, and a tuple containing all of the valid states. Sometimes
+constructor begins with a default value and a tuple containing all of the valid states. Sometimes
 it is beneficial to add as the *alias* parameter a second tuple containing a more descriptive
-tag. In this case, the alias "N" tells you that a value of "0" sets the gear to Neutral. The
-*Enum* is not type-restrictive. You could use the alias strings as the values, though typically
+tag. In this case, the alias *'N'* tells you that a value of 0 sets the gear to Neutral. The
+Enum is not type-restrictive. You could use the alias strings as the values, though typically
 the values are needed because you have some code that operates on an integer number. In our
 case, our simulation will upshift by adding 1 to the current gear, which it couldn't do to
-the strings. More information on *Enums* can be found in :ref:`Enums`.
+the strings. For more information, see :ref:`Enums`.
 
 Finally, ``transmission.py`` needs to do something when it is executed. This code
 illustrates how to use the input and output variables to perform a calculation. 
@@ -498,15 +500,15 @@ illustrates how to use the input and output variables to perform a calculation.
         if self.RPM < 1000.0 and self.current_gear == 1 :
             self.RPM = 1000.0
 	    
-Recall that inputs and outputs are attributes of our component, so they are accessed using
+You may recall that inputs and outputs are attributes of our component, so they are accessed using
 ``self.variablename``. It is generally a good idea to create a local copy of a public
 variable for doing calculations in the component for improved efficiency and ease of reading.
 
 We have also imported and used the *convert_units* function to convert the value of velocity
-from units of *mi/h* to units of *inch/min*. This makes the units consistent for the calculation
-of RPM. The *convert_units* function provides unit conversion capability for your internal
-variables. We could also change the definition of the velocity Float, specifying the *units*
-as 'inch/min', and then the *convert_units* call would not be needed.
+from units of mi/h to units of inch/min. This makes the units consistent for the calculation
+of RPM. The convert_units function provides unit conversion capability for your internal
+variables. We could also change the definition of the velocity Float, specifying the units
+as 'inch/min', and then the convert_units call would not be needed.
 
 The transmission model is now complete, and the next section will show how to interact with
 it in the Python shell. The engine and chassis are created in a similar manner. However, the 
@@ -530,15 +532,15 @@ The Python implementations of the three component models (``engine.py,
 transmission.py, chassis.py``) should all make sense now. This section will
 demonstrate how to instantiate and use these components in the Python shell.
 Make sure that you have activated your Python environment before running the
-Python interpreter, so that you have access to OpenMDAO and the example problems.
+Python interpreter so that you can access OpenMDAO and the example problems.
 
-An instance of the class Engine can be created by typing the following:
+Please enter the Python shell. Create an instance of the Engine class by typing the following:
 
 	>>> from openmdao.examples.enginedesign.engine import Engine
 	>>> my_engine = Engine()
 
-The object MyEngine is an engine model with default values for all of its inputs. We can interact with the
-inputs and outputs by direct inspection:
+The object *my_engine* is an engine model with default values for all of its inputs. We can interact
+with the inputs and outputs by direct inspection:
 
 	>>> my_engine.bore
 	82.0
@@ -577,9 +579,9 @@ to this situation. Now, run the engine and examine the power and torque at
 	>>> my_engine.power
 	53.3974483...
 	
-You run a component by calling the *run* method. Recall that you define an *execute* method when you
-create a component. The *run* method calls *execute*, but also does some other things. Always run your
-component with *run*.
+You run a component by calling the *run* method. Recall that you define an execute method when you
+create a component. The run method calls execute but also does some other things. Always run your
+component with *run.*
 
 .. index:: Assembly
 
@@ -627,11 +629,11 @@ Engine, and Chassis components.
 	        self.add_container('chassis', Chassis())
 
 The Engine, Transmission, and Chassis components all need to be imported so
-their instances can be created, and so they can be added to the assembly
+their instances can be created; they can be added to the assembly
 with *add_container*. Please notice that an assembly inherits from Assembly
 instead of Component. When the instances of the Transmission, Engine, and
 Chassis are created, their members and data are internally accessible using
-self plus the instance name, e.g., `self.transmission`.
+*self* plus the instance name, e.g., ``self.transmission``.
 
 Now that the components are instantiated in the assembly, they need to be hooked up:
 
@@ -703,8 +705,8 @@ this quickly by creating passthroughs:
 	self.create_passthrough('chassis.mass_vehicle')
 	self.create_passthrough('chassis.Cf')
 		
-The *create_passthrough* function is a shortcut that creates an identical public variable
-in the assembly, and connects it to the corresponding component variable. So now, all of the
+The *create_passthrough* function creates an identical public variable
+in the assembly and connects it to the corresponding component variable. So now, all of the
 design variables are available as public variables in any simulation that includes an instance
 of the vehicle model.
 
@@ -712,7 +714,7 @@ However, the engine tutorial throws you a curve ball here. The Engine
 and Chassis components are defined with SI units, but the Transmission
 component is defined with English units. We have two inputs -- the tire
 circumference and the vehicle velocity -- that are each used by two components
-with different units. The *create_passthrough* function creates an exact copy
+with different units. The create_passthrough function creates an exact copy
 of the public variable, so we cannot use it here. Instead, we must connect them manually
 by declaring variables in our assembly.
 
@@ -810,7 +812,7 @@ implementing a numerical algorithm, particularly where performance is important.
 the engine model can be improved by implementing it in a compiled language like C or Fortran.
 
 Python was designed to be smoothly integrated with other languages, in
-particular C and related languages Fortran and C++. This is important for a
+particular, C and related languages Fortran and C++. This is important for a
 scripting language, where code execution is generally slower, and it is often
 necessary to use a compiled language like C to implement computationally
 intensive functions. To complement Python's native integration ability, the
@@ -820,21 +822,22 @@ Python community has developed some excellent tools, such as `F2PY
 building the wrapper for a code. As the name implies, F2PY is a Python utility
 that takes a Fortran source code file and compiles and generates a wrapped
 object callable from Python. More information on getting your codes to run in
-Python can be found in :ref:`Plugin-Developer's-Guide`.
+Python can be found in the :ref:`Plugin-Developer-Guide`.
 
 The main algorithm in ``engine.py`` was rewritten in C as ``engine.C``. A
 wrapped shared object of ``engine.C`` was created using F2Py; this tool can
 also be used to generate wrappers for C code provided that the signature file
-``engine.pyf`` is manually created. This file ``engine.pyf`` defines the
+``engine.pyf`` is manually created. The file ``engine.pyf`` defines the
 interface for the functions found in ``engine.C``. The C code has been placed
 in a function called *RunEngineCycle* which can be imported and takes the design and simulation
 variables as inputs.
 
-The intent of this exercise is not to teach you how to write a signature file. Some more
-information on this topic can be found in :ref:`Creating-an-Extension-with-F2PY`, and more
-extensive details can be found in `F2PY Users Guide <http://cens.ioc.ee/projects/f2py2e/usersguide/index.html>`_.
+The intent of this exercise is not to teach you how to write a signature file. More
+information on this topic can be found in :ref:`Creating-an-Extension-with-F2PY`, while more
+extensive details can be found in the `F2PY Users Guide <http://cens.ioc.ee/projects/f2py2e/usersguide/index.html>`_.
 
-The shared object can be generated using the existing signature file and C code by issuing the following command
+The shared object can be generated using the existing signature file and C code by issuing the
+following command:
 
 ::
 
@@ -865,7 +868,7 @@ run the original Python implementation of Engine, type:
 
     python engine.py
     
-and note the elapsed time, which is printed after the engine completes its run. Now type:
+Note the elapsed time, which is printed after the engine completes its run. Now type:
     
 ::
 
@@ -899,7 +902,7 @@ be implemented as a :term:`Socket`.
 
 .. todo::
 
-	Define an interface for Vehicle, and add more info on that to this part
+	Define an interface for Vehicle and add more info on that to this part
 	of the tutorial. Sockets are not yet fully defined, so the vehicle instance
 	is currently stored directly in the DrivingSim class.
 
@@ -922,21 +925,16 @@ EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 Setting up an Optimization Problem
 ----------------------------------
 
-The final step is to create a *top level Assembly* that defines the problem using DrivingSim and the vehicle assembly.
-The *top level Assembly* is a container that can be thought of as the workspace where the model is built, or the container that
-ultimately contains the entire model. Functionally, it's no different than an assembly such as Vehicle.py. 
-Any OpenMDAO model can be packaged up and inserted into some other model as a component. Generally, the *top level Assembly*
-contains one or more Components or Assemblies. It may also contain a solution driver, or it may just rely on sequential
-execution based on the data flow.
+The final step is to create a top level Assembly that defines the problem using DrivingSim and the vehicle assembly.
 
 The first problem we would like to solve is a single objective optimization problem where we adjust some of the design
-variables to minimize the 0-60 acceleration time. The chosen design variables are the *bore* and *spark angle*. The optimal value
-of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second variable cannot
-be optimized by mere inspection. 
+variables to minimize the 0-60 acceleration time. The chosen design variables are the bore and spark angle. The optimal value
+of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second
+variable cannot be optimized by mere inspection. 
 
 The optimization will be handled by the gradient optimizer CONMIN.
 
-In ``engine_optimization.py``, we define the class EngineOptimization, and
+In ``engine_optimization.py``, we define the class EngineOptimization and
 create an instance of DrivingSim and CONMINdriver:
 
 .. testcode:: Code9
@@ -1004,7 +1002,7 @@ EngineOptimization class, setting it as the top assembly.
 	<openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at ...>
 
 The problem is set up like above. We could run it now, but first let's find out how
-the current design performs. We can do this by running the Vehicle component once,
+the current design performs. We can do this by running the Vehicle component once
 and printing the value of the acceleration time.
 
 .. doctest:: optimization_fun
@@ -1035,7 +1033,7 @@ but should be finished in less than a minute.
 	-28.965...
 
 The optimizer has found a new solution that has a much faster acceleration
-time -- 5.4 seconds vs 7.5. This was accomplished by increasing the bore to
+time: 5.4 seconds vs 7.5. This was accomplished by increasing the bore to
 its maximum value, which makes the engine larger, and by optimizing the
 spark timing.
 
@@ -1046,12 +1044,12 @@ You can run this same problem at the command prompt by typing:
     python engine_optimization.py
 
 This script prints out a little more information than we've shown in this
-example. See :ref:`Getting-Started-with-OpenMDAO` for a refresher on how
+example. See the :ref:`simple tutorial problem <Getting-Started-with-OpenMDAO>` for a refresher on how
 to set up a component to run at the command prompt.
 
 The Expression can be used to pose more sophisticated objective expressions
 that are functions of multiple simulation variables. For example, if you want
-to maximize *accel_time* instead of minimizing it, you can do this by negating
+to maximize accel_time instead of minimizing it, you can do this by negating
 the expression:
 
 .. testsetup:: Code10
@@ -1119,4 +1117,4 @@ Try solving the same optimization problem using this objective.
 	>>> prob.driving_sim.EPA_highway
 	38.696...
 
-This concludes the more complex tutorial problem.
+You have now completed the more complex tutorial problem.

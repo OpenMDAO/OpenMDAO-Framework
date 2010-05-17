@@ -1,6 +1,6 @@
 .. index:: simple example
 
-.. _Getting-Started-with-OpenMDAO:
+.. _`Getting-Started-with-OpenMDAO`:
 
 Getting Started: A Simple Tutorial Problem
 ==========================================
@@ -38,32 +38,45 @@ variables (*x* and *y*) to minimize the output of the paraboloid function
 on the inputs (*x* and *y*) and returns the value of the function (*f*)
 evaluated at those inputs. Both the driver and the component are contained in
 an :term:`Assembly`, which maintains the connections between the driver and
-the component, and knows how to run the system.
+the component and knows how to run the system.
 
-The following instructions will help you locate the directory containing
-the pieces needed for the model.
+In this tutorial, you will build a simple OpenMDAO model from scratch. If you get 
+stuck, or want to see the completed tutorial, you can find it in one of the following
+locations.
 
-If you have downloaded the latest release version from the website:
+If you have downloaded the latest release version from the website, you should see something like this,
 
     ``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.simple-X.X.X-######.egg/openmdao/examples/simple``
     
 where X.X.X is the current OpenMDAO version, and ###### is a string that
-contains the Python version and the operating system description. This will
-vary depending on your system and version, but there will only be one
+contains the Python version and the operating system description. What you see will
+vary depending on your system and version, but there will be only one
 *simple* egg.
     
-If you are a developer, and have a branch from the source repository:
+If you are a developer and have a branch from the source repository, you will see:
 
     ``examples/openmdao.examples.simple/openmdao/examples/simple``
     
+Getting Started
+---------------
+
+The first thing you must do before running OpenMDAO is to activate the enviroment. If
+you have not done this, then please refer to the instructions in the section on 
+:ref:`installation <Installation>`.
+
+With the environment activated, you can run OpenMDAO from anywhere by typing "python" and
+the name of a Python script. We recommend creating a clean directory somewhere and starting
+your work there. You will need some kind of editor to create the Python files, so use
+whichever editor you are familiar with using.
+
 .. index:: Component
 
 Building a Component - Paraboloid
 ---------------------------------
 
 A component takes a set of inputs and operates on them to produce a set of
-outputs. In the OpenMDAO architecture, a class called :term:`Component`
-provides this behavior. Any :term:`Component` has inputs and outputs and
+outputs. In the OpenMDAO architecture, a class called *Component*
+provides this behavior. Any Component has inputs and outputs and
 contains a function called *execute* that calculates the outputs based on the
 values of the inputs. Let's take a look at how we would implement the
 paraboloid as an OpenMDAO component:
@@ -93,30 +106,31 @@ paraboloid as an OpenMDAO component:
         
         self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
+Your component should look pretty close to this when it is complete. 
 To implement a component in the OpenMDAO framework, you write some Python
-code and place it in a file. This file is called a module in Python.
+code and place it in a file. This file is called a *module* in Python.
 Typically, a module will contain one component, although you can include more
 than one component in a single file. The file ``paraboloid.py`` contains the
 code shown above. Later in this tutorial we will discuss how to execute a
 model containing this component.
 
 In Python, a class or function must be imported before it can be used. Most of
-what you need in OpenMDAO can be imported from: *openmdao.main.api* and
-*openmdao.lib.api*.
+what you need in OpenMDAO can be imported from: ``openmdao.main.api`` and
+``openmdao.lib.api``.
 
 The first two lines in the ``paraboloid.py`` module import the definitions
 of the Component class and the Float class.  We will use these in the definition
-of our Paraboloid class. 
+of our Paraboloid class. Open an editor and create a file called ``paraboloid.py``.
+Copy these two lines into that file by typing:
 
 .. testcode:: simple_component_Paraboloid_pieces
 
     from openmdao.main.api import Component
     from openmdao.lib.api import Float
     
-There are many other objects that we could import from ``openmdao.main.api``
-and ``openmdao.lib.api``, but we are only importing the two classes that we
-need. This is a good idea because it helps to prevent any namespace collisions
-in our module. In other words:
+We could import many other objects from ``openmdao.main.api`` and ``openmdao.lib.api``, but we are
+importing only the two classes that we need. This is a good idea because it helps to prevent any
+namespace collisions in our module. In other words:
 
 .. testcode:: package
 
@@ -147,6 +161,9 @@ Typically there are just two functions that you provide -- one for
 initialization (anything that needs to be set up once), and one to execute the
 component (calculate the outputs from the inputs.)
 
+Please edit the ``paraboloid.py`` that you created and define the class
+Paraboloid as we do above.
+
 If we stop here, we have a Paraboloid component with no inputs, no 
 outputs, and an execute function that does nothing. The next thing we need
 to do is to define the inputs and outputs in the class definition
@@ -162,25 +179,28 @@ by adding these lines:
 
 .. index:: Traits
 
-There are two kinds of variables in OpenMDAO: *internal variables* and *public variables*.
-Internal variables are variables that are used internally to a component but are
-ignored by the framework. Public variables are variables that are 
-publicly visible (and manipulable if they are inputs) in the framework. Public
-variables are declared in the class definition of a component.
+OpenMDAO has two kinds of variables: *internal* variables and *public* variables. *Internal* variables
+are used internally to a component but are ignored by the framework. *Public* variables are publicly
+visible (and manipulable if they are inputs) in the framework. Public variables are declared in the
+class definition of a component.
 
 All of our inputs and outputs are floating point numbers, so we use a type of
-public variable called *Float*. The *Float* constructor contains a default
-value and some arguments. The default value has been set to zero for the *x*
-and *y*.
+public variable called *Float*. The Float constructor contains a default
+value and some arguments. The default value has been set to zero for the x
+and y.
 
 The argument *iotype* declares this variable as an input or an output. This
 argument is required. If it is omitted (or misspelled) then the variable
 won't be visible in the framework.
 
-The argument *desc*, contains a description, or a string of text that describes this
+The argument *desc* contains a description, or a string of text that describes this
 variable. This argument, while not required, is encouraged.
 
 The variable is given a name by which it will be known internally and externally.
+
+Please edit the ``paraboloid.py`` that you created and add three variables to
+class Paraboloid. You will need to have x and y as inputs and f_xy as an output. Use
+the example above to check your work.
 
 For the Paraboloid component, we've created two inputs and one output. Later
 in this example, an optimizer will set these inputs. In later examples, we
@@ -205,14 +225,42 @@ The execute function is where you define what a component does when it runs.
 For our Paraboloid component, the equation is evaluated here. The input and
 output public variables are members of the Paraboloid class, which means that
 they must be accessed using *self*. For example, *self.x* gives you the value
-stored in *x*. This *self.* can be cumbersome in a big equation, so a pair of
-internal variables *x* and *y* are used in the calculation.
+stored in x. This *self.* can be cumbersome in a big equation, so a pair of
+internal variables, *x* and *y*, are used in the calculation.
 
 Often, you will already have the code for evaluating your component outputs,
-but it will be in some other language, such as Fortran or C/C++. The :ref:`Plugin-Developer's-Guide` 
+but it will be in some other language, such as Fortran or C/C++. The :ref:`Plugin-Developer-Guide` 
 gives some examples of how to incorporate these kinds of components into OpenMDAO.
 
-The Paraboloid component is now built and ready for inclusion in a model.
+Please edit the ``paraboloid.py`` that you created and add an execute function
+that solves the equation given above. Don't forget that indentation is important
+in Python and that your execute function must be indented so that Python knows
+it is part of the Paraboloid class. The finished result should look like the code
+from the beginning of this tutorial.
+
+To make sure this component works, let's try running it. Please enter the Python
+shell by typing
+
+::
+
+	python
+	
+at the command prompt. Now, let's create an instance of our Paraboloid component,
+set a new value for each of the inputs, run the component, and look at the output.
+
+::
+
+    >>> from paraboloid import Paraboloid
+    >>> my_comp = Paraboloid()
+    >>> my_comp.x = 3
+    >>> my_comp.y = -5
+    >>> my_comp.run()
+    >>> my_comp.f_xy
+    -17.0
+
+If you have done everything correctly, you should also get -17.0 as the solution.    
+
+The Paraboloid component is now built and ready for inclusion in a larger model.
 
 
 Building a Model - Unconstrained Optimization using CONMIN
@@ -262,18 +310,20 @@ file ``optimization_unconstrained.py``:
             self.driver.upper_bounds = [50, 50]
 
 
+Please create a file called ``optimization_unconstrained.py`` and copy this
+block of code into it. We will discuss this code next.
+	    
 .. index:: top level Assembly
 
-In OpenMDAO terminology, we describe this as the *top level Assembly.* An
-:term:`Assembly` is a container that can hold any number of components,
+An :term:`Assembly` is a container that can hold any number of components,
 drivers, and other assemblies. An Assembly also manages the connections
 between the components and assemblies that it owns, and it executes all
-components and drivers in the correct order. For our problem, this assembly
-will include a Paraboloid component and a CONMIN driver. It will tell the
-CONMIN driver when to run and what to run.
+components and drivers in the correct order. In OpenMDAO terminology, we call
+the top assembly in a model the *top level assembly.* In our problem, the top
+level assembly includes a Paraboloid component and a CONMIN driver. It will
+tell the CONMIN driver when to run and what to run.
 
-This is an Assembly, so we derive the class from Assembly instead
-of Component.
+We derive the class from Assembly instead of Component.
 
 .. testsetup:: simple_model_Unconstrained_pieces
 
@@ -289,12 +339,12 @@ of Component.
     class OptimizationUnconstrained(Assembly):
         """Unconstrained optimization of the Paraboloid with CONMIN."""
     
-For the Paraboloid component, we create an execute function to tell it what to
-do when the component is run. The *OptimizationUnconstrained* assembly does
-not need an execute function because the Assembly class already has one that
+In the Paraboloid component, we created an execute function to tell it what to
+do when the component is run. The OptimizationUnconstrained assembly does
+not need an execute function, because the Assembly class already has one that
 is sufficient for most cases. However, this assembly does need an initialize
 function to set parameters for the optimization. This is done using the
-*__init__* function.
+*__init__* function:
 
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -313,7 +363,7 @@ can lead to unexpected behavior.
 
 Next, the Paraboloid and the CONMIN driver have to be instantiated and added
 to OptimizationUnconstrained. The function *add_container* is used to add them
-to the assembly.
+to the assembly:
 
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -324,9 +374,9 @@ to the assembly.
             self.add_container('driver', CONMINdriver())
 
 Here we make an instance of the *Paraboloid* component we created above and
-give it the name paraboloid. Similarly we create an instance of the CONMIN
+give it the name *paraboloid.* Similarly we create an instance of the CONMIN
 driver and give it the name *driver.* As with other class members, these are
-now accessible in the *OptimizationUnconstrained* assembly via *self.paraboloid*
+now accessible in the OptimizationUnconstrained assembly via *self.paraboloid*
 and *self.driver.*
 
 For this problem, we want to minimize *f_xy.* In optimization, this is called
@@ -345,7 +395,7 @@ name combines the public variable name with its parents' names. You can think
 of it as something similar to the path name in a file system, but using a "."
 as a separator. This allows for two components to have the same variable name
 while still assuring that you can refer to each of them uniquely. Here, the
-*f_xy* output of the Paraboloid component is selected as the objective for
+f_xy output of the Paraboloid component is selected as the objective for
 minimization.
 
 Expressions are also used to define the design variables (decision variables)
@@ -358,10 +408,10 @@ it allows multiple design variables. These are assigned in a Python list:
             self.driver.design_vars = ['paraboloid.x', 
                                      'paraboloid.y' ]
 
-Here, both *x* and *y* are chosen as the design variables. We can also add a range
+Here, both x and y are chosen as the design variables. We can also add a range
 of validity for these variables, which allows an unconstrained optimization to be
 performed on what is essentially a bounded region. For this problem, we have
-created a lower and an upper bound, constraining *x* and *y* to lie on [-50, 50].
+created a lower and an upper bound, constraining x and y to lie on [-50, 50].
         
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -370,7 +420,7 @@ created a lower and an upper bound, constraining *x* and *y* to lie on [-50, 50]
 
 The problem is now essentially ready to execute. CONMIN contains quite a few
 additional control parameters, though the default values for many of them are
-adequate. These parameters are detailed in :ref:`CONMIN-driver`.
+adequate. These parameters are detailed in the section on :ref:`CONMIN-driver`.
         
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -387,23 +437,25 @@ problem (*fdch* and *fdchm*). If the default values are used, only two places of
 accuracy can be obtained in the calculated minimum because CONMIN's default step
 size is too large for this problem.
 
-This model is now finished, and ready to be run. The next section will show how this is done.
+This model is now finished and ready to be run. The next section will show how this is done.
 
 Executing the Simple Optimization Problem
 ------------------------------------------
 
-To run our model, we need to create an instance of OptimizationUnconstrained and tell it to run. A
-convenient way to do this is to add some code to the end of the file that contains OptimizationUnconstrained,
-so that it can be executed in Python, either at the command line or in the Python shell. Using the conditional:
+To run our model, we need to create an instance of OptimizationUnconstrained and tell it to run. We
+did this above using an interactive Python session. Try doing this for ``optimization_unconstrained.py``.
+
+We can execute this model another way. We can add some code to the end of
+the ``optimization_unconstrained.py`` so that it can be executed in Python,
+either at the command line or in the Python shell. Using the conditional
 
 ::
 
     ``if __name__ == "__main__":``
     
-we can include some Python code at the bottom of
-``optimization_unconstrained.py``. It will execute only when we call it at the
-command line or the shell, and not when another module imports it. So, the
-final lines in this file are:
+we can include some Python code at the bottom of ``optimization_unconstrained.py``. It will execute only
+when we call it at the command line or the shell, and not when another module imports it. So, the final
+lines in this file are:
 
 .. testsetup:: simple_model_Unconstrained_run
 
@@ -439,15 +491,16 @@ final lines in this file are:
         
  
 This block of code does four things. In the first statement, we create an
-instance of the class *OptimizationUnconstrained* with the name
-*opt_problem.* In the second statement, we set *opt_problem* as the top
-assembly in the model hierarchy. This will be explained in a later tutorial.
-In the fifth statement, we tell *opt_problem* to run. The model will execute
+instance of the class OptimizationUnconstrained with the name
+*opt_problem.* In the second statement, we set opt_problem as the top
+Assembly in the model hierarchy. This will be explained in a later tutorial.
+In the fifth statement, we tell opt_problem to run. The model will execute
 until the optimizer's termination criteria are reached. The rest of the
 statements print the results and report the elapsed time.
 
-Make sure that you have activated your Python environment, so that you have
-access to OpenMDAO and the example problems. At the command prompt, type:
+Please edit your copy of ``optimization_unconstrained.py`` and add the
+block of code into it. Now, save the file and type the following at the command
+prompt:
 
 ::
 
@@ -471,15 +524,19 @@ Building a Model - Constrained Optimization using CONMIN
 
 Usually, an optimization problem also contains constraints that reduce the
 design space. *Constraints* are equations or inequalities that are expressed as functions
-of the design variables. 
+of the design variables. We would like to add a constraint to our model in
+``optimization_unconstrained.py``. First, copy the file and give the new file the
+name ``optimization_constrained.py``. Inside of this file, change the name of the
+assembly from OptimizationUnconstrained to OptimizationConstrained. Don't forget to
+also change it in the bottom section where it is instantiated and run.
 
-In OpenMDAO, you can construct one with an Expression using any available public
+In OpenMDAO, you can construct a constraint with an Expression using any available public
 variables to build an expression with Python mathematical syntax. For CONMIN,
-the *constraints* parameter is a list of inequalities that are defined to be
+the constraints parameter is a list of inequalities that are defined to be
 satisfied when they return a negative value or zero and violated when they
 return a positive value.
 
-We want to add the constraint *(y-x+15)<0* to the problem. The unconstrained
+We want to add the constraint (y-x+15)<0 to the problem. The unconstrained
 minimum violates this constraint, so a new minimum must be found by
 the optimizer. We can add a constraint to our existing OptimizationUnconstrained
 model by adding one line to the init function:
@@ -489,13 +546,14 @@ model by adding one line to the init function:
         # CONMIN Constraints
         self.driver.constraints = ['paraboloid.y-paraboloid.x+15.0']
 
-This new script should be saved as optimization_constrained.py. Execute it by typing:
+So, please add this line to the __init__ function in
+``optimization_constrained.py`` and save it. Execute it by typing:
 
 ::
 
         python optimization_constrained.py
     
-When this is executed, it should produce the output:
+When it is executed, it should produce this output:
 
 :: 
 
@@ -509,4 +567,4 @@ the unconstrained problem.
 
 This concludes an introduction to a simple problem of component creation and execution in
 OpenMDAO. The next tutorial section introduces a problem with more complexity and
-presents some more of the features of the framework.
+presents additional features of the framework.

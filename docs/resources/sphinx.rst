@@ -510,10 +510,10 @@ entries should precede the section or paragraph containing the text to be indexe
 *Note that all index entries are placed flush left.* Some examples follow.
 
 **- Single term** 
-     ``.. index:: egg``         
+     ``.. index:: branch``         
 
 Will appear in the index as:
-     ``egg``
+     ``branch``
 
 **- Pair**  
      ``.. index:: pair: Python; module`` 
@@ -548,7 +548,7 @@ will appear under the P's as:
 
 ::
 
-  .. index:: component, assembly, egg, plugins
+  .. index:: Component, Assembly, Driver, plugins
 
   
 Testing Code

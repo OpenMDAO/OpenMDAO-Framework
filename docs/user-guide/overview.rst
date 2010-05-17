@@ -48,3 +48,7 @@ A :term:`Driver` is another special kind of Component. Drivers are designed to i
 over a Workflow until some condition is met. Some examples of Drivers
 are optimizers, solvers, and design space explorers.
 
+.. todo:: Expand this section
+
+This concludes a brief introduction to OpenMDAO. Please see the next section for
+details on system requirements and how to install the software.
