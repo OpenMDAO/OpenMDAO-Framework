@@ -375,16 +375,18 @@ section will examine these components.
 The following instructions will help you locate the directory containing the pieces
 needed for the model.
 
-If you have downloaded the latest release version from the website:
+If you have downloaded the latest release version from the website, the files you need should be
+here:
 
 	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign``
 	
-where X.X.X is the current OpenMDAO version, and ###### is a string that
-contains the Python version and the operating system description. This will
+X.X.X is the current OpenMDAO version, and ###### is a string that
+contains the Python version and the operating system description. This path will 
 vary depending on your system and version, but there will only be one
 *enginedesign* egg.
 
-If you are a developer and have a branch from the source repository:
+If you are a developer and have a branch from the source repository, the files you need will be
+here:
 
 	``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``
 	
