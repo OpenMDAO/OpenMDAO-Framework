@@ -5,6 +5,7 @@ from enthought.traits.api import implements
 import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
 
+from openmdao.main.interfaces import IWorkflow
 from openmdao.main.workflow import Workflow
 
 __all__ = ['Dataflow']
@@ -16,36 +17,42 @@ class Dataflow(Workflow):
     data flow order.
     """
 
+    implements(IWorkflow)
+    
     def __init__(self, scope=None):
         """ Create an empty flow. """
         super(Dataflow, self).__init__(scope=scope)
         self._no_expr_graph = nx.DiGraph()
         
-    def __contains__(self, name):
-        """Return True if this Dataflow contains a Component with the
-        given name.
-        """
-        return name in self._no_expr_graph
+    def __contains__(self, comp):
+        """Return True if this Dataflow contains the given component."""
+        return comp.name in self._no_expr_graph
+    
+    def __len__(self):
+        return len(self._no_expr_graph)
         
-    def add_node(self, name):
+    def __iter__(self):
+        """Iterate through the nodes in dataflow order."""
+        for n in nx.topological_sort(self._no_expr_graph):
+            yield getattr(self.scope, n)
+            
+    def add(self, comp):
         """Add the name of a Component to this Dataflow."""
-        self._no_expr_graph.add_node(name)
+        self._no_expr_graph.add_node(comp.name)
         
-    def remove_node(self, name):
+    def remove(self, comp):
         """Remove the name of a Component from this Dataflow."""
-        self._no_expr_graph.remove_node(name)
+        self._no_expr_graph.remove_node(comp.name)
         
-    def get_graph(self):
-        """Return the Component graph for this Dataflow."""
-        return self._no_expr_graph
-        
-    def connect(self, srccompname, destcompname, srcvarname, destvarname):
+    def connect(self, srcpath, destpath):
         """Add an edge to our Component graph from *srccompname* to *destcompname*.
         The *srcvarname* and *destvarname* args are for data reporting only.
         """
         # if an edge already exists between the two components, 
         # just increment the ref count
         graph = self._no_expr_graph
+        srccompname, srcvarname = srcpath.split('.', 1)
+        destcompname, destvarname = destpath.split('.', 1)
         try:
             graph[srccompname][destcompname]['refcount'] += 1
         except KeyError:
@@ -78,11 +85,3 @@ class Dataflow(Workflow):
         else:
             self._no_expr_graph[comp1name][comp2name]['refcount'] = refcount
 
-            
-    def nodes_iter(self):
-        """Iterate through the nodes in dataflow order."""
-        drivers = self.scope.drivers
-        self._drvsorter = None
-        
-        for n in nx.topological_sort(self._no_expr_graph):
-            yield getattr(self.scope, n)
