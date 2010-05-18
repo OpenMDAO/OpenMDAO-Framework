@@ -38,22 +38,23 @@ variables (*x* and *y*) to minimize the output of the paraboloid function
 on the inputs (*x* and *y*) and returns the value of the function (*f*)
 evaluated at those inputs. Both the driver and the component are contained in
 an :term:`Assembly`, which maintains the connections between the driver and
-the component and knows how to run the system.
+the component, and knows how to run the system.
 
-In this tutorial, you will build a simple OpenMDAO model from scratch. If you get 
-stuck, or want to see the completed tutorial, you can find it in one of the following
-locations.
+The following instructions will help you locate the directory containing
+the pieces needed for the model.
 
-If you have downloaded the latest release version from the website, you should see something like this,
+If you have downloaded the latest release version from the website, the files you need should be
+here:
 
     ``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.simple-X.X.X-######.egg/openmdao/examples/simple``
     
-where X.X.X is the current OpenMDAO version, and ###### is a string that
-contains the Python version and the operating system description. What you see will
-vary depending on your system and version, but there will be only one
+X.X.X is the current OpenMDAO version, and ###### is a string that
+contains the Python version and the operating system description. This path may
+vary depending on your system and version, but there will only be one
 *simple* egg.
     
-If you are a developer and have a branch from the source repository, you will see:
+If you are a developer, and have a branch from the source repository, the files you need will
+be here:
 
     ``examples/openmdao.examples.simple/openmdao/examples/simple``
     
