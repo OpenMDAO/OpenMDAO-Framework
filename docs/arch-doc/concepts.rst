@@ -366,7 +366,7 @@ _______________
 
 The existing implementation doesn't support any type of workflow beyond sequential
 data flow. However, a new type of workflow that allows both data flow and control 
-flow is being developed.  This new workflow will support concurrent execution and 
+flow is planned.  This new workflow will support concurrent execution and 
 conditional branching.  The current plan is to replace Assembly's single workflow
 object with two workflow objects.  One would be a concurrent workflow containing
 only Components, and the other would be a sequential workflow containing only
