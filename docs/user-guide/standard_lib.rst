@@ -371,15 +371,17 @@ public variable types can be used as design variables in any optimization.
 
 You add design varibles to genetic using the ``add_des_var`` method.
 
-.. testcode:: Genetic_add_des_var
+.. testcode:: Genetic
 
-    from openmdao.main.api import Assembly,Component
+    from openmdao.main.api import Assembly,Component, set_as_top
     from openmdao.lib.api import Genetic
-    from openmdao.main.api import Float,Int,Enum
+    from openmdao.lib.api import Float,Int,Enum
     
     class SomeComp(Component):
         """Arbitrary component with a few public variables, but which does not really do 
 	any calculations"""
+
+	w = Float(0.0,low=-10,high=10,iotype="in")
 	
 	x = Float(0.0,low=0.0,high=100.0,iotype="in")
 	y = Int(10,low=10,high=100,iotype="in")
@@ -400,6 +402,9 @@ You add design varibles to genetic using the ``add_des_var`` method.
 	    self.optimizer.add_des_var('comp.y')
 	    self.optimizer.add_des_var('comp.z')
 	    
+    top = Simulation()
+    set_as_top(top)
+	    
 In the above example, three design variables were added to the optimizer. The optimizer 
 figures out for itself what type of variable it is and behaves approriately. In all three
 cases, since no `low' or `high` arguments were provided the optimzier will use the values
@@ -412,9 +417,9 @@ list of allowed values, [-10,-5,0,7]. You can see that for `comp.z`.
 It is possible to override the `low` and `high` values from the metadata, if you wanted to
 to tell the optimizer to use a different range instead of the default. 
 
-.. testcode:: Genetic_add_des_var_min_max
-
-    self.optimizer.add_des_var('comp.x',low=5.0,high=7.0)
+.. testcode:: Genetic
+    
+    top.optimizer.add_des_var('comp.w',low=5.0,high=7.0)
 
 Now for `comp.x` the optimizer will only try values between 5.0 and 7.0. Not that `low` and `high`
 are only applicable to Float and Int public variables. For Enum public variables, `low` and `high`
@@ -426,13 +431,13 @@ Configuration
 When setting the `objective` attribute you can specify a single 
 public variable or a more complex function. 
 
-.. testcode:: Genetic_set_objective
+.. testcode:: Genetic
 
     top.optimizer.objective = "comp.x"
     
 or 
 
-.. testcode:: Genetic_set_objective_2
+.. testcode:: Genetic
 
     top.optimzier.objective = "2*comp.x+comp.y+3*comp.z"
 
@@ -442,14 +447,14 @@ a weighted combination of `comp.x`, `comp.y`, and `comp.z`.
 To set the optimizer to either minmize or maximize your objective, you set the `opt_type` attribute 
 of the driver to "minimize" or "maximize".
 
-.. testcode:: Genetic_set_opt_type
+.. testcode:: Genetic
 
     top.optimizer.opt_type = "minimize"
     
 You can control the size of the population in each generation and the maximum number of generations in 
 your optimization with the `population_size` and `generations` attributes. 
     
-.. testcode:: Genetic_popsize_generations
+.. testcode:: Genetic
 
     top.optimzier.population_size = 80
     top.optimizer.generations = 100
@@ -477,7 +482,7 @@ that more of the genes are swapped between parents, which will result in give a 
 better searching of the design space. If the rate is set too high, then it is likely that indivduals with high 
 fitness could be lost to churn. 
 
-.. testcode:: Genetic_crossover_rate
+.. testcode:: Genetic
 
     top.optimizer.crossover_rate = 0.9
 
@@ -486,7 +491,7 @@ mutation rate will help prevent stagnation in the gene pool by randomly moving t
 rate is set too high, the algorithm basically degrades into a random search through the design space. The
 allowed values are bewtween 0.0 and 1.0. 
 
-.. testcode:: Genetic_mutation_rate
+.. testcode:: Genetic
 
     top.optimizer.mutation_rate = .02
 
@@ -495,7 +500,7 @@ generation to the next due to competition, mutation, and crossover. If you want 
 individual always survives in tact from one generation to the next, then turn on the `eltisim` flag for your
 optimization. This will ensure that the best individual is always copied to the next generation no matter what. 
 
-.. testcode:: Genetic_elitism
+.. testcode:: Genetic
 
     top.optimizer.elitism = True
 
@@ -504,7 +509,7 @@ Roulette Wheel Algorithm. Also available are Tournamen Selection, Rank Selection
 This feature is controlled by the `selection_method` attribute. Allowed values are "roulette_wheel", 
 "tournament", "rank", and "uniform". 
 
-.. testcode:: Genetic_selector
+.. testcode:: Genetic
     
     top.optimizer.selection_method="rank"
 

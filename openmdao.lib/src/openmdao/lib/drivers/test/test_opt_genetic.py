@@ -13,7 +13,7 @@ from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.api import Float, Array, Enum, Int
-from openmdao.lib.drivers import genetic
+from openmdao.lib.api import Genetic
 from openmdao.main.eggchecker import check_save_load
 
 # pylint: disable-msg=E1101
@@ -49,7 +49,7 @@ class TestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         
         self.top.add_container('driver', 
-                               genetic.Genetic())
+                               Genetic())
 
     def tearDown(self):
         self.top = None
@@ -72,11 +72,12 @@ class TestCase(unittest.TestCase):
         self.top.run()
         
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               5.1414,places = 4)
+                               .1920,places = 4)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, 0.3761, places = 4)
-        self.assertEqual(y, 1)
-        self.assertEqual(z, 2)    
+        self.assertAlmostEqual(x, -0.4381, places = 4)
+        self.assertEqual(y, 0)
+        self.assertEqual(z, 0)
+        
         
     def test_optimizeSphere(self):
         self.top.add_container('comp', SphereFunction())
@@ -96,11 +97,11 @@ class TestCase(unittest.TestCase):
         self.top.run()
         
         self.assertAlmostEqual(self.top.driver.best_individual.score,
-                               5.1414,places = 4)
+                               .1920,places = 4)
         x,y,z = [x for x in self.top.driver.best_individual] 
-        self.assertAlmostEqual(x, 0.3761, places = 4)
-        self.assertEqual(y, 1)
-        self.assertEqual(z, 2)
+        self.assertAlmostEqual(x, -0.4381, places = 4)
+        self.assertEqual(y, 0)
+        self.assertEqual(z, 0)
         
     def test_optimizeSpherearray_nolowhigh(self):
         self.top.add_container('comp', SphereFunctionArray())
@@ -108,11 +109,11 @@ class TestCase(unittest.TestCase):
 
         try:        
             self.top.driver.add_des_var('comp.x[0]')
-        except ValueError,err: 
+        except TypeError,err: 
             self.assertEqual(str(err),"driver: values for 'high' and 'low' arguments are required when specifying an "
                              "Array element as a design variable. They were not given for 'comp.x[0]'")
         else: 
-            self.fail('ValueError expected')
+            self.fail('TypeError expected')
     
     def test_optimizeSpherearray(self):
         self.top.add_container('comp', SphereFunctionArray())
@@ -172,4 +173,5 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(err),"driver: Trying to add 'comp.y' to the genetic driver, but it is already in the driver")
         else: 
             self.fail('RuntimeError expected')
-        
+	    
+                  
