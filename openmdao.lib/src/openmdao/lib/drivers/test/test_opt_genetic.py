@@ -173,5 +173,37 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(err),"driver: Trying to add 'comp.y' to the genetic driver, but it is already in the driver")
         else: 
             self.fail('RuntimeError expected')
+
+    def test_stuff(self): 
+        from openmdao.main.api import Assembly,Component, set_as_top
+	from openmdao.lib.api import Genetic
+	from openmdao.lib.api import Float,Int,Enum
+	
+	class SomeComp(Component):
+	    """Arbitrary component with a few public variables, but which does not really do 
+	    any calculations"""
+    
+	    w = Float(0.0,low=-10,high=10,iotype="in")
 	    
+	    x = Float(0.0,low=0.0,high=100.0,iotype="in")
+	    y = Int(10,low=10,high=100,iotype="in")
+	    z = Enum([-10,-5,0,7],iotype="in")
+	    
+	class Simulation(Assembly):
+	    """Top Level Assembly used for simulation"""
+	    
+	    def __init__(self):
+		"""Adds the Genetic driver to the assembly"""
+		
+		super(Simulation,self).__init__()
+		
+		self.add_container('optimizer',Genetic())
+		self.add_container('comp',SomeComp())
+		
+		self.optimizer.add_des_var('comp.x')
+		self.optimizer.add_des_var('comp.y')
+		self.optimizer.add_des_var('comp.z')
+	    
+	top = Simulation()	    
+	set_as_top(top)
                   

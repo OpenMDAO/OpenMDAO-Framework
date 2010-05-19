@@ -401,8 +401,8 @@ You add design varibles to genetic using the ``add_des_var`` method.
 	    self.optimizer.add_des_var('comp.x')
 	    self.optimizer.add_des_var('comp.y')
 	    self.optimizer.add_des_var('comp.z')
-	    
-    top = Simulation()
+	
+    top = Simulation()	    
     set_as_top(top)
 	    
 In the above example, three design variables were added to the optimizer. The optimizer 
