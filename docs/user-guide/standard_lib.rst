@@ -401,8 +401,8 @@ You add design varibles to genetic using the ``add_des_var`` method.
 	    self.optimizer.add_des_var('comp.x')
 	    self.optimizer.add_des_var('comp.y')
 	    self.optimizer.add_des_var('comp.z')
-	    
-    top = Simulation()
+	
+    top = Simulation()	    
     set_as_top(top)
 	    
 In the above example, three design variables were added to the optimizer. The optimizer 
@@ -439,7 +439,7 @@ or
 
 .. testcode:: Genetic
 
-    top.optimzier.objective = "2*comp.x+comp.y+3*comp.z"
+    top.optimizer.objective = "2*comp.x+comp.y+3*comp.z"
 
 In the second example above, a more complex objective was created where the overall objective was 
 a weighted combination of `comp.x`, `comp.y`, and `comp.z`. 
@@ -456,7 +456,7 @@ your optimization with the `population_size` and `generations` attributes.
     
 .. testcode:: Genetic
 
-    top.optimzier.population_size = 80
+    top.optimizer.population_size = 80
     top.optimizer.generations = 100
     
 As you increase the population size, you are effectively adding diversity in to the gene pool of your

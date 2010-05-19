@@ -16,7 +16,7 @@ array_test = re.compile("\[[0-9]+\]$")
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO frameowork, based on the Pyevolve Genetic algorithm module. 
     """
-    objective = Expression(iotype='out',
+    objective = Expression(iotype='in',
                           desc='A string containing the objective function expression to be optimized') 
     
     opt_type = Enum("minimize", values=["minimize","maximize"],
@@ -151,7 +151,7 @@ class Genetic(Driver):
             if t and t.is_trait_type(Enum):
                 self._des_var_ranges[ref]=(None,None)
             elif t: #can't be an Enum, so it's a Float, Int, or Array element
-                if t.low: 
+                if hasattr(t,"low"): 
                     ranges[0] = t.low
                 elif low: 
                     ranges[0] = low
@@ -159,7 +159,7 @@ class Genetic(Driver):
                     self.raise_exception("No value was specified for the 'low' argument, "
                                          "and no default was found in the public variable metadata",ValueError)
                 
-                if t.high:
+                if hasattr(t,"high"):
                     ranges[1] = t.high
                 elif high: 
                     ranges[1] = high                
