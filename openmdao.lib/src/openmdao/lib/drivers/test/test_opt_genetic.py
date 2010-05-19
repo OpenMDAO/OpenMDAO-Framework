@@ -203,3 +203,4 @@ class TestCase(unittest.TestCase):
                 self.optimizer.add_des_var('comp.x')
                 self.optimizer.add_des_var('comp.y')
                 self.optimizer.add_des_var('comp.z')
+
