@@ -240,8 +240,7 @@ class Assembly (Component):
         if destcomp is not self:
             destcomp.set_source(destvarname, srcpath)
             if srccomp is not self: # neither var is on boundary
-                if hasattr(self.workflow, 'connect'):
-                    self.workflow.connect(srcpath, destpath)
+                self.workflow.connect(srcpath, destpath)
         
         vgraph = self.get_var_graph()
         vgraph.add_edge(srcpath, destpath)
@@ -307,7 +306,7 @@ class Assembly (Component):
                 # (no boundary connections) then remove a connection 
                 # between two components in the component graph
                 utup = src.split('.',1)
-                if len(utup)>1 and hasattr(self.workflow, 'disconnect'):
+                if len(utup)>1:
                     self.workflow.disconnect(utup[0], vtup[0])
                 
         vargraph.remove_edges_from(to_remove)
