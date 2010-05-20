@@ -364,15 +364,15 @@ as shown below.
 _______________
 
 
-The existing implementation doesn't support any type of workflow beyond sequential
-data flow. However, a new type of workflow that allows both data flow and control 
-flow is planned.  This new workflow will support concurrent execution and 
-conditional branching.  The current plan is to replace Assembly's single workflow
-object with two workflow objects.  One would be a concurrent workflow containing
-only Components, and the other would be a sequential workflow containing only
-Drivers.  Both workflows would support conditional branching.  Each Driver in the
-driver workflow would execute in turn, and as part of its execution it would 
-iteratively execute the component workflow.
+The existing implementation only supports sequential data flow workflows.
+However, a new type of workflow that allows both data flow and control flow is
+planned. This new workflow will support concurrent execution and conditional
+branching. The figure below is a notional view of the planned Assembly
+workflow layout. The top workflow, called 'driverflow' will contain Drivers
+only and will be sequential. The bottom workflow, called 'workflow' will be
+concurrent and support conditional branching. The current Assembly design has
+two workflow objects. One is a simple sequential workflow containing only Drivers
+and the other is a sequential data flow workflow containing only Components.
     
 
 .. _`control flow`:
