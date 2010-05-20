@@ -233,6 +233,8 @@ def main():
     parser = OptionParser()
     parser.add_option("-d", "--destination", action="store", type="string", dest="destdir",
                       help="directory where distributions will be placed")
+    parser.add_option("-t", "--test", action="store_true", dest="test",
+                      help="if present, release will be a test release (no repo tag, commit not required)")
     parser.add_option("","--version", action="store", type="string", dest="version",
                       help="version string applied to all openmdao distributions")
     (options, args) = parser.parse_args(sys.argv[1:])
@@ -243,9 +245,10 @@ def main():
         
     topdir = _find_top_dir()
     
-    if _has_checkouts():
-        print 'ERROR: Creating a release requires that all changes have been committed'
-        sys.exit(-1)
+    if not options.test:
+        if _has_checkouts():
+            print 'ERROR: Creating a release requires that all changes have been committed'
+            sys.exit(-1)
         
     destdir = os.path.realpath(options.destdir)
     if not os.path.exists(destdir):
@@ -272,7 +275,8 @@ def main():
         check_call([sys.executable, os.path.join(devtools_dir,'build_docs.py')])
         shutil.move(os.path.join(topdir,'docs','_build'), 
                     os.path.join(destdir,'_build'))
-        check_call(['bzr', 'commit', '-m', '"updating release info and sphinx config files"'])
+        if not options.test:
+            check_call(['bzr', 'commit', '-m', '"updating release info and sphinx config files"'])
 
         for project_name in openmdao_packages:
             pdir = os.path.join(topdir, 
@@ -295,10 +299,14 @@ def main():
     
         print 'creating bootstrapping installer script go-openmdao.py'
         installer = os.path.join(topdir, 'scripts','mkinstaller.py')
-        check_call([sys.executable, installer, '-d', destdir])
+        if options.test:
+            check_call([sys.executable, installer, '-t', '-d', destdir])
+        else:
+            check_call([sys.executable, installer, '-d', destdir])
         
         # tag the current revision with the release version id
-        check_call(['bzr', 'tag', '--force', options.version])
+        if not options.test:
+            check_call(['bzr', 'tag', '--force', options.version])
     finally:
         os.chdir(startdir)
     

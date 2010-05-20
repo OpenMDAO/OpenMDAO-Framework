@@ -4,6 +4,9 @@
 .. index:: Factories
 .. index:: Traits
 
+
+.. _OpenMDAO-Standard-Library:
+
 OpenMDAO Standard Library
 =========================
 
@@ -31,7 +34,7 @@ algorithm is the Method of Feasible Directions. If analytic gradients of the
 objective or constraint functions are not available, this information is
 calculated by finite difference. While the program is intended primarily for
 efficient solution of constrained problems, unconstrained function
-minimization problems may also be solved, and the conjugate direction method
+minimization problems may also be solved. The conjugate direction method
 of Fletcher and Reeves is used for this purpose.
 
 More information on CONMIN can be found in the `CONMIN User's Manual
@@ -83,9 +86,9 @@ follows:
 
 This first section of code defines an assembly called *EngineOptimization.* This
 assembly contains a DrivingSim component and a CONMIN driver, both of which are
-created and added inside the *__init__* function with *add_container()*. The 
+created and added inside the __init__ function with add_container(). The 
 objective function, design variables, constraints, and any CONMIN parameters
-are also assigned in the *__init__* function. The specific syntax for all of 
+are also assigned in the __init__ function. The specific syntax for all of 
 these is given below.
 
 .. testsetup:: CONMIN_show
@@ -154,7 +157,7 @@ The size of these lists must be equal to the number of design variables or
 OpenMDAO will raise an exception. Similarly, the upper bound must be greater
 than the lower bound for each design variable.
 
-*Constraints* are equations or inequalities that are constructed from the available OpenMDAO variables using Python
+Constraints are equations or inequalities that are constructed from the available OpenMDAO variables using Python
 mathematical syntax. The constraints parameter is a list of inequalities that
 are defined to be **satisfied when they return a negative value or zero**, and **violated
 when they return a positive value**.
@@ -183,10 +186,10 @@ The default value is 10.
 
 The convergence tolerance is controlled with *dabfun* and *delfun*. *Dabfun* is the
 absolute change in the objective function to indicate convergence (i.e., if the
-objective function changes by less than *dabfun*, then the problem is converged).
+objective function changes by less than dabfun, then the problem is converged).
 Similarly, *delfun* is the relative change of the objective function with respect
-to the value at the previous step. Note that *delfun* has a hard-wired minimum of 
-1e-10 in the Fortran code, and *dabfun* has a minimum of 0.0001.
+to the value at the previous step. Note that delfun has a hard-wired minimum of 
+1e-10 in the Fortran code, and dabfun has a minimum of 0.0001.
 
 .. testcode:: CONMIN_show
 
@@ -201,7 +204,7 @@ tests are performed in the following sequence:
 3. Check relative change in objective
 4. Reduce constraint thickness for slow convergence
 
-The number of successive iterations the convergence tolerance should be checked before
+The number of successive iterations that the convergence tolerance should be checked before
 terminating the loop can also be specified with the *itrm* parameter, whose
 default value is 3.
 
@@ -214,7 +217,7 @@ constraints using a finite difference approximation. This is the current
 default behavior of the OpenMDAO driver. The CONMIN code can also accept
 user-calculated gradients, but these are not yet supported in OpenMDAO. Two
 parameters control the step size used for numerically estimating the local
-gradient: fdch and fdchm. The *fdchm* parameter is the minimum absolute step size that the finite
+gradient: *fdch* and *fdchm.* The *fdchm* parameter is the minimum absolute step size that the finite
 difference will use, and *fdch* is the step size relative to the design variable.
 
 .. testcode:: CONMIN_show
@@ -266,9 +269,9 @@ variables as follows:
     self.cons_is_linear = [1, 0]
 
 If *cons_is_linear* is not specified, then all the constraints are assumed to be
-nonlinear. Note that the original CONMIN parameter for this is ISC.	
+nonlinear. Note that the original CONMIN parameter for this is *ISC.*	
 
-Finally, the *iprint* parameter can be used to turn on the display of diagnostic
+Finally, the *iprint* parameter can be used to display diagnostic
 messages inside of CONMIN. These messages are currently sent to the standard
 output.
 
@@ -318,7 +321,7 @@ design variables + 1.
 **Constraint Thickness** -- CONMIN gives four parameters for controlling the 
 thickness of constraints -- *ct, ctmin, ctl,* and *ctlmin.* Using these parameters
 essentially puts a tolerance around a constraint surface. Note that *ct* is used
-for general constraints, and *ctl* is only used for linear constraints. A wide
+for general constraints, and *ctl* is used only for linear constraints. A wide
 initial value of the constraint thickness is desirable for highly nonlinear 
 problems so that when a constraint becomes active, it tends to remain active,
 thus reducing the zigzagging problem. The values of *ct* and *ctl* adapt as the
@@ -333,16 +336,16 @@ for G(J) = ct to 4.0*theta for G(J) = ABS(ct)``. A value of theta = 0.0 is used
 in the program for constraints which are identified by the user to be strictly
 linear. Theta is called a *push-off* factor because it pushes the design away
 from the active constraints into the feasible region. The default value is
-usually adequate. This is only used for constrained problems.
+usually adequate. This is used only for constrained problems.
 
 **phi** -- Participation coefficient, used if a design is infeasible (i.e.,
 one or more violated constraints). *Phi* is a measure of how hard the design
 will be "pushed" towards the feasible region and is, in effect, a penalty
 parameter. If in a given problem, a feasible solution cannot be obtained with
-the default value, *phi* should be increased, and the problem run again. If a
+the default value, phi should be increased, and the problem run again. If a
 feasible solution cannot be obtained with phi = 100, it is probable that no
 feasible solution exists. The default value of 5.0 is usually adequate. Phi is
-only used for constrained problems.
+used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
@@ -351,25 +354,28 @@ only used for constrained problems.
 ++++++++++
 
 :term:`Genetic` is a driver which performs optimization using a genetic algorithm based
-on the `Pyevolve <http://pyevolve.sourceforge.net/>`_. Genetic is a global optimzier, and 
-can is ideal for optimizing problems with integer or discrete design variables because 
-it is a non-derivative based optimization method. 
+on `Pyevolve <http://pyevolve.sourceforge.net/>`_. Genetic is a global optimizer and
+is ideal for optimizing problems with integer or discrete design variables because it
+is a non-derivative based optimization method. 
 
-Genetic can be used in any simulation by importing it from ``openmdao.lib.api``.
+Genetic can be used in any simulation by importing it from ``openmdao.lib.api``:
 
 .. testcode:: Genetic_load
 
     from openmdao.lib.api import Genetic
 
+.. index:: pair: design; variables
+.. index:: Float, Int, Enum
 
 Design Variables
 ~~~~~~~~~~~~~~~~
-Public variables are added to Genetic and become design variables. The set 
-of design variables is what Genetic will vary to search for an optimum.
-Genetic supports three public variable types: :term:Float, :term:Int, :Term:Enum. These 
-public variable types can be used as design variables in any optimization. 
 
-You add design varibles to genetic using the ``add_des_var`` method.
+Public variables are added to Genetic and become design variables. Genetic will vary the set of
+design variables to search for an optimum. Genetic supports three public variable types:
+:term:`Float`, :term:`Int`, and :Term:`Enum`. These public variable types can be used as design
+variables in any optimization. 
+
+You add design variables to Genetic using the *add_des_var* method.
 
 .. testcode:: Genetic
 
@@ -406,16 +412,16 @@ You add design varibles to genetic using the ``add_des_var`` method.
     set_as_top(top)
 	    
 In the above example, three design variables were added to the optimizer. The optimizer 
-figures out for itself what type of variable it is and behaves approriately. In all three
-cases, since no `low' or `high` arguments were provided the optimzier will use the values
-from the metadata provided in the variable decleration. 
+figures out for itself what type of variable it is and behaves appropriately. In all three
+cases, since no *low* or *high* arguments were provided, the optimizer will use the values
+from the metadata provided in the variable deceleration. 
 
-For `comp.x` the optimizer will try floats between 0.0 and 100.0. For `comp.y' the 
-optimizer will try integers between 10 and 100. For `comp.z` the optimizer will pick from the
-list of allowed values, [-10,-5,0,7]. You can see that for `comp.z`. 
+For `comp.x` the optimizer will try floats between 0.0 and 100.0. For *comp.y* the optimizer
+will try integers between 10 and 100. For *comp.z* the optimizer will pick from
+the list of allowed values: [-10,-5,0,7]. 
 
-It is possible to override the `low` and `high` values from the metadata, if you wanted to
-to tell the optimizer to use a different range instead of the default. 
+You can override the low and high values from the metadata if you want
+the optimizer to use a different range instead of the default. 
 
 .. testcode:: Genetic
     
@@ -429,7 +435,7 @@ Configuration
 ~~~~~~~~~~~~~
 
 When setting the `objective` attribute you can specify a single 
-public variable or a more complex function. 
+public variable or a more complex function, such as 
 
 .. testcode:: Genetic
 
@@ -442,9 +448,9 @@ or
     top.optimizer.objective = "2*comp.x+comp.y+3*comp.z"
 
 In the second example above, a more complex objective was created where the overall objective was 
-a weighted combination of `comp.x`, `comp.y`, and `comp.z`. 
+a weighted combination of *comp.x, comp.y,* and *comp.z*. 
 
-To set the optimizer to either minmize or maximize your objective, you set the `opt_type` attribute 
+To set the optimizer to either minimize or maximize your objective, you set the `opt_type` attribute 
 of the driver to "minimize" or "maximize".
 
 .. testcode:: Genetic
@@ -461,26 +467,25 @@ your optimization with the `population_size` and `generations` attributes.
     
 As you increase the population size, you are effectively adding diversity in to the gene pool of your
 optimization. A large population means that a larger number of individuals from a given generation will
-be chosen to provide genetic material for the next generation. So there is a better chance that individuals
-with a weaker fitness will pass on their genes. This diversity helps to ensure that your optimziation will 
+be chosen to provide genetic material for the next generation. So there is a better chance that weaker individuals
+will pass on their genes. This diversity helps to ensure that your optimization will 
 find a true global optimum within the allowed design space. However, it also serves to slow down the 
-optimziation because of the increased number of function evaluations necessary for each generation. 
+optimization because of the increased number of function evaluations necessary for each generation. 
 
 Picking an appropriate value for the maximum number of generations will depend highly on the specifics of 
 your problem. Setting this number too low will likely prevent the optimization from converging on a true 
-optimium. Setting it too high will help you find the true optimum, but you may end up wasting the computation
+optimum. Setting it too high will help you find the true optimum, but you may end up wasting the computation
 time on later generations where the optimum has been found. 
 
-You can further control the behavior of the genetic algorithm by setting the `crossover_rate`, `mutation_rate`,
-`selection_method`, and `elitism` attributes. These settings will fine tune the convergence of your 
-optimization to achieve the desired result, however,for many optimziations the default values will work
-well and don't need to be changed. 
+You can further control the behavior of the genetic algorithm by setting the `crossover_rate`,
+`mutation_rate`, `selection_method`, and `elitism` attributes. These settings will allow you to
+fine-tune the convergence of your optimization to achieve the desired result; however, for many
+optimizations the default values will work well and won't need to be changed. 
 
-The `crossover_rate` controls the rate at which the crossover operator gets applied to the genome of a
-set of individuals which are reproducing. The allowed values are between 0.0 and 1.0. A higher rate will mean 
-that more of the genes are swapped between parents, which will result in give a more uniform population and 
-better searching of the design space. If the rate is set too high, then it is likely that indivduals with high 
-fitness could be lost to churn. 
+The `crossover_rate` controls the rate at which the crossover operator gets applied to the genome of a set of
+individuals who are reproducing. The allowed values are between 0.0 and 1.0. A higher rate will mean  that more of
+the genes are swapped between parents. The result will be a more uniform population and better searching of the
+design space. If the rate is set too high, then it is likely that stronger individuals could be lost to churn. 
 
 .. testcode:: Genetic
 
@@ -489,24 +494,25 @@ fitness could be lost to churn.
 The `mutation_rate` controls how likely any particular gene is to experience a mutation. A low, but non-zero,
 mutation rate will help prevent stagnation in the gene pool by randomly moving the values of genes. If this 
 rate is set too high, the algorithm basically degrades into a random search through the design space. The
-allowed values are bewtween 0.0 and 1.0. 
+allowed values are between 0.0 and 1.0. 
 
 .. testcode:: Genetic
 
     top.optimizer.mutation_rate = .02
 
-In a pure genetic algorithm, it is possible that your best performing individual does not survive from one
+In a pure genetic algorithm, it is possible that your best performing individual will not survive from one
 generation to the next due to competition, mutation, and crossover. If you want to ensure that the best 
-individual always survives in tact from one generation to the next, then turn on the `eltisim` flag for your
-optimization. This will ensure that the best individual is always copied to the next generation no matter what. 
+individual survives in tact from one generation to the next, then turn on the `elitism` flag for your
+optimization. This will ensure that the best individual is always copied to the next generation no matter
+what. 
 
 .. testcode:: Genetic
 
     top.optimizer.elitism = True
 
-There are a number of different commonly used selection algorithms available. The default algorithm is the
-Roulette Wheel Algorithm. Also available are Tournamen Selection, Rank Selection, and Uniform Selection. 
-This feature is controlled by the `selection_method` attribute. Allowed values are "roulette_wheel", 
+A number of different commonly used selection algorithms are available. The default algorithm is the Roulette
+Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection are also available. The
+`selection_method` attribute allows you to select the algorithm; allowed values are: "roulette_wheel", 
 "tournament", "rank", and "uniform". 
 
 .. testcode:: Genetic
@@ -518,7 +524,7 @@ This feature is controlled by the `selection_method` attribute. Allowed values a
 *The Case Iterator*
 +++++++++++++++++++
 
-TODO: Case Iterator documentation
+.. todo:: Case Iterator documentation
 
 Factories
 ---------

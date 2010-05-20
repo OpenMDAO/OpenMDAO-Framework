@@ -80,9 +80,10 @@ Glossary
       	See :term:`Component` above.
 	
 	
-      **CONMIN**
-        An interface to the NASA CONMIN optimization program.
-      
+      **CONMIN**  
+        Stands for "CONstraint MINimization." It is a gradient descent optimization algorithm developed by
+	NASA.
+	
       
       **Container**
         A container of Variables and other Containers. The base class of all objects
@@ -130,6 +131,12 @@ Glossary
         See :term:`egg` above. 
 
       	
+      **Enum**
+        A public variable type, found in ``openmdao.lib.api``, which supports a
+	list of discrete allowed values. The list of allowed values can be of arbitrary
+	length, and elements can be of any type.
+	
+	
       **F2PY**
         Fortran to Python interface generator.
 
@@ -154,8 +161,14 @@ Glossary
       **GA**
       	Genetic algorithm
 	
+	
+      **Float**
+        A public variable type, found in ``openmdao.lib.api``, which represents a
+        floating point number. It also also allows for the specification of units.
+     
+      
       **Genetic**
-        OpenMDAO genetic algorithm optimizer, based on the Pyevovle genetic algorithm
+        OpenMDAO genetic algorithm optimizer based on the Pyevolve genetic algorithm.
 	
 	
       **GUI**
@@ -168,6 +181,11 @@ Glossary
         properties that can be queried.
        
 
+      **Int**
+        A public variable type, found in ``openmdao.lib.api``, which represents
+	numbers with integer values.
+	
+	
       **IPC**
         Interprocess communication
 

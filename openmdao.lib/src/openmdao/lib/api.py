@@ -23,7 +23,7 @@ Pseudo package containing plugins from the OpenMDAO Standard Library.
 |    CONMINdriver
 |    pyevolvedriver
 |    Genetic
-
+|
 | *Components*
 |
 |    ExternalCode

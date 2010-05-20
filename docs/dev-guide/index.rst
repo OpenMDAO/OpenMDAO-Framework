@@ -1,8 +1,8 @@
 
-.. _Developer's-Guide:
+.. _Developer-Guide:
 
 =================
-Developer's Guide
+Developer Guide
 =================
 
 .. toctree::

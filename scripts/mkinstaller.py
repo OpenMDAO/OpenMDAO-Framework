@@ -44,7 +44,7 @@ def after_install(options, home_dir):
     global logger
     reqs = %(reqs)s
     cmds = %(cmds)s
-    url = 'http://openmdao.org/dists'
+    url = '%(url)s'
     found = [c for c in cmds if url in c]
     if not found:
         cmds.extend(['-f',url])
@@ -67,7 +67,8 @@ def after_install(options, home_dir):
     numpyidx = None
     for i,req in enumerate(reqs):
         if req.startswith('numpy') and len(req)>5 and (req[5]=='=' or req[5]=='>'):
-            reqnumpy = req
+            # for now, just require 'numpy' instead of a specific version
+            #reqnumpy = req
             numpyidx = i
             break
     _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
@@ -79,6 +80,8 @@ def after_install(options, home_dir):
     parser = OptionParser()
     parser.add_option("-d", "--destination", action="store", type="string", dest='dest', 
                       help="specify destination directory", default='.')
+    parser.add_option("-t", "--test", action="store_true", dest="test",
+                      help="if present, generated installer will point to /OpenMDAO/test_server/dists")
     
     
     (options, args) = parser.parse_args()
@@ -103,8 +106,13 @@ def after_install(options, home_dir):
         if dist.project_name not in excludes:
             reqs.append('%s' % dist.as_requirement())  
             
+    if options.test:
+        home = os.environ['HOME']
+        url = 'file://%s/dists' % home
+    else:
+        url = 'http://openmdao.org/dists'
     reqs = list(set(reqs))  # eliminate duplicates (numpy was in there twice somehow)
-    optdict = { 'reqs': reqs, 'cmds':cmds, 'version': version }
+    optdict = { 'reqs': reqs, 'cmds':cmds, 'version': version, 'url': url }
     
     dest = os.path.abspath(options.dest)
     scriptname = os.path.join(dest,'go-openmdao-%s.py' % version)
