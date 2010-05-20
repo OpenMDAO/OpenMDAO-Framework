@@ -1,5 +1,8 @@
 #!/usr/local/bin/python
 
+# This script will build .png versions of all of our Dia diagrams that
+# have changed since the last time they were built.
+
 import glob
 import os.path
 from dirwalk import includingWalk
