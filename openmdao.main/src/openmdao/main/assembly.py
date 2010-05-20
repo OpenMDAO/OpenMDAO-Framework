@@ -16,10 +16,6 @@ from openmdao.main.workflow import SequentialFlow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.driver import Driver
 
-# just use this class as a default for add_container that indicates default behavior
-class _default_workflow:
-    pass
-
 def _filter_internal_edges(edges):
     """Return a copy of the given list of edges with edges removed that are
     connecting two variables on the same component.
@@ -38,6 +34,7 @@ class PassthroughTrait(TraitType):
             return self.validation_trait.validate(obj, name, value)
         return value
 
+
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
     and outputs between its children.  When executed, it runs the components
@@ -45,7 +42,7 @@ class Assembly (Component):
     """
     driverflow = Instance(IWorkflow, allow_none=True)
     workflow = Instance(IWorkflow)
-    
+        
     def __init__(self, doc=None, directory=''):
         self._child_io_graphs = {}
         self._need_child_io_update = True
@@ -95,19 +92,38 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add_container(self, name, obj, workflow=_default_workflow):
-        """Update dependency graph and call base class *add_container*.
-        Returns the added Container object.
+    def add_container(self, name, obj, workflow='default'):
+        """Add obj to the specified workflow and call base class 
+        *add_container*.  If workflow is None, do not add obj to any
+        workflow.
+        
+        Returns the added object.
         """
         obj = super(Assembly, self).add_container(name, obj)
 
-        if workflow is _default_workflow:
+        if workflow == 'default':
             if isinstance(obj, Driver):
                 workflow = self.driverflow  
             else:
                 workflow = self.workflow
+        elif workflow in ['driverflow', 'workflow']:
+            workflow = getattr(self, workflow)
+        elif workflow:
+            self.raise_exception("'%s' is not a valid Workflow name" % workflow,
+                                 NameError)
                 
         if workflow is not None and isinstance(obj, Component):
+            # for now, do not allow non-Drivers in self.driverflow or
+            # Drivers in self.workflow
+            if isinstance(obj, Driver):
+                if workflow is self.workflow:
+                    self.raise_exception("Driver '%s' is not allowed in workflow" % obj.name,
+                                         TypeError)
+            else: # it's a non-Driver component
+                if workflow is self.driverflow:
+                    self.raise_exception("Component '%s' is not allowed in driverflow" % obj.name,
+                                         TypeError)
+                    
             workflow.add(obj)
             # since the internals of the given Component can change after it's
             # added to our workflow, wait to collect its io_graph until we need it
@@ -117,7 +133,8 @@ class Assembly (Component):
         return obj
         
     def remove_container(self, name):
-        """Remove the named container object from this container."""
+        """Remove the named container object from this container and remove
+        it from its workflow (if any)."""
         cont = getattr(self, name)
         if cont in self.workflow:
             self.workflow.remove(cont)
@@ -178,7 +195,7 @@ class Assembly (Component):
         return newtrait
 
     def get_dyn_trait(self, pathname, iotype=None):
-        """Retrieves the named trait, attempting to create a Passthrough trait
+        """Retrieves the named trait, attempting to create a PassthroughTrait
         on-the-fly if the specified trait doesn't exist.
         """
         trait = self.trait(pathname)
@@ -332,13 +349,13 @@ class Assembly (Component):
         return False
 
     def execute (self):
-        """Runs its driver, or its workflow if there is no driver."""
+        """Runs driverflow, or workflow if driverflow is empty."""
         if self.driverflow and len(self.driverflow) > 0:
             self.driverflow.run()
         else:  # we have not driver, so just run the workflow once
             self.workflow.run()
         self._update_boundary_vars()
-        
+    
     def _update_boundary_vars (self):
         """Update output variables on our bounary."""
         invalid_outs = self.list_outputs(valid=False)
@@ -350,10 +367,15 @@ class Assembly (Component):
 
     def step(self):
         """Execute a single child component and return."""
-        self.workflow.step()
+        if self.driverflow and len(self.driverflow) > 0:
+            self.driverflow.step()
+        else:  # we have not driver, so just step the workflow
+            self.workflow.step()
         
     def stop(self):
         """Stop the workflow."""
+        if self.driverflow:
+            self.driverflow.stop()
         self.workflow.stop()
     
     def list_connections(self, show_passthrough=True):
