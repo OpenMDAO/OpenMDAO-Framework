@@ -22,7 +22,7 @@ Pseudo package containing plugins from the OpenMDAO Standard Library.
 |    CaseIteratorDriver
 |    CONMINdriver
 |    pyevolvedriver
-|
+|    Genetic
 |
 | *Components*
 |
@@ -43,6 +43,7 @@ from enthought.traits.api import Array, Bool, List, Str, Instance, \
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.pyevolvedriver import pyevolvedriver
+from openmdao.lib.drivers.genetic import Genetic
 
 # Components
 from openmdao.lib.components.external_code import ExternalCode
