@@ -57,8 +57,9 @@ The next figure shows and example of an Assembly with two Drivers and four
 Components. A solid line between two Components indicates that one of them
 is supplying inputs to the other. Each dashed line between a Driver and a 
 Component indicates an :term:`Expression` object in the Driver that references
-an input or output variable on the Component. The arrow ending a dashed or solid line
-indicates the direction of the data flow between the two connected objects.
+an input or output variable on the Component. The arrow at the end of 
+a dashed or solid line
+indicates the direction of the data flow between two connected objects.
 
 .. _`driver flow`:
 
@@ -74,7 +75,7 @@ The functionality of OpenMDAO can be extended through the use of
 that a user can create any of these and the framework will understand how to
 interact with them. This is possible because plugins have a specific interface
 that the framework expects.  To learn how to create your own plugins, see the 
-`Plugin-Developer's-Guide`_.
+:ref:`Plugin-Developer's-Guide`.
 
 
 .. figure:: ../generated_images/TopContext.png
@@ -82,9 +83,6 @@ that the framework expects.  To learn how to create your own plugins, see the
 
    Top Level Context Diagram
 
-
-
-.. todo:: Expand this section
 
 This concludes a brief introduction to OpenMDAO. Please see the next section for
 details on system requirements and how to install the software.
