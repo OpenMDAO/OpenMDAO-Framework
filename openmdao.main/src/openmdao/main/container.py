@@ -173,10 +173,6 @@ class Container(HasTraits):
         self.parent = None
         self._name = None
         
-        self._input_names = None
-        self._output_names = None
-        self._container_names = None
-        
         self._call_tree_rooted = True
         
         if doc is not None:
@@ -409,18 +405,6 @@ class Container(HasTraits):
                     "cannot set valid flag of '%s' because "
                     "it's not an io trait." % name, RuntimeError)
 
-    def check_config (self):
-        """Verify that the configuration of this component is correct. This
-        function is called once prior to the first execution of this Assembly
-        and if any children are added or removed or if
-        *self._call_check_config* is True it will be called prior to the next
-        execution .
-        """
-        for name, value in self._traits_meta_filter(required=True).items():
-            if value.is_trait_type(Instance) and getattr(self, name) is None:
-                self.raise_exception("required plugin '%s' is not present" %
-                                     name, TraitError)                
-        
     def add_container(self, name, obj, **kw_args):
         """Add a Container object to this Container.
         Returns the added Container object.
@@ -527,38 +511,9 @@ class Container(HasTraits):
         return [tup[1] for tup in self._items(set([id(self.parent)]), 
                                               recurse, **metadata)]
 
-    def list_inputs(self, valid=None):
-        """Return a list of names of input values. If valid is not None,
-        the the list will contain names of inputs with matching validity.
-        """
-        if self._input_names is None:
-            self._input_names = self.keys(iotype='in')
-            
-        if valid is None:
-            return self._input_names
-        else:
-            fval = self.get_valid
-            return [n for n in self._input_names if fval(n)==valid]
-        
-    def list_outputs(self, valid=None):
-        """Return a list of names of output values. If valid is not None,
-        the the list will contain names of outputs with matching validity.
-        """
-        if self._output_names is None:
-            self._output_names = self.keys(iotype='out')
-            
-        if valid is None:
-            return self._output_names
-        else:
-            fval = self.get_valid
-            return [n for n in self._output_names if fval(n)==valid]
-        
     def list_containers(self):
         """Return a list of names of child Containers."""
-        if self._container_names is None:
-            self._container_names = [n for n,v in self.items() 
-                                                   if isinstance(v,Container)]            
-        return self._container_names
+        return [n for n,v in self.items() if isinstance(v,Container)]
     
     def _traits_meta_filter(self, traits=None, **metadata):
         """This returns a dict that contains all entries in the traits dict
@@ -1109,18 +1064,16 @@ class Container(HasTraits):
                 "Can't create alias '%s' because it already exists." % alias, 
                 RuntimeError)
     
-    def _config_changed(self):
-        """Call this whenever the configuration of this Container changes,
-        for example, children added or removed.
-        """
-        self._input_names = None
-        self._output_names = None
-        self._container_names = None
-        
     def _trait_added_changed(self, name):
         """Called any time a new trait is added to this container."""
         self._config_changed()
         
+    def _config_changed(self):
+        """Call this whenever the configuration of this Component changes,
+        for example, children are added or removed.
+        """
+        pass
+    
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)

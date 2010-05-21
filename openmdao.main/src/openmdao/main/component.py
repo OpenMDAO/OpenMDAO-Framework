@@ -100,6 +100,11 @@ class Component (Container):
         self._stop = False
         self._call_check_config = True
         self._call_execute = True
+        
+        self._input_names = None
+        self._output_names = None
+        self._container_names = None
+
         if directory:
             self.directory = directory
         
@@ -120,7 +125,10 @@ class Component (Container):
         Classes that override this function must still call the base class
         version.
         """
-        super(Component, self).check_config()
+        for name, value in self._traits_meta_filter(required=True).items():
+            if value.is_trait_type(Instance) and getattr(self, name) is None:
+                self.raise_exception("required plugin '%s' is not present" %
+                                     name, TraitError)
     
     def tree_rooted(self):
         """Calls the base class version of *tree_rooted()*, checks our
@@ -268,9 +276,44 @@ class Component (Container):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
         """
-        super(Component, self)._config_changed()
+        self._input_names = None
+        self._output_names = None
+        self._container_names = None
         self._call_check_config = True
 
+    def list_inputs(self, valid=None):
+        """Return a list of names of input values. If valid is not None,
+        the the list will contain names of inputs with matching validity.
+        """
+        if self._input_names is None:
+            self._input_names = self.keys(iotype='in')
+            
+        if valid is None:
+            return self._input_names
+        else:
+            fval = self.get_valid
+            return [n for n in self._input_names if fval(n)==valid]
+        
+    def list_outputs(self, valid=None):
+        """Return a list of names of output values. If valid is not None,
+        the the list will contain names of outputs with matching validity.
+        """
+        if self._output_names is None:
+            self._output_names = self.keys(iotype='out')
+            
+        if valid is None:
+            return self._output_names
+        else:
+            fval = self.get_valid
+            return [n for n in self._output_names if fval(n)==valid]
+        
+    def list_containers(self):
+        """Return a list of names of child Containers."""
+        if self._container_names is None:
+            self._container_names = [n for n,v in self.items() 
+                                                   if isinstance(v,Container)]            
+        return self._container_names
+    
     def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
         within the allowed area (somewhere within the simulation root path).
