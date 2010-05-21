@@ -231,8 +231,16 @@ class Assembly (Component):
             
         # test compatability (raises TraitError on failure)
         if desttrait.validate is not None:
-            desttrait.validate(destcomp, destvarname, 
-                               getattr(srccomp, srcvarname))
+            try:
+                if desttrait.trait_type.get_val_meta_wrapper:
+                    desttrait.validate(destcomp, destvarname, 
+                                       srccomp.get_wrapped_attr(srcvarname))
+                else:
+                    desttrait.validate(destcomp, destvarname, 
+                                       getattr(srccomp, srcvarname))
+            except TraitError, err:
+                self.raise_exception("can't connect '%s' to '%s': %s" % 
+                                     (srcpath,destpath,str(err)), TraitError)
         
         if destcomp is not self:
             destcomp.set_source(destvarname, srcpath)
