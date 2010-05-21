@@ -3,7 +3,7 @@ The Container class
 """
 
 #public symbols
-__all__ = ["Container", "set_as_top", "PathProperty"]
+__all__ = ["Container", "set_as_top", "PathProperty", "get_default_name", "dump"]
 
 import datetime
 import copy
@@ -218,9 +218,7 @@ class Container(HasTraits):
     def _get_name(self):
         if self._name is None:
             if self.parent:
-                self._name = self.parent.findname(self)
-            if self._name is None:
-                self._name = ''
+                self._name = findname(self.parent, self)
         return self._name
 
     def _set_name(self, name):
@@ -232,28 +230,6 @@ class Container(HasTraits):
         
     name = property(_get_name, _set_name, doc="Name of the Container")
     
-    def findname(self, obj):
-        """Return the object within this object's dict that has the given name.
-        Return None if not found.
-        """
-        for name,val in self.__dict__.items():
-            if val is obj:
-                return name
-        return None
-    
-    def get_default_name(self, scope):
-        """Return a unique name for the given object in the given scope."""
-        classname = self.__class__.__name__.lower()
-        if scope is None:
-            sdict = {}
-        else:
-            sdict = scope.__dict__
-            
-        ver = 1
-        while '%s%d' % (classname, ver) in sdict:
-            ver += 1
-        return '%s%d' % (classname, ver)
-        
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
@@ -261,7 +237,7 @@ class Container(HasTraits):
         path = []
         obj = self
         name = obj.name
-        while obj != rel_to_scope and name:
+        while obj is not rel_to_scope and name:
             path.append(name)
             obj = obj.parent
             if obj is None:
@@ -527,16 +503,6 @@ class Container(HasTraits):
             for cname in self.list_containers():
                 getattr(self, cname).revert_to_defaults(recurse)
             
-    def dump(self, recurse=False, stream=None):
-        """Print all items having iotype metadata and
-        their corresponding values to the given stream. If the stream
-        is not supplied, it defaults to *sys.stdout*.
-        """
-        pprint.pprint(dict([(n,str(v)) 
-                        for n,v in self.items(recurse=recurse, 
-                                              iotype=not_none)]),
-                      stream)
-    
     def items(self, recurse=False, **metadata):
         """Return a list of tuples of the form (rel_pathname, obj) for each
         trait of this Container that matches the given metadata. If recurse is
@@ -1191,4 +1157,43 @@ def _get_entry_group(obj):
     raise TypeError('No entry point group defined for %r' % obj)
 
 _get_entry_group.group_map = None  # Map from class/interface to group name.
+
+
+def dump(cont, recurse=False, stream=None):
+    """Print all items having iotype metadata and
+    their corresponding values to the given stream. If the stream
+    is not supplied, it defaults to *sys.stdout*.
+    """
+    pprint.pprint(dict([(n,str(v)) 
+                    for n,v in cont.items(recurse=recurse, 
+                                          iotype=not_none)]),
+                  stream)
+
+
+def findname(parent, obj):
+    """Find the given object in the specified parent and return its name 
+    in the parent's __dict__.
+    
+    Return '' if not found.
+    """
+    for name,val in parent.__dict__.items():
+        if val is obj:
+            return name
+    return ''
+
+
+def get_default_name(obj, scope):
+    """Return a unique name for the given object in the given scope."""
+    classname = obj.__class__.__name__.lower()
+    if scope is None:
+        sdict = {}
+    else:
+        sdict = scope.__dict__
+        
+    ver = 1
+    while '%s%d' % (classname, ver) in sdict:
+        ver += 1
+    return '%s%d' % (classname, ver)
+        
+
 

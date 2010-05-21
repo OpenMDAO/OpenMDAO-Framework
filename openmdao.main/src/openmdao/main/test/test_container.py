@@ -8,7 +8,7 @@ import StringIO
 from enthought.traits.api import TraitError
 
 import openmdao.util.eggsaver as constants
-from openmdao.main.container import Container
+from openmdao.main.container import Container, get_default_name
 from openmdao.lib.api import Float
 from openmdao.util.testutil import make_protected_dir
 
@@ -99,7 +99,7 @@ class ContainerTestCase(unittest.TestCase):
         cont.add_container('container1', Container())
         cont.add_container('container2', Container())
         cc = Container()
-        self.assertEqual(cc.get_default_name(cont), 'container3')
+        self.assertEqual(get_default_name(cc, cont), 'container3')
         
     def test_bad_get(self):
         try:
