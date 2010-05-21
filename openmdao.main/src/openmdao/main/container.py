@@ -621,8 +621,8 @@ class Container(HasTraits):
         if len(tup) == 1:
             return path in self.__dict__
         
-        if tup[0] in self.__dict__:
-            obj = getattr(self, tup[0])
+        obj = self.__dict__.get(tup[0])
+        if obj is not None:
             if isinstance(obj, Container):
                 return obj.contains(tup[1])
             else:
