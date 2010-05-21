@@ -15,7 +15,7 @@ Glossary
       **Assembly**
         The Assembly class is the primary building block of the "system of systems"
         aspect of OpenMDAO. Each assembly has a Component Workflow called *workflow*
-        and a Driver Workflow called *driverflow*, and acts as a container for
+        and a Driver Workflow called *driverflow* and acts as a container for
         Components. An assembly is also a Component, so hierarchical structures of
         assemblies can be created.
       
@@ -116,7 +116,7 @@ Glossary
       **Driver**
         A Driver's function is to iterate over a Workflow until some
         condition is met. The simplest Driver executes a Workflow only once.
-        Other Drivers, such as Optimizers or ParameterStudies, would execute
+        Other Drivers, such as Optimizers or Parameter Studies, would execute
         the Workflow a variable number of times based on their inputs.  
 
        

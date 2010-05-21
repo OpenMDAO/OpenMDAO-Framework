@@ -47,26 +47,26 @@ Components, Drivers, and two Workflows. The first Workflow, called
 *driverflow*, specifies the execution order of all of the Drivers in the
 Assembly. The second, called *workflow*, specifies the execution order of the
 non-Driver Components in the Assembly. When an Assembly executes, it runs the
-*driverflow* Workflow, which executes each Driver in turn. The execution of
-each Driver will run *workflow* until that Driver decides it is finished. Then
-the next Driver in *driverflow* will execute, running *workflow* until it
-finishes, and so on until all of the Drivers in *driverflow* have finished. If
-*driverflow* happens to be empty, then the Assembly will run *workflow* once.
+driverflow Workflow, which executes each Driver in turn. The execution of
+each Driver will run workflow until that Driver decides it is finished. Then
+the next Driver in driverflow will execute, running workflow until it
+finishes, and so on until all of the Drivers in driverflow have finished. If
+driverflow happens to be empty, then the Assembly will run workflow once.
 
-The next figure shows and example of an Assembly with two Drivers and four
-Components. A solid line between two Components indicates that one of them
-is supplying inputs to the other. Each dashed line between a Driver and a 
+The next figure shows an example of an Assembly with two Drivers and four
+Components. A solid line between two Components indicates that one of them is
+supplying inputs to the other. Each dashed line between a Driver and a 
 Component indicates an :term:`Expression` object in the Driver that references
-an input or output variable on the Component. The arrow at the end of 
-a dashed or solid line
-indicates the direction of the data flow between two connected objects.
+an input or output variable on the Component. The arrow at the end of  a dashed
+or solid line  indicates the direction of the data flow between two connected
+objects.
 
 .. _`driver flow`:
 
 .. figure:: ../generated_images/DriverFlow.png
    :align: center
 
-   View of an Assembly with *driverflow* and *workflow*
+   View of an Assembly with driverflow and workflow
 
 
 The functionality of OpenMDAO can be extended through the use of
@@ -75,7 +75,7 @@ The functionality of OpenMDAO can be extended through the use of
 that a user can create any of these and the framework will understand how to
 interact with them. This is possible because plugins have a specific interface
 that the framework expects.  To learn how to create your own plugins, see the 
-:ref:`Plugin-Developer's-Guide`.
+:ref:`Plugin-Developer-Guide`.
 
 
 .. figure:: ../generated_images/TopContext.png
