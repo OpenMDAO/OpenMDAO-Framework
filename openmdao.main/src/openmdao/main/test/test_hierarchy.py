@@ -72,10 +72,10 @@ class HierarchyTestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')
             
-        self.h121.error("can't start server")
-        self.h121.warning("I wouldn't recommend that")
-        self.h121.info("fyi")
-        self.h121.debug("dump value = 3")
+        self.h121._logger.error("can't start server")
+        self.h121._logger.warning("I wouldn't recommend that")
+        self.h121._logger.info("fyi")
+        self.h121._logger.debug("dump value = 3")
     
     
 if __name__ == "__main__":

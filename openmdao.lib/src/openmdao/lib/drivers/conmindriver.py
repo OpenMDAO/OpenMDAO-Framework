@@ -274,9 +274,9 @@ class CONMINdriver(Driver):
         # update constraint value array
         for i, v in enumerate(self.constraints):
             self.constraint_vals[i] = v.evaluate()
-        #self.debug('%s: new iteration' % self.get_pathname())
-        #self.debug('objective = %s' % self.objective)
-        #self.debug('design vars = %s' % self.design_vars)
+        #self._logger.debug('%s: new iteration' % self.get_pathname())
+        #self._logger.debug('objective = %s' % self.objective)
+        #self._logger.debug('design vars = %s' % self.design_vars)
         
         # loop until optimized
         while self.cnmn1.igoto or self.iter_count == 0:
@@ -291,9 +291,9 @@ class CONMINdriver(Driver):
                 self.raise_exception('objective function is not pointing to a \
                                       valid OpenMDAO Variable', RuntimeError)
                     
-            #self.debug('iter_count = %d' % self.iter_count)
-            #self.debug('objective = %f' % self.cnmn1.obj)
-            #self.debug('design vals = %s' % self.design_vals[:-2])
+            #self._logger.debug('iter_count = %d' % self.iter_count)
+            #self._logger.debug('objective = %f' % self.cnmn1.obj)
+            #self._logger.debug('design vals = %s' % self.design_vals[:-2])
             
 # TODO: 'step around' ill-behaved cases.
             
@@ -315,7 +315,7 @@ class CONMINdriver(Driver):
                                    self.cons_is_linear,
                                    self.cons_active_or_violated, self._ms1)
             except Exception, err:
-                self.error(str(err))
+                self._logger.error(str(err))
                 raise
             
             # common blocks are saved before, and loaded after execution
@@ -340,7 +340,7 @@ class CONMINdriver(Driver):
                 # update constraint value array
                 for i, v in enumerate(self.constraints):
                     self.constraint_vals[i] = v.evaluate()
-                #self.debug('constraints = %s'%self.constraint_vals)
+                #self._logger.debug('constraints = %s'%self.constraint_vals)
                     
             # calculate gradient of constraints and graident of objective
             elif self.cnmn1.info == 2:

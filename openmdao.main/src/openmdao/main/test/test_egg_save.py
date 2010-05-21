@@ -119,12 +119,12 @@ class Source(Assembly):
         """ Write test data to files. """
         if self.write_files:
             cwd = os.getcwd()
-            self.debug("opening file '%s' in %s" % 
+            self._logger.debug("opening file '%s' in %s" % 
                        (self.text_file.path, cwd))
             with open(self.text_file.path, 'w') as out:
                 out.write(self.text_data)
 
-            self.debug("opening file '%s' in %s" % 
+            self._logger.debug("opening file '%s' in %s" % 
                        (self.sub.binary_file.path, cwd))
             with open(self.sub.binary_file.path, 'wb') as out:
                 cPickle.dump(self.sub.binary_data, out, 2)
@@ -200,18 +200,18 @@ class Oddball(Assembly):
     def execute(self):
         """ Call stuff. Empty sockets are clumsy. """
         if self.thing_to_call:
-            self.debug('thing_to_call returned %s', self.thing_to_call())
+            self._logger.debug('thing_to_call returned %s', self.thing_to_call())
 
         for thing, args in self.list_to_call:
-            self.debug('list-thing returned %s', thing(*args))
+            self._logger.debug('list-thing returned %s', thing(*args))
 
         try:
-            self.debug('function_socket returned %s', self.function_socket())
+            self._logger.debug('function_socket returned %s', self.function_socket())
         except RuntimeError, exc:
             if not str(exc).find('empty'):
                 raise exc
         try:
-            self.debug('method_socket returned %s', self.method_socket())
+            self._logger.debug('method_socket returned %s', self.method_socket())
         except RuntimeError, exc:
             if not str(exc).find('empty'):
                 raise exc

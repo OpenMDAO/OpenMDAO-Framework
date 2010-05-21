@@ -441,7 +441,7 @@ class Component (Container):
                 parent_dir = comp.parent.get_abs_directory()
                 fixup_dirs.append((comp, comp.directory))
                 comp.directory = relpath(comp_dir, parent_dir)
-                self.debug("    %s.directory reset to '%s'", 
+                self._logger.debug("    %s.directory reset to '%s'", 
                            comp.name, comp.directory)
         elif require_relpaths:
             self.raise_exception(
@@ -449,7 +449,7 @@ class Component (Container):
                 % (comp.get_pathname(), comp_dir, root_dir), ValueError)
 
         else:
-            self.warning("%s directory '%s' can't be made relative to '%s'.",
+            self._logger.warning("%s directory '%s' can't be made relative to '%s'.",
                          comp.get_pathname(), comp_dir, root_dir)
 
     def _fix_external_files(self, comp, comp_dir, root_dir, require_relpaths,
@@ -475,7 +475,7 @@ class Component (Container):
                     "Can't save, %s file '%s' doesn't start with '%s'."
                     % (comp.get_pathname(), path, root_dir), ValueError)
             else:
-                self.warning("%s file '%s' can't be made relative to '%s'.",
+                self._logger.warning("%s file '%s' can't be made relative to '%s'.",
                              comp.get_pathname(), path, root_dir)
 
     def _fix_file_vars(self, comp, comp_dir, root_dir, require_relpaths,
@@ -504,7 +504,7 @@ class Component (Container):
                     % ('.'.join((comp.get_pathname(), fvarname)),
                        path, root_dir), ValueError)
             else:
-                self.warning("%s path '%s' can't be made relative to '%s'.",
+                self._logger.warning("%s path '%s' can't be made relative to '%s'.",
                              '.'.join((comp.get_pathname(), fvarname)),
                              path, root_dir)
 
@@ -623,7 +623,7 @@ class Component (Container):
         with self.dir_context:
             fvars = self.get_file_vars()
             if self.external_files or fvars:
-                self.info('Checking files in %s', os.getcwd())
+                self._logger.info('Checking files in %s', os.getcwd())
 
             for metadata in self.external_files:
                 pattern = metadata.path
@@ -686,7 +686,7 @@ class Component (Container):
                     found = True
                     if exists(filename):
                         # Don't overwrite existing files (reloaded instance).
-                        self.debug("    '%s' exists", filename)
+                        self._logger.debug("    '%s' exists", filename)
                         continue
 
                     src_name = ''.join((rel_path, sep, filename))
@@ -703,7 +703,7 @@ class Component (Container):
                     file_list.append((src_name, mode, size,
                                       os.path.join(cwd, filename)))
             if not found and is_input:
-                self.warning("No files found for '%s'", pattern)
+                self._logger.warning("No files found for '%s'", pattern)
         finally:
             if directory:
                 self.pop_dir()
@@ -722,7 +722,7 @@ class Component (Container):
             src_name, mode, size, dst_name = info
             if dirname(dst_name) != dst_dir:
                 dst_dir = dirname(dst_name)
-                self.info('Restoring files in %s', dst_dir)
+                self._logger.info('Restoring files in %s', dst_dir)
             if observer is not None:
                 observer.copy(src_name, i/total_files,
                               completed_bytes/total_bytes)

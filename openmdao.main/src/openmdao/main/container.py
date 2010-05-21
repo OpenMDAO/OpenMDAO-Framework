@@ -1067,7 +1067,7 @@ class Container(HasTraits):
         else:
             return (None, None)
 
-    def create_io_traits(self, obj_info, iotype='in'):
+    def _create_io_traits(self, obj_info, iotype='in'):
         """Create io trait(s) specified by the contents of obj_info. Calls
         _build_trait(), which can be overridden by subclasses, to create each
         trait.
@@ -1078,10 +1078,10 @@ class Container(HasTraits):
         
         For example, the following are valid calls:
 
-        obj.create_io_traits('foo')
-        obj.create_io_traits(['foo','bar','baz'])
-        obj.create_io_traits(('foo', 'foo_alias', 'in', some_trait))
-        obj.create_io_traits([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
+        obj._create_io_traits('foo')
+        obj._create_io_traits(['foo','bar','baz'])
+        obj._create_io_traits(('foo', 'foo_alias', 'in', some_trait))
+        obj._create_io_traits([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
         """
         if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
             lst = [obj_info]
@@ -1104,7 +1104,7 @@ class Container(HasTraits):
                 except IndexError:
                     pass
             else:
-                self.raise_exception('create_io_traits cannot add trait %s' % entry,
+                self.raise_exception('_create_io_traits cannot add trait %s' % entry,
                                      TraitError)
             self.add_trait(name, 
                            self._build_trait(ref_name, iostat, trait))
@@ -1160,27 +1160,6 @@ class Container(HasTraits):
         full_msg = '%s: %s' % (self.get_pathname(), msg)
         self._logger.error(msg)
         raise exception_class(full_msg)
-    
-    def exception(self, msg, *args, **kwargs):
-        """Log traceback from within exception handler."""
-        self._logger.critical(msg, *args, **kwargs)
-        self._logger.critical(traceback.format_exc())
-
-    def error(self, msg, *args, **kwargs):
-        """Record an error message."""
-        self._logger.error(msg, *args, **kwargs)
-        
-    def warning(self, msg, *args, **kwargs):
-        """Record a warning message."""
-        self._logger.warning(msg, *args, **kwargs)
-        
-    def info(self, msg, *args, **kwargs):
-        """Record an informational message."""
-        self._logger.info(msg, *args, **kwargs)
-        
-    def debug(self, msg, *args, **kwargs):
-        """Record a debug message."""
-        self._logger.debug(msg, *args, **kwargs)
 
 
 def _get_entry_group(obj):

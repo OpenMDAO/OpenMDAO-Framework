@@ -100,13 +100,13 @@ class ExternalCode(Component):
 
     def _execute_local(self):
         """ Run command. """
-        self.info("executing '%s'...", self.command)
+        self._logger.info("executing '%s'...", self.command)
         start_time = time.time()
 
         self._process = \
             ShellProc(self.command, self.stdin, self.stdout, self.stderr,
                       self.env_vars)
-        self.debug('PID = %d', self._process.pid)
+        self._logger.debug('PID = %d', self._process.pid)
 
         try:
             return_code, error_msg = \
@@ -117,7 +117,7 @@ class ExternalCode(Component):
 
         et = time.time() - start_time
         if et >= 60:
-            self.info('elapsed time: %.1f sec.', et)
+            self._logger.info('elapsed time: %.1f sec.', et)
 
         return (return_code, error_msg)
 
@@ -142,10 +142,10 @@ class ExternalCode(Component):
             if patterns:
                 self._send_inputs(patterns)
             else:
-                self.debug("No input metadata paths")
+                self._logger.debug("No input metadata paths")
 
             # Run command.
-            self.info("executing '%s'...", self.command)
+            self._logger.info("executing '%s'...", self.command)
             start_time = time.time()
             return_code, error_msg = \
                 self._server.execute_command(self.command, self.stdin,
@@ -154,7 +154,7 @@ class ExternalCode(Component):
                                              self.timeout)
             et = time.time() - start_time
             if et >= 60:
-                self.info('elapsed time: %f sec.', et)
+                self._logger.info('elapsed time: %f sec.', et)
 
             # Retrieve results.
             patterns = []
@@ -164,7 +164,7 @@ class ExternalCode(Component):
             if patterns:
                 self._retrieve_results(patterns)
             else:
-                self.debug("No output metadata paths")
+                self._logger.debug("No output metadata paths")
 
         finally:
             RAM.release(self._server)
@@ -174,7 +174,7 @@ class ExternalCode(Component):
 
     def _send_inputs(self, patterns):
         """ Sends input files matching `patterns`. """
-        self.info('sending inputs...')
+        self._logger.info('sending inputs...')
         start_time = time.time()
 
         filename = 'inputs.zip'
@@ -192,11 +192,11 @@ class ExternalCode(Component):
 
         et = time.time() - start_time
         if et >= 60:
-            self.info('elapsed time: %f sec.', et)
+            self._logger.info('elapsed time: %f sec.', et)
 
     def _retrieve_results(self, patterns):
         """ Retrieves result files matching `patterns`. """
-        self.info('retrieving results...')
+        self._logger.info('retrieving results...')
         start_time = time.time()
 
         filename = 'outputs.zip'
@@ -214,7 +214,7 @@ class ExternalCode(Component):
 
         et = time.time() - start_time
         if et >= 60:
-            self.info('elapsed time: %f sec.', et)
+            self._logger.info('elapsed time: %f sec.', et)
 
     def stop(self):
         """ Stop the external code. """
@@ -227,7 +227,7 @@ class ExternalCode(Component):
         Copy inputs from `inputs_dir` that match `patterns`.
         This can be useful for resetting problem state.
         """
-        self.info('copying initial inputs from %s...', inputs_dir)
+        self._logger.info('copying initial inputs from %s...', inputs_dir)
         with self.dir_context:
             if not os.path.exists(inputs_dir):
                 self.raise_exception("inputs_dir '%s' does not exist" \
@@ -240,7 +240,7 @@ class ExternalCode(Component):
         This can be useful for workflow debugging when the external
         code takes a long time to execute.
         """
-        self.info('copying precomputed results from %s...', results_dir)
+        self._logger.info('copying precomputed results from %s...', results_dir)
         with self.dir_context:
             if not os.path.exists(results_dir):
                 self.raise_exception("results_dir '%s' does not exist" \
@@ -259,7 +259,7 @@ class ExternalCode(Component):
             pattern = os.path.join(directory, pattern)
             for src_path in sorted(glob.glob(pattern)):
                 dst_path = os.path.basename(src_path)
-                self.debug('    %s', src_path)
+                self._logger.debug('    %s', src_path)
                 shutil.copy(src_path, dst_path)
                 # Ensure writable.
                 mode = os.stat(dst_path).st_mode

@@ -258,7 +258,7 @@ file called ``coord.py`` and placing the following code in it:
                all([isinstance(val,float) or isinstance(val,int) for val in value]):
                 return value
             else:
-                self.error(object, name, value)
+                self._logger.error(object, name, value)
 
 
 OpenMDAO uses the Traits package from Enthought to implement public

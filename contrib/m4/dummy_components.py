@@ -30,7 +30,7 @@ class Model_A2d(Component):
         vec = [self.x, self.y]
         self.z1 = self._m4_comp.RunModel(vec, 0)
         self.z2 = self._m4_comp.RunModel(vec, 1)
-        self.debug('function(%f, %f) = %f, %f',
+        self._logger.debug('function(%f, %f) = %f, %f',
                    self.x, self.y, self.z1, self.z2)
 
 
@@ -51,5 +51,5 @@ class Model_B2d(Component):
         """ Run M4 component. """
         vec = [self.x, self.y]
         self.z = self._m4_comp.RunModel(vec, 0)
-        self.debug('function(%f, %f) = %f', self.x, self.y, self.z)
+        self._logger.debug('function(%f, %f) = %f', self.x, self.y, self.z)
 
