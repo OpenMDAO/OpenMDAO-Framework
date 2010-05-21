@@ -195,14 +195,14 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
         
     def test_add_container_no_workflow(self):
-        self.asm.add_container('comp_nw1', DummyComp(), add_to_workflow=False)
-        self.assertTrue(self.asm.workflow.has_node('comp1'))
-        self.assertFalse(self.asm.workflow.has_node('comp_nw1'))
+        self.asm.add_container('comp_nw1', DummyComp(), workflow=None)
+        self.assertTrue(self.asm.comp1 in self.asm.workflow)
+        self.assertFalse(self.asm.comp_nw1 in self.asm.workflow)
     
     def test_create_no_workflow(self):
-        self.asm.create('openmdao.lib.api.CONMINdriver', 'd_nw1', add_to_workflow=False)
-        self.assertTrue(self.asm.workflow.has_node('comp1'))
-        self.assertFalse(self.asm.workflow.has_node('d_nw1'))
+        self.asm.create('openmdao.lib.api.CONMINdriver', 'd_nw1', workflow=None)
+        self.assertTrue(self.asm.comp1 in self.asm.workflow)
+        self.assertFalse(self.asm.d_nw1 in self.asm.workflow)
     
     def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)
