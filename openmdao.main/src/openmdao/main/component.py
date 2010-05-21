@@ -237,7 +237,7 @@ class Component (Container):
         any child containers are added.
         Returns the added Container object.
         """
-        self.config_changed()
+        self._config_changed()
         return super(Component, self).add_container(name, obj)
         
     def remove_container(self, name):
@@ -245,7 +245,7 @@ class Component (Container):
         any child containers are removed.
         """
         obj = super(Component, self).remove_container(name)
-        self.config_changed()
+        self._config_changed()
         return obj
 
     def add_trait(self, name, *trait):
@@ -253,7 +253,7 @@ class Component (Container):
         force call to *check_config* prior to execution when new traits are
         added.
         """
-        self.config_changed()
+        self._config_changed()
         super(Component, self).add_trait(name, *trait)
         
     def remove_trait(self, name):
@@ -261,14 +261,14 @@ class Component (Container):
         force call to *check_config* prior to execution when a trait is
         removed.
         """
-        self.config_changed()
+        self._config_changed()
         super(Component, self).remove_trait(name)    
 
-    def config_changed(self):
-        """Call this whenever the configuration of this Container changes,
+    def _config_changed(self):
+        """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
         """
-        super(Component, self).config_changed()
+        super(Component, self)._config_changed()
         self._call_check_config = True
 
     def check_path(self, path, check_dir=False):

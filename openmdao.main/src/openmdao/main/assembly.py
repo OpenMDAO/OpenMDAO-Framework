@@ -155,11 +155,7 @@ class Assembly (Component):
         pathname for validation (if it's not a property trait), adds it to
         self, and creates a connection between the two. If alias is *None,*
         the name of the "promoted" trait will be the last entry in its
-        pathname.  This is different from the *create_alias* function because
-        the new trait is only tied to the specified trait by a connection
-        in the Assembly. This means that updates to the new trait value will
-        not be reflected in the connected trait until the assembly executes.
-        The trait specified by pathname must exist.
+        pathname. The trait specified by pathname must exist.
         """
         if alias:
             newname = alias

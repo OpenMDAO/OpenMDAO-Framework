@@ -128,10 +128,6 @@ class ContainerTestCase(unittest.TestCase):
                                  if isinstance(x, Container) and x.parent==self.root.c2]
         self.assertEqual(sorted(names), ['c2.c21', 'c2.c22'])        
 
-    def test_create(self):
-        new_obj = self.root.create('openmdao.main.component.Component','mycomp')
-        self.assertEqual(new_obj.__class__.__name__, 'Component')
- 
     # TODO: all of these save/load test functions need to do more checking
     #       to verify that the loaded thing is equivalent to the saved thing
     

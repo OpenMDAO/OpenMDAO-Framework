@@ -436,8 +436,9 @@ class Container(HasTraits):
     def check_config (self):
         """Verify that the configuration of this component is correct. This
         function is called once prior to the first execution of this Assembly
-        and prior to execution if any children are added or removed, or if
-        *self._call_check_config* is True.
+        and if any children are added or removed or if
+        *self._call_check_config* is True it will be called prior to the next
+        execution .
         """
         for name, value in self._traits_meta_filter(required=True).items():
             if value.is_trait_type(Instance) and getattr(self, name) is None:
@@ -662,17 +663,6 @@ class Container(HasTraits):
                 return hasattr(obj, tup[1])
         return False
     
-    def create(self, type_name, name, version=None, server=None,
-               res_desc=None, **kw_args):
-        """Create a new object of the specified type inside of this
-        Container.
-        
-        Returns the new object.        
-        """
-        obj = fmcreate(type_name, version, server, res_desc)
-        self.add_container(name, obj, **kw_args)
-        return obj
-
     def invoke(self, path, *args, **kwargs):
         """Call the callable specified by **path**, which may be a simple
         name or a dotted path, passing the given arguments to it, and 
@@ -1128,13 +1118,13 @@ class Container(HasTraits):
         if trait:
             return trait
         try:
-            return self.create_alias(name, iotype)
+            return self._create_alias(name, iotype)
         except AttributeError:
             self.raise_exception("Cannot locate trait named '%s'" %
                                  name, NameError)
 
     
-    def create_alias(self, path, io_status=None, trait=None, alias=None):
+    def _create_alias(self, path, io_status=None, trait=None, alias=None):
         """Create a trait that maps to some internal variable designated by a
         dotted path. If a trait is supplied as an argument, use that trait as
         a validator for the aliased value. The resulting trait will have the
@@ -1153,7 +1143,7 @@ class Container(HasTraits):
                 "Can't create alias '%s' because it already exists." % alias, 
                 RuntimeError)
     
-    def config_changed(self):
+    def _config_changed(self):
         """Call this whenever the configuration of this Container changes,
         for example, children added or removed.
         """
@@ -1163,7 +1153,7 @@ class Container(HasTraits):
         
     def _trait_added_changed(self, name):
         """Called any time a new trait is added to this container."""
-        self.config_changed()
+        self._config_changed()
         
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
