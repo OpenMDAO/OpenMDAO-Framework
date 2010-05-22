@@ -66,5 +66,10 @@ def run_wing():
             sodirs = set([os.path.dirname(x) for x in _find_files('*.so',bzrtop)])
             libs.extend(sodirs)
             env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
-            
-    Popen([wingpath, projpath], env=env)
+    
+    if projpath:
+        Popen([wingpath, projpath], env=env)
+
+    
+if __name__ == '__main__':
+    run_wing()
