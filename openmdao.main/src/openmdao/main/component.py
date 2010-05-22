@@ -13,7 +13,7 @@ import sys
 import weakref
 
 from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Str
+from enthought.traits.api import Bool, List, Str, Instance, TraitError
 
 from openmdao.main.container import Container
 from openmdao.main.filevar import FileMetadata, FileRef
