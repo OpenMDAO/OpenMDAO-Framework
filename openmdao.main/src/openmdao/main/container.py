@@ -3,7 +3,7 @@ The Container class
 """
 
 #public symbols
-__all__ = ["Container", "set_as_top", "PathProperty", "get_default_name", "dump"]
+__all__ = ["Container", "set_as_top", "get_default_name", "dump"]
 
 import datetime
 import copy
@@ -86,7 +86,7 @@ _namecheck_rgx = re.compile(
 class _DumbTmp(object):
     pass
 
-class PathProperty(TraitType):
+class _PathProperty(TraitType):
     """A trait that allows attributes in child objects to be referenced
     using an alias in a parent scope.  We don't use a delegate because
     we can't be sure that the attribute we want is found in a HasTraits
@@ -95,17 +95,17 @@ class PathProperty(TraitType):
     def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
         ref_name = metadata.get('ref_name')
         if not ref_name:
-            raise TraitError("PathProperty constructor requires a"
+            raise TraitError("_PathProperty constructor requires a"
                              " 'ref_name' argument.")
         self._names = ref_name.split('.')
         if len(self._names) < 2:
-            raise TraitError("PathProperty ref_name must have at least "
+            raise TraitError("_PathProperty ref_name must have at least "
                              "two entries in the path."
                              " The given ref_name was '%s'" % ref_name)        
         #make weakref to a transient object to force a re-resolve later
         #without checking for self._ref being equal to None
         self._ref = weakref.ref(_DumbTmp()) 
-        super(PathProperty, self).__init__(default_value, **metadata)
+        super(_PathProperty, self).__init__(default_value, **metadata)
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -129,7 +129,7 @@ class PathProperty(TraitType):
             for name in self._names[:-1]:
                 obj = getattr(obj, name)
         except AttributeError:
-            raise TraitError("PathProperty cannot resolve path '%s'" % 
+            raise TraitError("_PathProperty cannot resolve path '%s'" % 
                              '.'.join(self._names))
         self._last_name = self._names[len(self._names)-1]
         self._ref = weakref.ref(obj)
@@ -966,7 +966,7 @@ class Container(HasTraits):
         if trait is None:
             trait = objtrait
         # if we make it to here, object specified by ref_name exists
-        return PathProperty(ref_name=pathname, iotype=iotype, 
+        return _PathProperty(ref_name=pathname, iotype=iotype, 
                             trait=trait)
     
     def _find_trait_and_value(self, pathname):
