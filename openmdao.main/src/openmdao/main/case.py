@@ -20,7 +20,7 @@ class Case(object):
         """
         self.inputs = inputs or []      # a list of name,index,value tuples 
         self.outputs = outputs or []    # a list of name,index,value tuples 
-                                        # Values for each output will be filled 
+                                        # Values for each output will be filled
                                         # in after the case completes
         self.max_retries = max_retries  # times to retry after error(s)
         self.retries = retries          # times case was retried
