@@ -13,7 +13,7 @@ class Case(object):
 
     """
     def __init__(self, inputs=None, outputs=None, max_retries=None,
-                 retries=None, msg=None, ident=''):
+                 retries=0, msg='', ident=''):
         """If inputs or outputs are supplied to the constructor, each must be an
         iterator that returns (name,index,value) tuples. 
         
