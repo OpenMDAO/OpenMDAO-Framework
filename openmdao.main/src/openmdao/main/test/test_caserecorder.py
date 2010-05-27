@@ -30,8 +30,11 @@ class CaseRecorderTestCase(unittest.TestCase):
 
     def test_caseDBrecorder(self):
         self.setup_model()
-        self.top.driver.recorder = DBCaseRecorder(':memory:')
+        self.top.driver.recorder = DBCaseRecorder()  # db file defaults to ':memory:'
         self.top.run()
+        
+        # now use the DB as the CaseIterator
+        self.top.driver.iterator = DBCaseIterator()
 
 if __name__ == '__main__':
     unittest.main()
