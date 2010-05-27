@@ -3,7 +3,7 @@ import sqlite3
 
 from enthought.traits.api import implements
 
-from openmdao.main.interfaces import ICaseRecorder
+from openmdao.main.interfaces import ICaseIterator
 from openmdao.main.api import Case
 
 def _all_cases(Case):

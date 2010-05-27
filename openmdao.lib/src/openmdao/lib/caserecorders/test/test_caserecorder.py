@@ -5,8 +5,9 @@ Test for CaseRecorders.
 import unittest
 import tempfile
 
-from openmdao.main.api import Component, Assembly, Case, DBCaseRecorder, ListCaseIterator, set_as_top
+from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
+from openmdao.lib.api import DBCaseIterator, DBCaseRecorder, ListCaseIterator
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 
     

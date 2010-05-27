@@ -16,7 +16,6 @@ Pseudo package containing plugins from the OpenMDAO Standard Library.
 |    List
 |    Str
 |
-|
 | *Drivers*
 |
 |    CaseIteratorDriver
@@ -27,6 +26,15 @@ Pseudo package containing plugins from the OpenMDAO Standard Library.
 | *Components*
 |
 |    ExternalCode
+|
+| *CaseIterators*
+|
+|    ListCaseIterator
+|    DBCaseIterator
+|
+| *CaseRecorders*
+|
+|    DBCaseRecorder
 """
 
 # Traits that we've modified
@@ -47,4 +55,11 @@ from openmdao.lib.drivers.genetic import Genetic
 
 # Components
 from openmdao.lib.components.external_code import ExternalCode
+
+# CaseIterators
+from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
+
+# CaseRecorders
+from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
 

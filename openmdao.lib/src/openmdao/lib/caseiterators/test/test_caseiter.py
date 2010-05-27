@@ -6,7 +6,8 @@ import unittest
 
 import cStringIO
 
-from openmdao.main.api import Case, ListCaseIterator
+from openmdao.main.api import Case
+from openmdao.lib.api import ListCaseIterator
 
 class CaseTestCase(unittest.TestCase):
 
