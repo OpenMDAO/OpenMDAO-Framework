@@ -13,15 +13,16 @@ class Case(object):
 
     """
     def __init__(self, inputs=None, outputs=None, max_retries=None,
-                 retries=0, msg='', ident=''):
+                 retries=None, msg='', ident=''):
         """If inputs or outputs are supplied to the constructor, each must be an
         iterator that returns (name,index,value) tuples. 
         
         """
         self.inputs = inputs or []      # a list of name,index,value tuples 
         self.outputs = outputs or []    # a list of name,index,value tuples 
-                                        # Values for each output will be filled
-                                        # in after the case completes
+                                        #   Values for each output will be filled
+                                        #   in after the case completes by calling 
+                                        #   the update function
         self.max_retries = max_retries  # times to retry after error(s)
         self.retries = retries          # times case was retried
         self.msg = msg                  # If non-null, error message.
@@ -39,82 +40,99 @@ class Case(object):
 
     def apply(self, scope):
         """Set all of the inputs in this case to their specified values."""
+        if self.retries is None:
+            self.retries = 0
+        else:
+            self.retries += 1
         for name,index,value in self.inputs:
             scope.set(name, value, index)
+            
+    def update(self, scope, msg=None):
+        """Update the value of all outputs of interest, and/or set error
+        msg.
+        """
+        if msg:
+            self.msg = msg
+        new_outputs = []
+        # TODO: make this smart enough to do a multiget on a component
+        #       instead of multiple individual gets
+        for name,index,value in self.outputs:
+            new_outputs.append((name, index, scope.get(name, index)))
+        self.outputs = new_outputs
 
 
-class FileCaseIterator(object):
-    """An iterator that returns :class:`Case` objects from a file having the
-    simple format below, where a blank line indicates a separation between two
-    cases.  Whitespace outside of quotes is ignored.  Outputs are indicated
-    by the lack of an assignment.
+#class FileCaseIterator(object):
+    #"""An iterator that returns :class:`Case` objects from a file having the
+    #simple format below, where a blank line indicates a separation between two
+    #cases.  Whitespace outside of quotes is ignored.  Outputs are indicated
+    #by the lack of an assignment.
     
-.. todo:: Convert value strings to appropriate type
+#.. todo:: Convert value strings to appropriate type
 
-.. todo:: Allow multi-line values (strings, arrays, etc.) on right hand side
+#.. todo:: Allow multi-line values (strings, arrays, etc.) on right hand side
        
-.. todo:: Allow array indexing for inputs, outputs, or RHS values
+#.. todo:: Allow array indexing for inputs, outputs, or RHS values
     
-.. parsed-literal::
+#.. parsed-literal::
     
-       # Example of an input file
+       ## Example of an input file
     
-       someinput = value1
-       blah = value2
-       foo = 'abcdef'
-       someoutput
-       output2
+       #someinput = value1
+       #blah = value2
+       #foo = 'abcdef'
+       #someoutput
+       #output2
 
-       someinput = value3
-       blah = value4
+       #someinput = value3
+       #blah = value4
     
-    """
+    #"""
     
-    implements(ICaseIterator)
+    #implements(ICaseIterator)
     
-    def __init__(self, scope, fname):
-        if isinstance(fname, basestring):
-            self.inp = open(fname, 'r')
-        else:
-            self.inp = fname
-        self.scope = scope
-        self.line_number = 0
-        self.ident = 0
+    #def __init__(self, scope, fname):
+        #if isinstance(fname, basestring):
+            #self.inp = open(fname, 'r')
+        #else:
+            #self.inp = fname
+        #self.scope = scope
+        #self.line_number = 0
+        #self.ident = 0
     
-    def __iter__(self):
-        return self._next_case()
+    #def __iter__(self):
+        #return self._next_case()
         
-    def _next_case(self):
-        """ Generator which returns cases as they are seen in the stream. """
-        inputs = []
-        outputs = []
-        for line in self.inp:
-            self.line_number += 1
-            line = line.strip()
-            if line.startswith('#'):  # comment line
-                continue
-            if line == '':  # blank line
-                if len(inputs) > 0:
-                    self.ident += 1
-                    newcase = Case(inputs, outputs, ident=str(self.ident))
-                    inputs = []
-                    outputs = []
-                    yield newcase
-                else: # extra blank line. ignore
-                    pass
-            else:
-                parts = line.split('=')
-                if len(parts) > 1:        # it's an input assignment
-                    inputs.append((parts[0].strip(), None, parts[1].strip()))
-                else:
-                    outputs.append((parts[0].strip(), None, None))
+    #def _next_case(self):
+        #""" Generator which returns cases as they are seen in the stream. """
+        #inputs = []
+        #outputs = []
+        #for line in self.inp:
+            #self.line_number += 1
+            #line = line.strip()
+            #if line.startswith('#'):  # comment line
+                #continue
+            #if line == '':  # blank line
+                #if len(inputs) > 0:
+                    #self.ident += 1
+                    #newcase = Case(inputs, outputs, ident=str(self.ident))
+                    #inputs = []
+                    #outputs = []
+                    #yield newcase
+                #else: # extra blank line. ignore
+                    #pass
+            #else:
+                #parts = line.split('=')
+                #if len(parts) > 1:        # it's an input assignment
+                    #inputs.append((parts[0].strip(), None, parts[1].strip()))
+                #else:
+                    #outputs.append((parts[0].strip(), None, None))
                     
-        if len(inputs) > 0:
-            self.ident += 1
-            newcase = Case(inputs, outputs, ident=str(self.ident))
-            inputs = []
-            outputs = []
-            yield newcase
+        #if len(inputs) > 0:
+            #self.ident += 1
+            #newcase = Case(inputs, outputs, ident=str(self.ident))
+            #inputs = []
+            #outputs = []
+            #yield newcase
                     
 
 class ListCaseIterator(object):                

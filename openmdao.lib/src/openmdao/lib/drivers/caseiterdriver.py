@@ -28,7 +28,7 @@ class CaseIteratorDriver(Driver):
     :class:`ResourceAllocationManager`.
 
     - The `iterator` socket provides the cases to be evaluated.
-    - The `model` socket provides the model to be executed.
+    - The `model` to be executed is found in the parent workflow.
     - The `recorder` socket is used to record results.
     - If `sequential` is True, then the cases are evaluated sequentially.
     - If `reload_model` is True, the model is reloaded between executions.
@@ -41,7 +41,6 @@ class CaseIteratorDriver(Driver):
 
     iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
     recorder = Instance(object, desc='Something to append() to.', required=True)
-    #model = Instance(Component, desc='Model to be executed.', required=True)
     
     sequential = Bool(True, iotype='in',
                       desc='Evaluate cases sequentially.')

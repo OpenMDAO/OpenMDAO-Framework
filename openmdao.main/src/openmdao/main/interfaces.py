@@ -141,3 +141,9 @@ class ICaseIterator(Interface):
         exception.
         """
 
+class ICaseRecorder(Interface):
+    """A recorder of Cases"""
+    
+    def record(case):
+        """Record the given Case."""
+        

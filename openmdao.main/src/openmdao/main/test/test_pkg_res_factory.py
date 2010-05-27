@@ -77,8 +77,15 @@ class PkgResFactoryTestCase(unittest.TestCase):
         dist = working_set.find(Requirement.parse('openmdao.test'))
         fact = PkgResourcesFactory(['openmdao.component'], None)
         
-        comp = fact.create('openmdao.test.Box')
+        comp = fact.create('openmdao.test.ExecComp', 
+                           exprs=['x = a+1','y=b-2','z=x*2'])
+        comp.a = 4
+        comp.b = 2
         comp.run()
+        self.assertEqual(comp.x, 5)
+        self.assertEqual(comp.y, 0)
+        self.assertEqual(comp.z, 10)
+        
         
     def test_load_version(self):
         """load a specific version, then try to load a conflicting version"""
@@ -138,8 +145,7 @@ class PkgResFactoryTestCase(unittest.TestCase):
         types = [x[0] for x in get_available_types()]
         self.assertEqual(types, ['openmdao.lib.CONMINdriver',
                                  'openmdao.lib.pyevolvedriver',
-                                 'openmdao.test.Box',
-                                 'openmdao.test.HollowSphere'])
+                                 'openmdao.test.ExecComp'])
         
 if __name__ == "__main__":
     unittest.main()

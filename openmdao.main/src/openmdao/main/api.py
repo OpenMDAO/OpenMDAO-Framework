@@ -30,7 +30,6 @@ openmdao.main API.
 |
 |         Case
 |         ExprEvaluator
-|         FileCaseIterator
 |         FileMetadata
 |         FileRef
 |         ListCaseIterator
@@ -71,8 +70,8 @@ from openmdao.main.exceptions import ConstraintError
 from openmdao.main.expression import Expression, ExpressionList
 from openmdao.main.filevar import FileMetadata, FileRef
 
-from openmdao.main.case import Case, FileCaseIterator, ListCaseIterator
-from openmdao.main.casedbrecorder import CaseDBRecorder
+from openmdao.main.case import Case, ListCaseIterator
+from openmdao.main.dbcaserecorder import DBCaseRecorder
 
 from openmdao.util.eggsaver import SAVE_YAML, SAVE_LIBYAML, \
                                    SAVE_PICKLE, SAVE_CPICKLE

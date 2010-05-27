@@ -1,9 +1,14 @@
 
 import sqlite3
 
+from enthought.traits.api import implements
 
-class CaseDBRecorder(object):
-    """"Records Cases to a relational DB"""
+from openmdao.main.interfaces import ICaseRecorder
+
+class DBCaseRecorder(object):
+    """"Records Cases to a relational DB (sqlite)"""
+    
+    implements(ICaseRecorder)
     
     def __init__(self, dbfile=':memory:'):
         self.dbfile = dbfile
@@ -36,10 +41,10 @@ class CaseDBRecorder(object):
         cur.execute("""insert into cases(case_id,name,msg,retries,model_id,timeEnter) 
                            values (?,?,?,?,?,DATETIME('NOW'))""", 
                                      (None, case.ident, case.msg, case.retries, self.model_id))
-        cur.execute("select rowid from cases")
-        case_id = cur.fetchone()[0]
+        case_id = cur.lastrowid
         # insert the inputs and outputs into the vars table
         vlist = [(None, name, case_id, 'i', value, entry) for name,entry,value in case.inputs]
         vlist.extend([(None, name, case_id, 'o', value, entry) for name,entry,value in case.outputs])
         cur.executemany("insert into casevars(var_id,name,case_id,sense,value,entry) values(?,?,?,?,?,?)", 
                         vlist)
+        self.connection.commit()
