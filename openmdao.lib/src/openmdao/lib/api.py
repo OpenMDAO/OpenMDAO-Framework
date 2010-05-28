@@ -35,6 +35,7 @@ Pseudo package containing plugins from the OpenMDAO Standard Library.
 | *CaseRecorders*
 |
 |    DBCaseRecorder
+|    DumpCaseRecorder
 """
 
 # Traits that we've modified
@@ -62,4 +63,5 @@ from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
 
 # CaseRecorders
 from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
+from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
 
