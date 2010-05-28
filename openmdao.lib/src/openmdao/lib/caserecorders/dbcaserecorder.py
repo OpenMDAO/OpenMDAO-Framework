@@ -10,21 +10,21 @@ class DBCaseRecorder(object):
     
     implements(ICaseRecorder)
     
-    def __init__(self, dbfile=':memory:'):
-        self.dbfile = dbfile
-        self.model_id = ''
-        self.connection = sqlite3.connect(dbfile)
-        self.connection.execute("""
+    def __init__(self, dbfile=':memory:', model_id=''):
+        self.dbfile = dbfile  # this creates the connection
+        self.model_id = model_id
+        
+        self._connection.execute("""
         create table cases(
          case_id INTEGER PRIMARY KEY,
          name TEXT,
          msg TEXT,
          retries INTEGER,
-         model_id INTEGER,
+         model_id TEXT,
          timeEnter TEXT
          )""")
         
-        self.connection.execute("""
+        self._connection.execute("""
         create table casevars(
          var_id INTEGER PRIMARY KEY,
          name TEXT,
@@ -34,9 +34,19 @@ class DBCaseRecorder(object):
          entry TEXT
          )""")
 
+    @property
+    def dbfile(self):
+        return self._dbfile
+    
+    @dbfile.setter
+    def dbfile(self, value):
+        """Set the DB file and connect to it."""
+        self._dbfile = value
+        self._connection = sqlite3.connect(value)
+    
     def record(self, case):
         """Record the given Case"""
-        cur = self.connection.cursor()
+        cur = self._connection.cursor()
         
         cur.execute("""insert into cases(case_id,name,msg,retries,model_id,timeEnter) 
                            values (?,?,?,?,?,DATETIME('NOW'))""", 
@@ -47,4 +57,4 @@ class DBCaseRecorder(object):
         vlist.extend([(None, name, case_id, 'o', value, entry) for name,entry,value in case.outputs])
         cur.executemany("insert into casevars(var_id,name,case_id,sense,value,entry) values(?,?,?,?,?,?)", 
                         vlist)
-        self.connection.commit()
+        self._connection.commit()

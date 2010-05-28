@@ -6,7 +6,7 @@ from enthought.traits.api import implements
 from openmdao.main.interfaces import ICaseRecorder
 
 class DumpCaseRecorder(object):
-    """"Dumps Cases to the terminal (default) or to a file."""
+    """"Dumps Cases to a file-like attribute called 'out'"""
     
     implements(ICaseRecorder)
     

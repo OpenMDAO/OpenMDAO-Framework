@@ -8,15 +8,20 @@ from openmdao.lib.api import Instance
 class SimpleCaseIterDriver(Driver):
     """
     Run a set of cases provided by an :class:`ICaseIterator` sequentially
-    and record the results in a :class:`CaseRecorder`.
+    and record the results in a :class:`CaseRecorder`.  This is intended
+    for test cases or very simple models only.  For a more full featured 
+    Driver of with similar functionality, see :class:`CaseIteratorDriver`.
 
     - The `iterator` socket provides the cases to be evaluated.
-    - The `model` to be executed is found in the parent workflow.
     - The `recorder` socket is used to record results.
+    
+    For each case coming from the `iterator`, the parent workflow will
+    be executed once.
     """
 
     iterator = Instance(ICaseIterator, desc='source of Cases', required=True)
-    recorder = Instance(ICaseRecorder, desc='where Case results are recorded', required=True)
+    recorder = Instance(ICaseRecorder, desc='where Case results are recorded', 
+                        required=True)
     
     def __init__(self, *args, **kwargs):
         super(SimpleCaseIterDriver, self).__init__(*args, **kwargs)

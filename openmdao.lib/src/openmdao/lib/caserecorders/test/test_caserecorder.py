@@ -53,7 +53,10 @@ class CaseRecorderTestCase(unittest.TestCase):
         
         # now use the DB as the CaseIterator
         self.top.driver.iterator = DBCaseIterator()
-        self.top.driver.iterator.connection = self.top.driver.recorder.connection
+        
+        # since the db is in memory in this case, use the connection from the
+        # DBCaseRecorder to get access to the same tables
+        self.top.driver.iterator._connection = self.top.driver.recorder._connection
         sout = StringIO.StringIO()
         self.top.driver.recorder = DumpCaseRecorder(sout)
         self.top.run()
