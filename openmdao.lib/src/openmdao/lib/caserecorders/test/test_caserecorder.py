@@ -46,16 +46,22 @@ class CaseRecorderTestCase(unittest.TestCase):
         self.assertTrue('\n'.join(expected) in sout.getvalue())
         
         
-    def test_caseDBrecorder(self):
+    def test_inoutDB(self):
+        """This test runs some cases, puts them in a DB using a DBCaseRecorder,
+        then runs the model again using the same cases, pulled out of the DB
+        by a DBCaseIterator.  Finally the cases are dumped to a string after
+        being run for the second time.
+        """
         self.top.driver.recorder = DBCaseRecorder()  # db file defaults to ':memory:'
         self.top.run()
         
-        # now use the DB as the CaseIterator
+        # now use the DB as source of Cases
         self.top.driver.iterator = DBCaseIterator()
         
-        # since the db is in memory in this case, use the connection from the
+        # since the db is in memory in this test, use the connection from the
         # DBCaseRecorder to get access to the same tables
         self.top.driver.iterator._connection = self.top.driver.recorder._connection
+        
         sout = StringIO.StringIO()
         self.top.driver.recorder = DumpCaseRecorder(sout)
         self.top.run()
