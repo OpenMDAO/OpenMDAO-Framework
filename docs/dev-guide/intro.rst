@@ -4,7 +4,7 @@ Getting Started
 This document attempts to explain the OpenMDAO development process and how a
 developer should interact with the various tools the project uses for
 version control, testing, deployment, etc. The source files for the
-Developer Guide can be found in the ``docs/dev-guide`` directory in the top
+*Developer Guide* can be found in the ``docs/dev-guide`` directory in the top
 level of your OpenMDAO source repository.
 
 .. index:: Bazaar
@@ -25,7 +25,7 @@ Guide.*  These requirements are described below.
 
 **C/C++ and Fortran Compilers**
    Certain packages used in OpenMDAO contain Python extensions, meaning that they
-   contain non-python source code that must be compiled. Packages currently in use require
+   contain non-Python source code that must be compiled. Packages currently in use require
    either C/C++ or Fortran compilers.
 
    - *Linux*:
@@ -47,7 +47,7 @@ Guide.*  These requirements are described below.
         
       - *gfortran*
 
-        Binaries for gfortran are available `here <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_
+        Binaries for gfortran are available `here <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_.
 
    - *Windows*:
    
@@ -103,7 +103,7 @@ Getting the Source Code
 
 Before you can do any development work on OpenMDAO, you'll need
 a copy of the source code. The source repository for the OpenMDAO 
-project is available on Launchpad. You can get a copy of the repository 
+project is available on :term:`Launchpad`. You can get a copy of the repository 
 as follows:
 
 ::
@@ -111,16 +111,23 @@ as follows:
    bzr branch lp:openmdao <branch_name>
    
    
-where ``<branch_name>`` is the name you are giving to the top level directory
-of your branch repository.  The name should reflect the purpose of the branch to
-avoid confusion in the case where you have multiple branches active at the same time.
-If you do not supply ``<branch_name>``, the name by default will be the last part of
-the source repository URI, which in this case is ``openmdao``.
+where ``<branch_name>`` is the name you are giving to the top level directory of your
+branch repository. It's a good idea to name branches based on ticket numbers in our bug 
+tracker using the  form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug
+tracker ticket number and ``<desc>`` is a short description of the branch, for example,
+``T0029-workflow_fix``. 
 
-It's a good idea to name branches based on ticket numbers in the bug  tracker using the 
-form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug
-tracker ticket number and ``<desc>`` is a short description of the branch. For
-example, ``T0029-workflow_fix``.
+In any case, the name you give your branch should reflect the purpose of the
+branch to avoid confusion if you have multiple branches active at the
+same time. If you do not supply a ``<branch_name>``, the name by default will be the last
+part of the source repository URI, which in this case is ``openmdao``.
+
+OpenMDAO uses Trac for project management and for tracking bugs and other issues. Bugs,
+enhancements and requirements are entered into Trac and automatically assigned a ticket
+number. A ticket is transitioned to various states during the development process. You
+can visit the OpenMDAO website to find out more about how we use `Trac
+<http://openmdao.org/wiki/Home>`_ and about the OpenMDAO `development
+<http://openmdao.org/wiki/Development>`_ process.
 
 
 .. _Creating-the-Virtual-Environment:
@@ -130,9 +137,10 @@ Creating the Virtual Environment
 ________________________________
 
 
-After you've created your branch, run ``python go-openmdao-dev.py`` from the top
-directory of your branch to set up your development environment. 
-
+After you've created your branch, run ``python go-openmdao-dev.py`` from the top directory of your
+branch to set up your development environment. The script will check the version of Python you are
+running. You must be running a version greater than or equal to 2.6 but less than 3.0. (To find out
+which Python version you are running, type ``python --version``.)
 
 .. note:: On Windows, you need to run the installer from a command window that has
    the Visual Studio environment variables set.  The easiest way to do this is to
@@ -142,10 +150,9 @@ directory of your branch to set up your development environment.
    option will be slightly different, i.e., replace "Express" with "Professional" or
    "Standard."
 
-
 ::
 
-   python2.6 go-openmdao-dev.py
+   python go-openmdao-dev.py
    
 Running ``go-openmdao-dev.py`` populates your virtual Python environment with all of the packages that
 OpenMDAO depends upon and installs the openmdao namespace packages in your virtual Python
@@ -158,16 +165,25 @@ see the results without having to rebuild any distributions.
 Activating the Virtual Environment
 __________________________________
 
-The next step is to activate your virtual python environment. 
-Change your directory to ``devenv`` and run:
+The next step is to activate your virtual Python environment. 
+Change your directory to ``devenv``.
 
-On Linux or OS X (must be running bash, and don't forget the '.' in the command below):
+On Linux or OS X, you must be running the Bash shell. If you are in Bash, omit this step.
+
+::
+
+   bash
+   
+ 
+Next, type the following, making sure to include the "." in the command:
 
 ::
 
    . bin/activate
 
-or, on Windows:
+
+
+Or, on Windows, type:
 
 ::
 
@@ -177,9 +193,9 @@ At this point, your ``devenv`` directory should contain the following
 subdirectories:
 
 ``bin``
-    Contains python and a number of other scripts that are associated with
+    Contains Python and a number of other scripts that are associated with
     the Python packages that are installed in the virtual environment. On
-    Windows, this directory is called *Scripts*
+    Windows, this directory is called ``Scripts``.
 
 ``lib``
     Contains Python standard library and installed modules.
@@ -190,13 +206,21 @@ subdirectories:
 ``etc``
     Contains miscellaneous files that don't fit in bin, lib, or include.
 
-
-After your virtual python environment has been activated, you can add additional
-distributions to the environment by using *easy_install* or *pip* in
+After your virtual Python environment has been activated, you can add additional
+distributions to the environment by using ``easy_install`` or :term:`pip` in
 the same manner that you would add packages to the system level Python.
 
 If you make doc changes and need to rebuild the docs, you can run ``openmdao_build_docs``.
 Running ``openmdao_docs`` will display the documents in HTML in the default browser.
+
+You can deactivate the environment by typing:
+
+
+:: 
+
+  deactivate
+  
+ 
 
 .. index:: source repository
 
@@ -206,51 +230,57 @@ Running ``openmdao_docs`` will display the documents in HTML in the default brow
 
 The directory structure of your repository should look like this:
 
+``contrib`` 
+    The directory containing source to be packaged into distributions that can
+    be released separately from OpenMDAO. These distributions may or may not depend upon
+    OpenMDAO. Distributions that have not yet been approved to be part of
+    ``openmdao.lib`` can live here--as long as their license is compatible with NOSA. No
+    proprietary code or GPL code can live in the OpenMDAO repository.
+
 ``devenv``
-    The directory containing the the OpenMDAO virtual environment. Note that
+    The directory containing the OpenMDAO virtual environment. Note that
     this is not part of the source repository. You will build it by running
     the ``go-openmdao-dev.py`` script that sits at the top of the source
     repository.
     
-``docs`` All Sphinx user documentation for OpenMDAO.  The documentation is broken up into
-    several major documents, each found in a separate  subdirectory, e.g., ``user-guide``
-    contains the *User Guide,* ``dev-guide`` contains the *Developer's Guide,* and so on.
-
-``openmdao.main``
-    Python package containing all infrastructure source for OpenMDAO.
+``docs``  
+    The directory containing all user documentation for OpenMDAO. The
+    documentation is broken up into several major documents, each found in a separate 
+    subdirectory, e.g., ``user-guide`` contains the *User Guide,* ``dev-guide`` contains
+    the *Developer Guide,* and so on.
+  
+``examples``
+    Python package containing examples of using OpenMDAO.
     
+``misc``
+    The directory containing miscellaneous scripts and configuration files used by
+    OpenMDAO developers.
+
+``openmdao.devtools``
+    Python package containing scripts intended for developers and maintainers
+    of openmdao to do things like build the docs or create a release.
+    These scripts assume that the source repository is present, so this
+    package is not distributed as part of an OpenMDAO release.
+
 ``openmdao.lib``
     Python package containing source for the OpenMDAO standard library of 
     modules.
-    
-``openmdao.util``
-    Python package containing source for various Python utility routines
-    used by OpenMDAO developers.
-    
-``openmdao.devtools``
-    Python package containing scripts intended for developers and maintainers
-    of openmdao to do things like build the Sphinx docs or create a release.
-    These scripts assume that the source repository is present, so this
-    package is not distributed as part of an OpenMDAO release.
-    
+
+``openmdao.main``
+    Python package containing all infrastructure source for OpenMDAO.
+     
 ``openmdao.test``
     Python package containing source for various OpenMDAO plugins used for
     testing.
     
-``openmdao.examples``
-    Python package containing examples of using OpenMDAO.
-    
-``misc``
-    Miscellaneous scripts and configuration files used by OpenMDAO developers.
-     
-``contrib``
-    Contains source to be packaged into distributions that can be released
-    separately from OpenMDAO. These distributions may or may not depend upon
-    OpenMDAO. Distributions that have not yet been approved to be part of
-    ``openmdao.lib`` can live here, as long as their license is compatible
-    with NOSA. No proprietary code or GPL code can live in the OpenMDAO
-    repository.
+``openmdao.units``
+     Contains the units for doing unit conversion.   
 
+``openmdao.util``
+    Python package containing source for various Python utility routines
+    used by OpenMDAO developers.
+    
+    
 .. index:: namespace package
 
 
@@ -258,13 +288,13 @@ The directory structure of your repository should look like this:
 +++++++++++++++++++++++++++++++
 
 OpenMDAO is split up into multiple Python packages, all under a top level
-package called ``openmdao``. This top package is what is called a *namespace*
-package, is sort of a fake package that allows us to maintain and release our
-subpackages separately while appearing to the user to be all part of the same
-top level package. The following packages under the ``openmdao`` namespace
-have a similar directory layout: ``openmdao.main``, ``openmdao.lib``,
-``openmdao.devtools``, ``openmdao.util`` and ``openmdao.test``. The layout is
-shown below.
+package called ``openmdao``. This top package, called a *namespace* package,
+is a sort of fake package that allows us to maintain and release our
+subpackages separately while appearing to the user to be all part of the
+same top level package. The following packages under the ``openmdao``
+namespace have a similar directory layout: ``openmdao.main``,
+``openmdao.lib``, ``openmdao.devtools``, ``openmdao.util`` and
+``openmdao.test``. The layout is shown below.
 
 ``openmdao.<package>``
     The top level directory for the package denoted by ``<package>``. This
@@ -272,17 +302,16 @@ shown below.
     create a distribution for the package.
     
 ``openmdao.<package>/src``
-        Contains all of the package source code.
+    Contains all of the package source code.
     
 ``openmdao.<package>/src/openmdao``
     Contains a special ``__init__.py`` file and a ``<package>``
     subdirectory.
     
 ``openmdao.<package>/src/openmdao/<package>``
-    This is where the actual source code, usually a bunch of Python files,
-    is located.  There could be a standard Python package directory structure
-    under this directory as well.
-    
+    Contains the actual source code, usually a bunch of Python files. There could be a
+    standard Python package directory structure under this directory as well.
+
 ``openmdao.<package>/src/openmdao/<package>/test``
     Contains unit tests for this package. These are executed by
     ``openmdao_test``.

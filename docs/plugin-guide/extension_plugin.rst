@@ -9,7 +9,7 @@ Building a Plugin that Contains a Python Extension
 
 Many of you will have an existing application written in some language other than Python that
 needs to be turned into an openMDAO component. This section and the one that follows present
-some examples to show you how to do this. The process of building a Python extension to some
+some examples that show you how to do this. The process of building a Python extension to some
 external code is called *wrapping.* There are generally two ways to wrap an application: direct
 wrapping and file wrapping. In a *direct* wrap, data is passed directly into and out of the wrapped
 function through memory, while in a *file* wrap intermediate data files
@@ -55,12 +55,13 @@ into the default Python environment on your system.
     Source Languages: C, FORTRAN 77, Fortran 90/95 (newer Fortran can also be wrapped, but not all
     features are supported) Documentation: http://cens.ioc.ee/projects/f2py2e/usersguide/index.html
     
-F2PY automates the process of generating a library that contains Fortran functions callable from Python
-as well as an interface into exposed common blocks and Fortran 90/95 module data. Additionally, F2PY
-handles the conversion of inputs and output between their representative Python and Fortran types, 
-particularly with arrays, which are converted into NumPy's numerical arrays on the Python side. The
-most attractive feature of F2PY is its simplicity--it can be quickly learned and used without
-understanding the details under the hood.
+F2PY automates the process of generating a library that contains Fortran functions
+callable from Python as well as an interface into exposed common blocks and Fortran
+90/95 module data. Additionally, F2PY handles the conversion of inputs and output
+between their representative Python and Fortran types,  particularly with arrays,
+which are converted into NumPy's numerical arrays on the Python side. The most
+attractive feature of F2PY is its simplicity -- it can be learned quickly and used
+without understanding the details under the hood.
 
 While F2PY was developed for use with Fortran, it can also wrap C functions with almost as 
 much ease. An example of wrapping a C function with F2PY can be found in :ref:`Wrapping-an-External-Module-Using-F2PY`
@@ -88,7 +89,7 @@ platform.
 
 .. index:: three-bar truss
 
-The Fortran code *bar3.f* contains the subroutine *runbar3truss*, which contains an analytical solution
+The Fortran code ``bar3.f`` contains the subroutine ``runbar3truss``, which contains an analytical solution
 for a three-bar truss with the following specific geometry:
 
 
@@ -100,7 +101,7 @@ for a three-bar truss with the following specific geometry:
 The inputs to the problem are the components of the body force acting on node 1 (2d array pvec); the
 initial cross-sectional areas of all three structural elements (a1, a2, a3); the lumped mass at node 1 (mo);
 the length of bar 2 (el: this essentially scales the problem); and some material properties for the 
-bars (e; Young's Modulus, and rho: material density). The outputs of interest are the stresses 
+bars (e: Young's Modulus and rho: material density). The outputs of interest are the stresses 
 in each bar (s1, s2, s3); the displacement at node 1 (u, v); the frequency of the first mode of
 vibration (ff); and the total weight of the structure (obj). The objective of this example is to use
 this Fortran subroutine to calculate the optimal cross-sectional areas of the three bars that minimize the total
@@ -121,11 +122,11 @@ This example showcases the "quick and smart way." An example of the "smart way" 
 as part of the engine design tutorial. The "quick and smart way" should be fine for most cases,
 provided there are no objections to inserting new comments into your existing source code. For
 some cases, the extra flexibility of the signature file may be needed. One specific example
-is a case where you only want to expose one function from a Fortran file that contains
+is where you only want to expose one function from a Fortran file that contains
 several functions. In this case you can instruct F2PY to generate a signature file,
 after which you can edit it to your satisfaction.
 
-Subroutine *runbar3truss* has the following interface:
+Subroutine ``runbar3truss`` has the following interface:
 
 ::
 
@@ -161,7 +162,7 @@ comments are prefaced with *Cf2py*:
     
 The *intent(in)* marks an input, and *intent(out)* denotes an output. If an argument serves as
 both an input and output (i.e., it passes a value to the argument and expects a change
-upon completion), then *intent(inout)* can be used. There are several other intents that are
+upon completion), then intent(inout) can be used. There are several other intents that are
 useful for other less common cases. One that may be of interest is *intent(callback),* which
 can be used to pass a Python (or other) function into a Fortran subroutine.
 
@@ -172,9 +173,9 @@ executing the following at the command prompt:
 
     [unix_prompt]$ f2py -c -m bar3 bar3.f
     
-The result is the shared object *bar3.so.* The next step is to build a Python component that
-can run *runbar3truss*, supplying its inputs and gathering its output. An OpenMDAO wrapper
-for *bar3.so* is available as part of this example and can be found in ``bar3_wrap_f.py``. The
+The result is the shared object ``bar3.so.`` The next step is to build a Python component that
+can run ``runbar3truss``, supplying its inputs and gathering its output. An OpenMDAO wrapper
+for ``bar3.so`` is available as part of this example and can be found in ``bar3_wrap_f.py``. The
 functions that were compiled through F2PY are contained in the bar3 library, and this can
 be imported into Python just like any Python file:
 
@@ -200,7 +201,7 @@ be imported into Python just like any Python file:
 
     from openmdao.examples.bar3simulation.bar3 import runbar3truss, forces
 
-Here, we import both the function *runbar3truss* and the common block
+Here, we import both the function ``runbar3truss`` and the common block
 *forces*. Calling into this function is similar to calling a Python function.
 Inputs are passed in as arguments, and outputs are returned on the right-hand
 side.
@@ -287,13 +288,13 @@ problem.
     
 **F2PY Quick Command Reference**
 
-============================ =============================
-Ordinary Build                f2py -c -m foo foo.f
----------------------------- -----------------------------
-Only Make Signature File      f2py -m foo -h foo.pyf foo.f
----------------------------- -----------------------------
-Build with Signature foo.pyf  f2py foo.pyf foo.f -c
-============================ =============================
+================================ =================================
+Ordinary Build                   ``f2py -c -m foo foo.f``
+-------------------------------- ---------------------------------
+Only Make Signature File         ``f2py -m foo -h foo.pyf foo.f``
+-------------------------------- ---------------------------------
+Build with Signature ``foo.pyf`` ``f2py foo.pyf foo.f -c``
+================================ =================================
 
 .. index:: SWIG
 
@@ -315,12 +316,11 @@ SWIG is a bit more complicated than F2PY, so you are strongly encouraged to read
 the documentation and experiment with their `example problem`__ before
 attempting to wrap your own C or C++ codes.
 
-The first step in creating a Python extension is to create the interface file for
-the C functions that are to be wrapped. The interface file is analogous to the
-signature file that F2PY uses, though its format is more like C. For example,
-consider the engine simulation as described in the :ref:`A-More-Complex-Tutorial-Problem`.
-There is one function with inputs and outputs effectively passed as arguments. The
-corresponding interface file would look like this:
+The first step in creating a Python extension is to create the interface file for the C functions
+that are to be wrapped. The interface file is analogous to the signature file that F2PY uses, though
+its format is more like C. For example, consider the engine simulation as described in the :ref:`more
+complex tutorial <A-More-Complex-Tutorial-Problem>`. There is one function with inputs and outputs
+effectively passed as arguments. The corresponding interface file would look like this:
 
 .. __: http://www.swig.org/tutorial.html
 
@@ -356,7 +356,7 @@ Generating the importable shared object from this interface is a 4-step process.
 
 1. Run SWIG on the interface file, using Python as the target.
 2. Compile the original C function on your system. (Not needed if you already have a library that contains this function.)
-3. Compile the code generated in step 1.
+3. Compile the code generated in Step 1.
 4. Link the libraries from steps 2 and 3 (along with any other required externals) to create the shared object.
 
 For the engine example, on a UNIX environment with GCC as the compiler, these 

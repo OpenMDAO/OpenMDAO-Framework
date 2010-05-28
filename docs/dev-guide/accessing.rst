@@ -5,9 +5,9 @@ Accessing OpenMDAO on Launchpad -- SSH Keys
 ============================================
 
 The source repository for OpenMDAO is read-accessible to the public, so making
-a branch from it does not typically require that you have a Launchpad account.
+a branch from it does not typically require that you have a :term:`Launchpad` account.
 However, if you are behind a proxy, you *may* need to not only have a Launchpad
-account but also to register your public SSH key with your Launchpad account
+account but also register your public SSH key with your Launchpad account
 before you can *read* or *write* to the repository. If you require *write* access
 to the OpenMDAO project on Launchpad, either to push changes directly to the
 trunk or to push up personal branches for merge approval, you will need to
@@ -29,7 +29,7 @@ if you use Linux or OS X.
 *Creating Your Key on Linux*
 ++++++++++++++++++++++++++++
 
-1. First, check to see if you already have an SSH key.  Look for a file called ~/.ssh/id_rsa.pub.
+1. First, check to see if you already have an SSH key.  Look for a file called ``~/.ssh/id_rsa.pub``.
    If the file is there, skip to the next section and learn how to register your key with Launchpad.
 2. You should be in your home directory on your Linux machine. At the prompt, type: ``ssh-keygen -t rsa``. 
 3. When prompted, press ``Enter`` to accept the default file name for your key. 
@@ -65,11 +65,9 @@ push a branch back to openmdao. In your home directory on your Linux machine, ty
   bzr launchpad-login userid
 
 .. note:: If you do not know your userid, log in to Launchpad and click on your name in the upper
-   right-hand corner. This takes you to an *Overview* page. In the first column, under *User Information*, 
-   you should see **OpenID login**. The web address should contain your userid. In most cases
-   this will be a hyphenated name, e.g.,  ``john-j-smith, j-smith`` or ``smith-j``. It will depend on
-   the email address you provided.
-   
+   right-hand corner. This takes you to an *Overview* page. In the first column, under *User
+   Information*, you should see **OpenID login**. The web address should contain your userid. 
+
 If the above command failed, you may be missing an ``authentication.conf`` file or have incomplete
 information in your ``bazaar.conf`` file. To check whether you have these files, type the following
 commands:
@@ -99,18 +97,20 @@ commands:
 Windows Users
 -------------
 
-Please follow these instructions for the SSH key creation/registration process if you use Windows.
+If you use Windows, please follow these instructions for SSH key creation and registration. 
+
+.. _Creating-Your-Key-on-Windows:
 
 *Creating Your Key on Windows*
 ++++++++++++++++++++++++++++++
 
 **Windows (PuTTY)**
 
-If you already have PuTTY installed on your machine, omit Step #1.
+If you already have :term:`PuTTY` on your machine, omit Step #1. (Note that you might not find
+PuTTY on your *start* menu; you may have to check your C: drive.)
 
 
-1. Download the PuTTY Key Generator from here:
-   http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html
+1. Download the PuTTY Key Generator from `here <http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html>`_.
 
 2. Go to Putty and run ``puttygen.exe`` to bring up the PuTTY Key Generator. 
   
@@ -125,10 +125,11 @@ If you already have PuTTY installed on your machine, omit Step #1.
 6. Keep your Puttygen window open and copy the public key from it. (You need to register the
    key with Launchpad.)
 
-7. Run/install Pageant as either a standalone .exe or as part of the entire putty package. 
+7. Run/install `Pageant <http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html>`_, which is an SSH
+   authentication agent for PuTTY. You can install it as either a standalone .exe or as part of the entire
+   PuTTY package. Running it will add an icon to your task bar.
 
-      
-8. Make sure Pageant is running and right-click on the icon in the lower right corner of your screen. 
+8. Make sure Pageant is running and right-click on its icon. 
 
 9. Select the *Add Key* option. (This step is crucial if you want to connect to Launchpad from a Windows PC.)
    
@@ -164,7 +165,7 @@ You need to register and upload the *public* portion of your SSH key to Launchpa
 +++++++++++++++++++++++++++++++++++++
 
 You need to provide Launchpad with your userid before you can merge from openmdao to your branch or
-push a branch back to openmdao. In your home directory on your Windows machine, type: 
+push a branch back to openmdao. On your Windows machine, type: 
 
 ::
 
@@ -172,10 +173,7 @@ push a branch back to openmdao. In your home directory on your Windows machine, 
 
 .. note:: If you do not know your userid, log in to Launchpad and click on your name in the upper
    right-hand corner. This takes you to an *Overview* page. In the first column, under *User Information*, 
-   you should see **OpenID login**. The web address should contain your userid. In most cases
-   this will be a hyphenated name, e.g.,  ``john-j-smith, j-smith`` or ``smith-j``. It will depend on
-   the email address you provided.
-
+   you should see **OpenID login**. The web address should contain your userid. 
 
 
  

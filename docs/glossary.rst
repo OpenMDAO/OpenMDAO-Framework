@@ -26,8 +26,8 @@ Glossary
 	
       
       **branch**
-	An ordered series of revisions (see :term:`revision` below) that describes the
-	history of a set of files. 	
+      	Bazaar term for an ordered series of revisions (see :term:`revision`
+	below) that describes the history of a set of files. 	
 
 
       **CAD**
@@ -44,6 +44,7 @@ Glossary
         Computational Analysis Programming Interface. CAPRI is a CAD vendor-neutral
         programming interface that aids in acquiring geometry data directly from CAD
         files.
+
 
       **Case**
         An object containing a collection of input names and values, and names of outputs 
@@ -66,7 +67,7 @@ Glossary
 
 
       **commit**
-        To record a change. A change is committed to a developer's local
+        Bazaar command that records a change. A change is committed to a developer's local
         repository.
 	
       
@@ -136,6 +137,11 @@ Glossary
         A public variable type, found in ``openmdao.lib.api``, which supports a
 	list of discrete allowed values. The list of allowed values can be of arbitrary
 	length, and elements can be of any type.
+	
+	
+      **Expression**
+        A special kind of trait that contains a string expression that
+	references public variables in the framework.
 	
 	
       **F2PY**
@@ -211,6 +217,11 @@ Glossary
         Local Area Network. An interconnection of computers that are in relatively
         close proximity to each other, such as within a building. 
 
+      
+      **Launchpad**
+        Free open source project hosting. Repository based on the Bazaar version control
+	system.
+
 	
       **MDAO**  
         Multi-disciplinary Analysis & Optimization
@@ -244,10 +255,12 @@ Glossary
         A unittest extension offering automatic test suite discovery and easy test
         authoring.
 
+      
       **nosecoverage2**
         A nose plugin that exposes some features of version 3.2 of the **coverage**
         package, including html output and cobertura output.
             
+      
       **NumPy**
         NumPy is the fundamental package needed for scientific computing with Python. See
 	http://numpy.scipy.org/ 
@@ -277,6 +290,10 @@ Glossary
         `Open Source Initiative <http://www.opensource.org>`_.
 
 
+      **Pageant**
+        An SSH authentication agent for PuTTY. 
+              
+      
       **PBS**
         Portable Batch System (PBS) is a queueing system. Jobs are submitted to the
         queue that reflects the resources needed, and a scheduler decides which ones
@@ -306,10 +323,9 @@ Glossary
 	
 	
       **pip**
-	pip installs Python packages. It is a replacement for ``easy_install`` and uses mostly
+	Installs Python packages. It is a replacement for ``easy_install`` and uses mostly
 	the same techniques for finding packages, so packages that were made easy_installable
 	should be pip-installable as well.
-
 
       
       **plugin**
@@ -330,6 +346,11 @@ Glossary
         variables can also perform their own validation when being assigned to another
         public variable. OpenMDAO's public variables are implemented using Traits, an
         open source extension to Python authored by Enthought, Inc.
+
+      
+      **PuTTY**  
+        A free terminal emulator application that can act as a client for SSH, Telnet,
+	rlogin, and raw TCP computing protocols.	
 
 	
       **Pyevolve**
@@ -353,7 +374,7 @@ Glossary
 	
 
       **repository**
-        A store of revisions. See :term:`revision`.
+        Bazaar term for a store of revisions. See :term:`revision`.
 	
 
       **ResourceAllocator**
@@ -382,7 +403,7 @@ Glossary
 
      
       **revision**
-        A snapshot of the state of files and directories, including their
+        Bazaar term for a snapshot of the state of files and directories, including their
         content. A revision also has some metadata associated with it, including
         who committed it, when it was committed, a commit message, and the
         parent revisions from which it was derived.
@@ -435,11 +456,6 @@ Glossary
         See :term:`Socket`.
 	
 
-      **Expression**	
-	A special kind of trait that contains a string expression that references public variables
-	in the framework. 
-
-
       **SWIG**
         Simplified Wrapper and Interface Generator. A software development tool that connects
         programs written in C and C++ with a variety of high-level programming languages. Go to 
@@ -461,7 +477,11 @@ Glossary
         the software will require a ticket, and the ticket number will identify
         the software :term:`branch` where the change is being made.
 
-	
+
+      **Trac**
+        An open source, web-based project management and bug-tracking tool. 
+      
+      
       **Traits**
         A software package from Enthought, Inc. that aids in developing Python code. A trait is
         a type definition that can be used for normal Python object attributes, giving the
@@ -475,6 +495,12 @@ Glossary
         passed between linked Components.
 
       
+      
+      **trunk**
+        A Bazaar term that refers to the main development branch (in this case,
+	the openmdao trunk) from which working branches are pulled. 	
+	
+	
       **units**
         A package used by OpenMDAO that provides unit conversion capability for variables.
 	
