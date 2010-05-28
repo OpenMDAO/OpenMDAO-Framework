@@ -21,7 +21,11 @@ class SimpleCaseIterDriver(Driver):
     def __init__(self, *args, **kwargs):
         super(SimpleCaseIterDriver, self).__init__(*args, **kwargs)
         self._iter = None  # Set to None when iterator is empty.
+        self.on_trait_change(self._iterator_modified, 'iterator')
 
+    def _iterator_modified(self, obj, name, value):
+        self._call_execute = True
+    
     def execute(self):
         """ Runs each case in `iterator` and records results in `recorder`. """
         for case in self.iterator:

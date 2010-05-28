@@ -53,6 +53,11 @@ class CaseRecorderTestCase(unittest.TestCase):
         
         # now use the DB as the CaseIterator
         self.top.driver.iterator = DBCaseIterator()
+        self.top.driver.iterator.connection = self.top.driver.recorder.connection
+        sout = StringIO.StringIO()
+        self.top.driver.recorder = DumpCaseRecorder(sout)
+        self.top.run()
+        sout.getvalue()
 
 if __name__ == '__main__':
     unittest.main()
