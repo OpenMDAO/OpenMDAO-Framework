@@ -34,15 +34,14 @@ class CaseRecorderTestCase(unittest.TestCase):
         self.top.driver.recorder = DumpCaseRecorder(sout)
         self.top.run()
         expected = [
-            'ident: case8',
-            'retries: 0',
-            'max_retries: None',
-            'inputs:',
-            '    comp1.x = 8',
-            '    comp1.y = 16',
-            'outputs:',
-            '    comp1.z = 24.0',
-            '    comp2.z = 25.0'
+            'Case: case8',
+            '   inputs:',
+            '      comp1.x = 8',
+            '      comp1.y = 16',
+            '   outputs:',
+            '      comp1.z = 24.0',
+            '      comp2.z = 25.0',
+            '   max_retries: None, retries: 0',
             ]
         self.assertTrue('\n'.join(expected) in sout.getvalue())
         
@@ -60,7 +59,17 @@ class CaseRecorderTestCase(unittest.TestCase):
         sout = StringIO.StringIO()
         self.top.driver.recorder = DumpCaseRecorder(sout)
         self.top.run()
-        sout.getvalue()
+        expected = [
+            'Case: case8',
+            '   inputs:',
+            '      comp1.x = 8',
+            '      comp1.y = 16',
+            '   outputs:',
+            '      comp1.z = 24.0',
+            '      comp2.z = 25.0',
+            '   max_retries: None, retries: 1',
+            ]
+        self.assertTrue('\n'.join(expected) in sout.getvalue())
 
 if __name__ == '__main__':
     unittest.main()

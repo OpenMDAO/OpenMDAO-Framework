@@ -12,14 +12,24 @@ class DBCaseIterator(object):
     implements(ICaseIterator)
     
     def __init__(self, dbfile=':memory:', case_selector=None, var_selector=None):
-        self._dbfile = dbfile
+        self._connection = None
+        self.dbfile = dbfile
         self.case_selector = case_selector # WHERE clause for case table
         self.var_selector = var_selector   # WHERE clause for casevars table
-        self.connection = None
+
+    @property
+    def dbfile(self):
+        return self._dbfile
+    
+    @dbfile.setter
+    def dbfile(self, value):
+        """Set the DB file and connect to it."""
+        self._dbfile = value
+        if self._connection:
+            self._connection.close()
+        self._connection = sqlite3.connect(value)
 
     def __iter__(self):
-        if not self.connection:
-            self.connection = sqlite3.connect(self._dbfile)
         return self._next_case()
 
     def _next_case(self):
@@ -28,14 +38,14 @@ class DBCaseIterator(object):
         if self.case_selector:
             sql.append("WHERE %s" % self.case_selector)
             
-        casecur = self.connection.cursor()
+        casecur = self._connection.cursor()
         casecur.execute(' '.join(sql))
         
         sql = ["SELECT * from casevars WHERE case_id=%s"]
         if self.var_selector:
             sql.append("AND %s" % self.var_selector)
         combined = ' '.join(sql)
-        varcur = self.connection.cursor()
+        varcur = self._connection.cursor()
         
         for case_id,name,msg,retries,model_id,timeEnter in casecur:
             varcur.execute(combined % case_id)

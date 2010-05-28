@@ -5,8 +5,16 @@ from enthought.traits.api import implements
 
 from openmdao.main.interfaces import ICaseRecorder
 
+def _pprint_var(name, index, value):
+    s = [name]
+    if index:
+        for entry in index:
+            s.append('[%s]' % entry)
+    s.append(' = %s' % value)
+    return ''.join(s)
+
 class DumpCaseRecorder(object):
-    """"Dumps Cases to a file-like attribute called 'out'"""
+    """"Dumps Cases to a file-like object called 'out' (defaults to sys.stdout)"""
     
     implements(ICaseRecorder)
     
@@ -14,26 +22,16 @@ class DumpCaseRecorder(object):
         self.out = out
 
     def record(self, case):
-        """Dump the given Case"""
+        """Dump the given Case in a 'pretty' form."""
         out = self.out
-        out.write("ident: %s\n" % case.ident)
-        out.write("retries: %s\n" % case.retries)
-        out.write("max_retries: %s\n" % case.max_retries)
-        if case.msg:
-            out.write("msg: %s\n" % case.msg)
-        out.write("inputs:\n")
+        out.write("Case: %s\n" % case.ident)
+        out.write("   inputs:\n")
         for name,index,value in case.inputs:
-            out.write("    %s" % name)
-            if index:
-                for entry in index:
-                    out.write("[%s]" % entry)
-            out.write(" = %s\n" % value)
-        out.write("outputs:\n")
+            out.write('      %s\n' % _pprint_var(name, index, value))
+        out.write("   outputs:\n")
         for name,index,value in case.outputs:
-            out.write("    %s" % name)
-            if index:
-                for entry in index:
-                    out.write("[%s]" % entry)
-            out.write(" = %s\n" % value)
-        out.write("\n\n")
-            
+            out.write('      %s\n' % _pprint_var(name, index, value))
+        out.write("   max_retries: %s, retries: %s\n" % (case.max_retries, 
+                                                         case.retries))
+        if case.msg:
+            out.write('   msg: %s' % case.msg)
