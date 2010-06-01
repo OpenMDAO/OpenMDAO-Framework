@@ -1,7 +1,6 @@
 #test_connect_var.py
 """
-    Testing variables in connect(..,..) statement
-       global variables betwwen 2 components.
+    Testing connecting different variable types to each other.
 """
 
 
@@ -18,7 +17,6 @@ class Oneout(Component):
                    desc='Float Variable')
     ratio2 = Int(9, iotype='out', 
                    desc='Integer variable')
-    #ratio3 = Bool(False, iotype='out', 
     ratio3 = Bool(True, iotype='out', 
                    desc='Boolean Variable')
     ratio4 = Float(1.03, iotype='out', 
@@ -86,8 +84,6 @@ class VariableTestCase(unittest.TestCase):
         self.assertAlmostEqual(0.033792,self.top.oneinp.ratio4,5)
         self.assertEqual('05678',self.top.oneinp.ratio5)
         self.assertEqual(27,self.top.oneinp.ratio6)
-    
-        #print  'top dict =',self.top.__dict__
 
 
     def test_var2(self):
@@ -118,9 +114,8 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio1 = 12.0   
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio2')  # float to int   
-            #self.top.run( )                                       
         except TraitError, err:
-            msg = "a value of 12.0 <type 'float'> was specified"
+            msg = "but a value of 12.0 <type 'float'> was specified"
             self.assertTrue( msg in str(err))
         else:
             self.fail('TraitError Expected')
@@ -129,9 +124,9 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio1 = 12.0   
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio3')  # float to Bool  
-            #self.top.run( )                                       
         except TraitError, err:
-            msg = "The 'ratio3' trait of an Oneinp instance must be a"\
+            msg = ": can't connect 'oneout.ratio1' to 'oneinp.ratio3': " +\
+                  "The 'ratio3' trait of an Oneinp instance must be a"\
                   " boolean, but a value of 12.0 <type 'float'> was specified."
             self.assertEqual(str(err), msg)
         else:
@@ -141,9 +136,9 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio1 = 12.0   
         try:
             self.top.connect('oneout.ratio1','oneinp.ratio5')  # float to Str   
-            #self.top.run( )                                       
         except TraitError, err:
-            msg = "The 'ratio5' trait of an Oneinp instance must be a"\
+            msg = ": can't connect 'oneout.ratio1' to 'oneinp.ratio5': " +\
+                  "The 'ratio5' trait of an Oneinp instance must be a"\
                   " string, but a value of 12.0 <type 'float'> was specified."
             self.assertEqual(str(err), msg)
         else:
@@ -153,9 +148,9 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio2 = 20     
         try:
             self.top.connect('oneout.ratio2','oneinp.ratio3')  # int to Bool    
-            #self.top.run( )                                       
         except TraitError, err:
-            msg = "The 'ratio3' trait of an Oneinp instance must be a"\
+            msg = ": can't connect 'oneout.ratio2' to 'oneinp.ratio3': " +\
+                  "The 'ratio3' trait of an Oneinp instance must be a"\
                   " boolean, but a value of 20 <type 'int'> was specified."
             self.assertEqual(str(err), msg)
         else:
@@ -165,9 +160,9 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio2 = 20     
         try:
             self.top.connect('oneout.ratio2','oneinp.ratio5')  # int to Str     
-            #self.top.run( )                                       
         except TraitError, err:
-            msg = "The 'ratio5' trait of an Oneinp instance must be a"\
+            msg = ": can't connect 'oneout.ratio2' to 'oneinp.ratio5': " +\
+                  "The 'ratio5' trait of an Oneinp instance must be a"\
                   " string, but a value of 20 <type 'int'> was specified."
             self.assertEqual(str(err), msg)
         else:
@@ -177,9 +172,9 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio3 = True   
         try:
             self.top.connect('oneout.ratio3','oneinp.ratio5')  # Bool to Str    
-            #self.top.run( )                                       
         except TraitError, err:
-            msg = "The 'ratio5' trait of an Oneinp instance must be a"\
+            msg = ": can't connect 'oneout.ratio3' to 'oneinp.ratio5': " +\
+                  "The 'ratio5' trait of an Oneinp instance must be a"\
                   " string, but a value of True <type 'bool'> was specified."
             self.assertEqual(str(err), msg)
         else:
@@ -190,7 +185,6 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio5 = '55555'
         try:
             self.top.connect('oneout.ratio5','oneinp.ratio2')  # Str to int
-            #self.top.run( ) 
         except TraitError, err:
             msg = "a value of 55555 <type 'str'> was specified"
             self.assertTrue( msg in str(err))
@@ -201,9 +195,9 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio5 = '55555'
         try:
             self.top.connect('oneout.ratio5','oneinp.ratio1')  # Str to Float
-            #self.top.run( ) 
         except TraitError, err:
-            msg = "oneinp: Trait 'ratio1' must be a float, but a value of 55555" + \
+            msg = ": can't connect 'oneout.ratio5' to 'oneinp.ratio1': oneinp: " + \
+                  "Trait 'ratio1' must be a float, but a value of 55555" + \
                       " <type 'str'> was specified."
             self.assertEqual(str(err), msg)
         else:
@@ -213,9 +207,9 @@ class VariableTestCase(unittest.TestCase):
         self.top.oneout.ratio5 = '55555'
         try:
             self.top.connect('oneout.ratio5','oneinp.ratio3')  # Str to Bool
-            #self.top.run( ) 
         except TraitError, err:
-            msg = "The 'ratio3' trait of an Oneinp instance must be a boolean, but a"\
+            msg = ": can't connect 'oneout.ratio5' to 'oneinp.ratio3': " +\
+                  "The 'ratio3' trait of an Oneinp instance must be a boolean, but a"\
                   " value of '55555' <type 'str'> was specified."
             self.assertEqual(str(err), msg)
         else:

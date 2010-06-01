@@ -532,9 +532,11 @@ and under the M's as:
     module
 	Python
 
+
 **- Modified single**
-    ``.. plugins; registering``
+    ``.. index:: plugins; registering``
     
+        
 will appear under the P's as:
 
 ::

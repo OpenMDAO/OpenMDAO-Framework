@@ -13,10 +13,11 @@ Glossary
 
 
       **Assembly**
-        The Assembly class is the primary building block of the "system of 
-        systems" aspect of OpenMDAO. Each assembly has a Workflow and a 
-        Driver, and acts as a container for Components. An assembly is also a
-        component, so hierarchical structures of assemblies can be created.
+        The Assembly class is the primary building block of the "system of systems"
+        aspect of OpenMDAO. Each assembly has a Component Workflow called *workflow*
+        and a Driver Workflow called *driverflow* and acts as a container for
+        Components. An assembly is also a Component, so hierarchical structures of
+        assemblies can be created.
       
       
       **AXOD** 
@@ -115,7 +116,7 @@ Glossary
       **Driver**
         A Driver's function is to iterate over a Workflow until some
         condition is met. The simplest Driver executes a Workflow only once.
-        Other Drivers, such as Optimizers or ParameterStudies, would execute
+        Other Drivers, such as Optimizers or Parameter Studies, would execute
         the Workflow a variable number of times based on their inputs.  
 
        
@@ -131,6 +132,12 @@ Glossary
         See :term:`egg` above. 
 
       	
+      **Enum**
+        A public variable type, found in ``openmdao.lib.api``, which supports a
+	list of discrete allowed values. The list of allowed values can be of arbitrary
+	length, and elements can be of any type.
+	
+	
       **F2PY**
         Fortran to Python interface generator.
 
@@ -156,6 +163,15 @@ Glossary
       	Genetic algorithm
 	
 	
+      **Float**
+        A public variable type, found in ``openmdao.lib.api``, which represents a
+        floating point number. It also also allows for the specification of units.
+     
+      
+      **Genetic**
+        OpenMDAO genetic algorithm optimizer based on the Pyevolve genetic algorithm.
+	
+	
       **GUI**
         Graphical User Interface. A computer operating system that is based upon icons
         and visual relationships rather than text.
@@ -166,6 +182,11 @@ Glossary
         properties that can be queried.
        
 
+      **Int**
+        A public variable type, found in ``openmdao.lib.api``, which represents
+	numbers with integer values.
+	
+	
       **IPC**
         Interprocess communication
 

@@ -652,14 +652,14 @@ class Container(HasTraits):
         """
         tup = path.split('.', 1)
         if len(tup) == 1:
-            return getattr(self, path, Missing) is not Missing
+            return path in self.__dict__
         
-        obj = getattr(self, tup[0], Missing)
-        if obj is not Missing:
+        if tup[0] in self.__dict__:
+            obj = getattr(self, tup[0])
             if isinstance(obj, Container):
                 return obj.contains(tup[1])
             else:
-                return getattr(obj, tup[1], Missing) is not Missing
+                return hasattr(obj, tup[1])
         return False
     
     def create(self, type_name, name, version=None, server=None,
