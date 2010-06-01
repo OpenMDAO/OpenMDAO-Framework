@@ -23,15 +23,16 @@ class DumpCaseRecorder(object):
 
     def record(self, case):
         """Dump the given Case in a 'pretty' form."""
-        out = self.out
-        out.write("Case: %s\n" % case.ident)
-        out.write("   inputs:\n")
-        for name,index,value in case.inputs:
-            out.write('      %s\n' % _pprint_var(name, index, value))
-        out.write("   outputs:\n")
-        for name,index,value in case.outputs:
-            out.write('      %s\n' % _pprint_var(name, index, value))
-        out.write("   max_retries: %s, retries: %s\n" % (case.max_retries, 
-                                                         case.retries))
-        if case.msg:
-            out.write('   msg: %s' % case.msg)
+        if self.out:  # if self.out is None, just do nothing
+            out = self.out
+            out.write("Case: %s\n" % case.ident)
+            out.write("   inputs:\n")
+            for name,index,value in case.inputs:
+                out.write('      %s\n' % _pprint_var(name, index, value))
+            out.write("   outputs:\n")
+            for name,index,value in case.outputs:
+                out.write('      %s\n' % _pprint_var(name, index, value))
+            out.write("   max_retries: %s, retries: %s\n" % (case.max_retries, 
+                                                             case.retries))
+            if case.msg:
+                out.write('   msg: %s' % case.msg)

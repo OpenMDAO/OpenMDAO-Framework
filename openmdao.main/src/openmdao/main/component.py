@@ -314,6 +314,19 @@ class Component (Container):
                                                    if isinstance(v,Container)]            
         return self._container_names
     
+    def get_expr_names(self, iotype=None):
+        """Return a list of names of all Expression and ExpressionList traits
+        in this instance.
+        """
+        if iotype is None:
+            checker = not_none
+        else:
+            checker = iotype
+        
+        return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
+                    if v.is_trait_type(Expression) or 
+                       v.is_trait_type(ExpressionList)]
+        
     def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
         within the allowed area (somewhere within the simulation root path).

@@ -25,8 +25,8 @@ class Driver(Component):
     
     def __init__(self, doc=None):
         super(Driver, self).__init__(doc=doc)
-        self._expr_graph = { None: None, 'in': None, 'out': None }
-        self._expr_comps = { None: None, 'in': None, 'out': None }
+        #self._expr_graph = { None: None, 'in': None, 'out': None }
+        #self._expr_comps = { None: None, 'in': None, 'out': None }
         self.workflow = None
     
     def _pre_execute (self):
@@ -42,8 +42,8 @@ class Driver(Component):
         if not all(self.get_valids(exprnames)):
             self._call_execute = True
             # force regeneration of _expr_graph, _expr_comps, _iteration_comps
-            self._expr_graph = { None: None, 'in': None, 'out': None } 
-            self._expr_comps = { None: None, 'in': None, 'out': None }
+            #self._expr_graph = { None: None, 'in': None, 'out': None } 
+            #self._expr_comps = { None: None, 'in': None, 'out': None }
             
         super(Driver, self)._pre_execute()
         
@@ -61,7 +61,6 @@ class Driver(Component):
                     if not rv.refs_valid():
                         self._call_execute = True
                         return
-        
                 
     def execute(self):
         """ Iterate over a workflow of Components until some condition
@@ -103,66 +102,44 @@ class Driver(Component):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration
 
-    def get_expr_names(self, iotype=None):
-        """Return a list of names of all Expression and ExpressionList traits
-        in this instance.
-        """
-        if iotype is None:
-            checker = not_none
-        else:
-            checker = iotype
-        
-        return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
-                    if v.is_trait_type(Expression) or 
-                       v.is_trait_type(ExpressionList)]
-        
-    def get_referenced_comps(self, iotype=None):
-        """Return a set of names of Components that we reference based on the 
-        contents of our Expressions and ExpressionLists.  If iotype is
-        supplied, return only component names that are referenced by ref
-        variables with matching iotype.
-        """
-        if self._expr_comps[iotype] is None:
-            comps = set()
-        else:
-            return self._expr_comps[iotype]
-    
-        for name in self.get_expr_names(iotype):
-            obj = getattr(self, name)
-            if isinstance(obj, list):
-                for entry in obj:
-                    comps.update(entry.get_referenced_compnames())
-            else:
-                comps.update(obj.get_referenced_compnames())
-                
-        self._expr_comps[iotype] = comps
-        return comps
-        
-    def get_expr_graph(self, iotype=None):
-        """Return the dependency graph for this Driver based on
-        Expressions and ExpressionLists.
-        """
-        if self._expr_graph[iotype] is not None:
-            return self._expr_graph[iotype]
-        
-        self._expr_graph[iotype] = nx.DiGraph()
-        name = self.name
-        
-        if iotype == 'out' or iotype is None:
-            self._expr_graph[iotype].add_edges_from([(name,rv) 
-                                  for rv in self.get_referenced_comps(iotype='out')])
-            
-        if iotype == 'in' or iotype is None:
-            self._expr_graph[iotype].add_edges_from([(rv, name) 
-                                  for rv in self.get_referenced_comps(iotype='in')])
-        return self._expr_graph[iotype]
-    
-    #def simple_iteration_set(self):
-        #"""Return the set of components iterated over by this driver, not including
-        #other drivers that may be nested within this driver.
+    #def get_referenced_comps(self, iotype=None):
+        #"""Return a set of names of Components that we reference based on the 
+        #contents of our Expressions and ExpressionLists.  If iotype is
+        #supplied, return only component names that are referenced by ref
+        #variables with matching iotype.
         #"""
-        #if self._simple_iteration_set is None:
-            #iterset = set(self._get_simple_iteration_subgraph().nodes_iter())
-            #iterset.remove(self.name)
-            #self._simple_iteration_set = iterset
-        #return self._simple_iteration_set
+        #if self._expr_comps[iotype] is None:
+            #comps = set()
+        #else:
+            #return self._expr_comps[iotype]
+    
+        #for name in self.get_expr_names(iotype):
+            #obj = getattr(self, name)
+            #if isinstance(obj, list):
+                #for entry in obj:
+                    #comps.update(entry.get_referenced_compnames())
+            #else:
+                #comps.update(obj.get_referenced_compnames())
+                
+        #self._expr_comps[iotype] = comps
+        #return comps
+        
+    #def get_expr_graph(self, iotype=None):
+        #"""Return the dependency graph for this Driver based on
+        #Expressions and ExpressionLists.
+        #"""
+        #if self._expr_graph[iotype] is not None:
+            #return self._expr_graph[iotype]
+        
+        #self._expr_graph[iotype] = nx.DiGraph()
+        #name = self.name
+        
+        #if iotype == 'out' or iotype is None:
+            #self._expr_graph[iotype].add_edges_from([(name,rv) 
+                                  #for rv in self.get_referenced_comps(iotype='out')])
+            
+        #if iotype == 'in' or iotype is None:
+            #self._expr_graph[iotype].add_edges_from([(rv, name) 
+                                  #for rv in self.get_referenced_comps(iotype='in')])
+        #return self._expr_graph[iotype]
+    

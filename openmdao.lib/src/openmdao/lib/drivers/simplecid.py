@@ -7,10 +7,11 @@ from openmdao.lib.api import Instance
 
 class SimpleCaseIterDriver(Driver):
     """
-    Run a set of cases provided by an :class:`ICaseIterator` sequentially
-    and record the results in a :class:`CaseRecorder`.  This is intended
-    for test cases or very simple models only.  For a more full featured 
-    Driver of with similar functionality, see :class:`CaseIteratorDriver`.
+    A Driver that runs a set of cases provided by an :class:`ICaseIterator`
+    sequentially and records the results in a :class:`CaseRecorder`. This is
+    intended for test cases or very simple models only. For a more full
+    featured Driver with similar functionality, see
+    :class:`CaseIteratorDriver`.
 
     - The `iterator` socket provides the cases to be evaluated.
     - The `recorder` socket is used to record results.
