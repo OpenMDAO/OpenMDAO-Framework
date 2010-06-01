@@ -66,8 +66,8 @@ This will remove the file from the repository but will **not** delete it.
 Committing Changes 
 ------------------
 
-After you make changes on your branch, you need to make sure those changes are *committed*, or
-recorded, to your local Bazaar repository. To see if you have uncommitted changes, type:
+After you make changes on your branch, make sure you :term:`commit`, or record, these changes to your
+local repository. To see if you have uncommitted changes, type:
 
 ::
 
@@ -216,8 +216,8 @@ To confirm that all tests still pass, type:
 
   openmdao_test                    
   
-If all tests pass, you may commit the changes from your merge. (This avoid mixing up merge
-changes with any later changes you make. Type:
+If all tests pass, you may commit the changes from your merge. (This avoids mixing up merge
+changes with any later changes you make.) Type:
 
 ::
 
@@ -265,8 +265,8 @@ builds successfully and passes all tests.
 
 You will push your branch up to the openmdao repository, but the changes do not become a
 part of the development trunk until one of the reviewers merges it. Note that your branch
-may be reviewed by a senior developer as well as a tech writer (for grammar, punctuation, and
-and formatting correctness and consistency). 
+may be reviewed by a senior developer as well as a tech writer (to make sure the
+documentation is consistent and clear). 
 
 On the branch to be pushed, type the following command, replacing ``userid`` with your
 Launchpad userid and replacing ``branch_name`` with the name of the branch you are

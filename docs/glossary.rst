@@ -436,9 +436,11 @@ Glossary
         Simple, fast, extensible :term:`JSON` encoder/decoder for Python.
 	
 	
-      **Sphinx**
-        A Python documentation generator. It translates reStructuredText markup language into html.
-	
+      **Sphinx** 
+        A Python documentation generator. It translates reStructuredText markup
+	language into HTML. (See: http://sphinx.pocoo.org/index.html )
+     
+      .. seealso:: :ref:`Sphinx-and-reStructuredText`
 	
       **SQLAlchemy**
         Database Abstraction Library

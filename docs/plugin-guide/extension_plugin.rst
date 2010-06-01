@@ -98,22 +98,23 @@ for a three-bar truss with the following specific geometry:
 
    The 3-Bar Truss Geometry
    
-The inputs to the problem are the components of the body force acting on node 1 (2d array pvec); the
-initial cross-sectional areas of all three structural elements (a1, a2, a3); the lumped mass at node 1 (mo);
-the length of bar 2 (el: this essentially scales the problem); and some material properties for the 
-bars (e: Young's Modulus and rho: material density). The outputs of interest are the stresses 
-in each bar (s1, s2, s3); the displacement at node 1 (u, v); the frequency of the first mode of
-vibration (ff); and the total weight of the structure (obj). The objective of this example is to use
-this Fortran subroutine to calculate the optimal cross-sectional areas of the three bars that minimize the total
-weight of the structure while satisfying constraints on the bar stresses, the displacement of node
-1, and the frequency of the first mode.
-   
+The inputs to the problem are the components of the body force acting on node 1 (2d array *pvec*);
+the initial cross-sectional areas of all three structural elements (*a1, a2, a3*); the lumped mass
+at node 1 (*mo*); the length of bar 2 (*el*, this essentially scales the problem); and some
+material properties for the  bars (*e*, Young's Modulus, and *rho*, material density). The outputs of
+interest are the stresses  in each bar (*s1, s2, s3*); the displacement at node 1 (*u, v*); the
+frequency of the first mode of vibration (*ff*); and the total weight of the structure (*obj*). The
+objective of this example is to use this Fortran subroutine to calculate the optimal
+cross-sectional areas of the three bars that minimize the total weight of the structure while
+satisfying constraints on the bar stresses, the displacement of node 1, and the frequency of the
+first mode.
+
 The `F2PY Users Guide <http://cens.ioc.ee/projects/f2py2e/usersguide/index.html>`_ describes three
 ways to use F2PY to generate the Python-callable object. The "quick way" is to just run F2PY on the
 Fortran file, which produces a shared object containing a function (or functions) that can be
 called from Python. This works for the simplest case but breaks down when F2PY doesn't know which
 function arguments are inputs and which are outputs. In the "smart way," the user specifies the
-input/output intent of each function in the signature file (extension .pyf). Finally, in the
+input/output intent of each function in the signature file (extension ``.pyf``). Finally, in the
 "quick and smart way," the input/output intents are specified directly in the Fortran code as 
 comments.
 
@@ -135,7 +136,7 @@ Subroutine ``runbar3truss`` has the following interface:
      
 The inputs and outputs are described above. To tell F2PY which of these variables are
 inputs and which are outputs, a series of comments is inserted after the function header. These
-comments are prefaced with *Cf2py*:
+comments are prefaced with ``Cf2py``:
      
 ::
 

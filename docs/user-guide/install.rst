@@ -48,9 +48,9 @@ On **OS X**, make sure to install *Xcode*. It's included on the OS X install
 disk, and installing it will give you access to *gcc*. You can also download a newer version
 from Apple, but you'll have to fill out a (free) registration to do it. 
 
-If you're running **Snow Leopard**, you'll need to install a version of Python 2.6 from python.org
-because the built-in version has a distutils bug that will cause some of the OpenMDAO tests
-to fail.  It's not clear exactly what release the fix first appeared in, but version `2.6.5`__
+If you're running **Snow Leopard**, you'll need to install a version of Python 2.6 from
+``python.org`` because the built-in version has a distutils bug that will cause some of the OpenMDAO
+tests to fail.  It's not clear exactly what release the fix first appeared in, but version `2.6.5`__
 definitely has the fix.
 
 .. __: http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg

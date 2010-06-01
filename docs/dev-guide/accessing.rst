@@ -8,7 +8,7 @@ The source repository for OpenMDAO is read-accessible to the public, so making
 a branch from it does not typically require that you have a :term:`Launchpad` account.
 However, if you are behind a proxy, you *may* need to not only have a Launchpad
 account but also register your public SSH key with your Launchpad account
-before you can *read* or *write* to the repository. If you require *write* access
+before you can read or write to the repository. If you require *write* access
 to the OpenMDAO project on Launchpad, either to push changes directly to the
 trunk or to push up personal branches for merge approval, you will need to
 have a Launchpad account and to register your public SSH key with that
@@ -32,8 +32,8 @@ if you use Linux or OS X.
 1. First, check to see if you already have an SSH key.  Look for a file called ``~/.ssh/id_rsa.pub``.
    If the file is there, skip to the next section and learn how to register your key with Launchpad.
 2. You should be in your home directory on your Linux machine. At the prompt, type: ``ssh-keygen -t rsa``. 
-3. When prompted, press ``Enter`` to accept the default file name for your key. 
-4. Press ``Enter`` when prompted for a password and then press it again to
+3. When prompted, press *Enter* to accept the default file name for your key. 
+4. Press *Enter* when prompted for a password and then press it again to
    confirm that you are not entering a password. Your key pair is stored in ``~/.ssh/
    as id_rsa.pub`` (public key) and ``id_rsa`` (private key).
 
@@ -47,7 +47,7 @@ if you use Linux or OS X.
 You need to register and upload the *public* portion of your SSH key to Launchpad. 
 
 1. Open your public key in a text editor and copy its contents to your clipboard. The public key
-   file has the extension *.pub*; for example:  ``id_rsa.pub`` 
+   file has the extension ``.pub``; for example:  ``id_rsa.pub`` 
 2. You must be logged into Launchpad for this step. Go to your `SSH keys
    <https://launchpad.net/people/+me/+editsshkeys>`_ page. 
 3. Paste your public key into the text box and then click the *Import Public Key* button (below the
@@ -83,7 +83,7 @@ commands:
      [Launchpad]
      host = .launchpad.net
      scheme = ssh
-     user = <launchpad-username>    (e.g., john-j-smith)
+     user = <launchpad-username>    
   
 5. Save and exit the ``authentication.conf`` file.
 6. Use your text editor to open the ``bazaar.conf`` file. Make sure your Launchpad username is in the

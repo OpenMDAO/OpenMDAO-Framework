@@ -36,10 +36,10 @@ To run unit tests for a package only, for example ``openmdao.main``, type:
     openmdao_test openmdao.main
     
     
-To get a list of options available with ``openmdao_test``, type  ``openmdao_test
---help`` from the ``devenv`` directory.  Since the ``openmdao_test`` script uses the *nose*
-testing framework internally, so all options available when running *nosetests*
-should also be available when using ``openmdao_test``.
+To get a list of options available with ``openmdao_test``, type  ``openmdao_test --help``
+from the ``devenv`` directory.  Since the ``openmdao_test`` script uses the *nose* testing
+framework internally, all options available when running *nosetests* should also be
+available when using ``openmdao_test``.
 
 .. index: test coverage
 
@@ -222,7 +222,7 @@ how to develop new components and plugins. Thus, it is imperative that any code
 examples included in the documentation (particularly the *User Guide* and the
 *Developer Guide*) be tested to ensure that the code is error-free. 
 
-Fortunately, there are tools built into the Sphinx reStructuredText processor that
+Fortunately, there are tools built into the :term:`Sphinx` reStructuredText processor that
 make the process of testing code samples much easier. Sphinx includes a builder
 called *doctest* as a plugin in its standard library. Instead of building a
 readable document as is done by the HTML builder, the doctest builder scans the

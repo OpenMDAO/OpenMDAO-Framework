@@ -103,29 +103,28 @@ After you type ``bzr add``, Bazaar will display a list of the files and director
 *Removing a File or Directory*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You may use either Bazaar's ``remove`` command or the UNIX command to remove a file. The Bazaar
-command, however, requires an option. Use the ``--keep`` option if you want to retain a file's
-revision history in the repository.
+You may use either Bazaar's remove command or the UNIX remove command to delete a file from the
+current revision of the repository. The Bazaar command requires an option with it, either
+``--keep`` or ``--force``, for example:
 
 ::
 
   bzr remove <file_name> --keep 
+  
+Using ``--keep`` deletes the file from the Bazaar repository but leaves the working copy. Bazaar will no longer track changes to the file. If
+you use ``--force``, you will delete the specified file and its history from the current revision of the
+repository.
 
-Or , use ``--force`` to delete the file and its history from the repository.
-  
-::
-  
-  bzr remove <file_name> --force
     
-Alternatively, you may simply use the UNIX command to remove all traces of a file:   
+Alternatively, you may simply use the UNIX command to delete a file:   
 
 ::  
     
   rm <file_name>             
   
     
-However, to remove a directory, it's easier and safer to use the UNIX remove command. This
-command removes a directory and recursively removes the files in it.
+However, to remove a directory, it may be safer to use the UNIX remove command. This
+command removes a directory and recursively removes all files in it.
 
 
 ::
@@ -154,8 +153,8 @@ or move; then enter the appropriate command. See the examples that follow:
   Example:
   bzr mv test1.rst test2.rst                              
 
-The above command merely renames a file, while the next examples move a file (``test1.rst``) to a
-different directory. In the first example, the file is renamed (to ``test2.rst``) and, in the
+The above command merely renames a file, while the next two examples move a file (``test1.rst``) to a
+different directory. In the first of these, the file is renamed (to ``test2.rst``) and, in the
 second example, the file keeps its name.
 
 ::
@@ -168,7 +167,7 @@ second example, the file keeps its name.
 
 .. note::
    If you need to move an entire directory, use the ``bzr mv`` command, NOT
-   the UNIX command, to ensure that the bazaar understands that all of the versioned
+   the UNIX command, to ensure that Bazaar understands that all of the versioned
    files in the directory have moved.
 
 
@@ -221,17 +220,16 @@ the command above.
 Canceling a Merge and Reverting Changes
 ++++++++++++++++++++++++++++++++++++++++
 
-If you encounter a problem when merging to your branch and things are messed
-up enough that you want to start over, you can cancel the merge by using the ``revert``
-command. Type:
+If you encounter a problem when merging to your branch and you want to start over, you can
+cancel the merge by using the ``revert`` command. Type:
 
 ::
 
   bzr revert         
   
-This removes uncommitted changes and causes your branch to revert to the previous revision. You can
-also use this command if you do not want to commit changes you've made. In this case, it is a good idea
-to see what files will be removed, so type:
+This removes uncommitted changes and causes your branch to revert to the previous revision. You
+can also use this command if you do not want to commit changes you've made. In this case, it is
+a good idea to see which files will be removed, so type:
 
 ::
 

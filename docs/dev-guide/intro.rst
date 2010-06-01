@@ -18,48 +18,48 @@ Guide.*  These requirements are described below.
 
 
 **Bazaar**
-   We use Bazaar for version control.  You'll need it to access the OpenMDAO
-   source repository.  Installers for various platforms can be found `here`__.
+  We use Bazaar for version control.  You'll need it to access the OpenMDAO
+  source repository.  Installers for various platforms can be found `here`__.
     
 .. __: http://wiki.bazaar.canonical.com/Download
 
 **C/C++ and Fortran Compilers**
-   Certain packages used in OpenMDAO contain Python extensions, meaning that they
-   contain non-Python source code that must be compiled. Packages currently in use require
-   either C/C++ or Fortran compilers.
+  Certain packages used in OpenMDAO contain Python extensions, meaning that they
+  contain non-Python source code that must be compiled. Packages currently in use require
+  either C/C++ or Fortran compilers.
 
-   - *Linux*:
+  - *Linux*:
 
-      - *gcc*
-      - *gfortran*
+    - *gcc*
     
-      If they are not already on your system, they should be easily installable using your package manager.
+    - *gfortran*
+      
+      If they are not already on your system, they should be easily installable using your
+      package manager.
 
       
-   - *OS X*:
+  - *OS X*:
    
-      - *gcc*
+    - *gcc*
       
-        Is available as part of
-        *Xcode*, which can be found on the OS X distribution disks but typically is not 
-        installed by default.  You can also download gcc and install it from source, although
-        this is more prone to installation problems.
+      Is available as part of *Xcode*, which can be found on the OS X distribution disks but typically is not 
+      installed by default.  You can also download gcc and install it from source, although
+      this is more prone to installation problems.
         
-      - *gfortran*
+    - *gfortran*
+      
+      Binaries for gfortran are available `here <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_.
 
-        Binaries for gfortran are available `here <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_.
-
-   - *Windows*:
+  - *Windows*:
    
-      - *Visual C++ 2008*
+    - *Visual C++ 2008*
       
-        The Express version is what we use, but others (Professional, Standard)
-        should work too.
+      We uses the Express version, but others (Professional, Standard) should work too.
          
-      - *mingw32*   (for FORTRAN)
+    - *mingw32*   (for FORTRAN)
       
-        Make sure to put the *bin* directory of the mingw32 install in your path.
-        You can find mingw32 `here`__.
+      Make sure to put the *bin* directory of the mingw32 install in your path.
+      You can find mingw32 `here`__.
          
          
 .. __: http://sourceforge.net/projects/mingw/files/Automated%20MinGW%20Installer/MinGW%205.1.6/MinGW-5.1.6.exe/download
@@ -70,7 +70,7 @@ System Configuration
 
 Some steps of the development process, e.g., downloading a branch of the source
 repository and downloading Python distributions, require network access.  If you're
-behind an http proxy, you may have to set the *http_proxy* environment variable
+behind an http proxy, you may have to set the ``http_proxy`` environment variable
 on your system for Bazaar and ``virtualenv`` to function properly.
 
 
@@ -122,12 +122,10 @@ branch to avoid confusion if you have multiple branches active at the
 same time. If you do not supply a ``<branch_name>``, the name by default will be the last
 part of the source repository URI, which in this case is ``openmdao``.
 
-OpenMDAO uses Trac for project management and for tracking bugs and other issues. Bugs,
-enhancements and requirements are entered into Trac and automatically assigned a ticket
-number. A ticket is transitioned to various states during the development process. You
-can visit the OpenMDAO website to find out more about how we use `Trac
-<http://openmdao.org/wiki/Home>`_ and about the OpenMDAO `development
-<http://openmdao.org/wiki/Development>`_ process.
+We use Trac for tracking bugs (as well as for project management). Trac automatically assigns a
+ticket number (mentioned above) when a user submits a bug or requests an enhancement. You can visit
+the OpenMDAO website to find out more about how we use `Trac <http://openmdao.org/wiki/Home>`_ and
+about the OpenMDAO `development <http://openmdao.org/wiki/Development>`_ process.
 
 
 .. _Creating-the-Virtual-Environment:
@@ -140,7 +138,7 @@ ________________________________
 After you've created your branch, run ``python go-openmdao-dev.py`` from the top directory of your
 branch to set up your development environment. The script will check the version of Python you are
 running. You must be running a version greater than or equal to 2.6 but less than 3.0. (To find out
-which Python version you are running, type ``python --version``.)
+which Python version you are running, you can type ``python --version``.)
 
 .. note:: On Windows, you need to run the installer from a command window that has
    the Visual Studio environment variables set.  The easiest way to do this is to
@@ -206,7 +204,7 @@ subdirectories:
 ``etc``
     Contains miscellaneous files that don't fit in bin, lib, or include.
 
-After your virtual Python environment has been activated, you can add additional
+After your virtual Python environment has been activated, you can add other 
 distributions to the environment by using ``easy_install`` or :term:`pip` in
 the same manner that you would add packages to the system level Python.
 
@@ -274,7 +272,7 @@ The directory structure of your repository should look like this:
     testing.
     
 ``openmdao.units``
-     Contains the units for doing unit conversion.   
+     Python package containing tools for doing unit conversion.   
 
 ``openmdao.util``
     Python package containing source for various Python utility routines

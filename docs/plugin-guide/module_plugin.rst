@@ -113,21 +113,24 @@ In this case, the ``setup.py`` file looks like this:
     )
 
     
-The ``setup()`` command has many options in addition to those shown above,
-e.g., author, author_email, maintainer, maintainer_email, url, license,
+The ``setup()`` command has many arguments in addition to those shown above,
+e.g., *author, author_email, maintainer, maintainer_email, url, license,
 description, long_description, keywords, platforms, fullname, contact,
-contact_email, classifiers, and download_url. If you supply any of these,
-their values will be stored as metadata in the distribution. To keep things simple, we
-won't describe all of the options in detail, but if you're interested, you can
-go to  `<http://docs.python.org/distutils/apiref.html#module-distutils.core>`_ and
-`<http://peak.telecommunity.com/DevCenter/setuptools#new-and-changed-setup-keywords>`_.
+contact_email, classifiers,* and *download_url.* If you supply any of these,
+their values will be stored as metadata in the distribution. To keep things
+simple, we won't describe all of the arguments in detail. If you're
+interested, you can go to this 
+`reference page <http://docs.python.org/distutils/apiref.html#module-distutils.core>`_ for a
+description of the arguments to ``setup()`` or go
+`here <http://peak.telecommunity.com/DevCenter/setuptools#new-and-changed-setup-keywords>`_ for
+the keyword arguments added or changed by ``setuptools``.
 
 The following options are required for our distribution to function properly
 within the OpenMDAO framework:
 
 **name** 
     The package must have a name, and generally it should be the name of
-    the module, minus the ".py" extension, e.g., ``'simple_adder'``, or the name
+    the module, minus the ``.py`` extension, e.g., ``'simple_adder'``, or the name
     of the class within the module, assuming that the module contains only one
     class.
 
@@ -159,8 +162,8 @@ within the OpenMDAO framework:
     you need to include only *package_A*. Make sure not to leave out any
     direct dependencies here, because doing so will result in failure to
     install needed dependent distributions whenever your distribution is
-    installed. The value of *install_requires* should be a list of strings.
-    These strings can specify not only the name of a distribution, but also a
+    installed. The value of ``install_requires`` should be a list of strings.
+    These strings can specify not only the name of a distribution but also a
     version or a range of versions. For example, 'numpy>=1.3.0', 'numpy<=1.5'
     and 'numpy=='1.4.1' are all valid entries in ``install_requires``. However,
     it's usually best not to specify an exact version in ``install_requires``
@@ -176,7 +179,7 @@ within the OpenMDAO framework:
     point is specified by its name, followed by an equals (**=**) sign, followed by
     dotted module path (dotted path you would use to import the module in
     Python), followed by a colon (**:**) and the name of the plugin class. The value
-    of entry_points should be a string in INI file format or a dictionary. 
+    of ``entry_points`` should be a string in INI file format or a dictionary. 
     
         
     For example:
@@ -271,7 +274,7 @@ is that the Trait object itself is just a validator and possibly a converter.  T
 object that actually gets passed around between components is the *value* that the
 trait corresponds to and not the trait itself. For example, if we had a component
 named *wheel* that contained one of our Coordinates traits named
-*center_location*, then the value of ``wheel.center_location`` would be a 3-tuple,
+``center_location``, then the value of ``wheel.center_location`` would be a 3-tuple,
 not a Coordinates object.
 
 We override the base class constructor so we can supply a default value of
