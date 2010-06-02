@@ -17,6 +17,7 @@ from enthought.traits.api import Bool, List, Str, Instance, TraitError
 
 from openmdao.main.container import Container
 from openmdao.main.filevar import FileMetadata, FileRef
+from openmdao.main.expression import Expression, ExpressionList
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 
