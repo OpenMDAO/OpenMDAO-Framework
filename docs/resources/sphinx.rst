@@ -1,5 +1,7 @@
 .. index:: Sphinx, reStructuredText
 
+- `Sphinx-and-reStructredText`:
+
 Sphinx and reStructuredText
 ===========================
 

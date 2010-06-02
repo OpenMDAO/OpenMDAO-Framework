@@ -325,45 +325,45 @@ Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 +------------------+----------------------------------------------------------+
 | Name             | Callable Signature                                       |
 +==================+==========================================================+
-| Array            | Array( [*dtype* = None, *shape* = None, *value* = None,  |
-|                  | *typecode* = None, *iotype* = None, *desc* = None] )     |
+| Array            | Array( [dtype = None, shape = None, value = None,        |
+|                  | typecode = None, iotype = None, desc = None] )           |
 +------------------+----------------------------------------------------------+
-| Bool             | Bool( [*value* = None, *desc* = None, *iotype* = None] ) | 
+| Bool             | Bool( [value = None, desc = None, iotype = None] )       | 
 +------------------+----------------------------------------------------------+
-| Complex          | Complex( [*value* = None, *desc* = None,                 |
-|                  | *iotype* = None] )                                       | 
+| Complex          | Complex( [value = None, desc = None,                     |
+|                  | iotype = None] )                                         |
 +------------------+----------------------------------------------------------+
-| Enum             | Enum( [*default_value*, *values* = (),                   |
-|                  | *desc* = None, *iotype* = None, *aliases* = ()] )        |
+| Enum             | Enum( [default_value, values = (),                       | 
+|                  | desc = None, iotype = None, aliases = ()] )              |
 +------------------+----------------------------------------------------------+
-| File             | File( [*default_value* = None, *iotype* = None,          | 
-|                  | *desc* = None, *low* = None, *high* = None, *path* =     |
-|                  | None, *content_type* = None, *binary* = False,           |
-|                  | *local_path* = None                                      |
+| File             | File( [default_value = None, iotype = None,              |
+|                  | desc = None, low = None, high = None, path = None,       |
+|                  | content_type = None, binary = False,                     |
+|                  | local_path = None                                        |
 +------------------+----------------------------------------------------------+
-| Float            | Float( [*default_value* = None, *iotype* = None,         | 
-|                  | *desc* = None, *low* = None, *high* = None,              |
-|                  | *exclude_low* = False, *exclude_high* = False,           |
-|                  | *units* = None] )                                        |
+| Float            | Float( [default_value = None, iotype = None,             |
+|                  | desc = None, low = None, high = None,                    |
+|                  | exclude_low = False, exclude_high = False,               |
+|                  | units = None] )                                          |
 +------------------+----------------------------------------------------------+
-| Instance         | Instance( [*klass* = None, *desc* = None, *iotype* =     |
-|                  | None, *factory* = None, *args* = None, *kw* = None,      |
-|                  | *allow_none* = True, *adapt* = None, *module* = None,    |
-|                  | *required* = False] )                                    | 
+| Instance         | Instance( [klass = None, desc = None, iotype = None,     |
+|                  | factory = None, args = None, kw = None,                  |
+|                  | allow_none = True, adapt = None, module = None,          |
+|                  | required = False] )                                      |
 +------------------+----------------------------------------------------------+
-| Int              | Int( [*default_value* = None, *iotype* = None,           |
-|                  | *desc* = None, *low* = None, *high* = None,              |
-|                  | *exclude_low* = False, *exclude_high* = False] )         |
+| Int              | Int( [default_value = None, iotype = None,               |
+|                  | desc = None, low = None, *high* = None,                  |
+|                  | exclude_low = False, exclude_high = False] )             |
 +------------------+----------------------------------------------------------+
 | Range            | Deprecated. Use OpenMDAO's Int or Float.                 |
 +------------------+----------------------------------------------------------+
-| Str              | Str( [*value* = None, *desc* = None, *iotype* = None] )  |
+| Str              | Str( [value = None, desc = None, iotype = None] )        |
 +------------------+----------------------------------------------------------+
-| Expression       | Expression( [*default_value* = NoDefaultSpecified,       |
-|                  | *desc* = None, *iotype* = None] )                        |
+| Expression       | Expression( [default_value = NoDefaultSpecified,         |
+|                  | desc = None, iotype = None] )                            |
 +------------------+----------------------------------------------------------+
-| ExpressionList   | ExpressionList( [*default_value* = NoDefaultSpecified,   |
-|                  | *desc* = None, *iotype* = None] )                        |
+| ExpressionList   | ExpressionList( [default_value = NoDefaultSpecified,     |
+|                  | desc = None, iotype = None] )                            |
 +------------------+----------------------------------------------------------+
 
 A more detailed list of Enthought's `Traits`__ is given in their documentation.
