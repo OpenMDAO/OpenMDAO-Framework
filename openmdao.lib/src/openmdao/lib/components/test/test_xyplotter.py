@@ -22,6 +22,7 @@ class XYplotterTestCase(unittest.TestCase):
         top.add_container('comp2', ExecComp(exprs=['z=x*.4']))
         top.connect('comp1.z', 'comp2.x')
         driver = top.add_container('driver', SimpleCaseIterDriver())
+        
         plotter = top.add_container('plotter', XYplotter())
         plotter.title = "Foobar"
         #plotter.add_line(y="comp1.z", line_type='bo-')

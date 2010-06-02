@@ -36,6 +36,7 @@ class SimpleCaseIterDriver(Driver):
         """ Runs each case in `iterator` and records results in `recorder`. """
         for case in self.iterator:
             self._run_case(case)
+            self.recorder.record(case)
 
     def _run_case(self, case):
         msg = ''
@@ -48,17 +49,4 @@ class SimpleCaseIterDriver(Driver):
             case.update(self.parent, msg)
         except Exception as err:
             case.msg = msg + " : " + str(err)
-        self.recorder.record(case)
-        
-    def step(self):
-        """ Evaluate the next case. """
-        self._stop = False
-        if self._iter is None:
-            self._iter = self.iterator.__iter__()
-
-        try:
-            case = self._iter.next()
-        except StopIteration:
-            self._iter = None
-            raise
 
