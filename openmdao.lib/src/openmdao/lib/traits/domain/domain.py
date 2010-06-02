@@ -11,7 +11,9 @@ class DomainObj(object):
     """
 
     def __init__(self):
+        self.cartesian = True
         self.right_handed = True
+        self.reference_state = None
         # Zones are kept in an explicit list to retain the order
         # that they were added.
         self.zones = []
@@ -96,6 +98,20 @@ class DomainObj(object):
                 logger.debug("zone '%s' equivalence failed.", name)
                 return False
         return True
+
+    def make_cartesian(self):
+        """ Convert to cartesian coordinate system. """
+        if not self.cartesian:
+            for zone in self.zones:
+                zone.make_cartesian()
+            self.cartesian = True
+
+    def make_cylindrical(self):
+        """ Convert to cylindrical coordinate system. """
+        if self.cartesian:
+            for zone in self.zones:
+                zone.make_cylindrical()
+            self.cartesian = False
 
     def make_left_handed(self):
         """ Convert to left-handed coordinate system. """

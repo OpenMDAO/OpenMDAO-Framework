@@ -1,6 +1,6 @@
-import math
+from math import asin, atan2, cos, sin, sqrt
 
-_DEG2RAD = math.asin(1.) / 90.
+_DEG2RAD = asin(1.) / 90.
 
 
 class Vector(object):
@@ -74,6 +74,38 @@ class Vector(object):
             raise AttributeError('vector has no Z component')
         self.z *= -1.
 
+    def make_cartesian(self):
+        """ Convert to cartesian coordinate system. """
+        y_get = self.y.item
+        y_set = self.y.itemset
+        z_get = self.z.item
+        z_set = self.z.itemset
+# TODO: try 'ravel' to avoid structured grid dependence.
+        imax, jmax, kmax = self.x.shape
+        for i in range(imax):
+            for j in range(jmax):
+                for k in range(kmax):
+                    y = y_get(i, j, k)  # r
+                    z = z_get(i, j, k)  # theta
+                    y_set(i, j, k, y * sin(z))
+                    z_set(i, j, k, y * cos(z))
+
+    def make_cylindrical(self):
+        """ Convert to cylindrical coordinate system. """
+        y_get = self.y.item
+        y_set = self.y.itemset
+        z_get = self.z.item
+        z_set = self.z.itemset
+# TODO: try 'ravel' to avoid structured grid dependence.
+        imax, jmax, kmax = self.x.shape
+        for i in range(imax):
+            for j in range(jmax):
+                for k in range(kmax):
+                    y = y_get(i, j, k)
+                    z = z_get(i, j, k)
+                    y_set(i, j, k, sqrt(y*y + z*z))  # r
+                    z_set(i, j, k, atan2(z, y))      # theta
+
     def rotate_about_x(self, deg):
         """ Rotate about the X axis by `deg` degrees. """
         if self.y is None:
@@ -81,8 +113,8 @@ class Vector(object):
         if self.z is None:
             raise AttributeError('vector has no Z component')
 
-        sine   = math.sin(deg * _DEG2RAD)
-        cosine = math.cos(deg * _DEG2RAD)
+        sine   = sin(deg * _DEG2RAD)
+        cosine = cos(deg * _DEG2RAD)
         y_new  = self.y*cosine - self.z*sine
         self.z = self.z*cosine + self.y*sine
         self.y = y_new
@@ -94,8 +126,8 @@ class Vector(object):
         if self.z is None:
             raise AttributeError('vector has no Z component')
 
-        sine   = math.sin(deg * _DEG2RAD)
-        cosine = math.cos(deg * _DEG2RAD)
+        sine   = sin(deg * _DEG2RAD)
+        cosine = cos(deg * _DEG2RAD)
         x_new  = self.x*cosine - self.z*sine
         self.z = self.z*cosine + self.x*sine
         self.x = x_new
@@ -107,8 +139,8 @@ class Vector(object):
         if self.y is None:
             raise AttributeError('vector has no Y component')
 
-        sine   = math.sin(deg * _DEG2RAD)
-        cosine = math.cos(deg * _DEG2RAD)
+        sine   = sin(deg * _DEG2RAD)
+        cosine = cos(deg * _DEG2RAD)
         x_new  = self.x*cosine - self.y*sine
         self.y = self.y*cosine + self.x*sine
         self.x = x_new

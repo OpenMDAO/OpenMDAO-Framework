@@ -8,6 +8,10 @@ class Zone(object):
         self.coords = GridCoordinates()
         self.arrays = []
         self.vectors = []
+        self.reference_state = None
+        self.symmetry = None
+        self.symmetry_axis = None
+        self.symmetry_instances = 1
 
     @property
     def shape(self):
@@ -85,6 +89,18 @@ class Zone(object):
         self.coords.flip_z()
         for vector in self.vectors:
             vector.flip_z()
+
+    def make_cartesian(self):
+        """ Convert to cartesian coordinate system. """
+        self.coords.make_cartesian()
+        for vector in self.vectors:
+            vector.make_cartesian()
+
+    def make_cylindrical(self):
+        """ Convert to cylindrical coordinate system. """
+        self.coords.make_cylindrical()
+        for vector in self.vectors:
+            vector.make_cylindrical()
 
     def translate(self, delta_x, delta_y, delta_z):
         """ Translate coordinates. """

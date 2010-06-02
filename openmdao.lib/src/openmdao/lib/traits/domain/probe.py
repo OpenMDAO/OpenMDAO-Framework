@@ -1,0 +1,539 @@
+from math import sqrt
+
+from openmdao.units.units import PhysicalQuantity
+
+
+# Dictionary for calculated variable information.
+# Holds (integrate_flag, collect_function).
+# Populated as collection functions are defined.
+_VARIABLES = {}
+
+_SCHEMES = ('area', 'mass')
+
+
+def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
+    """
+    Calculate metrics on mesh surfaces.
+    Currently only supports structured grids with cell-centered data.
+
+    - `domain` is the :class:`Domain` to be processed.
+    - `surfaces` is a list of ``(zone_name,imin,imax,jmin,jmax,kmin,kmax)`` \
+    mesh surface specifications to be used for the calculation. \
+    Indices start at 0.
+    - `variables` is a list of ``(metric_name, units)`` tuples. Legal metric \
+    names are 'area', 'mass_flow', 'pressure_stagnation', and \
+    'temperature_stagnation'.
+    - `weighting_scheme` specifies how individual values are weighted. \
+    Legal values are 'area' for area averaging and 'mass' for mass averaging.
+
+    Returns a list of metric values in the order of the `variables` list.
+    """
+    metrics = []
+
+    # Check validity of surface specifications.
+    _surfaces = []
+    for zone_name, imin, imax, jmin, jmax, kmin, kmax in surfaces:
+        try:
+            zone = getattr(domain, zone_name)
+            zone_imax, zone_jmax, zone_kmax = zone.shape
+        except AttributeError:
+            raise ValueError("Domain does not contain zone '%s'" % zone_name)
+
+        # Support end-relative indexing.
+        if imin < 0:
+            imin = zone_imax + imin
+        if imax < 0:
+            imax = zone_imax + imax
+        if jmin < 0:
+            jmin = zone_jmax + jmin
+        if jmax < 0:
+            jmax = zone_jmax + jmax
+        if kmin < 0:
+            kmin = zone_kmax + kmin
+        if kmax < 0:
+            kmax = zone_kmax + kmax
+
+        # Check index validity.
+        if imin < 0 or imin >= zone_imax:
+            raise ValueError("Zone %s imin %d invalid (max %d)"
+                             % (zone_name, imin, zone_imax))
+        if imax < imin or imax >= zone_imax:
+            raise ValueError("Zone %s imax %d invalid (max %d)"
+                             % (zone_name, imax, zone_imax))
+        if jmin < 0 or jmin >= zone_jmax:
+            raise ValueError("Zone %s jmin %d invalid (max %d)"
+                             % (zone_name, jmin, zone_jmax))
+        if jmax < jmin or jmax >= zone_jmax:
+            raise ValueError("Zone %s jmax %d invalid (max %d)"
+                             % (zone_name, jmax, zone_jmax))
+        if kmin < 0 or kmin >= zone_kmax:
+            raise ValueError("Zone %s kmin %d invalid (max %d)"
+                             % (zone_name, kmin, zone_kmax))
+        if kmax < kmin or kmax >= zone_kmax:
+            raise ValueError("Zone %s kmax %d invalid (max %d)"
+                             % (zone_name, kmax, zone_kmax))
+        if imin != imax and jmin != jmax and kmin != kmax:
+            raise ValueError("Zone %s volume specified: %d,%d %d,%d %d,%d"
+                             % (zone_name, imin, imax, jmin, jmax, kmin, kmax))
+
+        _surfaces.append((zone_name, imin, imax, jmin, jmax, kmin, kmax))
+
+    # Check validity of variables.
+    for name, units in variables:
+        if name not in _VARIABLES:
+            raise ValueError("Unknown/unsupported variable '%s'" % name)
+
+    # Check validity of weighting scheme.
+    if weighting_scheme not in _SCHEMES:
+        raise ValueError("Unknown/unsupported weighting scheme '%s'"
+                         % weighting_scheme)
+
+    # Collect weights.
+    weights = {}
+    weight_total = 0.
+    for surface in _surfaces:
+        zone_name = surface[0]
+        zone_weights = _weights(weighting_scheme, domain, surface)
+        # Adjust for symmetry.
+        zone = getattr(domain, zone_name)
+        zone_weights *= zone.symmetry_instances
+        weights[zone_name] = zone_weights
+        weight_total += sum(zone_weights)
+
+    # For each variable...
+    for name, units in variables:
+        # Compute total across each surface...
+        total = None
+        for surface in _surfaces:
+            zone_name = surface[0]
+            zone = getattr(domain, zone_name)
+
+            # Check for a reference_state dictionary.
+            ref = zone.reference_state or domain.reference_state
+            if not ref:
+                raise ValueError('No zone or domain reference_state dictionary'
+                                 ' supplied.')
+
+            value = _VARIABLES[name][1](domain, surface, weights, ref)
+            # Adjust for symmetry.
+            value *= zone.symmetry_instances
+            if total is None:
+                total = value
+            else:
+                total += value
+
+        # Convert to requested units.
+        total.convert_to_unit(units)
+
+        # If integrating set total, otherwise adjust for overall weighting.
+        if _VARIABLES[name][0]:
+            metrics.append(total.value)
+        else:
+            metrics.append(total.value / weight_total)
+
+    return metrics
+
+
+def _weights(scheme, domain, surface):
+    """ Returns weights for a mesh surface. """
+    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
+    zone = getattr(domain, zone_name)
+
+    x = zone.coords.x.item
+    y = zone.coords.y.item
+    z = zone.coords.z.item
+
+    if scheme == 'mass':
+        try:
+            mom_x = zone.momentum.x.item
+            mom_y = zone.momentum.y.item
+            mom_z = zone.momentum.z.item
+        except AttributeError:
+            raise AttributeError("For mass averaging zone %s is missing"
+                                 " 'momentum'." % zone_name)
+
+    # Ensure range() returns face index.
+    if imin == imax:
+        imax += 1
+        normal = _iface_normal
+    elif jmin == jmax:
+        jmax += 1
+        normal = _jface_normal
+    else:
+        kmax += 1
+        normal = _kface_normal
+
+    weights = []
+    for i in range(imin, imax):
+        ip1 = i + 1
+        for j in range(jmin, jmax):
+            jp1 = j + 1
+            for k in range(kmin, kmax):
+                kp1 = k + 1
+
+                sx, sy, sz = normal(x, y, z, i, j, k)
+                if scheme == 'mass':
+                    kp1 = k + 1
+                    rvu = 0.5 * (mom_x(ip1, jp1, kp1) + mom_x(i, jp1, kp1))
+                    rvv = 0.5 * (mom_y(ip1, jp1, kp1) + mom_y(i, jp1, kp1))
+                    rvw = 0.5 * (mom_z(ip1, jp1, kp1) + mom_z(i, jp1, kp1))
+                    weights.append(rvu*sx + rvv*sy + rvw*sz)
+                else:
+                    weights.append(sqrt(sx*sx + sy*sy + sz*sz))
+
+    return weights
+
+
+def _iface_normal(x, y, z, i, j, k, lref=1.):
+    """ Return vector normal to I face with magnitude equal to area. """
+    jp1 = j + 1
+    kp1 = k + 1
+
+    # upper-left - lower-right.
+    diag_x1 = x(i, jp1, k) - x(i, j, kp1)
+    diag_y1 = y(i, jp1, k) - y(i, j, kp1)
+    diag_z1 = z(i, jp1, k) - z(i, j, kp1)
+
+    # upper-right - lower-left.
+    diag_x2 = x(i, jp1, kp1) - x(i, j, k)
+    diag_y2 = y(i, jp1, kp1) - y(i, j, k)
+    diag_z2 = z(i, jp1, kp1) - z(i, j, k)
+
+    r1 = (y(i, j, kp1) + y(i, jp1, k  )) / 2.
+    r2 = (y(i, j, k  ) + y(i, jp1, kp1)) / 2.
+
+    aref = lref * lref
+
+    sx = -0.5 * ( r2 * diag_y1 * diag_z2 - r1 * diag_y2 * diag_z1) * aref
+    sy = -0.5 * (-r2 * diag_x1 * diag_z2 + r1 * diag_x2 * diag_z1) * aref
+    sz = -0.5 * (      diag_x1 * diag_y2 -      diag_x2 * diag_y1) * aref
+
+    return (sx, sy, sz)
+
+
+def _jface_normal(x, y, z, i, j, k, lref=1.):
+    """ Return vector normal to J face with magnitude equal to area. """
+    ip1 = i + 1
+    kp1 = k + 1
+
+    # upper-left - lower-right.
+    diag_x1 = x(ip1, j, k) - x(i, j, kp1)
+    diag_y1 = y(ip1, j, k) - y(i, j, kp1)
+    diag_z1 = z(ip1, j, k) - z(i, j, kp1)
+
+    # upper-right - lower-left.
+    diag_x2 = x(ip1, j, kp1) - x(i, j, k)
+    diag_y2 = y(ip1, j, kp1) - y(i, j, k)
+    diag_z2 = z(ip1, j, kp1) - z(i, j, k)
+
+    r1 = (y(i, j, kp1) + y(ip1, j, k  )) / 2.
+    r2 = (y(i, j, k  ) + y(ip1, j, kp1)) / 2.
+
+    aref = lref * lref
+
+    sx = -0.5 * ( r2 * diag_y1 * diag_z2 - r1 * diag_y2 * diag_z1) * aref
+    sy = -0.5 * (-r2 * diag_x1 * diag_z2 + r1 * diag_x2 * diag_z1) * aref
+    sz = -0.5 * (      diag_x1 * diag_y2 -      diag_x2 * diag_y1) * aref
+
+    return (sx, sy, sz)
+
+
+def _kface_normal(x, y, z, i, j, k, lref=1.):
+    """ Return vector normal to K face with magnitude equal to area. """
+    ip1 = i + 1
+    jp1 = j + 1
+
+    # upper-left - lower-right.
+    diag_x1 = x(i, jp1, k) - x(ip1, j, k)
+    diag_y1 = y(i, jp1, k) - y(ip1, j, k)
+    diag_z1 = z(i, jp1, k) - z(ip1, j, k)
+
+    # upper-right - lower-left.
+    diag_x2 = x(ip1, jp1, k) - x(i, j, k)
+    diag_y2 = y(ip1, jp1, k) - y(i, j, k)
+    diag_z2 = z(ip1, jp1, k) - z(i, j, k)
+
+    r1 = (y(i, jp1, k) + y(ip1, j,   k)) / 2.
+    r2 = (y(i, j,   k) + y(ip1, jp1, k)) / 2.
+
+    aref = lref * lref
+
+    sx = -0.5 * ( r2 * diag_y1 * diag_z2 - r1 * diag_y2 * diag_z1) * aref
+    sy = -0.5 * (-r2 * diag_x1 * diag_z2 + r1 * diag_x2 * diag_z1) * aref
+    sz = -0.5 * (      diag_x1 * diag_y2 -      diag_x2 * diag_y1) * aref
+
+    return (sx, sy, sz)
+
+
+def _area(domain, surface, weights, reference_state):
+    """ Returns area of mesh surface as a :class:`PhysicalQuantity`. """
+    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
+    zone = getattr(domain, zone_name)
+
+    x = zone.coords.x.item
+    y = zone.coords.y.item
+    z = zone.coords.z.item
+
+    # Ensure range() returns face index.
+    if imin == imax:
+        imax += 1
+        normal = _iface_normal
+    elif jmin == jmax:
+        jmax += 1
+        normal = _jface_normal
+    else:
+        kmax += 1
+        normal = _kface_normal
+
+    try:
+        lref = reference_state['length_reference']
+    except KeyError:
+        raise AttributeError("For area, reference_state is missing"
+                             " 'length_reference'.")
+    aref = lref * lref
+
+    total = 0.
+    for i in range(imin, imax):
+        for j in range(jmin, jmax):
+            for k in range(kmin, kmax):
+                sx, sy, sz = normal(x, y, z, i, j, k, lref.value)
+                total += sqrt(sx*sx + sy*sy + sz*sz)
+
+    return PhysicalQuantity(total, aref.get_unit_name())
+
+_VARIABLES['area'] = (True, _area)
+
+
+def _massflow(domain, surface, weights, reference_state):
+    """ Returns mass flow for a mesh surface as a :class:`PhysicalQuantity`. """
+    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
+    zone = getattr(domain, zone_name)
+    try:
+        mom_x = zone.momentum.x.item
+        mom_y = zone.momentum.y.item
+        mom_z = zone.momentum.z.item
+    except AttributeError:
+        raise AttributeError("For mass flow, zone %s is missing 'momentum'."
+                             % zone_name)
+    x = zone.coords.x.item
+    y = zone.coords.y.item
+    z = zone.coords.z.item
+
+    # Ensure range() returns face index.
+    if imin == imax:
+        imax += 1
+        normal = _iface_normal
+    elif jmin == jmax:
+        jmax += 1
+        normal = _jface_normal
+    else:
+        kmax += 1
+        normal = _kface_normal
+
+    try:
+        lref = reference_state['length_reference']
+        pref = reference_state['pressure_reference']
+        rgas = reference_state['ideal_gas_constant']
+        tref = reference_state['temperature_reference']
+    except KeyError:
+        vals = ('length_reference', 'pressure_reference', 'ideal_gas_constant',
+                'temperature_reference')
+        raise AttributeError('For mass flow, reference_state is missing'
+                             ' one or more of %s.' % vals)
+
+    rhoref = pref / rgas / tref
+    vref = (rgas * tref).sqrt()
+    momref = rhoref * vref
+    wref = momref * lref * lref
+
+    total = 0.
+    for i in range(imin, imax):
+        ip1 = i + 1
+        for j in range(jmin, jmax):
+            jp1 = j + 1
+            for k in range(kmin, kmax):
+                kp1 = k + 1
+
+                rvu = 0.5 * (mom_x(ip1, jp1, kp1) + mom_x(i, jp1, kp1)) \
+                      * momref.value
+                rvv = 0.5 * (mom_y(ip1, jp1, kp1) + mom_y(i, jp1, kp1)) \
+                      * momref.value
+                rvw = 0.5 * (mom_z(ip1, jp1, kp1) + mom_z(i, jp1, kp1)) \
+                      * momref.value
+                sx, sy, sz = normal(x, y, z, i, j, k, lref.value)
+
+                w = rvu*sx + rvv*sy + rvw*sz
+
+                total += w
+
+    return PhysicalQuantity(total, wref.get_unit_name())
+
+_VARIABLES['mass_flow'] = (True, _massflow)
+
+
+def _total_pressure(domain, surface, weights, reference_state):
+    """
+    Returns weighted total pressure for a mesh surface as a
+    :class:`PhysicalQuantity`.
+    """
+    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
+    zone = getattr(domain, zone_name)
+    weights = weights[zone_name]
+    try:
+        density = zone.density.item
+        mom_x = zone.momentum.x.item
+        mom_y = zone.momentum.y.item
+        mom_z = zone.momentum.z.item
+        pressure = zone.pressure.item
+    except AttributeError:
+        vnames = ('density', 'momentum', 'pressure')
+        raise AttributeError('For total pressure, zone %s is missing'
+                             ' one or more of %s.' % (zone_name, vnames))
+    try:
+        gam = zone.gamma.item
+    except AttributeError:
+        gam = None  # Use passed-in scalar gamma.
+
+    # Ensure range() returns face index.
+    if imin == imax:
+        imax += 1
+    elif jmin == jmax:
+        jmax += 1
+    else:
+        kmax += 1
+
+    try:
+        pref = reference_state['pressure_reference']
+        rgas = reference_state['ideal_gas_constant']
+        tref = reference_state['temperature_reference']
+        if gam is None:
+            gamma = reference_state['specific_heat_ratio'].value
+    except KeyError:
+        vals = ('pressure_reference', 'ideal_gas_constant',
+                'temperature_reference', 'specific_heat_ratio')
+        raise AttributeError('For total pressure, reference_state is missing'
+                             ' one or more of %s.' % vals)
+
+    rhoref = pref / rgas / tref
+    vref = (rgas * tref).sqrt()
+    momref = rhoref * vref
+
+    total = 0.
+    weight_index = 0
+    for i in range(imin, imax):
+        ip1 = i + 1
+        for j in range(jmin, jmax):
+            jp1 = j + 1
+            for k in range(kmin, kmax):
+                kp1 = k + 1
+
+                rho = 0.5 * (density(ip1, jp1, kp1) + density(i, jp1, kp1)) \
+                      * rhoref.value
+                vu = 0.5 * (mom_x(ip1, jp1, kp1) + mom_x(i, jp1, kp1)) \
+                      * momref.value / rho
+                vv = 0.5 * (mom_y(ip1, jp1, kp1) + mom_y(i, jp1, kp1)) \
+                      * momref.value / rho
+                vw = 0.5 * (mom_z(ip1, jp1, kp1) + mom_z(i, jp1, kp1)) \
+                      * momref.value / rho
+                ps = 0.5 * (pressure(ip1, jp1, kp1) + pressure(i, jp1, kp1)) \
+                      * pref.value
+                if gam is not None:
+                    gamma = gam(i, jp1, kp1)
+                weight = weights[weight_index]
+                weight_index += 1
+
+                u2 = vu*vu + vv*vv + vw*vw
+                a2 = (gamma * ps) / rho
+                mach2 = u2 / a2
+                pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
+
+                total += pt * weight
+
+    return PhysicalQuantity(total, pref.get_unit_name())
+
+_VARIABLES['pressure_stagnation'] = (False, _total_pressure)
+
+
+def _total_temperature(domain, surface, weights, reference_state):
+    """
+    Returns weighted total temperature for a mesh surface as a
+    :class:`PhysicalQuantity`.
+    """
+    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
+    zone = getattr(domain, zone_name)
+    weights = weights[zone_name]
+    try:
+        density = zone.density.item
+        mom_x = zone.momentum.x.item
+        mom_y = zone.momentum.y.item
+        mom_z = zone.momentum.z.item
+        pressure = zone.pressure.item
+    except AttributeError:
+        vnames = ('density', 'momentum', 'pressure')
+        raise AttributeError('For total temperature, zone %s is missing'
+                             ' one or more of %s.' % (zone_name, vnames))
+    try:
+        gam = zone.gamma.item
+    except AttributeError:
+        gam = None  # Use passed-in scalar gamma.
+
+    # Ensure range() returns face index.
+    if imin == imax:
+        imax += 1
+    elif jmin == jmax:
+        jmax += 1
+    else:
+        kmax += 1
+
+    try:
+        pref = reference_state['pressure_reference']
+        rgas = reference_state['ideal_gas_constant']
+        tref = reference_state['temperature_reference']
+        if gam is None:
+            gamma = reference_state['specific_heat_ratio'].value
+    except KeyError:
+        vals = ('pressure_reference', 'ideal_gas_constant',
+                'temperature_reference', 'specific_heat_ratio')
+        raise AttributeError('For total pressure, reference_state is missing'
+                             ' one or more of %s.' % vals)
+
+    rhoref = pref / rgas / tref
+    vref = (rgas * tref).sqrt()
+    momref = rhoref * vref
+
+    total = 0.
+    weight_index = 0
+    for i in range(imin, imax):
+        ip1 = i + 1
+        for j in range(jmin, jmax):
+            jp1 = j + 1
+            for k in range(kmin, kmax):
+                kp1 = k + 1
+
+                rho = 0.5 * (density(ip1, jp1, kp1) + density(i, jp1, kp1)) \
+                      * rhoref.value
+                vu = 0.5 * (mom_x(ip1, jp1, kp1) + mom_x(i, jp1, kp1)) \
+                      * momref.value / rho
+                vv = 0.5 * (mom_y(ip1, jp1, kp1) + mom_y(i, jp1, kp1)) \
+                      * momref.value / rho
+                vw = 0.5 * (mom_z(ip1, jp1, kp1) + mom_z(i, jp1, kp1)) \
+                      * momref.value / rho
+                ps = 0.5 * (pressure(ip1, jp1, kp1) + pressure(i, jp1, kp1)) \
+                      * pref.value
+                if gam is not None:
+                    gamma = gam(i, jp1, kp1)
+                weight = weights[weight_index]
+                weight_index += 1
+
+                u2 = vu*vu + vv*vv + vw*vw
+                a2 = (gamma * ps) / rho
+                mach2 = u2 / a2
+                ts = ps / (rho * rgas.value)
+                tt = ts * (1. + (gamma-1.)/2. * mach2)
+
+                total += tt * weight
+
+    return PhysicalQuantity(total, tref.get_unit_name())
+
+_VARIABLES['temperature_stagnation'] = (False, _total_temperature)
+
