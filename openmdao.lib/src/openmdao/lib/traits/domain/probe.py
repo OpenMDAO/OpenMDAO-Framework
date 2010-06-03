@@ -14,12 +14,12 @@ _SCHEMES = ('area', 'mass')
 def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     """
     Calculate metrics on mesh surfaces.
-    Currently only supports structured grids with cell-centered data.
+    Currently only supports 3D structured grids with cell-centered data.
 
     - `domain` is the :class:`Domain` to be processed.
     - `surfaces` is a list of ``(zone_name,imin,imax,jmin,jmax,kmin,kmax)`` \
     mesh surface specifications to be used for the calculation. \
-    Indices start at 0.
+    Indices start at 0. Negative indices are relative to the end of the array.
     - `variables` is a list of ``(metric_name, units)`` tuples. Legal metric \
     names are 'area', 'mass_flow', 'pressure_stagnation', and \
     'temperature_stagnation'.
@@ -93,16 +93,15 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     weight_total = 0.
     for surface in _surfaces:
         zone_name = surface[0]
-        zone_weights = _weights(weighting_scheme, domain, surface)
-        # Adjust for symmetry.
         zone = getattr(domain, zone_name)
-        zone_weights *= zone.symmetry_instances
+        zone_weights = _weights(weighting_scheme, domain, surface)
+        zone_weights *= zone.symmetry_instances  # Adjust for symmetry.
         weights[zone_name] = zone_weights
         weight_total += sum(zone_weights)
 
     # For each variable...
     for name, units in variables:
-        # Compute total across each surface...
+        # Compute total across each surface.
         total = None
         for surface in _surfaces:
             zone_name = surface[0]
@@ -112,24 +111,21 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
             ref = zone.reference_state or domain.reference_state
             if not ref:
                 raise ValueError('No zone or domain reference_state dictionary'
-                                 ' supplied.')
+                                 ' supplied for %s.' % zone_name)
 
             value = _VARIABLES[name][1](domain, surface, weights, ref)
-            # Adjust for symmetry.
-            value *= zone.symmetry_instances
+            value *= zone.symmetry_instances  # Adjust for symmetry.
             if total is None:
                 total = value
             else:
                 total += value
 
-        # Convert to requested units.
-        total.convert_to_unit(units)
+        # If not integrating adjust for overall weighting.
+        if not _VARIABLES[name][0]:
+            total /= weight_total
 
-        # If integrating set total, otherwise adjust for overall weighting.
-        if _VARIABLES[name][0]:
-            metrics.append(total.value)
-        else:
-            metrics.append(total.value / weight_total)
+        total.convert_to_unit(units)  # Convert to requested units.
+        metrics.append(total.value)
 
     return metrics
 
@@ -151,10 +147,8 @@ def _weights(scheme, domain, surface):
         except AttributeError:
             raise AttributeError("For mass averaging zone %s is missing"
                                  " 'momentum'." % zone_name)
-
-    # Ensure range() returns face index.
     if imin == imax:
-        imax += 1
+        imax += 1  # Ensure range() returns face index.
         normal = _iface_normal
     elif jmin == jmax:
         jmax += 1
@@ -265,6 +259,19 @@ def _kface_normal(x, y, z, i, j, k, lref=1.):
     return (sx, sy, sz)
 
 
+def _iface_cell_value(arr, i, j, k):
+    """ Returns I face value for cell-centered data. """
+    return 0.5 * (arr(i, j, k) + arr(i-1, j, k))
+
+def _jface_cell_value(i, j, k, arr):
+    """ Returns J face value for cell-centered data. """
+    return 0.5 * (arr(i, j, k) + arr(i, j-1, k))
+
+def _kface_cell_value(i, j, k, arr):
+    """ Returns K face value for cell-centered data. """
+    return 0.5 * (arr(i, j, k) + arr(i, j, k-1))
+
+
 def _area(domain, surface, weights, reference_state):
     """ Returns area of mesh surface as a :class:`PhysicalQuantity`. """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
@@ -274,9 +281,8 @@ def _area(domain, surface, weights, reference_state):
     y = zone.coords.y.item
     z = zone.coords.z.item
 
-    # Ensure range() returns face index.
     if imin == imax:
-        imax += 1
+        imax += 1  # Ensure range() returns face index.
         normal = _iface_normal
     elif jmin == jmax:
         jmax += 1
@@ -319,16 +325,18 @@ def _massflow(domain, surface, weights, reference_state):
     y = zone.coords.y.item
     z = zone.coords.z.item
 
-    # Ensure range() returns face index.
     if imin == imax:
-        imax += 1
-        normal = _iface_normal
+        imax += 1  # Ensure range() returns face index.
+        face_normal = _iface_normal
+        face_value = _iface_cell_value
     elif jmin == jmax:
         jmax += 1
-        normal = _jface_normal
+        face_normal = _jface_normal
+        face_value = _jface_cell_value
     else:
         kmax += 1
-        normal = _kface_normal
+        face_normal = _kface_normal
+        face_value = _kface_cell_value
 
     try:
         lref = reference_state['length_reference']
@@ -354,13 +362,10 @@ def _massflow(domain, surface, weights, reference_state):
             for k in range(kmin, kmax):
                 kp1 = k + 1
 
-                rvu = 0.5 * (mom_x(ip1, jp1, kp1) + mom_x(i, jp1, kp1)) \
-                      * momref.value
-                rvv = 0.5 * (mom_y(ip1, jp1, kp1) + mom_y(i, jp1, kp1)) \
-                      * momref.value
-                rvw = 0.5 * (mom_z(ip1, jp1, kp1) + mom_z(i, jp1, kp1)) \
-                      * momref.value
-                sx, sy, sz = normal(x, y, z, i, j, k, lref.value)
+                rvu = face_value(mom_x, ip1, jp1, kp1) * momref.value
+                rvv = face_value(mom_y, ip1, jp1, kp1) * momref.value
+                rvw = face_value(mom_z, ip1, jp1, kp1) * momref.value
+                sx, sy, sz = face_normal(x, y, z, i, j, k, lref.value)
 
                 w = rvu*sx + rvv*sy + rvw*sz
 
@@ -394,13 +399,15 @@ def _total_pressure(domain, surface, weights, reference_state):
     except AttributeError:
         gam = None  # Use passed-in scalar gamma.
 
-    # Ensure range() returns face index.
     if imin == imax:
-        imax += 1
+        imax += 1  # Ensure range() returns face index.
+        face_value = _iface_cell_value
     elif jmin == jmax:
         jmax += 1
+        face_value = _jface_cell_value
     else:
         kmax += 1
+        face_value = _kface_cell_value
 
     try:
         pref = reference_state['pressure_reference']
@@ -427,18 +434,13 @@ def _total_pressure(domain, surface, weights, reference_state):
             for k in range(kmin, kmax):
                 kp1 = k + 1
 
-                rho = 0.5 * (density(ip1, jp1, kp1) + density(i, jp1, kp1)) \
-                      * rhoref.value
-                vu = 0.5 * (mom_x(ip1, jp1, kp1) + mom_x(i, jp1, kp1)) \
-                      * momref.value / rho
-                vv = 0.5 * (mom_y(ip1, jp1, kp1) + mom_y(i, jp1, kp1)) \
-                      * momref.value / rho
-                vw = 0.5 * (mom_z(ip1, jp1, kp1) + mom_z(i, jp1, kp1)) \
-                      * momref.value / rho
-                ps = 0.5 * (pressure(ip1, jp1, kp1) + pressure(i, jp1, kp1)) \
-                      * pref.value
+                rho = face_value(density, ip1, jp1, kp1) * rhoref.value
+                vu = face_value(mom_x, ip1, jp1, kp1) * momref.value / rho
+                vv = face_value(mom_y, ip1, jp1, kp1) * momref.value / rho
+                vw = face_value(mom_z, ip1, jp1, kp1) * momref.value / rho
+                ps = face_value(pressure, ip1, jp1, kp1) * pref.value
                 if gam is not None:
-                    gamma = gam(i, jp1, kp1)
+                    gamma = face_value(gam, ip1, jp1, kp1)
                 weight = weights[weight_index]
                 weight_index += 1
 
@@ -477,13 +479,15 @@ def _total_temperature(domain, surface, weights, reference_state):
     except AttributeError:
         gam = None  # Use passed-in scalar gamma.
 
-    # Ensure range() returns face index.
     if imin == imax:
-        imax += 1
+        imax += 1  # Ensure range() returns face index.
+        face_value = _iface_cell_value
     elif jmin == jmax:
         jmax += 1
+        face_value = _jface_cell_value
     else:
         kmax += 1
+        face_value = _kface_cell_value
 
     try:
         pref = reference_state['pressure_reference']
@@ -510,18 +514,13 @@ def _total_temperature(domain, surface, weights, reference_state):
             for k in range(kmin, kmax):
                 kp1 = k + 1
 
-                rho = 0.5 * (density(ip1, jp1, kp1) + density(i, jp1, kp1)) \
-                      * rhoref.value
-                vu = 0.5 * (mom_x(ip1, jp1, kp1) + mom_x(i, jp1, kp1)) \
-                      * momref.value / rho
-                vv = 0.5 * (mom_y(ip1, jp1, kp1) + mom_y(i, jp1, kp1)) \
-                      * momref.value / rho
-                vw = 0.5 * (mom_z(ip1, jp1, kp1) + mom_z(i, jp1, kp1)) \
-                      * momref.value / rho
-                ps = 0.5 * (pressure(ip1, jp1, kp1) + pressure(i, jp1, kp1)) \
-                      * pref.value
+                rho = face_value(density, ip1, jp1, kp1) * rhoref.value
+                vu = face_value(mom_x, ip1, jp1, kp1) * momref.value / rho
+                vv = face_value(mom_y, ip1, jp1, kp1) * momref.value / rho
+                vw = face_value(mom_z, ip1, jp1, kp1) * momref.value / rho
+                ps = face_value(pressure, ip1, jp1, kp1) * pref.value
                 if gam is not None:
-                    gamma = gam(i, jp1, kp1)
+                    gamma = face_value(gam, ip1, jp1, kp1)
                 weight = weights[weight_index]
                 weight_index += 1
 
