@@ -35,6 +35,12 @@ class PassthroughTrait(TraitType):
         return value
 
 
+def _is_driver(obj):
+    return isinstance(obj, Driver)
+
+def _is_plain_component(obj):
+    return isinstance(obj, Component) and not _is_driver(obj)
+
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
     and outputs between its children.  When executed, it runs the components
@@ -61,8 +67,8 @@ class Assembly (Component):
             if v not in self._var_graph:
                 self._var_graph.add_node(v)
         
-        self.workflow = Dataflow(scope=self)
-        self.driverflow = SequentialFlow()
+        self.workflow = Dataflow(scope=self, validator=_is_plain_component)
+        self.driverflow = SequentialFlow(scope=self, validator=_is_driver)
 
     def get_var_graph(self):
         """Returns the Variable dependency graph, after updating it with child
@@ -100,35 +106,27 @@ class Assembly (Component):
         Returns the added object.
         """
         obj = super(Assembly, self).add_container(name, obj)
-
-        if workflow == 'default':
-            if isinstance(obj, Driver):
-                workflow = self.driverflow  
-            else:
-                workflow = self.workflow
-        elif workflow in ['driverflow', 'workflow']:
-            workflow = getattr(self, workflow)
-        elif workflow:
-            self.raise_exception("'%s' is not a valid Workflow name" % workflow,
-                                 NameError)
-                
-        if workflow is not None and isinstance(obj, Component):
-            # for now, do not allow non-Drivers in self.driverflow or
-            # Drivers in self.workflow
-            if isinstance(obj, Driver):
-                if workflow is self.workflow:
-                    self.raise_exception("Driver '%s' is not allowed in workflow" % obj.name,
-                                         TypeError)
-            else: # it's a non-Driver component
-                if workflow is self.driverflow:
-                    self.raise_exception("Component '%s' is not allowed in driverflow" % obj.name,
-                                         TypeError)
+        
+        if isinstance(obj, Container) and not isinstance(obj, Component):
+            pass   # don't add plain Containers to workflow
+        else:
+            if workflow == 'default':
+                if isinstance(obj, Driver):
+                    workflow = self.driverflow  
+                else:
+                    workflow = self.workflow
+            elif workflow in ['driverflow', 'workflow']:
+                workflow = getattr(self, workflow)
+            elif workflow:
+                self.raise_exception("'%s' is not a valid Workflow name" % workflow,
+                                     NameError)
                     
-            workflow.add(obj)
-            # since the internals of the given Component can change after it's
-            # added to our workflow, wait to collect its io_graph until we need it
-            self._child_io_graphs[obj.name] = None
-            self._need_child_io_update = True
+            if workflow is not None:
+                workflow.add(obj)
+                # since the internals of the given Component can change after it's
+                # added to our workflow, wait to collect its io_graph until we need it
+                self._child_io_graphs[obj.name] = None
+                self._need_child_io_update = True
             
         return obj
         

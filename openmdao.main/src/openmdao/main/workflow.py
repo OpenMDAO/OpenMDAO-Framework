@@ -8,6 +8,9 @@ from openmdao.main.exceptions import RunStopped
 
 __all__ = ['Workflow']
 
+def _is_component(obj):
+    return isinstance(obj, Component)
+
 class Workflow(object):
     """
     A Workflow consists of a collection of Components which are to be executed
@@ -16,9 +19,10 @@ class Workflow(object):
 
     implements(IWorkflow)
     
-    def __init__(self, scope=None):
+    def __init__(self, scope=None, validator=_is_component):
         """ Create an empty flow. """
         self.scope = scope
+        self._validator = validator
         self._iterator = None
         self._stop = False
 
@@ -83,9 +87,9 @@ class Workflow(object):
 class SequentialFlow(Workflow):
     """A Workflow that is a simple sequence of components."""
     
-    def __init__(self, scope=None):
+    def __init__(self, scope=None, validator=_is_component):
         """ Create an empty flow. """
-        super(SequentialFlow, self).__init__(scope=scope)
+        super(SequentialFlow, self).__init__(scope=scope, validator=validator)
         self._nodes = []
         
     def __iter__(self):
@@ -97,10 +101,14 @@ class SequentialFlow(Workflow):
 
     def add(self, comp):
         """ Add a new component to the end of the workflow. """
-        if isinstance(comp, Component):
-            self._nodes.append(comp)
+        if self._validator and not self._validator(comp):
+            msg = 'Workflow.add validation failed for type %s' % type(comp)
+            if self.scope:
+                self.scope.raise_exception(msg, TypeError)
+            else:
+                raise TypeError(msg)
         else:
-            raise TypeError('Workflow.add requires a Component, not a %s' % type(comp))
+            self._nodes.append(comp)
         
     def remove(self, comp):
         """Remove a component from this Workflow and any of its children."""

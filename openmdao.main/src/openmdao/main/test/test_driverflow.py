@@ -37,7 +37,7 @@ class DriverflowTestCase(unittest.TestCase):
         try:
             asm.add_container('drv', Dumbcomp(), workflow='driverflow')
         except TypeError, err:
-            self.assertEqual(str(err), ": Component 'drv' is not allowed in driverflow")
+            self.assertTrue(str(err).startswith(": Workflow.add validation failed for type "))
         else:
             self.fail('expected TypeError')
         
@@ -45,8 +45,8 @@ class DriverflowTestCase(unittest.TestCase):
         asm = Assembly()
         try:
             asm.add_container('comp', Dumbdriver(), workflow='workflow')
-        except TypeError, err:
-            self.assertEqual(str(err), ": Driver 'comp' is not allowed in workflow")
+        except TypeError as err:
+            self.assertTrue(str(err).startswith(": Dataflow.add validation failed for type "))
         else:
             self.fail('expected TypeError')
         

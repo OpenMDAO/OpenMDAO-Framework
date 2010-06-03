@@ -7,9 +7,12 @@ from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_co
 
 from openmdao.main.interfaces import IWorkflow
 from openmdao.main.workflow import Workflow
+from openmdao.main.component import Component
 
 __all__ = ['Dataflow']
 
+def _is_component(obj):
+    return isinstance(obj, Component)
                 
 class Dataflow(Workflow):
     """
@@ -19,9 +22,9 @@ class Dataflow(Workflow):
 
     implements(IWorkflow)
     
-    def __init__(self, scope=None):
+    def __init__(self, scope=None, validator=_is_component):
         """ Create an empty flow. """
-        super(Dataflow, self).__init__(scope=scope)
+        super(Dataflow, self).__init__(scope=scope, validator=validator)
         self._no_expr_graph = nx.DiGraph()
         
     def __contains__(self, comp):
@@ -38,7 +41,15 @@ class Dataflow(Workflow):
             
     def add(self, comp):
         """Add the name of a Component to this Dataflow."""
-        self._no_expr_graph.add_node(comp.name)
+        if self._validator and not self._validator(comp):
+            msg = 'Dataflow.add validation failed for type %s' % type(comp)
+            if self.scope:
+                self.scope.raise_exception(msg, TypeError)
+            else:
+                raise TypeError(msg)
+        else:
+            self._no_expr_graph.add_node(comp.name)
+
         
     def remove(self, comp):
         """Remove the name of a Component from this Dataflow."""
