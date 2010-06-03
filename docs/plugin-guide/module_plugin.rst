@@ -282,14 +282,14 @@ We override the base class constructor so we can supply a default value of
 need to supply is the validate function, which will be called with the
 following arguments:
 
-    **object**
-        The object that contains the value of our coordinates variable
-    
-    **name**
-        The name of our coordinates variable
-    
-    **value**
-        The value that our current value is being replaced with
+**object**
+    The object that contains the value of our coordinates variable
+
+**name**
+    The name of our coordinates variable
+
+**value**
+    The value that our current value is being replaced with
 
 
 Our validate function should test that the value we've been called with is

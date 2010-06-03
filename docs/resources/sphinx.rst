@@ -413,6 +413,8 @@ table, you must:
 * Make sure the overline and underlines are all of identical length
 
 
+A table that looks like this:
+
 ::
 
    ==================  ===========================================  =======
@@ -427,8 +429,7 @@ table, you must:
    engine_weight       Engine weight estimate			    kg
    ==================  ===========================================  =======
 
-it results in:
-
+results in this:
 
 ==================  ===========================================  =======
 **Variable**	    **Description**			         **Units**
@@ -442,10 +443,46 @@ fuel_burn	    Fuel burn rate				 li/sec
 engine_weight	    Engine weight estimate			 kg
 ==================  ===========================================  =======
 
-The table that is generated does not have a box outline around it. Also, there is no space
-after the column line. Indenting the text does not affect this; the text will still be flush
-left to the column. (We can only hope that at some future date, the appearance of tables
-will be improved.)
+The table that is generated does not have a box outline around it. And to get the
+header rows to be boldface, you must use the two asteriks (**) markup before and
+after the text you want in bold. 
+
+However, with Sphinx 1.0 beta 2 (released May 30, 2010), the header row
+automatically appears in boldface and the row background appears in color if you
+use a double broken line under the header row (``====``) instead of a single broken
+line (``----``). Additionally, in all tables a space appears after the vertical
+lines separating cells. 
+
+So, using the double broken line under the header like this:
+
+::
+
+  ==================  ===========================================  =======
+  Variable	      Description			           Units
+  ==================  ===========================================  =======
+  power		      Power produced by engine			   kW
+  ------------------  -------------------------------------------  -------
+  torque	      Torque produced by engine			   N*m
+  ------------------  -------------------------------------------  -------
+  fuel_burn	      Fuel burn rate				   li/sec
+  ------------------  -------------------------------------------  -------
+  engine_weight	      Engine weight estimate			   kg
+  ==================  ===========================================  =======
+
+
+results in this:
+
+==================  ===========================================  =======
+Variable	    Description			                 Units
+==================  ===========================================  =======
+power		    Power produced by engine			 kW
+------------------  -------------------------------------------  -------
+torque	            Torque produced by engine			 N*m
+------------------  -------------------------------------------  -------
+fuel_burn	    Fuel burn rate				 li/sec
+------------------  -------------------------------------------  -------
+engine_weight	    Engine weight estimate			 kg
+==================  ===========================================  =======
 
 
 **- Grid table:**

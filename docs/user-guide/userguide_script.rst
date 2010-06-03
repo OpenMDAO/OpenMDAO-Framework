@@ -352,7 +352,7 @@ Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 |                  | required = False] )                                      |
 +------------------+----------------------------------------------------------+
 | Int              | Int( [default_value = None, iotype = None,               |
-|                  | desc = None, low = None, *high* = None,                  |
+|                  | desc = None, low = None, high = None,                    |
 |                  | exclude_low = False, exclude_high = False] )             |
 +------------------+----------------------------------------------------------+
 | Range            | Deprecated. Use OpenMDAO's Int or Float.                 |
@@ -387,7 +387,7 @@ attribute are *'in'* and *'out'*.
 
 ============  =====================
 **iotype**    **Description**
-------------  ---------------------
+============  =====================
 iotype='in'   Component input
 ------------  ---------------------
 iotype='out'  Component output
