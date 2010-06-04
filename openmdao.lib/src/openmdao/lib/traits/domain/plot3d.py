@@ -292,18 +292,18 @@ def _read_plot3d_coords(zone, stream, shape, blanking, planes, logger):
             logger.warning('unexpected coords recordlength'
                            ' %d vs. %d', reclen, expected)
 
-    zone.coords.x = stream.read_floats(shape, order='Fortran')
+    zone.grid_coordinates.x = stream.read_floats(shape, order='Fortran')
     logger.debug('    x min %g, max %g',
-                 zone.coords.x.min(), zone.coords.x.max())
+                 zone.grid_coordinates.x.min(), zone.grid_coordinates.x.max())
 
-    zone.coords.y = stream.read_floats(shape, order='Fortran')
+    zone.grid_coordinates.y = stream.read_floats(shape, order='Fortran')
     logger.debug('    y min %g, max %g',
-                 zone.coords.y.min(), zone.coords.y.max())
+                 zone.grid_coordinates.y.min(), zone.grid_coordinates.y.max())
 
     if dim > 2:
-        zone.coords.z = stream.read_floats(shape, order='Fortran')
+        zone.grid_coordinates.z = stream.read_floats(shape, order='Fortran')
         logger.debug('    z min %g, max %g',
-                     zone.coords.z.min(), zone.coords.z.max())
+                     zone.grid_coordinates.z.min(), zone.grid_coordinates.z.max())
 
     if stream.unformatted:
         reclen2 = stream.read_recordmark()
@@ -317,10 +317,10 @@ def _read_plot3d_qscalars(zone, stream, logger):
     mach, alpha, reynolds, time = stream.read_floats(4, full_record=True)
     logger.debug('    mach %g, alpha %g, reynolds %g, time %g',
                  mach, alpha, reynolds, time)
-    zone.mach = mach
-    zone.alpha = alpha
-    zone.reynolds = reynolds
-    zone.time = time
+    zone.flow_solution.mach = mach
+    zone.flow_solution.alpha = alpha
+    zone.flow_solution.reynolds = reynolds
+    zone.flow_solution.time = time
 
 
 def _read_plot3d_qvars(zone, stream, planes, logger):
@@ -346,7 +346,7 @@ def _read_plot3d_qvars(zone, stream, planes, logger):
     name = 'density'
     arr = stream.read_floats(shape, order='Fortran')
     logger.debug('    %s min %g, max %g', name, arr.min(), arr.max())
-    zone.add_array(name, arr)
+    zone.flow_solution.add_array(name, arr)
 
     vec = Vector()
 
@@ -360,12 +360,12 @@ def _read_plot3d_qvars(zone, stream, planes, logger):
         vec.z = stream.read_floats(shape, order='Fortran')
         logger.debug('    momentum.z min %g, max %g', vec.z.min(), vec.z.max())
 
-    zone.add_vector('momentum', vec)
+    zone.flow_solution.add_vector('momentum', vec)
 
     name = 'energy_stagnation_density'
     arr = stream.read_floats(shape, order='Fortran')
     logger.debug('    %s min %g, max %g', name, arr.min(), arr.max())
-    zone.add_array(name, arr)
+    zone.flow_solution.add_array(name, arr)
 
     if stream.unformatted:
         reclen2 = stream.read_recordmark()
@@ -400,7 +400,7 @@ def _read_plot3d_fvars(zone, stream, dim, nvars, varnames, planes, logger):
         else:
             name = 'f_%d' % (i+1)
         arr = stream.read_floats(shape, order='Fortran')
-        zone.add_array(name, arr)
+        zone.flow_solution.add_array(name, arr)
         logger.debug('    %s min %g, max %g', name, arr.min(), arr.max())
 
     if stream.unformatted:
@@ -418,13 +418,14 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
 
     # Verify we have the needed data.
     for zone in domain.zones:
+        flow = zone.flow_solution
         missing = []
-        for attr in ('mach', 'alpha', 'reynolds', 'time',
+        for name in ('mach', 'alpha', 'reynolds', 'time',
                      'density', 'momentum', 'energy_stagnation_density'):
-            if not hasattr(zone, attr):
-                missing.append(attr)
+            if not hasattr(flow, name):
+                missing.append(name)
         if missing:
-            raise AttributeError('zone %s is missing %s' \
+            raise AttributeError('zone %s flow_solution is missing %s' \
                                  % (domain.zone_name(zone), missing))
     # Write grid file.
     write_plot3d_grid(domain, grid_file, planes, binary, big_endian,
@@ -459,16 +460,17 @@ def write_plot3d_f(domain, grid_file, f_file, varnames=None, planes=False,
 
     # Verify we have the needed data.
     if varnames is None:
-        zone = domain.zones[0]
-        varnames = [zone.name_of_obj(obj) for obj in zone.arrays]
-        varnames.extend([zone.name_of_obj(obj) for obj in zone.vectors])
+        flow = domain.zones[0].flow_solution
+        varnames = [flow.name_of_obj(obj) for obj in flow.arrays]
+        varnames.extend([flow.name_of_obj(obj) for obj in flow.vectors])
     for zone in domain.zones:
+        flow = zone.flow_solution
         missing = []
         for name in varnames:
-            if not hasattr(zone, name):
+            if not hasattr(flow, name):
                 missing.append(name)
         if missing:
-            raise AttributeError('zone %s is missing %s' \
+            raise AttributeError('zone %s flow_solution is missing %s' \
                                  % (domain.zone_name(zone), missing))
     # Write grid file.
     write_plot3d_grid(domain, grid_file, planes, binary, big_endian,
@@ -540,9 +542,9 @@ def _write_plot3d_dims(domain, stream, logger, varnames=None):
 
     nvars = 0
     if varnames:
-        zone = domain.zones[0]
+        flow = domain.zones[0].flow_solution
         for name in varnames:
-            obj = getattr(zone, name)
+            obj = getattr(flow, name)
             nvars += dim if isinstance(obj, Vector) else 1
 
     if stream.unformatted:
@@ -553,7 +555,7 @@ def _write_plot3d_dims(domain, stream, logger, varnames=None):
         stream.write_recordmark(reclen)
 
     for zone in domain.zones:
-        shape = list(zone.coords.x.shape)
+        shape = list(zone.grid_coordinates.x.shape)
         if nvars:
             shape.append(nvars)
         stream.write_ints(numpy.array(shape, dtype=numpy.int32))
@@ -564,7 +566,7 @@ def _write_plot3d_dims(domain, stream, logger, varnames=None):
 
 def _write_plot3d_coords(zone, stream, planes, logger):
     """ Write coordinates (& blanking) to Plot3D stream. """
-    if hasattr(zone.coords, 'iblank'):
+    if hasattr(zone.grid_coordinates, 'iblank'):
         raise NotImplementedError('blanking not supported yet')
 
     if planes:
@@ -584,17 +586,17 @@ def _write_plot3d_coords(zone, stream, planes, logger):
         stream.write_recordmark(reclen)
 
     logger.debug('    x min %g, max %g',
-                 zone.coords.x.min(), zone.coords.x.max())
-    stream.write_floats(zone.coords.x, order='Fortran')
+                 zone.grid_coordinates.x.min(), zone.grid_coordinates.x.max())
+    stream.write_floats(zone.grid_coordinates.x, order='Fortran')
 
     logger.debug('    y min %g, max %g',
-                 zone.coords.y.min(), zone.coords.y.max())
-    stream.write_floats(zone.coords.y, order='Fortran')
+                 zone.grid_coordinates.y.min(), zone.grid_coordinates.y.max())
+    stream.write_floats(zone.grid_coordinates.y, order='Fortran')
 
     if dim > 2:
         logger.debug('    z min %g, max %g',
-                     zone.coords.z.min(), zone.coords.z.max())
-        stream.write_floats(zone.coords.z, order='Fortran')
+                     zone.grid_coordinates.z.min(), zone.grid_coordinates.z.max())
+        stream.write_floats(zone.grid_coordinates.z, order='Fortran')
 
     if stream.unformatted:
         stream.write_recordmark(reclen)
@@ -602,9 +604,10 @@ def _write_plot3d_coords(zone, stream, planes, logger):
 
 def _write_plot3d_qscalars(zone, stream, logger):
     """ Writes Mach number, alpha, Reynolds number, and time. """
+    flow = zone.flow_solution
     logger.debug('    mach %g, alpha %g, reynolds %g, time %g',
-                 zone.mach, zone.alpha, zone.reynolds, zone.time)
-    scalars = (zone.mach, zone.alpha, zone.reynolds, zone.time)
+                 flow.mach, flow.alpha, flow.reynolds, flow.time)
+    scalars = (flow.mach, flow.alpha, flow.reynolds, flow.time)
     stream.write_floats(numpy.array(scalars, dtype=numpy.float32),
                         full_record=True)
 
@@ -616,9 +619,10 @@ def _write_plot3d_vars(zone, stream, varnames, planes, logger):
 
     shape = zone.shape
     dim = len(shape)
+    flow = zone.flow_solution
     nvars = 0
     for name in varnames:
-        obj = getattr(zone, name)
+        obj = getattr(flow, name)
         nvars += dim if isinstance(obj, Vector) else 1
     logger.debug('    nvars %d', nvars)
 
@@ -633,7 +637,7 @@ def _write_plot3d_vars(zone, stream, varnames, planes, logger):
         stream.write_recordmark(reclen)
 
     for name in varnames:
-        obj = getattr(zone, name)
+        obj = getattr(flow, name)
         if isinstance(obj, Vector):
             arr = obj.x
             logger.debug('    %s.x min %g, max %g', name, arr.min(), arr.max())

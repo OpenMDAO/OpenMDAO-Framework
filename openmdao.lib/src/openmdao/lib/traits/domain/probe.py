@@ -10,6 +10,9 @@ _VARIABLES = {}
 
 _SCHEMES = ('area', 'mass')
 
+# TODO: support Vertex flow solution grid location.
+# TODO: account for ghost cells in index calculations.
+
 
 def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     """
@@ -55,25 +58,25 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
 
         # Check index validity.
         if imin < 0 or imin >= zone_imax:
-            raise ValueError("Zone %s imin %d invalid (max %d)"
+            raise ValueError('Zone %s imin %d invalid (max %d)'
                              % (zone_name, imin, zone_imax))
         if imax < imin or imax >= zone_imax:
-            raise ValueError("Zone %s imax %d invalid (max %d)"
+            raise ValueError('Zone %s imax %d invalid (max %d)'
                              % (zone_name, imax, zone_imax))
         if jmin < 0 or jmin >= zone_jmax:
-            raise ValueError("Zone %s jmin %d invalid (max %d)"
+            raise ValueError('Zone %s jmin %d invalid (max %d)'
                              % (zone_name, jmin, zone_jmax))
         if jmax < jmin or jmax >= zone_jmax:
-            raise ValueError("Zone %s jmax %d invalid (max %d)"
+            raise ValueError('Zone %s jmax %d invalid (max %d)'
                              % (zone_name, jmax, zone_jmax))
         if kmin < 0 or kmin >= zone_kmax:
-            raise ValueError("Zone %s kmin %d invalid (max %d)"
+            raise ValueError('Zone %s kmin %d invalid (max %d)'
                              % (zone_name, kmin, zone_kmax))
         if kmax < kmin or kmax >= zone_kmax:
-            raise ValueError("Zone %s kmax %d invalid (max %d)"
+            raise ValueError('Zone %s kmax %d invalid (max %d)'
                              % (zone_name, kmax, zone_kmax))
         if imin != imax and jmin != jmax and kmin != kmax:
-            raise ValueError("Zone %s volume specified: %d,%d %d,%d %d,%d"
+            raise ValueError('Zone %s volume specified: %d,%d %d,%d %d,%d'
                              % (zone_name, imin, imax, jmin, jmax, kmin, kmax))
 
         _surfaces.append((zone_name, imin, imax, jmin, jmax, kmin, kmax))
@@ -94,6 +97,12 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     for surface in _surfaces:
         zone_name = surface[0]
         zone = getattr(domain, zone_name)
+
+        if zone.flow_solution.grid_location != 'CellCenter':
+            raise NotImplementedError('Zone %s solution location %s'
+                                      ' not supported'
+                                      % zone.flow_solution.grid_location)
+
         zone_weights = _weights(weighting_scheme, domain, surface)
         zone_weights *= zone.symmetry_instances  # Adjust for symmetry.
         weights[zone_name] = zone_weights
@@ -133,29 +142,33 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
 def _weights(scheme, domain, surface):
     """ Returns weights for a mesh surface. """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
+    grid = getattr(domain, zone_name).grid_coordinates
+    flow = getattr(domain, zone_name).flow_solution
 
-    x = zone.coords.x.item
-    y = zone.coords.y.item
-    z = zone.coords.z.item
+    x = grid.x.item
+    y = grid.y.item
+    z = grid.z.item
 
     if scheme == 'mass':
         try:
-            mom_x = zone.momentum.x.item
-            mom_y = zone.momentum.y.item
-            mom_z = zone.momentum.z.item
+            mom_x = flow.momentum.x.item
+            mom_y = flow.momentum.y.item
+            mom_z = flow.momentum.z.item
         except AttributeError:
             raise AttributeError("For mass averaging zone %s is missing"
                                  " 'momentum'." % zone_name)
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
-        normal = _iface_normal
+        face_normal = _iface_normal
+        face_value = _iface_cell_value
     elif jmin == jmax:
         jmax += 1
-        normal = _jface_normal
+        face_normal = _jface_normal
+        face_value = _jface_cell_value
     else:
         kmax += 1
-        normal = _kface_normal
+        face_normal = _kface_normal
+        face_value = _kface_cell_value
 
     weights = []
     for i in range(imin, imax):
@@ -165,12 +178,12 @@ def _weights(scheme, domain, surface):
             for k in range(kmin, kmax):
                 kp1 = k + 1
 
-                sx, sy, sz = normal(x, y, z, i, j, k)
+                sx, sy, sz = face_normal(x, y, z, i, j, k)
                 if scheme == 'mass':
                     kp1 = k + 1
-                    rvu = 0.5 * (mom_x(ip1, jp1, kp1) + mom_x(i, jp1, kp1))
-                    rvv = 0.5 * (mom_y(ip1, jp1, kp1) + mom_y(i, jp1, kp1))
-                    rvw = 0.5 * (mom_z(ip1, jp1, kp1) + mom_z(i, jp1, kp1))
+                    rvu = face_value(mom_x, ip1, jp1, kp1)
+                    rvv = face_value(mom_y, ip1, jp1, kp1)
+                    rvw = face_value(mom_z, ip1, jp1, kp1)
                     weights.append(rvu*sx + rvv*sy + rvw*sz)
                 else:
                     weights.append(sqrt(sx*sx + sy*sy + sz*sz))
@@ -275,11 +288,11 @@ def _kface_cell_value(i, j, k, arr):
 def _area(domain, surface, weights, reference_state):
     """ Returns area of mesh surface as a :class:`PhysicalQuantity`. """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
+    grid = getattr(domain, zone_name).grid_coordinates
 
-    x = zone.coords.x.item
-    y = zone.coords.y.item
-    z = zone.coords.z.item
+    x = grid.x.item
+    y = grid.y.item
+    z = grid.z.item
 
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
@@ -313,17 +326,19 @@ _VARIABLES['area'] = (True, _area)
 def _massflow(domain, surface, weights, reference_state):
     """ Returns mass flow for a mesh surface as a :class:`PhysicalQuantity`. """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
+    grid = getattr(domain, zone_name).grid_coordinates
+    flow = getattr(domain, zone_name).flow_solution
+
     try:
-        mom_x = zone.momentum.x.item
-        mom_y = zone.momentum.y.item
-        mom_z = zone.momentum.z.item
+        mom_x = flow.momentum.x.item
+        mom_y = flow.momentum.y.item
+        mom_z = flow.momentum.z.item
     except AttributeError:
         raise AttributeError("For mass flow, zone %s is missing 'momentum'."
                              % zone_name)
-    x = zone.coords.x.item
-    y = zone.coords.y.item
-    z = zone.coords.z.item
+    x = grid.x.item
+    y = grid.y.item
+    z = grid.z.item
 
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
@@ -382,20 +397,21 @@ def _total_pressure(domain, surface, weights, reference_state):
     :class:`PhysicalQuantity`.
     """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
+    flow = getattr(domain, zone_name).flow_solution
     weights = weights[zone_name]
+
     try:
-        density = zone.density.item
-        mom_x = zone.momentum.x.item
-        mom_y = zone.momentum.y.item
-        mom_z = zone.momentum.z.item
-        pressure = zone.pressure.item
+        density = flow.density.item
+        mom_x = flow.momentum.x.item
+        mom_y = flow.momentum.y.item
+        mom_z = flow.momentum.z.item
+        pressure = flow.pressure.item
     except AttributeError:
         vnames = ('density', 'momentum', 'pressure')
         raise AttributeError('For total pressure, zone %s is missing'
                              ' one or more of %s.' % (zone_name, vnames))
     try:
-        gam = zone.gamma.item
+        gam = flow.gamma.item
     except AttributeError:
         gam = None  # Use passed-in scalar gamma.
 
@@ -462,20 +478,21 @@ def _total_temperature(domain, surface, weights, reference_state):
     :class:`PhysicalQuantity`.
     """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    zone = getattr(domain, zone_name)
+    flow = getattr(domain, zone_name).flow_solution
     weights = weights[zone_name]
+
     try:
-        density = zone.density.item
-        mom_x = zone.momentum.x.item
-        mom_y = zone.momentum.y.item
-        mom_z = zone.momentum.z.item
-        pressure = zone.pressure.item
+        density = flow.density.item
+        mom_x = flow.momentum.x.item
+        mom_y = flow.momentum.y.item
+        mom_z = flow.momentum.z.item
+        pressure = flow.pressure.item
     except AttributeError:
         vnames = ('density', 'momentum', 'pressure')
         raise AttributeError('For total temperature, zone %s is missing'
                              ' one or more of %s.' % (zone_name, vnames))
     try:
-        gam = zone.gamma.item
+        gam = flow.gamma.item
     except AttributeError:
         gam = None  # Use passed-in scalar gamma.
 

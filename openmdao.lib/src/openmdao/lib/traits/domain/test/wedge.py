@@ -1,10 +1,10 @@
-import math
+from math import asin, cos, sin
 
 import numpy
 
 from openmdao.lib.traits.domain import DomainObj, Vector, Zone, write_plot3d_q
 
-_DEG2RAD = math.asin(1.) / 90.
+_DEG2RAD = asin(1.) / 90.
 
 
 def create_wedge_3d(shape, length, inner, outer, angle):
@@ -35,8 +35,8 @@ def create_wedge_3d(shape, length, inner, outer, angle):
                 tangential = delta_theta * k
 
                 x.itemset(i, j, k, axial)
-                y.itemset(i, j, k, radial * math.cos(tangential))
-                z.itemset(i, j, k, radial * math.sin(tangential))
+                y.itemset(i, j, k, radial * cos(tangential))
+                z.itemset(i, j, k, radial * sin(tangential))
 
                 q1.itemset(i, j, k, axial)
 
@@ -52,18 +52,18 @@ def create_wedge_3d(shape, length, inner, outer, angle):
     momentum.z = q4
     
     zone = Zone()
-    zone.coords.x = x
-    zone.coords.y = y
-    zone.coords.z = z
+    zone.grid_coordinates.x = x
+    zone.grid_coordinates.y = y
+    zone.grid_coordinates.z = z
 
-    zone.mach = 0.5
-    zone.alpha = 0.
-    zone.reynolds = 100000.
-    zone.time = 42.
+    zone.flow_solution.mach = 0.5
+    zone.flow_solution.alpha = 0.
+    zone.flow_solution.reynolds = 100000.
+    zone.flow_solution.time = 42.
 
-    zone.density = q1
-    zone.add_vector('momentum', momentum)
-    zone.energy_stagnation_density = q5
+    zone.flow_solution.add_array('density', q1)
+    zone.flow_solution.add_vector('momentum', momentum)
+    zone.flow_solution.add_array('energy_stagnation_density', q5)
 
     domain = DomainObj()
     domain.add_zone('xyzzy', zone)
@@ -93,8 +93,8 @@ def create_wedge_2d(shape, inner, outer, angle):
         for j in range(jmax):
             tangential = delta_theta * j
 
-            x.itemset(i, j, radial * math.cos(tangential))
-            y.itemset(i, j, radial * math.sin(tangential))
+            x.itemset(i, j, radial * cos(tangential))
+            y.itemset(i, j, radial * sin(tangential))
 
             q1.itemset(i, j, radial)
 
@@ -108,17 +108,17 @@ def create_wedge_2d(shape, inner, outer, angle):
     momentum.y = q3
     
     zone = Zone()
-    zone.coords.x = x
-    zone.coords.y = y
+    zone.grid_coordinates.x = x
+    zone.grid_coordinates.y = y
 
-    zone.mach = 0.5
-    zone.alpha = 0.
-    zone.reynolds = 100000.
-    zone.time = 42.
+    zone.flow_solution.mach = 0.5
+    zone.flow_solution.alpha = 0.
+    zone.flow_solution.reynolds = 100000.
+    zone.flow_solution.time = 42.
 
-    zone.density = q1
-    zone.add_vector('momentum', momentum)
-    zone.energy_stagnation_density = q4
+    zone.flow_solution.add_array('density', q1)
+    zone.flow_solution.add_vector('momentum', momentum)
+    zone.flow_solution.add_array('energy_stagnation_density', q4)
 
     domain = DomainObj()
     domain.add_zone('xyzzy', zone)
