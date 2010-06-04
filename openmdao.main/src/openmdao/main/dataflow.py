@@ -11,9 +11,6 @@ from openmdao.main.component import Component
 
 __all__ = ['Dataflow']
 
-def _is_component(obj):
-    return isinstance(obj, Component)
-                
 class Dataflow(Workflow):
     """
     A Dataflow consists of a collection of Components which are executed in 
@@ -22,9 +19,9 @@ class Dataflow(Workflow):
 
     implements(IWorkflow)
     
-    def __init__(self, scope=None, validator=_is_component):
+    def __init__(self, parent, scope=None):
         """ Create an empty flow. """
-        super(Dataflow, self).__init__(scope=scope, validator=validator)
+        super(Dataflow, self).__init__(parent, scope=scope)
         self._no_expr_graph = nx.DiGraph()
         
     def __contains__(self, comp):
@@ -36,23 +33,18 @@ class Dataflow(Workflow):
         
     def __iter__(self):
         """Iterate through the nodes in dataflow order."""
+        scope = self._parent.parent
         for n in nx.topological_sort(self._no_expr_graph):
-            yield getattr(self.scope, n)
+            yield getattr(scope, n)
             
     def add(self, comp):
         """Add the name of a Component to this Dataflow."""
-        if self._validator and not self._validator(comp):
-            msg = 'Dataflow.add validation failed for type %s' % type(comp)
-            if self.scope:
-                self.scope.raise_exception(msg, TypeError)
-            else:
-                raise TypeError(msg)
-        else:
-            self._no_expr_graph.add_node(comp.name)
+        self._no_expr_graph.add_node(comp.name)
 
-        
     def remove(self, comp):
-        """Remove the name of a Component from this Dataflow."""
+        """Remove the name of a Component from this Dataflow. It is not
+        an error if the component does not exist in this Workflow.
+        """
         self._no_expr_graph.remove_node(comp.name)
         
     def connect(self, srcpath, destpath):

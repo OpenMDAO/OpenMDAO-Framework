@@ -12,6 +12,7 @@ from networkx.algorithms.traversal import strongly_connected_components
 from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
+from openmdao.main.dataflow import Dataflow
 from openmdao.main.expression import Expression, ExpressionList
 
     
@@ -27,8 +28,15 @@ class Driver(Component):
         super(Driver, self).__init__(doc=doc)
         #self._expr_graph = { None: None, 'in': None, 'out': None }
         #self._expr_comps = { None: None, 'in': None, 'out': None }
-        self.workflow = None
+        self.workflow = Dataflow(self)
+        
+        # keep track of modifications to our parent
+        self.on_trait_change(self._parent_modified, 'parent')
     
+    def _parent_modified(self, obj, name, value):
+        """This is called when the parent attribute is changed."""
+        self.workflow.scope = value
+
     def _pre_execute (self):
         """Call base class *_pre_execute* after determining if we have any invalid
         ref variables, which will cause us to have to regenerate our ref dependency graph.
@@ -61,7 +69,27 @@ class Driver(Component):
                     if not rv.refs_valid():
                         self._call_execute = True
                         return
-                
+                    
+    def add_to_workflow(self, wfname, component):
+        """Adds the given component to the named workflow."""
+        if wfname in self.__dict__:
+            wf = getattr(self, wfname)
+            if not isinstance(wf, Workflow):
+                self.raise_exception("'%s' is not a Workflow" % wfname,
+                                     TypeError)
+            if not isinstance(component, Component):
+                self.raise_exception("Attempted to add a non-Component to Workflow '%s'" % wfname,
+                                     TypeError)
+            wf.add(component)
+        else:
+            self.raise_exception("unknown Workflow '%s'" % wfname, NameError)
+
+    def remove_from_workflow(self, component):
+        """Remove the specified component from all of our Workflows."""
+        for obj in self.__dict__.values():
+            if isinstance(obj, Workflow):
+                obj.remove(component)
+
     def execute(self):
         """ Iterate over a workflow of Components until some condition
         is met. If you don't want to structure your driver to use *pre_iteration*,
@@ -91,12 +119,7 @@ class Driver(Component):
         
     def run_iteration(self):
         """Runs the workflow of components."""
-        if self.parent:
-            self.workflow = self.parent.workflow
-            self.workflow.run()
-        else:
-            self.raise_exception('Driver cannot run referenced components without a parent',
-                                 RuntimeError)
+        self.workflow.run()
 
     def post_iteration(self):
         """Called after each iteration."""

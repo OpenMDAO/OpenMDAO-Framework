@@ -19,8 +19,9 @@ class Workflow(object):
 
     implements(IWorkflow)
     
-    def __init__(self, scope=None, validator=_is_component):
+    def __init__(self, parent, scope=None, validator=_is_component):
         """ Create an empty flow. """
+        self._parent = parent
         self.scope = scope
         self._validator = validator
         self._iterator = None
@@ -87,9 +88,9 @@ class Workflow(object):
 class SequentialFlow(Workflow):
     """A Workflow that is a simple sequence of components."""
     
-    def __init__(self, scope=None, validator=_is_component):
+    def __init__(self, parent, scope=None):
         """ Create an empty flow. """
-        super(SequentialFlow, self).__init__(scope=scope, validator=validator)
+        super(SequentialFlow, self).__init__(parent, scope=scope)
         self._nodes = []
         
     def __iter__(self):
@@ -101,16 +102,11 @@ class SequentialFlow(Workflow):
 
     def add(self, comp):
         """ Add a new component to the end of the workflow. """
-        if self._validator and not self._validator(comp):
-            msg = 'Workflow.add validation failed for type %s' % type(comp)
-            if self.scope:
-                self.scope.raise_exception(msg, TypeError)
-            else:
-                raise TypeError(msg)
-        else:
-            self._nodes.append(comp)
+        self._nodes.append(comp)
         
     def remove(self, comp):
-        """Remove a component from this Workflow and any of its children."""
+        """Remove a component from this Workflow. Do not report an
+        error if the specified component is not in this Workflow.
+        """
         self._nodes = [x for x in self._nodes if x is not comp]
 

@@ -35,30 +35,20 @@ class PassthroughTrait(TraitType):
             return self.validation_trait.validate(obj, name, value)
         return value
 
-
-def _is_driver(obj):
-    return isinstance(obj, Driver)
-
-def _is_plain_component(obj):
-    return isinstance(obj, Component) and not _is_driver(obj)
-
 class Assembly (Component):
     """This is a container of Components. It understands how to connect inputs
-    and outputs between its children.  When executed, it runs the components
-    in its Workflow.
+    and outputs between its children.  When executed, it runs the top level
+    Driver called 'driver'.
     """
-    initflow = Instance(IWorkflow, allow_none=True, 
-                        desc="An optional workflow of Drivers to be executed once per Assembly run")
-    driverflow = Instance(IWorkflow, allow_none=True,
-                          desc="An optional workflow of Drivers to be executed until the loop expression is False")
-    workflow = Instance(IWorkflow, 
-                        desc="A workflow of Components to be executed once for each iteration of each Driver in initflow and driverflow")
-    loop = Expression('False', iotype='in', 
-                      desc="driverflow stops iterating when this evaluates to False")
+    
+    driver = Instance(Driver, 
+                      desc="The top level Driver that manages execution of this Assembly")
     
     def __init__(self, doc=None, directory=''):
         self._child_io_graphs = {}
         self._need_child_io_update = True
+        
+        self.comp_graph = ComponentGraph()
         
         # A graph of Variable names (local path), 
         # with connections between Variables as directed edges.  
@@ -73,9 +63,11 @@ class Assembly (Component):
         for v in self.keys(iotype=not_none):
             if v not in self._var_graph:
                 self._var_graph.add_node(v)
+                
+        # default Driver has a DataFlow workflow and executes it once
+        self.add_container('driver', Driver(), workflow=None)
         
-        self.workflow = Dataflow(scope=self, validator=_is_plain_component)
-        self.driverflow = SequentialFlow(scope=self, validator=_is_driver)
+
 
     def get_var_graph(self):
         """Returns the Variable dependency graph, after updating it with child
@@ -105,7 +97,7 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add_container(self, name, obj, workflow='default'):
+    def add_container(self, name, obj, workflow='driver.workflow'):
         """Add obj to the specified workflow and call base class 
         *add_container*.  If workflow is None, do not add obj to any
         workflow.
@@ -114,22 +106,18 @@ class Assembly (Component):
         """
         obj = super(Assembly, self).add_container(name, obj)
         
-        if isinstance(obj, Container) and not isinstance(obj, Component):
-            pass   # don't add plain Containers to workflow
-        else:
-            if workflow == 'default':
-                if isinstance(obj, Driver):
-                    workflow = self.driverflow  
-                else:
-                    workflow = self.workflow
-            elif workflow in ['driverflow', 'workflow']:
-                workflow = getattr(self, workflow)
-            elif workflow:
-                self.raise_exception("'%s' is not a valid Workflow name" % workflow,
-                                     NameError)
-                    
-            if workflow is not None:
-                workflow.add(obj)
+        if workflow is not None:
+            if isinstance(obj, Container) and not isinstance(obj, Component):
+                pass   # don't add plain Containers to a workflow
+            elif name == 'driver':
+                pass   # don't add top level driver to a workflow
+            else:
+                parts = workflow.split('.')
+                if len(parts) < 2 or parts[0] not in self.__dict__:
+                    self.raise_exception("'%s' is not a known workflow" % workflow,
+                                         NameError)
+                drv = getattr(self, parts[0])
+                drv.add_to_workflow('.'.join(parts[1:]), obj)
                 # since the internals of the given Component can change after it's
                 # added to our workflow, wait to collect its io_graph until we need it
                 self._child_io_graphs[obj.name] = None
@@ -141,10 +129,9 @@ class Assembly (Component):
         """Remove the named container object from this container and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
-        if cont in self.workflow:
-            self.workflow.remove(cont)
-        elif cont in self.driverflow:
-            self.driverflow.remove(cont)
+        for obj in self.__dict__:
+            if isinstance(obj, Driver):
+                obj.remove_from_workflow(obj)
             
         if name in self._child_io_graphs:
             childgraph = self._child_io_graphs[name]
@@ -266,7 +253,7 @@ class Assembly (Component):
         if destcomp is not self:
             destcomp.set_source(destvarname, srcpath)
             if srccomp is not self: # neither var is on boundary
-                self.workflow.connect(srcpath, destpath)
+                self.comp_graph.connect(srcpath, destpath)
         
         vgraph = self.get_var_graph()
         vgraph.add_edge(srcpath, destpath)
@@ -333,7 +320,7 @@ class Assembly (Component):
                 # between two components in the component graph
                 utup = src.split('.',1)
                 if len(utup)>1:
-                    self.workflow.disconnect(utup[0], vtup[0])
+                    self.comp_graph.disconnect(utup[0], vtup[0])
                 
         vargraph.remove_edges_from(to_remove)
         
@@ -359,10 +346,7 @@ class Assembly (Component):
 
     def execute (self):
         """Runs driverflow, or workflow if driverflow is empty."""
-        if self.driverflow and len(self.driverflow) > 0:
-            self.driverflow.run()
-        else:  # we have not driver, so just run the workflow once
-            self.workflow.run()
+        self.driver.run()
         self._update_boundary_vars()
     
     def _update_boundary_vars (self):
@@ -376,16 +360,11 @@ class Assembly (Component):
 
     def step(self):
         """Execute a single child component and return."""
-        if self.driverflow and len(self.driverflow) > 0:
-            self.driverflow.step()
-        else:  # we have not driver, so just step the workflow
-            self.workflow.step()
+        self.driver.step()
         
     def stop(self):
         """Stop the workflow."""
-        if self.driverflow:
-            self.driverflow.stop()
-        self.workflow.stop()
+        self.driver.stop()
     
     def list_connections(self, show_passthrough=True):
         """Return a list of tuples of the form (outvarname, invarname).
@@ -511,3 +490,74 @@ class Assembly (Component):
                     notify_parent)
         return outs
 
+
+class ComponentGraph(object):
+    """
+    A dependency graph for Components.
+    """
+
+    def __init__(self):
+        self._no_expr_graph = nx.DiGraph()
+        
+    def __contains__(self, comp):
+        """Return True if this graph contains the given component."""
+        return comp.name in self._no_expr_graph
+    
+    def __len__(self):
+        return len(self._no_expr_graph)
+        
+    def iter(self, scope):
+        """Iterate through the nodes in dataflow order."""
+        for n in nx.topological_sort(self._no_expr_graph):
+            yield getattr(scope, n)
+            
+    def add(self, comp):
+        """Add the name of a Component to the graph."""
+        self._no_expr_graph.add_node(comp.name)
+
+    def remove(self, comp):
+        """Remove the name of a Component from the graph. It is not
+        an error if the component is not found in the graph.
+        """
+        self._no_expr_graph.remove_node(comp.name)
+        
+    def connect(self, srcpath, destpath):
+        """Add an edge to our Component graph from *srccompname* to *destcompname*.
+        The *srcvarname* and *destvarname* args are for data reporting only.
+        """
+        # if an edge already exists between the two components, 
+        # just increment the ref count
+        graph = self._no_expr_graph
+        srccompname, srcvarname = srcpath.split('.', 1)
+        destcompname, destvarname = destpath.split('.', 1)
+        try:
+            graph[srccompname][destcompname]['refcount'] += 1
+        except KeyError:
+            graph.add_edge(srccompname, destcompname, refcount=1)
+            
+        if not is_directed_acyclic_graph(graph):
+            # do a little extra work here to give more info to the user in the error message
+            strongly_connected = strongly_connected_components(graph)
+            refcount = graph[srccompname][destcompname]['refcount'] - 1
+            if refcount == 0:
+                graph.remove_edge(srccompname, destcompname)
+            else:
+                graph[srccompname][destcompname]['refcount'] = refcount
+            for strcon in strongly_connected:
+                if len(strcon) > 1:
+                    raise RuntimeError(
+                        'circular dependency (%s) would be created by connecting %s to %s' %
+                                 (str(strcon), 
+                                  '.'.join([srccompname,srcvarname]), 
+                                  '.'.join([destcompname,destvarname]))) 
+        
+    def disconnect(self, comp1name, comp2name):
+        """Decrement the ref count for the edge in the dependency graph 
+        between the two components or remove the edge if the ref count
+        reaches 0.
+        """
+        refcount = self._no_expr_graph[comp1name][comp2name]['refcount'] - 1
+        if refcount == 0:
+            self._no_expr_graph.remove_edge(comp1name, comp2name)
+        else:
+            self._no_expr_graph[comp1name][comp2name]['refcount'] = refcount
