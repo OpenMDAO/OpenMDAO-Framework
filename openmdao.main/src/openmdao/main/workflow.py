@@ -8,9 +8,6 @@ from openmdao.main.exceptions import RunStopped
 
 __all__ = ['Workflow']
 
-def _is_component(obj):
-    return isinstance(obj, Component)
-
 class Workflow(object):
     """
     A Workflow consists of a collection of Components which are to be executed
@@ -19,17 +16,14 @@ class Workflow(object):
 
     implements(IWorkflow)
     
-    def __init__(self, parent, scope=None, validator=_is_component):
+    def __init__(self, parent):
         """ Create an empty flow. """
         self._parent = parent
-        self.scope = scope
-        self._validator = validator
         self._iterator = None
         self._stop = False
 
     def run(self):
         """ Run through the nodes in the workflow list. """
-        #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
         self._stop = False
         self._iterator = self.__iter__()
         for node in self._iterator:
@@ -74,23 +68,14 @@ class Workflow(object):
     
     def __len__(self):
         raise NotImplemented("This Workflow has no '__len__' function")
-    
-    def connect(self, srcpath, destpath):
-        """Specify a connection between two components in this workflow. The
-        names passed in are full pathnames to variables being connected."""
-        raise NotImplemented("This Workflow has no 'connect' function")
-        
-    def disconnect(self, comp1name, comp2name):
-        """Disconnect two components in this workflow."""
-        pass
 
     
 class SequentialFlow(Workflow):
     """A Workflow that is a simple sequence of components."""
     
-    def __init__(self, parent, scope=None):
+    def __init__(self, parent):
         """ Create an empty flow. """
-        super(SequentialFlow, self).__init__(parent, scope=scope)
+        super(SequentialFlow, self).__init__(parent)
         self._nodes = []
         
     def __iter__(self):
@@ -99,6 +84,9 @@ class SequentialFlow(Workflow):
     
     def __len__(self):
         return len(self._nodes)
+    
+    def __contains__(self, comp):
+        return comp in self._nodes
 
     def add(self, comp):
         """ Add a new component to the end of the workflow. """

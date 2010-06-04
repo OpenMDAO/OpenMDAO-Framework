@@ -28,7 +28,7 @@ class CaseIteratorDriver(Driver):
     :class:`ResourceAllocationManager`.
 
     - The `iterator` socket provides the cases to be evaluated.
-    - The `model` to be executed is found in the parent workflow.
+    - The `model` to be executed is found in the workflow.
     - The `recorder` socket is used to record results.
     - If `sequential` is True, then the cases are evaluated sequentially.
     - If `reload_model` is True, the model is reloaded between executions.
@@ -466,7 +466,7 @@ class CaseIteratorDriver(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
-                self.parent.workflow.run()
+                self.workflow.run()
             except Exception as exc:
                 self._exceptions[server] = exc
                 self._logger.critical('Caught exception: %s' % exc)

@@ -8,6 +8,7 @@ from enthought.traits.api import TraitType, Undefined
 from enthought.traits.trait_base import not_none
 
 import networkx as nx
+from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
 
 from openmdao.main.interfaces import IDriver, IWorkflow
 from openmdao.main.component import Component
@@ -41,7 +42,7 @@ class Assembly (Component):
     Driver called 'driver'.
     """
     
-    driver = Instance(Driver, 
+    driver = Instance(Driver, allow_none=True,
                       desc="The top level Driver that manages execution of this Assembly")
     
     def __init__(self, doc=None, directory=''):
@@ -105,6 +106,7 @@ class Assembly (Component):
         Returns the added object.
         """
         obj = super(Assembly, self).add_container(name, obj)
+        self.comp_graph.add(obj)
         
         if workflow is not None:
             if isinstance(obj, Container) and not isinstance(obj, Component):
@@ -122,6 +124,7 @@ class Assembly (Component):
                 # added to our workflow, wait to collect its io_graph until we need it
                 self._child_io_graphs[obj.name] = None
                 self._need_child_io_update = True
+                
             
         return obj
         
@@ -130,7 +133,7 @@ class Assembly (Component):
         it from its workflow (if any)."""
         cont = getattr(self, name)
         for obj in self.__dict__:
-            if isinstance(obj, Driver):
+            if obj is not cont and isinstance(obj, Driver):
                 obj.remove_from_workflow(obj)
             
         if name in self._child_io_graphs:
@@ -502,6 +505,9 @@ class ComponentGraph(object):
     def __contains__(self, comp):
         """Return True if this graph contains the given component."""
         return comp.name in self._no_expr_graph
+    
+    def subgraph(self, nodelist):
+        return self._no_expr_graph.subgraph(nodelist)
     
     def __len__(self):
         return len(self._no_expr_graph)

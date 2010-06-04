@@ -16,7 +16,7 @@ class SimpleCaseIterDriver(Driver):
     - The `iterator` socket provides the cases to be evaluated.
     - The `recorder` socket is used to record results.
     
-    For each case coming from the `iterator`, the parent workflow will
+    For each case coming from the `iterator`, the workflow will
     be executed once.
     """
 
@@ -42,7 +42,7 @@ class SimpleCaseIterDriver(Driver):
         msg = ''
         case.apply(self.parent)
         try:
-            self.parent.workflow.run()
+            self.workflow.run()
         except Exception as err:
             msg = str(err)
         try:

@@ -30,13 +30,6 @@ class Driver(Component):
         #self._expr_comps = { None: None, 'in': None, 'out': None }
         self.workflow = Dataflow(self)
         
-        # keep track of modifications to our parent
-        self.on_trait_change(self._parent_modified, 'parent')
-    
-    def _parent_modified(self, obj, name, value):
-        """This is called when the parent attribute is changed."""
-        self.workflow.scope = value
-
     def _pre_execute (self):
         """Call base class *_pre_execute* after determining if we have any invalid
         ref variables, which will cause us to have to regenerate our ref dependency graph.

@@ -5,12 +5,6 @@ Interfaces for the OpenMDAO project.
 
 # pylint: disable-msg=E0213,E0211,W0232
 
-#public symbols
-__all__ = ['IFactory', 'IResourceAllocator',
-           'ICaseIterator']
-
-
-
 
 from enthought.traits.api import Interface, Instance
 
@@ -35,10 +29,9 @@ class IWorkflow(Interface):
     def __iter__():
         """Return an iterator object that iterates over components."""
         
-    def __contains__(self, name):
-        """Return True if this workflow contains a Component with the
-        given name.
-        """    
+    def __contains__(self, comp):
+        """Return True if this workflow contains the given Component."""
+        
     def __len__(self):
         """Returns the number of components in this workflow."""
         
@@ -48,13 +41,6 @@ class IWorkflow(Interface):
     def remove(self, comp):
         """Remove the Component from this workflow."""
 
-    def connect(self, srcpath, destpath):
-        """Specify a connection between two components in this workflow. The
-        names passed in are full pathnames to variables being connected."""
-        
-    def disconnect(self, comp1name, comp2name):
-        """Disconnect two components in this workflow."""
-        
     def run(self):
         """ Run the workflow. """
     
