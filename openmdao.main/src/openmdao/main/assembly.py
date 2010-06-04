@@ -15,6 +15,7 @@ from openmdao.main.container import Container
 from openmdao.main.workflow import SequentialFlow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.driver import Driver
+from openmdao.main.expression import Expression
 
 def _filter_internal_edges(edges):
     """Return a copy of the given list of edges with edges removed that are
@@ -46,9 +47,15 @@ class Assembly (Component):
     and outputs between its children.  When executed, it runs the components
     in its Workflow.
     """
-    driverflow = Instance(IWorkflow, allow_none=True)
-    workflow = Instance(IWorkflow)
-        
+    initflow = Instance(IWorkflow, allow_none=True, 
+                        desc="An optional workflow of Drivers to be executed once per Assembly run")
+    driverflow = Instance(IWorkflow, allow_none=True,
+                          desc="An optional workflow of Drivers to be executed until the loop expression is False")
+    workflow = Instance(IWorkflow, 
+                        desc="A workflow of Components to be executed once for each iteration of each Driver in initflow and driverflow")
+    loop = Expression('False', iotype='in', 
+                      desc="driverflow stops iterating when this evaluates to False")
+    
     def __init__(self, doc=None, directory=''):
         self._child_io_graphs = {}
         self._need_child_io_update = True

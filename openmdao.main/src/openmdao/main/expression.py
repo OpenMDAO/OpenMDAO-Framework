@@ -42,19 +42,19 @@ class Expression(BaseStr):
             
         super(Expression, self).__init__(default_value, **metadata)
 
-    def validate(self, object, name, value):
+    def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
         
         Note: The 'fast validator' version performs this check in C.
         """
         # normal string validation
-        s = super(Expression, self).validate(object, name, value) 
+        s = super(Expression, self).validate(obj, name, value) 
         
         try:
             if self.iotype == 'out':
-                s = ExprEvaluator(s, object, single_name=True)
+                s = ExprEvaluator(s, obj, single_name=True)
             else:
-                s = ExprEvaluator(s, object)
+                s = ExprEvaluator(s, obj)
             s._parse()
         except RuntimeError:
             raise TraitError("invalid %sput ref variable value '%s'" % \
