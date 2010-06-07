@@ -24,8 +24,8 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     mesh surface specifications to be used for the calculation. \
     Indices start at 0. Negative indices are relative to the end of the array.
     - `variables` is a list of ``(metric_name, units)`` tuples. Legal metric \
-    names are 'area', 'mass_flow', 'pressure_stagnation', and \
-    'temperature_stagnation'.
+    names are 'area', 'mass_flow', 'corrected_mass_flow', 'pressure', \
+    'pressure_stagnation', 'temperature', and 'temperature_stagnation'.
     - `weighting_scheme` specifies how individual values are weighted. \
     Legal values are 'area' for area averaging and 'mass' for mass averaging.
 
@@ -391,6 +391,156 @@ def _massflow(domain, surface, weights, reference_state):
 _VARIABLES['mass_flow'] = (True, _massflow)
 
 
+def _corrected_massflow(domain, surface, weights, reference_state):
+    """
+    Returns corrected mass flow for a mesh surface as a
+    :class:`PhysicalQuantity`.
+    """
+    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
+    grid = getattr(domain, zone_name).grid_coordinates
+    flow = getattr(domain, zone_name).flow_solution
+
+    try:
+        density = flow.density.item
+        mom_x = flow.momentum.x.item
+        mom_y = flow.momentum.y.item
+        mom_z = flow.momentum.z.item
+        pressure = flow.pressure.item
+    except AttributeError:
+        vnames = ('density', 'momentum', 'pressure')
+        raise AttributeError('For corrected mass flow, %s is missing'
+                             ' one or more of %s.' % (zone_name, vnames))
+    try:
+        gam = flow.gamma.item
+    except AttributeError:
+        gam = None  # Use passed-in scalar gamma.
+
+    x = grid.x.item
+    y = grid.y.item
+    z = grid.z.item
+
+    if imin == imax:
+        imax += 1  # Ensure range() returns face index.
+        face_normal = _iface_normal
+        face_value = _iface_cell_value
+    elif jmin == jmax:
+        jmax += 1
+        face_normal = _jface_normal
+        face_value = _jface_cell_value
+    else:
+        kmax += 1
+        face_normal = _kface_normal
+        face_value = _kface_cell_value
+
+    try:
+        lref = reference_state['length_reference']
+        pref = reference_state['pressure_reference']
+        rgas = reference_state['ideal_gas_constant']
+        tref = reference_state['temperature_reference']
+        if gam is None:
+            gamma = reference_state['specific_heat_ratio'].value
+    except KeyError:
+        vals = ('length_reference', 'pressure_reference', 'ideal_gas_constant',
+                'temperature_reference', 'specific_heat_ratio')
+        raise AttributeError('For corrected mass flow, reference_state is'
+                             ' missing one or more of %s.' % vals)
+
+    rhoref = pref / rgas / tref
+    vref = (rgas * tref).sqrt()
+    momref = rhoref * vref
+    wref = momref * lref * lref
+
+    pstd = PhysicalQuantity(14.696, 'psi')
+    pstd.convert_to_unit(pref.get_unit_name())
+
+    tstd = PhysicalQuantity(518.67, 'degR')
+    tstd.convert_to_unit(tref.get_unit_name())
+
+    total = 0.
+    for i in range(imin, imax):
+        ip1 = i + 1
+        for j in range(jmin, jmax):
+            jp1 = j + 1
+            for k in range(kmin, kmax):
+                kp1 = k + 1
+
+                rho = face_value(density, ip1, jp1, kp1) * rhoref.value
+                rvu = face_value(mom_x, ip1, jp1, kp1) * momref.value
+                rvv = face_value(mom_y, ip1, jp1, kp1) * momref.value
+                rvw = face_value(mom_z, ip1, jp1, kp1) * momref.value
+                ps = face_value(pressure, ip1, jp1, kp1) * pref.value
+                if gam is not None:
+                    gamma = face_value(gam, ip1, jp1, kp1)
+                sx, sy, sz = face_normal(x, y, z, i, j, k, lref.value)
+
+                w = rvu*sx + rvv*sy + rvw*sz
+
+                u2 = (rvu*rvu + rvv*rvv + rvw*rvw) / (rho*rho)
+                a2 = (gamma * ps) / rho
+                mach2 = u2 / a2
+                ts = ps / (rho * rgas.value)
+                tt = ts * (1. + (gamma-1.)/2. * mach2)
+
+                pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
+
+                wc = w * sqrt(tt/tstd.value) / (pt/pstd.value)
+                total += wc
+
+    return PhysicalQuantity(total, wref.get_unit_name())
+
+_VARIABLES['corrected_mass_flow'] = (True, _corrected_massflow)
+
+
+def _static_pressure(domain, surface, weights, reference_state):
+    """
+    Returns weighted static pressure for a mesh surface as a
+    :class:`PhysicalQuantity`.
+    """
+    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
+    flow = getattr(domain, zone_name).flow_solution
+    weights = weights[zone_name]
+
+    try:
+        pressure = flow.pressure.item
+    except AttributeError:
+        vnames = ('density', 'momentum', 'pressure')
+        raise AttributeError("For static pressure, zone %s is missing"
+                             " 'pressure'." % zone_name)
+    if imin == imax:
+        imax += 1  # Ensure range() returns face index.
+        face_value = _iface_cell_value
+    elif jmin == jmax:
+        jmax += 1
+        face_value = _jface_cell_value
+    else:
+        kmax += 1
+        face_value = _kface_cell_value
+
+    try:
+        pref = reference_state['pressure_reference']
+    except KeyError:
+        raise AttributeError("For static pressure, reference_state is missing"
+                             " 'pressure_reference'.")
+    total = 0.
+    weight_index = 0
+    for i in range(imin, imax):
+        ip1 = i + 1
+        for j in range(jmin, jmax):
+            jp1 = j + 1
+            for k in range(kmin, kmax):
+                kp1 = k + 1
+
+                ps = face_value(pressure, ip1, jp1, kp1) * pref.value
+                weight = weights[weight_index]
+                weight_index += 1
+
+                total += ps * weight
+
+    return PhysicalQuantity(total, pref.get_unit_name())
+
+_VARIABLES['pressure'] = (False, _static_pressure)
+
+
 def _total_pressure(domain, surface, weights, reference_state):
     """
     Returns weighted total pressure for a mesh surface as a
@@ -470,6 +620,67 @@ def _total_pressure(domain, surface, weights, reference_state):
     return PhysicalQuantity(total, pref.get_unit_name())
 
 _VARIABLES['pressure_stagnation'] = (False, _total_pressure)
+
+
+def _static_temperature(domain, surface, weights, reference_state):
+    """
+    Returns weighted static temperature for a mesh surface as a
+    :class:`PhysicalQuantity`.
+    """
+    zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
+    flow = getattr(domain, zone_name).flow_solution
+    weights = weights[zone_name]
+
+    try:
+        density = flow.density.item
+        pressure = flow.pressure.item
+    except AttributeError:
+        vnames = ('density', 'pressure')
+        raise AttributeError('For static temperature, zone %s is missing'
+                             ' one or more of %s.' % (zone_name, vnames))
+    if imin == imax:
+        imax += 1  # Ensure range() returns face index.
+        face_value = _iface_cell_value
+    elif jmin == jmax:
+        jmax += 1
+        face_value = _jface_cell_value
+    else:
+        kmax += 1
+        face_value = _kface_cell_value
+
+    try:
+        pref = reference_state['pressure_reference']
+        rgas = reference_state['ideal_gas_constant']
+        tref = reference_state['temperature_reference']
+    except KeyError:
+        vals = ('pressure_reference', 'ideal_gas_constant',
+                'temperature_reference')
+        raise AttributeError('For static pressure, reference_state is missing'
+                             ' one or more of %s.' % vals)
+
+    rhoref = pref / rgas / tref
+
+    total = 0.
+    weight_index = 0
+    for i in range(imin, imax):
+        ip1 = i + 1
+        for j in range(jmin, jmax):
+            jp1 = j + 1
+            for k in range(kmin, kmax):
+                kp1 = k + 1
+
+                rho = face_value(density, ip1, jp1, kp1) * rhoref.value
+                ps = face_value(pressure, ip1, jp1, kp1) * pref.value
+                weight = weights[weight_index]
+                weight_index += 1
+
+                ts = ps / (rho * rgas.value)
+
+                total += ts * weight
+
+    return PhysicalQuantity(total, tref.get_unit_name())
+
+_VARIABLES['temperature'] = (False, _static_temperature)
 
 
 def _total_temperature(domain, surface, weights, reference_state):
