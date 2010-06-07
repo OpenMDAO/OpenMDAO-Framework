@@ -288,6 +288,14 @@ class Component (Container):
         except KeyError:
             pass
 
+    def is_valid(self):
+        if self._call_execute:
+            return False
+        for val in self._valid_dict.values():
+            if val is False:
+                return False
+        return True
+
     def _config_changed(self):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.

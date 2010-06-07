@@ -411,13 +411,10 @@ class Container(HasTraits):
                 self.raise_exception('attribute %s is not a Container' % name,
                                      RuntimeError)
             if trait.is_trait_type(Instance):
-                if obj is not None:
-                    if trait._allow_none:
-                        setattr(self, name, None)
-                    else:
-                        self.raise_exception(
-                            "Instance trait %s does not allow a value of None so it's contents can't be removed"
-                            % name, RuntimeError)
+                try:
+                    setattr(self, name, None)
+                except TraitError as err:
+                    self.raise_exception(str(err), RuntimeError)
             else:
                 self.remove_trait(name)
             return obj       

@@ -26,7 +26,7 @@ class Expression(BaseStr):
     number of other variables.
     """
     
-    def __init__(self, default_value=NoDefaultSpecified, iotype=None, \
+    def __init__(self, default_value=NoDefaultSpecified, iotype=None,
                  desc=None, **metadata):
         
         if default_value is NoDefaultSpecified:

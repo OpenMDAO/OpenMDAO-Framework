@@ -28,43 +28,42 @@ class Driver(Component):
         super(Driver, self).__init__(doc=doc)
         self.workflow = Dataflow(self)
         
-    def _pre_execute (self):
-        """Call base class *_pre_execute* after determining if we have any invalid
-        ref variables, which will cause us to have to regenerate our ref dependency graph.
-        """
-        if self._call_execute:
-            super(Driver, self)._pre_execute()
-            return
+    def is_valid(self):
+        if super(Driver, self).is_valid() is False:
+            return False
         
         exprnames = self.get_expr_names(iotype='in')
         
         if not all(self.get_valids(exprnames)):
-            self._call_execute = True
+            return False
             
+        # driver is invalid if any of its Expressions reference
+        # invalid Variables
+        for name in exprnames:
+            rv = getattr(self, name)
+            if isinstance(rv, list):
+                for entry in rv:
+                    if not entry.refs_valid():
+                        return False
+            else:
+                if not rv.refs_valid():
+                    return False
+                    
+        # force execution if any component in the workflow is invalid
+        for comp in self.workflow.contents():
+            if not comp.is_valid():
+                return False
+
+        return True
+
+    def _pre_execute (self):
+        """Call base class *_pre_execute* after determining if we have any invalid
+        ref variables, which will cause us to have to regenerate our ref dependency graph.
+        """
+        if not self.is_valid():
+            self._call_execute = True
         super(Driver, self)._pre_execute()
-        
-        if not self._call_execute:
-            # force execution of the driver if any of its Expressions reference
-            # invalid Variables
-            for name in exprnames:
-                rv = getattr(self, name)
-                if isinstance(rv, list):
-                    for entry in rv:
-                        if not entry.refs_valid():
-                            self._call_execute = True
-                            return
-                else:
-                    if not rv.refs_valid():
-                        self._call_execute = True
-                        return
-                    
-        if not self._call_execute:
-            # force execution if any component in the workflow is invalid
-            for comp in self.workflow.contents():
-                if comp._call_execute is True:
-                    self._call_execute = True
-                    break
-                    
+
     def add_to_workflow(self, wfname, component):
         """Adds the given component to the named workflow."""
         if wfname in self.__dict__:

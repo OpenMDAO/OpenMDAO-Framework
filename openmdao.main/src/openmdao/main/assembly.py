@@ -66,7 +66,7 @@ class Assembly (Component):
                 self._var_graph.add_node(v)
                 
         # default Driver has a DataFlow workflow and executes it once
-        self.add_container('driver', Driver(), workflow=None)
+        drv = self.add_container('driver', Driver(), workflow=None)
         
 
 
@@ -114,14 +114,19 @@ class Assembly (Component):
             elif name == 'driver':
                 pass   # don't add top level driver to a workflow
             else:
-                parts = workflow.split('.')
-                if len(parts) < 2 or parts[0] not in self.__dict__:
-                    self.raise_exception("'%s' is not a known workflow" % workflow,
-                                         NameError)
-                drv = getattr(self, parts[0])
-                drv.add_to_workflow('.'.join(parts[1:]), obj)
+                if isinstance(workflow, basestring):
+                    workflows = [workflow]
+                else:
+                    workflows = workflow
+                for workflow in workflows:
+                    parts = workflow.split('.')
+                    if len(parts) < 2 or parts[0] not in self.__dict__:
+                        self.raise_exception("'%s' is not a known workflow" % workflow,
+                                             NameError)
+                    drv = getattr(self, parts[0])
+                    drv.add_to_workflow('.'.join(parts[1:]), obj)
                 # since the internals of the given Component can change after it's
-                # added to our workflow, wait to collect its io_graph until we need it
+                # added, wait to collect its io_graph until we need it
                 self._child_io_graphs[obj.name] = None
                 self._need_child_io_update = True
                 

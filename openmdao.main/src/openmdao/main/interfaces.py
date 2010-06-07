@@ -14,11 +14,6 @@ from enthought.traits.api import Interface, Instance
 class IComponent(Interface):
     """A marker interface for Components."""
     
-class IDriver(Interface):
-    """A marker interface for Drivers. To make a usable IDriver plug-in,
-    you must still inherit from Driver.
-    """
- 
 class IWorkflow(Interface):
     """An object that can run and iterate over a group of 
     components in some order. 
@@ -62,6 +57,13 @@ class IWorkflow(Interface):
         We assume it's OK to to call stop() on something that isn't running.
         """
         
+class IDriver(Interface):
+    """A marker interface for Drivers. To make a usable IDriver plug-in,
+    you must still inherit from Driver.
+    """
+    
+    workflow = Instance(IWorkflow, allow_none=True)
+ 
 
 class IFactory (Interface):
     """An object that creates and returns objects based on a type string."""
