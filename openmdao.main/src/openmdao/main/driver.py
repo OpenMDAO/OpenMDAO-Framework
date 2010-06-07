@@ -26,8 +26,6 @@ class Driver(Component):
     
     def __init__(self, doc=None):
         super(Driver, self).__init__(doc=doc)
-        #self._expr_graph = { None: None, 'in': None, 'out': None }
-        #self._expr_comps = { None: None, 'in': None, 'out': None }
         self.workflow = Dataflow(self)
         
     def _pre_execute (self):
@@ -42,9 +40,6 @@ class Driver(Component):
         
         if not all(self.get_valids(exprnames)):
             self._call_execute = True
-            # force regeneration of _expr_graph, _expr_comps, _iteration_comps
-            #self._expr_graph = { None: None, 'in': None, 'out': None } 
-            #self._expr_comps = { None: None, 'in': None, 'out': None }
             
         super(Driver, self)._pre_execute()
         
@@ -62,6 +57,13 @@ class Driver(Component):
                     if not rv.refs_valid():
                         self._call_execute = True
                         return
+                    
+        if not self._call_execute:
+            # force execution if any component in the workflow is invalid
+            for comp in self.workflow.contents():
+                if comp._call_execute is True:
+                    self._call_execute = True
+                    break
                     
     def add_to_workflow(self, wfname, component):
         """Adds the given component to the named workflow."""

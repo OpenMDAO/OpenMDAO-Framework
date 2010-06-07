@@ -27,7 +27,9 @@ class IWorkflow(Interface):
     scope = Instance(IComponent, allow_none=True)
     
     def __iter__():
-        """Return an iterator object that iterates over components."""
+        """Return an iterator object that iterates over components in
+        the desired execution order.
+        """
         
     def __contains__(self, comp):
         """Return True if this workflow contains the given Component."""
@@ -39,10 +41,17 @@ class IWorkflow(Interface):
         """Add the Component to this workflow."""
         
     def remove(self, comp):
-        """Remove the Component from this workflow."""
+        """Remove the Component from this workflow.  Do not raise
+        an exception if the component is not found.
+        """
+        
+    def contents(self):
+        """Return a list of all Components in this Workflow. No
+        ordering is assumed.
+        """
 
     def run(self):
-        """ Run the workflow. """
+        """ Run the components in the workflow. """
     
     def step(self):
         """Run a single component in the Workflow."""

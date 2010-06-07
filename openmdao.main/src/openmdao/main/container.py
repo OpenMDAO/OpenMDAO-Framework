@@ -163,8 +163,7 @@ class Container(HasTraits):
     __ = Python()
     
     def __init__(self, doc=None):
-        super(Container, self).__init__() 
-        self._valid_dict = {}  # contains validity flag for each io Trait
+        super(Container, self).__init__()
         self._sources = {}  # for checking that destination traits cannot be 
                           # set by other objects
         # for keeping track of dynamically added traits for serialization
@@ -278,17 +277,10 @@ class Container(HasTraits):
             if not self.trait(name) and not name.startswith('__'):
                 setattr(self, name, val) # force def of implicit trait
 
-    def add_trait(self, name, *trait):
+    def add_trait(self, name, trait):
         """Overrides HasTraits definition of *add_trait* in order to
         keep track of dynamically added traits for serialization.
         """
-        if len( trait ) == 0:
-            raise ValueError, 'No trait definition was specified.'
-        elif len(trait) > 1:
-            trait = Trait(*trait)
-        else:
-            trait = trait[0]
-            
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
         
@@ -333,8 +325,10 @@ class Container(HasTraits):
                     "cannot be directly set"%
                     (name, self._sources[name]), TraitError)
             self._call_execute = True
-        if self.get_valid(name):  # if var is not already invalid
-            self.invalidate_deps([name], notify_parent=True)
+            self._input_changed(name)
+            
+    def _input_changed(self, name):
+        pass
 
     # error reporting stuff
     def _get_log_level(self):
@@ -370,41 +364,6 @@ class Container(HasTraits):
         
         return getattr(self, name)
         
-    def get_valid(self, name):
-        """Get the value of the validity flag for the io trait with the given
-        name.
-        """
-        valid = self._valid_dict.get(name, Missing)
-        if valid is Missing:
-            trait = self.trait(name)
-            if trait and trait.iotype:
-                self._valid_dict[name] = False
-                return False
-            else:
-                self.raise_exception(
-                    "cannot get valid flag of '%s' because it's not "
-                    "an io trait." % name, RuntimeError)
-        return valid
-    
-    def get_valids(self, names):
-        """Get a list of validity flags for the io traits with the given
-        names.
-        """
-        return [self.get_valid(v) for v in names]
-
-    def set_valid(self, name, valid):
-        """Mark the io trait with the given name as valid or invalid."""
-        if name in self._valid_dict:
-            self._valid_dict[name] = valid
-        else:
-            trait = self.trait(name)
-            if trait and trait.iotype:
-                self._valid_dict[name] = valid
-            else:
-                self.raise_exception(
-                    "cannot set valid flag of '%s' because "
-                    "it's not an io trait." % name, RuntimeError)
-
     def add_container(self, name, obj, **kw_args):
         """Add a Container object to this Container.
         Returns the added Container object.

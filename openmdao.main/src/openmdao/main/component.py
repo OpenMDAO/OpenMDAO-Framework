@@ -98,6 +98,9 @@ class Component (Container):
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
+        # contains validity flag for each io Trait
+        self._valid_dict = dict([(name,False) for name,t in self.class_traits().items() if t.iotype])
+        
         self._stop = False
         self._call_check_config = True
         self._call_execute = True
@@ -118,6 +121,10 @@ class Component (Container):
         if self._dir_context is None:
             self._dir_context = DirectoryContext(self)
         return self._dir_context
+
+    def _input_changed(self, name):
+        if self.get_valid(name):  # if var is not already invalid
+            self.invalidate_deps([name], notify_parent=True)
 
     def check_config (self):
         """Verify that this component is fully configured to execute.
@@ -207,7 +214,9 @@ class Component (Container):
                 self.parent.update_inputs(['.'.join([name, n]) for n in invalid_ins])
                 for name in invalid_ins:
                     self.set_valid(name, True)
-                                
+            elif self._call_execute == False and len(self.list_outputs(valid=False)):
+                self._call_execute = True
+
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
         have already been set. This must be overridden in derived classes.
@@ -257,21 +266,27 @@ class Component (Container):
         self._config_changed()
         return obj
 
-    def add_trait(self, name, *trait):
+    def add_trait(self, name, trait):
         """Overrides base definition of add_trait in order to
         force call to *check_config* prior to execution when new traits are
         added.
         """
+        super(Component, self).add_trait(name, trait)
         self._config_changed()
-        super(Component, self).add_trait(name, *trait)
+        if trait.iotype:
+            self._valid_dict[name] = False
         
     def remove_trait(self, name):
         """Overrides base definition of add_trait in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
+        super(Component, self).remove_trait(name)
         self._config_changed()
-        super(Component, self).remove_trait(name)    
+        try:
+            del self._valid_dict[name]
+        except KeyError:
+            pass
 
     def _config_changed(self):
         """Call this whenever the configuration of this Component changes,
@@ -817,11 +832,62 @@ class Component (Container):
         """Stop this component."""
         self._stop = True
 
-    def invalidate_deps(self, vars, notify_parent=False):
+    def get_valid(self, name):
+        """Get the value of the validity flag for the io trait with the given
+        name.
+        """
+        try:
+            return self._valid_dict[name]
+        except KeyError:
+            self.raise_exception(
+                "cannot get valid flag of '%s' because it's not "
+                "an io trait." % name, RuntimeError)
+            
+        #valid = self._valid_dict.get(name, Missing)
+        #if valid is Missing:
+            #trait = self.trait(name)
+            #if trait and trait.iotype:
+                #self._valid_dict[name] = False
+                #return False
+            #else:
+                #self.raise_exception(
+                    #"cannot get valid flag of '%s' because it's not "
+                    #"an io trait." % name, RuntimeError)
+        #return valid
+    
+    def get_valids(self, names):
+        """Get a list of validity flags for the io traits with the given
+        names.
+        """
+        return [self.get_valid(v) for v in names]
+
+    def set_valid(self, name, valid):
+        """Mark the io trait with the given name as valid or invalid."""
+        try:
+            self._valid_dict[name] = valid
+        except KeyError:
+            self.raise_exception(
+                "cannot set valid flag of '%s' because "
+                "it's not an io trait." % name, RuntimeError)
+            
+        #if name in self._valid_dict:
+            #self._valid_dict[name] = valid
+        #else:
+            #trait = self.trait(name)
+            #if trait and trait.iotype:
+                #self._valid_dict[name] = valid
+            #else:
+                #self.raise_exception(
+                    #"cannot set valid flag of '%s' because "
+                    #"it's not an io trait." % name, RuntimeError)
+
+    def invalidate_deps(self, varlist, notify_parent=False):
         """Invalidate all of our valid outputs."""
         valid_outs = self.list_outputs(valid=True)
         
-        for var in vars:
+        self._call_execute = True
+        
+        for var in varlist:
             self.set_valid(var, False)
             
         if notify_parent and self.parent and len(valid_outs) > 0:
@@ -830,7 +896,7 @@ class Component (Container):
         for out in valid_outs:
             self._valid_dict[out] = False
             
-        return valid_outs    
+        return valid_outs
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.
@@ -838,6 +904,7 @@ class Component (Container):
         """
         self.run()
         
+
 # TODO: uncomment require_gradients and require_hessians after they're better thought out
     
     #def require_gradients (self, varname, gradients):

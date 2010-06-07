@@ -62,6 +62,10 @@ class Workflow(object):
         """Remove a component from this Workflow"""
         raise NotImplemented("This Workflow has no 'remove' function")
 
+    def contents(self):
+        """List the contents of this workflow. No ordering is assumed."""
+        raise NotImplemented("This Workflow has no 'contents' function")
+
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""
         raise NotImplemented("This Workflow has no '__iter__' function")
@@ -87,14 +91,18 @@ class SequentialFlow(Workflow):
     
     def __contains__(self, comp):
         return comp in self._nodes
+    
+    def contents(self):
+        """Returns a list of all Components in the workflow."""
+        return self._nodes[:]
 
     def add(self, comp):
         """ Add a new component to the end of the workflow. """
         self._nodes.append(comp)
         
     def remove(self, comp):
-        """Remove a component from this Workflow. Do not report an
-        error if the specified component is not in this Workflow.
+        """Remove a component from the workflow. Do not report an
+        error if the specified component is not found.
         """
         self._nodes = [x for x in self._nodes if x is not comp]
 

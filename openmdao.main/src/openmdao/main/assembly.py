@@ -132,9 +132,9 @@ class Assembly (Component):
         """Remove the named container object from this container and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
-        for obj in self.__dict__:
+        for obj in self.__dict__.values():
             if obj is not cont and isinstance(obj, Driver):
-                obj.remove_from_workflow(obj)
+                obj.remove_from_workflow(cont)
             
         if name in self._child_io_graphs:
             childgraph = self._child_io_graphs[name]
@@ -275,8 +275,9 @@ class Assembly (Component):
         elif srccomp is self and srctrait.iotype == 'in': # boundary input
             self.set_valid(srcpath, False)
         else:
-            destcomp.set_valid(destvarname, False)
-            self.invalidate_deps([destpath])
+            #destcomp.set_valid(destvarname, False)
+            destcomp.invalidate_deps([destvarname], notify_parent=True)
+            #self.invalidate_deps([destpath])
         
         self._io_graph = None
 

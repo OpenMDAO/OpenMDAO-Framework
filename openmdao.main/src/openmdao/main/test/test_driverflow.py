@@ -1,7 +1,7 @@
 """
-Test of driverflow (workflow for Drivers).
+Test of drivers in a workflow.
 
-Most of the real tests of driverflow are found in test_multidriver.py
+test_multidriver.py also tests various permutations of this.
 """
 
 import unittest
@@ -55,7 +55,7 @@ class DriverflowTestCase(unittest.TestCase):
         try:
             asm.add_container('comp', Dumbcomp(), workflow='bogus')
         except NameError, err:
-            self.assertEqual(str(err), ": 'bogus' is not a valid Workflow name")
+            self.assertEqual(str(err), ": 'bogus' is not a known workflow")
         else:
             self.fail('expected NameError')
         
