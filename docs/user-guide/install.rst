@@ -82,12 +82,15 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 
 **Acquire and run the script**
 
-1. Download the installation script: `go-openmdao.py <http://openmdao.org/downloads/latest/go-openmdao.py>`_. If you are
-   using Internet Explorer, right click on the link to the left, and then select "Save Target as."
-      
-   .. note:: Download the `go-openmdao.py <http://openmdao.org/downloads/latest/go-openmdao.py>`_ script to the directory/folder where you would like
-         to install OpenMDAO. We highly recommend you pick a directory/folder without any spaces in the path name! For instance, on a Windows
-         machine, you could put all your OpenMDAO installations in ``C:\\OpenMDAO``.
+1. Download the installation script: `go-openmdao.py <http://openmdao.org/downloads/latest/go-openmdao.py>`_. If you are using
+   Internet Explorer (IE), right click on the link to the left, and then select "Save Target as."
+
+   .. note:: In the case of IE, be sure to save the `go-openmdao.py 
+      <http://openmdao.org/downloads/latest/go-openmdao.py>`_ script to the folder where you want to install
+      OpenMDAO. Other browsers may automatically download the file to a specific folder (e.g., a Downloads
+      folder), and you will have to move it to the desired location (where you want to install OpenMDAO). We
+      highly recommend you pick a folder without any spaces in the path name! For instance, on a Windows machine,
+      you could put all your OpenMDAO installations in ``C:\\OpenMDAO``.
 
 2. Run the script. If you specify a directory name, the virtual environment will be installed there. If you don't supply a directory name, it
    will default to a name based on the version, for example, ``openmdao-0.1``. 
