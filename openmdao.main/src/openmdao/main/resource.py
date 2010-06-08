@@ -398,11 +398,18 @@ class LocalAllocator(ResourceAllocator):
                         self._logger.debug('Rating failed: version mismatch.')
                     return (-2, {key : value})
 
+            elif key == 'exclude':
+                 if socket.gethostname() in value:
+                    if log_failure:
+                        self._logger.debug('Rating failed: excluded host.')
+                    return (-2, {key : value})
+
             else:
                 if log_failure:
                     self._logger.debug('Rating failed:' \
                                        ' unrecognized => unsupported.')
                 return (-2, {key : value})
+
         return (0, {})
 
     def deploy(self, name, resource_desc, criteria):
