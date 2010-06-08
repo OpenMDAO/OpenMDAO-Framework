@@ -82,16 +82,15 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 
 **Acquire and run the script**
 
-   1. Download the installation script: `go-openmdao.py <http://openmdao.org/downloads/latest/go-openmdao.py>`_. If you are
-      using Internet Explorer, right click on the link to the left, then select "Save Target as."
+1. Download the installation script: `go-openmdao.py <http://openmdao.org/downloads/latest/go-openmdao.py>`_. If you are
+   using Internet Explorer, right click on the link to the left, and then select "Save Target as."
       
-   2. Put the `go-openmdao.py <http://openmdao.org/downloads/latest/go-openmdao.py>`_. file where you would like to install 
-      OpenMDAO. We highly recommend you pick a folder without any spaces in the path name! For instance, on a windows machine, 
-      you could put all your OpenMDAO installations in C:\\OpenMDAO.
+   .. note:: Download the `go-openmdao.py <http://openmdao.org/downloads/latest/go-openmdao.py>`_ script to the directory/folder where you would like
+         to install OpenMDAO. We highly recommend you pick a directory/folder without any spaces in the path name! For instance, on a Windows
+         machine, you could put all your OpenMDAO installations in ``C:\\OpenMDAO``.
 
-   3. Run the script. If you specify a directory name, the virtual environment will be
-      installed there. If you don't, it will default to a name based on the version, for example:
-      openmdao-0.1. 
+2. Run the script. If you specify a directory name, the virtual environment will be installed there. If you don't supply a directory name, it
+   will default to a name based on the version, for example, ``openmdao-0.1``. 
 
 ::
 
@@ -105,7 +104,7 @@ before you can start using it.
 **Activate your virtual environment**
 
 Each time before you want to use openmdao you need to activate it. Activating your virtual environment adds your 
-virtual environment's `bin` directory to the front of your system path in the current shell, so that when you 
+virtual environment's ``bin`` directory to the front of your system path in the current shell so that when you 
 type ``python``, you'll get a Python interpreter that's customized for your virtual environment, 
 giving you access to everything in OpenMDAO.
 
@@ -136,7 +135,7 @@ On Windows:
 **Run tests to verify valid install.**
 
 OpenMDAO has a large test suite which allows you to check and make sure all of the functionality of OpenMDAO will work 
-on your system. You can run these tests yourself to double check your installation. It only takes a couple 
+on your system. You can run these tests yourself to double check your installation. It takes only a couple of 
 minutes to run them all. 
 
 Type the following to run all tests.
