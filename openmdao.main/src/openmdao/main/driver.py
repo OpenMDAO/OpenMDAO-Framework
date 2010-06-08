@@ -28,6 +28,7 @@ class Driver(Component):
         super(Driver, self).__init__(doc=doc)
         self.workflow = SequentialFlow(self)
         self._workflows = set()
+        self._iter = None
         
     def is_valid(self):
         if super(Driver, self).is_valid() is False:
@@ -105,11 +106,37 @@ class Driver(Component):
         *post_iteration*, etc., just override this function. As a result, none
         of the <start/pre/post/continue>_iteration() functions will be called.
         """
+        self._iter = None
         self.start_iteration()
         while self.continue_iteration():
             self.pre_iteration()
             self.run_iteration()
             self.post_iteration()
+
+    def step(self):
+        if self._iter is None:
+            self.start_iteration()
+            self._iter = self._step()
+        try:
+            self._iter.next()
+        except StopIteration:
+            self._iter = None
+            raise
+        raise RunStopped('Step complete')
+        
+    def _step(self):
+        while self.continue_iteration():
+            self.pre_iteration()
+            for junk in self._step_workflow():
+                yield
+            self.post_iteration()
+        self._iter = None
+        raise StopIteration()
+    
+    def _step_workflow(self):
+        while True:
+            self.workflow.step()
+            yield
 
     def start_iteration(self):
         """Called just prior to the beginning of an iteration loop. This can 
