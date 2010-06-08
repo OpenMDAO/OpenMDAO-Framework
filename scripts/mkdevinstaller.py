@@ -49,17 +49,9 @@ def adjust_options(options, args):
     args.append(join(_find_repo_top(), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
 
 def _single_install(cmds, req, bin_dir):
-    #import pkg_resources
-    #try:
-        #pkg_resources.working_set.resolve([pkg_resources.Requirement.parse(req)])
-    #except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
-        ## if package isn't currently installed, install it
-        ## NOTE: we need to do our own check for already installed packages because
-        ##       for some reason distribute always wants to install a package even if
-        ##       it already is installed.
     cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
-        # pip seems more robust than easy_install, but won't install from binary distribs :(
-        #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
+    # pip seems better than easy_install, but won't install binary distribs :(
+    #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     logger.debug("running command: %%s" %% ' '.join(cmdline))
     subprocess.call(cmdline)
 
@@ -107,7 +99,7 @@ def after_install(options, home_dir):
     try:
         for pkg in openmdao_packages:
             os.chdir(join(topdir, pkg))
-            cmdline = [join(absbin, 'python'), 'setup.py', 'develop'] + cmds
+            cmdline = [join(absbin, 'python'), 'setup.py', 'develop', '-N'] + cmds
             subprocess.check_call(cmdline)
     finally:
         os.chdir(startdir)

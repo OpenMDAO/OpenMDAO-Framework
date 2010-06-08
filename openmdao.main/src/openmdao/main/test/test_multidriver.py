@@ -285,7 +285,7 @@ class MultiDriverTestCase(unittest.TestCase):
         top.add_container('comp1', ExprComp(expr='x-3'))
         top.add_container('comp2', ExprComp(expr='-3'))
         top.add_container('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'),
-                          workflow=['driver.workflow', 'driver1.workflow'])
+                          workflow='driver1.workflow')
         top.add_container('comp4', ExprComp2(expr='x+y'))
         top.comp1.x = 50
         top.comp3.y = -50

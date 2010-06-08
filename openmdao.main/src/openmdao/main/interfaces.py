@@ -63,7 +63,10 @@ class IDriver(Interface):
     """
     
     workflow = Instance(IWorkflow, allow_none=True)
- 
+    def iteration_set(self):
+        """Return a set of names (not pathnames) containing all Components
+        in all of the workflows managed by this Driver
+        """
 
 class IFactory (Interface):
     """An object that creates and returns objects based on a type string."""

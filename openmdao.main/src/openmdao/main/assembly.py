@@ -67,7 +67,7 @@ class Assembly (Component):
                 
         # default Driver has a DataFlow workflow and executes it once
         drv = self.add_container('driver', Driver(), workflow=None)
-        
+        drv.workflow = Dataflow(drv)
 
 
     def get_var_graph(self):
@@ -514,6 +514,9 @@ class ComponentGraph(object):
     
     def subgraph(self, nodelist):
         return self._no_expr_graph.subgraph(nodelist)
+    
+    def graph(self):
+        return self._no_expr_graph
     
     def __len__(self):
         return len(self._no_expr_graph)

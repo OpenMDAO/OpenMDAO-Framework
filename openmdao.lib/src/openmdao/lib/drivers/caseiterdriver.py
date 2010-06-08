@@ -141,14 +141,15 @@ class CaseIteratorDriver(Driver):
                 # Must do this before creating any locks or queues.
                 self._replicants += 1
                 version = 'replicant.%d' % (self._replicants)
-                driverflow = self.parent.driverflow
-                self.parent.driverflow = None
+                driver = self.parent.driver
+                self.parent.add_container('driver', Driver())
+                self.parent.driver.workflow = self.workflow
                 try:
                     #egg_info = self.model.save_to_egg(self.model.name, version)
                     # FIXME: what name should we give to the egg?
                     egg_info = self.parent.save_to_egg(self.name, version)
                 finally:
-                    self.parent.driverflow = driverflow
+                    self.parent.driver = driver
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]

@@ -39,6 +39,12 @@ class Expression(BaseStr):
         # Put units in the metadata dictionary
         if desc is not None:
             metadata['desc'] = desc
+    
+        # this piece of metadata is used to set up triggers for all
+        # Expression traits so we can keep dependency graphs updated
+        # by calling expression_updated() on the parent
+        if not 'monitor_expr' in metadata:
+            metadata['monitor_expr'] = True
             
         super(Expression, self).__init__(default_value, **metadata)
 
@@ -48,7 +54,7 @@ class Expression(BaseStr):
         Note: The 'fast validator' version performs this check in C.
         """
         # normal string validation
-        s = super(Expression, self).validate(obj, name, value) 
+        s = super(Expression, self).validate(obj, name, value)
         
         try:
             if self.iotype == 'out':
@@ -67,6 +73,11 @@ class ExpressionList(List):
     
     def __init__(self, **metadata):
         self.iotype = metadata.get('iotype', 'in')
-        super(ExpressionList, self).__init__(trait=Expression( \
+        # this piece of metadata is used to set up triggers for all
+        # Expression traits so we can keep dependency graphs updated
+        # by calling expression_updated() on the parent
+        if not 'monitor_expr' in metadata:
+            metadata['monitor_expr'] = True
+        super(ExpressionList, self).__init__(trait=Expression(
                             iotype=self.iotype), **metadata)
     

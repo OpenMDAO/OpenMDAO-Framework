@@ -12,7 +12,7 @@ from networkx.algorithms.traversal import strongly_connected_components
 from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
-from openmdao.main.dataflow import Dataflow
+from openmdao.main.workflow import SequentialFlow
 from openmdao.main.expression import Expression, ExpressionList
 
     
@@ -26,20 +26,18 @@ class Driver(Component):
     
     def __init__(self, doc=None):
         super(Driver, self).__init__(doc=doc)
-        self.workflow = Dataflow(self)
+        self.workflow = SequentialFlow(self)
+        self._workflows = set()
         
     def is_valid(self):
         if super(Driver, self).is_valid() is False:
             return False
         
-        exprnames = self.get_expr_names(iotype='in')
-        
-        if not all(self.get_valids(exprnames)):
-            return False
-            
         # driver is invalid if any of its Expressions reference
-        # invalid Variables
-        for name in exprnames:
+        # invalid Variables or if the Expression itself is invalid
+        for name in self.get_expr_names(iotype='in'):
+            if not self.get_valid(name):
+                return False
             rv = getattr(self, name)
             if isinstance(rv, list):
                 for entry in rv:
@@ -75,6 +73,7 @@ class Driver(Component):
                 self.raise_exception("Attempted to add a non-Component to Workflow '%s'" % wfname,
                                      TypeError)
             wf.add(component)
+            self._workflows.add(wfname)
         else:
             self.raise_exception("unknown Workflow '%s'" % wfname, NameError)
 
@@ -84,6 +83,22 @@ class Driver(Component):
             if isinstance(obj, Workflow):
                 obj.remove(component)
 
+    def iteration_set(self):
+        """Return a set of all Components in any
+        Workflow that this Driver controls. Recurse
+        through the entire Workflow hierarchy controlled
+        by this Driver in the current Assembly scope.
+        """
+        allcomps = set()
+        for wfname in self._workflows:
+            wf = getattr(self, wfname, None)
+            if wf:
+                for child in wf.contents():
+                    allcomps.add(child)
+                    if isinstance(child, Driver):
+                        allcomps.update(child.iteration_set())
+        return allcomps
+        
     def execute(self):
         """ Iterate over a workflow of Components until some condition
         is met. If you don't want to structure your driver to use *pre_iteration*,

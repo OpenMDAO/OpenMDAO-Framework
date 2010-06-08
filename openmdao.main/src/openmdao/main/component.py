@@ -13,7 +13,7 @@ import sys
 import weakref
 
 from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Str, Instance, TraitError
+from enthought.traits.api import Bool, List, Str, Instance, TraitError, on_trait_change
 
 from openmdao.main.container import Container
 from openmdao.main.filevar import FileMetadata, FileRef
@@ -108,6 +108,8 @@ class Component (Container):
         self._input_names = None
         self._output_names = None
         self._container_names = None
+        
+        self.on_trait_change(self.expression_updated, '+monitor_expr')
 
         if directory:
             self.directory = directory
@@ -126,6 +128,12 @@ class Component (Container):
         if self.get_valid(name):  # if var is not already invalid
             self.invalidate_deps([name], notify_parent=True)
 
+    def expression_updated(self, obj, name, value):
+        """An Expression or ExpressionList has been updated, so we
+        must update our dependency graph.
+        """
+        
+        
     def check_config (self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
@@ -212,8 +220,9 @@ class Component (Container):
                 self._call_execute = True
                 name = self.name
                 self.parent.update_inputs(['.'.join([name, n]) for n in invalid_ins])
+                valids = self._valid_dict
                 for name in invalid_ins:
-                    self.set_valid(name, True)
+                    valids[name] = True
             elif self._call_execute == False and len(self.list_outputs(valid=False)):
                 self._call_execute = True
 

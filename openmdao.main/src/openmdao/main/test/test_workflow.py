@@ -25,7 +25,7 @@ class TestComponent(Component):
     def execute(self):
         self.total_executions += 1
         if self.set_stop:
-            self.parent.workflow.stop()
+            self.parent.driver.workflow.stop()
 
 
 class Model(Assembly):

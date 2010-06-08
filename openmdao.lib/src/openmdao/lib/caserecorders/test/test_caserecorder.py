@@ -16,10 +16,10 @@ class CaseRecorderTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = top = set_as_top(Assembly())
+        driver = top.add_container('driver', SimpleCaseIterDriver())
         top.add_container('comp1', ExecComp(exprs=['z=x+y']))
         top.add_container('comp2', ExecComp(exprs=['z=x+1']))
         top.connect('comp1.z', 'comp2.x')
-        driver = top.add_container('driver', SimpleCaseIterDriver())
         
         # now create some Cases
         outputs = [('comp1.z', None, None), ('comp2.z', None, None)]
