@@ -1,39 +1,44 @@
-from openmdao.lib.traits.domain.coords import GridCoordinates
+from openmdao.lib.traits.domain.flow import FlowSolution
+from openmdao.lib.traits.domain.grid import GridCoordinates
+
+CARTESIAN = 'Cartesian'
+CYLINDRICAL = 'Cylindrical'
 
 
 class Zone(object):
     """ One zone in a possibly multi-zone :class:`DomainObj`. """
 
     def __init__(self):
-        self.coords = GridCoordinates()
-        self.arrays = []
-        self.vectors = []
+        self.grid_coordinates = GridCoordinates()
+        self.flow_solution = FlowSolution()
+        self.reference_state = None
+
+        self._coordinate_system = CARTESIAN
+        self.right_handed = True
+        self.symmetry = None
+        self.symmetry_axis = None
+        self.symmetry_instances = 1
 
     @property
     def shape(self):
         """ Returns tuple of index limits. """
-        return self.coords.shape
+        return self.grid_coordinates.shape
 
     @property
     def extent(self):
         """ Returns tuple of coordinate ranges. """
-        return self.coords.extent
+        return self.grid_coordinates.extent
 
-    def add_array(self, name, array):
-        """ Add an array bound to `name`. Returns the added array. """
-        if hasattr(self, name):
-            raise ValueError("name '%s' is already bound" % name)
-        setattr(self, name, array)
-        self.arrays.append(array)
-        return array
+    def _get_coord_sys(self):
+        return self._coordinate_system
 
-    def add_vector(self, name, vector):
-        """ Add a :class:`Vector` bound to `name`. Returns the added vector. """
-        if hasattr(self, name):
-            raise ValueError("name '%s' is already bound" % name)
-        setattr(self, name, vector)
-        self.vectors.append(vector)
-        return vector
+    def _set_coord_sys(self, sys):
+        if sys in (CARTESIAN, CYLINDRICAL):
+            self._coordinate_system = sys
+        else:
+            raise ValueError("invalid coordinate system '%s'" % sys)
+
+    coordinate_system = property(_get_coord_sys, _set_coord_sys)
 
     def is_equivalent(self, other, logger):
         """ Test if self and `other` are equivalent. """
@@ -41,35 +46,32 @@ class Zone(object):
             logger.debug('other is not a Zone object.')
             return False
 
-        if not self.coords.is_equivalent(other.coords, logger):
+        if self.coordinate_system != other.coordinate_system:
+            logger.debug('coordinate_systems are not equal.')
             return False
 
-# TODO: check scalars.
+        if self.right_handed != other.right_handed:
+            logger.debug('handedness is not equal.')
+            return False
 
-        for arr in self.arrays:
-            name = self.name_of_obj(arr)
-            if name is None:
-                raise AttributeError('cannot find array!')
-            try:
-                other_arr = getattr(other, name)
-            except AttributeError:
-                logger.debug("other is missing array '%s'", name)
-                return False
-            if (other_arr != arr).any():
-                logger.debug('%s values are not equal.', name)
-                return False
+        if self.symmetry != other.symmetry:
+            logger.debug('symmetry is not equal.')
+            return False
 
-        for vector in self.vectors:
-            name = self.name_of_obj(vector)
-            if name is None:
-                raise AttributeError('cannot find vector!')
-            try:
-                other_vector = getattr(other, name)
-            except AttributeError:
-                logger.debug("other is missing vector '%s'", name)
-                return False
-            if not vector.is_equivalent(other_vector, name, logger):
-                return False
+        if self.symmetry_axis != other.symmetry_axis:
+            logger.debug('symmetry_axis is not equal.')
+            return False
+
+        if self.symmetry_instances != other.symmetry_instances:
+            logger.debug('symmetry_instances is not equal.')
+            return False
+
+        if not self.grid_coordinates.is_equivalent(other.grid_coordinates,
+                                                   logger):
+            return False
+
+        if not self.flow_solution.is_equivalent(other.flow_solution, logger):
+            return False
 
         return True
 
@@ -80,31 +82,68 @@ class Zone(object):
                 return name
         return None
 
-    def flip_z(self):
-        """ Convert to other-handed coordinate system. """
-        self.coords.flip_z()
-        for vector in self.vectors:
-            vector.flip_z()
+    def make_cartesian(self):
+        """ Convert to cartesian coordinate system. """
+        if self.coordinate_system != CARTESIAN:
+            self.grid_coordinates.make_cartesian()
+            self.flow_solution.make_cartesian()
+            self.coordinate_system = CARTESIAN
+
+    def make_cylindrical(self):
+        """ Convert to cylindrical coordinate system. """
+        if self.coordinate_system != CYLINDRICAL:
+            self.grid_coordinates.make_cylindrical()
+            self.flow_solution.make_cylindrical()
+            self.coordinate_system = CYLINDRICAL
+
+    def make_left_handed(self):
+        """ Convert to left-handed coordinate system. """
+        if self.coordinate_system == CARTESIAN:
+            if self.right_handed:
+                self.grid_coordinates.flip_z()
+                self.flow_solution.flip_z()
+                self.right_handed = False
+        else:
+            raise RuntimeError('Zone not in cartesian coordinates')
+
+    def make_right_handed(self):
+        """ Convert to right-handed coordinate system. """
+        if self.coordinate_system == CARTESIAN:
+            if not self.right_handed:
+                self.grid_coordinates.flip_z()
+                self.flow_solution.flip_z()
+                self.right_handed = True
+        else:
+            raise RuntimeError('Zone not in cartesian coordinates')
 
     def translate(self, delta_x, delta_y, delta_z):
         """ Translate coordinates. """
-        self.coords.translate(delta_x, delta_y, delta_z)
+        if self.coordinate_system == CARTESIAN:
+            self.grid_coordinates.translate(delta_x, delta_y, delta_z)
+        else:
+            raise RuntimeError('Zone not in cartesian coordinates')
 
     def rotate_about_x(self, deg):
         """ Rotate about the X axis by `deg` degrees. """
-        self.coords.rotate_about_x(deg)
-        for vector in self.vectors:
-            vector.rotate_about_x(deg)
+        if self.coordinate_system == CARTESIAN:
+            self.grid_coordinates.rotate_about_x(deg)
+            self.flow_solution.rotate_about_x(deg)
+        else:
+            raise RuntimeError('Zone not in cartesian coordinates')
 
     def rotate_about_y(self, deg):
         """ Rotate about the Y axis by `deg` degrees. """
-        self.coords.rotate_about_y(deg)
-        for vector in self.vectors:
-            vector.rotate_about_y(deg)
+        if self.coordinate_system == CARTESIAN:
+            self.grid_coordinates.rotate_about_y(deg)
+            self.flow_solution.rotate_about_y(deg)
+        else:
+            raise RuntimeError('Zone not in cartesian coordinates')
 
     def rotate_about_z(self, deg):
         """ Rotate about the Z axis by `deg` degrees. """
-        self.coords.rotate_about_z(deg)
-        for vector in self.vectors:
-            vector.rotate_about_z(deg)
+        if self.coordinate_system == CARTESIAN:
+            self.grid_coordinates.rotate_about_z(deg)
+            self.flow_solution.rotate_about_z(deg)
+        else:
+            raise RuntimeError('Zone not in cartesian coordinates')
 
