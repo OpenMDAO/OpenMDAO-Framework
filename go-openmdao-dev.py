@@ -1140,18 +1140,6 @@ openmdao_packages = ['openmdao.util',
                      'examples/openmdao.examples.bar3simulation',
                      'examples/openmdao.examples.enginedesign',
                     ]
-
-def _find_repo_top():
-    start = os.getcwd()
-    location = os.getcwd()
-    while location:
-        if '.bzr' in os.listdir(location):
-            return location
-        tmp = location
-        location = os.path.dirname(location)
-        if tmp == location:
-            break
-    raise RuntimeError('ERROR: %s is not inside of a bazaar repository' % start)
     
 def adjust_options(options, args):
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
@@ -1161,26 +1149,18 @@ def adjust_options(options, args):
         if not arg.startswith('-'):
             print 'no args allowed that start without a dash (-)'
             sys.exit(-1)
-    args.append(join(_find_repo_top(), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
+    args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
 
 def _single_install(cmds, req, bin_dir):
-    #import pkg_resources
-    #try:
-        #pkg_resources.working_set.resolve([pkg_resources.Requirement.parse(req)])
-    #except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
-        ## if package isn't currently installed, install it
-        ## NOTE: we need to do our own check for already installed packages because
-        ##       for some reason distribute always wants to install a package even if
-        ##       it already is installed.
     cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
-        # pip seems more robust than easy_install, but won't install from binary distribs :(
-        #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
+    # pip seems better than easy_install, but won't install binary distribs :(
+    #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     logger.debug("running command: %s" % ' '.join(cmdline))
     subprocess.call(cmdline)
 
 def after_install(options, home_dir):
     global logger
-    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'coverage==3.3.1', 'pycrypto==2.0.1', 'Traits==3.3.0', 'PyYAML==3.09', 'conmin==1.0', 'Jinja2==2.4', 'virtualenv==1.4.5', 'numpy==1.4.1', 'zc.buildout==1.4.3', 'Fabric==0.9.0', 'Sphinx==1.0b2', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'Pygments==1.3.1', 'nose==0.11.3']
+    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'coverage==3.3.1', 'pycrypto==2.0.1', 'Traits==3.3.0', 'numpy==1.3.0', 'PyYAML==3.09', 'conmin==1.0', 'Jinja2==2.4', 'virtualenv==1.4.5', 'zc.buildout==1.4.3', 'Fabric==0.9.0', 'Sphinx==1.0b2', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'Pygments==1.3.1', 'nose==0.11.3']
     cmds = []
     url = 'http://openmdao.org/dists'
     found = [c for c in cmds if url in c]
@@ -1216,7 +1196,7 @@ def after_install(options, home_dir):
         _single_install(cmds, req, bin_dir)
 
     # now install dev eggs for all of the openmdao packages
-    topdir = _find_repo_top()
+    topdir = os.path.abspath(os.path.dirname(__file__))
     startdir = os.getcwd()
     absbin = os.path.abspath(bin_dir)
     try:

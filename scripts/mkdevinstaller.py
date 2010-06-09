@@ -25,18 +25,6 @@ openmdao_packages = ['openmdao.util',
                      'examples/openmdao.examples.bar3simulation',
                      'examples/openmdao.examples.enginedesign',
                     ]
-
-def _find_repo_top():
-    start = os.getcwd()
-    location = os.getcwd()
-    while location:
-        if '.bzr' in os.listdir(location):
-            return location
-        tmp = location
-        location = os.path.dirname(location)
-        if tmp == location:
-            break
-    raise RuntimeError('ERROR: %%s is not inside of a bazaar repository' %% start)
     
 def adjust_options(options, args):
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
@@ -46,7 +34,7 @@ def adjust_options(options, args):
         if not arg.startswith('-'):
             print 'no args allowed that start without a dash (-)'
             sys.exit(-1)
-    args.append(join(_find_repo_top(), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
+    args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
 
 def _single_install(cmds, req, bin_dir):
     cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
@@ -93,7 +81,7 @@ def after_install(options, home_dir):
         _single_install(cmds, req, bin_dir)
 
     # now install dev eggs for all of the openmdao packages
-    topdir = _find_repo_top()
+    topdir = os.path.abspath(os.path.dirname(__file__))
     startdir = os.getcwd()
     absbin = os.path.abspath(bin_dir)
     try:
