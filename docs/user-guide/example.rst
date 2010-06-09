@@ -87,8 +87,8 @@ occurs when the transmission is in first gear.
 **Transmission - Design Variables:**
 
 ==================  ===========================================  ======
-**Variable**	 	  **Description**			 **Units**
-------------------  -------------------------------------------  ------
+Variable	 	  Description                            Units
+==================  ===========================================  ======
 ratio1		    Gear ratio in first gear			
 ------------------  -------------------------------------------  ------
 ratio2		    Gear ratio in second gear			
@@ -109,8 +109,8 @@ tire_circumference  Circumference of the tire			 inch
 **Transmission - Simulation Inputs:**
 
 =================     ===========================================  ======
-**Variable**	 	  **Description**			   **Units**
------------------     -------------------------------------------  ------
+Variable	 	  Description			           Units
+=================     ===========================================  ======
 current_gear          Current gear position
 -----------------     -------------------------------------------  ------
 velocity	      Current vehicle velocity			   m/s
@@ -121,8 +121,8 @@ velocity	      Current vehicle velocity			   m/s
 **Transmission - Outputs:**
 
 =================  ===========================================  ======
-**Variable**	 	  **Description**			**Units**
------------------  -------------------------------------------  ------
+Variable	 	  Description   			Units
+=================  ===========================================  ======
 torque_ratio	   Ratio of transmission output power to power 
                    at the wheel
 -----------------  -------------------------------------------  ------
@@ -181,7 +181,7 @@ weight and provide it as an output.
 
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
------------------  -------------------------------------------  ------
+=================  ===========================================  ======
 stroke		   Length of compression zone in cylinder	mm		
 -----------------  -------------------------------------------  ------
 bore		   Bore (cylinder diameter)			mm
@@ -208,8 +208,8 @@ D_v  		   Intake valve diameter                        mm
 **Engine - Simulation Inputs:**
 
 =================  ===========================================  ======
-**Variable**	 	  **Description**			**Units**
------------------  -------------------------------------------  ------
+Variable	 	  Description		                Units
+=================  ===========================================  ======
 RPM		   Engine rotational speed (1000-6000)          rev/min
 -----------------  -------------------------------------------  ------
 throttle	   Throttle position				
@@ -220,8 +220,8 @@ throttle	   Throttle position
 **Engine - Outputs:**
 
 =================  ===========================================  ======
-**Variable**	 	  **Description**			**Units**
------------------  -------------------------------------------  ------
+Variable	 	  Description			        Units
+=================  ===========================================  ======
 power		   Power produced by engine			kW
 -----------------  -------------------------------------------  ------
 torque		   Torque produced by engine			N*m
@@ -256,7 +256,7 @@ tires and the vehicle drag which is proportional to the square of velocity.
 
 =================  ===========================================  ======
 **Variable**	 	  **Description**			**Units**
------------------  -------------------------------------------  ------
+=================  ===========================================  ======
 mass_vehicle       Vehicle mass					kg
 -----------------  -------------------------------------------  ------
 Cf		   Rolling friction coefficient			
@@ -272,7 +272,7 @@ area		   Front profile area				m*m
 
 ==================  ===========================================  ======
 **Variable**	 	  **Description**			 **Units**
-------------------  -------------------------------------------  ------
+==================  ===========================================  ======
 mass_engine	    Engine mass estimate			 kg
 ------------------  -------------------------------------------  ------
 velocity	    Current vehicle velocity			 m/s
@@ -288,8 +288,8 @@ tire_circumference  Circumference of the tire			 m
 **Chassis - Outputs:**
 
 =================  ===========================================  ======
-**Variable**	 	  **Description**			**Units**
------------------  -------------------------------------------  ------
+Variable	 	  Description		                Units
+=================  ===========================================  ======
 acceleration	   Vehicle instantaneous acceleration		m/(s*s)
 =================  ===========================================  ======
 
@@ -909,18 +909,18 @@ be implemented as a :term:`Socket`.
 
 **DrivingSim - Outputs:**
 
-=================  ===========================================  ======
-**Variable**	 	  **Description**			**Units**
------------------  -------------------------------------------  ------
+=================  ===========================================  ========
+Variable	 	Description			        Units
+=================  ===========================================  ========
 accel_time	   Time for vehicle to accelerate to 60 mph 	s
 		   from a stop.
------------------  -------------------------------------------  ------
+-----------------  -------------------------------------------  --------
 EPA_city    	   Fuel economy estimate based on EPA city	mi/galUS
 		   driving profile
------------------  -------------------------------------------  ------
+-----------------  -------------------------------------------  --------
 EPA_highway    	   Fuel economy estimate based on EPA highway	mi/galUS
 		   driving profile
-=================  ===========================================  ======
+=================  ===========================================  ========
 
 
 Setting up an Optimization Problem
