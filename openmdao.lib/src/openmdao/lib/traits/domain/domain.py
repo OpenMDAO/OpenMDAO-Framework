@@ -11,8 +11,6 @@ class DomainObj(object):
     """
 
     def __init__(self):
-        self.cartesian = True
-        self.right_handed = True
         self.reference_state = None
         # Zones are kept in an explicit list to retain the order
         # that they were added.
@@ -101,31 +99,23 @@ class DomainObj(object):
 
     def make_cartesian(self):
         """ Convert to cartesian coordinate system. """
-        if not self.cartesian:
-            for zone in self.zones:
-                zone.make_cartesian()
-            self.cartesian = True
+        for zone in self.zones:
+            zone.make_cartesian()
 
     def make_cylindrical(self):
         """ Convert to cylindrical coordinate system. """
-        if self.cartesian:
-            for zone in self.zones:
-                zone.make_cylindrical()
-            self.cartesian = False
+        for zone in self.zones:
+            zone.make_cylindrical()
 
     def make_left_handed(self):
         """ Convert to left-handed coordinate system. """
-        if self.right_handed:
-            for zone in self.zones:
-                zone.flip_z()
-            self.right_handed = False
+        for zone in self.zones:
+            zone.make_left_handed()
 
     def make_right_handed(self):
         """ Convert to right-handed coordinate system. """
-        if not self.right_handed:
-            for zone in self.zones:
-                zone.flip_z()
-            self.right_handed = True
+        for zone in self.zones:
+            zone.make_right_handed()
 
     def translate(self, delta_x, delta_y, delta_z):
         """ Translate coordinates. """

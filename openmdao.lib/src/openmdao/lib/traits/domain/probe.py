@@ -2,6 +2,7 @@ from math import sqrt
 
 from openmdao.units.units import PhysicalQuantity
 
+from openmdao.lib.traits.domain.zone import CYLINDRICAL
 
 # Dictionary for calculated variable information.
 # Holds (integrate_flag, collect_function).
@@ -12,6 +13,18 @@ _SCHEMES = ('area', 'mass')
 
 # TODO: support Vertex flow solution grid location.
 # TODO: account for ghost cells in index calculations.
+
+
+def register_surface_probe(name, function, integrate):
+    """
+    Register a surface probe function.
+
+    - `name` is the name of the metric calculated.
+    - `function` is the function to call.  The passed arguments are \
+    ``(domain, surface, weights, reference_state)``.
+    - If `integrate` then function values are integrated, not averaged.
+    """
+    _VARIABLES[name] = (integrate, function)
 
 
 def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
@@ -97,12 +110,6 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
     for surface in _surfaces:
         zone_name = surface[0]
         zone = getattr(domain, zone_name)
-
-        if zone.flow_solution.grid_location != 'CellCenter':
-            raise NotImplementedError('Zone %s solution location %s'
-                                      ' not supported'
-                                      % zone.flow_solution.grid_location)
-
         zone_weights = _weights(weighting_scheme, domain, surface)
         zone_weights *= zone.symmetry_instances  # Adjust for symmetry.
         weights[zone_name] = zone_weights
@@ -142,8 +149,11 @@ def surface_probe(domain, surfaces, variables, weighting_scheme='area'):
 def _weights(scheme, domain, surface):
     """ Returns weights for a mesh surface. """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    grid = getattr(domain, zone_name).grid_coordinates
-    flow = getattr(domain, zone_name).flow_solution
+    zone = getattr(domain, zone_name)
+    grid = zone.grid_coordinates
+    flow = zone.flow_solution
+    cylindrical = zone.coordinate_system == CYLINDRICAL
+    cell_center = flow.grid_location == 'CellCenter'
 
     x = grid.x.item
     y = grid.y.item
@@ -160,15 +170,15 @@ def _weights(scheme, domain, surface):
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
         face_normal = _iface_normal
-        face_value = _iface_cell_value
+        face_value = _iface_cell_value if cell_center else _iface_node_value
     elif jmin == jmax:
         jmax += 1
         face_normal = _jface_normal
-        face_value = _jface_cell_value
+        face_value = _jface_cell_value if cell_center else _jface_node_value
     else:
         kmax += 1
         face_normal = _kface_normal
-        face_value = _kface_cell_value
+        face_value = _kface_cell_value if cell_center else _kface_node_value
 
     weights = []
     for i in range(imin, imax):
@@ -178,7 +188,7 @@ def _weights(scheme, domain, surface):
             for k in range(kmin, kmax):
                 kp1 = k + 1
 
-                sx, sy, sz = face_normal(x, y, z, i, j, k)
+                sx, sy, sz = face_normal(x, y, z, i, j, k, cylindrical)
                 if scheme == 'mass':
                     kp1 = k + 1
                     rvu = face_value(mom_x, ip1, jp1, kp1)
@@ -191,7 +201,7 @@ def _weights(scheme, domain, surface):
     return weights
 
 
-def _iface_normal(x, y, z, i, j, k, lref=1.):
+def _iface_normal(x, y, z, i, j, k, cylindrical, lref=1.):
     """ Return vector normal to I face with magnitude equal to area. """
     jp1 = j + 1
     kp1 = k + 1
@@ -206,8 +216,12 @@ def _iface_normal(x, y, z, i, j, k, lref=1.):
     diag_y2 = y(i, jp1, kp1) - y(i, j, k)
     diag_z2 = z(i, jp1, kp1) - z(i, j, k)
 
-    r1 = (y(i, j, kp1) + y(i, jp1, k  )) / 2.
-    r2 = (y(i, j, k  ) + y(i, jp1, kp1)) / 2.
+    if cylindrical:
+        r1 = (y(i, j, kp1) + y(i, jp1, k  )) / 2.
+        r2 = (y(i, j, k  ) + y(i, jp1, kp1)) / 2.
+    else:
+        r1 = 1.
+        r2 = 1.
 
     aref = lref * lref
 
@@ -218,7 +232,7 @@ def _iface_normal(x, y, z, i, j, k, lref=1.):
     return (sx, sy, sz)
 
 
-def _jface_normal(x, y, z, i, j, k, lref=1.):
+def _jface_normal(x, y, z, i, j, k, cylindrical, lref=1.):
     """ Return vector normal to J face with magnitude equal to area. """
     ip1 = i + 1
     kp1 = k + 1
@@ -233,8 +247,12 @@ def _jface_normal(x, y, z, i, j, k, lref=1.):
     diag_y2 = y(ip1, j, kp1) - y(i, j, k)
     diag_z2 = z(ip1, j, kp1) - z(i, j, k)
 
-    r1 = (y(i, j, kp1) + y(ip1, j, k  )) / 2.
-    r2 = (y(i, j, k  ) + y(ip1, j, kp1)) / 2.
+    if cylindrical:
+        r1 = (y(i, j, kp1) + y(ip1, j, k  )) / 2.
+        r2 = (y(i, j, k  ) + y(ip1, j, kp1)) / 2.
+    else:
+        r1 = 1.
+        r2 = 1.
 
     aref = lref * lref
 
@@ -245,7 +263,7 @@ def _jface_normal(x, y, z, i, j, k, lref=1.):
     return (sx, sy, sz)
 
 
-def _kface_normal(x, y, z, i, j, k, lref=1.):
+def _kface_normal(x, y, z, i, j, k, cylindrical, lref=1.):
     """ Return vector normal to K face with magnitude equal to area. """
     ip1 = i + 1
     jp1 = j + 1
@@ -260,8 +278,12 @@ def _kface_normal(x, y, z, i, j, k, lref=1.):
     diag_y2 = y(ip1, jp1, k) - y(i, j, k)
     diag_z2 = z(ip1, jp1, k) - z(i, j, k)
 
-    r1 = (y(i, jp1, k) + y(ip1, j,   k)) / 2.
-    r2 = (y(i, j,   k) + y(ip1, jp1, k)) / 2.
+    if cylindrical:
+        r1 = (y(i, jp1, k) + y(ip1, j,   k)) / 2.
+        r2 = (y(i, j,   k) + y(ip1, jp1, k)) / 2.
+    else:
+        r1 = 1.
+        r2 = 1.
 
     aref = lref * lref
 
@@ -285,10 +307,25 @@ def _kface_cell_value(i, j, k, arr):
     return 0.5 * (arr(i, j, k) + arr(i, j, k-1))
 
 
+def _iface_node_value(arr, i, j, k):
+    """ Returns I face value for vertex data. """
+    raise NotImplementedError('Zone solution location Vertex not supported')
+
+def _jface_node_value(i, j, k, arr):
+    """ Returns J face value for vertex data. """
+    raise NotImplementedError('Zone solution location Vertex not supported')
+
+def _kface_node_value(i, j, k, arr):
+    """ Returns K face value for vertex data. """
+    raise NotImplementedError('Zone solution location Vertex not supported')
+
+
 def _area(domain, surface, weights, reference_state):
     """ Returns area of mesh surface as a :class:`PhysicalQuantity`. """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    grid = getattr(domain, zone_name).grid_coordinates
+    zone = getattr(domain, zone_name)
+    grid = zone.grid_coordinates
+    cylindrical = zone.coordinate_system == CYLINDRICAL
 
     x = grid.x.item
     y = grid.y.item
@@ -315,19 +352,22 @@ def _area(domain, surface, weights, reference_state):
     for i in range(imin, imax):
         for j in range(jmin, jmax):
             for k in range(kmin, kmax):
-                sx, sy, sz = normal(x, y, z, i, j, k, lref.value)
+                sx, sy, sz = normal(x, y, z, i, j, k, cylindrical, lref.value)
                 total += sqrt(sx*sx + sy*sy + sz*sz)
 
     return PhysicalQuantity(total, aref.get_unit_name())
 
-_VARIABLES['area'] = (True, _area)
+register_surface_probe('area', _area, True)
 
 
 def _massflow(domain, surface, weights, reference_state):
     """ Returns mass flow for a mesh surface as a :class:`PhysicalQuantity`. """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    grid = getattr(domain, zone_name).grid_coordinates
-    flow = getattr(domain, zone_name).flow_solution
+    zone = getattr(domain, zone_name)
+    grid = zone.grid_coordinates
+    flow = zone.flow_solution
+    cylindrical = zone.coordinate_system == CYLINDRICAL
+    cell_center = flow.grid_location == 'CellCenter'
 
     try:
         mom_x = flow.momentum.x.item
@@ -343,15 +383,15 @@ def _massflow(domain, surface, weights, reference_state):
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
         face_normal = _iface_normal
-        face_value = _iface_cell_value
+        face_value = _iface_cell_value if cell_center else _iface_node_value
     elif jmin == jmax:
         jmax += 1
         face_normal = _jface_normal
-        face_value = _jface_cell_value
+        face_value = _jface_cell_value if cell_center else _jface_node_value
     else:
         kmax += 1
         face_normal = _kface_normal
-        face_value = _kface_cell_value
+        face_value = _kface_cell_value if cell_center else _kface_node_value
 
     try:
         lref = reference_state['length_reference']
@@ -380,15 +420,15 @@ def _massflow(domain, surface, weights, reference_state):
                 rvu = face_value(mom_x, ip1, jp1, kp1) * momref.value
                 rvv = face_value(mom_y, ip1, jp1, kp1) * momref.value
                 rvw = face_value(mom_z, ip1, jp1, kp1) * momref.value
-                sx, sy, sz = face_normal(x, y, z, i, j, k, lref.value)
+                sx, sy, sz = face_normal(x, y, z, i, j, k, cylindrical,
+                                         lref.value)
 
                 w = rvu*sx + rvv*sy + rvw*sz
-
                 total += w
 
     return PhysicalQuantity(total, wref.get_unit_name())
 
-_VARIABLES['mass_flow'] = (True, _massflow)
+register_surface_probe('mass_flow', _massflow, True)
 
 
 def _corrected_massflow(domain, surface, weights, reference_state):
@@ -397,8 +437,11 @@ def _corrected_massflow(domain, surface, weights, reference_state):
     :class:`PhysicalQuantity`.
     """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
-    grid = getattr(domain, zone_name).grid_coordinates
-    flow = getattr(domain, zone_name).flow_solution
+    zone = getattr(domain, zone_name)
+    grid = zone.grid_coordinates
+    flow = zone.flow_solution
+    cylindrical = zone.coordinate_system == CYLINDRICAL
+    cell_center = flow.grid_location == 'CellCenter'
 
     try:
         density = flow.density.item
@@ -422,15 +465,15 @@ def _corrected_massflow(domain, surface, weights, reference_state):
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
         face_normal = _iface_normal
-        face_value = _iface_cell_value
+        face_value = _iface_cell_value if cell_center else _iface_node_value
     elif jmin == jmax:
         jmax += 1
         face_normal = _jface_normal
-        face_value = _jface_cell_value
+        face_value = _jface_cell_value if cell_center else _jface_node_value
     else:
         kmax += 1
         face_normal = _kface_normal
-        face_value = _kface_cell_value
+        face_value = _kface_cell_value if cell_center else _kface_node_value
 
     try:
         lref = reference_state['length_reference']
@@ -471,7 +514,8 @@ def _corrected_massflow(domain, surface, weights, reference_state):
                 ps = face_value(pressure, ip1, jp1, kp1) * pref.value
                 if gam is not None:
                     gamma = face_value(gam, ip1, jp1, kp1)
-                sx, sy, sz = face_normal(x, y, z, i, j, k, lref.value)
+                sx, sy, sz = face_normal(x, y, z, i, j, k, cylindrical,
+                                         lref.value)
 
                 w = rvu*sx + rvv*sy + rvw*sz
 
@@ -488,7 +532,7 @@ def _corrected_massflow(domain, surface, weights, reference_state):
 
     return PhysicalQuantity(total, wref.get_unit_name())
 
-_VARIABLES['corrected_mass_flow'] = (True, _corrected_massflow)
+register_surface_probe('corrected_mass_flow', _corrected_massflow, True)
 
 
 def _static_pressure(domain, surface, weights, reference_state):
@@ -498,6 +542,7 @@ def _static_pressure(domain, surface, weights, reference_state):
     """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
     flow = getattr(domain, zone_name).flow_solution
+    cell_center = flow.grid_location == 'CellCenter'
     weights = weights[zone_name]
 
     try:
@@ -508,13 +553,13 @@ def _static_pressure(domain, surface, weights, reference_state):
                              " 'pressure'." % zone_name)
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
-        face_value = _iface_cell_value
+        face_value = _iface_cell_value if cell_center else _iface_node_value
     elif jmin == jmax:
         jmax += 1
-        face_value = _jface_cell_value
+        face_value = _jface_cell_value if cell_center else _jface_node_value
     else:
         kmax += 1
-        face_value = _kface_cell_value
+        face_value = _kface_cell_value if cell_center else _kface_node_value
 
     try:
         pref = reference_state['pressure_reference']
@@ -538,7 +583,7 @@ def _static_pressure(domain, surface, weights, reference_state):
 
     return PhysicalQuantity(total, pref.get_unit_name())
 
-_VARIABLES['pressure'] = (False, _static_pressure)
+register_surface_probe('pressure', _static_pressure, False)
 
 
 def _total_pressure(domain, surface, weights, reference_state):
@@ -548,6 +593,7 @@ def _total_pressure(domain, surface, weights, reference_state):
     """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
     flow = getattr(domain, zone_name).flow_solution
+    cell_center = flow.grid_location == 'CellCenter'
     weights = weights[zone_name]
 
     try:
@@ -567,13 +613,13 @@ def _total_pressure(domain, surface, weights, reference_state):
 
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
-        face_value = _iface_cell_value
+        face_value = _iface_cell_value if cell_center else _iface_node_value
     elif jmin == jmax:
         jmax += 1
-        face_value = _jface_cell_value
+        face_value = _jface_cell_value if cell_center else _jface_node_value
     else:
         kmax += 1
-        face_value = _kface_cell_value
+        face_value = _kface_cell_value if cell_center else _kface_node_value
 
     try:
         pref = reference_state['pressure_reference']
@@ -614,12 +660,11 @@ def _total_pressure(domain, surface, weights, reference_state):
                 a2 = (gamma * ps) / rho
                 mach2 = u2 / a2
                 pt = ps * pow(1. + (gamma-1.)/2. * mach2, gamma/(gamma-1.))
-
                 total += pt * weight
 
     return PhysicalQuantity(total, pref.get_unit_name())
 
-_VARIABLES['pressure_stagnation'] = (False, _total_pressure)
+register_surface_probe('pressure_stagnation', _total_pressure, False)
 
 
 def _static_temperature(domain, surface, weights, reference_state):
@@ -629,6 +674,7 @@ def _static_temperature(domain, surface, weights, reference_state):
     """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
     flow = getattr(domain, zone_name).flow_solution
+    cell_center = flow.grid_location == 'CellCenter'
     weights = weights[zone_name]
 
     try:
@@ -640,13 +686,13 @@ def _static_temperature(domain, surface, weights, reference_state):
                              ' one or more of %s.' % (zone_name, vnames))
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
-        face_value = _iface_cell_value
+        face_value = _iface_cell_value if cell_center else _iface_node_value
     elif jmin == jmax:
         jmax += 1
-        face_value = _jface_cell_value
+        face_value = _jface_cell_value if cell_center else _jface_node_value
     else:
         kmax += 1
-        face_value = _kface_cell_value
+        face_value = _kface_cell_value if cell_center else _kface_node_value
 
     try:
         pref = reference_state['pressure_reference']
@@ -675,12 +721,11 @@ def _static_temperature(domain, surface, weights, reference_state):
                 weight_index += 1
 
                 ts = ps / (rho * rgas.value)
-
                 total += ts * weight
 
     return PhysicalQuantity(total, tref.get_unit_name())
 
-_VARIABLES['temperature'] = (False, _static_temperature)
+register_surface_probe('temperature', _static_temperature, False)
 
 
 def _total_temperature(domain, surface, weights, reference_state):
@@ -690,6 +735,7 @@ def _total_temperature(domain, surface, weights, reference_state):
     """
     zone_name, imin, imax, jmin, jmax, kmin, kmax = surface
     flow = getattr(domain, zone_name).flow_solution
+    cell_center = flow.grid_location == 'CellCenter'
     weights = weights[zone_name]
 
     try:
@@ -709,13 +755,13 @@ def _total_temperature(domain, surface, weights, reference_state):
 
     if imin == imax:
         imax += 1  # Ensure range() returns face index.
-        face_value = _iface_cell_value
+        face_value = _iface_cell_value if cell_center else _iface_node_value
     elif jmin == jmax:
         jmax += 1
-        face_value = _jface_cell_value
+        face_value = _jface_cell_value if cell_center else _jface_node_value
     else:
         kmax += 1
-        face_value = _kface_cell_value
+        face_value = _kface_cell_value if cell_center else _kface_node_value
 
     try:
         pref = reference_state['pressure_reference']
@@ -757,10 +803,9 @@ def _total_temperature(domain, surface, weights, reference_state):
                 mach2 = u2 / a2
                 ts = ps / (rho * rgas.value)
                 tt = ts * (1. + (gamma-1.)/2. * mach2)
-
                 total += tt * weight
 
     return PhysicalQuantity(total, tref.get_unit_name())
 
-_VARIABLES['temperature_stagnation'] = (False, _total_temperature)
+register_surface_probe('temperature_stagnation', _total_temperature, False)
 

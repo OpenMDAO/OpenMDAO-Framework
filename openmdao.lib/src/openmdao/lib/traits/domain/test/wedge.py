@@ -2,6 +2,7 @@ from math import asin, cos, sin
 
 import numpy
 
+from openmdao.units import PhysicalQuantity
 from openmdao.lib.traits.domain import DomainObj, Vector, Zone, write_plot3d_q
 
 _DEG2RAD = asin(1.) / 90.
@@ -66,6 +67,7 @@ def create_wedge_3d(shape, length, inner, outer, angle):
     zone.flow_solution.add_array('energy_stagnation_density', q5)
 
     domain = DomainObj()
+    domain.reference_state = dict(length_reference=PhysicalQuantity(1., 'ft'))
     domain.add_zone('xyzzy', zone)
 
     return domain
@@ -121,6 +123,7 @@ def create_wedge_2d(shape, inner, outer, angle):
     zone.flow_solution.add_array('energy_stagnation_density', q4)
 
     domain = DomainObj()
+    domain.reference_state = dict(length_reference=PhysicalQuantity(1., 'ft'))
     domain.add_zone('xyzzy', zone)
 
     return domain
