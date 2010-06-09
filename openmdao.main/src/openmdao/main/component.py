@@ -298,6 +298,7 @@ class Component (Container):
             pass
 
     def is_valid(self):
+        """Return False if any of our public variables is invalid."""
         if self._call_execute:
             return False
         for val in self._valid_dict.values():

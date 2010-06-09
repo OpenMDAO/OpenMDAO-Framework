@@ -32,6 +32,10 @@ class Driver(Component):
         self._iter = None
         
     def is_valid(self):
+        """Return False if any Component in our workflow(s) is invalid,
+        or if any of our public variables is invalid, or if any public
+        variable referenced by any of our Expressions is invalid.
+        """
         if super(Driver, self).is_valid() is False:
             return False
         
@@ -50,9 +54,11 @@ class Driver(Component):
                     return False
                     
         # force execution if any component in the workflow is invalid
-        for comp in self.workflow.contents():
-            if not comp.is_valid():
-                return False
+        for wfname in self._workflows:
+            workflow = getattr(self, wfname)
+            for comp in workflow.contents():
+                if not comp.is_valid():
+                    return False
 
         return True
 
