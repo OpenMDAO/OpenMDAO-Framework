@@ -10,6 +10,7 @@ import networkx as nx
 from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.interfaces import IDriver
+from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.workflow import SequentialFlow
@@ -135,7 +136,10 @@ class Driver(Component):
     
     def _step_workflow(self):
         while True:
-            self.workflow.step()
+            try:
+                self.workflow.step()
+            except RunStopped:
+                pass
             yield
 
     def start_iteration(self):
