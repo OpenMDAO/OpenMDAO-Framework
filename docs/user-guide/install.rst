@@ -39,18 +39,18 @@ On **Ubuntu**, the .deb package names are:
 On **Windows**, you'll need `Python 2.6`__; numpy can be found
 `here`__.
     
-.. __: http://www.python.org/ftp/python/2.6.4/python-2.6.4.msi
+.. __: http://www.python.org/download/
 
-.. __: http://sourceforge.net/projects/numpy/files/NumPy/1.4.1/numpy-1.4.1-win32-superpack-python2.6.exe/download
+.. __: http://sourceforge.net/projects/numpy/files/
 
 
 On **OS X**, make sure to install *Xcode*. It's included on the OS X install
 disk, and installing it will give you access to *gcc*. You can also download a newer version
 from Apple, but you'll have to fill out a (free) registration to do it. 
 
-If you're running **Snow Leopard**, you'll need to install a version of Python 2.6 from python.org
-because the built-in version has a distutils bug that will cause some of the OpenMDAO tests
-to fail.  It's not clear exactly what release the fix first appeared in, but version `2.6.5`__
+If you're running **Snow Leopard**, you'll need to install a version of Python 2.6 from
+``python.org`` because the built-in version has a distutils bug that will cause some of the OpenMDAO
+tests to fail.  It's not clear exactly what release the fix first appeared in, but version `2.6.5`__
 definitely has the fix.
 
 .. __: http://python.org/ftp/python/2.6.5/python-2.6.5-macosx10.3-2010-03-24.dmg
@@ -91,7 +91,11 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 
 ::
 
-   python2.6 go-openmdao.py
+   python go-openmdao.py
+
+
+This script will check the version of Python you are running. You must be running a version greater than or equal to 2.6 but
+less than 3.0.
 
 
 **Step 2)** Activate your virtual environment.
@@ -99,11 +103,18 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 Navigate into the folder that was just created by your install script and type the following
 command:
 
-On Linux or OS X (You must be running bash. If you're not, just type ``bash`` first):
+On Linux or OS X, you must be running Bash. If you are in Bash, omit this step. 
+
+:: 
+
+   bash
+
+Next, type the following, making sure to include the "." in the command:
 
 ::
 
-   source bin/activate
+   . bin/activate
+
 
 On Windows:
 

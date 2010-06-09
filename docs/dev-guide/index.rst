@@ -12,7 +12,6 @@ Developer Guide
    accessing
    working
    testing
-   guidelines
    bazaar
    todo
    
