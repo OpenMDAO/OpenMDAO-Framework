@@ -121,6 +121,10 @@ class Driver(Component):
             self.post_iteration()
 
     def step(self):
+        """Similar to the 'execute' function, but this one only 
+        executes a single Component from the workflow each time
+        it's called.
+        """
         if self._iter is None:
             self.start_iteration()
             self._iter = self._step()

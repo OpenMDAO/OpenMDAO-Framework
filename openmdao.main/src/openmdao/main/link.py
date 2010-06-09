@@ -1,6 +1,12 @@
-
+"""
+This code is incomplete and is not currently being used, but it may be part of a future
+implementation.
+"""
 
 class Link(object):
+    """A connection between two Components. It contains mappings from outputs on the 
+    source Component to inputs on the destination Component.
+    """
     def __init__(self, scope, source, sink, expr=None, mapping=None):
         """
         scope is the enclosing Assembly
