@@ -5,6 +5,8 @@ Note: This is a work in progress.
 """
 
 import re
+from pyparsing import CaselessLiteral, Combine, Literal, OneOrMore, Optional, \
+                      TokenConverter, Word, nums, oneOf, printables
 
 class _SubHelper(object):
     """Replaces file text at the correct word location in a line."""
@@ -61,9 +63,50 @@ class _SubHelper(object):
         else:
             return text.group()
 
+
+class ToInteger(TokenConverter):
+    """Converter to make token into an integer."""
+    def postParse( self, instring, loc, tokenlist ):
+        return int(tokenlist[0])
+
+class ToFloat(TokenConverter):
+    """Converter to make token into a float."""
+    def postParse( self, instring, loc, tokenlist ):
+        return float(tokenlist[0])
         
+def _parse_line():
+    """Parse a single data line that may contain string or numerical data.
+    Float and Int 'words' are converted to their appropriate type. 
+    Exponentiation is supported, as are NaN and Inf."""
+        
+    digits = Word(nums)
+    dot = "."
+    sign = oneOf("+ -")
+    ee = CaselessLiteral('E')
+
+    num_int = ToInteger(Combine( Optional(sign) + digits ))
+    
+    num_float = ToFloat(Combine( Optional(sign) + 
+                        ((digits + dot + Optional(digits)) |
+                         (dot + digits)) +
+                         Optional(ee + Optional(sign) + digits)
+                        ))
+    
+    # special case for a float written like "3e5"
+    mixed_exp = ToFloat(Combine( digits + ee + Optional(sign) + digits ))
+    
+    nan = ToFloat(oneOf("NaN Inf -Inf"))
+    
+    # sep = Literal(" ") | Literal("\n")
+    
+    data = ( OneOrMore( (num_float | mixed_exp | num_int | 
+                         nan | Word(printables)) ) )
+    
+    return data
+
+
 class InputFileGenerator(object):
-    """Utility to generate an intput file from a template.
+    """Utility to generate an input file from a template.
     Substitution of values is supported. Data is located with
     a simple API."""
     
@@ -92,27 +135,56 @@ class InputFileGenerator(object):
         
         self.output_filename = filename
 
-    def set_delimiter(self, delimiter):
+    def set_delimiters(self, delimiter):
         """Lets you change the delimiter that is used to identify field
         boundaries."""
         
         self.delimiter = delimiter
         self.reg = re.compile('[^' + delimiter + '\n]+')
         
-    def mark_anchor(self, anchor):
+    def mark_anchor(self, anchor, occurrence=1):
         """Marks the location of a landmark, which lets you describe data by
-        relative position."""
+        relative position.
         
-        count = 0
-        for line in self.data:
-            if line.find(anchor) > -1:
-                self.current_row = count
-                return
+        anchor: text to search for
+        
+        occurence: find nth instance of text; default is 1 (first). Use -1 to
+        find last occurence."""
+        
+        if not isinstance(occurrence, int):
+            raise ValueError("The value for occurrence must be an integer")
+        
+        instance = 0
+        if occurrence > 0:
+            count = 0
+            for line in self.data:
+                if line.find(anchor) > -1:
+                    instance += 1
+                    if instance == occurrence:
+                        self.current_row = count
+                        return
             
-            count += 1
+                count += 1
+        elif occurrence < 0:
+            count = len(self.data)-1
+            for line in reversed(self.data):
+                if line.find(anchor) > -1:
+                    instance += -1
+                    if instance == occurrence:
+                        self.current_row = count
+                        return
+            
+                count -= 1
+        else:
+            raise ValueError("0 is not valid for an anchor occurrence.")            
             
         raise RuntimeError("Could not find pattern %s in template file %s" % \
                            (anchor, self.template_filename))
+        
+    def reset_anchor(self):
+        """Resets anchor to the beginning of the file."""
+        
+        self.current_row = 0
         
     def transfer_var(self, value, row, field):
         """Changes a single variable in the template relative to the 
@@ -239,4 +311,224 @@ class InputFileGenerator(object):
         infile = open(self.output_filename, 'w')
         infile.writelines(self.data)
         infile.close()
+
+
+class FileParser(object):
+    """Utility to locate and read data from a file."""
+    
+    def __init__(self):
         
+        self.filename = []
+        self.data = []
+        
+        self.delimiter = " "
+        #self.reg = re.compile('[^ \n]+')
+        
+        self.current_row = 0
+        
+    def set_file(self, filename):
+        """Set the name of the file that will be generated."""
+        
+        self.filename = filename
+        
+        inputfile = open(filename, 'r')
+        self.data = inputfile.readlines()
+        inputfile.close()
+
+    def set_delimiters(self, delimiter):
+        """Lets you change the delimiter that is used to identify field
+        boundaries."""
+        
+        if delimiter not in [" ", "columns"]:
+            raise NotImplementedError('Only " " and "columns" are currently' + \
+                                      ' implemented as delimiters')
+        
+        self.delimiter = delimiter
+        #self.reg = re.compile('[^' + delimiter + '\n]+')
+        
+    def mark_anchor(self, anchor, occurrence=1):
+        """Marks the location of a landmark, which lets you describe data by
+        relative position. Note that a forward search begins at the old anchor 
+        location. If you want to restart the search for the anchor at the file
+        beginning, then call reset_anchor() before mark_anchor. 
+        
+        anchor: The text you want to search for
+        
+        occurence: find nth instance of text; default is 1 (first). Use -1 to
+        find last occurence. Reverse searches always start at the end of the
+        file no matter the state of any previous anchor."""
+        
+        if not isinstance(occurrence, int):
+            raise ValueError("The value for occurrence must be an integer")
+        
+        instance = 0
+        if occurrence > 0:
+            count = 0
+            for line in self.data[self.current_row:]:
+                if line.find(anchor) > -1:
+                    instance += 1
+                    if instance == occurrence:
+                        self.current_row += count
+                        return
+            
+                count += 1
+                
+        elif occurrence < 0:
+            count = len(self.data)-1
+            for line in reversed(self.data):
+                if line.find(anchor) > -1:
+                    instance += -1
+                    if instance == occurrence:
+                        self.current_row = count
+                        return
+            
+                count -= 1
+        else:
+            raise ValueError("0 is not valid for an anchor occurrence.")            
+            
+        raise RuntimeError("Could not find pattern %s in output file %s" % \
+                           (anchor, self.filename))
+        
+    def reset_anchor(self):
+        """Resets anchor to the beginning of the file."""
+        
+        self.current_row = 0
+        
+    def transfer_line(self, row):
+        """Returns a whole line, relative to current anchor.
+        
+        row - number of lines offset from anchor line (0 is anchor line).
+        This can be negative."""
+        
+        return self.data[self.current_row + row]
+        
+    def transfer_var(self, row, field, fieldend=None):
+        """Grabs a single variable relative to the current anchor.
+        
+        --- If the delimiter is " " ---
+        
+        row - number of lines offset from anchor line (0 is anchor line).
+        This can be negative.
+        
+        field - which word in line to retrieve
+        
+        fieldend - IGNORED
+        
+        --- If the delimiter is "columns" ---
+        
+        row - number of lines offset from anchor line (0 is anchor line).
+        This can be negative.
+        
+        field - character position to start
+        
+        fieldend - position of last character to return"""
+        
+        j = self.current_row + row
+        line = self.data[j]
+        
+        if self.delimiter == "columns":
+            
+            if not fieldend:
+                fieldend = fieldstart
+            
+            line = line[(field-1):(fieldend)]
+            
+            # Let pyparsing figure out if this is a number, and return it
+            # as a float or int as appropriate
+            data = _parse_line().parseString(line)
+            
+            # data might have been split if it contains whitespace. If so,
+            # just return the whole string
+            if len(data) > 1:
+                return line
+            else:
+                return data[0]
+        else:
+            data = _parse_line().parseString(line)
+            return data[field-1]
+
+    def transfer_keyvar(self, key, field, occurrence=1, rowoffset=0):
+        """Searches for a key relative to the current anchor, and then grabs
+        a field from that line.
+        
+        field -- Which field to transfer. Field 0 is the key
+        
+        occurrence -- find nth instance of text; default is 1 (first value
+        field). Use -1 to find last occurence. Position 0 is the key
+        field, so it should not be used as a value for occurrence.
+        
+        rowoffset -- Optional row offset from the occurrence of key. This can
+        also be negative
+        
+        You can do the same thing with a call to mark_anchor and transfer_var.
+        This function just combines them for convenience."""
+
+        if not isinstance(occurrence, int):
+            raise ValueError("The value for occurrence must be an integer")
+        
+        instance = 0
+        if occurrence > 0:
+            row = 0
+            for line in self.data[self.current_row:]:
+                if line.find(key) > -1:
+                    instance += 1
+                    if instance == occurrence:
+                        break
+            
+                row += 1
+                
+        elif occurrence < 0:
+            for line in reversed(self.data[:current_row]):
+                if line.find(key) > -1:
+                    instance += -1
+                    if instance == occurrence:
+                        break
+            
+                row -= 1
+        else:
+            raise ValueError("0 is not valid for an anchor occurrence.")
+        
+        j = self.current_row + row + rowoffset
+        line = self.data[j]
+        
+        fields = _parse_line().parseString(line.replace(key,"Key_Field"))
+        
+        return fields[field]
+
+    def transfer_array(self, rowstart, fieldstart, rowend=None, fieldend=None):
+        """Grabs an array of variables relative to the current anchor.
+        """
+        
+        j1 = self.current_row + rowstart
+        
+        if rowend:
+            j2 = self.current_row + rowend + 1
+        else:
+            j2 = j1
+            
+        if not fieldend:
+            fieldend = fieldstart
+            
+        lines = self.data[j1:j2]
+
+        data = []
+
+        for line in lines:
+            if self.delimiter == "columns":
+                line = line[(fieldstart-1):fieldend]
+                
+                # Let pyparsing figure out if this is a number, and return it
+                # as a float or int as appropriate
+                parsed = _parse_line().parseString(line)
+                
+                # data might have been split if it contains whitespace. If so,
+                # just return the whole string
+                if len(parsed) > 1:
+                    data.append(line)
+                else:
+                    data.append(parsed)
+            else:
+                parsed = _parse_line().parseString(line)
+                data.append(parsed[(fieldstart-1):fieldend])
+        
+                
