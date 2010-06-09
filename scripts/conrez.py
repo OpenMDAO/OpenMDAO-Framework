@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/local/bin/python2.5
 
 """
 This is a helper script to make merging with bazaar and meld be more similar to

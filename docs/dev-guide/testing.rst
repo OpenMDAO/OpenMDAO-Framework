@@ -29,30 +29,29 @@ which should generate output something like this:
     OK
 
 
-To run units tests for only a package, for example ``openmdao.main``, type:
+To run unit tests for a package only, for example ``openmdao.main``, type:
 
 ::
 
     openmdao_test openmdao.main
     
     
-To get a list of options available with ``openmdao_test``, type 
-``openmdao_test --help``
-from the ``devenv`` directory.  The openmdao_test script uses the *nose* testing
-framework internally, so all options available when running *nosetests*
-should also be available when using ``openmdao_test``.
-   
+To get a list of options available with ``openmdao_test``, type  ``openmdao_test --help``
+from the ``devenv`` directory.  Since the ``openmdao_test`` script uses the *nose* testing
+framework internally, all options available when running *nosetests* should also be
+available when using ``openmdao_test``.
+
 .. index: test coverage
 
 
 Test Coverage
 -------------
 
-There is a Python package called  `coverage
-<http://nedbatchelder.com/code/modules/rees-coverage.html>`_ that is accessible
-through ``openmdao_test`` that makes it easy to determine if your tests cover every
+A Python package called `coverage 
+<http://nedbatchelder.com/code/modules/rees-coverage.html>`_, which is accessible through
+``openmdao_test``, makes it easy to determine if your tests cover every
 line of code in your source files.  To get a coverage report for the openmdao
-package, do the following from the ``devenv`` directory:
+package, go to the ``devenv`` directory and type the following:
 
 ::
 
@@ -126,9 +125,9 @@ Adding New Tests
 Generally, you should write your tests using Python's `unittest
 <http://docs.python.org/library/unittest.html>`_ framework if possible,
 although the nose_ package is able to discover and run tests that do not use
-unittest_.
+unittest.
 
-The following is a simple example of a unit test written using the unittest_
+The following is a simple example of a unit test written using the unittest
 framework.
 
 
@@ -172,16 +171,20 @@ test output during a test function.  For example:
     Test will fail if *val1* differs from *val2* by more than a small
     number of decimal places.
     
+``self.assert_rel_error(val1,val2,tolerance)``
+    Test will fail if *val1* differs from *val2* by more than the
+    percentage given as the tolerance.
+    
 ``self.fail([msg])``
     Test will fail and display the given message.
     
 Often in a test you will want to make sure that a specific exception is raised
 when a certain thing happens, and usually you want to verify that the error
-message contains certain information.  The unittest_ framework provides an
+message contains certain information.  The unittest framework provides an
 ``assertRaises`` function that does part of this job, but it does not allow
 you to check the error message. So the preferred way to test exceptions is
 shown in the code below. In this example, we will assume that the exception
-we are interested in is a ``ValueError``. Note that we would place our
+we are interested in is a *ValueError*. Note that we would place our
 test function inside of our ``unittest.TestCase`` derived class.
 
 .. parsed-literal::
@@ -195,7 +198,7 @@ test function inside of our ``unittest.TestCase`` derived class.
             self.fail('expected a ValueError')
 
 Note that the *else* block after the *except* is important because we want the
-test to fail if no exception is raised at all. Without the *else*  block, the
+test to fail if no exception is raised. Without the *else*  block, the
 test would pass if no exception were raised.
 
 
@@ -217,9 +220,9 @@ The OpenMDAO documentation includes quite a few examples of Python code. These
 examples are used to explain how to use features of the OpenMDAO API as well as
 how to develop new components and plugins. Thus, it is imperative that any code
 examples included in the documentation (particularly the *User Guide* and the
-*Developer's Guide*) be tested to ensure that the code is error-free. 
+*Developer Guide*) be tested to ensure that the code is error-free. 
 
-Fortunately, there are tools built into the Sphinx reStructuredText processor that
+Fortunately, there are tools built into the :term:`Sphinx` reStructuredText processor that
 make the process of testing code samples much easier. Sphinx includes a builder
 called *doctest* as a plugin in its standard library. Instead of building a
 readable document as is done by the HTML builder, the doctest builder scans the
@@ -254,10 +257,10 @@ effectively test blocks of code using a set of directives. The test code
 directive is used to mark a block of text that should be tested and treated
 as Python code. It is not always possible to execute a standalone block of
 Python code without first executing some preliminary code containing any
-prerequisites (e.g., imports.) The *testsetup block* makes it possible to run
+prerequisites (e.g., imports.) The *testsetup* block makes it possible to run
 the preliminary code. This block is hidden by default, so it does not show
 up in the generated HTML documentation. Additionally, there is a *testoutput*
-block, where any output that is generated by the *testcode block* should be
+block, where any output that is generated by the *testcode* block should be
 included so that it can be tested.
 
 A simple example of how to implement these three blocks is shown here:
@@ -278,9 +281,9 @@ A simple example of how to implement these three blocks is shown here:
     # If your code block outputs anything when executed, then that output
     # needs to go in this block.
 
-*Group1* is a label that we've given this set of blocks. Note that you can have
-multiple labels in your documents. Note also that the testsetup and
-testoutput blocks are both optional; some code examples don't need either.
+*Group1* is a label that we've given this set of blocks. You can have
+multiple labels in your documents. Also, the testsetup and
+testoutput blocks are both optional. Some code examples don't need either.
 You can have multiple testcode blocks for a single testsetup block. The
 environment is preserved across all of the testcode blocks in a given group, so
 that the code executed in the first testcode block in Group1 affects all later
@@ -288,10 +291,10 @@ blocks in Group1.
 
 The label is optional, and defaults to *default* when not explicitly defined.
 
-There is one other directive of note. The *doctest* directive is used to mark
-blocks of interactive shell Python code. Note that if the directive is omitted,
-the doctest builder can often find the Python blocks by itself, but it is
-still good form to include it.
+The *doctest* directive is used to specify blocks of interactive shell Python
+code. If the directive is omitted, the doctest builder can often
+find the Python blocks by itself, but it is still a good idea to include it so
+that you can control the environment.
 
 ::
 
@@ -311,8 +314,8 @@ More details on using the doctest builder can be found here: http://sphinx.pocoo
 *Including Code Straight from the Source*
 +++++++++++++++++++++++++++++++++++++++++
 
-There are times that it is more efficient to directly include code from a source
-file. There is a directive built into Sphinx that enables this -- the *literalinclude*
+At times it is more efficient to directly include code from a source
+file. The built-in Sphinx directive that enables this is called the *literalinclude*
 block:
 
 ::
@@ -336,7 +339,7 @@ also be done with the *lines* option.
        :lines: 3,7-12,45
        :language: python
 
-More details on the *literalinclude* directive can be found at http://sphinx.pocoo.org/markup/code.html.       
+More details on the literalinclude directive can be found at http://sphinx.pocoo.org/markup/code.html.       
        
 *Helpful Tips*
 ++++++++++++++
@@ -346,7 +349,8 @@ More details on the *literalinclude* directive can be found at http://sphinx.poc
   function class, you may have to get creative in what you place in your testsetup block (e.g., defining
   *self* as something.)
 
-* Tracebacks don't have to be accurately reproduced (and they can't be anyway). Handle these the same way they are in doctest, that is:
+* Tracebacks don't have to be accurately reproduced (and they can't be
+  anyway). Handle these by replacing the traceback with ellipses:
 
     >>> my_engine.set("RPM",7500)
     Traceback (most recent call last):
@@ -356,41 +360,42 @@ More details on the *literalinclude* directive can be found at http://sphinx.poc
 * Care should be taken to assure that each block of code is being tested. One way to do this is to
   purposefully introduce an error into a block to verify that it is caught.
 
-* Be wary of including code by line number. If the source file is changed, and lines are added or
-  removed, then the included code might not be what was intended.
+* Be wary of including code by line number. If the source file is changed and lines
+  are added or removed, then the included code might not be what was intended.
 
-* To include a numerical example in a doctest block, you can use elipses to match the output to a
+* To include a numerical example in a doctest block, you can use ellipses to match the output to a
   specific tolerance. For example, this block of text passes: 
 
     >>> import numpy
     >>> numpy.pi 
     3.14...
 
+* Sphinx automatically generates syntax highlighting for the code block, but it can get confused if you mix tabs and spaces.
+    
 *Running the Tests*
 +++++++++++++++++++
 
-The build procedure currently generates a script for testing the code in the
-documents. In an active openmdao virtual environment, type:
+The doctests are automatically run whenever you run ``openmdao_test``, but you can
+also run them separately. In an active openmdao virtual environment, type:
 
 ::
 
     testdocs
 
-If the output ends with "build succeeded", then the test was successful, e.g.,
+If the test was successful, you should see output similiar to the following:
 
 ::
 
     Doctest summary
     ===============
-        37 tests
+      156 tests
         0 failures in tests
         0 failures in setup code
     build succeeded.
 
-If any tests fail, they will also be noted in this summary, and specific tracebacks
+If any tests fail, they will be noted in this summary, and specific tracebacks
 will be given for each failure earlier in the output.
 
-The document testing is also part of the full testing process and is executed as part of the normal
-``openmdao_test``.
+.. note:: If you make changes to the docs, you must rebuild the docs by running ``openmdao_build_docs``.
 
 

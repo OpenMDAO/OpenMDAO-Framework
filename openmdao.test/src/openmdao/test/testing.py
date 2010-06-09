@@ -17,9 +17,9 @@ def run_openmdao_suite():
     break_check = ['--help', '-h', '--all']
     
     # check for args not starting with '-'
-    args = sys.argv[1:]
-    for arg in args:
-        if not arg.startswith('-') or arg in break_check:
+    args = sys.argv
+    for i, arg in enumerate(args):
+        if (i>0 and not arg.startswith('-')) or arg in break_check:
             break
     else:  # no non '-' args, so assume they want to run the whole test suite
         args.append('--all')
@@ -53,9 +53,8 @@ def run_openmdao_suite():
     if '--all' in args:
         args.remove('--all')
         args.extend(tlist)
-        nose.run_exit(argv=args)
-    else:
-        nose.run_exit()
+        
+    nose.run_exit(argv=args)
 
 
 if __name__ == '__main__':

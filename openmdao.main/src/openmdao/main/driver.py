@@ -4,39 +4,31 @@ __all__ = ["Driver"]
 
 
 
-from enthought.traits.api import implements, List
+from enthought.traits.api import implements, List, Instance
 from enthought.traits.trait_base import not_none
 import networkx as nx
 from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
-from openmdao.main.assembly import Assembly
-from openmdao.main.stringref import StringRef, StringRefArray
-from openmdao.main.drivertree import DriverForest, create_labeled_graph
+from openmdao.main.workflow import Workflow
+from openmdao.main.expression import Expression, ExpressionList
 
     
-class Driver(Assembly):
-    """ A Driver iterates over a collection of Components until some condition
+class Driver(Component):
+    """ A Driver iterates over a workflow of Components until some condition
     is met. """
     
     implements(IDriver)
     
+    workflow = Instance(Workflow, allow_none=True)
+    
     def __init__(self, doc=None):
         super(Driver, self).__init__(doc=doc)
-        self._ref_graph = { None: None, 'in': None, 'out': None }
-        self._ref_comps = { None: None, 'in': None, 'out': None }
-        self.graph_regen_needed()
+        self._expr_graph = { None: None, 'in': None, 'out': None }
+        self._expr_comps = { None: None, 'in': None, 'out': None }
+        self.workflow = None
     
-    def graph_regen_needed(self):
-        """If called, reset internal graphs to that they will be
-        regenerated when they are requested next.
-        """
-        self._iteration_comps = None
-        self._simple_iteration_subgraph = None
-        self._simple_iteration_set = None    
-        self._driver_tree = None
-        
     def _pre_execute (self):
         """Call base class *_pre_execute* after determining if we have any invalid
         ref variables, which will cause us to have to regenerate our ref dependency graph.
@@ -45,21 +37,20 @@ class Driver(Assembly):
             super(Driver, self)._pre_execute()
             return
         
-        refnames = self.get_refvar_names(iotype='in')
+        exprnames = self.get_expr_names(iotype='in')
         
-        if not all(self.get_valids(refnames)):
+        if not all(self.get_valids(exprnames)):
             self._call_execute = True
-            # force regeneration of _ref_graph, _ref_comps, _iteration_comps
-            self._ref_graph = { None: None, 'in': None, 'out': None } 
-            self._ref_comps = { None: None, 'in': None, 'out': None }
-            self.graph_regen_needed()
+            # force regeneration of _expr_graph, _expr_comps, _iteration_comps
+            self._expr_graph = { None: None, 'in': None, 'out': None } 
+            self._expr_comps = { None: None, 'in': None, 'out': None }
             
         super(Driver, self)._pre_execute()
         
         if not self._call_execute:
-            # force execution of the driver if any of its StringRefs reference
+            # force execution of the driver if any of its Expressions reference
             # invalid Variables
-            for name in refnames:
+            for name in exprnames:
                 rv = getattr(self, name)
                 if isinstance(rv, list):
                     for entry in rv:
@@ -73,7 +64,7 @@ class Driver(Assembly):
         
                 
     def execute(self):
-        """ Iterate over a collection of Components until some condition
+        """ Iterate over a workflow of Components until some condition
         is met. If you don't want to structure your driver to use *pre_iteration*,
         *post_iteration*, etc., just override this function. As a result, none
         of the <start/pre/post/continue>_iteration() functions will be called.
@@ -100,33 +91,10 @@ class Driver(Assembly):
         pass
         
     def run_iteration(self):
-        """Runs the full set of components, in dataflow order, 
-        that are part of our iteration loop, including any nested drivers.
-        """
+        """Runs the workflow of components."""
         if self.parent:
-            drivers = self.parent.drivers
-            if len(drivers) > 1:
-                dtree = self._get_driver_tree()  # determine driver nesting hierarchy
-                if len(dtree.children) > 0:  # we have nested drivers
-                    graph = self.parent.get_component_graph().copy()
-                    for drv in dtree.drivers_iter():
-                        graph.add_edges_from(drv.get_ref_graph().edges_iter())
-                    strongs = strongly_connected_components(graph)
-                    for strong in strongs:
-                        if self.name in strong:
-                            subgraph = create_labeled_graph(graph.subgraph(nbunch=strong))
-                            for nested in dtree.children: # collapse immediate children
-                                nested.collapse_graph(subgraph)
-                            subgraph.remove_edges_from(
-                                self.get_ref_graph(iotype='in').edges_iter())
-                            sorted = nx.topological_sort(subgraph)
-                            for comp in sorted:
-                                if comp != self.name:
-                                    getattr(self.parent, comp).run()
-                else:  # no nested drivers
-                    self._run_simple_iteration()
-            else:  # single driver case
-                self._run_simple_iteration()
+            self.workflow = self.parent.workflow
+            self.workflow.run()
         else:
             self.raise_exception('Driver cannot run referenced components without a parent',
                                  RuntimeError)
@@ -135,8 +103,8 @@ class Driver(Assembly):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration
 
-    def get_refvar_names(self, iotype=None):
-        """Return a list of names of all StringRef and StringRefArray traits
+    def get_expr_names(self, iotype=None):
+        """Return a list of names of all Expression and ExpressionList traits
         in this instance.
         """
         if iotype is None:
@@ -145,21 +113,21 @@ class Driver(Assembly):
             checker = iotype
         
         return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
-                    if v.is_trait_type(StringRef) or 
-                       v.is_trait_type(StringRefArray)]
+                    if v.is_trait_type(Expression) or 
+                       v.is_trait_type(ExpressionList)]
         
     def get_referenced_comps(self, iotype=None):
         """Return a set of names of Components that we reference based on the 
-        contents of our StringRefs and StringRefArrays.  If iotype is
+        contents of our Expressions and ExpressionLists.  If iotype is
         supplied, return only component names that are referenced by ref
         variables with matching iotype.
         """
-        if self._ref_comps[iotype] is None:
+        if self._expr_comps[iotype] is None:
             comps = set()
         else:
-            return self._ref_comps[iotype]
+            return self._expr_comps[iotype]
     
-        for name in self.get_refvar_names(iotype):
+        for name in self.get_expr_names(iotype):
             obj = getattr(self, name)
             if isinstance(obj, list):
                 for entry in obj:
@@ -167,80 +135,34 @@ class Driver(Assembly):
             else:
                 comps.update(obj.get_referenced_compnames())
                 
-        self._ref_comps[iotype] = comps
+        self._expr_comps[iotype] = comps
         return comps
         
-    def get_ref_graph(self, iotype=None):
+    def get_expr_graph(self, iotype=None):
         """Return the dependency graph for this Driver based on
-        StringRefs and StringRefArrays.
+        Expressions and ExpressionLists.
         """
-        if self._ref_graph[iotype] is not None:
-            return self._ref_graph[iotype]
+        if self._expr_graph[iotype] is not None:
+            return self._expr_graph[iotype]
         
-        self._ref_graph[iotype] = nx.DiGraph()
+        self._expr_graph[iotype] = nx.DiGraph()
         name = self.name
         
         if iotype == 'out' or iotype is None:
-            self._ref_graph[iotype].add_edges_from([(name,rv) 
+            self._expr_graph[iotype].add_edges_from([(name,rv) 
                                   for rv in self.get_referenced_comps(iotype='out')])
             
         if iotype == 'in' or iotype is None:
-            self._ref_graph[iotype].add_edges_from([(rv, name) 
+            self._expr_graph[iotype].add_edges_from([(rv, name) 
                                   for rv in self.get_referenced_comps(iotype='in')])
-        return self._ref_graph[iotype]
+        return self._expr_graph[iotype]
     
-    def _get_simple_iteration_subgraph(self):
-        """Return a graph of our iteration loop (ourself plus all components we
-        iterate over). This does not include nested drivers, unless they are
-        explicitly referenced by us through a ReferenceVariable or they are
-        explicitly connected to another component in our set of iteration
-        components via a non-ReferenceVariable connection.
-        """
-        if self._simple_iteration_subgraph is None:
-            graph = self.parent.get_component_graph().copy()
-            # add all of our StringRef edges and find any strongly connected
-            # components (SCCs) that are created as a result
-            graph.add_edges_from(self.get_ref_graph().edges_iter())
-            strcons = strongly_connected_components(graph)
-            # No cycles are allowed other than the one we possibly just
-            # created, so our cycle must be the first SCC in the list. If there
-            # is no cycle, then this driver may not be in the first SCC since
-            # they are sorted by size and they will all have size 1.
-            if len(strcons[0]) > 1:
-                self._simple_iteration_subgraph = graph.subgraph(nbunch=strcons[0])
-            else:
-                # no cycle, so just return a graph with the driver and any components
-                # it references
-                self._simple_iteration_subgraph = graph.subgraph(nbunch=[self.name]+
-                                                    list(self.get_referenced_comps()))
-            self._simple_iteration_set = None
-        
-        return self._simple_iteration_subgraph
-    
-    def simple_iteration_set(self):
-        """Return the set of components iterated over by this driver, not including
-        other drivers that may be nested within this driver.
-        """
-        if self._simple_iteration_set is None:
-            iterset = set(self._get_simple_iteration_subgraph().nodes_iter())
-            iterset.remove(self.name)
-            self._simple_iteration_set = iterset
-        return self._simple_iteration_set
-        
-    def _get_driver_tree(self):
-        """Return the DriverTree object corresponding to this Driver from the 
-        DriverTree hierarchy in the parent Assembly."""
-        if not self._driver_tree:
-            self._driver_tree = DriverForest(self.parent.drivers).locate(self)
-        return self._driver_tree    
-            
-    def _run_simple_iteration(self):
-        """There are no nested drivers. Just run our subgraph with our 
-        input edges removed.
-        """
-        graph = self._get_simple_iteration_subgraph().copy()
-        graph.remove_node(self.name)
-        itercomps = nx.topological_sort(graph)
-        for comp in itercomps:
-                getattr(self.parent, comp).run()
-        
+    #def simple_iteration_set(self):
+        #"""Return the set of components iterated over by this driver, not including
+        #other drivers that may be nested within this driver.
+        #"""
+        #if self._simple_iteration_set is None:
+            #iterset = set(self._get_simple_iteration_subgraph().nodes_iter())
+            #iterset.remove(self.name)
+            #self._simple_iteration_set = iterset
+        #return self._simple_iteration_set

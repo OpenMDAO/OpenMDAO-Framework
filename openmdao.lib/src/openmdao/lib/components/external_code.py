@@ -5,12 +5,13 @@ import subprocess
 import stat
 import time
 
-from enthought.traits.api import Dict
+from enthought.traits.api import Bool, Dict, Str
 
 from openmdao.main.api import Component
 from openmdao.main.exceptions import RunInterrupted, RunStopped
 from openmdao.main.resource import ResourceAllocationManager as RAM
-from openmdao.lib.api import Bool, Float, Int, Str
+from openmdao.lib.traits.float import Float
+from openmdao.lib.traits.int import Int
 from openmdao.util.filexfer import filexfer, pack_zipfile, unpack_zipfile
 from openmdao.util.shellproc import ShellProc
 

@@ -31,16 +31,30 @@ Common Bazaar Commands
 
 To use these commands, type ``bzr <command_name>``, for example ``bzr add``.
 
-::
-  
-  add       (Adds files/directories to the Bazaar repository on your branch.)
-  branch    (Creates a new copy of a branch.)
-  commit    (Commits changes into a new revision. You must add a commit message via "-m" or another text editor.)
-  conflicts (Lists files with conflicts.)
-  log --forward (Displays revisions on a branch. The "--forward" option means the most recent activity will be displayed last.)    
-  merge     (Pulls in committed changes from another branch.)
-  revert    (Cancels all changes since the last merge, so you revert to the previous revision.)
-  status    (Displays pending changes, if any; if no uncommitted changes are pending, it returns to the prompt.)
+
+===================  =================================================================================
+Command Name         Description
+===================  =================================================================================
+``add``              Adds files/directories to the Bazaar repository on your branch.
+-------------------  ---------------------------------------------------------------------------------
+  ``branch``         Creates a new copy of a branch.
+-------------------  ---------------------------------------------------------------------------------
+``commit``           Commits changes into a new revision. You must add a commit message via ``-m`` 
+                     (command line) or a text editor. When you commit, it records your userid, the 
+		     current time and timezone, and the contents of your branch.
+-------------------  ---------------------------------------------------------------------------------
+``conflicts``        Lists files with conflicts.
+-------------------  ---------------------------------------------------------------------------------
+``log --forward``    Displays revisions on a branch. The ``--forward`` option means the most recent 
+                     activity will be displayed last.    
+-------------------  ---------------------------------------------------------------------------------
+``merge``            Pulls in committed changes from another branch.
+-------------------  ---------------------------------------------------------------------------------
+``revert``           Cancels all changes since the last merge, so you revert to the previous revision.
+-------------------  ---------------------------------------------------------------------------------
+``status``           Displays pending changes, if any; if no uncommitted changes are pending, 
+                     it returns to the prompt.
+===================  =================================================================================
   
 Note that all files on your branch are available to be changed. By running the ``bzr status``
 command, you can see all of the uncommitted changes on your branch. 
@@ -89,18 +103,34 @@ After you type ``bzr add``, Bazaar will display a list of the files and director
 *Removing a File or Directory*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-Bazaar's ``remove`` command is similar to the UNIX command, and either can be used to remove a file.
+You may use either Bazaar's remove command or the UNIX remove command to delete a file from the
+current revision of the repository. The Bazaar command requires an option with it, either
+``--keep`` or ``--force``, for example:
 
 ::
 
-  bzr remove <file_name>     (Bazaar "remove" command)
-  rm <file_name>             (UNIX "remove" command)
+  bzr remove <file_name> --keep 
+  
+Using ``--keep`` deletes the file from the Bazaar repository but leaves the working copy. Bazaar will no longer track changes to the file. If
+you use ``--force``, you will delete the specified file and its history from the current revision of the
+repository.
+
     
-However, to remove a directory, it's easier to use the UNIX remove command (``rm``), as follows:
+Alternatively, you may simply use the UNIX command to delete a file:   
+
+::  
+    
+  rm <file_name>             
+  
+    
+However, to remove a directory, it may be safer to use the UNIX remove command. This
+command removes a directory and recursively removes all files in it.
+
 
 ::
   
-  rm -rf <directory_name>    (Removes a directory and recursively removes the files in it.)
+  rm -rf <directory_name>    
+  
 
 
 .. index:: moving a file/directory
@@ -114,24 +144,30 @@ The move command (``bzr mv``) is used to rename or move a file, depending on the
 provide. When moving a file, you must provide the path to the new location. When you
 move a file, Bazaar deletes the file from its current location.
 
-To rename or move a file, you must be in the directory containing the file you want to rename or move; then enter
-the appropriate command. See the examples that follow: 
+To rename or move a file, go to the directory containing the file you want to rename
+or move; then enter the appropriate command. See the examples that follow: 
 
 ::
 
-  bzr mv <old_file_name> <new_file_name>                  (Renames a file)
+  bzr mv <old_file_name> <new_file_name>                  
   Example:
-  bzr mv test1.rst test2.rst                              (Renames "test1.rst" to "test2.rst")
-  
-  bzr mv <file_to_move> <path_to_new_location><new_name>  (Moves and renames a file)
+  bzr mv test1.rst test2.rst                              
+
+The above command merely renames a file, while the next two examples move a file (``test1.rst``) to a
+different directory. In the first of these, the file is renamed (to ``test2.rst``) and, in the
+second example, the file keeps its name.
+
+::
+
+  bzr mv <file_to_move> <path_to_new_location><new_name>  
   Examples: 
-  bzr mv test1.rst ../user-guide/test2.rst                (Moves "test1.rst" to "user-guide" directory & renames it "test2.rst")   
-  bzr mv test1.rst ../user-guide/.                        (Moves "test1.rst" to "user-guide" directory & keeps the same name)
+  bzr mv test1.rst ../user-guide/test2.rst                
+  bzr mv test1.rst ../user-guide/.                        
 
 
 .. note::
    If you need to move an entire directory, use the ``bzr mv`` command, NOT
-   the UNIX command, to ensure that the bazaar understands that all of the versioned
+   the UNIX command, to ensure that Bazaar understands that all of the versioned
    files in the directory have moved.
 
 
@@ -140,14 +176,15 @@ the appropriate command. See the examples that follow:
 *Viewing Changes in a File*
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you have edited a file and want to see what you have done, type:
+If you have edited a file and want to see the differences in the working tree versus the last commit,
+you can type:
 
 ::
 
   bzr diff <file_name>
   
-Bazaar will display the name of the modified file (the name you specified) and then list the additions and deletions with a
-plus (+) or minus (-) sign in front of the changed lines.
+Bazaar will display the name of the modified file (the name you specified) and then list the additions
+and deletions with a plus (+) or minus (-) sign in front of the changed lines. 
 
 
 .. index:: log command
@@ -183,20 +220,27 @@ the command above.
 Canceling a Merge and Reverting Changes
 ++++++++++++++++++++++++++++++++++++++++
 
-If you encounter a problem when merging to your branch, and things are messed
-up enough that you want to start over, you can cancel the merge by using the ``revert``
-command. Type:
+If you encounter a problem when merging to your branch and you want to start over, you can
+cancel the merge by using the ``revert`` command. Type:
 
 ::
 
-  bzr revert         (Reverts to the previous revision and removes uncommitted changes.)
-
-You can also use this command if you do not want to commit changes you've made. In this case, it is a
-good idea to see what files will be removed, so type:
+  bzr revert         
+  
+This removes uncommitted changes and causes your branch to revert to the previous revision. You
+can also use this command if you do not want to commit changes you've made. In this case, it is
+a good idea to see which files will be removed, so type:
 
 ::
 
-  bzr status    (Shows which files have been modified, deleted, or added.)
-  bzr revert    (Reverts to the previous revision.)
+  bzr status    
+  
+This shows you which files have been modified, deleted, or added. Then, type:
+
+::
+
+  bzr revert    
+  
+to revert to the previous revision.
   
   

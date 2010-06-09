@@ -24,7 +24,6 @@ packages = [
     'openmdao.lib',
     'openmdao.util',
     'openmdao.units',
-    'openmdao.devtools',
 ]
 
 

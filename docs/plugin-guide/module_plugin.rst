@@ -17,7 +17,7 @@ need to function properly as an OpenMDAO component.
 
 .. _plugin_overview_Code1: 
 
-.. testcode::plugin_example
+.. testcode:: plugin_example
 
     from openmdao.lib.api import Float
     
@@ -37,23 +37,23 @@ Component class defined in ``openmdao.main.api``, so we have to import it from
 there. The function in our component that performs a computation is called
 ``execute()``, and there we define *c* as the sum of *a* and *b*.
 The *self* object that is passed as an argument to ``execute()`` represents an
-instance of our *SimpleAdder* class.
+instance of our SimpleAdder class.
 
-*SimpleAdder* has three Public Variables of type *Float* with the names *a*, *b*, and
+SimpleAdder has three Public Variables of type Float with the names *a*, *b*, and
 *c*. All three attributes have a default value of 0.0. Attributes *a* and *b*
-are inputs, so we specify that they have an *iotype* of *'in'*. Attribute
-*c* is an output, so it has an *iotype* of *'out'*.
+are inputs, so we specify that they have an iotype of *'in'*. Attribute
+*c* is an output, so it has an iotype of *'out'*.
 
-The *Float* variable is defined in the package ``openmdao.lib.api``, so we have
-to import it from there before we can use it. This 
-package defines a wide variety of traits, including basic types like *Int*,
-*Str*, and *Bool*; containers like *List* and *Dictionary*; and others. Public Variables
-are actually based off of Enthought's Traits, and a larger selection of less commonly used
-traits are available by importing from the package ``enthought.traits.api``.
-To learn more about traits, you may want to look at the 
-`Traits User Manual <http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_
-and the list of 
-`available traits <http://code.enthought.com/projects/files/ETS32_API/enthought.traits.api.html>`_.
+The Float variable is defined in the package ``openmdao.lib.api``, so we have to
+import it from there before we can use it. This  package defines a wide variety
+of traits, including basic types like *Int*, *Str*, and *Bool*; containers like
+*List* and *Dict*; and others. Public Variables are actually based on
+Enthought's Traits, and a larger selection of less commonly used traits are
+available by importing from the package ``enthought.traits.api``. To learn more
+about traits, see the  `Traits User Manual 
+<http://code.enthought.com/projects/traits/docs/html/traits_user_manual/index.html>`_
+and the list of  `available traits
+<http://code.enthought.com/projects/files/ETS32_API/enthought.traits.api.html>`_.
 
 At this point, our SimpleAdder plugin is usable within OpenMDAO. We could simply
 import the module containing it and use it in a model; but we want more than
@@ -87,7 +87,7 @@ as a package in a distribution:
       `-- setup.py
       
 
-The ``__init__.py`` file is empty and is only there because that is how
+The ``__init__.py`` file is empty and is there only because that is how
 Python determines that the directory ``simple_adder`` is a Python package. The
 only other file in the directory structure besides ``simple_adder.py`` is the
 ``setup.py`` file, which describes how to build a distribution containing our module.
@@ -113,24 +113,27 @@ In this case, the ``setup.py`` file looks like this:
     )
 
     
-The *setup()* command has *many* options in addition to those shown above,
+The ``setup()`` command has many arguments in addition to those shown above,
 e.g., *author, author_email, maintainer, maintainer_email, url, license,
 description, long_description, keywords, platforms, fullname, contact,
 contact_email, classifiers,* and *download_url.* If you supply any of these,
-their values will be stored as metadata in the distribution. To keep things simple, we
-won't describe all of the options in detail, but if you're interested, you can
-go to  `<http://docs.python.org/distutils/apiref.html#module-distutils.core>`_ and
-`<http://peak.telecommunity.com/DevCenter/setuptools#new-and-changed-setup-keywords>`_.
+their values will be stored as metadata in the distribution. To keep things
+simple, we won't describe all of the arguments in detail. If you're
+interested, you can go to this 
+`reference page <http://docs.python.org/distutils/apiref.html#module-distutils.core>`_ for a
+description of the arguments to ``setup()`` or go
+`here <http://peak.telecommunity.com/DevCenter/setuptools#new-and-changed-setup-keywords>`_ for
+the keyword arguments added or changed by ``setuptools``.
 
 The following options are required for our distribution to function properly
 within the OpenMDAO framework:
 
-**name**
-    The package must have a name, and generally it should be the
-    name of the module, minus the .py extension, e.g., 'simple_adder', or the
-    name of the class within the module, assuming that the module contains
-    only one class.
-    
+**name** 
+    The package must have a name, and generally it should be the name of
+    the module, minus the ``.py`` extension, e.g., ``'simple_adder'``, or the name
+    of the class within the module, assuming that the module contains only one
+    class.
+
 **version**
     Packages tend to evolve over time, so providing a version id for a package
     is extremely important. You **must** update the version id of your package
@@ -139,31 +142,31 @@ within the OpenMDAO framework:
     distribution will **never** change. People may build things that depend on
     a particular version of your distribution, so changing that version could
     break their code. If, however, you update your distribution's version id,
-    then users of your distribution have the option to either use the updated
+    then users have the option to either use the updated
     distribution and make whatever modifications are necessary to their own
     code to make it work or stick with an older version that already works
     with their code. The value of *version* is specified as a string, e.g.,
     '1.0.4'.
     
 **packages**
-    In the case where you have only one module, there will be only one
-    package, but the distribution format allows for the existence of multiple
-    packages. You can specify *packages* as an explicit list of strings, but
-    the easiest thing to do is to use the *find_packages()* function from
-    setuptools as shown in the example above.
-    
+    If you have only one module, there will be only one package, but the
+    distribution format allows for the existence of multiple packages. You can
+    specify *packages* as an explicit list of strings, but the easiest thing
+    to do is to use the ``find_packages()`` function from setuptools as shown in
+    the example above.
+
 **install_requires**  
-    This specifies the distributions that your distribution depends upon. Note
+    This option specifies the distributions that your distribution depends upon. Note
     that you need to include only *direct* dependencies in this list, i.e., if
     your package depends on *package_A*, which in turn depends on *package_B*,
     you need to include only *package_A*. Make sure not to leave out any
     direct dependencies here, because doing so will result in failure to
     install needed dependent distributions whenever your distribution is
-    installed. The value of *install_requires* should be a list of strings.
-    These strings can specify not only the name of a distribution, but also a
+    installed. The value of ``install_requires`` should be a list of strings.
+    These strings can specify not only the name of a distribution but also a
     version or a range of versions. For example, 'numpy>=1.3.0', 'numpy<=1.5'
-    and 'numpy=='1.4.1' are all valid entries in *install_requires*. However,
-    it's usually best not to specify an exact version in *install_requires*
+    and 'numpy=='1.4.1' are all valid entries in ``install_requires``. However,
+    it's usually best not to specify an exact version in ``install_requires``
     because it will make it harder to install your distribution in an
     environment with other distributions that depend upon a different version
     of some distribution that your package depends on.
@@ -172,11 +175,11 @@ within the OpenMDAO framework:
     Entry points can be used by OpenMDAO to determine which plugins are
     available within a distribution. Entry points are divided into groups, and each
     type of OpenMDAO plugin has a particular group. For example, Component
-    plugins are found in the *openmdao.component* group. Each individual entry
+    plugins are found in the ``openmdao.component`` group. Each entry
     point is specified by its name, followed by an equals (**=**) sign, followed by
     dotted module path (dotted path you would use to import the module in
     Python), followed by a colon (**:**) and the name of the plugin class. The value
-    of *entry_points* should be a string in INI file format or a dictionary. 
+    of ``entry_points`` should be a string in INI file format or a dictionary. 
     
         
     For example:
@@ -184,10 +187,10 @@ within the OpenMDAO framework:
     ::
     
         """
-        [openmdao.components]
+        [openmdao.component]
         SimpleAdder = simple_adder:SimpleAdder
         
-        [openmdao.drivers]
+        [openmdao.driver]
         MyDriver = mydriver:MyDriver
         """
    
@@ -196,8 +199,8 @@ within the OpenMDAO framework:
     :: 
        
           
-        { 'openmdao.components': ['SimpleAdder = simple_adder:SimpleAdder'],
-          'openmdao.drivers': ['MyDriver = mydriver:MyDriver']
+        { 'openmdao.component': ['SimpleAdder = simple_adder:SimpleAdder'],
+          'openmdao.driver': ['MyDriver = mydriver:MyDriver']
         }
 
         
@@ -215,8 +218,8 @@ specified in our ``setup.py`` file was '1.0', our distribution will be named
 Egg Creation for the Lazy
 --------------------------
 
-A tool called ``mod2dist`` exists for those of us who don't want to create a package
-directory structure and a setup.py file manually. It has a number of options that you
+A tool called *mod2dist* exists for those of us who don't want to create a package
+directory structure and a ``setup.py`` file manually. It has a number of options that you
 can see if you run ``mod2dist -h``.  The only required options are the desired version
 of the distribution and the module to use to generate the distribution.  For example, 
 the command
@@ -261,32 +264,32 @@ file called ``coord.py`` and placing the following code in it:
                 self.error(object, name, value)
 
 
-OpenMDAO uses the Traits package from Enthought to implement public
-variables. The base class for custom traits is *TraitType*, so that's the
-base class for our coordinates variable. If a component or a component class
-contains a TraitType object and that object has a metadata attribute called
-*iotype*, then that object is exposed to the framework as a variable whose
-value can be passed between components.  One thing to note that can be a 
-little confusing to people first using Traits is that the Trait object itself
-is just a validator and possibly a converter.  The object that actually gets
-passed around between components is the *value* that the trait corresponds to
-and not the trait itself.  For example, if we had a component named *wheel* that 
-contained one of our Coordinates traits named *center_location*, then the value
-of *wheel.center_location* would be a 3-tuple, not a Coordinates object.
+OpenMDAO uses the Traits package from Enthought to implement public variables. The
+base class for custom traits is *TraitType*, so that's the base class for our
+coordinates variable. If a component or a component class contains a TraitType
+object and that object has a metadata attribute called *iotype*, then that object
+is exposed to the framework as a variable whose value can be passed between
+components.  One thing that can be a little confusing to people first using Traits
+is that the Trait object itself is just a validator and possibly a converter.  The
+object that actually gets passed around between components is the *value* that the
+trait corresponds to and not the trait itself. For example, if we had a component
+named *wheel* that contained one of our Coordinates traits named
+``center_location``, then the value of ``wheel.center_location`` would be a 3-tuple,
+not a Coordinates object.
 
 We override the base class constructor so we can supply a default value of
 (0.,0.,0.) if the caller doesn't supply one. After that, the only function we
-need to supply is the *validate* function, which will be called with the
+need to supply is the validate function, which will be called with the
 following arguments:
 
-    **object**
-        The object that contains the value of our coordinates variable
-    
-    **name**
-        The name of our coordinates variable
-    
-    **value**
-        The value that our current value is being replaced with
+**object**
+    The object that contains the value of our coordinates variable
+
+**name**
+    The name of our coordinates variable
+
+**value**
+    The value that our current value is being replaced with
 
 
 Our validate function should test that the value we've been called with is
@@ -319,6 +322,6 @@ a different entry point group name.
         }
     )
 
-We can create this file by hand or generate it using ``mod2dist`` as we showed in
+We can create this file by hand or generate it using mod2dist, as shown in
 an earlier section.
 

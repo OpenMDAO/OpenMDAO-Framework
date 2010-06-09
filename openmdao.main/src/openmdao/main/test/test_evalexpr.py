@@ -70,7 +70,7 @@ class ExprEvalTestCase(unittest.TestCase):
         ('a.b[1][2]', "scope.get('a.b',[1,2])"),
         ('abs(a.b[1][2])', "abs(scope.get('a.b',[1,2]))"),
         ('a.b[1,2]', "scope.get('a.b',[1,2])"),
-        ('a.b[1][x.y]', "scope.get('a.b',[1,scope.parent.get('x.y')])"),
+        ('a.b[1][x.y]', "scope.get('a.b',[1,scope.parent.get('x.y')])"),  
         ('a.b()', "scope.invoke('a.b')"),
         ('comp.x=a.b[1]',"scope.set('comp.x',scope.get('a.b',[1]))"),
         ('a.b(5)', "scope.invoke('a.b',5)"),

@@ -6,8 +6,8 @@ Plugin Creation Methods
 
 You can create a plugin for OpenMDAO in three primary ways. 
 
-* The simplest and most common way, for tasks that are not computationally
-  intensive, is to write it in pure Python. 
+* For tasks that are not computationally  intensive, the simplest and most
+  common way is to write it in pure Python. 
 
 * For tasks that are computationally intensive, often the best choice is to
   create a Python extension using a shared library that was compiled from

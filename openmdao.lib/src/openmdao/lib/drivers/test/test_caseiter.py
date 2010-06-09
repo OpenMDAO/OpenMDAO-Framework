@@ -58,9 +58,9 @@ class DrivenComponent(Component):
         if self.raise_error:
             self.raise_exception('Forced error', RuntimeError)
         if self.stop_exec:
-            self.parent.stop()  # Only valid if sequential!
+            self.parent.driver.stop()  # Only valid if sequential!
 #FIXME: for some reason the above doesn't call stop() on the driver...
-            self.parent._stop = True
+            #self.parent._stop = True
 
 
 class MyModel(Assembly):
@@ -69,7 +69,7 @@ class MyModel(Assembly):
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
         self.add_container('driver', CaseIteratorDriver())
-        self.driver.add_container('model', DrivenComponent())
+        self.add_container('driven', DrivenComponent())
 
 
 class TestCase(unittest.TestCase):
@@ -87,12 +87,12 @@ class TestCase(unittest.TestCase):
         self.cases = []
         for i in range(10):
             raise_error = force_errors and i%4 == 3
-            inputs = [('x', None, numpy.random.normal(size=4)),
-                      ('y', None, numpy.random.normal(size=10)),
-                      ('raise_error', None, raise_error),
-                      ('stop_exec', None, False)]
-            outputs = [('rosen_suzuki', None, None),
-                       ('sum_y', None, None)]
+            inputs = [('driven.x', None, numpy.random.normal(size=4)),
+                      ('driven.y', None, numpy.random.normal(size=10)),
+                      ('driven.raise_error', None, raise_error),
+                      ('driven.stop_exec', None, False)]
+            outputs = [('driven.rosen_suzuki', None, None),
+                       ('driven.sum_y', None, None)]
             self.cases.append(Case(inputs, outputs, ident=i))
 
     def tearDown(self):
@@ -122,7 +122,7 @@ class TestCase(unittest.TestCase):
 
         self.generate_cases()
         stop_case = self.cases[1]  # Stop after 2 cases run.
-        stop_case.inputs[3] = ('stop_exec', None, True)
+        stop_case.inputs[3] = ('driven.stop_exec', None, True)
         self.model.driver.iterator = ListCaseIterator(self.cases)
         results = []
         self.model.driver.recorder = results
@@ -233,9 +233,9 @@ class TestCase(unittest.TestCase):
             error_expected = forced_errors and i%4 == 3
             if error_expected:
                 if self.model.driver.sequential:
-                    self.assertEqual(case.msg, 'driver.model: Forced error')
+                    self.assertEqual(case.msg, 'driven: Forced error')
                 else:
-                    self.assertEqual(case.msg, 'model: Forced error')
+                    self.assertEqual(case.msg, 'driven: Forced error')
             else:
                 self.assertEqual(case.msg, None)
                 self.assertEqual(case.outputs[0][2],
@@ -265,10 +265,10 @@ class TestCase(unittest.TestCase):
         # Create cases with missing input 'dc.z'.
         cases = []
         for i in range(2):
-            inputs = [('x', None, numpy.random.normal(size=4)),
-                      ('z', None, numpy.random.normal(size=10))]
-            outputs = [('rosen_suzuki', None, None),
-                       ('sum_y', None, None)]
+            inputs = [('driven.x', None, numpy.random.normal(size=4)),
+                      ('driven.z', None, numpy.random.normal(size=10))]
+            outputs = [('driven.rosen_suzuki', None, None),
+                       ('driven.sum_y', None, None)]
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
@@ -278,8 +278,8 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "driver: Exception setting 'z':" \
-              " driver.model: object has no attribute 'z'"
+        msg = "driver: Exception setting 'driven.z':" \
+              " driven: object has no attribute 'z'"
         for case in results:
             self.assertEqual(case.msg, msg)
 
@@ -290,10 +290,10 @@ class TestCase(unittest.TestCase):
         # Create cases with missing output 'dc.sum_z'.
         cases = []
         for i in range(2):
-            inputs = [('x', None, numpy.random.normal(size=4)),
-                      ('y', None, numpy.random.normal(size=10))]
-            outputs = [('rosen_suzuki', None, None),
-                       ('sum_z', None, None)]
+            inputs = [('driven.x', None, numpy.random.normal(size=4)),
+                      ('driven.y', None, numpy.random.normal(size=10))]
+            outputs = [('driven.rosen_suzuki', None, None),
+                       ('driven.sum_z', None, None)]
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
@@ -303,8 +303,8 @@ class TestCase(unittest.TestCase):
         self.model.run()
 
         self.assertEqual(len(results), len(cases))
-        msg = "driver: Exception getting 'sum_z':" \
-              " driver.model: object has no attribute 'sum_z'"
+        msg = "driver: Exception getting 'driven.sum_z': " \
+            "'DrivenComponent' object has no attribute 'sum_z'"
         for case in results:
             self.assertEqual(case.msg, msg)
 
