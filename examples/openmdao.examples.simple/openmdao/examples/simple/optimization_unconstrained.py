@@ -20,12 +20,12 @@ class OptimizationUnconstrained(Assembly):
         
         super(OptimizationUnconstrained, self).__init__()
 
-        # Create Paraboloid component instances
-        self.add_container('paraboloid', Paraboloid())
-
         # Create CONMIN Optimizer instance
         self.add_container('driver', CONMINdriver())
         
+        # Create Paraboloid component instances
+        self.add_container('paraboloid', Paraboloid())
+
         # CONMIN Flags
         self.driver.iprint = 0
         self.driver.itmax = 30

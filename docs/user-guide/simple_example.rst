@@ -288,12 +288,12 @@ file ``optimization_unconstrained.py``:
         
             super(OptimizationUnconstrained, self).__init__()
 
-            # Create Paraboloid component instances
-            self.add_container('paraboloid', Paraboloid())
-
             # Create CONMIN Optimizer instance
             self.add_container('driver', CONMINdriver())
         
+            # Create Paraboloid component instances
+            self.add_container('paraboloid', Paraboloid())
+
             # CONMIN Flags
             self.driver.iprint = 0
             self.driver.itmax = 30
@@ -368,11 +368,11 @@ to the assembly:
 
 .. testcode:: simple_model_Unconstrained_pieces
 
-            # Create Paraboloid component instances
-            self.add_container('paraboloid', Paraboloid())
-
             # Create CONMIN Optimizer instance
             self.add_container('driver', CONMINdriver())
+
+            # Create Paraboloid component instances
+            self.add_container('paraboloid', Paraboloid())
 
 Here we make an instance of the *Paraboloid* component we created above and
 give it the name *paraboloid.* Similarly we create an instance of the CONMIN

@@ -125,12 +125,11 @@ class Assembly (Component):
                                              NameError)
                     drv = getattr(self, parts[0])
                     drv.add_to_workflow('.'.join(parts[1:]), obj)
-                # since the internals of the given Component can change after it's
-                # added, wait to collect its io_graph until we need it
-                self._child_io_graphs[obj.name] = None
-                self._need_child_io_update = True
-                
-            
+            # since the internals of the given Component can change after it's
+            # added, wait to collect its io_graph until we need it
+            self._child_io_graphs[obj.name] = None
+            self._need_child_io_update = True
+
         return obj
         
     def remove_container(self, name):

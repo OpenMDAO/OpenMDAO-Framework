@@ -862,12 +862,12 @@ Consider the top level assembly that was created for the :ref:`simple tutorial p
         
 	        super(OptimizationUnconstrained, self).__init__()
 
-	        # Create Paraboloid component instances
-	        self.add_container('paraboloid', Paraboloid())
-
 	        # Create CONMIN Optimizer instance
 	        self.add_container('driver', CONMINdriver())
 		
+	        # Create Paraboloid component instances
+	        self.add_container('paraboloid', Paraboloid())
+
 We can see here that components that comprise the top level of this model are
 declared in the __init__ function. The base class __init__ function is called
 (with the super function) before anything is added to the empty assembly. This
