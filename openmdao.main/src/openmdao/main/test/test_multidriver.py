@@ -4,7 +4,8 @@ import unittest
 import logging
 from math import sqrt
 
-from openmdao.main.api import Assembly, Component, Driver, Expression, set_as_top
+from openmdao.main.api import Assembly, Component, Driver, Expression, \
+                              Dataflow, SequentialFlow, set_as_top
 from openmdao.lib.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
@@ -113,22 +114,24 @@ class MultiDriverTestCase(unittest.TestCase):
         self.top = top
         
         # create the first driver
-        drv = top.add('driver1', CONMINdriver(), workflow='driver.workflow')
-
-        top.add('comp1', ExprComp(expr='x**2 - 5.0*x'), workflow='driver1.workflow')
-        top.add('comp2', ExprComp(expr='x**2 - 5.0*x'), workflow='driver1.workflow')
-        top.add('comp3', ExprComp(expr='2.0*x**2 - 21.0*x'), workflow='driver1.workflow')
-        top.add('comp4', ExprComp(expr='x**2 + 7.0*x'), workflow='driver1.workflow')
+        drv = top.add('driver1', CONMINdriver())
         
-        top.add('adder1', Adder(), workflow='driver1.workflow')
+        top.driver.workflow = Dataflow(top, members=[drv])
+
+        top.add('comp1', ExprComp(expr='x**2 - 5.0*x'))
+        top.add('comp2', ExprComp(expr='x**2 - 5.0*x'))
+        top.add('comp3', ExprComp(expr='2.0*x**2 - 21.0*x'))
+        top.add('comp4', ExprComp(expr='x**2 + 7.0*x'))
+        
+        top.add('adder1', Adder())
         top.connect('comp1.f_x', 'adder1.x1')
         top.connect('comp2.f_x', 'adder1.x2')
         
-        top.add('adder2', Adder(), workflow='driver1.workflow')
+        top.add('adder2', Adder())
         top.connect('comp3.f_x', 'adder2.x1')
         top.connect('comp4.f_x', 'adder2.x2')
         
-        top.add('adder3', Adder(), workflow='driver1.workflow')
+        top.add('adder3', Adder())
         top.connect('adder1.sum', 'adder3.x1')
         top.connect('adder2.sum', 'adder3.x2')
         
@@ -171,11 +174,12 @@ class MultiDriverTestCase(unittest.TestCase):
     def test_2_drivers(self):
         self.rosen_setUp()
         drv = self.top.add('driver1a', CONMINdriver())
-        self.top.add('comp1a', ExprComp(expr='x**2'), 
-                               workflow='driver1a.workflow')
-        self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'), 
-                               workflow='driver1a.workflow')
+        self.top.add('comp1a', ExprComp(expr='x**2'))
+        self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'))
         self.top.connect('comp1a.f_x', 'comp2a.x')
+        drv.workflow = Dataflow(self.top, 
+                                members=[self.top.comp1a, self.top.comp2a])
+        self.top.driver.workflow.add(drv)
         drv.itmax = 40
         drv.objective = 'comp2a.f_x'
         drv.design_vars = ['comp1a.x']
@@ -271,7 +275,6 @@ class MultiDriverTestCase(unittest.TestCase):
         # Solve (x-3)^2 + xy + (y+4)^2 = 3
         # using two optimizers nested. The inner loop optimizes y
         # the outer loop takes care of x
-        # Enough components created to assure that the optimizers don't "touch"
         # 
         # Optimal solution: x = 6.6667; y = -7.3333
         self.top = set_as_top(Assembly())
@@ -284,8 +287,7 @@ class MultiDriverTestCase(unittest.TestCase):
         
         top.add('comp1', ExprComp(expr='x-3'))
         top.add('comp2', ExprComp(expr='-3'))
-        top.add('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'),
-                          workflow='driver1.workflow')
+        top.add('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'))
         top.add('comp4', ExprComp2(expr='x+y'))
         top.comp1.x = 50
         top.comp3.y = -50
@@ -311,6 +313,9 @@ class MultiDriverTestCase(unittest.TestCase):
         drv.lower_bounds = [-50]
         drv.upper_bounds = [50]
         
+        drv1.workflow = Dataflow(top, members=[top.comp3])
+        drv.workflow = Dataflow(top, members=[top.comp1, top.comp2, drv1, top.comp4])
+        
         self.top.run()
 
         # Notes: CONMIN does not quite reach the anlytical minimum
@@ -329,16 +334,17 @@ class MultiDriverTestCase(unittest.TestCase):
         #
         global exec_order
         top = set_as_top(Assembly())
+        top.add('C1', ExprComp(expr='x+1'))
         top.add('D1', Summer())
-        top.add('D2', Summer())
-        top.add('C1', ExprComp(expr='x+1'), 
-                          workflow=['D1.workflow','D2.workflow'])
         top.D1.objective = 'C1.f_x'
         top.D1.design = 'C1.x'
         top.D1.max_iterations = 3
+        top.add('D2', Summer())
         top.D2.objective = 'C1.f_x'
         top.D2.design = 'C1.x'
         top.D2.max_iterations = 2
+        
+        top.driver.workflow = Dataflow(top, members=[top.D1, top.D2])
         
         top.run()
         
@@ -364,10 +370,8 @@ class MultiDriverTestCase(unittest.TestCase):
         top = set_as_top(Assembly())
         top.add('D1', Summer())
         top.add('D2', Summer())
-        top.add('C1', ExprComp(expr='x+1'), 
-                          workflow=['D1.workflow','D2.workflow'])
-        top.add('C2', ExprComp(expr='x+1'),
-                          workflow=['D1.workflow','D2.workflow'])
+        top.add('C1', ExprComp(expr='x+1'))
+        top.add('C2', ExprComp(expr='x+1'))
         top.D1.objective = 'C2.f_x'
         top.D1.design = 'C1.x'
         top.D1.max_iterations = 2
@@ -375,6 +379,7 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.design = 'C2.x'
         top.D2.max_iterations = 3
 
+        top.driver.workflow = Dataflow(top, members=[top.D1, top.D2])
         top.run()
         
         self.assertEqual(top.D2.runcount, 1)
@@ -402,18 +407,23 @@ class MultiDriverTestCase(unittest.TestCase):
         #          |<---C2
         global exec_order
         top = set_as_top(Assembly())
-        top.add('D1', Summer())
-        top.add('D2', Summer())
-        top.add('C1', ExprComp(expr='x+1'), workflow='D1.workflow')
-        top.add('C2', ExprComp2(expr='x+y'), workflow='D2.workflow')
+        top.add('C1', ExprComp(expr='x+1'))
+        top.add('C2', ExprComp2(expr='x+y'))
         
         top.connect('C1.f_x', 'C2.x')
+        top.add('D1', Summer())
         top.D1.objective = 'C1.f_x'
         top.D1.design = 'C1.x'
         top.D1.max_iterations = 2
+        top.add('D2', Summer())
         top.D2.objective = 'C2.f_xy'
         top.D2.design = 'C2.y'
         top.D2.max_iterations = 3
+        
+        top.driver.workflow = Dataflow(top, members=[top.D1, top.D2])
+        top.D1.workflow = SequentialFlow(members=[top.C1])
+        top.D2.workflow = SequentialFlow(members=[top.C2])
+        
         top.run()
         self.assertEqual(top.D2.runcount, 1)
         self.assertEqual(top.D1.runcount, 1)

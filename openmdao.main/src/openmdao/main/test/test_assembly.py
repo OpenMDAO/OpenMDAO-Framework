@@ -194,10 +194,10 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
         
-    def test_add_no_workflow(self):
-        self.asm.add('comp_nw1', DummyComp(), workflow=None)
-        self.assertTrue(self.asm.comp1 in self.asm.driver.workflow)
-        self.assertFalse(self.asm.comp_nw1 in self.asm.driver.workflow)
+    #def test_add_no_workflow(self):
+        #self.asm.add('comp_nw1', DummyComp(), workflow=None)
+        #self.assertTrue(self.asm.comp1 in self.asm.driver.workflow)
+        #self.assertFalse(self.asm.comp_nw1 in self.asm.driver.workflow)
     
     def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)

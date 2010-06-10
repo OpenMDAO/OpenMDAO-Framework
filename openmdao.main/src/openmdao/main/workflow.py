@@ -16,11 +16,14 @@ class Workflow(object):
 
     implements(IWorkflow)
     
-    def __init__(self, parent):
-        """ Create an empty flow. """
-        self._parent = parent
+    def __init__(self, members=None):
+        """ Create an workflow. If members is not None,
+        iterate through members and add them to the workflow."""
         self._iterator = None
         self._stop = False
+        if members:
+            for member in members:
+                self.add(member)
 
     def run(self):
         """ Run through the nodes in the workflow list. """
@@ -74,37 +77,3 @@ class Workflow(object):
     
     def __len__(self):
         raise NotImplemented("This Workflow has no '__len__' function")
-
-    
-class SequentialFlow(Workflow):
-    """A Workflow that is a simple sequence of components."""
-    
-    def __init__(self, parent):
-        """ Create an empty flow. """
-        super(SequentialFlow, self).__init__(parent)
-        self._nodes = []
-        
-    def __iter__(self):
-        """Returns an iterator over the components in the workflow."""
-        return self._nodes.__iter__()
-    
-    def __len__(self):
-        return len(self._nodes)
-    
-    def __contains__(self, comp):
-        return comp in self._nodes
-    
-    def contents(self):
-        """Returns a list of all Components in the workflow."""
-        return self._nodes[:]
-
-    def add(self, comp):
-        """ Add a new component to the end of the workflow. """
-        self._nodes.append(comp)
-        
-    def remove(self, comp):
-        """Remove a component from the workflow. Do not report an
-        error if the specified component is not found.
-        """
-        self._nodes = [x for x in self._nodes if x is not comp]
-
