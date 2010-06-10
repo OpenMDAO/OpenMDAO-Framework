@@ -289,10 +289,10 @@ file ``optimization_unconstrained.py``:
             super(OptimizationUnconstrained, self).__init__()
 
             # Create CONMIN Optimizer instance
-            self.add_container('driver', CONMINdriver())
+            self.add('driver', CONMINdriver())
         
             # Create Paraboloid component instances
-            self.add_container('paraboloid', Paraboloid())
+            self.add('paraboloid', Paraboloid())
 
             # CONMIN Flags
             self.driver.iprint = 0
@@ -363,16 +363,16 @@ __init__ function of the parent (Assembly). This is required, and forgetting it
 can lead to unexpected behavior.
 
 Next, the Paraboloid and the CONMIN driver have to be instantiated and added
-to OptimizationUnconstrained. The function *add_container* is used to add them
+to OptimizationUnconstrained. The function *add* is used to add them
 to the assembly:
 
 .. testcode:: simple_model_Unconstrained_pieces
 
             # Create CONMIN Optimizer instance
-            self.add_container('driver', CONMINdriver())
+            self.add('driver', CONMINdriver())
 
             # Create Paraboloid component instances
-            self.add_container('paraboloid', Paraboloid())
+            self.add('paraboloid', Paraboloid())
 
 Here we make an instance of the *Paraboloid* component we created above and
 give it the name *paraboloid.* Similarly we create an instance of the CONMIN

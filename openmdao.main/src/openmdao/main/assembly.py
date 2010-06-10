@@ -66,7 +66,7 @@ class Assembly (Component):
                 self._var_graph.add_node(v)
                 
         # default Driver has a DataFlow workflow and executes it once
-        drv = self.add_container('driver', Driver(), workflow=None)
+        drv = self.add('driver', Driver(), workflow=None)
         drv.workflow = Dataflow(drv)
 
 
@@ -98,14 +98,14 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add_container(self, name, obj, workflow='driver.workflow'):
+    def add(self, name, obj, workflow='driver.workflow'):
         """Add obj to the specified workflow and call base class 
-        *add_container*.  If workflow is None, do not add obj to any
+        *add*.  If workflow is None, do not add obj to any
         workflow.
         
         Returns the added object.
         """
-        obj = super(Assembly, self).add_container(name, obj)
+        obj = super(Assembly, self).add(name, obj)
         self.comp_graph.add(obj)
         
         if workflow is not None:

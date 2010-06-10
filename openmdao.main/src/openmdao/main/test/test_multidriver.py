@@ -113,22 +113,22 @@ class MultiDriverTestCase(unittest.TestCase):
         self.top = top
         
         # create the first driver
-        drv = top.add_container('driver1', CONMINdriver(), workflow='driver.workflow')
+        drv = top.add('driver1', CONMINdriver(), workflow='driver.workflow')
 
-        top.add_container('comp1', ExprComp(expr='x**2 - 5.0*x'), workflow='driver1.workflow')
-        top.add_container('comp2', ExprComp(expr='x**2 - 5.0*x'), workflow='driver1.workflow')
-        top.add_container('comp3', ExprComp(expr='2.0*x**2 - 21.0*x'), workflow='driver1.workflow')
-        top.add_container('comp4', ExprComp(expr='x**2 + 7.0*x'), workflow='driver1.workflow')
+        top.add('comp1', ExprComp(expr='x**2 - 5.0*x'), workflow='driver1.workflow')
+        top.add('comp2', ExprComp(expr='x**2 - 5.0*x'), workflow='driver1.workflow')
+        top.add('comp3', ExprComp(expr='2.0*x**2 - 21.0*x'), workflow='driver1.workflow')
+        top.add('comp4', ExprComp(expr='x**2 + 7.0*x'), workflow='driver1.workflow')
         
-        top.add_container('adder1', Adder(), workflow='driver1.workflow')
+        top.add('adder1', Adder(), workflow='driver1.workflow')
         top.connect('comp1.f_x', 'adder1.x1')
         top.connect('comp2.f_x', 'adder1.x2')
         
-        top.add_container('adder2', Adder(), workflow='driver1.workflow')
+        top.add('adder2', Adder(), workflow='driver1.workflow')
         top.connect('comp3.f_x', 'adder2.x1')
         top.connect('comp4.f_x', 'adder2.x2')
         
-        top.add_container('adder3', Adder(), workflow='driver1.workflow')
+        top.add('adder3', Adder(), workflow='driver1.workflow')
         top.connect('adder1.sum', 'adder3.x1')
         top.connect('adder2.sum', 'adder3.x2')
         
@@ -170,10 +170,10 @@ class MultiDriverTestCase(unittest.TestCase):
         
     def test_2_drivers(self):
         self.rosen_setUp()
-        drv = self.top.add_container('driver1a', CONMINdriver())
-        self.top.add_container('comp1a', ExprComp(expr='x**2'), 
+        drv = self.top.add('driver1a', CONMINdriver())
+        self.top.add('comp1a', ExprComp(expr='x**2'), 
                                workflow='driver1a.workflow')
-        self.top.add_container('comp2a', ExprComp(expr='x-5.0*sqrt(x)'), 
+        self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'), 
                                workflow='driver1a.workflow')
         self.top.connect('comp1a.f_x', 'comp2a.x')
         drv.itmax = 40
@@ -210,15 +210,15 @@ class MultiDriverTestCase(unittest.TestCase):
         # Optimal solution: x = 6.6667; y = -7.3333
         self.top = set_as_top(Assembly())
         # create the outer driver
-        drv2 = self.top.add_container('driver', CONMINdriver())
-        nested = self.top.add_container('nested', Assembly())
+        drv2 = self.top.add('driver', CONMINdriver())
+        nested = self.top.add('nested', Assembly())
         # create the inner driver
-        drv1 = nested.add_container('driver', CONMINdriver())
+        drv1 = nested.add('driver', CONMINdriver())
         
-        nested.add_container('comp1', ExprComp(expr='x-3'))
-        nested.add_container('comp2', ExprComp(expr='-3'))
-        nested.add_container('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'))
-        nested.add_container('comp4', ExprComp2(expr='x+y'))
+        nested.add('comp1', ExprComp(expr='x-3'))
+        nested.add('comp2', ExprComp(expr='-3'))
+        nested.add('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'))
+        nested.add('comp4', ExprComp2(expr='x+y'))
         nested.comp1.x = 50
         nested.comp3.y = -50
         
@@ -231,7 +231,7 @@ class MultiDriverTestCase(unittest.TestCase):
         nested.create_passthrough('comp4.f_xy')
 
         ## create one driver for testing
-        #drv1 = self.top.add_container('driver1', CONMINdriver())
+        #drv1 = self.top.add('driver1', CONMINdriver())
         #drv1.itmax = 30
         #drv1.iprint = 1001
         #drv1.fdch = .000001
@@ -277,16 +277,16 @@ class MultiDriverTestCase(unittest.TestCase):
         self.top = set_as_top(Assembly())
         top = self.top
         # create the outer driver
-        drv = self.top.add_container('driver', CONMINdriver())
+        drv = self.top.add('driver', CONMINdriver())
         
         # create the inner driver
-        drv1 = top.add_container('driver1', CONMINdriver())
+        drv1 = top.add('driver1', CONMINdriver())
         
-        top.add_container('comp1', ExprComp(expr='x-3'))
-        top.add_container('comp2', ExprComp(expr='-3'))
-        top.add_container('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'),
+        top.add('comp1', ExprComp(expr='x-3'))
+        top.add('comp2', ExprComp(expr='-3'))
+        top.add('comp3', ExprComp2(expr='x*x + (x+3)*y + (y+4)**2'),
                           workflow='driver1.workflow')
-        top.add_container('comp4', ExprComp2(expr='x+y'))
+        top.add('comp4', ExprComp2(expr='x+y'))
         top.comp1.x = 50
         top.comp3.y = -50
         
@@ -329,9 +329,9 @@ class MultiDriverTestCase(unittest.TestCase):
         #
         global exec_order
         top = set_as_top(Assembly())
-        top.add_container('D1', Summer())
-        top.add_container('D2', Summer())
-        top.add_container('C1', ExprComp(expr='x+1'), 
+        top.add('D1', Summer())
+        top.add('D2', Summer())
+        top.add('C1', ExprComp(expr='x+1'), 
                           workflow=['D1.workflow','D2.workflow'])
         top.D1.objective = 'C1.f_x'
         top.D1.design = 'C1.x'
@@ -362,11 +362,11 @@ class MultiDriverTestCase(unittest.TestCase):
         #
         global exec_order
         top = set_as_top(Assembly())
-        top.add_container('D1', Summer())
-        top.add_container('D2', Summer())
-        top.add_container('C1', ExprComp(expr='x+1'), 
+        top.add('D1', Summer())
+        top.add('D2', Summer())
+        top.add('C1', ExprComp(expr='x+1'), 
                           workflow=['D1.workflow','D2.workflow'])
-        top.add_container('C2', ExprComp(expr='x+1'),
+        top.add('C2', ExprComp(expr='x+1'),
                           workflow=['D1.workflow','D2.workflow'])
         top.D1.objective = 'C2.f_x'
         top.D1.design = 'C1.x'
@@ -402,10 +402,10 @@ class MultiDriverTestCase(unittest.TestCase):
         #          |<---C2
         global exec_order
         top = set_as_top(Assembly())
-        top.add_container('D1', Summer())
-        top.add_container('D2', Summer())
-        top.add_container('C1', ExprComp(expr='x+1'), workflow='D1.workflow')
-        top.add_container('C2', ExprComp2(expr='x+y'), workflow='D2.workflow')
+        top.add('D1', Summer())
+        top.add('D2', Summer())
+        top.add('C1', ExprComp(expr='x+1'), workflow='D1.workflow')
+        top.add('C2', ExprComp2(expr='x+y'), workflow='D2.workflow')
         
         top.connect('C1.f_x', 'C2.x')
         top.D1.objective = 'C1.f_x'
