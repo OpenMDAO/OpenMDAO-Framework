@@ -33,7 +33,7 @@ class SphereFunction(Component):
 
 class SphereFunctionArray(Component):
     total = Float(0., iotype='out')
-    x = Array(value=[0.0,0,0], iotype="in")
+    x = Array([0.0,0,0], iotype="in")
 
     def __init__(self, desc=None):
         super(SphereFunctionArray, self).__init__(desc)
