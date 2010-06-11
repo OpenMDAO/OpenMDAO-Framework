@@ -21,7 +21,7 @@ from openmdao.main.eggchecker import check_save_load
 
 class SphereFunction(Component):
     total = Float(0., iotype='out')
-    points = Array(value=[], iotype='in')
+    points = Array([], iotype='in')
     
     def __init__(self, desc=None):
         super(SphereFunction, self).__init__(desc)

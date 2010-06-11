@@ -41,8 +41,8 @@ def rosen_suzuki(x):
 class DrivenComponent(Component):
     """ Just something to be driven and compute results. """
 
-    x = Array('d', value=[1., 1., 1., 1.], iotype='in')
-    y = Array('d', value=[1., 1., 1., 1.], iotype='in')
+    x = Array([1., 1., 1., 1.], iotype='in')
+    y = Array([1., 1., 1., 1.], iotype='in')
     raise_error = Bool(False, iotype='in')
     stop_exec = Bool(False, iotype='in')
     rosen_suzuki = Float(0., iotype='out')
