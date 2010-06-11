@@ -20,8 +20,8 @@ class ArrayTestCase(unittest.TestCase):
         self.hobj.add_trait('arr2', Array(array([13.2]), iotype='out', units='inch'))
         self.hobj.add_trait('arr3', Array(iotype='in', units='kg'))
         
-        self.hobj.arr1 = [3.1415926]
-        self.hobj.arr2 = [42.]
+        self.hobj.arr1 = [1.0, 2.0, 3.0]
+        self.hobj.arr2 = [[1.,2.],[3.,4.]]
         self.hobj.arr3 = [1.1]
                        
         
@@ -30,7 +30,6 @@ class ArrayTestCase(unittest.TestCase):
         self.hobj = None
 
     def test_set_to_default(self):
-        self.assertEqual(3.1415926, self.hobj.arr1[0])
         self.hobj.add_trait('arr4', Array(iotype='in', units='kg'))
         self.assertTrue(all(array([]) == self.hobj.arr4))
         self.hobj.arr4 = [6.5]
@@ -38,26 +37,28 @@ class ArrayTestCase(unittest.TestCase):
         
         self.hobj.revert_to_defaults()
         
-        self.assertEqual([98.9], self.hobj.arr1[0])
+        self.assertTrue(all(array([98.9]) == self.hobj.arr1))
         self.assertTrue(all(array([]) == self.hobj.arr4))
 
     def test_assignment(self):
         # check starting value
-        self.assertEqual(3.1415926, self.hobj.arr1[0])
+        self.assertTrue(all(array([1.,2.,3.]) == self.hobj.arr1))
         # check default value
         self.assertEqual([98.9], self.hobj.trait('arr1').trait_type.default_value)
         
-        # use unit_convert to perform unit conversion
-        self.hobj.arr1 = [3.]
+        # use convert_units to perform unit conversion
         self.hobj.arr2 = convert_units(self.hobj.arr1, self.hobj.trait('arr1').units,
                                          'inch')
-        self.assertAlmostEqual(36., self.hobj.arr2[0], 5)
+        self.assertAlmostEqual(12., self.hobj.arr2[0], 5)
+        self.assertAlmostEqual(24., self.hobj.arr2[1], 5)
+        self.assertAlmostEqual(36., self.hobj.arr2[2], 5)
 
     def test_unit_conversion(self):
-        self.hobj.arr2 = [12.]  # inches
-        self.hobj.arr1 = convert_units(self.hobj.arr2, self.hobj.trait('arr2').units,
-                                         'ft')
-        self.assertEqual(self.hobj.arr1[0], 1.) # 12 inches = 1 ft
+        self.hobj.arr1 = [1.,2.,3.]
+        self.hobj.arr2 = self.hobj.get_wrapped_attr('arr1')
+        self.assertAlmostEqual(12., self.hobj.arr2[0])
+        self.assertAlmostEqual(24., self.hobj.arr2[1])
+        self.assertAlmostEqual(36., self.hobj.arr2[2])
         
     def test_bogus_units(self):
         try:
@@ -69,8 +70,7 @@ class ArrayTestCase(unittest.TestCase):
             self.fail('ValueError expected')
         
     def test_get(self):
-        self.assertEqual(self.hobj.arr1, 3.1415926)
-        self.assertEqual(self.hobj.get('arr1'), 3.1415926)
+        self.assertTrue(all(self.hobj.get('arr1') == array([1.,2.,3.])))
         
     def test_array_assign(self):
         self.hobj.arr1 = [1.,2,3,4,5]
