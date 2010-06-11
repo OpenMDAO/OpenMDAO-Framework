@@ -353,6 +353,12 @@ Glossary
 	rlogin, and raw TCP computing protocols.	
 
 	
+      **PuTTYgen** 
+        A key generator. It generates pairs of public and private
+	keys to be used with PuTTY, PSCP, Plink, and the PuTTy
+	authentication agent, Pageant.
+
+	
       **Pyevolve**
         A complete Python genetic algorithm framework
 	
