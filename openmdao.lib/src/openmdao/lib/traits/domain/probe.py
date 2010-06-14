@@ -256,9 +256,9 @@ def _jface_normal(x, y, z, i, j, k, cylindrical, lref=1.):
 
     aref = lref * lref
 
-    sx = -0.5 * ( r2 * diag_y1 * diag_z2 - r1 * diag_y2 * diag_z1) * aref
-    sy = -0.5 * (-r2 * diag_x1 * diag_z2 + r1 * diag_x2 * diag_z1) * aref
-    sz = -0.5 * (      diag_x1 * diag_y2 -      diag_x2 * diag_y1) * aref
+    sx = 0.5 * ( r2 * diag_y1 * diag_z2 - r1 * diag_y2 * diag_z1) * aref
+    sy = 0.5 * (-r2 * diag_x1 * diag_z2 + r1 * diag_x2 * diag_z1) * aref
+    sz = 0.5 * (      diag_x1 * diag_y2 -      diag_x2 * diag_y1) * aref
 
     return (sx, sy, sz)
 
@@ -287,9 +287,9 @@ def _kface_normal(x, y, z, i, j, k, cylindrical, lref=1.):
 
     aref = lref * lref
 
-    sx = -0.5 * ( r2 * diag_y1 * diag_z2 - r1 * diag_y2 * diag_z1) * aref
-    sy = -0.5 * (-r2 * diag_x1 * diag_z2 + r1 * diag_x2 * diag_z1) * aref
-    sz = -0.5 * (      diag_x1 * diag_y2 -      diag_x2 * diag_y1) * aref
+    sx = 0.5 * ( r2 * diag_y1 * diag_z2 - r1 * diag_y2 * diag_z1) * aref
+    sy = 0.5 * (-r2 * diag_x1 * diag_z2 + r1 * diag_x2 * diag_z1) * aref
+    sz = 0.5 * (      diag_x1 * diag_y2 -      diag_x2 * diag_y1) * aref
 
     return (sx, sy, sz)
 
@@ -298,11 +298,11 @@ def _iface_cell_value(arr, i, j, k):
     """ Returns I face value for cell-centered data. """
     return 0.5 * (arr(i, j, k) + arr(i-1, j, k))
 
-def _jface_cell_value(i, j, k, arr):
+def _jface_cell_value(arr, i, j, k):
     """ Returns J face value for cell-centered data. """
     return 0.5 * (arr(i, j, k) + arr(i, j-1, k))
 
-def _kface_cell_value(i, j, k, arr):
+def _kface_cell_value(arr, i, j, k):
     """ Returns K face value for cell-centered data. """
     return 0.5 * (arr(i, j, k) + arr(i, j, k-1))
 
@@ -311,11 +311,11 @@ def _iface_node_value(arr, i, j, k):
     """ Returns I face value for vertex data. """
     raise NotImplementedError('Zone solution location Vertex not supported')
 
-def _jface_node_value(i, j, k, arr):
+def _jface_node_value(arr, i, j, k):
     """ Returns J face value for vertex data. """
     raise NotImplementedError('Zone solution location Vertex not supported')
 
-def _kface_node_value(i, j, k, arr):
+def _kface_node_value(arr, i, j, k):
     """ Returns K face value for vertex data. """
     raise NotImplementedError('Zone solution location Vertex not supported')
 
@@ -402,7 +402,7 @@ def _massflow(domain, surface, weights, reference_state):
         vals = ('length_reference', 'pressure_reference', 'ideal_gas_constant',
                 'temperature_reference')
         raise AttributeError('For mass flow, reference_state is missing'
-                             ' one or more of %s.' % vals)
+                             ' one or more of %s.' % (vals,))
 
     rhoref = pref / rgas / tref
     vref = (rgas * tref).sqrt()
@@ -451,7 +451,7 @@ def _corrected_massflow(domain, surface, weights, reference_state):
         pressure = flow.pressure.item
     except AttributeError:
         vnames = ('density', 'momentum', 'pressure')
-        raise AttributeError('For corrected mass flow, %s is missing'
+        raise AttributeError('For corrected mass flow, zone %s is missing'
                              ' one or more of %s.' % (zone_name, vnames))
     try:
         gam = flow.gamma.item
@@ -486,7 +486,7 @@ def _corrected_massflow(domain, surface, weights, reference_state):
         vals = ('length_reference', 'pressure_reference', 'ideal_gas_constant',
                 'temperature_reference', 'specific_heat_ratio')
         raise AttributeError('For corrected mass flow, reference_state is'
-                             ' missing one or more of %s.' % vals)
+                             ' missing one or more of %s.' % (vals,))
 
     rhoref = pref / rgas / tref
     vref = (rgas * tref).sqrt()
@@ -548,7 +548,6 @@ def _static_pressure(domain, surface, weights, reference_state):
     try:
         pressure = flow.pressure.item
     except AttributeError:
-        vnames = ('density', 'momentum', 'pressure')
         raise AttributeError("For static pressure, zone %s is missing"
                              " 'pressure'." % zone_name)
     if imin == imax:
@@ -631,7 +630,7 @@ def _total_pressure(domain, surface, weights, reference_state):
         vals = ('pressure_reference', 'ideal_gas_constant',
                 'temperature_reference', 'specific_heat_ratio')
         raise AttributeError('For total pressure, reference_state is missing'
-                             ' one or more of %s.' % vals)
+                             ' one or more of %s.' % (vals,))
 
     rhoref = pref / rgas / tref
     vref = (rgas * tref).sqrt()
@@ -702,7 +701,7 @@ def _static_temperature(domain, surface, weights, reference_state):
         vals = ('pressure_reference', 'ideal_gas_constant',
                 'temperature_reference')
         raise AttributeError('For static pressure, reference_state is missing'
-                             ' one or more of %s.' % vals)
+                             ' one or more of %s.' % (vals,))
 
     rhoref = pref / rgas / tref
 
@@ -773,7 +772,7 @@ def _total_temperature(domain, surface, weights, reference_state):
         vals = ('pressure_reference', 'ideal_gas_constant',
                 'temperature_reference', 'specific_heat_ratio')
         raise AttributeError('For total pressure, reference_state is missing'
-                             ' one or more of %s.' % vals)
+                             ' one or more of %s.' % (vals,))
 
     rhoref = pref / rgas / tref
     vref = (rgas * tref).sqrt()

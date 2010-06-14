@@ -12,13 +12,19 @@ def assertRaisesError(test_case_instance, code, err_type, err_msg):
         test_case_instance.fail("Expecting %s" % err_type)
 
 
-def assert_raises(test_case, code, globals, locals, exception, msg):
+def assert_raises(test_case, code, globals, locals, exception, msg,
+                  use_exec=False):
     """
     Determine that `code` raises `exception` with `msg`.
     `globals` and `locals` are arguments for :meth:`eval`.
+    If `use_exec`, then evaluate `code` with `exec` rather than :meth:`eval`.
+    This is necessary for testing statements that are not expressions.
     """
     try:
-        eval(code, globals, locals)
+        if use_exec:
+            exec code in globals, locals
+        else:
+            eval(code, globals, locals)
     except exception as exc:
         test_case.assertEqual(str(exc)[:len(msg)], msg)
     else:

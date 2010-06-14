@@ -1,4 +1,7 @@
+import numpy
+
 _GRID_LOCATIONS = ('Vertex', 'CellCenter')
+
 
 class FlowSolution(object):
     """ Contains flow solution variables for a :class:`Zone`. """
@@ -56,7 +59,7 @@ class FlowSolution(object):
         self._vectors.append(vector)
         return vector
 
-    def is_equivalent(self, other, logger):
+    def is_equivalent(self, other, logger, tolerance=0.):
         """ Test if self and `other` are equivalent. """
         if not isinstance(other, FlowSolution):
             logger.debug('other is not a FlowSolution object.')
@@ -75,9 +78,14 @@ class FlowSolution(object):
             except AttributeError:
                 logger.debug("other is missing array '%s'", name)
                 return False
-            if (other_arr != arr).any():
-                logger.debug('%s values are not equal.', name)
-                return False
+            if tolerance > 0.:
+                if not numpy.allclose(other_arr, arr, tolerance, tolerance):
+                    logger.debug("%s values are not 'close'.", name)
+                    return False
+            else:
+                if (other_arr != arr).any():
+                    logger.debug('%s values are not equal.', name)
+                    return False
 
         for vector in self._vectors:
             name = self.name_of_obj(vector)
@@ -88,7 +96,7 @@ class FlowSolution(object):
             except AttributeError:
                 logger.debug("other is missing vector '%s'", name)
                 return False
-            if not vector.is_equivalent(other_vector, name, logger):
+            if not vector.is_equivalent(other_vector, name, logger, tolerance):
                 return False
 
 # TODO: check scalars
@@ -107,15 +115,15 @@ class FlowSolution(object):
         for vector in self._vectors:
             vector.flip_z()
 
-    def make_cartesian(self):
+    def make_cartesian(self, grid):
         """ Convert to cartesian coordinate system. """
         for vector in self._vectors:
-            vector.make_cartesian()
+            vector.make_cartesian(grid)
 
-    def make_cylindrical(self):
+    def make_cylindrical(self, grid):
         """ Convert to cylindrical coordinate system. """
         for vector in self._vectors:
-            vector.make_cylindrical()
+            vector.make_cylindrical(grid)
 
     def rotate_about_x(self, deg):
         """ Rotate about the X axis by `deg` degrees. """

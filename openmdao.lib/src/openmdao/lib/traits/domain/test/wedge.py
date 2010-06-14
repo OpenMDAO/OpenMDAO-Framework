@@ -12,9 +12,9 @@ def create_wedge_3d(shape, length, inner, outer, angle):
     """ Creates a 3D wedge-shaped single-zone structured domain. """
     imax, jmax, kmax = shape
 
-    delta_x      = float(length) / (imax - 1)
-    delta_radius = float(outer - inner) / (jmax - 1)
-    delta_theta  = float(angle * _DEG2RAD) / (kmax - 1)
+    delta_x      = float(length) / (imax - 1) if imax > 1 else 1.
+    delta_radius = float(outer - inner) / (jmax - 1) if jmax > 1 else 1.
+    delta_theta  = float(angle * _DEG2RAD) / (kmax - 1) if kmax > 1 else 1.
 
     dtype = numpy.float32  # Default single-precision.
 
@@ -77,8 +77,8 @@ def create_wedge_2d(shape, inner, outer, angle):
     """ Creates a 2D wedge-shaped single-zone structured domain. """
     imax, jmax = shape
 
-    delta_radius = float(outer - inner) / (imax - 1)
-    delta_theta  = float(angle * _DEG2RAD) / (jmax - 1)
+    delta_radius = float(outer - inner) / (imax - 1) if imax > 1 else 1.
+    delta_theta  = float(angle * _DEG2RAD) / (jmax - 1) if jmax > 1 else 1.
 
     dtype = numpy.float32  # Default single-precision.
 

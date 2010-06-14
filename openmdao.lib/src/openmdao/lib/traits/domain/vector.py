@@ -1,6 +1,6 @@
-from math import asin, atan2, cos, sin, sqrt
+from math import atan2, cos, hypot, radians, sin
 
-_DEG2RAD = asin(1.) / 90.
+import numpy
 
 
 class Vector(object):
@@ -33,88 +33,104 @@ class Vector(object):
             return (self.x.min(), self.x.max())
         return ()
 
-    def is_equivalent(self, other, name, logger):
+    def is_equivalent(self, other, name, logger, tolerance=0.):
         """ Test if self and `other` are equivalent. """
         if not isinstance(other, Vector):
             logger.debug('other is not a Vector object.')
             return False
 
-        if self.x is None:
-            if other.x is not None:
-                logger.debug("'self' has no X component but 'other' does.")
+        if not self._check_equivalent(other, name, 'x', logger, tolerance):
+            return False
+        if not self._check_equivalent(other, name, 'y', logger, tolerance):
+            return False
+        if not self._check_equivalent(other, name, 'z', logger, tolerance):
+            return False
+
+        return True
+
+    def _check_equivalent(self, other, name, component, logger, tolerance):
+        """ Check equivalence to a component array. """
+        arr = getattr(self, component)
+        other_arr = getattr(other, component)
+        if arr is None:
+            if other_arr is not None:
+                logger.debug("%s has no %s component but 'other' does.", name,
+                             component.upper())
                 return False
         else:
-            if (other.x != self.x).any():
-                logger.debug('%s X values are not equal.', name)
-                return False
-
-        if self.y is None:
-            if other.y is not None:
-                logger.debug("'self' has no Y component but 'other' does.")
-                return False
-        else:
-            if (other.y != self.y).any():
-                logger.debug('%s Y values are not equal.', name)
-                return False
-
-        if self.z is None:
-            if other.z is not None:
-                logger.debug("'self' has no Z component but 'other' does.")
-                return False
-        else:
-            if (other.z != self.z).any():
-                logger.debug('%s Z values are not equal.', name)
-                return False
-
+            if tolerance > 0.:
+                if not numpy.allclose(other_arr, arr, tolerance, tolerance):
+                    logger.debug("%s %s values are not 'close'.", name,
+                                 component.upper())
+                    print 'arr:', arr
+                    print 'other_arr:', other_arr
+                    return False
+            else:
+                if (other_arr != arr).any():
+                    logger.debug('%s %s values are not equal.', name,
+                                 component.upper())
+                    return False
         return True
 
     def flip_z(self):
         """ Convert to other-handed coordinate system. """
         if self.z is None:
-            raise AttributeError('vector has no Z component')
+            raise AttributeError('flip_z: no Z component')
         self.z *= -1.
 
-    def make_cartesian(self):
-        """ Convert to cartesian coordinate system. """
-        y_get = self.y.item
-        y_set = self.y.itemset
-        z_get = self.z.item
-        z_set = self.z.itemset
-# TODO: try 'ravel' to avoid structured grid dependence.
-        imax, jmax, kmax = self.x.shape
-        for i in range(imax):
-            for j in range(jmax):
-                for k in range(kmax):
-                    y = y_get(i, j, k)  # r
-                    z = z_get(i, j, k)  # theta
-                    y_set(i, j, k, y * sin(z))
-                    z_set(i, j, k, y * cos(z))
+    def make_cartesian(self, grid):
+        """
+        Convert to cartesian coordinate system.
+        The associated :class:`GridCoordinates` must be in cylindrical form.
+        """
+        if grid.shape != self.shape:
+            raise NotImplementedError('make_cartesian: shape mismatch'
+                                      ' not supported')
+        t_flat = grid.z.flat  # theta
+        y_flat = self.y.flat
+        z_flat = self.z.flat
+        for i in range(len(y_flat)):
+            t = t_flat[i]
+            sine = sin(t)
+            cosine = cos(t)
 
-    def make_cylindrical(self):
-        """ Convert to cylindrical coordinate system. """
-        y_get = self.y.item
-        y_set = self.y.itemset
-        z_get = self.z.item
-        z_set = self.z.itemset
-# TODO: try 'ravel' to avoid structured grid dependence.
-        imax, jmax, kmax = self.x.shape
-        for i in range(imax):
-            for j in range(jmax):
-                for k in range(kmax):
-                    y = y_get(i, j, k)
-                    z = z_get(i, j, k)
-                    y_set(i, j, k, sqrt(y*y + z*z))  # r
-                    z_set(i, j, k, atan2(z, y))      # theta
+            y = y_flat[i]  # Radial component
+            z = z_flat[i]  # Tangential component
+
+            y_flat[i] = y*cosine - z*sine
+            z_flat[i] = y*sine   + z*cosine
+
+    def make_cylindrical(self, grid):
+        """
+        Convert to cylindrical coordinate system.
+        The associated :class:`GridCoordinates` must be in cylindrical form.
+        """
+        if grid.shape != self.shape:
+            raise NotImplementedError('make_cylindrical: shape mismatch'
+                                      ' not supported')
+        t_flat = grid.z.flat  # theta
+        y_flat = self.y.flat
+        z_flat = self.z.flat
+        for i in range(len(y_flat)):
+            t = t_flat[i]
+            y = y_flat[i]
+            z = z_flat[i]
+
+            magnitude = hypot(y, z)
+            rel_theta = atan2(z, y) - t
+
+            y_flat[i] = magnitude * cos(rel_theta)  # Radial component
+            z_flat[i] = magnitude * sin(rel_theta)  # Tangential component
 
     def rotate_about_x(self, deg):
         """ Rotate about the X axis by `deg` degrees. """
         if self.y is None:
-            raise AttributeError('vector has no Y component')
+            raise AttributeError('rotate_about_x: no Y component')
         if self.z is None:
-            raise AttributeError('vector has no Z component')
+            raise AttributeError('rotate_about_x: no Z component')
 
-        sine   = sin(deg * _DEG2RAD)
-        cosine = cos(deg * _DEG2RAD)
+        sine   = sin(radians(deg))
+        cosine = cos(radians(deg))
         y_new  = self.y*cosine - self.z*sine
         self.z = self.z*cosine + self.y*sine
         self.y = y_new
@@ -122,12 +138,12 @@ class Vector(object):
     def rotate_about_y(self, deg):
         """ Rotate about the Y axis by `deg` degrees. """
         if self.x is None:
-            raise AttributeError('vector has no X component')
+            raise AttributeError('rotate_about_y: no X component')
         if self.z is None:
-            raise AttributeError('vector has no Z component')
+            raise AttributeError('rotate_about_y: no Z component')
 
-        sine   = sin(deg * _DEG2RAD)
-        cosine = cos(deg * _DEG2RAD)
+        sine   = sin(radians(deg))
+        cosine = cos(radians(deg))
         x_new  = self.x*cosine - self.z*sine
         self.z = self.z*cosine + self.x*sine
         self.x = x_new
@@ -135,12 +151,12 @@ class Vector(object):
     def rotate_about_z(self, deg):
         """ Rotate about the Z axis by `deg` degrees. """
         if self.x is None:
-            raise AttributeError('vector has no X component')
+            raise AttributeError('rotate_about_z: no X component')
         if self.y is None:
-            raise AttributeError('vector has no Y component')
+            raise AttributeError('rotate_about_z: no Y component')
 
-        sine   = sin(deg * _DEG2RAD)
-        cosine = cos(deg * _DEG2RAD)
+        sine   = sin(radians(deg))
+        cosine = cos(radians(deg))
         x_new  = self.x*cosine - self.y*sine
         self.y = self.y*cosine + self.x*sine
         self.x = x_new

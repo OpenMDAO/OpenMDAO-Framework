@@ -40,7 +40,7 @@ class Zone(object):
 
     coordinate_system = property(_get_coord_sys, _set_coord_sys)
 
-    def is_equivalent(self, other, logger):
+    def is_equivalent(self, other, logger, tolerance=0.):
         """ Test if self and `other` are equivalent. """
         if not isinstance(other, Zone):
             logger.debug('other is not a Zone object.')
@@ -67,10 +67,11 @@ class Zone(object):
             return False
 
         if not self.grid_coordinates.is_equivalent(other.grid_coordinates,
-                                                   logger):
+                                                   logger, tolerance):
             return False
 
-        if not self.flow_solution.is_equivalent(other.flow_solution, logger):
+        if not self.flow_solution.is_equivalent(other.flow_solution, logger,
+                                                tolerance):
             return False
 
         return True
@@ -85,15 +86,15 @@ class Zone(object):
     def make_cartesian(self):
         """ Convert to cartesian coordinate system. """
         if self.coordinate_system != CARTESIAN:
+            self.flow_solution.make_cartesian(self.grid_coordinates)
             self.grid_coordinates.make_cartesian()
-            self.flow_solution.make_cartesian()
             self.coordinate_system = CARTESIAN
 
     def make_cylindrical(self):
         """ Convert to cylindrical coordinate system. """
         if self.coordinate_system != CYLINDRICAL:
             self.grid_coordinates.make_cylindrical()
-            self.flow_solution.make_cylindrical()
+            self.flow_solution.make_cylindrical(self.grid_coordinates)
             self.coordinate_system = CYLINDRICAL
 
     def make_left_handed(self):

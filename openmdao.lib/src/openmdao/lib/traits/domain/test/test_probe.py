@@ -3,7 +3,8 @@ Test :class:`DomainObj` surface_probe() operations.
 """
 
 import logging
-import numpy
+import os.path
+import pkg_resources
 import unittest
 
 from math import pi
@@ -14,9 +15,24 @@ from openmdao.lib.traits.domain.test.wedge import create_wedge_3d
 
 from openmdao.util.testutil import assert_raises, assert_rel_error
 
+from openmdao.lib.traits.domain.test import restart
+
+ORIG_DIR = os.getcwd()
+
 
 class TestCase(unittest.TestCase):
     """ Test :class:`Domain` surface_probe() operations. """
+
+    directory = os.path.realpath(
+        pkg_resources.resource_filename('openmdao.lib.traits.domain', 'test'))
+
+    def setUp(self):
+        """ Called before each test in this class. """
+        os.chdir(TestCase.directory)
+
+    def tearDown(self):
+        """ Called after each test in this class. """
+        os.chdir(ORIG_DIR)
 
     def test_cube(self):
         logging.debug('')
@@ -59,7 +75,7 @@ class TestCase(unittest.TestCase):
         variables = (('area', 'inch**2'),)
         metrics = surface_probe(wedge, surfaces, variables)
         area = metrics[0]
-        expected = (((pi*2.**2.) - (pi*0.5**2.)) * 30. / 360.) * 144.
+        expected = (((pi*2.**2.) - (pi*0.5**2.)) * 30./360.) * 144.
         logging.debug('area = %g (%g ft), expected %g',
                       area, area / 144., expected)
         assert_rel_error(self, area, expected, 0.00001)
@@ -69,7 +85,7 @@ class TestCase(unittest.TestCase):
         variables = (('area', 'inch**2'),)
         metrics = surface_probe(wedge, surfaces, variables)
         area = metrics[0]
-        expected = (2.* pi*0.5 * 30. / 360.) * 5. * 144.
+        expected = (2.*pi*0.5 * 30./360.) * 5. * 144.
         logging.debug('area = %g (%g ft), expected %g',
                       area, area / 144., expected)
         assert_rel_error(self, area, expected, 0.00001)
@@ -78,7 +94,7 @@ class TestCase(unittest.TestCase):
         variables = (('area', 'inch**2'),)
         metrics = surface_probe(wedge, surfaces, variables)
         area = metrics[0]
-        expected = (2.* pi*2. * 30. / 360.) * 5. * 144.
+        expected = (2.* pi*2. * 30./360.) * 5. * 144.
         logging.debug('area = %g (%g ft), expected %g',
                       area, area / 144., expected)
         assert_rel_error(self, area, expected, 0.00001)
@@ -92,6 +108,63 @@ class TestCase(unittest.TestCase):
         logging.debug('area = %g (%g ft), expected %g',
                       area, area / 144., expected)
         assert_rel_error(self, area, expected, 0.000001)
+
+    def test_adpac(self):
+        # Verify correct metric values for data from real scenario.
+        logging.debug('')
+        logging.debug('test_adpac')
+
+        domain = restart.read('lpc-test', logging.getLogger())
+        surfaces = [('zone_1', 2, 2, 0, -1, 0, -1),
+                    ('zone_2', 2, 2, 0, -1, 0, -1)]
+        variables = [('area', 'inch**2'),
+                     ('pressure_stagnation', 'psi'),
+                     ('pressure', 'psi'),
+                     ('temperature_stagnation', 'degR'),
+                     ('temperature', 'degR'),
+                     ('mass_flow', 'lbm/s'),
+                     ('corrected_mass_flow', 'lbm/s')]
+        metrics = surface_probe(domain, surfaces, variables, 'mass')
+        logging.debug('lpc-test I face data:')
+        for i, (name, units) in enumerate(variables):
+            logging.debug('    %s = %g %s' % (name, metrics[i], units))
+
+        # These values have been verified with ADSPIN.
+        assert_rel_error(self, metrics[0], 830.494, 0.00001)
+        assert_rel_error(self, metrics[1], 8.95658, 0.00001)
+        assert_rel_error(self, metrics[2], 6.97191, 0.00001)
+        assert_rel_error(self, metrics[3], 547.784, 0.00001)
+        assert_rel_error(self, metrics[4], 509.909, 0.00001)
+        assert_rel_error(self, metrics[5], 120.092, 0.00001)
+        assert_rel_error(self, metrics[6], 202.573, 0.00001)
+
+        surfaces = [('zone_1', 0, -1, 2, 2, 0, -1)]
+        metrics = surface_probe(domain, surfaces, variables, 'mass')
+        logging.debug('lpc-test J face data:')
+        for i, (name, units) in enumerate(variables):
+            logging.debug('    %s = %g %s' % (name, metrics[i], units))
+
+        assert_rel_error(self, metrics[0],  1089.77, 0.00001)
+        assert_rel_error(self, metrics[1],  7.08859, 0.00001)
+        assert_rel_error(self, metrics[2],  6.52045, 0.00001)
+        assert_rel_error(self, metrics[3],  553.772, 0.00001)
+        assert_rel_error(self, metrics[4],  540.711, 0.00001)
+        assert_rel_error(self, metrics[5], 0.421583, 0.00001)
+        assert_rel_error(self, metrics[6], 0.903318, 0.00001)
+
+        surfaces = [('zone_1', 0, -1, 0, -1, 2, 2)]
+        metrics = surface_probe(domain, surfaces, variables, 'mass')
+        logging.debug('lpc-test K face data:')
+        for i, (name, units) in enumerate(variables):
+            logging.debug('    %s = %g %s' % (name, metrics[i], units))
+
+        assert_rel_error(self, metrics[0],  2870.64, 0.00001)
+        assert_rel_error(self, metrics[1],  8.69595, 0.00001)
+        assert_rel_error(self, metrics[2],  6.89906, 0.00001)
+        assert_rel_error(self, metrics[3],  546.863, 0.00001)
+        assert_rel_error(self, metrics[4],  511.839, 0.00001)
+        assert_rel_error(self, metrics[5], -156.175, 0.00001)
+        assert_rel_error(self, metrics[6], -271.477, 0.00001)
 
     def test_errors(self):
         logging.debug('')
@@ -147,6 +220,10 @@ class TestCase(unittest.TestCase):
                       "Unknown/unsupported variable 'no-such-variable'")
 
         variables = (('area', 'inch**2'),)
+        assert_raises(self, 'surface_probe(wedge, surfaces, variables, "mass")',
+                      globals(), locals(), NotImplementedError,
+                      'Zone solution location Vertex not supported')
+
         assert_raises(self, 'surface_probe(wedge, surfaces, variables, "scheme")',
                       globals(), locals(), ValueError,
                       "Unknown/unsupported weighting scheme 'scheme'")
@@ -160,8 +237,44 @@ class TestCase(unittest.TestCase):
 
         wedge.reference_state = {'dummy': 42}
         assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
-                      globals(), locals(), AttributeError,
-                      "For area, reference_state is missing 'length_reference'.")
+                      globals(), locals(), AttributeError, "For area,"
+                      " reference_state is missing 'length_reference'.")
+
+        variables = (('mass_flow', 'lbm/s'),)
+        assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
+                      globals(), locals(), AttributeError, "For mass flow,"
+                      " reference_state is missing one or more of"
+                      " ('length_reference', 'pressure_reference',"
+                      " 'ideal_gas_constant', 'temperature_reference').")
+
+        variables = (('corrected_mass_flow', 'lbm/s'),)
+        assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
+                      globals(), locals(), AttributeError, "For corrected mass"
+                      " flow, zone xyzzy is missing one or more of"
+                      " ('density', 'momentum', 'pressure').")
+
+        variables = (('pressure', 'psi'),)
+        assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
+                      globals(), locals(), AttributeError, "For static"
+                      " pressure, zone xyzzy is missing 'pressure'.")
+
+        variables = (('pressure_stagnation', 'psi'),)
+        assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
+                      globals(), locals(), AttributeError, "For total"
+                      " pressure, zone xyzzy is missing one or more of"
+                      " ('density', 'momentum', 'pressure').")
+
+        variables = (('temperature', 'degR'),)
+        assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
+                      globals(), locals(), AttributeError, "For static"
+                      " temperature, zone xyzzy is missing one or more of"
+                      " ('density', 'pressure').")
+
+        variables = (('temperature_stagnation', 'degR'),)
+        assert_raises(self, 'surface_probe(wedge, surfaces, variables)',
+                      globals(), locals(), AttributeError, "For total"
+                      " temperature, zone xyzzy is missing one or more of"
+                      " ('density', 'momentum', 'pressure').")
 
 
 if __name__ == '__main__':

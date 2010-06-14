@@ -70,43 +70,44 @@ class TestCase(unittest.TestCase):
         self.assertEqual(domain.shape, [])
         self.assertEqual(domain.extent, [])
 
-    def test_coords(self):
+    def test_coordinate_systems(self):
         logging.debug('')
-        logging.debug('test_coords')
+        logging.debug('test_coordinate_systems')
 
-        coords = GridCoordinates()
-        self.assertEqual(coords.shape, ())
-        self.assertEqual(coords.extent, ())
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
 
-        logger = logging.getLogger()
-        wedge3d = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
-        self.assertFalse(coords.is_equivalent(wedge3d.xyzzy.grid_coordinates,
-                                              logger))
+        cyl = wedge.copy()
+        cyl.make_cylindrical()
 
-        wedge2d = create_wedge_2d((20, 10), 0.5, 2., 30.)
-        self.assertFalse(coords.is_equivalent(wedge2d.xyzzy.grid_coordinates,
-                                              logger))
+        cart = cyl.copy()
+        cart.make_cartesian()
+        self.assertTrue(cart.is_equivalent(wedge, tolerance=0.000001))
 
-        assert_raises(self, 'coords.flip_z()', globals(), locals(),
-                      AttributeError, 'no Z coordinates')
+    def test_grid(self):
+        logging.debug('')
+        logging.debug('test_grid')
 
-        assert_raises(self, 'coords.translate(0., 0., 1.)', globals(), locals(),
-                      AttributeError, 'no Z coordinates')
+        grid = GridCoordinates()
+        self.assertEqual(grid.shape, ())
+        self.assertEqual(grid.extent, ())
+        self.assertEqual(grid.ghosts, [0, 0, 0, 0, 0, 0])
 
-        assert_raises(self, 'coords.translate(0., 1., 0.)', globals(), locals(),
+        assert_raises(self, 'grid.ghosts = []', globals(), locals(),
+                      ValueError, 'ghosts must be a 6-element array',
+                      use_exec=True)
+
+        assert_raises(self, 'grid.ghosts = [0, 1, 2, 3, 4, -5]',
+                      globals(), locals(), ValueError,
+                      'All ghost values must be >= 0', use_exec=True)
+
+        assert_raises(self, 'grid.translate(1., 0., 0.)', globals(), locals(),
+                      AttributeError, 'no X coordinates')
+
+        assert_raises(self, 'grid.translate(0., 1., 0.)', globals(), locals(),
                       AttributeError, 'no Y coordinates')
 
-        assert_raises(self, 'coords.translate(1., 0., 0.)', globals(), locals(),
-                      AttributeError, 'no X coordinates')
-
-        assert_raises(self, 'coords.rotate_about_x(0.)', globals(), locals(),
-                      AttributeError, 'no Y coordinates')
-
-        assert_raises(self, 'coords.rotate_about_y(0.)', globals(), locals(),
-                      AttributeError, 'no X coordinates')
-
-        assert_raises(self, 'coords.rotate_about_z(0.)', globals(), locals(),
-                      AttributeError, 'no X coordinates')
+        assert_raises(self, 'grid.translate(0., 0., 1.)', globals(), locals(),
+                      AttributeError, 'no Z coordinates')
 
     def test_vector(self):
         logging.debug('')
@@ -116,26 +117,17 @@ class TestCase(unittest.TestCase):
         self.assertEqual(vec.shape, ())
         self.assertEqual(vec.extent, ())
 
-        logger = logging.getLogger()
-        wedge3d = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
-        self.assertFalse(vec.is_equivalent(wedge3d.xyzzy.flow_solution.momentum,
-                                           'momentum', logger))
-
-        wedge2d = create_wedge_2d((20, 10), 0.5, 2., 30.)
-        self.assertFalse(vec.is_equivalent(wedge2d.xyzzy.flow_solution.momentum,
-                                           'momentum', logger))
-
         assert_raises(self, 'vec.flip_z()', globals(), locals(),
-                      AttributeError, 'vector has no Z component')
+                      AttributeError, 'flip_z: no Z component')
 
         assert_raises(self, 'vec.rotate_about_x(0.)', globals(), locals(),
-                      AttributeError, 'vector has no Y component')
+                      AttributeError, 'rotate_about_x: no Y component')
 
         assert_raises(self, 'vec.rotate_about_y(0.)', globals(), locals(),
-                      AttributeError, 'vector has no X component')
+                      AttributeError, 'rotate_about_y: no X component')
 
         assert_raises(self, 'vec.rotate_about_z(0.)', globals(), locals(),
-                      AttributeError, 'vector has no X component')
+                      AttributeError, 'rotate_about_z: no X component')
 
     def test_misc(self):
         logging.debug('')
@@ -146,10 +138,8 @@ class TestCase(unittest.TestCase):
 
         domain = DomainObj()
         domain.add_domain(wedge, make_copy=True)
-
         self.assertTrue(domain.is_equivalent(wedge, logger))
 
-        # Just for test coverage.
         domain.xyzzy.flow_solution.add_vector('fred',
                                               numpy.zeros(domain.xyzzy.shape,
                                                           float))
@@ -164,20 +154,6 @@ class TestCase(unittest.TestCase):
         domain.xyzzy.flow_solution.momentum.x += 1.
         self.assertFalse(domain.is_equivalent(wedge, logger))
 
-        assert_raises(self, "domain.add_zone('xyzzy', wedge)",
-                      globals(), locals(), ValueError,
-                      "name 'xyzzy' is already bound")
-
-        assert_raises(self, "domain.rename_zone('xyzzy', domain.xyzzy)",
-                      globals(), locals(), ValueError,
-                      "name 'xyzzy' is already bound")
-
-        assert_raises(self,
-                      "domain.xyzzy.flow_solution.add_vector('momentum',"
-                      " numpy.zeros(domain.xyzzy.shape, numpy.float32))",
-                      globals(), locals(), ValueError,
-                      "name 'momentum' is already bound")
-
         domain.rename_zone('wedge', domain.xyzzy)
         self.assertFalse(domain.is_equivalent(wedge, logger))
 
@@ -187,6 +163,32 @@ class TestCase(unittest.TestCase):
         self.assertFalse(
             domain.wedge.flow_solution.momentum.is_equivalent([], 'momentum',
                                                               logger))
+    def test_errors(self):
+        logging.debug('')
+        logging.debug('test_errors')
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        domain = wedge.copy()
+
+        assert_raises(self, "domain.add_zone('xyzzy', wedge)",
+                      globals(), locals(), ValueError,
+                      "name 'xyzzy' is already bound")
+
+        assert_raises(self, "domain.rename_zone('xyzzy', domain.xyzzy)",
+                      globals(), locals(), ValueError,
+                      "name 'xyzzy' is already bound")
+
+        assert_raises(self,
+                      "domain.xyzzy.flow_solution.add_array('density',"
+                      " numpy.zeros(domain.xyzzy.shape, numpy.float32))",
+                      globals(), locals(), ValueError,
+                      "name 'density' is already bound")
+
+        assert_raises(self,
+                      "domain.xyzzy.flow_solution.add_vector('momentum',"
+                      " numpy.zeros(domain.xyzzy.shape, numpy.float32))",
+                      globals(), locals(), ValueError,
+                      "name 'momentum' is already bound")
 
 
 if __name__ == '__main__':

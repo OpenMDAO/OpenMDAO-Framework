@@ -57,6 +57,17 @@ class DomainObj(object):
         self.zones.append(zone)
         return zone
 
+    def remove_zone(self, zone):
+        """ Remove `zone`, specified either by name or object reference. """
+        if isinstance(zone, basestring):
+            name = zone
+            zone = getattr(self, zone)
+        else:
+            name = self.zone_name(zone)
+        delattr(self, name)
+        self.zones.remove(zone)
+        return zone
+
     def rename_zone(self, name, zone):
         """ Rename `zone` to `name`. """
         if hasattr(self, name):
@@ -72,13 +83,17 @@ class DomainObj(object):
                 return name
         raise ValueError('cannot find zone!')
 
+    def copy(self):
+        """ Returns a deep copy of self. """
+        return copy.deepcopy(self)
+
     def deallocate(self):
         """ Deallocate resources. """
         for zone in self.zones:
             delattr(self, self.zone_name(zone))
         self.zones = []
 
-    def is_equivalent(self, other, logger=None):
+    def is_equivalent(self, other, logger=None, tolerance=0.):
         """ Test if self and `other` are equivalent. """
         logger = logger or NullLogger()
         if not isinstance(other, DomainObj):
@@ -92,7 +107,7 @@ class DomainObj(object):
             except AttributeError:
                 logger.debug("other is missing zone '%s'.", name)
                 return False
-            if not zone.is_equivalent(other_zone, logger):
+            if not zone.is_equivalent(other_zone, logger, tolerance):
                 logger.debug("zone '%s' equivalence failed.", name)
                 return False
         return True
