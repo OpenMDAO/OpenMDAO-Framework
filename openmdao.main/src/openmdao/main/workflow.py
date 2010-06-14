@@ -53,9 +53,9 @@ class Workflow(object):
         Stop all nodes.
         We assume it's OK to to call stop() on something that isn't running.
         """
-        self._stop = True
         for comp in self.__iter__():
             comp.stop()
+        self._stop = True
 
     def add(self, comp):
         """ Add a new component to the workflow. """

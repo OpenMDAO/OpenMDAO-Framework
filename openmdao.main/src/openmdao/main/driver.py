@@ -31,6 +31,9 @@ class Driver(Component):
         self._workflow_set = False
         
     def _get_workflow(self):
+        """Returns the 'active' workflow for this Driver, which is either
+        self.workflow or the parent's workflow if no workflow is set for
+        this Driver."""
         if self.workflow:
             return self.workflow
         else:
@@ -57,7 +60,7 @@ class Driver(Component):
             else:
                 if not rv.refs_valid():
                     return False
-                    
+
         # force execution if any component in the workflow is invalid
         for comp in self._get_workflow().contents():
             if not comp.is_valid():
@@ -140,7 +143,6 @@ class Driver(Component):
                 pass
             yield
 
-            
     def stop(self):
         self._stop = True
         self._get_workflow().stop()
