@@ -35,4 +35,4 @@ class DumpCaseRecorder(object):
             out.write("   max_retries: %s, retries: %s\n" % (case.max_retries, 
                                                              case.retries))
             if case.msg:
-                out.write('   msg: %s' % case.msg)
+                out.write('   msg: %s\n' % case.msg)
