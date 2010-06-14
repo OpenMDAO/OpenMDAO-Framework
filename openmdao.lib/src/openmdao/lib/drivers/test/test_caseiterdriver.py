@@ -59,8 +59,6 @@ class DrivenComponent(Component):
             self.raise_exception('Forced error', RuntimeError)
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
-#FIXME: for some reason the above doesn't call stop() on the driver...
-            #self.parent._stop = True
 
 
 class MyModel(Assembly):
