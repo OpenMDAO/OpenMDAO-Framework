@@ -43,15 +43,11 @@ repeatedly until some condition is met. Some examples of Drivers are
 optimizers, solvers, and design space explorers.
 
 An :term:`Assembly` is a special kind of Component that contains other
-Components, Drivers, and two Workflows. The first Workflow, called
-*driverflow*, specifies the execution order of all of the Drivers in the
-Assembly. The second, called *workflow*, specifies the execution order of the
-non-Driver Components in the Assembly. When an Assembly executes, it runs the
-driverflow Workflow, which executes each Driver in turn. The execution of
-each Driver will run workflow until that Driver decides it is finished. Then
-the next Driver in driverflow will execute, running workflow until it
-finishes, and so on until all of the Drivers in driverflow have finished. If
-driverflow happens to be empty, then the Assembly will run workflow once.
+Components and Drivers. By default an Assembly has one Driver called *driver*,
+When an Assembly executes, it runs *driver*, which in turn executes its
+Workflow. A Driver's Workflow may contain other Drivers, which allows for
+nested iteration schemes. The execution of each Driver will run its
+corresponding workflow until that Driver decides it is finished.
 
 The next figure shows an example of an Assembly with two Drivers and four
 Components. A solid line between two Components indicates that one of them is

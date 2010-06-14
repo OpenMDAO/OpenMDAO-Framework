@@ -13,6 +13,7 @@ from openmdao.main.interfaces import IDriver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
+from openmdao.main.dataflow import SequentialFlow
 from openmdao.main.expression import Expression, ExpressionList
 
     
@@ -35,7 +36,8 @@ class Driver(Component):
         if self._workflow:
             return self._workflow
         else:
-            return self.parent.workflow
+            self._workflow = SequentialFlow()
+            return self._workflow
         
     @workflow.setter
     def workflow(self, wf):
