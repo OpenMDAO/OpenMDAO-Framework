@@ -3,6 +3,8 @@
 import random
 import re
 
+from numpy import int32,int64,float32,float64
+
 from enthought.traits.api import Python
 
 from pyevolve import G1DList, G1DBinaryString, G2DList, GAllele, GenomeBase
@@ -11,7 +13,7 @@ from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 from openmdao.main.api import Driver, ExprEvaluator, set_as_top, Component, Assembly,Expression
 from openmdao.lib.api import Float, Int, Enum, Array,Bool, Instance
 
-array_test = re.compile("\[[0-9]+\]$")
+array_test = re.compile("(\[[0-9]+\])+$")
 
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO frameowork, based on the Pyevolve Genetic algorithm module. 
@@ -136,15 +138,14 @@ class Genetic(Driver):
         #indexed the same as self._allels
         expreval = ExprEvaluator(ref, self.parent, single_name=True)
         self._design_vars.append(expreval) #add it to the list of string refs
-        val = self._design_vars[-1].evaluate()
-        if low and high: #use specified, overrides any trait defaults that would have been found
+        val = expreval.evaluate()
+        if low is not None and high is not None: #use specified, overrides any trait defaults that would have been found
             self._des_var_ranges[ref] = (low,high)
         else: 
             ranges = [0,0]
             #split up the ref string to be able to get the trait. 
             path = ".".join(ref.split(".")[0:-1]) #get the path to the object
             target = ref.split(".")[-1] #get the last part of the string after the last "."
-            
             obj = getattr(self.parent,path)
             
             t = obj.trait(target) #get the trait
@@ -167,9 +168,11 @@ class Genetic(Driver):
                     self.raise_exception("No value was specified for the 'high' argument, "
                                          "and no default was found in the public variable metadata",ValueError)
                 self._des_var_ranges[ref] = tuple(ranges)
-                
+             
             elif array_test.search(target): #can't figure out what the ranges should be
-                if not(isinstance(val,float) or isinstance(val,int)):
+                if not(isinstance(val,float) or isinstance(val,int) or isinstance(val,int32) or \
+                       isinstance(val,int64) or isinstance(val,float32) or isinstance(val,float64)
+                      ):
                     self.raise_exception("Only array values of type 'int' or 'float' are allowed as "
                                          "design variables")
                     
@@ -212,6 +215,7 @@ class Genetic(Driver):
         ga.evolve(freq_stats=0)
         
         self.best_individual = ga.bestIndividual()
+           
 
     def _run_model(self,chromosome):
         for i,value in enumerate(chromosome):
