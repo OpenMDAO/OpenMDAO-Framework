@@ -34,7 +34,7 @@ if you use Linux or OS X.
 2. You should be in your home directory on your Linux machine. At the prompt, type: ``ssh-keygen -t rsa``. 
 3. When prompted, press *Enter* to accept the default file name for your key. 
 4. Press *Enter* when prompted for a password and then press it again to
-   confirm that you are not entering a password. Your key pair is stored in ``~/.ssh/
+   confirm that you are NOT entering a password. Your key pair is stored in ``~/.ssh/
    as id_rsa.pub`` (public key) and ``id_rsa`` (private key).
 
 .. note::  In the unusual event that the ``ssh-keygen`` command fails, you may need to install
@@ -66,13 +66,13 @@ push a branch back to openmdao. In your home directory on your Linux machine, ty
 
 .. note:: If you do not know your userid, log in to Launchpad and click on your name in the upper
    right-hand corner. This takes you to an *Overview* page. In the first column, under *User
-   Information*, you should see **OpenID login**. The web address should contain your userid. 
+   Information*, you should see **OpenID login**. The web address will contain your userid. 
 
 If the above command failed, you may be missing an ``authentication.conf`` file or have incomplete
 information in your ``bazaar.conf`` file. To check whether you have these files, type the following
 commands:
 
-1. ``cd  ~/.bazaar``.
+1. ``cd  ~/.bazaar``
 2. ``ls``
 3. If you do not see the ``authentication.conf`` file, use a text editor of your choice to
    create it.  
@@ -87,7 +87,7 @@ commands:
   
 5. Save and exit the ``authentication.conf`` file.
 6. Use your text editor to open the ``bazaar.conf`` file. Make sure your Launchpad username is in the
-   file. If it isn't, add it at the end of the file, for example:  ``launchpad_username = john-j-smith``.
+   file. If it isn't, add it at the end of the file, for example: ``launchpad_username = john-j-smith``.
 7. Save any changes and exit the file.
 
 
@@ -104,76 +104,48 @@ If you use Windows, please follow these instructions for SSH key creation and re
 *Creating Your Key on Windows*
 ++++++++++++++++++++++++++++++
 
-**Windows (PuTTY)**
+1. In your user directory (on Vista, for example, ``C:\Users\<win-username-here>)``, create a new directory
+   called ``.ssh``. **Creating this directory with Explorer will not work because of the leading dot!** To
+   create this directory, start a command prompt and navigate (using the ``cd`` command) to your user
+   directory and type ``md .ssh``.
 
-If you already have :term:`PuTTY` on your machine, omit Step #1. (Note that you might not find
-PuTTY on your *start* menu; you may have to check your C: drive.)
+2. Assuming :term:`PuTTY` is installed in ``C:\Putty``, go there and run :term:`PuTTYgen`. If it isn't
+   installed, install it by going to this `page <http://www.putty.org>`_. 
 
+3. Within PuTTYgen, click the *Generate* button and move your mouse around as instructed. **Do not 
+   enter a key passphrase.**
 
-1. Download the PuTTY Key Generator from `here <http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html>`_.
+4. Once the key is generated, go to the *Conversions* menu and choose *Export OpenSSH Key*. (DON'T USE
+   the *Save Private Key* button.) In the save dialog, navigate to the ``.ssh`` folder and save the
+   key that you created in Step 1 above. Save the private key as ``id_rsa`` (no file extension).
+   PuTTYgen will warn you that you're making a key without a passphrase. Click *YES* to let PuTTYgen
+   know that you are sure you want to save this key without a passphrase to protect it. 
 
-2. Go to Putty and run ``puttygen.exe`` to bring up the PuTTY Key Generator. 
-  
-3. Click on the *Generate* button. You must move your mouse around in the blank area during key generation.
-
-4. Leave the *Key passphrase* and *Confirmation passphrase* boxes blank. Click *Save public key* and choose a
-   location to save it. 
-   
-5. Click *Save private key*. When asked whether you are sure you want to save the key without a passphrase, click
-   *yes* and save it to a secure location.
-
-6. Keep your Puttygen window open and copy the public key from it. (You need to register the
-   key with Launchpad.)
-
-7. Run/install `Pageant <http://www.chiark.greenend.org.uk/~sgtatham/putty/download.html>`_, which is an SSH
-   authentication agent for PuTTY. You can install it as either a standalone .exe or as part of the entire
-   PuTTY package. Running it will add an icon to your task bar.
-
-8. Make sure Pageant is running and right-click on its icon. 
-
-9. Select the *Add Key* option. (This step is crucial if you want to connect to Launchpad from a Windows PC.)
-   
-   You can now register your key.
-
-
-.. note:: Follow the steps below if you wish to use Pageant under Cygwin.
-
-**Cygwin/Windows (PuTTY)**
-
-1. Follow the procedure in the **Windows-(PuTTY)** section.
-
-2. Add ``BZR_SSH`` as an environment variable with the value *plink*.
-
-3. Close all existing bash terminals and open a new terminal.
-
-4. Run ``plink INSERT_YOUR_USERNAME_HERE@bazaar.launchpad.net`` and accept *yes* to store the server's
-   host key.
+   Check to make sure your key is not created with a ``.ppk`` extension. If it has an extension, use
+   Explorer to navigate to this file and rename it so it has NO extension.
 
 
 *Registering the key with Launchpad*
 +++++++++++++++++++++++++++++++++++++
 
-You need to register and upload the *public* portion of your SSH key to Launchpad. 
+1. In your ``.ssh`` directory, create the file: ``id_rsa.pub``  
 
-1. Go to your `SSH keys <https://launchpad.net/people/+me/+editsshkeys>`_ page. 
+2. Copy the string from the field titled *Public Key for pasting into OpenSSH authorized_keys file:* onto
+   your clipboard; then paste it into the newly-created ``id_rsa.pub`` file. Save this file.
 
-2. Paste your public key into the text box and then click the *Import Public Key* button (below the
-   text box) to continue. 
-   
+3. Start a browser and navigate to ``Launchpad.net``. Log in to your Launchpad account. Once logged in, you can
+   either edit your user information or  go directly to the URL:  
+   ``https://launchpad.net/~lp-username-goes-here/+editsshkeys``.
 
-*Notifying Launchpad of Your Userid*
-+++++++++++++++++++++++++++++++++++++
+4. Your clipboard should still contain ``id_rsa.pub``. Paste the contents of ``id_rsa.pub`` into the *Add an
+   SSH key* field. Click *Import Public Key* and wait for the key to be added.
 
-You need to provide Launchpad with your userid before you can merge from openmdao to your branch or
-push a branch back to openmdao. On your Windows machine, type: 
+5. From the Windows command line (assuming you have Bazaar installed and assuming you have a LaunchPad
+   account) you should now be able to do: ``bzr launchpad-login <your-lp-userid-here>``.
 
-::
-
-  bzr launchpad-login userid
-
-.. note:: If you do not know your userid, log in to Launchpad and click on your name in the upper
+.. note:: If you do not know your userid, in Launchpad click on your name in the upper
    right-hand corner. This takes you to an *Overview* page. In the first column, under *User Information*, 
-   you should see **OpenID login**. The web address should contain your userid. 
+   you should see **OpenID login**. The web address will contain your userid. 
 
-
- 
+6. If everything worked correctly as you followed these steps, you should be able to create a branch
+   using ``bzr branch lp:openmdao`` without getting any SSH key errors.

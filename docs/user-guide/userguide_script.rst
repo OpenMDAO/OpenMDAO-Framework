@@ -325,8 +325,8 @@ Enthought's Traits `project page <http://code.enthought.com/projects/traits/>`_.
 +------------------+----------------------------------------------------------+
 | Name             | Callable Signature                                       |
 +==================+==========================================================+
-| Array            | Array( [dtype = None, shape = None, value = None,        |
-|                  | typecode = None, iotype = None, desc = None] )           |
+| Array            | Array( [default_value = None, shape = None, value = None,|
+|                  | dtype = None, units = None, iotype = None, desc = None] )|
 +------------------+----------------------------------------------------------+
 | Bool             | Bool( [value = None, desc = None, iotype = None] )       | 
 +------------------+----------------------------------------------------------+
@@ -417,7 +417,7 @@ are illustrated in the following example:
     >>> from openmdao.lib.api import Array
     >>> from numpy import array
     >>> from numpy import float as numpy_float
-    >>> z = Array(dtype=numpy_float, shape=(2,2), value=array([[1.0,2.0],[3.0,5.0]]), iotype='in')
+    >>> z = Array(array([[1.0,2.0],[3.0,5.0]]), dtype=numpy_float, shape=(2,2), iotype='in')
     >>> z.default_value
     array([[ 1.,  2.],
            [ 3.,  5.]])
@@ -455,10 +455,10 @@ and calculates their dot product as an output.
         """ A component that outputs a dot product of two arrays"""
     
 	# set up interface to the framework  
-	x1 = Array(dtype=float, desc = "Input 1", \
-	           value=array([1.0,2.0]), iotype='in')
-	x2 = Array(dtype=float, desc = "Input 2", \
-	           value=array([7.0,8.0]), iotype='in')
+	x1 = Array(array([1.0,2.0]), dtype=float, desc = "Input 1", \
+	           iotype='in')
+	x2 = Array(array([7.0,8.0]), dtype=float, desc = "Input 2", \
+	           iotype='in')
 		   
 	y = Float(0.0, iotype='out', desc = "Dot Product")
 
