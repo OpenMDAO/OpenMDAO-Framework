@@ -66,8 +66,8 @@ architecture document.
 **NASA Documents:**
 
 ==================  ================================================
-*Document Number*	 	  *Title*	
-------------------  ------------------------------------------------
+Document Number	 	  Title	
+==================  ================================================
 NPR 7150.2           NASA Software Engineering Requirements
 ------------------  ------------------------------------------------
 GLPR 7150.1          GRC Software Engineering Requirements

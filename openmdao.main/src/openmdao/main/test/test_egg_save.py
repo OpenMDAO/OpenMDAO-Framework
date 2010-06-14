@@ -133,7 +133,7 @@ class Source(Assembly):
 class Subcontainer(Container):
     """ Just a subcontainer for Source. """
 
-    binary_data = Array('d', value=[], iotype='in')
+    binary_data = Array(dtype='d', iotype='in')
     binary_file = File(path=os.path.join('..', 'sub', 'source.bin'),
                             iotype='out', binary=True)
         
@@ -149,7 +149,7 @@ class Sink(Component):
     """ Consumes files. """
 
     text_data = Str(iotype='out')
-    binary_data = Array('d', value=[], iotype='out')
+    binary_data = Array(dtype='d', iotype='out')
     text_file = File(iotype='in')
     binary_file = File(iotype='in')
     executions = Int(0, iotype='in',

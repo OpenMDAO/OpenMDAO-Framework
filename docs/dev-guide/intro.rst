@@ -50,12 +50,15 @@ Guide.*  These requirements are described below.
       
       Binaries for gfortran are available `here <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_.
 
+.. _`Windows`:
+
   - *Windows*:
    
     - *Visual C++ 2008*
       
-      We uses the Express version, but others (Professional, Standard) should work too.
-         
+      We use the Express version, but others (Professional, Standard) should work too. To get this software,
+      go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.
+
     - *mingw32*   (for FORTRAN)
       
       Make sure to put the *bin* directory of the mingw32 install in your path.
