@@ -22,10 +22,10 @@ class MyModel(Assembly):
         super(MyModel, self).__init__(*args, **kwargs)
 
         # Specify DOE.
-        doe = self.add_container('M4_DOE', DOE())
+        doe = self.add('M4_DOE', DOE())
 
         # The model is an M4 variable fidelity component.
-        doe.model = self.add_container('VarFi', VarFi())
+        doe.model = self.add('VarFi', VarFi())
 
         doe.design_variables = [('x', 0., 5.), ('y', 0., 5.)]
         doe.response_variables = [('z1'), ('z2')]

@@ -259,13 +259,13 @@ class Component (Container):
             if self.directory:
                 self.pop_dir()
  
-    def add_container(self, name, obj):
+    def add(self, name, obj):
         """Override of base class version to force call to *check_config* after
         any child containers are added.
         Returns the added Container object.
         """
         self._config_changed()
-        return super(Component, self).add_container(name, obj)
+        return super(Component, self).add(name, obj)
         
     def remove_container(self, name):
         """Override of base class version to force call to *check_config* after

@@ -68,8 +68,8 @@ class MyModel(Assembly):
 
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
-        self.add_container('driver', CaseIteratorDriver())
-        self.add_container('driven', DrivenComponent())
+        self.add('driver', CaseIteratorDriver())
+        self.add('driven', DrivenComponent())
 
 
 class TestCase(unittest.TestCase):

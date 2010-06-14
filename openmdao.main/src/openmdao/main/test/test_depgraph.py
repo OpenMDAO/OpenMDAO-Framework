@@ -59,16 +59,16 @@ class DepGraphTestCase(unittest.TestCase):
     def setUp(self):
         top = set_as_top(Assembly())
         self.top = top
-        top.add_container('sub', Assembly())
-        top.add_container('comp7', Simple())
-        top.add_container('comp8', Simple())
+        top.add('sub', Assembly())
+        top.add('comp7', Simple())
+        top.add('comp8', Simple())
         sub = top.sub
-        sub.add_container('comp1', Simple())
-        sub.add_container('comp2', Simple())
-        sub.add_container('comp3', Simple())
-        sub.add_container('comp4', Simple())
-        sub.add_container('comp5', Simple())
-        sub.add_container('comp6', Simple())
+        sub.add('comp1', Simple())
+        sub.add('comp2', Simple())
+        sub.add('comp3', Simple())
+        sub.add('comp4', Simple())
+        sub.add('comp5', Simple())
+        sub.add('comp6', Simple())
 
         sub.create_passthrough('comp1.a', 'a1')
         sub.create_passthrough('comp3.a', 'a3')
@@ -93,7 +93,7 @@ class DepGraphTestCase(unittest.TestCase):
 
     def test_simple(self):
         top = set_as_top(Assembly())
-        top.add_container('comp1', Simple())
+        top.add('comp1', Simple())
         vars = ['a','b','c','d']
         self.assertEqual(top.comp1.run_count, 0)
         valids = [top.comp1.get_valid(v) for v in vars]
@@ -117,7 +117,7 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(valids, [True, True, True, True])
         
         # now add another comp and connect them
-        top.add_container('comp2', Simple())
+        top.add('comp2', Simple())
         top.connect('comp1.c', 'comp2.a')
         self.assertEqual(top.comp2.run_count, 0)
         self.assertEqual(top.comp2.c, 3)

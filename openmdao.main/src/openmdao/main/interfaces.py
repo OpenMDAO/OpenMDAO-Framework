@@ -40,6 +40,9 @@ class IWorkflow(Interface):
         an exception if the component is not found.
         """
         
+    def clear(self):
+        """Remove all Components from this workflow."""
+        
     def contents(self):
         """Return a list of all Components in this Workflow. No
         ordering is assumed.

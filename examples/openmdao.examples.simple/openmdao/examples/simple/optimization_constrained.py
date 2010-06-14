@@ -21,10 +21,10 @@ class OptimizationConstrained(Assembly):
         super(OptimizationConstrained, self).__init__()
 
         # Create Paraboloid component instances
-        self.add_container('paraboloid', Paraboloid())
+        self.add('paraboloid', Paraboloid())
 
         # Create CONMIN Optimizer instance
-        self.add_container('driver', CONMINdriver())
+        self.add('driver', CONMINdriver())
         
         # CONMIN Flags
         self.driver.iprint = 0

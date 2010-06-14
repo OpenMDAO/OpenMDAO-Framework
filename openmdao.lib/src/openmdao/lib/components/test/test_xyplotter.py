@@ -18,12 +18,12 @@ class XYplotterTestCase(unittest.TestCase):
 
     def setUp(self):
         self.top = top = set_as_top(Assembly())
-        top.add_container('comp1', ExecComp(exprs=['z=x*y+100']))
-        top.add_container('comp2', ExecComp(exprs=['z=x*.4']))
+        top.add('comp1', ExecComp(exprs=['z=x*y+100']))
+        top.add('comp2', ExecComp(exprs=['z=x*.4']))
         top.connect('comp1.z', 'comp2.x')
-        driver = top.add_container('driver', SimpleCaseIterDriver())
+        driver = top.add('driver', SimpleCaseIterDriver())
         
-        plotter = top.add_container('plotter', XYplotter())
+        plotter = top.add('plotter', XYplotter())
         plotter.title = "Foobar"
         #plotter.add_line(y="comp1.z", line_type='bo-')
         plotter.add_line(x="comp1.x", y="comp1.z", line_type='bo-')

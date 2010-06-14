@@ -13,7 +13,6 @@ from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_co
 from openmdao.main.interfaces import IDriver, IWorkflow
 from openmdao.main.component import Component
 from openmdao.main.container import Container
-from openmdao.main.workflow import SequentialFlow
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression
@@ -45,11 +44,15 @@ class Assembly (Component):
     driver = Instance(Driver, allow_none=True,
                       desc="The top level Driver that manages execution of this Assembly")
     
+    workflow = Instance(IWorkflow, 
+                        desc="The default workflow used by Drivers in this Assembly")
+    
     def __init__(self, doc=None, directory=''):
         self._child_io_graphs = {}
         self._need_child_io_update = True
         
         self.comp_graph = ComponentGraph()
+        self.workflow = Dataflow(self)
         
         # A graph of Variable names (local path), 
         # with connections between Variables as directed edges.  
@@ -65,9 +68,9 @@ class Assembly (Component):
             if v not in self._var_graph:
                 self._var_graph.add_node(v)
                 
-        # default Driver has a DataFlow workflow and executes it once
-        drv = self.add_container('driver', Driver(), workflow=None)
-        drv.workflow = Dataflow(drv)
+        # default Driver executes its workflow once
+        drv = self.add('driver', Driver())
+        
 
 
     def get_var_graph(self):
@@ -98,37 +101,22 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add_container(self, name, obj, workflow='driver.workflow'):
-        """Add obj to the specified workflow and call base class 
-        *add_container*.  If workflow is None, do not add obj to any
-        workflow.
+    def add(self, name, obj):
+        """Add obj to the workflow and call base class *add*.
         
         Returns the added object.
         """
-        obj = super(Assembly, self).add_container(name, obj)
+        obj = super(Assembly, self).add(name, obj)
         self.comp_graph.add(obj)
         
-        if workflow is not None:
-            if isinstance(obj, Container) and not isinstance(obj, Component):
-                pass   # don't add plain Containers to a workflow
-            elif name == 'driver':
-                pass   # don't add top level driver to a workflow
-            else:
-                if isinstance(workflow, basestring):
-                    workflows = [workflow]
-                else:
-                    workflows = workflow
-                for workflow in workflows:
-                    parts = workflow.split('.')
-                    if len(parts) < 2 or parts[0] not in self.__dict__:
-                        self.raise_exception("'%s' is not a known workflow" % workflow,
-                                             NameError)
-                    drv = getattr(self, parts[0])
-                    drv.add_to_workflow('.'.join(parts[1:]), obj)
-            # since the internals of the given Component can change after it's
-            # added, wait to collect its io_graph until we need it
-            self._child_io_graphs[obj.name] = None
-            self._need_child_io_update = True
+        # add all non-Driver Components to the Assembly workflow
+        if isinstance(obj, Component) and not isinstance(obj, Driver):
+            self.workflow.add(obj)
+
+        # since the internals of the given Component can change after it's
+        # added, wait to collect its io_graph until we need it
+        self._child_io_graphs[obj.name] = None
+        self._need_child_io_update = True
 
         return obj
         
@@ -136,6 +124,7 @@ class Assembly (Component):
         """Remove the named container object from this container and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
+        self.workflow.remove(cont)
         for obj in self.__dict__.values():
             if obj is not cont and isinstance(obj, Driver):
                 obj.remove_from_workflow(cont)
@@ -353,7 +342,7 @@ class Assembly (Component):
         return False
 
     def execute (self):
-        """Runs driverflow, or workflow if driverflow is empty."""
+        """Runs driver and updates our boundary variables."""
         self.driver.run()
         self._update_boundary_vars()
     
@@ -371,7 +360,7 @@ class Assembly (Component):
         self.driver.step()
         
     def stop(self):
-        """Stop the workflow."""
+        """Stop the calculation."""
         self.driver.stop()
     
     def list_connections(self, show_passthrough=True):

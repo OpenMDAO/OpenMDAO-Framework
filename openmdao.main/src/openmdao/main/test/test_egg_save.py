@@ -68,7 +68,7 @@ class Source(Assembly):
         global SOURCE_INIT
         SOURCE_INIT = True
 
-        self.add_container('sub', Subcontainer())
+        self.add('sub', Subcontainer())
         self.create_passthrough('sub.binary_file')
 
         # Some custom objects that must be restored.
@@ -186,8 +186,8 @@ class Oddball(Assembly):
 
     def __init__(self, *args, **kwargs):
         super(Oddball, self).__init__(*args, **kwargs)
-        self.add_container('oddcomp', OddballComponent())
-        self.add_container('oddcont', OddballContainer())
+        self.add('oddcomp', OddballComponent())
+        self.add('oddcont', OddballContainer())
         self.thing_to_call = self.instance_method
         self.list_to_call = [[self.instance_method, ()],
                              [Assembly.get_pathname, (self,)]]
@@ -258,9 +258,9 @@ class Model(Assembly):
     def __init__(self, *args, **kwargs):
         super(Model, self).__init__(*args, **kwargs)
 
-        self.add_container('Source', Source(directory='Source'))
-        self.add_container('Oddball', Oddball(directory='Oddball'))
-        self.add_container('Sink', Sink(directory='Sink'))
+        self.add('Source', Source(directory='Source'))
+        self.add('Oddball', Oddball(directory='Oddball'))
+        self.add('Sink', Sink(directory='Sink'))
 
         self.connect('Source.text_file', 'Sink.text_file')
         self.connect('Source.binary_file', 'Sink.binary_file')
@@ -716,7 +716,7 @@ class TestCase(unittest.TestCase):
             self.fail('Expected RuntimeError')
 
         # Create non-orphan component that is not part of model.
-        badboy = orphan.add_container('badboy', Component())
+        badboy = orphan.add('badboy', Component())
         try:
             # Try to include non-member component as an entry point in egg.
             self.model.save_to_egg(self.model.name, next_egg(), py_dir=PY_DIR,

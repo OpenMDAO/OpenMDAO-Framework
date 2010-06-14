@@ -40,10 +40,10 @@ class Bar3Optimization(Assembly):
         super(Bar3Optimization, self).__init__()
 
         # Create CONMIN Optimizer instance
-        self.add_container('driver', CONMINdriver())
+        self.add('driver', CONMINdriver())
         
         # Create Bar3_Truss component instances
-        self.add_container('bar3_truss', Bar3Truss())
+        self.add('bar3_truss', Bar3Truss())
 
         # CONMIN Flags
         self.driver.iprint = 0

@@ -1,7 +1,7 @@
 
 import networkx as nx
 
-from openmdao.main.workflow import SequentialFlow
+from openmdao.main.seqentialflow import SequentialFlow
 from openmdao.main.driver import Driver
 
 __all__ = ['Dataflow']
@@ -11,10 +11,15 @@ class Dataflow(SequentialFlow):
     A Dataflow consists of a collection of Components which are executed in 
     data flow order.
     """
+    def __init__(self, scope, members=None):
+        """ Create an empty flow. """
+        super(Dataflow, self).__init__(members)
+        self._scope = scope
+
     def __iter__(self):
         """Iterate through the nodes in dataflow order."""
         # import Driver here to avoid circular import
-        scope = self._parent.parent
+        scope = self._scope
         graph = self._get_collapsed_graph()
         for n in nx.topological_sort(graph):
             yield getattr(scope, n)
@@ -28,7 +33,7 @@ class Dataflow(SequentialFlow):
         # in each driver's iteration set so we can add edges to/from the driver
         # in our collapsed graph
         to_add = []
-        scope = self._parent.parent
+        scope = self._scope
         graph = scope.comp_graph.graph()
         for comp in self._nodes:
             if isinstance(comp, Driver):

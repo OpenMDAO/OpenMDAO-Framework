@@ -15,7 +15,7 @@ class DumbContainer(Container):
     v3 = Float(3., iotype='in')
     def __init__(self, *args, **kwargs):
         super(DumbContainer, self).__init__(*args, **kwargs)
-        self.add_container('cont', DumbContainer2())
+        self.add('cont', DumbContainer2())
     
     
 class SimpleComp(Component):
@@ -25,8 +25,8 @@ class SimpleComp(Component):
     
     def __init__(self, *args, **kwargs):
         super(SimpleComp, self).__init__(*args, **kwargs)
-        self.add_container('cont_in', DumbContainer())
-        self.add_container('cont_out', DumbContainer())
+        self.add('cont_in', DumbContainer())
+        self.add('cont_out', DumbContainer())
     
     def execute(self):
         for name in ['v1', 'v2', 'v3']:
@@ -41,8 +41,8 @@ class NamespaceTestCase(unittest.TestCase):
 
     def setUp(self):
         self.asm = set_as_top(Assembly())
-        self.asm.add_container('scomp1', SimpleComp())
-        self.asm.add_container('scomp2', SimpleComp())
+        self.asm.add('scomp1', SimpleComp())
+        self.asm.add('scomp2', SimpleComp())
     
     def test_pass_container(self):
         #scomp1                   scomp2

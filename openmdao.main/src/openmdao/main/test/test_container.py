@@ -34,11 +34,11 @@ class ContainerTestCase(unittest.TestCase):
         """
         
         self.root = Container()
-        self.root.add_container('c1', Container())
-        self.root.add_container('c2', Container())
-        self.root.c2.add_container('c21', Container())
-        self.root.c2.add_container('c22', Container())
-        self.root.c2.c22.add_container('c221', Container())
+        self.root.add('c1', Container())
+        self.root.add('c2', Container())
+        self.root.c2.add('c21', Container())
+        self.root.c2.add('c22', Container())
+        self.root.c2.c22.add('c221', Container())
         self.root.c2.c22.c221.add_trait('number', Float(3.14, iotype='in'))
 
     def tearDown(self):
@@ -48,7 +48,7 @@ class ContainerTestCase(unittest.TestCase):
     def test_add_bad_child(self):
         foo = Container()
         try:
-            foo.add_container('non_container', 'some string')
+            foo.add('non_container', 'some string')
         except TypeError, err:
             self.assertEqual(str(err), ": '<type 'str'>' "+
                 "object is not an instance of Container.")
@@ -56,8 +56,8 @@ class ContainerTestCase(unittest.TestCase):
             self.fail('TypeError expected')
         
     def test_pathname(self):
-        self.root.add_container('foo', Container())
-        self.root.foo.add_container('foochild', Container())
+        self.root.add('foo', Container())
+        self.root.foo.add('foochild', Container())
         self.assertEqual(self.root.foo.foochild.get_pathname(), 'foo.foochild')
 
     def test_get(self):
@@ -96,8 +96,8 @@ class ContainerTestCase(unittest.TestCase):
         
     def test_default_naming(self):
         cont = Container()
-        cont.add_container('container1', Container())
-        cont.add_container('container2', Container())
+        cont.add('container1', Container())
+        cont.add('container2', Container())
         cc = Container()
         self.assertEqual(get_default_name(cc, cont), 'container3')
         
@@ -134,7 +134,7 @@ class ContainerTestCase(unittest.TestCase):
     def test_save_load_yaml(self):
         output = StringIO.StringIO()
         c1 = Container()
-        c1.add_container('c2', Container())
+        c1.add('c2', Container())
         c1.save(output, constants.SAVE_YAML)
         
         inp = StringIO.StringIO(output.getvalue())
@@ -143,7 +143,7 @@ class ContainerTestCase(unittest.TestCase):
     def test_save_load_libyaml(self):
         output = StringIO.StringIO()
         c1 = Container()
-        c1.add_container('c2', Container())
+        c1.add('c2', Container())
         c1.save(output, constants.SAVE_LIBYAML)
         
         inp = StringIO.StringIO(output.getvalue())
@@ -152,7 +152,7 @@ class ContainerTestCase(unittest.TestCase):
     def test_save_load_cpickle(self):
         output = StringIO.StringIO()
         c1 = Container()
-        c1.add_container('c2', Container())
+        c1.add('c2', Container())
         c1.save(output)
         
         inp = StringIO.StringIO(output.getvalue())
@@ -161,7 +161,7 @@ class ContainerTestCase(unittest.TestCase):
     def test_save_load_pickle(self):
         output = StringIO.StringIO()
         c1 = Container()
-        c1.add_container('c2', Container())
+        c1.add('c2', Container())
         c1.save(output, constants.SAVE_PICKLE)
         
         inp = StringIO.StringIO(output.getvalue())

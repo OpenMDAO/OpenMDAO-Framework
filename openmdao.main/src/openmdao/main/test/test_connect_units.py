@@ -103,8 +103,8 @@ class VariableTestCase(unittest.TestCase):
     def setUp(self):
         """ this function is used to test each type..."""
         self.top = set_as_top(Assembly())
-        self.top.add_container('oneinp', Oneinp())
-        self.top.add_container('oneout', Oneout())
+        self.top.add('oneinp', Oneinp())
+        self.top.add('oneout', Oneout())
 
     def test_var1(self):
         #  connect to same type variables....

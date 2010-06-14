@@ -73,9 +73,9 @@ class Vehicle(Assembly):
 
         # Create component instances
         
-        self.add_container('transmission', Transmission())
-        self.add_container('engine', Engine())
-        self.add_container('chassis', Chassis())
+        self.add('transmission', Transmission())
+        self.add('engine', Engine())
+        self.add('chassis', Chassis())
 
         # Create input and output ports at the assembly level
         # pylint: disable-msg=E1101
@@ -131,7 +131,7 @@ if __name__ == "__main__": # pragma: no cover
     from openmdao.main.api import set_as_top
     
     top = set_as_top(Assembly())
-    our_vehicle = top.add_container('Testing', Vehicle())      
+    our_vehicle = top.add('Testing', Vehicle())      
     our_vehicle.current_gear = 1
     our_vehicle.velocity = 20.0*(26.8224/60.0)
     our_vehicle.throttle = 1.0

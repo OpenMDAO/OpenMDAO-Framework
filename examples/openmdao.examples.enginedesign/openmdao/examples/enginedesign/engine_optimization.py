@@ -21,10 +21,10 @@ class EngineOptimization(Assembly):
         # pylint: disable-msg=E1101
         
         # Create CONMIN Optimizer instance
-        self.add_container('driver', CONMINdriver())
+        self.add('driver', CONMINdriver())
         
         # Create DrivingSim instance
-        self.add_container('driving_sim', DrivingSim())
+        self.add('driving_sim', DrivingSim())
 
         # CONMIN Flags
         self.driver.iprint = 0
