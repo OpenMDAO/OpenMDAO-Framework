@@ -13,7 +13,6 @@ from openmdao.main.interfaces import IDriver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
-from openmdao.main.dataflow import SequentialFlow
 from openmdao.main.expression import Expression, ExpressionList
 
     
@@ -23,25 +22,19 @@ class Driver(Component):
     
     implements(IDriver)
     
-    _workflow = Instance(Workflow, allow_none=True)
+    workflow = Instance(Workflow, allow_none=True)
     
     def __init__(self, doc=None):
         super(Driver, self).__init__(doc=doc)
-        self._workflow = None
+        self.workflow = None
         self._iter = None
+        self._workflow_set = False
         
-        
-    @property
-    def workflow(self):
-        if self._workflow:
-            return self._workflow
+    def _get_workflow(self):
+        if self.workflow:
+            return self.workflow
         else:
-            self._workflow = SequentialFlow()
-            return self._workflow
-        
-    @workflow.setter
-    def workflow(self, wf):
-        self._workflow = wf
+            return self.parent.workflow
 
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
@@ -66,7 +59,7 @@ class Driver(Component):
                     return False
                     
         # force execution if any component in the workflow is invalid
-        for comp in self.workflow.contents():
+        for comp in self._get_workflow().contents():
             if not comp.is_valid():
                 return False
 
@@ -81,22 +74,22 @@ class Driver(Component):
         super(Driver, self)._pre_execute()
         
         if self._call_execute:
-            if self in self.workflow.contents():
+            if self in self._get_workflow().contents():
                 self.raise_exception("Driver '%s' is a member of it's own workflow!" %
                                      self.name, RuntimeError)
 
 
     def remove_from_workflow(self, component):
         """Remove the specified component from our workflow."""
-        if self._workflow:
-            self._workflow.remove(component)
+        if self.workflow:
+            self.workflow.remove(component)
 
     def iteration_set(self):
         """Return a set of all Components in our workflow, and 
         recursively in any workflow in any driver in our workflow.
         """
         allcomps = set()
-        for child in self.workflow.contents():
+        for child in self._get_workflow().contents():
             allcomps.add(child)
             if isinstance(child, Driver):
                 allcomps.update(child.iteration_set())
@@ -142,10 +135,15 @@ class Driver(Component):
     def _step_workflow(self):
         while True:
             try:
-                self.workflow.step()
+                self._get_workflow().step()
             except RunStopped:
                 pass
             yield
+
+            
+    def stop(self):
+        self._stop = True
+        self._get_workflow().stop()
 
     def start_iteration(self):
         """Called just prior to the beginning of an iteration loop. This can 
@@ -164,7 +162,7 @@ class Driver(Component):
         
     def run_iteration(self):
         """Runs the workflow of components."""
-        wf = self.workflow
+        wf = self._get_workflow()
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run()
