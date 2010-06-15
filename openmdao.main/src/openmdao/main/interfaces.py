@@ -13,6 +13,12 @@ from enthought.traits.api import Interface, Instance
 
 # to check if an interface is provided, you can call
 # validate_implements(value,klass) from enthought.traits.trait_types
+# or if the object you're checking inherits from HasTraits, you can call 
+# has_traits_interface(*ifaces)
+# on it.  Note that if the object you are checking does NOT inherit
+# from HasTraits, validate_implements does a sort of duck typing check that
+# ignores attributes and checks member functions only.  This can lead to
+# interface checks that return True when they really shouldn't.
 
 class IComponent(Interface):
     """A marker interface for Components."""
