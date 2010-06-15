@@ -8,11 +8,11 @@ from openmdao.lib.traits.domain import DomainObj, Vector, Zone, write_plot3d_q
 _DEG2RAD = asin(1.) / 90.
 
 
-def create_wedge_3d(shape, length, inner, outer, angle):
+def create_wedge_3d(shape, length, inner, outer, angle, axis='z'):
     """ Creates a 3D wedge-shaped single-zone structured domain. """
     imax, jmax, kmax = shape
 
-    delta_x      = float(length) / (imax - 1) if imax > 1 else 1.
+    delta_axis   = float(length) / (imax - 1) if imax > 1 else 1.
     delta_radius = float(outer - inner) / (jmax - 1) if jmax > 1 else 1.
     delta_theta  = float(angle * _DEG2RAD) / (kmax - 1) if kmax > 1 else 1.
 
@@ -29,15 +29,20 @@ def create_wedge_3d(shape, length, inner, outer, angle):
     q5 = numpy.zeros(shape, dtype=dtype)
 
     for i in range(imax):
-        axial = delta_x * i
+        axial = delta_axis * i
         for j in range(jmax):
             radial = inner + delta_radius * j
             for k in range(kmax):
                 tangential = delta_theta * k
 
-                x.itemset(i, j, k, axial)
-                y.itemset(i, j, k, radial * cos(tangential))
-                z.itemset(i, j, k, radial * sin(tangential))
+                if axis == 'z':
+                    x.itemset(i, j, k, radial * cos(tangential))
+                    y.itemset(i, j, k, radial * sin(tangential))
+                    z.itemset(i, j, k, axial)
+                else:
+                    x.itemset(i, j, k, axial)
+                    y.itemset(i, j, k, radial * cos(tangential))
+                    z.itemset(i, j, k, radial * sin(tangential))
 
                 q1.itemset(i, j, k, axial)
 

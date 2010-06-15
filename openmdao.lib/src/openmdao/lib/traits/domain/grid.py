@@ -35,25 +35,79 @@ class GridCoordinates(Vector):
 
         return other.ghosts == self.ghosts
 
-    def make_cartesian(self):
-        """ Convert to cartesian coordinate system. """
-        y_flat = self.y.flat
-        z_flat = self.z.flat
-        for i in range(len(y_flat)):
-            y = y_flat[i]  # r
-            z = z_flat[i]  # theta
-            y_flat[i] = y * cos(z)
-            z_flat[i] = y * sin(z)
+    def make_cartesian(self, axis='z'):
+        """
+        Convert to cartesian coordinate system.
+        `axis` specifies which is the cylinder axis ('z' or 'x').
+        """
+        r_flat = self.r.flat
+        t_flat = self.t.flat
 
-    def make_cylindrical(self):
-        """ Convert to cylindrical coordinate system. """
-        y_flat = self.y.flat
-        z_flat = self.z.flat
-        for i in range(len(y_flat)):
-            y = y_flat[i]
-            z = z_flat[i]
-            y_flat[i] = hypot(y, z)  # r
-            z_flat[i] = atan2(z, y)  # theta
+        if axis == 'z':
+            self.x = self.r.copy()
+            self.y = self.r.copy()
+            x_flat = self.x.flat
+            y_flat = self.y.flat
+            for i in range(self.r.size):
+                r = r_flat[i]
+                t = t_flat[i]
+                x_flat[i] = r * cos(t)
+                y_flat[i] = r * sin(t)
+            self.r = None
+            self.t = None
+
+        elif axis == 'x':
+            self.x = self.z
+            self.y = self.r.copy()
+            self.z = self.r.copy()
+            y_flat = self.y.flat
+            z_flat = self.z.flat
+            for i in range(self.r.size):
+                r = r_flat[i]
+                t = t_flat[i]
+                y_flat[i] = r * cos(t)
+                z_flat[i] = r * sin(t)
+            self.r = None
+            self.t = None
+
+        else:
+            raise ValueError("axis must be 'z' or 'x'")
+
+    def make_cylindrical(self, axis='z'):
+        """
+        Convert to cylindrical coordinate system.
+        `axis` specifies which is the cylinder axis ('z' or 'x').
+        """
+        self.r = self.x.copy()
+        self.t = self.x.copy()
+        r_flat = self.r.flat
+        t_flat = self.t.flat
+
+        if axis == 'z':
+            x_flat = self.x.flat
+            y_flat = self.y.flat
+            for i in range(self.x.size):
+                x = x_flat[i]
+                y = y_flat[i]
+                r_flat[i] = hypot(x, y)
+                t_flat[i] = atan2(y, x)
+            self.x = None
+            self.y = None
+
+        elif axis == 'x':
+            y_flat = self.y.flat
+            z_flat = self.z.flat
+            for i in range(self.y.size):
+                y = y_flat[i]
+                z = z_flat[i]
+                r_flat[i] = hypot(y, z)
+                t_flat[i] = atan2(z, y)
+            self.z = self.x
+            self.x = None
+            self.y = None
+
+        else:
+            raise ValueError("axis must be 'z' or 'x'")
 
     def translate(self, delta_x, delta_y, delta_z):
         """ Translate coordinates. """

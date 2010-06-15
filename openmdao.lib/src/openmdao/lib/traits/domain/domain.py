@@ -112,15 +112,21 @@ class DomainObj(object):
                 return False
         return True
 
-    def make_cartesian(self):
-        """ Convert to cartesian coordinate system. """
+    def make_cartesian(self, axis='z'):
+        """
+        Convert to cartesian coordinate system.
+        `axis` specifies which is the cylinder axis ('z' or 'x').
+        """
         for zone in self.zones:
-            zone.make_cartesian()
+            zone.make_cartesian(axis)
 
-    def make_cylindrical(self):
-        """ Convert to cylindrical coordinate system. """
+    def make_cylindrical(self, axis='z'):
+        """
+        Convert to cylindrical coordinate system.
+        `axis` specifies which is the cylinder axis ('z' or 'x').
+        """
         for zone in self.zones:
-            zone.make_cylindrical()
+            zone.make_cylindrical(axis)
 
     def make_left_handed(self):
         """ Convert to left-handed coordinate system. """

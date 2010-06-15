@@ -1,13 +1,15 @@
 import numpy
 
-_GRID_LOCATIONS = ('Vertex', 'CellCenter')
+VERTEX = 'Vertex'
+CELL_CENTER = 'CellCenter'
+_GRID_LOCATIONS = (VERTEX, CELL_CENTER)
 
 
 class FlowSolution(object):
     """ Contains flow solution variables for a :class:`Zone`. """
 
     def __init__(self):
-        self._grid_location = 'Vertex'
+        self._grid_location = VERTEX
         self._ghosts = [0, 0, 0, 0, 0, 0]
         self._arrays = []
         self._vectors = []
@@ -115,15 +117,23 @@ class FlowSolution(object):
         for vector in self._vectors:
             vector.flip_z()
 
-    def make_cartesian(self, grid):
-        """ Convert to cartesian coordinate system. """
+    def make_cartesian(self, grid, axis='z'):
+        """
+        Convert to cartesian coordinate system.
+        The associated :class:`GridCoordinates` must be in cylindrical form.
+        `axis` specifies which is the cylinder axis ('z' or 'x').
+        """
         for vector in self._vectors:
-            vector.make_cartesian(grid)
+            vector.make_cartesian(grid, axis)
 
-    def make_cylindrical(self, grid):
-        """ Convert to cylindrical coordinate system. """
+    def make_cylindrical(self, grid, axis='z'):
+        """
+        Convert to cylindrical coordinate system.
+        The associated :class:`GridCoordinates` must be in cylindrical form.
+        `axis` specifies which is the cylinder axis ('z' or 'x').
+        """
         for vector in self._vectors:
-            vector.make_cylindrical(grid)
+            vector.make_cylindrical(grid, axis)
 
     def rotate_about_x(self, deg):
         """ Rotate about the X axis by `deg` degrees. """

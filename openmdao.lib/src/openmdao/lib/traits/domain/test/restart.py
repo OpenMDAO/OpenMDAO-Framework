@@ -41,7 +41,7 @@ def read(casename, logger):
         zone.symmetry = 'rotational'
         zone.symmetry_axis = 'x'
         zone.symmetry_instances = nbld
-        zone.make_cylindrical()
+        zone.make_cylindrical(axis='x')
 
     # Read restart.
     restart = casename+'.restart.new'
@@ -83,15 +83,26 @@ def read(casename, logger):
             zone.flow_solution.add_array(name, arr)
 
             vec = Vector()
-            vec.x = stream.read_floats(shape, order='Fortran')
-            logger.debug('    momentum.x min %g, max %g',
-                         vec.x.min(), vec.x.max())
-            vec.y = stream.read_floats(shape, order='Fortran')
-            logger.debug('    momentum.y min %g, max %g',
-                         vec.y.min(), vec.y.max())
-            vec.z = stream.read_floats(shape, order='Fortran')
-            logger.debug('    momentum.z min %g, max %g',
-                         vec.z.min(), vec.z.max())
+            if zone.coordinate_system == 'Cartesian':
+                vec.x = stream.read_floats(shape, order='Fortran')
+                logger.debug('    momentum.x min %g, max %g',
+                             vec.x.min(), vec.x.max())
+                vec.y = stream.read_floats(shape, order='Fortran')
+                logger.debug('    momentum.y min %g, max %g',
+                             vec.y.min(), vec.y.max())
+                vec.z = stream.read_floats(shape, order='Fortran')
+                logger.debug('    momentum.z min %g, max %g',
+                             vec.z.min(), vec.z.max())
+            else:
+                vec.z = stream.read_floats(shape, order='Fortran')
+                logger.debug('    momentum.z min %g, max %g',
+                             vec.z.min(), vec.z.max())
+                vec.r = stream.read_floats(shape, order='Fortran')
+                logger.debug('    momentum.r min %g, max %g',
+                             vec.r.min(), vec.r.max())
+                vec.t = stream.read_floats(shape, order='Fortran')
+                logger.debug('    momentum.t min %g, max %g',
+                             vec.t.min(), vec.t.max())
             zone.flow_solution.add_vector('momentum', vec)
 
             name = 'energy_stagnation_density'

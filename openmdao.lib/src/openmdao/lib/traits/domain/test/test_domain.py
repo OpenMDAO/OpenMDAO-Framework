@@ -22,7 +22,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_domain')
 
         logger = logging.getLogger()
-        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30., 'x')
 
         domain = DomainObj()
         self.assertEqual(domain.shape, [])
@@ -81,6 +81,15 @@ class TestCase(unittest.TestCase):
 
         cart = cyl.copy()
         cart.make_cartesian()
+        self.assertTrue(cart.is_equivalent(wedge, tolerance=0.000001))
+
+        wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30., 'x')
+
+        cyl = wedge.copy()
+        cyl.make_cylindrical('x')
+
+        cart = cyl.copy()
+        cart.make_cartesian('x')
         self.assertTrue(cart.is_equivalent(wedge, tolerance=0.000001))
 
     def test_grid(self):

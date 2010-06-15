@@ -3,6 +3,7 @@ from openmdao.lib.traits.domain.grid import GridCoordinates
 
 CARTESIAN = 'Cartesian'
 CYLINDRICAL = 'Cylindrical'
+_COORD_SYSTEMS = (CARTESIAN, CYLINDRICAL)
 
 
 class Zone(object):
@@ -33,7 +34,7 @@ class Zone(object):
         return self._coordinate_system
 
     def _set_coord_sys(self, sys):
-        if sys in (CARTESIAN, CYLINDRICAL):
+        if sys in _COORD_SYSTEMS:
             self._coordinate_system = sys
         else:
             raise ValueError("invalid coordinate system '%s'" % sys)
@@ -83,18 +84,24 @@ class Zone(object):
                 return name
         return None
 
-    def make_cartesian(self):
-        """ Convert to cartesian coordinate system. """
+    def make_cartesian(self, axis='z'):
+        """
+        Convert to cartesian coordinate system.
+        `axis` specifies which is the cylinder axis ('z' or 'x').
+        """
         if self.coordinate_system != CARTESIAN:
-            self.flow_solution.make_cartesian(self.grid_coordinates)
-            self.grid_coordinates.make_cartesian()
+            self.flow_solution.make_cartesian(self.grid_coordinates, axis)
+            self.grid_coordinates.make_cartesian(axis)
             self.coordinate_system = CARTESIAN
 
-    def make_cylindrical(self):
-        """ Convert to cylindrical coordinate system. """
+    def make_cylindrical(self, axis='z'):
+        """
+        Convert to cylindrical coordinate system.
+        `axis` specifies which is the cylinder axis ('z' or 'x').
+        """
         if self.coordinate_system != CYLINDRICAL:
-            self.grid_coordinates.make_cylindrical()
-            self.flow_solution.make_cylindrical(self.grid_coordinates)
+            self.grid_coordinates.make_cylindrical(axis)
+            self.flow_solution.make_cylindrical(self.grid_coordinates, axis)
             self.coordinate_system = CYLINDRICAL
 
     def make_left_handed(self):
