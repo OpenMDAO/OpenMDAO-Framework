@@ -235,8 +235,8 @@ For certain problems, it is desirable to scale the inputs.
 Several scaling options are available, as summarized here:
 
 ============  ========================================================
-*Value*	      *Result*	
-------------  --------------------------------------------------------
+Value	      Result	
+============  ========================================================
 nscal < 0     User-defined scaling with the vector in scal
 ------------  --------------------------------------------------------
 nscal = 0     No scaling of the design variables
@@ -282,8 +282,8 @@ output.
 Higher positive values of *iprint* turn on the display of more levels of output, as summarized below.
 
 ============  ========================================================
-*Value*       *Result*
-------------  --------------------------------------------------------
+Value         Result
+============  ========================================================
 iprint = 0    All output is suppressed
 ------------  --------------------------------------------------------
 iprint = 1    Print initial and final function information

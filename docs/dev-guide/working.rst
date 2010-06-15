@@ -282,7 +282,7 @@ the instructions below.
 1. Go to `OpenMDAO <https://launchpad.net/openmdao>`_ on Launchpad and log in if you are
    not logged in already.
 
-2. Click on the *Branches* tab at the top of the page to go to *Bazaar branches of
+2. Click on the *Code* tab at the top of the page to go to *Bazaar branches of
    OpenMDAO.* On this page you will see the openmdao trunk, which should be the first
    branch listed. Below that you should see all branches that have been uploaded but are
    not on the trunk, including the branch that you just pushed up. (You may need to
