@@ -11,14 +11,14 @@ __all__ = ['IFactory', 'IResourceAllocator',
 
 from enthought.traits.api import Interface, Instance
 
-# to check if an interface is provided, you can call
-# validate_implements(value,klass) from enthought.traits.trait_types
+# to check if an interface is implemented, you can call
+# validate_implements(obj, klass) from enthought.traits.trait_types
 # or if the object you're checking inherits from HasTraits, you can call 
-# has_traits_interface(*ifaces)
-# on it.  Note that if the object you are checking does NOT inherit
-# from HasTraits, validate_implements does a sort of duck typing check that
-# ignores attributes and checks member functions only.  This can lead to
-# interface checks that return True when they really shouldn't.
+# obj.has_traits_interface(*ifaces) on it.
+# Note that validate_implements checks for existence of attributes and member 
+# functions but does not type check attributes. It also doesn't care whether
+# a class calls 'implements' or not.  has_traits_interface, on the other hand,
+# believes whatever the class says it implements and doesn't verify anything.
 
 class IComponent(Interface):
     """A marker interface for Components."""
