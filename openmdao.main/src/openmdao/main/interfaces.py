@@ -9,9 +9,6 @@ Interfaces for the OpenMDAO project.
 __all__ = ['IFactory', 'IResourceAllocator',
            'ICaseIterator']
 
-
-
-
 from enthought.traits.api import Interface, Instance
 
 # to check if an interface is provided, you can call

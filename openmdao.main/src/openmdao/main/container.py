@@ -593,6 +593,14 @@ class Container(HasTraits):
                                                    if isinstance(v,Container)]            
         return self._container_names
     
+    def obj_has_interface(self, obj, *ifaces):
+        try:
+            if not obj.has_traits_interface(*ifaces):
+                return False
+        except AttributeError:
+            return False
+        return True
+    
     def _traits_meta_filter(self, traits=None, **metadata):
         """This returns a dict that contains all entries in the traits dict
         that match the given metadata.

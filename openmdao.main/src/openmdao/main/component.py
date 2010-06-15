@@ -13,9 +13,10 @@ import sys
 import weakref
 
 from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Str
+from enthought.traits.api import Bool, List, Str, implements
 
 from openmdao.main.container import Container
+from openmdao.main.interfaces import IComponent
 from openmdao.main.filevar import FileMetadata, FileRef
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
@@ -87,6 +88,8 @@ class Component (Container):
       :mod:`glob`-style pattern.
     """
 
+    implements(IComponent)
+    
     create_instance_dir = Bool(False, desc='If True, create a unique'
                                ' per-instance execution directory',
                                iotype='in')
