@@ -32,9 +32,18 @@ class Mimic(Component):
         update all outputs with the model's outputs.  Other classes can override this
         function to introduce other behaviors.
         """
-        pass
+        if self.model:
+            for name in [n for n in self.list_inputs() if n not in _mimic_class_traits]:
+                setattr(self.model, name, getattr(self, name))
+            self.model.run()
+            for name in [n for n in self.list_outputs() if n not in _mimic_class_traits]:
+                setattr(self, name, getattr(self.model, name))
 
     def _model_changed(self, oldmodel, newmodel):
+        # TODO: check for pre-connected traits on the new model
+        # TODO: disconnect traits corresponding to old model (or leave them if the new model has the same ones?)
+        # TODO: check for nested Mimics?  Is this a problem?
+        # TODO: check for name collisions between Mimic class traits and traits from model
         if newmodel is not None and not self.obj_has_interface(newmodel, IComponent):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel),
                                  TypeError)
@@ -64,6 +73,7 @@ class Mimic(Component):
         self.__dict__['mimic_excludes'] = old
     
     def _eligible(self, name):
+        # TODO: add wildcarding to mimic_includes and mimic_excludes
         if name in _mimic_class_traits:
             return False
         if self.mimic_includes and name not in self.mimic_includes:

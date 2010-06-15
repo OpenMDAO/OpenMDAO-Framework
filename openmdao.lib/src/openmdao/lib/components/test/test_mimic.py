@@ -63,7 +63,27 @@ class MimicTestCase(unittest.TestCase):
         self.assertEquals(inputs-mimins, set(['w','x']))
         self.assertEquals(outputs-mimouts, set(['y','z']))
         
+    def test_default_execute(self):
+        mimic = Mimic()
+        mimic.model = Simple()
+        simple = Simple()
         
+        mimic.a = simple.a = 1.
+        mimic.b = simple.b = 2.
+        
+        simple.run()
+        mimic.run()
+        
+        self.assertEqual(mimic.c, 3.)
+        self.assertEqual(mimic.d, -1.)
+        self.assertEqual(mimic.c, simple.c)
+        self.assertEqual(mimic.d, simple.d)
+        
+    def test_includes(self):
+        self.fail("includes")
+        
+    def test_excludes(self):
+        self.fail("excludes")
         
 if __name__ == "__main__":
     unittest.main()
