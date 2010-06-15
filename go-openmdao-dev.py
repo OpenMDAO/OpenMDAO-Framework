@@ -1128,8 +1128,6 @@ def create_bootstrap_script(extra_text, python_version=''):
 
 
 # list of openmdao packages to be installed as 'develop' eggs.
-# NOTE: Order matters here.  Any given package must appear
-#       before any other packages that depend on it.
 openmdao_packages = ['openmdao.util', 
                      'openmdao.units', 
                      'openmdao.main', 
@@ -1180,7 +1178,7 @@ def _single_install(cmds, req, bin_dir):
 
 def after_install(options, home_dir):
     global logger
-    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'coverage==3.3.1', 'pycrypto==2.0.1', 'Traits==3.3.0', 'numpy==1.3.0', 'PyYAML==3.09', 'conmin==1.0', 'Jinja2==2.4', 'virtualenv==1.4.5', 'zc.buildout==1.4.3', 'Fabric==0.9.0', 'Sphinx==1.0b2', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'Pygments==1.3.1', 'nose==0.11.3']
+    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'coverage==3.3.1', 'pycrypto==2.0.1', 'Traits==3.3.0', 'PyYAML==3.09', 'conmin==1.0', 'Jinja2==2.4', 'virtualenv==1.4.5', 'numpy==1.4.1', 'zc.buildout==1.4.3', 'Fabric==0.9.0', 'Sphinx==1.0b2', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'Pygments==1.3.1', 'nose==0.11.3']
     cmds = []
     url = 'http://openmdao.org/dists'
     found = [c for c in cmds if url in c]
@@ -1243,6 +1241,14 @@ def after_install(options, home_dir):
     
     shutil.copy(proj_template, 
                 join(os.path.abspath(home_dir),'etc','wingproj.wpr'))
+                
+    print '\n\nThe OpenMDAO virtual environment has been installed in %s.' % home_dir
+    print 'From %s, type:' % home_dir
+    if sys.platform == 'win32':
+        print '\nScripts\activate'
+    else:
+        print '\n. bin/activate'
+    print "\nto activate your environment and start using OpenMDAO."
     
 
 ##file site.py

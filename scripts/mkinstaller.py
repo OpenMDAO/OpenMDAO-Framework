@@ -76,6 +76,16 @@ def after_install(options, home_dir):
         reqs.remove(reqs[numpyidx])
     for req in reqs:
         _single_install(cmds, req, bin_dir)
+        
+                
+    print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% home_dir
+    print 'From %%s, type:' %% home_dir
+    if sys.platform == 'win32':
+        print '\\nScripts\\activate'
+    else:
+        print '\\n. bin/activate'
+    print "\\nto activate your environment and start using OpenMDAO."
+
     """
     parser = OptionParser()
     parser.add_option("-d", "--destination", action="store", type="string", dest='dest', 

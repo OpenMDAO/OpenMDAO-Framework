@@ -1,6 +1,6 @@
 """
-Generates a virtualenv bootstrapping script that will create a virtualenv with
-develop versions of all of the openmdao packages.
+Generates a virtualenv bootstrapping script called go-openmdao-dev.py that will create a 
+virtualenv with 'develop' versions of all of the openmdao packages.
 """
 
 import sys, os
@@ -13,8 +13,6 @@ def main():
     script_str = """
 
 # list of openmdao packages to be installed as 'develop' eggs.
-# NOTE: Order matters here.  Any given package must appear
-#       before any other packages that depend on it.
 openmdao_packages = ['openmdao.util', 
                      'openmdao.units', 
                      'openmdao.main', 
@@ -128,6 +126,14 @@ def after_install(options, home_dir):
     
     shutil.copy(proj_template, 
                 join(os.path.abspath(home_dir),'etc','wingproj.wpr'))
+                
+    print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% home_dir
+    print 'From %%s, type:' %% home_dir
+    if sys.platform == 'win32':
+        print '\\nScripts\\activate'
+    else:
+        print '\\n. bin/activate'
+    print "\\nto activate your environment and start using OpenMDAO."
     """
     parser = OptionParser()
     
