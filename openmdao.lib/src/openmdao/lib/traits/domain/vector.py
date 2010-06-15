@@ -5,7 +5,7 @@ import numpy
 
 class Vector(object):
     """
-    Vector data for a :class:`Zone`.
+    Vector data for a :class:`FlowSolution`.
     In cartesian coordinates, array indexing order is x,y,z;
     so an 'i-face' is a y,z surface.
     In cylindrical coordinates, array indexing order is z,r,t;
@@ -30,7 +30,7 @@ class Vector(object):
 
     @property
     def extent(self):
-        """ Returns tuple of coordinate ranges. """
+        """ Returns tuple of component ranges. """
         if self.x is not None:
             if self.y is not None:
                 if self.z is not None:
@@ -40,10 +40,23 @@ class Vector(object):
                 return (self.x.min(), self.x.max(),
                         self.y.min(), self.y.max())
             return (self.x.min(), self.x.max())
+
+        elif self.r is not None and self.t is not None:
+            if self.z is not None:
+                return (self.z.min(), self.z.max(),
+                        self.r.min(), self.r.max(),
+                        self.t.min(), self.t.max())
+            return (self.r.min(), self.r.max(),
+                    self.t.min(), self.t.max())
+
         return ()
 
     def is_equivalent(self, other, name, logger, tolerance=0.):
-        """ Test if self and `other` are equivalent. """
+        """
+        Test if self and `other` are equivalent.
+        `tolerance` is the maximum relative difference in array values
+        to be considered equivalent.
+        """
         if not isinstance(other, Vector):
             logger.debug('other is not a Vector object.')
             return False
@@ -67,8 +80,6 @@ class Vector(object):
                 if not numpy.allclose(other_arr, arr, tolerance, tolerance):
                     logger.debug("%s %s values are not 'close'.", name,
                                  component.upper())
-                    print 'arr:', arr
-                    print 'other_arr:', other_arr
                     return False
             else:
                 if (other_arr != arr).any():
@@ -83,7 +94,6 @@ class Vector(object):
             raise AttributeError('flip_z: no Z component')
         self.z *= -1.
 
-
     def make_cartesian(self, grid, axis='z'):
         """
         Convert to cartesian coordinate system.
@@ -91,7 +101,7 @@ class Vector(object):
         `axis` specifies which is the cylinder axis ('z' or 'x').
         """
         if grid.shape != self.shape:
-            raise NotImplementedError('make_cartesian: shape mismatch'
+            raise NotImplementedError('make_cartesian: grid shape mismatch'
                                       ' not supported')
         gt_flat = grid.t.flat
         r_flat = self.r.flat
@@ -140,7 +150,7 @@ class Vector(object):
         `axis` specifies which is the cylinder axis ('z' or 'x').
         """
         if grid.shape != self.shape:
-            raise NotImplementedError('make_cylindrical: shape mismatch'
+            raise NotImplementedError('make_cylindrical: grid shape mismatch'
                                       ' not supported')
         gt_flat = grid.t.flat
         self.r = self.x.copy()
@@ -179,7 +189,6 @@ class Vector(object):
 
         else:
             raise ValueError("axis must be 'z' or 'x'")
-
 
     def rotate_about_x(self, deg):
         """ Rotate about the X axis by `deg` degrees. """

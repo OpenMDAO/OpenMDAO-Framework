@@ -14,7 +14,8 @@ Functions to read and write a :class:`DomainObj` in Plot3D format.
   markers.  Only meaningful if `binary`.
 
 Default argument values are set for a typical 3D multiblock single-precision
-Fortran unformatted file.
+Fortran unformatted file.  When writing, zones are assumed in Cartesian
+coordinates with data located at the vertices.
 """
 
 import os.path
@@ -33,7 +34,9 @@ def read_plot3d_q(grid_file, q_file, multiblock=True, dim=3, blanking=False,
                   single_precision=True, unformatted=True, logger=None):
     """
     Returns a :class:`DomainObj` initialized from Plot3D `grid_file` and
-    `q_file`.
+    `q_file`.  Q variables are assigned to 'density', 'momentum', and
+    'energy_stagnation_density'.  Scalars are assigned to 'mach', 'alpha',
+    'reynolds', and 'time'.
     """
     logger = logger or NullLogger()
 
@@ -99,7 +102,7 @@ def read_plot3d_f(grid_file, f_file, varnames=None, multiblock=True, dim=3,
                   single_precision=True, unformatted=True, logger=None):
     """
     Returns a :class:`DomainObj` initialized from Plot3D `grid_file` and
-    `f_file`.
+    `f_file`.  Variables are assigned to names of the form ``f_N``.
     """
     logger = logger or NullLogger()
 
@@ -193,7 +196,6 @@ def read_plot3d_shape(grid_file, multiblock=True, dim=3, binary=True,
     """ Returns a list of zone dimensions from Plot3D `grid_file`. """
     logger = logger or NullLogger()
 
-# TODO: automagically determine format.
     mode = 'rb' if binary else 'r'
     with open(grid_file, mode) as inp:
         logger.info("reading grid file '%s'", grid_file)
@@ -413,7 +415,11 @@ def _read_plot3d_fvars(zone, stream, dim, nvars, varnames, planes, logger):
 def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
                    big_endian=False, single_precision=True, unformatted=True,
                    logger=None):
-    """ Writes `domain` to `grid_file` and `q_file` in Plot3D format. """
+    """
+    Writes `domain` to `grid_file` and `q_file` in Plot3D format.
+    Requires 'density', 'momentum', and 'energy_stagnation_density' variables
+    as well as 'mach', 'alpha', 'reynolds', and 'time' scalars.
+    """
     logger = logger or NullLogger()
 
     # Verify we have the needed data.
@@ -455,14 +461,18 @@ def write_plot3d_q(domain, grid_file, q_file, planes=False, binary=True,
 def write_plot3d_f(domain, grid_file, f_file, varnames=None, planes=False,
                    binary=True, big_endian=False, single_precision=True,
                    unformatted=True, logger=None):
-    """ Writes `domain` to `grid_file` and `f_file` in Plot3D format. """
+    """
+    Writes `domain` to `grid_file` and `f_file` in Plot3D format.
+    If `varnames` is None, then all arrays and then all vectors are written.
+    """
     logger = logger or NullLogger()
 
-    # Verify we have the needed data.
     if varnames is None:
         flow = domain.zones[0].flow_solution
         varnames = [flow.name_of_obj(obj) for obj in flow.arrays]
         varnames.extend([flow.name_of_obj(obj) for obj in flow.vectors])
+
+    # Verify we have the needed data.
     for zone in domain.zones:
         flow = zone.flow_solution
         missing = []

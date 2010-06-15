@@ -18,7 +18,7 @@ class DomainObj(object):
 
     @property
     def shape(self):
-        """ Returns list of index limits for each zone. """
+        """ Returns list of coordinate index limits for each zone. """
         return [zone.shape for zone in self.zones]
 
     @property
@@ -42,9 +42,10 @@ class DomainObj(object):
     def add_zone(self, name, zone, prefix='', make_copy=False):
         """
         Add a :class:`Zone`. If `name` is None or blank, then a default
-        is used. The resulting name will be prepended with `prefix`. If
-        `make_copy` is True then a deep copy of each zone is made rather
-        than just referring to a shared instance. Returns the added zone.
+        of the form ``zone_N`` is used. The resulting name will be prepended
+        with `prefix`. If `make_copy` is True then a deep copy of each zone is
+        made rather than just referring to a shared instance.
+        Returns the added zone.
         """
         if not name:
             name = 'zone_%d' % (len(self.zones) + 1)
@@ -58,7 +59,10 @@ class DomainObj(object):
         return zone
 
     def remove_zone(self, zone):
-        """ Remove `zone`, specified either by name or object reference. """
+        """
+        Remove `zone`, specified either by name or object reference.
+        Returns the removed zone.
+        """
         if isinstance(zone, basestring):
             name = zone
             zone = getattr(self, zone)
@@ -94,7 +98,11 @@ class DomainObj(object):
         self.zones = []
 
     def is_equivalent(self, other, logger=None, tolerance=0.):
-        """ Test if self and `other` are equivalent. """
+        """
+        Test if self and `other` are equivalent.
+        `tolerance` is the maximum relative difference in array values
+        to be considered equivalent.
+        """
         logger = logger or NullLogger()
         if not isinstance(other, DomainObj):
             logger.debug('other is not a DomainObj object.')

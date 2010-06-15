@@ -6,7 +6,10 @@ _GRID_LOCATIONS = (VERTEX, CELL_CENTER)
 
 
 class FlowSolution(object):
-    """ Contains flow solution variables for a :class:`Zone`. """
+    """
+    Contains solution variables for a :class:`Zone`.
+    All variables have the same shape and grid location.
+    """
 
     def __init__(self):
         self._grid_location = VERTEX
@@ -22,8 +25,8 @@ class FlowSolution(object):
             raise ValueError("'%s' is not a valid grid location" % loc)
         self._grid_location = loc
 
-    grid_location = property(_get_grid_location, _set_grid_location)
-
+    grid_location = property(_get_grid_location, _set_grid_location,
+                             doc='Position at which data is located.')
     def _get_ghosts(self):
         return self._ghosts
 
@@ -35,8 +38,8 @@ class FlowSolution(object):
                 raise ValueError('All ghost values must be >= 0')
         self._ghosts = ghosts
 
-    ghosts = property(_get_ghosts, _set_ghosts)
-
+    ghosts = property(_get_ghosts, _set_ghosts,
+                      doc='Number of ghost cells for each index direction.')
     @property
     def arrays(self):
         return self._arrays
@@ -46,7 +49,10 @@ class FlowSolution(object):
         return self._vectors
 
     def add_array(self, name, array):
-        """ Add an array bound to `name`. Returns the added array. """
+        """
+        Add a :class:`numpy.ndarray` and bind to `name`.
+        Returns the added array.
+        """
         if hasattr(self, name):
             raise ValueError("name '%s' is already bound" % name)
         setattr(self, name, array)
@@ -54,7 +60,10 @@ class FlowSolution(object):
         return array
 
     def add_vector(self, name, vector):
-        """ Add a :class:`Vector` bound to `name`. Returns the added vector. """
+        """
+        Add a :class:`Vector` and bind to `name`.
+        Returns the added vector.
+        """
         if hasattr(self, name):
             raise ValueError("name '%s' is already bound" % name)
         setattr(self, name, vector)
@@ -62,13 +71,21 @@ class FlowSolution(object):
         return vector
 
     def is_equivalent(self, other, logger, tolerance=0.):
-        """ Test if self and `other` are equivalent. """
+        """
+        Test if self and `other` are equivalent.
+        `tolerance` is the maximum relative difference in array values
+        to be considered equivalent.
+        """
         if not isinstance(other, FlowSolution):
             logger.debug('other is not a FlowSolution object.')
             return False
 
         if self.grid_location != other.grid_location:
             logger.debug('grid locations are not equal.')
+            return False
+
+        if self.ghosts != other.ghosts:
+            logger.debug('ghost cell counts are not equal.')
             return False
 
         for arr in self._arrays:

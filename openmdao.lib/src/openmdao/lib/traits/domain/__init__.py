@@ -13,7 +13,7 @@ from grid   import GridCoordinates
 from vector import Vector
 from zone   import Zone
 
-from probe  import surface_probe
+from probe  import surface_probe, register_surface_probe
 from plot3d import read_plot3d_q, read_plot3d_f, read_plot3d_grid, \
                    write_plot3d_q, write_plot3d_f, write_plot3d_grid, \
                    read_plot3d_shape

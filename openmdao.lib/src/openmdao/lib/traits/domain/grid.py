@@ -8,7 +8,7 @@ class GridCoordinates(Vector):
 
     def __init__(self):
         super(GridCoordinates, self).__init__()
-        self.ghosts = [0, 0, 0, 0, 0, 0]
+        self._ghosts = [0, 0, 0, 0, 0, 0]
 
     def _get_ghosts(self):
         return self._ghosts
@@ -21,10 +21,15 @@ class GridCoordinates(Vector):
                 raise ValueError('All ghost values must be >= 0')
         self._ghosts = ghosts
 
-    ghosts = property(_get_ghosts, _set_ghosts)
+    ghosts = property(_get_ghosts, _set_ghosts,
+                      doc='Number of ghost cells for each index direction.')
 
     def is_equivalent(self, other, logger, tolerance=0.):
-        """ Test if self and `other` are equivalent. """
+        """
+        Test if self and `other` are equivalent.
+        `tolerance` is the maximum relative difference in array values
+        to be considered equivalent.
+        """
         if not isinstance(other, GridCoordinates):
             logger.debug('other is not a GridCoordinates object.')
             return False
@@ -33,7 +38,11 @@ class GridCoordinates(Vector):
                                                           logger, tolerance):
             return False
 
-        return other.ghosts == self.ghosts
+        if self.ghosts != other.ghosts:
+            logger.debug('ghost cell counts are not equal.')
+            return False
+
+        return True
 
     def make_cartesian(self, axis='z'):
         """

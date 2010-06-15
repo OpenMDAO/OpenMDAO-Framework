@@ -7,7 +7,7 @@ from openmdao.lib.traits.domain.zone import CYLINDRICAL
 
 # Dictionary for calculated variable information.
 # Holds (integrate_flag, collect_function).
-# Populated as collection functions are defined.
+# Populated as collection functions are registered.
 _VARIABLES = {}
 
 _SCHEMES = ('area', 'mass')

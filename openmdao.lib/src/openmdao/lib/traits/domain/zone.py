@@ -22,7 +22,7 @@ class Zone(object):
 
     @property
     def shape(self):
-        """ Returns tuple of index limits. """
+        """ Returns tuple of coordinate index limits. """
         return self.grid_coordinates.shape
 
     @property
@@ -39,10 +39,15 @@ class Zone(object):
         else:
             raise ValueError("invalid coordinate system '%s'" % sys)
 
-    coordinate_system = property(_get_coord_sys, _set_coord_sys)
+    coordinate_system = property(_get_coord_sys, _set_coord_sys,
+                                 doc='Coordinate system in use.')
 
     def is_equivalent(self, other, logger, tolerance=0.):
-        """ Test if self and `other` are equivalent. """
+        """
+        Test if self and `other` are equivalent.
+        `tolerance` is the maximum relative difference in array values
+        to be considered equivalent.
+        """
         if not isinstance(other, Zone):
             logger.debug('other is not a Zone object.')
             return False
@@ -106,23 +111,17 @@ class Zone(object):
 
     def make_left_handed(self):
         """ Convert to left-handed coordinate system. """
-        if self.coordinate_system == CARTESIAN:
-            if self.right_handed:
-                self.grid_coordinates.flip_z()
-                self.flow_solution.flip_z()
-                self.right_handed = False
-        else:
-            raise RuntimeError('Zone not in cartesian coordinates')
+        if self.right_handed:
+            self.grid_coordinates.flip_z()
+            self.flow_solution.flip_z()
+            self.right_handed = False
 
     def make_right_handed(self):
         """ Convert to right-handed coordinate system. """
-        if self.coordinate_system == CARTESIAN:
-            if not self.right_handed:
-                self.grid_coordinates.flip_z()
-                self.flow_solution.flip_z()
-                self.right_handed = True
-        else:
-            raise RuntimeError('Zone not in cartesian coordinates')
+        if not self.right_handed:
+            self.grid_coordinates.flip_z()
+            self.flow_solution.flip_z()
+            self.right_handed = True
 
     def translate(self, delta_x, delta_y, delta_z):
         """ Translate coordinates. """
