@@ -223,7 +223,16 @@ class TestCase(unittest.TestCase):
         assert_raises(self, 'surface_probe(wedge, surfaces, variables, "mass")',
                       globals(), locals(), NotImplementedError,
                       'Zone solution location Vertex not supported')
+        surfaces = (('xyzzy', 0, -1, 2, 2, 0, -1),)
+        assert_raises(self, 'surface_probe(wedge, surfaces, variables, "mass")',
+                      globals(), locals(), NotImplementedError,
+                      'Zone solution location Vertex not supported')
+        surfaces = (('xyzzy', 0, -1, 0, -1, 2, 2),)
+        assert_raises(self, 'surface_probe(wedge, surfaces, variables, "mass")',
+                      globals(), locals(), NotImplementedError,
+                      'Zone solution location Vertex not supported')
 
+        surfaces = (('xyzzy', 2, 2, 0, -1, 0, -1),)
         assert_raises(self, 'surface_probe(wedge, surfaces, variables, "scheme")',
                       globals(), locals(), ValueError,
                       "Unknown/unsupported weighting scheme 'scheme'")

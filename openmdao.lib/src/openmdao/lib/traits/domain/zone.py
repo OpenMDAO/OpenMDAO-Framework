@@ -82,13 +82,6 @@ class Zone(object):
 
         return True
 
-    def name_of_obj(self, obj):
-        """ Return name of object. """
-        for name, value in self.__dict__.items():
-            if value is obj:
-                return name
-        return None
-
     def make_cartesian(self, axis='z'):
         """
         Convert to cartesian coordinate system.

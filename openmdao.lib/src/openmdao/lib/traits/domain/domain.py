@@ -108,6 +108,10 @@ class DomainObj(object):
             logger.debug('other is not a DomainObj object.')
             return False
 
+        if len(self.zones) != len(other.zones):
+            logger.debug('zone count mismatch.')
+            return False
+
         for zone in self.zones:
             name = self.zone_name(zone)
             try:
