@@ -44,6 +44,9 @@ class Simple2(Component):
         self.y = self.w * 1.1
         self.z = self.x * 0.9
 
+class MyMimic(Mimic):
+    my_x = Float(1., iotype='in')
+
 class MimicTestCase(unittest.TestCase):
         
     def test_simple(self):
@@ -80,10 +83,18 @@ class MimicTestCase(unittest.TestCase):
         self.assertEqual(mimic.d, simple.d)
         
     def test_includes(self):
-        self.fail("includes")
+        mimic = MyMimic()
+        mimic.mimic_includes = ['a','d']
+        mimic.model = Simple()
+        self.assertEqual(mimic.list_inputs_to_model(), ['a'])
+        self.assertEqual(mimic.list_outputs_from_model(), ['d'])
         
     def test_excludes(self):
-        self.fail("excludes")
+        mimic = MyMimic()
+        mimic.mimic_excludes = ['a','d']
+        mimic.model = Simple()
+        self.assertEqual(mimic.list_inputs_to_model(), ['b'])
+        self.assertEqual(mimic.list_outputs_from_model(), ['c'])
         
 if __name__ == "__main__":
     unittest.main()
