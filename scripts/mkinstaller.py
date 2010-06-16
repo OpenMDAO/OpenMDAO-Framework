@@ -79,11 +79,11 @@ def after_install(options, home_dir):
         
                 
     print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% home_dir
-    print 'From %%s, type:' %% home_dir
+    print 'From %%s, type:\\n' %% home_dir
     if sys.platform == 'win32':
-        print '\\nScripts\\activate'
+        print r'Scripts\\activate'
     else:
-        print '\\n. bin/activate'
+        print '. bin/activate'
     print "\\nto activate your environment and start using OpenMDAO."
 
     """
