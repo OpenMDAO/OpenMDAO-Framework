@@ -128,6 +128,10 @@ class CaseIteratorDriver(Driver):
         while self._server_ready(None, stepping=True):
             pass
 
+    def stop(self):
+        """ Avoid default driver handling of stop signal. """
+        self._stop = True
+
     def setup(self, replicate=True):
         """
         Setup to begin new run. If `replicate`, then replicate the model
