@@ -45,21 +45,27 @@ class Mimic(Component):
     def update_model_inputs(self):
         """Copy the values of the Mimic's inputs into the inputs of the model."""
         if self.model:
-            for name in [n for n in self.list_inputs() if n not in _mimic_class_traits]:
+            for name in self.list_inputs_to_model():
                 setattr(self.model, name, getattr(self, name))
-                
+
     def update_outputs_from_model(self):
         """Copy output values from the model into the Mimic's outputs."""
         if self.model:
-            for name in [n for n in self.list_outputs() if n not in _mimic_class_traits]:
+            for name in self.list_outputs_from_model():
                 setattr(self, name, getattr(self.model, name))
-                
+
     def list_inputs_to_model(self):
+        """Return the list of names of public inputs that correspond 
+        to model inputs.
+        """
         return list(set(self.list_inputs())-self._mimic_class_traits)
-    
+
     def list_outputs_from_model(self):
+        """Return the list of names of public outputs that correspond
+        to model outputs.
+        """
         return list(set(self.list_outputs())-self._mimic_class_traits)
-                
+
     def _model_changed(self, oldmodel, newmodel):
         """called whenever the model attribute is set."""
         # TODO: check for pre-connected traits on the new model
@@ -89,12 +95,14 @@ class Mimic(Component):
     def _mimic_includes_changed(self, old, new):
         if self.mimic_excludes and new is not None:
             self.__dict__['mimic_includes'] = old
-            self.raise_exception("mimic_includes and mimic_excludes are mutually exclusive")
+            self.raise_exception("mimic_includes and mimic_excludes are mutually exclusive",
+                                 RuntimeError)
     
     def _mimic_excludes_changed(self, old, new):
         if self.mimic_includes and new is not None:
             self.__dict__['mimic_excludes'] = old
-            self.raise_exception("mimic_includes and mimic_excludes are mutually exclusive")
+            self.raise_exception("mimic_includes and mimic_excludes are mutually exclusive",
+                                 RuntimeError)
     
     def _eligible(self, name):
         """Return True if the named model trait should become a trait in the Mimic."""

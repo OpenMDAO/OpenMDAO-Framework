@@ -49,7 +49,7 @@ class MyMimic(Mimic):
 
 class MimicTestCase(unittest.TestCase):
         
-    def test_simple(self):
+    def test_model_change(self):
         mimic = Mimic()
         mimins = set(mimic.list_inputs())
         mimouts = set(mimic.list_outputs())
@@ -65,6 +65,30 @@ class MimicTestCase(unittest.TestCase):
         outputs = set(mimic.list_outputs())
         self.assertEquals(inputs-mimins, set(['w','x']))
         self.assertEquals(outputs-mimouts, set(['y','z']))
+        
+    def test_in_assembly(self):
+        asm = set_as_top(Assembly())
+        asm.add_container('mimic', Mimic())
+        asm.add_container('comp1', Simple())
+        asm.add_container('comp2', Simple())
+        asm.mimic.model = Simple()
+        asm.connect('comp1.c','mimic.a')
+        asm.connect('comp1.d','mimic.b')
+        asm.connect('mimic.c','comp2.a')
+        asm.connect('mimic.d','comp2.b')
+        self.assertEqual(set(asm.list_connections()), 
+                         set([('mimic.d', 'comp2.b'), ('mimic.c', 'comp2.a'), 
+                              ('comp1.c', 'mimic.a'), ('comp1.d', 'mimic.b')]))
+        asm.comp1.a = 1.
+        asm.comp1.b = 2.
+        asm.run()
+        self.assertEqual(asm.comp2.c, 6.)
+        self.assertEqual(asm.comp2.d, -2.)
+        
+        # set new model and verify disconnect
+        asm.mimic.model = Simple2()
+        self.assertEqual(asm.list_connections(), [])
+        
         
     def test_default_execute(self):
         mimic = Mimic()
@@ -95,6 +119,31 @@ class MimicTestCase(unittest.TestCase):
         mimic.model = Simple()
         self.assertEqual(mimic.list_inputs_to_model(), ['b'])
         self.assertEqual(mimic.list_outputs_from_model(), ['c'])
+        
+    def test_include_exclude(self):
+        mimic = MyMimic()
+        mimic.mimic_includes = ['a','d']
+        try:
+            mimic.mimic_excludes = ['b','c']
+        except RuntimeError as err:
+            self.assertEqual(str(err), 
+                             ': mimic_includes and mimic_excludes are mutually exclusive')
+        else:
+            self.fail('Expected RuntimeError')
+        self.assertEqual(mimic.mimic_excludes, [])
+            
+        mimic.mimic_includes = []
+        mimic.mimic_excludes = ['b','c']
+        try:
+            mimic.mimic_includes = ['a','d']
+        except Exception as err:
+            self.assertEqual(str(err), 
+                             ': mimic_includes and mimic_excludes are mutually exclusive')
+        else:
+            self.fail('Expected Exception')
+        self.assertEqual(mimic.mimic_includes, [])
+        
+        
         
 if __name__ == "__main__":
     unittest.main()
