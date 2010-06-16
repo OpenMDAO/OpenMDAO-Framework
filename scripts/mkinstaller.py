@@ -71,11 +71,24 @@ def after_install(options, home_dir):
             #reqnumpy = req
             numpyidx = i
             break
-    _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
-    if numpyidx is not None:
-        reqs.remove(reqs[numpyidx])
-    for req in reqs:
-        _single_install(cmds, req, bin_dir)
+	try:
+		_single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
+		if numpyidx is not None:
+			reqs.remove(reqs[numpyidx])
+		for req in reqs:
+			_single_install(cmds, req, bin_dir)
+	except Exception as err:
+		print "ERROR: build failed"
+		sys.exit(-1)
+			
+    print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% home_dir
+    print 'From %%s, type:\\n' %% home_dir
+    if sys.platform == 'win32':
+        print r'Scripts\\activate'
+    else:
+        print '. bin/activate'
+    print "\\nto activate your environment and start using OpenMDAO."
+
     """
     parser = OptionParser()
     parser.add_option("-d", "--destination", action="store", type="string", dest='dest', 

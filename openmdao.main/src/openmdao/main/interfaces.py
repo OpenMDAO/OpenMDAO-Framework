@@ -9,13 +9,16 @@ Interfaces for the OpenMDAO project.
 __all__ = ['IFactory', 'IResourceAllocator',
            'ICaseIterator']
 
-
-
-
 from enthought.traits.api import Interface, Instance
 
-# to check if an interface is provided, you can call
-# validate_implements(value,klass) from enthought.traits.trait_types
+# to check if an interface is implemented, you can call
+# validate_implements(obj, klass) from enthought.traits.trait_types
+# or if the object you're checking inherits from HasTraits, you can call 
+# obj.has_traits_interface(*ifaces) on it.
+# Note that validate_implements checks for existence of attributes and member 
+# functions but does not type check attributes. It also doesn't care whether
+# a class calls 'implements' or not.  has_traits_interface, on the other hand,
+# believes whatever the class says it implements and doesn't verify anything.
 
 class IComponent(Interface):
     """A marker interface for Components."""
