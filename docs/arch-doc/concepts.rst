@@ -364,23 +364,23 @@ as shown below.
 _______________
 
 
-The existing implementation supports only sequential data flow workflows.
-However, a new type of workflow that allows both data flow and control flow is
-planned. This new workflow will support concurrent execution and conditional
-branching. The figure below is a notional view of the planned Assembly
-workflow layout. The top workflow, called *driverflow*, will contain Drivers
-only and will be sequential. The bottom workflow, called *workflow*, will be
-concurrent and support conditional branching. The current Assembly design has
-two workflow objects. One is a simple sequential workflow containing only Drivers
-and the other is a sequential data flow workflow containing only Components.
-    
+An Assembly contains at least one Driver, called *driver*, that manages
+execution of the other Components and Drivers within the Assembly. Each Driver
+references a workflow that it iterates over until some condition is met.
+Nested iterations can be constructed by placing a Driver within the workflow
+of another Driver. If a Driver doesn't define its own workflow object, it will
+use the default workflow object that lives in the Assembly. The existing
+implementation of Workflow supports only sequential data flow workflows.
+However, a new type of Workflow that allows both data flow and control flow is
+planned. This new Workflow will support concurrent execution and conditional
+branching.
 
 .. _`control flow`:
 
 .. figure:: ../generated_images/ControlFlow.png
    :align: center
 
-   Notional View of an Assembly with Driver Flow and Control Flow
+   Notional Workflow View of an Assembly
 
 
 .. index:: pair: problem formulation; view
