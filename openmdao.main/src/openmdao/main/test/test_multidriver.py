@@ -5,7 +5,7 @@ import logging
 from math import sqrt
 
 from openmdao.main.api import Assembly, Component, Driver, Expression, \
-                              Dataflow, SequentialFlow, set_as_top
+                              Dataflow, SequentialWorkflow, set_as_top
 from openmdao.lib.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
@@ -421,8 +421,8 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.max_iterations = 3
         
         top.driver.workflow = Dataflow(top, members=[top.D1, top.D2])
-        top.D1.workflow = SequentialFlow(members=[top.C1])
-        top.D2.workflow = SequentialFlow(members=[top.C2])
+        top.D1.workflow = SequentialWorkflow(members=[top.C1])
+        top.D2.workflow = SequentialWorkflow(members=[top.C2])
         
         top.run()
         self.assertEqual(top.D2.runcount, 1)

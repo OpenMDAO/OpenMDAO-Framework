@@ -100,7 +100,7 @@ class Driver(Component):
         
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by any *input* Expression or ExpressionList 
+        for each dependency introduced by any Expression or ExpressionList 
         traits in this Driver, ignoring any dependencies on components that are
         inside of this Driver's iteration set.
         """

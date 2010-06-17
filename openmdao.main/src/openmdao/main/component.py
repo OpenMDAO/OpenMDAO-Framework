@@ -355,7 +355,7 @@ class Component (Container):
     
     def get_expr_depends(self):
         """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
-        for each dependency introduced by any *input* Expression or ExpressionList 
+        for each dependency introduced by any Expression or ExpressionList 
         traits in this Component.
         """
         conn_list = []

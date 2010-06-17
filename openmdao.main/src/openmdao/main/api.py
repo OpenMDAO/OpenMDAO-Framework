@@ -9,7 +9,7 @@ openmdao.main API.
 |     Container
 |     Dataflow
 |     Driver
-|     SequentialFlow
+|     SequentialWorkflow
 |     SimulationRoot
 |     set_as_top
 |     Workflow
@@ -64,7 +64,7 @@ from openmdao.main.assembly import Assembly
 from openmdao.main.driver import Driver
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
-from openmdao.main.seqentialflow import SequentialFlow
+from openmdao.main.seqentialflow import SequentialWorkflow
 
 from openmdao.main.exceptions import ConstraintError
 

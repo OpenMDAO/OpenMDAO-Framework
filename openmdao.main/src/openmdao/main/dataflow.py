@@ -2,12 +2,12 @@
 import networkx as nx
 from networkx.algorithms.traversal import strongly_connected_components
 
-from openmdao.main.seqentialflow import SequentialFlow
+from openmdao.main.seqentialflow import SequentialWorkflow
 from openmdao.main.driver import Driver
 
 __all__ = ['Dataflow']
 
-class Dataflow(SequentialFlow):
+class Dataflow(SequentialWorkflow):
     """
     A Dataflow consists of a collection of Components which are executed in 
     data flow order.
