@@ -151,8 +151,7 @@ class Assembly (Component):
             parts = pathname.split('.')
             newname = parts[-1]
 
-        oldtrait = self.trait(newname)
-        if oldtrait:
+        if newname in self.__dict__:
             self.raise_exception("a trait named '%s' already exists" %
                                  newname, TraitError)
         trait, val = self._find_trait_and_value(pathname)

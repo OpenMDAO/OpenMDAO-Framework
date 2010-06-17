@@ -47,6 +47,14 @@ class Dataflow(SequentialWorkflow):
             # add any dependencies due to Expressions or ExpressionLists
             graph.add_edges_from([tup for tup in comp.get_expr_depends()])
             
+        # now add some fake dependencies for degree 0 nodes in an attempt to
+        # mimic a SequentialWorkflow in cases where nodes aren't connected.
+        deg = [graph.degree(c.name) for c in self._nodes]
+        for i,comp in enumerate(self._nodes[:-1]):
+            if deg[i] == 0:
+                for n in self._nodes[i+1:]:
+                    graph.add_edge(comp.name, n.name)
+            
         cnames = []
         for comp in self._nodes:
             cname = comp.name

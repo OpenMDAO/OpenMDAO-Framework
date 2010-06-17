@@ -11,6 +11,7 @@ from openmdao.lib.api import Int
 class DumbDriver(Driver):
     objective = Expression(iotype='in')
 
+exec_order = []
 
 class Simple(Component):
     a = Int(iotype='in')
@@ -27,6 +28,8 @@ class Simple(Component):
         self.run_count = 0
 
     def execute(self):
+        global exec_order
+        exec_order.append(self.name)
         self.run_count += 1
         self.c = self.a + self.b
         self.d = self.a - self.b
@@ -60,6 +63,8 @@ subvars = subins+subouts
 class DepGraphTestCase(unittest.TestCase):
 
     def setUp(self):
+        global exec_order
+        exec_order = []
         top = set_as_top(Assembly())
         self.top = top
         top.add('sub', Assembly())
@@ -217,6 +222,18 @@ class DepGraphTestCase(unittest.TestCase):
         for comp,vals in zip(allcomps,outs):
             self.assertEqual((comp,vals[0],vals[1]), 
                              (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
+            
+    def test_sequential(self):
+        # verify that if components aren't connected they should execute in the
+        # order that they were added instead of hash order
+        top = set_as_top(Assembly())
+        top.add('c1', Simple())
+        top.add('c2', Simple())
+        top.add('c3', Simple())
+        top.add('c4', Simple())
+        top.connect('c4.c', 'c3.a')  # force c4 to run before c3
+        top.run()
+        self.assertEqual(exec_order, ['c1','c2','c4','c3'])
 
     def test_set_already_connected(self):
         try:
