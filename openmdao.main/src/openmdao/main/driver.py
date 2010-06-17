@@ -5,15 +5,15 @@ __all__ = ["Driver"]
 
 
 from enthought.traits.api import implements, List, Instance
-from enthought.traits.trait_base import not_none
-import networkx as nx
-from networkx.algorithms.traversal import strongly_connected_components
+#from enthought.traits.trait_base import not_none
+#import networkx as nx
+#from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.interfaces import IDriver
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
-from openmdao.main.expression import Expression, ExpressionList
+#from openmdao.main.expression import Expression, ExpressionList
 
     
 class Driver(Component):
@@ -98,6 +98,20 @@ class Driver(Component):
                 allcomps.update(child.iteration_set())
         return allcomps
         
+    def get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by any *input* Expression or ExpressionList 
+        traits in this Driver, ignoring any dependencies on components that are
+        inside of this Driver's iteration set.
+        """
+        iternames = set([c.name for c in self.iteration_set()])
+        conn_list = super(Driver, self).get_expr_depends()
+        new_list = []
+        for src, dest in conn_list:
+            if src not in iternames and dest not in iternames:
+                new_list.append((src, dest))
+        return new_list
+
     def execute(self):
         """ Iterate over a workflow of Components until some condition
         is met. If you don't want to structure your driver to use *pre_iteration*,

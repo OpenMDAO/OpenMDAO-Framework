@@ -12,7 +12,7 @@ import pkg_resources
 import sys
 import weakref
 
-from enthought.traits.trait_base import not_event
+from enthought.traits.trait_base import not_event, not_none
 from enthought.traits.api import Bool, List, Str, Instance, TraitError, on_trait_change
 
 from openmdao.main.container import Container
@@ -109,8 +109,6 @@ class Component (Container):
         self._output_names = None
         self._container_names = None
         
-        self.on_trait_change(self.expression_updated, '+monitor_expr')
-
         if directory:
             self.directory = directory
         
@@ -127,12 +125,6 @@ class Component (Container):
     def _input_changed(self, name):
         if self.get_valid(name):  # if var is not already invalid
             self.invalidate_deps([name], notify_parent=True)
-
-    def expression_updated(self, obj, name, value):
-        """An Expression or ExpressionList has been updated, so we
-        must update our dependency graph.
-        """
-        
         
     def check_config (self):
         """Verify that this component is fully configured to execute.
@@ -360,7 +352,32 @@ class Component (Container):
         return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
                     if v.is_trait_type(Expression) or 
                        v.is_trait_type(ExpressionList)]
-        
+    
+    def get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by any *input* Expression or ExpressionList 
+        traits in this Component.
+        """
+        conn_list = []
+        exprs = self.get_expr_names()
+        selfname = self.name
+        for name in exprs:
+            exprobj = getattr(self, name)
+            if isinstance(exprobj, basestring): # a simple Expression
+                cnames = exprobj.get_referenced_compnames()
+            else:  # an ExpressionList
+                cnames = []
+                for entry in exprobj:
+                    cnames += entry.get_referenced_compnames()
+            if self.trait(name).iotype == 'in':
+                for cname in cnames:
+                    conn_list.append((cname, selfname))
+            else:
+                for cname in cnames:
+                    conn_list.append((selfname, cname))
+                
+        return conn_list
+
     def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
         within the allowed area (somewhere within the simulation root path).

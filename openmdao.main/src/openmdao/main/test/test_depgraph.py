@@ -5,10 +5,13 @@ import logging
 
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, Driver, Expression, set_as_top
 from openmdao.lib.api import Int
 
-        
+class DumbDriver(Driver):
+    objective = Expression(iotype='in')
+
+
 class Simple(Component):
     a = Int(iotype='in')
     b = Int(iotype='in')
@@ -133,8 +136,8 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(valids, [True, True, True, True])
         
         
-    def test_lazy1(self):   
-        self.top.run()        
+    def test_lazy1(self):
+        self.top.run()
         run_counts = [self.top.get(x).run_count for x in allcomps]
         self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_counts)
         outs = [(5,-3),(3,-1),(5,1),(7,3),(4,6),(5,1),(3,-1),(8,6)]
