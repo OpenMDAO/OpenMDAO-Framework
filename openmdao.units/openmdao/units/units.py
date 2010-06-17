@@ -668,6 +668,9 @@ def import_library(libfilepointer):
               "config file. missing: %s, at least %s required" % \
               (missing, required_base_types)
    
+    # Explicit unitless 'unit'.
+    _new_unit('unitless', 1, list(base_list))
+
     retry1 = set()
     retry2 = set()
     retry_count = 0
