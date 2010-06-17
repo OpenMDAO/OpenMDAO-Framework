@@ -28,7 +28,6 @@ class Driver(Component):
         super(Driver, self).__init__(doc=doc)
         self.workflow = None
         self._iter = None
-        self._workflow_set = False
         
     def _get_workflow(self):
         """Returns the 'active' workflow for this Driver, which is either
@@ -37,7 +36,7 @@ class Driver(Component):
         if self.workflow:
             return self.workflow
         else:
-            return self.parent.workflow
+            return self.parent._default_workflow
 
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
@@ -80,7 +79,6 @@ class Driver(Component):
             if self in self._get_workflow().contents():
                 self.raise_exception("Driver '%s' is a member of it's own workflow!" %
                                      self.name, RuntimeError)
-
 
     def remove_from_workflow(self, component):
         """Remove the specified component from our workflow."""

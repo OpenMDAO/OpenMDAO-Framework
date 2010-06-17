@@ -52,7 +52,10 @@ class Assembly (Component):
         self._need_child_io_update = True
         
         self.comp_graph = ComponentGraph()
-        self.workflow = Dataflow(self)
+        
+        # this is the default Workflow for all Drivers living in this
+        # Assembly that don't define their own Workflow
+        self._default_workflow = Dataflow(self)
         
         # A graph of Variable names (local path), 
         # with connections between Variables as directed edges.  
@@ -69,7 +72,7 @@ class Assembly (Component):
                 self._var_graph.add_node(v)
                 
         # default Driver executes its workflow once
-        drv = self.add('driver', Driver())
+        self.add('driver', Driver())
         
 
 
@@ -101,7 +104,7 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add(self, name, obj):
+    def add(self, name, obj, workflow='default'):
         """Add obj to the workflow and call base class *add*.
         
         Returns the added object.
@@ -110,8 +113,11 @@ class Assembly (Component):
         self.comp_graph.add(obj)
         
         # add all non-Driver Components to the Assembly workflow
-        if isinstance(obj, Component) and not isinstance(obj, Driver):
-            self.workflow.add(obj)
+        if workflow == 'default':
+            if isinstance(obj, Component) and not isinstance(obj, Driver):
+                self._default_workflow.add(obj)
+        elif workflow is not None:
+            workflow.add(obj)
 
         # since the internals of the given Component can change after it's
         # added, wait to collect its io_graph until we need it
@@ -124,7 +130,7 @@ class Assembly (Component):
         """Remove the named container object from this container and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
-        self.workflow.remove(cont)
+        self._default_workflow.remove(cont)
         for obj in self.__dict__.values():
             if obj is not cont and isinstance(obj, Driver):
                 obj.remove_from_workflow(cont)

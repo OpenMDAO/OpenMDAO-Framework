@@ -174,8 +174,9 @@ class MultiDriverTestCase(unittest.TestCase):
     def test_2_drivers(self):
         self.rosen_setUp()
         drv = self.top.add('driver1a', CONMINdriver())
-        self.top.add('comp1a', ExprComp(expr='x**2'))
-        self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'))
+        drv.workflow = Dataflow(self.top)
+        self.top.add('comp1a', ExprComp(expr='x**2'), workflow=drv.workflow)
+        self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'), workflow=drv.workflow)
         self.top.connect('comp1a.f_x', 'comp2a.x')
         drv.workflow = Dataflow(self.top, 
                                 members=[self.top.comp1a, self.top.comp2a])
@@ -388,6 +389,7 @@ class MultiDriverTestCase(unittest.TestCase):
                          top.D1.max_iterations)
         self.assertEqual(top.C2.runcount, 
                          top.D2.max_iterations+1)
+                         
         # since C1 and C2 are not dependent on each other, they could
         # execute in any order (depending on dict hash value which can differ per platform)
         # so need two possible exec orders

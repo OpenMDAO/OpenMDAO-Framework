@@ -5,13 +5,18 @@ import logging
 
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Assembly, Component, Driver, Expression, set_as_top
+from openmdao.main.api import Assembly, Component, Driver, Expression, set_as_top, Dataflow
 from openmdao.lib.api import Int
+
+exec_order = []
 
 class DumbDriver(Driver):
     objective = Expression(iotype='in')
-
-exec_order = []
+    
+    def execute(self):
+        global exec_order
+        exec_order.append(self.name)
+        super(DumbDriver, self).execute()
 
 class Simple(Component):
     a = Int(iotype='in')
@@ -234,6 +239,25 @@ class DepGraphTestCase(unittest.TestCase):
         top.connect('c4.c', 'c3.a')  # force c4 to run before c3
         top.run()
         self.assertEqual(exec_order, ['c1','c2','c4','c3'])
+        
+        
+    def test_expr_deps(self):
+        top = set_as_top(Assembly())
+        top.add('driver1', DumbDriver())
+        top.add('driver2', DumbDriver())
+        top.workflow.add(top.driver1)
+        top.workflow.add(top.driver2)
+        top.add('c1', Simple())
+        top.add('c2', Simple())
+        top.add('c3', Simple())
+        top.connect('c1.c', 'c2.a')
+        top.driver1.workflow = Dataflow(top, members=[top.c2])
+        top.driver2.workflow = Dataflow(top, members=[top.c1])
+        top.driver1.objective = "c2.c*c2.d"
+        top.driver2.objective = "c1.c"
+        top.run()
+        self.assertEqual(exec_order, ['driver2','c1','driver1','c2','c3'])
+        
 
     def test_set_already_connected(self):
         try:
