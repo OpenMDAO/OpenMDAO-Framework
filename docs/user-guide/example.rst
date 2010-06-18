@@ -598,10 +598,8 @@ data connections define an execution order based on their dependencies, i.e.,
 components that are upstream in the data flow will be executed prior to those
 downstream so that input data to a component will always be valid with respect
 to the other parts of the workflow. A component will not execute if its inputs
-have not changed since its last execution. An Assembly can also contain a
-Driver, but this is not required. When an Assembly does not explicitly contain
-a driver, the components are executed sequentially based on their data
-connections.
+have not changed since its last execution. An Assembly contains a
+Driver called *driver* that controls iterations over the workflow.
 
 For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission,
 Engine, and Chassis components.

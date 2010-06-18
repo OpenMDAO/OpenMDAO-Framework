@@ -21,9 +21,7 @@ class IComponent(Interface):
     """A marker interface for Components."""
     
 class IWorkflow(Interface):
-    """An object that can run and iterate over a group of 
-    components in some order. 
-    """
+    """An object that can run a group of components in some order. """
     
     scope = Instance(IComponent, allow_none=True)
     

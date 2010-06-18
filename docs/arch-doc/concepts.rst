@@ -369,9 +369,11 @@ execution of the other Components and Drivers within the Assembly. Each Driver
 references a workflow that it iterates over until some condition is met.
 Nested iterations can be constructed by placing a Driver within the workflow
 of another Driver. If a Driver doesn't define its own workflow object, it will
-use the default workflow object that lives in the Assembly. The existing
-implementation of Workflow supports only sequential data flow workflows.
-However, a new type of Workflow that allows both data flow and control flow is
+use the default workflow object that lives in the Assembly. There are two existing
+Workflow classes currently, SequentialWorkflow and Dataflow.  Dataflow infers
+execution order based on data connections between Components, and SequentialWorkflow
+supports a simple sequence of Components that run in the order that they are added
+to the workflow. A new type of Workflow that allows both data flow and control flow is
 planned. This new Workflow will support concurrent execution and conditional
 branching.
 

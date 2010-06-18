@@ -42,14 +42,14 @@ A :term:`Driver` is a special kind of Component that executes a Workflow
 repeatedly until some condition is met. Some examples of Drivers are
 optimizers, solvers, and design space explorers.
 
-An :term:`Assembly` is a special kind of Component that contains other
-Components and Drivers. By default an Assembly has one Driver called *driver*.
-When an Assembly executes, it runs *driver*, which in turn executes its
-Workflow. A Driver's Workflow may contain other Drivers, which allows for
-nested iteration schemes. The execution of each Driver will run its
-corresponding workflow until that Driver decides it is finished.  Each Driver
-may contain its own Workflow, or it may use the default Workflow that is 
-maintained by the Assembly.  The default Workflow contains all non-Driver
+An :term:`Assembly` is a special kind of Component that contains one or more
+Drivers and a group of Components. By default an Assembly contains one Driver
+called *driver*. When an Assembly executes, it runs *driver*, which in turn
+executes its Workflow. A Driver's Workflow may contain other Drivers, which
+allows for nested iteration schemes. The execution of each Driver will run its
+corresponding workflow until that Driver decides it is finished. Each Driver
+may contain its own Workflow, or it may use the default Workflow that is
+maintained by the Assembly. The default Workflow contains all non-Driver
 Components in the Assembly.
 
 The next figure shows an example of an Assembly with one Driver and four

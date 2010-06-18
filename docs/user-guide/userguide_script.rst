@@ -890,7 +890,7 @@ An Assembly is a special type of Component with the characteristics below. It co
 
 - Some number of other components (some of which may be assemblies)
 - A workflow (essentially an execution order)
-- A driver that operates on the workflow
+- At least one driver. A driver may have its own workflow or may use the assembly's workflow.
 
 An Assembly retains the Component API (i.e., it can be executed, added to
 models, and exists in the model hierarchy), but it also extends the API to
@@ -1153,18 +1153,15 @@ variables will not be able to read, write, or even open their target files.
 
     Discuss sharing models
 
-Data Flow and Workflow
-----------------------
+Workflow
+--------
 
-The execution order for components in a model can be determined
-either automatically by OpenMDAO or specified explicitly by defining a custom
-Workflow class. This distinction can be made at the assembly level, so for
-example, a model can have some assemblies with user-specified workflow and 
-others with automatically determined workflow. In addition, a user can specify a *driver*
-workflow. All three of these scenarios are discussed below.
+The execution order for components in a model is determined by the workflow object
+that the components belong to. OpenMDAO current has two available workflow classes that
+are described below.  They are Dataflow and SequentialWorkflow.
 
-*Data Flow*
-~~~~~~~~~~~
+*Dataflow*
+~~~~~~~~~~
 
 The "default" workflow for a model is inferred from the data flow connections.
 This means that a component is available to run once its inputs become valid,
@@ -1180,6 +1177,13 @@ component's inputs become invalidated, the effect is propagated downstream to
 all components that depend on it. Also, when a model is instantiated, all
 inputs are invalid, which ensures that the whole model always executes the
 first time it is run.
+
+
+*SequentialWorkflow*
+~~~~~~~~~~~~~~~~~~~~
+
+A SequentialWorkflow is a simple sequence of Components.  It will execute the
+Components in the order that they were added to the sequence.
 
 
 Geometry in OpenMDAO

@@ -199,39 +199,18 @@ Execution
 =========
 
 Each Component in the system has a *run()* function which handles updating of
-necessary inputs, executing the Component, and updating outputs.  An
-:term:`Assembly` is a Component that contains other Components within an object
-called a :term:`Workflow`. When an Assembly is run, it runs its
-Workflow, which in turn runs all of the Components within it in the
-order specified by the Workflow object. A :term:`Driver` is an
-Assembly that performs some kind of iteration over its Workflow,
-iterating until some condition is met. A Driver that is an optimizer,
-for example, would iterate over its Workflow until it satisfies some
-convergence criteria or reaches its maximum allowed number of iterations.  A
-CaseIterDriver, which is a Driver that runs input cases that come from a
-:term:`CaseIterator`, will iterate over its Workflow until it uses up
-all of the cases in the CaseIterator.
+necessary inputs, executing the Component, and updating outputs. An
+:term:`Assembly` is a Component that contains other Components along with at
+least one special Component called a Driver. When an Assembly runs, it runs
+its top level Driver, which is always named *driver*. A :term:`Driver` is a
+Component that performs some kind of iteration over a Workflow, iterating
+until some condition is met. A Driver that is an optimizer, for example, would
+iterate over its Workflow until it satisfies some convergence criteria or
+reaches its maximum allowed number of iterations.  A CaseIterDriver, which is a
+Driver that runs input cases that come from a :term:`CaseIterator`, will
+iterate over its Workflow until it uses up all of the cases in the
+CaseIterator. 
 
-In the current implementation, an Assembly runs its workflow directly, and that
-workflow may contain one or more drivers.  When executed, the workflow determines
-how many drivers it contains and what their respective iteration sets are. A driver's
-iteration set is just the set of Components that must be executed on each iteration
-of the driver.  This approach has a couple of problems. The algorithm to
-determine iteration sets is somewhat complex, and there are a number of component/driver
-topologies where the proper order of driver loop execution cannot be unambiguously 
-determined.  
-
-As a result of these problems a new design is being considered, where an
-Assembly has a component workflow and a driver workflow. When the assembly
-runs, it simply runs the driver workflow. Each Driver will then be executed 
-in the order determined by the driver workflow.  As each Driver executes, 
-it will iteratively execute the component workflow until it reaches some
-termination condition.  Then the next Driver in the driver workflow will
-begin iterating over the same component workflow.  This continues until
-all of the Drivers in the driver workflow have completed their execution.
-
-This design will allow a user to handle simple cases, e.g., a single optimizer,
-as well as cases requiring multiple drivers, e.g., cascade optimizers.
 
 The following figure describes how a single Driver interacts with a Workflow
 during execution.
