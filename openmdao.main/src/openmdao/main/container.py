@@ -471,17 +471,6 @@ class Container(HasTraits):
         """Return a list of names of child Containers."""
         return [n for n,v in self.items() if isinstance(v,Container)]
     
-    def obj_has_interface(self, obj, *ifaces):
-        """Returns True if the specified object inherits from HasTraits and
-        implements one or more of the specified interfaces.
-        """
-        try:
-            if not obj.has_traits_interface(*ifaces):
-                return False
-        except AttributeError:
-            return False
-        return True
-    
     def _traits_meta_filter(self, traits=None, **metadata):
         """This returns a dict that contains all entries in the traits dict
         that match the given metadata.

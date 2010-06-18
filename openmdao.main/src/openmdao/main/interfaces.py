@@ -155,4 +155,16 @@ class ICaseRecorder(Interface):
     
     def record(case):
         """Record the given Case."""
-        
+
+
+def obj_has_interface(obj, *ifaces):
+    """Returns True if the specified object inherits from HasTraits and
+    implements one or more of the specified interfaces.
+    """
+    try:
+        if not obj.has_traits_interface(*ifaces):
+            return False
+    except Exception:
+        return False
+    return True
+    

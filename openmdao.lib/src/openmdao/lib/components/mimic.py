@@ -3,7 +3,7 @@ from enthought.traits.api import Instance, ListStr
 from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Component
-from openmdao.main.interfaces import IComponent
+from openmdao.main.interfaces import IComponent, obj_has_interface
 
 _mimic_class_traits = set(['mimic_includes', 'mimic_excludes', 'model'])
 
@@ -72,7 +72,7 @@ class Mimic(Component):
         # TODO: disconnect traits corresponding to old model (or leave them if the new model has the same ones?)
         # TODO: check for nested Mimics?  Is this a problem?
         # TODO: check for name collisions between Mimic class traits and traits from model
-        if newmodel is not None and not self.obj_has_interface(newmodel, IComponent):
+        if newmodel is not None and not obj_has_interface(newmodel, IComponent):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel),
                                  TypeError)
 
