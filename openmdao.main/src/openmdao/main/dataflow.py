@@ -84,13 +84,15 @@ class Dataflow(SequentialWorkflow):
         # sequence order.
         last = len(self._nodes)-1
         if last > 0:
+            to_add = []
             for i,comp in enumerate(self._nodes):
-                if graph.degree(comp.name) == 0:
+                if collapsed_graph.degree(comp.name) == 0:
                     if i < last:
                         for n in self._nodes[i+1:]:
-                            collapsed_graph.add_edge(comp.name, n.name)
+                            to_add.append((comp.name, n.name))
                     else:
                         for n in self._nodes[0:i]:
-                            collapsed_graph.add_edge(n.name, comp.name)
-
+                            to_add.append((n.name, comp.name))
+            collapsed_graph.add_edges_from(to_add)
+        
         return collapsed_graph.subgraph(cnames-removes)

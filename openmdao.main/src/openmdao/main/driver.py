@@ -87,7 +87,7 @@ class Driver(Component):
 
     def iteration_set(self):
         """Return a set of all Components in our workflow, and 
-        recursively in any workflow in any driver in our workflow.
+        recursively in any workflow in any Driver in our workflow.
         """
         allcomps = set()
         for child in self._get_workflow().contents():

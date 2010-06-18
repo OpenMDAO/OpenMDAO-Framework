@@ -17,6 +17,10 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression
 
+class _undefined_(object):
+    pass
+
+
 def _filter_internal_edges(edges):
     """Return a copy of the given list of edges with edges removed that are
     connecting two variables on the same component.
@@ -43,9 +47,6 @@ class Assembly (Component):
     
     driver = Instance(Driver, allow_none=True,
                       desc="The top level Driver that manages execution of this Assembly")
-    
-    workflow = Instance(IWorkflow, 
-                        desc="The default workflow used by Drivers in this Assembly")
     
     def __init__(self, doc=None, directory=''):
         self._child_io_graphs = {}
@@ -104,7 +105,7 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add(self, name, obj, workflow='default'):
+    def add(self, name, obj, workflow=_undefined_):
         """Add obj to the workflow and call base class *add*.
         
         Returns the added object.
@@ -112,8 +113,8 @@ class Assembly (Component):
         obj = super(Assembly, self).add(name, obj)
         self.comp_graph.add(obj)
         
-        # add all non-Driver Components to the Assembly workflow
-        if workflow == 'default':
+        # add all non-Driver Components to the Assembly workflow by default
+        if workflow is _undefined_:
             if isinstance(obj, Component) and not isinstance(obj, Driver):
                 self._default_workflow.add(obj)
         elif workflow is not None:
