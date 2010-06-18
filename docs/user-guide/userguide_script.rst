@@ -103,9 +103,9 @@ compliance when a public variable or Component instance is created:
     >>> from openmdao.main.api import Assembly
     >>> from openmdao.examples.enginedesign.chassis import Chassis
     >>> top = Assembly('top')
-    >>> top.add_container('chassis1',Chassis())
+    >>> top.add('chassis1',Chassis())
     <openmdao.examples.enginedesign.chassis.Chassis object at ...
-    >>> top.add_container('the chassis',Chassis())
+    >>> top.add('the chassis',Chassis())
     Traceback (most recent call last):
     ...
     NameError: name 'the chassis' contains illegal characters
@@ -815,8 +815,8 @@ three variables that define two flight conditions:
             super(AircraftSim, self).__init__()
         
 	    # Instantiate and add our variable containers.
-            self.add_container('fcc1', FlightCondition())
-            self.add_container('fcc2', FlightCondition())
+            self.add('fcc1', FlightCondition())
+            self.add('fcc2', FlightCondition())
 	    
         def execute(self):
             """Do something."""
@@ -862,19 +862,19 @@ Consider the top level assembly that was created for the :ref:`simple tutorial p
         
 	        super(OptimizationUnconstrained, self).__init__()
 
-	        # Create Paraboloid component instances
-	        self.add_container('paraboloid', Paraboloid())
-
 	        # Create CONMIN Optimizer instance
-	        self.add_container('driver', CONMINdriver())
+	        self.add('driver', CONMINdriver())
 		
+	        # Create Paraboloid component instances
+	        self.add('paraboloid', Paraboloid())
+
 We can see here that components that comprise the top level of this model are
 declared in the __init__ function. The base class __init__ function is called
 (with the super function) before anything is added to the empty assembly. This
 is important to ensure that functions that are defined in the base classes are
-available for use, such as *add_container*. 
+available for use, such as *add*. 
 
-The function add_container, takes a valid OpenMDAO name and a constructor as
+The function add, takes a valid OpenMDAO name and a constructor as
 its arguments. This function call creates a new instance of the Component and 
 adds it to the OpenMDAO model hierarchy using the given name. In this case then,
 the CONMIN driver is accessible anywhere in this assembly via ``self.driver``.
@@ -914,9 +914,9 @@ instances of the Paraboloid function and connect them together in series.
     	    def __init__(self):
                 """ Creates a new Assembly containing a Paraboloid and an optimizer"""
 		
-		self.add_container("par1",Paraboloid())
-		self.add_container("par2",Paraboloid())
-		self.add_container("par3",Paraboloid())
+		self.add("par1",Paraboloid())
+		self.add("par2",Paraboloid())
+		self.add("par3",Paraboloid())
 		
 		self.connect("par1.f_xy","par2.x")
 		self.connect("par2.f_xy","par3.y")
@@ -955,8 +955,8 @@ linked at that level.
 		
 	        super(ConnectingComponents, self).__init__()
 
-		self.add_container("par1",Paraboloid())
-		self.add_container("par2",Paraboloid())
+		self.add("par1",Paraboloid())
+		self.add("par2",Paraboloid())
 		
 		self.connect("par1.f_xy","par2.x")
 		
@@ -1026,7 +1026,7 @@ a new working directory for the Paraboloid component when it is instantiated.
 	        super(OptimizationUnconstrained, self).__init__()
 
 	        # Create Paraboloid component instances
-	        self.add_container('paraboloid', Paraboloid(directory='folder/subfolder'))
+	        self.add('paraboloid', Paraboloid(directory='folder/subfolder'))
 
 Notice that this is a relative path. **All components in the model hierarchy
 must operate in a directory that is a sub-directory of the top level

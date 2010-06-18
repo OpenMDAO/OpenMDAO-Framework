@@ -5,6 +5,7 @@ import sys
 import time
 
 from openmdao.main.component import Component
+from openmdao.main.container import get_default_name
 from openmdao.util.log import LOG_DEBUG
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.testutil import find_python
@@ -25,7 +26,7 @@ def check_save_load(comp, py_dir=None, test_dir='test_dir', cleanup=True,
 
     old_level = comp.log_level
     comp.log_level = LOG_DEBUG
-    name = comp.name or comp.get_default_name(comp.parent)
+    name = comp.name or get_default_name(comp, comp.parent)
     start = time.time()
     egg_info = comp.save_to_egg(name, 'CSL.1', py_dir=py_dir, fmt=fmt)
     egg_name = egg_info[0]

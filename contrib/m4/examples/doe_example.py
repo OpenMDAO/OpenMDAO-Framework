@@ -19,11 +19,11 @@ class MyModel(Assembly):
         super(MyModel, self).__init__(*args, **kwargs)
 
         # Specify DOE driver.
-        self.add_container('M4_DOE', m4.doe.DOE())
+        self.add('M4_DOE', m4.doe.DOE())
         doe = self.M4_DOE
 
         # The model is just an M4 test component.
-        doe.add_container('model', m4.dummy_components.Model_A2d())
+        doe.add('model', m4.dummy_components.Model_A2d())
 
         doe.design_variables = [('x', 0., 5.), ('y', 0., 5.)]
         doe.response_variables = [('z1'), ('z2')]

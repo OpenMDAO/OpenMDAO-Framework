@@ -11,6 +11,7 @@ import subprocess
 import unittest
 
 from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+from openmdao.main.container import get_default_name
 import openmdao.util.testutil
 
 
@@ -38,7 +39,7 @@ class TestCase(unittest.TestCase):
         py_dir = pkg_resources.resource_filename('openmdao.examples.enginedesign',
                                                  'test')
         python = openmdao.util.testutil.find_python()
-        name = self.model.name or self.model.get_default_name(self)
+        name = self.model.name or get_default_name(self.model, self)
         egg_info = self.model.save_to_egg(name, '0', py_dir=py_dir)
         egg_name = egg_info[0]
 

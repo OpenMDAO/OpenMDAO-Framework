@@ -27,29 +27,13 @@ packages = [
 ]
 
 
-def _find_repo_top():
-    """Return the top of the current bazaar repo, or raise an
-    exception if we're not in a repo
-    """
-    start = os.getcwd()
-    location = start
-    while location:
-        if '.bzr' in os.listdir(location):
-            return location
-        tmp = location
-        location = os.path.dirname(location)
-        if tmp == location:
-            break
-    raise RuntimeError('ERROR: %s is not inside of a bazaar repository' % start)
-
-
 logger = logging.getLogger()
 
 # set all of our global configuration parameters
 def _get_dirnames():
-    branchdir = _find_repo_top()
-    docdir = os.path.join(branchdir, 'docs')
     bindir = os.path.dirname(sys.executable)
+    branchdir = os.path.dirname(os.path.dirname(bindir))
+    docdir = os.path.join(branchdir, 'docs')
     return (branchdir, docdir, bindir)
 
 def _mod_sphinx_info(mod, outfile, show_undoc=False):

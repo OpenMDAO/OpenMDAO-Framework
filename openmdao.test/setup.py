@@ -49,8 +49,7 @@ setup(name='openmdao.test',
       ],
       entry_points={
       'openmdao.component': [
-          'openmdao.test.HollowSphere = openmdao.test.HollowSphere:HollowSphere',
-          'openmdao.test.Box = openmdao.test.Box:Box'
+          'openmdao.test.ExecComp = openmdao.test.execcomp:ExecComp'
       ],
       "console_scripts": [
           'openmdao_test = openmdao.test.testing:run_openmdao_suite'

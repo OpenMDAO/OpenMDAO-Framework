@@ -67,10 +67,10 @@ can be directly set:
 	        super(TLA, self).__init__(directory)
 
 	        # Create GeoMan component instances
-        	self.add_container('geo_manipulator', GeoMan())
+        	self.add('geo_manipulator', GeoMan())
 
 	        # Create CONMIN Optimizer instance
-        	self.add_container('driver', CONMINdriver())
+        	self.add('driver', CONMINdriver())
 
 	self = TLA()
 	geo_manipulator = GeoMan()

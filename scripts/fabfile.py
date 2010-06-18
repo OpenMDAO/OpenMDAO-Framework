@@ -132,8 +132,8 @@ def release(version=None, test=False):
     _release(version)
     
 
-@hosts('bnaylor@torpedo.grc.nasa.gov')
-def testrelease(version=None):
+@hosts('localhost')
+def localrelease(version=None):
     _release(version, test=True)
     
     

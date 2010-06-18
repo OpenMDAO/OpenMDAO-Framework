@@ -14,10 +14,10 @@ import numpy.random
 
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Assembly, Component, Case, ListCaseIterator, set_as_top
+from openmdao.main.api import Assembly, Component, Case, set_as_top
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
-from openmdao.lib.api import Float, Bool, Array
+from openmdao.lib.api import Float, Bool, Array, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
@@ -59,8 +59,6 @@ class DrivenComponent(Component):
             self.raise_exception('Forced error', RuntimeError)
         if self.stop_exec:
             self.parent.driver.stop()  # Only valid if sequential!
-#FIXME: for some reason the above doesn't call stop() on the driver...
-            #self.parent._stop = True
 
 
 class MyModel(Assembly):
@@ -68,8 +66,8 @@ class MyModel(Assembly):
 
     def __init__(self, *args, **kwargs):
         super(MyModel, self).__init__(*args, **kwargs)
-        self.add_container('driver', CaseIteratorDriver())
-        self.add_container('driven', DrivenComponent())
+        self.add('driver', CaseIteratorDriver())
+        self.add('driven', DrivenComponent())
 
 
 class TestCase(unittest.TestCase):

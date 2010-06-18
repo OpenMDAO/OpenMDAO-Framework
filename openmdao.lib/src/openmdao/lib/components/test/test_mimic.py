@@ -68,9 +68,9 @@ class MimicTestCase(unittest.TestCase):
         
     def test_in_assembly(self):
         asm = set_as_top(Assembly())
-        asm.add_container('mimic', Mimic())
-        asm.add_container('comp1', Simple())
-        asm.add_container('comp2', Simple())
+        asm.add('mimic', Mimic())
+        asm.add('comp1', Simple())
+        asm.add('comp2', Simple())
         asm.mimic.model = Simple()
         asm.connect('comp1.c','mimic.a')
         asm.connect('comp1.d','mimic.b')

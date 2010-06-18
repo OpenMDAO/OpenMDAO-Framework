@@ -79,14 +79,14 @@ follows:
             super(EngineOptimization, self).__init__()
 
             # Create DrivingSim component instances
-            self.add_container('driving_sim', DrivingSim())
+            self.add('driving_sim', DrivingSim())
 
             # Create CONMIN Optimizer instance
-            self.add_container('driver', CONMINdriver())
+            self.add('driver', CONMINdriver())
 
 This first section of code defines an assembly called *EngineOptimization.* This
 assembly contains a DrivingSim component and a CONMIN driver, both of which are
-created and added inside the __init__ function with add_container(). The 
+created and added inside the __init__ function with add(). The 
 objective function, design variables, constraints, and any CONMIN parameters
 are also assigned in the __init__ function. The specific syntax for all of 
 these is given below.
@@ -401,8 +401,8 @@ You add design variables to Genetic using the *add_des_var* method.
 	    
 	    super(Simulation,self).__init__()
 	    
-	    self.add_container('optimizer',Genetic())
-	    self.add_container('comp',SomeComp())
+	    self.add('optimizer',Genetic())
+	    self.add('comp',SomeComp())
 	    
 	    self.optimizer.add_des_var('comp.x')
 	    self.optimizer.add_des_var('comp.y')
