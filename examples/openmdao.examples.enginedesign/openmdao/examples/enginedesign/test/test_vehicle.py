@@ -13,7 +13,7 @@ class VehicleTestCase(unittest.TestCase):
 
     def setUp(self):
         self.model = set_as_top(Assembly())
-        self.model.add_container('test_vehicle', Vehicle())
+        self.model.add('test_vehicle', Vehicle())
 
     def tearDown(self):
         self.model.pre_delete()

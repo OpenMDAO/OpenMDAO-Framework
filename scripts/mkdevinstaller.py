@@ -23,18 +23,6 @@ openmdao_packages = ['openmdao.util',
                      'examples/openmdao.examples.bar3simulation',
                      'examples/openmdao.examples.enginedesign',
                     ]
-
-def _find_repo_top():
-    start = os.getcwd()
-    location = os.getcwd()
-    while location:
-        if '.bzr' in os.listdir(location):
-            return location
-        tmp = location
-        location = os.path.dirname(location)
-        if tmp == location:
-            break
-    raise RuntimeError('ERROR: %%s is not inside of a bazaar repository' %% start)
     
 def adjust_options(options, args):
     if sys.version_info[:2] < (2,6) or sys.version_info[:2] >= (3,0):
@@ -44,17 +32,9 @@ def adjust_options(options, args):
         if not arg.startswith('-'):
             print 'no args allowed that start without a dash (-)'
             sys.exit(-1)
-    args.append(join(_find_repo_top(), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
+    args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 
 def _single_install(cmds, req, bin_dir):
-    #import pkg_resources
-    #try:
-        #pkg_resources.working_set.resolve([pkg_resources.Requirement.parse(req)])
-    #except (pkg_resources.DistributionNotFound, pkg_resources.VersionConflict):
-        ## if package isn't currently installed, install it
-        ## NOTE: we need to do our own check for already installed packages because
-        ##       for some reason distribute always wants to install a package even if
-        ##       it already is installed.
     cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
         # pip seems more robust than easy_install, but won't install from binary distribs :(
         #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
@@ -93,27 +73,28 @@ def after_install(options, home_dir):
             numpyidx = i
             break
     try:
-		_single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
-		if numpyidx is not None:
-			reqs.remove(reqs[numpyidx])
-		for req in reqs:
-			_single_install(cmds, req, bin_dir)
+        _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
+        if numpyidx is not None:
+            reqs.remove(reqs[numpyidx])
+        for req in reqs:
+            _single_install(cmds, req, bin_dir)
 
-		# now install dev eggs for all of the openmdao packages
-		topdir = _find_repo_top()
-		startdir = os.getcwd()
-		absbin = os.path.abspath(bin_dir)
-		try:
-			for pkg in openmdao_packages:
-				os.chdir(join(topdir, pkg))
-				cmdline = [join(absbin, 'python'), 'setup.py', 'develop'] + cmds
-				subprocess.check_call(cmdline)
-		finally:
-			os.chdir(startdir)
+        # now install dev eggs for all of the openmdao packages
+        topdir = os.path.abspath(os.path.dirname(__file__))
+        startdir = os.getcwd()
+        absbin = os.path.abspath(bin_dir)
+        try:
+            for pkg in openmdao_packages:
+                os.chdir(join(topdir, pkg))
+                cmdline = [join(absbin, 'python'), 'setup.py', 
+                           'develop', '-N'] + cmds
+                subprocess.check_call(cmdline)
+        finally:
+            os.chdir(startdir)
     except Exception as err:
-		print "ERROR: build failed"
-		sys.exit(-1)
-		
+        print "ERROR: build failed"
+        sys.exit(-1)
+        
     # copy the default wing project file into the virtualenv
     # try to find the default.wpr file in the user's home directory
     try:
@@ -128,11 +109,12 @@ def after_install(options, home_dir):
     if not os.path.isfile(proj_template):
         proj_template = join(topdir,'config','wing_proj_template.wpr')
     
+    abshome = os.path.abspath(home_dir)
     shutil.copy(proj_template, 
-                join(os.path.abspath(home_dir),'etc','wingproj.wpr'))
+                join(abshome,'etc','wingproj.wpr'))
                 
-    print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% home_dir
-    print 'From %%s, type:\\n' %% home_dir
+    print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% abshome
+    print 'From %%s, type:\\n' %% abshome
     if sys.platform == 'win32':
         print r'Scripts\\activate'
     else:

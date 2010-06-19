@@ -51,46 +51,46 @@ class IterateTestCase(unittest.TestCase):
         self.top = None
 
     def test_success(self):
-        self.top.add_container("iterate", Iterate())
-        self.top.add_container("simple", Simple2())
-        self.top.iterate.loop_end = 'simple.outvar'
-        self.top.iterate.loop_start = 'simple.invar'
+        self.top.add("driver", Iterate())
+        self.top.add("simple", Simple2())
+        self.top.driver.loop_end = 'simple.outvar'
+        self.top.driver.loop_start = 'simple.invar'
         self.top.run()
         
         self.assertAlmostEqual(self.top.simple.invar, 
                                self.top.simple.outvar, places=6)
-        self.assertEqual(self.top.iterate.current_iteration, 1)
+        self.assertEqual(self.top.driver.current_iteration, 1)
             
     def test_maxiteration(self):
-        self.top.add_container("iterate", Iterate())
-        self.top.add_container("simple", Simple1())
-        self.top.iterate.loop_end = 'simple.outvar'
-        self.top.iterate.loop_start = 'simple.invar'
-        self.top.iterate.max_iteration = 3
+        self.top.add("driver", Iterate())
+        self.top.add("simple", Simple1())
+        self.top.driver.loop_end = 'simple.outvar'
+        self.top.driver.loop_start = 'simple.invar'
+        self.top.driver.max_iteration = 3
         try:
             self.top.run()
         except RuntimeError, err:
-            self.assertEqual(str(err), 'iterate: Max iterations exceeded ' + \
+            self.assertEqual(str(err), 'driver: Max iterations exceeded ' + \
                                        'without convergence.' )
         else:
-            self.fail('RuntimeError expected')       
+            self.fail('RuntimeError expected')
         
     def test_tolerance(self):
-        self.top.add_container("iterate", Iterate())
-        self.top.add_container("simple", Simple3())
-        self.top.iterate.loop_end = 'simple.outvar'
-        self.top.iterate.loop_start = 'simple.invar'
-        self.top.iterate.max_iteration = 2
-        self.top.iterate.tolerance = .001
+        self.top.add("driver", Iterate())
+        self.top.add("simple", Simple3())
+        self.top.driver.loop_end = 'simple.outvar'
+        self.top.driver.loop_start = 'simple.invar'
+        self.top.driver.max_iteration = 2
+        self.top.driver.tolerance = .001
         try:
             self.top.run()
         except RuntimeError, err:
-            self.assertEqual(str(err), 'iterate: Max iterations exceeded ' + \
+            self.assertEqual(str(err), 'driver: Max iterations exceeded ' + \
                                        'without convergence.' )
         else:
             self.fail('RuntimeError expected')   
             
-        self.top.iterate.tolerance = 0.1
+        self.top.driver.tolerance = 0.1
         self.top.run()
 
 

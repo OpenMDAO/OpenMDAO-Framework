@@ -26,7 +26,7 @@ class Expression(BaseStr):
     number of other variables.
     """
     
-    def __init__(self, default_value=NoDefaultSpecified, iotype=None, \
+    def __init__(self, default_value=NoDefaultSpecified, iotype=None,
                  desc=None, **metadata):
         
         if default_value is NoDefaultSpecified:
@@ -39,22 +39,22 @@ class Expression(BaseStr):
         # Put units in the metadata dictionary
         if desc is not None:
             metadata['desc'] = desc
-            
+    
         super(Expression, self).__init__(default_value, **metadata)
 
-    def validate(self, object, name, value):
+    def validate(self, obj, name, value):
         """ Validates that a specified value is valid for this trait.
         
         Note: The 'fast validator' version performs this check in C.
         """
         # normal string validation
-        s = super(Expression, self).validate(object, name, value) 
+        s = super(Expression, self).validate(obj, name, value)
         
         try:
             if self.iotype == 'out':
-                s = ExprEvaluator(s, object, single_name=True)
+                s = ExprEvaluator(s, obj, single_name=True)
             else:
-                s = ExprEvaluator(s, object)
+                s = ExprEvaluator(s, obj)
             s._parse()
         except RuntimeError:
             raise TraitError("invalid %sput ref variable value '%s'" % \
@@ -67,6 +67,6 @@ class ExpressionList(List):
     
     def __init__(self, **metadata):
         self.iotype = metadata.get('iotype', 'in')
-        super(ExpressionList, self).__init__(trait=Expression( \
+        super(ExpressionList, self).__init__(trait=Expression(
                             iotype=self.iotype), **metadata)
     

@@ -39,8 +39,8 @@ class Model(Assembly):
 
     def __init__(self):
         super(Model, self).__init__()
-        self.add_container('a', Unique())
-        self.add_container('b', Unique())
+        self.add('a', Unique())
+        self.add('b', Unique())
 
 
 class TestCase(unittest.TestCase):

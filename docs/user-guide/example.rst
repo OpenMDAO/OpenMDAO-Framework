@@ -598,10 +598,8 @@ data connections define an execution order based on their dependencies, i.e.,
 components that are upstream in the data flow will be executed prior to those
 downstream so that input data to a component will always be valid with respect
 to the other parts of the workflow. A component will not execute if its inputs
-have not changed since its last execution. An Assembly can also contain a
-Driver, but this is not required. When an Assembly does not explicitly contain
-a driver, the components are executed sequentially based on their data
-connections.
+have not changed since its last execution. An Assembly contains a
+Driver called *driver* that controls iterations over the workflow.
 
 For the vehicle simulation, a Vehicle assembly is needed that can sequentially execute the Transmission,
 Engine, and Chassis components.
@@ -625,13 +623,13 @@ Engine, and Chassis components.
 
 	        # Create component instances
         
-	        self.add_container('transmission', Transmission())
-	        self.add_container('engine', Engine())
-	        self.add_container('chassis', Chassis())
+	        self.add('transmission', Transmission())
+	        self.add('engine', Engine())
+	        self.add('chassis', Chassis())
 
 The Engine, Transmission, and Chassis components all need to be imported so
 their instances can be created; they can be added to the assembly
-with *add_container*. Please notice that an assembly inherits from Assembly
+with *add*. Please notice that an assembly inherits from Assembly
 instead of Component. When the instances of the Transmission, Engine, and
 Chassis are created, their members and data are internally accessible using
 *self* plus the instance name, e.g., ``self.transmission``.
@@ -659,9 +657,9 @@ Now that the components are instantiated in the assembly, they need to be hooked
 
 	        # Create component instances
         
-	        self.add_container('transmission', Transmission())
-	        self.add_container('engine', Engine())
-	        self.add_container('chassis', Chassis())
+	        self.add('transmission', Transmission())
+	        self.add('engine', Engine())
+	        self.add('chassis', Chassis())
 		
 	# This is a trick to get around a limitation in Sphinx's doctest, where
 	# there is no way to preserve the indentation level between code
@@ -759,9 +757,9 @@ Now these inputs are available to connect to the components, so we connect them 
 
 	        # Create component instances
         
-	        self.add_container('transmission', Transmission())
-	        self.add_container('engine', Engine())
-	        self.add_container('chassis', Chassis())
+	        self.add('transmission', Transmission())
+	        self.add('engine', Engine())
+	        self.add('chassis', Chassis())
 		
 	self = Vehicle()
 
@@ -954,10 +952,10 @@ create an instance of DrivingSim and CONMINdriver:
 	        super(EngineOptimization, self).__init__()
 
 	        # Create DrivingSim instance
-        	self.add_container('driving_sim', Driving_Sim())
+        	self.add('driving_sim', Driving_Sim())
 
 	        # Create CONMIN Optimizer instance
-        	self.add_container('driver', CONMINdriver())
+        	self.add('driver', CONMINdriver())
 
 	        # CONMIN Flags
         	self.driver.iprint = 1
@@ -1069,10 +1067,10 @@ the expression:
 	        super(EngineOptimization, self).__init__()
 
 	        # Create DrivingSim instance
-        	self.add_container('driving_sim', DrivingSim())
+        	self.add('driving_sim', DrivingSim())
 
 	        # Create CONMIN Optimizer instance
-        	self.add_container('driver', CONMINdriver())
+        	self.add('driver', CONMINdriver())
 
 	self = EngineOptimization()
 	

@@ -52,7 +52,7 @@ class DOE(CaseIteratorDriver):
             else:
                 min_samples = 2**nvars + 2*nvars + 1
             if self.n_samples != min_samples:
-                self.warning('Setting n_samples to CCD required value: %d' % \
+                self._logger.warning('Setting n_samples to CCD required value: %d' % \
                              min_samples)
             self.n_samples = min_samples
         elif self.type == 'lhs':
@@ -64,11 +64,11 @@ class DOE(CaseIteratorDriver):
         elif self.type == 'oa3':
             min_samples = (nvars-1)**3
         else:
-            self.error("Unknown type '%s'" % self.type)
+            self._logger.error("Unknown type '%s'" % self.type)
             return None
 
         if self.n_samples < min_samples:
-            self.warning('Updating n_samples to minimum: %d' % min_samples)
+            self._logger.warning('Updating n_samples to minimum: %d' % min_samples)
             self.n_samples = min_samples
 
         xmin = []

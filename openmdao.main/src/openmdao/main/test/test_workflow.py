@@ -25,7 +25,7 @@ class TestComponent(Component):
     def execute(self):
         self.total_executions += 1
         if self.set_stop:
-            self.parent.workflow.stop()
+            self.parent.driver.stop()
 
 
 class Model(Assembly):
@@ -33,9 +33,9 @@ class Model(Assembly):
 
     def __init__(self):
         super(Model, self).__init__()
-        self.add_container('comp_a', TestComponent())
-        self.add_container('comp_b', TestComponent())
-        self.add_container('comp_c', TestComponent())
+        self.add('comp_a', TestComponent())
+        self.add('comp_b', TestComponent())
+        self.add('comp_c', TestComponent())
 
         self.connect('comp_a.total_executions', 'comp_b.dummy_input')
         self.connect('comp_b.total_executions', 'comp_c.dummy_input')

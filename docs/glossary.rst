@@ -14,9 +14,9 @@ Glossary
 
       **Assembly**
         The Assembly class is the primary building block of the "system of systems"
-        aspect of OpenMDAO. Each assembly has a Component Workflow called *workflow*
-        and a Driver Workflow called *driverflow* and acts as a container for
-        Components. An assembly is also a Component, so hierarchical structures of
+        aspect of OpenMDAO. Each assembly has a Driver called *driver* that controls
+        execution of the workflow of Components within the Assembly.
+        An assembly is also a Component, so hierarchical structures of
         assemblies can be created.
       
       
@@ -94,7 +94,7 @@ Glossary
       
       **Coverage**
         A Python module that measures code coverage during test execution.
-	
+
 
       **decorator**
         A Python module that aims to simplify the usage of decorators for the average
@@ -105,8 +105,8 @@ Glossary
       
       **DLL**
         Dynamically Loadable Library 
-	
-	
+
+
       **docutils**
         Docutils is a modular system for processing documentation into useful
         formats, such as HTML, XML, and LaTeX. For input Docutils supports
@@ -494,8 +494,8 @@ Glossary
         A software package from Enthought, Inc. that aids in developing Python code. A trait is
         a type definition that can be used for normal Python object attributes, giving the
         attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
-	The Traits package works with version 2.4 and later of Python and is similar in some ways
-	to the Python property language feature. 
+        The Traits package works with version 2.4 and later of Python and is similar in some ways
+        to the Python property language feature. 
 
 
       **TraitType** 
@@ -506,7 +506,7 @@ Glossary
       
       **trunk**
         A Bazaar term that refers to the main development branch (in this case,
-	the openmdao trunk) from which working branches are pulled. 	
+        the openmdao trunk) from which working branches are pulled. 	
 	
 	
       **units**
@@ -529,27 +529,28 @@ Glossary
               
        
       **WebHelpers**
-	A library of helper functions intended to make writing templates in Web applications
-	easier. It's the standard function library for Pylons and TurboGears 2. It also
-	contains a large number of functions not specific to the Web, including text
-	processing, number formatting, date calculations, container objects, etc.
+        A library of helper functions intended to make writing templates in Web applications
+        easier. It's the standard function library for Pylons and TurboGears 2. It also
+        contains a large number of functions not specific to the Web, including text
+        processing, number formatting, date calculations, container objects, etc.
 
             
       **WebOb**
         :term:`WSGI` request and response object 
-	
 
-      **WebTest** 
-	Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
-	easy to send test requests to that application without starting up an HTTP
-	server. 
-	
+
+      **WebTest**  
+        Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
+        easy to send test requests to that application without starting up an HTTP
+        server. 
+
 
       **Workflow**
-        A Workflow controls the execution order of a group of Components. The Workflow
-        class supports simple sequential execution. Other classes inheriting from 
-        Workflow will support different execution schemes, e.g., concurrent execution,
-        conditional execution, and looping of various types.
+        A Workflow controls the execution order of a group of Components. The default
+        workflow class is Dataflow, which orders Components based on their input and
+        output connections. Other classes inheriting from 
+        Workflow will support different execution schemes, e.g., concurrent and
+        conditional execution.
 
 
       **WSGI**
