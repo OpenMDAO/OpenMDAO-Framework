@@ -14,6 +14,7 @@ from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 
 try:
     # TODO: fix matplotlib issues on viper and storm 
+    import matplotlib
     from openmdao.lib.components.xyplotter import XYplotter
 except ImportError:
     pass
