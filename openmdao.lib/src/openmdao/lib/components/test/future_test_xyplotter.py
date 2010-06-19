@@ -13,7 +13,7 @@ from openmdao.lib.api import DBCaseIterator, DBCaseRecorder, DumpCaseRecorder, L
 from openmdao.lib.drivers.simplecid import SimpleCaseIterDriver
 
 try:
-    # TODO: fix matplotlib issues on viper and storm
+    # TODO: fix matplotlib issues on viper and storm 
     from openmdao.lib.components.xyplotter import XYplotter
 except ImportError:
     pass
