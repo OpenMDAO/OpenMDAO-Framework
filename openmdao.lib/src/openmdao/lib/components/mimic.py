@@ -84,25 +84,28 @@ class Mimic(Component):
         
         self._current_model_traits = set()
         
-        traitdict = newmodel._traits_meta_filter(iotype=not_none)
-        
-        for name,trait in traitdict.items():
-            if self._eligible(name):
-                self.add_trait(name, trait.trait_type)
-                self._current_model_traits.add(name)
-                setattr(self, name, getattr(newmodel, name))
+        if newmodel:
+            traitdict = newmodel._traits_meta_filter(iotype=not_none)
+            
+            for name,trait in traitdict.items():
+                if self._eligible(name):
+                    self.add_trait(name, trait.trait_type)
+                    self._current_model_traits.add(name)
+                    setattr(self, name, getattr(newmodel, name))
     
     def _mimic_includes_changed(self, old, new):
         if self.mimic_excludes and new is not None:
             self.__dict__['mimic_includes'] = old
             self.raise_exception("mimic_includes and mimic_excludes are mutually exclusive",
                                  RuntimeError)
+        self._model_changed(self.model, self.model)
     
     def _mimic_excludes_changed(self, old, new):
         if self.mimic_includes and new is not None:
             self.__dict__['mimic_excludes'] = old
             self.raise_exception("mimic_includes and mimic_excludes are mutually exclusive",
                                  RuntimeError)
+        self._model_changed(self.model, self.model)
     
     def _eligible(self, name):
         """Return True if the named model trait should become a trait in the Mimic."""

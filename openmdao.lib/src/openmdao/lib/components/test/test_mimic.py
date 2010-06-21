@@ -113,12 +113,32 @@ class MimicTestCase(unittest.TestCase):
         self.assertEqual(mimic.list_inputs_to_model(), ['a'])
         self.assertEqual(mimic.list_outputs_from_model(), ['d'])
         
+    def test_changing_includes(self):
+        mimic = MyMimic()
+        mimic.mimic_includes = ['a','d']
+        mimic.model = Simple()
+        self.assertEqual(mimic.list_inputs_to_model(), ['a'])
+        self.assertEqual(mimic.list_outputs_from_model(), ['d'])
+        mimic.mimic_includes = ['b', 'c']
+        self.assertEqual(mimic.list_inputs_to_model(), ['b'])
+        self.assertEqual(mimic.list_outputs_from_model(), ['c'])
+        
     def test_excludes(self):
         mimic = MyMimic()
         mimic.mimic_excludes = ['a','d']
         mimic.model = Simple()
         self.assertEqual(mimic.list_inputs_to_model(), ['b'])
         self.assertEqual(mimic.list_outputs_from_model(), ['c'])
+        
+    def test_changing_excludes(self):
+        mimic = MyMimic()
+        mimic.mimic_excludes = ['a','d']
+        mimic.model = Simple()
+        self.assertEqual(mimic.list_inputs_to_model(), ['b'])
+        self.assertEqual(mimic.list_outputs_from_model(), ['c'])
+        mimic.mimic_excludes = ['b', 'c']
+        self.assertEqual(mimic.list_inputs_to_model(), ['a'])
+        self.assertEqual(mimic.list_outputs_from_model(), ['d'])
         
     def test_include_exclude(self):
         mimic = MyMimic()
