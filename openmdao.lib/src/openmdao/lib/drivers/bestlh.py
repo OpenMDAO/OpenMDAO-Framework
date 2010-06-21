@@ -9,7 +9,7 @@ from enthought.traits.api import Event
 
 from openmdao.main.api import Driver, ExprEvaluator
 from openmdao.lib.api import Float,Int, Enum
-from openmdao.util.math import rand_latin_hypercube
+from openmdao.util.mdo import rand_latin_hypercube
 
 class DesVar(object): 
     
