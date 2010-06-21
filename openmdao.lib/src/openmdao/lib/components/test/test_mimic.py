@@ -153,8 +153,6 @@ class MimicTestCase(unittest.TestCase):
             self.fail('Expected Exception')
         self.assertEqual(mimic.mimic_includes, [])
         
-        
-        
 if __name__ == "__main__":
     unittest.main()
 

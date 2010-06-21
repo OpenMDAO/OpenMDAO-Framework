@@ -2,8 +2,6 @@ from __future__ import division
 
 import random
 
-from array import array as py_array
-
 from numpy import array,zeros,size,argsort,sum,unique,floor,equal,bincount
 from numpy.linalg import norm
 
@@ -11,16 +9,16 @@ from enthought.traits.api import Event
 
 from openmdao.main.api import Driver, ExprEvaluator
 from openmdao.lib.api import Float,Int, Enum
+from openmdao.util.math import rand_latin_hypercube
 
 class DesVar(object): 
     
     def __init__(self): 
         self.low = None
         self.high = None
-        
         self.expr = None
 
-class LH(object):
+class LatinHypercube(object):
     def __init__(self,doe,q=2,p=1):
         self.q = q
         self.p = p
@@ -30,7 +28,7 @@ class LH(object):
     
     def get_shape(self):
         return self.doe.shape
-    shape = property(get_shape,None,None,"(rowsxcolumns) size of the LH doe")
+    shape = property(get_shape,None,None,"(rowsxcolumns) size of the LatinHypercube doe")
         
     def mmphi(self):
         """Calculates the Morris-Mitchell sampling criterion for input DOE"""
@@ -74,7 +72,7 @@ class LH(object):
             new_doe[el1,col] = self.doe[el2,col]
             new_doe[el2,col] = self.doe[el1,col] 
                
-        return LH(new_doe,self.q,self.p)
+        return LatinHypercube(new_doe,self.q,self.p)
             
     def __repr__(self): 
         return repr(self.doe)
@@ -85,35 +83,38 @@ class LH(object):
     def __getitem__(self,*args): 
         return self.doe.__getitem__(*args)
 
-class Best_LH(Driver): 
+
+class BestLatinHypercube(Driver): 
     
     n = Int(20,iotype="in",desc="number of sample points in the DOE")
     
-    population = Int(20,iotype="in",desc="Size of the population for the genetic algorithm optimization of the DOE sample points")
-    generations = Int(2,iotype="in",desc="Number of generations the genetic algorithm will evolve for before terminating")
+    population = Int(20,iotype="in",
+                     desc="Size of the population for the genetic algorithm optimization of the DOE sample points")
+    generations = Int(2,iotype="in",
+                      desc="Number of generations the genetic algorithm will evolve for before terminating")
     norm_method = Enum(["1-norm","2-norm"],iotype='in',
-                              desc="vector norm calculation method. '1-norm' is faster, but less accurate")
-    
+                       desc="vector norm calculation method. '1-norm' is faster, but less accurate")
     norm_map = {"1-norm":1,"2-norm":2}
     
-    
-    def __init__(self,doc=None):
-        super(Best_LH,self).__init__(doc)
-        self._des_vars = dict()
-        self._event_vars = dict()
+    def __init__(self, doc=None):
+        super(BestLatinHypercube,self).__init__(doc)
+        self._des_vars = {}
+        self._event_vars = {}
         self.q = [1,2,5,10,20,50,100] #list of qs to try for Phi_q optimization
       
-    def add_event_var(self,ref):
-        """Adds an event variable to the driver, which the driver will the set before each iteration. 'ref' is string
-        refering to the public event variable on some component. """   
+    def add_event_var(self, ref):
+        """Adds an event variable to the driver, which the driver will the set
+        before each iteration. 'ref' is string refering to the public event
+        variable on some component. 
+        """
         
         if ref in self.event_vars: 
-            self.raise_exception("Trying to add event_var '%s' to driver, but it is already in there"%ref,RuntimeError)
+            self.raise_exception("Trying to add event_var '%s' to driver, " % ref,
+                                 "but it is already in there",RuntimeError)
         
-        expreval = ExprEvaluator(ref,self.parent,single_name=True)
+        expreval = ExprEvaluator(ref,self.parent, single_name=True)
         path = ".".join(ref.split(".")[0:-1]) #get the path to the object
         target = ref.split(".")[-1] #get the last part of the string after the last "."
-        
 
         obj = getattr(self.parent,path)
         t = obj.trait(target)
@@ -123,24 +124,24 @@ class Best_LH(Driver):
         self._event_vars[ref] = expreval
         
 
-    def add_des_var(self,ref,low=None,high=None):
-        """adds a design variable to the driver. 'ref' is a string refering to the public variable the 
+    def add_des_var(self, ref, low=None, high=None):
+        """Adds a design variable to the driver. 'ref' is a string refering to the public variable the 
         driver should vary during execution. 'low' and 'high' refer to the minimum and maximum allowed 
         values for the optimizer to use. If neither are specified, the min and max will default to the 
         values in the metadata of the public variable being referenced. If they are not specified in 
         the metadata and not provided as arguments a ValueError is raised.
         """
         if ref in self.design_vars: 
-            self.raise_exception("Trying to add '%s' to driver, but it is already in there"%ref,RuntimeError)
+            self.raise_exception("Trying to add '%s' to driver, but it is already in there" % ref,
+                                 RuntimeError)
         
         expreval = ExprEvaluator(ref, self.parent, single_name=True)
         
-        _des_var = DesVar()
-        _des_var.expr = expreval
+        des_var = DesVar()
+        des_var.expr = expreval
         
         path = ".".join(ref.split(".")[0:-1]) #get the path to the object
         target = ref.split(".")[-1] #get the last part of the string after the last "."
-        
 
         obj = getattr(self.parent,path)
         t = obj.trait(target)
@@ -153,10 +154,11 @@ class Best_LH(Driver):
                     _des_var.low = t.low
                     _des_var.high = t.high
                 else: 
-                    self.raise_exception("Trying to add design variable '%s', but no low/high metadata was found and no \
-                                         'low','high' arguments were given. One or the other must be specified."%ref,RuntimeError)
-            #the des_var has been created, with expr and low/high. Just add it to the storage dictionary
-            self._des_vars[ref] = _des_var  
+                    self.raise_exception("Trying to add design variable '%s', but no low/high metadata was found and no" % ref,
+                                         "'low','high' arguments were given. One or the other must be specified.",RuntimeError)
+            # the des_var has been created, with expr and low/high. 
+            # Just add it to the storage dictionary
+            self.des_vars[ref] = _des_var
         else: 
             self.raise_exception("Trying to add design variable '%s' to driver, but only Float types are allowed."%ref,RuntimeError)
             
@@ -189,11 +191,10 @@ class Best_LH(Driver):
     def execute():
         k = len(self._des_vars)
         lhcs = []
-        rand_doe = _rand_latin_hypercube(n,k)
-        
+        rand_doe = rand_latin_hypercube(n,k)
         
         for i in self.q:
-            lh = LH(rand_doe,q=i,p=self.norm_map[self.norm_method])
+            lh = LatinHypercube(rand_doe,q=i,p=self.norm_map[self.norm_method])
             lh_opt = _mmlhs(lh,self.population,self.generations)
             lhcs.append(lh_opt)
             
@@ -209,32 +210,10 @@ class Best_LH(Driver):
                 event_var.set(1)  
             #run model
             self.run_iteration()
-            
-
-def _rand_latin_hypercube(n,k,edges=False):
-    """Calculates a random latin hypercube set of n points in k dimensions within [0,1]^k hypercube
-    n - desired number of points
-    k - number of design variables (dimensions)
-    edges - if Edges=True the extreme bins will have their centres on the
-            edges of the domain, otherwise the bins will be entirely 
-            contained within the domain (default setting). 
-    """
-    
-    #generate nxk array of random numbers from the list of range(n) choices
-    X = zeros((n,k))
-    row = range(1,n+1)
-    for i in range(k):      
-        random.shuffle(row)
-        X[:,i] = row
-    if edges:
-        X = (X-1.0)/float((n-1))
-    else: 
-        X = (X-.5)/float(n)
-    return X
 
 def _mmlhs(x_start,population,generations):
-    """Evolutionary search for most space filling Latin-Hypercube. Returns a new LH instance 
-    with an optimzied set of points"""
+    """Evolutionary search for most space filling Latin-Hypercube. 
+    Returns a new LatinHypercube instance with an optimzied set of points"""
     x_best = x_start
     phi_best = x_start.mmphi()
     n = x_start.shape[1]
@@ -281,8 +260,8 @@ if __name__== "__main__":
         print "Couldn't find matplotlib"
     
     test = """
-x = _rand_latin_hypercube(100,2)
-lh = LH(x,2,1) 
+x = rand_latin_hypercube(100,2)
+lh = LatinHypercube(x,2,1) 
 print lh.mmphi()
 lh_opt = _mmlhs(lh,20,20)
 print lh_opt.mmphi()

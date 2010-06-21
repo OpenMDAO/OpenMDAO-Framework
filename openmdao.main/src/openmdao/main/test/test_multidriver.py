@@ -174,13 +174,11 @@ class MultiDriverTestCase(unittest.TestCase):
     def test_2_drivers(self):
         self.rosen_setUp()
         drv = self.top.add('driver1a', CONMINdriver())
-        drv.workflow = Dataflow(self.top)
-        self.top.add('comp1a', ExprComp(expr='x**2'), workflow=drv.workflow)
-        self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'), workflow=drv.workflow)
+        self.top.add('comp1a', ExprComp(expr='x**2'), False)
+        self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'), False)
+        drv.add_to_workflow([self.top.comp1a, self.top.comp2a])
         self.top.connect('comp1a.f_x', 'comp2a.x')
-        drv.workflow = Dataflow(self.top, 
-                                members=[self.top.comp1a, self.top.comp2a])
-        self.top.driver.workflow.add(drv)
+        self.top.driver.add_to_workflow(drv)
         drv.itmax = 40
         drv.objective = 'comp2a.f_x'
         drv.design_vars = ['comp1a.x']

@@ -105,7 +105,7 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add(self, name, obj, workflow=_undefined_):
+    def add(self, name, obj, add_to_workflow=True):
         """Add obj to the workflow and call base class *add*.
         
         Returns the added object.
@@ -114,11 +114,9 @@ class Assembly (Component):
         self.comp_graph.add(obj)
         
         # add all non-Driver Components to the Assembly workflow by default
-        if workflow is _undefined_:
-            if isinstance(obj, Component) and not isinstance(obj, Driver):
-                self._default_workflow.add(obj)
-        elif workflow is not None:
-            workflow.add(obj)
+        # unless add_to_workflow is False
+        if add_to_workflow is True and isinstance(obj, Component) and not isinstance(obj, Driver):
+            self._default_workflow.add(obj)
 
         # since the internals of the given Component can change after it's
         # added, wait to collect its io_graph until we need it
