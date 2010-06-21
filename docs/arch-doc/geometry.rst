@@ -38,8 +38,8 @@ component is instantiated but before it can be used in a process model:
 *Needed for requirements: Tools/Geometry/Interaction/01 and Tools/Geometry/Interaction/02*
 
 Parameters are set the same way as any other OpenMDAO input variable. For
-example, consider a cylinder with two parameters: radius and height. If we 
-have a geometry manipulator called *geo_manipulator,* the geometry parameters
+example, consider a cylinder with two parameters: *radius* and *height*. If we 
+have a geometry manipulator called ``geo_manipulator,`` the geometry parameters
 can be directly set:
 
 .. testsetup:: parameter_interface
@@ -141,7 +141,7 @@ states, and tags, from a saved egg.
 Associates a geometric entity with some metadata. This is useful for marking
 an entity for later use by an analysis tool (e.g., marking loads and boundary
 conditions.) The most straightforward way to implement the tags' storage would
-be to create each tag as an OpenMDAO variable, accessed via its *tag_name.*
+be to create each tag as an OpenMDAO variable, accessed via its ``tag_name``.
 
 **(Visualization)**
 
@@ -227,7 +227,7 @@ Returns the (x,y,z) coordinate for a node in the volume.
 
 **(trange, nodes) = GetEdge(vol, edge)**
 
-Returns the nodes associated with an edge in a given volume. *trange* returns the
+Returns the nodes associated with an edge in a given volume; *trange* returns the
 parameterization *t* in terms of the original curve coordinate (*t*).
 
 **(urange, nloop, loops, edges) = GetFace(vol, face)**
@@ -256,15 +256,15 @@ _________________
 
 Returns the Cartesian coordinate of a point on an edge given the point's coordinate in
 the local (*t*) parameter space used to mesh the edge. First and second
-derivatives can also be returned if available using the *req_derivative* parameter
-(0 = no derivatives, 1 = 1st order, 2 = 2nd order).
+derivatives can also be returned if available using the ``req_derivative`` parameter
+(``0 = no derivatives, 1 = 1st order, 2 = 2nd order``).
 
 **(point, du, dv, duu, duv, dvv) = PointOnFace(vol, face, uv, req_derivative)**
 
 Returns the Cartesian coordinate of a point on a face given the point's coordinate in
 the local (*u,v*) parameter space used to mesh the face. First and second
-derivatives can also be returned if available using the *req_derivative* parameter
-(0 = no derivatives, 1 = 1st order, 2 = 2nd order.)
+derivatives can also be returned if available using the ``req_derivative`` parameter
+(``0 = no derivatives, 1 = 1st order, 2 = 2nd order``.)
 
 **(point_on_edge, t) = NearestOnEdge(vol, edge, coor, point, t_guess)**
 

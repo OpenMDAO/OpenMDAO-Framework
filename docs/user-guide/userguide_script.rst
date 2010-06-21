@@ -138,7 +138,7 @@ Every component in the OpenMDAO framework is an object that conforms to a
 specific interface. At present, the easiest way to match this interface
 is to inherit from the built-in Component class and then override the
 execute() function to give the component some kind of run behavior. Likewise,
-the __init__() function can also be overridden to prescribe the component's
+the ``__init__()`` function can also be overridden to prescribe the component's
 behavior when it is instantiated. This is mostly useful for defining any 
 internal private variables that need to be saved between runs but aren't
 needed by other components in the framework.
@@ -175,16 +175,16 @@ A simple component that implements an equation with two inputs is shown below:
         
 	    self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
-In this example, the __init__() function doesn't do anything but call the
+In this example, the ``__init__()`` function doesn't do anything but call the
 equivalent in the base class, so technically it should be removed from this 
 class definition. Public variables are explained in more detail in the section :ref:`Public-Variables`.
 
 .. index:: save_to_egg()
 
 One additional function that may need to be defined in certain cases is
-*save_to_egg().* Sometimes a wrapped code might require some additional files or
+``save_to_egg()``. Sometimes a wrapped code might require some additional files or
 directories to be packed with it. These kinds of things can be taken care of in
-save_to_egg(). It is important not to forget to call the save_to_egg() for the base
+``save_to_egg()``. It is important not to forget to call the ``save_to_egg()`` for the base
 class.
 
 .. todo::
@@ -226,7 +226,7 @@ output would look like this:
 	    self.y = 3.0*self.x
 
 The example above shows the way the majority of users will create public variables.
-An alternative way to declare them is to use the *add_trait* function that is part of the
+An alternative way to declare them is to use the ``add_trait`` function that is part of the
 Component public interface. First, lets define the same class in the shell but without
 the public variables x and y.
   
@@ -240,7 +240,7 @@ the public variables x and y.
             """ y = 3*x """
             self.y = 3.0*self.x
 
-Next, the add_trait function is used to add the input x and the output y after
+Next, the ``add_trait`` function is used to add the input x and the output y after
 an instance of Simple has been created:
 
 .. doctest:: creating_public_variables_2
@@ -253,7 +253,7 @@ an instance of Simple has been created:
     >>> equation.y
     21.0	    
 
-The primary use of add_trait is to create a public variable dynamically at some
+The primary use of ``add_trait`` is to create a public variable dynamically at some
 point after the component has been created (possibly during execution).
 
     >>> from openmdao.examples.simple.paraboloid import Paraboloid
@@ -747,7 +747,7 @@ value of zero from being assigned, resulting in a division error. Of course, you
 could still get very large values for *pressure* if area is near machine zero.
 
 This units library can also be used to convert internal variables by importing
-the function *convert_units* from ``openmdao.lib.api``.
+the function ``convert_units`` from ``openmdao.lib.api``.
 
     >>> from openmdao.main.api import convert_units
     >>> convert_units(12.0,'inch','ft')
@@ -761,7 +761,7 @@ variable of a different type is assigned. Public variables were created
 using the *casting* traits as opposed to the *coercion* traits. This means that
 most mis-assignments in variable connections (e.g., a float connected to
 a string) should generate a TraitError exception. However, certain widening
-coercions are permitted (e.g., Int->Float, Bool->Int, Bool->Float). No
+coercions are permitted (e.g., ``Int->Float, Bool->Int, Bool->Float``). No
 coercion from Str or to Str is allowed. If you need to apply different
 coercion behavior, it should be simple to create a Python component to
 do the type translation.
@@ -869,18 +869,18 @@ Consider the top level assembly that was created for the :ref:`simple tutorial p
 	        self.add_container('driver', CONMINdriver())
 		
 We can see here that components that comprise the top level of this model are
-declared in the __init__ function. The base class __init__ function is called
+declared in the ``__init__`` function. The base class ``__init__`` function is called
 (with the super function) before anything is added to the empty assembly. This
 is important to ensure that functions that are defined in the base classes are
-available for use, such as *add_container*. 
+available for use, such as ``add_container``. 
 
-The function add_container, takes a valid OpenMDAO name and a constructor as
+The function ``add_container``, takes a valid OpenMDAO name and a constructor as
 its arguments. This function call creates a new instance of the Component and 
 adds it to the OpenMDAO model hierarchy using the given name. In this case then,
 the CONMIN driver is accessible anywhere in this assembly via ``self.driver``.
 Likewise, the Paraboloid is accessed via ``self.paraboloid``.
 
-A Component can also be removed from an Assembly using *remove_container*,
+A Component can also be removed from an Assembly using ``remove_container``,
 though it is not expected to be needed except in rare cases.
 
 *Assemblies*
@@ -900,7 +900,7 @@ include functions that support the above-listed characteristics.
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 Consider once again the top level assembly that was created for the 
-:ref:`simple tutorial. <Getting-Started-with-OpenMDAO` We would like to create a few
+:ref:`simple tutorial <Getting-Started-with-OpenMDAO>`. We would like to create a few
 instances of the Paraboloid function and connect them together in series.
 
 .. testcode:: connect_components
@@ -936,7 +936,7 @@ that are set by the user or are perfectly fine at their defaults.
 
 Variables in an assembly also must be able to be connected to the assembly
 boundary so that outside components can link to them. This can be done using
-*create_passthrough*.
+``create_passthrough``.
 
 Consider a similar assembly as shown above, except that we want to promote the
 remaining unconnected variables to the assembly boundary so that they can be
@@ -965,7 +965,7 @@ linked at that level.
 		self.create_passthrough('par2.y')
 		self.create_passthrough('par2.f_xy')
 
-The create_passthrough function creates a public variable on the assembly. This new variable has
+The ``create_passthrough`` function creates a public variable on the assembly. This new variable has
 the same name, iotype, default value, units, description, and range characteristics as the
 original variable on the subcomponent. If you would like to present a different interface
 external to the assembly (perhaps you would like different units), then a passthrough
@@ -1008,7 +1008,7 @@ the same absolute directory.
 
 You can change the absolute path of the working directory for any
 component on instantiation by setting the *directory* attribute in the
-__init__ function. For example, given the simple optimization model, we can specify
+``__init__`` function. For example, given the simple optimization model, we can specify
 a new working directory for the Paraboloid component when it is instantiated.
 
 .. testcode:: simple_model_component_directory
@@ -1055,21 +1055,26 @@ their respective workflow until certain conditions are met. OpenMDAO comes with
 several drivers that are distributable (i.e., either open source or
 public domain.)
 
+.. index:: CONMIN, Genetic
+
 **CONMIN**
 
 CONMIN, which stands for CONstraint MINimization, is a gradient descent optimization
 algorithm based on the :term:`Method of Feasible Directions`. It was developed at
 NASA in the 1970s and is currently in the public domain. It has been included
 in OpenMDAO's Standard Library to provide users with a basic gradient algorithm.
-The interface for CONMIN is fully detailed in :ref:`CONMIN-driver`.
+The interface for CONMIN is fully discussed in the section :ref:`CONMIN-driver`.
 
 **Genetic**
 
-Genetic is a evolutionary algorithm optimizer based on PyEvolve, which is a
-complete genetic algorithm framework written in Python. PyEvolve was developed
-and is actively maintained by Christian S. Perone.
+Genetic is an evolutionary algorithm optimizer based on PyEvolve, which is a complete genetic
+algorithm framework written in Python. PyEvolve was developed and is actively maintained by
+Christian S. Perone. (Documentation for the PyEvolve package can be found 
+`here <http://pyevolve.sourceforge.net/>`_.)
 
-Documentation for the PyEvolve package can be found at `<http://pyevolve.sourceforge.net/>`_.
+
+.. seealso:: :ref:`Genetic`
+
 
 
 *The Case Iterator*
@@ -1096,12 +1101,12 @@ Running OpenMDAO
 
 When a Component or Assembly is instantiated as a standalone object, it is not
 aware of the directory where it resides. Any component added to such an assembly
-also does not know its path. The function *set_as_top* is available to denote an
+also does not know its path. The function ``set_as_top`` is available to denote an
 assembly as the top level assembly in the framework. Once an assembly is set
 as the top level assembly, it gains an absolute path which can be accessed
-through the function *get_abs_directory*.
+through the function ``get_abs_directory``.
 
-The path that is set by set_as_top is always the current working directory 
+The path that is set by ``set_as_top`` is always the current working directory 
 in the Python environment.
 
     >>> from openmdao.main.api import Assembly, set_as_top   

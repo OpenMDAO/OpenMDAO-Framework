@@ -114,9 +114,9 @@ In this case, the ``setup.py`` file looks like this:
 
     
 The ``setup()`` command has many arguments in addition to those shown above,
-e.g., author, author_email, maintainer, maintainer_email, url, license,
+e.g., ``author, author_email, maintainer, maintainer_email, url, license,
 description, long_description, keywords, platforms, fullname, contact,
-contact_email, classifiers, and download_url. If you supply any of these,
+contact_email, classifiers``, and ``download_url``. If you supply any of these,
 their values will be stored as metadata in the distribution. To keep things
 simple, we won't describe all of the arguments in detail. If you're
 interested, you can go to this 
@@ -152,19 +152,20 @@ within the OpenMDAO framework:
     to do is to use the ``find_packages()`` function from setuptools as shown in
     the example above.
 
-**install_requires**  
-    This option specifies the distributions that your distribution depends on. Note that you
-    need to include only *direct* dependencies in this list, i.e., if your package depends
-    on package_A, which in turn depends on package_B, you need to include only package_A.
-    Make sure not to leave out any direct dependencies here, because doing so will result in
-    failure to install needed dependent distributions whenever your distribution is
-    installed. The value of *install_requires* should be a list of strings. These strings
-    can specify not only the name of a distribution but also a version or a range of
-    versions. For example, ``'numpy>=1.3.0',`` ``'numpy<=1.5'`` and ``'numpy=='1.4.1'`` are
-    all valid entries. However, it's usually best not to specify an
-    exact version because it will make it harder to install your distribution in an
-    environment with other distributions that depend on a different version of a
-    distribution that your package depends on.
+**install_requires**   This option specifies the distributions that your
+    distribution depends on. Note that you need to include only *direct*
+    dependencies in this list, i.e., if your package depends on ``package_A``,
+    which in turn depends on ``package_B``, you need to include only
+    ``package_A``. Make sure not to leave out any direct dependencies here,
+    because doing so will result in failure to install needed dependent
+    distributions whenever your distribution is installed. The value of
+    ``install_requires`` should be a list of strings. These strings can specify
+    not only the name of a distribution but also a version or a range of
+    versions. For example, ``'numpy>=1.3.0',`` ``'numpy<=1.5'`` and
+    ``'numpy=='1.4.1'`` are all valid entries. However, it's usually best not to
+    specify an exact version because it will make it harder to install your
+    distribution in an environment with other distributions that depend on a
+    different version of a distribution that your package depends on.
 
 **entry_points**
     Entry points can be used by OpenMDAO to determine which plugins are
@@ -174,7 +175,7 @@ within the OpenMDAO framework:
     point is specified by its name, followed by an equals (**=**) sign, followed by
     dotted module path (dotted path you would use to import the module in
     Python), followed by a colon (**:**) and the name of the plugin class. The value
-    of *entry_points* should be a string in INI file format or a dictionary. 
+    of ``entry_points`` should be a string in INI file format or a dictionary. 
     
         
     For example:

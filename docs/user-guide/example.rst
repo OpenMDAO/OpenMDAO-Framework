@@ -505,11 +505,11 @@ You may recall that inputs and outputs are attributes of our component, so they 
 ``self.variablename``. It is generally a good idea to create a local copy of a public
 variable for doing calculations in the component for improved efficiency and ease of reading.
 
-We have also imported and used the *convert_units* function to convert the value of velocity
+We have also imported and used the ``convert_units`` function to convert the value of velocity
 from units of mi/h to units of inch/min. This makes the units consistent for the calculation
-of RPM. The convert_units function provides unit conversion capability for your internal
+of RPM. The ``convert_units`` function provides unit conversion capability for your internal
 variables. We could also change the definition of the velocity Float, specifying the units
-as 'inch/min', and then the convert_units call would not be needed.
+as 'inch/min', and then the ``convert_units`` call would not be needed.
 
 The transmission model is now complete, and the next section will show how to interact with
 it in the Python shell. The engine and chassis are created in a similar manner. However, the 
@@ -540,7 +540,7 @@ Please enter the Python shell. Create an instance of the Engine class by typing 
 	>>> from openmdao.examples.enginedesign.engine import Engine
 	>>> my_engine = Engine()
 
-The object *my_engine* is an engine model with default values for all of its inputs. We can interact
+The object ``my_engine`` is an engine model with default values for all of its inputs. We can interact
 with the inputs and outputs by direct inspection:
 
 	>>> my_engine.bore
@@ -631,7 +631,7 @@ Engine, and Chassis components.
 
 The Engine, Transmission, and Chassis components all need to be imported so
 their instances can be created; they can be added to the assembly
-with *add_container*. Please notice that an assembly inherits from Assembly
+with ``add_container``. Please notice that an assembly inherits from Assembly
 instead of Component. When the instances of the Transmission, Engine, and
 Chassis are created, their members and data are internally accessible using
 *self* plus the instance name, e.g., ``self.transmission``.
@@ -706,7 +706,7 @@ this quickly by creating passthroughs:
 	self.create_passthrough('chassis.mass_vehicle')
 	self.create_passthrough('chassis.Cf')
 		
-The *create_passthrough* function creates an identical public variable
+The ``create_passthrough`` function creates an identical public variable
 in the assembly and connects it to the corresponding component variable. So now, all of the
 design variables are available as public variables in any simulation that includes an instance
 of the vehicle model.
@@ -715,7 +715,7 @@ However, the engine tutorial throws you a curve ball here. The Engine
 and Chassis components are defined with SI units, but the Transmission
 component is defined with English units. We have two inputs -- the tire
 circumference and the vehicle velocity -- that are each used by two components
-with different units. The create_passthrough function creates an exact copy
+with different units. The ``create_passthrough`` function creates an exact copy
 of the public variable, so we cannot use it here. Instead, we must connect them manually
 by declaring variables in our assembly.
 

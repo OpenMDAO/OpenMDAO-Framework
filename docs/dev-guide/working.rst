@@ -92,6 +92,39 @@ Running Tests
 
 For detailed information on running tests on your branch, please see :ref:`Testing`.
 
+.. index:: tagging a branch
+
+.. _`Tagging-Your-Branch`:
+
+Tagging Your Branch
+--------------------
+
+If your branch is associated with a Trac ticket, you should tag your branch after you commit
+the final changes and before pushing it up to Launchpad. To tag your branch, type the
+following: 
+
+::
+
+   bzr tag T<ticket_number>
+   
+where ``<ticket_number>`` is the Trac ticket number assigned to the bug, enhancement, or
+requirement that was submitted for the issue you are working on your branch. 
+
+Bazaar will return a message:
+
+::   
+
+   Created tag T<ticket_number>
+
+To see what tags have been created and the revision number related to each tag, you can
+type:
+
+::
+  
+   bzr tags 
+   
+Bazaar will return a list of ticket numbers (left column) and the revision number
+associated with each ticket (right column).
 
 .. _Merging-to-Your-Branch:
 
@@ -125,22 +158,22 @@ Next, you will change directory to go to your virtual development environment:
 On **Linux** or **OS X,** you must be running Bash to activate your environment. If you are in Bash, omit
 this next step.
 
-::
+ ::
  
-  bash
+   bash
   
-To activate your virtual development environment, type:
+ To activate your virtual development environment, type:
 
-::
+ ::
 
-  . bin/activate   
+   . bin/activate   
   
 
 Or, on **Windows,** type:
  
-::
+ ::
   
-   Scripts\activate
+    Scripts\activate
    
 If you have doc changes, you can build the docs from scratch, by typing:
  
@@ -193,22 +226,22 @@ To change to the dev environment:
 On **Linux** or **OS X,** you must be running Bash to activate your environment. If you
 are in Bash, omit this next step.
 
-::
+ ::
     
-  bash
+   bash
      
-To activate your virtual developement environment, type:
+ To activate your virtual development environment, type:
   
-::
+ ::
   
-  . bin/activate
+   . bin/activate
     
     
 Or, on **Windows,** type:
    
-::
+ ::
    
-  Scripts\activate
+   Scripts\activate
      
 To confirm that all tests still pass, type:     
   
@@ -256,17 +289,20 @@ in the *Bazaar User Guide.*
 Pushing a Branch Back to Launchpad
 -----------------------------------
 
-The following instructions are for Linux, OS X, and Windows. However, on Windows,
-depending on how you created your :ref:`SSH keys <Creating-Your-Key-on-Windows>`, you may
-need to have Pageant running before you can merge to your branch or push it to Launchpad.
+The following instructions are for Linux, OS X, and Windows platforms. 
 
-First, make sure all of your changes are committed and that your your branch
-builds successfully and passes all tests.
+First, make sure all of your changes are committed and that the documentation builds
+successfully (if applicable) and all tests pass.
 
-You will push your branch up to the openmdao repository, but the changes do not become a
-part of the development trunk until one of the reviewers merges it. Note that your branch
-may be reviewed by a senior developer as well as a tech writer (to make sure the
-documentation is consistent and clear). 
+You will push your branch up to the openmdao repository, but the changes will not become a part
+of the development trunk until one of the reviewers approves it, and it is merged. Note that
+your branch may be reviewed by a senior developer and a tech writer (if there are
+documentation changes).
+
+If your branch is associated with a :term:`Trac` ticket, you should :term:`tag` your branch with the
+related ticket number before pushing it to Launchpad. For more information about submitting a ticket in
+Trac, go to the `OpenMDAO Development page <http://openmdao.org/wiki/Development>`_ on our website.
+For instructions on tagging a branch, click :ref:`here <Tagging-Your-Branch>`.
 
 On the branch to be pushed, type the following command, replacing ``userid`` with your
 Launchpad userid and replacing ``branch_name`` with the name of the branch you are
@@ -315,7 +351,7 @@ the instructions below.
 You have now completed the process for proposing that your branch be merged. In a short
 time, you will receive a copy of an email that went to the gatekeeper of all merge
 proposals. The email will show you as the sender, and the subject will be the merge of
-your branch to openmdao:  ``[Merge]lp:~username/openmdao/branch_name into openmdao``. The
+your branch to openmdao: ``[Merge]lp:~username/openmdao/branch_name into openmdao``. The
 email will contain the proposal for merge and an attachment showing the differences. (This
 diff file is just a text file and is not very readable.)
 
@@ -327,7 +363,3 @@ indicating whether the proposal was approved or disapproved.
 
 - If your proposal for merge was disapproved, you can continue working on your branch. (If
   you have a Trac ticket open, it will be transitioned back to the WORKING state.)
-
-
-
-i

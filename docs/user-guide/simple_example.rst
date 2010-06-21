@@ -24,7 +24,7 @@ analytical gradients. The optimizer will calculate numerical gradients internall
 
 If we express the problem as a block diagram, we can see how to set it up in OpenMDAO:
 
-.. _`OpenMDAO_overview`:
+.. _`OpenMDAO-overview`:
 
 .. figure:: ../../examples/openmdao.examples.simple/openmdao/examples/simple/Simple1.png
    :align: center
@@ -144,7 +144,7 @@ namespace collisions in our module. In other words:
     # GOOD
     from openmdao.main.api import Component
 
-The next line defines a class called Paraboloid:
+The next line defines a class called *Paraboloid:*
 
 .. testcode:: simple_component_Paraboloid_pieces
 
@@ -200,7 +200,7 @@ variable. This argument, while not required, is encouraged.
 The variable is given a name by which it will be known internally and externally.
 
 Please edit the ``paraboloid.py`` that you created and add three variables to
-class Paraboloid. You will need to have x and y as inputs and f_xy as an output. Use
+class Paraboloid. You will need to have *x* and *y* as inputs and ``f_xy`` as an output. Use
 the example above to check your work.
 
 For the Paraboloid component, we've created two inputs and one output. Later
@@ -225,8 +225,8 @@ Finally, we need a function to execute this component:
 The execute function is where you define what a component does when it runs.
 For our Paraboloid component, the equation is evaluated here. The input and
 output public variables are members of the Paraboloid class, which means that
-they must be accessed using *self*. For example, *self.x* gives you the value
-stored in x. This *self.* can be cumbersome in a big equation, so a pair of
+they must be accessed using *self*. For example, ``self.x`` gives you the value
+stored in x. This ``self.`` can be cumbersome in a big equation, so a pair of
 internal variables, *x* and *y*, are used in the calculation.
 
 Often, you will already have the code for evaluating your component outputs,
@@ -263,6 +263,9 @@ If you have done everything correctly, you should also get -17.0 as the solution
 
 The Paraboloid component is now built and ready for inclusion in a larger model.
 
+.. index:: CONMIN
+
+. _`using-CONMIN`:
 
 Building a Model - Unconstrained Optimization using CONMIN
 -----------------------------------------------------------
@@ -271,7 +274,7 @@ Our next task is to build a model that finds the minimum value for the
 Paraboloid component described above. This model contains the Paraboloid as
 well as a public domain gradient optimizer called :term:`CONMIN`, for which a
 Python-wrapped driver has been included in OpenMDAO. As the name implies,
-CONMIN finds the minimum of a function. The model can be found in the Python
+:ref:`CONMIN <CONMIN-Driver>` finds the minimum of a function. The model can be found in the Python
 file ``optimization_unconstrained.py``:
 
 .. testcode:: simple_model_Unconstrained
@@ -345,7 +348,7 @@ do when the component is run. The OptimizationUnconstrained assembly does
 not need an execute function, because the Assembly class already has one that
 is sufficient for most cases. However, this assembly does need an initialize
 function to set parameters for the optimization. This is done using the
-*__init__* function:
+``__init__`` function:
 
 .. testcode:: simple_model_Unconstrained_pieces
 
@@ -356,14 +359,14 @@ function to set parameters for the optimization. This is done using the
 
 .. index:: Expression
 
-The __init__ function is called by the class constructor on a new
+The ``__init__`` function is called by the class constructor on a new
 uninitialized instance of the class, so it's a good spot to set up any
 parameters that CONMIN needs. The *super* command calls the
-__init__ function of the parent (Assembly). This is required, and forgetting it
+``__init__`` function of the parent (Assembly). This is required, and forgetting it
 can lead to unexpected behavior.
 
 Next, the Paraboloid and the CONMIN driver have to be instantiated and added
-to OptimizationUnconstrained. The function *add_container* is used to add them
+to OptimizationUnconstrained. The function ``add_container`` is used to add them
 to the assembly:
 
 .. testcode:: simple_model_Unconstrained_pieces
@@ -374,14 +377,14 @@ to the assembly:
             # Create CONMIN Optimizer instance
             self.add_container('driver', CONMINdriver())
 
-Here we make an instance of the *Paraboloid* component we created above and
+Here we make an instance of the Paraboloid component we created above and
 give it the name *paraboloid.* Similarly we create an instance of the CONMIN
 driver and give it the name *driver.* As with other class members, these are
-now accessible in the OptimizationUnconstrained assembly via *self.paraboloid*
-and *self.driver.*
+now accessible in the OptimizationUnconstrained assembly via ``self.paraboloid``
+and ``self.driver``.
 
-For this problem, we want to minimize *f_xy.* In optimization, this is called
-the objective function. In OpenMDAO, we define the objective function using an
+For this problem, we want to minimize ``f_xy``. In optimization, this is called
+the *objective function*. In OpenMDAO, we define the objective function using an
 *Expression* variable:
         
 .. testcode:: simple_model_Unconstrained_pieces
@@ -396,7 +399,7 @@ name combines the public variable name with its parents' names. You can think
 of it as something similar to the path name in a file system, but using a "."
 as a separator. This allows for two components to have the same variable name
 while still assuring that you can refer to each of them uniquely. Here, the
-f_xy output of the Paraboloid component is selected as the objective for
+``f_xy`` output of the Paraboloid component is selected as the objective for
 minimization.
 
 Expressions are also used to define the design variables (decision variables)
@@ -493,9 +496,9 @@ lines in this file are:
  
 This block of code does four things. In the first statement, we create an
 instance of the class OptimizationUnconstrained with the name
-*opt_problem.* In the second statement, we set opt_problem as the top
+``opt_problem``. In the second statement, we set ``opt_problem`` as the top
 Assembly in the model hierarchy. This will be explained in a later tutorial.
-In the fifth statement, we tell opt_problem to run. The model will execute
+In the fifth statement, we tell ``opt_problem`` to run. The model will execute
 until the optimizer's termination criteria are reached. The rest of the
 statements print the results and report the elapsed time.
 
@@ -520,6 +523,8 @@ Now we are ready to solve a more advanced optimization problem with constraints.
     
 .. index:: constraints, CONMIN
 
+.. _`constrained-optimization`:
+
 Building a Model - Constrained Optimization using CONMIN
 ---------------------------------------------------------
 
@@ -537,7 +542,7 @@ the constraints parameter is a list of inequalities that are defined to be
 satisfied when they return a negative value or zero and violated when they
 return a positive value.
 
-We want to add the constraint (y-x+15)<0 to the problem. The unconstrained
+We want to add the constraint ``(y-x+15)<0`` to the problem. The unconstrained
 minimum violates this constraint, so a new minimum must be found by
 the optimizer. We can add a constraint to our existing OptimizationUnconstrained
 model by adding one line to the init function:
@@ -547,7 +552,7 @@ model by adding one line to the init function:
         # CONMIN Constraints
         self.driver.constraints = ['paraboloid.y-paraboloid.x+15.0']
 
-So, please add this line to the __init__ function in
+So, please add this line to the ``__init__`` function in
 ``optimization_constrained.py`` and save it. Execute it by typing:
 
 ::
