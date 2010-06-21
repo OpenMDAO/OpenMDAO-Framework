@@ -28,6 +28,7 @@ class LatinHypercube(object):
     
     def get_shape(self):
         return self.doe.shape
+    
     shape = property(get_shape,None,None,"(rowsxcolumns) size of the LatinHypercube doe")
         
     def mmphi(self):
@@ -119,7 +120,7 @@ class BestLatinHypercube(Driver):
         obj = getattr(self.parent,path)
         t = obj.trait(target)
         if (not t) or (not t.is_trait_type(Event)):
-            self.raise_exception("refence provided, '%s', does not point to an Event variable. Only Event variables are allowe"%ref,RuntimeError)
+            self.raise_exception("refence provided, '%s', does not point to an Event variable. Only Event variables are allowed"%ref,RuntimeError)
         
         self._event_vars[ref] = expreval
         
@@ -145,17 +146,24 @@ class BestLatinHypercube(Driver):
 
         obj = getattr(self.parent,path)
         t = obj.trait(target)
+        trait_low_high = False
         if t and t.is_trait_type(Float):
-            if low!=None and high!=None: 
+            if hasattr(t,'low') and hasattr(t,'high'):
+                trait_low_high = True
+            if low!=None and high!=None:
+                if trait_low_high:
+                    if high > thigh or low < tlow:
+                        self.raise_exception("Trying to add design variable '%s', " % ref,
+                                             "but the low/high metadata supplied (%s, %s) exceeds the" % (low,high),
+                                             "built-in low/high limits (%s, %s)." % (t.low,t.high),RuntimeError)
                 _des_var.low = low
                 _des_var.high = high
+            elif trait_low_high:
+                _des_var.low = t.low
+                _des_var.high = t.high
             else: 
-                if hasattr(t,'low') and hasattr(t,'high'):
-                    _des_var.low = t.low
-                    _des_var.high = t.high
-                else: 
-                    self.raise_exception("Trying to add design variable '%s', but no low/high metadata was found and no" % ref,
-                                         "'low','high' arguments were given. One or the other must be specified.",RuntimeError)
+                self.raise_exception("Trying to add design variable '%s', but no low/high metadata was found and no" % ref,
+                                     "'low','high' arguments were given. One or the other must be specified.",RuntimeError)
             # the des_var has been created, with expr and low/high. 
             # Just add it to the storage dictionary
             self.des_vars[ref] = _des_var
@@ -242,7 +250,7 @@ def _mmlhs(x_start,population,generations):
     return x_best
 
 def _mmsort(lhcs):
-    """Ranks DOEs according to Morris-Mitchell criterion"""
+    #"""Ranks DOEs according to Morris-Mitchell criterion"""
     scores = []
     for lh in lhcs:
         scores.append(lh.mmphi())

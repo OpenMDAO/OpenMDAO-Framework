@@ -5,7 +5,7 @@ import threading
 
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.interfaces import ICaseIterator
+from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.lib.api import Bool, Instance, Int
 from openmdao.util.filexfer import filexfer
@@ -34,13 +34,10 @@ class CaseIteratorDriver(Driver):
     - If `reload_model` is True, the model is reloaded between executions.
     - `max_retries` sets the number of times to retry a failed case.
     
-
-.. todo:: Define interface for "recorder."
-
     """
 
     iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
-    recorder = Instance(object, desc='Something to append() to.', required=True)
+    recorder = Instance(ICaseRecorder, desc='Something to append() to.', required=True)
     
     sequential = Bool(True, iotype='in',
                       desc='Evaluate cases sequentially.')
