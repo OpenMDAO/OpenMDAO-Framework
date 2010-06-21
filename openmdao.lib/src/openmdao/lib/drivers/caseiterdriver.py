@@ -37,7 +37,7 @@ class CaseIteratorDriver(Driver):
     """
 
     iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
-    recorder = Instance(ICaseRecorder, desc='Something to append() to.', required=True)
+    recorder = Instance(object, desc='Something to append() to.', required=True)
     
     sequential = Bool(True, iotype='in',
                       desc='Evaluate cases sequentially.')
