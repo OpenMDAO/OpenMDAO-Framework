@@ -113,12 +113,22 @@ class MimicTestCase(unittest.TestCase):
         self.assertEqual(mimic.list_inputs_to_model(), ['a'])
         self.assertEqual(mimic.list_outputs_from_model(), ['d'])
         
+        # now try changing the includes
+        mimic.mimic_includes = ['b', 'c']
+        self.assertEqual(mimic.list_inputs_to_model(), ['b'])
+        self.assertEqual(mimic.list_outputs_from_model(), ['c'])
+
     def test_excludes(self):
         mimic = MyMimic()
         mimic.mimic_excludes = ['a','d']
         mimic.model = Simple()
         self.assertEqual(mimic.list_inputs_to_model(), ['b'])
         self.assertEqual(mimic.list_outputs_from_model(), ['c'])
+        
+        # now try changing the excludes
+        mimic.mimic_excludes = ['b', 'c']
+        self.assertEqual(mimic.list_inputs_to_model(), ['a'])
+        self.assertEqual(mimic.list_outputs_from_model(), ['d'])
         
     def test_include_exclude(self):
         mimic = MyMimic()
@@ -142,8 +152,6 @@ class MimicTestCase(unittest.TestCase):
         else:
             self.fail('Expected Exception')
         self.assertEqual(mimic.mimic_includes, [])
-        
-        
         
 if __name__ == "__main__":
     unittest.main()

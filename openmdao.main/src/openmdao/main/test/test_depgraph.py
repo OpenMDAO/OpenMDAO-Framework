@@ -243,14 +243,15 @@ class DepGraphTestCase(unittest.TestCase):
         
     def test_expr_deps(self):
         top = set_as_top(Assembly())
-        top.add('driver1', DumbDriver(), top._default_workflow)
-        top.add('driver2', DumbDriver(), top._default_workflow)
+        top.add('driver1', DumbDriver())
+        top.add('driver2', DumbDriver())
         top.add('c1', Simple())
         top.add('c2', Simple())
         top.add('c3', Simple())
         top.connect('c1.c', 'c2.a')
-        top.driver1.workflow = Dataflow(top, members=[top.c2])
-        top.driver2.workflow = Dataflow(top, members=[top.c1])
+        top.driver.add_to_workflow([top.driver1, top.driver2, top.c3])
+        top.driver1.add_to_workflow(top.c2)
+        top.driver2.add_to_workflow(top.c1)
         top.driver1.objective = "c2.c*c2.d"
         top.driver2.objective = "c1.c"
         top.run()

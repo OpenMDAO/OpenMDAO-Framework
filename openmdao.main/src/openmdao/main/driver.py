@@ -9,10 +9,11 @@ from enthought.traits.api import implements, List, Instance
 #import networkx as nx
 #from networkx.algorithms.traversal import strongly_connected_components
 
-from openmdao.main.interfaces import IDriver
+from openmdao.main.interfaces import IDriver, IComponent, obj_has_interface
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
+from openmdao.main.dataflow import Dataflow
 #from openmdao.main.expression import Expression, ExpressionList
 
     
@@ -66,6 +67,31 @@ class Driver(Component):
                 return False
 
         return True
+
+    def add_to_workflow(self, obj):
+        """Add the given object to this Driver's workflow, creating a
+        local workflow if one doesn't already exist.
+        """
+        if self.workflow is None:
+            if self.parent:
+                self.workflow = Dataflow(self.parent)
+            else:
+                self.raise_exception("'parent' not set, so can't set scope of Dataflow", 
+                                     RuntimeError)
+        if obj_has_interface(obj, IComponent):
+            self.workflow.add(obj)
+        else:
+            try:
+                iter(obj)
+            except TypeError:
+                self.raise_exception("Cannot add object of type %s to workflow" % type(obj),
+                                     TypeError)
+            for entry in obj:
+                if obj_has_interface(entry, IComponent):
+                    self.workflow.add(entry)
+                else:
+                    self.raise_exception("Cannot add object of type %s to workflow" % type(entry),
+                                     TypeError)
 
     def _pre_execute (self):
         """Call base class *_pre_execute* after determining if we have any invalid
