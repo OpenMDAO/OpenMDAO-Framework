@@ -92,7 +92,7 @@ Entry points are defined within the ``setup.py`` file that is
 used to build the distribution.  The following code snippet
 shows a ``setup.py`` file that defines an entry point for an
 OpenMDAO component plugin called *SimpleAdder* in a distribution 
-called *simple_adder*:
+called ``simple_adder``:
 
 
 ..  _plugin_overview_Code2:
