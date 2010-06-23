@@ -133,5 +133,64 @@ def release(version=None, test=False):
 @hosts('bnaylor@torpedo.grc.nasa.gov')
 def testrelease(version=None):
     _release(version, test=True)
+  
     
+#Builds and runs tests on a branch on all our development platforms
+#Currently can only run remotely on viper and torpedo
+#You must run from the top level of your branch.
+#If you have uncommitted changes on your branch you will get an error message
+# Usage: fab testbranch
+#        fab testbranch -u username, if you are not on viper, storm, or torpedo
+#        fab testbranch:host=hostname.grc.nasa.gov,  to run on a single host
+
+ 
+def exportbranch():
+    """Creates a tar file by doing a bzr export in the current branch on the current host
+    """
+    branchdir=os.getcwd()
+    #print branchdir
+    with cd('%s' % branchdir):
+        local('bzr export testbranch.tar.gz')
+
+#Local developer script to build and run tests on a branch on each development platform
+def _testbranch():
+    """Builds and runs tests on a branch on all our development platforms
+    Currently can only run remotely on viper and torpedo
+    You must run from the top level of your branch.
+    If you have uncommitted changes on your branch you will get an error message
+    """
+    #export the current branch to a tarfile
+    exportbranch()
+    winplatforms=["storm.grc.nasa.gov"]
+    if env.host in winplatforms:
+        devbindir='devenv\Scripts'
+	unpacktar="gzip "    #need to find out what it is on windoze
+        pyversion="python"
+        removeit="rmdir"
+    else:
+        devbindir='devenv/bin'
+	unpacktar="tar xvf"
+	pyversion="python2.6"
+	removeit="rm -rf"
+    branchdir=os.getcwd()
+    print('original branch dir on localhost is is %s' % branchdir)
+    #remove any previous testbranches
+    run('%s testbranch' % removeit)
+    #Copy exported branch tarfile to desired test platform
+    put(os.path.join(branchdir,'testbranch.tar.gz'), 'testbranch.tar.gz') 
+    #unpack the tarfile
+    run('%s testbranch.tar.gz' % unpacktar)
+    with cd('testbranch'):
+        #Make a .bzr directory to fool go-openmdao-dev.py into thinking this is a real repository
+        run('mkdir .bzr')    #this also works on windoze
+        #build it
+        run('%s go-openmdao-dev.py' % pyversion)
+        #change to devenv/bin or devenv\Scripts (on windows), activate the envronment, and run tests
+        with cd(devbindir):
+            print("Please wait while the environment is activated and the tests are run")
+            run('source activate && echo $PATH && echo environment activated, please wait while tests run && openmdao_test')
+            print('Tests completed') 
     
+@hosts('torpedo.grc.nasa.gov', 'viper.grc.nasa.gov')    
+def testbranch():
+    _testbranch()
