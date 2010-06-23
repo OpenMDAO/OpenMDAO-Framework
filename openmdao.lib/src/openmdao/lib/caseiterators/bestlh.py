@@ -2,7 +2,8 @@ from __future__ import division
 
 import random
 
-from numpy import array,zeros,size,argsort,sum,unique,floor,equal,bincount,sqrt,diff
+from numpy import array,zeros,size,argsort,sum,floor,equal,bincount,sqrt,diff
+from numpy.lib.arraysetops import unique
 from numpy.linalg import norm
 
 from enthought.traits.api import HasTraits, Event, implements
@@ -37,6 +38,17 @@ class LatinHypercube(object):
         n,m = self.doe.shape
         d = []
         
+        # TODO: talk to justin about this, but it seems like there's no reason
+        # not to leave the LH array in index form until as late as possible because
+        # that should make it easier to count dups, etc. Need a way to determine
+        # integer distance. Shouldn't be too hard
+        # Should be able to create an nxm array of ints and loop like this:
+        # arr starts out as all zeros
+        # for i in range(n):
+        #    count = (lh==arr).sum()
+        #    arr += 1
+        
+        
         #calculate the norm between each pair of points in the DOE
         if True:
             for i,row_a in enumerate(self.doe):
@@ -44,14 +56,18 @@ class LatinHypercube(object):
                     #check for distance between same point, always = 0. Also avoid duplicate calcs
                     if j>=i: 
                         break
-                    else: 
-                        d.append(norm(row_a-row_b,ord = self.p))
+                    else:
+                        nrm = norm(row_b-row_a,ord = self.p)
+                        #nrm = norm(row_a-row_b,ord = self.p)
+                        d.append(nrm)
         else:
             arr = self.doe
             for i in range(n):
-                #pts = sqrt(sum(diff(arr[i:], axis=0)**2, axis=1))
-                pts = sum(abs(diff(arr[i:], axis=0)), axis=1)
-                d.extend(pts)
+                for j in range(i+1, n):
+                    #pts = sqrt(sum(diff(arr[i:], axis=0)**2, axis=1))
+                    #pts = sum(abs(diff(arr[i:], axis=0)), axis=1)
+                    #d.extend(pts)
+                    d.append(norm(arr[i]-arr[j], ord=self.p))
 
         #toss out any entries with the same distance
         distinct_d = unique(d)
@@ -262,7 +278,7 @@ def _mmlhs(x_start, population, generations):
         phi_improved = phi_best
         
         for offspring in range(population):
-            #print 'gen,pop,mut = ',it,offspring,mutations
+            print 'gen,pop,mut = ',it,offspring,mutations
             x_try = x_best.perturb(mutations)
             phi_try = x_try.mmphi()
             

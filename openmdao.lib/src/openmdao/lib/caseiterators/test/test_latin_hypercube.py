@@ -11,7 +11,7 @@ from openmdao.util.mdo import rand_latin_hypercube
 
 class TestCase(unittest.TestCase):
     def test_bestlh(self):
-        x = rand_latin_hypercube(100,2)
+        x = rand_latin_hypercube(10,2)
         lh = LatinHypercube(x, 2, 1) 
         phi1 = lh.mmphi()
         lh_opt = _mmlhs(lh, 20, 20)
