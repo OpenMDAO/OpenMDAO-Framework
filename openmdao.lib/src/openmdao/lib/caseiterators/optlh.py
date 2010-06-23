@@ -2,8 +2,7 @@ from __future__ import division
 
 import random
 
-from numpy import array,zeros,size,argsort,sum,floor,equal,bincount,sqrt,diff
-from numpy.lib.arraysetops import unique
+from numpy import array,zeros,size,argsort,unique,sum,floor,equal,bincount,sqrt,diff
 from numpy.linalg import norm
 
 from enthought.traits.api import HasTraits, Event, implements
@@ -13,6 +12,18 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.api import Float,Int, Enum
 from openmdao.util.mdo import rand_latin_hypercube
 
+import time
+
+def print_timing(func):
+    def wrapper(*arg):
+        t1 = time.time()
+        res = func(*arg)
+        t2 = time.time()
+        print '%s took %0.3f ms' % (func.func_name, (t2-t1)*1000.0)
+        return res
+    return wrapper
+
+
 class _DesVar(object): 
     
     def __init__(self): 
@@ -21,7 +32,7 @@ class _DesVar(object):
         self.expr = None
 
 class LatinHypercube(object):
-    def __init__(self,doe,q=2,p=1):
+    def __init__(self, doe, q=2, p=1):
         self.q = q
         self.p = p
         self.doe = doe
@@ -36,48 +47,46 @@ class LatinHypercube(object):
     def mmphi(self):
         """Calculates the Morris-Mitchell sampling criterion for input DOE"""
         n,m = self.doe.shape
-        d = []
-        
-        # TODO: talk to justin about this, but it seems like there's no reason
-        # not to leave the LH array in index form until as late as possible because
-        # that should make it easier to count dups, etc. Need a way to determine
-        # integer distance. Shouldn't be too hard
-        # Should be able to create an nxm array of ints and loop like this:
-        # arr starts out as all zeros
-        # for i in range(n):
-        #    count = (lh==arr).sum()
-        #    arr += 1
-        
+        distdict = {}
         
         #calculate the norm between each pair of points in the DOE
-        if True:
-            for i,row_a in enumerate(self.doe):
-                for j,row_b in enumerate(self.doe):
-                    #check for distance between same point, always = 0. Also avoid duplicate calcs
-                    if j>=i: 
-                        break
-                    else:
-                        nrm = norm(row_b-row_a,ord = self.p)
-                        #nrm = norm(row_a-row_b,ord = self.p)
-                        d.append(nrm)
-        else:
-            arr = self.doe
-            for i in range(n):
-                for j in range(i+1, n):
-                    #pts = sqrt(sum(diff(arr[i:], axis=0)**2, axis=1))
-                    #pts = sum(abs(diff(arr[i:], axis=0)), axis=1)
-                    #d.extend(pts)
-                    d.append(norm(arr[i]-arr[j], ord=self.p))
+        arr = self.doe
+        for i in range(n):
+            for j in range(i+1, n):
+                nrm = norm(arr[i]-arr[j], ord=self.p)
+                distdict[nrm] = distdict.get(nrm, 0) + 1
 
-        #toss out any entries with the same distance
-        distinct_d = unique(d)
+        distinct_d = array(distdict.keys())
         
         #mutltiplicity array with a count of how many pairs of points have a given distance
-        J = array([d.count(x) for x in distinct_d])
+        J = array(distdict.values())
         
         phiQ = sum(J*(distinct_d**(-self.q)))**(1.0/self.q)
         
         return phiQ  
+    
+    #def mmphi(self):
+        #"""Calculates the Morris-Mitchell sampling criterion for input DOE"""
+        #n,m = self.doe.shape
+        #d = []
+        
+        ##calculate the norm between each pair of points in the DOE
+        #for i,row_a in enumerate(self.doe):
+            #for j,row_b in enumerate(self.doe):
+                ##check for distance between same point, always = 0. Also avoid duplicate calcs
+                #if i==j or j>i: continue
+
+                #else: d.append(norm(row_a-row_b,ord = self.p))
+                    
+        ##toss out any entries with the same distance
+        #distinct_d = unique(d)
+        
+        ##mutltiplicity array with a count of how many pairs of points have a given distance
+        #J = array([d.count(x) for x in distinct_d])
+        
+        #phiQ = sum(J*(distinct_d**(-self.q)))**(1.0/self.q)
+        
+        #return phiQ
         
     def perturb(self,mutation_count):
         """ Interchanges pairs of randomly chosen elements within randomly chosen
@@ -111,7 +120,7 @@ class LatinHypercube(object):
 
 _norm_map = {"1-norm":1,"2-norm":2}
 
-class BestLatinHypercube(HasTraits): 
+class OptLatinHypercube(HasTraits): 
     
     implements(ICaseIterator)
     
@@ -125,7 +134,7 @@ class BestLatinHypercube(HasTraits):
                        desc="vector norm calculation method. '1-norm' is faster, but less accurate")
     
     def __init__(self):
-        super(BestLatinHypercube,self).__init__()
+        super(OptLatinHypercube,self).__init__()
         self._des_vars = {}
         self._event_vars = {}
         self.q = [1,2,5,10,20,50,100] #list of qs to try for Phi_q optimization
@@ -260,6 +269,7 @@ class BestLatinHypercube(HasTraits):
             #run model
             self.run_iteration()
 
+@print_timing
 def _mmlhs(x_start, population, generations):
     """Evolutionary search for most space filling Latin-Hypercube. 
     Returns a new LatinHypercube instance with an optimized set of points"""
@@ -278,7 +288,7 @@ def _mmlhs(x_start, population, generations):
         phi_improved = phi_best
         
         for offspring in range(population):
-            print 'gen,pop,mut = ',it,offspring,mutations
+            #print 'gen,pop,mut = ',it,offspring,mutations
             x_try = x_best.perturb(mutations)
             phi_try = x_try.mmphi()
             
@@ -311,7 +321,7 @@ if __name__== "__main__":
         print "Couldn't find matplotlib"
     
     test = """
-x = rand_latin_hypercube(100,2)
+x = rand_latin_hypercube(80,2)
 lh = LatinHypercube(x,2,1) 
 print lh.mmphi()
 lh_opt = _mmlhs(lh,20,20)

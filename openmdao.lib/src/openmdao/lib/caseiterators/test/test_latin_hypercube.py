@@ -1,17 +1,17 @@
 """
-Test BaseLatinHypercube.
+Test OptLatinHypercube.
 """
 
 import sys
 import unittest
 
 from openmdao.main.api import Assembly, Component, Case, set_as_top
-from openmdao.lib.caseiterators.bestlh import LatinHypercube, BestLatinHypercube, _mmlhs
+from openmdao.lib.caseiterators.optlh import LatinHypercube, OptLatinHypercube, _mmlhs
 from openmdao.util.mdo import rand_latin_hypercube
 
 class TestCase(unittest.TestCase):
     def test_bestlh(self):
-        x = rand_latin_hypercube(10,2)
+        x = rand_latin_hypercube(30,2)
         lh = LatinHypercube(x, 2, 1) 
         phi1 = lh.mmphi()
         lh_opt = _mmlhs(lh, 20, 20)
