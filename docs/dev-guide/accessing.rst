@@ -5,7 +5,7 @@ Accessing OpenMDAO on Launchpad -- SSH Keys
 ============================================
 
 The source repository for OpenMDAO is read-accessible to the public, so making
-a branch from it does not typically require that you have a :term:`Launchpad` account.
+a :term:`branch` from it does not typically require that you have a :term:`Launchpad` account.
 However, if you are behind a proxy, you *may* need to not only have a Launchpad
 account but also register your public SSH key with your Launchpad account
 before you can read or write to the repository. If you require *write* access
@@ -110,7 +110,7 @@ If you use Windows, please follow these instructions for SSH key creation and re
    directory and type ``md .ssh``.
 
 2. Assuming :term:`PuTTY` is installed in ``C:\Putty``, go there and run :term:`PuTTYgen`. If it isn't
-   installed, install it by going to this `page <http://www.putty.org>`_. 
+   installed, go to this `page <http://www.putty.org>`_ and download it. 
 
 3. Within PuTTYgen, click the *Generate* button and move your mouse around as instructed. **Do not 
    enter a key passphrase.**
@@ -125,7 +125,7 @@ If you use Windows, please follow these instructions for SSH key creation and re
    Explorer to navigate to this file and rename it so it has NO extension.
 
 
-*Registering the key with Launchpad*
+*Registering the Key with Launchpad*
 +++++++++++++++++++++++++++++++++++++
 
 1. In your ``.ssh`` directory, create the file: ``id_rsa.pub``  

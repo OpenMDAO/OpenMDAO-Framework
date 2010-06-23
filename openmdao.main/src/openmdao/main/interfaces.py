@@ -5,40 +5,34 @@ Interfaces for the OpenMDAO project.
 
 # pylint: disable-msg=E0213,E0211,W0232
 
-#public symbols
-__all__ = ['IFactory', 'IResourceAllocator',
-           'ICaseIterator']
-
-
-
 
 from enthought.traits.api import Interface, Instance
 
-# to check if an interface is provided, you can call
-# validate_implements(value,klass) from enthought.traits.trait_types
+# to check if an interface is implemented, you can call
+# validate_implements(obj, klass) from enthought.traits.trait_types
+# or if the object you're checking inherits from HasTraits, you can call 
+# obj.has_traits_interface(*ifaces) on it.
+# Note that validate_implements checks for existence of attributes and member 
+# functions but does not type check attributes. It also doesn't care whether
+# a class calls 'implements' or not.  has_traits_interface, on the other hand,
+# believes whatever the class says it implements and doesn't verify anything.
 
 class IComponent(Interface):
     """A marker interface for Components."""
     
-class IDriver(Interface):
-    """A marker interface for Drivers. To make a usable IDriver plug-in,
-    you must still inherit from Driver.
-    """
- 
 class IWorkflow(Interface):
-    """An object that can run and iterate over a group of 
-    components in some order. 
-    """
+    """An object that can run a group of components in some order. """
     
     scope = Instance(IComponent, allow_none=True)
     
     def __iter__():
-        """Return an iterator object that iterates over components."""
+        """Return an iterator object that iterates over components in
+        the desired execution order.
+        """
         
-    def __contains__(self, name):
-        """Return True if this workflow contains a Component with the
-        given name.
-        """    
+    def __contains__(self, comp):
+        """Return True if this workflow contains the given Component."""
+        
     def __len__(self):
         """Returns the number of components in this workflow."""
         
@@ -46,17 +40,20 @@ class IWorkflow(Interface):
         """Add the Component to this workflow."""
         
     def remove(self, comp):
-        """Remove the Component from this workflow."""
+        """Remove the Component from this workflow.  Do not raise
+        an exception if the component is not found.
+        """
+        
+    def clear(self):
+        """Remove all Components from this workflow."""
+        
+    def contents(self):
+        """Return a list of all Components in this Workflow. No
+        ordering is assumed.
+        """
 
-    def connect(self, srcpath, destpath):
-        """Specify a connection between two components in this workflow. The
-        names passed in are full pathnames to variables being connected."""
-        
-    def disconnect(self, comp1name, comp2name):
-        """Disconnect two components in this workflow."""
-        
     def run(self):
-        """ Run the workflow. """
+        """ Run the components in the workflow. """
     
     def step(self):
         """Run a single component in the Workflow."""
@@ -67,6 +64,16 @@ class IWorkflow(Interface):
         We assume it's OK to to call stop() on something that isn't running.
         """
         
+class IDriver(Interface):
+    """A marker interface for Drivers. To make a usable IDriver plug-in,
+    you must still inherit from Driver.
+    """
+    
+    workflow = Instance(IWorkflow, allow_none=True)
+    def iteration_set(self):
+        """Return a set of names (not pathnames) containing all Components
+        in all of the workflows managed by this Driver
+        """
 
 class IFactory (Interface):
     """An object that creates and returns objects based on a type string."""
@@ -141,3 +148,21 @@ class ICaseIterator(Interface):
         exception.
         """
 
+class ICaseRecorder(Interface):
+    """A recorder of Cases"""
+    
+    def record(case):
+        """Record the given Case."""
+
+
+def obj_has_interface(obj, *ifaces):
+    """Returns True if the specified object inherits from HasTraits and
+    implements one or more of the specified interfaces.
+    """
+    try:
+        if not obj.has_traits_interface(*ifaces):
+            return False
+    except Exception:
+        return False
+    return True
+    

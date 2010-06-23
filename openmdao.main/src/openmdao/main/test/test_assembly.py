@@ -64,7 +64,7 @@ class DummyComp(Component):
         self.sout = ''
         
         # make a nested container with input and output ContainerVars
-        self.add_container('dummy', Multiplier())
+        self.add('dummy', Multiplier())
         self.dummy_in = self.dummy
         self.dummy_out = self.dummy
                 
@@ -88,16 +88,16 @@ class AssemblyTestCase(unittest.TestCase):
             comp3
         """
         self.asm = set_as_top(Assembly())
-        self.asm.add_container('comp1', DummyComp())        
-        self.asm.add_container('nested', Assembly())
-        self.asm.nested.add_container('comp1', DummyComp())
+        self.asm.add('comp1', DummyComp())
+        self.asm.add('nested', Assembly())
+        self.asm.nested.add('comp1', DummyComp())
         for name in ['comp2', 'comp3']:
-            self.asm.add_container(name, DummyComp())
+            self.asm.add(name, DummyComp())
         
     def test_lazy_eval(self):
         top = set_as_top(Assembly())
-        top.add_container('comp1', Multiplier())
-        top.add_container('comp2', Multiplier())
+        top.add('comp1', Multiplier())
+        top.add('comp2', Multiplier())
         top.comp1.mult = 2.0
         top.comp2.mult = 4.0
         top.connect('comp1.rval_out', 'comp2.rval_in')
@@ -194,16 +194,6 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_in'), 75.4)
         self.assertEqual(self.asm.get('comp2.dummy_in.rval_out'), 75.4*1.5)
         
-    def test_add_container_no_workflow(self):
-        self.asm.add_container('comp_nw1', DummyComp(), workflow=None)
-        self.assertTrue(self.asm.comp1 in self.asm.workflow)
-        self.assertFalse(self.asm.comp_nw1 in self.asm.workflow)
-    
-    def test_create_no_workflow(self):
-        self.asm.create('openmdao.lib.api.CONMINdriver', 'd_nw1', workflow=None)
-        self.assertTrue(self.asm.comp1 in self.asm.workflow)
-        self.assertFalse(self.asm.d_nw1 in self.asm.workflow)
-    
     def test_create_passthrough(self):
         self.asm.set('comp3.r', 75.4)
         self.asm.create_passthrough('comp3.rout')
@@ -333,9 +323,9 @@ class AssemblyTestCase(unittest.TestCase):
         
     def test_input_passthrough_to_2_inputs(self):
         asm = set_as_top(Assembly())
-        asm.add_container('nested', Assembly())
-        asm.nested.add_container('comp1', Simple())
-        asm.nested.add_container('comp2', Simple())
+        asm.add('nested', Assembly())
+        asm.nested.add('comp1', Simple())
+        asm.nested.add('comp2', Simple())
         asm.nested.create_passthrough('comp1.a') 
         asm.nested.connect('a', 'comp2.b') 
         self.assertEqual(asm.nested.comp1.a, 4.)
@@ -361,9 +351,9 @@ class AssemblyTestCase(unittest.TestCase):
         
     def test_connect_2_outs_to_passthrough(self):
         asm = set_as_top(Assembly())
-        asm.add_container('nested', Assembly())
-        asm.nested.add_container('comp1', Simple())
-        asm.nested.add_container('comp2', Simple())
+        asm.add('nested', Assembly())
+        asm.nested.add('comp1', Simple())
+        asm.nested.add('comp2', Simple())
         asm.nested.create_passthrough('comp1.c')
         try:
             asm.nested.connect('comp2.d', 'c')
@@ -381,7 +371,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.disconnect('comp2.s')
 
     def test_listcon_with_deleted_objs(self):
-        self.asm.add_container('comp3', DummyComp())
+        self.asm.add('comp3', DummyComp())
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.connect('comp3.sout', 'comp2.s')
         conns = self.asm.list_connections()

@@ -65,7 +65,7 @@ class DrivingSim(Assembly):
         # set up interface to the framework  
         # pylint: disable-msg=E1101
 
-        self.add_container('vehicle', Vehicle())
+        self.add('vehicle', Vehicle())
         
         # Promoted From Vehicle -> Engine
         self.create_passthrough('vehicle.stroke')

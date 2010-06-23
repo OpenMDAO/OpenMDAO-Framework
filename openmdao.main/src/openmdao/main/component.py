@@ -12,14 +12,15 @@ import pkg_resources
 import sys
 import weakref
 
-from enthought.traits.trait_base import not_event
-from enthought.traits.api import Bool, List, Str
+from enthought.traits.trait_base import not_event, not_none
+from enthought.traits.api import Bool, List, Str, Instance, implements, TraitError
 
 from openmdao.main.container import Container
+from openmdao.main.interfaces import IComponent
 from openmdao.main.filevar import FileMetadata, FileRef
+from openmdao.main.expression import Expression, ExpressionList
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
-
 
 class SimulationRoot (object):
     """Singleton object used to hold root directory."""
@@ -87,6 +88,8 @@ class Component (Container):
       :mod:`glob`-style pattern.
     """
 
+    implements(IComponent)
+    
     create_instance_dir = Bool(False, desc='If True, create a unique'
                                ' per-instance execution directory',
                                iotype='in')
@@ -97,9 +100,17 @@ class Component (Container):
     def __init__(self, doc=None, directory=''):
         super(Component, self).__init__(doc)
         
+        # contains validity flag for each io Trait
+        self._valid_dict = dict([(name,False) for name,t in self.class_traits().items() if t.iotype])
+        
         self._stop = False
         self._call_check_config = True
         self._call_execute = True
+
+        self._input_names = None
+        self._output_names = None
+        self._container_names = None
+        
         if directory:
             self.directory = directory
         
@@ -113,6 +124,10 @@ class Component (Container):
             self._dir_context = DirectoryContext(self)
         return self._dir_context
 
+    def _input_changed(self, name):
+        if self.get_valid(name):  # if var is not already invalid
+            self.invalidate_deps([name], notify_parent=True)
+        
     def check_config (self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
@@ -120,7 +135,10 @@ class Component (Container):
         Classes that override this function must still call the base class
         version.
         """
-        super(Component, self).check_config()
+        for name, value in self._traits_meta_filter(required=True).items():
+            if value.is_trait_type(Instance) and getattr(self, name) is None:
+                self.raise_exception("required plugin '%s' is not present" %
+                                     name, TraitError)
     
     def tree_rooted(self):
         """Calls the base class version of *tree_rooted()*, checks our
@@ -196,8 +214,11 @@ class Component (Container):
                 self._call_execute = True
                 name = self.name
                 self.parent.update_inputs(['.'.join([name, n]) for n in invalid_ins])
+                valids = self._valid_dict
                 for name in invalid_ins:
-                    self.set_valid(name, True)
+                    valids[name] = True
+            elif self._call_execute == False and len(self.list_outputs(valid=False)):
+                self._call_execute = True
                                 
     def execute (self):
         """Perform calculations or other actions, assuming that inputs 
@@ -232,44 +253,132 @@ class Component (Container):
             if self.directory:
                 self.pop_dir()
  
-    def add_container(self, name, obj):
+    def add(self, name, obj):
         """Override of base class version to force call to *check_config* after
         any child containers are added.
         Returns the added Container object.
         """
-        self.config_changed()
-        return super(Component, self).add_container(name, obj)
+        self._config_changed()
+        return super(Component, self).add(name, obj)
         
     def remove_container(self, name):
         """Override of base class version to force call to *check_config* after
         any child containers are removed.
         """
         obj = super(Component, self).remove_container(name)
-        self.config_changed()
+        self._config_changed()
         return obj
 
-    def add_trait(self, name, *trait):
+    def add_trait(self, name, trait):
         """Overrides base definition of add_trait in order to
         force call to *check_config* prior to execution when new traits are
         added.
         """
-        self.config_changed()
-        super(Component, self).add_trait(name, *trait)
+        super(Component, self).add_trait(name, trait)
+        self._config_changed()
+        if trait.iotype:
+            self._valid_dict[name] = False
         
     def remove_trait(self, name):
         """Overrides base definition of add_trait in order to
         force call to *check_config* prior to execution when a trait is
         removed.
         """
-        self.config_changed()
-        super(Component, self).remove_trait(name)    
+        super(Component, self).remove_trait(name)
+        self._config_changed()
+        try:
+            del self._valid_dict[name]
+        except KeyError:
+            pass
 
-    def config_changed(self):
-        """Call this whenever the configuration of this Container changes,
+    def is_valid(self):
+        """Return False if any of our public variables is invalid."""
+        if self._call_execute:
+            return False
+        for val in self._valid_dict.values():
+            if val is False:
+                return False
+        return True
+
+    def _config_changed(self):
+        """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
         """
-        super(Component, self).config_changed()
+        self._input_names = None
+        self._output_names = None
+        self._container_names = None
         self._call_check_config = True
+
+    def list_inputs(self, valid=None):
+        """Return a list of names of input values. If valid is not None,
+        the the list will contain names of inputs with matching validity.
+        """
+        if self._input_names is None:
+            self._input_names = self.keys(iotype='in')
+            
+        if valid is None:
+            return self._input_names
+        else:
+            fval = self.get_valid
+            return [n for n in self._input_names if fval(n)==valid]
+        
+    def list_outputs(self, valid=None):
+        """Return a list of names of output values. If valid is not None,
+        the the list will contain names of outputs with matching validity.
+        """
+        if self._output_names is None:
+            self._output_names = self.keys(iotype='out')
+            
+        if valid is None:
+            return self._output_names
+        else:
+            fval = self.get_valid
+            return [n for n in self._output_names if fval(n)==valid]
+        
+    def list_containers(self):
+        """Return a list of names of child Containers."""
+        if self._container_names is None:
+            self._container_names = [n for n,v in self.items() 
+                                                   if isinstance(v,Container)]            
+        return self._container_names
+    
+    def get_expr_names(self, iotype=None):
+        """Return a list of names of all Expression and ExpressionList traits
+        in this instance.
+        """
+        if iotype is None:
+            checker = not_none
+        else:
+            checker = iotype
+        
+        return [n for n,v in self._traits_meta_filter(iotype=checker).items() 
+                    if v.is_trait_type(Expression) or 
+                       v.is_trait_type(ExpressionList)]
+    
+    def get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by any Expression or ExpressionList 
+        traits in this Component.
+        """
+        conn_list = []
+        exprs = self.get_expr_names()
+        selfname = self.name
+        for name in exprs:
+            exprobj = getattr(self, name)
+            if isinstance(exprobj, basestring): # a simple Expression
+                cnames = exprobj.get_referenced_compnames()
+            else:  # an ExpressionList
+                cnames = []
+                for entry in exprobj:
+                    cnames += entry.get_referenced_compnames()
+            if self.trait(name).iotype == 'in':
+                for cname in cnames:
+                    conn_list.append((cname, selfname))
+            else:
+                for cname in cnames:
+                    conn_list.append((selfname, cname))
+                
+        return conn_list
 
     def check_path(self, path, check_dir=False):
         """Verify that the given path is a directory and is located
@@ -441,7 +550,7 @@ class Component (Container):
                 parent_dir = comp.parent.get_abs_directory()
                 fixup_dirs.append((comp, comp.directory))
                 comp.directory = relpath(comp_dir, parent_dir)
-                self.debug("    %s.directory reset to '%s'", 
+                self._logger.debug("    %s.directory reset to '%s'", 
                            comp.name, comp.directory)
         elif require_relpaths:
             self.raise_exception(
@@ -449,7 +558,7 @@ class Component (Container):
                 % (comp.get_pathname(), comp_dir, root_dir), ValueError)
 
         else:
-            self.warning("%s directory '%s' can't be made relative to '%s'.",
+            self._logger.warning("%s directory '%s' can't be made relative to '%s'.",
                          comp.get_pathname(), comp_dir, root_dir)
 
     def _fix_external_files(self, comp, comp_dir, root_dir, require_relpaths,
@@ -475,7 +584,7 @@ class Component (Container):
                     "Can't save, %s file '%s' doesn't start with '%s'."
                     % (comp.get_pathname(), path, root_dir), ValueError)
             else:
-                self.warning("%s file '%s' can't be made relative to '%s'.",
+                self._logger.warning("%s file '%s' can't be made relative to '%s'.",
                              comp.get_pathname(), path, root_dir)
 
     def _fix_file_vars(self, comp, comp_dir, root_dir, require_relpaths,
@@ -504,7 +613,7 @@ class Component (Container):
                     % ('.'.join((comp.get_pathname(), fvarname)),
                        path, root_dir), ValueError)
             else:
-                self.warning("%s path '%s' can't be made relative to '%s'.",
+                self._logger.warning("%s path '%s' can't be made relative to '%s'.",
                              '.'.join((comp.get_pathname(), fvarname)),
                              path, root_dir)
 
@@ -623,7 +732,7 @@ class Component (Container):
         with self.dir_context:
             fvars = self.get_file_vars()
             if self.external_files or fvars:
-                self.info('Checking files in %s', os.getcwd())
+                self._logger.info('Checking files in %s', os.getcwd())
 
             for metadata in self.external_files:
                 pattern = metadata.path
@@ -686,7 +795,7 @@ class Component (Container):
                     found = True
                     if exists(filename):
                         # Don't overwrite existing files (reloaded instance).
-                        self.debug("    '%s' exists", filename)
+                        self._logger.debug("    '%s' exists", filename)
                         continue
 
                     src_name = ''.join((rel_path, sep, filename))
@@ -703,7 +812,7 @@ class Component (Container):
                     file_list.append((src_name, mode, size,
                                       os.path.join(cwd, filename)))
             if not found and is_input:
-                self.warning("No files found for '%s'", pattern)
+                self._logger.warning("No files found for '%s'", pattern)
         finally:
             if directory:
                 self.pop_dir()
@@ -722,7 +831,7 @@ class Component (Container):
             src_name, mode, size, dst_name = info
             if dirname(dst_name) != dst_dir:
                 dst_dir = dirname(dst_name)
-                self.info('Restoring files in %s', dst_dir)
+                self._logger.info('Restoring files in %s', dst_dir)
             if observer is not None:
                 observer.copy(src_name, i/total_files,
                               completed_bytes/total_bytes)
@@ -760,11 +869,62 @@ class Component (Container):
         """Stop this component."""
         self._stop = True
 
-    def invalidate_deps(self, vars, notify_parent=False):
+    def get_valid(self, name):
+        """Get the value of the validity flag for the io trait with the given
+        name.
+        """
+        try:
+            return self._valid_dict[name]
+        except KeyError:
+            self.raise_exception(
+                "cannot get valid flag of '%s' because it's not "
+                "an io trait." % name, RuntimeError)
+            
+        #valid = self._valid_dict.get(name, Missing)
+        #if valid is Missing:
+            #trait = self.trait(name)
+            #if trait and trait.iotype:
+                #self._valid_dict[name] = False
+                #return False
+            #else:
+                #self.raise_exception(
+                    #"cannot get valid flag of '%s' because it's not "
+                    #"an io trait." % name, RuntimeError)
+        #return valid
+    
+    def get_valids(self, names):
+        """Get a list of validity flags for the io traits with the given
+        names.
+        """
+        return [self.get_valid(v) for v in names]
+
+    def set_valid(self, name, valid):
+        """Mark the io trait with the given name as valid or invalid."""
+        try:
+            self._valid_dict[name] = valid
+        except KeyError:
+            self.raise_exception(
+                "cannot set valid flag of '%s' because "
+                "it's not an io trait." % name, RuntimeError)
+            
+        #if name in self._valid_dict:
+            #self._valid_dict[name] = valid
+        #else:
+            #trait = self.trait(name)
+            #if trait and trait.iotype:
+                #self._valid_dict[name] = valid
+            #else:
+                #self.raise_exception(
+                    #"cannot set valid flag of '%s' because "
+                    #"it's not an io trait." % name, RuntimeError)
+
+    def invalidate_deps(self, varlist, notify_parent=False):
         """Invalidate all of our valid outputs."""
         valid_outs = self.list_outputs(valid=True)
         
-        for var in vars:
+        self._call_execute = True
+        
+        for var in varlist:
             self.set_valid(var, False)
             
         if notify_parent and self.parent and len(valid_outs) > 0:
@@ -773,7 +933,7 @@ class Component (Container):
         for out in valid_outs:
             self._valid_dict[out] = False
             
-        return valid_outs    
+        return valid_outs
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.

@@ -26,10 +26,10 @@ class ExpressionTestCase(unittest.TestCase):
     def setUp(self):
         """this setup function will be called before each test in this class"""
         self.top = set_as_top(Assembly())
-        self.comp1 = self.top.add_container('comp1', RefComp())
-        self.comp2 = self.top.add_container('comp2', SimpleComp())
-        self.comp3 = self.top.add_container('comp3', SimpleComp())
-        self.comp4 = self.top.add_container('comp4', SimpleComp())
+        self.comp1 = self.top.add('comp1', RefComp())
+        self.comp2 = self.top.add('comp2', SimpleComp())
+        self.comp3 = self.top.add('comp3', SimpleComp())
+        self.comp4 = self.top.add('comp4', SimpleComp())
         
     def test_assignment(self):
         self.comp1.objective = 'comp2.x'

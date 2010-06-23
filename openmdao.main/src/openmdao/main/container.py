@@ -3,7 +3,7 @@ The Container class
 """
 
 #public symbols
-__all__ = ["Container", "set_as_top", "PathProperty"]
+__all__ = ["Container", "set_as_top", "get_default_name", "dump"]
 
 import datetime
 import copy
@@ -86,7 +86,7 @@ _namecheck_rgx = re.compile(
 class _DumbTmp(object):
     pass
 
-class PathProperty(TraitType):
+class _PathProperty(TraitType):
     """A trait that allows attributes in child objects to be referenced
     using an alias in a parent scope.  We don't use a delegate because
     we can't be sure that the attribute we want is found in a HasTraits
@@ -95,17 +95,17 @@ class PathProperty(TraitType):
     def __init__ ( self, default_value = NoDefaultSpecified, **metadata ):
         ref_name = metadata.get('ref_name')
         if not ref_name:
-            raise TraitError("PathProperty constructor requires a"
+            raise TraitError("_PathProperty constructor requires a"
                              " 'ref_name' argument.")
         self._names = ref_name.split('.')
         if len(self._names) < 2:
-            raise TraitError("PathProperty ref_name must have at least "
+            raise TraitError("_PathProperty ref_name must have at least "
                              "two entries in the path."
                              " The given ref_name was '%s'" % ref_name)        
         #make weakref to a transient object to force a re-resolve later
         #without checking for self._ref being equal to None
         self._ref = weakref.ref(_DumbTmp()) 
-        super(PathProperty, self).__init__(default_value, **metadata)
+        super(_PathProperty, self).__init__(default_value, **metadata)
 
     def __getstate__(self):
         state = self.__dict__.copy()
@@ -129,7 +129,7 @@ class PathProperty(TraitType):
             for name in self._names[:-1]:
                 obj = getattr(obj, name)
         except AttributeError:
-            raise TraitError("PathProperty cannot resolve path '%s'" % 
+            raise TraitError("_PathProperty cannot resolve path '%s'" % 
                              '.'.join(self._names))
         self._last_name = self._names[len(self._names)-1]
         self._ref = weakref.ref(obj)
@@ -163,8 +163,7 @@ class Container(HasTraits):
     __ = Python()
     
     def __init__(self, doc=None):
-        super(Container, self).__init__() 
-        self._valid_dict = {}  # contains validity flag for each io Trait
+        super(Container, self).__init__()
         self._sources = {}  # for checking that destination traits cannot be 
                           # set by other objects
         # for keeping track of dynamically added traits for serialization
@@ -172,10 +171,6 @@ class Container(HasTraits):
                           
         self.parent = None
         self._name = None
-        
-        self._input_names = None
-        self._output_names = None
-        self._container_names = None
         
         self._call_tree_rooted = True
         
@@ -218,9 +213,7 @@ class Container(HasTraits):
     def _get_name(self):
         if self._name is None:
             if self.parent:
-                self._name = self.parent.findname(self)
-            if self._name is None:
-                self._name = ''
+                self._name = findname(self.parent, self)
         return self._name
 
     def _set_name(self, name):
@@ -232,28 +225,6 @@ class Container(HasTraits):
         
     name = property(_get_name, _set_name, doc="Name of the Container")
     
-    def findname(self, obj):
-        """Return the object within this object's dict that has the given name.
-        Return None if not found.
-        """
-        for name,val in self.__dict__.items():
-            if val is obj:
-                return name
-        return None
-    
-    def get_default_name(self, scope):
-        """Return a unique name for the given object in the given scope."""
-        classname = self.__class__.__name__.lower()
-        if scope is None:
-            sdict = {}
-        else:
-            sdict = scope.__dict__
-            
-        ver = 1
-        while '%s%d' % (classname, ver) in sdict:
-            ver += 1
-        return '%s%d' % (classname, ver)
-        
     def get_pathname(self, rel_to_scope=None):
         """ Return full path name to this container, relative to scope
         *rel_to_scope*. If *rel_to_scope* is *None*, return the full pathname.
@@ -261,7 +232,7 @@ class Container(HasTraits):
         path = []
         obj = self
         name = obj.name
-        while obj != rel_to_scope and name:
+        while obj is not rel_to_scope and name:
             path.append(name)
             obj = obj.parent
             if obj is None:
@@ -306,17 +277,10 @@ class Container(HasTraits):
             if not self.trait(name) and not name.startswith('__'):
                 setattr(self, name, val) # force def of implicit trait
 
-    def add_trait(self, name, *trait):
+    def add_trait(self, name, trait):
         """Overrides HasTraits definition of *add_trait* in order to
         keep track of dynamically added traits for serialization.
         """
-        if len( trait ) == 0:
-            raise ValueError, 'No trait definition was specified.'
-        elif len(trait) > 1:
-            trait = Trait(*trait)
-        else:
-            trait = trait[0]
-            
         self._added_traits[name] = trait
         super(Container, self).add_trait(name, trait)
         
@@ -361,8 +325,10 @@ class Container(HasTraits):
                     "cannot be directly set"%
                     (name, self._sources[name]), TraitError)
             self._call_execute = True
-        if self.get_valid(name):  # if var is not already invalid
-            self.invalidate_deps([name], notify_parent=True)
+            self._input_changed(name)
+            
+    def _input_changed(self, name):
+        pass
 
     # error reporting stuff
     def _get_log_level(self):
@@ -398,59 +364,13 @@ class Container(HasTraits):
         
         return getattr(self, name)
         
-    def get_valid(self, name):
-        """Get the value of the validity flag for the io trait with the given
-        name.
-        """
-        valid = self._valid_dict.get(name, Missing)
-        if valid is Missing:
-            trait = self.trait(name)
-            if trait and trait.iotype:
-                self._valid_dict[name] = False
-                return False
-            else:
-                self.raise_exception(
-                    "cannot get valid flag of '%s' because it's not "
-                    "an io trait." % name, RuntimeError)
-        return valid
-    
-    def get_valids(self, names):
-        """Get a list of validity flags for the io traits with the given
-        names.
-        """
-        return [self.get_valid(v) for v in names]
-
-    def set_valid(self, name, valid):
-        """Mark the io trait with the given name as valid or invalid."""
-        if name in self._valid_dict:
-            self._valid_dict[name] = valid
-        else:
-            trait = self.trait(name)
-            if trait and trait.iotype:
-                self._valid_dict[name] = valid
-            else:
-                self.raise_exception(
-                    "cannot set valid flag of '%s' because "
-                    "it's not an io trait." % name, RuntimeError)
-
-    def check_config (self):
-        """Verify that the configuration of this component is correct. This
-        function is called once prior to the first execution of this Assembly
-        and prior to execution if any children are added or removed, or if
-        *self._call_check_config* is True.
-        """
-        for name, value in self._traits_meta_filter(required=True).items():
-            if value.is_trait_type(Instance) and getattr(self, name) is None:
-                self.raise_exception("required plugin '%s' is not present" %
-                                     name, TraitError)                
-        
-    def add_container(self, name, obj, **kw_args):
+    def add(self, name, obj, **kw_args):
         """Add a Container object to this Container.
         Returns the added Container object.
         """
         if '.' in name:
             self.raise_exception(
-                'add_container does not allow dotted path names like %s' %
+                'add does not allow dotted path names like %s' %
                 name, ValueError)
         if obj == self:
             self.raise_exception('cannot make an object a child of itself',
@@ -491,13 +411,10 @@ class Container(HasTraits):
                 self.raise_exception('attribute %s is not a Container' % name,
                                      RuntimeError)
             if trait.is_trait_type(Instance):
-                if obj is not None:
-                    if trait._allow_none:
-                        setattr(self, name, None)
-                    else:
-                        self.raise_exception(
-                            "Instance trait %s does not allow a value of None so it's contents can't be removed"
-                            % name, RuntimeError)
+                try:
+                    setattr(self, name, None)
+                except TraitError as err:
+                    self.raise_exception(str(err), RuntimeError)
             else:
                 self.remove_trait(name)
             return obj       
@@ -526,16 +443,6 @@ class Container(HasTraits):
             for cname in self.list_containers():
                 getattr(self, cname).revert_to_defaults(recurse)
             
-    def dump(self, recurse=False, stream=None):
-        """Print all items having iotype metadata and
-        their corresponding values to the given stream. If the stream
-        is not supplied, it defaults to *sys.stdout*.
-        """
-        pprint.pprint(dict([(n,str(v)) 
-                        for n,v in self.items(recurse=recurse, 
-                                              iotype=not_none)]),
-                      stream)
-    
     def items(self, recurse=False, **metadata):
         """Return a list of tuples of the form (rel_pathname, obj) for each
         trait of this Container that matches the given metadata. If recurse is
@@ -560,38 +467,9 @@ class Container(HasTraits):
         return [tup[1] for tup in self._items(set([id(self.parent)]), 
                                               recurse, **metadata)]
 
-    def list_inputs(self, valid=None):
-        """Return a list of names of input values. If valid is not None,
-        the the list will contain names of inputs with matching validity.
-        """
-        if self._input_names is None:
-            self._input_names = self.keys(iotype='in')
-            
-        if valid is None:
-            return self._input_names
-        else:
-            fval = self.get_valid
-            return [n for n in self._input_names if fval(n)==valid]
-        
-    def list_outputs(self, valid=None):
-        """Return a list of names of output values. If valid is not None,
-        the the list will contain names of outputs with matching validity.
-        """
-        if self._output_names is None:
-            self._output_names = self.keys(iotype='out')
-            
-        if valid is None:
-            return self._output_names
-        else:
-            fval = self.get_valid
-            return [n for n in self._output_names if fval(n)==valid]
-        
     def list_containers(self):
         """Return a list of names of child Containers."""
-        if self._container_names is None:
-            self._container_names = [n for n,v in self.items() 
-                                                   if isinstance(v,Container)]            
-        return self._container_names
+        return [n for n,v in self.items() if isinstance(v,Container)]
     
     def _traits_meta_filter(self, traits=None, **metadata):
         """This returns a dict that contains all entries in the traits dict
@@ -654,25 +532,14 @@ class Container(HasTraits):
         if len(tup) == 1:
             return path in self.__dict__
         
-        if tup[0] in self.__dict__:
-            obj = getattr(self, tup[0])
+        obj = self.__dict__.get(tup[0])
+        if obj is not None:
             if isinstance(obj, Container):
                 return obj.contains(tup[1])
             else:
                 return hasattr(obj, tup[1])
         return False
     
-    def create(self, type_name, name, version=None, server=None,
-               res_desc=None, **kw_args):
-        """Create a new object of the specified type inside of this
-        Container.
-        
-        Returns the new object.        
-        """
-        obj = fmcreate(type_name, version, server, res_desc)
-        self.add_container(name, obj, **kw_args)
-        return obj
-
     def invoke(self, path, *args, **kwargs):
         """Call the callable specified by **path**, which may be a simple
         name or a dotted path, passing the given arguments to it, and 
@@ -1055,7 +922,7 @@ class Container(HasTraits):
         if trait is None:
             trait = objtrait
         # if we make it to here, object specified by ref_name exists
-        return PathProperty(ref_name=pathname, iotype=iotype, 
+        return _PathProperty(ref_name=pathname, iotype=iotype, 
                             trait=trait)
     
     def _find_trait_and_value(self, pathname):
@@ -1077,7 +944,7 @@ class Container(HasTraits):
         else:
             return (None, None)
 
-    def create_io_traits(self, obj_info, iotype='in'):
+    def _create_io_traits(self, obj_info, iotype='in'):
         """Create io trait(s) specified by the contents of obj_info. Calls
         _build_trait(), which can be overridden by subclasses, to create each
         trait.
@@ -1088,10 +955,10 @@ class Container(HasTraits):
         
         For example, the following are valid calls:
 
-        obj.create_io_traits('foo')
-        obj.create_io_traits(['foo','bar','baz'])
-        obj.create_io_traits(('foo', 'foo_alias', 'in', some_trait))
-        obj.create_io_traits([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
+        obj._create_io_traits('foo')
+        obj._create_io_traits(['foo','bar','baz'])
+        obj._create_io_traits(('foo', 'foo_alias', 'in', some_trait))
+        obj._create_io_traits([('foo', 'fooa', 'in'),('bar', 'barb', 'out'),('baz', 'bazz')])
         """
         if isinstance(obj_info, basestring) or isinstance(obj_info, tuple):
             lst = [obj_info]
@@ -1114,7 +981,7 @@ class Container(HasTraits):
                 except IndexError:
                     pass
             else:
-                self.raise_exception('create_io_traits cannot add trait %s' % entry,
+                self.raise_exception('_create_io_traits cannot add trait %s' % entry,
                                      TraitError)
             self.add_trait(name, 
                            self._build_trait(ref_name, iostat, trait))
@@ -1128,13 +995,13 @@ class Container(HasTraits):
         if trait:
             return trait
         try:
-            return self.create_alias(name, iotype)
+            return self._create_alias(name, iotype)
         except AttributeError:
             self.raise_exception("Cannot locate trait named '%s'" %
                                  name, NameError)
 
     
-    def create_alias(self, path, io_status=None, trait=None, alias=None):
+    def _create_alias(self, path, io_status=None, trait=None, alias=None):
         """Create a trait that maps to some internal variable designated by a
         dotted path. If a trait is supplied as an argument, use that trait as
         a validator for the aliased value. The resulting trait will have the
@@ -1153,44 +1020,21 @@ class Container(HasTraits):
                 "Can't create alias '%s' because it already exists." % alias, 
                 RuntimeError)
     
-    def config_changed(self):
-        """Call this whenever the configuration of this Container changes,
-        for example, children added or removed.
-        """
-        self._input_names = None
-        self._output_names = None
-        self._container_names = None
-        
     def _trait_added_changed(self, name):
         """Called any time a new trait is added to this container."""
-        self.config_changed()
+        self._config_changed()
         
+    def _config_changed(self):
+        """Call this whenever the configuration of this Component changes,
+        for example, children are added or removed.
+        """
+        pass
+    
     def raise_exception(self, msg, exception_class=Exception):
         """Raise an exception."""
         full_msg = '%s: %s' % (self.get_pathname(), msg)
         self._logger.error(msg)
         raise exception_class(full_msg)
-    
-    def exception(self, msg, *args, **kwargs):
-        """Log traceback from within exception handler."""
-        self._logger.critical(msg, *args, **kwargs)
-        self._logger.critical(traceback.format_exc())
-
-    def error(self, msg, *args, **kwargs):
-        """Record an error message."""
-        self._logger.error(msg, *args, **kwargs)
-        
-    def warning(self, msg, *args, **kwargs):
-        """Record a warning message."""
-        self._logger.warning(msg, *args, **kwargs)
-        
-    def info(self, msg, *args, **kwargs):
-        """Record an informational message."""
-        self._logger.info(msg, *args, **kwargs)
-        
-    def debug(self, msg, *args, **kwargs):
-        """Record a debug message."""
-        self._logger.debug(msg, *args, **kwargs)
 
 
 def _get_entry_group(obj):
@@ -1222,4 +1066,43 @@ def _get_entry_group(obj):
     raise TypeError('No entry point group defined for %r' % obj)
 
 _get_entry_group.group_map = None  # Map from class/interface to group name.
+
+
+def dump(cont, recurse=False, stream=None):
+    """Print all items having iotype metadata and
+    their corresponding values to the given stream. If the stream
+    is not supplied, it defaults to *sys.stdout*.
+    """
+    pprint.pprint(dict([(n,str(v)) 
+                    for n,v in cont.items(recurse=recurse, 
+                                          iotype=not_none)]),
+                  stream)
+
+
+def findname(parent, obj):
+    """Find the given object in the specified parent and return its name 
+    in the parent's __dict__.
+    
+    Return '' if not found.
+    """
+    for name,val in parent.__dict__.items():
+        if val is obj:
+            return name
+    return ''
+
+
+def get_default_name(obj, scope):
+    """Return a unique name for the given object in the given scope."""
+    classname = obj.__class__.__name__.lower()
+    if scope is None:
+        sdict = {}
+    else:
+        sdict = scope.__dict__
+        
+    ver = 1
+    while '%s%d' % (classname, ver) in sdict:
+        ver += 1
+    return '%s%d' % (classname, ver)
+        
+
 

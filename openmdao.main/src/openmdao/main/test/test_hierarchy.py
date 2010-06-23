@@ -11,15 +11,15 @@ class HierarchyTestCase(unittest.TestCase):
     def setUp(self):
         self.top = Container()
         self.h1 = Container(doc="a hierarchy member")
-        self.top.add_container('h1', self.h1)
+        self.top.add('h1', self.h1)
         self.h11 = Container()    
         self.h12 = Container()
         self.h121 = Container()
         self.h122 = Container()
-        self.h1.add_container('h11',self.h11)
-        self.h1.add_container('h12',self.h12)
-        self.h12.add_container('h121',self.h121)
-        self.h12.add_container('h122',self.h122)
+        self.h1.add('h11',self.h11)
+        self.h1.add('h12',self.h12)
+        self.h12.add('h121',self.h121)
+        self.h12.add('h122',self.h122)
     
     def test_pathnames(self):
         self.assertEqual(self.h1.get_pathname(), 'h1')
@@ -72,10 +72,10 @@ class HierarchyTestCase(unittest.TestCase):
         else:
             self.fail('ValueError expected')
             
-        self.h121.error("can't start server")
-        self.h121.warning("I wouldn't recommend that")
-        self.h121.info("fyi")
-        self.h121.debug("dump value = 3")
+        self.h121._logger.error("can't start server")
+        self.h121._logger.warning("I wouldn't recommend that")
+        self.h121._logger.info("fyi")
+        self.h121._logger.debug("dump value = 3")
     
     
 if __name__ == "__main__":

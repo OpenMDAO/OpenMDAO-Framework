@@ -62,7 +62,7 @@ class Middle(Assembly):
     def __init__(self, *args, **kwargs):
         super(Middle, self).__init__(*args, **kwargs)
 
-        self.add_container('passthrough', Passthrough(directory='Passthrough'))
+        self.add('passthrough', Passthrough(directory='Passthrough'))
 
         self.create_passthrough('passthrough.text_in')
         self.create_passthrough('passthrough.binary_in')
@@ -99,9 +99,9 @@ class Model(Assembly):
     def __init__(self, *args, **kwargs):
         super(Model, self).__init__(*args, **kwargs)
 
-        self.add_container('source', Source(directory='Source'))
-        self.add_container('middle', Middle(directory='Middle'))
-        self.add_container('sink', Sink(directory='Sink'))
+        self.add('source', Source(directory='Source'))
+        self.add('middle', Middle(directory='Middle'))
+        self.add('sink', Sink(directory='Sink'))
 
         self.connect('source.text_file', 'middle.text_in')
         self.connect('source.binary_file', 'middle.binary_in')

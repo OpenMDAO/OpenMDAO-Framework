@@ -44,14 +44,14 @@ class AxodComp(Component):
             os.remove('axod.out')
         self.results = []
 
-        self.debug('running')
+        self._logger.debug('running')
         try:
             shutil.copyfile(self.input_filename, 'axod.inp')
             (self.hpower, self.tott, self.totp,
              self.mflow, self.effs, self.effr) = axod.axod()
         except Exception, exc:
             self.raise_exception(str(exc), type(exc))
-        self.debug('done')
+        self._logger.debug('done')
 
         if os.path.exists('axod.out'):
             inp = open('axod.out', 'rU')

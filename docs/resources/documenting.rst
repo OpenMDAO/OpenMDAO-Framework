@@ -48,14 +48,12 @@ the following:
       .. toctree::
          :maxdepth: 2
 
-         intro.rst
-	 new_file.rst
-	 accessing
-   	 working
-   	 testing
-   	 guidelines
-   	 distributions
+         intro
+         accessing
+	 working
+	 testing
 	 bazaar
+	 todo
          
         
 It is not necessary to include the ``.rst`` suffix when adding a file to the index, but it does

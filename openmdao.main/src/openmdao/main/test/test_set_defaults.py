@@ -64,8 +64,8 @@ class SetDefaultsTestCase(unittest.TestCase):
         
     def test_set_recursive(self):
         asm = Assembly()
-        asm.add_container('defcomp', MyDefComp())
-        asm.add_container('nodefcomp', MyNoDefComp())
+        asm.add('defcomp', MyDefComp())
+        asm.add('nodefcomp', MyNoDefComp())
         self.assertEqual(0., asm.nodefcomp.f_in)
         self.assertEqual(3.14, asm.defcomp.f_in)
         asm.nodefcomp.f_in = 99

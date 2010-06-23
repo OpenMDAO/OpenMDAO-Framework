@@ -127,11 +127,13 @@ def _release(version=None, test=False):
             
 @hosts('openmdao@web103.webfaction.com')
 def release(version=None, test=False):
+    if sys.platform != 'win32':
+        raise RuntimeError("OpenMDAO releases should be built on Windows so Windows binary distributions can be built")
     _release(version)
     
 
-@hosts('bnaylor@torpedo.grc.nasa.gov')
-def testrelease(version=None):
+@hosts('localhost')
+def localrelease(version=None):
     _release(version, test=True)
   
     

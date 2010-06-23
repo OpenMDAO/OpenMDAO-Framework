@@ -5,7 +5,7 @@ import threading
 
 from openmdao.main.api import Component, Driver
 from openmdao.main.exceptions import RunStopped
-from openmdao.main.interfaces import ICaseIterator
+from openmdao.main.interfaces import ICaseIterator, ICaseRecorder
 from openmdao.main.resource import ResourceAllocationManager as RAM
 from openmdao.lib.api import Bool, Instance, Int
 from openmdao.util.filexfer import filexfer
@@ -28,20 +28,16 @@ class CaseIteratorDriver(Driver):
     :class:`ResourceAllocationManager`.
 
     - The `iterator` socket provides the cases to be evaluated.
-    - The `model` socket provides the model to be executed.
+    - The `model` to be executed is found in the workflow.
     - The `recorder` socket is used to record results.
     - If `sequential` is True, then the cases are evaluated sequentially.
     - If `reload_model` is True, the model is reloaded between executions.
     - `max_retries` sets the number of times to retry a failed case.
     
-
-.. todo:: Define interface for "recorder."
-
     """
 
     iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
     recorder = Instance(object, desc='Something to append() to.', required=True)
-    #model = Instance(Component, desc='Model to be executed.', required=True)
     
     sequential = Bool(True, iotype='in',
                       desc='Evaluate cases sequentially.')
@@ -94,7 +90,7 @@ class CaseIteratorDriver(Driver):
 
         try:
             if self.sequential:
-                self.info('Start sequential evaluation.')
+                self._logger.info('Start sequential evaluation.')
                 while self._iter is not None:
                     if self._stop:
                         break
@@ -103,7 +99,7 @@ class CaseIteratorDriver(Driver):
                     except StopIteration:
                         break
             else:
-                self.info('Start concurrent evaluation.')
+                self._logger.info('Start concurrent evaluation.')
                 self._start()
         finally:
             self._cleanup(remove_egg)
@@ -129,6 +125,10 @@ class CaseIteratorDriver(Driver):
         while self._server_ready(None, stepping=True):
             pass
 
+    def stop(self):
+        """ Avoid default driver handling of stop signal. """
+        self._stop = True
+
     def setup(self, replicate=True):
         """
         Setup to begin new run. If `replicate`, then replicate the model
@@ -142,14 +142,15 @@ class CaseIteratorDriver(Driver):
                 # Must do this before creating any locks or queues.
                 self._replicants += 1
                 version = 'replicant.%d' % (self._replicants)
-                driverflow = self.parent.driverflow
-                self.parent.driverflow = None
+                driver = self.parent.driver
+                self.parent.add('driver', Driver())
+                self.parent.driver.workflow = self.workflow
                 try:
                     #egg_info = self.model.save_to_egg(self.model.name, version)
                     # FIXME: what name should we give to the egg?
                     egg_info = self.parent.save_to_egg(self.name, version)
                 finally:
-                    self.parent.driverflow = driverflow
+                    self.parent.driver = driver
                 self._egg_file = egg_info[0]
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
@@ -165,7 +166,7 @@ class CaseIteratorDriver(Driver):
             'orphan_modules':self._egg_orphan_modules,
             'python_version':sys.version[:3]}
         max_servers = RAM.max_servers(resources)
-        self.debug('max_servers %d', max_servers)
+        self._logger.debug('max_servers %d', max_servers)
         if max_servers <= 0:
             msg = 'No servers supporting required resources %s' % resources
             self.raise_exception(msg, RuntimeError)
@@ -192,7 +193,7 @@ class CaseIteratorDriver(Driver):
             # Start server worker thread.
             n_servers += 1
             name = '%s_%d' % (self.name, n_servers)
-            self.debug('starting worker for %s', name)
+            self._logger.debug('starting worker for %s', name)
             self._servers[name] = None
             self._in_use[name] = True
             self._server_cases[name] = None
@@ -211,7 +212,7 @@ class CaseIteratorDriver(Driver):
                         break  # Timeout.
                     else:
                         if self._servers[name] is None:
-                            self.debug('server startup failed for %s', name)
+                            self._logger.debug('server startup failed for %s', name)
                             self._in_use[name] = False
                         else:
                             self._in_use[name] = self._server_ready(name)
@@ -222,7 +223,7 @@ class CaseIteratorDriver(Driver):
             for name in self._in_use.keys():
                 name, result = self._reply_queue.get()
                 if self._servers[name] is None:
-                    self.debug('server startup failed for %s', name)
+                    self._logger.debug('server startup failed for %s', name)
                     self._in_use[name] = False
 
             # Kick-off started servers.
@@ -246,7 +247,7 @@ class CaseIteratorDriver(Driver):
             else:
                 del self._queues[name]
         for name in self._queues.keys():
-            self.warning('Timeout waiting for %s to shut-down.', name)
+            self._logger.warning('Timeout waiting for %s to shut-down.', name)
 
     def _busy(self):
         """ Return True while at least one server is in use. """
@@ -281,12 +282,12 @@ class CaseIteratorDriver(Driver):
         Returns True if this server is still in use.
         """
         state = self._server_states[server]
-        self.debug('server %s state %s', server, state)
+        self._logger.debug('server %s state %s', server, state)
         in_use = True
 
         if state == _EMPTY:
             try:
-                self.debug('    load_model')
+                self._logger.debug('    load_model')
                 self._load_model(server)
                 self._server_states[server] = _READY
             except ServerError:
@@ -295,18 +296,18 @@ class CaseIteratorDriver(Driver):
         elif state == _READY:
             # Test for stop request.
             if self._stop:
-                self.debug('    stop requested')
+                self._logger.debug('    stop requested')
                 in_use = False
 
             # Select case to run.
             elif self._todo:
-                self.debug('    run startup case')
+                self._logger.debug('    run startup case')
                 self._run_case(self._todo.pop(0), server)
             elif self._rerun:
-                self.debug('    rerun case')
+                self._logger.debug('    rerun case')
                 self._run_case(self._rerun.pop(0), server, rerun=True)
             elif self._iter is None:
-                self.debug('    no more cases')
+                self._logger.debug('    no more cases')
                 in_use = False
             elif stepping:
                 in_use = False
@@ -314,11 +315,11 @@ class CaseIteratorDriver(Driver):
                 try:
                     case = self._iter.next()
                 except StopIteration:
-                    self.debug('    no more cases')
+                    self._logger.debug('    no more cases')
                     in_use = False
                     self._iter = None
                 else:
-                    self.debug('    run next case')
+                    self._logger.debug('    run next case')
                     self._run_case(case, server)
         
         elif state == _COMPLETE:
@@ -336,22 +337,22 @@ class CaseIteratorDriver(Driver):
                             msg = "Exception getting '%s': %s" % (niv[0], exc)
                             case.msg = '%s: %s' % (self.get_pathname(), msg)
                 else:
-                    self.debug('    exception %s', exc)
+                    self._logger.debug('    exception %s', exc)
                     case.msg = str(exc)
                 # Record the data.
                 self.recorder.append(case)
 
                 if not case.msg:
                     if self.reload_model:
-                        self.debug('    reload')
+                        self._logger.debug('    reload')
                         self._load_model(server)
                 else:
-                    self.debug('    load')
+                    self._logger.debug('    load')
                     self._load_model(server)
                 self._server_states[server] = _READY
             except ServerError:
                 # Handle server error separately.
-                self.debug('    server error')
+                self._logger.debug('    server error')
 
         elif state == _ERROR:
             self._server_cases[server] = None
@@ -363,7 +364,7 @@ class CaseIteratorDriver(Driver):
                 self._server_states[server] = _READY
 
         else:
-            self.error('unexpected state %s for server %s', state, server)
+            self._logger.error('unexpected state %s for server %s', state, server)
             in_use = False
 
         return in_use
@@ -400,7 +401,7 @@ class CaseIteratorDriver(Driver):
         """ Each server has an associated thread executing this. """
         server, server_info = RAM.allocate(resource_desc)
         if server is None:
-            self.error('Server allocation for %s failed :-(', name)
+            self._logger.error('Server allocation for %s failed :-(', name)
             self._reply_queue.put((name, False))
             return
         else:
@@ -441,7 +442,7 @@ class CaseIteratorDriver(Driver):
             self._server_info[server]['egg_file'] = self._egg_file
         tlo = self._servers[server].load_model(self._egg_file)
         if not tlo:
-            self.error("server.load_model of '%s' failed :-(",
+            self._logger.error("server.load_model of '%s' failed :-(",
                        self._egg_file)
             return False
         self._top_levels[server] = tlo
@@ -467,10 +468,10 @@ class CaseIteratorDriver(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
-                self.parent.workflow.run()
+                self._get_workflow().run()
             except Exception as exc:
                 self._exceptions[server] = exc
-                self.exception('Caught exception: %s' % exc)
+                self._logger.critical('Caught exception: %s' % exc)
         else:
             self._queues[server].put((self._remote_model_execute, server))
 
@@ -480,7 +481,7 @@ class CaseIteratorDriver(Driver):
             self._top_levels[server].run()
         except Exception as exc:
             self._exceptions[server] = exc
-            self.error('Caught exception from server %s, PID %d on %s: %s',
+            self._logger.error('Caught exception from server %s, PID %d on %s: %s',
                        self._server_info[server]['name'],
                        self._server_info[server]['pid'],
                        self._server_info[server]['host'], exc)

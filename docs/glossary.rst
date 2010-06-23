@@ -14,9 +14,9 @@ Glossary
 
       **Assembly**
         The Assembly class is the primary building block of the "system of systems"
-        aspect of OpenMDAO. Each assembly has a Component Workflow called *workflow*
-        and a Driver Workflow called *driverflow* and acts as a container for
-        Components. An assembly is also a Component, so hierarchical structures of
+        aspect of OpenMDAO. Each assembly has a Driver called *driver* that controls
+        execution of the workflow of Components within the Assembly.
+        An assembly is also a Component, so hierarchical structures of
         assemblies can be created.
       
       
@@ -82,10 +82,13 @@ Glossary
       	See :term:`Component` above.
 	
 	
-      **CONMIN**  
-        Stands for "CONstraint MINimization." It is a gradient descent optimization algorithm developed by
-	NASA.
-	
+      **CONMIN**   
+        Stands for "CONstraint MINimization." CONMIN is a gradient descent optimization
+	algorithm developed by NASA. The simple tutorial in the *User Guide* contains information on
+	using CONMIN for an both an :ref:`unconstrained <using-CONMIN>`  optimization and a
+	:ref:`constrained <constrained-optimization>` optimization. The Standard Library also
+	contains information about :ref:`CONMIN-Driver`.
+
       
       **Container**
         A container of Variables and other Containers. The base class of all objects
@@ -94,7 +97,7 @@ Glossary
       
       **Coverage**
         A Python module that measures code coverage during test execution.
-	
+
 
       **decorator**
         A Python module that aims to simplify the usage of decorators for the average
@@ -105,8 +108,8 @@ Glossary
       
       **DLL**
         Dynamically Loadable Library 
-	
-	
+
+
       **docutils**
         Docutils is a modular system for processing documentation into useful
         formats, such as HTML, XML, and LaTeX. For input Docutils supports
@@ -124,9 +127,7 @@ Glossary
       **egg**
         A zip file with a specified internal directory structure that
         contains a Python package or module. It is similar to a jar file in java. For
-        more information on eggs, see PythonEggs_.
-
-      .. _PythonEggs: http://peak.telecommunity.com/DevCenter/PythonEggs
+        more information on eggs, see `PythonEggs <http://peak.telecommunity.com/DevCenter/PythonEggs>`_.
 
 
       **eggs**
@@ -174,9 +175,11 @@ Glossary
         floating point number. It also also allows for the specification of units.
      
       
-      **Genetic**
-        OpenMDAO genetic algorithm optimizer based on the Pyevolve genetic algorithm.
-	
+      **Genetic** 
+        OpenMDAO genetic algorithm optimizer based on the Pyevolve genetic
+	algorithm. For more information, see the section on :ref:`Genetic` in the
+	Standard Library section of the *User Guide.*
+
 	
       **GUI**
         Graphical User Interface. A computer operating system that is based upon icons
@@ -219,7 +222,7 @@ Glossary
 
       
       **Launchpad**
-        Free open source project hosting. Repository based on the Bazaar version control
+        Free open-source project hosting. The repository is based on the Bazaar version control
 	system.
 
 	
@@ -286,13 +289,12 @@ Glossary
         Open Source
 	
 
-      **OSI** 
-        `Open Source Initiative <http://www.opensource.org>`_.
-
-
-      **Pageant**
-        An SSH authentication agent for PuTTY. 
-              
+      **OSI**    
+        The Open Source Initiative (OSI) is a non-profit corporation formed to educate
+	the community about open source (OS), to advocate for the benefits of OS, and to build
+	bridges among different constituencies in the open-source community.  For more
+	information, see `Open Source Initiative <http://www.opensource.org>`_. 
+           
       
       **PBS**
         Portable Batch System (PBS) is a queueing system. Jobs are submitted to the
@@ -338,7 +340,7 @@ Glossary
 
 	
       **Public Variables** 
-        A component's inputs and outputs. They are called "public" variables because
+        A component's inputs and outputs. They are called *public* variables because
         they are exposed to the framework; inputs can be set and outputs can be read
         by other framework components. In general, a public variable is a wrapper for
         data passed between framework components. It has a value, a default value, and
@@ -444,9 +446,9 @@ Glossary
 	
       **Sphinx** 
         A Python documentation generator. It translates reStructuredText markup
-	language into HTML. (See: http://sphinx.pocoo.org/index.html )
+	language into HTML. (See the `Sphinx home page <http://sphinx.pocoo.org/index.html>`_
+	for more information.)
      
-      .. seealso:: :ref:`Sphinx-and-reStructuredText`
 	
       **SQLAlchemy**
         Database Abstraction Library
@@ -469,7 +471,15 @@ Glossary
         programs written in C and C++ with a variety of high-level programming languages. Go to 
         http://www.swig.org/index.php for more information.
 
-     
+
+      **Tag**
+      	A Bazaar nickname for a particular revision. A tag is typically used to mark
+	a release of the software so you can easily refer to it later. Tags are stored in the
+	branch and are propagated when the branch is pushed, pulled or merged. If your branch is
+	associated with a Trac ticket, you should apply a tag (corresponding to your ticket
+	number) to your branch after committing final changes and before you push it to Launchpad
+        and propose a merge.
+   
       **Tempita**
         Tempita is a small templating language for text substitution.
      
@@ -487,26 +497,26 @@ Glossary
 
 
       **Trac**
-        An open source, web-based project management and bug-tracking tool. 
+        An open source, web-based project management and bug-tracking tool. OpenMDAO uses Trac
+	to track bugs, enhancements, and requirements and to host openmdao.org.
       
       
       **Traits**
         A software package from Enthought, Inc. that aids in developing Python code. A trait is
         a type definition that can be used for normal Python object attributes, giving the
         attributes some additional characteristics. See http://code.enthought.com/projects/traits/. 
-	The Traits package works with version 2.4 and later of Python and is similar in some ways
-	to the Python property language feature. 
+        The Traits package works with version 2.4 and later of Python and is similar in some ways
+        to the Python property language feature. 
 
 
       **TraitType** 
         The base class used to validate and possibly convert data objects that are
         passed between linked Components.
-
       
       
       **trunk**
         A Bazaar term that refers to the main development branch (in this case,
-	the openmdao trunk) from which working branches are pulled. 	
+        the openmdao trunk) from which working branches are pulled. 	
 	
 	
       **units**
@@ -529,27 +539,28 @@ Glossary
               
        
       **WebHelpers**
-	A library of helper functions intended to make writing templates in Web applications
-	easier. It's the standard function library for Pylons and TurboGears 2. It also
-	contains a large number of functions not specific to the Web, including text
-	processing, number formatting, date calculations, container objects, etc.
+        A library of helper functions intended to make writing templates in Web applications
+        easier. It's the standard function library for Pylons and TurboGears 2. It also
+        contains a large number of functions not specific to the Web, including text
+        processing, number formatting, date calculations, container objects, etc.
 
             
       **WebOb**
         :term:`WSGI` request and response object 
-	
 
-      **WebTest** 
-	Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
-	easy to send test requests to that application without starting up an HTTP
-	server. 
-	
+
+      **WebTest**  
+        Helper to test :term:`WSGI` applications. This wraps any WSGI application and makes it
+        easy to send test requests to that application without starting up an HTTP
+        server. 
+
 
       **Workflow**
-        A Workflow controls the execution order of a group of Components. The Workflow
-        class supports simple sequential execution. Other classes inheriting from 
-        Workflow will support different execution schemes, e.g., concurrent execution,
-        conditional execution, and looping of various types.
+        A Workflow controls the execution order of a group of Components. The default
+        workflow class is Dataflow, which orders Components based on their input and
+        output connections. Other classes inheriting from 
+        Workflow will support different execution schemes, e.g., concurrent and
+        conditional execution.
 
 
       **WSGI**

@@ -136,7 +136,7 @@ class MidFidelity(Assembly):
                 else:
                     min_samples = 2**nvars + 2*nvars + 1
                 if self.n_samples != min_samples:
-                    self.warning('Setting n_samples to CCD required value: %d',
+                    self._logger.warning('Setting n_samples to CCD required value: %d',
                                  min_samples)
                 self.n_samples = min_samples
             elif self.doe_type == 'lhs':
@@ -152,7 +152,7 @@ class MidFidelity(Assembly):
                 self.raise_exception(msg, ValueError)
 
             if self.n_samples < min_samples:
-                self.warning('Updating n_samples to minimum for DOE: %d',
+                self._logger.warning('Updating n_samples to minimum for DOE: %d',
                              min_samples)
                 self.n_samples = min_samples
 
@@ -172,7 +172,7 @@ class MidFidelity(Assembly):
                 self.raise_exception(msg, ValueError)
 
             if self.n_samples < min_samples:
-                self.warning('Updating n_samples to minimum for RS: %d',
+                self._logger.warning('Updating n_samples to minimum for RS: %d',
                              min_samples)
                 self.n_samples = min_samples
 
@@ -223,9 +223,9 @@ class MidFidelity(Assembly):
             vec.append(self.get(mapping[0]))
 
         for i, mapping in enumerate(self.output_mappings):
-            self.debug('Running mid-fidelity model %s %d %s',
+            self._logger.debug('Running mid-fidelity model %s %d %s',
                        str(vec), i, str(mapping[0]))
             result = self._midfi_model.RunModel(vec, i)
-            self.debug('    result %s', str(result))
+            self._logger.debug('    result %s', str(result))
             setattr(self, mapping[0], result)
 

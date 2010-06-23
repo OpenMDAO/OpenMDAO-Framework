@@ -48,14 +48,14 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())
 
-        self.top.add_container('driver', 
+        self.top.add('driver', 
                                Genetic())
 
     def tearDown(self):
         self.top = None
 
     def test_optimizeSphere_set_high_low(self):
-        self.top.add_container('comp', SphereFunction())
+        self.top.add('comp', SphereFunction())
         self.top.driver.objective = "comp.total" 
 
         self.top.driver.add_des_var('comp.x',high=5.13,low=-5.12)
@@ -80,7 +80,7 @@ class TestCase(unittest.TestCase):
 
 
     def test_optimizeSphere(self):
-        self.top.add_container('comp', SphereFunction())
+        self.top.add('comp', SphereFunction())
         self.top.driver.objective = "comp.total" 
 
         self.top.driver.add_des_var('comp.x')
@@ -104,7 +104,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(z, 0)
 
     def test_optimizeSpherearray_nolowhigh(self):
-        self.top.add_container('comp', SphereFunctionArray())
+        self.top.add('comp', SphereFunctionArray())
         self.top.driver.objective = "comp.total" 
 
         try:        
@@ -116,7 +116,7 @@ class TestCase(unittest.TestCase):
             self.fail('TypeError expected')
 
     def test_optimizeSpherearray(self):
-        self.top.add_container('comp', SphereFunctionArray())
+        self.top.add('comp', SphereFunctionArray())
         self.top.driver.objective = "comp.total" 
 
         self.top.driver.add_des_var('comp.x[0]', low=-5.12,high=5.13)
@@ -142,7 +142,7 @@ class TestCase(unittest.TestCase):
 
 
     def test_list_remove_clear_des_vars(self):
-        self.top.add_container('comp', SphereFunction())
+        self.top.add('comp', SphereFunction())
         self.top.driver.add_des_var('comp.x')
         self.top.driver.add_des_var('comp.y')
 
@@ -197,8 +197,8 @@ class TestCase(unittest.TestCase):
 
                 super(Simulation,self).__init__()
 
-                self.add_container('optimizer',Genetic())
-                self.add_container('comp',SomeComp())
+                self.add('optimizer',Genetic())
+                self.add('comp',SomeComp())
 
                 self.optimizer.add_des_var('comp.x')
                 self.optimizer.add_des_var('comp.y')

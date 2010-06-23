@@ -16,17 +16,27 @@ Pseudo package containing plugins from the OpenMDAO Standard Library.
 |    List
 |    Str
 |
-|
 | *Drivers*
 |
 |    CaseIteratorDriver
 |    CONMINdriver
 |    pyevolvedriver
 |    Genetic
+|    Iterate
 |
 | *Components*
 |
 |    ExternalCode
+|
+| *CaseIterators*
+|
+|    ListCaseIterator
+|    DBCaseIterator
+|
+| *CaseRecorders*
+|
+|    DBCaseRecorder
+|    DumpCaseRecorder
 """
 
 # Traits that we've modified
@@ -45,7 +55,16 @@ from openmdao.lib.drivers.conmindriver import CONMINdriver
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.drivers.pyevolvedriver import pyevolvedriver
 from openmdao.lib.drivers.genetic import Genetic
+from openmdao.lib.drivers.iterate import Iterate
 
 # Components
 from openmdao.lib.components.external_code import ExternalCode
+
+# CaseIterators
+from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
+
+# CaseRecorders
+from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
+from openmdao.lib.caserecorders.dumpcaserecorder import DumpCaseRecorder
 
