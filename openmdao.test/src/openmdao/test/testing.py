@@ -43,6 +43,14 @@ def run_openmdao_suite():
             else:
                 args.append('--cover2-html-dir=html_coverage')
 
+    if '--with-coverage' in args:
+        args.append('--cover-erase')
+        if '--all' in args:
+            for pkg in tlist:
+                opt = '--cover-package=%s' % pkg
+                if opt not in args:
+                    args.append(opt)
+
     # this tells it to enable the console in the environment so that
     # the logger will print output to stdout. This helps greatly when 
     # debugging openmdao scripts running in separate processes.

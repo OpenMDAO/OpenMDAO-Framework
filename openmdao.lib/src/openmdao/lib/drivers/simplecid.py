@@ -40,13 +40,13 @@ class SimpleCaseIterDriver(Driver):
 
     def _run_case(self, case):
         msg = ''
-        case.apply(self.parent)
+        case.set_inputs(self.parent)
         try:
             self._get_workflow().run()
         except Exception as err:
             msg = str(err)
         try:
-            case.update(self.parent, msg)
+            case.update_outputs(self.parent, msg)
         except Exception as err:
             case.msg = msg + " : " + str(err)
 

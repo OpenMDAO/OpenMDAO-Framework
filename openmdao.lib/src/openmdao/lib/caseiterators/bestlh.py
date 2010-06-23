@@ -2,16 +2,17 @@ from __future__ import division
 
 import random
 
-from numpy import array,zeros,size,argsort,sum,unique,floor,equal,bincount
+from numpy import array,zeros,size,argsort,sum,unique,floor,equal,bincount,sqrt,diff
 from numpy.linalg import norm
 
-from enthought.traits.api import Event
+from enthought.traits.api import HasTraits, Event, implements
 
-from openmdao.main.api import Driver, ExprEvaluator
+from openmdao.main.api import ExprEvaluator
+from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.api import Float,Int, Enum
 from openmdao.util.mdo import rand_latin_hypercube
 
-class DesVar(object): 
+class _DesVar(object): 
     
     def __init__(self): 
         self.low = None
@@ -33,22 +34,30 @@ class LatinHypercube(object):
         
     def mmphi(self):
         """Calculates the Morris-Mitchell sampling criterion for input DOE"""
-        n = size(self.doe,0)
+        n,m = self.doe.shape
         d = []
         
         #calculate the norm between each pair of points in the DOE
-        for i,row_a in enumerate(self.doe):
-            for j,row_b in enumerate(self.doe):
-                #check for distance between same point, always = 0. Also avoid duplicate calcs
-                if i==j or j>i: continue
-                
-                else: d.append(norm(row_a-row_b,ord = self.p))
-        
+        if True:
+            for i,row_a in enumerate(self.doe):
+                for j,row_b in enumerate(self.doe):
+                    #check for distance between same point, always = 0. Also avoid duplicate calcs
+                    if j>=i: 
+                        break
+                    else: 
+                        d.append(norm(row_a-row_b,ord = self.p))
+        else:
+            arr = self.doe
+            for i in range(n):
+                #pts = sqrt(sum(diff(arr[i:], axis=0)**2, axis=1))
+                pts = sum(abs(diff(arr[i:], axis=0)), axis=1)
+                d.extend(pts)
+
         #toss out any entries with the same distance
         distinct_d = unique(d)
         
         #mutltiplicity array with a count of how many pairs of points have a given distance
-        J = [d.count(x) for x in distinct_d]
+        J = array([d.count(x) for x in distinct_d])
         
         phiQ = sum(J*(distinct_d**(-self.q)))**(1.0/self.q)
         
@@ -84,65 +93,79 @@ class LatinHypercube(object):
     def __getitem__(self,*args): 
         return self.doe.__getitem__(*args)
 
+_norm_map = {"1-norm":1,"2-norm":2}
 
-class BestLatinHypercube(Driver): 
+class BestLatinHypercube(HasTraits): 
     
-    n = Int(20,iotype="in",desc="number of sample points in the DOE")
+    implements(ICaseIterator)
     
-    population = Int(20,iotype="in",
+    n = Int(20, desc="number of sample points in the DOE")
+    
+    population = Int(20,
                      desc="Size of the population for the genetic algorithm optimization of the DOE sample points")
-    generations = Int(2,iotype="in",
+    generations = Int(2,
                       desc="Number of generations the genetic algorithm will evolve for before terminating")
-    norm_method = Enum(["1-norm","2-norm"],iotype='in',
+    norm_method = Enum(["1-norm","2-norm"],
                        desc="vector norm calculation method. '1-norm' is faster, but less accurate")
-    norm_map = {"1-norm":1,"2-norm":2}
     
-    def __init__(self, doc=None):
-        super(BestLatinHypercube,self).__init__(doc)
+    def __init__(self):
+        super(BestLatinHypercube,self).__init__()
         self._des_vars = {}
         self._event_vars = {}
         self.q = [1,2,5,10,20,50,100] #list of qs to try for Phi_q optimization
       
-    def add_event_var(self, ref):
+    def add_event_var(self, varname):
         """Adds an event variable to the driver, which the driver will the set
-        before each iteration. 'ref' is string refering to the public event
-        variable on some component. 
+        before each iteration. 
+                
+        varname : string
+            name of the public event variable that should be set before execution
         """
         
-        if ref in self.event_vars: 
-            self.raise_exception("Trying to add event_var '%s' to driver, " % ref,
+        if varname in self.event_vars: 
+            self.raise_exception("Trying to add event_var '%s' to driver, " % varname,
                                  "but it is already in there",RuntimeError)
         
-        expreval = ExprEvaluator(ref,self.parent, single_name=True)
-        path = ".".join(ref.split(".")[0:-1]) #get the path to the object
-        target = ref.split(".")[-1] #get the last part of the string after the last "."
+        expreval = ExprEvaluator(varname,self.parent, single_name=True)
+        path = ".".join(varname.split(".")[0:-1]) #get the path to the object
+        target = varname.split(".")[-1] #get the last part of the string after the last "."
 
         obj = getattr(self.parent,path)
         t = obj.trait(target)
         if (not t) or (not t.is_trait_type(Event)):
-            self.raise_exception("refence provided, '%s', does not point to an Event variable. Only Event variables are allowed"%ref,RuntimeError)
+            self.raise_exception("refence provided, '%s', does not point to an Event variable. Only Event variables are allowed"%varname,RuntimeError)
         
-        self._event_vars[ref] = expreval
+        self._event_vars[varname] = expreval
         
 
-    def add_des_var(self, ref, low=None, high=None):
-        """Adds a design variable to the driver. 'ref' is a string refering to the public variable the 
-        driver should vary during execution. 'low' and 'high' refer to the minimum and maximum allowed 
-        values for the optimizer to use. If neither are specified, the min and max will default to the 
-        values in the metadata of the public variable being referenced. If they are not specified in 
-        the metadata and not provided as arguments a ValueError is raised.
+    def add_des_var(self, varname, low=None, high=None):
+        """Adds a design variable to the driver. 
+        
+        varname : string
+            name of the public variable the driver should vary during execution.
+            
+        low : float, optional
+            minimum allowed value of the design variable
+            
+        high : float, optional
+            maximum allowed value of the design variable
+        
+        If neither 'low' nor 'high' are specified, the min and max will
+        default to the values in the metadata of the public variable being
+        referenced. If they are not specified in the metadata and not provided
+        as arguments a ValueError is raised.
         """
-        if ref in self.design_vars: 
-            self.raise_exception("Trying to add '%s' to driver, but it is already in there" % ref,
+        if varname in self.design_vars: 
+            self.raise_exception("Trying to add '%s' to driver, but it is already in there" % varname,
                                  RuntimeError)
         
-        expreval = ExprEvaluator(ref, self.parent, single_name=True)
+        expreval = ExprEvaluator(varname, self.parent, single_name=True)
         
-        des_var = DesVar()
+        des_var = _DesVar()
         des_var.expr = expreval
         
-        path = ".".join(ref.split(".")[0:-1]) #get the path to the object
-        target = ref.split(".")[-1] #get the last part of the string after the last "."
+        path = ".".join(varname.split(".")[0:-1]) #get the path to the object
+        target = varname.split(".")[-1] #get the last part of the string after the last "."
 
         obj = getattr(self.parent,path)
         t = obj.trait(target)
@@ -153,7 +176,7 @@ class BestLatinHypercube(Driver):
             if low!=None and high!=None:
                 if trait_low_high:
                     if high > thigh or low < tlow:
-                        self.raise_exception("Trying to add design variable '%s', " % ref,
+                        self.raise_exception("Trying to add design variable '%s', " % varname,
                                              "but the low/high metadata supplied (%s, %s) exceeds the" % (low,high),
                                              "built-in low/high limits (%s, %s)." % (t.low,t.high),RuntimeError)
                 _des_var.low = low
@@ -162,24 +185,24 @@ class BestLatinHypercube(Driver):
                 _des_var.low = t.low
                 _des_var.high = t.high
             else: 
-                self.raise_exception("Trying to add design variable '%s', but no low/high metadata was found and no" % ref,
-                                     "'low','high' arguments were given. One or the other must be specified.",RuntimeError)
+                self.raise_exception("Trying to add design variable '%s', but no low/high metadata was found and no" % varname,
+                                     "'low','high' arguments were given. One or the other must be specified.",ValueError)
             # the des_var has been created, with expr and low/high. 
             # Just add it to the storage dictionary
-            self.des_vars[ref] = _des_var
+            self.des_vars[varname] = _des_var
         else: 
-            self.raise_exception("Trying to add design variable '%s' to driver, but only Float types are allowed."%ref,RuntimeError)
+            self.raise_exception("Trying to add design variable '%s' to driver, but only Float types are allowed."%varname,TypeError)
             
-    def remove_event_var(self,ref): 
-        if ref not in self._event_vars:
-            self.raise_exception("Trying to remove event variable '%s' that is not in the driver."%ref,RuntimeError)
-        del self._event_vars[ref]
+    def remove_event_var(self,varname): 
+        if varname not in self._event_vars:
+            self.raise_exception("Trying to remove event variable '%s' that is not in the driver."%varname,RuntimeError)
+        del self._event_vars[varname]
         return True
         
-    def remove_des_var(self,ref): 
-        if ref not in self._des_vars:
-            self.raise_exception("Trying to remove design variable '%s' that is not in the driver."%ref,RuntimeError)
-        del self._des_vars[ref]
+    def remove_des_var(self,varname): 
+        if varname not in self._des_vars:
+            self.raise_exception("Trying to remove design variable '%s' that is not in the driver."%varname,RuntimeError)
+        del self._des_vars[varname]
         return True
     
     def list_event_vars(self): 
@@ -189,39 +212,41 @@ class BestLatinHypercube(Driver):
         return sorted(self._des_vars.keys())
     
     def clear_event_vars(self): 
-        self._event_vars = dict()
+        self._event_vars = {}
         return True 
         
     def clear_des_vars(self): 
-        self._des_vars = dict()
+        self._des_vars ={}
         return True
     
-    def execute():
+    def __iter__(self):
+        """Return an iterator over our set of Cases"""
         k = len(self._des_vars)
         lhcs = []
         rand_doe = rand_latin_hypercube(n,k)
         
         for i in self.q:
-            lh = LatinHypercube(rand_doe,q=i,p=self.norm_map[self.norm_method])
+            lh = LatinHypercube(rand_doe,q=i,p=_norm_map[self.norm_method])
             lh_opt = _mmlhs(lh,self.population,self.generations)
             lhcs.append(lh_opt)
             
-        best_lhc = _mmsort(lhcs,norm_map[norm_method])
+        best_lhc = _mmsort(lhcs,_norm_map[norm_method])
         
         #run the cases
         for row in X:
-            for val,ref,des_var in zip(row,self._des_vars.iteritems()):
+            for val,varname,des_var in zip(row,self._des_vars.iteritems()):
                 #convert DOE values to variable values and set values
                 des_var.expr.set(des_var.low+(des_var.high-des_var.low)*val)
             
-            for ref,event_var in self._event_vars.iteritems():
-                event_var.set(1)  
+            for varname,event_var in self._event_vars.iteritems():
+                event_var.set(1)
+
             #run model
             self.run_iteration()
 
-def _mmlhs(x_start,population,generations):
+def _mmlhs(x_start, population, generations):
     """Evolutionary search for most space filling Latin-Hypercube. 
-    Returns a new LatinHypercube instance with an optimzied set of points"""
+    Returns a new LatinHypercube instance with an optimized set of points"""
     x_best = x_start
     phi_best = x_start.mmphi()
     n = x_start.shape[1]
@@ -237,6 +262,7 @@ def _mmlhs(x_start,population,generations):
         phi_improved = phi_best
         
         for offspring in range(population):
+            #print 'gen,pop,mut = ',it,offspring,mutations
             x_try = x_best.perturb(mutations)
             phi_try = x_try.mmphi()
             
@@ -247,6 +273,7 @@ def _mmlhs(x_start,population,generations):
         if phi_improved < phi_best: 
             phi_best = phi_improved
             x_best = x_improved
+
     return x_best
 
 def _mmsort(lhcs):
@@ -287,5 +314,3 @@ print lh_opt.mmphi()
         pyplot.scatter(lh[:,0],lh[:,1])
         pyplot.scatter(lh_opt[:,0],lh_opt[:,1],c='r')
         pyplot.show()
-    
-    
