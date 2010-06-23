@@ -5,6 +5,7 @@ Test for CaseRecorders.
 import unittest
 import tempfile
 import StringIO
+import os
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
@@ -76,6 +77,12 @@ class CaseRecorderTestCase(unittest.TestCase):
             '   max_retries: None, retries: 1',
             ]
         self.assertTrue('\n'.join(expected) in sout.getvalue())
+        
+    def test_tables_already_exist(self):
+        recorder = DBCaseRecorder('junk_dbfile')
+        recorder = DBCaseRecorder('junk_dbfile')
+        os.remove('junk_dbfile')
+        
 
 if __name__ == '__main__':
     unittest.main()
