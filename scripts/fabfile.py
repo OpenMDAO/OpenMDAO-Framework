@@ -167,14 +167,14 @@ def _testbranch():
     winplatforms=["storm.grc.nasa.gov"]
     if env.host in winplatforms:
         devbindir='devenv\Scripts'
-	unpacktar="gzip "    #need to find out what it is on windoze
+        unpacktar="gzip "    #need to find out what it is on windoze
         pyversion="python"
         removeit="rmdir"
     else:
         devbindir='devenv/bin'
-	unpacktar="tar xvf"
-	pyversion="python2.6"
-	removeit="rm -rf"
+    unpacktar="tar xvf"
+    pyversion="python2.6"
+    removeit="rm -rf"
     branchdir=os.getcwd()
     print('original branch dir on localhost is is %s' % branchdir)
     #remove any previous testbranches
@@ -211,7 +211,7 @@ def _getrelease():
         if hasattr(e, 'code'):
             print 'We failed to reach a server'
             print 'Error code: ', e.code
-	    sys.exit()
+        sys.exit()
     else:
         gofile = open('go-openmdao.py', 'wb')
         shutil.copyfileobj(resp.fp, gofile)
@@ -233,12 +233,12 @@ def _testrelease():
         removeit="rmdir"
     else:
         devbindir='bin'
-	pyversion="python2.6"
-	removeit="rm -rf"
+        pyversion="python2.6"
+        removeit="rm -rf"
     if env.host in winplatforms:
-    	#run everything locally until ssh server is setup on storm
+        #run everything locally until ssh server is setup on storm
         #local('%s releasetest' % removeit)
-	if os.path.isdir('releasetest'):
+        if os.path.isdir('releasetest'):
             shutil.rmtree('releasetest')
         local('mkdir releasetest')
         shutil.copy('go-openmdao.py', os.path.join('releasetest', 'go-openmdao.py'))  
@@ -248,7 +248,7 @@ def _testrelease():
             with cd(os.path.join('testrelease', devbindir)):
                 print("Please wait while the environment is activated and the tests are run")
                 local('activate && echo environment activated, please wait while tests run && openmdao_test')
-                print('Tests completed on %s' % env.host)  	
+                print('Tests completed on %s' % env.host)
     else:
         #remove any previous testrelease dirs on remote unix or linux host
         run('%s releasetest' % removeit)
