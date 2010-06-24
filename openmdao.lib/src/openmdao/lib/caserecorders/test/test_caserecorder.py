@@ -87,6 +87,7 @@ class CaseRecorderTestCase(unittest.TestCase):
         recorder = DBCaseRecorder('junk_dbfile')
         recorder._connection.close()
         recorder = DBCaseRecorder('junk_dbfile')
+        recorder._connection.close()
         os.remove('junk_dbfile')
         
 
