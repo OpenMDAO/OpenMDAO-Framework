@@ -379,7 +379,7 @@ design variables to search for an optimum. Genetic supports three public variabl
 :term:`Float`, :term:`Int`, and :Term:`Enum`. These public variable types can be used as design
 variables in any optimization. 
 
-You add design variables to Genetic using the ``add_des_var`` method.
+You add design variables to Genetic using the ``add_parameter`` method.
 
 .. testcode:: Genetic
 
@@ -408,9 +408,9 @@ You add design variables to Genetic using the ``add_des_var`` method.
 	    self.add('optimizer',Genetic())
 	    self.add('comp',SomeComp())
 	    
-	    self.optimizer.add_des_var('comp.x')
-	    self.optimizer.add_des_var('comp.y')
-	    self.optimizer.add_des_var('comp.z')
+	    self.optimizer.add_parameter('comp.x')
+	    self.optimizer.add_parameter('comp.y')
+	    self.optimizer.add_parameter('comp.z')
 	
     top = Simulation()	    
     set_as_top(top)
@@ -429,7 +429,7 @@ the optimizer to use a different range instead of the default.
 
 .. testcode:: Genetic
     
-    top.optimizer.add_des_var('comp.w',low=5.0,high=7.0)
+    top.optimizer.add_parameter('comp.w',low=5.0,high=7.0)
 
 Now, for ``comp.x`` the optimizer will only try values between 5.0 and 7.0. Note that `low` and `high`
 are only applicable to Float and Int public variables. For Enum public variables, `low` and `high`
