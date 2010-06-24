@@ -12,7 +12,7 @@ import numpy
 from enthought.traits.api import TraitError
 
 from openmdao.main.api import Assembly, Component, set_as_top
-from openmdao.lib.api import Float, Array, Enum, Int
+from openmdao.lib.api import Float, Array, Enum, Int, Str
 from openmdao.lib.api import Genetic
 from openmdao.main.eggchecker import check_save_load
 
@@ -58,9 +58,9 @@ class TestCase(unittest.TestCase):
         self.top.add('comp', SphereFunction())
         self.top.driver.objective = "comp.total" 
 
-        self.top.driver.add_des_var('comp.x',high=5.13,low=-5.12)
-        self.top.driver.add_des_var('comp.y')
-        self.top.driver.add_des_var('comp.z',high=5,low=-5)
+        self.top.driver.add_parameter('comp.x',high=5.13,low=-5.12)
+        self.top.driver.add_parameter('comp.y')
+        self.top.driver.add_parameter('comp.z',high=5,low=-5)
 
         self.top.driver.seed = 123
 
@@ -83,9 +83,9 @@ class TestCase(unittest.TestCase):
         self.top.add('comp', SphereFunction())
         self.top.driver.objective = "comp.total" 
 
-        self.top.driver.add_des_var('comp.x')
-        self.top.driver.add_des_var('comp.y')
-        self.top.driver.add_des_var('comp.z')
+        self.top.driver.add_parameter('comp.x')
+        self.top.driver.add_parameter('comp.y')
+        self.top.driver.add_parameter('comp.z')
 
         self.top.driver.seed = 123
 
@@ -108,10 +108,10 @@ class TestCase(unittest.TestCase):
         self.top.driver.objective = "comp.total" 
 
         try:        
-            self.top.driver.add_des_var('comp.x[0]')
+            self.top.driver.add_parameter('comp.x[0]')
         except TypeError,err: 
             self.assertEqual(str(err),"driver: values for 'high' and 'low' arguments are required when specifying an "
-                             "Array element as a design variable. They were not given for 'comp.x[0]'")
+                             "Array element as a parameter. They were not given for 'comp.x[0]'")
         else: 
             self.fail('TypeError expected')
 
@@ -119,9 +119,9 @@ class TestCase(unittest.TestCase):
         self.top.add('comp', SphereFunctionArray())
         self.top.driver.objective = "comp.total" 
 
-        self.top.driver.add_des_var('comp.x[0]', low=-5.12,high=5.13)
-        self.top.driver.add_des_var('comp.x[1]', low=-5.12,high=5.13)
-        self.top.driver.add_des_var('comp.x[2]', low=-5.12,high=5.13)
+        self.top.driver.add_parameter('comp.x[0]', low=-5.12,high=5.13)
+        self.top.driver.add_parameter('comp.x[1]', low=-5.12,high=5.13)
+        self.top.driver.add_parameter('comp.x[2]', low=-5.12,high=5.13)
 
         self.top.driver.seed = 123
 
@@ -141,34 +141,34 @@ class TestCase(unittest.TestCase):
         self.assertAlmostEqual(z, -1.1387, places = 4)  
 
 
-    def test_list_remove_clear_des_vars(self):
+    def test_list_remove_clear_params(self):
         self.top.add('comp', SphereFunction())
-        self.top.driver.add_des_var('comp.x')
-        self.top.driver.add_des_var('comp.y')
+        self.top.driver.add_parameter('comp.x')
+        self.top.driver.add_parameter('comp.y')
 
-        des_vars = self.top.driver.list_des_vars()
-        self.assertEqual(des_vars,['comp.x','comp.y'])
+        params = self.top.driver.list_parameters()
+        self.assertEqual(params,['comp.x','comp.y'])
 
-        self.top.driver.remove_des_var('comp.x')
-        des_vars = self.top.driver.list_des_vars()
-        self.assertEqual(des_vars,['comp.y'])  
+        self.top.driver.remove_parameter('comp.x')
+        params = self.top.driver.list_parameters()
+        self.assertEqual(params,['comp.y'])  
 
         try: 
-            self.top.driver.remove_des_var('xyz')
+            self.top.driver.remove_parameter('xyz')
         except RuntimeError,err: 
-            self.assertEqual(str(err),"driver: Trying to remove design variable 'xyz', but it is not in the genetic driver")
+            self.assertEqual(str(err),"driver: Trying to remove parameter 'xyz', but it is not in the genetic driver")
         else: 
             self.fail('RuntimeError Expected')
 
 
-        self.top.driver.add_des_var('comp.x')
-        self.top.driver.clear_des_vars()
-        des_vars = self.top.driver.list_des_vars()
-        self.assertEqual(des_vars,[])
+        self.top.driver.add_parameter('comp.x')
+        self.top.driver.clear_parameters()
+        params = self.top.driver.list_parameters()
+        self.assertEqual(params,[])
 
-        self.top.driver.add_des_var('comp.y')
+        self.top.driver.add_parameter('comp.y')
         try: 
-            self.top.driver.add_des_var('comp.y')
+            self.top.driver.add_parameter('comp.y')
         except RuntimeError,err: 
             self.assertEqual(str(err),"driver: Trying to add 'comp.y' to the genetic driver, but it is already in the driver")
         else: 
@@ -200,7 +200,33 @@ class TestCase(unittest.TestCase):
                 self.add('optimizer',Genetic())
                 self.add('comp',SomeComp())
 
-                self.optimizer.add_des_var('comp.x')
-                self.optimizer.add_des_var('comp.y')
-                self.optimizer.add_des_var('comp.z')
+                self.optimizer.add_parameter('comp.x')
+                self.optimizer.add_parameter('comp.y')
+                self.optimizer.add_parameter('comp.z')
+        s = Simulation()
+    
+    def test_improper_parameter_type(self): 
+        class SomeComp(Component):
+            """Arbitrary component with a few public variables, but which does not really do 
+            any calculations"""
+            z = Str("test",iotype="in")
 
+        class Simulation(Assembly):
+            """Top Level Assembly used for simulation"""
+
+            def __init__(self):
+                """Adds the Genetic driver to the assembly"""
+
+                super(Simulation,self).__init__()
+
+                self.add('driver',Genetic())
+                self.add('comp',SomeComp())
+                
+                self.driver.add_parameter('comp.z')
+        
+        try:         
+            s = Simulation()    
+        except ValueError,err:
+            self.assertEqual(str(err),"driver: Improper parameter type. Must be Float,Int, or an element of an Array.")
+        else: 
+            self.fail("ValueError expected")
