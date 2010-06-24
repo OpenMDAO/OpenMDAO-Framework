@@ -1,2 +1,2 @@
-recursive-include src *.inp lpc-test.mesh lpc-test.restart.new
-
+recursive-include src *.inp 
+include src/openmdao/lib/traits/domain/test *.mesh *.new
