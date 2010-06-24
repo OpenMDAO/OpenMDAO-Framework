@@ -9,7 +9,8 @@ from enthought.traits.api import implements, List, Instance
 #import networkx as nx
 #from networkx.algorithms.traversal import strongly_connected_components
 
-from openmdao.main.interfaces import IDriver, IComponent, obj_has_interface
+from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, \
+                                     obj_has_interface 
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
@@ -22,7 +23,10 @@ class Driver(Component):
     is met. """
     
     implements(IDriver)
-    
+
+    recorder = Instance(ICaseRecorder, desc='Case recorder for iteration data', 
+                        required=False)
+
     workflow = Instance(Workflow, allow_none=True)
     
     def __init__(self, doc=None):
