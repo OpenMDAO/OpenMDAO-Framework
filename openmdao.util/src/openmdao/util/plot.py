@@ -2,9 +2,11 @@
 Utility functions related to plotting data
 """
 
+import sys
 import sqlite3
+from optparse import OptionParser
 
-def get_data(dbname, varnames, case_sql=None, var_sql=None):
+def case_db_to_dict(dbname, varnames, case_sql=None, var_sql=None):
     """
     Retrieve the values of specified variables from a sqlite DB containing
     Case data.
@@ -16,13 +18,13 @@ def get_data(dbname, varnames, case_sql=None, var_sql=None):
         The name of the sqlite DB file
         
     varnames : list[str]
-        The list of names of variables to be plotted
+        The list of names of variables to be retrieved
         
     case_sql : str, optional
-        Optional SQL syntax that will be placed in the WHERE clause for Case retrieval
+        SQL syntax that will be placed in the WHERE clause for Case retrieval
         
     var_sql : str, optional
-        Option SQL syntax that will be placed in the WHERE clause for variable retrieval
+        SQL syntax that will be placed in the WHERE clause for variable retrieval
     
     """
     connection = sqlite3.connect(dbname)
@@ -57,14 +59,14 @@ def get_data(dbname, varnames, case_sql=None, var_sql=None):
                 vname = "vname%s" % entry
             dval = vardict.setdefault(vname, [])
             dval.append(value)
-            print vname,'=',value
             
     return vardict
 
 
-def get_lines(dbname, xnames, ynames, case_sql=None, var_sql=None): 
+def _get_lines(dbname, xnames, ynames, case_sql=None, var_sql=None): 
+    """Return a list of lines which will be fed to the plot function."""
     
-    vardict = get_data(dbname, xnames+ynames, case_sql, var_sql)
+    vardict = case_db_to_dict(dbname, xnames+ynames, case_sql, var_sql)
 
     lines = []
     yvals = []
@@ -82,3 +84,110 @@ def get_lines(dbname, xnames, ynames, case_sql=None, var_sql=None):
         lines.append((xdata, ydata))
         
     return lines
+
+
+def displayXY(dbname, xnames, ynames, case_sql=None, var_sql=None,
+              title='', grid=False, xlabel='', ylabel=''):
+    """Display an XY plot using Case data from a sqlite DB.
+    
+    dbname : str
+        Name of the database file
+        
+    xnames : list[str]
+        Names of X variables
+        
+    ynames : list[str]
+        Names of Y variables
+        
+    case_sql : str, optional
+        SQL syntax that will be placed in the WHERE clause for Case retrieval
+        
+    var_sql : str, optional
+        SQL syntax that will be placed in the WHERE clause for variable retrieval
+        
+    title : str, optional
+        Plot title
+        
+    grid : bool, optional
+        If True, a grid is drawn on the plot
+        
+    xlabel : str, optional
+        X axis label
+        
+    ylabel : str, optional
+        Y axis label
+    """
+    try:
+        if 'matplotlib' not in sys.modules:
+            import matplotlib
+            if sys.platform == 'darwin':
+                matplotlib.use('MacOSX')
+            else:
+                matplotlib.use('TkAgg')
+              
+        import matplotlib.pyplot as plt
+    except ImportError:
+        print 'matplotlib not found'
+        return
+    
+    fig = plt.figure()
+    fig.add_subplot(111)
+    
+    for i,line in enumerate(_get_lines(dbname, xnames, ynames, case_sql, var_sql)):
+        args = []
+        kwargs = {}
+        args.append(line[0])
+        args.append(line[1])
+        kwargs['label'] = '%s' % ynames[i]
+        plt.plot(*args, **kwargs)
+    if grid:
+        plt.grid(True)
+    if xlabel:
+        plt.xlabel(xlabel)
+    if ylabel:
+        plt.ylabel(ylabel)
+    if title:
+        plt.title(title)
+    plt.legend()
+    plt.show()
+
+def cmdlineXYplot():
+    """Based on command line options, display an XY plot using data from a 
+    sqlite Case DB.
+    """
+    parser = OptionParser()
+    parser.add_option("-x", "", action="store", type="string", dest="xnames",
+                      help="names of x variables")
+    parser.add_option("-y", "", action="store", type="string", dest="ynames",
+                      help="names of y variables")
+    parser.add_option("-d", "--dbfile", action="store", type="string", dest="dbname",
+                      help="database filename")
+    parser.add_option("-t", "--title", action="store", type="string", dest="title",
+                      help="plot title",)
+    parser.add_option("", "--xlabel", action="store", type="string", dest="xlabel",
+                      help="x axis label")
+    parser.add_option("", "--ylabel", action="store", type="string", dest="ylabel",
+                      help="y axis label")
+    parser.add_option("-g", "--grid", action="store_true", dest="grid",
+                      help="makes grid visible")
+    parser.add_option("", "--cases", action="store", type="string", dest="case_sql",
+                      help="sql syntax to select certain cases")
+    parser.add_option("", "--vars", action="store", type="string", dest="var_sql",
+                      help="sql syntax to select certain vars")
+
+    (options, args) = parser.parse_args(sys.argv[1:])
+    
+    if len(args) > 0 or not options.ynames or not options.dbname:
+        parser.print_help()
+        sys.exit(-1)
+    
+    xs = options.xnames.split(',')
+    ys = options.ynames.split(',')
+    
+    if len(xs) > 1 and len(xs) != len(ys):
+        print "Number of x variables doesn't match number of y variables."
+        sys.exit(-1)
+    
+    displayXY(options.dbname, xs, ys, options.case_sql, options.var_sql, 
+              title=options.title, grid=options.grid, xlabel=options.xlabel,
+              ylabel=options.ylabel)
