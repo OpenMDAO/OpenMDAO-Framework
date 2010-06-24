@@ -37,13 +37,15 @@ def case_db_to_dict(dbname, varnames, case_sql=None, var_sql=None):
     casecur.execute(' '.join(sql))
     
     sql = ["SELECT name, value, entry from casevars WHERE case_id=%s"]
+    vars_added = False
     for i,name in enumerate(varnames):
         if i==0:
             sql.append("AND (")
         else:
             sql.append("OR")
         sql.append("name='%s'" % name)
-    if i>0: sql.append(")")
+        vars_added = True
+    if vars_added: sql.append(")")
     
     if var_sql:
         sql.append("AND %s" % var_sql)
@@ -181,7 +183,10 @@ def cmdlineXYplot():
         parser.print_help()
         sys.exit(-1)
     
-    xs = options.xnames.split(',')
+    if options.xnames:
+        xs = options.xnames.split(',')
+    else:
+        xs = []
     ys = options.ynames.split(',')
     
     if len(xs) > 1 and len(xs) != len(ys):
