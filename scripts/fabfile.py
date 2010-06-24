@@ -15,6 +15,7 @@ import tempfile
 import shutil
 import fnmatch
 import tarfile
+import urllib2
 
 
 class _VersionError(RuntimeError):
@@ -136,7 +137,7 @@ def release(version=None, test=False):
 def localrelease(version=None):
     _release(version, test=True)
   
-    
+#-------------------------------------------------------------------------------------    
 #Builds and runs tests on a branch on all our development platforms
 #Currently can only run remotely on viper and torpedo
 #You must run from the top level of your branch.
@@ -192,7 +193,89 @@ def _testbranch():
             print("Please wait while the environment is activated and the tests are run")
             run('source activate && echo $PATH && echo environment activated, please wait while tests run && openmdao_test')
             print('Tests completed') 
-    
+
+#------------------------------------------------------------------------------------------------------
+#Part of script needed to test releases
+#This will only be run from storm, since the release script is always run from storm
+def _getrelease():
+    """Grabs the latest openmdao release from the website, go-openmdao.py, so it can be tested on our dev platforms
+    """
+    startdir=os.getcwd()
+    print('starting dir is %s' % startdir)
+    releaseurl='http://openmdao.org/downloads/latest/go-openmdao.py'
+    try:  resp = urllib2.urlopen(releaseurl)
+    except IOError, e:
+        if hasattr(e, 'reason'):
+            print 'We failed to reach the server'
+            print 'Reason: ', e.reason
+        if hasattr(e, 'code'):
+            print 'We failed to reach a server'
+            print 'Error code: ', e.code
+	    sys.exit()
+    else:
+        gofile = open('go-openmdao.py', 'wb')
+        shutil.copyfileobj(resp.fp, gofile)
+        gofile.close()
+        #print resp.code
+        #print resp.headers["content-type"]
+
+def _testrelease():
+    """"Copies the go-openmdao.py file to each production platform and builds and tests on each one
+    """
+    startdir=os.getcwd()
+    _getrelease()
+    #@runs_once(_getrelease())
+    #our go-openmdao.py file is now in startdir on the local host
+    winplatforms=["storm.grc.nasa.gov"]  #Is remote host storm?
+    if env.host in winplatforms:
+        devbindir='Scripts'
+        pyversion="python"
+        removeit="rmdir"
+    else:
+        devbindir='bin'
+	pyversion="python2.6"
+	removeit="rm -rf"
+    if env.host in winplatforms:
+    	#run everything locally until ssh server is setup on storm
+        #local('%s releasetest' % removeit)
+	if os.path.isdir('releasetest'):
+            shutil.rmtree('releasetest')
+        local('mkdir releasetest')
+        shutil.copy('go-openmdao.py', os.path.join('releasetest', 'go-openmdao.py'))  
+        with cd('releasetest'):
+            local('%s go-openmdao.py testrelease' % pyversion)
+            #change to testrelease\Scripts (on windows), activate the environment, and run tests
+            with cd(os.path.join('testrelease', devbindir)):
+                print("Please wait while the environment is activated and the tests are run")
+                local('activate && echo environment activated, please wait while tests run && openmdao_test')
+                print('Tests completed on %s' % env.host)  	
+    else:
+        #remove any previous testrelease dirs on remote unix or linux host
+        run('%s releasetest' % removeit)
+        #make new releasetest dir on remote host
+        run('mkdir releasetest')
+        #Copy go-openmdao.py to releasetest directory on remote host
+        put('go-openmdao.py', 'releasetest/go-openmdao.py')  
+        with cd('releasetest'):
+            #build the environment and put it in a directory called testrelease
+            run('%s go-openmdao.py testrelease' % pyversion)
+            #change to testrelease/bin or testrelease\Scripts (on windows), activate the envronment, and run tests
+            with cd('testrelease/%s' % devbindir)):
+                print("Please wait while the environment is activated and the tests are run")
+                run('source activate && echo $PATH && echo environment activated, please wait while tests run && openmdao_test')
+                print('Tests completed on %s' % env.host)  
+
+
 @hosts('torpedo.grc.nasa.gov', 'viper.grc.nasa.gov')    
 def testbranch():
     _testbranch()
+
+def getrelease():
+    _getrelease()
+
+@hosts('torpedo.grc.nasa.gov', 'viper.grc.nasa.gov', 'storm.grc.nasa.gov')
+def testrelease():
+    #if sys.platform != 'win32':
+        #raise RuntimeError("OpenMDAO releases should be tested from Windows until the ssh server is installed on Windows")
+    _testrelease()
+    
