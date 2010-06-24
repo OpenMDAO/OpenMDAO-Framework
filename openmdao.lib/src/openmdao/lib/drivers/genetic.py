@@ -3,6 +3,8 @@
 import random
 import re
 
+from numpy import int32,int64,float32,float64
+
 from enthought.traits.api import Python
 
 from pyevolve import G1DList, G1DBinaryString, G2DList, GAllele, GenomeBase
@@ -11,7 +13,7 @@ from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 from openmdao.main.api import Driver, ExprEvaluator, set_as_top, Component, Assembly,Expression
 from openmdao.lib.api import Float, Int, Enum, Array,Bool, Instance
 
-array_test = re.compile("\[[0-9]+\]$")
+array_test = re.compile("(\[[0-9]+\])+$")
 
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO frameowork, based on the Pyevolve Genetic algorithm module. 
@@ -56,14 +58,14 @@ class Genetic(Driver):
     def __init__(self,doc=None):
         super(Genetic,self).__init__(doc)
         
-        self._design_vars = []
-        self._des_var_ranges = dict()
+        self._parameters = []
+        self._parameter_ranges = dict()
     
     def _make_alleles(self): 
         """ Returns a GAllelle.Galleles instance with alleles corresponding to 
-        the design variables specified by the user"""
+        the parameters specified by the user"""
         alleles = GAllele.GAlleles()
-        for str_ref in self._design_vars:
+        for str_ref in self._parameters:
             val = str_ref.evaluate() #now grab the value 
             ref = str(str_ref)
             
@@ -71,7 +73,7 @@ class Genetic(Driver):
             path = ".".join(ref.split(".")[0:-1]) #get the path to the object
             target = ref.split(".")[-1] #get the last part of the string after the last "."
             
-            low,high = self._des_var_ranges[ref]
+            low,high = self._parameter_ranges[ref]
             
             #bunch of logic to check for array elements being passed as refs
             
@@ -90,67 +92,72 @@ class Genetic(Driver):
             elif t and t.is_trait_type(Enum): 
                 allele = GAllele.GAlleleList(t.values)
                 alleles.add(allele)
-                
-            else:
-                self.raise_exception("Improper design variable type. Must be Float,Int or an element of an Array.",ValueError)
         
         return alleles
     
-    def remove_des_var(self,ref):
-        """removes the design variable, specified by 'ref', from the set of design variables. 
-        If not design variable is found matching the name given in 'ref' a ValueError is raised"""
+    def remove_parameter(self,param_name):
+        """removes the specified parameter
+        
+        param_name : str
+            name of the parameter to remove from the driver
+        """
         
         try:
-            i = [str(x) for x in self._design_vars].index(ref)
+            i = [str(x) for x in self._parameters].index(param_name)
         except ValueError:
-            self.raise_exception("Trying to remove design variable '%s', but it is not in the genetic driver"%ref,RuntimeError)
-        self._design_vars.pop(i)
-        self._des_var_ranges.pop(ref)
+            self.raise_exception("Trying to remove parameter '%s', but it is not in the genetic driver"%param_name,RuntimeError)
+        self._parameters.pop(i)
+        self._parameter_ranges.pop(param_name)
         return True
     
-    def list_des_vars(self):
-        """Returns a list of the names of the design variables currently in the genetic instance"""
-        return [str(x) for x in self._design_vars]
+    def list_parameters(self):
+        """Returns a list of the names of the parameters currently in the genetic instance"""
+        return [str(x) for x in self._parameters]
     
-    def clear_des_vars(self):
-        """Removes all design variables from the genetic instance"""
-        self._design_vars = []
-        self._des_var_ranges = {}
+    def clear_parameters(self):
+        """Removes all parameters from the genetic instance"""
+        self._parameters = []
+        self._parameter_ranges = {}
     
-    def add_des_var(self,ref,low=None,high=None):
-        """adds a design variable to the driver. 'ref' is a string refering to the public variable the 
-        driver should vary during execution. 'low' and 'high' refer to the minimum and maximum allowed 
-        values for the optimizer to use. If neither are specified, the min and max will default to the 
-        values in the metadata of the public variable being referenced. If they are not specified in 
-        the metadata and not provided as arguments a ValueError is raised.
+    def add_parameter(self,param_name,low=None,high=None):
+        """adds a parameter to the driver. 
+        
+        param_name : str 
+            name of the parameter to add to the driver
+        low : number, optional
+            minimum allowed value the optimzier can use for this parameter. If not specified, 
+            then the 'low' value from the public variable is used. 
+        high : number, optional
+            maximum allowed value the optimizer can use for this parameter. If not specified, 
+            then the 'high' value from the public variable is used.
         """
 
-        #check to see if this ref is already in the driver
+        #check to see if this param_name is already in the driver
         try: 
-            i = [str(x) for x in self._design_vars].index(ref)
+            i = [str(x) for x in self._parameters].index(param_name)
             #if found one, so it's already in there
-            self.raise_exception("Trying to add '%s' to the genetic driver, but it is already in the driver"%ref,RuntimeError)
+            self.raise_exception("Trying to add '%s' to the genetic driver, but it is already in the driver"%param_name,RuntimeError)
         except ValueError: #not in the list, so you're good to go!
             pass
 
         #indexed the same as self._allels
-        expreval = ExprEvaluator(ref, self.parent, single_name=True)
-        self._design_vars.append(expreval) #add it to the list of string refs
-        val = self._design_vars[-1].evaluate()
-        if low and high: #use specified, overrides any trait defaults that would have been found
-            self._des_var_ranges[ref] = (low,high)
+        expreval = ExprEvaluator(param_name, self.parent, single_name=True)
+        self._parameters.append(expreval) #add it to the list of string refs
+        val = expreval.evaluate()
+        if low is not None and high is not None: #use specified, overrides any trait defaults that would have been found
+            self._parameter_ranges[param_name] = (low,high)
         else: 
             ranges = [0,0]
-            #split up the ref string to be able to get the trait. 
-            path = ".".join(ref.split(".")[0:-1]) #get the path to the object
-            target = ref.split(".")[-1] #get the last part of the string after the last "."
-            
+            #split up the param_name string to be able to get the trait. 
+            path = ".".join(param_name.split(".")[0:-1]) #get the path to the object
+            target = param_name.split(".")[-1] #get the last part of the string after the last "."
             obj = getattr(self.parent,path)
             
             t = obj.trait(target) #get the trait
             if t and t.is_trait_type(Enum):
-                self._des_var_ranges[ref]=(None,None)
-            elif t: #can't be an Enum, so it's a Float, Int, or Array element
+                self._parameter_ranges[param_name]=(None,None)
+            elif t and (t.is_trait_type(Float) or t.is_trait_type(Int)): #can't be an Enum, so maybe it's a Float, Int
+                
                 if hasattr(t,"low"): 
                     ranges[0] = t.low
                 elif low: 
@@ -166,17 +173,19 @@ class Genetic(Driver):
                 else: 
                     self.raise_exception("No value was specified for the 'high' argument, "
                                          "and no default was found in the public variable metadata",ValueError)
-                self._des_var_ranges[ref] = tuple(ranges)
-                
+                self._parameter_ranges[param_name] = tuple(ranges)
+             
             elif array_test.search(target): #can't figure out what the ranges should be
-                if not(isinstance(val,float) or isinstance(val,int)):
+                if not(isinstance(val,float) or isinstance(val,int) or isinstance(val,int32) or \
+                       isinstance(val,int64) or isinstance(val,float32) or isinstance(val,float64)
+                      ):
                     self.raise_exception("Only array values of type 'int' or 'float' are allowed as "
-                                         "design variables")
+                                         "parameters")
                     
                 self.raise_exception("values for 'high' and 'low' arguments are required when specifying "
-                                     "an Array element as a design variable. They were not given for '%s'"%ref,TypeError)
+                                     "an Array element as a parameter. They were not given for '%s'"%param_name,TypeError)
             else: 
-                self.raise_exception("Improper design variable type. Must be Float,Int, or an element of "
+                self.raise_exception("Improper parameter type. Must be Float,Int, or an element of "
                                      "an Array.",ValueError)
         return True
             
@@ -212,10 +221,14 @@ class Genetic(Driver):
         ga.evolve(freq_stats=0)
         
         self.best_individual = ga.bestIndividual()
+        
+        #run it once to get the model into the optimal state
+        self._run_model(self.best_individual) 
+           
 
     def _run_model(self,chromosome):
         for i,value in enumerate(chromosome):
-            self._design_vars[i].set(value)
+            self._parameters[i].set(value)
         #    print i,value    
         self.run_iteration()
         #exit()        

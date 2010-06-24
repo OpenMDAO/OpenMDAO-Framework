@@ -327,7 +327,7 @@ block:
        
 The first line contains the relative path location of the file that is to be 
 included. Since you rarely want to include an entire file, the options
-*start-after* and *end-before* can be used to define the bookends that
+``start-after`` and ``end-before`` can be used to define the bookends that
 bound the block of text to be included. 
        
 Sometimes, it makes more sense to grab specific lines from a file. This can

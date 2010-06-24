@@ -271,7 +271,7 @@ Here is an example of how to link to a figure:
 
 In the above example, ``.. _`Class Diagram of Core Classes`:`` is an optional label that is used for
 cross referencing to this figure. In this case there was some preceding text: ``The figure `Class Diagram of
-Core Classes`_ shows . . .`` . A cross reference is not necessary, but if you are discussing a figure
+Core Classes`_ shows...``. A cross reference is not necessary, but if you are discussing a figure
 that appears later in the text, it is helpful to the reader. 
 
 The path to the image is: ``.. figure:: ../generated_images/ModelClasses.png``.

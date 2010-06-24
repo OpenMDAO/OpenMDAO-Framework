@@ -305,10 +305,10 @@ Build with Signature ``foo.pyf``     ``f2py foo.pyf foo.f -c``
 Creating an Extension with SWIG
 --------------------------------
 
-The Simplified Wrapper and Interface Generator (SWIG) is a tool that simplifies
-the creation of extensions from C and C++ functions for use in a variety of
-target languages, including Python. To use SWIG, you must download and install the most recent
-version at the system level.
+The Simplified Wrapper and Interface Generator (:term:`SWIG`) is a tool that simplifies the
+creation of extensions from C and C++ functions for use in a variety of target languages,
+including Python. To use SWIG you must download and
+install the most recent version at the system level.
 
 ::
 

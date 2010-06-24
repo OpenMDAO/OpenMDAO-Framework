@@ -17,7 +17,7 @@ framework sorted into four categories: components, drivers, factories, and trait
 
 Components
 ----------
-.. index:: standard library drivers, CONMIN driver
+.. index:: CONMIN 
 
 
 Drivers
@@ -38,7 +38,9 @@ minimization problems may also be solved. The conjugate direction method
 of Fletcher and Reeves is used for this purpose.
 
 More information on CONMIN can be found in the `CONMIN User's Manual
-<file:../../../plugin-guide/CONMIN_user_manual.html>`_.
+<file:../../../plugin-guide/CONMIN_user_manual.html>`_. (In the :ref:`simple
+tutorial <Getting-Started-with-OpenMDAO>` in the *User Guide*, CONMIN is used for an
+unconstrained and a constrained optimization.)
 
 CONMIN has been included in the OpenMDAO standard library to provide users
 with a basic gradient-based optimization algorithm.
@@ -86,9 +88,9 @@ follows:
 
 This first section of code defines an assembly called *EngineOptimization.* This
 assembly contains a DrivingSim component and a CONMIN driver, both of which are
-created and added inside the __init__ function with add(). The 
+created and added inside the ``__init__`` function with ``add_container()``. The 
 objective function, design variables, constraints, and any CONMIN parameters
-are also assigned in the __init__ function. The specific syntax for all of 
+are also assigned in the ``__init__`` function. The specific syntax for all of 
 these is given below.
 
 .. testsetup:: CONMIN_show
@@ -146,7 +148,7 @@ are expressed as functions of the design variables, and *side* constraints,
 which are used to bound the design space (i.e., specify a range for each
 design variable).
 
-Side constraints are defined using the *lower_bounds* and *upper_bounds* parameters:
+Side constraints are defined using the ``lower_bounds`` and ``upper_bounds`` parameters:
 
 .. testcode:: CONMIN_show
 
@@ -350,6 +352,8 @@ used only for constrained problems.
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
 
+.. _`Genetic`:
+
 *Genetic*
 ++++++++++
 
@@ -375,7 +379,7 @@ design variables to search for an optimum. Genetic supports three public variabl
 :term:`Float`, :term:`Int`, and :Term:`Enum`. These public variable types can be used as design
 variables in any optimization. 
 
-You add design variables to Genetic using the *add_des_var* method.
+You add design variables to Genetic using the ``add_parameter`` method.
 
 .. testcode:: Genetic
 
@@ -404,9 +408,9 @@ You add design variables to Genetic using the *add_des_var* method.
 	    self.add('optimizer',Genetic())
 	    self.add('comp',SomeComp())
 	    
-	    self.optimizer.add_des_var('comp.x')
-	    self.optimizer.add_des_var('comp.y')
-	    self.optimizer.add_des_var('comp.z')
+	    self.optimizer.add_parameter('comp.x')
+	    self.optimizer.add_parameter('comp.y')
+	    self.optimizer.add_parameter('comp.z')
 	
     top = Simulation()	    
     set_as_top(top)
@@ -416,18 +420,18 @@ figures out for itself what type of variable it is and behaves appropriately. In
 cases, since no *low* or *high* arguments were provided, the optimizer will use the values
 from the metadata provided in the variable deceleration. 
 
-For `comp.x` the optimizer will try floats between 0.0 and 100.0. For *comp.y* the optimizer
-will try integers between 10 and 100. For *comp.z* the optimizer will pick from
-the list of allowed values: [-10,-5,0,7]. 
+For ``comp.x`` the optimizer will try floats between 0.0 and 100.0. For ``comp.y`` the optimizer
+will try integers between 10 and 100. For ``comp.z`` the optimizer will pick from
+the list of allowed values: ``[-10,-5,0,7]``. 
 
 You can override the low and high values from the metadata if you want
 the optimizer to use a different range instead of the default. 
 
 .. testcode:: Genetic
     
-    top.optimizer.add_des_var('comp.w',low=5.0,high=7.0)
+    top.optimizer.add_parameter('comp.w',low=5.0,high=7.0)
 
-Now for `comp.x` the optimizer will only try values between 5.0 and 7.0. Not that `low` and `high`
+Now, for ``comp.x`` the optimizer will only try values between 5.0 and 7.0. Note that `low` and `high`
 are only applicable to Float and Int public variables. For Enum public variables, `low` and `high`
 are not applicable.
 
@@ -448,17 +452,17 @@ or
     top.optimizer.objective = "2*comp.x+comp.y+3*comp.z"
 
 In the second example above, a more complex objective was created where the overall objective was 
-a weighted combination of *comp.x, comp.y,* and *comp.z*. 
+a weighted combination of ``comp.x, comp.y,`` and ``comp.z``. 
 
-To set the optimizer to either minimize or maximize your objective, you set the `opt_type` attribute 
-of the driver to "minimize" or "maximize".
+To set the optimizer to either minimize or maximize your objective, you set the
+``opt_type`` attribute of the driver to "minimize" or "maximize."
 
 .. testcode:: Genetic
 
     top.optimizer.opt_type = "minimize"
     
 You can control the size of the population in each generation and the maximum number of generations in 
-your optimization with the `population_size` and `generations` attributes. 
+your optimization with the ``population_size`` and ``generations`` attributes. 
     
 .. testcode:: Genetic
 
@@ -477,12 +481,12 @@ your problem. Setting this number too low will likely prevent the optimization f
 optimum. Setting it too high will help you find the true optimum, but you may end up wasting the computation
 time on later generations where the optimum has been found. 
 
-You can further control the behavior of the genetic algorithm by setting the `crossover_rate`,
-`mutation_rate`, `selection_method`, and `elitism` attributes. These settings will allow you to
+You can further control the behavior of the genetic algorithm by setting the ``crossover_rate``,
+``mutation_rate``, ``selection_method``, and ``elitism`` attributes. These settings will allow you to
 fine-tune the convergence of your optimization to achieve the desired result; however, for many
 optimizations the default values will work well and won't need to be changed. 
 
-The `crossover_rate` controls the rate at which the crossover operator gets applied to the genome of a set of
+The ``crossover_rate`` controls the rate at which the crossover operator gets applied to the genome of a set of
 individuals who are reproducing. The allowed values are between 0.0 and 1.0. A higher rate will mean  that more of
 the genes are swapped between parents. The result will be a more uniform population and better searching of the
 design space. If the rate is set too high, then it is likely that stronger individuals could be lost to churn. 
@@ -491,7 +495,7 @@ design space. If the rate is set too high, then it is likely that stronger indiv
 
     top.optimizer.crossover_rate = 0.9
 
-The `mutation_rate` controls how likely any particular gene is to experience a mutation. A low, but non-zero,
+The ``mutation_rate`` controls how likely any particular gene is to experience a mutation. A low, but non-zero,
 mutation rate will help prevent stagnation in the gene pool by randomly moving the values of genes. If this 
 rate is set too high, the algorithm basically degrades into a random search through the design space. The
 allowed values are between 0.0 and 1.0. 
@@ -512,14 +516,13 @@ what.
 
 A number of different commonly used selection algorithms are available. The default algorithm is the Roulette
 Wheel Algorithm, but Tournament Selection, Rank Selection, and Uniform Selection are also available. The
-`selection_method` attribute allows you to select the algorithm; allowed values are: "roulette_wheel", 
-"tournament", "rank", and "uniform". 
+``selection_method`` attribute allows you to select the algorithm; allowed values are: "roulette_wheel," 
+"tournament," "rank," and "uniform."
 
 .. testcode:: Genetic
     
     top.optimizer.selection_method="rank"
-
-    
+ 
 
 *The Case Iterator*
 +++++++++++++++++++

@@ -182,19 +182,19 @@ not work through CAPRI because CAPRI does not support geometry creation.
 Component Publishing
 ====================
 
-.. note::
-    Currently packaging in the Python community is in a state of flux, so
+.. note:: Currently packaging in the Python community is in a state of flux, so
     the remainder of this section will have to be rewritten at some point.
-    *setuptools* has been forked into a package called *distribute*, and 
-    based on discussions at PyCon 2010, apparently the plan is that eventually, *distribute*
-    and *distutils* will go away and be replaced by *distutils2*, which will be 
-    part of the standard library. Much of the functionality of *setuptools/distribute*
-    will be incorporated into *distutils2*, and *distutils2* will break backward
-    compatibility with *distutils*.  Eggs are apparently going away as well, but 
-    the assumption is that packaged distributions created by *distutils2* will
-    be usable in a way similar to eggs.  If *distutils2* does in fact become part
-    of the standard library and it provides the same functionality that we require
-    from *setuptools*, we will switch over to it.  Stay tuned.
+    Python's setuptools has been forked into a package called *distribute,* and  based on
+    discussions at PyCon 2010, apparently the plan is that eventually,
+    distribute and distutils will go away and be replaced by distutils2,
+    which will be  part of the standard library. Much of the functionality of
+    setuptools/distribute will be incorporated into distutils2, and
+    distutils2 will break backward compatibility with distutils. Eggs are
+    apparently going away as well, but  the assumption is that packaged
+    distributions created by distutils2 will be usable in a way similar to
+    eggs. If distutils2 does in fact become part of the standard library and it
+    provides the same functionality that we require from setuptools, we will
+    switch over to it. Stay tuned.
 
 
 Because increasing the number of available framework components will make the

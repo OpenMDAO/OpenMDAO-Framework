@@ -130,7 +130,7 @@ Use italics for the following:
   of quotes, for example, when discussing a parameter in a code sample.  (If it's a
   long parameter, it might be better to use literal text.
  
-f
+
 .. index:: Python; capitalization
 
 Capitalization 
@@ -166,7 +166,7 @@ Capitalize *Python* when referring to the programming language, for example, a
 OpenMDAO path name, script name, command, part of a URL, etc., that is lower case.
 
 This rule also applies to other programming languages or software programs; for example,
-*Enthought, Inc.* is capitalized, but *enthoughts.traits.api* is not. 
+``Enthought, Inc.`` is capitalized, but ``enthoughts.traits.api`` is not. 
 
 
 *reStructuredText*
@@ -222,6 +222,9 @@ which will result in text that looks like this:
 * ``openmdao.main.api``
 * ``openmdao.lib``
  
+Additionally, if a word or phrase contains an underscore (_) or a dot (.), use literal text, so it
+is easier to read, e.g., ``_init_`` function, ``self.driver``, and ``optimization_constrained.py``.
+
 
 Abbreviations and Acronyms
 --------------------------
