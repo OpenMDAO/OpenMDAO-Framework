@@ -1179,20 +1179,11 @@ def after_install(options, home_dir):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
-    reqnumpy = 'numpy'
-    numpyidx = None
-    for i,req in enumerate(reqs):
-        if req.startswith('numpy') and len(req)>5 and (req[5]=='=' or req[5]=='>'):
-            # for now, just require 'numpy' instead of a specific version
-            #reqnumpy = req
-            numpyidx = i
-            break
     try:
-        _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
-        if numpyidx is not None:
-            reqs.remove(reqs[numpyidx])
+        _single_install(cmds, 'numpy', bin_dir) # force numpy first so we can use f2py later
         for req in reqs:
-            _single_install(cmds, req, bin_dir)
+            if not req.startswith('numpy'):
+                _single_install(cmds, req, bin_dir)
 
         # now install dev eggs for all of the openmdao packages
         topdir = os.path.abspath(os.path.dirname(__file__))

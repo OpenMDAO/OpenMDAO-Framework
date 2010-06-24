@@ -63,24 +63,15 @@ def after_install(options, home_dir):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
-    reqnumpy = 'numpy'
-    numpyidx = None
-    for i,req in enumerate(reqs):
-        if req.startswith('numpy') and len(req)>5 and (req[5]=='=' or req[5]=='>'):
-            # for now, just require 'numpy' instead of a specific version
-            #reqnumpy = req
-            numpyidx = i
-            break
-	try:
-		_single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
-		if numpyidx is not None:
-			reqs.remove(reqs[numpyidx])
-		for req in reqs:
-			_single_install(cmds, req, bin_dir)
-	except Exception as err:
-		print "ERROR: build failed"
-		sys.exit(-1)
-			
+    try:
+        _single_install(cmds, 'numpy', bin_dir) # force numpy first so we can use f2py later
+        for req in reqs:
+            if not req.startswith('numpy'):
+                _single_install(cmds, req, bin_dir)
+    except Exception as err:
+        print "ERROR: build failed"
+        sys.exit(-1)
+            
     print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% home_dir
     print 'From %%s, type:\\n' %% home_dir
     if sys.platform == 'win32':
