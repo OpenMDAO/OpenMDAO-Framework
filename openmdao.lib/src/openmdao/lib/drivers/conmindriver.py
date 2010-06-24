@@ -20,7 +20,7 @@ from enthought.traits.api import on_trait_change, TraitError
                                  
 import conmin.conmin as conmin
 
-from openmdao.main.api import Driver, Expression, ExpressionList
+from openmdao.main.api import Case, Driver, Expression, ExpressionList
 from openmdao.main.exceptions import RunStopped
 from openmdao.lib.traits.float import Float
 from openmdao.lib.traits.int import Int
@@ -220,6 +220,10 @@ class CONMINdriver(Driver):
     linobj = Int(0, iotype='in', desc='Linear objective function flag')
     itrm = Int(3, iotype='in', desc='Number of consecutive iterations to '\
                       'indicate convergence (relative or absolute)')
+        
+    # Extra variables for printing
+    printvars = ExpressionList(iotype='in',desc='list of extra variables to'
+                               'output in the recorder')
     
     def __init__(self, doc=None):
         super(CONMINdriver, self).__init__( doc)
@@ -319,11 +323,6 @@ class CONMINdriver(Driver):
             # common blocks are saved before, and loaded after execution
             self._save_common_blocks()
             
-            # Iteration count comes from CONMIN. You can't just count over the
-            # loop because some cycles do other things (e.g., numerical
-            # gradient calculation)
-            self.iter_count = self.cnmn1.iter 
-                        
             # update the design variables in the model
             dvals = [float(val) for val in self.design_vals[:-2]]
             for var, val in zip(self.design_vars, dvals):
@@ -359,6 +358,31 @@ class CONMINdriver(Driver):
                 self.raise_exception('Unexpected value for flag INFO returned \
                         from CONMIN', RuntimeError)
 
+            # Iteration count comes from CONMIN. You can't just count over the
+            # loop because some cycles do other things (e.g., numerical
+            # gradient calculation)
+            if self.iter_count != self.cnmn1.iter:
+                    
+                self.iter_count = self.cnmn1.iter 
+                
+                if self.recorder:
+                    # Write out some relevant information to the recorder
+                    case_input = []
+                    for var, val in zip(self.design_vars, dvals):
+                        case_input.append([var, None, val])
+                        
+                    for var in self.printvars:
+                        case_input.append([var, None, var.evaluate()])
+                
+                    case_output = []
+                    case_output.append(["objective", None, self.cnmn1.obj])
+                
+                    for i, val in enumerate(self.constraint_vals):
+                        case_output.append(["Constraint%d" % i, None, val])
+                    
+                    self.recorder.record(Case(case_input, case_output, 
+                                              'case%s' % self.iter_count))
+                        
 
     def _config_conmin(self):
         """Set up arrays for the FORTRAN conmin routine, and perform some
