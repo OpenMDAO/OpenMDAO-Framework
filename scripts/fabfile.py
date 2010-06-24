@@ -260,7 +260,7 @@ def _testrelease():
             #build the environment and put it in a directory called testrelease
             run('%s go-openmdao.py testrelease' % pyversion)
             #change to testrelease/bin or testrelease\Scripts (on windows), activate the envronment, and run tests
-            with cd('testrelease/%s' % devbindir)):
+            with cd('testrelease\Scripts'):
                 print("Please wait while the environment is activated and the tests are run")
                 run('source activate && echo $PATH && echo environment activated, please wait while tests run && openmdao_test')
                 print('Tests completed on %s' % env.host)  
