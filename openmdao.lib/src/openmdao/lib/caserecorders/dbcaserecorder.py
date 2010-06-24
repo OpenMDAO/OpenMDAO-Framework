@@ -15,7 +15,7 @@ class DBCaseRecorder(object):
         self.model_id = model_id
         
         self._connection.execute("""
-        create table cases(
+        create table if not exists cases(
          case_id INTEGER PRIMARY KEY,
          name TEXT,
          msg TEXT,
@@ -25,7 +25,7 @@ class DBCaseRecorder(object):
          )""")
         
         self._connection.execute("""
-        create table casevars(
+        create table if not exists casevars(
          var_id INTEGER PRIMARY KEY,
          name TEXT,
          case_id INTEGER,

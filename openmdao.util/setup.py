@@ -39,5 +39,6 @@ setup(name='openmdao.util',
       entry_points = """
       [console_scripts]
       mod2dist=openmdao.util.mod2dist:mod2dist
+      xyplot=openmdao.util.plot:cmdlineXYplot
       """
     )
