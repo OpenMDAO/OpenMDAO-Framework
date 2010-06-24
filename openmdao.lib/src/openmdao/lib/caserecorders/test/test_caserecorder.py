@@ -85,6 +85,7 @@ class CaseRecorderTestCase(unittest.TestCase):
     
     def test_tables_already_exist(self):
         recorder = DBCaseRecorder('junk_dbfile')
+        recorder._connection.close()
         recorder = DBCaseRecorder('junk_dbfile')
         os.remove('junk_dbfile')
         
