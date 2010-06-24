@@ -64,18 +64,7 @@ def after_install(options, home_dir):
 
     if not os.path.exists(etc):
         os.makedirs(etc)
-    reqnumpy = 'numpy'
-    numpyidx = None
-    for i,req in enumerate(reqs):
-        if req.startswith('numpy') and len(req)>5 and (req[5]=='=' or req[5]=='>'):
-            # for now, just require 'numpy' instead of a specific version
-            #reqnumpy = req
-            numpyidx = i
-            break
     try:
-        _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
-        if numpyidx is not None:
-            reqs.remove(reqs[numpyidx])
         for req in reqs:
             _single_install(cmds, req, bin_dir)
 
@@ -137,16 +126,17 @@ def after_install(options, home_dir):
                     ]
 
     cmds = []
-    reqs = []
+    reqs = set()
     dists = working_set.resolve([Requirement.parse(r) for r in openmdao_pkgs])
     excludes = set(['setuptools', 'distribute'])
     for dist in dists:
         if dist.project_name == 'openmdao.main':
             version = dist.version
         if not dist.project_name.startswith('openmdao.') and dist.project_name not in excludes:
-            reqs.append('%s' % dist.as_requirement())  
+            if dist.project_name != 'numpy':
+                reqs.add('%s' % dist.as_requirement())  
             
-    reqs = list(set(reqs))  # eliminate duplicates (numpy was in there twice somehow)
+    reqs = ['numpy'] + list(reqs)
     
     optdict = { 'reqs': reqs, 'cmds':cmds }
     
