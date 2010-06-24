@@ -5,15 +5,16 @@ __all__ = ["Driver"]
 
 
 from enthought.traits.api import implements, List, Instance
-from enthought.traits.trait_base import not_none
-import networkx as nx
-from networkx.algorithms.traversal import strongly_connected_components
+#from enthought.traits.trait_base import not_none
+#import networkx as nx
+#from networkx.algorithms.traversal import strongly_connected_components
 
-from openmdao.main.interfaces import IDriver
+from openmdao.main.interfaces import IDriver, IComponent, obj_has_interface
 from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
-from openmdao.main.expression import Expression, ExpressionList
+from openmdao.main.dataflow import Dataflow
+#from openmdao.main.expression import Expression, ExpressionList
 
     
 class Driver(Component):
@@ -28,13 +29,15 @@ class Driver(Component):
         super(Driver, self).__init__(doc=doc)
         self.workflow = None
         self._iter = None
-        self._workflow_set = False
         
     def _get_workflow(self):
+        """Returns the 'active' workflow for this Driver, which is either
+        self.workflow or the parent's workflow if no workflow is set for
+        this Driver."""
         if self.workflow:
             return self.workflow
         else:
-            return self.parent.workflow
+            return self.parent._default_workflow
 
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
@@ -57,13 +60,38 @@ class Driver(Component):
             else:
                 if not rv.refs_valid():
                     return False
-                    
+
         # force execution if any component in the workflow is invalid
         for comp in self._get_workflow().contents():
             if not comp.is_valid():
                 return False
 
         return True
+
+    def add_to_workflow(self, obj):
+        """Add the given object to this Driver's workflow, creating a
+        local workflow if one doesn't already exist.
+        """
+        if self.workflow is None:
+            if self.parent:
+                self.workflow = Dataflow(self.parent)
+            else:
+                self.raise_exception("'parent' not set, so can't set scope of Dataflow", 
+                                     RuntimeError)
+        if obj_has_interface(obj, IComponent):
+            self.workflow.add(obj)
+        else:
+            try:
+                iter(obj)
+            except TypeError:
+                self.raise_exception("Cannot add object of type %s to workflow" % type(obj),
+                                     TypeError)
+            for entry in obj:
+                if obj_has_interface(entry, IComponent):
+                    self.workflow.add(entry)
+                else:
+                    self.raise_exception("Cannot add object of type %s to workflow" % type(entry),
+                                     TypeError)
 
     def _pre_execute (self):
         """Call base class *_pre_execute* after determining if we have any invalid
@@ -78,7 +106,6 @@ class Driver(Component):
                 self.raise_exception("Driver '%s' is a member of it's own workflow!" %
                                      self.name, RuntimeError)
 
-
     def remove_from_workflow(self, component):
         """Remove the specified component from our workflow."""
         if self.workflow:
@@ -86,7 +113,7 @@ class Driver(Component):
 
     def iteration_set(self):
         """Return a set of all Components in our workflow, and 
-        recursively in any workflow in any driver in our workflow.
+        recursively in any workflow in any Driver in our workflow.
         """
         allcomps = set()
         for child in self._get_workflow().contents():
@@ -95,6 +122,20 @@ class Driver(Component):
                 allcomps.update(child.iteration_set())
         return allcomps
         
+    def get_expr_depends(self):
+        """Returns a list of tuples of the form (src_comp_name, dest_comp_name)
+        for each dependency introduced by any Expression or ExpressionList 
+        traits in this Driver, ignoring any dependencies on components that are
+        inside of this Driver's iteration set.
+        """
+        iternames = set([c.name for c in self.iteration_set()])
+        conn_list = super(Driver, self).get_expr_depends()
+        new_list = []
+        for src, dest in conn_list:
+            if src not in iternames and dest not in iternames:
+                new_list.append((src, dest))
+        return new_list
+
     def execute(self):
         """ Iterate over a workflow of Components until some condition
         is met. If you don't want to structure your driver to use *pre_iteration*,
@@ -140,7 +181,6 @@ class Driver(Component):
                 pass
             yield
 
-            
     def stop(self):
         self._stop = True
         self._get_workflow().stop()

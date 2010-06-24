@@ -9,8 +9,7 @@ Contents:
 
 .. toctree::
    :maxdepth: 1
-   :numbered:
- 
+    
    
    user-guide/index
    plugin-guide/index

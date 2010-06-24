@@ -11,14 +11,14 @@ class DomainObj(object):
     """
 
     def __init__(self):
-        self.right_handed = True
+        self.reference_state = None
         # Zones are kept in an explicit list to retain the order
         # that they were added.
         self.zones = []
 
     @property
     def shape(self):
-        """ Returns list of index limits for each zone. """
+        """ Returns list of coordinate index limits for each zone. """
         return [zone.shape for zone in self.zones]
 
     @property
@@ -42,9 +42,10 @@ class DomainObj(object):
     def add_zone(self, name, zone, prefix='', make_copy=False):
         """
         Add a :class:`Zone`. If `name` is None or blank, then a default
-        is used. The resulting name will be prepended with `prefix`. If
-        `make_copy` is True then a deep copy of each zone is made rather
-        than just referring to a shared instance. Returns the added zone.
+        of the form ``zone_N`` is used. The resulting name will be prepended
+        with `prefix`. If `make_copy` is True then a deep copy of each zone is
+        made rather than just referring to a shared instance.
+        Returns the added zone.
         """
         if not name:
             name = 'zone_%d' % (len(self.zones) + 1)
@@ -55,6 +56,20 @@ class DomainObj(object):
             zone = copy.deepcopy(zone)
         setattr(self, name, zone)
         self.zones.append(zone)
+        return zone
+
+    def remove_zone(self, zone):
+        """
+        Remove `zone`, specified either by name or object reference.
+        Returns the removed zone.
+        """
+        if isinstance(zone, basestring):
+            name = zone
+            zone = getattr(self, zone)
+        else:
+            name = self.zone_name(zone)
+        delattr(self, name)
+        self.zones.remove(zone)
         return zone
 
     def rename_zone(self, name, zone):
@@ -72,17 +87,29 @@ class DomainObj(object):
                 return name
         raise ValueError('cannot find zone!')
 
+    def copy(self):
+        """ Returns a deep copy of self. """
+        return copy.deepcopy(self)
+
     def deallocate(self):
         """ Deallocate resources. """
         for zone in self.zones:
             delattr(self, self.zone_name(zone))
         self.zones = []
 
-    def is_equivalent(self, other, logger=None):
-        """ Test if self and `other` are equivalent. """
+    def is_equivalent(self, other, logger=None, tolerance=0.):
+        """
+        Test if self and `other` are equivalent.
+        `tolerance` is the maximum relative difference in array values
+        to be considered equivalent.
+        """
         logger = logger or NullLogger()
         if not isinstance(other, DomainObj):
             logger.debug('other is not a DomainObj object.')
+            return False
+
+        if len(self.zones) != len(other.zones):
+            logger.debug('zone count mismatch.')
             return False
 
         for zone in self.zones:
@@ -92,24 +119,36 @@ class DomainObj(object):
             except AttributeError:
                 logger.debug("other is missing zone '%s'.", name)
                 return False
-            if not zone.is_equivalent(other_zone, logger):
+            if not zone.is_equivalent(other_zone, logger, tolerance):
                 logger.debug("zone '%s' equivalence failed.", name)
                 return False
         return True
 
+    def make_cartesian(self, axis='z'):
+        """
+        Convert to cartesian coordinate system.
+        `axis` specifies which is the cylinder axis ('z' or 'x').
+        """
+        for zone in self.zones:
+            zone.make_cartesian(axis)
+
+    def make_cylindrical(self, axis='z'):
+        """
+        Convert to cylindrical coordinate system.
+        `axis` specifies which is the cylinder axis ('z' or 'x').
+        """
+        for zone in self.zones:
+            zone.make_cylindrical(axis)
+
     def make_left_handed(self):
         """ Convert to left-handed coordinate system. """
-        if self.right_handed:
-            for zone in self.zones:
-                zone.flip_z()
-            self.right_handed = False
+        for zone in self.zones:
+            zone.make_left_handed()
 
     def make_right_handed(self):
         """ Convert to right-handed coordinate system. """
-        if not self.right_handed:
-            for zone in self.zones:
-                zone.flip_z()
-            self.right_handed = True
+        for zone in self.zones:
+            zone.make_right_handed()
 
     def translate(self, delta_x, delta_y, delta_z):
         """ Translate coordinates. """

@@ -5,7 +5,7 @@ import logging
 from math import sqrt
 
 from openmdao.main.api import Assembly, Component, Driver, Expression, \
-                              Dataflow, SequentialFlow, set_as_top
+                              Dataflow, SequentialWorkflow, set_as_top
 from openmdao.lib.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
@@ -174,12 +174,11 @@ class MultiDriverTestCase(unittest.TestCase):
     def test_2_drivers(self):
         self.rosen_setUp()
         drv = self.top.add('driver1a', CONMINdriver())
-        self.top.add('comp1a', ExprComp(expr='x**2'))
-        self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'))
+        self.top.add('comp1a', ExprComp(expr='x**2'), False)
+        self.top.add('comp2a', ExprComp(expr='x-5.0*sqrt(x)'), False)
+        drv.add_to_workflow([self.top.comp1a, self.top.comp2a])
         self.top.connect('comp1a.f_x', 'comp2a.x')
-        drv.workflow = Dataflow(self.top, 
-                                members=[self.top.comp1a, self.top.comp2a])
-        self.top.driver.workflow.add(drv)
+        self.top.driver.add_to_workflow(drv)
         drv.itmax = 40
         drv.objective = 'comp2a.f_x'
         drv.design_vars = ['comp1a.x']
@@ -388,6 +387,7 @@ class MultiDriverTestCase(unittest.TestCase):
                          top.D1.max_iterations)
         self.assertEqual(top.C2.runcount, 
                          top.D2.max_iterations+1)
+                         
         # since C1 and C2 are not dependent on each other, they could
         # execute in any order (depending on dict hash value which can differ per platform)
         # so need two possible exec orders
@@ -421,8 +421,8 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.max_iterations = 3
         
         top.driver.workflow = Dataflow(top, members=[top.D1, top.D2])
-        top.D1.workflow = SequentialFlow(members=[top.C1])
-        top.D2.workflow = SequentialFlow(members=[top.C2])
+        top.D1.workflow = SequentialWorkflow(members=[top.C1])
+        top.D2.workflow = SequentialWorkflow(members=[top.C2])
         
         top.run()
         self.assertEqual(top.D2.runcount, 1)

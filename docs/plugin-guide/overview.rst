@@ -12,11 +12,11 @@ functionality of OpenMDAO and explains how to build them and how to make
 them usable by the framework.
 
 The rest of this document assumes that you have already installed OpenMDAO. If you
-haven't, learn how to do that :ref:`here<Installing-OpenMDAO>`.
+haven't, learn how to do that :ref:`here <Installing-OpenMDAO>`.
 
 .. note:: If you intend to develop a plugin on Windows that requires compilation, you
           will need to have the necessary compiler(s) installed on your system. See the
-          *Developer Guide* installation instructions for Windows for help on installing
+          *Developer Guide* installation instructions for :ref:`Windows <Windows>` for help on installing
           Visual C++ 2008 and mingw32.
 
 
@@ -54,7 +54,7 @@ interface, so as long as your class provides the necessary interface and can
 be imported into your Python script, you'll be able to use it as a plugin.
 But what if an OpenMDAO user wants to obtain a listing of all of the 
 plugins that are available in the environment?  To allow that to happen, 
-the plugin developer must provide metadata that specifies the name,
+a plugin developer must provide metadata that specifies the name,
 plugin interface, and location within its package for each plugin that
 is intended to be discoverable by the framework.  The rest of this
 section describes the form of this metadata and how to add it to 
@@ -92,7 +92,7 @@ Entry points are defined within the ``setup.py`` file that is
 used to build the distribution.  The following code snippet
 shows a ``setup.py`` file that defines an entry point for an
 OpenMDAO component plugin called *SimpleAdder* in a distribution 
-called *simple_adder*:
+called ``simple_adder``:
 
 
 ..  _plugin_overview_Code2:

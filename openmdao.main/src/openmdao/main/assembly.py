@@ -17,6 +17,10 @@ from openmdao.main.dataflow import Dataflow
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression
 
+class _undefined_(object):
+    pass
+
+
 def _filter_internal_edges(edges):
     """Return a copy of the given list of edges with edges removed that are
     connecting two variables on the same component.
@@ -44,15 +48,15 @@ class Assembly (Component):
     driver = Instance(Driver, allow_none=True,
                       desc="The top level Driver that manages execution of this Assembly")
     
-    workflow = Instance(IWorkflow, 
-                        desc="The default workflow used by Drivers in this Assembly")
-    
     def __init__(self, doc=None, directory=''):
         self._child_io_graphs = {}
         self._need_child_io_update = True
         
         self.comp_graph = ComponentGraph()
-        self.workflow = Dataflow(self)
+        
+        # this is the default Workflow for all Drivers living in this
+        # Assembly that don't define their own Workflow
+        self._default_workflow = Dataflow(self)
         
         # A graph of Variable names (local path), 
         # with connections between Variables as directed edges.  
@@ -69,7 +73,7 @@ class Assembly (Component):
                 self._var_graph.add_node(v)
                 
         # default Driver executes its workflow once
-        drv = self.add('driver', Driver())
+        self.add('driver', Driver())
         
 
 
@@ -101,7 +105,7 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add(self, name, obj):
+    def add(self, name, obj, add_to_workflow=True):
         """Add obj to the workflow and call base class *add*.
         
         Returns the added object.
@@ -109,9 +113,10 @@ class Assembly (Component):
         obj = super(Assembly, self).add(name, obj)
         self.comp_graph.add(obj)
         
-        # add all non-Driver Components to the Assembly workflow
-        if isinstance(obj, Component) and not isinstance(obj, Driver):
-            self.workflow.add(obj)
+        # add all non-Driver Components to the Assembly workflow by default
+        # unless add_to_workflow is False
+        if add_to_workflow is True and isinstance(obj, Component) and not isinstance(obj, Driver):
+            self._default_workflow.add(obj)
 
         # since the internals of the given Component can change after it's
         # added, wait to collect its io_graph until we need it
@@ -124,7 +129,7 @@ class Assembly (Component):
         """Remove the named container object from this container and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
-        self.workflow.remove(cont)
+        self._default_workflow.remove(cont)
         for obj in self.__dict__.values():
             if obj is not cont and isinstance(obj, Driver):
                 obj.remove_from_workflow(cont)
@@ -151,8 +156,7 @@ class Assembly (Component):
             parts = pathname.split('.')
             newname = parts[-1]
 
-        oldtrait = self.trait(newname)
-        if oldtrait:
+        if newname in self.__dict__:
             self.raise_exception("a trait named '%s' already exists" %
                                  newname, TraitError)
         trait, val = self._find_trait_and_value(pathname)

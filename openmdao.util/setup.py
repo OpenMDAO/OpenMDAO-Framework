@@ -22,7 +22,7 @@ setup(name='openmdao.util',
       keywords='',
       author='',
       author_email='',
-      url='http://openmdao.org',
+      url='http://openmdao.org/docs/srcdocs/packages/openmdao.util.html',
       license='NASA Open Source Agreement 1.3',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),
@@ -39,5 +39,6 @@ setup(name='openmdao.util',
       entry_points = """
       [console_scripts]
       mod2dist=openmdao.util.mod2dist:mod2dist
+      xyplot=openmdao.util.plot:cmdlineXYplot
       """
     )

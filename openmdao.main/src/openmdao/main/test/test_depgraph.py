@@ -5,10 +5,19 @@ import logging
 
 from enthought.traits.api import TraitError
 
-from openmdao.main.api import Assembly, Component, set_as_top
+from openmdao.main.api import Assembly, Component, Driver, Expression, set_as_top, Dataflow
 from openmdao.lib.api import Int
 
-        
+exec_order = []
+
+class DumbDriver(Driver):
+    objective = Expression(iotype='in')
+    
+    def execute(self):
+        global exec_order
+        exec_order.append(self.name)
+        super(DumbDriver, self).execute()
+
 class Simple(Component):
     a = Int(iotype='in')
     b = Int(iotype='in')
@@ -24,6 +33,8 @@ class Simple(Component):
         self.run_count = 0
 
     def execute(self):
+        global exec_order
+        exec_order.append(self.name)
         self.run_count += 1
         self.c = self.a + self.b
         self.d = self.a - self.b
@@ -57,6 +68,8 @@ subvars = subins+subouts
 class DepGraphTestCase(unittest.TestCase):
 
     def setUp(self):
+        global exec_order
+        exec_order = []
         top = set_as_top(Assembly())
         self.top = top
         top.add('sub', Assembly())
@@ -133,8 +146,8 @@ class DepGraphTestCase(unittest.TestCase):
         self.assertEqual(valids, [True, True, True, True])
         
         
-    def test_lazy1(self):   
-        self.top.run()        
+    def test_lazy1(self):
+        self.top.run()
         run_counts = [self.top.get(x).run_count for x in allcomps]
         self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_counts)
         outs = [(5,-3),(3,-1),(5,1),(7,3),(4,6),(5,1),(3,-1),(8,6)]
@@ -214,6 +227,36 @@ class DepGraphTestCase(unittest.TestCase):
         for comp,vals in zip(allcomps,outs):
             self.assertEqual((comp,vals[0],vals[1]), 
                              (comp,self.top.get(comp+'.c'),self.top.get(comp+'.d')))
+            
+    def test_sequential(self):
+        # verify that if components aren't connected they should execute in the
+        # order that they were added instead of hash order
+        top = set_as_top(Assembly())
+        top.add('c1', Simple())
+        top.add('c2', Simple())
+        top.add('c3', Simple())
+        top.add('c4', Simple())
+        top.connect('c4.c', 'c3.a')  # force c4 to run before c3
+        top.run()
+        self.assertEqual(exec_order, ['c1','c2','c4','c3'])
+        
+        
+    def test_expr_deps(self):
+        top = set_as_top(Assembly())
+        top.add('driver1', DumbDriver())
+        top.add('driver2', DumbDriver())
+        top.add('c1', Simple())
+        top.add('c2', Simple())
+        top.add('c3', Simple())
+        top.connect('c1.c', 'c2.a')
+        top.driver.add_to_workflow([top.driver1, top.driver2, top.c3])
+        top.driver1.add_to_workflow(top.c2)
+        top.driver2.add_to_workflow(top.c1)
+        top.driver1.objective = "c2.c*c2.d"
+        top.driver2.objective = "c1.c"
+        top.run()
+        self.assertEqual(exec_order, ['driver2','c1','driver1','c2','c3'])
+        
 
     def test_set_already_connected(self):
         try:

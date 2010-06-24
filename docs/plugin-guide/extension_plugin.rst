@@ -289,23 +289,26 @@ problem.
     
 **F2PY Quick Command Reference**
 
-================================ =================================
-Ordinary Build                   ``f2py -c -m foo foo.f``
--------------------------------- ---------------------------------
-Only Make Signature File         ``f2py -m foo -h foo.pyf foo.f``
--------------------------------- ---------------------------------
-Build with Signature ``foo.pyf`` ``f2py foo.pyf foo.f -c``
-================================ =================================
+
+==================================   =================================
+Build                                 Command
+==================================   =================================
+Ordinary Build                       ``f2py -c -m foo foo.f``
+----------------------------------   ---------------------------------
+Make Signature File Only             ``f2py -m foo -h foo.pyf foo.f``
+----------------------------------   ---------------------------------
+Build with Signature ``foo.pyf``     ``f2py foo.pyf foo.f -c``
+==================================   =================================
 
 .. index:: SWIG
 
 Creating an Extension with SWIG
 --------------------------------
 
-The Simplified Wrapper and Interface Generator (SWIG) is a tool that simplifies
-the creation of extensions from C and C++ functions for use in a variety of
-target languages, including Python. To use SWIG, you must download and install the most recent
-version at the system level.
+The Simplified Wrapper and Interface Generator (:term:`SWIG`) is a tool that simplifies the
+creation of extensions from C and C++ functions for use in a variety of target languages,
+including Python. To use SWIG you must download and
+install the most recent version at the system level.
 
 ::
 

@@ -30,7 +30,7 @@ Component, Driver, and TraitType plugins for OpenMDAO
       keywords='optimization multidisciplinary multi-disciplinary analysis',
       author='',
       author_email='',
-      url='http://openmdao.org',
+      url='http://openmdao.org/docs/srcdocs/packages/openmdao.lib.html',
       license='NASA Open Source Agreement 1.3',
       namespace_packages=["openmdao"],
       packages=find_packages('src'),

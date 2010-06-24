@@ -7,7 +7,9 @@ import os.path
 import unittest
 
 from openmdao.lib.traits.domain import read_plot3d_q, write_plot3d_q, \
-                                       read_plot3d_f, write_plot3d_f
+                                       read_plot3d_f, write_plot3d_f, \
+                                       read_plot3d_shape
+
 from openmdao.lib.traits.domain.test.wedge import create_wedge_2d, \
                                                   create_wedge_3d
 
@@ -49,12 +51,16 @@ class TestCase(unittest.TestCase):
         self.assertTrue(domain.is_equivalent(wedge, logger=logger))
 
         # Multiblock.
-        wedge2 = create_wedge_3d((30, 20, 10), 5., 2.5, 4., 30.)
+        wedge2 = create_wedge_3d((29, 19, 9), 5., 2.5, 4., 30.)
         domain.add_domain(wedge2)
         write_plot3d_q(domain, 'unformatted.xyz', 'unformatted.q',
                        logger=logger)
         domain = read_plot3d_q('unformatted.xyz', 'unformatted.q',
                                logger=logger)
+
+        shape = read_plot3d_shape('unformatted.xyz', logger=logger)
+        self.assertEqual(shape, [(30, 20, 10), (29, 19, 9)])
+
         # Errors.
         try:
             read_plot3d_q('unformatted.xyz', 'unformatted.q', blanking=True,
@@ -105,6 +111,7 @@ class TestCase(unittest.TestCase):
 
         logger = logging.getLogger()
         wedge = create_wedge_3d((30, 20, 10), 5., 0.5, 2., 30.)
+        wedge_flow = wedge.xyzzy.flow_solution
         varnames = ('density', 'momentum', 'energy_stagnation_density')
 
         # Big-endian binary.
@@ -113,22 +120,24 @@ class TestCase(unittest.TestCase):
         domain = read_plot3d_f('be-binary.xyz', 'be-binary.f', logger=logger,
                                multiblock=False, big_endian=True,
                                unformatted=False)
-        self.assertTrue((domain.zone_1.f_1 == wedge.xyzzy.density).all())
-        self.assertTrue((domain.zone_1.f_2 == wedge.xyzzy.momentum.x).all())
-        self.assertTrue((domain.zone_1.f_3 == wedge.xyzzy.momentum.y).all())
-        self.assertTrue((domain.zone_1.f_4 == wedge.xyzzy.momentum.z).all())
-        self.assertTrue((domain.zone_1.f_5 == wedge.xyzzy.energy_stagnation_density).all())
+        test_flow = domain.zone_1.flow_solution
+        self.assertTrue((test_flow.f_1 == wedge_flow.density).all())
+        self.assertTrue((test_flow.f_2 == wedge_flow.momentum.x).all())
+        self.assertTrue((test_flow.f_3 == wedge_flow.momentum.y).all())
+        self.assertTrue((test_flow.f_4 == wedge_flow.momentum.z).all())
+        self.assertTrue((test_flow.f_5 == wedge_flow.energy_stagnation_density).all())
 
         # Little-endian unformatted.
         write_plot3d_f(domain, 'unformatted.xyz', 'unformatted.f',
                        logger=logger)
         domain = read_plot3d_f('unformatted.xyz', 'unformatted.f',
                                logger=logger, multiblock=False)
-        self.assertTrue((domain.zone_1.f_1 == wedge.xyzzy.density).all())
-        self.assertTrue((domain.zone_1.f_2 == wedge.xyzzy.momentum.x).all())
-        self.assertTrue((domain.zone_1.f_3 == wedge.xyzzy.momentum.y).all())
-        self.assertTrue((domain.zone_1.f_4 == wedge.xyzzy.momentum.z).all())
-        self.assertTrue((domain.zone_1.f_5 == wedge.xyzzy.energy_stagnation_density).all())
+        test_flow = domain.zone_1.flow_solution
+        self.assertTrue((test_flow.f_1 == wedge_flow.density).all())
+        self.assertTrue((test_flow.f_2 == wedge_flow.momentum.x).all())
+        self.assertTrue((test_flow.f_3 == wedge_flow.momentum.y).all())
+        self.assertTrue((test_flow.f_4 == wedge_flow.momentum.z).all())
+        self.assertTrue((test_flow.f_5 == wedge_flow.energy_stagnation_density).all())
 
     def test_f_2d(self):
         logging.debug('')
@@ -136,6 +145,7 @@ class TestCase(unittest.TestCase):
 
         logger = logging.getLogger()
         wedge = create_wedge_2d((20, 10), 0.5, 2., 30.)
+        wedge_flow = wedge.xyzzy.flow_solution
         varnames = ('density', 'momentum', 'energy_stagnation_density')
 
         # Big-endian binary.
@@ -144,10 +154,11 @@ class TestCase(unittest.TestCase):
         domain = read_plot3d_f('be-binary.xyz', 'be-binary.f', logger=logger,
                                dim=2, multiblock=False, big_endian=True,
                                unformatted=False)
-        self.assertTrue((domain.zone_1.f_1 == wedge.xyzzy.density).all())
-        self.assertTrue((domain.zone_1.f_2 == wedge.xyzzy.momentum.x).all())
-        self.assertTrue((domain.zone_1.f_3 == wedge.xyzzy.momentum.y).all())
-        self.assertTrue((domain.zone_1.f_4 == wedge.xyzzy.energy_stagnation_density).all())
+        test_flow = domain.zone_1.flow_solution
+        self.assertTrue((test_flow.f_1 == wedge_flow.density).all())
+        self.assertTrue((test_flow.f_2 == wedge_flow.momentum.x).all())
+        self.assertTrue((test_flow.f_3 == wedge_flow.momentum.y).all())
+        self.assertTrue((test_flow.f_4 == wedge_flow.energy_stagnation_density).all())
 
         # Little-endian unformatted.
         write_plot3d_f(domain, 'unformatted.xyz', 'unformatted.f',
@@ -155,10 +166,11 @@ class TestCase(unittest.TestCase):
         varnames = ('density', 'momentum_x')
         domain = read_plot3d_f('unformatted.xyz', 'unformatted.f', varnames,
                                logger=logger, dim=2, multiblock=False)
-        self.assertTrue((domain.zone_1.density == wedge.xyzzy.density).all())
-        self.assertTrue((domain.zone_1.momentum_x == wedge.xyzzy.momentum.x).all())
-        self.assertTrue((domain.zone_1.f_3 == wedge.xyzzy.momentum.y).all())
-        self.assertTrue((domain.zone_1.f_4 == wedge.xyzzy.energy_stagnation_density).all())
+        test_flow = domain.zone_1.flow_solution
+        self.assertTrue((test_flow.density == wedge_flow.density).all())
+        self.assertTrue((test_flow.momentum_x == wedge_flow.momentum.x).all())
+        self.assertTrue((test_flow.f_3 == wedge_flow.momentum.y).all())
+        self.assertTrue((test_flow.f_4 == wedge_flow.energy_stagnation_density).all())
 
 
 if __name__ == '__main__':

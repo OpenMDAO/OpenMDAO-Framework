@@ -50,12 +50,15 @@ Guide.*  These requirements are described below.
       
       Binaries for gfortran are available `here <http://gcc.gnu.org/wiki/GFortranBinaries#MacOS>`_.
 
+.. _`Windows`:
+
   - *Windows*:
    
     - *Visual C++ 2008*
       
-      We uses the Express version, but others (Professional, Standard) should work too.
-         
+      We use the Express version, but others (Professional, Standard) should work too. To get this software,
+      go to the `downloads page <http://www.microsoft.com/express/downloads/#2008-Visual-CPP>`_.
+
     - *mingw32*   (for FORTRAN)
       
       Make sure to put the *bin* directory of the mingw32 install in your path.
@@ -168,24 +171,24 @@ Change your directory to ``devenv``.
 
 On Linux or OS X, you must be running the Bash shell. If you are in Bash, omit this step.
 
-::
+  ::
 
-   bash
+     bash
    
  
-Next, type the following, making sure to include the "." in the command:
+  Next, type the following, making sure to include the "." in the command:
 
-::
+  ::
 
-   . bin/activate
+     . bin/activate
 
 
 
 Or, on Windows, type:
 
-::
+  ::
 
-   Scripts\activate
+     Scripts\activate
 
 At this point, your ``devenv`` directory should contain the following
 subdirectories:
@@ -202,7 +205,7 @@ subdirectories:
     Contains Python C header files.
     
 ``etc``
-    Contains miscellaneous files that don't fit in bin, lib, or include.
+    Contains miscellaneous files that don't fit in ``bin, lib,`` or ``include``.
 
 After your virtual Python environment has been activated, you can add other 
 distributions to the environment by using ``easy_install`` or :term:`pip` in
@@ -232,7 +235,7 @@ The directory structure of your repository should look like this:
     The directory containing source to be packaged into distributions that can
     be released separately from OpenMDAO. These distributions may or may not depend upon
     OpenMDAO. Distributions that have not yet been approved to be part of
-    ``openmdao.lib`` can live here--as long as their license is compatible with NOSA. No
+    ``openmdao.lib`` can live here -- as long as their license is compatible with NOSA. No
     proprietary code or GPL code can live in the OpenMDAO repository.
 
 ``devenv``

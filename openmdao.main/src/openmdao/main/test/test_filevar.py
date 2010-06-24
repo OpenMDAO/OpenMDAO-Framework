@@ -24,7 +24,7 @@ class Source(Component):
 
     write_files = Bool(True, iotype='in')
     text_data = Str(iotype='in')
-    binary_data = Array('d', iotype='in')
+    binary_data = Array(iotype='in')
     text_file = File(path='source.txt', iotype='out', content_type='txt')
     binary_file = File(path='source.bin', iotype='out', binary=True,
                             extra_stuff='Hello world!')
@@ -76,7 +76,7 @@ class Sink(Component):
 
     bogus_path = Str('', iotype='in')
     text_data = Str(iotype='out')
-    binary_data = Array('d', iotype='out')
+    binary_data = Array(iotype='out')
     text_file = File(iotype='in')
     binary_file = File(iotype='in')
 

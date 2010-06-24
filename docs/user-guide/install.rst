@@ -80,59 +80,76 @@ To avoid version conflicts with system level Python packages, OpenMDAO is best i
 bootstrap script that installs OpenMDAO in a *virtual* Python environment. This script is called
 ``go-openmdao.py``. 
 
-**Step 1)** Acquire and run the script.
+**Acquire and run the script**
 
-   1. Download the installation script: `go-openmdao.py <http://openmdao.org/downloads/latest/go-openmdao.py>`_. If you are
-      using Internet Explorer, right click on the link to the left, then select "Save Target as."
+1. Download the installation script: `go-openmdao.py <http://openmdao.org/downloads/latest/go-openmdao.py>`_
+   
+   If you are using Internet Explorer, right click on the above link; then select "Save Target as." Be sure to
+   save the `go-openmdao.py  <http://openmdao.org/downloads/latest/go-openmdao.py>`_ script to the folder
+   where you want to install OpenMDAO. Other browsers may automatically download the file to a specific
+   folder (e.g., a Downloads folder), and you will have to move it to the location where you want
+   to install OpenMDAO. We highly recommend you pick a folder without any spaces in the path name! For
+   instance, on a Windows machine, you could put all your OpenMDAO installations in ``C:\\OpenMDAO``.
 
-   2. Run the script. If you specify a directory name, the virtual environment will be
-      installed there. If you don't, it will default to a name based on the version, for example:
-      openmdao-0.1. 
+2. Run the script. 
 
-::
+   If you specify a directory name, the virtual environment will be installed there. If you don't supply a directory name, it
+   will default to a name based on the version, for example, ``openmdao-0.1``. 
 
-   python go-openmdao.py
+   ::
 
-
-This script will check the version of Python you are running. You must be running a version greater than or equal to 2.6 but
-less than 3.0.
-
-
-**Step 2)** Activate your virtual environment.
-
-Navigate into the folder that was just created by your install script and type the following
-command:
-
-On Linux or OS X, you must be running Bash. If you are in Bash, omit this step. 
-
-:: 
-
-   bash
-
-Next, type the following, making sure to include the "." in the command:
-
-::
-
-   . bin/activate
+      python go-openmdao.py
 
 
-On Windows:
+   This script will check the version of Python you are running. You must be running a version greater than or equal to 2.6 but
+   less than 3.0. After the script completes successfully you have installed OpenMDAO. There are just a couple more steps to follow
+   before you can start using it. 
 
-::
+**Activate your virtual environment**
 
-   Scripts\activate
-
-Activating your virtual environment adds your virtual environment's `bin` directory to 
-the front of your system path in the current shell, so that when you type ``python``, 
-you'll get a Python interpreter that's customized for your virtual environment, 
+Each time before you want to use openmdao you need to activate it. Activating your virtual environment adds your 
+virtual environment's ``bin`` directory to the front of your system path in the current shell so that when you 
+type ``python``, you'll get a Python interpreter that's customized for your virtual environment, 
 giving you access to everything in OpenMDAO.
 
-**Step 3)** Run tests to verify valid install. Type the following to run all tests.
+Navigate into the folder that was just created by your install script.
+
+On **Linux or OS X,** you must be running Bash. If you are in Bash, omit this step; otherwise, type: 
+
+ :: 
+
+    bash
+
+ Next, type the following, making sure to include the "." in the command:
+
+ ::
+
+    . bin/activate
+
+
+On **Windows,** type:
+
+ ::
+
+    Scripts\activate
+
+
+
+**Run tests to verify valid install**
+
+OpenMDAO has a large test suite which allows you to check and make sure all of the functionality of OpenMDAO will work 
+on your system. You can run these tests yourself to double check your installation. It takes only a couple of 
+minutes to run them all. 
+
+Type the following to run all tests.
 
 ::
 
    openmdao_test
    
+If you don't get any errors or failed tests, everything worked. If you did have some problems, the 
+`forum <http://openmdao.org/discussion/forum/3>`_ is your next stop!
+
 Now you are ready to start using OpenMDAO.  When you are done using it, you can deactivate the environment
 by typing:
 
@@ -143,5 +160,6 @@ by typing:
 
 .. note:: If you need an earlier version of OpenMDAO, its bootstrap script can be downloaded from:
    ``http://openmdao.org/downloads/<openmdao_version>/go-openmdao.py`` 
-   where ``<openmdao_version>`` is the version of OpenMDAO you want to install. 
+   where ``<openmdao_version>`` is the version of OpenMDAO you want to install. You can browse 
+   through the older versions `here <http://openmdao.org/downloads/>`_.
 

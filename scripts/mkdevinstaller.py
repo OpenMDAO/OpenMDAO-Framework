@@ -1,6 +1,6 @@
 """
-Generates a virtualenv bootstrapping script that will create a virtualenv with
-develop versions of all of the openmdao packages.
+Generates a virtualenv bootstrapping script called go-openmdao-dev.py that will create a 
+virtualenv with 'develop' versions of all of the openmdao packages.
 """
 
 import sys, os
@@ -13,8 +13,6 @@ def main():
     script_str = """
 
 # list of openmdao packages to be installed as 'develop' eggs.
-# NOTE: Order matters here.  Any given package must appear
-#       before any other packages that depend on it.
 openmdao_packages = ['openmdao.util', 
                      'openmdao.units', 
                      'openmdao.main', 
@@ -34,14 +32,14 @@ def adjust_options(options, args):
         if not arg.startswith('-'):
             print 'no args allowed that start without a dash (-)'
             sys.exit(-1)
-    args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <repo_top>/devenv
+    args.append(join(os.path.dirname(__file__), 'devenv'))  # force the virtualenv to be in <top>/devenv
 
 def _single_install(cmds, req, bin_dir):
     cmdline = [join(bin_dir, 'easy_install'),'-NZ'] + cmds + [req]
-    # pip seems better than easy_install, but won't install binary distribs :(
-    #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
+        # pip seems more robust than easy_install, but won't install from binary distribs :(
+        #cmdline = [join(bin_dir, 'pip'), 'install'] + cmds + [req]
     logger.debug("running command: %%s" %% ' '.join(cmdline))
-    subprocess.call(cmdline)
+    subprocess.check_call(cmdline)
 
 def after_install(options, home_dir):
     global logger
@@ -74,23 +72,28 @@ def after_install(options, home_dir):
             #reqnumpy = req
             numpyidx = i
             break
-    _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
-    if numpyidx is not None:
-        reqs.remove(reqs[numpyidx])
-    for req in reqs:
-        _single_install(cmds, req, bin_dir)
-
-    # now install dev eggs for all of the openmdao packages
-    topdir = os.path.abspath(os.path.dirname(__file__))
-    startdir = os.getcwd()
-    absbin = os.path.abspath(bin_dir)
     try:
-        for pkg in openmdao_packages:
-            os.chdir(join(topdir, pkg))
-            cmdline = [join(absbin, 'python'), 'setup.py', 'develop', '-N'] + cmds
-            subprocess.check_call(cmdline)
-    finally:
-        os.chdir(startdir)
+        _single_install(cmds, reqnumpy, bin_dir) # force numpy first so we can use f2py later
+        if numpyidx is not None:
+            reqs.remove(reqs[numpyidx])
+        for req in reqs:
+            _single_install(cmds, req, bin_dir)
+
+        # now install dev eggs for all of the openmdao packages
+        topdir = os.path.abspath(os.path.dirname(__file__))
+        startdir = os.getcwd()
+        absbin = os.path.abspath(bin_dir)
+        try:
+            for pkg in openmdao_packages:
+                os.chdir(join(topdir, pkg))
+                cmdline = [join(absbin, 'python'), 'setup.py', 
+                           'develop', '-N'] + cmds
+                subprocess.check_call(cmdline)
+        finally:
+            os.chdir(startdir)
+    except Exception as err:
+        print "ERROR: build failed"
+        sys.exit(-1)
         
     # copy the default wing project file into the virtualenv
     # try to find the default.wpr file in the user's home directory
@@ -106,8 +109,17 @@ def after_install(options, home_dir):
     if not os.path.isfile(proj_template):
         proj_template = join(topdir,'config','wing_proj_template.wpr')
     
+    abshome = os.path.abspath(home_dir)
     shutil.copy(proj_template, 
-                join(os.path.abspath(home_dir),'etc','wingproj.wpr'))
+                join(abshome,'etc','wingproj.wpr'))
+                
+    print '\\n\\nThe OpenMDAO virtual environment has been installed in %%s.' %% abshome
+    print 'From %%s, type:\\n' %% abshome
+    if sys.platform == 'win32':
+        print r'Scripts\\activate'
+    else:
+        print '. bin/activate'
+    print "\\nto activate your environment and start using OpenMDAO."
     """
     parser = OptionParser()
     

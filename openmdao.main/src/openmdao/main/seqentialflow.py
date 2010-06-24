@@ -5,15 +5,15 @@ from openmdao.main.workflow import Workflow
 from openmdao.main.component import Component
 from openmdao.main.exceptions import RunStopped
 
-__all__ = ['SequentialFlow']
+__all__ = ['SequentialWorkflow']
 
-class SequentialFlow(Workflow):
+class SequentialWorkflow(Workflow):
     """A Workflow that is a simple sequence of components."""
     
     def __init__(self, members=None):
         """ Create an empty flow. """
         self._nodes = []
-        super(SequentialFlow, self).__init__(members)
+        super(SequentialWorkflow, self).__init__(members)
         
     def __iter__(self):
         """Returns an iterator over the components in the workflow."""

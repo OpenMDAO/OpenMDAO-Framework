@@ -40,9 +40,9 @@ The *self* object that is passed as an argument to ``execute()`` represents an
 instance of our SimpleAdder class.
 
 SimpleAdder has three Public Variables of type Float with the names *a*, *b*, and
-*c*. All three attributes have a default value of 0.0. Attributes *a* and *b*
+*c*. All three attributes have a default value of 0.0. Attributes a and b
 are inputs, so we specify that they have an iotype of *'in'*. Attribute
-*c* is an output, so it has an iotype of *'out'*.
+c is an output, so it has an iotype of *'out'*.
 
 The Float variable is defined in the package ``openmdao.lib.api``, so we have to
 import it from there before we can use it. This  package defines a wide variety
@@ -114,9 +114,9 @@ In this case, the ``setup.py`` file looks like this:
 
     
 The ``setup()`` command has many arguments in addition to those shown above,
-e.g., *author, author_email, maintainer, maintainer_email, url, license,
+e.g., ``author, author_email, maintainer, maintainer_email, url, license,
 description, long_description, keywords, platforms, fullname, contact,
-contact_email, classifiers,* and *download_url.* If you supply any of these,
+contact_email, classifiers``, and ``download_url``. If you supply any of these,
 their values will be stored as metadata in the distribution. To keep things
 simple, we won't describe all of the arguments in detail. If you're
 interested, you can go to this 
@@ -134,20 +134,17 @@ within the OpenMDAO framework:
     of the class within the module, assuming that the module contains only one
     class.
 
-**version**
-    Packages tend to evolve over time, so providing a version id for a package
-    is extremely important. You **must** update the version id of your package
-    prior to creating a distribution out of it. It is assumed that once a
-    distribution is created from a particular version of a package, that
-    distribution will **never** change. People may build things that depend on
-    a particular version of your distribution, so changing that version could
-    break their code. If, however, you update your distribution's version id,
-    then users have the option to either use the updated
-    distribution and make whatever modifications are necessary to their own
-    code to make it work or stick with an older version that already works
-    with their code. The value of *version* is specified as a string, e.g.,
-    '1.0.4'.
-    
+**version** 
+    Packages tend to evolve over time, so providing a version id for a package is extremely
+    important. You **must** update the version id of your package prior to creating a
+    distribution out of it. It is assumed that once a distribution is created from a
+    particular version of a package, that distribution will **never** change. People may
+    build things that depend on a particular version of your distribution, so changing that
+    version could break their code. If, however, you update your distribution's version id,
+    then users have the option of either using the updated distribution and modifying their
+    own code to make it work or sticking with an older version that already works with their
+    code. The value of *version* is specified as a string, e.g., ``'1.0.4'``.
+
 **packages**
     If you have only one module, there will be only one package, but the
     distribution format allows for the existence of multiple packages. You can
@@ -155,21 +152,20 @@ within the OpenMDAO framework:
     to do is to use the ``find_packages()`` function from setuptools as shown in
     the example above.
 
-**install_requires**  
-    This option specifies the distributions that your distribution depends upon. Note
-    that you need to include only *direct* dependencies in this list, i.e., if
-    your package depends on *package_A*, which in turn depends on *package_B*,
-    you need to include only *package_A*. Make sure not to leave out any
-    direct dependencies here, because doing so will result in failure to
-    install needed dependent distributions whenever your distribution is
-    installed. The value of ``install_requires`` should be a list of strings.
-    These strings can specify not only the name of a distribution but also a
-    version or a range of versions. For example, 'numpy>=1.3.0', 'numpy<=1.5'
-    and 'numpy=='1.4.1' are all valid entries in ``install_requires``. However,
-    it's usually best not to specify an exact version in ``install_requires``
-    because it will make it harder to install your distribution in an
-    environment with other distributions that depend upon a different version
-    of some distribution that your package depends on.
+**install_requires**   This option specifies the distributions that your
+    distribution depends on. Note that you need to include only *direct*
+    dependencies in this list, i.e., if your package depends on ``package_A``,
+    which in turn depends on ``package_B``, you need to include only
+    ``package_A``. Make sure not to leave out any direct dependencies here,
+    because doing so will result in failure to install needed dependent
+    distributions whenever your distribution is installed. The value of
+    ``install_requires`` should be a list of strings. These strings can specify
+    not only the name of a distribution but also a version or a range of
+    versions. For example, ``'numpy>=1.3.0',`` ``'numpy<=1.5'`` and
+    ``'numpy=='1.4.1'`` are all valid entries. However, it's usually best not to
+    specify an exact version because it will make it harder to install your
+    distribution in an environment with other distributions that depend on a
+    different version of a distribution that your package depends on.
 
 **entry_points**
     Entry points can be used by OpenMDAO to determine which plugins are
@@ -209,7 +205,7 @@ file shown, we can now build our distribution. From the ``simple_adder``
 directory, typing ``python setup.py sdist -d .`` will create the distribution
 in our current directory. The version of the distribution and the Python
 version will be included in the filename. For example, since the version we
-specified in our ``setup.py`` file was '1.0', our distribution will be named 
+specified in our ``setup.py`` file was ``'1.0'``, our distribution will be named 
 ``simple_adder-1.0.tar.gz``. 
 
 

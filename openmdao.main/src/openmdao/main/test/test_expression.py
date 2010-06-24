@@ -19,7 +19,7 @@ class SimpleComp(Component):
     y = Float(99.9, iotype='in')
     d1 = Float(42., iotype='in')
     d1out = Float(11., iotype='out')
-    array = Array(value=[1., 2., 3.], iotype='in')
+    array = Array([1., 2., 3.], iotype='in')
         
 class ExpressionTestCase(unittest.TestCase):
 

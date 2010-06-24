@@ -13,7 +13,7 @@ from openmdao.lib.api import Float, Array
 class MyDefComp(Component):
     f_in = Float(3.14, iotype='in')
     f_out = Float(iotype='out')
-    arr_in = Array(dtype=numpy.float, value=numpy.array([1.,2.,3.]), iotype='in')
+    arr_in = Array([1.,2.,3.], iotype='in')
     list_in = List(value=['a','b','c'], iotype='in')
     
     def execute(self):
@@ -22,7 +22,7 @@ class MyDefComp(Component):
 class MyNoDefComp(Component):
     f_in = Float(iotype='in')
     f_out = Float(iotype='out')
-    arr_in = Array(dtype=numpy.float, iotype='in')
+    arr_in = Array(iotype='in')
     list_in = List(iotype='in')
     
     def execute(self):

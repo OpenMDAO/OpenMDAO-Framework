@@ -5,6 +5,7 @@ Test for CaseRecorders.
 import unittest
 import tempfile
 import StringIO
+import os
 
 from openmdao.main.api import Component, Assembly, Case, set_as_top
 from openmdao.test.execcomp import ExecComp
@@ -52,7 +53,7 @@ class CaseRecorderTestCase(unittest.TestCase):
         by a DBCaseIterator.  Finally the cases are dumped to a string after
         being run for the second time.
         """
-        self.top.driver.recorder = DBCaseRecorder()  # db file defaults to ':memory:'
+        self.top.driver.recorder = DBCaseRecorder()
         self.top.run()
         
         # now use the DB as source of Cases
@@ -76,6 +77,19 @@ class CaseRecorderTestCase(unittest.TestCase):
             '   max_retries: None, retries: 1',
             ]
         self.assertTrue('\n'.join(expected) in sout.getvalue())
+    
+    def test_file_db(self):
+        self.top.driver.recorder = DBCaseRecorder('recorder_db')
+        self.top.run()
+        
+    
+    def test_tables_already_exist(self):
+        recorder = DBCaseRecorder('junk_dbfile')
+        recorder._connection.close()
+        recorder = DBCaseRecorder('junk_dbfile')
+        recorder._connection.close()
+        os.remove('junk_dbfile')
+        
 
 if __name__ == '__main__':
     unittest.main()

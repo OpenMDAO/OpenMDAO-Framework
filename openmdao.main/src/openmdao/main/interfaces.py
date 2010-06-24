@@ -8,16 +8,20 @@ Interfaces for the OpenMDAO project.
 
 from enthought.traits.api import Interface, Instance
 
-# to check if an interface is provided, you can call
-# validate_implements(value,klass) from enthought.traits.trait_types
+# to check if an interface is implemented, you can call
+# validate_implements(obj, klass) from enthought.traits.trait_types
+# or if the object you're checking inherits from HasTraits, you can call 
+# obj.has_traits_interface(*ifaces) on it.
+# Note that validate_implements checks for existence of attributes and member 
+# functions but does not type check attributes. It also doesn't care whether
+# a class calls 'implements' or not.  has_traits_interface, on the other hand,
+# believes whatever the class says it implements and doesn't verify anything.
 
 class IComponent(Interface):
     """A marker interface for Components."""
     
 class IWorkflow(Interface):
-    """An object that can run and iterate over a group of 
-    components in some order. 
-    """
+    """An object that can run a group of components in some order. """
     
     scope = Instance(IComponent, allow_none=True)
     
@@ -149,4 +153,16 @@ class ICaseRecorder(Interface):
     
     def record(case):
         """Record the given Case."""
-        
+
+
+def obj_has_interface(obj, *ifaces):
+    """Returns True if the specified object inherits from HasTraits and
+    implements one or more of the specified interfaces.
+    """
+    try:
+        if not obj.has_traits_interface(*ifaces):
+            return False
+    except Exception:
+        return False
+    return True
+    
