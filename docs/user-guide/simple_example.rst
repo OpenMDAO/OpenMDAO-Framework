@@ -463,7 +463,6 @@ lines in this file are:
 
 .. testsetup:: simple_model_Unconstrained_run
 
-    from openmdao.main.api import set_as_top
     from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     __name__ = "__main__"
 
@@ -471,6 +470,7 @@ lines in this file are:
 
     if __name__ == "__main__": 
 
+	from openmdao.main.api import set_as_top
         opt_problem = OptimizationUnconstrained()
         set_as_top(opt_problem)
 
