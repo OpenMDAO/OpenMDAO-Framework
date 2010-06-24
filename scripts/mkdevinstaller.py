@@ -65,10 +65,8 @@ def after_install(options, home_dir):
     if not os.path.exists(etc):
         os.makedirs(etc)
     try:
-        _single_install(cmds, 'numpy', bin_dir) # force numpy first so we can use f2py later
         for req in reqs:
-            if not req.startswith('numpy'):
-                _single_install(cmds, req, bin_dir)
+            _single_install(cmds, req, bin_dir)
 
         # now install dev eggs for all of the openmdao packages
         topdir = os.path.abspath(os.path.dirname(__file__))
@@ -128,16 +126,17 @@ def after_install(options, home_dir):
                     ]
 
     cmds = []
-    reqs = []
+    reqs = set()
     dists = working_set.resolve([Requirement.parse(r) for r in openmdao_pkgs])
     excludes = set(['setuptools', 'distribute'])
     for dist in dists:
         if dist.project_name == 'openmdao.main':
             version = dist.version
         if not dist.project_name.startswith('openmdao.') and dist.project_name not in excludes:
-            reqs.append('%s' % dist.as_requirement())  
+            if dist.project_name != 'numpy':
+                reqs.add('%s' % dist.as_requirement())  
             
-    reqs = list(set(reqs))  # eliminate duplicates (numpy was in there twice somehow)
+    reqs = ['numpy'] + list(reqs)
     
     optdict = { 'reqs': reqs, 'cmds':cmds }
     

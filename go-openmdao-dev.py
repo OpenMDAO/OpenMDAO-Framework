@@ -1158,7 +1158,7 @@ def _single_install(cmds, req, bin_dir):
 
 def after_install(options, home_dir):
     global logger
-    reqs = ['docutils==0.6', 'Pyevolve==0.6', 'coverage==3.3.1', 'pycrypto==2.0.1', 'Traits==3.3.0', 'numpy==1.3.0', 'PyYAML==3.09', 'conmin==1.0', 'Jinja2==2.4', 'virtualenv==1.4.6', 'zc.buildout==1.4.3', 'Fabric==0.9.0', 'Sphinx==1.0b2', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'Pygments==1.3.1', 'nose==0.11.3']
+    reqs = ['numpy', 'docutils==0.6', 'Pyevolve==0.6', 'coverage==3.3.1', 'pycrypto==2.0.1', 'Traits==3.3.0', 'PyYAML==3.09', 'conmin==1.0', 'Jinja2==2.4', 'virtualenv==1.4.6', 'zc.buildout==1.4.3', 'Fabric==0.9.0', 'Sphinx==1.0b2', 'networkx==1.0.1', 'pyparsing==1.5.2', 'nosecoverage2==0.1', 'Pygments==1.3.1', 'nose==0.11.3']
     cmds = []
     url = 'http://openmdao.org/dists'
     found = [c for c in cmds if url in c]
@@ -1180,10 +1180,8 @@ def after_install(options, home_dir):
     if not os.path.exists(etc):
         os.makedirs(etc)
     try:
-        _single_install(cmds, 'numpy', bin_dir) # force numpy first so we can use f2py later
         for req in reqs:
-            if not req.startswith('numpy'):
-                _single_install(cmds, req, bin_dir)
+            _single_install(cmds, req, bin_dir)
 
         # now install dev eggs for all of the openmdao packages
         topdir = os.path.abspath(os.path.dirname(__file__))
