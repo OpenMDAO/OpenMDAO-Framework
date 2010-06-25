@@ -332,6 +332,13 @@ class Assembly (Component):
         self._io_graph = None  
 
 
+    def config_changed(self, update_parent=True):
+        """Call this whenever the configuration of this Component changes,
+        for example, children are added or removed.
+        """
+        self._need_child_io_update = True
+        super(Assembly, self).config_changed(update_parent)
+
     def is_destination(self, varpath):
         """Return True if the Variable specified by varname is a destination
         according to our graph. This means that either it's an input connected
@@ -391,7 +398,8 @@ class Assembly (Component):
         pred = vargraph.pred
         
         for vname in varnames:
-            if vargraph.node[vname].get('expr'): # it's an expression link
+            node = vargraph.node.get(vname)
+            if node and node.get('expr'): # it's an expression link
                 continue
             
             preds = pred.get(vname, '')
@@ -474,8 +482,10 @@ class Assembly (Component):
             if name in vargraph:
                 tup = name.split('.', 1)
                 if len(tup)==1:
+                    print '**invalidating %s.%s' % (self.name,name)
                     self.set_valid(name, False)
                 else:
+                    print '**invalidating %s.%s' % (tup[0],tup[1])
                     getattr(self, tup[0]).set_valid(tup[1], False)
             else:
                 self.raise_exception("%s is not an io trait" % name,
@@ -496,6 +506,7 @@ class Assembly (Component):
         
         if len(outs) > 0:
             for out in outs:
+                print '**invalidating %s.%s' % (self.name,out)
                 self.set_valid(out, False)
             if notify_parent and self.parent:
                 self.parent.invalidate_deps(

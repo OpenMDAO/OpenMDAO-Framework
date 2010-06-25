@@ -629,7 +629,7 @@ Engine, and Chassis components.
 
 The Engine, Transmission, and Chassis components all need to be imported so
 their instances can be created; they can be added to the assembly
-with ``add_container``. Please notice that an assembly inherits from Assembly
+with ``add``. Please notice that an assembly inherits from Assembly
 instead of Component. When the instances of the Transmission, Engine, and
 Chassis are created, their members and data are internally accessible using
 *self* plus the instance name, e.g., ``self.transmission``.
