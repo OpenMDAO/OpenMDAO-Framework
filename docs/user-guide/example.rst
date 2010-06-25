@@ -383,7 +383,7 @@ here:
 	
 X.X.X is the current OpenMDAO version, and ###### is a string that
 contains the Python version and the operating system description. This path will 
-vary depending on your system and version, but there will only be one
+vary depending on your system and version, but there will be only one
 *enginedesign* egg.
 
 If you are a developer and have a branch from the source repository, the files you need will be

@@ -4,18 +4,18 @@
 
 .. _System-Requirements:
 
+
 System Requirements
 ===================
 
-These instructions assume that you intend to install OpenMDAO for normal use -- that you will not be hacking on
-the OpenMDAO infrastructure or standard library, or developing any plugins that require compilation. If you *do*
-intend to perform some kind of OpenMDAO development, you should refer to the installation instructions in the
-*Developer Guide,* because the developer environment has some additional system requirements on certain
-platforms.
+These instructions assume that you intend to install OpenMDAO for normal use -- that you will not be
+hacking on the OpenMDAO infrastructure or standard library, or developing any plugins that require
+compilation. If you *do* intend to perform some kind of OpenMDAO development, you should refer to
+the installation instructions in the *Developer Guide,* because the developer environment has some
+additional :ref:`system requirements <developer-requirements>` on certain platforms.
 
-OpenMDAO requires **Python 2.6** to be installed at the system level on all platforms. 
-It is highly recommended that **NumPy** (version 1.3 or higher) be 
-installed at the system level as well.
+OpenMDAO requires **Python 2.6** to be installed at the system level on all platforms.  It is highly
+recommended that **NumPy** (version 1.3 or higher) be  installed at the system level as well.
 
 **Platform-Specific Requirements**
 
@@ -44,7 +44,7 @@ On **Windows**, you'll need `Python 2.6`__; numpy can be found
 .. __: http://sourceforge.net/projects/numpy/files/
 
 
-On **OS X**, make sure to install *Xcode*. It's included on the OS X install
+On **Mac OS X**, make sure to install *Xcode*. It's included on the OS X install
 disk, and installing it will give you access to *gcc*. You can also download a newer version
 from Apple, but you'll have to fill out a (free) registration to do it. 
 
@@ -88,8 +88,14 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
    save the `go-openmdao.py  <http://openmdao.org/downloads/latest/go-openmdao.py>`_ script to the folder
    where you want to install OpenMDAO. Other browsers may automatically download the file to a specific
    folder (e.g., a Downloads folder), and you will have to move it to the location where you want
-   to install OpenMDAO. We highly recommend you pick a folder without any spaces in the path name! For
+   to install OpenMDAO. We highly recommend you pick a folder without any spaces in your path name! For
    instance, on a Windows machine, you could put all your OpenMDAO installations in ``C:\\OpenMDAO``.
+
+   If you are on a Windows machine, even though you have Python installed, the Path environment
+   variable will not be configured to point to the Python installation directory. You will have to put
+   ``Python26`` in the path. For help doing this, please see the following `video
+   <http://showmedo.com/videotutorials/video?name=960000&fromSeriesID=96>`_. Please note that this
+   video is for Python 2.5, and you want to use **Python 2.6**.  
 
 2. Run the script. 
 
@@ -107,14 +113,14 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
 
 **Activate your virtual environment**
 
-Each time before you want to use openmdao you need to activate it. Activating your virtual environment adds your 
+Each time before you want to use openmdao, you need to activate it. Activating your virtual environment adds your 
 virtual environment's ``bin`` directory to the front of your system path in the current shell so that when you 
 type ``python``, you'll get a Python interpreter that's customized for your virtual environment, 
 giving you access to everything in OpenMDAO.
 
 Navigate into the folder that was just created by your install script.
 
-On **Linux or OS X,** you must be running Bash. If you are in Bash, omit this step; otherwise, type: 
+If you are on **Linux or Mac OS X,** you must be running Bash. If you are in Bash, omit this step; otherwise, type: 
 
  :: 
 
@@ -127,7 +133,7 @@ On **Linux or OS X,** you must be running Bash. If you are in Bash, omit this st
     . bin/activate
 
 
-On **Windows,** type:
+If you are on **Windows,** type:
 
  ::
 
@@ -141,7 +147,7 @@ OpenMDAO has a large test suite which allows you to check and make sure all of t
 on your system. You can run these tests yourself to double check your installation. It takes only a couple of 
 minutes to run them all. 
 
-Type the following to run all tests.
+To run all tests, type the following:
 
 ::
 

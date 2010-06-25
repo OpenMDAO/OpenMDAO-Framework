@@ -9,10 +9,13 @@ level of your OpenMDAO source repository.
 
 .. index:: Bazaar
 
+
+.. _`developer-requirements`:
+
 System Requirements
 ===================
 
-Working with OpenMDAO as a developer has some other system requirements in
+Working with OpenMDAO as a developer has some system requirements in
 addition to those mentioned in the :ref:`System-Requirements` section of the *User
 Guide.*  These requirements are described below.
 
@@ -34,11 +37,13 @@ Guide.*  These requirements are described below.
     
     - *gfortran*
       
-      If they are not already on your system, they should be easily installable using your
-      package manager.
+      If they are not already on your system, they should be easily installable using
+      your package manager. OpenMDAO currently builds and passes all tests with
+      gcc/gfortran 4.1.2. We expect that later versions of gcc/gfortran 4.X should also
+      work.
 
       
-  - *OS X*:
+  - *Mac OS X*:
    
     - *gcc*
       
@@ -74,7 +79,7 @@ System Configuration
 Some steps of the development process, e.g., downloading a branch of the source
 repository and downloading Python distributions, require network access.  If you're
 behind an http proxy, you may have to set the ``http_proxy`` environment variable
-on your system for Bazaar and ``virtualenv`` to function properly.
+on your system for Bazaar and :term:`virtualenv` to function properly.
 
 
 *Bazaar User Setup*
@@ -104,31 +109,30 @@ to a :term:`repository` on that machine.
 Getting the Source Code
 +++++++++++++++++++++++
 
-Before you can do any development work on OpenMDAO, you'll need
-a copy of the source code. The source repository for the OpenMDAO 
-project is available on :term:`Launchpad`. You can get a copy of the repository 
-as follows:
+Before you can do any development work on OpenMDAO, you'll need a copy of the source code.
+The source repository for the OpenMDAO  project is available on :term:`Launchpad`. You can
+get a copy of the repository by typing:
 
 ::
 
    bzr branch lp:openmdao <branch_name>
    
    
-where ``<branch_name>`` is the name you are giving to the top level directory of your
-branch repository. It's a good idea to name branches based on ticket numbers in our bug 
-tracker using the  form ``T<ticket_number>-<desc>`` where ``ticket_number`` is the bug
-tracker ticket number and ``<desc>`` is a short description of the branch, for example,
-``T0029-workflow_fix``. 
+where ``<branch_name>`` is the name you are giving to the top level directory of your branch
+repository. It's a good idea to name branches based on ticket numbers in our bug  tracker
+(:term:`Trac`) using the form ``T<ticket_number>-<desc>``, where ``ticket_number`` is the Trac
+ticket number and ``<desc>`` is a short description of the branch, for example,
+``T0029-workflow_fix``.  Trac automatically assigns a ticket number when you submit a bug or
+request an enhancement. You can visit the OpenMDAO website to find out more about how we use
+`Trac <http://openmdao.org/wiki/Home>`_ and about the OpenMDAO `development
+<http://openmdao.org/wiki/Development>`_ process.
+
 
 In any case, the name you give your branch should reflect the purpose of the
 branch to avoid confusion if you have multiple branches active at the
 same time. If you do not supply a ``<branch_name>``, the name by default will be the last
 part of the source repository URI, which in this case is ``openmdao``.
 
-We use Trac for tracking bugs (as well as for project management). Trac automatically assigns a
-ticket number (mentioned above) when a user submits a bug or requests an enhancement. You can visit
-the OpenMDAO website to find out more about how we use `Trac <http://openmdao.org/wiki/Home>`_ and
-about the OpenMDAO `development <http://openmdao.org/wiki/Development>`_ process.
 
 
 .. _Creating-the-Virtual-Environment:
@@ -139,9 +143,10 @@ ________________________________
 
 
 After you've created your branch, run ``python go-openmdao-dev.py`` from the top directory of your
-branch to set up your development environment. The script will check the version of Python you are
-running. You must be running a version greater than or equal to 2.6 but less than 3.0. (To find out
-which Python version you are running, you can type ``python --version``.)
+branch to set up your development environment. (The ``devenv`` directory that is created is not part
+of the source repository.) The script will check the version of Python you are running. You must be
+running a version greater than or equal to 2.6 but less than 3.0. (To find out which Python version
+you are running, you can type ``python --version``.)
 
 .. note:: On Windows, you need to run the installer from a command window that has
    the Visual Studio environment variables set.  The easiest way to do this is to
@@ -166,10 +171,10 @@ see the results without having to rebuild any distributions.
 Activating the Virtual Environment
 __________________________________
 
-The next step is to activate your virtual Python environment. 
-Change your directory to ``devenv``.
+The next step is to activate your virtual Python environment. Change your directory to
+``devenv``. 
 
-On Linux or OS X, you must be running the Bash shell. If you are in Bash, omit this step.
+On Linux or Mac OS X, you must be running the Bash shell. If you are in Bash, omit this step.
 
   ::
 
@@ -190,22 +195,22 @@ Or, on Windows, type:
 
      Scripts\activate
 
-At this point, your ``devenv`` directory should contain the following
-subdirectories:
+At this point, your ``devenv`` directory should contain the following subdirectories:
 
 ``bin``
     Contains Python and a number of other scripts that are associated with
     the Python packages that are installed in the virtual environment. On
     Windows, this directory is called ``Scripts``.
-
-``lib``
-    Contains Python standard library and installed modules.
-    
-``include``
-    Contains Python C header files.
     
 ``etc``
     Contains miscellaneous files that don't fit in ``bin, lib,`` or ``include``.
+    
+``include``
+    Contains Python C header files.
+
+
+``lib``
+    Contains Python standard library and installed modules.
 
 After your virtual Python environment has been activated, you can add other 
 distributions to the environment by using ``easy_install`` or :term:`pip` in

@@ -527,6 +527,15 @@ Glossary
         see :term:`Public Variables`
 
 
+      **virtualenv**  
+        Virtualenv is a tool used to create isolated Python environments. You can
+	create a new Python environment to run OpenMDAO and install all package dependencies
+	into the virtualenv without affecting your system's site-packages or vice versa. If you
+	need to upgrade a package to see how it affects your app, you can create a new
+	virtualenv, install/copy your app into it, run your tests, and delete it when you are
+	finished.  
+
+      
       **VSP**
         Vehicle Sketch Pad. VSP is a rapid geometry creation tool used to create a
         wide range of aerospace vehicles from a combination of predefined components.

@@ -131,9 +131,9 @@ associated with each ticket (right column).
 Merging to Your Branch
 -----------------------
 
-As you work on your branch, you may want to update it (merge out) from the OpenMDAO :term:`trunk` on
-Launchpad (for developers who have this privilege). You cannot merge from the trunk to your branch if
-you have uncommitted changes. 
+As you work on your branch, you may want to incorporate any changes that have been made to the
+:term:`trunk` since you created your branch. You cannot merge from the trunk to your branch if you
+have uncommitted changes. 
 
 You should be in the top level directory of your branch. To check whether you have uncommitted
 changes, type:
@@ -204,8 +204,11 @@ And finally, to merge from the openmdao trunk to your branch, type:
 
 **- If you have no merge conflicts,** you can continue. 
 
-It's a good idea to remove the old virtual environment, so type:
+It's a good idea to remove the old virtual environment so that when you rebuild,
+the correct packages will be used and not leftover packages that may be missing
+something you need.
 
+To remove the old directory, type:
 ::
 
   rm -rf devenv 
@@ -223,7 +226,7 @@ To change to the dev environment:
   
   cd devenv
 
-On **Linux** or **OS X,** you must be running Bash to activate your environment. If you
+On **Linux** or **Mac OS X,** you must be running Bash to activate your environment. If you
 are in Bash, omit this next step.
 
  ::

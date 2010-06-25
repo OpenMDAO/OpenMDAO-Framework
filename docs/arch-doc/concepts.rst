@@ -245,7 +245,7 @@ sides of the connection, these *incompatible* components can coexist within a
 model.
 
 In OpenMDAO, this will be done by setting up an :term:`ObjServerFactory` in a
-self-contained Python environment that was created using ``virtualenv`` and having
+self-contained Python environment that was created using :term:`virtualenv` and having
 each :term:`ObjServer` spawned from that factory use that factory's environment.
 Each virtual environment can run a different Python version and can also
 have its own set of modules installed.
