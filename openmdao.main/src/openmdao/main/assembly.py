@@ -254,6 +254,7 @@ class Assembly (Component):
             destcomp.set_source(destvarname, srcpath)
             if srccomp is not self: # neither var is on boundary
                 self.comp_graph.connect(srcpath, destpath)
+                self._default_workflow.config_changed()
         
         vgraph = self.get_var_graph()
         vgraph.add_edge(srcpath, destpath)
@@ -322,6 +323,7 @@ class Assembly (Component):
                 utup = src.split('.',1)
                 if len(utup)>1:
                     self.comp_graph.disconnect(utup[0], vtup[0])
+                    self._default_workflow.config_changed()
                 
         vargraph.remove_edges_from(to_remove)
         

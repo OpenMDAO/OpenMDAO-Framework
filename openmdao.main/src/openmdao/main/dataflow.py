@@ -16,10 +16,10 @@ class Dataflow(SequentialWorkflow):
         """ Create an empty flow. """
         super(Dataflow, self).__init__(members)
         self._scope = scope
+        self._collapsed_graph = None
 
     def __iter__(self):
         """Iterate through the nodes in dataflow order."""
-        # import Driver here to avoid circular import
         scope = self._scope
         graph = self._get_collapsed_graph()
         topsort = nx.topological_sort(graph)
@@ -31,12 +31,31 @@ class Dataflow(SequentialWorkflow):
         for n in topsort:
             yield getattr(scope, n)
 
+    def add(self, comp):
+        """ Add a new component to the workflow. """
+        super(Dataflow, self).add(comp)
+        self.config_changed()
+
+    def remove(self, comp):
+        """Remove a component from this Workflow"""
+        super(Dataflow, self).remove(comp)
+        self.config_changed()
+
+    def config_changed(self):
+        """Notifies the Workflow that workflow configuration (dependencies, etc.)
+        has changed.
+        """
+        self._collapsed_graph = None
+
     def _get_collapsed_graph(self):
         """Get a dependency graph with only our workflow components
         in it, with additional edges added to it from sub-workflows
         of any Driver components in our workflow, and from any Expressions
         or ExpressionLists in any components in our workflow.
         """
+        if self._collapsed_graph:
+            return self._collapsed_graph
+        
         to_add = []
         scope = self._scope
         graph = scope.comp_graph.graph().copy()
@@ -95,4 +114,5 @@ class Dataflow(SequentialWorkflow):
                             to_add.append((n.name, comp.name))
             collapsed_graph.add_edges_from(to_add)
         
-        return collapsed_graph.subgraph(cnames-removes)
+        self._collapsed_graph = collapsed_graph.subgraph(cnames-removes)
+        return self._collapsed_graph

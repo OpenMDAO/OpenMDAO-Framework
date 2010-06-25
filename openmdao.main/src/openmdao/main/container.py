@@ -1022,9 +1022,9 @@ class Container(HasTraits):
     
     def _trait_added_changed(self, name):
         """Called any time a new trait is added to this container."""
-        self._config_changed()
+        self.config_changed()
         
-    def _config_changed(self):
+    def config_changed(self):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
         """

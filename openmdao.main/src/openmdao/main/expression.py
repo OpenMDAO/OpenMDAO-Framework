@@ -59,6 +59,9 @@ class Expression(BaseStr):
         except RuntimeError:
             raise TraitError("invalid %sput ref variable value '%s'" % \
                              (self.iotype, str(value)))
+        
+        obj.config_changed()
+
         return s
     
     

@@ -258,7 +258,7 @@ class Component (Container):
         any child containers are added.
         Returns the added Container object.
         """
-        self._config_changed()
+        self.config_changed()
         return super(Component, self).add(name, obj)
         
     def remove_container(self, name):
@@ -266,7 +266,7 @@ class Component (Container):
         any child containers are removed.
         """
         obj = super(Component, self).remove_container(name)
-        self._config_changed()
+        self.config_changed()
         return obj
 
     def add_trait(self, name, trait):
@@ -275,7 +275,7 @@ class Component (Container):
         added.
         """
         super(Component, self).add_trait(name, trait)
-        self._config_changed()
+        self.config_changed()
         if trait.iotype:
             self._valid_dict[name] = False
         
@@ -285,7 +285,7 @@ class Component (Container):
         removed.
         """
         super(Component, self).remove_trait(name)
-        self._config_changed()
+        self.config_changed()
         try:
             del self._valid_dict[name]
         except KeyError:
@@ -300,10 +300,12 @@ class Component (Container):
                 return False
         return True
 
-    def _config_changed(self):
+    def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
         """
+        if update_parent and hasattr(self, 'parent') and self.parent:
+            self.parent.config_changed()
         self._input_names = None
         self._output_names = None
         self._container_names = None
