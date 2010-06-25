@@ -78,10 +78,9 @@ class CaseRecorderTestCase(unittest.TestCase):
             ]
         self.assertTrue('\n'.join(expected) in sout.getvalue())
     
-    def test_file_db(self):
-        self.top.driver.recorder = DBCaseRecorder('recorder_db')
-        self.top.run()
-        
+    #def test_file_db(self):
+        #self.top.driver.recorder = DBCaseRecorder('recorder_db')
+        #self.top.run()
     
     def test_tables_already_exist(self):
         recorder = DBCaseRecorder('junk_dbfile')
