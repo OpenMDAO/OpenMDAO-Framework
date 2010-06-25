@@ -203,6 +203,9 @@ class Component (Container):
             self.check_config()
             self._call_check_config = False
         
+        if not self.is_valid():
+            self._call_execute = True
+
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.
             self._call_execute = True
@@ -295,10 +298,7 @@ class Component (Container):
         """Return False if any of our public variables is invalid."""
         if self._call_execute:
             return False
-        for val in self._valid_dict.values():
-            if val is False:
-                return False
-        return True
+        return False not in self._valid_dict.values()
 
     def config_changed(self, update_parent=True):
         """Call this whenever the configuration of this Component changes,
@@ -310,6 +310,7 @@ class Component (Container):
         self._output_names = None
         self._container_names = None
         self._call_check_config = True
+        self._call_execute = True
 
     def list_inputs(self, valid=None):
         """Return a list of names of input values. If valid is not None,
