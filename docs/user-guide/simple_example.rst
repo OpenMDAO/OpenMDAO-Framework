@@ -97,15 +97,15 @@ paraboloid as an OpenMDAO component:
         f_xy = Float(0.0, iotype='out', desc='F(x,y)')        
 
         
-    def execute(self):
-        """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
-            Minimum: x = 6.6667; y = -7.3333
-        """
+        def execute(self):
+            """f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3
+                Minimum: x = 6.6667; y = -7.3333
+            """
         
-        x = self.x
-        y = self.y
+            x = self.x
+            y = self.y
         
-        self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
+            self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
 Your component should look pretty close to this when it is complete. 
 To implement a component in the OpenMDAO framework, you write some Python
@@ -463,7 +463,6 @@ lines in this file are:
 
 .. testsetup:: simple_model_Unconstrained_run
 
-    from openmdao.main.api import set_as_top
     from openmdao.examples.simple.optimization_unconstrained import OptimizationUnconstrained
     __name__ = "__main__"
 
@@ -471,6 +470,7 @@ lines in this file are:
 
     if __name__ == "__main__": 
 
+	from openmdao.main.api import set_as_top
         opt_problem = OptimizationUnconstrained()
         set_as_top(opt_problem)
 
