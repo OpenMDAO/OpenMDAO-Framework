@@ -41,7 +41,7 @@ setup(name='openmdao.main',
       install_requires=[
           'setuptools',
           'zc.buildout',
-          'pyparsing>=1.5.2',
+          'pyparsing==1.5.2',
           'numpy>=1.3.0',
           'PyYAML',
           'networkx>=1.0.1',

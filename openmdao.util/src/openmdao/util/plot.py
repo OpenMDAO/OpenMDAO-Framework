@@ -6,6 +6,45 @@ import sys
 import sqlite3
 from optparse import OptionParser
 
+def list_db_vars(dbname, case_sql=None, var_sql=None):
+    """
+    Return the set of the names of the variables found in the specified case DB file.
+    
+    dbname : str
+        The name of the sqlite DB file
+        
+    case_sql : str, optional
+        SQL syntax that will be placed in the WHERE clause for Case retrieval
+        
+    var_sql : str, optional
+        SQL syntax that will be placed in the WHERE clause for variable retrieval
+    """
+    connection = sqlite3.connect(dbname)
+    
+    sql = ["SELECT case_id FROM cases"]
+    if case_sql:
+        sql.append("WHERE %s" % case_sql)
+        
+    casecur = connection.cursor()
+    casecur.execute(' '.join(sql))
+    
+    sql = ["SELECT name, entry from casevars WHERE case_id=%s"]
+    if var_sql:
+        sql.append("AND %s" % var_sql)
+    combined = ' '.join(sql)
+    
+    varcur = connection.cursor()
+    
+    varnames = set()
+    for case_id in casecur:
+        varcur.execute(combined % case_id)
+        for vname, entry in varcur:
+            if entry:
+                vname = "vname%s" % entry
+            varnames.add(vname)
+
+    return varnames
+
 def case_db_to_dict(dbname, varnames, case_sql=None, var_sql=None):
     """
     Retrieve the values of specified variables from a sqlite DB containing
@@ -176,9 +215,18 @@ def cmdlineXYplot():
                       help="sql syntax to select certain cases")
     parser.add_option("", "--vars", action="store", type="string", dest="var_sql",
                       help="sql syntax to select certain vars")
+    parser.add_option("-l", "--list", action="store_true", dest="listvars",
+                      help="lists names of variables found in the database")
 
     (options, args) = parser.parse_args(sys.argv[1:])
     
+    if options.listvars:
+        print
+        for name in sorted(list_db_vars(options.dbname)):
+            print name
+        print
+        sys.exit(0)
+
     if len(args) > 0 or not options.ynames or not options.dbname:
         parser.print_help()
         sys.exit(-1)

@@ -147,6 +147,7 @@ class ICaseIterator(Interface):
         """Return the next Case. If no Cases remain, raise a StopIteration
         exception.
         """
+        
 
 class ICaseRecorder(Interface):
     """A recorder of Cases"""

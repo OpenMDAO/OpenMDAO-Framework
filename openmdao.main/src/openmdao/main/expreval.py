@@ -336,7 +336,7 @@ class ExprEvaluator(str):
             
             if scope is None:
                 raise RuntimeError(
-                        'ExprEvaluator scoping object has been deleted.')
+                        'ExprEvaluator scoping object does not exist.')
         else:
             scope = None
         try:

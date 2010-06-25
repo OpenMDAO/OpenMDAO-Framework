@@ -909,6 +909,7 @@ class Container(HasTraits):
             # specify edges, with all inputs as predecessors to all outputs
             for invar in ins:
                 io_graph.add_edges_from([(invar, o) for o in outs])
+
         return self._io_graph
     
     def _build_trait(self, pathname, iotype=None, trait=None):
@@ -1022,9 +1023,9 @@ class Container(HasTraits):
     
     def _trait_added_changed(self, name):
         """Called any time a new trait is added to this container."""
-        self._config_changed()
+        self.config_changed()
         
-    def _config_changed(self):
+    def config_changed(self):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
         """

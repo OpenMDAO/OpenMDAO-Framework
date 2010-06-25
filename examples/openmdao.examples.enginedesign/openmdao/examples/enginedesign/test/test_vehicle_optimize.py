@@ -44,7 +44,7 @@ if __name__ == "__main__":
         import pstats
         
         sys.argv.remove('-prof') #unittest doesn't like -prof
-        #cProfile.run('unittest.main()', 'profout')        
+        cProfile.run('unittest.main()', 'profout')        
         p = pstats.Stats('profout')
         p.strip_dirs()
         p.sort_stats('cum', 'time')

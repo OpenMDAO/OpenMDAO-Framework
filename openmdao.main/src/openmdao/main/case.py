@@ -38,8 +38,10 @@ class Case(object):
                (self.ident, self.inputs, self.outputs,
                 self.max_retries, self.retries, self.msg)
 
-    def apply(self, scope):
-        """Set all of the inputs in this case to their specified values."""
+    def set_inputs(self, scope):
+        """Set all of the inputs in this case to their specified values in
+        the given scope.
+        """
         if self.retries is None:
             self.retries = 0
         else:
@@ -47,9 +49,9 @@ class Case(object):
         for name,index,value in self.inputs:
             scope.set(name, value, index)
             
-    def update(self, scope, msg=None):
-        """Update the value of all outputs of interest, and/or set error
-        msg.
+    def update_outputs(self, scope, msg=None):
+        """Update the value of all outputs of interest, using the given 
+        scope, and/or set error message.
         """
         if msg:
             self.msg = msg
@@ -60,6 +62,13 @@ class Case(object):
             new_outputs.append((name, index, scope.get(name, index)))
         self.outputs = new_outputs
 
+    def add_input(self, name, value, index=None):
+        """Convenience function for adding an input"""
+        self.inputs.append((name, index, value))
+
+    def add_output(self, name, index=None):
+        """Convenience function for adding an output"""
+        self.outputs.append((name, index, None))
 
 #class FileCaseIterator(object):
     #"""An iterator that returns :class:`Case` objects from a file having the

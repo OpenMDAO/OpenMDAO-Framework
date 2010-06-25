@@ -97,6 +97,14 @@ class Driver(Component):
                     self.raise_exception("Cannot add object of type %s to workflow" % type(entry),
                                      TypeError)
 
+    def config_changed(self):
+        """Call this whenever the configuration of this Component changes,
+        for example, children are added or removed.
+        """
+        super(Driver, self).config_changed()
+        if self.workflow:
+            self.workflow.config_changed()
+
     def _pre_execute (self):
         """Call base class *_pre_execute* after determining if we have any invalid
         ref variables, which will cause us to have to regenerate our ref dependency graph.

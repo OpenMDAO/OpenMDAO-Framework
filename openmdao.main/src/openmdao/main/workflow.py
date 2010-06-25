@@ -60,6 +60,12 @@ class Workflow(object):
     def add(self, comp):
         """ Add a new component to the workflow. """
         raise NotImplemented("This Workflow has no 'add' function")
+    
+    def config_changed(self):
+        """Notifies the Workflow that workflow configuration (dependencies, etc.)
+        has changed.
+        """
+        pass
         
     def remove(self, comp):
         """Remove a component from this Workflow"""
