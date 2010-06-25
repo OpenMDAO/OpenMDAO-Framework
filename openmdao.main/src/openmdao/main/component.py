@@ -12,6 +12,7 @@ import pkg_resources
 import sys
 import weakref
 
+import networkx as nx
 from enthought.traits.trait_base import not_event, not_none
 from enthought.traits.api import Bool, List, Str, Instance, implements, TraitError
 
@@ -256,6 +257,51 @@ class Component (Container):
             if self.directory:
                 self.pop_dir()
  
+    def get_io_graph(self):
+        """Return a graph connecting our input variables to our output
+        variables. In the case of a simple Container, all input variables are
+        predecessors to all output variables.
+        """
+        # NOTE: if the _io_graph changes, this function must return a NEW
+        # graph object instead of modifying the old one, because object
+        # identity is used in the parent assembly to determine of the graph
+        # has changed
+        if self._io_graph is None:
+            self._io_graph = nx.DiGraph()
+            io_graph = self._io_graph
+            name = self.name
+            ins = ['.'.join([name, v]) for v in self.keys(iotype='in')]
+            outs = ['.'.join([name, v]) for v in self.keys(iotype='out')]
+            
+            # add nodes for all of the variables
+            io_graph.add_nodes_from(ins)
+            io_graph.add_nodes_from(outs)
+            
+            # specify edges, with all inputs as predecessors to all outputs
+            for invar in ins:
+                io_graph.add_edges_from([(invar, o) for o in outs])
+          
+            exprs = self.get_expr_names()
+            selfname = self.name
+            for name in exprs:
+                exprobj = getattr(self, name)
+                #if isinstance(exprobj, basestring): # a simple Expression
+                if self.trait(name).is_trait_type(Expression):
+                    vnames = exprobj.get_referenced_varpaths()
+                else:  # an ExpressionList
+                    vnames = []
+                    for entry in exprobj:
+                        vnames += entry.get_referenced_varpaths()
+                if self.trait(name).iotype == 'in':
+                    for vname in vnames:
+                        io_graph.add_edge(vname, '.'.join([selfname,name]), expr=True)
+                    io_graph.node['.'.join([selfname,name])]['expr'] = True
+                #else:
+                    #for vname in vnames:
+                        #io_graph.add_edge('.'.join([selfname,name]), vname, expr=True)
+                
+        return self._io_graph
+
     def add(self, name, obj):
         """Override of base class version to force call to *check_config* after
         any child containers are added.

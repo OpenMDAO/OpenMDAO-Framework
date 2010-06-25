@@ -909,6 +909,7 @@ class Container(HasTraits):
             # specify edges, with all inputs as predecessors to all outputs
             for invar in ins:
                 io_graph.add_edges_from([(invar, o) for o in outs])
+
         return self._io_graph
     
     def _build_trait(self, pathname, iotype=None, trait=None):

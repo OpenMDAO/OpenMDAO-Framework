@@ -15,7 +15,19 @@ from openmdao.main.expreval import ExprEvaluator
 
 class DumbDefault(object):
     """Dummy object for default, when none is given."""
-    def __getattr__(self, name):
+    def get_referenced_varpaths(self):
+        return set()
+
+    def get_referenced_compnames(self):
+        return set()
+    
+    def refs_valid(self):
+        return True
+    
+    def evaluate(self):
+        raise TraitError('Expression: string reference is undefined')
+        
+    def set(self, val):
         raise TraitError('Expression: string reference is undefined')
             
 class Expression(BaseStr):

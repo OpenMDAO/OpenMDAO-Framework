@@ -16,6 +16,7 @@ from openmdao.main.container import Container
 from openmdao.main.dataflow import Dataflow
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression
+from openmdao.main.expreval import ExprEvaluator
 
 class _undefined_(object):
     pass
@@ -74,8 +75,6 @@ class Assembly (Component):
                 
         # default Driver executes its workflow once
         self.add('driver', Driver())
-        
-
 
     def get_var_graph(self):
         """Returns the Variable dependency graph, after updating it with child
@@ -90,8 +89,10 @@ class Assembly (Component):
                     if val is not None:  # remove old stuff
                         vargraph.remove_nodes_from(val)
                     childiographs[childname] = graph
-                    vargraph.add_nodes_from(graph.nodes_iter())
-                    vargraph.add_edges_from(graph.edges_iter())
+                    node_data = graph.nodes_iter(data=True)
+                    for n,dat in node_data:
+                        vargraph.add_node(n, **dat)
+                    vargraph.add_edges_from(graph.edges_iter(data=True))
             self._need_child_io_update = False
         return self._var_graph
         
@@ -390,16 +391,25 @@ class Assembly (Component):
         pred = vargraph.pred
         
         for vname in varnames:
+            if vargraph.node[vname].get('expr'): # it's an expression link
+                continue
+            
             preds = pred.get(vname, '')
             if len(preds) == 0: 
                 continue
-            elif len(preds) > 1:
-                self.raise_exception("variable '%s' has multiple sources %s" %
-                                     (vname, preds.keys()), RuntimeError)
-            updated = True
+                       
             srcname = preds.keys()[0]
             srccompname,srccomp,srcvarname = self.split_varpath(srcname)
             destcompname,destcomp,destvarname = self.split_varpath(vname)
+
+            #if vargraph[srcname][vname].get('expr'): # it's an expression link
+                #continue
+            
+            if len(preds) > 1:
+                self.raise_exception("variable '%s' has multiple sources %s" %
+                                     (vname, preds.keys()), RuntimeError)
+
+            updated = True
 
             if srccomp.get_valid(srcvarname) is False:  # source is invalid 
                 # need to backtrack to get a valid source value
