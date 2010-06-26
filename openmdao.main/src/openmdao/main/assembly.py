@@ -130,7 +130,7 @@ class Assembly (Component):
 
         return obj
         
-    def remove_container(self, name):
+    def remove(self, name):
         """Remove the named container object from this container and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
@@ -145,7 +145,7 @@ class Assembly (Component):
                 self._var_graph.remove_nodes_from(childgraph)
             del self._child_io_graphs[name]
                     
-        return super(Assembly, self).remove_container(name)
+        return super(Assembly, self).remove(name)
 
 
     def create_passthrough(self, pathname, alias=None):

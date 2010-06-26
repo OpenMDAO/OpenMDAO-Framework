@@ -311,11 +311,11 @@ class Component (Container):
         self.config_changed()
         return super(Component, self).add(name, obj)
         
-    def remove_container(self, name):
+    def remove(self, name):
         """Override of base class version to force call to *check_config* after
         any child containers are removed.
         """
-        obj = super(Component, self).remove_container(name)
+        obj = super(Component, self).remove(name)
         self.config_changed()
         return obj
 

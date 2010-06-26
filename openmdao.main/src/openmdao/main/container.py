@@ -380,7 +380,7 @@ class Container(HasTraits):
             obj.parent = self
             # if an old child with that name exists, remove it
             if self.contains(name):
-                self.remove_container(name)
+                self.remove(name)
             setattr(self, name, obj)
             obj.name = name
             # if this object is already installed in a hierarchy, then go
@@ -394,13 +394,13 @@ class Container(HasTraits):
                     TypeError)
         return obj
         
-    def remove_container(self, name):
+    def remove(self, name):
         """Remove the specified child from this container and remove any
         public trait objects that reference that child. Notify any
         observers."""
         if '.' in name:
             self.raise_exception(
-                'remove_container does not allow dotted path names like %s' %
+                'remove does not allow dotted path names like %s' %
                                  name, ValueError)
         trait = self.trait(name)
         if trait is not None:
