@@ -16,7 +16,7 @@ class Discipline1(Component):
     x1 = Float(0.0, iotype='in', desc='Local Design Variable')
     y2 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
 
-    y1 = Float(iotype='out', desc='Output of this Discipline')        
+    y1 = Float(iotype='out', desc='Output of this Discipline')
 
         
     def execute(self):

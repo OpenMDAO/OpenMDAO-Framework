@@ -289,9 +289,9 @@ class CONMINdriver(Driver):
             # calculate objective
             try:
                 self.cnmn1.obj = self.objective.evaluate()
-            except:
-                self.raise_exception('objective function is not pointing to a \
-                                      valid OpenMDAO Variable', RuntimeError)
+            except Exception as err:
+                self.raise_exception('error evaluating objective function: %s' % str(err), 
+                                     RuntimeError)
                     
             #self._logger.debug('iter_count = %d' % self.iter_count)
             #self._logger.debug('objective = %f' % self.cnmn1.obj)

@@ -87,7 +87,11 @@ class Assembly (Component):
                 graph = getattr(self, childname).get_io_graph()
                 if graph is not val:  # child io graph has changed
                     if val is not None:  # remove old stuff
-                        vargraph.remove_nodes_from(val)
+                        # some nodes will be outside of the child (due to Expression dependencies),
+                        # so don't remove them from the graph
+                        childdot = ''.join([childname,'.'])
+                        to_remove = [n for n in val if n.startswith(childdot)]
+                        vargraph.remove_nodes_from(to_remove)
                     childiographs[childname] = graph
                     node_data = graph.nodes_iter(data=True)
                     for n,dat in node_data:
@@ -482,10 +486,10 @@ class Assembly (Component):
             if name in vargraph:
                 tup = name.split('.', 1)
                 if len(tup)==1:
-                    print '**invalidating %s.%s' % (self.name,name)
+                    #print '**invalidating %s.%s' % (self.name,name)
                     self.set_valid(name, False)
                 else:
-                    print '**invalidating %s.%s' % (tup[0],tup[1])
+                    #print '**invalidating %s.%s' % (tup[0],tup[1])
                     getattr(self, tup[0]).set_valid(tup[1], False)
             else:
                 self.raise_exception("%s is not an io trait" % name,
@@ -506,7 +510,7 @@ class Assembly (Component):
         
         if len(outs) > 0:
             for out in outs:
-                print '**invalidating %s.%s' % (self.name,out)
+                #print '**invalidating %s.%s' % (self.name,out)
                 self.set_valid(out, False)
             if notify_parent and self.parent:
                 self.parent.invalidate_deps(

@@ -88,7 +88,7 @@ class SellarCO(Assembly):
         self.localopt1.lower_bounds = [-10.0, 0.0, 0.0, -10.0]
         self.localopt1.upper_bounds = [10.0, 10.0, 10.0, 24.0]
         self.localopt1.iprint = 0
-        self.localopt1.itmax = 100
+        self.localopt1.itmax = 100 
         self.localopt1.fdch = .003
         self.localopt1.fdchm = .003
         self.localopt1.delfun = .001
