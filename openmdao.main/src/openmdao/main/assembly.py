@@ -77,7 +77,7 @@ class Assembly (Component):
         self.add('driver', Driver())
 
     def get_var_graph(self):
-        """Returns the Variable dependency graph, after updating it with child
+        """Returns the Variable dependency graph, after updating it with child io_graph
         info if necessary.
         """
         if self._need_child_io_update:
@@ -93,6 +93,9 @@ class Assembly (Component):
                         childdot = ''.join([childname,'.'])
                         to_remove = [n for n in val if n.startswith(childdot) and n not in graph]
                         vargraph.remove_nodes_from(to_remove)
+                        # now remove all internal connections from the old graph
+                        to_remove = [(u,v) for u,v in val.edges() if u.startswith(childdot) and v.startswith(childdot)]
+                        vargraph.remove_edges_from(to_remove)
                     childiographs[childname] = graph
                     node_data = graph.nodes_iter(data=True)
                     for n,dat in node_data:
