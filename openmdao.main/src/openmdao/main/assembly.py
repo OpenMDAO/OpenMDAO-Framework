@@ -88,9 +88,10 @@ class Assembly (Component):
                 if graph is not val:  # child io graph has changed
                     if val is not None:  # remove old stuff
                         # some nodes will be outside of the child (due to Expression dependencies),
-                        # so don't remove them from the graph
+                        # so don't remove them from the graph, and retain any connections to
+                        # nodes outside of the child
                         childdot = ''.join([childname,'.'])
-                        to_remove = [n for n in val if n.startswith(childdot)]
+                        to_remove = [n for n in val if n.startswith(childdot) and n not in graph]
                         vargraph.remove_nodes_from(to_remove)
                     childiographs[childname] = graph
                     node_data = graph.nodes_iter(data=True)
