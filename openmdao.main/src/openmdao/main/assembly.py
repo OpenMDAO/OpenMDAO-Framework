@@ -77,7 +77,7 @@ class Assembly (Component):
         self.add('driver', Driver())
 
     def get_var_graph(self):
-        """Returns the Variable dependency graph, after updating it with child
+        """Returns the Variable dependency graph, after updating it with child io_graph
         info if necessary.
         """
         if self._need_child_io_update:
@@ -87,7 +87,15 @@ class Assembly (Component):
                 graph = getattr(self, childname).get_io_graph()
                 if graph is not val:  # child io graph has changed
                     if val is not None:  # remove old stuff
-                        vargraph.remove_nodes_from(val)
+                        # some nodes will be outside of the child (due to Expression dependencies),
+                        # so don't remove them from the graph, and retain any connections to
+                        # nodes outside of the child
+                        childdot = ''.join([childname,'.'])
+                        to_remove = [n for n in val if n.startswith(childdot) and n not in graph]
+                        vargraph.remove_nodes_from(to_remove)
+                        # now remove all internal connections from the old graph
+                        to_remove = [(u,v) for u,v in val.edges() if u.startswith(childdot) and v.startswith(childdot)]
+                        vargraph.remove_edges_from(to_remove)
                     childiographs[childname] = graph
                     node_data = graph.nodes_iter(data=True)
                     for n,dat in node_data:
@@ -126,7 +134,7 @@ class Assembly (Component):
 
         return obj
         
-    def remove_container(self, name):
+    def remove(self, name):
         """Remove the named container object from this container and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
@@ -141,7 +149,7 @@ class Assembly (Component):
                 self._var_graph.remove_nodes_from(childgraph)
             del self._child_io_graphs[name]
                     
-        return super(Assembly, self).remove_container(name)
+        return super(Assembly, self).remove(name)
 
 
     def create_passthrough(self, pathname, alias=None):
@@ -332,6 +340,13 @@ class Assembly (Component):
         self._io_graph = None  
 
 
+    def config_changed(self, update_parent=True):
+        """Call this whenever the configuration of this Component changes,
+        for example, children are added or removed.
+        """
+        self._need_child_io_update = True
+        super(Assembly, self).config_changed(update_parent)
+
     def is_destination(self, varpath):
         """Return True if the Variable specified by varname is a destination
         according to our graph. This means that either it's an input connected
@@ -391,7 +406,8 @@ class Assembly (Component):
         pred = vargraph.pred
         
         for vname in varnames:
-            if vargraph.node[vname].get('expr'): # it's an expression link
+            node = vargraph.node.get(vname)
+            if node and node.get('expr'): # it's an expression link
                 continue
             
             preds = pred.get(vname, '')
@@ -474,8 +490,10 @@ class Assembly (Component):
             if name in vargraph:
                 tup = name.split('.', 1)
                 if len(tup)==1:
+                    #print '**invalidating %s.%s' % (self.name,name)
                     self.set_valid(name, False)
                 else:
+                    #print '**invalidating %s.%s' % (tup[0],tup[1])
                     getattr(self, tup[0]).set_valid(tup[1], False)
             else:
                 self.raise_exception("%s is not an io trait" % name,
@@ -496,6 +514,7 @@ class Assembly (Component):
         
         if len(outs) > 0:
             for out in outs:
+                #print '**invalidating %s.%s' % (self.name,out)
                 self.set_valid(out, False)
             if notify_parent and self.parent:
                 self.parent.invalidate_deps(

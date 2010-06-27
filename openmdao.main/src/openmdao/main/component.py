@@ -251,6 +251,7 @@ class Component (Container):
             self._pre_execute()
             if self._call_execute or force:
                 #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
+                #print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
         finally:
@@ -289,9 +290,9 @@ class Component (Container):
                 if self.trait(name).is_trait_type(Expression):
                     vnames = exprobj.get_referenced_varpaths()
                 else:  # an ExpressionList
-                    vnames = []
+                    vnames = set()
                     for entry in exprobj:
-                        vnames += entry.get_referenced_varpaths()
+                        vnames.update(entry.get_referenced_varpaths())
                 if self.trait(name).iotype == 'in':
                     for vname in vnames:
                         io_graph.add_edge(vname, '.'.join([selfname,name]), expr=True)
@@ -310,11 +311,11 @@ class Component (Container):
         self.config_changed()
         return super(Component, self).add(name, obj)
         
-    def remove_container(self, name):
+    def remove(self, name):
         """Override of base class version to force call to *check_config* after
         any child containers are removed.
         """
-        obj = super(Component, self).remove_container(name)
+        obj = super(Component, self).remove(name)
         self.config_changed()
         return obj
 
@@ -351,10 +352,11 @@ class Component (Container):
         for example, children are added or removed.
         """
         if update_parent and hasattr(self, 'parent') and self.parent:
-            self.parent.config_changed()
+            self.parent.config_changed(update_parent)
         self._input_names = None
         self._output_names = None
         self._container_names = None
+        self._io_graph = None
         self._call_check_config = True
         self._call_execute = True
 

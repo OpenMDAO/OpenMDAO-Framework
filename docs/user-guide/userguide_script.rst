@@ -880,7 +880,7 @@ adds it to the OpenMDAO model hierarchy using the given name. In this case then,
 the CONMIN driver is accessible anywhere in this assembly via ``self.driver``.
 Likewise, the Paraboloid is accessed via ``self.paraboloid``.
 
-A Component can also be removed from an Assembly using ``remove_container``,
+A Component can also be removed from an Assembly using ``remove``,
 though it is not expected to be needed except in rare cases.
 
 *Assemblies*
