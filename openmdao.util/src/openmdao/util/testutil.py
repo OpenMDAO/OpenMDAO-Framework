@@ -60,3 +60,15 @@ def make_protected_dir():
     os.chmod(directory, 0)
     return os.path.join(os.getcwd(), directory)
 
+
+# this decorator is based on a code snippet by vegaseat at daniweb.
+# See http://www.daniweb.com/code/snippet216689.html
+def print_timing(func):
+    def wrapper(*args, **kwargs):
+        t1 = time.time()
+        res = func(*args, **kwargs)
+        t2 = time.time()
+        print '%s took %0.3f ms' % (func.func_name, (t2-t1)*1000.0)
+        return res
+    return wrapper
+
