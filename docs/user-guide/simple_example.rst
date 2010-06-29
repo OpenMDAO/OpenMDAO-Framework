@@ -47,7 +47,7 @@ here:
 
     ``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.simple-X.X.X-######.egg/openmdao/examples/simple``
     
-X.X.X is the current OpenMDAO version, and ###### is a string that
+``X.X.X`` is the current OpenMDAO version, and ``######`` is a string that
 contains the Python version and the operating system description. This path may
 vary depending on your system and version, but there will be only one
 *simple* egg.
@@ -177,7 +177,7 @@ by adding these lines:
 
 .. index:: Traits
 
-OpenMDAO has two kinds of variables: *internal* variables and *public* variables. *Internal* variables
+OpenMDAO has two kinds of variables: internal variables and public variables. *Internal* variables
 are used internally to a component but are ignored by the framework. *Public* variables are publicly
 visible (and manipulable if they are inputs) in the framework. Public variables are declared in the
 class definition of a component.
@@ -270,7 +270,7 @@ Building a Model - Unconstrained Optimization using CONMIN
 Your next task is to build a model that finds the minimum value for the Paraboloid component
 described above. This model contains the Paraboloid as well as a public domain gradient optimizer
 called :term:`CONMIN`, for which a Python-wrapped driver has been included in OpenMDAO. As the name
-implies, :ref:`CONMIN <CONMIN-Driver>` finds the minimum of a function. The model can be found in
+implies, CONMIN finds the minimum of a function. The model can be found in
 the Python file ``optimization_unconstrained.py``:
 
 .. testcode:: simple_model_Unconstrained
@@ -322,7 +322,7 @@ in a model is called the *top level assembly.* In this problem, the top level as
 Paraboloid component and a CONMIN driver. It will tell the CONMIN driver when to run and what to
 run.
 
-You derive the class from Assembly instead of Component.
+The class is derived from Assembly instead of Component.
 
 .. testsetup:: simple_model_Unconstrained_pieces
 
@@ -339,7 +339,7 @@ You derive the class from Assembly instead of Component.
         """Unconstrained optimization of the Paraboloid with CONMIN."""
     
 In the Paraboloid component, you created an execute function to tell it what to do when the
-component is run. The OptimizationUnconstrained assembly does not need an execute function, because
+component is run. The ``OptimizationUnconstrained`` assembly does not need an execute function because
 the Assembly class already has one that is sufficient for most cases. However, this assembly does
 need an initialize function to set parameters for the optimization. This is what the ``__init__``
 function does:
@@ -360,7 +360,7 @@ parameters that CONMIN needs. The *super* command calls the
 can lead to unexpected behavior.
 
 Next, the Paraboloid and the CONMIN driver have to be instantiated and added
-to OptimizationUnconstrained. The function *add* is used to add them
+to ``OptimizationUnconstrained``. The function *add* is used to add them
 to the assembly:
 
 .. testcode:: simple_model_Unconstrained_pieces
@@ -374,7 +374,7 @@ to the assembly:
 Here you will make an instance of the *Paraboloid* component that you created above and
 give it the name *paraboloid.* Similarly you will create an instance of the CONMIN
 driver and give it the name *driver.* As with other class members, these are
-now accessible in the OptimizationUnconstrained assembly via ``self.paraboloid``
+now accessible in the ``OptimizationUnconstrained`` assembly via ``self.paraboloid``
 and ``self.driver``.
 
 For this problem, you want to minimize ``f_xy``. In optimization, this is called
@@ -440,7 +440,7 @@ This model is now finished and ready to be run. The next section will show how t
 Executing the Simple Optimization Problem
 ------------------------------------------
 
-To run your model, you need to create an instance of OptimizationUnconstrained and tell it to run.
+To run your model, you need to create an instance of ``OptimizationUnconstrained`` and tell it to run.
 You did this above using an interactive Python session. Try doing this for
 ``optimization_unconstrained.py``.
 
@@ -490,7 +490,7 @@ the final lines in this file are:
         
  
 In this block of code you are doing four things. 1) In the first statement, you create an instance
-of the class OptimizationUnconstrained with the name ``opt_problem``. 2) In the second statement,
+of the class ``OptimizationUnconstrained`` with the name ``opt_problem``. 2) In the second statement,
 you set ``opt_problem`` as the top Assembly in the model hierarchy. (This will be explained in a
 later tutorial.) 3) In the fifth statement, you tell ``opt_problem`` to run. (The model will execute
 until the optimizer's termination criteria are reached.) 4) In the remaining statements, you define

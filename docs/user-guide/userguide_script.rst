@@ -824,8 +824,8 @@ three variables that define two flight conditions:
 	    print "FCC1 angle of attack = ", self.fcc1.angle_of_attack
 	    print "FCC2 angle of attack = ", self.fcc2.angle_of_attack
 	    
-Here, the container *FlightCondition* was defined, containing three public variables.
-The component *AircraftSim* is also defined with a public variable *weight* and
+Here, the container ``FlightCondition`` was defined, containing three public variables.
+The component ``AircraftSim`` is also defined with a public variable *weight* and
 two variable containers *fcc1* and *fcc2*. We can access weight through ``self.weight``; 
 likewise, we can access the airspeed of the second flight condition through
 ``self.fcc2.airspeed``. You can also add containers to containers.
@@ -871,8 +871,8 @@ Consider the top level assembly that was created for the :ref:`simple tutorial p
 We can see here that components that comprise the top level of this model are
 declared in the ``__init__`` function. The base class ``__init__`` function is called
 (with the super function) before anything is added to the empty assembly. This
-is important to ensure that functions that are defined in the base classes are
-available for use, such as *add*. 
+is important to ensure that functions, such as *add*, that are defined in the base classes are
+available for use. 
 
 The function add takes a valid OpenMDAO name and a constructor as
 its arguments. This function call creates a new instance of the Component and 
@@ -1050,7 +1050,7 @@ Drivers
 *Drivers*
 ~~~~~~~~~~~~~~~~~~
 
-Drivers are generally iterative solvers such as optimizers that operate on
+Drivers are generally iterative solvers, such as optimizers, that operate on
 their respective workflow until certain conditions are met. OpenMDAO comes with
 several drivers that are distributable (i.e., either open source or
 public domain.)

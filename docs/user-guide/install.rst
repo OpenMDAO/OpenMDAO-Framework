@@ -11,7 +11,7 @@ System Requirements
 These instructions assume that you intend to install OpenMDAO for normal use -- that you will not be
 hacking on the OpenMDAO infrastructure or standard library, or developing any plugins that require
 compilation. If you *do* intend to perform some kind of OpenMDAO development, you should refer to
-the installation instructions in the *Developer Guide,* because the developer environment has some
+the installation instructions in the *Developer Guide* because the developer environment has some
 additional :ref:`system requirements <developer-requirements>` on certain platforms.
 
 OpenMDAO requires **Python 2.6** to be installed at the system level on all platforms.  It is highly
@@ -107,9 +107,10 @@ bootstrap script that installs OpenMDAO in a *virtual* Python environment. This 
       python go-openmdao.py
 
 
-   This script will check the version of Python you are running. You must be running a version greater than or equal to 2.6 but
-   less than 3.0. After the script completes successfully you have installed OpenMDAO. There are just a couple more steps to follow
-   before you can start using it. 
+   This script will check the version of Python you are running. You must be running a version
+   greater than or equal to 2.6 but less than 3.0. After the script completes successfully, you
+   will have installed OpenMDAO. There are just a couple more steps to follow before you can start
+   using it. 
 
 **Activate your virtual environment**
 

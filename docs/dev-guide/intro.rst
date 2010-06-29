@@ -66,7 +66,7 @@ Guide.*  These requirements are described below.
 
     - *mingw32*   (for FORTRAN)
       
-      Make sure to put the *bin* directory of the mingw32 install in your path.
+      Make sure to put the ``bin`` directory of the mingw32 install in your path.
       You can find mingw32 `here`__.
          
          
@@ -120,18 +120,18 @@ get a copy of the repository by typing:
    
 where ``<branch_name>`` is the name you are giving to the top level directory of your branch
 repository. It's a good idea to name branches based on ticket numbers in our bug  tracker
-(:term:`Trac`) using the form ``T<ticket_number>-<desc>``, where ``ticket_number`` is the Trac
-ticket number and ``<desc>`` is a short description of the branch, for example,
+(:term:`Trac`) using the form ``T<ticket_number>-<desc>``, where ``ticket_number`` is the
+Trac ticket number and ``<desc>`` is a short description of the branch, for example,
 ``T0029-workflow_fix``.  Trac automatically assigns a ticket number when you submit a bug or
-request an enhancement. You can visit the OpenMDAO website to find out more about how we use
-`Trac <http://openmdao.org/wiki/Home>`_ and about the OpenMDAO `development
-<http://openmdao.org/wiki/Development>`_ process.
+request an enhancement. You can visit the `OpenMDAO website
+<http://openmdao.org/wiki/Home>`_  to find out more about how we use Trac and about the
+OpenMDAO `development <http://openmdao.org/wiki/Development>`_ process.
 
 
-In any case, the name you give your branch should reflect the purpose of the
-branch to avoid confusion if you have multiple branches active at the
-same time. If you do not supply a ``<branch_name>``, the name by default will be the last
-part of the source repository URI, which in this case is ``openmdao``.
+In any case, the name you give your branch should reflect the purpose of the branch to avoid
+confusion if you have multiple branches active at the same time. If you do not supply a
+``<branch_name>``, the name by default will be the last part of the source repository URI,
+which in this case is ``openmdao``.
 
 
 

@@ -54,7 +54,7 @@ You need to register and upload the *public* portion of your SSH key to Launchpa
    text box) to continue. 
 
 
-*Notifying Launchpad of Your Userid*
+*Notifying Launchpad of Your Userid*                                                    
 ++++++++++++++++++++++++++++++++++++
 
 You need to provide Launchpad with your userid before you can merge from openmdao to your branch or
@@ -83,11 +83,11 @@ commands:
      [Launchpad]
      host = .launchpad.net
      scheme = ssh
-     user = <launchpad-username>    
+     user = <launchpad-userid>    
   
 5. Save and exit the ``authentication.conf`` file.
-6. Use your text editor to open the ``bazaar.conf`` file. Make sure your Launchpad username is in the
-   file. If it isn't, add it at the end of the file, for example: ``launchpad_username = john-j-smith``.
+6. Use your text editor to open the ``bazaar.conf`` file. Make sure your Launchpad userid is in the
+   file. If it isn't, add it at the end of the file, for example: ``launchpad_userid = john-j-smith``.
 7. Save any changes and exit the file.
 
 
@@ -135,7 +135,7 @@ If you use Windows, please follow these instructions for SSH key creation and re
 
 3. Start a browser and navigate to ``Launchpad.net``. Log in to your Launchpad account. Once logged in, you can
    either edit your user information or  go directly to the URL:  
-   ``https://launchpad.net/~lp-username-goes-here/+editsshkeys``.
+   ``https://launchpad.net/~lp-userid-goes-here/+editsshkeys``.
 
 4. Your clipboard should still contain ``id_rsa.pub``. Paste the contents of ``id_rsa.pub`` into the *Add an
    SSH key* field. Click *Import Public Key* and wait for the key to be added.

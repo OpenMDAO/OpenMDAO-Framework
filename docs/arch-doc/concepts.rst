@@ -142,7 +142,7 @@ So we have two possible ways to have fully functional geometry within OpenMDAO.
 The CAPRI option works well for users with commercial CAD packages and skilled
 CAD operators available to create parametric CAD parts for them. One unfortunate
 side effect of this approach is that it limits collaboration with other
-potential users of a parametric geometry, because whatever parametric geometry
+potential users of a parametric geometry because whatever parametric geometry
 is built in this fashion will only work in the same CAD package in which it was
 built. If the geometry is exported into some format that is readable by other
 packages, the parametric information will be lost.
