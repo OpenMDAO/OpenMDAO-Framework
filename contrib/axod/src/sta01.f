@@ -53,6 +53,7 @@ C replaced by ...............................................6/4/09
       DIMENSION PTPPS0(6)
       EQUIVALENCE (STRF1     ,PCNF)
 C
+C     print *,'  Entering in sta01.f.......modified..22 continue...'
       PI=3.14159
       SCRIT=0.0
       wtol01=2.e-5
@@ -75,6 +76,7 @@ C
 
       DO I=1,ISECT
         PT1(I)=PT0(I,K)
+C        print *,'   PT1(',I,')=',PT1(I),'    in sta01...DO loop 1.'
         TT1(I,K)=TT0(I,K)
 
         if (twgf.gt.0.0) then
@@ -117,17 +119,28 @@ C
         CALL PRATIO(FFA1,GAM(2,K),rg1(k),PT0PS1(I ,K),PRTOL,
      1              ETAS(I ,K),VUOT,k)
       endif
+C..........................
+      LOOPCOUNT = 1
 
 3     continue
       CALL FLOW1(I)
       IF (PREVER) return
 
+C     print *,'  WGT1(K)=',WGT1(K),'  WG1(I,K) =',WG1(I,K)
       WGT1(K)=WGT1(K)+WG1(I,K)
+      LOOPCOUNT = LOOPCOUNT + 1
+      IF (LOOPCOUNT.eq.20) STOP
+C     print *,'  K =',K,'  WGT1(K) =',WGT1(K)
 C        TEST FOR TIP SECTOR
       IF((ISECT-I).gt.0) then
         I=I+ID
+C       added '22 continue ' to mask warning message...
+22      CONTINUE
         IF(I.gt.0) then
-22        L=I-ID
+C          commented statement (Label 22 removed here)
+C22        L=I-ID
+           L=I-ID
+c         print *,'  L=',L,'  I=',I,'  ID=',ID
           GM2=(GAM(2,K)-1.)/2.*VU1(L,K)**2/GAM(2,K)/G/rg1(k)/TS1(L,K)
           DRSQ=(DP1(L,K)/DP1(I,K))**2
           PS1(I,K)=PS1(L,K)
@@ -149,13 +162,17 @@ C        TEST FOR TIP SECTOR
 C        CALCULATE STA 0 FOR INCIDENCE CORRECTION
         WE1=WPREV/WGT1(K)-1.
         WPREV=WGT1(K)
+C       print *,' K=',K,' WGT1(K)=',WGT1(K),'  WTO101=',WTO101
         IF((ABS(WE1)-WTOl01).le.0) then
+C         print *,'  going to 18******** WE1=',WE1,'  JW=',JW
           goto 18
         else
+C         print *,'  going to 16******** WE1=',WE1,' JW =',Jw
           goto 16
         endif
       endif
 
+C     print *,'  JW =',JW
       IF((JW-20).ge.0) goto 18
 
       IF((JW-1).le.0) goto 16
@@ -271,6 +288,8 @@ C        END OF INCIDENCE LOSS CORRECTION LOOP
         DO IFT=1,ISECT
           IF(IFT.le.IPT) then
             PT1(I)  =PT1(I)  +DPT(IFT)*PSIRP
+C            print *,'   PT1(',I,')=',PT1(I),'    in sta01...DO loop 2.'
+C            print *,'   DPT(',IFT,')=',DPT(IFT),'  PSIRP =',PSIRP
           endif
           IF(IFT.le.ITT) then
             TT1(I,K)=TT1(I,K)+DTT(IFT)*PSIRP
@@ -295,6 +314,7 @@ C        END OF INCIDENCE LOSS CORRECTION LOOP
       ID=-1
       IF(WG.GT.0.)PT0PS1(IP,K)=(PRLOW+PRUP)/2.
       JW=JW+1
+C     print *,'   going to 3  ID =',ID,'  I=',I
       GO TO 3
 
 18    CONTINUE

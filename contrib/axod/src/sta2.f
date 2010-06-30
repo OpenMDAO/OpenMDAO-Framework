@@ -92,9 +92,27 @@ C
       I=IP
       ID=-1
       WGT2C(K)=0.
-      IF(ICHOKE)26,26,3
-26    IF(LOPIN)27,27,3
-27    IF(GAMF)2,2,16
+C     IF(ICHOKE)26,26,3
+C     replced by ..............
+      IF(ICHOKE.LE.0) THEN 
+         GO TO 26
+      ELSE
+         GO TO 3
+      ENDIF
+C26    IF(LOPIN)27,27,3
+C     replced by ..............
+26    IF(LOPIN.LE.0) THEN 
+         GO TO 27
+      ELSE
+         GO TO 3
+      ENDIF
+C27    IF(GAMF)2,2,16
+C     replced by ..............
+27    IF(GAMF.LE.0.) THEN 
+         GO TO 2
+      ELSE
+         GO TO 16
+      ENDIF
 2     TA2(K)=.95*TTR2(IP,K)
       CALL GAMA(PTR2(I,K),TA2(K),FAIRx(4,k),WAIRx(4,k),GAM(4,K))
 16    CP2(K)=rg2(k)*EXI/AJ
@@ -141,9 +159,21 @@ C
       WGT2C(K)=WGT2C(K)+WG2(I,K)
       L=1
       IF (PTRS2(I,K).LE.PTRS2(IP,K))   L=I
-      IF(ISECT-I)7,7,4
+C     IF(ISECT-I)7,7,4
+C     replaced by ..........
+      IF((ISECT-I).LE.0) THEN 
+         GO TO 7
+      ELSE
+         GO TO 4
+      ENDIF
 4     I=I+ID
-      IF(I)5,5,6
+C     IF(I)5,5,6
+C     replaced by ..........
+      IF(I.LE.0) THEN 
+         GO TO 5
+      ELSE
+         GO TO 6
+      ENDIF
 5     ID=1
       I=IP+ID
 6     L=I-ID
@@ -152,12 +182,24 @@ C
       PS2(I,K)=PS2(L,K)
      1         *(1.+GM2*(1.-DRSQ))   **(GAM(4,K)/(GAM(4,K)-1.))
       PTRS2(I,K)=PTR2(I,K)/PS2(I,K)
-      IF (PTRS2(I,K)-1.)19,19,1103
+C     IF (PTRS2(I,K)-1.)19,19,1103
+C     replaced by ..........
+      IF (PTRS2(I,K)-1..LE.0) THEN 
+         GO TO 19  
+      ELSE
+         GO TO 1103
+      ENDIF
 C      REVERSE FLOW INDICATION
 19    PTRS2(I,K) = 1.0  + PRTOL
       PTRN=-1.
       GO TO 1103
-7     IF(IS2(K))8,8,9
+C7     IF(IS2(K))8,8,9
+C     replaced by ..........
+7     IF(IS2(K).LE.0) THEN 
+         GO TO 8   
+      ELSE
+         GO TO 9
+      ENDIF
 8     EXI=GAM(4,K)/(GAM(4,K)-1.)
       IF(RUOT.NE.0.)GO TO 1210
       CALL PHIM(EXI,ETAR(L,K),PHIX,PRCRIT)
@@ -173,34 +215,87 @@ C      REVERSE FLOW INDICATION
       PCNF (1,K)=WG2(1,K)/WGT2C(K)/2.
       DO 50 I=2,ISECT
 50    PCNF(I,K)=(WG2(I-1,K)+WG2(I,K))/2./WGT2C(K)+PCNF (I-1,K)
-      IF(WGT2(K)-WGT2C(K))12,15,11
+C     IF(WGT2(K)-WGT2C(K))12,15,11
+C     replaced by ..........
+      IF(WGT2(K)-WGT2C(K).LT.0.) THEN 
+         GO TO 12
+      ELSEIF (WGT2(K)-WGT2C(K).EQ.0.) THEN
+         GO TO 15
+      ELSEIF (WGT2(K)-WGT2C(K).GT.0.) THEN
+         GO TO 11
+      ENDIF
+C
 11    PRLOW= PTRS2(IP,K)*.8+.2*PRLOW
       GO TO 13
 12    PRUP= PTRS2(IP,K)*.8+.2*PRUP
       IS2(K)=1
 13    WE=1.-WGT2(K)/WGT2C(K)
       J=J+1
-      IF(J-26)29,17,17
-29    IF(ICHOKE-L) 30,31,30
+C     IF(J-26)29,17,17
+C     replaced by ..........
+      IF(J-26.LT.0) THEN 
+         GO TO 29  
+      ELSE
+         GO TO 17
+      ENDIF
+C29    IF(ICHOKE-L) 30,31,30
+C     replaced by ..........
+29    IF((ICHOKE-L).NE.0) THEN 
+         GO TO 30  
+      ELSE
+         GO TO 31
+      ENDIF
 31    SCRIT= -WE
       GO TO 15
-30    IF(LOPIN)14,14,15
+C30    IF(LOPIN)14,14,15
+C     replaced by ..........
+30    IF(LOPIN.LE.0) THEN 
+         GO TO 14  
+      ELSE
+         GO TO 15
+      ENDIF
 14    CONTINUE
 C                                              
       IF(PTRS2(IP,K).LT.1.15) GO TO 71
-      IF (ABS( WE)- WTOL)15,15,24
-71    IF(ABS(WE)-10.*WTOL) 15,15,24
+C     IF (ABS( WE)- WTOL)15,15,24
+C     replaced by ..........
+      IF ((ABS( WE)- WTOL).LE.0.)  THEN  
+         GO TO 15  
+      ELSE
+         GO TO 24
+      ENDIF
+C71    IF(ABS(WE)-10.*WTOL) 15,15,24
+C     replaced by ..........
+71    IF((ABS(WE)-10.*WTOL).LE.0.) THEN 
+         GO TO 15  
+      ELSE
+         GO TO 24
+      ENDIF
 17    CONTINUE
       IF(PTRN.LT.0.) GO TO 18
       IF(WE.GT.10.*WTOL) GO TO 18
       IF(PTRS2(IP,K).GE.1.15.AND.WE.GT.WTOL) GO TO 18
       IF(PTRS2(IP,K).LT.1.15) GO TO 73
-      IF (ABS(WE)-WTOL)15,15,23
-73    IF(ABS(WE)-10.*WTOL) 15,15,23
+C     IF (ABS(WE)-WTOL)15,15,23
+C     replaced by ..........
+      IF ((ABS(WE)- WTOL).LE.0.)  THEN  
+         GO TO 15  
+      ELSE
+         GO TO 23
+      ENDIF
+C73    IF(ABS(WE)-10.*WTOL) 15,15,23
+C     replaced by ..........
+73    IF((ABS(WE)-10.*WTOL).LE.0.) THEN 
+         GO TO 15  
+      ELSE
+         GO TO 23
+      ENDIF
 24    PTRMO=PTRS2(IP,K)
       I=IP
       ID=-1
-      IF (SCRIT)28,28,15
+C     IF (SCRIT)28,28,15
+C     replaced by .........
+      IF (SCRIT.GT.0.) GO TO 15       
 28    CONTINUE
       IF (PTRS2(IP,K).LE.PRCRIT
      1.OR.RVU1(I,K).NE.0.) PRPC=0.

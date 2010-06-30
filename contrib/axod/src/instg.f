@@ -139,14 +139,30 @@ c     kf=2
       GO TO 27
 93    KS1=KS-1
       GO TO 27
-94    IF(KS-4)32,5,29
+C94    IF(KS-4)32,5,29
+C     replaced by ............
+94    IF((KS-4).LT.0) THEN
+         GO TO 32 
+      ELSEIF((KS-4).EQ.0) THEN
+         GO TO 5 
+      ELSEIF((KS-4).GT.0) THEN
+         GO TO 29
+      ENDIF
 32    KS1=KS-1
       GO TO 27
 29    KS1=KS-2
       GO TO 27
 95    KS1=KS-1
       GO TO 27
-96    IF(KS-4)30,5,31
+C96    IF(KS-4)30,5,31
+C     replaced by ............
+96    IF((KS-4).LT.0) THEN
+         GO TO 30 
+      ELSEIF((KS-4).EQ.0) THEN
+         GO TO 5 
+      ELSEIF((KS-4).GT.0) THEN
+         GO TO 31
+      ENDIF
 30    KS1=KS
       GO TO 27
 31    KS1=KS-1

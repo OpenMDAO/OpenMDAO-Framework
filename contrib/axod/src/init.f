@@ -43,10 +43,22 @@ c     IF(STGCH)5,5,4
    5  l=2
       GO TO(6,8),L
 6     WRITE(16,100)ICASE
-      IF(STGCH)3,3,7
+C     IF(STGCH)3,3,7
+C     replaced by .............
+      IF(STGCH.LE.0.) THEN 
+         GO TO 3
+      ELSE
+         GO TO 7
+      ENDIF
 7     IK=2
       GO TO 3
-8     IF (IK-2)9,3,3
+C8     IF (IK-2)9,3,3
+C     replaced by .............
+8     IF((IK-2).LT.0) THEN 
+         GO TO 9
+      ELSE
+         GO TO 3
+      ENDIF
 C        INITIALIZE INDEX REGISTERS AND FORKS
 9     ISECT=SECT+.0001
       KSTG= STG+.0001
@@ -66,7 +78,13 @@ C        INITIALIZE INDEX REGISTERS AND FORKS
       ISS=0
       PTRN=0.0
 C        TEST STAGE LOSS INDICATOR
-      IF(SLI)13,13,11
+C     IF(SLI)13,13,11
+C     replaced by .............
+      IF(SLI.LE.0.) THEN 
+         GO TO 13
+      ELSE
+         GO TO 11
+      ENDIF
 11    DO 12 I=1,ISECT
       DO 12 J=1,KSTG
       ETARS(I,J)=ETARS(I,1)
@@ -151,7 +169,13 @@ C             PITCHLINE WHEEL SPEED
       H1A(I  )=.5*PCNH(I)*SH1A
       H2(I,K)=.5*PCNH(I)*SH2
       H2A(I  )=.5*PCNH(I)*SH2A
-      IF(I-1)20,20,17
+C     IF(I-1)20,20,17
+C     replaced by .............
+      IF((I-1).LE.0) THEN 
+         GO TO 20
+      ELSE
+         GO TO 17
+      ENDIF
 20    DP0(I,K)=DR(1,K)+   H0(I  )
       DP1(I,K)=DR(2,K)+   H1(I,K)
       DP1A(I,K)=DR(3,K)+   H1A(I  )
@@ -174,7 +198,13 @@ C             PITCHLINE WHEEL SPEED
 19    CONTINUE
 C        DEFINE PITCHLINE INDEX
       IT=ISECT-2*(ISECT/2)
-      IF(IT)22,22,23
+C     IF(IT)22,22,23
+C     replaced by .............
+      IF(IT.LE.0) THEN 
+         GO TO 22
+      ELSE
+         GO TO 23
+      ENDIF
 22    IP=ISECT/2
       GO TO 24
 23    IP=(ISECT+1)/2
@@ -246,8 +276,20 @@ c        Calculate Axial Chords and Sector Slopes
   400 format (1h0,' TURBINE LENGTH = ',f6.2,' INCHES')
 C        CALCULATE INLET AND EXIT ANGLES IN RADIANS
       DO 31 K=1,KSTG
-      IF(ALPHA1(1,K))27,25,27
-25    IF(ANDO(1,K))31,31,125
+C     IF(ALPHA1(1,K))27,25,27
+C     replaced by .............
+      IF((ALPHA1(1,K)).NE.0.) THEN 
+         GO TO 27
+      ELSE
+         GO TO 25
+      ENDIF
+C25    IF(ANDO(1,K))31,31,125
+C     replaced by .............
+25    IF((ANDO(1,K)).LE.0.) THEN 
+         GO TO 31
+      ELSE
+         GO TO 125
+      ENDIF
 125   DO 26 I=1,ISECT
       CSALF1(I,K)=ANDO(I,K)*CFS(I,K)/(SESTHI(K)*3.14159*DP1(I,K)*
      1SQRT(ETAS(I,K)))
@@ -260,8 +302,20 @@ C        CALCULATE INLET AND EXIT ANGLES IN RADIANS
 28    CSALF1(I,K)=COS(ALF1(I,K))
 31    CONTINUE
       DO 130 K=1,KSTG
-      IF(BETA2(1,K))32,29,32
-29    IF(ANDOR(1,K))130,130,129
+C     IF(BETA2(1,K))32,29,32
+C     replaced by .............
+      IF((BETA2(1,K)).NE.0.) THEN 
+         GO TO 32
+      ELSE
+         GO TO 29
+      ENDIF
+C29    IF(ANDOR(1,K))130,130,129
+C     replaced by .............
+29    IF((ANDOR(1,K)).LE.0.) THEN 
+         GO TO 130
+      ELSE
+         GO TO 129
+      ENDIF
 129   DO 30 I=1,ISECT
       CSBET2(I,K)=ANDOR(I,K)*CFR(I,K)/(RERTHI(K)*3.14159*DP2(I,K)*
      1SQRT(ETAR(I,K)))
@@ -286,7 +340,13 @@ C        CALCULATE INLET AND EXIT ANGLES IN RADIANS
       if (icyl.eq.1) radrd(i,k)=atan(tan(radrd(i,k))
      & *cos(atan(tangm1(i,k))))
 35    continue
-      IF(RG)36,36,37
+C     IF(RG)36,36,37
+C     replaced by .............
+      IF(RG.LE.0.) THEN 
+         GO TO 36
+      ELSE
+         GO TO 37
+      ENDIF
 36    CALL R(PTIN,TTIN,FAIR,WAIR,RG)
       GAMF=0.0
       GO TO 38

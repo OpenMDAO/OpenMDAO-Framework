@@ -76,11 +76,23 @@ C        ADJUST AXIAL VELOCITY
 1     VZ1A(I,K)=WR*VZ1(I,K)*ANN1(I,K)*RHOS1(I,K)/(ANN1A(I,K)
      1*RHOSTR)
       V1A     =SQRT(VU1A(I,K)*VU1A(I,K)+VZ1A(I,K)*VZ1A(I,K))
-      IF(I-IP)2,3,2
+C     IF(I-IP)2,3,2
+C     replaced by
+      IF(I.NE.IP) THEN
+         GO TO 2                           
+      ELSE
+         GO TO 3
+      ENDIF
 2     EX=(GAM(3,K)-1.)/GAM(3,K)
       EXI=1./EX
       GO TO 4
-3     IF(GAMF)12,12,2
+C3     IF(GAMF)12,12,2
+C     replaced by
+3     IF(GAMF.LE.0.) THEN
+         GO TO 12                           
+      ELSE
+         GO TO 2
+      ENDIF
 12    TA1A=.5*(TT1A(I,K)+TS1A)
       CALL GAMA(PT0(I,K),TA1A   ,FAIRx(3,k),WAIRx(3,k),GAM(3,K))
       EX=(GAM(3,K)-1.)/GAM(3,K)
@@ -92,7 +104,13 @@ C        ADJUST AXIAL VELOCITY
       RHOS1A     =144.*PS1A(I,K)/(rg1a(k)*TS1A     )
 C        DENSITY ERROR
       RHOE=(RHOS1A     -RHOSTR)/RHOS1A
-      IF (ABS(RHOE)-RHOTOL)6,6,5
+C     IF (ABS(RHOE)-RHOTOL)6,6,5
+C     replaced by ...............
+      IF((ABS(RHOE)-RHOTOL).LE.0.) THEN
+         GO TO 6                         
+      ELSE
+         GO TO 5
+      ENDIF
 5     RHOSTR=RHOS1A
       GO TO 1
 6     RU1A(I,K)=VU1A(I,K)-U1A(I,K)
@@ -100,7 +118,13 @@ C        DENSITY ERROR
       SBET1A     =RU1A(I,K)/R1A(I,K)
       BET1A(I,K)=ATAN2(SBET1A     ,SQRT(1.-SBET1A     *SBET1A     ))
       IF(RVU1(I,K).NE.0.) RADRD(I,K)=BET1A(I,K)
-      IF(OMEGAR(I,K))8,8,7
+C     IF(OMEGAR(I,K))8,8,7
+C     replaced by ...............
+      IF(OMEGAR(I,K).LE.0.) THEN
+         GO TO 8                   
+      ELSE
+         GO TO 7
+      ENDIF
 7     ETARR(I,K)=1.
       EXPRE=0.0
 8     MR1A(I,K)=R1A(I,K)/SQRT(GAM(3,K)*G*rg1a(k)*TS1A     )
@@ -112,16 +136,34 @@ C        DENSITY ERROR
       RI(I,K)=BET1A(I,K)-RADRD(I,K)
       IF(RI(I,K).GT.1.5707) RI(I,K)=1.5707
       IF(RI(I,K).LT.(-1.5707)) RI(I,K)=(-1.5707)
-      IF(RI(I,K))9,9,10
+C     IF(RI(I,K))9,9,10
+C     replaced by ...............
+      IF(RI(I,K).LE.0.) THEN
+         GO TO 9                   
+      ELSE
+         GO TO 10
+      ENDIF
 9     EXPR=EXPN
       GO TO 11
 10    EXPR=EXPP
 11    PRPS1A     =(1.+(TRTS1A     -1.)*ETARR(I,K)*(COS(RI(I,K))**
      1EXPR))**EXI
       PTR1A(I,K)=PS1A(I,K)*PRPS1A
-      IF (ISECT-I)14,16,14
+C     IF (ISECT-I)14,16,14
+C     replaced by ...............
+      IF((ISECT-I).NE.0) THEN
+         GO TO 14                  
+      ELSE
+         GO TO 16
+      ENDIF
 14    I=I+ID
-      IF (I)15,15,13
+C     IF (I)15,15,13
+C     replaced by ...............
+      IF(I.LE.0) THEN
+         GO TO 15                  
+      ELSE
+         GO TO 13
+      ENDIF
 15    ID=1
       I=IP+ID
       GO TO 13

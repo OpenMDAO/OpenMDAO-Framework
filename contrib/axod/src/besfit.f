@@ -68,7 +68,15 @@ C     WRITE(16,14) K
       B(J+1)=C1/C0
       C0=C1
       LL=J+1
-      IF(IF.GT.0) IF(LL-IF) 3,3,4
+C     IF(IF.GT.0) IF(LL-IF) 3,3,4
+C     replaced by ..........
+      IF(IF.GT.0) THEN 
+         IF(( LL-IF).LE.0) THEN
+             GO TO 3
+         ELSE
+             GO TO 4 
+         ENDIF
+      ENDIF
       NDEG=NDEG-1
       RMS=RES(J+1)/FLOAT(NDEG)
 C     ISUB=MIN0(NDEG,20)
@@ -92,7 +100,13 @@ C array index error here - 11/25/03 RWC
       R(1,2)=-A(1)
       R(2,2)=1.
       R(2,1)=0.
-      IF(K-2) 6,8,8
+C     IF(K-2) 6,8,8
+C     replaced by..........
+      IF(K.LT.2) THEN 
+        GO TO 6
+      ELSE
+        GO TO 8
+      ENDIF
 8     DO 9 I=3,LL
       R(1,I)=-A(I-1)*R(1,I-1)-B(I-1)*R(1,I-2)
       LOOP=I-2

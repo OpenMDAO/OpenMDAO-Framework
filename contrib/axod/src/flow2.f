@@ -41,14 +41,32 @@ C
       EX=(GAM(4,K)-1.)/GAM(4,K)
 C        ISENTROPIC ROTOR RELATIVE TEMPERATURE RATIO
       PHI2(I,K)= PTRS2(I,K)**EX
-      IF(OMEGAR(1,1))2,2,1
+C     IF(OMEGAR(1,1))2,2,1
+C     replaced by .................
+      IF((OMEGAR(1,1)).LE.0.) THEN
+         GO TO 2 
+      ELSE
+         GO TO 1
+      ENDIF
 1     CALL LOSS2(I,K)
 C        EXIT TEMPERATURES
 2     IF(EPR.GT.0.) CALL ETAPR(PTRS2(I,K),ETAO1)
       ETA=ETAR(I,K)*ETAO1
       TS2(I,K)=TTR2(I,K)*(1.-ETA      *(1.-1./PHI2(I,K)))
-      IF(I-IP)6,3,6
-3     IF(    GAMF)4,4,5
+C     IF(I-IP)6,3,6
+C     replaced by .................
+      IF((I-IP).NE.0) THEN
+         GO TO 6 
+      ELSE
+         GO TO 3
+      ENDIF
+C3     IF(    GAMF)4,4,5
+C     replaced by .................
+3     IF( GAMF.LE.0.) THEN
+         GO TO 4
+      ELSE
+         GO TO 5
+      ENDIF
 4     TA2(K)=.5*(TTR2(I,K)+TS2(I,K))
       CALL GAMA(PTR2(I,K),TA2(K),FAIRx(4,k),WAIRx(4,k),GAM(4,K))
 5     EXI=GAM(4,K)/(GAM(4,K)-1.)
@@ -66,16 +84,41 @@ C        EXIT PRESSURE
 C        EXIT DENSITY
       RHOS2(I,K)=144.*PS2(I,K)/(rg2(k)*TS2(I,K))
 C        TEST CRITICAL PRESSURE RATIO
-      IF(RVU1(I,K))120,130,120
-120   SNBET2=(RVU2(I,K)*2./DP2(I,K)+U2(I,K))/R2(I,K)
-      ASNBET=ABS(SNBET2)
-      IF(ASNBET.GT.1.)SNBET2=SNBET2/(ASNBET+.01)
-      CBET2E=SQRT(1.-SNBET2**2)
-      BET2E(I,K)=ATAN(SNBET2/CBET2E)
-130   IF( PTRS2(I,K)-P1AS2C   )140,7,7
-7     IF(RVU1(I,K).NE.0.) GO TO 11
-      IF (IP-I) 22,8,22
-8     IF (PRPC)9,9,18
+C     IF(RVU1(I,K))120,130,120
+C     replaced by .........................
+      IF((RVU1(I,K)).NE.0.) THEN
+          SNBET2=(RVU2(I,K)*2./DP2(I,K)+U2(I,K))/R2(I,K)
+          ASNBET=ABS(SNBET2)
+          IF(ASNBET.GT.1.)SNBET2=SNBET2/(ASNBET+.01)
+          CBET2E=SQRT(1.-SNBET2**2)
+          BET2E(I,K)=ATAN(SNBET2/CBET2E)
+      ENDIF
+C120   SNBET2=(RVU2(I,K)*2./DP2(I,K)+U2(I,K))/R2(I,K)
+C      ASNBET=ABS(SNBET2)
+C      IF(ASNBET.GT.1.)SNBET2=SNBET2/(ASNBET+.01)
+C      CBET2E=SQRT(1.-SNBET2**2)
+C      BET2E(I,K)=ATAN(SNBET2/CBET2E)
+C130   IF( PTRS2(I,K)-P1AS2C   )140,7,7
+C     replaced by .........................
+      IF(( PTRS2(I,K)-P1AS2C   ).LT.0.) GO TO 140
+C        
+C7     IF(RVU1(I,K).NE.0.) GO TO 11
+      IF(RVU1(I,K).NE.0.) GO TO 11
+C     IF (IP-I) 22,8,22
+C     replaced by .........................
+      IF ((IP-I).NE.0) THEN
+         GO TO  22
+      ELSE
+         GO TO 8
+      ENDIF
+C
+C8     IF (PRPC)9,9,18
+C     replaced by .........................
+8     IF( PRPC.LE.0.) THEN
+         GO TO  9  
+      ELSE
+         GO TO 18
+      ENDIF
 9     PRPC=1.
       GO TO 18
 22    IF (PTRS2(I,K).LE.PTRS2(IP,K))   GO TO 18
@@ -90,7 +133,13 @@ C        TEST CRITICAL PRESSURE RATIO
      1PHI2C   -1.)/PHI2C  )
       TS2C     =TTR2(I,K)*(1.-ETAC     *(1.-1./PHI2C   ))
       RHOS2C     =144.*PTR2(I,K)/(rg2(k)*P1AS2C   *TS2C     )
-      IF(RVU1(I,K))15,150,15
+C     IF(RVU1(I,K))15,150,15
+C     replaced by ................
+      IF(RVU1(I,K).NE.0.) THEN
+         GO TO 15
+      ELSE
+         GO TO 150
+      ENDIF
 150   continue
       cscyl=sqrt(1./(1.+(1./csbet2(i,k)**2-1.)/cat2**2))
       WG2(I,K)=RHOS2C     *R2C     *ANN2(I,K)*CScyl
@@ -112,7 +161,13 @@ C   OVEREXPANSION
      & *cat2*cfr(i,k)*xcf
       if (andor(1,k).gt.0.0) wg2(i,k)=wg2(i,k)/cfr(i,k)/xcf
       IF(RVU1(I,K).EQ.0.) GO TO 16
-      IF(PTRS2(I,K)-P1AS2C) 170,180,180
+C     IF(PTRS2(I,K)-P1AS2C) 170,180,180
+C     replaced by .........................
+      IF((PTRS2(I,K)-P1AS2C).LT.0.) THEN
+         GO TO 170
+      ELSE
+         GO TO 180
+      ENDIF
 170   CSBET2(I,K)=CBET2E
       BET2(I,K)=BET2E(I,K)
       GO TO 16

@@ -57,19 +57,38 @@ C
 C
 C
 C
+C     print *,' Entering  In flow1  PT1(I)= ',PT1(I)
       ETAO1=1.
       cat1=cos(atan(tangm1(i,k)))
       EX=(GAM(2,K)-1.)/GAM(2,K)
 C        COMPUTE ISENTROPIC STATOR TEMPERATURE RATIO
       PHI1(I,K)=PT0PS1(I,K)**EX
 C        TEST FOR LOSS COEFFICIENT INPUT
-      IF (OMEGAS(1,1))2,2,1
+C     IF (OMEGAS(1,1))2,2,1
+C     replaced by ....................
+      IF(OMEGAS(1,1).LE.0.) THEN
+         GO TO 2
+      ELSE
+         GO TO 1
+      ENDIF
 1     CALL LOSS1(I,K,EX)
 2     IF(EPR.GT.0.) CALL ETAPR(PT0PS1(I,K),ETAO1)
       ETA=ETAS(I,K)*ETAO1
       TS1(I,K)=TT1(I,K)*(1.-ETA      *(1.-1./PHI1(I,K)))
-      IF(I-IP)6,3,6
-3     IF(GAMF)4,4,5
+C     IF(I-IP)6,3,6
+C     replaced by ....................
+      IF((I-IP).NE.0) THEN
+         GO TO 6
+      ELSE
+         GO TO 3
+      ENDIF
+C3     IF(GAMF)4,4,5
+C     replaced by ....................
+3     IF(GAMF.LE.0.) THEN
+         GO TO 4
+      ELSE
+         GO TO 5
+      ENDIF
 4     TA1(K)=.5*(TT1(I,K)+TS1(I,K))
       CALL GAMA(PT0(IP,K),TA1(K),FAIRx(2,k),WAIRx(2,k),GAM(2,K))
 5     EX=(GAM(2,K)-1.0)/GAM(2,K)
@@ -82,21 +101,48 @@ C        EXIT VELOCITY
 c      Pressure ratio correction to flow coefficient
       if (i.eq.ip) call etacf(pt0ps1(i,k),ptps1c,xcf)
 C        EXIT PRESSURE
+C     print *,'  In flow1  PT1(I)= ',PT1(I),'  PT0PS1(k)=',PT0PS1(I,K)
       PS1(I,K)=PT1(I  )/PT0PS1(I,K)
 C        EXIT DENSITY
+C     print *,'  In flow1  PS1(I,K)= ',PS1(I,K),'  rg1(k)=',rg1(k)
+C     print *,'  TS1(I,K)= ',TS1(I,K)
       RHOS1(I,K)=144.*PS1(I,K)/(rg1(k)*TS1(I,K))
 C        TEST CRITICAL PRESSURE RATIO
-      IF(RVU1(I,K))120,130,120
+C     IF(RVU1(I,K))120,130,120
+C     replaced by ....................
+      IF(RVU1(I,K).NE.0.) THEN
+         GO TO 120
+      ELSE
+         GO TO 130
+      ENDIF
 120   SNALF1=RVU1(I,K)*2./DP1(I,K)/V1(I,K)
       ASNALF=ABS(SNALF1)
       IF(ASNALF.GT.1.)SNALF1=SNALF1/(ASNALF+.01)
       CSAL1E=SQRT (1.-SNALF1**2)
       ALF1E(I,K)=ATAN(SNALF1/CSAL1E)
-130   IF(PT0PS1(I,K)-PTPS1C)140,   8,8
+C130   IF(PT0PS1(I,K)-PTPS1C)140,   8,8
+C     replaced by ....................
+130   IF((PT0PS1(I,K)-PTPS1C).LT.0.) THEN
+         GO TO 140
+      ELSE
+         GO TO 8
+      ENDIF
 C        GREATER THAN CRITICAL
 8     IF(RVU1(I,K).NE.0.) GOTO 11
-      IF (IP-I) 21,9,21
-9     IF (PRPC)10,10,22
+C     IF (IP-I) 21,9,21
+C     replaced by ....................
+      IF((IP-I).NE.0) THEN
+         GO TO 21
+      ELSE
+         GO TO 9
+      ENDIF
+C9     IF (PRPC)10,10,22
+C     replaced by ....................
+9     IF(PRPC.LE.0.) THEN
+         GO TO 10
+      ELSE
+         GO TO 22
+      ENDIF
 C        PREVIOUS PITCH NONCRITICAL
 10    PRPC=1.
       GO TO 22
@@ -113,8 +159,16 @@ C   PRESSURE RATIO ABOVE CRITICAL
      1-1.)/PHI1C   )
       TS1C     =TT1(I,K)*(1.-ETAC     *(1.-1./PHI1C   ))
       RHOS1C     =144.*PT1(I  )/(  PTPS1C   *TS1C     *rg1(k))
-      IF(RVU1(I,K))15,150,15
+C     IF(RVU1(I,K))15,150,15
+C     replaced by ....................
+C     print *,'  RVU1(I,K)=',RVU1(I,K),' I=',I,' K=',K
+      IF(RVU1(I,K).NE.0.) THEN
+         GO TO 15
+      ELSE
+         GO TO 150
+      ENDIF
 150   continue
+C     print *,'   in flow1...  after 150...'
       cscyl=sqrt(1./(1.+(1./csalf1(i,k)**2-1.)/cat1**2))
       WG1(I,K)=RHOS1C     *V1C     *ANN1(I,K)*CScyl
      & *cat1*cfs(i,k)*xcf
@@ -132,12 +186,25 @@ C   PRESSURE RATIO LESS THAN CRITICAL
       CSAL1E     =CSALF1(I,K)
       ALF1E(I,K)=ALF1(I,K)
 15    continue
+C     print *,'   in flow1...  after 15...'
       cscyle=sqrt(1./(1.+(1./csal1e**2-1.)/cat1**2))
+C     print *,' cscyle =',cscyle,'  in flow1....'
+c     print *,'  ANN1(I,K)=',ANN1(I,K),' I=',I,' K=',K
+C     print *,'  RHOS1(I,K)=',RHOS1(I,K),' cat1 =',cat1 
+C     print *,'  cfs(I,K)=',cfs(I,K),' xcf  =',xcf  
       WG1(I,K)=RHOS1(I,K)*V1(I,K)*ANN1(I,K)*CScyle
      & *cat1*cfs(i,k)*xcf
+C       print *,'  WG1(I,K) = ',WG1(I,K),'  in flow1..1.'
       if (ando(1,k).gt.0.0) wg1(i,k)=wg1(i,k)/cfs(i,k)/xcf
+C       print *,'  WG1(I,K) = ',WG1(I,K),'  in flow1..2.'
       IF(RVU1(I,K).EQ.0.) GO TO 16
-      IF(PT0PS1(I,K)-PTPS1C)170,180,180
+C     IF(PT0PS1(I,K)-PTPS1C)170,180,180
+C     replaced by ....................
+      IF((PT0PS1(I,K)-PTPS1C).LT.0.) THEN
+         GO TO 170
+      ELSE
+         GO TO 180
+      ENDIF
 170   CSALF1(I,K)=CSAL1E
       ALF1(I,K)=ALF1E(I,K)
       GO TO 16

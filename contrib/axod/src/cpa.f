@@ -2,13 +2,25 @@ CCPA
 C     CALCULATE SPECIFIC HEAT RATIO FOR AIR
       SUBROUTINE CPA(P,T,F,W,CPAX)
       DIMENSION XT(7)
-      IF(T-100.)1,2,2
+C     IF(T-100.)1,2,2
+C     replaced by ..........
+      IF(T.LT. 100.) THEN 
+        TX = 100.
+        GO TO 5
+C       GO TO 1
+      ELSE
+        GO TO 2
+      ENDIF
 1     TX=100.
       GO TO 5
-2     IF(6400.-T)3,4,4
-3     TX=6400.
-      GO TO 5
-4     TX=T
+C 2     IF(6400.-T)3,4,4
+C     replaced by ..........
+2     IF(T.GT.6400.) THEN
+        TX = 6400.
+      ELSE
+        TX = T
+      ENDIF
+C
 5     XT(1)=TX/1000.
       DO 6 I=2,7
 6     XT(I)=XT(I-1)*XT(1)

@@ -94,9 +94,27 @@ C
       ID=-1
       WGT1C(K)=0.0
       LC1(K)=0
-      IF(ICHOKE)17,17,16
-17    IF(LOPIN)18,18,16
-18    IF(GAMF)2,2,3
+C     IF(ICHOKE)17,17,16
+C     replaced by ..................
+      IF(ICHOKE.LE.0) THEN
+         GO TO 17
+      ELSE
+         GO TO 16
+      ENDIF
+C17    IF(LOPIN)18,18,16
+C     replaced by ..................
+17    IF(LOPIN.LE.0) THEN
+         GO TO 18
+      ELSE
+         GO TO 16
+      ENDIF
+C18    IF(GAMF)2,2,3
+C     replaced by ..................
+18    IF(GAMF.LE.0) THEN
+         GO TO 2 
+      ELSE
+         GO TO 3 
+      ENDIF
 2     TA1(K)=.95*TT0(IP,K)
       CALL GAMA(PT0(IP,K),TA1(K),FAIRx(2,k),WAIRx(2,k),GAM(2,K))
 3     EXI=GAM(2,K)/(GAM(2,K)-1.)
@@ -112,9 +130,21 @@ C
       WGT1C(K)=WGT1C(K)+WG1(I,K)
       L=1
       IF (PT0PS1(I,K).LE.PT0PS1(IP,K)) L=I
-      IF(ISECT-I)7,7,4
+C     IF(ISECT-I)7,7,4
+C     replaced by ..................
+      IF((ISECT-I).LE.0) THEN
+         GO TO 7 
+      ELSE
+         GO TO 4 
+      ENDIF
 4     I=I+ID
-      IF(I)5,5,6
+C     IF(I)5,5,6
+C     replaced by ..................
+      IF(I.LE.0) THEN
+         GO TO 5 
+      ELSE
+         GO TO 6 
+      ENDIF
 5     ID=1
       I=IP+ID
 6     L=I-ID
@@ -124,7 +154,13 @@ C
      1         *(1.+GM2*(1.-DRSQ))   **(GAM(2,K)/(GAM(2,K)-1.))
       PT0PS1(I,K)=PT0(I,K)/PS1(I,K)
       GO TO 16
-7     IF(LC1(K))8,8,9
+C7     IF(LC1(K))8,8,9
+C     replaced by ..................
+7     IF(LC1(K).LE.0) THEN
+         GO TO 8 
+      ELSE
+         GO TO 9 
+      ENDIF
 8     LC1(K)=1
       EX=GAM(2,K)/(GAM(2,K)-1.)
       IF(VUOT.NE.0.)GO TO 1210
@@ -163,30 +199,86 @@ C
         tt1(i,k)=(cpp*tt1(i,k)+(wr-1.)*cpc*twg(2,k))/(cpp+(wr-1.)*cpc)
       end if
 1150  continue
-      IF(WGT1(K)-WGT1C(K))12,15,11
+C     IF(WGT1(K)-WGT1C(K))12,15,11
+C     replaced by ..................
+      IF((WGT1(K)-WGT1C(K)).LT.0.) THEN 
+         GO TO 12
+      ELSEIF((WGT1(K)-WGT1C(K)).EQ.0.) THEN
+         GO TO 15
+      ELSEIF((WGT1(K)-WGT1C(K)).GT.0.) THEN
+         GO TO 11
+      ENDIF
 11    PRLOW=PT0PS1(IP,K)*.8+.2*PRLOW
       GO TO 13
 12    PRUP=PT0PS1(IP,K)*.8+.2*PRUP
 13    WE=1.-WGT1(K)/WGT1C(K)
       J=J+1
-      IF(J-26)29,21,21
-29    IF(ICHOKE-L) 30,31,30
+C     IF(J-26)29,21,21
+C     replaced by ..................
+      IF(J.LT.26) THEN
+         GO TO 29
+      ELSE
+         GO TO 21
+      ENDIF
+C29    IF(ICHOKE-L) 30,31,30
+C     replaced by ..................
+29    IF((ICHOKE-L).NE.0) THEN 
+         GO TO 30
+      ELSE
+         GO TO 31
+      ENDIF
 31    SCRIT= -WE
       GO TO 15
-30    IF(LOPIN)14,14,15
+C30    IF(LOPIN)14,14,15
+C     replaced by ..................
+30    IF(LOPIN.LE.0 ) THEN
+         GO TO 14
+      ELSE
+         GO TO 15
+      ENDIF
 14    CONTINUE
       IF(PT0PS1(IP,K).LT.1.15) GO TO 71
-      IF (ABS( WE)- WTOL)15,15,27
-71    IF(ABS(WE)-10.*WTOL) 15,15,27
+C     IF (ABS( WE)- WTOL)15,15,27
+C     replaced by ..................
+      IF((ABS( WE)- WTOL).LE.0.) THEN
+         GO TO 15
+      ELSE
+         GO TO 27
+      ENDIF
+C71    IF(ABS(WE)-10.*WTOL) 15,15,27
+C     replaced by ..................
+71    IF((ABS(WE)-10.* WTOL).LE.0.) THEN
+         GO TO 15
+      ELSE
+         GO TO 27
+      ENDIF
 21    CONTINUE
       IF(PT0PS1(IP,K).LT.1.15) GO TO 73
-      IF (ABS(WE)-WTOL)15,15,20
-73    IF(ABS(WE)-10.*WTOL) 15,15,20
+C     IF (ABS(WE)-WTOL)15,15,20
+C     replaced by ..................
+      IF((ABS(WE)- WTOL).LE.0.) THEN
+         GO TO 15
+      ELSE
+         GO TO 20
+      ENDIF
+C73    IF(ABS(WE)-10.*WTOL) 15,15,20
+C     replaced by ..................
+73    IF((ABS(WE)-10.* WTOL).LE.0.) THEN
+         GO TO 15
+      ELSE
+         GO TO 20
+      ENDIF
 27    PTRMO=PT0PS1(IP,K)
       WGT1C(K)=0.0
       I=IP
       ID=-1
-      IF (SCRIT)19,19,15
+C     IF (SCRIT)19,19,15
+C     replaced by ..................
+      IF(SCRIT.LE.0.) THEN
+         GO TO 19
+      ELSE
+         GO TO 15
+      ENDIF
 19    CONTINUE
       IF (PT0PS1(IP,K).LE.PRCRIT
      1.OR.RVU1(I,K).NE.0.) PRPC=0.

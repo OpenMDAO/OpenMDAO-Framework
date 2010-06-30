@@ -38,13 +38,27 @@ C
       EXPP=0.0
       ETARS(I,K)=1.0
       SI(I,K)=ALPHA0(I,K)- RADSD(I,K)
-      IF(SI(I,K))5,1,2
+C     IF(SI(I,K))5,1,2
+C     replaced by ...............
+      IF(SI(I,K).LT.0.) THEN 
+         GO TO 5
+      ELSEIF(SI(I,K).EQ.0.) THEN
+         GO TO 1
+      ELSEIF(SI(I,K).GT.0.) THEN
+         GO TO 2
+      ENDIF
 1     W01=OMEGAS(I,K)
       GO TO 9
 2     AS=A1(I,K)
       AC=A2(I,K)
       AQ=A3(I,K)
-      IF(ASMPO(I,K)-SI(I,K))3,4,4
+C     IF(ASMPO(I,K)-SI(I,K))3,4,4
+C     replaced by ...............
+      IF((ASMPO(I,K)-SI(I,K)).LT.0.) THEN 
+         GO TO 3
+      ELSE
+         GO TO 4
+      ENDIF
 3     WMWS=SI(I,K)/ASMPO(I,K)
       AR=ASMPO(I,K)/ASO(I,K)
       GO TO 8
@@ -54,7 +68,13 @@ C
 5     AS=A4(I,K)
       AC=A5(I,K)
       AQ=A6(I,K)
-      IF(SI(I,K)-ACMNO(I,K))6,4,4
+C     IF(SI(I,K)-ACMNO(I,K))6,4,4
+C     replaced by ...............
+      IF((SI(I,K)-ACMNO(I,K)).LT.0.) THEN 
+         GO TO 6
+      ELSE
+         GO TO 4
+      ENDIF
 6     WMWS=SI(I,K)/ACMNO(I,K)
       AR=ACMNO(I,K)/ASO(I,K)
 8     W01=(1.+AR*AR*(AS+AR*(AC+AR*AQ)))*WMWS*OMEGAS(I,K)

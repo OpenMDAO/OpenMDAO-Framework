@@ -36,13 +36,19 @@ Following modifications were needed to create a python wrapped module.
       'testaxod.py' is created.
 
 5.    Execute it as "python testaxod.py" from the commond line.
+      The testaxod.py script executes the code with  2 input files in a loop.
+
+      The "test_axod_comp.py" tests the component 'AxodComp' with 2 input files           
+      (one_stage.inp & eee_hpt.inp).
+
 
 6.    The wrapper module was tested by executing the code using two different
-      input files, namely, hpt.inp & lpt.inp. The script allows to run the code
+      input files, namely, eee_hpt.inp & one_stage.inp. The script allows to run the code
       in a loop by changing input files. The output produced matches with the output 
       obtained from a run with the original code.
 
 7.    Makefile was modified to create an f2py wrapper module 'axodm.so'.
+      (tested with gfortran compiler)
   
       Use  "make f2py"                  for  f2py module
            "make     "                  for  axod executable (default)

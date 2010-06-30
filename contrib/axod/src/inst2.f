@@ -116,11 +116,29 @@ c30    jj=3
 10    CONTINUE
       CALL FIT2
       IT=ISECT-2*(ISECT/2)
-      IF(IT)60,60,62
-60    GO TO(70,9,8,8,50,9,50),L
-62    GO TO(70,83,82,9,63,8,65),L
-63    IF(ISECT-1)84,84,50
-65    IF(ISECT-1)75,50,50
+C     IF(IT)60,60,62
+C     replaced by ...............
+      IF(IT.LE.0) THEN
+C60    GO TO(70,9,8,8,50,9,50),L
+        GO TO(70,9,8,8,50,9,50),L
+      ELSE
+C62    GO TO(70,83,82,9,63,8,65),L
+        GO TO(70,83,82,9,63,8,65),L
+      ENDIF
+C63    IF(ISECT-1)84,84,50
+C     replaced by ........
+63    IF(ISECT.LE.1)  THEN  
+        GO TO 84
+      ELSE
+        GO TO 50
+      ENDIF
+C65    IF(ISECT-1)75,50,50
+C     replaced by ........
+65    IF(ISECT.LT.1)  THEN  
+        GO TO 75
+      ELSE
+        GO TO 50
+      ENDIF
 C        CALCULATE   TIP   VALUES
 70    I=ISECT
 c     if(isect.eq.1) go to 43
@@ -158,7 +176,13 @@ c     go to 46
       IF(ISECT.EQ.5) GO TO 8
       IF(ISECT.EQ.1) GO TO 75
       I=ISECT/2
-      IF(ISECT-4)52,52,53
+C     IF(ISECT-4)52,52,53
+C     replaced by ........
+      IF(ISECT.LE.4) THEN  
+        GO TO 52
+      ELSE
+        GO TO 53
+      ENDIF
 52    L=I+2
       GO TO 54
 53    L=I+1
