@@ -990,7 +990,7 @@ We are now ready to solve an optimization problem.
 Solving the Optimization Problem
 ---------------------------------
 
-First, lets run the problem inside the Python shell. Load and create an instance of the
+First, let's run the problem inside the Python shell. Load and create an instance of the
 EngineOptimization class, setting it as the top assembly.
 
 .. doctest:: optimization_fun

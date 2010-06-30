@@ -44,8 +44,8 @@ On **Windows**, you'll need `Python 2.6`__; numpy can be found
 .. __: http://sourceforge.net/projects/numpy/files/
 
 
-On **Mac OS X**, make sure to install *Xcode*. It's included on the OS X install
-disk, and installing it will give you access to *gcc*. You can also download a newer version
+On **Mac OS X**, make sure to install Xcode. It's included on the OS X install
+disk, and installing it will give you access to gcc. You can also download a newer version
 from Apple, but you'll have to fill out a (free) registration to do it. 
 
 If you're running **Snow Leopard**, you'll need to install a version of Python 2.6 from

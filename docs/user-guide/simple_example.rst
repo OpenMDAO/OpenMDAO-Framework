@@ -236,7 +236,7 @@ in Python; your execute function must be indented so that Python knows
 it is part of the Paraboloid class. The finished result should look like the code
 from the beginning of this tutorial.
 
-To make sure this component works, let's try running it. Please enter the Python
+To make sure this component works, try running it. Please enter the Python
 shell by typing
 
 ::

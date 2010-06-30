@@ -11,7 +11,7 @@ interact with objects in the framework.
 
 The goal of this section of the *User Guide* is to explain and demonstrate
 several aspects of the OpenMDAO script interface. This section is intended
-primarily as a reference. If you are an inexperienced user, you would best be be
+primarily as a reference. If you are an inexperienced user, you would best be 
 served by reading and understanding the examples in
 :ref:`Getting-Started-with-OpenMDAO` and :ref:`A-More-Complex-Tutorial-Problem`.
 
