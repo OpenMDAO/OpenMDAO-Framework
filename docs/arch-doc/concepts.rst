@@ -142,7 +142,7 @@ So we have two possible ways to have fully functional geometry within OpenMDAO.
 The CAPRI option works well for users with commercial CAD packages and skilled
 CAD operators available to create parametric CAD parts for them. One unfortunate
 side effect of this approach is that it limits collaboration with other
-potential users of a parametric geometry, because whatever parametric geometry
+potential users of a parametric geometry because whatever parametric geometry
 is built in this fashion will only work in the same CAD package in which it was
 built. If the geometry is exported into some format that is readable by other
 packages, the parametric information will be lost.
@@ -245,7 +245,7 @@ sides of the connection, these *incompatible* components can coexist within a
 model.
 
 In OpenMDAO, this will be done by setting up an :term:`ObjServerFactory` in a
-self-contained Python environment that was created using ``virtualenv`` and having
+self-contained Python environment that was created using :term:`virtualenv` and having
 each :term:`ObjServer` spawned from that factory use that factory's environment.
 Each virtual environment can run a different Python version and can also
 have its own set of modules installed.

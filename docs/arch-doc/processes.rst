@@ -296,8 +296,8 @@ Components request their parent assembly to do input and output variable
 transfers. The request happens just before execution for inputs and just after
 execution for outputs.
 
-Subassemblies perform *passthrough* transfers, transfers from inputs to the
-subassembly to the corresponding internal component inputs, and transfers from
+Subassemblies perform *passthrough* transfers (transfers from inputs to the
+subassembly to the corresponding internal component inputs) and transfers from
 internal component outputs to the corresponding outputs of the subassembly. This
 is because the subassembly effectively hides its internal components from the
 outside world.
