@@ -24,7 +24,7 @@ config.add_extension('conmin', sources=['conmin.f'],
                      library_dirs=library_dirs)
 
 kwds = {'install_requires':['numpy'],
-        'version': '1.0',
+        'version': '1.0.1',
         'zip_safe': False,
         'license': 'public domain',
    # NOTE: we use 'url' here, but it really translates to 'home-page'
