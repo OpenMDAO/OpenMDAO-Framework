@@ -40,11 +40,11 @@ setup(name='openmdao.main',
       # TODO: get rid of our dependency on zc.buildout
       install_requires=[
           'setuptools',
-          'zc.buildout',
+          'zc.buildout==1.4.3',
           'pyparsing==1.5.2',
           'numpy>=1.3.0',
           'PyYAML',
-          'networkx>=1.0.1',
+          'networkx==1.0.1',
           'Traits==3.3.0',
           'openmdao.units',
           'openmdao.util',

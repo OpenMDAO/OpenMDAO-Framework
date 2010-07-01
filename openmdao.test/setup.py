@@ -44,7 +44,7 @@ setup(name='openmdao.test',
       install_requires=[
           'setuptools',
           'openmdao.lib',
-          'nose',
+          'nose==0.11.1',
           'nosecoverage2',
       ],
       entry_points={
