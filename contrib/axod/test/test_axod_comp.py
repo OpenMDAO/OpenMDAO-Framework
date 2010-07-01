@@ -4,9 +4,12 @@ import unittest
 
 import pkg_resources
 
+if '.' not in sys.path:
+    sys.path.append('.')
+
 from openmdao.util.testutil import assert_rel_error
 
-from openmdao.lib.components.axod_comp import AxodComp
+from axod_comp import AxodComp
 
 
 class TestCase(unittest.TestCase):

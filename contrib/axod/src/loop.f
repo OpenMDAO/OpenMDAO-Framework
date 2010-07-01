@@ -30,20 +30,50 @@ c    1ISORRS,LSTGS,SPTPS,PT0PS1(IP,JL),DELPR,DELL,SCRIT,LOPC
       if (delpr.lt.prtol/20.) go to 100
       IBRC=IBRC+1
 C     TEST NEGATIVE SECTOR PRESSURE RATIO
-      IF (PTRN)18,1,1
+C     IF (PTRN)18,1,1
+C     replaced by .............
+      IF (PTRN.LT.0.) THEN 
+          GO TO 18
+      ELSE
+          GO TO 1
+      ENDIF
 C     TEST CHOKE ITERATION ON BLADE ROW
-1     IF (ICHOKE-IBRC)3,2,3
+C1     IF (ICHOKE-IBRC)3,2,3
+C     replaced by .............
+1     IF ((ICHOKE-IBRC).NE.0) THEN 
+          GO TO 3 
+      ELSE
+          GO TO 2
+      ENDIF
 C     TEST INCREMENT TOLERANCE
-2     IF (PRTOL-DELPR)3,3,4
+C2     IF (PRTOL-DELPR)3,3,4
+C     replaced by .............
+2     IF ((PRTOL-DELPR).LE.0.) THEN 
+          GO TO 3 
+      ELSE
+          GO TO 4
+      ENDIF
 C     TEST STATION FLOW CRITICAL
-3     IF (SCRIT)5,5,6
+C3     IF (SCRIT)5,5,6
+C     replaced by .............
+3     IF (SCRIT.LE.0.) THEN 
+          GO TO 5
+      ELSE
+          GO TO 6
+      ENDIF
 C     CHOKE ITERATION COMPLETE
 4     ICHOKE=0
       IPC=IBRC
       ISS=IBRC
       ISORR=2+(IBRC/2)*2-IBRC
       JL=(ISORR-1)*8+KN
-      IF (JL-IJ)22,23,23
+C    IF (JL-IJ)22,23,23
+C     replaced by .............
+      IF ((JL-IJ).LT.0) THEN 
+          GO TO 22
+      ELSE
+          GO TO 23
+      ENDIF
 22    DELPR=DELL
 24    LOPC=0
       CHOKE=1.
@@ -52,9 +82,21 @@ C     CHOKE ITERATION COMPLETE
       GO TO 18
 23    DELPR=DELA
       GO TO 24
-5     IF (ICHOKE-IBRC)18,7,18
+C5     IF (ICHOKE-IBRC)18,7,18
+C     replaced by .............
+5     IF ((ICHOKE-IBRC).EQ.0) THEN 
+          GO TO 7   
+      ELSE
+          GO TO 18
+      ENDIF
 C     TEST CHOKE ITERATION LOOP
-6     IF(ISS-IBRC)8,18,18
+C6     IF(ISS-IBRC)8,18,18
+C     replaced by .............
+6     IF ((ISS-IBRC).LT.0) THEN 
+          GO TO 8   
+      ELSE
+          GO TO 18
+      ENDIF
 C     CHOKE ITERATION
 C     ISORR = 1 FOR STATOR
 C           = 2 FOR ROTOR
@@ -63,7 +105,13 @@ C           = 2 FOR ROTOR
       PT0PS1(IP,JL)=PT0PS1(IP,JL)+DELPR
       GO TO 16
 C     CHOKE HAS OCURRED
-8     IF(ICHOKE)80,80,13
+C8     IF(ICHOKE)80,80,13
+C     replaced by .............
+8     IF (ICHOKE.LE.0) THEN 
+          GO TO 80  
+      ELSE
+          GO TO 13
+      ENDIF
 80    J=(IBRC-2*(KN-1)-1)*8+KN
 
 c error in index calculation above
@@ -75,9 +123,21 @@ c error in index calculation above
 
 801   FORMAT(16X,10HBLADE ROW ,I3,8H CHOKED ,4X,5HPTPS=,F10.5)
 C     TEST SINGLE CALCULATION POINT
-      IF (DELC)18,18,10
+C     IF (DELC)18,18,10
+C     replaced by .............
+      IF (DELC.LE.0.) THEN 
+          GO TO 18  
+      ELSE
+          GO TO 10
+      ENDIF
 C     TEST PREVIOUS CHOKE
-10    IF (IPC)11,11,12
+C10    IF (IPC)11,11,12
+C     replaced by .............
+10    IF (IPC.LE.0) THEN 
+          GO TO 11  
+      ELSE
+          GO TO 12
+      ENDIF
 C     SAVE COMBINATIONS PRIOR FIRST CHOKE
 11    LBRCS=LBRC
       ISORRS=ISORR
@@ -106,7 +166,13 @@ C     SAVE COMBINATIONS PRIOR FIRST CHOKE
       CHOKE=0.0
       GO TO 17
 C     TEST PREVIOUS COMPLETE CALCULATION
-13    IF (PASS)15,15,14
+C13    IF (PASS)15,15,14
+C     replaced by .............
+13    IF (PASS.LE.0.) THEN 
+          GO TO 15  
+      ELSE
+          GO TO 14
+      ENDIF
 14    ICHOKE=IBRC
       DELPR=.5*DELPR
 15    JL=(ISORR-1)*8+LSTG
@@ -120,7 +186,13 @@ C SET JUMP FOR CHOKE ITERATION
 C     JUMP SET FOR NO CHOKE OR CHOKE COMPLETE
 18    JUMP=0
 C     TEST LOOP-TRACE
-19    IF (TRLOOP)21,21,20
+C19    IF (TRLOOP)21,21,20
+C     replaced by .............
+19    IF (TRLOOP.LE.0.) THEN 
+          GO TO 21  
+      ELSE
+          GO TO 20
+      ENDIF
 20    WRITE(16,2001)IBRC,LBRC,ISORR,KN,LSTG,IPC,ISS,ICHOKE,JUMP,LBRCS,
      1ISORRS,LSTGS,SPTPS,PT0PS1(IP,JL),DELPR,DELL,SCRIT,LOPC
 2001  FORMAT(3X,12I5/3X,4F10.5,F10.3,I10)

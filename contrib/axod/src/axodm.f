@@ -71,8 +71,9 @@ c      open(10,file='etaout',status='UNKNOWN')
       WRITE (16,'(A,///)') '             '
 
       CALL ICOMMON
+C     print *,'  After  ICOMMON *******************'
       ENDPLT=0.0
-      endjob=0.0
+      endjob=0.0 
       icf=0
 
       DO K=1,8
@@ -158,7 +159,11 @@ c      open(10,file='etaout',status='UNKNOWN')
       JL1=1
       THSSIT=0.0
 C                                                    
+C     print *,'  going to  INIT ******************'
       CALL INIT
+C     print *,'  BACK from  INIT ******************'
+C     print *,' endjob =',endjob
+c     if (endjob.eq.0.0) stop
 
 c     rwc mod
       if (endplt.eq.1.0) OPEN(7,FILE='pltfile',STATUS='UNKNOWN')
@@ -187,7 +192,10 @@ c     rwc mod
 2     continue
       PRPC=CS(KN)
       PRPC1=PRPC
+C     print *,'  going to  sta01******************'
       CALL STA01
+C     print *,'  Back from sta01******************'
+C     if (endjob.eq.0.0) stop
       CS(KN)= PRPC
       IF(M.EQ.6.OR.M.EQ.1) CALL DIAGT(1)
       IF(M.EQ.6.OR.M.EQ.2) CALL DIAGT(2)
@@ -231,7 +239,13 @@ CC
       CS(KN)=PRPC
       IF(M.EQ.6.OR.M.EQ.2) CALL DIAGT(2)
       IF (PREVER) GO TO 40
-      IF (JUMP)3,3,20
+C     IF (JUMP)3,3,20
+C     replaced by .........
+      IF (JUMP.LE.0) THEN
+         GO TO 3
+      ELSE
+         GO TO 20
+      ENDIF
 
 9     continue
       CALL OVRALL
@@ -383,12 +397,12 @@ c     IF ((ENDPLT-1.).le.0) then
       CALL PLOTER
 c     print *,'   RETURNING from axod.f ****KSTG =', KSTG
       CALL GETDATA(HPOWER, TOTT, TOTP, TOTF, EFFS, EFFR, KSTG)
-c     print *,'  HPOWER =', HPOWER
-c     print *,' TOTT =',(TOTT(III),III=1,KSTG)
-c     print *,' TOTP =',(TOTP(III),III=1,KSTG)
-c     print *,' TOTF =',(TOTF(III),III=1,KSTG)
-c     print *,' EFFS =',(EFFS(III),III=1,KSTG)
-c     print *,' EFFR =',(EFFR(III),III=1,KSTG)
+C     print *,'  HPOWER =', HPOWER
+C     print *,' TOTT =',(TOTT(III),III=1,KSTG)
+C     print *,' TOTP =',(TOTP(III),III=1,KSTG)
+C     print *,' TOTF =',(TOTF(III),III=1,KSTG)
+C     print *,' EFFS =',(EFFS(III),III=1,KSTG)
+C     print *,' EFFR =',(EFFR(III),III=1,KSTG)
       CLOSE (UNIT=15)
       close(16)
       close(7)

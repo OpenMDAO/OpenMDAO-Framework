@@ -37,6 +37,11 @@ class AxodComp(Component):
     mflow = Array(_ZEROS48,dtype=float32, shape=(48,), iotype='out')
     effs  = Array(_ZEROS48,dtype=float32, shape=(48,), iotype='out')
     effr  = Array(_ZEROS48,dtype=float32, shape=(48,), iotype='out')
+    # tott  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
+    # otp  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
+    # mflow = Array(dtype=numpy_float32, shape=(48,), iotype='out')
+    # effs  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
+    # effr  = Array(dtype=numpy_float32, shape=(48,), iotype='out')
 
     def __init__(self, doc=None, directory='', input_filename=''):
         super(AxodComp, self).__init__(doc, directory)

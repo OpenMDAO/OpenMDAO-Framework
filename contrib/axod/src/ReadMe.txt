@@ -26,4 +26,11 @@ Following modifications were made to get output data to python environment.
      python testaxod.py
 
      This will display AXOD internals, then run eee_hpt and one_stage
-     input files multiple times.
+     input files.  
+
+6.   This version of code was done on 6/28/2010
+
+     All "Arithmetic IF" statements are replaced by equivalent "IF THEN"
+     statements.  This was done to remove all warning messages seen during
+     gfortran compilation process.
+

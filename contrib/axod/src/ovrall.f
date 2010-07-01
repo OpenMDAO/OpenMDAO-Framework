@@ -92,9 +92,14 @@ C
       ODHATI = 0.
       E1=GAMSL/(GAMSL-1.)
       DO 17 K=1,KSTG
-      IF (GAMF)1,1,2
-1     TAO=TAO+TAS(K)
-      PAO=PAO+PAS(K)
+C     IF (GAMF)1,1,2
+C     replaced by .........
+      IF (GAMF.LE.0.) THEN 
+C1     TAO=TAO+TAS(K)
+C      PAO=PAO+PAS(K)
+         TAO=TAO+TAS(K)
+         PAO=PAO+PAS(K)
+      ENDIF
 2     GAMO=GAMO+GAMS(K)
       E2=GAM(1,K)/(GAM(1,K)-1.)
       E3=GAM(5,K)/(GAM(5,K)-1.)
@@ -199,11 +204,23 @@ C
       URURS(K)=URS(K)*URS(K)
       OURUR=OURUR+URURS(K)
       ODELHT=ODELHT+DELHTS(K)*rwg(1,k)
-      IF (DELHSI(IP,K))14,14,15
-14    VIS(K)=1.
-      GO TO 16
-15    VIS(K)=SQRT(2.*G*AJ*DHSIsu)
-16    UPVIS(K)=UPS(K)/VIS(K)
+C     IF (DELHSI(IP,K))14,14,15
+C     replaced by ................
+C     IF (DELHSI(IP,K).LE.0.) THEN
+C        GO TO 14
+C     ELSE
+C        GO TO 15
+C     ENDIF
+C14    VIS(K)=1.
+C      GO TO 16
+C15    VIS(K)=SQRT(2.*G*AJ*DHSIsu)
+C16    UPVIS(K)=UPS(K)/VIS(K)
+      IF (DELHSI(IP,K).LE.0.) THEN
+         VIS(K)=1.
+      ELSE
+         VIS(K)=SQRT(2.*G*AJ*DHSIsu)
+      ENDIF
+      UPVIS(K)=UPS(K)/VIS(K)
       URVIS(K)=URS(K)/VIS(K)
       PSIPS(K)=G*AJ*DELHTS(K)/UPUPS(K)
       PSIRS(K)=G*AJ*DELHTS(K)/URURS(K)
@@ -246,10 +263,15 @@ C
       OHP=OHP+HP(K)
       OTORQ=OTORQ+TORQUE(K)
 17    CONTINUE
-      IF(GAMF)4,4,7
-4     TAO=TAO/STG
-      PAO=PAO/STG
-7     GAMO=GAMO/STG
+C     IF(GAMF)4,4,7
+C     replaced by .........
+      IF (GAMF.LE.0.) THEN 
+C4     TAO=TAO/STG
+       TAO=TAO/STG
+       PAO=PAO/STG
+      ENDIF
+C7     GAMO=GAMO/STG
+      GAMO=GAMO/STG
       EO=(GAMO-1.)/GAMO
       CPO=(RG+rg2a(kstg))/2./EO/AJ
       K=KSTG

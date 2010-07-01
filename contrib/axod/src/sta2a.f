@@ -74,8 +74,20 @@ C
       SUMLP=0.0
       WGT2A(K)=WR*WGT2(K)
 12    VU2A(I,K)=VU2(I,K)*DP2(I,K)/DP2A(I,K)
-      IF (I-IP)28,24,28
-24    IF (GAMF)25,25,26
+C     IF (I-IP)28,24,28
+C     replaced by .........
+      IF ((I-IP).EQ.0) THEN 
+         GO TO 24 
+      ELSE
+         GO TO 28
+      ENDIF
+C24    IF (GAMF)25,25,26
+C     replaced by .........
+24    IF (GAMF.LE.0.) THEN
+         GO TO 25 
+      ELSE
+         GO TO 26
+      ENDIF
 25    TAS(K)=.5*(TA1(K)+TA2(K))
       PAS(K)=PT0(IP,K)
       CALL GAMA(PAS(K),TAS(K),FAIRx(3,k),WAIRx(3,k),GAMS(K))
@@ -106,8 +118,20 @@ c  ** DELHVD is per unit of primary flow entering the rotor **
       RHOSTR=RHOS2(I,K)
 1     VZ2A(I,K)=WR*VZ2(I,K)*ANN2(I,K)*RHOS2(I,K)/(ANN2A(I,K)*RHOSTR)
       V2A(I,K)=SQRT(VU2A(I,K)*VU2A(I,K)+VZ2A(I,K)*VZ2A(I,K))
-      IF(I-IP)4,2,4
-2     IF(    GAMF)3,3,4
+C     IF(I-IP)4,2,4
+C     replaced by .........
+      IF ((I-IP).EQ.0) THEN 
+         GO TO 2 
+      ELSE
+         GO TO 4 
+      ENDIF
+C2     IF(    GAMF)3,3,4
+C     replaced by .........
+2     IF (GAMF.LE.0.) THEN
+         GO TO 3  
+      ELSE
+         GO TO 4 
+      ENDIF
 3     TA2A=.5*(TT2A(I,K)+TS2A(I,K))
       CALL GAMA(PTR2(IP,K),TA2A   ,FAIRx(5,k),WAIRx(5,k),GAM(5,K))
 4     EX=(GAM(5,K)-1.)/GAM(5,K)
@@ -121,7 +145,13 @@ c  ** DELHVD is per unit of primary flow entering the rotor **
       GO TO 30
 32    PS2A(I,K)=PS2(I,K)*(TT2*TS2A(I,K)/TT2A(I,K)/TS2(I,K))**EXI
       RHOS2A     =144.*PS2A(I,K)/(rg2a(k)*TS2A(I,K))
-      IF(ABS(RHOSTR-RHOS2A     )-1.E-07)6,6,5
+C     IF(ABS(RHOSTR-RHOS2A     )-1.E-07)6,6,5
+C     replaced by ........
+      IF((ABS(RHOSTR-RHOS2A     )-1.E-07).LE.0.) THEN 
+         GO TO 6
+      ELSE
+         GO TO 5
+      ENDIF
 5     RHOSTR=RHOS2A
       GO TO 1
 6     SALF2A     =VU2A(I,K)/V2A(I,K)
@@ -132,9 +162,21 @@ c  ** DELHVD is per unit of primary flow entering the rotor **
       PTPS2A     = (TTTS2A(I)  )**EXI
       PT2A(I,K)=PS2A(I,K)*PTPS2A
       MF2A(I,K)=M2A(I,K)*COS(ALF2A(I,K))
-      IF (ISECT-I)13,15,13
+C     IF (ISECT-I)13,15,13
+C     replaced by .........
+      IF ((ISECT-I).EQ.0) THEN 
+         GO TO 15 
+      ELSE
+         GO TO 13
+      ENDIF
 13    I=I+ID
-      IF (I)14,14,12
+C     IF (I)14,14,12
+C     replaced by .........
+      IF (I.LE.0) THEN 
+         GO TO 14 
+      ELSE
+         GO TO 12
+      ENDIF
 14    ID=1
       I=IP+ID
       GO TO 12
@@ -148,22 +190,48 @@ c  ** DELHVD is per unit of primary flow entering the rotor **
       E3=GAM(5,K)/(GAM(5,K)-1.)
       TTBAR(K)=TT2A(IP,K)*SUMT
       PTBAR(K)=PT2A(IP,K)*EXP(SUMLP)
-      IF (K-KSTG)17,18,18
+C     IF (K-KSTG)17,18,18
+C     replaced by .........
+      IF ((K-KSTG).LT.0) THEN 
+         GO TO 17 
+      ELSE
+         GO TO 18
+      ENDIF
 17    STT0(K+1)=TTBAR(K)
       SPT0(K+1)=PTBAR(K)
       DO 23 I=1,ISECT
       SI(I,K+1)=ALF2A(I,K)- RADSD(I,K+1)
       IF(SI(I,K+1).GT. 1.5707) SI(I,K+1)= 1.5707
       IF(SI(I,K+1).LT.(-1.5707)) SI(I,K+1)=(-1.5707)
-      IF(OMEGAS(I,K))8,8,7
+C     IF(OMEGAS(I,K))8,8,7
+C     replaced by .........
+      IF(OMEGAS(I,K).LE.0.) THEN 
+         GO TO 8  
+      ELSE
+         GO TO 7
+      ENDIF
 7     ETARS(I,K+1)=1.0
       EXPSI=0.
       GO TO 117
-8     IF(SI(I,K+1))9,9,10
+C8     IF(SI(I,K+1))9,9,10
+C     replaced by .........
+8     IF(SI(I,K+1).LE.0.)  THEN
+         GO TO 9  
+      ELSE
+         GO TO 10
+      ENDIF
 9     EXPSI=EXPN
       GO TO 117
 10    EXPSI=EXPP
-117   IF (PAF-1.)19,20,21
+C117   IF (PAF-1.)19,20,21
+C     replaced by .........
+117   IF ((PAF-1.).LT.0.) THEN 
+         GO TO 19  
+      ELSEIF ((PAF-1.).EQ.0.) THEN
+         GO TO 20
+      ELSEIF((PAF-1.).GT.0.) THEN
+         GO TO 21
+      ENDIF
 C     UNIFORM PROFILES
 19    PTP(I,K+1)=PTBAR(K)
       PT0(I,K+1)= PTP(I,K+1)

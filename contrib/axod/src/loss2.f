@@ -30,20 +30,40 @@ C
 C
 C
       ETARR(I,K)=1.0
-      IF(RI(I,K))4,1,2
+C     IF(RI(I,K))4,1,2
+C     replaced by ..........
+      IF(RI(I,K).LT.0.) THEN 
+         GO TO 4
+      ELSEIF(RI(I,K).EQ.0.) THEN
+         GO TO 1
+      ELSEIF(RI(I,K).GT.0.) THEN
+         GO TO 2
+      ENDIF
 1     W1A2=OMEGAR(I,K)
       GO TO 8
 2     AS=B1(I,K)
       AC=B2(I,K)
       AQ=B3(I,K)
-      IF(BSMPIA(I,K)-RI(I,K))3,6,6
+C     IF(BSMPIA(I,K)-RI(I,K))3,6,6
+C     replaced by ..........
+      IF((BSMPIA(I,K)-RI(I,K)).LT.0.) THEN 
+         GO TO 3
+      ELSE
+         GO TO 6
+      ENDIF
 3     WMWR=RI(I,K)/BSMPIA(I,K)
       AR=BSMPIA(I,K)/BSIA(I,K)
       GO TO 7
 4     AS=B4(I,K)
       AC=B5(I,K)
       AQ=B6(I,K)
-      IF(RI(I,K)-BCMNIA(I,K))5,6,6
+C     IF(RI(I,K)-BCMNIA(I,K))5,6,6
+C     replaced by ..........
+      IF((RI(I,K)-BCMNIA(I,K)).LT.0.) THEN 
+         GO TO 5
+      ELSE
+         GO TO 6
+      ENDIF
 5     WMWR=RI(I,K)/BCMNIA(I,K)
       AR=BCMNIA(I,K)/BSIA(I,K)
       GO TO 7
