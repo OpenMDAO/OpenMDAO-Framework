@@ -210,8 +210,9 @@ class Component (Container):
         if self.parent is None: # if parent is None, we're not part of an Assembly
                                 # so Variable validity doesn't apply. Just execute.
             self._call_execute = True
+            valids = self._valid_dict
             for name in self.list_inputs():
-                self.set_valid(name, True)
+                valids[name] = True
         else:
             invalid_ins = self.list_inputs(valid=False)
             if len(invalid_ins) > 0:
@@ -235,8 +236,9 @@ class Component (Container):
         Overrides of this function must call this version.
         """
         # make our output Variables valid again
+        valids = self._valid_dict
         for name in self.list_outputs():
-            self.set_valid(name, True)
+            valids[name] = True
         self._call_execute = False
         
     def run (self, force=False):
@@ -930,19 +932,7 @@ class Component (Container):
             self.raise_exception(
                 "cannot get valid flag of '%s' because it's not "
                 "an io trait." % name, RuntimeError)
-            
-        #valid = self._valid_dict.get(name, Missing)
-        #if valid is Missing:
-            #trait = self.trait(name)
-            #if trait and trait.iotype:
-                #self._valid_dict[name] = False
-                #return False
-            #else:
-                #self.raise_exception(
-                    #"cannot get valid flag of '%s' because it's not "
-                    #"an io trait." % name, RuntimeError)
-        #return valid
-    
+                
     def get_valids(self, names):
         """Get a list of validity flags for the io traits with the given
         names.
@@ -958,31 +948,21 @@ class Component (Container):
                 "cannot set valid flag of '%s' because "
                 "it's not an io trait." % name, RuntimeError)
             
-        #if name in self._valid_dict:
-            #self._valid_dict[name] = valid
-        #else:
-            #trait = self.trait(name)
-            #if trait and trait.iotype:
-                #self._valid_dict[name] = valid
-            #else:
-                #self.raise_exception(
-                    #"cannot set valid flag of '%s' because "
-                    #"it's not an io trait." % name, RuntimeError)
-
     def invalidate_deps(self, varlist, notify_parent=False):
         """Invalidate all of our valid outputs."""
         valid_outs = self.list_outputs(valid=True)
         
         self._call_execute = True
         
+        valids = self._valid_dict
         for var in varlist:
-            self.set_valid(var, False)
+            valids[var] = False
             
         if notify_parent and self.parent and len(valid_outs) > 0:
             self.parent.invalidate_deps(['.'.join([self.name,n]) for n in valid_outs], 
                                         notify_parent)
         for out in valid_outs:
-            self._valid_dict[out] = False
+            valids[out] = False
             
         return valid_outs
 

@@ -67,6 +67,9 @@ class Assembly (Component):
         
         super(Assembly, self).__init__(doc=doc, directory=directory)
         
+        self._inlinks = {}  # one _Link per child Component connected to a boundary input
+        self._outlinks = {} # one _Link per child Component connected to a boundary output
+        
         # add any Variables we may have inherited from our base classes
         # to our _var_graph..
         for v in self.keys(iotype=not_none):
@@ -104,16 +107,6 @@ class Assembly (Component):
             self._need_child_io_update = False
         return self._var_graph
         
-    #def get_io_graph(self):
-        #"""For now, just return our base class version of get_io_graph."""
-        ## TODO: make this return an actual graph of inputs to outputs based on 
-        ##       the contents of this Assembly instead of a graph where all 
-        ##       outputs depend on all inputs
-        ## NOTE: if the io_graph changes, this function must return a NEW graph
-        ## object instead of modifying the old one, because object identity
-        ## is used in the parent assembly to determine of the graph has changed
-        #return super(Assembly, self).get_io_graph()
-    
     def add(self, name, obj, add_to_workflow=True):
         """Add obj to the workflow and call base class *add*.
         
@@ -278,13 +271,15 @@ class Assembly (Component):
                     # Note that it's a dest var in this scope, but a src var in
                     # the parent scope.
                     self.parent.invalidate_deps([destpath], True)
-            self.set_valid(destpath, False)
+            link = self._outlinks.setdefault(srccompname, _Link())
+            link.connect(srcvarname, destvarname)
+            self._valid_dict[destpath] = False
         elif srccomp is self and srctrait.iotype == 'in': # boundary input
-            self.set_valid(srcpath, False)
+            link = self._inlinks.setdefault(destcompname, _Link())
+            link.connect(srcvarname, destvarname)
+            self._valid_dict[srcpath] = False
         else:
-            #destcomp.set_valid(destvarname, False)
             destcomp.invalidate_deps([destvarname], notify_parent=True)
-            #self.invalidate_deps([destpath])
         
         self._io_graph = None
 
@@ -331,7 +326,7 @@ class Assembly (Component):
                 # between two components in the component graph
                 utup = src.split('.',1)
                 if len(utup)>1:
-                    self.comp_graph.disconnect(utup[0], vtup[0])
+                    self.comp_graph.disconnect(src, sink)
                     self._default_workflow.config_changed()
                 
         vargraph.remove_edges_from(to_remove)
@@ -514,7 +509,6 @@ class Assembly (Component):
         
         if len(outs) > 0:
             for out in outs:
-                #print '**invalidating %s.%s' % (self.name,out)
                 self.set_valid(out, False)
             if notify_parent and self.parent:
                 self.parent.invalidate_deps(
@@ -529,73 +523,119 @@ class ComponentGraph(object):
     """
 
     def __init__(self):
-        self._no_expr_graph = nx.DiGraph()
+        self._graph = nx.DiGraph()
         
     def __contains__(self, comp):
         """Return True if this graph contains the given component."""
-        return comp.name in self._no_expr_graph
+        return comp.name in self._graph
     
     def subgraph(self, nodelist):
-        return self._no_expr_graph.subgraph(nodelist)
+        return self._graph.subgraph(nodelist)
     
     def graph(self):
-        return self._no_expr_graph
+        return self._graph
     
     def __len__(self):
-        return len(self._no_expr_graph)
+        return len(self._graph)
         
     def iter(self, scope):
         """Iterate through the nodes in dataflow order."""
-        for n in nx.topological_sort(self._no_expr_graph):
+        for n in nx.topological_sort(self._graph):
             yield getattr(scope, n)
             
     def add(self, comp):
         """Add the name of a Component to the graph."""
-        self._no_expr_graph.add_node(comp.name)
+        self._graph.add_node(comp.name)
 
     def remove(self, comp):
         """Remove the name of a Component from the graph. It is not
         an error if the component is not found in the graph.
         """
-        self._no_expr_graph.remove_node(comp.name)
+        self._graph.remove_node(comp.name)
         
     def connect(self, srcpath, destpath):
-        """Add an edge to our Component graph from *srccompname* to *destcompname*.
-        The *srcvarname* and *destvarname* args are for data reporting only.
+        """Add an edge to our Component graph from 
+        *srccompname* to *destcompname*.
         """
-        # if an edge already exists between the two components, 
-        # just increment the ref count
-        graph = self._no_expr_graph
+        graph = self._graph
         srccompname, srcvarname = srcpath.split('.', 1)
         destcompname, destvarname = destpath.split('.', 1)
         try:
-            graph[srccompname][destcompname]['refcount'] += 1
+            link = graph[srccompname][destcompname]['link']
         except KeyError:
-            graph.add_edge(srccompname, destcompname, refcount=1)
+            link=_Link()
+            graph.add_edge(srccompname, destcompname, link=link)
             
-        if not is_directed_acyclic_graph(graph):
+        if is_directed_acyclic_graph(graph):
+            link.connect(srcvarname, destvarname)
+        else:   # cycle found
             # do a little extra work here to give more info to the user in the error message
             strongly_connected = strongly_connected_components(graph)
-            refcount = graph[srccompname][destcompname]['refcount'] - 1
-            if refcount == 0:
+            if len(link) == 0:
                 graph.remove_edge(srccompname, destcompname)
-            else:
-                graph[srccompname][destcompname]['refcount'] = refcount
             for strcon in strongly_connected:
                 if len(strcon) > 1:
                     raise RuntimeError(
                         'circular dependency (%s) would be created by connecting %s to %s' %
                                  (str(strcon), 
                                   '.'.join([srccompname,srcvarname]), 
-                                  '.'.join([destcompname,destvarname]))) 
+                                  '.'.join([destcompname,destvarname])))
+
         
-    def disconnect(self, comp1name, comp2name):
-        """Decrement the ref count for the edge in the dependency graph 
-        between the two components or remove the edge if the ref count
-        reaches 0.
-        """
-        refcount = self._no_expr_graph[comp1name][comp2name]['refcount'] - 1
-        if refcount == 0:
-            self._no_expr_graph.remove_edge(comp1name, comp2name)
+    def disconnect(self, srcpath, destpath):
+        """Disconnect the given variables."""
+        graph = self._graph
+        srccompname, srcvarname = srcpath.split('.', 1)
+        destcompname, destvarname = destpath.split('.', 1)
+        link = self._graph[srccompname][destcompname]['link']
+        link.disconnect(srcvarname, destvarname)
+        if len(link) == 0:
+            self._graph.remove_edge(srccompname, destcompname)
+
+            
+class _Link(object):
+    """A Class for keeping track of all connections between two Components."""
+    def __init__(self, connections=None):
+        self._srcs = {}
+        self._dests = {}
+        if connections is not None:
+            for src,dest in connections.items():
+                self.connect(src, dest)
+
+    def __len__(self):
+        return len(self._srcs)
+
+    def connect(self, src, dest):
+        if dest in self._dests:
+            raise RuntimeError("%s is already connected" % dest)
+        if src not in self._srcs:
+            self._srcs[src] = []
+        self._srcs[src].append(dest)
+        self._dests[dest] = src
+        
+    def disconnect(self, src, dest):
+        del self._dests[dest]
+        dests = self._srcs[src]
+        dests.remove(dest)
+        if len(dests) == 0:
+            del self._srcs[src]
+    
+    def get_dests(self, srcs=None):
+        if srcs is None:
+            return self._dests.keys()
         else:
-            self._no_expr_graph[comp1name][comp2name]['refcount'] = refcount
+            dests = []
+            for name in srcs:
+                dests.extend(self._srcs.get(name, []))
+            return dests
+    
+    def get_srcs(self, dests=None):
+        if dests is None:
+            return self._srcs.keys()
+        else:
+            srcs = []
+            for name in dests:
+                src = self._dests.get(name)
+                if src:
+                    srcs.append(src)
+                
