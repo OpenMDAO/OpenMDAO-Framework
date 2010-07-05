@@ -126,9 +126,9 @@ class Component (Container):
         return self._dir_context
 
     def _input_changed(self, name):
-        if self.get_valid(name):  # if var is not already invalid
-            self.invalidate_deps([name], notify_parent=True)
-        
+        if self._valid_dict[name]:  # if var is not already invalid
+            self.invalidate_deps(varnames=[name], notify_parent=True)
+
     def check_config (self):
         """Verify that this component is fully configured to execute.
         This function is called once prior to the first execution of this
@@ -218,7 +218,7 @@ class Component (Container):
             if len(invalid_ins) > 0:
                 self._call_execute = True
                 name = self.name
-                self.parent.update_inputs(['.'.join([name, n]) for n in invalid_ins])
+                self.parent.update_inputs(self.name, invalid_ins)
                 valids = self._valid_dict
                 for name in invalid_ins:
                     valids[name] = True
@@ -939,32 +939,42 @@ class Component (Container):
         """
         return [self.get_valid(v) for v in names]
 
-    def set_valid(self, name, valid):
-        """Mark the io trait with the given name as valid or invalid."""
-        try:
-            self._valid_dict[name] = valid
-        except KeyError:
-            self.raise_exception(
-                "cannot set valid flag of '%s' because "
-                "it's not an io trait." % name, RuntimeError)
+    def set_valids(self, names, valid):
+        """Mark the io traits with the given names as valid or invalid."""
+        for name in names:
+            try:
+                self._valid_dict[name] = valid
+            except KeyError:
+                self.raise_exception(
+                    "cannot set valid flag of '%s' because "
+                    "it's not an io trait." % name, RuntimeError)
             
-    def invalidate_deps(self, varlist, notify_parent=False):
-        """Invalidate all of our valid outputs."""
-        valid_outs = self.list_outputs(valid=True)
+    def invalidate_deps(self, varnames=None, notify_parent=False):
+        """Invalidate all of our outputs if they're not invalid already.
+        For a typical Component, this will always be all or nothing, meaning
+        there will never be partial validation of outputs.  Components
+        supporting partial output validation must override this function.
         
+        Returns None, indicating that all outputs are invalidated.
+        """
         self._call_execute = True
         
         valids = self._valid_dict
-        for var in varlist:
+        if varnames is None:
+            varnames = self.list_inputs(valid=True)
+        for var in varnames:
             valids[var] = False
-            
+        
+        valid_outs = self.list_outputs(valid=True)
+        
         if notify_parent and self.parent and len(valid_outs) > 0:
-            self.parent.invalidate_deps(['.'.join([self.name,n]) for n in valid_outs], 
-                                        notify_parent)
+            self.parent.invalidate_deps(compname=self.name, 
+                                        varnames=None, notify_parent=True)
+        
         for out in valid_outs:
             valids[out] = False
             
-        return valid_outs
+        return None
 
     def update_outputs(self, outnames):
         """Do what is necessary to make the specified output Variables valid.

@@ -163,6 +163,8 @@ class DepGraphTestCase(unittest.TestCase):
     def test_lazy2(self):
         vars = ['a','b','c','d']
         self.top.run()        
+        run_count = [self.top.get(x).run_count for x in allcomps]
+        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_count)
         valids = [self.top.sub.comp6.get_valid(v) for v in vars]
         self.assertEqual(valids, [True, True, True, True])
         self.top.sub.b6 = 3
@@ -180,11 +182,27 @@ class DepGraphTestCase(unittest.TestCase):
     def test_lazy3(self):
         vars = ['a','b','c','d']
         self.top.run()        
+        run_count = [self.top.get(x).run_count for x in allcomps]
+        self.assertEqual([1, 1, 1, 1, 1, 1, 1, 1], run_count)
         valids = [self.top.sub.comp3.get_valid(v) for v in vars]
         self.assertEqual(valids, [True, True, True, True])
         self.top.comp7.a = 3
+        valids = [self.top.sub.comp1.get_valid(v) for v in vars]
+        self.assertEqual(valids, [True, False, False, False])
+        valids = [self.top.sub.comp2.get_valid(v) for v in vars]
+        self.assertEqual(valids, [True, True, True, True])
         valids = [self.top.sub.comp3.get_valid(v) for v in vars]
         self.assertEqual(valids, [False, True, False, False])
+        valids = [self.top.sub.comp4.get_valid(v) for v in vars]
+        self.assertEqual(valids, [False, True, False, False])
+        valids = [self.top.sub.comp5.get_valid(v) for v in vars]
+        self.assertEqual(valids, [False, True, False, False])
+        valids = [self.top.sub.comp6.get_valid(v) for v in vars]
+        self.assertEqual(valids, [False, True, False, False])
+        valids = [self.top.comp7.get_valid(v) for v in vars]
+        self.assertEqual(valids, [False, True, False, False])
+        valids = [self.top.comp8.get_valid(v) for v in vars]
+        self.assertEqual(valids, [False, False, False, False])
         self.top.run()  
         # run_count should change for all sub comps but comp2
         run_count = [self.top.get(x).run_count for x in allcomps]

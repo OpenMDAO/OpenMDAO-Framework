@@ -379,7 +379,7 @@ class Container(HasTraits):
         if isinstance(obj, Container):
             obj.parent = self
             # if an old child with that name exists, remove it
-            if self.contains(name):
+            if self.contains(name) and getattr(self, name):
                 self.remove(name)
             setattr(self, name, obj)
             obj.name = name
