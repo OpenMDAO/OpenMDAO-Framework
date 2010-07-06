@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 """
-If run as main, dumpdistmeta.py will print out either a pretty-printed dict 
-full of the metadata found in the specified distribution, or just the value 
+If run as main, ``dumpdistmeta.py`` will print out either a pretty-printed dict 
+full of the metadata found in the specified distribution or just the value 
 of a single piece of metadata if metadata-item is specified on the command 
 line.  The distribution can be in the form of an installed egg, a zipped
 egg, or a gzipped tar file containing a distutils distribution.

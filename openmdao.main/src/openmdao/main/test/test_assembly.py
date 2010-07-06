@@ -375,8 +375,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.connect('comp3.sout', 'comp2.s')
         conns = self.asm.list_connections()
-        self.assertEqual(conns, [('comp1.rout', 'comp2.r'),
-                                 ('comp3.sout', 'comp2.s')])
+        self.assertEqual(set(conns), set([('comp1.rout', 'comp2.r'),
+                                 ('comp3.sout', 'comp2.s')]))
         self.asm.remove('comp3')
         conns = self.asm.list_connections()
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])

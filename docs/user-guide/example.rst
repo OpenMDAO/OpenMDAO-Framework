@@ -381,9 +381,9 @@ here:
 
 	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign``
 	
-X.X.X is the current OpenMDAO version, and ###### is a string that
+``X.X.X`` is the current OpenMDAO version, and ``######`` is a string that
 contains the Python version and the operating system description. This path will 
-vary depending on your system and version, but there will only be one
+vary depending on your system and version, but there will be only one
 *enginedesign* egg.
 
 If you are a developer and have a branch from the source repository, the files you need will be
@@ -511,9 +511,9 @@ of RPM. The ``convert_units`` function provides unit conversion capability for y
 variables. We could also change the definition of the velocity Float, specifying the units
 as 'inch/min', and then the ``convert_units`` call would not be needed.
 
-The transmission model is now complete, and the next section will show how to interact with
+The transmission model is now complete; the next section will show how to interact with
 it in the Python shell. The engine and chassis are created in a similar manner. However, the 
-engine's speed is only valid within a range 1000 to 6000 RPM. OpenMDAO's Float and Int
+engine's speed is valid only within a range 1000 to 6000 RPM. OpenMDAO's Float and Int
 variables allow you to specify an optional maximum and minimum value.
 
 .. testcode:: Code2
@@ -629,7 +629,7 @@ Engine, and Chassis components.
 
 The Engine, Transmission, and Chassis components all need to be imported so
 their instances can be created; they can be added to the assembly
-with ``add``. Please notice that an assembly inherits from Assembly
+with *add*. Please notice that an assembly inherits from Assembly
 instead of Component. When the instances of the Transmission, Engine, and
 Chassis are created, their members and data are internally accessible using
 *self* plus the instance name, e.g., ``self.transmission``.
@@ -812,7 +812,7 @@ the engine model can be improved by implementing it in a compiled language like 
 
 Python was designed to be smoothly integrated with other languages, in
 particular, C and related languages Fortran and C++. This is important for a
-scripting language, where code execution is generally slower, and it is often
+scripting language, where code execution is generally slower and it is often
 necessary to use a compiled language like C to implement computationally
 intensive functions. To complement Python's native integration ability, the
 Python community has developed some excellent tools, such as `F2PY
@@ -828,7 +828,7 @@ wrapped shared object of ``engine.C`` was created using F2Py; this tool can
 also be used to generate wrappers for C code provided that the signature file
 ``engine.pyf`` is manually created. The file ``engine.pyf`` defines the
 interface for the functions found in ``engine.C``. The C code has been placed
-in a function called *RunEngineCycle* which can be imported and takes the design and simulation
+in a function called ``RunEngineCycle`` which can be imported and takes the design and simulation
 variables as inputs.
 
 The intent of this exercise is not to teach you how to write a signature file. More
@@ -845,7 +845,7 @@ following command:
 A new Python component named ``engine_wrap_c.py`` was created to replace
 ``engine.py``. This component contains the same inputs and outputs as
 ``engine.py``, but replaces the engine internal calculations with a call to
-the C function *RunEngineCycle*. We can import and use this function just like
+the C function ``RunEngineCycle``. We can import and use this function just like
 any Python function:
 
 .. _Code8: 
@@ -857,7 +857,7 @@ any Python function:
 
 
 Notice that the return values are stored in lists, so a scalar value is accessed by grabbing the first
-element (element zero.) This is not needed for return values from Fortran codes compiled with
+element (element zero). This is not needed for return values from Fortran codes compiled with
 F2PY (arguments in Fortran functions are passed by reference), but it is needed for C codes.
 
 You can compare the execution time to see how much faster the C code runs on your hardware. To
@@ -926,10 +926,11 @@ Setting up an Optimization Problem
 
 The final step is to create a top level Assembly that defines the problem using DrivingSim and the vehicle assembly.
 
-The first problem we would like to solve is a single objective optimization problem where we adjust some of the design
-variables to minimize the 0-60 acceleration time. The chosen design variables are the bore and spark angle. The optimal value
-of the first variable should be quite intuitive (i.e., larger bore means faster acceleration), but the second
-variable cannot be optimized by mere inspection. 
+The first problem we would like to solve is a single objective optimization problem
+where we adjust some of the design variables to minimize the 0-60 acceleration time.
+The chosen design variables are the *bore* and *spark angle.* The optimal value of the
+first variable should be quite intuitive (i.e., larger bore means faster acceleration),
+but the second variable cannot be optimized by mere inspection. 
 
 The optimization will be handled by the gradient optimizer CONMIN.
 
@@ -989,7 +990,7 @@ We are now ready to solve an optimization problem.
 Solving the Optimization Problem
 ---------------------------------
 
-First, lets run the problem inside the Python shell. Load and create an instance of the
+First, let's run the problem inside the Python shell. Load and create an instance of the
 EngineOptimization class, setting it as the top assembly.
 
 .. doctest:: optimization_fun
@@ -1048,7 +1049,7 @@ to set up a component to run at the command prompt.
 
 The Expression can be used to pose more sophisticated objective expressions
 that are functions of multiple simulation variables. For example, if you want
-to maximize accel_time instead of minimizing it, you can do this by negating
+to maximize ``accel_time`` instead of minimizing it, you can do this by negating
 the expression:
 
 .. testsetup:: Code10

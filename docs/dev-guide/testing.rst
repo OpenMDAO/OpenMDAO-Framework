@@ -171,10 +171,6 @@ test output during a test function.  For example:
     Test will fail if *val1* differs from *val2* by more than a small
     number of decimal places.
     
-``self.assert_rel_error(val1,val2,tolerance)``
-    Test will fail if *val1* differs from *val2* by more than the
-    percentage given as the tolerance.
-    
 ``self.fail([msg])``
     Test will fail and display the given message.
     

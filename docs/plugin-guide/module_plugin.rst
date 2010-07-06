@@ -11,7 +11,7 @@ For this example we'll build a plugin for the component shown in the figure
 simply computes the value of its single output by adding its two inputs.
 
 Our first step is to create our class. We want to inherit from
-``openmdao.main.api.Component``, because that provides us with the interface we
+``openmdao.main.api.Component`` because that provides us with the interface we
 need to function properly as an OpenMDAO component.
 
 
@@ -68,8 +68,8 @@ Distribution Creation
 ---------------------
 
 Creating a distribution out of a Python module is straightforward, but it does
-require the creation of a simple directory structure, because distributions are
-intended to contain Python packages, not just individual modules.
+require the creation of a simple directory structure because distributions are
+intended to contain Python packages and not just individual modules.
 
 For example, if our SimpleAdder class is in a file called ``simple_adder.py``, 
 we need a directory structure that looks like this to make it distributable
@@ -152,11 +152,12 @@ within the OpenMDAO framework:
     to do is to use the ``find_packages()`` function from setuptools as shown in
     the example above.
 
-**install_requires**   This option specifies the distributions that your
+**install_requires**   
+    This option specifies the distributions that your
     distribution depends on. Note that you need to include only *direct*
     dependencies in this list, i.e., if your package depends on ``package_A``,
     which in turn depends on ``package_B``, you need to include only
-    ``package_A``. Make sure not to leave out any direct dependencies here,
+    ``package_A``. Make sure not to leave out any direct dependencies here
     because doing so will result in failure to install needed dependent
     distributions whenever your distribution is installed. The value of
     ``install_requires`` should be a list of strings. These strings can specify

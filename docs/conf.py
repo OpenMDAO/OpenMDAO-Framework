@@ -33,7 +33,7 @@ sys.path.append(os.path.join(os.path.dirname(os.path.abspath('.')),'scripts'))
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
 extensions = ['sphinx.ext.autodoc', 'sphinx.ext.intersphinx', 
               'sphinx.ext.doctest', 'sphinx.ext.todo'
-	      ]
+              ]
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ['_templates']
@@ -284,3 +284,4 @@ pdf_stylesheets = ['sphinx','kerning','a4']
 # Enable experimental feature to split table cells. Use it
 # if you get "DelayedTable too big" errors
 #pdf_splittables = False
+
