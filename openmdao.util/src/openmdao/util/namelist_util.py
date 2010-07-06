@@ -3,6 +3,7 @@ Utilities for reading and writing FORTRAN namelists.
 """
 
 from numpy import ndarray
+from enthought.traits.trait_base import not_none
 
 class Card(object):
     """ Data object that stores the value of a single card for a namelist."""
@@ -52,10 +53,7 @@ class Namelist(object):
         varpath is the dotted path (e.g., comp1.comp2.var1)"""
         
         paths = varpath.split('.')
-        if varpath > 1:
-            name = paths[-1]
-        else:
-            name = paths
+        name = paths[-1]
             
         value = self.comp.get(varpath)
         
@@ -69,8 +67,8 @@ class Namelist(object):
     def add_container(self, varpath):
         """Add every variable in an OpenMDAO container to the namelist."""
         
-        names = self.comp.get(varpath+'.list_inputs')
-        for name in names():
+        target_container = self.comp.get(varpath)
+        for name in target_container.keys(iotype=not_none):
             self.add_var(varpath+'.'+name)
         
     def add_comment(self, comment):
@@ -105,18 +103,18 @@ class Namelist(object):
                         data += card.name + " = "
                         sep = ""
                         for val in card.value:
-                            data += sep + val
+                            data += sep + str(val)
                             sep = self.delimiter
                         data += "\n"
                             
                     elif len(card.value.shape) == 2:
                         
                         for row in range(0,card.value.shape[0]):
-                            data += card.name + "(1," + str(row+1) + ")="
+                            data += card.name + "(1," + str(row+1) + ") ="
                             for col in range(0,card.value.shape[1]):
-                                data += " " + card.value[row,col] + \
+                                data += " " + str(card.value[row,col]) + \
                                          self.delimiter
-                        data += "\n"
+                            data += "\n"
                         
                     else:
                         raise RuntimeError("Don't know how to handle array of" + \
@@ -126,7 +124,7 @@ class Namelist(object):
                 else:
                     raise RuntimeError("Error generating input file. Don't" + \
                                        "know how to handle data in variable" + \
-                                       "%s in group %s." % (card.name, group[i]))
+                                       "%s in group %s." % (card.name, self.groups[i]))
                     
             data += self.terminator + "\n"
 
