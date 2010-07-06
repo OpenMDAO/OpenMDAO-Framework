@@ -42,8 +42,8 @@ Component, Driver, and TraitType plugins for OpenMDAO
       install_requires=[
           'setuptools',
           'openmdao.main',
-          'conmin',
-          'Pyevolve',
+          'conmin==1.0.1',
+          'Pyevolve==0.6',
           ],
       entry_points="""
       [openmdao.driver]
