@@ -116,7 +116,7 @@ class MultiDriverTestCase(unittest.TestCase):
         # create the first driver
         drv = top.add('driver1', CONMINdriver())
         
-        top.driver.workflow = Dataflow(top, members=[drv])
+        top.driver.add_to_workflow(drv)
 
         top.add('comp1', ExprComp(expr='x**2 - 5.0*x'))
         top.add('comp2', ExprComp(expr='x**2 - 5.0*x'))
@@ -312,8 +312,8 @@ class MultiDriverTestCase(unittest.TestCase):
         drv.lower_bounds = [-50]
         drv.upper_bounds = [50]
         
-        drv1.workflow = Dataflow(top, members=[top.comp3])
-        drv.workflow = Dataflow(top, members=[top.comp1, top.comp2, drv1, top.comp4])
+        drv1.add_to_workflow(top.comp3)
+        drv.add_to_workflow([top.comp1, top.comp2, drv1, top.comp4])
         
         self.top.run()
 
@@ -343,7 +343,7 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.design = 'C1.x'
         top.D2.max_iterations = 2
         
-        top.driver.workflow = Dataflow(top, members=[top.D1, top.D2])
+        top.driver.add_to_workflow([top.D1, top.D2])
         
         top.run()
         
@@ -378,7 +378,7 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.design = 'C2.x'
         top.D2.max_iterations = 3
 
-        top.driver.workflow = Dataflow(top, members=[top.D1, top.D2])
+        top.driver.add_to_workflow([top.D1, top.D2])
         top.run()
         
         self.assertEqual(top.D2.runcount, 1)
@@ -420,7 +420,7 @@ class MultiDriverTestCase(unittest.TestCase):
         top.D2.design = 'C2.y'
         top.D2.max_iterations = 3
         
-        top.driver.workflow = Dataflow(top, members=[top.D1, top.D2])
+        top.driver.add_to_workflow([top.D1, top.D2])
         top.D1.workflow = SequentialWorkflow(members=[top.C1])
         top.D2.workflow = SequentialWorkflow(members=[top.C2])
         

@@ -247,7 +247,7 @@ class DepGraphTestCase(unittest.TestCase):
         top.add('driver2', DumbDriver())
         top.add('c1', Simple())
         top.add('c2', Simple())
-        top.add('c3', Simple())
+        top.add('c3', Simple(), add_to_workflow=False)
         top.connect('c1.c', 'c2.a')
         top.driver.add_to_workflow([top.driver1, top.driver2, top.c3])
         top.driver1.add_to_workflow(top.c2)

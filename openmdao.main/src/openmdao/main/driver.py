@@ -31,18 +31,9 @@ class Driver(Component):
     
     def __init__(self, doc=None):
         super(Driver, self).__init__(doc=doc)
-        self.workflow = None
+        self.workflow = Dataflow(self)
         self._iter = None
         
-    def _get_workflow(self):
-        """Returns the 'active' workflow for this Driver, which is either
-        self.workflow or the parent's workflow if no workflow is set for
-        this Driver."""
-        if self.workflow:
-            return self.workflow
-        else:
-            return self.parent._default_workflow
-
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
         or if any of our public variables is invalid, or if any public
@@ -66,7 +57,7 @@ class Driver(Component):
                     return False
 
         # force execution if any component in the workflow is invalid
-        for comp in self._get_workflow().contents():
+        for comp in self.workflow.contents():
             if not comp.is_valid():
                 return False
 
@@ -76,12 +67,6 @@ class Driver(Component):
         """Add the given object to this Driver's workflow, creating a
         local workflow if one doesn't already exist.
         """
-        if self.workflow is None:
-            if self.parent:
-                self.workflow = Dataflow(self.parent)
-            else:
-                self.raise_exception("'parent' not set, so can't set scope of Dataflow", 
-                                     RuntimeError)
         if obj_has_interface(obj, IComponent):
             self.workflow.add(obj)
         else:
@@ -114,7 +99,7 @@ class Driver(Component):
         super(Driver, self)._pre_execute()
         
         if self._call_execute:
-            if self in self._get_workflow().contents():
+            if self in self.workflow.contents():
                 self.raise_exception("Driver '%s' is a member of it's own workflow!" %
                                      self.name, RuntimeError)
 
@@ -128,7 +113,7 @@ class Driver(Component):
         recursively in any workflow in any Driver in our workflow.
         """
         allcomps = set()
-        for child in self._get_workflow().contents():
+        for child in self.workflow.contents():
             allcomps.add(child)
             if isinstance(child, Driver):
                 allcomps.update(child.iteration_set())
@@ -188,14 +173,14 @@ class Driver(Component):
     def _step_workflow(self):
         while True:
             try:
-                self._get_workflow().step()
+                self.workflow.step()
             except RunStopped:
                 pass
             yield
 
     def stop(self):
         self._stop = True
-        self._get_workflow().stop()
+        self.workflow.stop()
 
     def start_iteration(self):
         """Called just prior to the beginning of an iteration loop. This can 
@@ -214,7 +199,7 @@ class Driver(Component):
         
     def run_iteration(self):
         """Runs the workflow of components."""
-        wf = self._get_workflow()
+        wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
         wf.run()

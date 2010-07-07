@@ -30,12 +30,16 @@ class SequentialWorkflow(Workflow):
         return self._nodes[:]
 
     def add(self, comp):
-        """ Add a new component to the end of the workflow. """
-        if isinstance(comp, Component):
-            self._nodes.append(comp)
+        """ Add new component(s) to the end of the workflow. """
+        if isinstance(comp, list) or isinstance(comp, tuple):
+            nodes = comp
+        elif isinstance(comp, Component):
+            nodes = [comp]
         else:
             raise TypeError("adding a non-Component to a workflow (%s)" %
                             type(comp))
+        for node in nodes:
+            self._nodes.append(node)
         
     def remove(self, comp):
         """Remove a component from the workflow. Do not report an
