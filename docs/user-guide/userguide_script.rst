@@ -1040,16 +1040,6 @@ multiprocessing, wherein each process has its own top level.
 Drivers
 -------
 
-*The Driver Interface*
-~~~~~~~~~~~~~~~~~~~~~~
-
-.. todo::
-
-    Discuss driver interface
-
-*Drivers*
-~~~~~~~~~~~~~~~~~~
-
 Drivers are generally iterative solvers, such as optimizers, that operate on
 their respective workflow until certain conditions are met. OpenMDAO comes with
 several drivers that are distributable (i.e., either open source or
