@@ -290,7 +290,6 @@ def _mmlhs(x_start, population, generations):
         phi_improved = phi_best
         
         for offspring in range(population):
-            print 'gen,pop = ',it,offspring
             x_try = x_best.perturb(mutations)
             phi_try = x_try.mmphi()
             
