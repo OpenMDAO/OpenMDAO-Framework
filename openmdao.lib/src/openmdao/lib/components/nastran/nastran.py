@@ -13,12 +13,9 @@ from openmdao.util.filewrap import FileParser
 
 from nastran_replacer import NastranReplacer
 from nastran_maker import NastranMaker
-
 from nastran_output import NastranOutput
 from nastran_output_helpers import *
-
 from nastran_parser import NastranParser
-
 from nastran_util import stringify, nastran_replace_inline
 
 class NastranComponent(ExternalCode):
@@ -33,10 +30,12 @@ class NastranComponent(ExternalCode):
     parser = None # it's a NastranParser?
 
     def execute(self):
-        # First, we replace all the placeholders used in the
-        # design variables with their actual values in
-        # the nastran file
-
+        # We are going to keep track of all the ways we
+        # can manage input/output:
+        #  - the crude way (NastranReplacer, NastranOutput)
+        #    correspond to input_variables, output_variables
+        #  - the better way (NastranMaker, NastranParser)
+        #    correspond to smart_replacements and grid_outputs
         input_variables = {}
         output_variables = []
         smart_replacements = []
@@ -86,16 +85,17 @@ class NastranComponent(ExternalCode):
                                     "did not specify all them. You " + \
                                     "most probably mistyped")
                     
-        # let's do our work in a tmp file
+        # let's do our work in a tmp dir
         tmpdir = mkdtemp()
         tmppath = path.join(tmpdir, "input.bdf")
         tmpfh = open(tmppath, "w")
-        
+
+        # raw nastran file supplied by user
         fh = open(self.nastran_filename, "r")
         nastran_text = fh.read().split("\n")
         fh.close()
 
-        # replace the variables in the nastran text
+        # replace the variables in the nastran text using Replacer
         replacer = NastranReplacer(nastran_text)
         replacer.replace(input_variables)
         nastran_text = replacer.text
@@ -116,16 +116,16 @@ class NastranComponent(ExternalCode):
                        tmppath + " batch=no out=" + tmpdir + \
                        " dbs=" + tmpdir
 
+        # This calls ExternalCode's execute which will run
+        # the nastran command via subprocess
         super(NastranComponent, self).execute()
 
-
-        #DEBUG
-        #raw_input("Is it okay to delete the tmp file at " + tmppath + "?")
-        #  UNCOMMENT     remove(tmppath)
-
+        # And now we parse the output
+        
         # what is the new file called?
         self.output_filename = path.join(tmpdir, "input.out")
 
+        # perhaps this should be logged, or something
         print self.output_filename
 
         filep = FileParser()
@@ -135,10 +135,12 @@ class NastranComponent(ExternalCode):
         output = NastranOutput(filep)
 
         for (output_name, output_trait) in output_variables:
+            # We run trait.nastran_func on filp and output and get the
+            # final value we want
             self.__setattr__(output_name, output_trait.nastran_func(filep, output))
-#            print output_name, self.__getattribute__(output_name)
 
 
+        # This is the grid parser.
         self.parser = NastranParser(filep.data)
         self.parser.parse()
 
@@ -149,10 +151,18 @@ class NastranComponent(ExternalCode):
             columns = trait.nastran_columns
             result = self.parser.get(header, subcase, \
                                      constraints, columns)
+            
+            # nastran_{row,column} might be kinda silly
+            # in most cases, the user will probably just call
+            # self.parser.get on her own
             nastran_row = trait.nastran_row
             nastran_column = trait.nastran_column
             row = nastran_row if nastran_row else 0
             col = nastran_column if nastran_column else 0
+
+            # Yeah, automatic conversion to float is tacky, but
+            # the user can always call self.parser.get on her own.
             self.__setattr__(name, float(result[row][col]))
 
-        #rmtree(tmpdir)
+        # get rid of our tmp dir
+        rmtree(tmpdir)
