@@ -20,9 +20,9 @@ doing.
 
 References:
 
-* Bazaar User Guide: http://doc.bazaar-vcs.org/latest/en/user-guide/index.html
-* Bazaar in five minutes: http://doc.bazaar-vcs.org/latest/en/mini-tutorial/index.html
-* Bazaar Tutorial: http://doc.bazaar-vcs.org/latest/en/tutorials/tutorial.html
+* Bazaar User Guide: http://doc.bazaar.canonical.com/latest/en/user-guide/index.html
+* Bazaar in five minutes: http://doc.bazaar.canonical.com/latest/en/mini-tutorial/index.html
+* Bazaar Tutorial: http://doc.bazaar.canonical.com/latest/en/tutorials/tutorial.html
 
 .. index Bazaar commands
 
