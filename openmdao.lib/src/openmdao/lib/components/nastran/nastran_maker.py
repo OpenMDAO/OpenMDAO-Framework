@@ -11,7 +11,7 @@ class NastranMaker(object):
     characters, instead of 8.
     """
 
-    
+
     def __init__(self, text):
         self.text = text
         self.names = {}
@@ -26,8 +26,10 @@ class NastranMaker(object):
         for index, line in enumerate(self.text):
             if line.startswith(name):
                 match = re.match("(?P<name>[a-zA-Z0-9*]*) +(?P<num>\d+) ", line)
-                if match and match.group("name") == name and \
-                       match.group("num") == str(id):
+                if match and \
+                       (match.group("name") == name or \
+                        match.group("name") == name + "*") \
+                        and match.group("num") == str(id):
                     if not card:
                         card = index
                     else:
@@ -35,8 +37,8 @@ class NastranMaker(object):
                                         "same id. You don't want this. " + \
                                         "Two cards: " + match.group("name") +\
                                         " id: " + match.group("num"))
-                    
-        if not card:
+
+        if card is None:
             raise Exception("Could not find card " + name + " with id " + str(id))
 
         # are we dealing with a long card?
@@ -71,7 +73,7 @@ class NastranMaker(object):
                     raise Exception("Your continuations should start" + \
                                     "with either * or +. `" + continuation + "` is not" + \
                                     "acceptable")
-                
+
             current_row += 1
 
         # we want to delete the row(s) from the file
@@ -89,7 +91,7 @@ class NastranMaker(object):
             value = attr["value"]
 
             #print "supposed to change", fieldnum, "to", value
-                       
+
             items[fieldnum] = stringify(value, length=long_format)
 
         # remove the continuations
