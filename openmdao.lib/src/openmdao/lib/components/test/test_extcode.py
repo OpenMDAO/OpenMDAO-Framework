@@ -41,6 +41,7 @@ class Model(Assembly):
         super(Model, self).__init__()
         self.add('a', Unique())
         self.add('b', Unique())
+        self.driver.workflow.add([self.a,self.b])
 
 
 class TestCase(unittest.TestCase):

@@ -63,25 +63,6 @@ class Driver(Component):
 
         return True
 
-    def add_to_workflow(self, obj):
-        """Add the given object to this Driver's workflow, creating a
-        local workflow if one doesn't already exist.
-        """
-        if obj_has_interface(obj, IComponent):
-            self.workflow.add(obj)
-        else:
-            try:
-                iter(obj)
-            except TypeError:
-                self.raise_exception("Cannot add object of type %s to workflow" % type(obj),
-                                     TypeError)
-            for entry in obj:
-                if obj_has_interface(entry, IComponent):
-                    self.workflow.add(entry)
-                else:
-                    self.raise_exception("Cannot add object of type %s to workflow" % type(entry),
-                                     TypeError)
-
     def config_changed(self):
         """Call this whenever the configuration of this Component changes,
         for example, children are added or removed.
@@ -207,45 +188,3 @@ class Driver(Component):
     def post_iteration(self):
         """Called after each iteration."""
         self._continue = False  # by default, stop after one iteration
-
-    #def get_referenced_comps(self, iotype=None):
-        #"""Return a set of names of Components that we reference based on the 
-        #contents of our Expressions and ExpressionLists.  If iotype is
-        #supplied, return only component names that are referenced by ref
-        #variables with matching iotype.
-        #"""
-        #if self._expr_comps[iotype] is None:
-            #comps = set()
-        #else:
-            #return self._expr_comps[iotype]
-    
-        #for name in self.get_expr_names(iotype):
-            #obj = getattr(self, name)
-            #if isinstance(obj, list):
-                #for entry in obj:
-                    #comps.update(entry.get_referenced_compnames())
-            #else:
-                #comps.update(obj.get_referenced_compnames())
-                
-        #self._expr_comps[iotype] = comps
-        #return comps
-        
-    #def get_expr_graph(self, iotype=None):
-        #"""Return the dependency graph for this Driver based on
-        #Expressions and ExpressionLists.
-        #"""
-        #if self._expr_graph[iotype] is not None:
-            #return self._expr_graph[iotype]
-        
-        #self._expr_graph[iotype] = nx.DiGraph()
-        #name = self.name
-        
-        #if iotype == 'out' or iotype is None:
-            #self._expr_graph[iotype].add_edges_from([(name,rv) 
-                                  #for rv in self.get_referenced_comps(iotype='out')])
-            
-        #if iotype == 'in' or iotype is None:
-            #self._expr_graph[iotype].add_edges_from([(rv, name) 
-                                  #for rv in self.get_referenced_comps(iotype='in')])
-        #return self._expr_graph[iotype]
-    

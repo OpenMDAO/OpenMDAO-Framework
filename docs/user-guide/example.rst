@@ -670,11 +670,11 @@ Now that the components are instantiated in the assembly, they need to be hooked
 
 .. testcode:: Code5
 
-	self.connect('transmission.RPM','engine.RPM')
+        self.connect('transmission.RPM','engine.RPM')
         self.connect('transmission.torque_ratio','chassis.torque_ratio')
         self.connect('engine.torque','chassis.engine_torque')
         self.connect('engine.engine_weight','chassis.mass_engine')
-	
+
 The first argument in the call to ``self.connect`` is the output variable of
 the source component instance, and the second argument is the input variable
 of the target component instance. For a connection to be valid, the units of
@@ -760,7 +760,7 @@ Now these inputs are available to connect to the components, so we connect them 
 	        self.add('transmission', Transmission())
 	        self.add('engine', Engine())
 	        self.add('chassis', Chassis())
-		
+
 	self = Vehicle()
 
 .. testcode:: Code7b

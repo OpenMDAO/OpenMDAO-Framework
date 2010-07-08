@@ -72,6 +72,8 @@ class MimicTestCase(unittest.TestCase):
         asm.add('comp1', Simple())
         asm.add('comp2', Simple())
         asm.mimic.model = Simple()
+        asm.driver.workflow.add([asm.mimic,asm.comp1,asm.comp2])
+        
         asm.connect('comp1.c','mimic.a')
         asm.connect('comp1.d','mimic.b')
         asm.connect('mimic.c','comp2.a')
