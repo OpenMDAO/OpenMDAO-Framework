@@ -36,10 +36,12 @@ class NastranComponent(ExternalCode):
         #    correspond to input_variables, output_variables
         #  - the better way (NastranMaker, NastranParser)
         #    correspond to smart_replacements and grid_outputs
+
+        # all of these are {"traitname" : trait}
         input_variables = {}
-        output_variables = []
-        smart_replacements = []
-        grid_outputs = []
+        smart_replacements = {}
+        output_variables = {}
+        grid_outputs = {}
         
         for name, trait in self.traits().iteritems():
             if trait.iotype == "in":
@@ -51,12 +53,12 @@ class NastranComponent(ExternalCode):
                     if len(trait.nastran_var) > 7:
                         raise ValueError("The variable " + trait.nastran + \
                                          " is too long to be a variable")
-                    input_variables[trait.nastran_var] = self.__getattribute__(name)
+                    input_variables[name] = trait
 
                 # it could also be a smart replacement, but we'll have
                 # to specify the card, id, and fieldnum
                 if trait.nastran_card and trait.nastran_id and trait.nastran_fieldnum:
-                    smart_replacements.append((name, trait))
+                    smart_replacements[name] = trait
 
                 elif trait.nastran_card or trait.nastran_id or trait.nastran_fieldnum:
                     raise Exception("You specified at least one of " + \
@@ -70,13 +72,13 @@ class NastranComponent(ExternalCode):
                 # out the wanted information from the output object
                 # and the fileparser, then this
                 if trait.nastran_func:
-                    output_variables.append((name, trait))
+                    output_variables[name] = trait
 
                 # this is the grid method of accessing. We have to
                 # specify a header, row, and attribute and
                 # the output variable will be set to that value
                 if trait.nastran_header and trait.nastran_constraints and trait.nastran_columns:
-                    grid_outputs.append((name, trait))
+                    grid_outputs[name] = trait
                 elif trait.nastran_header or trait.nastran_constraints or trait.nastran_columns:
                     raise Exception("You specified at least one of " + \
                                     "nastran_header, nastran_constrains"+\
@@ -96,15 +98,20 @@ class NastranComponent(ExternalCode):
 
         # replace the variables in the nastran text using Replacer
         replacer = NastranReplacer(nastran_text)
-        replacer.replace(input_variables)
+        varname2value = {}
+        for name, trait in input_variables.iteritems():
+            varname2value[trait.nastran_var] = self.__getattribute__(name)
+        replacer.replace(varname2value)
         nastran_text = replacer.text
 
         # use nastran maker to intelligently replace
         # values in cards
         maker = NastranMaker(nastran_text)
-        for name, trait in smart_replacements:
+        for name, trait in smart_replacements.iteritems():
             value = self.__getattribute__(name)
-            maker.set(trait.nastran_card, trait.nastran_id, trait.nastran_fieldnum, value)
+            maker.set(trait.nastran_card,
+                      trait.nastran_id,
+                      trait.nastran_fieldnum, value)
         maker.write_to_file(tmpfh, 10001)
         
         tmpfh.close()
@@ -133,17 +140,18 @@ class NastranComponent(ExternalCode):
 
         output = NastranOutput(filep)
 
-        for (output_name, output_trait) in output_variables:
+        for output_name, output_trait in output_variables.iteritems():
             # We run trait.nastran_func on filp and output and get the
             # final value we want
-            self.__setattr__(output_name, output_trait.nastran_func(filep, output))
+            self.__setattr__(output_name,
+                             output_trait.nastran_func(filep, output))
 
 
         # This is the grid parser.
         self.parser = NastranParser(filep.data)
         self.parser.parse()
 
-        for name, trait in grid_outputs:
+        for name, trait in grid_outputs.iteritems():
             header = trait.nastran_header
             subcase = trait.nastran_subcase
             constraints = trait.nastran_constraints
