@@ -32,9 +32,6 @@ class NastranComponent(ExternalCode):
 
     parser = None # it's a NastranParser?
 
-    def __init__(self, *args, **kwargs):
-        super(NastranComponent, self).__init__(*args, **kwargs)
-
     def execute(self):
         # First, we replace all the placeholders used in the
         # design variables with their actual values in
