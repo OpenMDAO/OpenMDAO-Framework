@@ -1045,6 +1045,7 @@ their respective workflow until certain conditions are met. OpenMDAO comes with
 several drivers that are distributable (i.e., either open source or
 public domain.)
 
+.. index:: CONMIN
 
 .. _CONMIN-driver:
 
@@ -1374,6 +1375,7 @@ used only for constrained problems.
 
 **linobj** -- Set this to 1 if the objective function is known to be linear.
 
+.. index:: Genetic
 
 .. _`Genetic`:
 

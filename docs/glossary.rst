@@ -86,8 +86,7 @@ Glossary
         Stands for "CONstraint MINimization." CONMIN is a gradient descent optimization
 	algorithm developed by NASA. The simple tutorial in the *User Guide* contains information on
 	using CONMIN for an both an :ref:`unconstrained <using-CONMIN>`  optimization and a
-	:ref:`constrained <constrained-optimization>` optimization. The Standard Library also
-	contains information about :ref:`CONMIN-Driver`.
+	:ref:`constrained <constrained-optimization>` optimization. 
 
       
       **Container**
@@ -175,10 +174,10 @@ Glossary
         floating point number. It also also allows for the specification of units.
      
       
-      **Genetic** 
-        OpenMDAO genetic algorithm optimizer based on the Pyevolve genetic
-	algorithm. For more information, see the section on :ref:`Genetic` in the
-	Standard Library section of the *User Guide.*
+      **Genetic**  
+      	OpenMDAO genetic algorithm optimizer based on the Pyevolve genetic algorithm,
+	which is a complete genetic algorithm framework written in Python. (PyEvolve
+	was developed and is actively maintained by Christian S. Perone.) 
 
 	
       **GUI**
