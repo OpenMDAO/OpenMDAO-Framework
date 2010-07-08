@@ -3,24 +3,26 @@ import copy
 
 from nastran_util import stringify, nastran_replace_inline
 
-class NastranReplacer(object):
+variable_match = re.compile("%([*\w]+)")
 
+class NastranReplacer(object):
+    
     def __init__(self, text):
         self.text = text
 
     def replace(self, input_variables):
-
+        # should be an array of lines
         nastran_text = self.text
         
         # we want all the variables in the nastran text
-
-        variable_match = re.compile("%(\w+)")
         all_variables = set()
     
         for index, line in enumerate(nastran_text):
             matches = re.findall(variable_match, line)
             for match in matches:
                 if match in all_variables:
+                    # This should be given to the user... but
+                    # maybe not in stdout
                     print "There is a duplicate variable called", match
                     print "They will get the same value"
                 all_variables.add(match)
@@ -33,21 +35,32 @@ class NastranReplacer(object):
                              "provided as input variables: " + \
                              str(extras))
 
-        #print "input vars:", input_variables.keys()
-
-        new_nastran_text = '\n'.join(nastran_text)
-
         new_nastran_text = []
         for line in nastran_text:
             new_nastran_text.append(copy.copy(line))
             matches = re.findall(variable_match, line)
             for match in matches:
+                # If the variable starts with ``*'', we will not
+                # simply replace the 8 character block, but we
+                # will just overwrite the location of the variable
+                if match.startswith("*"):
+                    value = str(input_variables[match])
+                    if len(value) < (len(match) + 1):
+                        value = value.ljust(len(match)+1)
+                    start_pos = new_nastran_text[-1].find("%" + match)
+                    end_pos = start_pos + len(value) # exclusive
+                    new_nastran_text[-1] = new_nastran_text[-1][:start_pos] + \
+                                           value + \
+                                           new_nastran_text[-1][end_pos:]
+                        
+                
                 #print "replacing", match, new_nastran_text, line
-                new_nastran_text[-1] = \
-                      nastran_replace_inline(new_nastran_text[-1],\
-                          "%" + match, \
-                          stringify(input_variables[match][2]))
-
+                else:
+                    new_nastran_text[-1] = \
+                         nastran_replace_inline(new_nastran_text[-1],\
+                                                "%" + match, \
+                                                stringify(input_variables[match]))
+                    
         self.text = new_nastran_text
                 
                 

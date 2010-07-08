@@ -3,6 +3,14 @@ import re
 from nastran_util import stringify
 
 class NastranMaker(object):
+    """
+    The goal of NastranMaker is to output a nastran file with
+    a set of variables replaced. It takes an existing nastran file
+    and variables. In order to retain as much data as possible,
+    it replaces the variables in long format, allowing for 16
+    characters, instead of 8.
+    """
+
     
     def __init__(self, text):
         self.text = text
@@ -107,11 +115,12 @@ class NastranMaker(object):
         #print "\n".join(new_rows)
         return unique_int
 
-
+    # This changes self.text
     def _output(self, unique_id):
         for (name, id), attrs in self.names.iteritems():
             unique_id = self.nastran_set(name, id, attrs, unique_id)
 
+    # This changes self.text and then prints self.text to a file
     def write_to_file(self, file_handler, unique_int=10001):
         self._output(unique_int)
         file_handler.write("\n".join(self.text))

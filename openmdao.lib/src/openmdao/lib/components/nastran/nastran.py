@@ -51,8 +51,7 @@ class NastranComponent(ExternalCode):
                     if len(trait.nastran_var) > 7:
                         raise ValueError("The variable " + trait.nastran + \
                                          " is too long to be a variable")
-                    input_variables[trait.nastran_var] = (name, trait, \
-                                                          self.__getattribute__(name))
+                    input_variables[trait.nastran_var] = self.__getattribute__(name)
 
                 # it could also be a smart replacement, but we'll have
                 # to specify the card, id, and fieldnum
