@@ -72,6 +72,9 @@ can be directly set:
 	        # Create CONMIN Optimizer instance
         	self.add('driver', CONMINdriver())
 
+	        # add geo_manipulator to workflow
+	        self.driver.workflow.add(self.geo_manipulator)
+
 	self = TLA()
 	geo_manipulator = GeoMan()
 

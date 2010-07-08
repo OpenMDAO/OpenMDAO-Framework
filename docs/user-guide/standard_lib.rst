@@ -86,6 +86,9 @@ follows:
             # Create CONMIN Optimizer instance
             self.add('driver', CONMINdriver())
 
+            # Driver process definition
+            self.driver.workflow.add(self.driving_sim)
+
 This first section of code defines an assembly called *EngineOptimization.* This
 assembly contains a DrivingSim component and a CONMIN driver, both of which are
 created and added inside the ``__init__`` function with *add*. The 

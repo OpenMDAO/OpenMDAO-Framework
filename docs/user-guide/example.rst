@@ -627,6 +627,9 @@ Engine, and Chassis components.
 	        self.add('engine', Engine())
 	        self.add('chassis', Chassis())
 
+	        # Set up the workflow
+	        self.driver.workflow.add([self.transmission, self.engine, self.chassis])
+
 The Engine, Transmission, and Chassis components all need to be imported so
 their instances can be created; they can be added to the assembly
 with *add*. Please notice that an assembly inherits from Assembly
@@ -660,7 +663,10 @@ Now that the components are instantiated in the assembly, they need to be hooked
 	        self.add('transmission', Transmission())
 	        self.add('engine', Engine())
 	        self.add('chassis', Chassis())
-		
+
+	        # Set up the workflow
+	        self.driver.workflow.add([self.transmission, self.engine, self.chassis])
+
 	# This is a trick to get around a limitation in Sphinx's doctest, where
 	# there is no way to preserve the indentation level between code
 	# blocks, and the concept of "self" is not defined when we fall out of
@@ -760,6 +766,9 @@ Now these inputs are available to connect to the components, so we connect them 
 	        self.add('transmission', Transmission())
 	        self.add('engine', Engine())
 	        self.add('chassis', Chassis())
+
+	        # Set up the workflow
+	        self.driver.workflow.add([self.transmission, self.engine, self.chassis])
 
 	self = Vehicle()
 
@@ -957,6 +966,9 @@ create an instance of DrivingSim and CONMINdriver:
 
 	        # Create CONMIN Optimizer instance
         	self.add('driver', CONMINdriver())
+        
+	        # add DrivingSim to workflow
+	        self.driver.workflow.add(self.driving_sim)
 
 	        # CONMIN Flags
         	self.driver.iprint = 1
@@ -1072,6 +1084,9 @@ the expression:
 
 	        # Create CONMIN Optimizer instance
         	self.add('driver', CONMINdriver())
+
+	        # add DrivingSim to workflow
+	        self.driver.workflow.add(self.driving_sim)
 
 	self = EngineOptimization()
 	

@@ -293,6 +293,9 @@ the Python file ``optimization_unconstrained.py``:
             # Create Paraboloid component instances
             self.add('paraboloid', Paraboloid())
 
+            # Driver process definition
+            self.driver.workflow.add(self.paraboloid)
+
             # CONMIN Flags
             self.driver.iprint = 0
             self.driver.itmax = 30
@@ -370,6 +373,9 @@ to the assembly:
 
             # Create Paraboloid component instances
             self.add('paraboloid', Paraboloid())
+
+            # Driver process definition
+            self.driver.workflow.add(self.paraboloid)
 
 Here you will make an instance of the *Paraboloid* component that you created above and
 give it the name *paraboloid.* Similarly you will create an instance of the CONMIN
