@@ -15,7 +15,6 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
-#from openmdao.main.expression import Expression, ExpressionList
 
     
 class Driver(Component):
@@ -85,13 +84,17 @@ class Driver(Component):
                                      self.name, RuntimeError)
 
     def remove_from_workflow(self, component):
-        """Remove the specified component from our workflow."""
+        """Remove the specified component from our workflow(s).
+        Drivers with mutiple workflows must override this function.
+        """
         if self.workflow:
             self.workflow.remove(component)
 
     def iteration_set(self):
         """Return a set of all Components in our workflow, and 
         recursively in any workflow in any Driver in our workflow.
+        If a Driver has other workflows in addition to the default one,
+        it must override this function.
         """
         allcomps = set()
         for child in self.workflow.contents():
