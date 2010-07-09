@@ -2,12 +2,7 @@
 __all__ = ["Driver"]
 
 
-
-
 from enthought.traits.api import implements, List, Instance
-#from enthought.traits.trait_base import not_none
-#import networkx as nx
-#from networkx.algorithms.traversal import strongly_connected_components
 
 from openmdao.main.interfaces import ICaseRecorder, IDriver, IComponent, \
                                      obj_has_interface 
@@ -29,9 +24,27 @@ class Driver(Component):
     workflow = Instance(Workflow, allow_none=True)
     
     def __init__(self, doc=None):
-        super(Driver, self).__init__(doc=doc)
-        self.workflow = Dataflow(self)
+        self._workflows = []
         self._iter = None
+        super(Driver, self).__init__(doc=doc)
+        self.add_workflow('workflow', Dataflow(self))
+        
+    def add_workflow(self, name, wf):
+        """Add a new Workflow with the given name to this Driver"""
+        if isinstance(wf, Workflow):
+            setattr(self, name, wf)
+            self._workflows.append(wf)
+        else:
+            self.raise_exception("'%s' is not a Workflow" % name,
+                                 TypeError)
+            
+    def remove_workflow(self, name):
+        wf = getattr(self, name, None)
+        try:
+            self._workflows.remove(wf)
+        except:
+            self.raise_exception("'%s' is not a member of the Workflow list" % name,
+                                 NameError)
         
     def is_valid(self):
         """Return False if any Component in our workflow(s) is invalid,
@@ -56,9 +69,10 @@ class Driver(Component):
                     return False
 
         # force execution if any component in the workflow is invalid
-        for comp in self.workflow.contents():
-            if not comp.is_valid():
-                return False
+        for wf in self._workflows:
+            for comp in wf.contents():
+                if not comp.is_valid():
+                    return False
 
         return True
 
@@ -67,8 +81,13 @@ class Driver(Component):
         for example, children are added or removed.
         """
         super(Driver, self).config_changed()
-        if self.workflow:
-            self.workflow.config_changed()
+        try:
+            wfs = self._workflows
+        except:
+            pass  # early on, self._workflows may not exist yet
+        else:
+            for wf in wfs:
+                wf.config_changed()
 
     def _pre_execute (self):
         """Call base class *_pre_execute* after determining if we have any invalid
@@ -77,30 +96,23 @@ class Driver(Component):
         if not self.is_valid():
             self._call_execute = True
         super(Driver, self)._pre_execute()
-        
-        if self._call_execute:
-            if self in self.workflow.contents():
-                self.raise_exception("Driver '%s' is a member of it's own workflow!" %
-                                     self.name, RuntimeError)
 
     def remove_from_workflow(self, component):
         """Remove the specified component from our workflow(s).
-        Drivers with mutiple workflows must override this function.
         """
-        if self.workflow:
-            self.workflow.remove(component)
+        for wf in self._workflows:
+            wf.remove(component)
 
     def iteration_set(self):
-        """Return a set of all Components in our workflow, and 
-        recursively in any workflow in any Driver in our workflow.
-        If a Driver has other workflows in addition to the default one,
-        it must override this function.
+        """Return a set of all Components in our workflow(s), and 
+        recursively in any workflow in any Driver in our workflow(s).
         """
         allcomps = set()
-        for child in self.workflow.contents():
-            allcomps.add(child)
-            if isinstance(child, Driver):
-                allcomps.update(child.iteration_set())
+        for wf in self._workflows:
+            for child in wf.contents():
+                allcomps.add(child)
+                if isinstance(child, Driver):
+                    allcomps.update(child.iteration_set())
         return allcomps
         
     def get_expr_depends(self):
@@ -182,7 +194,7 @@ class Driver(Component):
         pass
         
     def run_iteration(self):
-        """Runs the workflow of components."""
+        """Runs workflow"""
         wf = self.workflow
         if len(wf) == 0:
             self._logger.warning("'%s': workflow is empty!" % self.get_pathname())
