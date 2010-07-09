@@ -1,9 +1,32 @@
 import ast
+import types
+import math
 
-from enthought.traits.api import Instance, Either, Function, Method
-from openmdao.main.api import Driver, Expression, Workflow
+from enthought.traits.api import Instance, Either, Function, Method, TraitType
+from openmdao.main.api import Driver, Expression, Workflow, Dataflow
 from openmdao.main.exceptions import RunStopped
 
+def _find_funct_def(s):
+    """Walk the ast to find a function definition in the given string.
+    Return the name of the function, or None if the function is not found.
+    """
+    node = ast.parse(s)
+    for n in ast.iter_child_nodes(node):
+        if isinstance(n, ast.FunctionDef):
+            return n.name
+    return None
+    
+class _StrOrFunct(TraitType):
+    """A trait that can either be a function or a string defining a function"""
+
+    def validate(self, obj, name, value):
+        if isinstance(value, basestring):
+            if not _find_funct_def(value):
+                raise TraitError("couldn't find a function definition in %s" % name)
+        elif not (isinstance(value, types.MethodType) or isinstance(value, types.FunctionType)):
+            raise TraitError("%s must be a function or a string defining a function" % name)
+        return value
+    
 
 class ForLoop(Driver):
     """A driver with an initialization workflow and a boolean termination function 
@@ -14,38 +37,32 @@ class ForLoop(Driver):
                              desc="Initialization workflow. This workflow will be executed once"
                                   " before the iterative workflow is executed.")
     
-    continuation_funct_body = Str('return False', iotype='in', 
-                                 desc='The body of a function that is called before each iteration'
+    continuation_funct = _StrOrFunct(iotype='in', 
+                                 desc='A function or the string definition of a function that '
+                                 ' will be called before each iteration'
                                  ' to determine if iteration should continue. The function should'
                                  ' return True if iteration should continue and False if not.' 
-                                 ' The function takes a single arg which is a reference to the'
-                                 ' ForLoop object.')
+                                 ' A reference to the ForLoop object will be passed to the function.')
 
     def __init__(self, doc=None):
-        super(Iterate, self).__init__(doc)
+        super(ForLoop, self).__init__(doc)
+        self.init_workflow = Dataflow(self)
         self.current_iteration = 0
-        self._continue_funct = None
+        self._funct_container = { 'math': math }
+        self._fname = None
     
-    def _str_continue_funct_wrapper(self):
-        pass
-            
-    def _continuation_funct_changed(self, oldstr, newstr):
-        funct_parts = ["def continue_iter(self):"]
-        for line in newstr.split('\n'):
-            funct_parts.append('    %s' % line)
-        functstr = '\n'.join(funct_parts)
-        self._continue_funct = compile(functstr, '<string>', 'exec')
+    def _continuation_funct_changed(self, oldval, newval):
+        if isinstance(newval, basestring):
+            self._funct_container = { 'math': math }
+            fname = _find_funct_def(newval)
+            exec newval in self._funct_container  # create the function object
+            self._continue_funct = lambda obj: self._funct_container[fname](obj)
+        else:
+            self._continue_funct = newval
     
     def start_iteration(self):
-        if init_workflow is not None:
-            init_workflow.run()
-
-    def execute(self):
-        """Run the initialization workflow, then iterate over self.workflow
-        until the termination function returns False.
-        """
-        self.start_iteration()
-        while self.continue_iteration():
-            self.pre_iteration()
-            self.run_iteration()
-            self.post_iteration()
+        if self.init_workflow is not None:
+            self.init_workflow.run()
+            
+    def continue_iteration(self):
+        return self._continue_funct(self)
