@@ -298,7 +298,7 @@ class NastranParser(object):
                     # skip the next (row_width-1) rows
                     row += row_width-1
                 row += 1
-                    
+
 
             to_delete.sort(reverse=True)
             for row in to_delete:
@@ -315,7 +315,7 @@ class NastranParser(object):
                 print "Could not find column names", column_names, \
                       "in", mygrid[0]
                 raise
-            
+
         result = []
         for row in available_rows:
             result.append([])
@@ -325,13 +325,14 @@ class NastranParser(object):
         if row_width > 1:
             for i in range(0, len(result),row_width):
                 result = result[:i] + [zip(*result[i:i+row_width])] + result[i+row_width:]
-                
+
 
         return result
-    
-        
+
+
 # returns int between 0-200
-# 100 is a sure header
+# 200 is a sure header... it's really just that big
+# numbers are more likely than smaller numbers
 def _header_score(line, row):
     # if the line is done in dumbcaps, there
     # is a high probability it is a header
@@ -341,7 +342,7 @@ def _header_score(line, row):
     # if no alphabetic characters, then no go
     if len(filter(lambda x: x.isalpha(), line)) < 1:
         return 0
-    
+
     if _is_dumbcaps(line):
         return 200
 
@@ -362,7 +363,7 @@ def _header_score(line, row):
     score -= 100 if "SUBCASE" in line else 0
 
     return score
-    
+
 
 def _is_dumbcaps(line):
     good = bad = 0
@@ -384,13 +385,13 @@ def _readable_header(line):
     if line[0].isdigit():
         line = line[1:]
 
-    
+
     if _is_dumbcaps(line):
         line = line.strip()
         oldline = ""
         while oldline != line:
             oldline = line
-            
+
         # in order to avoid nasty six spaces
         line = re.sub('(?P<last>[a-zA-Z])   ', '\g<last>_', line)
         line = line.replace(' ', '')
