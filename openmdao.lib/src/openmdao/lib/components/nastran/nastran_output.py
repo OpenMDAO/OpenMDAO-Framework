@@ -5,7 +5,10 @@ import nastran_output_helpers as helpers
 # TODO: add support for registering a set of helper functions
 # so that anyone can just add their own... although it's
 # not totally necessary because the user writes her own functions
-# to access the data she wants
+# to access the data she wants and she can just pass in the function
+# The problem with this approach is that the function loses its
+# context so it cannot call any other functions that aren't in
+# the helper file.
 
 class NastranOutput(object):
     def __init__(self, filep):
@@ -20,9 +23,6 @@ class NastranOutput(object):
     def __getattr__(self, name):
         if not hasattr(helpers, name):
             raise AttributeError("Cannot compute " + name)
-
-        #oldvalue = object.__getattribute__(self, name)
-        #if not object.__getattribute__(self, name):
 
         filep = object.__getattribute__(self, "filep")
         result = helpers.__getattribute__(name)(filep, self)

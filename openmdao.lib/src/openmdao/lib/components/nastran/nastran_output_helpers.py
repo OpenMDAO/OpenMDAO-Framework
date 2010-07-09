@@ -27,12 +27,18 @@ forces = ["axial", "torque"]
 
 # Beware of innocent looking expressions which
 # in fact read the variable. Something like
-# output.f[0] = 5 does read output.f, so beware. 
+# output.f[0] = 5 does read output.f, so beware.
 
 # There really shouldn't be a reason you're accessing
 # output.f, for most of the stuff, you look at the
 # existing data in the output object and then
 # parse the stuff you care about from filep
+
+# This should probably not be used. It's better to use
+# NastranParser to get the grid data. But these can be
+# useful. One good example is reading the weight of
+# a model. It's not really in a grid, so it can be
+# parsed effectively with a helper function
 
 # please save the anchor
 def save_anchor(fn):
@@ -62,12 +68,12 @@ def number_of_crod_elements(filep, output):
 
 @save_anchor
 def displacement_vector(filep, output):
-    
+
     points = output.number_of_grid_points
 
     filep.reset_anchor()
     filep.mark_anchor(dumbcaps("DISPLACEMENT VECTOR"))
-    
+
     result = [{} for i in range(points)]
     for row in range(3,3+points):
         for field, item in enumerate(tandr):
@@ -80,7 +86,7 @@ def forces_in_rod_elements(filep, output):
     filep.mark_anchor(dumbcaps("FORCES IN ROD ELEMENTS  (CROD)"))
 
     forces = [{} for i in range(total_crods)]
-    
+
     for element in range(0, total_crods-1, 2):
         forces[element]["axial"] = filep.transfer_var(3+element/2,2)
         forces[element]["torque"] = filep.transfer_var(3+element/2,3)
@@ -109,19 +115,19 @@ def stresses_in_rod_elements(filep, output):
         spot = 2 # what spot are we looking at?
 
         spot = _parse_half_column_stresses(filep, stresses, spot, accounted)
-        
+
         # we just encounted another element!
         spot += 1
 
         _parse_half_column_stresses(filep, stresses, spot, accounted+1)
-        
+
     # now, it's possible that there's still one half a row left
     if total_crods % 2 == 1:
         _parse_half_column_stresses(filep, stresses, 2, total_crods-1)
 
     return stresses
 
-        
+
 def _parse_half_column_stresses(filep, stresses, spot, row):
     stresses[row]["axial"] = filep.transfer_var(3+row/2, spot)
     spot += 1
@@ -130,7 +136,7 @@ def _parse_half_column_stresses(filep, stresses, spot, row):
         stresses[row]["axial-safety"] = \
                     filep.transfer_var(3 + row/2, spot)
         spot += 1
-        
+
     stresses[row]["torsional"] = filep.transfer_var(3 + row/2, spot)
     spot += 1
     if stresses[row]["torsional"] != 0.0:
@@ -140,7 +146,7 @@ def _parse_half_column_stresses(filep, stresses, spot, row):
 
     return spot
 
-@save_anchor    
+@save_anchor
 def masses(filep, output):
     filep.reset_anchor()
     filep.mark_anchor("MASS AXIS SYSTEM (S)")
@@ -148,8 +154,8 @@ def masses(filep, output):
     for i in range(1,4):
         masses.append(filep.transfer_var(i, 2))
     return masses
-                     
-    
+
+
 
 # for the testing
 def nothing(filep, output):

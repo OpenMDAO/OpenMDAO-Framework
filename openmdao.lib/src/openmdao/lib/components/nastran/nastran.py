@@ -24,6 +24,8 @@ class NastranComponent(ExternalCode):
                                           placeholder variables")
     nastran_command = Str(iotype="in", desc="Location of nastran \
                                           executable")
+    nastran_command_args = Str(iotype="in", desc="Arguments to the \
+                               nastran command")
 
     output_filename = Str(iotype="out", desc="Output filename")
 
@@ -42,7 +44,7 @@ class NastranComponent(ExternalCode):
         smart_replacements = {}
         output_variables = {}
         grid_outputs = {}
-        
+
         for name, trait in self.traits().iteritems():
             if trait.iotype == "in":
                 # nastran_var is a variable that should be replaced
@@ -66,7 +68,7 @@ class NastranComponent(ExternalCode):
                                     "nastran_fieldnum, but you did " + \
                                     "not specify all of them. You " + \
                                     "most probably mistyped.")
-                
+
             elif trait.iotype == "out":
                 # if we want to supply a function that will parse
                 # out the wanted information from the output object
@@ -85,7 +87,7 @@ class NastranComponent(ExternalCode):
                                     ", and nastran_columns, but you " + \
                                     "did not specify all them. You " + \
                                     "most probably mistyped")
-                    
+
         # let's do our work in a tmp dir
         tmpdir = mkdtemp()
         tmppath = path.join(tmpdir, "input.bdf")
@@ -113,13 +115,14 @@ class NastranComponent(ExternalCode):
                       trait.nastran_id,
                       trait.nastran_fieldnum, value)
         maker.write_to_file(tmpfh, 10001)
-        
+
         tmpfh.close()
 
 
         # Then we run the nastran file
         self.command = self.nastran_command + " " + \
-                       tmppath + " batch=no out=" + tmpdir + \
+                       tmppath + " " + self.nastran_command_args + \
+                       " batch=no out=" + tmpdir + \
                        " dbs=" + tmpdir
 
         # This calls ExternalCode's execute which will run
@@ -127,7 +130,7 @@ class NastranComponent(ExternalCode):
         super(NastranComponent, self).execute()
 
         # And now we parse the output
-        
+
         # what is the new file called?
         self.output_filename = path.join(tmpdir, "input.out")
 
@@ -158,7 +161,7 @@ class NastranComponent(ExternalCode):
             columns = trait.nastran_columns
             result = self.parser.get(header, subcase, \
                                      constraints, columns)
-            
+
             # nastran_{row,column} might be kinda silly
             # in most cases, the user will probably just call
             # self.parser.get on her own
