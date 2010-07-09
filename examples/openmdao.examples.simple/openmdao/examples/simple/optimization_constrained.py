@@ -26,6 +26,9 @@ class OptimizationConstrained(Assembly):
         # Create CONMIN Optimizer instance
         self.add('driver', CONMINdriver())
         
+        # Driver process definition
+        self.driver.workflow.add(self.paraboloid)
+        
         # CONMIN Flags
         self.driver.iprint = 0
         self.driver.itmax = 30

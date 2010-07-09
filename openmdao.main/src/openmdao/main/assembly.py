@@ -13,7 +13,6 @@ from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_co
 from openmdao.main.interfaces import IDriver, IWorkflow
 from openmdao.main.component import Component
 from openmdao.main.container import Container
-from openmdao.main.dataflow import Dataflow
 from openmdao.main.driver import Driver
 from openmdao.main.expression import Expression
 from openmdao.main.expreval import ExprEvaluator
@@ -54,10 +53,6 @@ class Assembly (Component):
         self._need_child_io_update = True
         
         self.comp_graph = ComponentGraph()
-        
-        # this is the default Workflow for all Drivers living in this
-        # Assembly that don't define their own Workflow
-        self._default_workflow = Dataflow(self)
         
         # A graph of Variable names (local path), 
         # with connections between Variables as directed edges.  
@@ -114,19 +109,14 @@ class Assembly (Component):
         ## is used in the parent assembly to determine of the graph has changed
         #return super(Assembly, self).get_io_graph()
     
-    def add(self, name, obj, add_to_workflow=True):
-        """Add obj to the workflow and call base class *add*.
+    def add(self, name, obj):
+        """Add obj to the component graph and call base class *add*.
         
         Returns the added object.
         """
         obj = super(Assembly, self).add(name, obj)
         self.comp_graph.add(obj)
         
-        # add all non-Driver Components to the Assembly workflow by default
-        # unless add_to_workflow is False
-        if add_to_workflow is True and isinstance(obj, Component) and not isinstance(obj, Driver):
-            self._default_workflow.add(obj)
-
         # since the internals of the given Component can change after it's
         # added, wait to collect its io_graph until we need it
         self._child_io_graphs[obj.name] = None
@@ -138,7 +128,6 @@ class Assembly (Component):
         """Remove the named container object from this container and remove
         it from its workflow (if any)."""
         cont = getattr(self, name)
-        self._default_workflow.remove(cont)
         for obj in self.__dict__.values():
             if obj is not cont and isinstance(obj, Driver):
                 obj.remove_from_workflow(cont)
@@ -263,7 +252,6 @@ class Assembly (Component):
             destcomp.set_source(destvarname, srcpath)
             if srccomp is not self: # neither var is on boundary
                 self.comp_graph.connect(srcpath, destpath)
-                self._default_workflow.config_changed()
         
         vgraph = self.get_var_graph()
         vgraph.add_edge(srcpath, destpath)
@@ -332,7 +320,6 @@ class Assembly (Component):
                 utup = src.split('.',1)
                 if len(utup)>1:
                     self.comp_graph.disconnect(utup[0], vtup[0])
-                    self._default_workflow.config_changed()
                 
         vargraph.remove_edges_from(to_remove)
         

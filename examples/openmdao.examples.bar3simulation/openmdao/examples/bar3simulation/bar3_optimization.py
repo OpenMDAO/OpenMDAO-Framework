@@ -44,6 +44,8 @@ class Bar3Optimization(Assembly):
         
         # Create Bar3_Truss component instances
         self.add('bar3_truss', Bar3Truss())
+        
+        self.driver.workflow.add(self.bar3_truss)
 
         # CONMIN Flags
         self.driver.iprint = 0

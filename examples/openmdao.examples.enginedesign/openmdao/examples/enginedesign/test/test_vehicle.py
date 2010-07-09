@@ -14,6 +14,7 @@ class VehicleTestCase(unittest.TestCase):
     def setUp(self):
         self.model = set_as_top(Assembly())
         self.model.add('test_vehicle', Vehicle())
+        self.model.driver.workflow.add(self.model.test_vehicle)
 
     def tearDown(self):
         self.model.pre_delete()

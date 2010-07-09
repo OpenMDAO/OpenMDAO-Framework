@@ -468,7 +468,7 @@ class CaseIteratorDriver(Driver):
         self._exceptions[server] = None
         if server is None:
             try:
-                self._get_workflow().run()
+                self.workflow.run()
             except Exception as exc:
                 self._exceptions[server] = exc
                 self._logger.critical('Caught exception: %s' % exc)

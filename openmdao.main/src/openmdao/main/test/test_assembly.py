@@ -87,17 +87,24 @@ class AssemblyTestCase(unittest.TestCase):
             comp2
             comp3
         """
-        self.asm = set_as_top(Assembly())
-        self.asm.add('comp1', DummyComp())
-        self.asm.add('nested', Assembly())
-        self.asm.nested.add('comp1', DummyComp())
+        top = self.asm = set_as_top(Assembly())
+        top.add('comp1', DummyComp())
+        nested = top.add('nested', Assembly())
+        nested.add('comp1', DummyComp())
         for name in ['comp2', 'comp3']:
-            self.asm.add(name, DummyComp())
+            top.add(name, DummyComp())
+            
+        # driver process definition
+        top.driver.workflow.add([top.comp1,top.nested,top.comp2,top.comp3])
+        nested.driver.workflow.add([nested.comp1])
         
     def test_lazy_eval(self):
         top = set_as_top(Assembly())
-        top.add('comp1', Multiplier())
-        top.add('comp2', Multiplier())
+        comp1 = top.add('comp1', Multiplier())
+        comp2 = top.add('comp2', Multiplier())
+        
+        top.driver.workflow.add([comp1, comp2])
+        
         top.comp1.mult = 2.0
         top.comp2.mult = 4.0
         top.connect('comp1.rval_out', 'comp2.rval_in')
@@ -324,8 +331,12 @@ class AssemblyTestCase(unittest.TestCase):
     def test_input_passthrough_to_2_inputs(self):
         asm = set_as_top(Assembly())
         asm.add('nested', Assembly())
-        asm.nested.add('comp1', Simple())
-        asm.nested.add('comp2', Simple())
+        comp1 = asm.nested.add('comp1', Simple())
+        comp2 = asm.nested.add('comp2', Simple())
+        
+        asm.driver.workflow.add(asm.nested)
+        asm.nested.driver.workflow.add([comp1, comp2])
+        
         asm.nested.create_passthrough('comp1.a') 
         asm.nested.connect('a', 'comp2.b') 
         self.assertEqual(asm.nested.comp1.a, 4.)
