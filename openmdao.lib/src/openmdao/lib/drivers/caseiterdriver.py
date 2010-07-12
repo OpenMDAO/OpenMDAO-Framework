@@ -143,7 +143,7 @@ class CaseIteratorDriver(Driver):
                 self._replicants += 1
                 version = 'replicant.%d' % (self._replicants)
                 driver = self.parent.driver
-                self.parent.add('driver', Driver())
+                self.parent.add('driver', Driver()) # this driver will execute the workflow once
                 self.parent.driver.workflow = self.workflow
                 try:
                     #egg_info = self.model.save_to_egg(self.model.name, version)
