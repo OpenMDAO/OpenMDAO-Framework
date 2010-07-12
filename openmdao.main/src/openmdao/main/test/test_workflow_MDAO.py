@@ -436,31 +436,13 @@ class TestCase(unittest.TestCase):
         prob.coupler.x1_in = 1.0
         prob.dis1.x1 = 1.0
         
+        prob.coupler.y1_in = 3.16
+        prob.coupler.y2_in = 0.0
         prob.dis1.y2 = 0.0
         prob.dis2a.y1 = 3.16
         
-        # Note: All this junk is needed to suppress some annoying warning
-        # messages form CONMIN. They are output to STDOUT, but you can't
-        # just redirect them the old fashioned way. This code from
-        # stackoverflow does the trick.
-        
-        # open 2 fds
-        null_fds = [os.open(os.devnull, os.O_RDWR) for x in xrange(2)]
-        # save the current file descriptors to a tuple
-        save = os.dup(1), os.dup(2)
-        # put /dev/null fds on 1 and 2
-        os.dup2(null_fds[0], 1)
-        os.dup2(null_fds[1], 2)
-        
         prob.run()
 
-        # restore file descriptors so I can print the results
-        os.dup2(save[0], 1)
-        os.dup2(save[1], 2)
-        # close the temporary fds
-        os.close(null_fds[0])
-        os.close(null_fds[1])
-        
         assert_rel_error(self, prob.coupler.z1_in, 2.0, 0.1)
         assert_rel_error(self, 1.0-prob.coupler.z2_in, 1.0, 0.01)
         assert_rel_error(self, 1.0-prob.coupler.x1_in, 1.0, 0.01)
