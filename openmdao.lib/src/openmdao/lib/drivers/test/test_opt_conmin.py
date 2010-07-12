@@ -318,7 +318,37 @@ class CONMINdriverTestCase(unittest.TestCase):
         # pylint: disable-msg=E1101
         self.assertEqual(self.top.driver.iter_count,2)
 
+    def test_input_minmax_violation(self):
         
+        self.top.driver.objective = 'comp.result'
+        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
+                                             'comp.x[2]', 'comp.x[3]']
+        self.top.driver.lower_bounds = [-10, -10, -10, -10]
+        self.top.driver.upper_bounds = [99, 99, 99, 99]
+        
+        self.top.comp.x[0] = 100
+        try:
+            self.top.run()
+        except ValueError, err:
+            self.assertEqual(str(err),
+                             "driver: maximum exceeded for initial value of: comp.x[0]")
+        else:
+            self.fail('ValueError expected')
+
+        self.top.comp.x[0] = -50
+        try:
+            self.top.run()
+        except ValueError, err:
+            self.assertEqual(str(err),
+                             "driver: minimum exceeded for initial value of: comp.x[0]")
+        else:
+            self.fail('ValueError expected')
+
+        self.top.comp.x[0] = 99.0001
+        self.top.driver.ctlmin = .001
+        self.top.run()
+
+
 if __name__ == "__main__":
     unittest.main()
     #suite = unittest.TestLoader().loadTestsFromTestCase(ContainerTestCase)
