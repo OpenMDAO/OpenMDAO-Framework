@@ -58,7 +58,7 @@ def _deep_setattr(obj, path, value):
         obj = getattr(obj, name)
     setattr(obj, tup[-1], value)
 
-    
+
 # TODO: implement get_closest_proxy, along with a way to detect
 # when a Container is proxy so we can differentiate between
 # failure to find an attribute vs. failure to find a local
@@ -379,7 +379,7 @@ class Container(HasTraits):
         if isinstance(obj, Container):
             obj.parent = self
             # if an old child with that name exists, remove it
-            if self.contains(name):
+            if self.contains(name) and getattr(self, name):
                 self.remove(name)
             setattr(self, name, obj)
             obj.name = name
@@ -561,6 +561,26 @@ class Container(HasTraits):
         else:
             self.raise_exception("this object is not callable",
                                  RuntimeError)        
+    
+    def get_metadata(self, traitpath, metaname=None):
+        """Retrieve the metadata associated with the trait found using
+        traitpath.  If metaname is None, return the entire metadata dictionary
+        for the specified trait. Otherwise, just return the specified piece
+        of metadata.  If the specified piece of metadata is not part of
+        the trait, None is returned.
+        """
+        parts = traitpath.split('.')
+        obj = self
+        for part in parts[:-1]:
+            obj = getattr(obj, part)
+        t = obj.trait(parts[-1])
+        if not t:
+            self.raise_exception("Couldn't find trait %s" % parts[-1],
+                                 AttributeError)
+        if metaname is None:
+            return t.trait_type._metadata.copy()
+        else:
+            return getattr(t, metaname)
         
     def get(self, path, index=None):
         """Return any public object specified by the given 

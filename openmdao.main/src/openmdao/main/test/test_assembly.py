@@ -47,7 +47,7 @@ class DummyComp(Component):
     r = Float(iotype='in')
     r2 = Float(iotype='in')
     s = Str(iotype='in')
-    rout = Float(iotype='out')
+    rout = Float(iotype='out', units='ft')
     r2out = Float(iotype='out')
     sout = Str(iotype='out')
     
@@ -140,6 +140,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp1.s, 'once upon a time')
         
         # also, test that we can't do a direct set of a connected input
+        # This tests Requirement Ticket #274
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
@@ -278,7 +279,7 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail('exception expected')
      
-    def test_attribute_link(self):
+    def test_metadata_link(self):
         try:
             self.asm.connect('comp1.rout.units','comp2.s')
         except NameError, err:
@@ -286,7 +287,25 @@ class AssemblyTestCase(unittest.TestCase):
                     "comp1: Cannot locate trait named 'rout.units'")
         else:
             self.fail('NameError expected')
+            
+    def test_get_metadata(self):
+        units = self.asm.comp1.get_metadata('rout', 'units')
+        self.assertEqual(units, 'ft')
         
+        meta = self.asm.comp1.get_metadata('rout')
+        self.assertEqual(set(meta.keys()), set(['units','high','iotype','type','low']))
+        
+    def test_missing_metadata(self):
+        foo = self.asm.comp1.get_metadata('rout', 'foo')
+        self.assertEqual(foo, None)
+        
+        try:
+            bar = self.asm.comp1.get_metadata('bogus', 'bar')
+        except Exception as err:
+            self.assertEqual(str(err), "comp1: Couldn't find trait bogus")
+        else:
+            self.fail("Exception expected")
+            
     def test_value_link(self):
         try:
             self.asm.connect('comp1.rout.value','comp2.r2')
@@ -386,8 +405,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.connect('comp3.sout', 'comp2.s')
         conns = self.asm.list_connections()
-        self.assertEqual(conns, [('comp1.rout', 'comp2.r'),
-                                 ('comp3.sout', 'comp2.s')])
+        self.assertEqual(set(conns), set([('comp1.rout', 'comp2.r'),
+                                 ('comp3.sout', 'comp2.s')]))
         self.asm.remove('comp3')
         conns = self.asm.list_connections()
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])
