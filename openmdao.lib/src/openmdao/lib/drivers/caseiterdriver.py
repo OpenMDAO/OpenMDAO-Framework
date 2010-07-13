@@ -20,14 +20,13 @@ class ServerError(Exception):
     pass
 
 
-class CaseIteratorDriver(Driver):
+class CaseIterDriverBase(Driver):
     """
-    Run a set of cases provided by an :class:`ICaseIterator` in a manner similar
+    A base class for Drivers that run sets of cases in a manner similar
     to the ROSE framework. Concurrent evaluation is supported, with the various
     evaluations executed across servers obtained from the
     :class:`ResourceAllocationManager`.
 
-    - The `iterator` socket provides the cases to be evaluated.
     - The `model` to be executed is found in the workflow.
     - The `recorder` socket is used to record results.
     - If `sequential` is True, then the cases are evaluated sequentially.
@@ -36,8 +35,7 @@ class CaseIteratorDriver(Driver):
     
     """
 
-    iterator = Instance(ICaseIterator, desc='Cases to evaluate.', required=True)
-    recorder = Instance(object, desc='Something to append() to.', required=True)
+    recorder = Instance(object, desc='Something to write Cases to.', required=True)
     
     sequential = Bool(True, iotype='in',
                       desc='Evaluate cases sequentially.')
@@ -49,7 +47,7 @@ class CaseIteratorDriver(Driver):
                       desc='Number of times to retry a case.')
 
     def __init__(self, *args, **kwargs):
-        super(CaseIteratorDriver, self).__init__(*args, **kwargs)
+        super(CaseIterDriverBase, self).__init__(*args, **kwargs)
 
         self._iter = None  # Set to None when iterator is empty.
         self._replicants = 0
@@ -75,7 +73,7 @@ class CaseIteratorDriver(Driver):
         self._rerun = []  # Cases that failed and should be retried.
 
     def execute(self):
-        """ Runs each case in `iterator` and records results in `recorder`. """
+        """ Runs all cases and records results in `recorder`. """
         self.setup()
         self.resume()
 
@@ -155,7 +153,10 @@ class CaseIteratorDriver(Driver):
                 self._egg_required_distributions = egg_info[1]
                 self._egg_orphan_modules = [name for name, path in egg_info[2]]
 
-        self._iter = self.iterator.__iter__()
+        self._iter = self.get_case_iterator()
+        
+    def get_case_iterator(self):
+        raise NotImplemented('get_case_iterator')
 
     def _start(self):
         """ Start evaluating cases concurrently. """
@@ -277,7 +278,7 @@ class CaseIteratorDriver(Driver):
     def _server_ready(self, server, stepping=False):
         """
         Responds to asynchronous callbacks during :meth:`execute` to run cases
-        retrieved from `iterator`.  Results are processed by `recorder`.
+        retrieved from `self._iter`.  Results are processed by `recorder`.
         If `stepping`, then we don't grab any new cases.
         Returns True if this server is still in use.
         """
@@ -490,3 +491,19 @@ class CaseIteratorDriver(Driver):
         """ Return execute status from model. """
         return self._exceptions[server]
 
+
+class CaseIteratorDriver(CaseIterDriverBase):
+    """
+    Run a set of cases provided by an :class:`ICaseIterator` in a manner similar
+    to the ROSE framework. Concurrent evaluation is supported, with the various
+    evaluations executed across servers obtained from the
+    :class:`ResourceAllocationManager`.
+
+    - The `iterator` socket provides the cases to be evaluated.
+    """
+
+    iterator = Instance(ICaseIterator, desc='Iterator supplying Cases to evaluate.', required=True)
+    
+    def get_case_iterator(self):
+        """Returns a new iterator over the Case set"""
+        return self.iterator.__iter__()

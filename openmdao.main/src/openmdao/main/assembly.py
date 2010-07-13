@@ -9,7 +9,7 @@ from enthought.traits.api import TraitType
 import networkx as nx
 from networkx.algorithms.traversal import is_directed_acyclic_graph, strongly_connected_components
 
-from openmdao.main.interfaces import IDriver, IWorkflow
+from openmdao.main.interfaces import IDriver
 from openmdao.main.component import Component
 from openmdao.main.container import Container
 from openmdao.main.dataflow import Dataflow

@@ -24,12 +24,14 @@ from random import randint
 from numpy import array,size,sum,floor
 from numpy.linalg import norm
 
-from enthought.traits.api import HasTraits
+from enthought.traits.api import HasTraits, implements
 
 from openmdao.lib.api import Int, Enum
 from openmdao.util.mdo import rand_latin_hypercube
+from openmdao.main.interfaces import IDOEgenerator
 
 class LatinHypercube(object):
+    
     def __init__(self, doe, q=2, p=1):
         self.q = q
         self.p = p
@@ -106,6 +108,8 @@ _norm_map = {"1-norm":1,"2-norm":2}
 
 class OptLatinHypercube(HasTraits): 
     
+    implements(IDOEgenerator)
+    
     num_sample_points = Int(20, desc="number of sample points in the DOE")
     
     num_design_vars = Int(2, desc="number of design variables in the DOE")
@@ -117,9 +121,15 @@ class OptLatinHypercube(HasTraits):
     norm_method = Enum(["1-norm","2-norm"],
                     desc="vector norm calculation method. '1-norm' is faster, but less accurate")
     
-    def __init__(self):
+    def __init__(self, num_samples=None, num_design_vars=None, population=None):
         super(OptLatinHypercube,self).__init__()
         self.qs = [1,2,5,10,20,50,100] #list of qs to try for Phi_q optimization
+        if num_samples is not None:
+            self.num_sample_points = num_samples
+        if num_design_vars is not None:
+            self.num_design_vars = num_design_vars
+        if population is not None:
+            self.population = population
 
     def __iter__(self):
         """Return an iterator over our sets of input values"""

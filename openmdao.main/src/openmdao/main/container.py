@@ -569,18 +569,20 @@ class Container(HasTraits):
         of metadata.  If the specified piece of metadata is not part of
         the trait, None is returned.
         """
-        parts = traitpath.split('.')
-        obj = self
-        for part in parts[:-1]:
-            obj = getattr(obj, part)
-        t = obj.trait(parts[-1])
+        parts = traitpath.split('.',1)
+        if len(parts) > 1:
+            obj = getattr(self, parts[0])
+            return obj.get_metadata(parts[1], metaname)
+            
+        t = self.trait(traitpath)
         if not t:
-            self.raise_exception("Couldn't find trait %s" % parts[-1],
+            self.raise_exception("Couldn't find trait %s" % traitpath,
                                  AttributeError)
         if metaname is None:
             return t.trait_type._metadata.copy()
         else:
             return getattr(t, metaname)
+        
         
     def get(self, path, index=None):
         """Return any public object specified by the given 
@@ -689,23 +691,26 @@ class Container(HasTraits):
         tup = path.split('.')
         if len(tup) == 1:
             trait = self._check_trait_settable(path, srcname, force)
-            if index is None:
-                if trait is None:
-                    self.raise_exception("object has no attribute '%s'" %
-                                         path, TraitError)
-                # bypass the callback here and call it manually after 
-                # with a flag to tell it not to check if it's a destination
-                self._trait_change_notify(False)
-                try:
-                    setattr(self, path, value)
-                finally:
-                    self._trait_change_notify(True)
-                # now manually call the notifier with old set to Undefined
-                # to avoid the destination check
-                self._io_trait_changed(self, path, Undefined, 
-                                       getattr(self, path))
+            if trait.type =='event':
+                setattr(self, path, value)
             else:
-                self._array_set(path, value, index)
+                if index is None:
+                    if trait is None:
+                        self.raise_exception("object has no attribute '%s'" %
+                                             path, TraitError)
+                    # bypass the callback here and call it manually after 
+                    # with a flag to tell it not to check if it's a destination
+                    self._trait_change_notify(False)
+                    try:
+                        setattr(self, path, value)
+                    finally:
+                        self._trait_change_notify(True)
+                    # now manually call the notifier with old set to Undefined
+                    # to avoid the destination check
+                    self._io_trait_changed(self, path, Undefined, 
+                                           getattr(self, path))
+                else:
+                    self._array_set(path, value, index)
         else:
             obj = getattr(self, tup[0], Missing)
             if obj is Missing:

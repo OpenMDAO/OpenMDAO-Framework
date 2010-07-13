@@ -45,7 +45,7 @@ class Genetic(Driver):
                           "rank":Selectors.GRankSelector,
                           "uniform":Selectors.GUniformSelector}
     
-    elitism = Bool(False,iotype="in",desc="controls the use of elitism in the createion of new "
+    elitism = Bool(False,iotype="in",desc="controls the use of elitism in the creation of new "
                    "generations.")
     
     best_individual = Instance(klass = GenomeBase.GenomeBase, iotype="out", desc="the genome with the "
