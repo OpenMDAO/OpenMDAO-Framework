@@ -154,6 +154,28 @@ class ICaseRecorder(Interface):
     
     def record(case):
         """Record the given Case."""
+        
+class ISurrogate(Interface): 
+    
+    def __init__(self,X=None,Y=None):
+        """initialize the approximate predictor.
+            X,optional : a list of lists of values representing the training case inputs
+            Y,optional : a list of training case outputs which correspond to the training case inputs given in X. 
+        """
+        pass
+    
+    def predict(self,X):
+        """Predicts a value of from the surrogate model, for the given independent values in X.
+            X: a list of values representing the the input values to predict the function at
+        """
+        pass
+    
+    def train(self,X,Y): 
+        """trains the surrogate model, based on the given training data set.
+            X: a list of lists of values representing the training case inputs       
+            y: a list of training case outputs which correspond to the training case inputs given by X
+        """
+        pass        
 
 
 def obj_has_interface(obj, *ifaces):
@@ -167,3 +189,4 @@ def obj_has_interface(obj, *ifaces):
         return False
     return True
     
+
