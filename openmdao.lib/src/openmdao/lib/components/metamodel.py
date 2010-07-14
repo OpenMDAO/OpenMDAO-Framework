@@ -60,7 +60,3 @@ class MetaModel(Mimic):
             self.remove_trait(name)
         
         self._current_model_traitnames = new_model_traitnames
-        
-
-    def train(self):
-        pass

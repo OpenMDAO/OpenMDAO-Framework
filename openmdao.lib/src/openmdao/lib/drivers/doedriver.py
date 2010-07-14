@@ -31,7 +31,8 @@ class DOEdriver(CaseIterDriverBase):
         self._parameters = []  # need parameter ordering to map to DOE values, so no dict here
         self._event_vars = []
     
-    DOEgenerator = Instance(IDOEgenerator, desc='Iterator supplying normalized DOE values', 
+    DOEgenerator = Instance(IDOEgenerator, iotype='in',
+                            desc='Iterator supplying normalized DOE values', 
                             required=True)
     
     case_outputs = ListStr([], iotype='in', 
