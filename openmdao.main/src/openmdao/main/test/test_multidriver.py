@@ -2,10 +2,11 @@
 
 import unittest
 import logging
+import StringIO
 from math import sqrt
 
 from openmdao.main.api import Assembly, Component, Driver, Expression, \
-                              Dataflow, SequentialWorkflow, set_as_top
+                              Dataflow, SequentialWorkflow, set_as_top, dump_iteration_tree
 from openmdao.lib.api import Float, Int, Str
 from openmdao.lib.drivers.conmindriver import CONMINdriver
 
@@ -276,6 +277,14 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertAlmostEqual(nested.x, 6.66667, places=4)
         self.assertAlmostEqual(nested.comp3.y, -7.33333, places=4)
 
+        # test dumping of iteration tree
+        s = StringIO.StringIO()
+        dump_iteration_tree(self.top, s)
+        self.assertEqual(s.getvalue(), 
+            '\n   driver\n      nested\n         nested.driver\n            '
+            'nested.comp1\n            nested.comp3\n            nested.comp2\n'
+            '            nested.comp4\n')
+
     def test_2_nested_drivers_same_assembly(self):
         #
         # Solve (x-3)^2 + xy + (y+4)^2 = 3
@@ -330,6 +339,13 @@ class MultiDriverTestCase(unittest.TestCase):
         # This is also the case for a single 2-var problem.
         self.assertAlmostEqual(top.comp1.x, 6.66667, places=4)
         self.assertAlmostEqual(top.comp3.y, -7.33333, places=4)
+        
+        # test dumping of iteration tree
+        s = StringIO.StringIO()
+        dump_iteration_tree(self.top, s)
+        self.assertEqual(s.getvalue(), 
+            '\n   driver\n      driver1\n         comp1\n         comp3\n'
+            '         comp2\n         comp4\n')
         
     def test_2drivers_same_iterset(self):
         #
@@ -461,6 +477,7 @@ class MultiDriverTestCase(unittest.TestCase):
         self.assertEqual(exec_order,
                          ['D1', 'C1', 'C1', 'C1', 'C1', 'C1',
                           'D2', 'C2', 'C2', 'C2', 'C2'])
+        
         
 if __name__ == "__main__":
     

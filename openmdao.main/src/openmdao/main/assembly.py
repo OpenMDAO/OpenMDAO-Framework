@@ -2,6 +2,7 @@
 #public symbols
 __all__ = ['Assembly']
 
+import sys
 
 from enthought.traits.api import HasTraits, List, Instance, TraitError
 from enthought.traits.api import TraitType
@@ -628,3 +629,27 @@ class _Link(object):
                 if src:
                     srcs.append(src)
             return srcs
+
+
+def dump_iteration_tree(obj, f=sys.stdout, tablevel=0):
+    """Writes a text version of the iteration tree
+    of an OpenMDAO object or hierarchy.  The tree
+    shows which are being iterated over by which
+    drivers.
+    """
+    if isinstance(obj, Driver):
+        f.write(' '*tablevel)
+        f.write(obj.get_pathname())
+        f.write('\n')
+        for comp in obj.workflow:
+            if isinstance(comp, Driver) or isinstance(comp, Assembly):
+                dump_iteration_tree(comp, f, tablevel+3)
+            else:
+                f.write(' '*(tablevel+3))
+                f.write(comp.get_pathname())
+                f.write('\n')
+    elif isinstance(obj, Assembly):
+        f.write(' '*tablevel)
+        f.write(obj.get_pathname())
+        f.write('\n')
+        dump_iteration_tree(obj.driver, f, tablevel+3)
