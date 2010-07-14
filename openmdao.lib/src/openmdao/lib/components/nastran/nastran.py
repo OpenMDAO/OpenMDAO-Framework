@@ -114,6 +114,7 @@ class NastranComponent(ExternalCode):
             maker.set(trait.nastran_card,
                       trait.nastran_id,
                       trait.nastran_fieldnum, value)
+        self.nastran_maker_hook(maker)
         maker.write_to_file(tmpfh, 10001)
 
         tmpfh.close()
@@ -176,3 +177,8 @@ class NastranComponent(ExternalCode):
 
         # get rid of our tmp dir
         rmtree(tmpdir)
+
+    def nastran_maker_hook(self, maker):
+        # This class can be subclasses if you want to dynamically
+        # add variables with NastranMaker
+        pass

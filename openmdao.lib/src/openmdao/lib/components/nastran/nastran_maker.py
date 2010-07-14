@@ -21,7 +21,7 @@ class NastranMaker(object):
 
     # attrs is a list of dictionaries that have two items
     # 1: fieldnum, 2: value
-    def nastran_set(self, name, id, attrs, unique_int):
+    def _nastran_set(self, name, id, attrs, unique_int):
         card = None
         for index, line in enumerate(self.text):
             if line.startswith(name):
@@ -120,7 +120,7 @@ class NastranMaker(object):
     # This changes self.text
     def _output(self, unique_id):
         for (name, id), attrs in self.names.iteritems():
-            unique_id = self.nastran_set(name, id, attrs, unique_id)
+            unique_id = self._nastran_set(name, id, attrs, unique_id)
 
     # This changes self.text and then prints self.text to a file
     def write_to_file(self, file_handler, unique_int=10001):

@@ -1,1 +1,1 @@
-# make it a package!
+from nastran import NastranComponent
