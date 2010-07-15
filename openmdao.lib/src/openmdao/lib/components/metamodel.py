@@ -26,6 +26,7 @@ class MetaModel(Mimic):
                 self.model.run()
                 self.update_outputs_from_model()
                 #save the case
+                # must be some kind of call to surrogates here to 'train' them
             self._train = False
         else:
             # predict outputs     # how are the surrogates learning? No mention during training
