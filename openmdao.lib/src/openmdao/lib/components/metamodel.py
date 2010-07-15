@@ -18,6 +18,9 @@ class MetaModel(Component):
     
     surrogate = Instance(ISurrogate, allow_none=True,
                          desc='An ISurrogate instance that is used as a template for each output surrogate.')
+    
+    recorder = Instance(ICaseRecorder,
+                        desc = 'Records training cases')
 
     train_next = Event()  # when fired, the next execution will train the metamodel
     
@@ -48,17 +51,25 @@ class MetaModel(Component):
                 self._training_input_history.append(inputs)
                 self.model.run()
                 self.update_outputs_from_model()
-                for surrogate, output_history in self._surrogate_info:
+                case_outputs = []
+                for name, tup in self._surrogate_info.items():
+                    surrogate, output_history = tup
                     surrogate.train(self._training_input_history, output_history)
+                    case_outputs.append((name, None, output_history[-1]))
                 #save the case
+                case_inputs = [(name,None,val) for name,val in zip(self._surrogate_input_names, inputs)]
+                self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
             else:
                 self.raise_exception("MetaModel object must have a model!",
                                      RuntimeError)
             self._train = False
         else:
-            # predict outputs
-            # copy outputs to boundary
-            pass
+            input_values = [getattr(self, name) for name in self._surrogate_input_names]
+            for name, tup in self._surrogate_info.items():
+                surrogate = tup[0]
+                predicted = surrogate.predict(input_values)
+                # copy output to boudary
+                setattr(self, name, predicted)
             
     def _model_changed(self, oldmodel, newmodel):
         self.update_model(oldmodel, newmodel)
@@ -117,13 +128,14 @@ class MetaModel(Component):
         return input_values
 
     def update_outputs_from_model(self):
-        """Copy output values from the model into the MetaModel's outputs.
+        """Copy output values from the model into the MetaModel's outputs, and
+        if training, save the output associated with surrogate.
         """
         for name in self.list_outputs_from_model():
             out = getattr(self.model, name)
             setattr(self, name, out)
             if self._train:
-                self._surrogate_info[name][1].append(out)
+                self._surrogate_info[name][1].append(out) # save to training output history
 
     def list_inputs_to_model(self):
         """Return the list of names of public inputs that correspond 

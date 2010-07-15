@@ -17,15 +17,17 @@ class ParetoFilter(Component):
     dominated_set = Instance(ICaseIterator,iotype="out",desc="resulting collection of dominated cases")
                       
     def _is_dominated(self,y1,y2):
-        """tests to see if the point y1 is dominated by the point y2. True if y1 is dominated by y2, False otherwise"""
+        """tests to see if the point y1 is dominated by the point y2. 
+        True if y1 is dominated by y2, False otherwise.
+        """
         if y1==y2: return False
         if any([a<b for a,b in zip(y1,y2)]): return False
         return True
     
-    
     def execute(self):
         """Finds and removes pareto optimal points in the given case set. Returns 
-        list of pareto optimal points. Smaller is better for all criteria."""
+        list of pareto optimal points. Smaller is better for all criteria.
+        """
         
         y_list = []
         cases = [case for case in self.case_set]
