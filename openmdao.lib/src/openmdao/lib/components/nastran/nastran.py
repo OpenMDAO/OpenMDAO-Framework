@@ -4,7 +4,7 @@ from shutil import rmtree
 import re
 import copy
 
-from openmdao.lib.api import Float, Str
+from openmdao.lib.api import Float, Str, Bool
 from openmdao.lib.components.external_code import ExternalCode
 
 from enthought.traits.api import TraitError
@@ -30,6 +30,9 @@ class NastranComponent(ExternalCode):
     output_filename = Str(iotype="out", desc="Output filename")
 
     parser = None # it's a NastranParser?
+
+    delete_tmp_files = Bool(True, iotype="in", desc="Should I delete \
+                            the temporary files?")
 
     def execute(self):
         # We are going to keep track of all the ways we
@@ -176,7 +179,8 @@ class NastranComponent(ExternalCode):
             self.__setattr__(name, float(result[row][col]))
 
         # get rid of our tmp dir
-        rmtree(tmpdir)
+        if self.delete_tmp_files:
+            rmtree(tmpdir)
 
     def nastran_maker_hook(self, maker):
         # This class can be subclasses if you want to dynamically
