@@ -157,25 +157,48 @@ class ICaseRecorder(Interface):
         
 class ISurrogate(Interface): 
     
-    def __init__(self,X=None,Y=None):
-        """initialize the approximate predictor.
-            X,optional : a list of lists of values representing the training case inputs
-            Y,optional : a list of training case outputs which correspond to the training case inputs given in X. 
-        """
-        pass
-    
     def predict(self,X):
         """Predicts a value of from the surrogate model, for the given independent values in X.
-            X: a list of values representing the the input values to predict the function at
+            
+        X: list
+            values representing the the input values to predict the function at
         """
         pass
     
     def train(self,X,Y): 
         """trains the surrogate model, based on the given training data set.
-            X: a list of lists of values representing the training case inputs       
-            y: a list of training case outputs which correspond to the training case inputs given by X
+        
+        X: list of lists 
+            values representing the training case inputs       
+        y: list
+            training case outputs which correspond to the training case inputs given by X
         """
-        pass        
+        pass   
+    
+def IDriverParameter(Interface):
+    def add_parameter(self,param_name,low=None,high=None):
+        """adds a parameter to the driver. 
+        
+        param_name : str 
+            name of the parameter to add to the driver
+        low : number, optional
+            minimum allowed value the optimzier can use for this parameter. If not specified, 
+            then the 'low' value from the public variable is used. 
+        high : number, optional
+            maximum allowed value the optimizer can use for this parameter. If not specified, 
+            then the 'high' value from the public variable is used.
+        """
+    def remove_parameter(self,param_name):
+        """removes the specified parameter. Raises a KeyError if param_name is not found
+        
+        param_name: str
+            the name of the parameter to remove
+        """
+    def list_parameters(self):
+        """Lists all the parameters"""
+    def clear_parameters(self):
+        """Removes all parameters"""
+    
 
 
 def obj_has_interface(obj, *ifaces):
