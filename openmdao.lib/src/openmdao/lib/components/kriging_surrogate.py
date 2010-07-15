@@ -10,7 +10,7 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.container import Container
 from openmdao.main.component import Component
 from openmdao.main.interfaces import ISurrogate
-from openmdao.lib.traits.float import Float
+from openmdao.main.uncertainty_distributions import NormalDistribution
 
 
 class KrigingSurrogate(HasTraits): 
@@ -55,7 +55,8 @@ class KrigingSurrogate(HasTraits):
         term2 = (1-dot(one,self.myfun(R_fact,r)))**2/dot(one,self.myfun(R_fact,one))
         MSE = self.sig2*(1-term1+term2)
         RMSE = sqrt(abs(MSE))
-        return f,RMSE
+        
+        return NormalDistribution(f,RMSE)
 
     def train(self,X,Y):
         """train the surrogate model with the given set of inputs and outputs"""
