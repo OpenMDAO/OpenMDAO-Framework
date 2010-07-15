@@ -68,7 +68,7 @@ class KrigingSurrogate(HasTraits):
             self.thetas = thetas
             self._calculate_log_likelihood()
             return -self.log_likelihood
-        self.thetas = fmin(_calcll,thetas, disp=False,ftol = 0.0001)
+        self.thetas = fmin(_calcll, thetas, disp=False, ftol = 0.0001)
         self._calculate_log_likelihood()
         
     def _calculate_log_likelihood(self):
@@ -78,11 +78,11 @@ class KrigingSurrogate(HasTraits):
         X,Y = self.X,self.Y
         thetas = 10**self.thetas
         for i in range(self.n):
-                for j in arange(i+1,self.n):
-                    R[i,j] = e**(-sum(thetas*(X[i]-X[j])**2)) #weighted distance formula
+            for j in arange(i+1,self.n):
+                R[i,j] = e**(-sum(thetas*(X[i]-X[j])**2)) #weighted distance formula
         R = R+R.T+eye(self.n)
         self.R = R
-        one = ones(self.n)       
+        one = ones(self.n)
         try:
             self.R_fact = cho_factor(R)
             self.myfun = cho_solve

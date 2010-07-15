@@ -1,6 +1,8 @@
 
 from enthought.traits.api import HasTraits
 
+import ordereddict
+
 from openmdao.lib.traits.float import Float
 from openmdao.lib.traits.int import Int
 from openmdao.lib.traits.enum import Enum
@@ -18,7 +20,7 @@ class DriverParameters(HasTraits):
 
     def __init__(self):
         super(DriverParameters, self).__init__()
-        self._parameters = dict()
+        self._parameters = ordereddict.OrderedDict()
     
     def add_parameter(self, param_name, low=None, high=None):
         if param_name in self._parameters:
@@ -77,13 +79,14 @@ class DriverParameters(HasTraits):
         try:
             del self._parameters[param_name]
         except KeyError:
-            self.raise_exception("Trying to remove parameter '%s', but it is not in the driver"%param_name,KeyError)
+            self.raise_exception("Trying to remove parameter '%s', but it is not in the driver" %
+                                 param_name, KeyError)
     
     def list_parameters(self):
         return self._parameters.keys()
     
     def clear_parameters(self):
-        self._parameters = dict()
+        self._parameters = ordereddict.OrderedDict()
         
     def set_parameters(self, X): 
         """Pushes the values in the X put to their corresponding public variables in the model

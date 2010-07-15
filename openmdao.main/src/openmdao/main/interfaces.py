@@ -170,22 +170,25 @@ class ICaseRecorder(Interface):
     def record(case):
         """Record the given Case."""
         
-class ISurrogate(Interface): 
+class ISurrogate(Interface):
     
-    def predict(self,X):
+    def predict(self, X):
         """Predicts a value of from the surrogate model, for the given independent values in X.
             
         X: list
-            values representing the the input values to predict the function at
+            the input values for which the predicted output is requested.
+            
+        Returns the predicted output value
         """
 
-    def train(self,X,Y): 
-        """trains the surrogate model, based on the given training data set.
+    def train(self, X, Y): 
+        """Trains the surrogate model, based on the given training data set.
         
-        X: list of lists 
-            values representing the training case inputs
-        y: list
-            training case outputs which correspond to the training case inputs given by X
+        X: iterator of lists
+            values representing the training case input history
+        y: iterator
+            training case output history for this surrogate's output,
+            which corresponds to the training case input history given by X
         """
     
 def IDriverParameter(Interface):
