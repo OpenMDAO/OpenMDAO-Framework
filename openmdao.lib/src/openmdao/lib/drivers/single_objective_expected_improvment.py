@@ -53,8 +53,8 @@ class SingleObjectiveExpectedImprovement(Driver):
     def clear_parameters(self):
         self._parameters.clear_parameters()
     
-    def _calc_ei(self,X): 
-        """ calculates the expect improvement of the model at a given point, X """
+    def _calc_ei(self, X): 
+        """ calculates the expected improvement of the model at a given point, X """
         #set inputs to model
         self._parameters.set_parameters(X)
         #run the model    

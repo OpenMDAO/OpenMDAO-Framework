@@ -224,23 +224,30 @@ class TestCase(unittest.TestCase):
         self.model.driver.clear_parameters()
         try:
             self.model.driver.add_parameter('driven.x3', low=-20.)
-        except RuntimeError as err:
+        except ValueError as err:
             self.assertEqual(str(err), "driver: Trying to add parameter 'driven.x3', "
                              "but the lower limit supplied (-20.0) exceeds the built-in "
                              "lower limit (-11.0).")
+        else:
+            self.fail("expected ValueError")
+
         try:
             self.model.driver.add_parameter('driven.x3', high=20.)
-        except RuntimeError as err:
+        except ValueError as err:
             self.assertEqual(str(err), "driver: Trying to add parameter 'driven.x3', "
                              "but the upper limit supplied (20.0) exceeds the built-in "
                              "upper limit (11.0).")
-    
+        else:
+            self.fail("expected ValueError")
+
     def test_param_already_added(self):
         try:
             self.model.driver.add_parameter('driven.x3')
-        except Exception as err:
+        except AttributeError as err:
             self.assertEqual(str(err), "driver: Trying to add parameter 'driven.x3' to driver, "
                              "but it's already there")
+        else:
+            self.fail("expected AttributeError")
     
     def test_event_removal(self):
         self.model.driver.add_event_var('driven.err_event')
@@ -263,8 +270,10 @@ class TestCase(unittest.TestCase):
         self.model.driver.recorder = results
         try:
             self.model.run()
-        except Exception as err:
+        except ValueError as err:
             self.assertEqual(str(err), "driver: number of DOE values (4) != number of parameters (3)")
+        else:
+            self.fail("expected ValueError")
 
     def test_no_event(self):
         logging.debug('')
@@ -274,6 +283,8 @@ class TestCase(unittest.TestCase):
         except AttributeError as err:
             self.assertEqual(str(err), 
                              "driver: Can't add event 'foobar.blah' because it doesn't exist")
+        else:
+            self.fail("expected AttributeError")
 
     def test_nooutput(self):
         logging.debug('')

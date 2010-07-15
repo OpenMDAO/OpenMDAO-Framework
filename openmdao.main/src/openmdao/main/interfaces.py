@@ -154,7 +154,7 @@ class IDOEgenerator(Interface):
     to design variables by a Driver.
     """
     
-    num_design_vars = Int(2, desc="number of design variables in the DOE")
+    num_design_vars = Int(desc="number of design variables in the DOE")
     
     def __iter__():
         """Return an iterator object."""
@@ -187,17 +187,15 @@ class ISurrogate(Interface):
         X: list
             values representing the the input values to predict the function at
         """
-        pass
-    
+
     def train(self,X,Y): 
         """trains the surrogate model, based on the given training data set.
         
         X: list of lists 
-            values representing the training case inputs       
+            values representing the training case inputs
         y: list
             training case outputs which correspond to the training case inputs given by X
         """
-        pass   
     
 def IDriverParameter(Interface):
     def add_parameter(self,param_name,low=None,high=None):
@@ -212,17 +210,19 @@ def IDriverParameter(Interface):
             maximum allowed value the optimizer can use for this parameter. If not specified, 
             then the 'high' value from the public variable is used.
         """
+        
     def remove_parameter(self,param_name):
         """removes the specified parameter. Raises a KeyError if param_name is not found
         
         param_name: str
             the name of the parameter to remove
         """
+        
     def list_parameters(self):
         """Lists all the parameters"""
+        
     def clear_parameters(self):
         """Removes all parameters"""
-    
 
 
 def obj_has_interface(obj, *ifaces):

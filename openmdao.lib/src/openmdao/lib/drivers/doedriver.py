@@ -31,12 +31,11 @@ class DOEdriver(CaseIterDriverBase):
         self._parameters = []  # need parameter ordering to map to DOE values, so no dict here
         self._event_vars = []
     
-    DOEgenerator = Instance(IDOEgenerator, iotype='in',
-                            desc='Iterator supplying normalized DOE values', 
-                            required=True)
+    DOEgenerator = Instance(IDOEgenerator, iotype='in', required=True,
+                            desc='Iterator supplying normalized DOE values')
     
     case_outputs = ListStr([], iotype='in', 
-                           desc='A list of outputs to be saved after each case is run')
+                           desc='A list of outputs to be saved with each case')
     
     def get_case_iterator(self):
         """Returns a new iterator over the Case set"""
@@ -83,7 +82,7 @@ class DOEdriver(CaseIterDriverBase):
         if varname in [x.name for x in self._parameters]: 
             self.raise_exception("Trying to add parameter '%s' to driver, "
                                  "but it's already there" % varname,
-                                 RuntimeError)
+                                 AttributeError)
         
         parameter = _Parameter(varname)
         
@@ -101,7 +100,7 @@ class DOEdriver(CaseIterDriverBase):
                 self.raise_exception("Trying to add parameter '%s', " 
                                      "but the lower limit supplied (%s) exceeds the " 
                                      "built-in lower limit (%s)." % 
-                                     (varname, low, meta_low), RuntimeError)
+                                     (varname, low, meta_low), ValueError)
             parameter.low = low
 
         meta_high = metadata.get('high') # this will be None if 'high' isn't there
@@ -112,7 +111,7 @@ class DOEdriver(CaseIterDriverBase):
                 self.raise_exception("Trying to add parameter '%s', " 
                                      "but the upper limit supplied (%s) exceeds the " 
                                      "built-in upper limit (%s)." % 
-                                     (varname, high, meta_high), RuntimeError)
+                                     (varname, high, meta_high), ValueError)
             parameter.high = high
             
         if parameter.low is None: 
@@ -146,7 +145,7 @@ class DOEdriver(CaseIterDriverBase):
         else:
             self.raise_exception("Trying to remove parameter '%s' "
                                  "that is not in the driver." % varname,
-                                 RuntimeError)
+                                 AttributeError)
     
     def list_event_vars(self): 
         return sorted(self._event_vars)
@@ -171,7 +170,7 @@ class DOEdriver(CaseIterDriverBase):
                 #convert DOE values to variable values
                 value = parameter.low+(parameter.high-parameter.low)*val
                 if '[' in parameter.name:
-                    raise RuntimeError("array entry design vars not supported yet")
+                    raise ValueError("array entry design vars not supported yet")
                 else:
                     inputs.append((parameter.name, None, value))
             

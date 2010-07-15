@@ -17,6 +17,8 @@ class KrigingSurrogate(HasTraits):
     implements(ISurrogate)    
     
     def __init__(self,X=None,Y=None):
+        super(KrigingSurrogate, self).__init__() # must call HasTraits init to set up Traits stuff
+
         self.m = None #number of independent
         self.n = None #number of training points
         self.thetas = None
@@ -31,7 +33,9 @@ class KrigingSurrogate(HasTraits):
         
 
     def predict(self,new_x):
-        """calculates a predicted value of the response, based on the current trained model for the supplied list of inputs"""
+        """calculates a predicted value of the response, based on the current 
+        trained model for the supplied list of inputs
+        """
         #if self.m == None:
         #    Give error message
         r = zeros(self.n)

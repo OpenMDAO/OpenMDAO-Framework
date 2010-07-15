@@ -1,20 +1,26 @@
+
+from enthought.traits.api import HasTraits
+
 from openmdao.lib.traits.float import Float
 from openmdao.lib.traits.int import Int
 from openmdao.lib.traits.enum import Enum
 from openmdao.lib.traits.array import Array
 from enthought.traits.api import implements
 
-from openmdao.main.exprEval import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import IDriverParameter
 
 
-class DriverParameters(object): 
+class DriverParameters(HasTraits): 
+    """This class provides an implementation of the IDriverParameter interface"""
+
     implements(IDriverParameter)
-    def __init__(self): 
+
+    def __init__(self):
+        super(DriverParameters, self).__init__()
         self._parameters = dict()
     
-        
-    def add_parameter(self,param_name,low=None,high=None):
+    def add_parameter(self, param_name, low=None, high=None):
         if param_name in self._parameters:
             self.raise_exception("Trying to add '%s' to driver as a parameter, but it is already in the driver."%param_name,KeyError)
         
@@ -79,17 +85,19 @@ class DriverParameters(object):
     def clear_parameters(self):
         self._parameters = dict()
         
-    def set_parameters(self,X): 
+    def set_parameters(self, X): 
         """Pushes the values in the X put to their corresponding public variables in the model
         
-        X: list
-            list of input values with an order defined to match the order or parameters returned 
-            by the list_parameter method
+        X: iterator
+            iterator of input values with an order defined to match the order of parameters returned 
+            by the list_parameter method. X must support the len() function.
         """
-        
-        for x,param_name,param in zip(X,self._parameters.iteritems()): 
+        if len(X) != len(self._parameters):
+            raise ValueError("number of input values (%s) != number of parameters (%s)" % 
+                             (len(X),len(self._parameters)))
+        for x, param_name, param in zip(X, self._parameters.iteritems()): 
             param['expreval'].set(x)
             
-    def iteritems(self):
+    def iter_parameters(self):
         return self._parameters.iteritems()
             

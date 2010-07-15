@@ -499,10 +499,11 @@ class CaseIteratorDriver(CaseIterDriverBase):
     evaluations executed across servers obtained from the
     :class:`ResourceAllocationManager`.
 
-    - The `iterator` socket provides the cases to be evaluated.
+    - The `iterator` input provides the cases to be evaluated.
     """
 
-    iterator = Instance(ICaseIterator, desc='Iterator supplying Cases to evaluate.', required=True)
+    iterator = Instance(ICaseIterator, iotype='in',
+                        desc='Iterator supplying Cases to evaluate.', required=True)
     
     def get_case_iterator(self):
         """Returns a new iterator over the Case set"""

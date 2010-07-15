@@ -44,6 +44,7 @@ Component, Driver, and TraitType plugins for OpenMDAO
           'openmdao.main',
           'conmin==1.0.1',
           'Pyevolve==0.6',
+          'ordereddict',
           ],
       entry_points="""
       [openmdao.driver]
