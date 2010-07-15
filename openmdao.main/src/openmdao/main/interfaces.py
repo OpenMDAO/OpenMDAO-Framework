@@ -164,6 +164,15 @@ class IDOEgenerator(Interface):
         raise a StopIteration exception.
         """
 
+class IUncertainVariable(Interface):
+    """A variable which supports uncertainty"""
+    
+    def expected():
+        """Calculates the expected value of the uncertainty distribution"""
+    
+    def sample():
+        """Generates a random number from an uncertainty distribution"""
+
 class ICaseRecorder(Interface):
     """A recorder of Cases"""
     
