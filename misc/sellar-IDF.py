@@ -31,6 +31,9 @@ class SellarIDF(Assembly):
         self.add('dis1', Discipline1())
         self.add('dis2', Discipline2())
         
+        # Driver process definition
+        self.driver.workflow.add([self.coupler,self.dis1,self.dis2])
+        
         # Make all connections
         self.connect('coupler.z1','dis1.z1')
         self.connect('coupler.z1','dis2.z1')

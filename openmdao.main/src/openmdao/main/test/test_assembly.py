@@ -47,7 +47,7 @@ class DummyComp(Component):
     r = Float(iotype='in')
     r2 = Float(iotype='in')
     s = Str(iotype='in')
-    rout = Float(iotype='out')
+    rout = Float(iotype='out', units='ft')
     r2out = Float(iotype='out')
     sout = Str(iotype='out')
     
@@ -87,17 +87,24 @@ class AssemblyTestCase(unittest.TestCase):
             comp2
             comp3
         """
-        self.asm = set_as_top(Assembly())
-        self.asm.add('comp1', DummyComp())
-        self.asm.add('nested', Assembly())
-        self.asm.nested.add('comp1', DummyComp())
+        top = self.asm = set_as_top(Assembly())
+        top.add('comp1', DummyComp())
+        nested = top.add('nested', Assembly())
+        nested.add('comp1', DummyComp())
         for name in ['comp2', 'comp3']:
-            self.asm.add(name, DummyComp())
+            top.add(name, DummyComp())
+            
+        # driver process definition
+        top.driver.workflow.add([top.comp1,top.nested,top.comp2,top.comp3])
+        nested.driver.workflow.add([nested.comp1])
         
     def test_lazy_eval(self):
         top = set_as_top(Assembly())
-        top.add('comp1', Multiplier())
-        top.add('comp2', Multiplier())
+        comp1 = top.add('comp1', Multiplier())
+        comp2 = top.add('comp2', Multiplier())
+        
+        top.driver.workflow.add([comp1, comp2])
+        
         top.comp1.mult = 2.0
         top.comp2.mult = 4.0
         top.connect('comp1.rval_out', 'comp2.rval_in')
@@ -133,6 +140,7 @@ class AssemblyTestCase(unittest.TestCase):
         self.assertEqual(comp1.s, 'once upon a time')
         
         # also, test that we can't do a direct set of a connected input
+        # This tests Requirement Ticket #274
         oldval = self.asm.comp2.r
         try:
             self.asm.comp2.r = 44
@@ -271,7 +279,7 @@ class AssemblyTestCase(unittest.TestCase):
         else:
             self.fail('exception expected')
      
-    def test_attribute_link(self):
+    def test_metadata_link(self):
         try:
             self.asm.connect('comp1.rout.units','comp2.s')
         except NameError, err:
@@ -279,7 +287,25 @@ class AssemblyTestCase(unittest.TestCase):
                     "comp1: Cannot locate trait named 'rout.units'")
         else:
             self.fail('NameError expected')
+            
+    def test_get_metadata(self):
+        units = self.asm.comp1.get_metadata('rout', 'units')
+        self.assertEqual(units, 'ft')
         
+        meta = self.asm.comp1.get_metadata('rout')
+        self.assertEqual(set(meta.keys()), set(['units','high','iotype','type','low']))
+        
+    def test_missing_metadata(self):
+        foo = self.asm.comp1.get_metadata('rout', 'foo')
+        self.assertEqual(foo, None)
+        
+        try:
+            bar = self.asm.comp1.get_metadata('bogus', 'bar')
+        except Exception as err:
+            self.assertEqual(str(err), "comp1: Couldn't find trait bogus")
+        else:
+            self.fail("Exception expected")
+            
     def test_value_link(self):
         try:
             self.asm.connect('comp1.rout.value','comp2.r2')
@@ -324,8 +350,12 @@ class AssemblyTestCase(unittest.TestCase):
     def test_input_passthrough_to_2_inputs(self):
         asm = set_as_top(Assembly())
         asm.add('nested', Assembly())
-        asm.nested.add('comp1', Simple())
-        asm.nested.add('comp2', Simple())
+        comp1 = asm.nested.add('comp1', Simple())
+        comp2 = asm.nested.add('comp2', Simple())
+        
+        asm.driver.workflow.add(asm.nested)
+        asm.nested.driver.workflow.add([comp1, comp2])
+        
         asm.nested.create_passthrough('comp1.a') 
         asm.nested.connect('a', 'comp2.b') 
         self.assertEqual(asm.nested.comp1.a, 4.)
@@ -375,8 +405,8 @@ class AssemblyTestCase(unittest.TestCase):
         self.asm.connect('comp1.rout', 'comp2.r')
         self.asm.connect('comp3.sout', 'comp2.s')
         conns = self.asm.list_connections()
-        self.assertEqual(conns, [('comp1.rout', 'comp2.r'),
-                                 ('comp3.sout', 'comp2.s')])
+        self.assertEqual(set(conns), set([('comp1.rout', 'comp2.r'),
+                                 ('comp3.sout', 'comp2.s')]))
         self.asm.remove('comp3')
         conns = self.asm.list_connections()
         self.assertEqual(conns, [('comp1.rout', 'comp2.r')])

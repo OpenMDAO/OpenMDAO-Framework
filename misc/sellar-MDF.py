@@ -27,14 +27,14 @@ class SellarMDF(Assembly):
         self.add('driver', CONMINdriver())
         
         # Outer Loop - Global Optimization
-        self.add('coupler', Coupler(), False)
-        self.add('iterate', Iterate(), False)
-        self.driver.add_to_workflow([self.coupler, self.iterate])
+        self.add('coupler', Coupler())
+        self.add('iterate', Iterate())
+        self.driver.workflow.add([self.coupler, self.iterate])
 
         # Inner Loop - Full Multidisciplinary Solve via "iterate"
-        self.add('dis1', Discipline1(), False)
-        self.add('dis2', Discipline2(), False)
-        self.iterate.add_to_workflow([self.dis1, self.dis2])
+        self.add('dis1', Discipline1())
+        self.add('dis2', Discipline2())
+        self.iterate.workflow.add([self.dis1, self.dis2])
         
         # Make all connections
         self.connect('coupler.z1','dis1.z1')

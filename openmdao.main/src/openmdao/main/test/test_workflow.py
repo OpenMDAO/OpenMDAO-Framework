@@ -36,6 +36,8 @@ class Model(Assembly):
         self.add('comp_a', TestComponent())
         self.add('comp_b', TestComponent())
         self.add('comp_c', TestComponent())
+        
+        self.driver.workflow.add([self.comp_a,self.comp_b,self.comp_c])
 
         self.connect('comp_a.total_executions', 'comp_b.dummy_input')
         self.connect('comp_b.total_executions', 'comp_c.dummy_input')

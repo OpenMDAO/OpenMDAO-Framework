@@ -42,7 +42,7 @@ class SimpleCaseIterDriver(Driver):
         msg = ''
         case.set_inputs(self.parent)
         try:
-            self._get_workflow().run()
+            self.workflow.run()
         except Exception as err:
             msg = str(err)
         try:

@@ -6,7 +6,7 @@ Interfaces for the OpenMDAO project.
 # pylint: disable-msg=E0213,E0211,W0232
 
 
-from enthought.traits.api import Interface, Instance
+from enthought.traits.api import Interface, Instance, Int
 
 # to check if an interface is implemented, you can call
 # validate_implements(obj, klass) from enthought.traits.trait_types
@@ -70,6 +70,7 @@ class IDriver(Interface):
     """
     
     workflow = Instance(IWorkflow, allow_none=True)
+    
     def iteration_set(self):
         """Return a set of names (not pathnames) containing all Components
         in all of the workflows managed by this Driver
@@ -148,6 +149,20 @@ class ICaseIterator(Interface):
         exception.
         """
         
+class IDOEgenerator(Interface):
+    """An iterator that returns arrays of normalized values that are mapped
+    to design variables by a Driver.
+    """
+    
+    num_design_vars = Int(2, desc="number of design variables in the DOE")
+    
+    def __iter__():
+        """Return an iterator object."""
+        
+    def next():
+        """Return the next array of normalized values. If no values remain,
+        raise a StopIteration exception.
+        """
 
 class ICaseRecorder(Interface):
     """A recorder of Cases"""

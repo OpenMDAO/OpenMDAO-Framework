@@ -23,10 +23,11 @@ else:
     
         def setUp(self):
             self.top = top = set_as_top(Assembly())
-            top.add('comp1', ExecComp(exprs=['z=x*y+100']))
-            top.add('comp2', ExecComp(exprs=['z=x*.4']))
+            comp1 = top.add('comp1', ExecComp(exprs=['z=x*y+100']))
+            comp2 = top.add('comp2', ExecComp(exprs=['z=x*.4']))
             top.connect('comp1.z', 'comp2.x')
             driver = top.add('driver', SimpleCaseIterDriver())
+            driver.workflow.add([comp1, comp2])
             
             plotter = top.add('plotter', XYplotter())
             plotter.title = "Foobar"

@@ -24,19 +24,19 @@ class SellarCO(Assembly):
         super(SellarCO, self).__init__()
 
         # Global Optimization
-        self.add('driver', CONMINdriver(), False)
-        self.add('coupler', Coupler(), False)
-        self.add('localopt1', CONMINdriver(), False)
-        self.add('localopt2', CONMINdriver(), False)
-        self.driver.add_to_workflow([self.coupler, self.localopt1, self.localopt2])
+        self.add('driver', CONMINdriver())
+        self.add('coupler', Coupler())
+        self.add('localopt1', CONMINdriver())
+        self.add('localopt2', CONMINdriver())
+        self.driver.workflow.add([self.coupler, self.localopt1, self.localopt2])
         
         # Local Optimization 1
-        self.add('dis1', Discipline1(), False)
-        self.localopt1.add_to_workflow(self.dis1)
+        self.add('dis1', Discipline1())
+        self.localopt1.workflow.add(self.dis1)
         
         # Local Optimization 2
-        self.add('dis2', Discipline2(), False)
-        self.localopt2.add_to_workflow(self.dis2)
+        self.add('dis2', Discipline2())
+        self.localopt2.workflow.add(self.dis2)
         
         #Parameters - Global Optimization
         self.driver.objective = '(coupler.x1)**2 + coupler.z2 + coupler.y1 + math.exp(-coupler.y2)'

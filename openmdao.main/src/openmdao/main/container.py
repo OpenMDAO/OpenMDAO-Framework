@@ -58,7 +58,7 @@ def _deep_setattr(obj, path, value):
         obj = getattr(obj, name)
     setattr(obj, tup[-1], value)
 
-    
+
 # TODO: implement get_closest_proxy, along with a way to detect
 # when a Container is proxy so we can differentiate between
 # failure to find an attribute vs. failure to find a local
@@ -379,7 +379,7 @@ class Container(HasTraits):
         if isinstance(obj, Container):
             obj.parent = self
             # if an old child with that name exists, remove it
-            if self.contains(name):
+            if self.contains(name) and getattr(self, name):
                 self.remove(name)
             setattr(self, name, obj)
             obj.name = name
@@ -561,6 +561,28 @@ class Container(HasTraits):
         else:
             self.raise_exception("this object is not callable",
                                  RuntimeError)        
+    
+    def get_metadata(self, traitpath, metaname=None):
+        """Retrieve the metadata associated with the trait found using
+        traitpath.  If metaname is None, return the entire metadata dictionary
+        for the specified trait. Otherwise, just return the specified piece
+        of metadata.  If the specified piece of metadata is not part of
+        the trait, None is returned.
+        """
+        parts = traitpath.split('.',1)
+        if len(parts) > 1:
+            obj = getattr(self, parts[0])
+            return obj.get_metadata(parts[1], metaname)
+            
+        t = self.trait(traitpath)
+        if not t:
+            self.raise_exception("Couldn't find trait %s" % traitpath,
+                                 AttributeError)
+        if metaname is None:
+            return t.trait_type._metadata.copy()
+        else:
+            return getattr(t, metaname)
+        
         
     def get(self, path, index=None):
         """Return any public object specified by the given 
@@ -669,23 +691,26 @@ class Container(HasTraits):
         tup = path.split('.')
         if len(tup) == 1:
             trait = self._check_trait_settable(path, srcname, force)
-            if index is None:
-                if trait is None:
-                    self.raise_exception("object has no attribute '%s'" %
-                                         path, TraitError)
-                # bypass the callback here and call it manually after 
-                # with a flag to tell it not to check if it's a destination
-                self._trait_change_notify(False)
-                try:
-                    setattr(self, path, value)
-                finally:
-                    self._trait_change_notify(True)
-                # now manually call the notifier with old set to Undefined
-                # to avoid the destination check
-                self._io_trait_changed(self, path, Undefined, 
-                                       getattr(self, path))
+            if trait.type =='event':
+                setattr(self, path, value)
             else:
-                self._array_set(path, value, index)
+                if index is None:
+                    if trait is None:
+                        self.raise_exception("object has no attribute '%s'" %
+                                             path, TraitError)
+                    # bypass the callback here and call it manually after 
+                    # with a flag to tell it not to check if it's a destination
+                    self._trait_change_notify(False)
+                    try:
+                        setattr(self, path, value)
+                    finally:
+                        self._trait_change_notify(True)
+                    # now manually call the notifier with old set to Undefined
+                    # to avoid the destination check
+                    self._io_trait_changed(self, path, Undefined, 
+                                           getattr(self, path))
+                else:
+                    self._array_set(path, value, index)
         else:
             obj = getattr(self, tup[0], Missing)
             if obj is Missing:

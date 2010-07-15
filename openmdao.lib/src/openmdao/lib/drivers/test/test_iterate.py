@@ -53,6 +53,8 @@ class IterateTestCase(unittest.TestCase):
     def test_success(self):
         self.top.add("driver", Iterate())
         self.top.add("simple", Simple2())
+        self.top.driver.workflow.add(self.top.simple)
+        
         self.top.driver.loop_end = 'simple.outvar'
         self.top.driver.loop_start = 'simple.invar'
         self.top.run()
@@ -64,6 +66,7 @@ class IterateTestCase(unittest.TestCase):
     def test_maxiteration(self):
         self.top.add("driver", Iterate())
         self.top.add("simple", Simple1())
+        self.top.driver.workflow.add(self.top.simple)
         self.top.driver.loop_end = 'simple.outvar'
         self.top.driver.loop_start = 'simple.invar'
         self.top.driver.max_iteration = 3
@@ -78,6 +81,7 @@ class IterateTestCase(unittest.TestCase):
     def test_tolerance(self):
         self.top.add("driver", Iterate())
         self.top.add("simple", Simple3())
+        self.top.driver.workflow.add(self.top.simple)
         self.top.driver.loop_end = 'simple.outvar'
         self.top.driver.loop_start = 'simple.invar'
         self.top.driver.max_iteration = 2

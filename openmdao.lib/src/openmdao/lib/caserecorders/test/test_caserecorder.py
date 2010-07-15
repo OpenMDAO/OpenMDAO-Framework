@@ -21,6 +21,7 @@ class CaseRecorderTestCase(unittest.TestCase):
         top.add('comp1', ExecComp(exprs=['z=x+y']))
         top.add('comp2', ExecComp(exprs=['z=x+1']))
         top.connect('comp1.z', 'comp2.x')
+        driver.workflow.add([top.comp1, top.comp2])
         
         # now create some Cases
         outputs = [('comp1.z', None, None), ('comp2.z', None, None)]

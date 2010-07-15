@@ -61,7 +61,7 @@ class COBYLA(Driver):
         # first, set the design variables in the model
         for name, val in zip(self.design_vars, dvars):
             eval(translate_expr(name+'='+str(val), self))
-        self._get_workflow().run()
+        self.workflow.run()
         
         if self._stop is True:
             raise StopIteration()

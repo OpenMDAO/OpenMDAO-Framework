@@ -26,6 +26,9 @@ class OptimizationUnconstrained(Assembly):
         # Create Paraboloid component instances
         self.add('paraboloid', Paraboloid())
 
+        # Driver process definition
+        self.driver.workflow.add(self.paraboloid)
+        
         # CONMIN Flags
         self.driver.iprint = 0
         self.driver.itmax = 30

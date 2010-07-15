@@ -41,6 +41,7 @@ openmdao.main API.
 |
 |         convert_units
 |         logger
+|         dump_iteration_tree
 |
 |
 | *Constants*
@@ -60,7 +61,7 @@ from openmdao.main.factorymanager import create, get_available_types
 
 from openmdao.main.container import Container, set_as_top, get_default_name
 from openmdao.main.component import Component, SimulationRoot
-from openmdao.main.assembly import Assembly
+from openmdao.main.assembly import Assembly, dump_iteration_tree
 from openmdao.main.driver import Driver
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow

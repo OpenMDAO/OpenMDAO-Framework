@@ -48,14 +48,14 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         self.top = set_as_top(Assembly())
 
-        self.top.add('driver', 
-                               Genetic())
+        self.top.add('driver', Genetic())
 
     def tearDown(self):
         self.top = None
 
     def test_optimizeSphere_set_high_low(self):
         self.top.add('comp', SphereFunction())
+        self.top.driver.workflow.add(self.top.comp)
         self.top.driver.objective = "comp.total" 
 
         self.top.driver.add_parameter('comp.x',high=5.13,low=-5.12)
@@ -81,6 +81,7 @@ class TestCase(unittest.TestCase):
 
     def test_optimizeSphere(self):
         self.top.add('comp', SphereFunction())
+        self.top.driver.workflow.add(self.top.comp)
         self.top.driver.objective = "comp.total" 
 
         self.top.driver.add_parameter('comp.x')
@@ -105,6 +106,7 @@ class TestCase(unittest.TestCase):
 
     def test_optimizeSpherearray_nolowhigh(self):
         self.top.add('comp', SphereFunctionArray())
+        self.top.driver.workflow.add(self.top.comp)
         self.top.driver.objective = "comp.total" 
 
         try:        
@@ -117,6 +119,7 @@ class TestCase(unittest.TestCase):
 
     def test_optimizeSpherearray(self):
         self.top.add('comp', SphereFunctionArray())
+        self.top.driver.workflow.add(self.top.comp)
         self.top.driver.objective = "comp.total" 
 
         self.top.driver.add_parameter('comp.x[0]', low=-5.12,high=5.13)
@@ -143,6 +146,7 @@ class TestCase(unittest.TestCase):
 
     def test_list_remove_clear_params(self):
         self.top.add('comp', SphereFunction())
+        self.top.driver.workflow.add(self.top.comp)
         self.top.driver.add_parameter('comp.x')
         self.top.driver.add_parameter('comp.y')
 
@@ -197,8 +201,9 @@ class TestCase(unittest.TestCase):
 
                 super(Simulation,self).__init__()
 
-                self.add('optimizer',Genetic())
+                opt = self.add('optimizer',Genetic())
                 self.add('comp',SomeComp())
+                opt.workflow.add(self.comp)
 
                 self.optimizer.add_parameter('comp.x')
                 self.optimizer.add_parameter('comp.y')
@@ -221,6 +226,7 @@ class TestCase(unittest.TestCase):
 
                 self.add('driver',Genetic())
                 self.add('comp',SomeComp())
+                self.driver.workflow.add(self.comp)
                 
                 self.driver.add_parameter('comp.z')
         
