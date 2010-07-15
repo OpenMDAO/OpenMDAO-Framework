@@ -84,18 +84,7 @@ def after_install(options, home_dir):
         print "ERROR: build failed"
         sys.exit(-1)
         
-    # copy the default wing project file into the virtualenv
-    # try to find the default.wpr file in the user's home directory
-    try:
-        if sys.platform == 'win32':
-            home = os.environ['HOMEDRIVE']+os.environ['HOMEPATH']
-        else:
-            home = os.environ['HOME']
-    except:
-        home = ''
-    
-    #proj_template = join(home, '.wingide3', 'default.wpr')
-    #if not os.path.isfile(proj_template):
+    # copy the wing project file into the virtualenv
     proj_template = join(topdir,'config','wing_proj_template.wpr')
     
     abshome = os.path.abspath(home_dir)
