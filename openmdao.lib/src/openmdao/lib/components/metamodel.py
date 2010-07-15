@@ -5,7 +5,8 @@ from enthought.traits.api import Instance, ListStr, Event
 from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Component
-from openmdao.main.interfaces import IComponent, obj_has_interface
+from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, IUncertainVariable, obj_has_interface
+from openmdao.main.uncertain_distributions import NormalDistribution
 
 class MetaModel(Component):
     
@@ -84,6 +85,9 @@ class MetaModel(Component):
             self.raise_exception('model of type %s does not implement the IComponent interface' % type(newmodel).__name__,
                                  TypeError)
 
+        if not self.surrogate:
+            self.raise_exception("surrogate must be set before the model", RuntimeError)
+
         new_model_traitnames = set()
         self._surrogate_input_names = []
         self._taining_input_history = []
@@ -109,10 +113,11 @@ class MetaModel(Component):
             traitdict = newmodel._traits_meta_filter(iotype='out')
             for name,trait in traitdict.items():
                 if self._eligible(name):
-                    self.add_trait(name, UncertaintyTrait(trait.trait_type))
+                    self.add_trait(name, 
+                                   Instance(IUncertainVariable, iotype='out', desc=trait.desc))
                     self._surrogate_info[name] = (self.surrogate.__class__(), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
-                    setattr(self, name, getattr(newmodel, name))
+                    setattr(self, name, NormalDistribution(getattr(newmodel, name)))
         
         self._current_model_traitnames = new_model_traitnames
 
@@ -167,7 +172,7 @@ class MetaModel(Component):
         """Return True if the named trait is not excluded from the public interface based
         on the includes and excludes lists.
         """
-        if name in _mm_class_traitnames:
+        if name in self._mm_class_traitnames:
             self._logger.warning("Name collision for '%s' between model and MetaModel." % name)
             return False
         if self.includes and name not in self.includes:

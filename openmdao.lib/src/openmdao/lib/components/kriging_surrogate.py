@@ -28,9 +28,12 @@ class KrigingSurrogate(HasTraits):
         self.sig2 = None
         self.log_likelihood = None
         
+        self.X = X
+        self.Y = Y
+
         if X is not None and Y is not None: 
             self.train(X,Y)
-        
+
 
     def predict(self,new_x):
         """calculates a predicted value of the response, based on the current 

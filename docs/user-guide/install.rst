@@ -15,7 +15,7 @@ the installation instructions in the *Developer Guide* because the developer env
 additional :ref:`system requirements <developer-requirements>` on certain platforms.
 
 OpenMDAO requires **Python 2.6** to be installed at the system level on all platforms.  It is highly
-recommended that **NumPy** (version 1.3 or higher) be  installed at the system level as well.
+recommended that **NumPy** (version 1.3 or higher) and **scipy** be installed at the system level as well.
 
 **Platform-Specific Requirements**
 
@@ -28,20 +28,24 @@ On **Fedora**, the names of the needed RPM packages are:
 
     - python-devel
     - numpy
+    - scipy
     - gcc-gfortran
 
 On **Ubuntu**, the .deb package names are:
 
     - python-dev
     - python-numpy
+    - python-scipy
     - gfortran
 
 On **Windows**, you'll need `Python 2.6`__; numpy can be found
-`here`__.
+`here`__, and scipy can be found `here`__.
     
 .. __: http://www.python.org/download/
 
 .. __: http://sourceforge.net/projects/numpy/files/
+
+.. __: http://sourceforge.net/projects/scipy/files/
 
 
 On **Mac OS X**, make sure to install Xcode. It's included on the OS X install
