@@ -154,7 +154,7 @@ class IDOEgenerator(Interface):
     to design variables by a Driver.
     """
     
-    num_design_vars = Int(2, desc="number of design variables in the DOE")
+    num_design_vars = Int(desc="number of design variables in the DOE")
     
     def __iter__():
         """Return an iterator object."""
@@ -169,6 +169,51 @@ class ICaseRecorder(Interface):
     
     def record(case):
         """Record the given Case."""
+        
+class ISurrogate(Interface): 
+    
+    def predict(self,X):
+        """Predicts a value of from the surrogate model, for the given independent values in X.
+            
+        X: list
+            values representing the the input values to predict the function at
+        """
+
+    def train(self,X,Y): 
+        """trains the surrogate model, based on the given training data set.
+        
+        X: list of lists 
+            values representing the training case inputs
+        y: list
+            training case outputs which correspond to the training case inputs given by X
+        """
+    
+def IDriverParameter(Interface):
+    def add_parameter(self,param_name,low=None,high=None):
+        """adds a parameter to the driver. 
+        
+        param_name : str 
+            name of the parameter to add to the driver
+        low : number, optional
+            minimum allowed value the optimzier can use for this parameter. If not specified, 
+            then the 'low' value from the public variable is used. 
+        high : number, optional
+            maximum allowed value the optimizer can use for this parameter. If not specified, 
+            then the 'high' value from the public variable is used.
+        """
+        
+    def remove_parameter(self,param_name):
+        """removes the specified parameter. Raises a KeyError if param_name is not found
+        
+        param_name: str
+            the name of the parameter to remove
+        """
+        
+    def list_parameters(self):
+        """Lists all the parameters"""
+        
+    def clear_parameters(self):
+        """Removes all parameters"""
 
 
 def obj_has_interface(obj, *ifaces):
@@ -182,3 +227,4 @@ def obj_has_interface(obj, *ifaces):
         return False
     return True
     
+
