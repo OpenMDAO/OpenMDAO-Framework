@@ -7,12 +7,12 @@ from openmdao.lib.traits.enum import Enum
 from openmdao.lib.traits.array import Array
 from enthought.traits.api import implements
 
-from openmdao.main.exprEval import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import IDriverParameter
 
 
 class DriverParameters(HasTraits): 
-    """This class provides an implementation of the IDriverParameters interface"""
+    """This class provides an implementation of the IDriverParameter interface"""
 
     implements(IDriverParameter)
 
@@ -20,7 +20,7 @@ class DriverParameters(HasTraits):
         super(DriverParameters, self).__init__()
         self._parameters = dict()
     
-    def add_parameter(self, param_name,low=None, high=None):
+    def add_parameter(self, param_name, low=None, high=None):
         if param_name in self._parameters:
             self.raise_exception("Trying to add '%s' to driver as a parameter, but it is already in the driver."%param_name,KeyError)
         
