@@ -8,9 +8,9 @@ NORMAL_LINE_LEN = 100
 class NastranParser(object):
 
     def __init__(self, text):
+        # text should be array of lines
         self.text = text
 
-    # text should be array of lines
     def parse(self):
         # parse into pages
         pages = [[]]
@@ -25,17 +25,15 @@ class NastranParser(object):
         subcases = []
         grids = []
 
+
         for page in pages:
-            # try to find heading
+            # try to find header
             possibles = []
             for row, line in enumerate(page):
                 possibles.append((_header_score(line, row), (row, line)))
             headers.append(max(possibles, key=operator.itemgetter(0)))
 
             header_row = headers[-1][1][0]
-
-            #print '-------------------------------------------'
-            #print _readable_header(headers[-1][1][1]), ("(" + str(headers[-1][0]) + ")"),
 
             # is this a subcase thing?
             subcases.append(None)
@@ -87,11 +85,10 @@ class NastranParser(object):
 
                 if len(columns) == 0:
                     # this is not a grid
-                    break
+                    continue
 
                 if not possible:
                     columns.append(max_len_row)
-                #print columns
 
                 # grid split by columns
                 split_grid = []
@@ -102,9 +99,9 @@ class NastranParser(object):
                         split_grid[-1].append(line[last_column:c].strip())
                         last_column = c
 
-                if len(split_grid) == 0:
+                if len(split_grid) == 0 or len(split_grid[0]) == 0:
                     # this is not a grid
-                    break
+                    continue
 
                 # identify header rows
                 index = 0
@@ -385,12 +382,8 @@ def _readable_header(line):
     if line[0].isdigit():
         line = line[1:]
 
-
     if _is_dumbcaps(line):
         line = line.strip()
-        oldline = ""
-        while oldline != line:
-            oldline = line
 
         # in order to avoid nasty six spaces
         line = re.sub('(?P<last>[a-zA-Z])   ', '\g<last>_', line)
@@ -427,3 +420,28 @@ def _merge_columns(grid, columns_to_merge):
 
     return newgrid
 
+
+# If we want to test how NastranParser will
+# parse a file, we can just run this file
+if __name__ == "__main__":
+    import sys
+    if len(sys.argv) != 2:
+        print "This program takes one argument: the file you wish to analyze"
+        sys.exit(1)
+
+    fh = open(sys.argv[1], "r")
+    text = fh.read().split("\n")
+    fh.close()
+    parser = NastranParser(text)
+    parser.parse()
+
+    assert len(parser.headers) == len(parser.grids)
+    for index, header in enumerate(parser.headers):
+        print "||||", _readable_header(header[1][1])
+        grid = parser.grids[index]
+        if grid is None:
+            print
+            continue
+        for row in grid:
+            print " | ".join(row),
+            print
