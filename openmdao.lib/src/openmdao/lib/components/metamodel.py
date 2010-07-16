@@ -5,8 +5,10 @@ from enthought.traits.api import Instance, ListStr, Event
 from enthought.traits.trait_base import not_none
 
 from openmdao.main.api import Component, Case
-from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, IUncertainVariable, obj_has_interface
-from openmdao.main.uncertain_distributions import NormalDistribution
+from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder
+from openmdao.main.uncertain_distributions import UncertainDistribution, NormalDistribution
+
+from openmdao.main.interfaces import obj_has_interface
 
 class MetaModel(Component):
     
@@ -67,7 +69,7 @@ class MetaModel(Component):
             self._train = False
         else:
             if self._new_train_data: 
-                for name,tup in self._surrogate_info.item(): 
+                for name,tup in self._surrogate_info.items(): 
                     surrogate, output_history = tup
                     surrogate.train(self._training_input_history, output_history) 
                 self._new_train_data = False
@@ -122,7 +124,7 @@ class MetaModel(Component):
             for name,trait in traitdict.items():
                 if self._eligible(name):
                     self.add_trait(name, 
-                                   Instance(IUncertainVariable, iotype='out', desc=trait.desc))
+                                   Instance(UncertainDistribution, iotype='out', desc=trait.desc))
                     self._surrogate_info[name] = (self.surrogate.__class__(), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
                     setattr(self, name, NormalDistribution(getattr(newmodel, name)))

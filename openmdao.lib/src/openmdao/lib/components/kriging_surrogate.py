@@ -83,7 +83,7 @@ class KrigingSurrogate(HasTraits):
         #if self.m == None:
         #    Give error message
         R = zeros((self.n,self.n))
-        X,Y = self.X,self.Y
+        X,Y = array(self.X), array(self.Y)
         thetas = 10**self.thetas
         for i in range(self.n):
             for j in arange(i+1,self.n):
