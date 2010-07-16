@@ -103,6 +103,34 @@ class TestNastranParser(unittest.TestCase):
 
         self.assertAlmostEqual(float(t2), 1e5)
 
+    def test_spaces_in_headers_and_annoying_header(self):
+        self.go("practice-grid.5.txt")
+        h = "real eigenvector no.2"
+
+        self.assertTrue(h in self.parser.headers[0]["clean"])
+
+        [[t1]] = self.parser.get(h, 1, {"POINT ID.": "1"}, ["T1"])
+        self.assertAlmostEqual(float(t1), 8.089535E-01)
+
+        [[t2]] = self.parser.get(h, 1, {"POINT ID.": "2"}, ["T2"])
+        self.assertAlmostEqual(float(t2), 1.0)
+
+
+    def test_spaces_in_multiple_headers(self):
+        self.go("practice-grid.6.txt")
+        h = "forces of single-point constraint"
+
+        self.assertTrue(self.parser.headers[0]["clean"] == h)
+        grid = self.parser.grids[0]
+        self.assertTrue(grid[0] == ["POINT ID.", "TYPE", "T1", \
+                                    "T2", "T3", "R1", "R2", "R3"])
+        [[t1]] = self.parser.get(h, 1, {"POINT ID." : "2"}, ["T1"])
+        self.assertAlmostEqual(float(t1), -1.252551E+05)
+
+        [[r2]] = self.parser.get(h, 1, {"POINT ID." : "2"}, ["R2"])
+        self.assertAlmostEqual(float(r2), 0)
+
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -268,6 +268,7 @@ class NastranParser(object):
         # find the grid we're talking about my matching
         # the header
         myindex = None
+        maybeindex = None # for partial matches
         for index, grid in enumerate(self.grids):
             if self.headers[index]["actual"].strip() == header or \
                    self.headers[index]["clean"] == header:
@@ -279,11 +280,21 @@ class NastranParser(object):
                     print "subcase mismatch!"
                     print "should be subcase", subcase
                     print "but the header's subcase is", self.subcases[index]
+            if header in self.headers[index]["actual"].strip() or \
+                header in self.headers[index]["clean"]:
+                if not subcase or \
+                   (subcase and self.subcases[index] == subcase):
+                    maybeindex = index
+
 
         if myindex is None:
-            raise Exception("Could not find " + header + " in:\n" + \
-                            "\n".join(map(lambda x: x["actual"].strip(), self.headers)) + "\n - or -\n" + \
-                            "\n".join(map(operator.itemgetter("clean"), self.headers)))
+            if maybeindex is None:
+                raise Exception("Could not find " + header + \
+                                " in:\n" + \
+                                "\n".join(map(lambda x: x["actual"].strip(), self.headers)) + "\n - or -\n" + \
+                                "\n".join(map(operator.itemgetter("clean"), self.headers)))
+            else:
+                myindex = maybeindex
 
         # apply the dictionary of constraints in order
         # to eliminate rows that don't work (simple where clause)
