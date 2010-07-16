@@ -1,6 +1,6 @@
 import unittest
 
-from nastran_replacer import NastranReplacer
+from openmdao.lib.components.nastran.nastran_replacer import NastranReplacer
 
 class TestNastranReplacer(unittest.TestCase):
 
@@ -29,7 +29,7 @@ class TestNastranReplacer(unittest.TestCase):
         s = "%h blahhREAL DATA"
         t = "andrew  REAL DATA"
         self.easy_test(s, t, {"h" : "andrew"})
-    
+
     def test_overwrite_variable(self):
         s = "METHOD %*n"
         t = "METHOD 103"

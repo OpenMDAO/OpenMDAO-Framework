@@ -1,6 +1,6 @@
 import unittest
 
-from nastran_maker import NastranMaker
+from openmdao.lib.components.nastran.nastran_maker import NastranMaker
 
 class TestNastranMaker(unittest.TestCase):
 
