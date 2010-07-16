@@ -166,6 +166,9 @@ class IDOEgenerator(Interface):
 
 class IUncertainVariable(Interface):
     """A variable which supports uncertainty"""
+    def getvalue():
+        """returns either value from expected() or from sample() depending on 
+        the golbal or local uncertainty setting"""
     
     def expected():
         """Calculates the expected value of the uncertainty distribution"""
@@ -180,6 +183,10 @@ class ICaseRecorder(Interface):
         """Record the given Case."""
         
 class ISurrogate(Interface):
+    
+    def get_uncertain_value(self,value): 
+        """converts a deterministic value into an uncertain quantity which 
+        matches the uncertain variable type the surrogate predicts"""
     
     def predict(self, X):
         """Predicts a value of from the surrogate model, for the given independent values in X.

@@ -6,9 +6,6 @@ from scipy.optimize import fmin, anneal, brute
 
 from enthought.traits.api import HasTraits, implements
 
-from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.container import Container
-from openmdao.main.component import Component
 from openmdao.main.interfaces import ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
 
@@ -33,13 +30,17 @@ class KrigingSurrogate(HasTraits):
 
         if X is not None and Y is not None: 
             self.train(X,Y)
+            
+    def get_uncertain_value(self,value): 
+        """returns a NormalDistribution centered around the value, with a standard deviation of 0"""
+        return NormalDistribution(value,0)
 
     def predict(self,new_x):
         """calculates a predicted value of the response, based on the current 
         trained model for the supplied list of inputs
         """
-        #if self.m == None:
-        #    Give error message
+        if self.m == None: #untrained surrogate
+            raise RuntimeError("KrigingSurrogate has not been trained, so no prediction can be made")
         r = zeros(self.n)
         X,Y = self.X,self.Y
         thetas = 10**self.thetas
@@ -64,6 +65,8 @@ class KrigingSurrogate(HasTraits):
 
     def train(self,X,Y):
         """train the surrogate model with the given set of inputs and outputs"""
+        
+        #TODO: Check if one training point will work... if not raise error
         self.X = X
         self.Y = Y
         self.m = len([0])

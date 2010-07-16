@@ -2,12 +2,18 @@
 
 import unittest
 
-from enthought.traits.api import TraitError
+from enthought.traits.api import TraitError, HasTraits, implements
 from openmdao.main.api import Assembly, Component, set_as_top
 from openmdao.lib.api import Float
+from openmdao.main.interfaces import ICaseRecorder
 
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.components.kriging_surrogate import KrigingSurrogate # FIXME: in wrong place
+
+class DumbRecorder(HasTraits):
+    implements(ICaseRecorder)
+    def record(self,case): 
+        pass
 
 class Simple(Component):
     
@@ -99,11 +105,18 @@ class MetaModelTestCase(unittest.TestCase):
         metamodel = MetaModel()
         metamodel.surrogate = KrigingSurrogate()
         metamodel.model = Simple()
+        metamodel.recorder = DumbRecorder()
         simple = Simple()
         
         metamodel.a = simple.a = 1.
         metamodel.b = simple.b = 2.
+        metamodel.train_next = True
+        simple.run()
+        metamodel.run()
         
+        metamodel.a = simple.a = 1.
+        metamodel.b = simple.b = 2.
+        metamodel.train_next = True
         simple.run()
         metamodel.run()
         
@@ -127,8 +140,8 @@ class MetaModelTestCase(unittest.TestCase):
 
     def test_excludes(self):
         metamodel = MyMetaModel()
-        metamodel.excludes = ['a','d']
         metamodel.surrogate = KrigingSurrogate()
+        metamodel.excludes = ['a','d']
         metamodel.model = Simple()
         self.assertEqual(metamodel.list_inputs_to_model(), ['b'])
         self.assertEqual(metamodel.list_outputs_from_model(), ['c'])
