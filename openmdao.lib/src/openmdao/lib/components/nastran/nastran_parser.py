@@ -21,19 +21,27 @@ class NastranParser(object):
             if "PAGE" in line:
                 pages.append([])
 
+        # if we end with newlines, then we'll have a dumb page
+        # at the end
+        if len(pages[-1]) == 0:
+            del pages[-1]
+
         headers = []
         subcases = []
         grids = []
-
 
         for page in pages:
             # try to find header
             possibles = []
             for row, line in enumerate(page):
-                possibles.append((_header_score(line, row), (row, line)))
-            headers.append(max(possibles, key=operator.itemgetter(0)))
+                possibles.append({"score" : _header_score(line, row),
+                                  "row" : row,
+                                  "actual" : line,
+                                  "clean" : readable_header(line)})
+            headers.append(max(possibles,
+                               key=operator.itemgetter("score")))
 
-            header_row = headers[-1][1][0]
+            header_row = headers[-1]["row"]
 
             # is this a subcase thing?
             subcases.append(None)
@@ -63,169 +71,18 @@ class NastranParser(object):
                     break
 
             grid = grid[:messages_line]
-            merged_grid = None
-            grids.append(None)
+            grids.append(self._parse_grid(grid))
 
-            if len(grid) != 0:
-
-                # find columns
-                columns = []
-                max_len_row = len(max(grid, key=len))
-                possible = True
-                for i in range(max_len_row):
-                    possible = True
-                    for line in grid:
-                        if len(line) > i and line[i] != ' ':
-                            possible = False
-                            break
-                    if possible:
-                        if len(columns) > 0 and columns[-1] == i-1:
-                            columns[-1] = i
-                        else: columns.append(i)
-
-                if len(columns) == 0:
-                    # this is not a grid
-                    continue
-
-                if not possible:
-                    columns.append(max_len_row)
-
-                # grid split by columns
-                split_grid = []
-                for line in grid:
-                    split_grid.append([])
-                    last_column = columns[0]
-                    for c in columns[1:]:
-                        split_grid[-1].append(line[last_column:c].strip())
-                        last_column = c
-
-                if len(split_grid) == 0 or len(split_grid[0]) == 0:
-                    # this is not a grid
-                    continue
-
-                # identify header rows
-                index = 0
-                for index, row in enumerate(split_grid):
-                    if not re.match("[ ./a-zA-Z]+", row[0]):
-                        break
-
-                # merge top (index-1) rows
-                for row in split_grid[1:index]:
-                    for cell_index in range(len(row)):
-                        if split_grid[0][cell_index] == "" or \
-                           row[cell_index] == "":
-                            split_grid[0][cell_index] += row[cell_index]
-                        else: split_grid[0][cell_index] += " " + row[cell_index]
-
-                num_header_merged_rows = index-1
-
-                # now remove the merged ones:
-                merged_grid = []
-                for row_index, row in enumerate(split_grid):
-                    if row_index < 1 or row_index >= index:
-                        merged_grid.append(row)
-
-                # if a grid has two identical columns: coalesce
-                identical = True
-                row_length = len(merged_grid[0])
-                for cell in range(row_length/2):
-                    if merged_grid[0][cell] != merged_grid[0][cell+row_length/2]:
-                        identical = False
-                        break
-
-                # if we've seen everything twice
-                singular_grid = []
-                if identical and row_length % 2 == 0:
-
-                    singular_grid.append([])
-                    for cell in merged_grid[0][:row_length/2]:
-                        singular_grid[0].append(cell)
-
-                    for row in merged_grid[1:]:
-                        singular_grid.append(
-                            ["" for i in range(len(row)/2)])
-                        singular_grid.append(
-                            ["" for i in range(len(row)/2)])
-
-                        for index in range(len(row)):
-                            if index < len(row)/2:
-                                singular_grid[-2][index] = row[index]
-                            else: singular_grid[-1][index-len(row)/2] = row[index]
-
-                if singular_grid:
-                    merged_grid = singular_grid
-
-                #print "\n".join(map(str, merged_grid))
-
-                # now we have to normalize it... cuz our little
-                # algorithm doesn't always work
-
-                normalized_grid = []
-
-                # sometimes we pick too many columns.
-                # indicators: empty header cells and header cells with no data
-                # so we have to merge them back together
-
-                # first let's guess how many headers there should be
-                most_matches = []
-                for row_index in range(num_header_merged_rows+1):
-                    matches = re.findall("[.a-zA-Z0-9]+ ?[.a-zA-Z0-9]* ?[.a-zA-Z0-9]*",
-                               grid[row_index])
-                    if len(matches) > len(most_matches):
-                        most_matches = matches
-
-                # if there are too many headers, it should be fixed
-                # NOTE: this only works for non-merged headers... mainly
-                # because those are the only ones affecteed.
-                if len(merged_grid[0]) > len(most_matches):
-                    most_matches = map(lambda x: x.strip(), most_matches)
-                    accounted = 0
-                    to_merge = []
-                    cell_index = 0
-                    while cell_index < len(merged_grid[0])-1:
-                        if accounted == len(most_matches):
-                            # this can indicate that it wasnt a grid
-                            #print "i guess there weren't enough matches...? ..."
-                            break
-                        if merged_grid[0][cell_index] == most_matches[accounted]:
-                            accounted += 1
-                        # if we see that we can combine two columns, we do so
-                        # TODO: We probably want to examine the contents
-                        # of the columns instead of just the headers. We
-                        # could peg certain headers and then fill in the rest
-                        # The way it works now kinda assumes nastran will
-                        # always left align their numbers... which I think
-                        # is trueish
-                        elif merged_grid[0][cell_index] + " " + merged_grid[0][cell_index+1] == most_matches[accounted] or merged_grid[0][cell_index] + merged_grid[0][cell_index+1] == most_matches[accounted] or (merged_grid[0][cell_index].startswith(most_matches[accounted]) and merged_grid[0][cell_index+1] == ""):
-                            to_merge.append((cell_index, cell_index+1))
-                            accounted += 1
-                            cell_index += 1
-
-                        else: cell_index += 1
-
-                    normalized_grid = _merge_columns(merged_grid, to_merge)
-
-                if normalized_grid:
-                    merged_grid = normalized_grid
-
-
-            grids[-1] = merged_grid
 
         # sometimes grids span many pages
         # so if we find two grids with the same heading and subcase
         # coalesce!
-        #print len(pages)
-        #print len(headers)
-        #print len(subcases)
-        #print len(grids)
-
-
         last_header = ""
         last_subcase = -1
         page_index = 0
         while page_index < len(headers):
             #print headers[page_index], page_index, len(headers)
-            if headers[page_index][1][1] == last_header and \
+            if headers[page_index]["actual"] == last_header and \
                subcases[page_index] == last_subcase:
                 # merge grids (but not header again)
                 #print page_index
@@ -236,26 +93,174 @@ class NastranParser(object):
                 del grids[page_index]
 
             else:
-                last_header = headers[page_index][1][1]
+                last_header = headers[page_index]["actual"]
                 last_subcase = subcases[page_index]
 
                 page_index += 1
 
-
-
-
-        #for page_index in range(len(headers)):
-            #print '---------------------------------------'
-            #print _readable_header(headers[page_index][1][1]), subcases[page_index]
-            #print '---------------------------------------'
-            #if grids[page_index]:
-            #    for row in grids[page_index]:
-            #        print "   |   ".join(row)
-
-
         self.grids = grids
         self.headers = headers
         self.subcases = subcases
+
+    # a helper functiont to parser the grid
+    def _parse_grid(self, grid):
+        if len(grid) == 0:
+            return
+
+        # find columns
+        columns = []
+        max_len_row = len(max(grid, key=len))
+        possible = True
+        for i in range(max_len_row):
+            possible = True
+            for line in grid:
+                if len(line) > i and line[i] != ' ':
+                    possible = False
+                    break
+            if possible:
+                # There may be multiple spaces in between
+                # two items in a row, but we only want to
+                # remember one column
+                if len(columns) > 0 and columns[-1] == i-1:
+                    columns[-1] = i
+                else: columns.append(i)
+
+        # this is not a grid
+        if len(columns) == 0:
+            return
+
+        # if the line doesn't end with a space, we still want
+        # to recognize the last column
+        if not possible:
+            columns.append(max_len_row)
+
+        # grid split by columns
+        split_grid = []
+        for line in grid:
+            split_grid.append([])
+            last_column = columns[0]
+            for c in columns[1:]:
+                split_grid[-1].append(line[last_column:c].strip())
+                last_column = c
+
+        # this is not a grid
+        if len(split_grid) == 0 or len(split_grid[0]) == 0:
+            return
+
+        # identify header rows
+        index = 0
+        for index, row in enumerate(split_grid):
+            if not re.match("[ ./a-zA-Z]+", row[0]):
+                break
+
+        # merge top (index-1) rows
+        for row in split_grid[1:index]:
+            for cell_index in range(len(row)):
+                if split_grid[0][cell_index] == "" or \
+                   row[cell_index] == "":
+                    split_grid[0][cell_index] += row[cell_index]
+                else: split_grid[0][cell_index] += " " + row[cell_index]
+
+        num_header_merged_rows = index-1
+
+        # now remove the merged ones:
+        merged_grid = []
+        for row_index, row in enumerate(split_grid):
+            if row_index < 1 or row_index >= index:
+                merged_grid.append(row)
+
+        # if a grid has two identical columns: coalesce
+        # first we check to see if we have two identical columns
+        identical = True
+        row_length = len(merged_grid[0])
+        for cell in range(row_length/2):
+            if merged_grid[0][cell] != merged_grid[0][cell+row_length/2]:
+                identical = False
+                break
+
+        # now that we know we have two identical columns
+        # add new rows. The convention we're following now
+        # is that something like:
+        #
+        #  header  header
+        #  ------  ------
+        #  1       2
+        #  3       4
+        #  5       6
+        #
+        # will turn into [1,2,3,4,5,6]
+        #
+        if identical and row_length % 2 == 0:
+            singular_grid = []
+            singular_grid.append([])
+            for cell in merged_grid[0][:row_length/2]:
+                singular_grid[0].append(cell)
+
+            for row in merged_grid[1:]:
+                singular_grid.append(
+                    ["" for i in range(len(row)/2)])
+                singular_grid.append(
+                    ["" for i in range(len(row)/2)])
+
+                for index in range(len(row)):
+                    if index < len(row)/2:
+                        singular_grid[-2][index] = row[index]
+                    else: singular_grid[-1][index-len(row)/2] = row[index]
+
+            merged_grid = singular_grid
+
+        # normalize the grid. Sometimes our algorithm
+        # is a little to promiscuous when choosing columns, so
+        # we have to merge some columns together now.
+
+        # sometimes we pick too many columns.
+        # indicators: empty header cells and header cells with no data
+        # so we have to merge them back together
+
+        # first let's guess how many headers there should be
+        most_matches = []
+        for row_index in range(num_header_merged_rows+1):
+            matches = re.findall("[-.a-zA-Z0-9]+ ?[-.a-zA-Z0-9]* ?[-.a-zA-Z0-9]*",
+                       grid[row_index])
+            if len(matches) > len(most_matches):
+                most_matches = matches
+
+        # if there are too many headers, it should be fixed
+        # NOTE: this only works for non-merged headers... mainly
+        # because those are the only ones affected.
+        if len(merged_grid[0]) > len(most_matches):
+            most_matches = map(lambda x: x.strip(), most_matches)
+            accounted = 0
+            to_merge = []
+            cell_index = 0
+            while cell_index < len(merged_grid[0])-1:
+                if accounted == len(most_matches):
+                    # this can indicate that it wasnt a grid
+                    #print "i guess there weren't enough matches...? ..."
+                    break
+                if merged_grid[0][cell_index] == most_matches[accounted]:
+                    accounted += 1
+                # if we see that we can combine two columns, we do so
+                # TODO: We probably want to examine the contents
+                # of the columns instead of just the headers. We
+                # could peg certain headers and then fill in the rest
+                # The way it works now kinda assumes nastran will
+                # always left align their numbers... which I think
+                # is trueish
+                elif merged_grid[0][cell_index] + " " + merged_grid[0][cell_index+1] == most_matches[accounted] or merged_grid[0][cell_index] + merged_grid[0][cell_index+1] == most_matches[accounted] or (merged_grid[0][cell_index].startswith(most_matches[accounted]) and merged_grid[0][cell_index+1] == ""):
+                    to_merge.append((cell_index, cell_index+1))
+                    accounted += 1
+                    cell_index += 1
+
+                else: cell_index += 1
+
+            normalized_grid = _merge_columns(merged_grid, to_merge)
+
+            if normalized_grid:
+                merged_grid = normalized_grid
+
+        return merged_grid
+
 
     # row width is to enable you to specify a wide row (perhaps each
     # id has two values for a certain column
@@ -264,8 +269,8 @@ class NastranParser(object):
         # the header
         myindex = None
         for index, grid in enumerate(self.grids):
-            if self.headers[index][1][1].strip() == header or \
-                   _readable_header(self.headers[index][1][1]) == header:
+            if self.headers[index]["actual"].strip() == header or \
+                   self.headers[index]["clean"] == header:
                 if not subcase or \
                    (subcase and self.subcases[index] == subcase):
                     myindex = index
@@ -275,10 +280,10 @@ class NastranParser(object):
                     print "should be subcase", subcase
                     print "but the header's subcase is", self.subcases[index]
 
-        if not myindex:
+        if myindex is None:
             raise Exception("Could not find " + header + " in:\n" + \
-                            "\n".join(map(lambda x: x[1][1].strip(), self.headers)) + "\n - or -\n" + \
-                            "\n".join(map(lambda x: _readable_header(x[1][1]), self.headers)))
+                            "\n".join(map(lambda x: x["actual"].strip(), self.headers)) + "\n - or -\n" + \
+                            "\n".join(map(operator.itemgetter("clean"), self.headers)))
 
         # apply the dictionary of constraints in order
         # to eliminate rows that don't work (simple where clause)
@@ -378,7 +383,7 @@ def _is_dumbcaps(line):
         return True
     return False
 
-def _readable_header(line):
+def readable_header(line):
     if line[0].isdigit():
         line = line[1:]
 
@@ -437,7 +442,7 @@ if __name__ == "__main__":
 
     assert len(parser.headers) == len(parser.grids)
     for index, header in enumerate(parser.headers):
-        print "||||", _readable_header(header[1][1])
+        print "||||", header["clean"]
         grid = parser.grids[index]
         if grid is None:
             print

@@ -1,0 +1,10 @@
+     UNTITLED.SC4
+0                                                                                                            SUBCASE 1
+
+                                 F O R C E S   I N   B A R   E L E M E N T S         ( C B A R )
+0    ELEMENT         BEND-MOMENT END-A            BEND-MOMENT END-B                - SHEAR -               AXIAL
+       ID.         PLANE 1       PLANE 2        PLANE 1       PLANE 2        PLANE 1       PLANE 2         FORCE         TORQUE
+            1     0.0          -2.267912E+02   0.0           2.267912E+02   0.0          -3.207311E+00   5.567591E+03   0.0
+            2     0.0          -3.380713E+04   0.0           3.380713E+04   0.0          -6.761426E+02  -5.858867E+04   0.0
+            3     0.0          -1.938204E+03   0.0           1.938204E+03   0.0          -2.741034E+01  -6.415626E+04   0.0
+1                                                                              JUNE  23, 2010  MSC.NASTRAN  2/15/06   PAGE    17
