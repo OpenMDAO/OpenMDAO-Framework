@@ -10,7 +10,7 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.container import Container
 from openmdao.main.component import Component
 from openmdao.main.interfaces import ISurrogate
-from openmdao.main.uncertainty_distributions import NormalDistribution
+from openmdao.main.uncertain_distributions import NormalDistribution
 
 
 class KrigingSurrogate(HasTraits): 
@@ -28,9 +28,12 @@ class KrigingSurrogate(HasTraits):
         self.sig2 = None
         self.log_likelihood = None
         
+        self.X = X
+        self.Y = Y
+
         if X is not None and Y is not None: 
             self.train(X,Y)
-        
+
 
     def predict(self,new_x):
         """calculates a predicted value of the response, based on the current 
@@ -69,7 +72,7 @@ class KrigingSurrogate(HasTraits):
             self.thetas = thetas
             self._calculate_log_likelihood()
             return -self.log_likelihood
-        self.thetas = fmin(_calcll,thetas, disp=False,ftol = 0.0001)
+        self.thetas = fmin(_calcll, thetas, disp=False, ftol = 0.0001)
         self._calculate_log_likelihood()
         
     def _calculate_log_likelihood(self):
@@ -79,11 +82,11 @@ class KrigingSurrogate(HasTraits):
         X,Y = self.X,self.Y
         thetas = 10**self.thetas
         for i in range(self.n):
-                for j in arange(i+1,self.n):
-                    R[i,j] = e**(-sum(thetas*(X[i]-X[j])**2)) #weighted distance formula
+            for j in arange(i+1,self.n):
+                R[i,j] = e**(-sum(thetas*(X[i]-X[j])**2)) #weighted distance formula
         R = R+R.T+eye(self.n)
         self.R = R
-        one = ones(self.n)       
+        one = ones(self.n)
         try:
             self.R_fact = cho_factor(R)
             self.myfun = cho_solve
