@@ -1,0 +1,10 @@
+     UNTITLED.SC4
+0                                                                                                            SUBCASE 1
+      EIGENVALUE =  2.366534E+06
+                               F O R C E S   O F   S I N G L E - P O I N T   C O N S T R A I N T
+
+      POINT ID.   TYPE          T1             T2             T3             R1             R2             R3
+             2      G     -1.252551E+05   0.0            0.0            0.0            0.0            0.0
+             3      G      0.0           -1.884112E+05   0.0            0.0            0.0            0.0
+             4      G     -1.524159E+05  -1.524159E+05   0.0            0.0            0.0            0.0
+1                                                                              JUNE  28, 2010  MSC.NASTRAN  2/15/06   PAGE    18
