@@ -59,7 +59,7 @@ def _wingify(obj, left_margin=0):
         flat[-1] = flat[-1].replace(" ')}"," )}")
     return '\n'.join(flat)
 
-def modify_wpr_file(fpath):
+def _modify_wpr_file(fpath):
     config = ConfigParser.ConfigParser()
     config.read(fpath)
     config.set('user attributes', 'proj.pypath', 
@@ -84,6 +84,8 @@ def run_wing():
             wingpath = 'wing.exe'
         elif sys.platform == 'darwin':
             wingpath = '/Applications/WingIDE.app/Contents/MacOS/wing'
+            if not os.path.exists(wingpath):
+                wingpath = '/Applications/Wing/WingIDE.app/Contents/MacOS/wing'
         else:
             wingpath = 'wing3.2'
     if not os.path.isfile(projpath):
@@ -91,7 +93,7 @@ def run_wing():
         projpath = os.path.join(venvdir, 'etc', 'wingproj.wpr')
         
     if sys.platform == 'darwin':
-        modify_wpr_file(projpath) # have to put virtualenv sys path info in wing project file on Mac
+        _modify_wpr_file(projpath) # have to put virtualenv sys path info in wing project file on Mac
         
     # in order to find all of our shared libraries,
     # put their directories in LD_LIBRARY_PATH
