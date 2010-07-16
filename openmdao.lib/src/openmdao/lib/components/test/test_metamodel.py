@@ -1,6 +1,7 @@
 # pylint: disable-msg=C0111,C0103
 
 import unittest
+import random
 
 from enthought.traits.api import TraitError, HasTraits, implements
 from openmdao.main.api import Assembly, Component, set_as_top
@@ -94,19 +95,20 @@ class MetaModelTestCase(unittest.TestCase):
         self.assertEqual(set(asm.list_connections()), 
                          set([('metamodel.d', 'comp2.b'), ('metamodel.c', 'comp2.a'), 
                               ('comp1.c', 'metamodel.a'), ('comp1.d', 'metamodel.b')]))
-        asm.comp1.a = 1.
         
         # do some training
-        for val in range (3,10):
-            asm.comp1.b = val
+        for i in range(10):
+            asm.comp1.a = random.uniform(1,8)
+            asm.comp1.b = random.uniform(3,10)
             asm.metamodel.train_next = 1
             asm.run()
             
         # now run and get some results
+        asm.comp1.a = 1.
         asm.comp1.b = 2.
         asm.run()
-        self.assertEqual(asm.comp2.c, 6.)
-        self.assertEqual(asm.comp2.d, -2.)
+        self.assertTrue(abs(asm.comp2.c-6.) < 0.001)
+        self.assertTrue(abs(asm.comp2.d +2.) < 0.001)
         
         # set new model and verify disconnect
         asm.metamodel.model = Simple2()
