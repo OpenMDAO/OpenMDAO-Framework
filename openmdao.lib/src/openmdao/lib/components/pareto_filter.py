@@ -51,7 +51,7 @@ class ParetoFilter(Component):
         self.pareto_set = ListCaseIterator(pareto_set)
         self.dominated_set = ListCaseIterator(dominated_set)
     
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover  
     from matplotlib import pyplot as py
     from mpl_toolkits.mplot3d import Axes3D
     from numpy import random

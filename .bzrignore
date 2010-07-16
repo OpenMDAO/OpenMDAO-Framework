@@ -31,3 +31,4 @@ nosetests.xml
 examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3-f2pywrappers.f
 examples/openmdao.examples.bar3simulation/openmdao/examples/bar3simulation/bar3module.c
 devenv
+*.DS_Store
