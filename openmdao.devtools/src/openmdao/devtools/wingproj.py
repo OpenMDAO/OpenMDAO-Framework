@@ -47,7 +47,7 @@ def run_wing():
         if sys.platform == 'win32':
             wingpath = 'wing.exe'
         elif sys.platform == 'darwin':
-            wingpath = '/Applications/Wing/WingIDE.app/Contents/MacOS/wing'
+            wingpath = '/Applications/WingIDE.app/Contents/MacOS/wing'
         else:
             wingpath = 'wing3.2'
     if not os.path.isfile(projpath):
@@ -67,8 +67,7 @@ def run_wing():
             libs.extend(sodirs)
             env['LD_LIBRARY_PATH'] = os.pathsep.join(libs)
     
-    if projpath:
-        Popen([wingpath, projpath], env=env)
+    Popen([wingpath, projpath], env=env)
 
     
 if __name__ == '__main__':

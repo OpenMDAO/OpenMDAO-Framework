@@ -30,6 +30,10 @@ class KrigingSurrogate(HasTraits):
 
         if X is not None and Y is not None: 
             self.train(X,Y)
+            
+    def get_uncertain_value(self,value): 
+        """returns a NormalDistribution centered around the value, with a standard deviation of 0"""
+        return NormalDistribution(value,0)
 
 
     def predict(self,new_x):
@@ -60,6 +64,8 @@ class KrigingSurrogate(HasTraits):
 
     def train(self,X,Y):
         """train the surrogate model with the given set of inputs and outputs"""
+        
+        #TODO: Check if one training point will work... if not raise error
         self.X = X
         self.Y = Y
         self.m = len([0])

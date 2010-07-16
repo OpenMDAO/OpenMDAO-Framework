@@ -19,6 +19,9 @@ class NormalDistribution(HasTraits):
         self.mu = mu
         self.sigma = sigma
         
+    def getvalue(self):
+        return self.expected()
+        
     def sample(self): 
         return normalvariate(self.mu,self.sigma)
     

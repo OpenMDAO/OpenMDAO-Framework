@@ -4,7 +4,7 @@ import ordereddict
 from enthought.traits.api import Instance, ListStr, Event
 from enthought.traits.trait_base import not_none
 
-from openmdao.main.api import Component
+from openmdao.main.api import Component, Case
 from openmdao.main.interfaces import IComponent, ISurrogate, ICaseRecorder, IUncertainVariable, obj_has_interface
 from openmdao.main.uncertain_distributions import NormalDistribution
 
@@ -32,6 +32,7 @@ class MetaModel(Component):
         self._surrogate_input_names = []
         self._training_input_history = []
         self._train = False
+        self._new_train_data = False
         
         # the following line will work for classes that inherit from MetaModel
         # as long as they declare their traits in the class body and not in
@@ -42,6 +43,7 @@ class MetaModel(Component):
 
     def _train_next_fired(self):
         self._train = True
+        self._new_train_data = True
 
     def execute(self):
         """If the training flag is set, train the metamodel. Otherwise
@@ -55,7 +57,6 @@ class MetaModel(Component):
                 case_outputs = []
                 for name, tup in self._surrogate_info.items():
                     surrogate, output_history = tup
-                    surrogate.train(self._training_input_history, output_history)
                     case_outputs.append((name, None, output_history[-1]))
                 #save the case
                 case_inputs = [(name,None,val) for name,val in zip(self._surrogate_input_names, inputs)]
@@ -65,12 +66,19 @@ class MetaModel(Component):
                                      RuntimeError)
             self._train = False
         else:
+            if self._new_train_data: 
+                for name,tup in self._surrogate_info.item(): 
+                    surrogate, output_history = tup
+                    surrogate.train(self._training_input_history, output_history) 
+                self._new_train_data = False
+                
             input_values = [getattr(self, name) for name in self._surrogate_input_names]
             for name, tup in self._surrogate_info.items():
                 surrogate = tup[0]
                 predicted = surrogate.predict(input_values)
                 # copy output to boudary
                 setattr(self, name, predicted)
+            
             
     def _model_changed(self, oldmodel, newmodel):
         self.update_model(oldmodel, newmodel)
@@ -86,7 +94,7 @@ class MetaModel(Component):
                                  TypeError)
 
         if not self.surrogate:
-            self.raise_exception("surrogate must be set before the model", RuntimeError)
+            self.raise_exception("surrogate must be set before the model or any includes/excludes of variables", RuntimeError)
 
         new_model_traitnames = set()
         self._surrogate_input_names = []
@@ -138,7 +146,7 @@ class MetaModel(Component):
         """
         for name in self.list_outputs_from_model():
             out = getattr(self.model, name)
-            setattr(self, name, out)
+            setattr(self, name, self._surrogate_info[name][0].get_uncertain_value(out))
             if self._train:
                 self._surrogate_info[name][1].append(out) # save to training output history
 
