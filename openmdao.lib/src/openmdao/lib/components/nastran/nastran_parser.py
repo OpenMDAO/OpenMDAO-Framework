@@ -2,6 +2,7 @@
 import sys
 import re
 import operator
+import copy
 
 NORMAL_LINE_LEN = 100
 
@@ -147,6 +148,10 @@ class NastranParser(object):
         if len(split_grid) == 0 or len(split_grid[0]) == 0:
             return
 
+        # we want to save the split grid (without joining headers
+        # or anything) for later.
+        divided_grid = copy.deepcopy(split_grid)
+
         # identify header rows
         index = 0
         for index, row in enumerate(split_grid):
@@ -239,7 +244,20 @@ class NastranParser(object):
                     #print "i guess there weren't enough matches...? ..."
                     break
                 if merged_grid[0][cell_index] == most_matches[accounted]:
-                    accounted += 1
+                    # we want to look at the next one UNLESS we
+                    # currently have a column of empties and the
+                    # the next guy is empty
+                    #print "BOOOO", cell_index
+                    #print [row[cell_index] == "" for row in merged_grid[1:]]
+                    #print merged_grid[0][cell_index+1]
+                    if all([row[cell_index] == "" for row in \
+                            merged_grid[1:]]) and \
+                            merged_grid[0][cell_index+1] == "":
+                        to_merge.append((cell_index, cell_index+1))
+                        accounted += 1
+                        cell_index += 2
+                    else:
+                        accounted += 1
                 # if we see that we can combine two columns, we do so
                 # TODO: We probably want to examine the contents
                 # of the columns instead of just the headers. We
@@ -255,9 +273,96 @@ class NastranParser(object):
                 else: cell_index += 1
 
             normalized_grid = _merge_columns(merged_grid, to_merge)
-
             if normalized_grid:
                 merged_grid = normalized_grid
+
+        # we continue our process of normalization, but this time
+        # from the bottom. We are going to consider how the data is
+        # layed out and if there are not enough headers, we will make
+        # them. Do note, we will not delete headers here if it
+        # seems there are too many because (1) this is done in other
+        # places and (2) empty columns can exist.
+        empties = []
+        # we only want data
+        for row in grid[num_header_merged_rows+1:]:
+            empties.append(set())
+            for index in range(max_len_row):
+                if index >= len(row) or row[index] == " ":
+                    empties[-1].add(index)
+
+        # get all communal empties.
+        common = sorted(list(reduce(lambda x, y: x.intersection(y), \
+                                    empties)))
+        divisions = []
+        last = common[0]
+        for item in common[1:]:
+            if item != last+1:
+                divisions.append(last)
+            last = item
+
+        # note, this cannot apply to two column thingies,
+        # cuz we are purposely reducing the number of headers
+        if len(divisions) > len(merged_grid[0]) and not identical \
+               and num_header_merged_rows > 0:
+            # this stuff also only applies to multi-header
+            # stuff. If not, where would the header go?
+
+
+            # let's try and line up our data columns with
+            # the last row of headers, instead of entire things.
+            # when only considering the last row, sometimes its
+            # pretty sane.
+            little_grid = self._parse_grid(grid[num_header_merged_rows:])
+            # now try to match up the family to the elements. In
+            # general, the elements will be under the family. So
+            # we just have to go through the headers and see
+            # who got stuck together. If more than one little header
+            # got stuck, it was probably in a family.
+
+            complex_header_index = 0
+            last_complex_header = merged_grid[0][complex_header_index]
+            complex_groups = [[]]
+            for index, little_header in enumerate(little_grid[0]):
+                if not little_header:
+                    continue
+                if little_header in last_complex_header:
+                    complex_groups[-1].append(index)
+                    _, _, last_complex_header = \
+                       last_complex_header.partition(little_header)
+
+                    # okay, if the next guy is not in the
+                    # the reamining thing, then just go onto the next
+                    # one.
+                    if index+1 < len(little_grid[0]) and \
+                           (little_grid[0][index+1] not in last_complex_header):
+                        complex_groups.append([])
+                        complex_header_index += 1
+                        last_complex_header = merged_grid[0][complex_header_index]
+                else:
+                    complex_groups.append([])
+                    complex_header_index += 1
+                    last_complex_header = merged_grid[0][complex_header_index]
+            # now we have to change the family member jumbo
+            # into difference family-member1, family-member2 column
+            # names
+            seen = 0
+            for gindex, group in enumerate(complex_groups):
+                if len(group) <= 1:
+                    little_grid[0][seen] = merged_grid[0][gindex]
+                    seen += len(group)
+                    continue
+                # implicit assumption that there are only two
+                # rows of headers
+                family_name = divided_grid[0][gindex]
+                for element in group:
+                    little_grid[0][element] = family_name + " " + \
+                                              little_grid[0][element]
+
+                seen += len(group)
+
+            merged_grid = little_grid
+
+
 
         return merged_grid
 
@@ -300,22 +405,22 @@ class NastranParser(object):
         # to eliminate rows that don't work (simple where clause)
         mygrid = self.grids[myindex]
         available_rows = range(1,len(mygrid)) # ignore header
+        to_delete = set([])
         for cname, cvalue in constraints.iteritems():
             column_num = mygrid[0].index(cname)
-            to_delete = []
             row = 1 # ignore header
             while row < len(mygrid):
                 if mygrid[row][column_num] != cvalue:
-                    to_delete.append(row)
+                    to_delete.add(row)
                 else:
                     # skip the next (row_width-1) rows
                     row += row_width-1
                 row += 1
 
 
-            to_delete.sort(reverse=True)
-            for row in to_delete:
-                available_rows.remove(row)
+        to_delete = sorted(list(to_delete), reverse=True)
+        for row in to_delete:
+            available_rows.remove(row)
 
         # now, in the remaining rows, we will
         # take the columns specified

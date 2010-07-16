@@ -13,6 +13,9 @@ class TestNastranParser(unittest.TestCase):
         self.assertTrue(len(self.parser.headers) == len(self.parser.grids))
         self.assertTrue(len(self.parser.headers) == len(self.parser.subcases))
 
+        # make sure the table is really a grid
+        self.assertTrue(len(set([len(row) for row in self.parser.grids[0]])) == 1)
+
     def test_simple(self):
         self.go("practice-grid.1.txt")
 
@@ -65,20 +68,51 @@ class TestNastranParser(unittest.TestCase):
         self.assertAlmostEqual(float(ax[1]), 2.779327E+05)
         self.assertAlmostEqual(float(ax[2]), 1.005818E+05)
 
+    def test_family_confusion(self):
+        self.go("practice-grid.3.txt")
+        h = "stresses in layered composite elements (quad4)"
+        self.assertTrue(h == self.parser.headers[0]["clean"])
+
+        grid = self.parser.grids[0]
+
+        self.assertTrue(grid[0] == ["ELEMENT ID", "PLY ID",
+            "STRESSES IN FIBER AND MATRIX DIRECTIONS NORMAL-1",
+            "STRESSES IN FIBER AND MATRIX DIRECTIONS NORMAL-2",
+            "STRESSES IN FIBER AND MATRIX DIRECTIONS SHEAR-12",
+            "INTER-LAMINAR  STRESSES SHEAR XZ-MAT",
+            "INTER-LAMINAR  STRESSES SHEAR YZ-MAT",
+            "PRINCIPAL STRESSES (ZERO SHEAR) ANGLE",
+            "PRINCIPAL STRESSES (ZERO SHEAR) MAJOR",
+            "PRINCIPAL STRESSES (ZERO SHEAR) MINOR",
+            "MAX SHEAR"])
+
+        # sanity
+        [[stress]] = self.parser.get(h, 1, {"ELEMENT ID":"1", "PLY ID":"3"}, \
+                                     ["PRINCIPAL STRESSES (ZERO SHEAR) MAJOR"])
+        self.assertAlmostEqual(float(stress), 1.66126E+05)
+
+
     # this test is just amazingly annoying.
     # It has headings (element id, plane 1, plane 2, but
     # also families of headings (plane 1 and 2 belong to BEND-MOMENT END-A)
     # unfortunately, nastran makes it almost impossible to tell whether
     # or not something's a family or a header without being a human
     # So, heuristics.
-    def test_family_confusion(self):
-        self.go("practice-grid.3.txt")
+    def no_test_family_confusion_and_dash_in_header(self):
+        self.go("practice-grid.7.txt")
         h = "forces in bar elements (cbar)"
         self.assertTrue(h == self.parser.headers[0]["clean"])
 
         grid = self.parser.grids[0]
-        print grid[0]
-        self.assertTrue(grid[0] == ["ELEMENT ID.", "BEND-MOMENT END-A PLANE 1"])
+        self.assertTrue(grid[0] == ["ELEMENT ID.", \
+                                    "BEND-MOMENT END-A PLANE 1", \
+                                    "BEND-MOMENT END-A PLANE 2", \
+                                    "BEND-MOMENT END-B PLANE 1", \
+                                    "BEND-MOMENT END-B PLANE 2", \
+                                    "- SHEAR - PLANE 1", \
+                                    "- SHEAR - PLANE 2", \
+                                    "AXIAL FORCE",
+                                    "TORQUE",])
 
     # this example is a little funny. It has zeroes at the beginning
     # and no subcase, mostly due to the fact that the subcase is in the grid
