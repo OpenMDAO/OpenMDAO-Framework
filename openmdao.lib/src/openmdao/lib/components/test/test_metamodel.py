@@ -50,6 +50,9 @@ class Simple2(Component):
     def execute(self):
         self.y = self.w * 1.1
         self.z = self.x * 0.9
+        
+class AModel(Component):
+    pass
 
 class MyMetaModel(MetaModel):
     my_x = Float(1., iotype='in')
@@ -81,6 +84,7 @@ class MetaModelTestCase(unittest.TestCase):
         asm.add('comp2', Simple())
         asm.metamodel.surrogate = KrigingSurrogate()
         asm.metamodel.model = Simple()
+        asm.metamodel.recorder = DumbRecorder()
         asm.driver.workflow.add([asm.metamodel,asm.comp1,asm.comp2])
         
         asm.connect('comp1.c','metamodel.a')
@@ -91,6 +95,14 @@ class MetaModelTestCase(unittest.TestCase):
                          set([('metamodel.d', 'comp2.b'), ('metamodel.c', 'comp2.a'), 
                               ('comp1.c', 'metamodel.a'), ('comp1.d', 'metamodel.b')]))
         asm.comp1.a = 1.
+        
+        # do some training
+        for val in range (3,10):
+            asm.comp1.b = val
+            asm.metamodel.train_next = 1
+            asm.run()
+            
+        # now run and get some results
         asm.comp1.b = 2.
         asm.run()
         self.assertEqual(asm.comp2.c, 6.)
@@ -120,15 +132,15 @@ class MetaModelTestCase(unittest.TestCase):
         simple.run()
         metamodel.run()
         
-        self.assertEqual(metamodel.c, 3.)
-        self.assertEqual(metamodel.d, -1.)
-        self.assertEqual(metamodel.c, simple.c)
-        self.assertEqual(metamodel.d, simple.d)
+        self.assertEqual(metamodel.c.getvalue(), 3.)
+        self.assertEqual(metamodel.d.getvalue(), -1.)
+        self.assertEqual(metamodel.c.getvalue(), simple.c)
+        self.assertEqual(metamodel.d.getvalue(), simple.d)
         
     def test_includes(self):
         metamodel = MyMetaModel()
-        metamodel.includes = ['a','d']
         metamodel.surrogate = KrigingSurrogate()
+        metamodel.includes = ['a','d']
         metamodel.model = Simple()
         self.assertEqual(metamodel.list_inputs_to_model(), ['a'])
         self.assertEqual(metamodel.list_outputs_from_model(), ['d'])
@@ -153,6 +165,7 @@ class MetaModelTestCase(unittest.TestCase):
         
     def test_include_exclude(self):
         metamodel = MyMetaModel()
+        metamodel.surrogate = KrigingSurrogate()
         metamodel.includes = ['a','d']
         try:
             metamodel.excludes = ['b','c']
