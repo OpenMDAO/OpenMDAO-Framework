@@ -117,15 +117,14 @@ def after_install(options, home_dir):
     cmds = []
     reqs = set()
     dists = working_set.resolve([Requirement.parse(r) for r in openmdao_pkgs])
-    excludes = set(['setuptools', 'distribute'])
+    excludes = set(['setuptools', 'distribute', 'numpy', 'scipy'])
     for dist in dists:
         if dist.project_name == 'openmdao.main':
             version = dist.version
         if not dist.project_name.startswith('openmdao.') and dist.project_name not in excludes:
-            if dist.project_name != 'numpy':
-                reqs.add('%s' % dist.as_requirement())  
+            reqs.add('%s' % dist.as_requirement())  
             
-    reqs = ['numpy'] + list(reqs)
+    reqs = ['numpy', 'scipy'] + list(reqs)
     
     optdict = { 'reqs': reqs, 'cmds':cmds }
     
