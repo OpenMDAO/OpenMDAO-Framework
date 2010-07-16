@@ -103,7 +103,7 @@ class MetaModelTestCase(unittest.TestCase):
         
         metamodel.a = simple.a = 1.
         metamodel.b = simple.b = 2.
-        
+        metamodel.train_next = True
         simple.run()
         metamodel.run()
         

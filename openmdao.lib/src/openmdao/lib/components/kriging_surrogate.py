@@ -6,9 +6,6 @@ from scipy.optimize import fmin, anneal, brute
 
 from enthought.traits.api import HasTraits, implements
 
-from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.container import Container
-from openmdao.main.component import Component
 from openmdao.main.interfaces import ISurrogate
 from openmdao.main.uncertain_distributions import NormalDistribution
 
@@ -39,8 +36,8 @@ class KrigingSurrogate(HasTraits):
         """calculates a predicted value of the response, based on the current 
         trained model for the supplied list of inputs
         """
-        #if self.m == None:
-        #    Give error message
+        if self.m == None: #untrained surrogate
+            raise RuntimeError("KrigingSurrogate has not been trained, so no prediction can be made")
         r = zeros(self.n)
         X,Y = self.X,self.Y
         thetas = 10**self.thetas
