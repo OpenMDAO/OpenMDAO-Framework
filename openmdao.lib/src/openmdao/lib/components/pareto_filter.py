@@ -11,6 +11,8 @@ class ParetoFilter(Component):
     """takes a set of cases and filters out the subset of cases which are pareto optimal. Assumes that smaller values for 
        model responses are better, so all problems must be posed as minimization problems""" 
     
+    criteria = Array([],iotype="in",dtype=str,desc="list of outputs from the case to consider for filtering")    
+    
     case_set = Instance(ICaseIterator,iotype="in",desc="CaseIterator with the cases to be filtered to find the pareto optimal subset")
     
     pareto_set = Instance(ICaseIterator,iotpye="out",desc="resulting collection of pareto optimal cases")
@@ -33,7 +35,7 @@ class ParetoFilter(Component):
         cases = [case for case in self.case_set]
         
         for case in cases:
-            y_list.append([o[2] for o in case.outputs])
+            y_list.append([o[2] for o in case.outputs if o[0] in self.criteria])
         y_temp = list(y_list)
         
         dominated_set =[]
@@ -58,15 +60,17 @@ if __name__ == "__main__":
     pf = ParetoFilter()
     
     
+    
     # 2D PARETO FILTERING EXAMPLE
     n = 1000
     x = random.uniform(-1,0,n)
     y = -(1-x**2)**0.5*random.random(n)
     cases = []
     for x_0,y_0 in zip(x,y):
-        cases.append(Case(outputs=[("test",0,x_0),("test",1,y_0)]))
+        cases.append(Case(outputs=[("x",0,x_0),("y",1,y_0)]))
     
     pf.case_set = ListCaseIterator(cases)
+    pf.criteria = ['x','y']
     pf.execute()
    
     
@@ -77,7 +81,8 @@ if __name__ == "__main__":
     py.scatter(x,y,s=5)
     py.scatter(x_dom,y_dom,c='',edgecolor='b',s=80)
     py.scatter(x_p,y_p,c='',edgecolors='r',s=80)
-    
+    py.show()
+    exit()
     #3D PARETO FILTERING EXAMPLE
     n = 1000
     x = random.uniform(-1,0,n)
@@ -87,7 +92,7 @@ if __name__ == "__main__":
     
     cases = []
     for x_0,y_0,z_0 in zip(x,y,z):
-        cases.append(Case(outputs=[("test",0,x_0),("test",1,y_0),("test",1,z_0)]))
+        cases.append(Case(outputs=[("x",0,x_0),("y",1,y_0),("z",1,z_0)]))
     
     pf.case_set = ListCaseIterator(cases)
     pf.execute()
