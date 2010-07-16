@@ -1,9 +1,10 @@
+from random import normalvariate,uniform
+from math import factorial
+
 from enthought.traits.api import implements, HasTraits
 
 from openmdao.lib.traits.float import Float
 from openmdao.main.interfaces import IUncertainVariable
-
-from random import normalvariate,uniform
 
 class NormalDistribution(HasTraits): 
     """IUncertainVariable which represents a quantity with a normal distribution of uncertainty"""
@@ -42,12 +43,15 @@ class UniformDistribution(HasTraits):
         self.max = max
         self.min = min
         
+    def getvalue(self):
+        return self.expected()
+
     def sample(self):
         return uniform(self.min,self.max)
         
     def expected(self):
         return (self.max+self.min)/2.
-            
+
 class TriangularDistribution(hasTraits):
     """IUncertainVariable which represents a quantity with a triangular distribution of uncertainty"""
 
@@ -64,8 +68,34 @@ class TriangularDistribution(hasTraits):
         self.min = min
         self.mode = mode
         
+    def getvalue(self):
+        return self.expected()
+ 
     def sample(self):
         return triangular(self.min,self.max,self.mode)
         
     def expected(self):
         return (self.max+self.mode+self.min)/3.
+        
+class WeibullDistribution(HasTraits):
+    """IUncertainVariable which represents a quantity with a weibull distribution of uncertainty"""
+    
+    alpha = Float(1,desc="scale parameter for weibull distribution")
+    beta = Float(2,desc="shape parameter for weibull distribution")
+    
+    implements(IUncertainVariable)
+
+    def __init__(self,alpha=1,beta=2,*args,**kwargs):
+        super(UniformDistribution,self).__init__(*args,**kwargs)
+        
+        self.alpha = alpha
+        self.beta = beta
+        
+    def getvalue(self):
+        return self.expected()
+
+    def sample(self):
+        return weibullvariate(self.alpha,self.beta)
+        
+    def expected(self):
+        return 
