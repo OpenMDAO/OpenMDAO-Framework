@@ -119,4 +119,3 @@ class WeibullDistribution(UncertainDistribution):
     def expected(self):
         return self.alpha*gamma(1+1./self.beta)
         
-class 

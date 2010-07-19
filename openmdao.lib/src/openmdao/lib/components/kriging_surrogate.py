@@ -108,31 +108,3 @@ class KrigingSurrogate(HasTraits):
             self.sig2 = dot(Y-dot(one,self.mu),lstsq(self.R,(Y-dot(one,self.mu)))[0])/self.n
             self.log_likelihood = -self.n/2*log(self.sig2)-1./2.*log(abs(det(self.R)+1e-16))-sum(self.thetas)
                 
-if __name__ == "__main__": 
-    from matplotlib import pyplot as py
-    X = array([[0.05], [.25], [0.61], [0.95]])
-    Y1 = array([0.738513784857542,-0.210367746201974,-0.489015457891476,12.3033138316612])
-    Y2 = array([-9.1307431075712291, -7.6051838731009873, -4.1445077289457384, 5.6516569158305785])
-    rse1 = KrigingSurrogate(X,Y1)
-    rse2 = KrigingSurrogate(X,Y2)
-
-    x = arange(0.05,0.95,0.1)
-    f_1,f_2,err_1,err_2 = [],[],[],[]
-
-    for case in x:
-        y1 = rse1.predict(case)
-        y2 = rse2.predict(case)
-        f_1.append(y1.mu)
-        err_1.append(y1.sigma)
-        f_2.append(y2.mu)
-        err_2.append(y2.sigma)
-
-    py.figure()
-    py.subplot(211)
-    py.plot(x,f_1)
-    py.plot(x,f_2)
-    py.subplot(212)
-    py.plot(x,err_1)
-    py.plot(x,err_2)
-
-    py.show()
