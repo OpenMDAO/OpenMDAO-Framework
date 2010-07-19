@@ -14,7 +14,7 @@ from openmdao.lib.traits.float import Float
 
 from openmdao.main.expression import Expression
 
-from openmdao.main.exprEval import ExprEvaluator
+from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.driver import Driver
 from openmdao.main.interfaces import IDriverParameter
 from openmdao.main.driver_parameters import DriverParameters
