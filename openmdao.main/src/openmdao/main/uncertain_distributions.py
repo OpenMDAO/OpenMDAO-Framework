@@ -1,5 +1,6 @@
 
-from random import normalvariate
+from random import gauss, weibullvariate, uniform
+from scipy.special import gamma
 
 class UncertainDistribution(object):
     """Base class for uncertain variables."""
@@ -39,9 +40,82 @@ class NormalDistribution(UncertainDistribution):
         self.sigma = sigma
         
     def sample(self): 
-        return normalvariate(self.mu,self.sigma)
+        return gauss(self.mu,self.sigma)
     
     def expected(self): 
         return self.mu
         
     
+class UniformDistribution(UncertainDistribution):
+    """An UncertainDistribution which represents a quantity with a 
+    uniform distribution of uncertainty.
+    
+    min : float
+       minimum value
+       
+    max : float
+       maximum value
+    """
+ 
+    def __init__(self,max=0,min=1,*args,**kwargs):
+        super(UniformDistribution,self).__init__(*args,**kwargs)
+        
+        self.max = max
+        self.min = min
+
+    def sample(self):
+        return uniform(self.min,self.max)
+        
+    def expected(self):
+        return (self.max+self.min)/2.
+
+class TriangularDistribution(UncertainDistribution):
+    """An UncertainDistribution which represents a quantity with a 
+    triangular distribution of uncertainty.
+    
+    min : float
+       minimum value
+       
+    max : float
+       maximum value
+       
+    mode : float
+       mode
+    """
+ 
+    def __init__(self,max=0,min=1,mode=0.5,*args,**kwargs):
+        super(TriangularDistribution,self).__init__(*args,**kwargs)
+        
+        self.max = max
+        self.min = min
+        self.mode = mode
+ 
+    def sample(self):
+        return triangular(self.min,self.max,self.mode)
+        
+    def expected(self):
+        return (self.max+self.mode+self.min)/3.
+        
+class WeibullDistribution(UncertainDistribution):
+    """An UncertainDistribution which represents a quantity with a 
+    weibull distribution of uncertainty.
+    
+    alpha : float
+       scale parameter
+       
+    beta : float
+       shape parameter
+    """
+
+    def __init__(self,alpha=1,beta=2,*args,**kwargs):
+        super(UniformDistribution,self).__init__(*args,**kwargs)
+        
+        self.alpha = alpha
+        self.beta = beta
+
+    def sample(self):
+        return weibullvariate(self.alpha,self.beta)
+        
+    def expected(self):
+        return self.alpha*gamma(1+1./self.beta)
+        
