@@ -1,6 +1,7 @@
 
 import ordereddict
 
+from numpy import array
 from enthought.traits.api import Instance, ListStr, Event
 from enthought.traits.trait_base import not_none
 
@@ -74,7 +75,7 @@ class MetaModel(Component):
                     surrogate.train(self._training_input_history, output_history) 
                 self._new_train_data = False
                 
-            input_values = [getattr(self, name) for name in self._surrogate_input_names]
+            input_values = array([getattr(self, name) for name in self._surrogate_input_names])
             for name, tup in self._surrogate_info.items():
                 surrogate = tup[0]
                 predicted = surrogate.predict(input_values)
