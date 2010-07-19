@@ -10,5 +10,5 @@ class BraninComponent(Component):
     f_xy = Float(0,iotype="out")
     
     def execute(self):
-        self.f_xy = (y-(5.1/(4.*pi**2.))*x**2.+5.*x/pi-6.)**2.+10.*(1.-1./(8.*pi))*cos(x)+10.
+        self.f_xy = (self.y-(5.1/(4.*pi**2.))*self.x**2.+5.*self.x/pi-6.)**2.+10.*(1.-1./(8.*pi))*cos(self.x)+10.
     
