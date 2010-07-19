@@ -1,0 +1,54 @@
+ NASA ONE-STAGE TURBINE - TN D-4389
+ 100 PERCENT SPEED
+ &DATAIN 
+  STAGE = 1.,
+  TTIN = 518.19,
+  PTIN = 14.71,
+  IAR = 2,
+  PTPS = 1.25,
+  DELC = .02,
+  DELL = 0.1,
+  DELA = 0.0,
+  STG = 1.,
+  SECT = 5.,
+  PCNH = 5*0.2,
+  VCTD = 1.,
+  RG = 53.35,
+  RPM = 4407.4,
+  GAMG = 5*1.4,
+  RWG = 5*1.0,
+  EXPN = 4.,
+  EXPP = 3.,
+  DR = 5*22.,
+  DT = 5*30.,
+  SDIA = 5*-6.,
+  SDEA = 69.6,68.3,67.0,65.8,64.5,
+  SETA = 5*.9628,
+  SREC = 5*1.0,
+  SCF = 5*.990,
+  RDIA = 45.5,38.0,30.4,21.5,11.5,
+  RDEA = 56.35,57.30,58.26,59.19,60.12,
+  RETA = 5*.9256,
+  RTF = 5*1.0,
+  RREC = 5*1.0,
+  RCF = 5*.990,
+  endjob = 0.,
+  ENDPLT = 1.0,
+  ENDSTG = 1.
+ /
+
+ 70 PERCENT SPEED
+ &DATAIN 
+  PTPS = 1.3,
+  RPM = 3085.2,
+  VCTD = -1.,
+  ENDSTG = 1.0 
+ /    
+
+ 40 PERCENT SPEED
+ &DATAIN 
+  PTPS = 1.4,
+  RPM = 1763.0,
+  ENDSTG = 1.0,
+  endjob = 1. 
+ /    
