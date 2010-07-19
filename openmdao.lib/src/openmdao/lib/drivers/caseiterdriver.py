@@ -35,7 +35,7 @@ class CaseIterDriverBase(Driver):
     
     """
 
-    recorder = Instance(object, desc='Something to write Cases to.', required=True)
+    recorder = Instance(ICaseRecorder, desc='Something to write Cases to.', required=True)
     
     sequential = Bool(True, iotype='in',
                       desc='Evaluate cases sequentially.')
@@ -341,7 +341,7 @@ class CaseIterDriverBase(Driver):
                     self._logger.debug('    exception %s', exc)
                     case.msg = str(exc)
                 # Record the data.
-                self.recorder.append(case)
+                self.recorder.record(case)
 
                 if not case.msg:
                     if self.reload_model:

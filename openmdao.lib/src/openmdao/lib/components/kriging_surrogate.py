@@ -45,7 +45,7 @@ class KrigingSurrogate(HasTraits):
         X,Y = self.X,self.Y
         thetas = 10**self.thetas
         for i in range(self.n):
-            r[i] = e**(-sum(thetas*(X[i]-new_x)**2))
+            r[i] = e**(-sum(thetas*(array(X[i])-new_x)**2))
         one = ones(self.n)
 
         #-----LSTSQ-------

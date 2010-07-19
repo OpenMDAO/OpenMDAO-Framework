@@ -62,6 +62,25 @@ class KrigingSurrogateTests(unittest.TestCase):
         self.assertAlmostEqual(15.2509232731,pred.sigma,places=10)
         self.assertAlmostEqual(13.5855936402,pred.mu,places=10)
         
+    def test_get_uncertain_value(self): 
+        
+        x = array([[0.05], [.25], [0.61], [0.95]])
+        y = array([0.738513784857542,-0.210367746201974,-0.489015457891476,12.3033138316612])
+        krig1 = KrigingSurrogate(x,y)
+        
+        self.assertEqual(krig1.get_uncertain_value(1).mu,NormalDistribution(1,0).mu)
+        self.assertEqual(krig1.get_uncertain_value(1).sigma,NormalDistribution(1,0).sigma)
+        
+    def test_no_training_data(self): 
+        krig1 = KrigingSurrogate()
+        
+        try: 
+            krig1.predict([0,1])
+        except RuntimeError,err:
+            self.assertEqual(str(err),"KrigingSurrogate has not been trained, so no prediction can be made")
+        else: 
+            self.fail("RuntimeError Expected")
+        
     
 if __name__ == "__main__":
     unittest.main()        
