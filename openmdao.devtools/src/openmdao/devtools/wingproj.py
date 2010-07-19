@@ -63,9 +63,18 @@ def _modify_wpr_file(fpath):
     config = ConfigParser.ConfigParser()
     config.read(fpath)
     config.set('user attributes', 'proj.pypath', 
-               _wingify(dict({None: ('custom',os.pathsep.join(sys.path))}), left_margin=18))
+               dict({None: ('custom',os.pathsep.join(sys.path))}))
     with open(fpath, 'w') as fp:
         config.write(fp)
+    f = open(fpath,'r')
+    content = f.read()
+    f.close()
+    
+    f = open(fpath, 'w')
+    f.write('#!wing\n#!version=3.0\n')
+    f.write(content)
+    f.close()
+    
 
 def run_wing():
     """Runs the Wing IDE after first setting up a profile containing
