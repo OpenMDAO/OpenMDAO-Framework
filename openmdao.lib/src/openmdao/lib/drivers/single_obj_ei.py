@@ -15,15 +15,15 @@ from openmdao.lib.traits.float import Float
 from openmdao.main.expression import Expression
 
 from openmdao.main.driver import Driver
-from openmdao.main.interfaces import IDriverParameter
-from openmdao.main.driver_parameters import DriverParameters
+from openmdao.main.interfaces import IHasParameters
+from openmdao.main.driver_parameters import HasParameterss
 from openmdao.main.case import Case
 
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 class SingleObjectiveExpectedImprovement(Driver):
-    implements(IDriverParameter)
+    implements(IHasParameters)
 
     objective = Str("", iotype="in",
                     desc="name of the output from cases to be used as the objective")
@@ -38,7 +38,7 @@ class SingleObjectiveExpectedImprovement(Driver):
     def __init__(self,*args,**kwargs):
         super(SingleObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)
         
-        self._parameters = DriverParameters()
+        self._parameters = HasParameterss()
     
         
     def add_parameter(self,param_name,low,high):
