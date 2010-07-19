@@ -8,12 +8,12 @@ here = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(0, os.path.normpath(os.path.join(here,
                                                  'openmdao',
                                                  'examples',
-                                                 'single_EI')))
+                                                 'singleEI')))
 
 import releaseinfo
 version = releaseinfo.__version__
 
-setup(name='openmdao.examples.sigle_EI',
+setup(name='openmdao.examples.sigleEI',
       version=version,
       description="OpenMDAO examples - Single Objective Expected Improvement",
       long_description="""\

@@ -107,36 +107,51 @@ _norm_map = {"1-norm":1,"2-norm":2}
 
 
 class OptLatinHypercube(HasTraits): 
+    """IDOEgenerator which provides a latin hypercube DOE sample set.
+    The Morris-Mitchell sampling criterion of the DOE is optimzied
+    using an evolutionary algorithm
+
+    num_samples: Int,optional
+        number of sample points in the DOE sample set
+    num_parameters: Int, optional
+        number of parameters, or dimensions, for the DOE
+    population: Int, optional
+        size of the population used in the evolutionary optimization
+    generations: Int, optional
+        number of generations the optimization will evolve over
+    """
     
     implements(IDOEgenerator)
     
-    num_sample_points = Int(20, desc="number of sample points in the DOE")
+    num_sample_points = Int(20, desc="number of sample points in the DOE sample set")
     
-    num_design_vars = Int(2, desc="number of design variables in the DOE")
+    num_parameters = Int(2, desc="number of parameters, or dimensions, for the DOE")
     
     population = Int(20,
-        desc="Size of the population for the genetic algorithm optimization of the DOE sample points")
+        desc="size of the population used in the evolutionary optimization")
     generations = Int(2,
-        desc="Number of generations the genetic algorithm will evolve for before terminating")
+        desc="number of generations the optimization will evolve over")
     norm_method = Enum(["1-norm","2-norm"],
                     desc="vector norm calculation method. '1-norm' is faster, but less accurate")
     
-    def __init__(self, num_samples=None, num_design_vars=None, population=None):
+    def __init__(self, num_samples=None, num_parameters=None, population=None,generations=None):
         super(OptLatinHypercube,self).__init__()
         self.qs = [1,2,5,10,20,50,100] #list of qs to try for Phi_q optimization
         if num_samples is not None:
             self.num_sample_points = num_samples
-        if num_design_vars is not None:
-            self.num_design_vars = num_design_vars
+        if num_parameters is not None:
+            self.num_parameters = num_parameters
         if population is not None:
             self.population = population
+        if generations is not None: 
+            self.generations = generations
 
     def __iter__(self):
         """Return an iterator over our sets of input values"""
         return self._get_input_values()
     
     def _get_input_values(self):
-        rand_doe = rand_latin_hypercube(self.num_sample_points, self.num_design_vars)
+        rand_doe = rand_latin_hypercube(self.num_sample_points, self.num_parameters)
         best_lhc = LatinHypercube(rand_doe, q=1, p=_norm_map[self.norm_method])
         
         for q in self.qs:
