@@ -35,7 +35,6 @@ class KrigingSurrogate(HasTraits):
         """returns a NormalDistribution centered around the value, with a standard deviation of 0"""
         return NormalDistribution(value,0)
 
-
     def predict(self,new_x):
         """calculates a predicted value of the response, based on the current 
         trained model for the supplied list of inputs
@@ -48,15 +47,17 @@ class KrigingSurrogate(HasTraits):
         for i in range(self.n):
             r[i] = e**(-sum(thetas*(array(X[i])-new_x)**2))
         one = ones(self.n)
-        R_fact = self.R_fact
 
+        #-----LSTSQ-------
+        f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0])
+        term1 = dot(r,lstsq(self.R,r)[0])
+        term2 = (1-dot(one,lstsq(self.R,r)[0]))**2/dot(one,lstsq(self.R,one)[0])
+        #---LU or CHOLESKY DECOMPOSTION ---
+        #R_fact = self.R_fact
         #f = self.mu+dot(r,self.myfun(R_fact,Y-dot(one,self.mu)))
-        f = self.mu+dot(r,lstsq(self.R,Y-dot(one,self.mu))[0]) #-----LSTSQ-------
+        #term1 = dot(r,self.myfun(R_fact,r))
+        #term2 = (1-dot(one,self.myfun(R_fact,r)))**2/dot(one,self.myfun(R_fact,one))
 
-        #term1 = dot(r,lstsq(self.R,r)[0])
-        #term2 = (1-dot(one,lstsq(self.R,r)[0]))**2/dot(one,lstsq(self.R,one)[0])
-        term1 = dot(r,self.myfun(R_fact,r))
-        term2 = (1-dot(one,self.myfun(R_fact,r)))**2/dot(one,self.myfun(R_fact,one))
         MSE = self.sig2*(1-term1+term2)
         RMSE = sqrt(abs(MSE))
         
@@ -97,67 +98,13 @@ class KrigingSurrogate(HasTraits):
             self.sig2 = dot(Y-dot(one,self.mu),self.myfun(self.R_fact,(Y-dot(one,self.mu))))/self.n
             self.log_likelihood = -self.n/2*log(self.sig2)-1./2.*log(abs(det(self.R)))-sum(self.thetas)-sum(abs(self.thetas))
         except linalg.LinAlgError:
-            self.R_fact = lu_factor(R)
-            self.myfun = lu_solve
+            #---LU DECOMPOSITION---
+            #self.R_fact = lu_factor(R)
+            #self.myfun = lu_solve
             #self.mu = dot(one,self.myfun(self.R_fact,Y))/dot(one,self.myfun(self.R_fact,one))
             #self.sig2 = dot(Y-dot(one,self.mu),self.myfun(self.R_fact,(Y-dot(one,self.mu))))/self.n
-            #------SECOND VERSION USING LSTSQ-------------
+            #------LSTSQ---------
             self.mu = dot(one,lstsq(self.R,Y)[0])/dot(one,lstsq(self.R,one)[0])
             self.sig2 = dot(Y-dot(one,self.mu),lstsq(self.R,(Y-dot(one,self.mu)))[0])/self.n
-            self.log_likelihood = -self.n/2*log(self.sig2)-1./2.*log(abs(det(self.R)+1e50))-sum(self.thetas)
+            self.log_likelihood = -self.n/2*log(self.sig2)-1./2.*log(abs(det(self.R)+1e-16))-sum(self.thetas)
                 
-if __name__ == "__main__": 
-    from matplotlib import pyplot as py
-    X = array([[0.05], [.25], [0.61], [0.95]])
-    Y1 = array([0.738513784857542,-0.210367746201974,-0.489015457891476,12.3033138316612])
-    Y2 = array([-9.1307431075712291, -7.6051838731009873, -4.1445077289457384, 5.6516569158305785])
-    rse1 = KrigingSurrogate(X,Y1)
-    rse2 = KrigingSurrogate(X,Y2)
-    
-    theta1 = rse1.thetas
-    theta2 = rse2.thetas
-    opt_ll_1 = rse1.log_likelihood
-    opt_ll_2 = rse2.log_likelihood
-
-    x = arange(0.05,0.95,0.005)
-    f_1 = []
-    f_2 = []
-    err_1 = []
-    err_2 = []
-    
-    for i in x:
-        f1,err1 = rse1.predict(i)
-        f2,err2 = rse2.predict(i)
-        f_1.append(f1)
-        f_2.append(f2)
-        err_1.append(err1)
-        err_2.append(err2)
-    
-    thetas = arange(0,5,0.005)
-    ll_1 = []
-    ll_2 = []
-    for i in thetas:
-        rse1.thetas = array([i])
-        rse1._calculate_log_likelihood()
-        ll_1.append(rse1.log_likelihood)
-        rse2.thetas = array([i])
-        rse2._calculate_log_likelihood()
-        ll_2.append(rse2.log_likelihood)
-
-    py.figure(1)
-    py.plot(thetas,ll_1)
-    py.plot(thetas,ll_2)
-    py.scatter(theta1,opt_ll_1)
-    py.scatter(theta2,opt_ll_2)
-    py.ylabel('Likelihood')
-    py.legend(('Response 1','Response 2'))
-
-    py.figure(2)
-    py.subplot(211)
-    py.plot(x,f_1)
-    py.plot(x,f_2)
-    py.subplot(212)
-    py.plot(x,err_1)
-    py.plot(x,err_2)
-    
-    py.show()
