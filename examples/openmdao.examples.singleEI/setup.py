@@ -13,7 +13,7 @@ sys.path.insert(0, os.path.normpath(os.path.join(here,
 import releaseinfo
 version = releaseinfo.__version__
 
-setup(name='openmdao.examples.sigleEI',
+setup(name='openmdao.examples.singleEI',
       version=version,
       description="OpenMDAO examples - Single Objective Expected Improvement",
       long_description="""\
