@@ -1137,6 +1137,7 @@ openmdao_packages = ['openmdao.util',
                      'examples/openmdao.examples.simple',
                      'examples/openmdao.examples.bar3simulation',
                      'examples/openmdao.examples.enginedesign',
+                     'examples/openmdao.examples.singleEI'
                     ]
     
 def adjust_options(options, args):
