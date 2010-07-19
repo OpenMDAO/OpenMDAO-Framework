@@ -47,25 +47,21 @@ class KrigingSurrogateTests(unittest.TestCase):
        
         self.assertAlmostEqual(8.7709e-09,pred.sigma,places=7)
         self.assertAlmostEqual(0.479425538688,pred.mu,places=7)
-    """
-    def test_2d_kriging(self):
-        n = 12
-        x1 = linspace(-5,10,n)
-        x2 = linspace(0,15,n)
-        random.seed(seed=1)
-        random.shuffle(x1)
-        random.shuffle(x2)
 
-        x = array(zip(x1,x2))
-        
+    def test_2d_kriging(self):
         def bran(x):
             y = (x[1]-(5.1/(4.*pi**2.))*x[0]**2.+5.*x[0]/pi-6.)**2.+10.*(1.-1./(8.*pi))*cos(x[0])+10.
             return y
-            
-        y = [bran(x) for x in x]
 
-        rse = KrigingSurrogate(x,y)
-    """
+        x = array([[-2,0],[-0.5,1.5],[1,3],[8.5,4.5],[-3.5,6],[4,7.5],[-5,9],[5.5,10.5],[10,12],[7,13.5],[2.5,15]])
+        y = array([bran(case) for case in x])
+
+        krig1 = KrigingSurrogate(x,y)
+        pred = krig1.predict([5,5])
+        
+        self.assertAlmostEqual(15.2509232731,pred.sigma,places=10)
+        self.assertAlmostEqual(13.5855936402,pred.mu,places=10)
+        
     
 if __name__ == "__main__":
     unittest.main()        
