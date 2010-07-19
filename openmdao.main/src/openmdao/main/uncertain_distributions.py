@@ -1,5 +1,5 @@
 
-from random import gauss,weibullvariate,uniform,weibullvariate
+from random import gauss, weibullvariate, uniform
 from scipy.special import gamma
 
 class UncertainDistribution(object):

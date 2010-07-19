@@ -11,6 +11,8 @@ from openmdao.main.interfaces import ICaseRecorder
 from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.components.kriging_surrogate import KrigingSurrogate # FIXME: in wrong place
 
+from openmdao.util.testutil import assert_rel_error
+
 class DumbRecorder(HasTraits):
     implements(ICaseRecorder)
     def record(self,case): 
@@ -107,8 +109,8 @@ class MetaModelTestCase(unittest.TestCase):
         asm.comp1.a = 1.
         asm.comp1.b = 2.
         asm.run()
-        self.assertTrue(abs(asm.comp2.c-6.) < 0.001)
-        self.assertTrue(abs(asm.comp2.d +2.) < 0.001)
+        assert_rel_error(self, asm.comp2.c, 6., 0.001)
+        assert_rel_error(self, asm.comp2.d, -2., 0.001)
         
         # set new model and verify disconnect
         asm.metamodel.model = Simple2()

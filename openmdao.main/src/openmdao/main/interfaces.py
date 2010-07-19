@@ -207,7 +207,8 @@ class ISurrogate(Interface):
             which corresponds to the training case input history given by X
         """
     
-def IDriverParameter(Interface):
+class IDriverParameter(Interface):
+    
     def add_parameter(self,param_name,low=None,high=None):
         """adds a parameter to the driver. 
         

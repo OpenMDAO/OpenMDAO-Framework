@@ -14,7 +14,6 @@ from openmdao.lib.traits.float import Float
 
 from openmdao.main.expression import Expression
 
-from openmdao.main.exprEval import ExprEvaluator
 from openmdao.main.driver import Driver
 from openmdao.main.interfaces import IDriverParameter
 from openmdao.main.driver_parameters import DriverParameters
@@ -24,13 +23,17 @@ from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 class SingleObjectiveExpectedImprovement(Driver):
-    objective = Str("",iotype="in",desc="name of the output from cases to be used as the objective")
-    best_case = Instance(ICaseIterator,iotype="in",desc="CaseIterator which containes a single case, representing the target objective value")
-    next_case = Instance(ICaseIterator,iotype="out",desc="CaseIterator which contains the case which maximize expected improvement")
-    
     implements(IDriverParameter)
 
-    objective = Expression(iotype="in",desc="string representing the objective to maximize the expected improvement around. Must be a NormalDistrubtion type")
+    objective = Str("", iotype="in",
+                    desc="name of the output from cases to be used as the objective")
+    best_case = Instance(ICaseIterator, iotype="in",
+                         desc="CaseIterator which containes a single case, representing the target objective value")
+    next_case = Instance(ICaseIterator, iotype="out",
+                         desc="CaseIterator which contains the case which maximize expected improvement")
+    
+    objective = Expression(iotype="in",
+                           desc="string representing the objective to maximize the expected improvement around. Must be a NormalDistrubtion type")
     
     def __init__(self,*args,**kwargs):
         super(SingleObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)
@@ -48,8 +51,10 @@ class SingleObjectiveExpectedImprovement(Driver):
             
     def remove_parameter(self,param_name):
         self._parameters.remove_parameter(param_name)
+        
     def list_parameters(self): 
         self._parameters.list_parameters()
+        
     def clear_parameters(self):
         self._parameters.clear_parameters()
     
@@ -105,3 +110,4 @@ class SingleObjectiveExpectedImprovement(Driver):
         
         case = Case(inputs=[(name,None,value) for value,name in zip(new_x,self._parameters.list(parameters))])
         self.next_case = ListCaseIterator([case,])
+        
