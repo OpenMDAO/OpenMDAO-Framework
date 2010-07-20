@@ -24,16 +24,14 @@ from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 class SingleObjectiveExpectedImprovement(Driver):
     implements(IHasParameters)
-
-    objective = Str("", iotype="in",
-                    desc="name of the output from cases to be used as the objective")
+     
     best_case = Instance(ICaseIterator, iotype="in",
                          desc="CaseIterator which containes a single case, representing the target objective value")
     next_case = Instance(ICaseIterator, iotype="out",
                          desc="CaseIterator which contains the case which maximize expected improvement")
     
-    objective = Expression(iotype="in",
-                           desc="string representing the objective to maximize the expected improvement around. Must be a NormalDistrubtion type")
+    criteria = Expression(iotype="in",
+                           desc="name of the variable to maximize the expected improvement around. Must be a NormalDistrubtion type")
     
     def __init__(self,*args,**kwargs):
         super(SingleObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)

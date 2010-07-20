@@ -46,7 +46,7 @@ class MuliObjectiveExpectedImprovement(Driver):
         self.set_of_alleles = GAllele.GAlleles()
         for param_name,param in self._parameters.iteritems(): 
             a = GAllele.GAlleleRange(param['low'],param['high'],real=True)
-            self.set_of_allels.add(a)
+            self.set_of_alleles.add(a)
             
     def remove_parameter(self,param_name):
         self._parameters.remove_parameter(param_name)

@@ -158,11 +158,6 @@ class IDOEgenerator(Interface):
     
     def __iter__():
         """Return an iterator object."""
-        
-    def next():
-        """Return the next array of normalized values. If no values remain,
-        raise a StopIteration exception.
-        """
 
 class IUncertainVariable(Interface):
     """A variable which supports uncertainty"""
