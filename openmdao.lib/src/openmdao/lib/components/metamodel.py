@@ -51,7 +51,6 @@ class MetaModel(Component):
     def execute(self):
         """If the training flag is set, train the metamodel. Otherwise
         """
-        print "TEST"
         if self._train:
             if self.model:
                 inputs = self.update_model_inputs()
