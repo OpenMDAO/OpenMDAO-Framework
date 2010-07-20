@@ -17,7 +17,7 @@ from openmdao.main.expression import Expression
 from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.driver import Driver
 from openmdao.main.interfaces import IHasParameters
-from openmdao.main.driver_parameters import HasParameterss
+from openmdao.main.driver_parameters import HasParameters
 from openmdao.main.case import Case
 
 from openmdao.main.interfaces import ICaseIterator
@@ -37,7 +37,7 @@ class MuliObjectiveExpectedImprovement(Driver):
     def __init__(self,*args,**kwargs):
         super(MultiObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)
         
-        self._parameters = HasParameterss()
+        self._parameters = HasParameters()
     
         
     def add_parameter(self,param_name,low,high):

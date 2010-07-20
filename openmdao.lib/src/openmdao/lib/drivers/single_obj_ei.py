@@ -16,7 +16,7 @@ from openmdao.main.expression import Expression
 
 from openmdao.main.driver import Driver
 from openmdao.main.interfaces import IHasParameters
-from openmdao.main.driver_parameters import HasParameterss
+from openmdao.main.driver_parameters import HasParameters
 from openmdao.main.case import Case
 
 from openmdao.main.interfaces import ICaseIterator
@@ -38,7 +38,7 @@ class SingleObjectiveExpectedImprovement(Driver):
     def __init__(self,*args,**kwargs):
         super(SingleObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)
         
-        self._parameters = HasParameterss()
+        self._parameters = HasParameters()
     
         
     def add_parameter(self,param_name,low,high):

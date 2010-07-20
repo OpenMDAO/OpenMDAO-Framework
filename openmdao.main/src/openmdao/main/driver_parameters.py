@@ -13,13 +13,13 @@ from openmdao.main.expreval import ExprEvaluator
 from openmdao.main.interfaces import IHasParameters
 
 
-class HasParameterss(HasTraits): 
+class HasParameters(HasTraits): 
     """This class provides an implementation of the IHasParameters interface"""
 
     implements(IHasParameters)
 
     def __init__(self):
-        super(HasParameterss, self).__init__()
+        super(HasParameters, self).__init__()
         self._parameters = ordereddict.OrderedDict()
     
     def add_parameter(self, param_name, low=None, high=None):
