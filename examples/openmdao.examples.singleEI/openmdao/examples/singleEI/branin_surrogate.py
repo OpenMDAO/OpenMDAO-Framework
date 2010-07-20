@@ -6,7 +6,7 @@ from openmdao.lib.components.pareto_filter import ParetoFilter
 from openmdao.lib.drivers.doedriver import DOEdriver
 from openmdao.lib.drivers.single_obj_ei import SingleObjectiveExpectedImprovement
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
-from openmdao.lib.api import DumpCaseRecorder
+from openmdao.lib.api import DBCaseRecorder
 
 from openmdao.examples.singleEI.branin_component import BraninComponent
 
@@ -14,45 +14,64 @@ class Analysis(Assembly):
     def __init__(self,*args,**kwargs):
         super(Analysis,self).__init__(self,*args,**kwargs)
         
-        self.add("DOE",DOEdriver())
-        self.DOE.DOEgenerator = OptLatinHypercube(20,2)
+        self.add("DOE_trainer",DOEdriver())
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(20,2)
+        self.DOE_trainer.recorder = DBCaseRecorder('trainer.db')
         
-        driver_dump = open('doe_output.txt','w')
         
-        self.DOE.recorder = DumpCaseRecorder(driver_dump)
+        self.add("DOE_tester",DOEdriver())
+        self.DOE_tester.DOEgenerator = OptLatinHypercube(20,2)
+        self.DOE_tester.recorder = DBCaseRecorder('tester.db')
         
         self.add("bob",MetaModel())
         self.bob.surrogate = KrigingSurrogate()
         self.bob.model = BraninComponent()
-        bob_dump = open('bob_output.txt','w')
-        self.bob.recorder = DumpCaseRecorder(bob_dump)
         
-        self.DOE.workflow.add(self.bob)
-        self.DOE.add_parameter("bob.x")
-        self.DOE.add_parameter("bob.y")
-        self.DOE.add_event_var("bob.train_next")
+        self.bob.recorder = DBCaseRecorder('bob.db')
         
-        self.add("filter",ParetoFilter())
-        self.filter.criteria = "f_xy"
-        #self.filter.case_set = 
+        self.DOE_trainer.workflow.add(self.bob)
+        self.DOE_trainer.add_parameter("bob.x")
+        self.DOE_trainer.add_parameter("bob.y")
+        self.DOE_trainer.add_event_var("bob.train_next")
+        self.DOE_trainer.case_outputs = ["bob.f_xy"]
         
-        self.add("EI_driver",SingleObjectiveExpectedImprovement())
-        self.EI_driver.workflow.add(self.bob)
-        self.EI_driver.add_parameter("bob.x")
-        self.EI_driver.add_parameter("bob.y")
+        self.DOE_tester.workflow.add(self.bob)
+        self.DOE_tester.add_parameter("bob.x")
+        self.DOE_tester.add_parameter("bob.y")
+                
+        #self.add("filter",ParetoFilter())
+        #self.filter.criteria = "f_xy"
+        #self.filter.case_set = dbCaseIterator('bob.db')
+          
+        #self.add("EI_driver",SingleObjectiveExpectedImprovement())
+        #self.EI_driver.workflow.add(self.bob)
+        #self.EI_driver.add_parameter("bob.x")
+        #self.EI_driver.add_parameter("bob.y")
         #self.EI_driver.best_case = 
-        self.EI_driver.objective = "f_xy"
+        #self.EI_driver.objective = "f_xy"
         
-        self.driver.workflow.add(self.DOE)
-        self.driver.workflow.add(self.bob)
-        self.driver.workflow.add(self.filter)
-        self.driver.workflow.add(self.EI_driver)
+        self.driver.workflow.add(self.DOE_trainer)
+        self.driver.workflow.add(self.DOE_tester)
+        
+        #self.driver.workflow.add(self.filter)
+        #self.driver.workflow.add(self.EI_driver)
+        
+        
         
 if __name__ == "__main__":
     from openmdao.main.api import set_as_top
+    from openmdao.util.plot import case_db_to_dict
+    
     analysis = Analysis()
     set_as_top(analysis)
     analysis.run()
     
-    analysis.bob.execute()
+    data = case_db_to_dict('trainer.db',['bob.y','bob.x','bob.f_xy'])
+    
+    for key,value in data.iteritems(): 
+        print key,value
+    
+    
+    
+    
  
