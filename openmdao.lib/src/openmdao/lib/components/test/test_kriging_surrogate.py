@@ -47,7 +47,7 @@ class KrigingSurrogateTests(unittest.TestCase):
        
         self.assertAlmostEqual(8.7709e-09,pred.sigma,places=7)
         self.assertAlmostEqual(0.479425538688,pred.mu,places=7)
-
+    
     def test_2d_kriging(self):
         def bran(x):
             y = (x[1]-(5.1/(4.*pi**2.))*x[0]**2.+5.*x[0]/pi-6.)**2.+10.*(1.-1./(8.*pi))*cos(x[0])+10.
