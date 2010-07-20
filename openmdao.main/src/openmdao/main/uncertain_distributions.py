@@ -1,4 +1,4 @@
-
+import sqlite3
 from random import gauss, weibullvariate, uniform
 from scipy.special import gamma
 
@@ -21,7 +21,7 @@ class UncertainDistribution(object):
     def expected(self): 
         raise NotImplemented('The %s class has no expected() method' % self.__class__.__name__)
 
-        
+
 class NormalDistribution(UncertainDistribution): 
     """An UncertainDistribution which represents a quantity with a 
     normal distribution of uncertainty.
@@ -44,7 +44,18 @@ class NormalDistribution(UncertainDistribution):
     
     def expected(self): 
         return self.mu
-        
+    
+def adapt_norm_dist(nd): 
+    return "%f;%f"%(nd.mu,nd.sigma)
+
+def convert_norm_dist(nd):
+    mu,sigma = map(float, nd.split(';'))
+    return NormalDistribution(mu,sigma)
+
+#register the adapter
+sqlite3.register_adapter(NormalDistribution,adapt_norm_dist)
+#register the converter
+sqlite3.register_converter("NormalDistribution",convert_norm_dist)
     
 class UniformDistribution(UncertainDistribution):
     """An UncertainDistribution which represents a quantity with a 
