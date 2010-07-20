@@ -10,16 +10,16 @@ from openmdao.lib.traits.array import Array
 from enthought.traits.api import implements
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.interfaces import IDriverParameter
+from openmdao.main.interfaces import IHasParameters
 
 
-class DriverParameters(HasTraits): 
-    """This class provides an implementation of the IDriverParameter interface"""
+class HasParameters(HasTraits): 
+    """This class provides an implementation of the IHasParameters interface"""
 
-    implements(IDriverParameter)
+    implements(IHasParameters)
 
     def __init__(self):
-        super(DriverParameters, self).__init__()
+        super(HasParameters, self).__init__()
         self._parameters = ordereddict.OrderedDict()
     
     def add_parameter(self, param_name, low=None, high=None):

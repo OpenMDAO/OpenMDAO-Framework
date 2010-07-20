@@ -154,7 +154,7 @@ class IDOEgenerator(Interface):
     to design variables by a Driver.
     """
     
-    num_design_vars = Int(desc="number of design variables in the DOE")
+    num_parameters = Int(desc="number of parameters in the DOE")
     
     def __iter__():
         """Return an iterator object."""
@@ -207,7 +207,7 @@ class ISurrogate(Interface):
             which corresponds to the training case input history given by X
         """
     
-class IDriverParameter(Interface):
+class IHasParameters(Interface):
     
     def add_parameter(self,param_name,low=None,high=None):
         """adds a parameter to the driver. 

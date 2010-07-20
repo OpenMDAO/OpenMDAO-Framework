@@ -28,8 +28,8 @@ class TestCase(unittest.TestCase):
     def test_OptLatinHypercube(self):
         olh = OptLatinHypercube()
         olh.num_sample_points = 10
-        olh.num_design_vars = 2
-        z = zeros((olh.num_sample_points, olh.num_design_vars))
+        olh.num_parameters = 2
+        z = zeros((olh.num_sample_points, olh.num_parameters))
         for i,row in enumerate(olh):
             z[i,:] = row
         self.assertTrue(is_latin_hypercube(z))
