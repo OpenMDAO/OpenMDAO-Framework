@@ -9,6 +9,7 @@ from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
 from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
 from openmdao.lib.traits.float import Float
+from openmdao.main.api import SequentialWorkflow
 
 from openmdao.main.uncertain_distributions import convert_norm_dist
 
@@ -31,7 +32,7 @@ class Analysis(Assembly):
         
         #Drivers
         self.add("DOE_trainer",DOEdriver())
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(2,2,0,0)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(15,2,0,0)
         
         self.add("DOE_tester",DOEdriver())
         self.DOE_tester.DOEgenerator = FullFactorial(2,2)
@@ -47,10 +48,12 @@ class Analysis(Assembly):
         
         
         #Iteration Heirarchy                
-        self.DOE_trainer.workflow.add(self.branin_meta_model)        
+        self.DOE_trainer.workflow.add(self.branin_meta_model)
+        self.DOE_trainer.workflow.add(self.broadcaster)
         
         self.DOE_tester.workflow.add(self.branin_meta_model)
         self.DOE_tester.workflow.add(self.branin)
+        self.DOE_tester.workflow.add(self.broadcaster)
         
         self.driver.workflow.add(self.DOE_trainer)
         self.driver.workflow.add(self.DOE_tester)
@@ -64,7 +67,7 @@ class Analysis(Assembly):
         
         self.DOE_tester.add_parameter("broadcaster.x_in")
         self.DOE_tester.add_parameter("broadcaster.y_in")
-        self.DOE_tester.case_outputs = ["branin_meta_model.f_xy"]
+        self.DOE_tester.case_outputs = ["branin_meta_model.f_xy",'branin.f_xy']
         self.DOE_tester.recorder = DBCaseRecorder('tester.db')
         
         #Data Connections
@@ -106,7 +109,7 @@ if __name__ == "__main__":
     
     #convert the database data to python objects
     data_train['branin_meta_model.f_xy'] = [convert_norm_dist(x).mu for x in data_train['branin_meta_model.f_xy']]
-    #data_test['branin_meta_model.f_xy'] = [convert_norm_dist(x).mu for x in data_test['branin_meta_model.f_xy']]
+    data_test['branin_meta_model.f_xy'] = [convert_norm_dist(x).mu for x in data_test['branin_meta_model.f_xy']]
 
     
     for key,value in data_test.iteritems(): 
