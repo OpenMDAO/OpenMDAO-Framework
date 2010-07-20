@@ -92,7 +92,6 @@ class SingleObjectiveExpectedImprovement(Driver):
                 self.target = output[2]
                 break
         
-        
         genome = G1DList.G1DList(len(self.set_of_alleles))
         genome.setParams(allele=self.set_of_alleles)
         genome.evaluator.set(self._calc_ei)
