@@ -19,6 +19,7 @@ from openmdao.main.exceptions import RunStopped
 from openmdao.main.resource import ResourceAllocationManager, ClusterAllocator
 from openmdao.lib.api import Float, Bool, Array, ListCaseIterator
 from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
+from openmdao.lib.caserecorders.listcaserecorder import ListCaseRecorder
 from openmdao.main.eggchecker import check_save_load
 from openmdao.util.testutil import find_python
 
@@ -123,7 +124,7 @@ class TestCase(unittest.TestCase):
         stop_case = self.cases[1]  # Stop after 2 cases run.
         stop_case.inputs[3] = ('driven.stop_exec', None, True)
         self.model.driver.iterator = ListCaseIterator(self.cases)
-        results = []
+        results = ListCaseRecorder()
         self.model.driver.recorder = results
         self.model.driver.sequential = True
 
@@ -217,7 +218,7 @@ class TestCase(unittest.TestCase):
         """ Evaluate cases, either sequentially or across  multiple servers. """
         self.model.driver.sequential = sequential
         self.model.driver.iterator = ListCaseIterator(self.cases)
-        results = []
+        results = ListCaseRecorder()
         self.model.driver.recorder = results
 
         self.model.run()
@@ -227,7 +228,7 @@ class TestCase(unittest.TestCase):
 
     def verify_results(self, forced_errors=False):
         """ Verify recorded results match expectations. """
-        for case in self.model.driver.recorder:
+        for case in self.model.driver.recorder.cases:
             i = case.ident  # Correlation key.
             error_expected = forced_errors and i%4 == 3
             if error_expected:
@@ -247,7 +248,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_save_load')
 
         self.model.driver.iterator = ListCaseIterator(self.cases)
-        results = []
+        results = ListCaseRecorder()
         self.model.driver.recorder = results
 
         # Set local dir in case we're running in a different directory.
@@ -271,7 +272,7 @@ class TestCase(unittest.TestCase):
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
-        results = []
+        results = ListCaseRecorder()
         self.model.driver.recorder = results
 
         self.model.run()
@@ -279,7 +280,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         msg = "driver: Exception setting 'driven.z':" \
               " driven: object has no attribute 'z'"
-        for case in results:
+        for case in results.cases:
             self.assertEqual(case.msg, msg)
 
     def test_nooutput(self):
@@ -296,7 +297,7 @@ class TestCase(unittest.TestCase):
             cases.append(Case(inputs, outputs))
 
         self.model.driver.iterator = ListCaseIterator(cases)
-        results = []
+        results = ListCaseRecorder()
         self.model.driver.recorder = results
 
         self.model.run()
@@ -304,7 +305,7 @@ class TestCase(unittest.TestCase):
         self.assertEqual(len(results), len(cases))
         msg = "driver: Exception getting 'driven.sum_z': " \
             "'DrivenComponent' object has no attribute 'sum_z'"
-        for case in results:
+        for case in results.cases:
             self.assertEqual(case.msg, msg)
 
     def test_noiterator(self):
@@ -312,7 +313,7 @@ class TestCase(unittest.TestCase):
         logging.debug('test_noiterator')
 
         # Check resoponse to no iterator set.
-        self.model.driver.recorder = []
+        self.model.driver.recorder = ListCaseRecorder()
         try:
             self.model.run()
         except TraitError as exc:

@@ -396,7 +396,7 @@ class CaseIterDriverBase(Driver):
                 self._rerun.append(case)
             else:
                 case.msg = str(exc)
-                self.recorder.append(case)
+                self.recorder.record(case)
 
     def _service_loop(self, name, resource_desc):
         """ Each server has an associated thread executing this. """
