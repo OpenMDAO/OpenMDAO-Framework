@@ -27,7 +27,7 @@ class MuliObjectiveExpectedImprovement(Driver):
 
     objectives = Str("",iotype="in",desc="names of the output from cases to be used as the objectives")
     best_cases = Instance(ICaseIterator,iotype="in",desc="CaseIterator which contains pareto optimal cases, representing the target objective values")
-    infill = Str("EI",["EI","PI"],iotype="in",desc="infill criterion about which to maximize")
+    infill = Str(["EI","PI"],iotype="in",desc="infill criterion about which to maximize")
     next_case = Instance(ICaseIterator,iotype="out",desc="CaseIterator which contains the case that maximizes specified infill criterion")
     
     implements(IHasParameters)
@@ -124,7 +124,7 @@ class MuliObjectiveExpectedImprovement(Driver):
         return mcei
     
     def _calc_infill(self, X): 
-        """ calculates either probability of improvement or expected improvement of the model at a given point, X """
+        """ calculates either PI or EI of the model at a given point, X """
         #set inputs to model
         self._parameters.set_parameters(X)
         #run the model    
