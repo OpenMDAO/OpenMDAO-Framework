@@ -63,6 +63,24 @@ class ParetoFilterTests(unittest.TestCase):
         self.assertEqual((2,1),y_p)
         self.assertEqual((1, 2, 2, 3, 3, 3),x_dom)
         self.assertEqual((3, 2, 3, 1, 2, 3),y_dom)
+        
+    def test_bad_case_set(self): 
+        pf = ParetoFilter()
+        x = [1,1,2,2,2,3,3,3,]
+        y = [2,3,1,2,3,1,2,3]
+        cases = []
+        for x_0,y_0 in zip(x,y):
+            cases.append(Case(outputs=[("x",None,x_0),("y",None,y_0)]))
+            
+        pf.case_set = ListCaseIterator(cases)
+        pf.criteria = ['z','w']
+        
+        try:
+            pf.execute()
+        except ValueError,err: 
+            self.assertEqual(str(err),": no cases in the provided case_set had output matching the provided criteria, ['z' 'w']")
+        else: 
+            self.fail("expected ValueError")
 
         
 if __name__ == "__main__":
