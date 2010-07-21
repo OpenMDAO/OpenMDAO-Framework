@@ -14,25 +14,16 @@ from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
-
-import time
-
-
-#class _Parameter(object): 
-    
-    #def __init__(self, name):
-        #self.name = name
-        #self.low = None
-        #self.high = None
+from openmdao.main.hasevents import HasEvents
 
 
-@add_delegate(HasParameters)
+@add_delegate(HasParameters, HasEvents)
 class DOEdriver(CaseIterDriverBase): 
     
     def __init__(self, *args, **kwargs):
         super(DOEdriver, self).__init__(*args, **kwargs)
         #self._parameters = []  # need parameter ordering to map to DOE values, so no dict here
-        self._event_vars = []
+        #self._event_vars = []
     
     DOEgenerator = Instance(IDOEgenerator, iotype='in', required=True,
                             desc='Iterator supplying normalized DOE values')
@@ -126,38 +117,38 @@ class DOEdriver(CaseIterDriverBase):
     #def clear_parameters(self): 
         #self._parameters = []
     
-    def add_event_var(self, varname):
-        """Adds an event variable to the driver, which the driver will the set
-        before each iteration. 
+    #def add_event_var(self, varname):
+        #"""Adds an event variable to the driver, which the driver will the set
+        #before each iteration. 
                 
-        varname : string
-            name of the public event variable that should be set before execution
-        """
+        #varname : string
+            #name of the public event variable that should be set before execution
+        #"""
         
-        if varname in self._event_vars: 
-            self.raise_exception("Trying to add event_var '%s' to driver, " % varname,
-                                 "but it is already in there", RuntimeError)
+        #if varname in self._event_vars: 
+            #self.raise_exception("Trying to add event_var '%s' to driver, " % varname,
+                                 #"but it is already in there", RuntimeError)
         
-        try:
-            if not self.parent.get_metadata(varname, 'type') == 'event':
-                self.raise_exception("'%s', is not an Event variable." % varname, RuntimeError)
-        except AttributeError:
-            self.raise_exception("Can't add event '%s' because it doesn't exist" % varname,
-                                 AttributeError)
-        self._event_vars.append(varname)
+        #try:
+            #if not self.parent.get_metadata(varname, 'type') == 'event':
+                #self.raise_exception("'%s', is not an Event variable." % varname, RuntimeError)
+        #except AttributeError:
+            #self.raise_exception("Can't add event '%s' because it doesn't exist" % varname,
+                                 #AttributeError)
+        #self._event_vars.append(varname)
         
-    def remove_event_var(self, varname):
-        try:
-            self._event_vars.remove(varname)
-        except ValueError:
-            self.raise_exception("Trying to remove event variable '%s' "
-                                 "that is not in the driver." % varname, 
-                                 ValueError)    
-    def list_event_vars(self): 
-        return sorted(self._event_vars)
+    #def remove_event_var(self, varname):
+        #try:
+            #self._event_vars.remove(varname)
+        #except ValueError:
+            #self.raise_exception("Trying to remove event variable '%s' "
+                                 #"that is not in the driver." % varname, 
+                                 #ValueError)    
+    #def list_event_vars(self): 
+        #return sorted(self._event_vars)
             
-    def clear_event_vars(self): 
-        self._event_vars = []
+    #def clear_event_vars(self): 
+        #self._event_vars = []
         
     def _get_cases(self):
         params = self.get_parameters()
@@ -176,7 +167,7 @@ class DOEdriver(CaseIterDriverBase):
                     inputs.append((str(parameter.expreval), None, value))
             
             # now add any event variables
-            for varname in self._event_vars:
+            for varname in self.list_events():
                 inputs.append((varname, None, True))
 
             outputs = [(x,None,None) for x in self.case_outputs]

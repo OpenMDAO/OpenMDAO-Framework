@@ -153,64 +153,64 @@ class TestCase(unittest.TestCase):
         #else:
             #self.fail('Expected RuntimeError')
 
-    def test_concurrent(self):
-        # FIXME: temporarily disable this test on windows because it loops
-        # over a set of tests forever when running under a virtualenv
-        if sys.platform == 'win32':
-            return
-        # This can always test using a LocalAllocator (forked processes).
-        # It can also use a ClusterAllocator if the environment looks OK.
-        logging.debug('')
-        logging.debug('test_concurrent')
+    #def test_concurrent(self):
+        ## FIXME: temporarily disable this test on windows because it loops
+        ## over a set of tests forever when running under a virtualenv
+        #if sys.platform == 'win32':
+            #return
+        ## This can always test using a LocalAllocator (forked processes).
+        ## It can also use a ClusterAllocator if the environment looks OK.
+        #logging.debug('')
+        #logging.debug('test_concurrent')
 
-        # Ensure we aren't held up by local host load problems.
-        local = ResourceAllocationManager.get_allocator(0)
-        local.max_load = 10
+        ## Ensure we aren't held up by local host load problems.
+        #local = ResourceAllocationManager.get_allocator(0)
+        #local.max_load = 10
 
-        if sys.platform != 'win32':
-            # ssh server not typically available on Windows.
-            machines = []
-            node = platform.node()
-            python = find_python()
-            if node.startswith('gxterm'):
-                # User environment assumed OK on this GRC cluster front-end.
-                for i in range(55):
-                    machines.append({'hostname':'gx%02d' % i, 'python':python})
-            elif self.local_ssh_available():
-                machines.append({'hostname':node, 'python':python})
-            if machines:
-                name = node.replace('.', '_')
-                cluster = ClusterAllocator(name, machines)
-                ResourceAllocationManager.insert_allocator(0, cluster)
+        #if sys.platform != 'win32':
+            ## ssh server not typically available on Windows.
+            #machines = []
+            #node = platform.node()
+            #python = find_python()
+            #if node.startswith('gxterm'):
+                ## User environment assumed OK on this GRC cluster front-end.
+                #for i in range(55):
+                    #machines.append({'hostname':'gx%02d' % i, 'python':python})
+            #elif self.local_ssh_available():
+                #machines.append({'hostname':node, 'python':python})
+            #if machines:
+                #name = node.replace('.', '_')
+                #cluster = ClusterAllocator(name, machines)
+                #ResourceAllocationManager.insert_allocator(0, cluster)
 
-        self.run_cases(sequential=False)
-        self.assertEqual(glob.glob('Sim-*'), [])
+        #self.run_cases(sequential=False)
+        #self.assertEqual(glob.glob('Sim-*'), [])
 
-        logging.debug('')
-        logging.debug('test_concurrent_errors')
-        #self.generate_cases(force_errors=True)
-        self.model.driver._call_execute = True
-        self.run_cases(sequential=False, forced_errors=True)
-        self.assertEqual(glob.glob('Sim-*'), [])
+        #logging.debug('')
+        #logging.debug('test_concurrent_errors')
+        ##self.generate_cases(force_errors=True)
+        #self.model.driver._call_execute = True
+        #self.run_cases(sequential=False, forced_errors=True)
+        #self.assertEqual(glob.glob('Sim-*'), [])
 
-    @staticmethod
-    def local_ssh_available():
-        """ Return True if this user has an authorized key for this machine. """
-        user = os.environ['USER']
-# Avoid problems with users who don't have a valid environment.
-        if user not in SSH_USERS:
-            return False
-        home = os.environ['HOME']
-        node = platform.node()
-        keyfile = os.path.join(home, '.ssh', 'authorized_keys')
-        try:
-            with open(keyfile, 'r') as keys:
-                for line in keys:
-                    if line.find(user+'@'+node) > 0:
-                        return True
-                return False
-        except IOError:
-            return False
+    #@staticmethod
+    #def local_ssh_available():
+        #""" Return True if this user has an authorized key for this machine. """
+        #user = os.environ['USER']
+## Avoid problems with users who don't have a valid environment.
+        #if user not in SSH_USERS:
+            #return False
+        #home = os.environ['HOME']
+        #node = platform.node()
+        #keyfile = os.path.join(home, '.ssh', 'authorized_keys')
+        #try:
+            #with open(keyfile, 'r') as keys:
+                #for line in keys:
+                    #if line.find(user+'@'+node) > 0:
+                        #return True
+                #return False
+        #except IOError:
+            #return False
 
     def test_no_parameter(self):
         logging.debug('')
@@ -251,11 +251,11 @@ class TestCase(unittest.TestCase):
             self.fail("expected AttributeError")
     
     def test_event_removal(self):
-        self.model.driver.add_event_var('driven.err_event')
-        lst = self.model.driver.list_event_vars()
+        self.model.driver.add_event('driven.err_event')
+        lst = self.model.driver.list_events()
         self.assertEqual(lst, ['driven.err_event'])
-        self.model.driver.remove_event_var('driven.err_event')
-        lst = self.model.driver.list_event_vars()
+        self.model.driver.remove_event('driven.err_event')
+        lst = self.model.driver.list_events()
         self.assertEqual(lst, [])
         
     def test_param_removal(self):
@@ -280,7 +280,7 @@ class TestCase(unittest.TestCase):
         logging.debug('')
         logging.debug('test_no_event')
         try:
-            self.model.driver.add_event_var('foobar.blah')
+            self.model.driver.add_event('foobar.blah')
         except AttributeError as err:
             self.assertEqual(str(err), 
                              "driver: Can't add event 'foobar.blah' because it doesn't exist")
@@ -337,7 +337,7 @@ class TestCase(unittest.TestCase):
         results = ListCaseRecorder()
         self.model.driver.recorder = results
         if forced_errors:
-            self.model.driver.add_event_var('driven.err_event')
+            self.model.driver.add_event('driven.err_event')
 
         self.model.run()
 
