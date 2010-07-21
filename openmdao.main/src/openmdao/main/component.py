@@ -19,7 +19,7 @@ from enthought.traits.api import Bool, List, Str, Instance, implements, TraitErr
 from openmdao.main.container import Container
 from openmdao.main.interfaces import IComponent
 from openmdao.main.filevar import FileMetadata, FileRef
-from openmdao.main.expression import Expression, ExpressionList
+from openmdao.main.expression import Expression, ExpressionList, DumbDefault
 from openmdao.util.eggsaver import SAVE_CPICKLE
 from openmdao.util.eggobserver import EggObserver
 
@@ -418,6 +418,9 @@ class Component (Container):
         selfname = self.name
         for name in exprs:
             exprobj = getattr(self, name)
+            if isinstance(exprobj, DumbDefault):
+                self.raise_exception("The Expression '%s' has not been defined" % name,
+                                     ValueError)
             if isinstance(exprobj, basestring): # a simple Expression
                 cnames = exprobj.get_referenced_compnames()
             else:  # an ExpressionList
