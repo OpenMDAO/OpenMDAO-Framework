@@ -16,7 +16,7 @@ from openmdao.main.expression import Expression
 
 from openmdao.main.driver import Driver
 from openmdao.main.interfaces import IHasParameters
-from openmdao.main.driver_parameters import HasParameters
+from openmdao.main.hasparameters import HasParameters
 from openmdao.main.case import Case
 
 from openmdao.main.interfaces import ICaseIterator
