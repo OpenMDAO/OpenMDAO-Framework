@@ -51,8 +51,7 @@ def add_delegate(*delegates):
             for memname,mem in getmembers(delegate, ismethod):
                 if not memname.startswith('_'):
                     if memname in added_set:
-                        raise NameError("'%s' is already present so we can't add it to class %s from delegate '%s'"%
-                                        (memname, cls.__name__, delegatename))
+                        continue   # skip adding member if it's already part of the class
                     added_set.add(memname)
                     setattr(cls, memname, forwarder(memname, delegatename))
             cls.__init__ = init_wrapper(cls.__init__, listofdels)

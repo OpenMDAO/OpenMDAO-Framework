@@ -21,7 +21,10 @@ from openmdao.main.case import Case
 
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.util.decorators import add_delegate
 
+
+@add_delegate(HasParameters)  # this adds a member called _hasparameters of type HasParameters
 class SingleObjectiveExpectedImprovement(Driver):
     implements(IHasParameters)
      
@@ -35,31 +38,19 @@ class SingleObjectiveExpectedImprovement(Driver):
     
     def __init__(self,*args,**kwargs):
         super(SingleObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)
-        
-        self._parameters = HasParameters()
     
-        
     def add_parameter(self,param_name,low,high):
-        self._parameters.add_parameter(param_name,low,high)
+        self._hasparameters.add_parameter(param_name,low,high)
         
         self.set_of_alleles = GAllele.GAlleles()
-        for param_name,param in self._parameters.iteritems(): 
-            a = GAllele.GAlleleRange(param['low'],param['high'],real=True)
+        for param_name,param in self.get_parameters().items(): 
+            a = GAllele.GAlleleRange(param.low, param.high, real=True)
             self.set_of_allels.add(a)
             
-    def remove_parameter(self,param_name):
-        self._parameters.remove_parameter(param_name)
-        
-    def list_parameters(self): 
-        self._parameters.list_parameters()
-        
-    def clear_parameters(self):
-        self._parameters.clear_parameters()
-    
     def _calc_ei(self, X): 
         """ calculates the expected improvement of the model at a given point, X """
         #set inputs to model
-        self._parameters.set_parameters(X)
+        self.set_parameters(X)
         #run the model    
         self.run_iteration()
         #get prediction, sigma
@@ -105,6 +96,6 @@ class SingleObjectiveExpectedImprovement(Driver):
         ga.evolve()
         new_x = array([x for x in ga.bestIndividual()])
         
-        case = Case(inputs=[(name,None,value) for value,name in zip(new_x,self._parameters.list(parameters))])
+        case = Case(inputs=[(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())])
         self.next_case = ListCaseIterator([case,])
         
