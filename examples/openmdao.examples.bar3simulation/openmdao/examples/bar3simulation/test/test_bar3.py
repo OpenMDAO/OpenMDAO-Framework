@@ -23,7 +23,7 @@ class Bar3OptimizationTestCase(unittest.TestCase):
         
         self.model.run()
         
-        assert_rel_error(self, self.model.bar3_truss.weight, 83.3852245385, 0.001)
+        assert_rel_error(self, self.model.bar3_truss.weight, 236.814, 0.001)
 
 if __name__ == "__main__":
     import nose, sys
