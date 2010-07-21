@@ -42,7 +42,7 @@ class Bar3Truss(Component):
                         desc='Length of bar 2 and horizontal distance between \
                         nodes')
 
-    weight_density = Float(0.100, iotype='in', units='lb/(inch**3)',
+    weight_density = Float(0.284, iotype='in', units='lb/(inch**3)',
                         desc='weight density of all bars')
 
     lumped_mass = Float(0.68005, iotype='in', units='lb*s*s/inch',
@@ -82,7 +82,7 @@ class Bar3Truss(Component):
             #bar3_area = 1.0                 #area of bar 3 (in*in)
             #Youngs_Modulus = 30000.0        #Youngs_Modulus (ksi)
             #bar2_length = 100.0             #Length of bar2 (in)
-            #weight_density = 0.100          #weight_density (lb/cubic in)
+            #weight_density = 0.284          #weight_density (lb/cubic in)
             #lumped_mass = 0.6805            #assumed point mass at lower node 
                                              # (lb sec^2/in)
 

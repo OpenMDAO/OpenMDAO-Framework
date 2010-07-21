@@ -15,28 +15,14 @@ from openmdao.main.uncertain_distributions import convert_norm_dist
 
 from openmdao.examples.singleEI.branin_component import BraninComponent
 
-class Broadcaster(Component): 
-    x_in = Float(iotype="in",low=-5,high=10)
-    x_out = Float(iotype="out")
-    
-    y_in = Float(iotype="in",low=0,high=15)
-    y_out = Float(iotype="out")
-    
-    def execute(self): 
-        self.x_out = self.x_in
-        self.y_out = self.y_in
-
 class Analysis(Assembly): 
     def __init__(self,*args,**kwargs):
         super(Analysis,self).__init__(self,*args,**kwargs)
         
         #Drivers
         self.add("DOE_trainer",DOEdriver())
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(15,2,0,0)
-        
-        self.add("DOE_tester",DOEdriver())
-        self.DOE_tester.DOEgenerator = FullFactorial(2,2)
-        
+        self.DOE_trainer.DOEgenerator = FullFactorial(2,2)
+
         #Components
         self.add("branin_meta_model",MetaModel())
         self.branin_meta_model.surrogate = KrigingSurrogate()
@@ -44,19 +30,10 @@ class Analysis(Assembly):
         self.branin_meta_model.recorder = DBCaseRecorder('branin_meta_model.db')
         
         self.add("branin",BraninComponent())
-        self.add("broadcaster",Broadcaster())
-        
         
         #Iteration Heirarchy                
         self.DOE_trainer.workflow.add(self.branin_meta_model)
-        self.DOE_trainer.workflow.add(self.broadcaster)
-        
-        self.DOE_tester.workflow.add(self.branin_meta_model)
-        self.DOE_tester.workflow.add(self.branin)
-        self.DOE_tester.workflow.add(self.broadcaster)
-        
         self.driver.workflow.add(self.DOE_trainer)
-        self.driver.workflow.add(self.DOE_tester)
         
         #Driver Configuration
         self.DOE_trainer.add_parameter("broadcaster.x_in")
@@ -69,13 +46,6 @@ class Analysis(Assembly):
         self.DOE_tester.add_parameter("broadcaster.y_in")
         self.DOE_tester.case_outputs = ["branin_meta_model.f_xy",'branin.f_xy']
         self.DOE_tester.recorder = DBCaseRecorder('tester.db')
-        
-        #Data Connections
-        self.connect("broadcaster.x_out","branin_meta_model.x")
-        self.connect("broadcaster.x_out","branin.x")
-        
-        self.connect("broadcaster.y_out","branin_meta_model.y")
-        self.connect("broadcaster.y_out","branin.y")
         
         #self.add("filter",ParetoFilter())
         #self.filter.criteria = "f_xy"

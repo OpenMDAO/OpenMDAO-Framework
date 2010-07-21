@@ -236,3 +236,7 @@ class TestCase(unittest.TestCase):
             self.assertEqual(str(err),"driver: Improper parameter type. Must be Float,Int, or an element of an Array.")
         else: 
             self.fail("ValueError expected")
+
+            
+if __name__ == "__main__":
+    unittest.main()

@@ -265,12 +265,27 @@ class CONMINdriver(Driver):
         self.cnmn1.igoto = 0
         self.iter_count = 0
         
-        # perform an initial run for self-consistency
-        self.run_iteration()
-
         # get the initial values of the design variables
+        # check if any min/max constraints are violated by initial values
         for i, val in enumerate(self.design_vars):
             self.design_vals[i] = val.evaluate()
+            
+            if self.design_vals[i] > self.upper_bounds[i]:
+                if (self.design_vals[i] - self.upper_bounds[i]) < self.ctlmin:
+                    self.design_vals[i] = self.upper_bounds[i]
+                else:
+                    self.raise_exception('maximum exceeded for initial value'
+                                         ' of: %s' % val, ValueError)
+
+            if self.design_vals[i] < self.lower_bounds[i]:
+                if (self.lower_bounds[i] - self.design_vals[i] ) < self.ctlmin:
+                    self.design_vals[i] = self.lower_bounds[i]
+                else:
+                    self.raise_exception('minimum exceeded for initial value'
+                                         ' of: %s' % val, ValueError)
+
+        # perform an initial run for self-consistency
+        self.run_iteration()
 
         # update constraint value array
         for i, v in enumerate(self.constraints):
