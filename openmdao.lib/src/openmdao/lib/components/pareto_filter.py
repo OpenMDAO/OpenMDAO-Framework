@@ -11,11 +11,11 @@ class ParetoFilter(Component):
     """takes a set of cases and filters out the subset of cases which are pareto optimal. Assumes that smaller values for 
        model responses are better, so all problems must be posed as minimization problems""" 
     
-    criteria = Array([],iotype="in",dtype=str,desc="list of outputs from the case to consider for filtering")    
+    criteria = Array([],iotype="in",dtype=str,desc="list of outputs from the case to consider for filtering. Note, only case outputs are allowed as crietria")    
     
     case_set = Instance(ICaseIterator,iotype="in",desc="CaseIterator with the cases to be filtered to find the pareto optimal subset")
     
-    pareto_set = Instance(ICaseIterator,iotpye="out",desc="resulting collection of pareto optimal cases")
+    pareto_set = Instance(ICaseIterator,iotype="out",desc="resulting collection of pareto optimal cases")
     dominated_set = Instance(ICaseIterator,iotype="out",desc="resulting collection of dominated cases")
                       
     def _is_dominated(self,y1,y2):
@@ -30,17 +30,23 @@ class ParetoFilter(Component):
         """Finds and removes pareto optimal points in the given case set. Returns 
         list of pareto optimal points. Smaller is better for all criteria.
         """
-        
         y_list = []
         cases = [case for case in self.case_set]
+        criteria_count = len(self.criteria)
         
         for case in cases:
-            y_list.append([o[2] for o in case.outputs if o[0] in self.criteria])
+            #TODO: Implement extraction of output from case, 'case.get_output('x')'
+            outputs = [o[2] for o in case.outputs if o[0] in self.criteria]
+            if len(outputs) == criteria_count:
+                y_list.append(outputs)
+        if not y_list: #empty y_list set means no cases met the criteria!
+            self.raise_exception('no cases in the provided case_set had output matching the provided criteria, %s'%self.criteria,ValueError)
         y_temp = list(y_list)
         
         dominated_set =[]
         pareto_set = list(cases)
         for point1,case in zip(y_list,cases):
+            case.outputs.append(('criteria',None,self.criteria)) #add the criteria as an output to cases
             for point2 in y_temp:
                 if self._is_dominated(point1,point2):
                     dominated_set.append(case)

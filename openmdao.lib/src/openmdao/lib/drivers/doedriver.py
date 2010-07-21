@@ -12,24 +12,26 @@ from openmdao.main.interfaces import IDOEgenerator
 from openmdao.lib.api import Float,Int, Enum
 from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
+from openmdao.util.decorators import add_delegate
+from openmdao.main.hasparameters import HasParameters
 
 import time
 
 
-class _Parameter(object): 
+#class _Parameter(object): 
     
-    def __init__(self, name):
-        self.name = name
-        self.low = None
-        self.high = None
+    #def __init__(self, name):
+        #self.name = name
+        #self.low = None
+        #self.high = None
 
 
-
+@add_delegate(HasParameters)
 class DOEdriver(CaseIterDriverBase): 
     
     def __init__(self, *args, **kwargs):
         super(DOEdriver, self).__init__(*args, **kwargs)
-        self._parameters = []  # need parameter ordering to map to DOE values, so no dict here
+        #self._parameters = []  # need parameter ordering to map to DOE values, so no dict here
         self._event_vars = []
     
     DOEgenerator = Instance(IDOEgenerator, iotype='in', required=True,
@@ -42,6 +44,88 @@ class DOEdriver(CaseIterDriverBase):
         """Returns a new iterator over the Case set"""
         return self._get_cases()
 
+    #def add_parameter(self, varname, low=None, high=None):
+        #"""Adds a parameter to the driver. 
+        
+        #varname : string
+            #name of the public variable the driver should vary during execution.
+            
+        #low : float, optional
+            #minimum allowed value of the parameter
+            
+        #high : float, optional
+            #maximum allowed value of the parameter
+        
+        #If neither 'low' nor 'high' are specified, the min and max will
+        #default to the values in the metadata of the public variable being
+        #referenced. If they are not specified in the metadata and not provided
+        #as arguments a ValueError is raised.
+        #"""
+        #if varname in [x.name for x in self._parameters]: 
+            #self.raise_exception("Trying to add parameter '%s' to driver, "
+                                 #"but it's already there" % varname,
+                                 #AttributeError)
+        
+        #parameter = _Parameter(varname)
+        
+        #try:
+            #metadata = self.parent.get_metadata(varname)
+        #except AttributeError:
+            #self.raise_exception("Can't add parameter '%s' because it doesn't exist." % varname,
+                                 #AttributeError)
+        
+        #meta_low = metadata.get('low') # this will be None if 'low' isn't there
+        #if low is None:
+            #parameter.low = meta_low
+        #else:  # low is not None
+            #if meta_low is not None and low < meta_low:
+                #self.raise_exception("Trying to add parameter '%s', " 
+                                     #"but the lower limit supplied (%s) exceeds the " 
+                                     #"built-in lower limit (%s)." % 
+                                     #(varname, low, meta_low), ValueError)
+            #parameter.low = low
+
+        #meta_high = metadata.get('high') # this will be None if 'high' isn't there
+        #if high is None:
+            #parameter.high = meta_high
+        #else:  # high is not None
+            #if meta_high is not None and high > meta_high:
+                #self.raise_exception("Trying to add parameter '%s', " 
+                                     #"but the upper limit supplied (%s) exceeds the " 
+                                     #"built-in upper limit (%s)." % 
+                                     #(varname, high, meta_high), ValueError)
+            #parameter.high = high
+            
+        #if parameter.low is None: 
+            #self.raise_exception("Trying to add parameter '%s', "
+                                 #"but no lower limit was found and no " 
+                                 #"'low' argument was given. One or the "
+                                 #"other must be specified." % varname,ValueError)
+        #if parameter.high is None: 
+            #self.raise_exception("Trying to add parameter '%s', "
+                                 #"but no upper limit was found and no " 
+                                 #"'high' argument was given. One or the "
+                                 #"other must be specified." % varname,ValueError)
+            
+        ## the parameter has been created, with expr and low/high. 
+        ## Just add it to the storage list
+        #self._parameters.append(parameter)
+            
+    #def remove_parameter(self, varname): 
+        #for param in self._parameters:
+            #if param.name == varname:
+                #self._parameters.remove(param)
+                #break
+        #else:
+            #self.raise_exception("Trying to remove parameter '%s' "
+                                 #"that is not in the driver." % varname,
+                                 #AttributeError)
+    #def list_parameters(self):
+        #return sorted([x.name for x in self._parameters])
+    
+    #def clear_parameters(self): 
+        #self._parameters = []
+    
     def add_event_var(self, varname):
         """Adds an event variable to the driver, which the driver will the set
         before each iteration. 
@@ -62,118 +146,34 @@ class DOEdriver(CaseIterDriverBase):
                                  AttributeError)
         self._event_vars.append(varname)
         
-
-    def add_parameter(self, varname, low=None, high=None):
-        """Adds a parameter to the driver. 
-        
-        varname : string
-            name of the public variable the driver should vary during execution.
-            
-        low : float, optional
-            minimum allowed value of the parameter
-            
-        high : float, optional
-            maximum allowed value of the parameter
-        
-        If neither 'low' nor 'high' are specified, the min and max will
-        default to the values in the metadata of the public variable being
-        referenced. If they are not specified in the metadata and not provided
-        as arguments a ValueError is raised.
-        """
-        if varname in [x.name for x in self._parameters]: 
-            self.raise_exception("Trying to add parameter '%s' to driver, "
-                                 "but it's already there" % varname,
-                                 AttributeError)
-        
-        parameter = _Parameter(varname)
-        
-        try:
-            metadata = self.parent.get_metadata(varname)
-        except AttributeError:
-            self.raise_exception("Can't add parameter '%s' because it doesn't exist." % varname,
-                                 AttributeError)
-        
-        meta_low = metadata.get('low') # this will be None if 'low' isn't there
-        if low is None:
-            parameter.low = meta_low
-        else:  # low is not None
-            if meta_low is not None and low < meta_low:
-                self.raise_exception("Trying to add parameter '%s', " 
-                                     "but the lower limit supplied (%s) exceeds the " 
-                                     "built-in lower limit (%s)." % 
-                                     (varname, low, meta_low), ValueError)
-            parameter.low = low
-
-        meta_high = metadata.get('high') # this will be None if 'high' isn't there
-        if high is None:
-            parameter.high = meta_high
-        else:  # high is not None
-            if meta_high is not None and high > meta_high:
-                self.raise_exception("Trying to add parameter '%s', " 
-                                     "but the upper limit supplied (%s) exceeds the " 
-                                     "built-in upper limit (%s)." % 
-                                     (varname, high, meta_high), ValueError)
-            parameter.high = high
-            
-        if parameter.low is None: 
-            self.raise_exception("Trying to add parameter '%s', "
-                                 "but no lower limit was found and no " 
-                                 "'low' argument was given. One or the "
-                                 "other must be specified." % varname,ValueError)
-        if parameter.high is None: 
-            self.raise_exception("Trying to add parameter '%s', "
-                                 "but no upper limit was found and no " 
-                                 "'high' argument was given. One or the "
-                                 "other must be specified." % varname,ValueError)
-            
-        # the parameter has been created, with expr and low/high. 
-        # Just add it to the storage list
-        self._parameters.append(parameter)
-            
     def remove_event_var(self, varname):
         try:
             self._event_vars.remove(varname)
         except ValueError:
             self.raise_exception("Trying to remove event variable '%s' "
                                  "that is not in the driver." % varname, 
-                                 ValueError)
-        
-    def remove_parameter(self, varname): 
-        for param in self._parameters:
-            if param.name == varname:
-                self._parameters.remove(param)
-                break
-        else:
-            self.raise_exception("Trying to remove parameter '%s' "
-                                 "that is not in the driver." % varname,
-                                 AttributeError)
-    
+                                 ValueError)    
     def list_event_vars(self): 
         return sorted(self._event_vars)
             
-    def list_parameters(self):
-        return sorted([x.name for x in self._parameters])
-    
     def clear_event_vars(self): 
         self._event_vars = []
         
-    def clear_parameters(self): 
-        self._parameters = []
-    
     def _get_cases(self):
-        if self.DOEgenerator.num_parameters != len(self._parameters):
+        params = self.get_parameters()
+        if self.DOEgenerator.num_parameters != len(params):
             self.raise_exception("number of DOE values (%s) != number of parameters (%s)"%
-                                 (self.DOEgenerator.num_parameters,len(self._parameters)),
+                                 (self.DOEgenerator.num_parameters,len(params)),
                                  ValueError)
         for row in self.DOEgenerator:
             inputs = []
-            for val, parameter in zip(row, self._parameters):
+            for val, parameter in zip(row, params.values()):
                 #convert DOE values to variable values
                 value = parameter.low+(parameter.high-parameter.low)*val
-                if '[' in parameter.name:
+                if '[' in parameter.expreval:
                     raise ValueError("array entry design vars not supported yet")
                 else:
-                    inputs.append((parameter.name, None, value))
+                    inputs.append((str(parameter.expreval), None, value))
             
             # now add any event variables
             for varname in self._event_vars:

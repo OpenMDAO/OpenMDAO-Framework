@@ -16,60 +16,54 @@ from openmdao.main.expression import Expression
 
 from openmdao.main.driver import Driver
 from openmdao.main.interfaces import IHasParameters
-from openmdao.main.driver_parameters import HasParameters
+from openmdao.main.hasparameters import HasParameters
 from openmdao.main.case import Case
 
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+from openmdao.util.decorators import add_delegate
 
-class SingleObjectiveExpectedImprovement(Driver):
+
+@add_delegate(HasParameters)  # this adds a member called _hasparameters of type HasParameters
+class SingleCritEI(Driver):
     implements(IHasParameters)
      
     best_case = Instance(ICaseIterator, iotype="in",
-                         desc="CaseIterator which containes a single case, representing the target objective value")
+                         desc="CaseIterator which containes a single case, representing the criterion value")
     next_case = Instance(ICaseIterator, iotype="out",
                          desc="CaseIterator which contains the case which maximize expected improvement")
     
-    criteria = Expression(iotype="in",
+    case_criterion = Expression
+    criterion = Expression(iotype="in",
                            desc="name of the variable to maximize the expected improvement around. Must be a NormalDistrubtion type")
     
     def __init__(self,*args,**kwargs):
-        super(SingleObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)
-        
-        self._parameters = HasParameters()
+        super(SingleCritEI,self).__init__(self,*args,**kwargs)
     
+    def add_parameter(self,param_name,low=None,high=None):
         
-    def add_parameter(self,param_name,low,high):
-        self._parameters.add_parameter(param_name,low=None,high=None)
-        
+        self._hasparameters.add_parameter(param_name,low,high)
+            
         self.set_of_alleles = GAllele.GAlleles()
-        for param_name,param in self._parameters.iteritems(): 
-            a = GAllele.GAlleleRange(param['low'],param['high'],real=True)
+        for param_name,param in self.get_parameters().items(): 
+            a = GAllele.GAlleleRange(param.low, param.high, real=True)
             self.set_of_alleles.add(a)
             
-    def remove_parameter(self,param_name):
-        self._parameters.remove_parameter(param_name)
-        
-    def list_parameters(self): 
-        self._parameters.list_parameters()
-        
-    def clear_parameters(self):
-        self._parameters.clear_parameters()
-    
     def _calc_ei(self, X): 
         """ calculates the expected improvement of the model at a given point, X """
         #set inputs to model
-        self._parameters.set_parameters(X)
+        
+        self.set_parameters(X)
         #run the model    
         self.run_iteration()
         #get prediction, sigma
-        obj = self.objective.evaluate()
+        obj = self.criterion.evaluate()
         
         mu = obj.mu
         sigma = obj.sigma
-                
-        target = self.target        
         
+           
+        target = self.target
         try:
             T1 = (target-mu)*(0.5+0.5*erf((1./(2.**0.5))*((target-mu)/sigma)))
             T2 = sigma*((1./((2.*pi)**.05))*exp(-0.5*((target-mu)/sigma)**2.))
@@ -80,13 +74,22 @@ class SingleObjectiveExpectedImprovement(Driver):
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""
         
+        
         #TODO: This is not a good way to do this
-        #grab the target objective value out of the input best_case
+        #grab the target criterion value out of the input best_case
         for case in self.best_case: 
             best_case = case
             break
+        crit_var_name = None
         for output in best_case.outputs: 
-            if output[0] == self.objective:
+            if output[0] == 'criteria': 
+                #TODO: check that criteria is only one thing, error if not
+                crit_var_name = output[2]
+        if crit_var_name is None: 
+            self.raise_exception("best_case was not provided with a 'criteria' output, which must be present",ValueError)
+            
+        for output in best_case.outputs:
+            if output[0] == crit_var_name:
                 self.target = output[2]
                 break
         
@@ -105,6 +108,6 @@ class SingleObjectiveExpectedImprovement(Driver):
         ga.evolve()
         new_x = array([x for x in ga.bestIndividual()])
         
-        case = Case(inputs=[(name,None,value) for value,name in zip(new_x,self._parameters.list(parameters))])
+        case = Case(inputs=[(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())])
         self.next_case = ListCaseIterator([case,])
         
