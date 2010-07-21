@@ -56,8 +56,8 @@ class Analysis(Assembly):
         self.EI_driver.workflow.add(self.branin_meta_model)
         self.EI_driver.add_parameter("branin_meta_model.x")
         self.EI_driver.add_parameter("branin_meta_model.y")
-        self.EI_driver.best_case = self.filter.pareto_set
-        self.EI_driver.objective = "f_xy"
+        
+        self.EI_driver.criteria = "f_xy"
         
         #Iteration Heirarchy                
         self.DOE_trainer.workflow.add(self.branin_meta_model)
@@ -65,6 +65,9 @@ class Analysis(Assembly):
         self.driver.workflow.add(self.DOE_trainer)
         self.driver.workflow.add(self.filter)
         self.driver.workflow.add(self.EI_driver)
+        
+        #Data Connections
+        self.connect("filter.pareto_set","EI_driver.best_case")
         
 if __name__ == "__main__":
     from openmdao.main.api import set_as_top

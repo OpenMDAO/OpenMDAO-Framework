@@ -10,7 +10,6 @@ from openmdao.lib.traits.array import Array
 from enthought.traits.api import implements
 
 from openmdao.main.expreval import ExprEvaluator
-from openmdao.main.interfaces import IHasParameters
 
 class _Parameter(object): 
     
@@ -89,9 +88,7 @@ class HasParameters(object):
                                          "but no upper limit was found and no " 
                                          "'high' argument was given. One or the "
                                          "other must be specified." % varname,ValueError)
-            
-        # the parameter has been created, with expr and low/high. 
-        # Just add it to the storage list
+        
         self._parameters[varname] = parameter
             
     def remove_parameter(self, varname): 
