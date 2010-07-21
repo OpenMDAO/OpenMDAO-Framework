@@ -16,9 +16,6 @@ class HasEvents(object):
             self._parent.raise_exception("Trying to add event '%s' to driver, "
                                          "but it's already there" % name,
                                          AttributeError)
-        if not self._parent.parent.contains(name):
-            self._parent.raise_exception("Can't add event '%s' because it doesn't exist" % name,
-                                         AttributeError)
         self._events.add(name)
             
     def remove_event(self, name):

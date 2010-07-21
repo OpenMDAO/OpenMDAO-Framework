@@ -4,7 +4,7 @@ from openmdao.lib.components.metamodel import MetaModel
 from openmdao.lib.components.kriging_surrogate import KrigingSurrogate
 from openmdao.lib.components.pareto_filter import ParetoFilter
 from openmdao.lib.drivers.doedriver import DOEdriver
-from openmdao.lib.drivers.single_obj_ei import SingleObjectiveExpectedImprovement
+from openmdao.lib.drivers.single_crit_ei import SingleCritEI
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
 from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
@@ -33,7 +33,7 @@ class Analysis(Assembly):
         
         #Drivers
         self.add("DOE_trainer",DOEdriver())
-        self.DOE_trainer.DOEgenerator = FullFactorial(2,2)
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(12,2)
 
         #Components
         self.add("branin_meta_model",MetaModel())
@@ -52,12 +52,12 @@ class Analysis(Assembly):
         self.DOE_trainer.case_outputs = ["branin_meta_model.f_xy"]
         self.DOE_trainer.recorder = DBCaseRecorder('trainer.db')
         
-        self.add("EI_driver",SingleObjectiveExpectedImprovement())
+        self.add("EI_driver",SingleCritEI())
         self.EI_driver.workflow.add(self.branin_meta_model)
         self.EI_driver.add_parameter("branin_meta_model.x")
         self.EI_driver.add_parameter("branin_meta_model.y")
         
-        self.EI_driver.criteria = "f_xy"
+        self.EI_driver.criterion = "branin_meta_model.f_xy"
         
         #Iteration Heirarchy                
         self.DOE_trainer.workflow.add(self.branin_meta_model)
@@ -86,6 +86,6 @@ if __name__ == "__main__":
     data_train['branin_meta_model.f_xy'] = [convert_norm_dist(x).mu for x in data_train['branin_meta_model.f_xy']]
     
     
-        
+    print [x.inputs for x in analysis.EI_driver.next_case]
     
    

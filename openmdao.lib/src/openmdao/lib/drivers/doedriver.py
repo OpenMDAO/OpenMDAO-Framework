@@ -167,7 +167,7 @@ class DOEdriver(CaseIterDriverBase):
                     inputs.append((str(parameter.expreval), None, value))
             
             # now add any event variables
-            for varname in self.list_events():
+            for varname in self.get_events():
                 inputs.append((varname, None, True))
 
             outputs = [(x,None,None) for x in self.case_outputs]

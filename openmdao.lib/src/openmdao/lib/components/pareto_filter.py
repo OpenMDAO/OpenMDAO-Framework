@@ -15,7 +15,7 @@ class ParetoFilter(Component):
     
     case_set = Instance(ICaseIterator,iotype="in",desc="CaseIterator with the cases to be filtered to find the pareto optimal subset")
     
-    pareto_set = Instance(ICaseIterator,iotpye="out",desc="resulting collection of pareto optimal cases")
+    pareto_set = Instance(ICaseIterator,iotype="out",desc="resulting collection of pareto optimal cases")
     dominated_set = Instance(ICaseIterator,iotype="out",desc="resulting collection of dominated cases")
                       
     def _is_dominated(self,y1,y2):
@@ -46,6 +46,7 @@ class ParetoFilter(Component):
         dominated_set =[]
         pareto_set = list(cases)
         for point1,case in zip(y_list,cases):
+            case.outputs.append(('criteria',None,self.criteria)) #add the criteria as an output to cases
             for point2 in y_temp:
                 if self._is_dominated(point1,point2):
                     dominated_set.append(case)

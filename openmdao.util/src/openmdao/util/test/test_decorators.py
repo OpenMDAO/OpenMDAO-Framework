@@ -58,7 +58,7 @@ class decoratorTestCase(unittest.TestCase):
         self.assertEqual(mems, set(['amethod','del_amethod','genmethod']))
         f = Foo()
         self.assertEqual(f.del_amethod(1,2,0), 6)
-        self.assertTrue(hasattr(f,'gooddelegate'))
+        self.assertTrue(hasattr(f,'_gooddelegate'))
 
     def test_add_delegate_bad1(self):
         try:

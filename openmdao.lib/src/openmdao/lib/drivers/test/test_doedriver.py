@@ -252,10 +252,10 @@ class TestCase(unittest.TestCase):
     
     def test_event_removal(self):
         self.model.driver.add_event('driven.err_event')
-        lst = self.model.driver.list_events()
+        lst = self.model.driver.get_events()
         self.assertEqual(lst, ['driven.err_event'])
         self.model.driver.remove_event('driven.err_event')
-        lst = self.model.driver.list_events()
+        lst = self.model.driver.get_events()
         self.assertEqual(lst, [])
         
     def test_param_removal(self):
