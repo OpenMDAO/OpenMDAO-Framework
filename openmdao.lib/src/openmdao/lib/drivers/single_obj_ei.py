@@ -40,8 +40,9 @@ class SingleObjectiveExpectedImprovement(Driver):
         super(SingleObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)
     
     def add_parameter(self,param_name,low=None,high=None):
-        self._hasparameters.add_parameter(param_name,low,high)
         
+        self._hasparameters.add_parameter(param_name,low,high)
+            
         self.set_of_alleles = GAllele.GAlleles()
         for param_name,param in self.get_parameters().items(): 
             a = GAllele.GAlleleRange(param.low, param.high, real=True)
