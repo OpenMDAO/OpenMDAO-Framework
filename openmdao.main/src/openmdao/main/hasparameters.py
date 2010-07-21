@@ -186,7 +186,8 @@ class HasParameters(object):
         if len(X) != len(self._parameters):
             raise ValueError("number of input values (%s) != number of parameters (%s)" % 
                              (len(X),len(self._parameters)))
-        for x, param_name, param in zip(X, self._parameters.iteritems()): 
+
+        for x, (param_name, param) in zip(X, self._parameters.iteritems()): 
             param.expreval.set(x)
             
     def iter_parameters(self):

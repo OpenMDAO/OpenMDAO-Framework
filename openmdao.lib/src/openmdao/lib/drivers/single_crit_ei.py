@@ -25,19 +25,20 @@ from openmdao.util.decorators import add_delegate
 
 
 @add_delegate(HasParameters)  # this adds a member called _hasparameters of type HasParameters
-class SingleObjectiveExpectedImprovement(Driver):
+class SingleCritEI(Driver):
     implements(IHasParameters)
      
     best_case = Instance(ICaseIterator, iotype="in",
-                         desc="CaseIterator which containes a single case, representing the target objective value")
+                         desc="CaseIterator which containes a single case, representing the criterion value")
     next_case = Instance(ICaseIterator, iotype="out",
                          desc="CaseIterator which contains the case which maximize expected improvement")
     
-    criteria = Expression(iotype="in",
+    case_criterion = Expression
+    criterion = Expression(iotype="in",
                            desc="name of the variable to maximize the expected improvement around. Must be a NormalDistrubtion type")
     
     def __init__(self,*args,**kwargs):
-        super(SingleObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)
+        super(SingleCritEI,self).__init__(self,*args,**kwargs)
     
     def add_parameter(self,param_name,low=None,high=None):
         
@@ -51,17 +52,18 @@ class SingleObjectiveExpectedImprovement(Driver):
     def _calc_ei(self, X): 
         """ calculates the expected improvement of the model at a given point, X """
         #set inputs to model
+        
         self.set_parameters(X)
         #run the model    
         self.run_iteration()
         #get prediction, sigma
-        obj = self.objective.evaluate()
+        obj = self.criterion.evaluate()
         
         mu = obj.mu
         sigma = obj.sigma
-                
-        target = self.target        
         
+           
+        target = self.target
         try:
             T1 = (target-mu)*(0.5+0.5*erf((1./(2.**0.5))*((target-mu)/sigma)))
             T2 = sigma*((1./((2.*pi)**.05))*exp(-0.5*((target-mu)/sigma)**2.))
@@ -72,13 +74,22 @@ class SingleObjectiveExpectedImprovement(Driver):
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""
         
+        
         #TODO: This is not a good way to do this
-        #grab the target objective value out of the input best_case
+        #grab the target criterion value out of the input best_case
         for case in self.best_case: 
             best_case = case
             break
+        crit_var_name = None
         for output in best_case.outputs: 
-            if output[0] == self.objective:
+            if output[0] == 'criteria': 
+                #TODO: check that criteria is only one thing, error if not
+                crit_var_name = output[2]
+        if crit_var_name is None: 
+            self.raise_exception("best_case was not provided with a 'criteria' output, which must be present",ValueError)
+            
+        for output in best_case.outputs:
+            if output[0] == crit_var_name:
                 self.target = output[2]
                 break
         
