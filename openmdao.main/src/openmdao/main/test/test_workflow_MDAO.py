@@ -402,7 +402,7 @@ class TestCase(unittest.TestCase):
         prob.run()
         assert_rel_error(self, prob.coupler.z1_in, 1.977, 0.01)
         assert_rel_error(self, 1.0-prob.coupler.z2_in, 1.0, 0.01)
-        assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.01)
+        assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
 
     def test_IDF(self):
         """ Run IDF"""
@@ -418,7 +418,7 @@ class TestCase(unittest.TestCase):
         prob.run()
         assert_rel_error(self, prob.coupler.z1_in, 1.977, 0.01)
         assert_rel_error(self, 1.0-prob.coupler.z2_in, 1.0, 0.01)
-        assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.01)
+        assert_rel_error(self, 1.0-prob.dis1.x1, 1.0, 0.1)
         
     def test_CO(self):
         """ Run CO"""
@@ -448,7 +448,7 @@ class TestCase(unittest.TestCase):
 
         assert_rel_error(self, prob.coupler.z1_in, 2.0, 0.1)
         assert_rel_error(self, 1.0-prob.coupler.z2_in, 1.0, 0.01)
-        assert_rel_error(self, 1.0-prob.coupler.x1_in, 1.0, 0.01)
+        assert_rel_error(self, 1.0-prob.coupler.x1_in, 1.0, 0.1)
 
         
 if __name__ == '__main__':
