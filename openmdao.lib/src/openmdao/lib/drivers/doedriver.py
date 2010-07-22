@@ -34,7 +34,7 @@ class DOEdriver(CaseIterDriverBase):
         return self._get_cases()
         
     def _get_cases(self):
-        params = self.get_parameters()
+        params = self.get_parameters().values()
         if self.DOEgenerator.num_parameters != len(params):
             self.raise_exception("number of DOE values (%s) != number of parameters (%s)"%
                                  (self.DOEgenerator.num_parameters,len(params)),

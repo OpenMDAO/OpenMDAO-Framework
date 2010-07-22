@@ -112,8 +112,8 @@ class HasParameters(object):
         self._parameters = ordereddict.OrderedDict()
         
     def get_parameters(self):
-        """Returns a list of parameter objects."""
-        return self._parameters.values()
+        """Returns an ordered dict of parameter objects."""
+        return self._parameters
 
     def set_parameters(self, X): 
         """Pushes the values in the X input array into the corresponding public 

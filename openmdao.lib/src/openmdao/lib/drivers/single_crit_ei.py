@@ -41,11 +41,10 @@ class SingleCritEI(Driver):
         super(SingleCritEI,self).__init__(self,*args,**kwargs)
     
     def add_parameter(self,param_name,low=None,high=None):
-        
         self._hasparameters.add_parameter(param_name,low,high)
             
         self.set_of_alleles = GAllele.GAlleles()
-        for param_name,param in self.get_parameters().items(): 
+        for param in self.get_parameters().values(): 
             a = GAllele.GAlleleRange(param.low, param.high, real=True)
             self.set_of_alleles.add(a)
             

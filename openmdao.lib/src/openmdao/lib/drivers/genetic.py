@@ -66,7 +66,7 @@ class Genetic(Driver):
         """ Returns a GAllelle.Galleles instance with alleles corresponding to 
         the parameters specified by the user"""
         alleles = GAllele.GAlleles()
-        for param in self.get_parameters():
+        for param in self.get_parameters().values():
             expreval = param.expreval
             val = expreval.evaluate() #now grab the value 
             ref = str(expreval)
