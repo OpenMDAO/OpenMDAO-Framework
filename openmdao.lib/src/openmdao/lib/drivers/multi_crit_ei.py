@@ -23,7 +23,7 @@ from openmdao.main.case import Case
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
-class MuliObjectiveExpectedImprovement(Driver):
+class MuliCritEI(Driver):
 
     objectives = Str("",iotype="in",desc="names of the output from cases to be used as the objectives")
     best_cases = Instance(ICaseIterator,iotype="in",desc="CaseIterator which contains pareto optimal cases, representing the target objective values")

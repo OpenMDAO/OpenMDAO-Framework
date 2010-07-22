@@ -9,7 +9,6 @@ from pyevolve import Initializators,Mutators,Crossovers,Selectors
 
 from enthought.traits.api import implements,Instance,Str
 
-
 from openmdao.lib.traits.float import Float
 
 from openmdao.main.expression import Expression
@@ -24,7 +23,7 @@ from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 from openmdao.util.decorators import add_delegate
 
 
-@add_delegate(HasParameters)  # this adds a member called _hasparameters of type HasParameters
+@add_delegate(HasParameters)  #this adds a member called _hasparameters of type HasParameters
 class SingleCritEI(Driver):
     implements(IHasParameters)
      
@@ -61,8 +60,6 @@ class SingleCritEI(Driver):
         
         mu = obj.mu
         sigma = obj.sigma
-        
-           
         target = self.target
         try:
             T1 = (target-mu)*(0.5+0.5*erf((1./(2.**0.5))*((target-mu)/sigma)))
@@ -73,7 +70,6 @@ class SingleCritEI(Driver):
         
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""
-        
         
         #TODO: This is not a good way to do this
         #grab the target criterion value out of the input best_case
