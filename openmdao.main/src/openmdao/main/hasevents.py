@@ -16,6 +16,14 @@ class HasEvents(object):
             self._parent.raise_exception("Trying to add event '%s' to driver, "
                                          "but it's already there" % name,
                                          AttributeError)
+        # this is the easiest way to check for existence of an Event.
+        # if the named event trait doesn't exist, the call to get_metadata will
+        # raise an exception
+        try:
+            self._parent.parent.get_metadata(name, 'foo')
+        except AttributeError:
+            self._parent.raise_exception("Can't add event '%s' because it doesn't exist" %
+                                         (name), AttributeError)
         self._events.add(name)
             
     def remove_event(self, name):
