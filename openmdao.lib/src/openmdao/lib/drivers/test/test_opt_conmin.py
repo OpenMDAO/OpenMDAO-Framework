@@ -223,34 +223,6 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.fail('ValueError expected')
 
     
-    def test_gradient_step_size_small(self):
-        # Test that a smaller value of fd step-size is more acurate
-        
-        self.top.driver.objective = 'comp.result'
-        self.top.driver.design_vars = ['comp.x[0]', 'comp.x[1]',
-                                             'comp.x[2]', 'comp.x[3]']
-        self.top.driver.lower_bounds = [-10, -10, -10, -10]
-        self.top.driver.upper_bounds = [99, 99, 99, 99]
-        
-        # pylint: disable-msg=C0301
-        self.top.driver.constraints = [
-            'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
-            'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
-
-        self.top.run()
-        baseerror = abs(self.top.comp.opt_objective - self.top.driver.objective.evaluate())
-        
-        self.top.driver.fdch = .00001
-        self.top.driver.fdchm = .00001
-        self.top.comp.x = numpy.array([1., 1., 1., 1.], dtype=float)
-        self.top.run()
-        newerror = abs(self.top.comp.opt_objective - self.top.driver.objective.evaluate())
-
-        # pylint: disable-msg=E1101
-        if baseerror < newerror:
-            self.fail("Refining CONMIN gradient step size did not improve objective.")
-        
     def test_gradient_step_size_large(self):
         # Test that a larger value of fd step-size is less acurate
         
