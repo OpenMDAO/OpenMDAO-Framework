@@ -29,25 +29,31 @@ class SingleCritEI(Driver):
     implements(IHasParameters)
      
     best_case = Instance(ICaseIterator, iotype="in",
-                         desc="CaseIterator which containes a single case, representing the criterion value")
+                         desc="CaseIterator which containes a single case, representing the criteria value")
     next_case = Instance(ICaseIterator, iotype="out",
                          desc="CaseIterator which contains the case which maximize expected improvement")
     
-    case_criterion = Expression
-    criterion = Expression(iotype="in",
+    case_criteria = Expression
+    criteria = Expression("",iotype="in",
                            desc="name of the variable to maximize the expected improvement around. Must be a NormalDistrubtion type")
     
     def __init__(self,*args,**kwargs):
         super(SingleCritEI,self).__init__(self,*args,**kwargs)
-    
-    def add_parameter(self,param_name,low=None,high=None):
+        self.set_of_alleles = []        
         
-        self._hasparameters.add_parameter(param_name,low,high)
-            
+    def _make_alleles(self):
         self.set_of_alleles = GAllele.GAlleles()
         for param_name,param in self.get_parameters().items(): 
             a = GAllele.GAlleleRange(param.low, param.high, real=True)
             self.set_of_alleles.add(a)
+    
+    def add_parameter(self,param_name,low=None,high=None):
+        self._hasparameters.add_parameter(param_name,low,high)
+        self._make_alleles()    
+            
+    def remove_parameter(self,param_name):
+        self._hasparameters.remove_parameter(param_name)
+        self._make_alleles()
             
     def _calc_ei(self, X): 
         """ calculates the expected improvement of the model at a given point, X """
@@ -57,12 +63,11 @@ class SingleCritEI(Driver):
         #run the model    
         self.run_iteration()
         #get prediction, sigma
-        obj = self.criterion.evaluate()
+        obj = self.criteria.evaluate()
         
         mu = obj.mu
         sigma = obj.sigma
         
-           
         target = self.target
         try:
             T1 = (target-mu)*(0.5+0.5*erf((1./(2.**0.5))*((target-mu)/sigma)))
@@ -73,10 +78,12 @@ class SingleCritEI(Driver):
         
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""
-        
-        
+        if self.criteria == "": 
+            self.raise_exception("no criteria was specified",RuntimeError)
+        elif not self.set_of_alleles:
+            self.raise_exception("no parameters were added to the driver",RuntimeError)
         #TODO: This is not a good way to do this
-        #grab the target criterion value out of the input best_case
+        #grab the target criteria value out of the input best_case
         for case in self.best_case: 
             best_case = case
             break
