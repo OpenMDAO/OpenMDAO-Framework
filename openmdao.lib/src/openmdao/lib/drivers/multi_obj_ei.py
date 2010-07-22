@@ -23,6 +23,10 @@ from openmdao.main.case import Case
 from openmdao.main.interfaces import ICaseIterator
 from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
+from openmdao.util.decorators import add_delegate
+
+
+@add_delegate(HasParameters)  # this adds a member called _hasparameters of type HasParameters
 class MuliObjectiveExpectedImprovement(Driver):
 
     objectives = Str("",iotype="in",desc="names of the output from cases to be used as the objectives")
@@ -37,24 +41,14 @@ class MuliObjectiveExpectedImprovement(Driver):
     def __init__(self,*args,**kwargs):
         super(MultiObjectiveExpectedImprovement,self).__init__(self,*args,**kwargs)
         
-        self._parameters = HasParameters()
-    
-        
     def add_parameter(self,param_name,low,high):
-        self._parameters.add_parameter(param_name,low,high)
+        self._hasparameters.add_parameter(param_name,low,high)
         
         self.set_of_alleles = GAllele.GAlleles()
-        for param_name,param in self._parameters.iteritems(): 
+        for param in self.get_parameters().values(): 
             a = GAllele.GAlleleRange(param['low'],param['high'],real=True)
             self.set_of_allels.add(a)
             
-    def remove_parameter(self,param_name):
-        self._parameters.remove_parameter(param_name)
-    def list_parameters(self): 
-        self._parameters.list_parameters()
-    def clear_parameters(self):
-        self._parameters.clear_parameters()
-    
     def _mcpi(self,mu,sigma):
         """Calculates the multi-criteria probability of improvement
         for a new point with two responses. Takes as input a 
@@ -126,7 +120,7 @@ class MuliObjectiveExpectedImprovement(Driver):
     def _calc_infill(self, X): 
         """ calculates either PI or EI of the model at a given point, X """
         #set inputs to model
-        self._parameters.set_parameters(X)
+        self.set_parameters(X)
         #run the model    
         self.run_iteration()
         #get prediction, sigma from each output of the metamodel
@@ -135,7 +129,7 @@ class MuliObjectiveExpectedImprovement(Driver):
         mu = obj.mu
         sigma = obj.sigma
                 
-        target = self.target        
+        target = self.target
         
         self.PI = self._mcpi(mu,sigma)
         if self.infill == "EI":
@@ -176,5 +170,5 @@ class MuliObjectiveExpectedImprovement(Driver):
         ga.evolve()
         new_x = array([x for x in ga.bestIndividual()])
         
-        case = Case(inputs=[(name,None,value) for value,name in zip(new_x,self._parameters.list(parameters))])
+        case = Case(inputs=[(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())])
         self.next_case = ListCaseIterator([case,])

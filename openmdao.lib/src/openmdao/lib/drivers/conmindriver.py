@@ -7,8 +7,6 @@
 #public symbols
 __all__ = ['CONMINdriver']
 
-
-
 from sys import float_info
 
 # pylint: disable-msg=E0611,F0401
@@ -533,7 +531,6 @@ class CONMINdriver(Driver):
         self.cnmn1.linobj = self.linobj
         self.cnmn1.itrm = self.itrm
         
-
     @on_trait_change('objective') 
     def _expr_changed(self, obj, name, old, new):
         """ Check objective on change"""
