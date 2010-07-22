@@ -4,11 +4,8 @@ from numpy import float32, float64, int32, int64
 
 from openmdao.main.expreval import ExprEvaluator
 
-class _Parameter(object): 
-    
-    def __init__(self, low=None, high=None, expr=None):
-        self.low = low
-        self.high = high
+class _Constraint(object): 
+    def __init__(self, expr=None):
         self.expreval = expr
 
 class HasParameters(object): 

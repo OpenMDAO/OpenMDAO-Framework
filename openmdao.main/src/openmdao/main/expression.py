@@ -43,6 +43,9 @@ class Expression(BaseStr):
         
         if default_value is NoDefaultSpecified:
             default_value = DumbDefault()
+        else:
+            defval = default_value
+            default_value = ExprEvaluator(default_value) # try block around this seems to do nothing ???
             
         # Put iotype in the metadata dictionary
         if iotype is not None:
@@ -68,7 +71,7 @@ class Expression(BaseStr):
             else:
                 s = ExprEvaluator(s, obj)
             s._parse()
-        except RuntimeError:
+        except Exception:
             raise TraitError("invalid %sput ref variable value '%s'" % \
                              (self.iotype, str(value)))
         

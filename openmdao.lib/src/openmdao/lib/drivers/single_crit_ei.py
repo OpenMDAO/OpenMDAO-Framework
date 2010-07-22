@@ -43,7 +43,7 @@ class SingleCritEI(Driver):
         
     def _make_alleles(self):
         self.set_of_alleles = GAllele.GAlleles()
-        for param_name,param in self.get_parameters().items(): 
+        for param in self.get_parameters().values(): 
             a = GAllele.GAlleleRange(param.low, param.high, real=True)
             self.set_of_alleles.add(a)
     
