@@ -44,6 +44,11 @@ class HasParameters(object):
         parameter.expreval = ExprEvaluator(name, self._parent.parent, single_name=True)
         
         try:
+            metadata = self._parent.parent.get_metadata(name.split('[')[0])
+        except AttributeError:
+            self._parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % name,
+                                         AttributeError)
+        try:
             val = parameter.expreval.evaluate()
         except:
             self._parent.raise_exception("Can't add parameter because I can't evaluate '%s'" % name,
@@ -51,11 +56,6 @@ class HasParameters(object):
         if not isinstance(val,(float,float32,float64,int,int32,int64)):
             self._parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
                                          (name,type(val).__name__), ValueError)
-        try:
-            metadata = self._parent.parent.get_metadata(name.split('[')[0])
-        except AttributeError:
-            self._parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % name,
-                                         AttributeError)
         
         meta_low = metadata.get('low') # this will be None if 'low' isn't there
         if low is None:
