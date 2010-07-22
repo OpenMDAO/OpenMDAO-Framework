@@ -1,11 +1,9 @@
 from itertools import product
 
 from numpy import linspace
-
 from enthought.traits.api import implements, HasTraits
 
 from openmdao.main.interfaces import IDOEgenerator
-
 from openmdao.lib.traits.int import Int
 
 
@@ -21,7 +19,6 @@ class FullFactorial(HasTraits):
             self.num_parameters = num_parameters
         if num_levels is not None: 
             self.num_levels = num_levels
-        
     
     def __iter__(self):
         """Return an iterator over our sets of input values"""

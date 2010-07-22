@@ -13,8 +13,12 @@ from pyevolve import GSimpleGA, Selectors, Initializators, Mutators, Consts
 from openmdao.main.api import Driver, ExprEvaluator, set_as_top, Component, Assembly,Expression
 from openmdao.lib.api import Float, Int, Enum, Array,Bool, Instance
 
+from openmdao.main.hasparameters import HasParameters
+from openmdao.util.decorators import add_delegate
+
 array_test = re.compile("(\[[0-9]+\])+$")
 
+@add_delegate(HasParameters)
 class Genetic(Driver):
     """Genetic algorithm for the OpenMDAO frameowork, based on the Pyevolve Genetic algorithm module. 
     """
@@ -58,22 +62,24 @@ class Genetic(Driver):
     def __init__(self,doc=None):
         super(Genetic,self).__init__(doc)
         
-        self._parameters = []
-        self._parameter_ranges = dict()
+        #self._parameters = []
+        #self._parameter_ranges = dict()
     
     def _make_alleles(self): 
         """ Returns a GAllelle.Galleles instance with alleles corresponding to 
         the parameters specified by the user"""
         alleles = GAllele.GAlleles()
-        for str_ref in self._parameters:
-            val = str_ref.evaluate() #now grab the value 
-            ref = str(str_ref)
+        for param in self.get_parameters():
+            expreval = param.expreval
+            val = expreval.evaluate() #now grab the value 
+            ref = str(expreval)
             
             #split up the ref string to be able to get the trait. 
             path = ".".join(ref.split(".")[0:-1]) #get the path to the object
             target = ref.split(".")[-1] #get the last part of the string after the last "."
             
-            low,high = self._parameter_ranges[ref]
+            low = param.low
+            high = param.high
             
             #bunch of logic to check for array elements being passed as refs
             
@@ -95,99 +101,99 @@ class Genetic(Driver):
         
         return alleles
     
-    def remove_parameter(self,param_name):
-        """removes the specified parameter
+    #def remove_parameter(self,param_name):
+        #"""removes the specified parameter
         
-        param_name : str
-            name of the parameter to remove from the driver
-        """
+        #param_name : str
+            #name of the parameter to remove from the driver
+        #"""
         
-        try:
-            i = [str(x) for x in self._parameters].index(param_name)
-        except ValueError:
-            self.raise_exception("Trying to remove parameter '%s', but it is not in the genetic driver"%param_name,RuntimeError)
-        self._parameters.pop(i)
-        self._parameter_ranges.pop(param_name)
-        return True
+        #try:
+            #i = [str(x) for x in self._parameters].index(param_name)
+        #except ValueError:
+            #self.raise_exception("Trying to remove parameter '%s', but it is not in the genetic driver"%param_name,RuntimeError)
+        #self._parameters.pop(i)
+        #self._parameter_ranges.pop(param_name)
+        #return True
     
-    def list_parameters(self):
-        """Returns a list of the names of the parameters currently in the genetic instance"""
-        return [str(x) for x in self._parameters]
+    #def list_parameters(self):
+        #"""Returns a list of the names of the parameters currently in the genetic instance"""
+        #return [str(x) for x in self._parameters]
     
-    def clear_parameters(self):
-        """Removes all parameters from the genetic instance"""
-        self._parameters = []
-        self._parameter_ranges = {}
+    #def clear_parameters(self):
+        #"""Removes all parameters from the genetic instance"""
+        #self._parameters = []
+        #self._parameter_ranges = {}
     
-    def add_parameter(self,param_name,low=None,high=None):
-        """adds a parameter to the driver. 
+    #def add_parameter(self,param_name,low=None,high=None):
+        #"""adds a parameter to the driver. 
         
-        param_name : str 
-            name of the parameter to add to the driver
-        low : number, optional
-            minimum allowed value the optimzier can use for this parameter. If not specified, 
-            then the 'low' value from the public variable is used. 
-        high : number, optional
-            maximum allowed value the optimizer can use for this parameter. If not specified, 
-            then the 'high' value from the public variable is used.
-        """
+        #param_name : str 
+            #name of the parameter to add to the driver
+        #low : number, optional
+            #minimum allowed value the optimzier can use for this parameter. If not specified, 
+            #then the 'low' value from the public variable is used. 
+        #high : number, optional
+            #maximum allowed value the optimizer can use for this parameter. If not specified, 
+            #then the 'high' value from the public variable is used.
+        #"""
 
-        #check to see if this param_name is already in the driver
-        try: 
-            i = [str(x) for x in self._parameters].index(param_name)
-            #if found one, so it's already in there
-            self.raise_exception("Trying to add '%s' to the genetic driver, but it is already in the driver"%param_name,RuntimeError)
-        except ValueError: #not in the list, so you're good to go!
-            pass
+        ##check to see if this param_name is already in the driver
+        #try: 
+            #i = [str(x) for x in self._parameters].index(param_name)
+            ##if found one, so it's already in there
+            #self.raise_exception("Trying to add '%s' to the genetic driver, but it is already in the driver"%param_name,RuntimeError)
+        #except ValueError: #not in the list, so you're good to go!
+            #pass
 
-        #indexed the same as self._allels
-        expreval = ExprEvaluator(param_name, self.parent, single_name=True)
-        self._parameters.append(expreval) #add it to the list of string refs
-        val = expreval.evaluate()
-        if low is not None and high is not None: #use specified, overrides any trait defaults that would have been found
-            self._parameter_ranges[param_name] = (low,high)
-        else: 
-            ranges = [0,0]
-            #split up the param_name string to be able to get the trait. 
-            path = ".".join(param_name.split(".")[0:-1]) #get the path to the object
-            target = param_name.split(".")[-1] #get the last part of the string after the last "."
-            obj = getattr(self.parent,path)
+        ##indexed the same as self._allels
+        #expreval = ExprEvaluator(param_name, self.parent, single_name=True)
+        #self._parameters.append(expreval) #add it to the list of string refs
+        #val = expreval.evaluate()
+        #if low is not None and high is not None: #use specified, overrides any trait defaults that would have been found
+            #self._parameter_ranges[param_name] = (low,high)
+        #else: 
+            #ranges = [0,0]
+            ##split up the param_name string to be able to get the trait. 
+            #path = ".".join(param_name.split(".")[0:-1]) #get the path to the object
+            #target = param_name.split(".")[-1] #get the last part of the string after the last "."
+            #obj = getattr(self.parent,path)
             
-            t = obj.trait(target) #get the trait
-            if t and t.is_trait_type(Enum):
-                self._parameter_ranges[param_name]=(None,None)
-            elif t and (t.is_trait_type(Float) or t.is_trait_type(Int)): #can't be an Enum, so maybe it's a Float, Int
+            #t = obj.trait(target) #get the trait
+            #if t and t.is_trait_type(Enum):
+                #self._parameter_ranges[param_name]=(None,None)
+            #elif t and (t.is_trait_type(Float) or t.is_trait_type(Int)): #can't be an Enum, so maybe it's a Float, Int
                 
-                if hasattr(t,"low"): 
-                    ranges[0] = t.low
-                elif low: 
-                    ranges[0] = low
-                else: 
-                    self.raise_exception("No value was specified for the 'low' argument, "
-                                         "and no default was found in the public variable metadata",ValueError)
+                #if hasattr(t,"low"): 
+                    #ranges[0] = t.low
+                #elif low: 
+                    #ranges[0] = low
+                #else: 
+                    #self.raise_exception("No value was specified for the 'low' argument, "
+                                         #"and no default was found in the public variable metadata",ValueError)
                 
-                if hasattr(t,"high"):
-                    ranges[1] = t.high
-                elif high: 
-                    ranges[1] = high                
-                else: 
-                    self.raise_exception("No value was specified for the 'high' argument, "
-                                         "and no default was found in the public variable metadata",ValueError)
-                self._parameter_ranges[param_name] = tuple(ranges)
+                #if hasattr(t,"high"):
+                    #ranges[1] = t.high
+                #elif high: 
+                    #ranges[1] = high                
+                #else: 
+                    #self.raise_exception("No value was specified for the 'high' argument, "
+                                         #"and no default was found in the public variable metadata",ValueError)
+                #self._parameter_ranges[param_name] = tuple(ranges)
              
-            elif array_test.search(target): #can't figure out what the ranges should be
-                if not(isinstance(val,float) or isinstance(val,int) or isinstance(val,int32) or \
-                       isinstance(val,int64) or isinstance(val,float32) or isinstance(val,float64)
-                      ):
-                    self.raise_exception("Only array values of type 'int' or 'float' are allowed as "
-                                         "parameters")
+            #elif array_test.search(target): #can't figure out what the ranges should be
+                #if not(isinstance(val,float) or isinstance(val,int) or isinstance(val,int32) or \
+                       #isinstance(val,int64) or isinstance(val,float32) or isinstance(val,float64)
+                      #):
+                    #self.raise_exception("Only array values of type 'int' or 'float' are allowed as "
+                                         #"parameters")
                     
-                self.raise_exception("values for 'high' and 'low' arguments are required when specifying "
-                                     "an Array element as a parameter. They were not given for '%s'"%param_name,TypeError)
-            else: 
-                self.raise_exception("Improper parameter type. Must be Float,Int, or an element of "
-                                     "an Array.",ValueError)
-        return True
+                #self.raise_exception("values for 'high' and 'low' arguments are required when specifying "
+                                     #"an Array element as a parameter. They were not given for '%s'"%param_name,TypeError)
+            #else: 
+                #self.raise_exception("Improper parameter type. Must be Float,Int, or an element of "
+                                     #"an Array.",ValueError)
+        #return True
             
     def execute(self):
         """Perform the optimization"""
@@ -226,9 +232,10 @@ class Genetic(Driver):
         self._run_model(self.best_individual) 
            
 
-    def _run_model(self,chromosome):
-        for i,value in enumerate(chromosome):
-            self._parameters[i].set(value)
+    def _run_model(self, chromosome):
+        #for i,value in enumerate(chromosome):
+            #self._parameters[i].set(value)
+        self.set_parameters([val for val in chromosome])
         #    print i,value    
         self.run_iteration()
         #exit()        

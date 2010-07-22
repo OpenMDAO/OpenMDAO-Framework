@@ -1,13 +1,6 @@
 
-from enthought.traits.api import HasTraits
-
 import ordereddict
-
-from openmdao.lib.traits.float import Float
-from openmdao.lib.traits.int import Int
-from openmdao.lib.traits.enum import Enum
-from openmdao.lib.traits.array import Array
-from enthought.traits.api import implements
+from numpy import float32, float64, int32, int64
 
 from openmdao.main.expreval import ExprEvaluator
 
@@ -48,10 +41,18 @@ class HasParameters(object):
                                          AttributeError)
         
         parameter = _Parameter()
-        parameter.expreval = ExprEvaluator(name, self._parent.parent, single_name=True) 
+        parameter.expreval = ExprEvaluator(name, self._parent.parent, single_name=True)
         
         try:
-            metadata = self._parent.parent.get_metadata(name)
+            val = parameter.expreval.evaluate()
+        except:
+            self._parent.raise_exception("Can't add parameter because I can't evaluate '%s'" % name,
+                                         AttributeError)
+        if not isinstance(val,(float,float32,float64,int,int32,int64)):
+            self._parent.raise_exception("The value of parameter '%s' must be of type float or int, but its type is '%s'." %
+                                         (name,type(val).__name__), ValueError)
+        try:
+            metadata = self._parent.parent.get_metadata(name.split('[')[0])
         except AttributeError:
             self._parent.raise_exception("Can't add parameter '%s' because it doesn't exist." % name,
                                          AttributeError)
@@ -78,17 +79,20 @@ class HasParameters(object):
                                              (name, high, meta_high), ValueError)
             parameter.high = high
             
-        if parameter.low is None: 
-            self._parent.raise_exception("Trying to add parameter '%s', "
-                                         "but no lower limit was found and no " 
-                                         "'low' argument was given. One or the "
-                                         "other must be specified." % name,ValueError)
-        if parameter.high is None: 
-            self._parent.raise_exception("Trying to add parameter '%s', "
-                                         "but no upper limit was found and no " 
-                                         "'high' argument was given. One or the "
-                                         "other must be specified." % name,ValueError)
-        
+        values = metadata.get('values')
+        if values is not None and len(values)>0:
+            pass    # assume it's an Enum, so no need to set high or low
+        else:
+            if parameter.low is None:
+                self._parent.raise_exception("Trying to add parameter '%s', "
+                                             "but no lower limit was found and no " 
+                                             "'low' argument was given. One or the "
+                                             "other must be specified." % name,ValueError)
+            if parameter.high is None: 
+                self._parent.raise_exception("Trying to add parameter '%s', "
+                                             "but no upper limit was found and no " 
+                                             "'high' argument was given. One or the "
+                                             "other must be specified." % name,ValueError)
         self._parameters[name] = parameter
             
     def remove_parameter(self, name):
@@ -97,7 +101,7 @@ class HasParameters(object):
             del self._parameters[name]
         except KeyError:
             self._parent.raise_exception("Trying to remove parameter '%s' "
-                                         "that is not in the driver." % name,
+                                         "that is not in this driver." % name,
                                          AttributeError)
     def list_parameters(self):
         """Returns an alphabetized list of parameter names."""
@@ -109,19 +113,8 @@ class HasParameters(object):
         
     def get_parameters(self):
         """Returns a list of parameter objects."""
-        return self._parameters
-                
-             
-            #elif '[' in target: #can't figure out what the ranges should be
-                #if not(isinstance(val,float) or isinstance(val,int) or isinstance(val,int32) or \
-                       #isinstance(val,int64) or isinstance(val,float32) or isinstance(val,float64)
-                      #):
-                    #self.raise_exception("Only array values of type 'int' or 'float' are allowed as "
-                                         #"parameters")
-                    
-                #self.raise_exception("values for 'high' and 'low' arguments are required when specifying "
-                                     #"an Array element as a parameter. They were not given for '%s'"%param_name,TypeError)
-        
+        return self._parameters.values()
+
     def set_parameters(self, X): 
         """Pushes the values in the X input array into the corresponding public 
         variables in the model.
@@ -134,5 +127,5 @@ class HasParameters(object):
             raise ValueError("number of input values (%s) != number of parameters (%s)" % 
                              (len(X),len(self._parameters)))
 
-        for x, (param_name, param) in zip(X, self._parameters.iteritems()): 
+        for x, param in zip(X, self._parameters.values()): 
             param.expreval.set(x)
