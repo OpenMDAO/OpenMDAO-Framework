@@ -8,9 +8,10 @@ from types import MethodType
 
 
 def add_delegate(*delegates):
-    """A class decorator that takes a list of name,delegate tuples.  
-    All of the public functions from the delegates will be added to the class.
-    Conflicts will cause a NameError exception to be raised.
+    """A class decorator that takes delegate classes or name,delegate tuples as
+    args. All of the public functions from the delegates will be added to the class
+    unless there is an attribute or function in the class with the same name. In that
+    case the delegate function will be ignored.
     """
     def forwarder(fname, delegatename):
         """Forwards calls on the scoping object to calls on the delegate object"""

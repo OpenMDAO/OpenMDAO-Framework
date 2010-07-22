@@ -454,26 +454,26 @@ and calculates their dot product as an output.
     class Dot(Component):
         """ A component that outputs a dot product of two arrays"""
     
-	# set up interface to the framework  
-	x1 = Array(array([1.0,2.0]), dtype=float, desc = "Input 1", \
-	           iotype='in')
-	x2 = Array(array([7.0,8.0]), dtype=float, desc = "Input 2", \
-	           iotype='in')
-		   
-	y = Float(0.0, iotype='out', desc = "Dot Product")
+    # set up interface to the framework  
+    x1 = Array(array([1.0,2.0]), dtype=float, desc = "Input 1", \
+               iotype='in')
+    x2 = Array(array([7.0,8.0]), dtype=float, desc = "Input 2", \
+               iotype='in')
+           
+    y = Float(0.0, iotype='out', desc = "Dot Product")
 
-	def execute(self):
-	    """ calculate dot product """
-	    
-	    if len(self.x1) != len(self.x2):
-	        self.raise_exception('Input vectors must be of equal length',
-				      RuntimeError)
-	    
-	    # Note: array multiplication is element by element
-	    self.y = sum(self.x1*self.x2)
-	    
-	    # print the first element of x1
-	    print x1[0]
+    def execute(self):
+        """ calculate dot product """
+        
+        if len(self.x1) != len(self.x2):
+            self.raise_exception('Input vectors must be of equal length',
+                      RuntimeError)
+        
+        # Note: array multiplication is element by element
+        self.y = sum(self.x1*self.x2)
+        
+        # print the first element of x1
+        print x1[0]
 
 Multiplication of a NumPy array is element by element, so *sum* is used to
 complete the calculation of the dot product. Individual elements of the array
@@ -498,7 +498,7 @@ colors:
     from openmdao.main.api import Component
     
     class TrafficLight(Component):
-	color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
+        color2 = Enum('Red', ('Red', 'Yellow', 'Green'), iotype='in')
 
 Then we can interact like this:
 
@@ -594,7 +594,7 @@ mark a file as binary.
 .. todo::
 
     Provide some examples to demonstrate the options.
-			    
+                
 .. index:: Instance Traits
 
 Instance Traits

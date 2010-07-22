@@ -34,7 +34,7 @@ class SingleCritEI(Driver):
                          desc="CaseIterator which contains the case which maximize expected improvement")
     
     case_criteria = Expression
-    criteria = Expression("",iotype="in",
+    criteria = Expression(iotype="in",
                            desc="name of the variable to maximize the expected improvement around. Must be a NormalDistrubtion type")
     
     def __init__(self,*args,**kwargs):
@@ -43,7 +43,7 @@ class SingleCritEI(Driver):
         
     def _make_alleles(self):
         self.set_of_alleles = GAllele.GAlleles()
-        for param_name,param in self.get_parameters().items(): 
+        for param in self.get_parameters().values(): 
             a = GAllele.GAlleleRange(param.low, param.high, real=True)
             self.set_of_alleles.add(a)
     

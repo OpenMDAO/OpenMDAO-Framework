@@ -48,7 +48,7 @@ class Analysis(Assembly):
         #Driver Configuration
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
-        self.DOE_trainer.add_event_var("branin_meta_model.train_next")
+        self.DOE_trainer.add_event("branin_meta_model.train_next")
         self.DOE_trainer.case_outputs = ["branin_meta_model.f_xy"]
         self.DOE_trainer.recorder = DBCaseRecorder('trainer.db')
         

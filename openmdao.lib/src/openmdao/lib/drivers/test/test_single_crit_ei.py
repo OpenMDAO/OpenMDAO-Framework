@@ -101,7 +101,7 @@ class TestCase(unittest.TestCase):
  
         self.top.run()
         new_case = Case(inputs=[("x",None,5.0),("y",None,5.0)])
-        print self.top.EIdriver._calc_ei(new_case)
+        print self.top.EIdriver._calc_ei([inp[2] for inp in new_case.inputs])
         
 if __name__ == "__main__":
     unittest.main()

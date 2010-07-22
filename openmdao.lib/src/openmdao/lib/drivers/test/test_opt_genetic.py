@@ -111,9 +111,10 @@ class TestCase(unittest.TestCase):
 
         try:        
             self.top.driver.add_parameter('comp.x[0]')
-        except TypeError,err: 
-            self.assertEqual(str(err),"driver: values for 'high' and 'low' arguments are required when specifying an "
-                             "Array element as a parameter. They were not given for 'comp.x[0]'")
+        except ValueError,err: 
+            self.assertEqual(str(err),"driver: Trying to add parameter 'comp.x[0]', "
+                             "but no lower limit was found and no 'low' argument was "
+                             "given. One or the other must be specified.")
         else: 
             self.fail('TypeError expected')
 
@@ -159,8 +160,8 @@ class TestCase(unittest.TestCase):
 
         try: 
             self.top.driver.remove_parameter('xyz')
-        except RuntimeError,err: 
-            self.assertEqual(str(err),"driver: Trying to remove parameter 'xyz', but it is not in the genetic driver")
+        except AttributeError,err: 
+            self.assertEqual(str(err),"driver: Trying to remove parameter 'xyz' that is not in this driver.")
         else: 
             self.fail('RuntimeError Expected')
 
@@ -173,8 +174,8 @@ class TestCase(unittest.TestCase):
         self.top.driver.add_parameter('comp.y')
         try: 
             self.top.driver.add_parameter('comp.y')
-        except RuntimeError,err: 
-            self.assertEqual(str(err),"driver: Trying to add 'comp.y' to the genetic driver, but it is already in the driver")
+        except AttributeError,err: 
+            self.assertEqual(str(err),"driver: Trying to add parameter 'comp.y' to driver, but it's already there")
         else: 
             self.fail('RuntimeError expected')
 
@@ -233,7 +234,8 @@ class TestCase(unittest.TestCase):
         try:         
             s = Simulation()    
         except ValueError,err:
-            self.assertEqual(str(err),"driver: Improper parameter type. Must be Float,Int, or an element of an Array.")
+            self.assertEqual(str(err),
+                "driver: The value of parameter 'comp.z' must be of type float or int, but its type is 'str'.")
         else: 
             self.fail("ValueError expected")
 
