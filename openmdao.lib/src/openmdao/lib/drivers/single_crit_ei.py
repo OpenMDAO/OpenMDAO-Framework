@@ -34,7 +34,7 @@ class SingleCritEI(Driver):
                          desc="CaseIterator which contains the case which maximize expected improvement")
     
     case_criteria = Expression
-    criteria = Expression("",iotype="in",
+    criteria = Expression(iotype="in",
                            desc="name of the variable to maximize the expected improvement around. Must be a NormalDistrubtion type")
     
     def __init__(self,*args,**kwargs):
@@ -92,9 +92,8 @@ class SingleCritEI(Driver):
             if output[0] == 'criteria': 
                 #TODO: check that criteria is only one thing, error if not
                 crit_var_name = output[2]
-        if crit_var_name is None: 
+        if not crit_var_name: 
             self.raise_exception("best_case was not provided with a 'criteria' output, which must be present",ValueError)
-            
         for output in best_case.outputs:
             if output[0] == crit_var_name:
                 self.target = output[2]

@@ -17,9 +17,6 @@ class TestCase(unittest.TestCase):
     def setUp(self): 
         
         self.top = set_as_top(Assembly())
-        
-        self.top.add("DOE_trainer",DOEdriver())
-        self.top.DOE_trainer.DOEgenerator = FullFactorial(4,2)
 
         self.top.add("branin_meta_model",MetaModel())
         self.top.branin_meta_model.surrogate = KrigingSurrogate()
@@ -48,12 +45,12 @@ class TestCase(unittest.TestCase):
         self.top = None
     
     def test_no_criteria_error(self): 
-        self.top.EIdriver.best_case = ListCaseIterator([self.best_case,])
-        #self.top.EIdriver.criteria = ""
+        self.top.EIdriver.best_case = ListCaseIterator([self.best_case])
+        
         try:
             self.top.run()
-        except RuntimeError,err: 
-            self.assertEqual(str(err),"EIdriver: no criteria was specified")
+        except ValueError,err: 
+            self.assertEqual(str(err),"EIdriver: The Expression 'criteria' has not been defined")
         else: 
             self.fail("RunTimeError expected")
         
@@ -101,7 +98,6 @@ class TestCase(unittest.TestCase):
  
         self.top.run()
         new_case = Case(inputs=[("x",None,5.0),("y",None,5.0)])
-        print self.top.EIdriver._calc_ei(new_case)
         
 if __name__ == "__main__":
     unittest.main()
