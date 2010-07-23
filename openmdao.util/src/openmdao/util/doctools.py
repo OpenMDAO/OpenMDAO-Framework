@@ -1,13 +1,19 @@
-
+"""
+A utility to extract Traits information from the code and get it into the Sphinx documentation.
+"""
 
 from enthought.traits.api import HasTraits, MetaHasTraits, Any, Python, Event
 from enthought.traits.trait_base import not_none
 from inspect import getmro
-from sys import maxint
-
+from sys import maxint, float_info
+from enthought.traits.api import Instance
+	    
 excludes = (Any, Python, Event, type)
 
 def get_traits_info(app, what, name, obj, options, lines):
+    """
+    Gets traits info.
+    """
     if not (isinstance(obj, MetaHasTraits) or isinstance(obj, HasTraits)):
         return
     
@@ -37,10 +43,11 @@ def get_traits_info(app, what, name, obj, options, lines):
 	   if not (trt_val == base_class_traits[trt]):
 	       keepers[trt] = trt_val
     
-    keepers_in={'title':'**INPUTS**'}
-    keepers_out={'title':'**OUTPUTS**'}
-    keepers_instance={'title':'**INSTANCES**'}
-    keepers_undefined={'title':'**I/O NOT DEFINED**'}
+   
+    keepers_in={}
+    keepers_out={}
+    keepers_instance={}
+    keepers_undefined={}
     
     #Now we need to SORT the traits by input/output type. 	  
     for t,val in keepers.items():
@@ -59,40 +66,68 @@ def get_traits_info(app, what, name, obj, options, lines):
     dicts = (keepers_instance, keepers_in, keepers_out, keepers_undefined)
     
     for dic in dicts:
-    	if len(dic) > 1: 
-	    lines.append(dic['title'])
-	    lines.append('\n')
-	del dic['title']
+	sortedDict = sortedDictVals(dic)
 	
-    	for t, val in dic.items():     
-	    #Now just need to spit out the traits in the proper format into the documentation
-	     
-	    lines.extend(["*%s* **%s**:  %s " %(type(val.trait_type).__name__, t, val.desc)])
-	    
+	for t, val in sortedDict:
+	    lines.append('')
+	    #Now just need to spit out the traits in the proper format into the documentation 
+	    if (val.is_trait_type(Instance)):
+	        lines.extend(["*%s* (%s) **%s**" %(type(val.trait_type).__name__, val.trait_type.klass.__name__, t)])
+	    else:
+	        lines.extend(["*%s* **%s**" %(type(val.trait_type).__name__, t)])	
+	    lines.extend(["  %s" %val.desc])
+	    lines.append('')
+	    if (val.iotype is not None):
+	        lines.extend(["  * iotype:  '%s'" %val.iotype])
+	       
 	    if (val.units is not None):
-	       lines.extend(['Units: %s\n' %val.units])	
+	        lines.extend(["  * units: '%s'" %val.units]) 
 	           
 	    if (val.low is not None):
 	    	if (val.low == (-1 * maxint)):
-	    	    lines.append('Low: NEGATIVE MAXINT')
+		    continue
+		elif (val.low == (-float_info.max)):
+		    continue
 		else:
-		    lines.extend(['Low: %s' %val.low])
+		    lines.extend(['  * low:  %s' %val.low])
 	    
 	    if (val.high is not None):
 	    	if val.high is maxint:
-	            lines.append('High: MAXINT')
+	            continue
+		elif val.high is float_info.max:
+		    continue
 		else:
-		    lines.extend(['High: %s' %val.high])
-		    	
-	    lines.append('\n')
-	  	
+		    lines.extend(['  * high:  %s' %val.high])
+	    
+	    #now to put in the metadata added by users, or not specially handled.
+	    dontdo=('iotype', 'units', 'low', 'high', 'type', 'desc', 'instance_handler', 'parent', 'array')
+	    metadata = val.trait_type._metadata.items()
+	    for m, v in metadata:
+	    	if m not in dontdo:
+		    if isinstance(v, basestring):
+		    	v = "'%s'" %v  
+		    lines.extend(['  *  %s:  %s' %(m, v)])	     	
+	    
+	    lines.append('')
+	    
 
 def setup(app):
     app.connect('autodoc-process-docstring', get_traits_info)
 
+def sortedDictVals(unsorted_dict):
+  """
+  Sort a dictionary into alphabetical order by keys.
+  """
+  items = unsorted_dict.items()
+  items.sort()
+  return items
 
 if __name__ == '__main__':
-    from openmdao.main.api import Assembly
+    #from openmdao.main.api import Assembly
+    from openmdao.lib.api import ExternalCode
     lines = []
-    get_traits_info(None, 'class', 'foo', Assembly, None, lines)
-    print 'lines = %s', lines
+    #get_traits_info(None, 'class', 'foo', Assembly, None, lines)
+    get_traits_info(None, 'class', 'foo', ExternalCode, None, lines)
+    #print 'lines = %s', lines
+    for line in lines:
+    	print line
