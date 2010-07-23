@@ -85,7 +85,6 @@ if __name__ == "__main__":
     #convert the database data to python objects
     data_train['branin_meta_model.f_xy'] = [convert_norm_dist(x).mu for x in data_train['branin_meta_model.f_xy']]
     
-    
     print [x.inputs for x in analysis.EI_driver.next_case]
     
    

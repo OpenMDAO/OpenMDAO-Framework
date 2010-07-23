@@ -10,7 +10,7 @@ from openmdao.util.decorators import add_delegate
 class GoodDelegate(object):
     cls_x = 4
     
-    def __init__(self):
+    def __init__(self, parent):
         self.inst_y = 3
         
     def del_amethod(self, a, b, c):
@@ -21,7 +21,7 @@ class GoodDelegate(object):
     
 class BadDelegate1(object):
     
-    def __init__(self):
+    def __init__(self, parent):
         self.inst_y = 3
         
     def del_amethod(self, a, b, c):
@@ -34,7 +34,7 @@ class BadDelegate1(object):
         pass
 
 class BadDelegate2(object):
-    def __init__(self):
+    def __init__(self, parent):
         self.inst_y = 3
         
     def amethod(self):

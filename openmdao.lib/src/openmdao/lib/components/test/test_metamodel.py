@@ -119,6 +119,7 @@ class MetaModelTestCase(unittest.TestCase):
         
     def test_default_execute(self):
         metamodel = MetaModel()
+        metamodel.name = 'meta'
         metamodel.surrogate = KrigingSurrogate()
         metamodel.model = Simple()
         metamodel.recorder = DumbRecorder()
