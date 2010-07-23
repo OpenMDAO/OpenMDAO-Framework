@@ -503,7 +503,7 @@ class CaseIteratorDriver(CaseIterDriverBase):
     """
 
     iterator = Instance(ICaseIterator, iotype='in',
-                        desc='Iterator supplying Cases to evaluate.', required=True)
+                        desc='Iterator supplying Cases to evaluate.')
     
     def get_case_iterator(self):
         """Returns a new iterator over the Case set"""
