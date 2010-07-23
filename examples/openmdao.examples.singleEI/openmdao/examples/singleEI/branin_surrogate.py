@@ -7,6 +7,7 @@ from openmdao.lib.drivers.doedriver import DOEdriver
 from openmdao.lib.drivers.single_crit_ei import SingleCritEI
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.lib.doegenerators.full_factorial import FullFactorial
+from openmdao.lib.drivers.caseiterdriver import CaseIteratorDriver
 from openmdao.lib.caserecorders.dbcaserecorder import DBCaseRecorder
 from openmdao.lib.caseiterators.dbcaseiter import DBCaseIterator
 from openmdao.lib.traits.float import Float
@@ -31,10 +32,6 @@ class Analysis(Assembly):
     def __init__(self,*args,**kwargs):
         super(Analysis,self).__init__(self,*args,**kwargs)
         
-        #Drivers
-        self.add("DOE_trainer",DOEdriver())
-        self.DOE_trainer.DOEgenerator = OptLatinHypercube(12,2)
-
         #Components
         self.add("branin_meta_model",MetaModel())
         self.branin_meta_model.surrogate = KrigingSurrogate()
@@ -42,10 +39,12 @@ class Analysis(Assembly):
         self.branin_meta_model.recorder = DBCaseRecorder('branin_meta_model.db')
         
         self.add("filter",ParetoFilter())
-        self.filter.criteria = ['f_xy']
+        self.filter.criteria = ['branin_meta_model.f_xy']
         self.filter.case_set = DBCaseIterator('branin_meta_model.db')
 
         #Driver Configuration
+        self.add("DOE_trainer",DOEdriver())
+        self.DOE_trainer.DOEgenerator = OptLatinHypercube(12,2)
         self.DOE_trainer.add_parameter("branin_meta_model.x")
         self.DOE_trainer.add_parameter("branin_meta_model.y")
         self.DOE_trainer.add_event("branin_meta_model.train_next")
@@ -54,20 +53,27 @@ class Analysis(Assembly):
         
         self.add("EI_driver",SingleCritEI())
         self.EI_driver.workflow.add(self.branin_meta_model)
+        self.EI_driver.criteria = "branin_meta_model.f_xy"
         self.EI_driver.add_parameter("branin_meta_model.x")
         self.EI_driver.add_parameter("branin_meta_model.y")
-        
         self.EI_driver.criterion = "branin_meta_model.f_xy"
+        self.EI_driver.next_case_events = ['branin_meta_model.train_next']
+        
+        self.add("retrain",CaseIteratorDriver())
+        self.retrain.recorder = DBCaseRecorder()
+        
         
         #Iteration Heirarchy                
-        self.DOE_trainer.workflow.add(self.branin_meta_model)
-        
         self.driver.workflow.add(self.DOE_trainer)
         self.driver.workflow.add(self.filter)
         self.driver.workflow.add(self.EI_driver)
+        self.driver.workflow.add(self.retrain)
+        
+        self.DOE_trainer.workflow.add(self.branin_meta_model)
         
         #Data Connections
         self.connect("filter.pareto_set","EI_driver.best_case")
+        self.connect("EI_driver.next_case","retrain.iterator")
         
 if __name__ == "__main__":
     from openmdao.main.api import set_as_top

@@ -9,18 +9,17 @@ from pyevolve import Initializators,Mutators,Crossovers,Selectors
 
 from enthought.traits.api import implements,Instance,Str
 
-
 from openmdao.lib.traits.float import Float
+from openmdao.lib.traits.array import Array
+from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 from openmdao.main.expression import Expression
-
 from openmdao.main.driver import Driver
 from openmdao.main.interfaces import IHasParameters
 from openmdao.main.hasparameters import HasParameters
 from openmdao.main.case import Case
-
 from openmdao.main.interfaces import ICaseIterator
-from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
+
 from openmdao.util.decorators import add_delegate
 
 
@@ -30,10 +29,9 @@ class SingleCritEI(Driver):
      
     best_case = Instance(ICaseIterator, iotype="in",
                          desc="CaseIterator which containes a single case, representing the criteria value")
+    next_case_events = Array([],dtype="str",iotype="in",desc="Names of event traits which should be added to next_case")
     next_case = Instance(ICaseIterator, iotype="out",
                          desc="CaseIterator which contains the case which maximize expected improvement")
-    
-    case_criteria = Expression
     criteria = Expression(iotype="in",
                            desc="name of the variable to maximize the expected improvement around. Must be a NormalDistrubtion type")
     
@@ -112,5 +110,5 @@ class SingleCritEI(Driver):
         ga.setMinimax(Consts.minimaxType["maximize"])
         ga.evolve()
         new_x = array([x for x in ga.bestIndividual()])
-        case = Case(inputs=[(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())])
+        case = Case(inputs=[(event_name,None,True) for event_name in self.next_case_events]+[(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())])
         self.next_case = ListCaseIterator([case,])

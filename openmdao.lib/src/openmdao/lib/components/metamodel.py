@@ -60,7 +60,7 @@ class MetaModel(Component):
                 case_outputs = []
                 for name, tup in self._surrogate_info.items():
                     surrogate, output_history = tup
-                    case_outputs.append((name, None, output_history[-1]))
+                    case_outputs.append(('.'.join([self.name,name]), None, output_history[-1]))
                 # save the case, making sure to add out name to the local input name since
                 # this Case is scoped to our parent Assembly
                 case_inputs = [('.'.join([self.name,name]),None,val) for name,val in zip(self._surrogate_input_names, inputs)]
