@@ -4,41 +4,32 @@ from numpy import float32, float64, int32, int64
 
 from openmdao.main.expreval import ExprEvaluator
 
-class _Constraint(object): 
-    def __init__(self, expr=None):
-        self.expreval = expr
+import operator
 
-class HasParameters(object): 
-    """This class provides an implementation of the IHasParameters interface"""
+class Constraint(object):
+    def __init__(self, lhs, rhs, relation=operator.gt):
+        self.lhs = None
+        self.rhs = None
+        self.relation = relation
+
+class HasConstraints(object): 
+    """This class provides an implementation of the IHasConstraints interface"""
 
     def __init__(self, parent):
-        self._parameters = ordereddict.OrderedDict()
+        self._constraints = ordereddict.OrderedDict()
         self._parent = parent
 
-    def add_parameter(self, name, low=None, high=None):
-        """Adds a parameter to the driver. 
+    def add_constraint(self, expr_str, equality=False):
+        """Adds a constraint to the driver. 
         
-        name : string
-            name of the public variable the driver should vary during execution.
+        expr_str : string
+            string expression that is evaluated to calculate the constraint value
             
-        low : float, optional
-            minimum allowed value of the parameter
-            
-        high : float, optional
-            maximum allowed value of the parameter
-        
-        If neither 'low' nor 'high' are specified, the min and max will
-        default to the values in the metadata of the public variable being
-        referenced. If they are not specified in the metadata and not provided
-        as arguments a ValueError is raised.
+        equality : bool, optional
+            if True, this is an equality constraint
         """
-        if name in self._parameters: 
-            self._parent.raise_exception("Trying to add parameter '%s' to driver, "
-                                         "but it's already there" % name,
-                                         AttributeError)
-        
         parameter = _Parameter()
-        parameter.expreval = ExprEvaluator(name, self._parent.parent, single_name=True)
+        parameter.expreval = ExprEvaluator(name, self._parent.parent)
         
         try:
             metadata = self._parent.parent.get_metadata(name.split('[')[0])
@@ -90,29 +81,29 @@ class HasParameters(object):
                                              "but no upper limit was found and no " 
                                              "'high' argument was given. One or the "
                                              "other must be specified." % name,ValueError)
-        self._parameters[name] = parameter
+        self._constraints[name] = parameter
             
     def remove_parameter(self, name):
         """Removes the parameter with the given name."""
         try:
-            del self._parameters[name]
+            del self._constraints[name]
         except KeyError:
             self._parent.raise_exception("Trying to remove parameter '%s' "
                                          "that is not in this driver." % name,
                                          AttributeError)
-    def list_parameters(self):
+    def list_constraints(self):
         """Returns an alphabetized list of parameter names."""
-        return sorted(self._parameters.keys())
+        return sorted(self._constraints.keys())
     
-    def clear_parameters(self):
+    def clear_constraints(self):
         """Removes all parameters."""
-        self._parameters = ordereddict.OrderedDict()
+        self._constraints = ordereddict.OrderedDict()
         
-    def get_parameters(self):
+    def get_constraints(self):
         """Returns an ordered dict of parameter objects."""
-        return self._parameters
+        return self._constraints
 
-    def set_parameters(self, X): 
+    def eval_constraints(self): 
         """Pushes the values in the X input array into the corresponding public 
         variables in the model.
         
@@ -120,9 +111,9 @@ class HasParameters(object):
             iterator of input values with an order defined to match the order of parameters returned 
             by the list_parameter method. X must support the len() function.
         """
-        if len(X) != len(self._parameters):
+        if len(X) != len(self._constraints):
             raise ValueError("number of input values (%s) != number of parameters (%s)" % 
-                             (len(X),len(self._parameters)))
+                             (len(X),len(self._constraints)))
 
-        for x, param in zip(X, self._parameters.values()): 
+        for x, param in zip(X, self._constraints.values()): 
             param.expreval.set(x)
