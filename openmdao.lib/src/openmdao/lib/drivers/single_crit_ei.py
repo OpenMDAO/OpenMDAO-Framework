@@ -87,17 +87,16 @@ class SingleCritEI(Driver):
         for case in self.best_case: 
             best_case = case
             break
-        crit_var_name = None
+        self.target = None
         for output in best_case.outputs: 
-            if output[0] == 'criteria': 
+            if output[0] == self.criteria: 
                 #TODO: check that criteria is only one thing, error if not
-                crit_var_name = output[2]
-        if not crit_var_name: 
-            self.raise_exception("best_case was not provided with a 'criteria' output, which must be present",ValueError)
-        for output in best_case.outputs:
-            if output[0] == crit_var_name:
                 self.target = output[2]
                 break
+                
+        if not self.target: 
+            self.raise_exception("best_case did not have an output which matched the criteria, '%s'"%self.criteria,ValueError)
+
         
         genome = G1DList.G1DList(len(self.set_of_alleles))
         genome.setParams(allele=self.set_of_alleles)

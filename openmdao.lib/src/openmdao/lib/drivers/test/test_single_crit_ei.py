@@ -33,8 +33,8 @@ class TestCase(unittest.TestCase):
         self.top.add("EIdriver",SingleCritEI())
         self.top.add("noisy_branin",NoisyBraninComponent())
 
-        self.best_case = Case(outputs=[("f_xy",None,50.),('criteria',None,'f_xy')])
-        self.bad_best_case = Case(outputs=[("f_xy",None,50.)])
+        self.best_case = Case(outputs=[("noisy_branin.f_xy",None,50.)])
+        self.bad_best_case = Case(outputs=[("noisy_branin.f_xyz",None,50.)])
 
         self.top.EIdriver.workflow.add(self.top.noisy_branin)
 
@@ -70,7 +70,7 @@ class TestCase(unittest.TestCase):
         try:
             self.top.run()
         except ValueError,err: 
-            self.assertEqual(str(err),"EIdriver: best_case was not provided with a 'criteria' output, which must be present")
+            self.assertEqual(str(err),"EIdriver: best_case did not have an output which matched the criteria, 'noisy_branin.f_xy'")
         else: 
             self.fail("ValueError expected")
         
@@ -91,7 +91,6 @@ class TestCase(unittest.TestCase):
         self.top.run()
         
         case = [val[2] for case in self.top.EIdriver.next_case for val in case.inputs]
-        print case
         self.assertAlmostEqual(case[0],-3.36,places=1)
         self.assertAlmostEqual(case[1],13.1,places=1)
         
