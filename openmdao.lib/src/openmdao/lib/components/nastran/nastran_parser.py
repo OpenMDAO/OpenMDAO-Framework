@@ -108,9 +108,53 @@ class NastranParser(object):
         if len(grid) == 0:
             return
 
+        max_len_row = len(max(grid, key=len))
+
+        # identify header rows
+        headers_index = 0
+        for headers_index, row in enumerate(grid):
+            # a header will be identified if it
+            # has more alpha than numeric characters
+            alphas = sum(map(lambda x: 1 if x.isalpha() else 0, row))
+            numeric = sum(map(lambda x: 1 if x.isdigit() else 0, row))
+            if numeric > alphas:
+                break
+
+        # We need to find where the headers are
+        # because they will dictate what columsn we can
+        # take. We will not accept columns that split
+        # a single row of headers by only one character
+        # width.
+        acceptable_breaks = []
+        for index, row in enumerate(grid):
+            # it's a header
+            if index < headers_index:
+                spaces = []
+                for cindex, char in enumerate(row):
+                    if char == ' ':
+                        spaces.append(cindex)
+                acceptable = set([])
+                last = -1
+                good = -2
+                for space in spaces:
+                    if space == last+1:
+                        good = space
+                        acceptable.add(last)
+                    else:
+                        if good >= 0:
+                            acceptable.add(good)
+                        good = -2
+                    last = space
+                if good >= 0:
+                    acceptable.add(good)
+                [acceptable.add(x) for x in range(len(row), max_len_row+1)]
+                acceptable_breaks.append(acceptable)
+
+        header_acceptable_breaks = reduce(lambda x, y: x & y, \
+                                          acceptable_breaks)
+
         # find columns
         columns = []
-        max_len_row = len(max(grid, key=len))
         possible = True
         for i in range(max_len_row):
             possible = True
@@ -135,6 +179,10 @@ class NastranParser(object):
         if not possible:
             columns.append(max_len_row)
 
+        # Now we will only allow the columsn found by spaces
+        # and those that are acceptable for the headers
+        columns = sorted(list(header_acceptable_breaks & set(columns)))
+
         # grid split by columns
         split_grid = []
         for line in grid:
@@ -152,26 +200,20 @@ class NastranParser(object):
         # or anything) for later.
         divided_grid = copy.deepcopy(split_grid)
 
-        # identify header rows
-        index = 0
-        for index, row in enumerate(split_grid):
-            if not re.match("[ ./a-zA-Z]+", row[0]):
-                break
-
         # merge top (index-1) rows
-        for row in split_grid[1:index]:
+        for row in split_grid[1:headers_index]:
             for cell_index in range(len(row)):
                 if split_grid[0][cell_index] == "" or \
                    row[cell_index] == "":
                     split_grid[0][cell_index] += row[cell_index]
                 else: split_grid[0][cell_index] += " " + row[cell_index]
 
-        num_header_merged_rows = index-1
+        num_header_merged_rows = headers_index-1
 
         # now remove the merged ones:
         merged_grid = []
         for row_index, row in enumerate(split_grid):
-            if row_index < 1 or row_index >= index:
+            if row_index < 1 or row_index >= headers_index:
                 merged_grid.append(row)
 
         # if a grid has two identical columns: coalesce
@@ -312,7 +354,9 @@ class NastranParser(object):
             # the last row of headers, instead of entire things.
             # when only considering the last row, sometimes its
             # pretty sane.
+
             little_grid = self._parse_grid(grid[num_header_merged_rows:])
+
             # now try to match up the family to the elements. In
             # general, the elements will be under the family. So
             # we just have to go through the headers and see

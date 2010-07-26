@@ -98,7 +98,7 @@ class TestNastranParser(unittest.TestCase):
     # unfortunately, nastran makes it almost impossible to tell whether
     # or not something's a family or a header without being a human
     # So, heuristics.
-    def no_test_family_confusion_and_dash_in_header(self):
+    def test_family_confusion_and_dash_in_header(self):
         self.go("practice-grid.7.txt")
         h = "forces in bar elements (cbar)"
         self.assertTrue(h == self.parser.headers[0]["clean"])
