@@ -120,6 +120,10 @@ class NastranParser(object):
             if numeric > alphas:
                 break
 
+        # if you got no headers, you got no grid
+        if headers_index < 1:
+            return
+
         # We need to find where the headers are
         # because they will dictate what columsn we can
         # take. We will not accept columns that split
