@@ -16,6 +16,7 @@ proj.directory-list = [{'dirloc': loc('../..'),
                         'recursive': True,
                         'watch_for_changes': True}]
 proj.file-type = 'normal'
+testing.auto-test-file-specs = ('test_*.py',)
 [user attributes]
 guimgr.overall-gui-state = {'windowing-policy': 'combined-window',
                             'windows': [{'name': 'BaMFT35XXb8RZKcsSC5XR380Wx'\
@@ -43,7 +44,7 @@ guimgr.overall-gui-state = {'windowing-policy': 'combined-window',
                                {'tree-state': {'file-sort-method': 'by name',
         'list-files-first': False,
         'tree-states': {'deep': {'column-widths': [1.0],
-                                 'expanded-nodes': [],
+                                 'expanded-nodes': [(1,)],
                                  'selected-nodes': [],
                                  'top-node': (0,)}},
         'tree-style': 'deep'}}),
@@ -400,10 +401,9 @@ guimgr.overall-gui-state = {'windowing-policy': 'combined-window',
                  'splits': 2,
                  'tab_location': 'left',
                  'user_data': {}},
-        'window-alloc': (78,
+        'window-alloc': (1102,
                          64,
                          1331,
                          958)}]}
 proj.env-vars = {None: ('default',
                         [''])}
-testing.auto-test-file-specs = ('test_*.py',)
