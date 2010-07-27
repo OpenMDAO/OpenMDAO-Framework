@@ -83,15 +83,15 @@ class Analysis(Assembly):
         self.EI_driver.add_parameter("branin_meta_model.y")
         self.EI_driver.criterion = "branin_meta_model.f_xy"
         self.EI_driver.next_case_events = ['branin_meta_model.train_next']
+        self.EI_driver.force_execute = True
         
         self.add("retrain",CaseIteratorDriver())
         self.retrain.recorder = DBCaseRecorder()
+        self.retrain.force_execute = True
         
         self.add("iter",Iterator())
         self.iter.iterations = 2
         self.iter.recorder = DumpCaseRecorder(open('test.out','w'))
-        
-        
         
         
         #Iteration Heirarchy
@@ -111,7 +111,7 @@ class Analysis(Assembly):
         
         
 if __name__ == "__main__":
-    from openmdao.main.api import set_as_top
+    from openmdao.main.api import set_as_top #, dump_iteration_tree
     from openmdao.util.plot import case_db_to_dict
     from matplotlib import pyplot as py, cm 
     from mpl_toolkits.mplot3d import Axes3D
@@ -121,6 +121,8 @@ if __name__ == "__main__":
     set_as_top(analysis)
     analysis.run()
     
+    #dump_iteration_tree(analysis)
+
     data_train = case_db_to_dict('trainer.db',
                                  ['broadcaster.y_in','broadcaster.x_in','branin_meta_model.f_xy'])
     

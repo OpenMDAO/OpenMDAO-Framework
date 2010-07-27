@@ -8,15 +8,23 @@ from openmdao.lib.caseiterators.listcaseiter import ListCaseIterator
 
 
 class ParetoFilter(Component): 
-    """takes a set of cases and filters out the subset of cases which are pareto optimal. Assumes that smaller values for 
-       model responses are better, so all problems must be posed as minimization problems""" 
+    """Takes a set of cases and filters out the subset of cases which are
+    pareto optimal. Assumes that smaller values for model responses are
+    better, so all problems must be posed as minimization problems
+    """
     
-    criteria = Array([],iotype="in",dtype=str,desc="list of outputs from the case to consider for filtering. Note, only case outputs are allowed as criteria")    
+    criteria = Array([],iotype="in",dtype=str,
+                     desc="list of outputs from the case to consider for filtering. "
+                          "Note, only case outputs are allowed as criteria")    
     
-    case_set = Instance(ICaseIterator,iotype="in",desc="CaseIterator with the cases to be filtered to find the pareto optimal subset")
+    case_set = Instance(ICaseIterator,iotype="in",
+                        desc="CaseIterator with the cases to be filtered to find the pareto "
+                             "optimal subset")
     
-    pareto_set = Instance(ICaseIterator,iotype="out",desc="resulting collection of pareto optimal cases")
-    dominated_set = Instance(ICaseIterator,iotype="out",desc="resulting collection of dominated cases")
+    pareto_set = Instance(ICaseIterator,iotype="out",
+                          desc="resulting collection of pareto optimal cases")
+    dominated_set = Instance(ICaseIterator,iotype="out",
+                             desc="resulting collection of dominated cases")
     
     def _pre_execute(self): 
         self._call_execute = True

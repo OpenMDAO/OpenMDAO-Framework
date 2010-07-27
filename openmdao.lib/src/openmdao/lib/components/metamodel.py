@@ -57,7 +57,7 @@ class MetaModel(Component):
                 try:
                     inputs = self.update_model_inputs()
                     self._training_input_history.append(inputs)
-                    print '%s training with inputs: %s' % (self.get_pathname(), inputs)
+                    #print '%s training with inputs: %s' % (self.get_pathname(), inputs)
                     self.model.run(force=True)
                     self.update_outputs_from_model()
                     case_outputs = []
@@ -75,7 +75,7 @@ class MetaModel(Component):
                                      RuntimeError)
             self._train = False
         else:
-            print '%s predicting' % self.get_pathname()
+            #print '%s predicting' % self.get_pathname()
             if self._new_train_data: 
                 for name,tup in self._surrogate_info.items(): 
                     surrogate, output_history = tup
