@@ -1,5 +1,5 @@
 """
-Utilities for reading and writing FORTRAN namelists.
+Utilities for reading and writing Fortran namelists.
 """
 
 from numpy import ndarray
@@ -15,7 +15,7 @@ class Card(object):
         self.is_comment = is_comment
 
 class Namelist(object):
-    """Utility to ease the task of constructing a formatted output file"""
+    """Utility to ease the task of constructing a formatted output file."""
     
     def __init__(self, comp):
         
@@ -36,7 +36,7 @@ class Namelist(object):
         self.filename = filename
         
     def set_title(self, title):
-        """Sets the title for the namelist"""
+        """Sets the title for the namelist."""
         
         self.title = title
         
@@ -50,7 +50,7 @@ class Namelist(object):
         
     def add_var(self, varpath):
         """Add an openmdao variable to the namelist.
-        varpath is the dotted path (e.g., comp1.comp2.var1)"""
+        varpath is the dotted path (e.g., comp1.comp2.var1)."""
         
         paths = varpath.split('.')
         name = paths[-1]

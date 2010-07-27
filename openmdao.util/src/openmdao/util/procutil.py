@@ -4,8 +4,8 @@ import fnmatch
 from subprocess import Popen,PIPE,STDOUT
 
 def traceit(frame, event, arg):
-    """a function useful for tracing python execution. wherever you want the 
-    tracing to start, insert a call to sys.settrace(traceit)"""
+    """A function useful for tracing Python execution. Wherever you want the 
+    tracing to start, insert a call to sys.settrace(traceit)."""
     if event == "line":
         lineno = frame.f_lineno
         filename = frame.f_globals["__file__"]
@@ -19,7 +19,7 @@ def traceit(frame, event, arg):
 
 
 def run_command(cmd, sh=True):
-    """run a command using Popen and return its output (stdout and stderr)
+    """Run a command using Popen and return its output (stdout and stderr)
     and its return code as a tuple.
     """
 

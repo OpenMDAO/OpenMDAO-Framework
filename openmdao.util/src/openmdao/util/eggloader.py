@@ -32,7 +32,7 @@ def load_from_eggfile(filename, entry_group, entry_name, install=False,
                       logger=None, observer=None):
     """
     Extract files in egg to a subdirectory matching the saved object name.
-    Optionally installs distributions the egg depends on, and then loads object
+    Optionally installs distributions the egg depends on and then loads object
     graph state by invoking the given entry point.  Returns the root object.
     """
     logger = logger or NullLogger()

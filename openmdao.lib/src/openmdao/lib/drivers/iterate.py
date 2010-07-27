@@ -1,7 +1,7 @@
 """
-A simple iteration driver. Basically runs a workflow, pasing the output
+A simple iteration driver. Basically runs a workflow, passing the output
 to the input for the next iteration. Relative change and number of iterations
-are used as termination criterea.
+are used as termination criteria.
 """
 
 # pylint: disable-msg=E0611,F0401
@@ -18,15 +18,15 @@ class Iterate(Driver):
     iterations are used as termination criterea."""
 
     # pylint: disable-msg=E1101
-    loop_end = Expression(iotype='in', desc='loop output to pass to input') 
+    loop_end = Expression(iotype='in', desc='loop output to pass to input.') 
     loop_start = Expression(iotype='out', 
-                            desc='loop input, taken from the input')
+                            desc='loop input, taken from the input.')
     
     max_iteration = Int(25, iotype='in', desc='Maximum number of \
-                                         iterations before termination')
+                                         iterations before termination.')
     
     tolerance = Float(0.00001, iotype='in', desc='Absolute convergence \
-                                            tolerance between iterations')
+                                            tolerance between iterations.')
 
 
     def __init__(self, doc=None):

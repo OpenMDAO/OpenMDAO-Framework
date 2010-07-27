@@ -52,7 +52,7 @@ class EntryPtLoader(object):
         self.ctor = None
     
     def create(self, env, **ctor_args):
-        """Return the object created by calling the entry point.If
+        """Return the object created by calling the entry point. If
         necessary, first activate the distribution and load the entry
         point, and check for conflicting version dependencies before
         loading. """

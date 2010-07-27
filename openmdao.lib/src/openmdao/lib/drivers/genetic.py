@@ -16,44 +16,44 @@ from openmdao.lib.api import Float, Int, Enum, Array,Bool, Instance
 array_test = re.compile("(\[[0-9]+\])+$")
 
 class Genetic(Driver):
-    """Genetic algorithm for the OpenMDAO frameowork, based on the Pyevolve Genetic algorithm module. 
+    """Genetic algorithm for the OpenMDAO framework, based on the Pyevolve Genetic algorithm module. 
     """
     objective = Expression(iotype='in',
-                          desc='A string containing the objective function expression to be optimized') 
+                          desc='A string containing the objective function expression to be optimized.') 
     
     opt_type = Enum("minimize", values=["minimize","maximize"],
                     iotype="in",
-                    desc="sets the optimization to either minimize or maximize the objective function")
+                    desc="Sets the optimization to either minimize or maximize the objective function.")
     
     generations = Int(Consts.CDefGAGenerations,iotype="in",
-                      desc="the maximum number of generations the algorithm will "
-                      "evolve to before stopping")
+                      desc="The maximum number of generations the algorithm will "
+                      "evolve to before stopping.")
     population_size = Int(Consts.CDefGAPopulationSize, iotype="in",
-                          desc = "the size of the population in each generation")
+                          desc = "The size of the population in each generation.")
     crossover_rate = Float(Consts.CDefGACrossoverRate, iotype="in",low=0.0,high=1.0,
-                           desc="the crossover rate used when two parent genomes repoduce to form a "
-                           "child genome")
+                           desc="The crossover rate used when two parent genomes reproduce to form a "
+                           "child genome.")
     mutation_rate = Float(Consts.CDefGAMutationRate, iotype="in",low=0.0,high=1.0,
-                           desc="the mutation rate applied to population members")
+                           desc="The mutation rate applied to population members.")
     
     selection_method = Enum("roulette_wheel",("roulette_wheel","tournament","rank","uniform"),
-                         desc="the selection method used to pick population members who will survive for "
-                         "breeding into the next generation",
+                         desc="The selection method used to pick population members who will survive for "
+                         "breeding into the next generation.",
                          iotype="in")
     _selection_mapping = {"roulette_wheel":Selectors.GRouletteWheel,
                           "tournament":Selectors.GTournamentSelector,
                           "rank":Selectors.GRankSelector,
                           "uniform":Selectors.GUniformSelector}
     
-    elitism = Bool(False,iotype="in",desc="controls the use of elitism in the createion of new "
+    elitism = Bool(False,iotype="in",desc="Controls the use of elitism in the creation of new "
                    "generations.")
     
-    best_individual = Instance(klass = GenomeBase.GenomeBase, iotype="out", desc="the genome with the "
-                               "best score from the optimization") 
+    best_individual = Instance(klass = GenomeBase.GenomeBase, iotype="out", desc="The genome with the "
+                               "best score from the optimization.") 
     
     seed = Int(None,iotype="in",
                desc="Random seed for the optimizer. Set to a specific value for repeatable "
-               "results, otherwise leave as None for truely random seeding")
+               "results; otherwise leave as None for truly random seeding.")
     
     def __init__(self,doc=None):
         super(Genetic,self).__init__(doc)
@@ -63,7 +63,7 @@ class Genetic(Driver):
     
     def _make_alleles(self): 
         """ Returns a GAllelle.Galleles instance with alleles corresponding to 
-        the parameters specified by the user"""
+        the parameters specified by the user."""
         alleles = GAllele.GAlleles()
         for str_ref in self._parameters:
             val = str_ref.evaluate() #now grab the value 
@@ -96,10 +96,10 @@ class Genetic(Driver):
         return alleles
     
     def remove_parameter(self,param_name):
-        """removes the specified parameter
+        """Removes the specified parameter
         
         param_name : str
-            name of the parameter to remove from the driver
+            Name of the parameter to remove from the driver.
         """
         
         try:
@@ -111,24 +111,24 @@ class Genetic(Driver):
         return True
     
     def list_parameters(self):
-        """Returns a list of the names of the parameters currently in the genetic instance"""
+        """Returns a list of the names of the parameters currently in the genetic instance."""
         return [str(x) for x in self._parameters]
     
     def clear_parameters(self):
-        """Removes all parameters from the genetic instance"""
+        """Removes all parameters from the genetic instance."""
         self._parameters = []
         self._parameter_ranges = {}
     
     def add_parameter(self,param_name,low=None,high=None):
-        """adds a parameter to the driver. 
+        """Adds a parameter to the driver. 
         
         param_name : str 
-            name of the parameter to add to the driver
+            Name of the parameter to add to the driver.
         low : number, optional
-            minimum allowed value the optimzier can use for this parameter. If not specified, 
+            Minimum allowed value the optimizer can use for this parameter. If not specified, 
             then the 'low' value from the public variable is used. 
         high : number, optional
-            maximum allowed value the optimizer can use for this parameter. If not specified, 
+            Maximum allowed value the optimizer can use for this parameter. If not specified, 
             then the 'high' value from the public variable is used.
         """
 
@@ -190,7 +190,7 @@ class Genetic(Driver):
         return True
             
     def execute(self):
-        """Perform the optimization"""
+        """Perform the optimization."""
         alleles = self._make_alleles()
         
         genome = G1DList.G1DList(len(alleles))
@@ -205,7 +205,7 @@ class Genetic(Driver):
         # Genetic Algorithm Instance
         #print self.seed
         
-        #configuring the iptions
+        #configuring the options
         ga = GSimpleGA.GSimpleGA(genome,interactiveMode = False, seed=self.seed)
         ga.setMinimax(Consts.minimaxType[self.opt_type])
         ga.setGenerations(self.generations)

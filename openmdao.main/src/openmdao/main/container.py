@@ -866,7 +866,7 @@ class Container(HasTraits):
     @staticmethod
     def load(instream, fmt=SAVE_CPICKLE, package=None, call_post_load=True,
              name=None):
-        """Load object(s) from the input stream. Pure python classes generally
+        """Load object(s) from the input stream. Pure Python classes generally
         won't need to override this, but extensions will. The format can be
         supplied in case something other than cPickle is needed.
         """

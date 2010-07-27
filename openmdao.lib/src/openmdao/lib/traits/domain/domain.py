@@ -29,7 +29,7 @@ class DomainObj(object):
     def add_domain(self, other, prefix='', make_copy=False):
         """
         Add zones from `other` to self, retaining names where possible.
-        Zone names will be prepended with `prefix`. If `make_copy` is True
+        Zone names will be prepended with `prefix`. If `make_copy` is True,
         then a deep copy of each zone is made rather than just referring
         to a shared instance.
         """
@@ -43,7 +43,7 @@ class DomainObj(object):
         """
         Add a :class:`Zone`. If `name` is None or blank, then a default
         of the form ``zone_N`` is used. The resulting name will be prepended
-        with `prefix`. If `make_copy` is True then a deep copy of each zone is
+        with `prefix`. If `make_copy` is True, then a deep copy of each zone is
         made rather than just referring to a shared instance.
         Returns the added zone.
         """
@@ -81,7 +81,7 @@ class DomainObj(object):
         setattr(self, name, zone)
 
     def zone_name(self, zone):
-        """ Returns name that `zone` is bound to. """
+        """ Return name that `zone` is bound to. """
         for name, value in self.__dict__.items():
             if value is zone:
                 return name

@@ -187,19 +187,19 @@ class CONMINdriver(Driver):
     # of the solution. 
     
     iprint = Int(0, iotype='in', desc='Print information during CONMIN '
-                    'solution. Higher values are more verbose')
+                    'solution. Higher values are more verbose.')
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
-                    'termination')
+                    'termination.')
     fdch = Float(.01, iotype='in', desc='Relative change in design variables '
-                      'when calculating finite difference gradients')
+                      'when calculating finite difference gradients.')
     fdchm = Float(.01, iotype='in', desc='Minimum absolute step in finite '
-                      'difference gradient calculations')
+                      'difference gradient calculations.')
     icndir = Float(0, iotype='in', desc='Conjugate gradient restart '
-                      'parameter')
+                      'parameter.')
     nscal = Float(0, iotype='in', desc='Scaling control parameter -- '
-                      'controls scaling of decision variables')
+                      'controls scaling of decision variables.')
     nfdg = Float(0, iotype='in', desc='User-defined gradient flag (not yet '
-                      'supported)')
+                      'supported).')
     ct = Float(-0.1, iotype='in', desc='Constraint thickness parameter.')
     ctmin = Float(0.004, iotype='in', desc='Minimum absoluate value of ct '
                       'used in optimization.')
@@ -213,16 +213,16 @@ class CONMINdriver(Driver):
                       'parameter that pushes designs towards the feasible '
                       'region.')
     delfun = Float(0.001, iotype='in', low=0.0001, 
-                   desc='Relative convergence tolerance')
+                   desc='Relative convergence tolerance.')
     dabfun = Float(0.001, iotype='in', low=1.0e-10, 
-                   desc='Absolute convergence tolerance')
-    linobj = Int(0, iotype='in', desc='Linear objective function flag')
+                   desc='Absolute convergence tolerance.')
+    linobj = Int(0, iotype='in', desc='Linear objective function flag.')
     itrm = Int(3, iotype='in', desc='Number of consecutive iterations to '
-                      'indicate convergence (relative or absolute)')
+                      'indicate convergence (relative or absolute).')
         
     # Extra variables for printing
-    printvars = ExpressionList(iotype='in', desc='list of extra variables to'
-                               'output in the recorder')
+    printvars = ExpressionList(iotype='in', desc='List of extra variables to'
+                               'output in the recorder.')
     
     def __init__(self, doc=None):
         super(CONMINdriver, self).__init__( doc)
