@@ -2,9 +2,8 @@
 Some useful decorators
 """
 
-import functools
-from inspect import getmembers, ismethod
-from types import MethodType
+from decorator import decorator
+from inspect import getmembers, ismethod, getargspec
 
 def add_delegate(*delegates):
     """A class decorator that takes delegate classes or (name,delegate) tuples as
@@ -16,6 +15,7 @@ def add_delegate(*delegates):
     unless there is an attribute or function in the class with the same name. In that
     case the delegate function will be ignored.
     """
+
     def forwarder(fname, delegatename):
         """Returns a function that forwards calls on the scoping object to calls 
         on the delegate object.
@@ -61,7 +61,9 @@ def add_delegate(*delegates):
                     if memname in added_set:
                         continue   # skip adding member if it's already part of the class
                     added_set.add(memname)
-                    setattr(cls, memname, forwarder(memname, delegatename))
+                    f = forwarder(memname, delegatename)
+                    f.__doc__ = getattr(delegate, memname).__doc__
+                    setattr(cls, memname, f)
             cls.__init__ = init_wrapper(cls.__init__, listofdels)
         return cls
     return _add_delegate
