@@ -14,12 +14,12 @@ def rand_latin_hypercube(n, k, edges=False):
     dimensions within [0,1]^k hypercube.
     
     n : int
-       desired number of points
+       Desired number of points.
     k : int
-       number of design variables (dimensions)
+       Number of design variables (dimensions).
     edges : bool, optional
-       if Edges=True the extreme bins will have their centres on the
-       edges of the domain, otherwise the bins will be entirely 
+       if Edges=True, the extreme bins will have their centres on the
+       edges of the domain; otherwise the bins will be entirely 
        contained within the domain (default setting).
 
     Returns an n by k numpy array.

@@ -138,7 +138,7 @@ class IResourceAllocator (Interface):
 
     
 class ICaseIterator(Interface):
-    """An iterator that returns Case objects"""
+    """An iterator that returns Case objects."""
     
     def __iter__():
         """Return an iterator object."""
@@ -150,7 +150,7 @@ class ICaseIterator(Interface):
         
 
 class ICaseRecorder(Interface):
-    """A recorder of Cases"""
+    """A recorder of Cases."""
     
     def record(case):
         """Record the given Case."""

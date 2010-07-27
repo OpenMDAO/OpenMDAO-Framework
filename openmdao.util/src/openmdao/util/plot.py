@@ -11,13 +11,13 @@ def list_db_vars(dbname, case_sql=None, var_sql=None):
     Return the set of the names of the variables found in the specified case DB file.
     
     dbname : str
-        The name of the sqlite DB file
+        The name of the sqlite DB file.
         
     case_sql : str, optional
-        SQL syntax that will be placed in the WHERE clause for Case retrieval
+        SQL syntax that will be placed in the WHERE clause for Case retrieval.
         
     var_sql : str, optional
-        SQL syntax that will be placed in the WHERE clause for variable retrieval
+        SQL syntax that will be placed in the WHERE clause for variable retrieval.
     """
     connection = sqlite3.connect(dbname)
     
@@ -54,16 +54,16 @@ def case_db_to_dict(dbname, varnames, case_sql=None, var_sql=None):
     variable name.
     
     dbname : str
-        The name of the sqlite DB file
+        The name of the sqlite DB file.
         
     varnames : list[str]
-        The list of names of variables to be retrieved
+        The list of names of variables to be retrieved.
         
     case_sql : str, optional
-        SQL syntax that will be placed in the WHERE clause for Case retrieval
+        SQL syntax that will be placed in the WHERE clause for Case retrieval.
         
     var_sql : str, optional
-        SQL syntax that will be placed in the WHERE clause for variable retrieval
+        SQL syntax that will be placed in the WHERE clause for variable retrieval.
     
     """
     connection = sqlite3.connect(dbname)
@@ -132,31 +132,31 @@ def displayXY(dbname, xnames, ynames, case_sql=None, var_sql=None,
     """Display an XY plot using Case data from a sqlite DB.
     
     dbname : str
-        Name of the database file
+        Name of the database file.
         
     xnames : list[str]
-        Names of X variables
+        Names of X variables.
         
     ynames : list[str]
-        Names of Y variables
+        Names of Y variables.
         
     case_sql : str, optional
-        SQL syntax that will be placed in the WHERE clause for Case retrieval
+        SQL syntax that will be placed in the WHERE clause for Case retrieval.
         
     var_sql : str, optional
-        SQL syntax that will be placed in the WHERE clause for variable retrieval
+        SQL syntax that will be placed in the WHERE clause for variable retrieval.
         
     title : str, optional
-        Plot title
+        Plot title.
         
     grid : bool, optional
-        If True, a grid is drawn on the plot
+        If True, a grid is drawn on the plot.
         
     xlabel : str, optional
-        X axis label
+        X axis label.
         
     ylabel : str, optional
-        Y axis label
+        Y axis label.
     """
     try:
         if 'matplotlib' not in sys.modules:

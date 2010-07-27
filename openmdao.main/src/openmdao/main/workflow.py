@@ -72,7 +72,7 @@ class Workflow(object):
         raise NotImplemented("This Workflow has no 'remove' function")
 
     def contents(self):
-        """Returns a list of all Components in the workflow.
+        """Returns a list of all components in the workflow.
         No ordering is assumed.
         """
         raise NotImplemented("This Workflow has no 'contents' function")

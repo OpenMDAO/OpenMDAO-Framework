@@ -3,8 +3,8 @@ import sys
 
 def view_docs(browser=None):
     """A script (openmdao_docs) points to this. It just pops up a browser to 
-    view the openmdao sphinx docs. If the docs are not already built, it
-    builds them before viewing, but if the docs already exist, it's not smart enough
+    view the openmdao Sphinx docs. If the docs are not already built, it
+    builds them before viewing; but if the docs already exist, it's not smart enough
     to rebuild them if they've changed since the last build.
     
     If this is run from a non-developer install, i.e., there is no local copy of

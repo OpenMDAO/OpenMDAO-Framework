@@ -75,7 +75,7 @@ class CaseIteratorDriver(Driver):
         self._rerun = []  # Cases that failed and should be retried.
 
     def execute(self):
-        """ Runs each case in `iterator` and records results in `recorder`. """
+        """ Run each case in `iterator` and record results in `recorder`. """
         self.setup()
         self.resume()
 

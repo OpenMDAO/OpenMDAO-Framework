@@ -5,17 +5,17 @@
 
 """This module provides a data type that represents a physical
 quantity together with its unit. It is possible to add and
-subtract these quantities if the units are compatible, and
+subtract these quantities if the units are compatible and
 a quantity can be converted to another compatible unit.
 Multiplication, subtraction, and raising to integer powers
-is allowed without restriction, and the result will have
+are allowed without restriction, and the result will have
 the correct unit. A quantity can be raised to a non-integer
 power only if the result can be represented by integer powers
 of the base units.
 
 The module provides a basic set of predefined physical quanitites
-in its built in library, however it also supports generation of
-personal libararies which can be saved and reused"""
+in its built-in library; however, it also supports generation of
+personal libararies which can be saved and reused."""
 
 import re, ConfigParser
 import os.path
@@ -36,9 +36,9 @@ class NumberDict(dict):
   
     Constructor: NumberDict()
   
-    An instance of this class acts like an array of number with
+    An instance of this class acts like an array of numbers with
     generalized (non-integer) indices. A value of zero is assumed
-    for undefined entries. NumberDict instances support addition,
+    for undefined entries. NumberDict instances support addition
     and subtraction with other NumberDict instances, and multiplication
     and division by scalars.
     """
@@ -211,7 +211,7 @@ class PhysicalQuantity(object):
         return self.value != 0
   
     def convert_value(self, target_unit):
-        """Converts the values of the PQ to the target_unit"""
+        """Converts the values of the PQ to the target_unit."""
         (factor, offset) = self.unit.conversion_tuple_to(target_unit)
         return (self.value + offset) * factor
 
@@ -307,7 +307,7 @@ class PhysicalQuantity(object):
         return pow(self, 0.5)
 
     def sin(self):
-        """Parsing Sine"""
+        """Parsing Sine."""
         if self.unit.is_angle():
             return N.sin(self.value * \
                 self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
@@ -315,7 +315,7 @@ class PhysicalQuantity(object):
             raise TypeError('Argument of sin must be an angle')
 
     def cos(self):
-        """Parsing Cosine"""
+        """Parsing Cosine."""
         if self.unit.is_angle():
             return N.cos(self.value * \
                 self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
@@ -323,7 +323,7 @@ class PhysicalQuantity(object):
             raise TypeError('Argument of cos must be an angle')
 
     def tan(self):
-        """Parsing tangent"""
+        """Parsing tangent."""
         if self.unit.is_angle():
             return N.tan(self.value * \
                 self.unit.conversion_factor_to(PhysicalQuantity('1rad').unit))
@@ -502,12 +502,12 @@ class PhysicalUnit(object):
         return not any(self.powers)
   
     def is_angle(self):
-        """Checks if this PQ is an Angle"""
+        """Checks if this PQ is an Angle."""
         return (self.powers[_unit_lib.base_types['angle']] == 1 and \
                              sum(self.powers) == 1)
   
     def set_name(self, name):
-        """Sets the name"""
+        """Sets the name."""
         self.names = NumberDict()
         self.names[name] = 1
 
@@ -537,7 +537,7 @@ class PhysicalUnit(object):
 _unit_cache = {}
 
 def _find_unit(unit):
-    """find unit helper function"""
+    """Find unit helper function."""
     if isinstance(unit, str):
         name = unit.strip()
         try:
@@ -584,7 +584,7 @@ def _new_unit(name, factor, powers):
 
 
 def add_offset_unit(name, baseunit, factor, offset, comment=''):
-    """adding Offset Unit"""
+    """Adding Offset Unit."""
     if isinstance(baseunit, str):
         baseunit = _find_unit(baseunit)
     #else, baseunit should be a instance of PhysicalUnit
@@ -604,7 +604,7 @@ def add_offset_unit(name, baseunit, factor, offset, comment=''):
         
         
 def add_unit(name, unit, comment=''):
-    """adding Unit"""
+    """Adding Unit."""
     if comment:
         _unit_lib.help.append((name, comment, unit))
     if isinstance(unit, str):
@@ -623,14 +623,14 @@ def add_unit(name, unit, comment=''):
 _unit_lib = ConfigParser.ConfigParser()
 
 def do_nothing(string):
-    """makes the ConfigParser case sensitive"""
+    """Makes the ConfigParser case sensitive."""
     return string
 
 _unit_lib.optionxform = do_nothing
 
 
 def import_library(libfilepointer):
-    """Imports a library"""
+    """Imports a library."""
     global _unit_lib 
     global _unit_cache
     _unit_cache = {}

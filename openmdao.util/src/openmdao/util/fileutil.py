@@ -15,13 +15,13 @@ from subprocess import Popen,PIPE,STDOUT
 
 
 def makepath(path):
-    """ creates missing directories for the given path and
-        returns a normalized absolute version of the path.
+    """ Creates missing directories for the given path and returns a normalized absolute 
+    version of the path.
 
-    - if the given path already exists in the filesystem
+    - If the given path already exists in the filesystem,
       the filesystem is not modified.
 
-    - otherwise makepath creates directories along the given path
+    - Otherwise makepath creates directories along the given path
       using the dirname() of the path. You may append
       a '/' to the path if you want it to be a directory path.
 
@@ -43,7 +43,7 @@ def find_files(pat, startdir):
 
 
 def rm(path):
-    """Delete a file or directory"""
+    """Delete a file or directory."""
     if os.path.isdir(path):
         shutil.rmtree(path)
     else:
@@ -51,7 +51,7 @@ def rm(path):
         
 
 def copy(src, dest):
-    """Copy a file or directory"""
+    """Copy a file or directory."""
     if os.path.isfile(src):
         shutil.copy(src, dest)
     elif os.path.isdir(src):
@@ -59,7 +59,7 @@ def copy(src, dest):
     
 
 def find_bzr(path=None):
-    """ Return bzr root directory path, or None. """
+    """ Return bzr root directory path or None. """
     if not path:
         path = os.getcwd()
     if not os.path.exists(path):

@@ -61,10 +61,10 @@ class LatinHypercube(object):
     def get_shape(self):
         return self.doe.shape
     
-    shape = property(get_shape,None,None,"(rowsxcolumns) size of the LatinHypercube doe")
+    shape = property(get_shape,None,None,"(rowsxcolumns) size of the LatinHypercube DOE.")
         
     def mmphi(self):
-        """Calculates the Morris-Mitchell sampling criterion for input DOE"""
+        """Calculates the Morris-Mitchell sampling criterion for input DOE."""
         n,m = self.doe.shape
         distdict = {}
         
@@ -108,8 +108,8 @@ class LatinHypercube(object):
         #return phiQ
         
     def perturb(self,mutation_count):
-        """ Interchanges pairs of randomly chosen elements within randomly chosen
-        columns of a doe a number of times. The result of this operation will also 
+        """Interchanges pairs of randomly chosen elements within randomly chosen
+        columns of a DOE a number of times. The result of this operation will also 
         be a Latin hypercube.
         """
         new_doe = self.doe.copy()
@@ -163,7 +163,7 @@ class OptLatinHypercube(HasTraits):
         before each iteration. 
                 
         varname : string
-            name of the public event variable that should be set before execution
+            Name of the public event variable that should be set before execution.
         """
         
         if varname in self.event_vars: 
@@ -186,15 +186,15 @@ class OptLatinHypercube(HasTraits):
         """Adds a design variable to the driver. 
         
         varname : string
-            name of the public variable the driver should vary during execution.
+            Name of the public variable the driver should vary during execution.
             
         low : float, optional
-            minimum allowed value of the design variable
+            Minimum allowed value of the design variable.
             
         high : float, optional
-            maximum allowed value of the design variable
+            Maximum allowed value of the design variable.
         
-        If neither 'low' nor 'high' are specified, the min and max will
+        If neither 'low' nor 'high' is specified, the min and max will
         default to the values in the metadata of the public variable being
         referenced. If they are not specified in the metadata and not provided
         as arguments a ValueError is raised.
@@ -291,7 +291,7 @@ class OptLatinHypercube(HasTraits):
 @print_timing
 def _mmlhs(x_start, population, generations):
     """Evolutionary search for most space filling Latin-Hypercube. 
-    Returns a new LatinHypercube instance with an optimized set of points"""
+    Returns a new LatinHypercube instance with an optimized set of points."""
     x_best = x_start
     phi_best = x_start.mmphi()
     n = x_start.shape[1]
