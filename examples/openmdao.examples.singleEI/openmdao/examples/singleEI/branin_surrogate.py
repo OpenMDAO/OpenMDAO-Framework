@@ -67,6 +67,7 @@ class Analysis(Assembly):
         self.add("filter",ParetoFilter())
         self.filter.criteria = ['branin_meta_model.f_xy']
         self.filter.case_set = DBCaseIterator('branin_meta_model.db')
+        self.filter.force_execute = True
 
         #Driver Configuration
         self.add("DOE_trainer",DOEdriver())
@@ -86,12 +87,12 @@ class Analysis(Assembly):
         self.EI_driver.force_execute = True
         
         self.add("retrain",CaseIteratorDriver())
-        self.retrain.recorder = DBCaseRecorder()
+        self.retrain.recorder = DumpCaseRecorder()
         self.retrain.force_execute = True
         
         self.add("iter",Iterator())
-        self.iter.iterations = 2
-        self.iter.recorder = DumpCaseRecorder(open('test.out','w'))
+        self.iter.iterations = 4
+        self.iter.recorder = DBCaseRecorder() 
         
         
         #Iteration Heirarchy
