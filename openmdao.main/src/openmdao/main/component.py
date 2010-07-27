@@ -253,9 +253,11 @@ class Component (Container):
             self._pre_execute()
             if self._call_execute or force:
                 #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
-                #print 'execute %s' % self.get_pathname()
+                print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
+            else:
+                print '%s did not execute!' % self.get_pathname()
         finally:
             if self.directory:
                 self.pop_dir()

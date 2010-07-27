@@ -7,7 +7,7 @@ class HasEvents(object):
         self._parent = parent
 
     def add_event(self, name):
-        """Adds a parameter to the driver. 
+        """Adds an event variable to be set by the driver. 
         
         name : string
             name of the event variable the driver should set during execution
@@ -27,6 +27,9 @@ class HasEvents(object):
         self._events.append(name)
             
     def remove_event(self, name):
+        """Remove the name of the specified event variable from the driver's list
+        of event variables to be set during execution.
+        """
         try:
             self._events.remove(name)
         except KeyError:
@@ -34,7 +37,9 @@ class HasEvents(object):
                                          "that is not in the driver." % name,
                                          AttributeError)
     def get_events(self):
+        """Return the list of event variables to be set by this driver."""
         return self._events
     
-    def clear_events(self): 
+    def clear_events(self):
+        """Remove all event variables from the driver's list."""
         self._events = []

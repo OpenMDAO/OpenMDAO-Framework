@@ -94,7 +94,7 @@ class Analysis(Assembly):
         
         
         
-        #Iteration Heirarchy                
+        #Iteration Heirarchy
         self.driver.workflow.add([self.DOE_trainer,self.iter])
         
         self.DOE_trainer.workflow.add(self.branin_meta_model)
@@ -121,7 +121,8 @@ if __name__ == "__main__":
     set_as_top(analysis)
     analysis.run()
     
-    data_train = case_db_to_dict('trainer.db',['broadcaster.y_in','broadcaster.x_in','branin_meta_model.f_xy'])
+    data_train = case_db_to_dict('trainer.db',
+                                 ['broadcaster.y_in','broadcaster.x_in','branin_meta_model.f_xy'])
     
     #convert the database data to python objects
     data_train['branin_meta_model.f_xy'] = [convert_norm_dist(x).mu for x in data_train['branin_meta_model.f_xy']]

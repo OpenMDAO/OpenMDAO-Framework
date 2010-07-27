@@ -49,27 +49,33 @@ class MetaModel(Component):
         self._new_train_data = True
 
     def execute(self):
-        """If the training flag is set, train the metamodel. Otherwise
+        """If the training flag is set, train the metamodel. Otherwise, 
+        predict outputs.
         """
         if self._train:
             if self.model:
-                inputs = self.update_model_inputs()
-                self._training_input_history.append(inputs)
-                self.model.run()
-                self.update_outputs_from_model()
-                case_outputs = []
-                for name, tup in self._surrogate_info.items():
-                    surrogate, output_history = tup
-                    case_outputs.append(('.'.join([self.name,name]), None, output_history[-1]))
-                # save the case, making sure to add out name to the local input name since
-                # this Case is scoped to our parent Assembly
-                case_inputs = [('.'.join([self.name,name]),None,val) for name,val in zip(self._surrogate_input_names, inputs)]
-                self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
+                try:
+                    inputs = self.update_model_inputs()
+                    self._training_input_history.append(inputs)
+                    print '%s training with inputs: %s' % (self.get_pathname(), inputs)
+                    self.model.run(force=True)
+                    self.update_outputs_from_model()
+                    case_outputs = []
+                    for name, tup in self._surrogate_info.items():
+                        surrogate, output_history = tup
+                        case_outputs.append(('.'.join([self.name,name]), None, output_history[-1]))
+                    # save the case, making sure to add out name to the local input name since
+                    # this Case is scoped to our parent Assembly
+                    case_inputs = [('.'.join([self.name,name]),None,val) for name,val in zip(self._surrogate_input_names, inputs)]
+                    self.recorder.record(Case(inputs=case_inputs, outputs=case_outputs))
+                except Exception as err:
+                    self.raise_exception("training failed: %s" % str(err), type(err))
             else:
                 self.raise_exception("MetaModel object must have a model!",
                                      RuntimeError)
             self._train = False
         else:
+            print '%s predicting' % self.get_pathname()
             if self._new_train_data: 
                 for name,tup in self._surrogate_info.items(): 
                     surrogate, output_history = tup
@@ -84,6 +90,11 @@ class MetaModel(Component):
                 setattr(self, name, predicted)
             
             
+    def invalidate_deps(self, compname=None, varnames=None, notify_parent=False):
+        if compname:  # we were called from our model, which expects to be in an Assembly
+            return
+        super(MetaModel, self).invalidate_deps(varnames=varnames, notify_parent=notify_parent)
+    
     def _model_changed(self, oldmodel, newmodel):
         self.update_model(oldmodel, newmodel)
             
@@ -130,9 +141,17 @@ class MetaModel(Component):
                     self._surrogate_info[name] = (self.surrogate.__class__(), []) # (surrogate,output_history)
                     new_model_traitnames.add(name)
                     setattr(self, name, NormalDistribution(getattr(newmodel, name)))
+                    
+            newmodel.parent = self
+            newmodel.name = 'model'
         
         self._current_model_traitnames = new_model_traitnames
 
+    def update_inputs(self, compname, varnames):
+        if compname != 'model':
+            self.raise_exception("cannot update inputs for child named '%s'" % compname)
+        self.model.set_valids(varnames, True)
+    
     def update_model_inputs(self):
         """Copy the values of the MetaModel's inputs into the inputs of the model.
         Returns the values of the inputs.
