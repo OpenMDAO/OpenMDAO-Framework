@@ -13,16 +13,13 @@ class ListCaseIterator(HasTraits):
 
     def __init__(self, cases):
         super(ListCaseIterator, self).__init__()
-        self._cases = []
-        self._cases.extend(cases)
+        self._cases = list(cases)
 
     def __iter__(self):
         return self._next_case()
 
     def _next_case(self):
-        """ Generator which just returns list items in-order, emptying
-        the list as it goes.
-        """
-        while self._cases:
-            yield self._cases.pop(0)
+        """ Generator which just returns list items in-order"""
+        for case in self._cases:
+            yield case
 

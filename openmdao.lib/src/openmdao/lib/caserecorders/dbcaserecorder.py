@@ -55,6 +55,9 @@ class DBCaseRecorder(object):
         # insert the inputs and outputs into the vars table
         vlist = [(None, name, case_id, 'i', value, entry) for name,entry,value in case.inputs]
         vlist.extend([(None, name, case_id, 'o', value, entry) for name,entry,value in case.outputs])
-        cur.executemany("insert into casevars(var_id,name,case_id,sense,value,entry) values(?,?,?,?,?,?)", 
-                        vlist)
+        #cur.executemany("insert into casevars(var_id,name,case_id,sense,value,entry) values(?,?,?,?,?,?)", 
+                        #vlist)
+        for v in vlist:
+            cur.execute("insert into casevars(var_id,name,case_id,sense,value,entry) values(?,?,?,?,?,?)", 
+                            v)
         self._connection.commit()

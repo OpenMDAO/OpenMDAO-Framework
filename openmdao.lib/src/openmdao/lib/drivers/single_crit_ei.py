@@ -28,16 +28,18 @@ class SingleCritEI(Driver):
     implements(IHasParameters)
      
     best_case = Instance(ICaseIterator, iotype="in",
-                         desc="CaseIterator which containes a single case, representing the criteria value")
-    next_case_events = Array([],dtype="str",iotype="in",desc="Names of event traits which should be added to next_case")
+                    desc="CaseIterator which contains a single case, representing the criteria value")
+    next_case_events = Array([],dtype="str",iotype="in",
+                    desc="Names of event traits which should be added to next_case")
     next_case = Instance(ICaseIterator, iotype="out",
-                         desc="CaseIterator which contains the case which maximize expected improvement")
+                    desc="CaseIterator which contains the case which maximize expected improvement")
     criteria = Expression(iotype="in",
-                           desc="name of the variable to maximize the expected improvement around. Must be a NormalDistrubtion type")
+                    desc="Name of the variable to maximize the expected improvement around. "
+                          "Must be a NormalDistrubtion type")
     
     def __init__(self,*args,**kwargs):
         super(SingleCritEI,self).__init__(self,*args,**kwargs)
-        self.set_of_alleles = []   
+        self.set_of_alleles = []
         
     def _make_alleles(self):
         self.set_of_alleles = GAllele.GAlleles()
@@ -115,3 +117,4 @@ class SingleCritEI(Driver):
         case = Case(inputs=[(event_name,None,True) for event_name in self.next_case_events]+[(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())])
         print "ei_next_case: ", case        
         self.next_case = ListCaseIterator([case,])
+        
