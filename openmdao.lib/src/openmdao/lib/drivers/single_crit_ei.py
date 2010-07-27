@@ -37,7 +37,7 @@ class SingleCritEI(Driver):
     
     def __init__(self,*args,**kwargs):
         super(SingleCritEI,self).__init__(self,*args,**kwargs)
-        self.set_of_alleles = []        
+        self.set_of_alleles = []   
         
     def _make_alleles(self):
         self.set_of_alleles = GAllele.GAlleles()
@@ -76,13 +76,15 @@ class SingleCritEI(Driver):
         
     def execute(self): 
         """Optimize the Expected Improvement and calculate the next training point to run"""
+        print "EI_Driver"
         if self.criteria == "": 
             self.raise_exception("no criteria was specified",RuntimeError)
         elif not self.set_of_alleles:
             self.raise_exception("no parameters were added to the driver",RuntimeError)
         #TODO: This is not a good way to do this
         #grab the target criteria value out of the input best_case
-        for case in self.best_case: 
+        best_case = None
+        for case in self.best_case:
             best_case = case
             break
         self.target = None
@@ -111,4 +113,5 @@ class SingleCritEI(Driver):
         ga.evolve()
         new_x = array([x for x in ga.bestIndividual()])
         case = Case(inputs=[(event_name,None,True) for event_name in self.next_case_events]+[(name,None,value) for value,name in zip(new_x,self.get_parameters().keys())])
+        print "ei_next_case: ", case        
         self.next_case = ListCaseIterator([case,])
