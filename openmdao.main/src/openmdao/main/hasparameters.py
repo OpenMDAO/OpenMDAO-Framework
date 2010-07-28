@@ -93,6 +93,11 @@ class HasParameters(object):
                                              "but no upper limit was found and no " 
                                              "'high' argument was given. One or the "
                                              "other must be specified." % name,ValueError)
+                
+        if parameter.low > parameter.high:
+            self._parent.raise_exception("Parameter '%s' has a lower bound (%s) that exceeds its upper bound (%s)" %
+                                         (name, parameter.low, parameter.high), ValueError)
+
         self._parameters[name] = parameter
             
     def remove_parameter(self, name):
