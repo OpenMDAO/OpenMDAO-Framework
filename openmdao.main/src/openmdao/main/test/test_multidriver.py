@@ -29,7 +29,7 @@ class Adder(Component):
 
 class Summer(Driver):
     """Sums the objective over some number of iterations, feeding
-    its current sum back into the specified design variable."""
+    its current sum back into the specified parameter."""
     
     objective = Expression(iotype='in')
     design = Expression(iotype='out')

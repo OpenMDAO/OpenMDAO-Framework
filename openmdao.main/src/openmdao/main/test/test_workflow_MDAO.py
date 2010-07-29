@@ -263,8 +263,6 @@ class SellarIDF(Assembly):
                                    'dis2.y2-dis1.y2',
                                    'dis1.y2-dis2.y2']
         #self.driver.cons_is_linear = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-        #self.driver.lower_bounds = [-10.0, 0.0, 0.0, 3.16, -10.0]
-        #self.driver.upper_bounds = [10.0, 10.0, 10.0, 10, 24.0]
         self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003
@@ -328,8 +326,6 @@ class SellarCO(Assembly):
                                    '(coupler.z1-dis2b.z1)**2 + (coupler.z2-dis2c.z2)**2 + (coupler.y1-dis2a.y1)**2 + '
                                    '(coupler.y2-dis2c.y2)**2' ]
         
-        #self.driver.lower_bounds = [-10.0, 0.0, 0.0, 3.16, -10.0]
-        #self.driver.upper_bounds = [10.0, 10.0, 10.0, 10, 24.0]
         self.driver.printvars = ['dis1.y1','dis2c.y2']
         self.driver.iprint = 0
         self.driver.itmax = 100
@@ -368,8 +364,6 @@ class SellarCO(Assembly):
                                     [-10.0, 0.0, 3.16],
                                     [10.0, 10.0, 10]):
             self.localopt2.add_parameter(param, low=low, high=high)
-        #self.localopt2.lower_bounds = [-10.0, 0.0, 3.16]
-        #self.localopt2.upper_bounds = [10.0, 10.0, 10]
         self.localopt2.iprint = 0
         self.localopt2.itmax = 100
         self.localopt2.fdch = .003

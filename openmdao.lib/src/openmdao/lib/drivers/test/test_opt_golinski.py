@@ -290,7 +290,7 @@ class GolinskiTestCase(unittest.TestCase):
         try:
             self.top.run()
         except Exception, err:
-            self.assertEqual(str(err), "driver: no design variables specified")
+            self.assertEqual(str(err), "driver: no parameters specified")
         else:
             self.fail('Exception expected')
     

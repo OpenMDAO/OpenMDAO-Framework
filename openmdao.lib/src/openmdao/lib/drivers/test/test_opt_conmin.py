@@ -114,7 +114,7 @@ class CONMINdriverTestCase(unittest.TestCase):
             self.top.run()
         except RuntimeError, err:
             self.assertEqual(str(err), 
-                "driver: no design variables specified")
+                "driver: no parameters specified")
         else:
             self.fail('RuntimeError expected')
     

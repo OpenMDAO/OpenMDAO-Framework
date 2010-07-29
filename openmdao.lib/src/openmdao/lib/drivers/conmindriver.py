@@ -23,6 +23,7 @@ from openmdao.lib.traits.float import Float
 from openmdao.lib.traits.int import Int
 from openmdao.lib.traits.array import Array
 from openmdao.main.hasparameters import HasParameters
+from openmdao.main.hasevents import HasEvents
 from openmdao.util.decorators import add_delegate
 
 
@@ -148,7 +149,7 @@ class _consav(object):
         self.jgoto = 0
         self.ispace = [0, 0]
 
-@add_delegate(HasParameters)
+@add_delegate(HasParameters, HasEvents)
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 
         
@@ -157,12 +158,7 @@ class CONMINdriver(Driver):
           accessible through CONMINdriver
             
     """
-    
     # pylint: disable-msg=E1101
-    #design_vars = ExpressionList(iotype='out',
-       #desc='An array of design variable names. These names can include array '
-             #'indexing.')
-    
     constraints = ExpressionList(iotype='in',
             desc= 'A list of expression strings indicating constraints.'
             ' A value of < 0 for the expression indicates that the constraint '
@@ -171,14 +167,8 @@ class CONMINdriver(Driver):
     objective = Expression(iotype='in',
                 desc= 'A string containing the objective function expression.')
     
-    #upper_bounds = Array(zeros(0.,'d'), iotype='in',
-        #desc='Array of constraints on the maximum value of each design variable.')
-    
-    #lower_bounds = Array(zeros(0.,'d'), iotype='in',
-        #desc='Array of constraints on the minimum value of each design variable.')
-
     scal = Array(zeros(0.,'d'), iotype='in', 
-        desc='Array of scaling factors for the design variables.')
+        desc='Array of scaling factors for the parameters.')
 
     cons_is_linear = Array(zeros(0,'d'), dtype=numpy_int, iotype='in', 
         desc='Array designating whether each constraint is linear.')
@@ -191,7 +181,7 @@ class CONMINdriver(Driver):
                     'solution. Higher values are more verbose')
     itmax = Int(10, iotype='in', desc='Maximum number of iterations before '
                     'termination')
-    fdch = Float(.01, iotype='in', desc='Relative change in design variables '
+    fdch = Float(.01, iotype='in', desc='Relative change in parameters '
                       'when calculating finite difference gradients')
     fdchm = Float(.01, iotype='in', desc='Minimum absolute step in finite '
                       'difference gradient calculations')
@@ -265,7 +255,7 @@ class CONMINdriver(Driver):
         self.cnmn1.igoto = 0
         self.iter_count = 0
         
-        # get the initial values of the design variables
+        # get the initial values of the parameters
         # check if any min/max constraints are violated by initial values
         for i, val in enumerate(self.get_parameters().values()):
             self.design_vals[i] = dval = val.expreval.evaluate()
@@ -336,7 +326,7 @@ class CONMINdriver(Driver):
             # common blocks are saved before, and loaded after execution
             self._save_common_blocks()
             
-            # update the design variables in the model
+            # update the parameters in the model
             dvals = [float(val) for val in self.design_vals[:-2]]
             self.set_parameters(dvals)
             #for var, val in zip(self.design_vars, dvals):
@@ -410,12 +400,12 @@ class CONMINdriver(Driver):
         
         params = self.get_parameters().values()
         
-        # size arrays based on number of design variables
+        # size arrays based on number of parameters
         num_dvs = len(params)
         self.design_vals = zeros(num_dvs+2, 'd')
 
         if num_dvs < 1:
-            self.raise_exception('no design variables specified', RuntimeError)
+            self.raise_exception('no parameters specified', RuntimeError)
             
         # create lower_bounds array
         self._lower_bounds = zeros(num_dvs+2)
@@ -521,9 +511,9 @@ class CONMINdriver(Driver):
             msg = "invalid value '%s' for input ref variable '%s': %s"
             self.raise_exception( msg % (str(expr), name, err), TraitError)
         
-    @on_trait_change('constraints')#, design_vars') 
+    @on_trait_change('constraints')
     def _exprlist_changed(self, obj, name, old, new):
-        """ Check constraints and design variables on change"""
+        """ Check constraints and parameters on change"""
 
         exprevals = getattr(obj, name)
         for i, expr in enumerate(exprevals):

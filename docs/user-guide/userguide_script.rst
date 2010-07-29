@@ -1427,7 +1427,7 @@ You add design variables to Genetic using the ``add_parameter`` method.
     top = Simulation()        
     set_as_top(top)
         
-In the above example, three design variables were added to the optimizer. The optimizer 
+In the above example, three parameterss were added to the optimizer. The optimizer 
 figures out for itself what type of variable it is and behaves appropriately. In all three
 cases, since no *low* or *high* arguments were provided, the optimizer will use the values
 from the metadata provided in the variable deceleration. 
