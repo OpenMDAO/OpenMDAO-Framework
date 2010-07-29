@@ -153,27 +153,27 @@ A simple component that implements an equation with two inputs is shown below:
     class Equation(Component):
         """ Evaluates the equation f(x,y) = (x-3)^2 + xy + (y+4)^2 - 3 """
     
-	# Component Input 
-	x = Float(0.0, iotype='in', desc='The variable y')
+        # Component Input 
+        x = Float(0.0, iotype='in', desc='The variable y')
         y = Float(0.0, iotype='in', desc='The variable x')
 
-	# Component Output
+        # Component Output
         f_xy = Float(0.0, iotype='out', desc='F(x,y)')        
 
-	# Initialization function (technically not needed here)
-	def __init__(self):
-	    super(Equation, self).__init__()        
-	
-	# Executes when component is run
-	def execute(self):
-	    """ Solve (x-3)^2 + xy + (y+4)^2 = 3
-	        Optimal solution (minimum): x = 6.6667; y = -7.3333
-	        """
+        # Initialization function (technically not needed here)
+        def __init__(self):
+            super(Equation, self).__init__()        
+    
+        # Executes when component is run
+        def execute(self):
+            """ Solve (x-3)^2 + xy + (y+4)^2 = 3
+            Optimal solution (minimum): x = 6.6667; y = -7.3333
+            """
         
-	    x = self.x
-	    y = self.y
+            x = self.x
+            y = self.y
         
-	    self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
+            self.f_xy = (x-3.0)**2 + x*y + (y+4.0)**2 - 3.0
 
 In this example, the ``__init__()`` function doesn't do anything but call the
 equivalent in the base class, so technically it should be removed from this 
@@ -216,14 +216,14 @@ output would look like this:
     class Simple(Component):
         """ A simple multiplication """
     
-	# set up interface to the framework  
-	x = Float(1.0, iotype='in', desc='The input x')
+        # set up interface to the framework  
+        x = Float(1.0, iotype='in', desc='The input x')
         y = Float(iotype='out', desc='The output y')        
 
-	def execute(self):
-	    """ y = 3*x """
-	    
-	    self.y = 3.0*self.x
+        def execute(self):
+            """ y = 3*x """
+        
+            self.y = 3.0*self.x
 
 The example above shows the way the majority of users will create public variables.
 An alternative way to declare them is to use the ``add_trait`` function that is part of the
@@ -246,12 +246,12 @@ an instance of Simple has been created:
 .. doctest:: creating_public_variables_2
 
     >>> equation = Simple()
-    >>>	equation.add_trait('x',Float(1.0, iotype='in', desc='The input x'))
+    >>> equation.add_trait('x',Float(1.0, iotype='in', desc='The input x'))
     >>> equation.add_trait('y',Float(iotype='out', desc='The output y'))
     >>> equation.x=7
     >>> equation.run()
     >>> equation.y
-    21.0	    
+    21.0
 
 The primary use of ``add_trait`` is to create a public variable dynamically at some
 point after the component has been created (possibly during execution).
@@ -614,11 +614,11 @@ this type will generate an exception.
     
     class Fred(Component):
         """ A component that takes a class as an input """
-	
-	recorder = Instance(object, desc='Something to append() to.', \
-	                    iotype='in', required=True)
-        model = Instance(Component, desc='Model to be executed.', \
-	                    iotype='in', required=True)
+    
+        recorder = Instance(object, desc='Something to append() to.',
+                            iotype='in', required=True)
+        model = Instance(Component, desc='Model to be executed.',
+                         iotype='in', required=True)
  
 In this example, we have two inputs that are Instances. The one called *model*
 is of type Component, which means that this component takes another
@@ -731,16 +731,16 @@ component would look like this:
     class Pressure(Component):
         """Simple component to calculate pressure given force and area"""
     
-	# set up interface to the framework  
-	force = Float(1.0, iotype='in', desc='force', units='N')
-        area = Float(1.0, iotype='in', low=0.0, exclude_low=True, desc='m*m')        
+    # set up interface to the framework  
+    force = Float(1.0, iotype='in', desc='force', units='N')
+    area = Float(1.0, iotype='in', low=0.0, exclude_low=True, desc='m*m')        
 
-        pressure = Float(1.0, iotype='out', desc='Pa')        
+    pressure = Float(1.0, iotype='out', desc='Pa')        
 
-	def execute(self):
-	    """calculate pressure"""
-	    
-	    self.pressure = self.force/self.area
+    def execute(self):
+        """calculate pressure"""
+        
+        self.pressure = self.force/self.area
 
 The *low* and *exclude_low* parameters are used in the declaration of *area* to prevent a
 value of zero from being assigned, resulting in a division error. Of course, you
@@ -807,23 +807,23 @@ three variables that define two flight conditions:
         """This component contains variables in a container"""
     
         weight = Float(5400.0, iotype='in', units='kg')
-	# etc.
-	
+        # etc.
+
         def __init__(self):
             """Instantiate variable containers here"""
 
             super(AircraftSim, self).__init__()
         
-	    # Instantiate and add our variable containers.
+            # Instantiate and add our variable containers.
             self.add('fcc1', FlightCondition())
             self.add('fcc2', FlightCondition())
-	    
+    
         def execute(self):
             """Do something."""
-	    
-	    print "FCC1 angle of attack = ", self.fcc1.angle_of_attack
-	    print "FCC2 angle of attack = ", self.fcc2.angle_of_attack
-	    
+        
+            print "FCC1 angle of attack = ", self.fcc1.angle_of_attack
+            print "FCC2 angle of attack = ", self.fcc2.angle_of_attack
+
 Here, the container ``FlightCondition`` was defined, containing three public variables.
 The component ``AircraftSim`` is also defined with a public variable *weight* and
 two variable containers *fcc1* and *fcc2*. We can access weight through ``self.weight``; 
@@ -850,23 +850,23 @@ Consider the top level assembly that was created for the :ref:`simple tutorial p
 
 .. testcode:: simple_model_Unconstrained_pieces
 
-	from openmdao.main.api import Assembly
-	from openmdao.lib.api import CONMINdriver
-	from openmdao.examples.simple.paraboloid import Paraboloid
+    from openmdao.main.api import Assembly
+    from openmdao.lib.api import CONMINdriver
+    from openmdao.examples.simple.paraboloid import Paraboloid
 
-	class OptimizationUnconstrained(Assembly):
-    	    """Unconstrained optimization of the Paraboloid with CONMIN."""
+    class OptimizationUnconstrained(Assembly):
+        """Unconstrained optimization of the Paraboloid with CONMIN."""
     
-    	    def __init__(self):
-                """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+        def __init__(self):
+            """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
-	        super(OptimizationUnconstrained, self).__init__()
+            super(OptimizationUnconstrained, self).__init__()
 
-	        # Create CONMIN Optimizer instance
-	        self.add('driver', CONMINdriver())
-		
-	        # Create Paraboloid component instances
-	        self.add('paraboloid', Paraboloid())
+            # Create CONMIN Optimizer instance
+            self.add('driver', CONMINdriver())
+        
+            # Create Paraboloid component instances
+            self.add('paraboloid', Paraboloid())
 
 We can see here that components that comprise the top level of this model are
 declared in the ``__init__`` function. The base class ``__init__`` function is called
@@ -905,21 +905,21 @@ instances of the Paraboloid function and connect them together in series.
 
 .. testcode:: connect_components
 
-	from openmdao.main.api import Assembly
-	from openmdao.examples.simple.paraboloid import Paraboloid
+    from openmdao.main.api import Assembly
+    from openmdao.examples.simple.paraboloid import Paraboloid
 
-	class ConnectingComponents(Assembly):
-    	    """ Top level assembly for optimizing a vehicle. """
+    class ConnectingComponents(Assembly):
+        """ Top level assembly for optimizing a vehicle. """
     
-    	    def __init__(self):
-                """ Creates a new Assembly containing a Paraboloid and an optimizer"""
-		
-		self.add("par1",Paraboloid())
-		self.add("par2",Paraboloid())
-		self.add("par3",Paraboloid())
-		
-		self.connect("par1.f_xy","par2.x")
-		self.connect("par2.f_xy","par3.y")
+        def __init__(self):
+            """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+        
+            self.add("par1",Paraboloid())
+            self.add("par2",Paraboloid())
+            self.add("par3",Paraboloid())
+        
+            self.connect("par1.f_xy","par2.x")
+            self.connect("par2.f_xy","par3.y")
 
 Components are connected by using the *connect* function built into the
 assembly. *Connect* takes two arguments, the first of which must be a component
@@ -929,7 +929,7 @@ of the top level assembly. Additionally, only one output can
 be connected to any input.  On the other hand, it is fine to connect an output to multiple
 inputs. The violation of any of these rules generates a
 RuntimeError.
-		
+
 A public variable is not required to be connected to anything. Typical 
 components will have numerous inputs, and many of these will contain values
 that are set by the user or are perfectly fine at their defaults.
@@ -944,26 +944,26 @@ linked at that level.
 
 .. testcode:: passthroughs
 
-	from openmdao.main.api import Assembly
-	from openmdao.examples.simple.paraboloid import Paraboloid
+    from openmdao.main.api import Assembly
+    from openmdao.examples.simple.paraboloid import Paraboloid
 
-	class ConnectingComponents(Assembly):
-    	    """ Top level assembly for optimizing a vehicle. """
+    class ConnectingComponents(Assembly):
+        """ Top level assembly for optimizing a vehicle. """
     
-    	    def __init__(self):
-                """ Creates a new Assembly containing a Paraboloid and an optimizer"""
-		
-	        super(ConnectingComponents, self).__init__()
+        def __init__(self):
+            """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+        
+            super(ConnectingComponents, self).__init__()
 
-		self.add("par1",Paraboloid())
-		self.add("par2",Paraboloid())
-		
-		self.connect("par1.f_xy","par2.x")
-		
-		self.create_passthrough('par1.x')
-		self.create_passthrough('par1.y')
-		self.create_passthrough('par2.y')
-		self.create_passthrough('par2.f_xy')
+            self.add("par1",Paraboloid())
+            self.add("par2",Paraboloid())
+        
+            self.connect("par1.f_xy","par2.x")
+        
+            self.create_passthrough('par1.x')
+            self.create_passthrough('par1.y')
+            self.create_passthrough('par2.y')
+            self.create_passthrough('par2.f_xy')
 
 The ``create_passthrough`` function creates a public variable on the assembly. This new variable has
 the same name, iotype, default value, units, description, and range characteristics as the
@@ -1013,20 +1013,20 @@ a new working directory for the Paraboloid component when it is instantiated.
 
 .. testcode:: simple_model_component_directory
 
-	from openmdao.main.api import Assembly
-	from openmdao.lib.api import CONMINdriver
-	from openmdao.examples.simple.paraboloid import Paraboloid
+    from openmdao.main.api import Assembly
+    from openmdao.lib.api import CONMINdriver
+    from openmdao.examples.simple.paraboloid import Paraboloid
 
-	class OptimizationUnconstrained(Assembly):
-    	    """Unconstrained optimization of the Paraboloid with CONMIN."""
+    class OptimizationUnconstrained(Assembly):
+        """Unconstrained optimization of the Paraboloid with CONMIN."""
     
-    	    def __init__(self):
-                """ Creates a new Assembly containing a Paraboloid and an optimizer"""
+        def __init__(self):
+            """ Creates a new Assembly containing a Paraboloid and an optimizer"""
         
-	        super(OptimizationUnconstrained, self).__init__()
+            super(OptimizationUnconstrained, self).__init__()
 
-	        # Create Paraboloid component instances
-	        self.add('paraboloid', Paraboloid(directory='folder/subfolder'))
+            # Create Paraboloid component instances
+            self.add('paraboloid', Paraboloid(directory='folder/subfolder'))
 
 Notice that this is a relative path. **All components in the model hierarchy
 must operate in a directory that is a sub-directory of the top level
@@ -1247,7 +1247,7 @@ For certain problems, it is desirable to scale the inputs.
 Several scaling options are available, as summarized here:
 
 ============  ========================================================
-Value	      Result	
+Value         Result
 ============  ========================================================
 nscal < 0     User-defined scaling with the vector in scal
 ------------  --------------------------------------------------------
@@ -1255,7 +1255,7 @@ nscal = 0     No scaling of the design variables
 ------------  --------------------------------------------------------
 nscal > 0     Scale the design variables every NSCAL iterations.
               Please see the CONMIN user's manual for additional notes
-	      about using this option
+              about using this option
 ============  ========================================================
 
 The default setting is nscal=0 for no scaling of the design variables. The 
@@ -1281,7 +1281,7 @@ variables as follows:
     self.cons_is_linear = [1, 0]
 
 If *cons_is_linear* is not specified, then all the constraints are assumed to be
-nonlinear. Note that the original CONMIN parameter for this is *ISC.*	
+nonlinear. Note that the original CONMIN parameter for this is *ISC.*
 
 Finally, the *iprint* parameter can be used to display diagnostic
 messages inside of CONMIN. These messages are currently sent to the standard
@@ -1400,32 +1400,33 @@ You add design variables to Genetic using the ``add_parameter`` method.
     
     class SomeComp(Component):
         """Arbitrary component with a few public variables, but which does not really do 
-	any calculations"""
+           any calculations
+        """
 
-	w = Float(0.0,low=-10,high=10,iotype="in")
-	
-	x = Float(0.0,low=0.0,high=100.0,iotype="in")
-	y = Int(10,low=10,high=100,iotype="in")
-	z = Enum([-10,-5,0,7],iotype="in")
-	
+        w = Float(0.0,low=-10,high=10,iotype="in")
+    
+        x = Float(0.0,low=0.0,high=100.0,iotype="in")
+        y = Int(10,low=10,high=100,iotype="in")
+        z = Enum([-10,-5,0,7],iotype="in")
+    
     class Simulation(Assembly):
-	"""Top Level Assembly used for simulation"""
-	
-	def __init__(self):
-	    """Adds the Genetic driver to the assembly"""
-	    
-	    super(Simulation,self).__init__()
-	    
-	    self.add('optimizer',Genetic())
-	    self.add('comp',SomeComp())
-	    
-	    self.optimizer.add_parameter('comp.x')
-	    self.optimizer.add_parameter('comp.y')
-	    self.optimizer.add_parameter('comp.z')
-	
-    top = Simulation()	    
+        """Top Level Assembly used for simulation"""
+    
+        def __init__(self):
+            """Adds the Genetic driver to the assembly"""
+        
+            super(Simulation,self).__init__()
+        
+            self.add('optimizer',Genetic())
+            self.add('comp',SomeComp())
+        
+            self.optimizer.add_parameter('comp.x')
+            self.optimizer.add_parameter('comp.y')
+            self.optimizer.add_parameter('comp.z')
+    
+    top = Simulation()        
     set_as_top(top)
-	    
+        
 In the above example, three design variables were added to the optimizer. The optimizer 
 figures out for itself what type of variable it is and behaves appropriately. In all three
 cases, since no *low* or *high* arguments were provided, the optimizer will use the values
