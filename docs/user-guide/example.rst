@@ -948,41 +948,38 @@ create an instance of DrivingSim and CONMINdriver:
 
 .. testcode:: Code9
 
-	from openmdao.main.api import Assembly
-	from openmdao.lib.api import CONMINdriver
+    from openmdao.main.api import Assembly
+    from openmdao.lib.api import CONMINdriver
 
-	from openmdao.examples.enginedesign.driving_sim import DrivingSim
+    from openmdao.examples.enginedesign.driving_sim import DrivingSim
 
-	class EngineOptimization(Assembly):
-	    """Optimization of a Vehicle."""
+    class EngineOptimization(Assembly):
+        """Optimization of a Vehicle."""
     
-	    def __init__(self):
-        	""" Creates a new Assembly containing a DrivingSim and an optimizer"""
+        def __init__(self):
+            """ Creates a new Assembly containing a DrivingSim and an optimizer"""
         
-	        super(EngineOptimization, self).__init__()
+            super(EngineOptimization, self).__init__()
 
-	        # Create DrivingSim instance
-        	self.add('driving_sim', Driving_Sim())
+            # Create DrivingSim instance
+            self.add('driving_sim', Driving_Sim())
 
-	        # Create CONMIN Optimizer instance
-        	self.add('driver', CONMINdriver())
+            # Create CONMIN Optimizer instance
+            self.add('driver', CONMINdriver())
         
-	        # add DrivingSim to workflow
-	        self.driver.workflow.add(self.driving_sim)
+            # add DrivingSim to workflow
+            self.driver.workflow.add(self.driving_sim)
 
-	        # CONMIN Flags
-        	self.driver.iprint = 1
-	        self.driver.itmax = 30
+            # CONMIN Flags
+            self.driver.iprint = 1
+            self.driver.itmax = 30
         
-	        # CONMIN Objective 
-        	self.driver.objective = 'driving_sim.accel_time'
+            # CONMIN Objective 
+            self.driver.objective = 'driving_sim.accel_time'
         
-	        # CONMIN Design Variables 
-        	self.driver.design_vars = ['driving_sim.spark_angle', 
-                                           'driving_sim.bore' ]
-	        
-        	self.driver.lower_bounds = [-50, 65]
-	        self.driver.upper_bounds = [10, 100]
+            # CONMIN Design Variables 
+            self.add_parameters([('driving_sim.spark_angle', -50., 10.),
+                                 ('driving_sim.bore', 65., 100.)])
 
 Recall that the *iprint* flag enables or disables the printing of diagnostics
 internal to CONMIN, while the *itmax* parameter specifies the maximum number

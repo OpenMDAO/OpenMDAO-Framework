@@ -39,11 +39,8 @@ class OptimizationConstrained(Assembly):
         self.driver.objective = 'paraboloid.f_xy'
         
         # CONMIN Design Variables 
-        self.driver.design_vars = ['paraboloid.x', 
-                                         'paraboloid.y' ]
-        
-        self.driver.lower_bounds = [-50, -50]
-        self.driver.upper_bounds = [50, 50]
+        self.driver.add_parameter('paraboloid.x', low=-50., high=50.)
+        self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
         
         # CONMIN Constraints
         self.driver.constraints = ['paraboloid.y-paraboloid.x+15.0']

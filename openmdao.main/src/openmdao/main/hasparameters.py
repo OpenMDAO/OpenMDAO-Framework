@@ -18,6 +18,13 @@ class HasParameters(object):
         self._parameters = ordereddict.OrderedDict()
         self._parent = parent
 
+    def add_parameters(self, param_iter):
+        """Takes an iterator of tuples of the form (param_name, low, high)
+        and adds the parameters to the driver.
+        """
+        for name, low, high in param_iter:
+            self._parent.add_parameter(name, low=low, high=high)
+
     def add_parameter(self, name, low=None, high=None):
         """Adds a parameter to the driver. 
         

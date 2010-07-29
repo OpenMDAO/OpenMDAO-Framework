@@ -1128,6 +1128,7 @@ these is given below.
     # out of the class scope.
     
     self = EngineOptimization()
+    self.driver.clear_parameters()
 
 Both the objective function and the design variables are assigned via an
 :term:`Expression` variable. An Expression is a string that points to some other OpenMDAO
@@ -1140,8 +1141,8 @@ can be multiple design variables which are assigned as a Python list.
     self.driver.objective = 'driving_sim.accel_time'
         
     # CONMIN Design Variables 
-    self.driver.design_vars = ['driving_sim.spark_angle', 
-                                               'driving_sim.bore' ]
+    self.driver.add_parameter('driving_sim.spark_angle', low=-50. , high=10.)
+    self.driver.add_parameter('driving_sim.bore', low=65. , high=100.)
 
 These Expression variables must point to something that can be seen in the
 scope of the asssembly that contains the CONMIN driver. In other words,
@@ -1167,23 +1168,8 @@ CONMIN driver.
 
 .. index:: pair: constraints; CONMIN
 
-There are two types of constraints in CONMIN -- *ordinary* constraints, which
-are expressed as functions of the design variables, and *side* constraints,
-which are used to bound the design space (i.e., specify a range for each
-design variable).
-
-Side constraints are defined using the ``lower_bounds`` and ``upper_bounds`` parameters:
-
-.. testcode:: CONMIN_show
-
-    self.driver.lower_bounds = [-50, 65]
-    self.driver.upper_bounds = [10, 100]
-
-The size of these lists must be equal to the number of design variables or 
-OpenMDAO will raise an exception. Similarly, the upper bound must be greater
-than the lower bound for each design variable.
-
-Constraints are equations or inequalities that are constructed from the available OpenMDAO variables using Python
+Constraints in CONMIN are equations or inequalities that are constructed from the available 
+OpenMDAO variables using Python
 mathematical syntax. The constraints parameter is a list of inequalities that
 are defined to be **satisfied when they return a negative value or zero**, and **violated
 when they return a positive value**.

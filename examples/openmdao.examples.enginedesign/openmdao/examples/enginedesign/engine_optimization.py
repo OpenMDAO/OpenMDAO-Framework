@@ -37,12 +37,8 @@ class EngineOptimization(Assembly):
         self.driver.objective = 'driving_sim.accel_time'
         
         # CONMIN Design Variables 
-        self.driver.design_vars = ['driving_sim.spark_angle', 
-                                         'driving_sim.bore' ]
-        
-        self.driver.lower_bounds = [-50, 65]
-        self.driver.upper_bounds = [10, 100]
-        
+        self.driver.add_parameters([('driving_sim.spark_angle', -50., 10.),
+                                    ('driving_sim.bore', 65., 100.)])
 
 if __name__ == "__main__": # pragma: no cover         
 
