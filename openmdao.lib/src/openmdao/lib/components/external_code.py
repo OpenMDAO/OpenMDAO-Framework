@@ -39,7 +39,7 @@ class ExternalCode(Component):
                     desc='Environment variables.')
     resources = Dict({}, iotype='in',
                      desc='Resources required to run this component.')
-    poll_delay = Float(0., units='s', io_type='in',
+    poll_delay = Float(0., units='s', iotype='in',
                        desc='Delay between polling for command completion.')
     timeout = Float(0., low=0., iotype='in', units='s',
                     desc='Max time to wait for command completion.')
