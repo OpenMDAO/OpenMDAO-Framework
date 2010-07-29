@@ -87,21 +87,21 @@ occurs when the transmission is in first gear.
 **Transmission - Design Variables:**
 
 ==================  ===========================================  ======
-Variable	 	  Description                            Units
+Variable            Description                                  Units
 ==================  ===========================================  ======
-ratio1		    Gear ratio in first gear			
+ratio1              Gear ratio in first gear
 ------------------  -------------------------------------------  ------
-ratio2		    Gear ratio in second gear			
+ratio2              Gear ratio in second gear
 ------------------  -------------------------------------------  ------
-ratio3		    Gear ratio in third gear			
+ratio3              Gear ratio in third gear
 ------------------  -------------------------------------------  ------
-ratio4		    Gear ratio in fourth gear			
+ratio4              Gear ratio in fourth gear
 ------------------  -------------------------------------------  ------
-ratio5		    Gear ratio in fifth gear			
+ratio5              Gear ratio in fifth gear
 ------------------  -------------------------------------------  ------
-final_drive_ratio   Gear ratio for vehicle's differential	
+final_drive_ratio   Gear ratio for vehicle's differential
 ------------------  -------------------------------------------  ------
-tire_circumference  Circumference of the tire			 inch
+tire_circumference  Circumference of the tire                    inch
 ==================  ===========================================  ======
 
 |
@@ -109,11 +109,11 @@ tire_circumference  Circumference of the tire			 inch
 **Transmission - Simulation Inputs:**
 
 =================     ===========================================  ======
-Variable	 	  Description			           Units
+Variable              Description                                  Units
 =================     ===========================================  ======
 current_gear          Current gear position
 -----------------     -------------------------------------------  ------
-velocity	      Current vehicle velocity			   m/s
+velocity              Current vehicle velocity                     m/s
 =================     ===========================================  ======
 
 |
@@ -121,12 +121,12 @@ velocity	      Current vehicle velocity			   m/s
 **Transmission - Outputs:**
 
 =================  ===========================================  ======
-Variable	 	  Description   			Units
+Variable           Description                                  Units
 =================  ===========================================  ======
-torque_ratio	   Ratio of transmission output power to power 
+torque_ratio       Ratio of transmission output power to power 
                    at the wheel
 -----------------  -------------------------------------------  ------
-RPM    		   Engine rotational speed			1/min
+RPM                Engine rotational speed                      1/min
 =================  ===========================================  ======
 
   
@@ -180,27 +180,27 @@ weight and provide it as an output.
 **Engine - Design Variables:**
 
 =================  ===========================================  ======
-**Variable**	 	  **Description**			**Units**
+**Variable**           **Description**            **Units**
 =================  ===========================================  ======
-stroke		   Length of compression zone in cylinder	mm		
+stroke             Length of compression zone in cylinder       mm
 -----------------  -------------------------------------------  ------
-bore		   Bore (cylinder diameter)			mm
+bore               Bore (cylinder diameter)                     mm
 -----------------  -------------------------------------------  ------
-conrod		   Connecting rod length			mm
+conrod             Connecting rod length                        mm
 -----------------  -------------------------------------------  ------
-comp_ratio	   Volumetric ratio of compression			
+comp_ratio         Volumetric ratio of compression            
 -----------------  -------------------------------------------  ------
-spark_angle	   Spark angle with respect to top dead center	deg		
+spark_angle        Spark angle with respect to top dead center  deg
 -----------------  -------------------------------------------  ------
-n_cyl    	   Number of Cylinders	
+n_cyl              Number of Cylinders    
 -----------------  -------------------------------------------  ------
-IVO  		   Intake valve open before top dead center     deg
+IVO                Intake valve open before top dead center     deg
 -----------------  -------------------------------------------  ------
-IVC  		   Intake valve close after bottom dead center  deg
+IVC                Intake valve close after bottom dead center  deg
 -----------------  -------------------------------------------  ------
-L_v  		   Maximum valve lift                           mm
+L_v                Maximum valve lift                           mm
 -----------------  -------------------------------------------  ------
-D_v  		   Intake valve diameter                        mm
+D_v                Intake valve diameter                        mm
 =================  ===========================================  ======
 
 |
@@ -208,11 +208,11 @@ D_v  		   Intake valve diameter                        mm
 **Engine - Simulation Inputs:**
 
 =================  ===========================================  ======
-Variable	 	  Description		                Units
+Variable           Description                                  Units
 =================  ===========================================  ======
-RPM		   Engine rotational speed (1000-6000)          rev/min
+RPM                Engine rotational speed (1000-6000)          rev/min
 -----------------  -------------------------------------------  ------
-throttle	   Throttle position				
+throttle           Throttle position                
 =================  ===========================================  ======
 
 |
@@ -220,15 +220,15 @@ throttle	   Throttle position
 **Engine - Outputs:**
 
 =================  ===========================================  ======
-Variable	 	  Description			        Units
+Variable           Description                                  Units
 =================  ===========================================  ======
-power		   Power produced by engine			kW
+power              Power produced by engine                     kW
 -----------------  -------------------------------------------  ------
-torque		   Torque produced by engine			N*m
+torque             Torque produced by engine                    N*m
 -----------------  -------------------------------------------  ------
-fuel_burn	   Fuel burn rate				l/sec
+fuel_burn          Fuel burn rate                               l/sec
 -----------------  -------------------------------------------  ------
-engine_weight	   Engine weight estimate			kg
+engine_weight      Engine weight estimate                       kg
 =================  ===========================================  ======
 
 
@@ -255,15 +255,15 @@ tires and the vehicle drag which is proportional to the square of velocity.
 **Chassis - Design Variables:**
 
 =================  ===========================================  ======
-**Variable**	 	  **Description**			**Units**
+**Variable**           **Description**                          **Units**
 =================  ===========================================  ======
-mass_vehicle       Vehicle mass					kg
+mass_vehicle       Vehicle mass                                 kg
 -----------------  -------------------------------------------  ------
-Cf		   Rolling friction coefficient			
+Cf                 Rolling friction coefficient            
 -----------------  -------------------------------------------  ------
-Cd		   Drag coefficient			
+Cd                 Drag coefficient            
 -----------------  -------------------------------------------  ------
-area		   Front profile area				m*m
+area               Front profile area                           m*m
 =================  ===========================================  ======
 
 |
@@ -271,16 +271,16 @@ area		   Front profile area				m*m
 **Chassis - Simulation Inputs:**
 
 ==================  ===========================================  ======
-**Variable**	 	  **Description**			 **Units**
+**Variable**        **Description**                              **Units**
 ==================  ===========================================  ======
-mass_engine	    Engine mass estimate			 kg
+mass_engine         Engine mass estimate                         kg
 ------------------  -------------------------------------------  ------
-velocity	    Current vehicle velocity			 m/s
+velocity            Current vehicle velocity                     m/s
 ------------------  -------------------------------------------  ------
-torque_ratio	    Ratio of transmission output power to power 
+torque_ratio        Ratio of transmission output power to power 
                     at the wheel
 ------------------  -------------------------------------------  ------
-tire_circumference  Circumference of the tire			 m
+tire_circumference  Circumference of the tire                    m
 ==================  ===========================================  ======
 
 |
@@ -288,9 +288,9 @@ tire_circumference  Circumference of the tire			 m
 **Chassis - Outputs:**
 
 =================  ===========================================  ======
-Variable	 	  Description		                Units
+Variable           Description                                  Units
 =================  ===========================================  ======
-acceleration	   Vehicle instantaneous acceleration		m/(s*s)
+acceleration       Vehicle instantaneous acceleration           m/(s*s)
 =================  ===========================================  ======
 
 |
@@ -379,8 +379,8 @@ needed for the model.
 If you have downloaded the latest release version from the website, the files you need should be
 here:
 
-	``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign``
-	
+    ``openmdao-X.X.X/lib/python2.6/site-packages/openmdao.examples.enginedesign-X.X.X-######.egg/openmdao/examples/enginedesign``
+
 ``X.X.X`` is the current OpenMDAO version, and ``######`` is a string that
 contains the Python version and the operating system description. This path will 
 vary depending on your system and version, but there will be only one
@@ -389,8 +389,8 @@ vary depending on your system and version, but there will be only one
 If you are a developer and have a branch from the source repository, the files you need will be
 here:
 
-	``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``
-	
+    ``examples/openmdao.examples.enginedesign/openmdao/examples/enginedesign``
+
 The three engine models have been implemented in ``transmission.py, engine.py,`` and ``chassis.py``. It will
 be useful to browse these files as you learn some of the basic concepts in this tutorial.
 
@@ -402,36 +402,36 @@ from its inputs. We must create the public variables that define these inputs an
 
 .. testcode:: Code2
 
-	from openmdao.main.api import Component, convert_units
-	from openmdao.lib.api import Float, Int, Enum
+    from openmdao.main.api import Component, convert_units
+    from openmdao.lib.api import Float, Int, Enum
 
-	class Transmission(Component):
-	    """ A simple transmission model."""
-	
-	    ratio1 = Float(3.54, iotype='in', 
-	             desc='Gear ratio in First Gear')
-	    ratio2 = Float(2.13, iotype='in', 
-	             desc='Gear ratio in Second Gear')
-	    ratio3 = Float(1.36, iotype='in', 
-	             desc='Gear ratio in Third Gear')
-	    ratio4 = Float(1.03, iotype='in', 
-	             desc='Gear ratio in Fourth Gear')
-	    ratio5 = Float(0.72, iotype='in', 
-	             desc='Gear ratio in Fifth Gear')
-	    final_drive_ratio = Float(2.8, iotype='in', 
-	             desc='Final Drive Ratio')
-	    tire_circ = Float(75.0, iotype='in', units='inch', 
-	             desc='Circumference of tire (inches)')
+    class Transmission(Component):
+        """ A simple transmission model."""
+    
+        ratio1 = Float(3.54, iotype='in', 
+                       desc='Gear ratio in First Gear')
+        ratio2 = Float(2.13, iotype='in', 
+                       desc='Gear ratio in Second Gear')
+        ratio3 = Float(1.36, iotype='in', 
+                       desc='Gear ratio in Third Gear')
+        ratio4 = Float(1.03, iotype='in', 
+                       desc='Gear ratio in Fourth Gear')
+        ratio5 = Float(0.72, iotype='in', 
+                       desc='Gear ratio in Fifth Gear')
+        final_drive_ratio = Float(2.8, iotype='in', 
+                                  desc='Final Drive Ratio')
+        tire_circ = Float(75.0, iotype='in', units='inch', 
+                          desc='Circumference of tire (inches)')
 
-	    current_gear = Enum(0, (0,1,2,3,4,5), iotype='in', desc='Current Gear',
-                        aliases=('N','1st','2nd','3rd','4th','5th'))
-	    velocity = Float(0., iotype='in', units='mi/h',
-	             desc='Current Velocity of Vehicle')
+        current_gear = Enum(0, (0,1,2,3,4,5), iotype='in', desc='Current Gear',
+                            aliases=('N','1st','2nd','3rd','4th','5th'))
+        velocity = Float(0., iotype='in', units='mi/h',
+                         desc='Current Velocity of Vehicle')
 
-	    RPM = Float(1000., iotype='out', units='RPM',
-	             desc='Engine RPM')        
-	    torque_ratio = Float(0., iotype='out',
-	             desc='Ratio of output torque to engine torque')    
+        RPM = Float(1000., iotype='out', units='RPM',
+                    desc='Engine RPM')        
+        torque_ratio = Float(0., iotype='out',
+                             desc='Ratio of output torque to engine torque')    
 
 The Int and Float variable types were introduced in previous tutorials, but some new parameters are
 used here, including the *Enum* type.
@@ -485,7 +485,7 @@ illustrates how to use the input and output variables to perform a calculation.
         """ The 5-speed manual transmission is simulated by determining the
             torque output and engine RPM via the gear ratios.
             """
-	    
+    
         ratios = [0.0, self.ratio1, self.ratio2, self.ratio3, self.ratio4,
                   self.ratio5]
         
@@ -500,7 +500,7 @@ illustrates how to use the input and output variables to perform a calculation.
         # At low speeds, hold engine speed at 1000 RPM and partially engage the clutch
         if self.RPM < 1000.0 and self.current_gear == 1 :
             self.RPM = 1000.0
-	    
+    
 You may recall that inputs and outputs are attributes of our component, so they are accessed using
 ``self.variablename``. It is generally a good idea to create a local copy of a public
 variable for doing calculations in the component for improved efficiency and ease of reading.
@@ -537,49 +537,49 @@ Python interpreter so that you can access OpenMDAO and the example problems.
 
 Please enter the Python shell. Create an instance of the Engine class by typing the following:
 
-	>>> from openmdao.examples.enginedesign.engine import Engine
-	>>> my_engine = Engine()
+    >>> from openmdao.examples.enginedesign.engine import Engine
+    >>> my_engine = Engine()
 
 The object ``my_engine`` is an engine model with default values for all of its inputs. We can interact
 with the inputs and outputs by direct inspection:
 
-	>>> my_engine.bore
-	82.0
+    >>> my_engine.bore
+    82.0
 
 Let's change the engine speed from its default value (1000 RPM) to 2500 RPM.
 
-	>>> my_engine.RPM = 2500
-	>>> my_engine.RPM
-	2500.0
+    >>> my_engine.RPM = 2500
+    >>> my_engine.RPM
+    2500.0
 
 The value of the engine RPM is now 2500. Let's see what happens if we try to
 set the RPM to something invalid.
 
-	>>> my_engine.RPM = "Hello"
-	Traceback (most recent call last):
-	    ...
-	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of Hello <type 'str'> was specified.
-	
+    >>> my_engine.RPM = "Hello"
+    Traceback (most recent call last):
+        ...
+    TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of Hello <type 'str'> was specified.
+    
 The value "Hello" is invalid because RPM expects a value of type Float. Now,
 let's try setting the engine speed to a value that exceeds the maximum, which
 is 6000 RPM.
 
-	>>> my_engine.RPM = 7500
-	Traceback (most recent call last):
-	    ...
-	TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of 7500 <type 'int'> was specified.
+    >>> my_engine.RPM = 7500
+    Traceback (most recent call last):
+        ...
+    TraitError: Trait 'RPM' must be a float in the range [1000.0, 6000.0] but a value of 7500 <type 'int'> was specified.
 
 OpenMDAO raises an exception indicating that the maximum value for RPM has
 been violated. This exception can be handled to provide some logical response
 to this situation. Now, run the engine and examine the power and torque at
 2500 RPM.
 
-	>>> my_engine.run()
-	>>> my_engine.torque
-	203.963228...
-	>>> my_engine.power
-	53.3974483...
-	
+    >>> my_engine.run()
+    >>> my_engine.torque
+    203.963228...
+    >>> my_engine.power
+    53.3974483...
+    
 You run a component by calling the *run* method. Recall that you define an execute method when you
 create a component. The run method calls execute but also does some other things. Always run your
 component with *run.*
@@ -606,29 +606,29 @@ Engine, and Chassis components.
 
 .. testcode:: Code5
 
-	from openmdao.main.api import Assembly
-	from openmdao.lib.api import Float
+    from openmdao.main.api import Assembly
+    from openmdao.lib.api import Float
 
-	from openmdao.examples.enginedesign.transmission import Transmission
-	from openmdao.examples.enginedesign.chassis import Chassis
-	from openmdao.examples.enginedesign.engine_wrap_c import Engine
-	
-	class Vehicle(Assembly):
-	    """ Vehicle assembly. """
+    from openmdao.examples.enginedesign.transmission import Transmission
+    from openmdao.examples.enginedesign.chassis import Chassis
+    from openmdao.examples.enginedesign.engine_wrap_c import Engine
+    
+    class Vehicle(Assembly):
+        """ Vehicle assembly. """
 
-	    def __init__(self):
-	        """ Creates a new Vehicle Assembly object """
+        def __init__(self):
+            """ Creates a new Vehicle Assembly object """
 
-	        super(Vehicle, self).__init__()
+            super(Vehicle, self).__init__()
 
-	        # Create component instances
+            # Create component instances
         
-	        self.add('transmission', Transmission())
-	        self.add('engine', Engine())
-	        self.add('chassis', Chassis())
+            self.add('transmission', Transmission())
+            self.add('engine', Engine())
+            self.add('chassis', Chassis())
 
-	        # Set up the workflow
-	        self.driver.workflow.add([self.transmission, self.engine, self.chassis])
+            # Set up the workflow
+            self.driver.workflow.add([self.transmission, self.engine, self.chassis])
 
 The Engine, Transmission, and Chassis components all need to be imported so
 their instances can be created; they can be added to the assembly
@@ -1004,11 +1004,11 @@ EngineOptimization class, setting it as the top assembly.
 
 .. doctest:: optimization_fun
 
-	>>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
-	>>> from openmdao.main.api import set_as_top
-	>>> prob = EngineOptimization()
-	>>> set_as_top(prob)
-	<openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at ...>
+    >>> from openmdao.examples.enginedesign.engine_optimization import EngineOptimization
+    >>> from openmdao.main.api import set_as_top
+    >>> prob = EngineOptimization()
+    >>> set_as_top(prob)
+    <openmdao.examples.enginedesign.engine_optimization.EngineOptimization object at ...>
 
 The problem is set up like above. We could run it now, but first let's find out how
 the current design performs. We can do this by running the Vehicle component once
@@ -1016,14 +1016,14 @@ and printing the value of the acceleration time.
 
 .. doctest:: optimization_fun
 
-	>>> prob.driving_sim.run()
-	>>> prob.driving_sim.accel_time
-	7.499...
-	>>> prob.driving_sim.bore
-	82.0
-	>>> prob.driving_sim.spark_angle
-	-37.0	
-	
+    >>> prob.driving_sim.run()
+    >>> prob.driving_sim.accel_time
+    7.499...
+    >>> prob.driving_sim.bore
+    82.0
+    >>> prob.driving_sim.spark_angle
+    -37.0
+    
 The unit for this variable is seconds, so the default vehicle design can
 accelerate from 0 to 60 mph in seven and a half seconds. We've also printed
 the values of the two decision variables which will be changed by the

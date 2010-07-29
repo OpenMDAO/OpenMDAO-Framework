@@ -241,8 +241,8 @@ shell by typing
 
 ::
 
-	python
-	
+    python
+
 at the command prompt. Now you will create an instance of your Paraboloid component,
 set a new value for each of the inputs, run the component, and look at the output.
 
@@ -463,7 +463,7 @@ the final lines in this file are:
 
     if __name__ == "__main__": 
 
-	from openmdao.main.api import set_as_top
+        from openmdao.main.api import set_as_top
         opt_problem = OptimizationUnconstrained()
         set_as_top(opt_problem)
 
