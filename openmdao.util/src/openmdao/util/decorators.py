@@ -1,43 +1,58 @@
 """
 Some useful decorators
 """
+import types
 
 from decorator import FunctionMaker
-from inspect import getmembers, ismethod, getargspec
+from inspect import getmembers, ismethod, getargspec, formatargspec
+
+def forwarder(cls, fnc, delegatename):
+    """Returns a method that forwards calls on the scoping object to calls 
+    on the delegate object.  The signature of the delegate method is preserved
+    in the forwarding method.
+    """
+    fname = fnc.__name__
+    spec = getargspec(fnc)
+    sig = formatargspec(*spec)
+    body = 'return self.%s.%s(%s)' % (delegatename, fname, ','.join(spec[0][1:]))
+    f = FunctionMaker.create('%s%s' % (fname,sig), body, {}, defaults=spec[3],
+                             doc=fnc.__doc__)
+    return types.MethodType(f, None, cls)
 
 def add_delegate(*delegates):
     """A class decorator that takes delegate classes or (name,delegate) tuples as
     args. For each tuple, an instance with the given name will be created in the
-    wrapped __init__ function of the class.  If only the delegate class is provided,
-    then the instance created in the wrapped __init__ function will be named using
+    wrapped __init__ method of the class.  If only the delegate class is provided,
+    then the instance created in the wrapped __init__ method will be named using
     an underscore (_) followed by the lower case name of the class. All of the public 
-    functions from the delegate classes will be added to the class
-    unless there is an attribute or function in the class with the same name. In that
-    case the delegate function will be ignored.
+    methods from the delegate classes will be added to the class
+    unless there is an attribute or method in the class with the same name. In that
+    case the delegate method will be ignored.
     """
 
-    def forwarder(fname, delegatename):
-        """Returns a function that forwards calls on the scoping object to calls 
-        on the delegate object.
-        """
-        def _forward(obj, *args, **kwargs):
-            return getattr(getattr(obj, delegatename),fname)(*args, **kwargs)
-        return _forward
-
-    def init_wrapper(fnc, delegate_class_list):
+    def init_wrapper(cls, delegate_class_list):
         """Returns a function that calls the wrapped class' __init__ function
         and then creates an instance of each delegate class in delegate_class_list.
         """
-        def new_init(obj, *args, **kwargs):
-            fnc(obj, *args, **kwargs)
-            for name,delegate in delegate_class_list:
-                setattr(obj, name, delegate(obj))
-        return new_init
+        fnc = cls.__init__
+        spec = getargspec(fnc)
+        sig = formatargspec(*spec)
+        template = [
+            'old_init__(%s)' % ','.join(spec[0]),
+            ]
+        for name, delegate in delegate_class_list:
+            template.append('self.%s = %s(self)' % (name, delegate.__name__))
+        f = FunctionMaker.create('__init__%s' % sig, '\n'.join(template), 
+                                 dict([(c.__name__,c) for n,c in delegate_class_list]+
+                                      [('old_init__',fnc)]),
+                                 doc=fnc.__doc__, defaults=spec[3])
+        return types.MethodType(f, None, cls)
         
     def _add_delegate(cls):
         """Returns the given class, updated with a new __init__ function that wraps the
-        old one and adds instantiation of the delegate, and with new member functions added
-        that match the public functions in the delegate class.
+        old one and adds instantiation of the delegate, and adds new member functions
+        that match the public members in the delegate class.  Any public members in the
+        delegate that have a name matching anything in the scoping object are ignored.
         """
         added_set = set([n for n,v in getmembers(cls) if not n.startswith('_')])
     
@@ -61,9 +76,8 @@ def add_delegate(*delegates):
                     if memname in added_set:
                         continue   # skip adding member if it's already part of the class
                     added_set.add(memname)
-                    f = forwarder(memname, delegatename)
-                    f.__doc__ = getattr(delegate, memname).__doc__
+                    f = forwarder(cls, mem, delegatename)
                     setattr(cls, memname, f)
-            cls.__init__ = init_wrapper(cls.__init__, listofdels)
+            cls.__init__ = init_wrapper(cls, listofdels)
         return cls
     return _add_delegate

@@ -316,11 +316,11 @@ class TestCase(unittest.TestCase):
         self.model.driver.recorder = ListCaseRecorder()
         try:
             self.model.run()
-        except TraitError as exc:
-            msg = "driver: required plugin 'iterator' is not present"
+        except ValueError as exc:
+            msg = "driver: iterator has not been set"
             self.assertEqual(str(exc), msg)
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
 
     def test_norecorder(self):
         logging.debug('')

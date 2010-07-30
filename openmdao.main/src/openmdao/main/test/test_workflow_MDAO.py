@@ -73,7 +73,7 @@ class Discipline2a(Component):
     # pylint: disable-msg=E1101
     y1 = Float(0.0, iotype='in', desc='Disciplinary Coupling')
 
-    temp1 = Float(iotype='out', desc='Output of this Discipline')        
+    temp1 = Float(iotype='out', desc='Output of this Discipline')
 
         
     def execute(self):
@@ -116,7 +116,6 @@ class Discipline2c(Component):
 
     y2 = Float(iotype='out', desc='Output of this Discipline')        
 
-        
     def execute(self):
         """Evaluates the equation  
         y1 = y1**(.5) + z1 [+ z2]"""
@@ -200,14 +199,13 @@ class SellarMDF(Assembly):
 
         # Optimization parameters
         self.driver.objective = '(dis1.x1)**2 + coupler.z2 + dis1.y1 + math.exp(-dis2.y2)'
-        self.driver.design_vars = ['coupler.z1_in',
-                                   'coupler.z2_in',
-                                   'dis1.x1' ]
+        for param, low, high in zip(['coupler.z1_in', 'coupler.z2_in', 'dis1.x1'],
+                                    [-10.0, 0.0, 0.0],
+                                    [10.0, 10.0, 10.0]):
+            self.driver.add_parameter(param, low=low, high=high)
         self.driver.constraints = ['3.16 - dis1.y1',
                                    'dis2.y2 - 24.0' ]
         self.driver.cons_is_linear = [1, 1, 1, 1, 1, 0, 0, 0]
-        self.driver.lower_bounds = [-10.0, 0.0, 0.0]
-        self.driver.upper_bounds = [10.0, 10.0, 10.0]
         self.driver.iprint = 0
         self.driver.itmax = 30
         self.driver.fdch = .001
@@ -256,18 +254,15 @@ class SellarIDF(Assembly):
 
         # Optimization parameters
         self.driver.objective = '(dis1.x1)**2 + coupler.z2 + dis1.y1 + math.exp(-dis2.y2)'
-        self.driver.design_vars = ['coupler.z1_in',
-                                   'coupler.z2_in',
-                                   'dis1.x1',
-                                   'dis2.y1',
-                                   'dis1.y2']
+        for param, low, high in zip(['coupler.z1_in', 'coupler.z2_in', 'dis1.x1', 'dis2.y1', 'dis1.y2'],
+                                    [-10.0, 0.0, 0.0, 3.16, -10.0],
+                                    [10.0, 10.0, 10.0, 10, 24.0]):
+            self.driver.add_parameter(param, low=low, high=high)
         self.driver.constraints = ['dis2.y1-dis1.y1',
                                    'dis1.y1-dis2.y1',
                                    'dis2.y2-dis1.y2',
                                    'dis1.y2-dis2.y2']
         #self.driver.cons_is_linear = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
-        self.driver.lower_bounds = [-10.0, 0.0, 0.0, 3.16, -10.0]
-        self.driver.upper_bounds = [10.0, 10.0, 10.0, 10, 24.0]
         self.driver.iprint = 0
         self.driver.itmax = 100
         self.driver.fdch = .003
@@ -319,19 +314,18 @@ class SellarCO(Assembly):
         #Parameters - Global Optimization
         self.driver.objective = '(coupler.x1)**2 + coupler.z2 + coupler.y1' + \
                                                 '+ math.exp(-coupler.y2)'
-        self.driver.design_vars = ['coupler.z1_in',
-                                   'coupler.z2_in',
-                                   'coupler.x1_in',
-                                   'coupler.y1_in',
-                                   'coupler.y2_in']
+        for param,low,high in zip(['coupler.z1_in', 'coupler.z2_in', 'coupler.x1_in',
+                                   'coupler.y1_in', 'coupler.y2_in'],
+                                  [-10.0, 0.0, 0.0, 3.16, -10.0],
+                                  [10.0, 10.0, 10.0, 10, 24.0]):
+            self.driver.add_parameter(param, low=low, high=high)
+
         self.driver.constraints = ['(coupler.z1-dis1.z1)**2 + (coupler.z2-dis1.z2)**2 + (coupler.x1-dis1.x1)**2 + '
                                    '(coupler.y1-dis1.y1)**2 + (coupler.y2-dis1.y2)**2',
                                    
                                    '(coupler.z1-dis2b.z1)**2 + (coupler.z2-dis2c.z2)**2 + (coupler.y1-dis2a.y1)**2 + '
                                    '(coupler.y2-dis2c.y2)**2' ]
         
-        self.driver.lower_bounds = [-10.0, 0.0, 0.0, 3.16, -10.0]
-        self.driver.upper_bounds = [10.0, 10.0, 10.0, 10, 24.0]
         self.driver.printvars = ['dis1.y1','dis2c.y2']
         self.driver.iprint = 0
         self.driver.itmax = 100
@@ -348,12 +342,12 @@ class SellarCO(Assembly):
                                    '(coupler.x1-dis1.x1)**2 + ' + \
                                    '(coupler.y1-dis1.y1)**2 + ' + \
                                    '(coupler.y2-dis1.y2)**2'
-        self.localopt1.design_vars = ['dis1.z1',
-                                      'dis1.z2',
-                                      'dis1.x1',
-                                      'dis1.y2']
-        self.localopt1.lower_bounds = [-10.0, 0.0, 0.0, -10.0]
-        self.localopt1.upper_bounds = [10.0, 10.0, 10.0, 24.0]
+        for param, low, high in zip(['dis1.z1', 'dis1.z2', 'dis1.x1', 'dis1.y2'],
+                                    [-10.0, 0.0, 0.0, -10.0],
+                                    [10.0, 10.0, 10.0, 24.0]):
+            self.localopt1.add_parameter(param, low=low, high=high)
+        #self.localopt1.lower_bounds = [-10.0, 0.0, 0.0, -10.0]
+        #self.localopt1.upper_bounds = [10.0, 10.0, 10.0, 24.0]
         self.localopt1.iprint = 0
         self.localopt1.itmax = 100
         self.localopt1.fdch = .003
@@ -366,11 +360,10 @@ class SellarCO(Assembly):
                                    '(coupler.z2-dis2c.z2)**2 + ' + \
                                    '(coupler.y1-dis2a.y1)**2 + ' + \
                                    '(coupler.y2-dis2c.y2)**2'
-        self.localopt2.design_vars = ['dis2b.z1',
-                                      'dis2c.z2',
-                                      'dis2a.y1']
-        self.localopt2.lower_bounds = [-10.0, 0.0, 3.16]
-        self.localopt2.upper_bounds = [10.0, 10.0, 10]
+        for param, low, high in zip(['dis2b.z1', 'dis2c.z2', 'dis2a.y1'],
+                                    [-10.0, 0.0, 3.16],
+                                    [10.0, 10.0, 10]):
+            self.localopt2.add_parameter(param, low=low, high=high)
         self.localopt2.iprint = 0
         self.localopt2.itmax = 100
         self.localopt2.fdch = .003

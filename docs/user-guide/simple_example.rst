@@ -241,8 +241,8 @@ shell by typing
 
 ::
 
-	python
-	
+    python
+
 at the command prompt. Now you will create an instance of your Paraboloid component,
 set a new value for each of the inputs, run the component, and look at the output.
 
@@ -306,16 +306,13 @@ the Python file ``optimization_unconstrained.py``:
             self.driver.objective = 'paraboloid.f_xy'
         
             # CONMIN Design Variables 
-            self.driver.design_vars = ['paraboloid.x', 
-                                     'paraboloid.y' ]
-        
-            self.driver.lower_bounds = [-50, -50]
-            self.driver.upper_bounds = [50, 50]
+            self.driver.add_parameter('paraboloid.x', low=-50., high=50.)
+            self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
 
 
 Please create a file called ``optimization_unconstrained.py`` and copy this
 block of code into it. We will discuss this code next.
-	    
+
 .. index:: top level Assembly
 
 An :term:`Assembly` is a container that can hold any number of components, drivers, and other
@@ -409,19 +406,14 @@ it allows multiple design variables. These are assigned in a Python list:
 .. testcode:: simple_model_Unconstrained_pieces
 
             # CONMIN Design Variables 
-            self.driver.design_vars = ['paraboloid.x', 
-                                     'paraboloid.y' ]
+            self.driver.add_parameter('paraboloid.x', -50, 50)
+            self.driver.add_parameter('paraboloid.y', -50, 50)
 
 Here, both x and y are chosen as the design variables. You can also add a range
 of validity for these variables, which allows an unconstrained optimization to be
 performed on what is essentially a bounded region. For this problem, you are
 creating a lower and an upper bound, constraining x and y to lie on [-50, 50].
         
-.. testcode:: simple_model_Unconstrained_pieces
-
-            self.driver.lower_bounds = [-50, -50]
-            self.driver.upper_bounds = [50, 50]
-
 The problem is now essentially ready to execute. CONMIN contains quite a few
 additional control parameters, though the default values for many of them are
 adequate. These parameters are detailed in the section on :ref:`CONMIN-driver`.
@@ -471,7 +463,7 @@ the final lines in this file are:
 
     if __name__ == "__main__": 
 
-	from openmdao.main.api import set_as_top
+        from openmdao.main.api import set_as_top
         opt_problem = OptimizationUnconstrained()
         set_as_top(opt_problem)
 

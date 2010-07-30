@@ -29,7 +29,7 @@ class Adder(Component):
 
 class Summer(Driver):
     """Sums the objective over some number of iterations, feeding
-    its current sum back into the specified design variable."""
+    its current sum back into the specified parameter."""
     
     objective = Expression(iotype='in')
     design = Expression(iotype='out')
@@ -139,9 +139,10 @@ class MultiDriverTestCase(unittest.TestCase):
         
         drv.itmax = 30
         drv.objective = 'adder3.sum+50.'
-        drv.design_vars = ['comp1.x', 'comp2.x', 'comp3.x', 'comp4.x']
-        drv.lower_bounds = [-10, -10, -10, -10]
-        drv.upper_bounds = [99, 99, 99, 99]
+        drv.add_parameters([('comp1.x', -10., 99.),
+                            ('comp2.x', -10., 99.),
+                            ('comp3.x', -10., 99.),
+                            ('comp4.x', -10., 99.),])
         drv.constraints = [
             'comp1.x**2 + comp2.x**2 + comp3.x**2 + comp4.x**2 + comp1.x-comp2.x+comp3.x-comp4.x-8.0',
             'comp1.x**2 + 2.*comp2.x**2 + comp3.x**2 + 2.*comp4.x**2 - comp1.x - comp4.x -10.',
@@ -185,9 +186,7 @@ class MultiDriverTestCase(unittest.TestCase):
         
         drv.itmax = 40
         drv.objective = 'comp2a.f_x'
-        drv.design_vars = ['comp1a.x']
-        drv.lower_bounds = [0]
-        drv.upper_bounds = [99]
+        drv.add_parameter('comp1a.x', low=0, high=99)
         
         self.top.run()
         
@@ -248,26 +247,20 @@ class MultiDriverTestCase(unittest.TestCase):
         #inner_driver.fdch = .000001
         #inner_driver.fdchm = .000001
         #inner_driver.objective = 'comp4.f_xy'
-        #inner_driver.design_vars = ['comp1.x', 'comp3.y']
-        #inner_driver.lower_bounds = [-50, -50]
-        #inner_driver.upper_bounds = [50, 50]
+        #inner_driver.add_parameters(('comp1.x',-50,50), ('comp3.y',-50,50)])
         ##inner_driver.constraints = ['comp1.x**2 + comp3.y**2']
             
         inner_driver.itmax = 30
         inner_driver.fdch = .000001
         inner_driver.fdchm = .000001
         inner_driver.objective = 'comp3.f_xy'
-        inner_driver.design_vars = ['comp3.y']
-        inner_driver.lower_bounds = [-50]
-        inner_driver.upper_bounds = [50]
+        inner_driver.add_parameter('comp3.y', low=-50, high=50)
         
         outer_driver.itmax = 30
         outer_driver.fdch = .000001
         outer_driver.fdchm = .000001
         outer_driver.objective = 'nested.f_xy'   # comp4.f_xy passthrough
-        outer_driver.design_vars = ['nested.x']  # comp1.x passthrough
-        outer_driver.lower_bounds = [-50]
-        outer_driver.upper_bounds = [50]
+        outer_driver.add_parameter('nested.x', low=-50, high=50)  # comp1.x passthrough
         
         self.top.run()
 
@@ -320,17 +313,13 @@ class MultiDriverTestCase(unittest.TestCase):
         inner_driver.fdch = .000001
         inner_driver.fdchm = .000001
         inner_driver.objective = 'comp3.f_xy'
-        inner_driver.design_vars = ['comp3.y']
-        inner_driver.lower_bounds = [-50]
-        inner_driver.upper_bounds = [50]
+        inner_driver.add_parameter('comp3.y', low=-50, high=50)
         
         outer_driver.itmax = 30
         outer_driver.fdch = .000001
         outer_driver.fdchm = .000001
         outer_driver.objective = 'comp4.f_xy'
-        outer_driver.design_vars = ['comp1.x']
-        outer_driver.lower_bounds = [-50]
-        outer_driver.upper_bounds = [50]
+        outer_driver.add_parameter('comp1.x', low=-50, high=50)
         
         self.top.run()
 

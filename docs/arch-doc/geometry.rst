@@ -44,44 +44,44 @@ can be directly set:
 
 .. testsetup:: parameter_interface
 
-	from openmdao.main.api import Component, Assembly
-	from openmdao.lib.api import Float, Bool, CONMINdriver
-	
-	class GeoMan(Component):
-
-	    radius = Float(7.0, low=1., high=20.0, iotype='in', 
-                     units='m',  desc='radius')		
-	    height = Float(10.0, low=1., high=50.0, iotype='in', 
-                     units='m',  desc='height')	
-	    fillet1 = Bool(True, iotype='in')	
-	
-	    def __init__(self, directory=''):
-	        """ Creates a new Vehicle Assembly object """
-
-	        super(GeoMan, self).__init__(directory)
-	
-	class TLA(Assembly):
+    from openmdao.main.api import Component, Assembly
+    from openmdao.lib.api import Float, Bool, CONMINdriver
     
-	    def __init__(self, directory=''):
+    class GeoMan(Component):
+
+        radius = Float(7.0, low=1., high=20.0, iotype='in', 
+                     units='m',  desc='radius')        
+        height = Float(10.0, low=1., high=50.0, iotype='in', 
+                     units='m',  desc='height')    
+        fillet1 = Bool(True, iotype='in')    
+    
+        def __init__(self, directory=''):
+            """ Creates a new Vehicle Assembly object """
+
+            super(GeoMan, self).__init__(directory)
+    
+    class TLA(Assembly):
+    
+        def __init__(self, directory=''):
         
-	        super(TLA, self).__init__(directory)
+            super(TLA, self).__init__(directory)
 
-	        # Create GeoMan component instances
-        	self.add('geo_manipulator', GeoMan())
+            # Create GeoMan component instances
+            self.add('geo_manipulator', GeoMan())
 
-	        # Create CONMIN Optimizer instance
-        	self.add('driver', CONMINdriver())
+            # Create CONMIN Optimizer instance
+            self.add('driver', CONMINdriver())
 
-	        # add geo_manipulator to workflow
-	        self.driver.workflow.add(self.geo_manipulator)
+            # add geo_manipulator to workflow
+            self.driver.workflow.add(self.geo_manipulator)
 
-	self = TLA()
-	geo_manipulator = GeoMan()
+    self = TLA()
+    geo_manipulator = GeoMan()
 
 .. testcode:: parameter_interface
 
-	geo_manipulator.radius = 5
-	geo_manipulator.height = 15
+    geo_manipulator.radius = 5
+    geo_manipulator.height = 15
 
 More often, the geometry's parameters will be set as part of an optimization
 problem, so they can be declared as design variables when an optimizer is added
@@ -89,12 +89,10 @@ to a model.
       
 .. testcode:: parameter_interface
 
-	# CONMIN Design Variables 
-	self.driver.design_vars = ['geo_manipulator.radius', 
-                                   'geo_manipulator.height']
-				 
-	self.driver.lower_bounds = [3.0, 6.5]
-	self.driver.upper_bounds = [12, 25]
+    # CONMIN Design Variables 
+    self.driver.add_parameters([('geo_manipulator.radius', 3.0, 12.),
+                                ('geo_manipulator.height', 6.5, 25.)])
+                 
 
 Here, *self* is the top level assembly that contains an optimizer, the geometry
 manipulator, and some kind of process model such as the one pictured above.
@@ -105,7 +103,7 @@ suppress the feature fillet1.
 
 .. testcode:: parameter_interface
 
-	geo_manipulator.fillet1 = False
+    geo_manipulator.fillet1 = False
 
 **execute()**
 
