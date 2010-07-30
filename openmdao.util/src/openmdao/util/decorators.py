@@ -2,7 +2,7 @@
 Some useful decorators
 """
 
-from decorator import decorator
+from decorator import FunctionMaker
 from inspect import getmembers, ismethod, getargspec
 
 def add_delegate(*delegates):

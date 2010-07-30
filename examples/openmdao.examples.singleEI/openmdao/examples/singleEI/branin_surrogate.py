@@ -47,7 +47,7 @@ class Iterator(Driver):
         outputs = [("%s.iteration"%self.name,None,self._iterations),
                    ("branin_meta_model.x",None,self.parent.branin_meta_model.x),
                    ("branin_meta_model.y",None,self.parent.branin_meta_model.y),
-                   ("branin_meta_model.f_xy",None,self.parent.branin_meta_model.f_xy),
+                   ("branin_meta_model.f_xy",None,self.parent.branin_meta_model.f_xy)
                    ]
         c = Case(outputs = outputs)
         self.recorder.record(c)
@@ -84,15 +84,15 @@ class Analysis(Assembly):
         self.EI_driver.add_parameter("branin_meta_model.y")
         self.EI_driver.criterion = "branin_meta_model.f_xy"
         self.EI_driver.next_case_events = ['branin_meta_model.train_next']
-        self.EI_driver.force_execute = True
+        #self.EI_driver.force_execute = True
         
         self.add("retrain",CaseIteratorDriver())
         self.retrain.recorder = DumpCaseRecorder()
-        self.retrain.force_execute = True
+        #self.retrain.force_execute = True
         
         self.add("iter",Iterator())
-        self.iter.iterations = 4
-        self.iter.recorder = DBCaseRecorder() 
+        self.iter.iterations = 25
+        self.iter.recorder = DumpCaseRecorder(open('iter.out','w'))
         
         
         #Iteration Heirarchy
