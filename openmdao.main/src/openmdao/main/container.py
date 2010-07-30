@@ -1012,7 +1012,6 @@ class Container(HasTraits):
             self.add_trait(name, 
                            self._build_trait(ref_name, iostat, trait))
         
-
     def get_dyn_trait(self, name, iotype=None):
         """Retrieves the named trait, attempting to create it on-the-fly if
         it doesn't already exist.
@@ -1026,7 +1025,6 @@ class Container(HasTraits):
             self.raise_exception("Cannot locate trait named '%s'" %
                                  name, NameError)
 
-    
     def _create_alias(self, path, io_status=None, trait=None, alias=None):
         """Create a trait that maps to some internal variable designated by a
         dotted path. If a trait is supplied as an argument, use that trait as

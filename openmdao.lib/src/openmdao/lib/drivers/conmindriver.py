@@ -302,7 +302,6 @@ class CONMINdriver(Driver):
             
 # TODO: 'step around' ill-behaved cases.
             
-            # common blocks are saved before, and loaded after execution
             self._load_common_blocks()
             
             try:
@@ -323,14 +322,11 @@ class CONMINdriver(Driver):
                 self._logger.error(str(err))
                 raise
             
-            # common blocks are saved before, and loaded after execution
             self._save_common_blocks()
             
             # update the parameters in the model
             dvals = [float(val) for val in self.design_vals[:-2]]
             self.set_parameters(dvals)
-            #for var, val in zip(self.design_vars, dvals):
-                #var.set(val)
             
             # calculate objective and constraints
             if self.cnmn1.info == 1:
