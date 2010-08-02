@@ -20,10 +20,13 @@ class HasEvents(object):
         # if the named event trait doesn't exist, the call to get_metadata will
         # raise an exception
         try:
-            self._parent.parent.get_metadata(name, 'iotype')
+            typ = self._parent.parent.get_metadata(name, 'type')
         except AttributeError:
             self._parent.raise_exception("Can't add event '%s' because it doesn't exist" %
                                          (name), AttributeError)
+        if typ != 'event':
+            self._parent.raise_exception("'%s' is not an event" % name, TypeError)
+
         self._events.append(name)
             
     def remove_event(self, name):
@@ -43,3 +46,9 @@ class HasEvents(object):
     def clear_events(self):
         """Remove all event variables from the driver's list."""
         self._events = []
+        
+    def set_events(self):
+        """Set all events in the event list."""
+        scope = self._parent.parent
+        for event in self._events:
+            scope.set(event, True)

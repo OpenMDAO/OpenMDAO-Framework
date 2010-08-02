@@ -247,9 +247,8 @@ class CONMINdriver(Driver):
         # temp storage for constraints
         self.g1 = zeros(0,'d')
         self.g2 = zeros(0,'d')
-        
-    def execute(self):
-        """Perform the optimization."""
+    
+    def start_iteration(self):
         # set conmin array sizes and such
         self._config_conmin()
         self.cnmn1.igoto = 0
@@ -283,107 +282,114 @@ class CONMINdriver(Driver):
         #self._logger.debug('objective = %s' % self.objective)
         #self._logger.debug('design vars = %s' % self.design_vars)
         
-        # loop until optimized
-        while self.cnmn1.igoto or self.iter_count == 0:
+    def continue_iteration(self):
+        return self.cnmn1.igoto != 0 or self.iter_count == 0
+    
+    def pre_iteration(self):
+        super(CONMINdriver, self).pre_iteration()
+        if self._stop:
+            self.raise_exception('Stop requested', RunStopped)
             
-            if self._stop:
-                self.raise_exception('Stop requested', RunStopped)
+        # set any per-iteration events
+        
 
-            # calculate objective
-            try:
-                self.cnmn1.obj = self.objective.evaluate()
-            except Exception as err:
-                self.raise_exception('error evaluating objective function: %s' % str(err), 
-                                     RuntimeError)
-                    
-            #self._logger.debug('iter_count = %d' % self.iter_count)
-            #self._logger.debug('objective = %f' % self.cnmn1.obj)
-            #self._logger.debug('design vals = %s' % self.design_vals[:-2])
+        # calculate objective
+        try:
+            self.cnmn1.obj = self.objective.evaluate()
+        except Exception as err:
+            self.raise_exception('error evaluating objective function: %s' % str(err), 
+                                 RuntimeError)
+        
+    def run_iteration(self):
+        #self._logger.debug('iter_count = %d' % self.iter_count)
+        #self._logger.debug('objective = %f' % self.cnmn1.obj)
+        #self._logger.debug('design vals = %s' % self.design_vals[:-2])
+        
+        # TODO: 'step around' ill-behaved cases.
+        
+        self._load_common_blocks()
+        
+        try:
+            (self.design_vals,
+             self._scal, self.gradients, self.s,
+             self.g1, self.g2, self._b, self._c,
+             self.cons_is_linear,
+             self.cons_active_or_violated, self._ms1) = \
+                 conmin.conmin(self.design_vals,
+                               self._lower_bounds, self._upper_bounds,
+                               self.constraint_vals,
+                               self._scal, self.df,
+                               self.gradients,
+                               self.s, self.g1, self.g2, self._b, self._c,
+                               self.cons_is_linear,
+                               self.cons_active_or_violated, self._ms1)
+        except Exception, err:
+            self._logger.error(str(err))
+            raise
+        
+        self._save_common_blocks()
+        
+        # update the parameters in the model
+        dvals = [float(val) for val in self.design_vals[:-2]]
+        self.set_parameters(dvals)
+        
+        # calculate objective and constraints
+        if self.cnmn1.info == 1:
             
-# TODO: 'step around' ill-behaved cases.
-            
-            self._load_common_blocks()
-            
-            try:
-                (self.design_vals,
-                 self._scal, self.gradients, self.s,
-                 self.g1, self.g2, self._b, self._c,
-                 self.cons_is_linear,
-                 self.cons_active_or_violated, self._ms1) = \
-                     conmin.conmin(self.design_vals,
-                                   self._lower_bounds, self._upper_bounds,
-                                   self.constraint_vals,
-                                   self._scal, self.df,
-                                   self.gradients,
-                                   self.s, self.g1, self.g2, self._b, self._c,
-                                   self.cons_is_linear,
-                                   self.cons_active_or_violated, self._ms1)
-            except Exception, err:
-                self._logger.error(str(err))
-                raise
-            
-            self._save_common_blocks()
-            
-            # update the parameters in the model
-            dvals = [float(val) for val in self.design_vals[:-2]]
-            self.set_parameters(dvals)
-            
-            # calculate objective and constraints
-            if self.cnmn1.info == 1:
+            # update the model
+            super(CONMINdriver, self).run_iteration()
+        
+            # update constraint value array
+            for i, v in enumerate(self.constraints):
+                self.constraint_vals[i] = v.evaluate()
+            #self._logger.debug('constraints = %s'%self.constraint_vals)
                 
-                # update the model
-                self.run_iteration()
+        # calculate gradient of constraints and graident of objective
+        elif self.cnmn1.info == 2:
             
-                # update constraint value array
-                for i, v in enumerate(self.constraints):
-                    self.constraint_vals[i] = v.evaluate()
-                #self._logger.debug('constraints = %s'%self.constraint_vals)
-                    
-            # calculate gradient of constraints and graident of objective
-            elif self.cnmn1.info == 2:
+            # Placeholder for future use of component gradient calc.
+            
+            # User-defined gradients for objective and constraints
+            if self.cnmn1.nfdg == 1:
+                self.raise_exception('User defined gradients not yet \
+                           supported for constraints', NotImplementedError)
                 
-                # Placeholder for future use of component gradient calc.
-                
-                # User-defined gradients for objective and constraints
-                if self.cnmn1.nfdg == 1:
-                    self.raise_exception('User defined gradients not yet \
-                               supported for constraints', NotImplementedError)
-                    
-                # User-defined gradients for just the objective
-                elif self.cnmn1.nfdg == 2:
-                    self.raise_exception('User defined gradients not yet \
-                               supported', NotImplementedError)
-                
-            else:
-                self.raise_exception('Unexpected value for flag INFO returned \
-                        from CONMIN', RuntimeError)
+            # User-defined gradients for just the objective
+            elif self.cnmn1.nfdg == 2:
+                self.raise_exception('User defined gradients not yet \
+                           supported', NotImplementedError)
+            
+        else:
+            self.raise_exception('Unexpected value for flag INFO returned \
+                    from CONMIN', RuntimeError)
 
-            # Iteration count comes from CONMIN. You can't just count over the
-            # loop because some cycles do other things (e.g., numerical
-            # gradient calculation)
-            if self.iter_count != self.cnmn1.iter:
+    def post_iteration(self):
+        super(CONMINdriver, self).post_iteration()
+        
+        # Iteration count comes from CONMIN. You can't just count over the
+        # loop because some cycles do other things (e.g., numerical
+        # gradient calculation)
+        if self.iter_count != self.cnmn1.iter:
+            self.iter_count = self.cnmn1.iter 
+            
+            if self.recorder:
+                # Write out some relevant information to the recorder
+                case_input = []
+                for var, val in zip(self.get_parameters().keys(), dvals):
+                    case_input.append([var, None, val])
                     
-                self.iter_count = self.cnmn1.iter 
+                for var in self.printvars:
+                    case_input.append([var, None, var.evaluate()])
+            
+                case_output = []
+                case_output.append(["objective", None, self.cnmn1.obj])
+            
+                for i, val in enumerate(self.constraint_vals):
+                    case_output.append(["Constraint%d" % i, None, val])
                 
-                if self.recorder:
-                    # Write out some relevant information to the recorder
-                    case_input = []
-                    for var, val in zip(self.get_parameters().keys(), dvals):
-                        case_input.append([var, None, val])
-                        
-                    for var in self.printvars:
-                        case_input.append([var, None, var.evaluate()])
-                
-                    case_output = []
-                    case_output.append(["objective", None, self.cnmn1.obj])
-                
-                    for i, val in enumerate(self.constraint_vals):
-                        case_output.append(["Constraint%d" % i, None, val])
-                    
-                    self.recorder.record(Case(case_input, case_output, 
-                                              'case%s' % self.iter_count))
-                        
-
+                self.recorder.record(Case(case_input, case_output, 
+                                          'case%s' % self.iter_count))
+        
     def _config_conmin(self):
         """Set up arrays for the FORTRAN conmin routine, and perform some
         validation and make sure that array sizes are consistent.

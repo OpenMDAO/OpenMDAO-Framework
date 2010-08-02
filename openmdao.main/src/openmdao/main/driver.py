@@ -11,7 +11,6 @@ from openmdao.main.component import Component
 from openmdao.main.workflow import Workflow
 from openmdao.main.dataflow import Dataflow
 
-    
 class Driver(Component):
     """ A Driver iterates over a workflow of Components until some condition
     is met. """
