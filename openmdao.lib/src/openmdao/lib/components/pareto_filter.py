@@ -62,6 +62,8 @@ class ParetoFilter(Component):
                     y_temp.remove(point1)
                     pareto_set.remove(case)
                     break
+                
+        print "pareto_set: ", pareto_set[0].inputs        
         self.pareto_set = ListCaseIterator(pareto_set)
         self.dominated_set = ListCaseIterator(dominated_set)
     

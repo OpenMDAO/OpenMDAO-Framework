@@ -20,7 +20,7 @@ class HasEvents(object):
         # if the named event trait doesn't exist, the call to get_metadata will
         # raise an exception
         try:
-            self._parent.parent.get_metadata(name, 'foo')
+            self._parent.parent.get_metadata(name, 'iotype')
         except AttributeError:
             self._parent.raise_exception("Can't add event '%s' because it doesn't exist" %
                                          (name), AttributeError)

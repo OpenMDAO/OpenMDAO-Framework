@@ -255,7 +255,6 @@ class Component (Container):
             self._pre_execute()
             if self._call_execute or force or self.force_execute:
                 #if __debug__: self._logger.debug('execute %s' % self.get_pathname())
-                #print 'execute %s' % self.get_pathname()
                 self.execute()
                 self._post_execute()
         finally:

@@ -10,6 +10,9 @@ class ListCaseIterator(HasTraits):
 
     """
     implements(ICaseIterator)
+    
+    def __getitem__(self, key):
+        return self._cases[key]
 
     def __init__(self, cases):
         super(ListCaseIterator, self).__init__()

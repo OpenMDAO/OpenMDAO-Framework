@@ -1,13 +1,36 @@
 
+import operator
 import ordereddict
 
 from openmdao.main.expreval import ExprEvaluator
+
+_ops = {
+    '>': operator.gt,
+    '<': operator.lt,
+    '>=': operator.ge,
+    '<=': operator.le,
+    '==': operator.eq,
+    '=': operator.eq,
+    }
 
 class _Constraint(object):
     def __init__(self, lhs, relation='>', rhs='0'):
         self.lhs = lhs
         self.relation = relation
         self.rhs = rhs
+        #self.parent = None
+        #self.children = []
+        
+    def evaluate(self):
+        """Returns a tuple of the form (lhs, rhs, relation, is_violated)"""
+        lhs = self.lhs.evaluate()
+        rhs = self.rhs.evaluate()
+        return (lhs, rhs, self.relation, _ops[self.relation](lhs,rhs))
+        
+    def violated(self):
+        """Returns True if the constraint is voilated, False otherwise."""
+        return self.evaluate()[3]
+
 
 class HasConstraints(object): 
     """This class provides an implementation of the IHasConstraints interface"""
@@ -29,7 +52,7 @@ class HasConstraints(object):
         else:
             constraint = _Constraint(expr_string)
         self._constraints[expr_string] = constraint
-            
+
     def remove_constraint(self, expr_string):
         """Removes the constraint with the given name."""
         try:
