@@ -35,7 +35,8 @@ class CaseIterDriverBase(Driver):
     
     """
 
-    recorder = Instance(ICaseRecorder, desc='Something to write Cases to.', required=True)
+    recorder = Instance(ICaseRecorder, allow_none=True, 
+                        desc='Something to save Cases to.')
     
     sequential = Bool(True, iotype='in',
                       desc='Evaluate cases sequentially.')
@@ -341,7 +342,8 @@ class CaseIterDriverBase(Driver):
                     self._logger.debug('    exception %s', exc)
                     case.msg = str(exc)
                 # Record the data.
-                self.recorder.record(case)
+                if self.recorder is not None:
+                    self.recorder.record(case)
 
                 if not case.msg:
                     if self.reload_model:
@@ -396,7 +398,8 @@ class CaseIterDriverBase(Driver):
                 self._rerun.append(case)
             else:
                 case.msg = str(exc)
-                self.recorder.record(case)
+                if self.recorder is not None:
+                    self.recorder.record(case)
 
     def _service_loop(self, name, resource_desc):
         """ Each server has an associated thread executing this. """
