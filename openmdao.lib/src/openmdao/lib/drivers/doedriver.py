@@ -14,10 +14,8 @@ from openmdao.lib.drivers.caseiterdriver import CaseIterDriverBase
 from openmdao.lib.doegenerators.optlh import OptLatinHypercube
 from openmdao.util.decorators import add_delegate
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasevents import HasEvents
 
-
-@add_delegate(HasParameters, HasEvents)
+@add_delegate(HasParameters)
 class DOEdriver(CaseIterDriverBase): 
     
     def __init__(self, *args, **kwargs):

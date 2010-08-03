@@ -13,13 +13,11 @@ _ops = {
     '=': operator.eq,
     }
 
-class _Constraint(object):
-    def __init__(self, lhs, relation='>', rhs='0'):
+class Constraint(object):
+    def __init__(self, lhs, relation='>', rhs='0', parent=None):
         self.lhs = lhs
         self.relation = relation
         self.rhs = rhs
-        #self.parent = None
-        #self.children = []
         
     def evaluate(self):
         """Returns a tuple of the form (lhs, rhs, relation, is_violated)"""
@@ -28,10 +26,10 @@ class _Constraint(object):
         return (lhs, rhs, self.relation, _ops[self.relation](lhs,rhs))
         
     def violated(self):
-        """Returns True if the constraint is voilated, False otherwise."""
+        """Returns True if the constraint is violated, False otherwise."""
         return self.evaluate()[3]
 
-
+    
 class HasConstraints(object): 
     """This class provides an implementation of the IHasConstraints interface"""
 

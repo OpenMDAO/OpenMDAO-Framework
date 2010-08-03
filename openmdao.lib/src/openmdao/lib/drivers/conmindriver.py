@@ -290,9 +290,6 @@ class CONMINdriver(Driver):
         if self._stop:
             self.raise_exception('Stop requested', RunStopped)
             
-        # set any per-iteration events
-        
-
         # calculate objective
         try:
             self.cnmn1.obj = self.objective.evaluate()
