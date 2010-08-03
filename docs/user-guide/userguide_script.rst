@@ -1176,7 +1176,7 @@ when they return a positive value**.
 
 .. testcode:: CONMIN_show
 
-    self.driver.constraints = ['driving_sim.stroke - driving_sim.bore']
+    map(self.driver.add_constraint, ['driving_sim.stroke - driving_sim.bore'])
 
 Any equation can also be expressed as an inequality.
 
@@ -1276,8 +1276,8 @@ variables as follows:
 
 .. testcode:: CONMIN_show
 
-    self.driver.constraints = ['driving_sim.stroke - driving_sim.bore',
-                               '1.0 - driving_sim.stroke * driving_sim.bore']
+    map(self.driver.add_constraint, ['driving_sim.stroke - driving_sim.bore',
+                               '1.0 - driving_sim.stroke * driving_sim.bore'])
     self.cons_is_linear = [1, 0]
 
 If *cons_is_linear* is not specified, then all the constraints are assumed to be

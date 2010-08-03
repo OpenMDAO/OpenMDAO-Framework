@@ -74,7 +74,7 @@ class Bar3Optimization(Assembly):
         displacement_y_dir_allowable = self.displacement_y_dir_allowable
         frequency_allowable = self.frequency_allowable
 
-        self.driver.constraints = [ \
+        constraints = [
             '(bar3_truss.bar1_stress/bar1_stress_allowable)-1.0',
             '(bar3_truss.bar2_stress/bar2_stress_allowable)-1.0',
             '(bar3_truss.bar3_stress/bar3_stress_allowable)-1.0',
@@ -82,7 +82,7 @@ class Bar3Optimization(Assembly):
             '(bar3_truss.displacement_y_dir/displacement_y_dir_allowable)-1.0',
             '(frequency_allowable*frequency_allowable)/ \
              (bar3_truss.frequency*bar3_truss.frequency) - 1.0']
- 
+        map(self.driver.add_constraint, constraints)
 
 if __name__ == "__main__": # pragma: no cover         
 

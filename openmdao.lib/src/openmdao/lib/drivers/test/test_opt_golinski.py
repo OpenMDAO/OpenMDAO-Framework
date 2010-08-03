@@ -201,7 +201,7 @@ class GolinskiTestCase(unittest.TestCase):
                                        ('comp.x[3]',7.3,8.3),('comp.x[4]',7.3,8.3)])
         #  25 CONSTRAINTS  defined in the problem
         #  reduced to 1 constraint
-        self.top.driver.constraints = ['1.0 - 40.0/(comp.x[2] * comp.x[3])']
+        self.top.driver.add_constraint('1.0 - 40.0/(comp.x[2] * comp.x[3])')
         while iter < 4:
             # print  'iter     ',iter
             g00 = self.top.comp.x[0]
@@ -268,7 +268,7 @@ class GolinskiTestCase(unittest.TestCase):
             self.top.driver.add_parameter(param, low=low, high=high)
         #  25 CONSTRAINTS  defined in the problem
         #  reduced to 1 constraint
-        self.top.driver.constraints = ['1.0 - 40.0/(comp.x[2] * comp.x[3])']
+        self.top.driver.add_constraint('1.0 - 40.0/(comp.x[2] * comp.x[3])')
         # Set local dir in case we're running in a different directory.
         py_dir = pkg_resources.resource_filename('openmdao.lib.drivers', 'test')
         retcode = check_save_load(self.top, py_dir=py_dir)
@@ -341,12 +341,12 @@ class GolinskiTestCase(unittest.TestCase):
     
     def test_bad_constraint(self):
         try:
-            self.top.driver.constraints = ['bogus.flimflam']
-        except TraitError, err:
+            self.top.driver.add_constraint('bogus.flimflam')
+        except ValueError, err:
             self.assertEqual(str(err), 
-                "driver: invalid value 'bogus.flimflam' for input Expression 'constraints[0]': 'Assembly' object has no attribute 'bogus'")
+                "Invalid expression 'bogus.flimflam': 'Assembly' object has no attribute 'bogus'")
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
        
 
 if __name__ == "__main__":

@@ -78,10 +78,10 @@ class CONMINdriverTestCase(unittest.TestCase):
             ['comp.x[0]', 'comp.x[1]','comp.x[2]', 'comp.x[3]'])
         
         # pylint: disable-msg=C0301
-        self.top.driver.constraints = [
+        map(self.top.driver.add_constraint,[
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5'])        
         self.top.run()
         # pylint: disable-msg=E1101
         self.assertAlmostEqual(self.top.comp.opt_objective, 
@@ -157,12 +157,12 @@ class CONMINdriverTestCase(unittest.TestCase):
     
     def test_bad_constraint(self):
         try:
-            self.top.driver.constraints = ['bogus.flimflam']
-        except TraitError, err:
+            self.top.driver.add_constraint('bogus.flimflam')
+        except ValueError, err:
             self.assertEqual(str(err), 
-                "driver: invalid value 'bogus.flimflam' for input Expression 'constraints[0]': 'Assembly' object has no attribute 'bogus'")
+                "Invalid expression 'bogus.flimflam': 'Assembly' object has no attribute 'bogus'")
         else:
-            self.fail('TraitError expected')
+            self.fail('ValueError expected')
             
     def test_scale_design_vector_size_mismatch(self):
         self.top.driver.objective = 'comp.result'
@@ -186,10 +186,10 @@ class CONMINdriverTestCase(unittest.TestCase):
                                              'comp.x[2]', 'comp.x[3]'])
         
         # pylint: disable-msg=C0301
-        self.top.driver.constraints = [
+        map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5'])        
         
         self.top.run()
         baseerror = abs(self.top.comp.opt_objective - self.top.driver.objective.evaluate())
@@ -214,10 +214,10 @@ class CONMINdriverTestCase(unittest.TestCase):
         self.top.driver.nscal = -1
         
         # pylint: disable-msg=C0301
-        self.top.driver.constraints = [
+        map(self.top.driver.add_constraint, [
             'comp.x[0]**2+comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2+comp.x[2]+comp.x[3]**2-comp.x[3]-8',
             'comp.x[0]**2-comp.x[0]+2*comp.x[1]**2+comp.x[2]**2+2*comp.x[3]**2-comp.x[3]-10',
-            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5']        
+            '2*comp.x[0]**2+2*comp.x[0]+comp.x[1]**2-comp.x[1]+comp.x[2]**2-comp.x[3]-5'])
         
         self.top.run()
         

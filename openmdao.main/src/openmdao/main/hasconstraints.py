@@ -13,11 +13,21 @@ _ops = {
     '=': operator.eq,
     }
 
+def _check_expr(expr):
+    try:
+        # force checking for existence of vars referenced in expression
+        expr.refs_valid()  
+    except (AttributeError, RuntimeError), err:
+        msg = "Invalid expression '%s': %s" % (str(expr), err)
+        raise ValueError( msg )
+
 class Constraint(object):
-    def __init__(self, lhs, relation='>', rhs='0'):
-        self.lhs = lhs
+    def __init__(self, lhs, relation='>', rhs='0', scope=None):
+        self.lhs = ExprEvaluator(lhs, scope=scope)
+        _check_expr(self.lhs)
         self.relation = relation
-        self.rhs = rhs
+        self.rhs = ExprEvaluator(rhs, scope=scope)
+        _check_expr(self.rhs)
         
     def evaluate(self):
         """Returns a tuple of the form (lhs, rhs, relation, is_violated)"""
@@ -25,10 +35,6 @@ class Constraint(object):
         rhs = self.rhs.evaluate()
         return (lhs, rhs, self.relation, _ops[self.relation](lhs,rhs))
         
-    def violated(self):
-        """Returns True if the constraint is violated, False otherwise."""
-        return self.evaluate()[3]
-
 
 def _parse_constraint(expr_string):
     for relation in ['>=','<=','==','>','<','=']:
@@ -41,20 +47,11 @@ def _parse_constraint(expr_string):
 def _remove_spaces(s):
     return ''.join([c for c in s if c!=' '])
 
-
-class HasEqConstraints(object):
+class _HasConstraintsBase(object):
     def __init__(self, parent):
         self._parent = parent
         self._constraints = ordereddict.OrderedDict()
     
-    def add_constraint(self, expr_string):
-        """Adds a constraint to the driver"""
-        lhs, rel, rhs = _parse_constraint(expr_string)
-        if rel=='==' or rel=='=':
-            self.add_eq_constraint(lhs, rhs)
-        else:
-            raise NotImplemented("add_ineq_constraint")
-
     def remove_constraint(self, expr_string):
         """Removes the constraint with the given string."""
         try:
@@ -66,9 +63,19 @@ class HasEqConstraints(object):
         """Removes all constraints."""
         self._constraints = ordereddict.OrderedDict()
         
+    
+class HasEqConstraints(_HasConstraintsBase):
+    def add_constraint(self, expr_string):
+        """Adds a constraint to the driver"""
+        lhs, rel, rhs = _parse_constraint(expr_string)
+        if rel=='==' or rel=='=':
+            self.add_eq_constraint(lhs, rhs)
+        else:
+            raise NotImplemented("add_ineq_constraint")
+
     def add_eq_constraint(self, lhs, rhs):
         ident = _remove_spaces('='.join([lhs,rhs]))
-        self._constraints[ident] = Constraint(lhs,'=',rhs)
+        self._constraints[ident] = Constraint(lhs,'=',rhs, scope=self._parent)
         
     def get_eq_constraints(self):
         """Returns an ordered dict of constraint objects."""
@@ -81,33 +88,18 @@ class HasEqConstraints(object):
         return [c.evaluate() for c in self._constraints.values()]
 
     
-class HasIneqConstraints(object):
-    def __init__(self, parent):
-        self._parent = parent
-        self._constraints = ordereddict.OrderedDict()
-    
+class HasIneqConstraints(_HasConstraintsBase):
     def add_constraint(self, expr_string):
         """Adds a constraint to the driver"""
         lhs, rel, rhs = _parse_constraint(expr_string)
         self.add_ineq_constraint(lhs, rel, rhs)
 
-    def remove_constraint(self, expr_string):
-        """Removes the constraint with the given string."""
-        try:
-            del self._constraints[_remove_spaces(expr_string)]
-        except KeyError:
-            self._parent.raise_exception("Constraint '%s' was not found. Remove failed." % 
-                                         expr_string, AttributeError)
-    def clear_constraints(self):
-        """Removes all constraints."""
-        self._constraints = ordereddict.OrderedDict()
-        
     def add_ineq_constraint(self, lhs, rel, rhs):
         if rel=='==' or rel=='=':
             raise NotImplemented("add_eq_constraint")
 
         ident = _remove_spaces(rel.join([lhs,rhs]))
-        self._constraints[ident] = Constraint(lhs,rel,rhs)
+        self._constraints[ident] = Constraint(lhs,rel,rhs, scope=self._parent)
         
     def get_ineq_constraints(self):
         """Returns an ordered dict of inequality constraint objects."""

@@ -43,7 +43,7 @@ class OptimizationConstrained(Assembly):
         self.driver.add_parameter('paraboloid.y', low=-50., high=50.)
         
         # CONMIN Constraints
-        self.driver.constraints = ['paraboloid.y-paraboloid.x+15.0']
+        self.driver.add_constraint('paraboloid.y-paraboloid.x+15.0')
         
         
 if __name__ == "__main__": # pragma: no cover         

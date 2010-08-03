@@ -203,8 +203,8 @@ class SellarMDF(Assembly):
                                     [-10.0, 0.0, 0.0],
                                     [10.0, 10.0, 10.0]):
             self.driver.add_parameter(param, low=low, high=high)
-        self.driver.constraints = ['3.16 - dis1.y1',
-                                   'dis2.y2 - 24.0' ]
+        map(self.driver.add_constraint, ['3.16 - dis1.y1',
+                                              'dis2.y2 - 24.0' ])
         self.driver.cons_is_linear = [1, 1, 1, 1, 1, 0, 0, 0]
         self.driver.iprint = 0
         self.driver.itmax = 30
@@ -258,10 +258,10 @@ class SellarIDF(Assembly):
                                     [-10.0, 0.0, 0.0, 3.16, -10.0],
                                     [10.0, 10.0, 10.0, 10, 24.0]):
             self.driver.add_parameter(param, low=low, high=high)
-        self.driver.constraints = ['dis2.y1-dis1.y1',
-                                   'dis1.y1-dis2.y1',
-                                   'dis2.y2-dis1.y2',
-                                   'dis1.y2-dis2.y2']
+        map(self.driver.add_constraint, ['dis2.y1-dis1.y1',
+                                              'dis1.y1-dis2.y1',
+                                              'dis2.y2-dis1.y2',
+                                              'dis1.y2-dis2.y2'])
         #self.driver.cons_is_linear = [1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1]
         self.driver.iprint = 0
         self.driver.itmax = 100
@@ -320,11 +320,11 @@ class SellarCO(Assembly):
                                   [10.0, 10.0, 10.0, 10, 24.0]):
             self.driver.add_parameter(param, low=low, high=high)
 
-        self.driver.constraints = ['(coupler.z1-dis1.z1)**2 + (coupler.z2-dis1.z2)**2 + (coupler.x1-dis1.x1)**2 + '
-                                   '(coupler.y1-dis1.y1)**2 + (coupler.y2-dis1.y2)**2',
-                                   
-                                   '(coupler.z1-dis2b.z1)**2 + (coupler.z2-dis2c.z2)**2 + (coupler.y1-dis2a.y1)**2 + '
-                                   '(coupler.y2-dis2c.y2)**2' ]
+        map(self.driver.add_constraint, [
+            '(coupler.z1-dis1.z1)**2 + (coupler.z2-dis1.z2)**2 + (coupler.x1-dis1.x1)**2 + '
+            '(coupler.y1-dis1.y1)**2 + (coupler.y2-dis1.y2)**2',
+            '(coupler.z1-dis2b.z1)**2 + (coupler.z2-dis2c.z2)**2 + (coupler.y1-dis2a.y1)**2 + '
+            '(coupler.y2-dis2c.y2)**2' ])
         
         self.driver.printvars = ['dis1.y1','dis2c.y2']
         self.driver.iprint = 0

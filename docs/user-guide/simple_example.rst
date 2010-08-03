@@ -541,7 +541,7 @@ model by adding one line to the init function:
 .. testcode:: simple_model_Unconstrained_pieces
 
         # CONMIN Constraints
-        self.driver.constraints = ['paraboloid.y-paraboloid.x+15.0']
+        self.driver.add_constraint('paraboloid.y-paraboloid.x+15.0')
 
 So, please add this line to the ``__init__`` function in
 ``optimization_constrained.py`` and save it. Execute it by typing:

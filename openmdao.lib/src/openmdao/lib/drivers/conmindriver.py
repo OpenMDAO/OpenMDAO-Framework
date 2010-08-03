@@ -23,7 +23,7 @@ from openmdao.lib.traits.float import Float
 from openmdao.lib.traits.int import Int
 from openmdao.lib.traits.array import Array
 from openmdao.main.hasparameters import HasParameters
-from openmdao.main.hasevents import HasEvents
+from openmdao.main.hasconstraints import HasIneqConstraints
 from openmdao.util.decorators import add_delegate
 
 
@@ -149,7 +149,7 @@ class _consav(object):
         self.jgoto = 0
         self.ispace = [0, 0]
 
-@add_delegate(HasParameters, HasEvents)
+@add_delegate(HasParameters, HasIneqConstraints)
 class CONMINdriver(Driver):
     """ Driver wrapper of Fortran version of CONMIN. 
         
@@ -159,10 +159,10 @@ class CONMINdriver(Driver):
             
     """
     # pylint: disable-msg=E1101
-    constraints = ExpressionList(iotype='in',
-            desc= 'A list of expression strings indicating constraints.'
-            ' A value of < 0 for the expression indicates that the constraint '
-            'is violated.')
+    #constraints = ExpressionList(iotype='in',
+            #desc= 'A list of expression strings indicating constraints.'
+            #' A value of < 0 for the expression indicates that the constraint '
+            #'is violated.')
     
     objective = Expression(iotype='in',
                 desc= 'A string containing the objective function expression.')
@@ -276,8 +276,8 @@ class CONMINdriver(Driver):
         self.run_iteration()
 
         # update constraint value array
-        for i, v in enumerate(self.constraints):
-            self.constraint_vals[i] = v.evaluate()
+        for i, v in enumerate(self.get_ineq_constraints().values()):
+            self.constraint_vals[i] = v.evaluate()[0]
         #self._logger.debug('%s: new iteration' % self.get_pathname())
         #self._logger.debug('objective = %s' % self.objective)
         #self._logger.debug('design vars = %s' % self.design_vars)
@@ -338,8 +338,8 @@ class CONMINdriver(Driver):
             super(CONMINdriver, self).run_iteration()
         
             # update constraint value array
-            for i, v in enumerate(self.constraints):
-                self.constraint_vals[i] = v.evaluate()
+            for i, v in enumerate(self.get_ineq_constraints().values()):
+                self.constraint_vals[i] = v.evaluate()[0]
             #self._logger.debug('constraints = %s'%self.constraint_vals)
                 
         # calculate gradient of constraints and graident of objective
@@ -412,7 +412,6 @@ class CONMINdriver(Driver):
         for i, param in enumerate(params):
             self._lower_bounds[i] = param.low
             
-            
         # create upper bounds array
         self._upper_bounds = zeros(num_dvs+2)
         for i, param in enumerate(params):
@@ -434,7 +433,7 @@ class CONMINdriver(Driver):
         self.s = zeros(num_dvs+2, 'd')
         
         # size constraint related arrays
-        length = len(self.constraints) + 2*num_dvs
+        length = len(self.get_ineq_constraints()) + 2*num_dvs
         self.constraint_vals = zeros(length, 'd')
         
         # temp storage of constraint and design vals
@@ -455,12 +454,12 @@ class CONMINdriver(Driver):
                                (len(self.cons_is_linear),length), ValueError)
         
         self.cnmn1.ndv = num_dvs
-        self.cnmn1.ncon = len(self.constraints)
+        self.cnmn1.ncon = len(self.get_ineq_constraints())
         
         self.cnmn1.nside = 2*num_dvs
 
         self.cnmn1.nacmx1 = max(num_dvs,
-                                len(self.constraints)+self.cnmn1.nside)+1
+                                self.cnmn1.ncon+self.cnmn1.nside)+1
         n1 = num_dvs+2
         n3 = self.cnmn1.nacmx1
         n4 = max(n3, num_dvs)
@@ -508,19 +507,19 @@ class CONMINdriver(Driver):
             msg = "invalid value '%s' for input ref variable '%s': %s"
             self.raise_exception( msg % (str(expr), name, err), TraitError)
         
-    @on_trait_change('constraints')
-    def _exprlist_changed(self, obj, name, old, new):
-        """ Check constraints and parameters on change"""
+    #@on_trait_change('constraints')
+    #def _exprlist_changed(self, obj, name, old, new):
+        #""" Check constraints and parameters on change"""
 
-        exprevals = getattr(obj, name)
-        for i, expr in enumerate(exprevals):
-            try:
-                # force checking for existence of vars referenced in expression
-                expr.refs_valid()  
-            except (AttributeError, RuntimeError), err:
-                msg = "invalid value '%s' for input Expression '%s[%d]': %s"
-                self.raise_exception( msg % \
-                    (str(expr), name, i, err), TraitError)
+        #exprevals = getattr(obj, name)
+        #for i, expr in enumerate(exprevals):
+            #try:
+                ## force checking for existence of vars referenced in expression
+                #expr.refs_valid()  
+            #except (AttributeError, RuntimeError), err:
+                #msg = "invalid value '%s' for input Expression '%s[%d]': %s"
+                #self.raise_exception( msg % \
+                    #(str(expr), name, i, err), TraitError)
         
     def _load_common_blocks(self):
         """ Reloads the common blocks using the intermediate info saved in the
